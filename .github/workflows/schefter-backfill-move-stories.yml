@@ -1,0 +1,81 @@
+name: Schefter Move Story Backfill
+
+# One-off (manual): rewrite this league year's template transaction posts as
+# Schefter move stories, so the Transactions page reads as his wire from the
+# first move of the season. New moves get a story from the scan itself; this
+# only catches up the ones scanned before that shipped. Idempotent — a post
+# already carrying the current storyVersion is skipped, so re-running is safe.
+#
+# Shares the scan's concurrency group so the two never write the feed at the
+# same time; the feed merge additionally keeps the higher storyVersion on an
+# id collision (scripts/lib/merge-schefter-feed.mjs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "Schefter league (theleague | afl), blank for all"
+        required: false
+        default: ""
+      limit:
+        description: "Max posts to rewrite per league (blank = all)"
+        required: false
+        default: ""
+
+concurrency:
+  group: schefter-scan
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 1
+
+      # The Schefter feeds live in Redis; git holds a daily snapshot. Start from
+      # the live copy so this job's scripts never write on top of a day-old
+      # feed (scripts/lib/schefter-feed-store.mjs).
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Rewrite template move posts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MFL_HOST: ${{ vars.MFL_HOST }}
+          LEAGUE: ${{ inputs.league }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          ARGS=()
+          if [ -n "$LEAGUE" ]; then ARGS+=(--league "$LEAGUE"); fi
+          if [ -n "$LIMIT" ]; then ARGS+=(--limit "$LIMIT"); fi
+          node scripts/schefter-backfill-move-stories.mjs "${ARGS[@]}"
+
+      - name: Commit and push
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch "$BRANCH" \
+            --message "chore: schefter move stories — backfill this season's transaction posts" \
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/schefter-archive,data/afl-fantasy/schefter-archive"

@@ -27,10 +27,14 @@
  * ONLY hydrated part, and it is a separate island that renders nothing unless
  * it applies. See OwnersPollHomeCardPrompt.
  */
-import { getLeagueBySlug, leagueClock } from '../../../config/leagues';
+import { ensureLeaguePrefix, getLeagueBySlug, leagueClock } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import OwnersPollHomeCardPrompt from './OwnersPollHomeCardPrompt';
+import OwnersPollPopup from './OwnersPollPopup';
+import { buildBallotTeams, type BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
 import '../../../styles/owners-poll-card.css';
+// The pop-up renders the poll page's BallotBuilder, so it needs that page's styles.
+import '../../../styles/owners-poll.css';
 
 interface RankedRow {
   rank: number;
@@ -53,9 +57,16 @@ interface Props {
   ballotHref: string;
   /** How many rows to show. The card is a teaser, not the column. */
   limit?: number;
+  /**
+   * Standings rows from the NEWEST issue (`newestIssueStandings`) — the stats
+   * on the pop-up's ballot cards. Empty is fine; the cards lose their line.
+   */
+  ballotStandings?: BallotStandingsRow[];
 }
 
-const { issue, teams, leagueSlug, ballotHref, limit = 5 } = Astro.props as Props;
+const { issue, teams, leagueSlug, ballotHref, limit = 5, ballotStandings = [] } = Astro.props as Props;
+const ballotTeams = buildBallotTeams(leagueSlug, ballotStandings);
+const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
 
 const league = getLeagueBySlug(leagueSlug)!;
 const teamMap = teams instanceof Map ? teams : new Map(Object.entries(teams ?? {}));
@@ -123,6 +134,22 @@ const recruiting = ranked.length === 0;
     leagueParam={league.navSlug}
     ballotHref={ballotHref}
     officialClock={leagueClock(league.slug)}
+  />
+
+  <!--
+    The once-a-week quick-vote sheet, for owners with no ballot or a stale one.
+    client:idle for the same zero-height reason as the prompt above.
+  -->
+  <OwnersPollPopup
+    client:idle
+    leagueSlug={league.slug}
+    leagueParam={league.navSlug}
+    teams={ballotTeams}
+    slots={league.ownersPoll.slots}
+    ballotHref={ballotHref}
+    columnHref={ensureLeaguePrefix(league, '/pecking-order')}
+    officialClock={leagueClock(league.slug)}
+    vapidPublicKey={vapidPublicKey}
   />
 
   <p class="ophc__links">

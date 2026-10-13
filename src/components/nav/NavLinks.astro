@@ -21,6 +21,8 @@
  */
 
 import { getPersonaLabels } from '../../utils/persona-server';
+import { getAuthUser } from '../../utils/auth';
+import { isPlatformAdmin } from '../../utils/league-admin';
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
 import { NAV_COOKIES, isAflFamily } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
@@ -55,6 +57,10 @@ const {
   isCommissioner = false,
   isCommishMode = false,
 } = Astro.props;
+
+// Links to pages private to the site's platform admins (Owner Activity) show
+// to them alone: a commissioner's role does not pass those pages' own gate.
+const viewerIsPlatformAdmin = isPlatformAdmin(getAuthUser(Astro.request));
 
 const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
 
@@ -207,6 +213,7 @@ function getVisibleSections(): Array<NavSection & { _adminOnly?: boolean }> {
     .map((section) => {
       const filteredLinks = section.links.filter((link) => {
         if (link.leagueOnly && link.leagueOnly !== league) return false;
+        if (link.platformAdminOnly) return viewerIsPlatformAdmin;
         if (link.visibility === 'admin' && isCommissioner) return true;
         return isLinkVisible(link, franchiseId, adminFranchiseIds);
       });

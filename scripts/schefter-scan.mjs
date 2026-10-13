@@ -33,7 +33,7 @@ import {
 } from './lib/throwback-reminder.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
-import { parseRosterMove } from './lib/roster-move-parse.mjs';
+import { parseRosterMove, rosterMoveString } from './lib/roster-move-parse.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import {
   evaluatePingWindow,
@@ -44,6 +44,13 @@ import { schefterKey } from './lib/schefter-keys.mjs';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
+import {
+  MOVE_STORY_SUBTYPES,
+  applyMoveStory,
+  factsFromRawMove,
+  formatSalary,
+  writeMoveStory,
+} from './lib/schefter-move-story.mjs';
 
 import { getRedisConfig } from './lib/redis.mjs';
 import { createUpstashClient } from './lib/redis-client.mjs';
@@ -60,6 +67,7 @@ import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
 import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -93,12 +101,8 @@ const BIG_DROP_PENDING_KEY = schefterKey('theleague', 'bigdrop:pending_groupme')
 
 // ── Helpers ──
 
-function formatSalary(cents) {
-  if (!Number.isFinite(cents) || cents === 0) return '$0';
-  if (cents >= 1_000_000) return `$${(cents / 1_000_000).toFixed(2)}M`;
-  if (cents >= 1_000) return `$${(cents / 1_000).toFixed(0)}K`;
-  return `$${cents.toLocaleString()}`;
-}
+// formatSalary lives in ./lib/schefter-move-story.mjs so the move-story
+// writer prints a price exactly the way the templates do.
 
 function generatePostId(timestamp) {
   const hash = Math.random().toString(36).slice(2, 6);
@@ -454,7 +458,7 @@ function describePlayer(playerId, players) {
 
 function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMap = new Map()) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
-  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
+  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(rosterMoveString(raw));
   const added = describePlayer(addedIds[0], players);
   const salary = Number.isFinite(bbidAmount) && bbidAmount > 100_000 ? bbidAmount : undefined;
 
@@ -523,8 +527,9 @@ async function generateBreakingCommentary(post, raw) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 400,
         system: `You are Claude Schefter, a beat reporter for a dynasty fantasy football league. Channel Adam Schefter's energy. Use phrases like "I'm told...", "League sources tell me...", "Boom!". Grade trades A+ to F. Be opinionated and confident. Never break character. Keep it to 2-3 sentences for the body and 1-2 sentences for the analysis/take.`,
         messages: [
           {
@@ -541,7 +546,7 @@ async function generateBreakingCommentary(post, raw) {
     }
 
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? '';
+    const text = responseText(data);
 
     // Try to parse JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -754,8 +759,11 @@ async function scanLeague(league) {
 
   console.log(`  New transactions: ${newTxns.length}`);
   if (newTxns.length === 0) {
-    feed.lastScanTimestamp = now.toISOString();
-    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    // Nothing new: leave the feed byte-untouched. Bumping lastScanTimestamp
+    // alone committed the feed — and so redeployed production — on every
+    // quiet scan. The watermark is lastProcessedMflTimestamp, which a quiet
+    // scan never moves, so skipping this write changes no later scan.
+    // (lastScanTimestamp now reads "last scan that found a move".)
     // Still drain any big-drop pings held back by quiet hours / spacing.
     await flushPendingBigDrops(now);
     return 0;
@@ -798,6 +806,21 @@ async function scanLeague(league) {
       if (removed > 0) {
         console.log(`  [dedup] Removed ${removed} pending-trade rumor post(s) superseded by completed TRADE`);
       }
+    }
+
+    // Schefter's own write-up of the move — the Transactions page leads with
+    // it. Null on any failure, and the template post above stands.
+    if (MOVE_STORY_SUBTYPES.has(post.transactionSubType) && !DRY_RUN) {
+      const registry = registryLeague(league);
+      const facts = factsFromRawMove(txn, {
+        players,
+        parseRosterMove,
+        leagueName: registry?.name ?? league.slug,
+        hasSalaries: !!registry?.features?.salaryCap,
+        dropSalary: post.bigDrop ? formatSalary(post.bigDrop.salary) : null,
+      });
+      const story = await writeMoveStory({ facts, teams, apiKey: process.env.ANTHROPIC_API_KEY });
+      if (story) applyMoveStory(post, story, facts);
     }
 
     // Generate AI commentary for breaking-tier posts
@@ -1306,8 +1329,9 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams, {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 220,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 290,
         system,
         messages: [{ role: 'user', content: userContent }],
       }),
@@ -1317,7 +1341,7 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams, {
       return null;
     }
     const data = await res.json();
-    const text = (data.content?.[0]?.text ?? '').trim();
+    const text = responseText(data).trim();
     return text || null;
   } catch (err) {
     console.log(`  [rumor-mill AI] error: ${err.message} — using template`);
@@ -1713,6 +1737,19 @@ function buildTradeBaitTip({
   };
 }
 
+/**
+ * Store the trade-bait state, stamping `tradeBaitStateAt` only when its content
+ * changed. mergeFeed (scripts/lib/merge-schefter-feed.mjs) keeps whichever
+ * side's state carries the newer stamp, so an unchanged state must not move it:
+ * a stamp on every run would rewrite the feed on every quiet scan.
+ */
+function setTradeBaitState(feed, nextState) {
+  if (JSON.stringify(feed.tradeBaitState ?? null) !== JSON.stringify(nextState)) {
+    feed.tradeBaitStateAt = new Date().toISOString();
+  }
+  feed.tradeBaitState = nextState;
+}
+
 async function scanTradeBait(league) {
   if (!process.env.SCHEFTER_RUMOR_MILL_ENABLED ||
       process.env.SCHEFTER_RUMOR_MILL_ENABLED === '0' ||
@@ -1802,7 +1839,7 @@ async function scanTradeBait(league) {
     }
     // Always persist state even on no-op so seed + no-change advances
     // drop the drift timers and committed blocks stay current.
-    feed.tradeBaitState = nextState;
+    setTradeBaitState(feed, nextState);
     await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
     return 0;
   }
@@ -1864,7 +1901,7 @@ async function scanTradeBait(league) {
   // Only after the push succeeds do we advance committedBlock. If any part
   // of the push failed above, the early return kept committedBlock on the
   // prior value so the next cycle retries cleanly.
-  feed.tradeBaitState = nextState;
+  setTradeBaitState(feed, nextState);
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
 
   return tips.length;

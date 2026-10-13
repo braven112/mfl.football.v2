@@ -115,11 +115,9 @@ describe('article links — destinations are real pages', () => {
     expect(() => primaryLink('afl-fantasy', 'contracts')).toThrow(/has no "contracts" page/);
   });
 
-  it('uses the per-league label where the same path is a different page', () => {
-    // /activity is owner-visit tracking in TheLeague and the transaction log
-    // in the AFL. One label would promise the wrong page in one of them.
-    expect(articleLink('theleague', 'activity')!.label).toBe('the activity tracker');
-    expect(articleLink('afl-fantasy', 'activity')!.label).toBe('the transaction log');
+  it('never plugs Owner Activity, which owners cannot open', () => {
+    // Private to site admins in every league (owner-activity-access.ts).
+    expect(() => articleLink('theleague', 'activity' as never)).toThrow(/unknown destination/);
   });
 
   it('prefixes the league, and leaves an already-prefixed path alone', () => {

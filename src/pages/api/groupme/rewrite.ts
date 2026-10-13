@@ -13,6 +13,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { loadTeamConfig } from '../../../utils/groupme-storage';
+import { HAIKU_MODEL, HAIKU_THINKING } from '../../../utils/claude-models.mjs';
 
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW = 3600; // 1 hour
@@ -90,9 +91,9 @@ export const POST: APIRoute = async ({ request }) => {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      temperature: 0.9,
+      model: HAIKU_MODEL,
+      thinking: HAIKU_THINKING,
+      max_tokens: 400,
       system: SCHEFTER_SYSTEM,
       messages: [{ role: 'user', content: parts.join('\n\n') }],
     });

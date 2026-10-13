@@ -8,14 +8,16 @@
  * `0008`. The record behind the id is what the reader actually opened, so the
  * name comes from it: the article's headline, the franchise's current name.
  *
- * Server-only (the article lookup reads the feeds with fs). `site-analytics.ts`
- * stays free of I/O and takes this as its `titleFor` callback.
+ * Server-only (the article lookup reads the committed feed snapshot with fs,
+ * synchronously, so an article from today may only be named tomorrow).
+ * `site-analytics.ts` stays free of I/O and takes this as its `titleFor`
+ * callback.
  */
 
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import { getLeagueBySlug, stripLeaguePrefix } from '../config/leagues';
 import { getLeagueTeamConfig } from './league-team-brands';
-import { findSchefterPost } from './schefter-post-index';
+import { findSnapshotSchefterPost } from './schefter-post-index';
 import { isValidSchefterPostId } from './schefter-feed';
 
 /**
@@ -39,7 +41,7 @@ export function recordedPageTitle(path: string, league: CanonicalLeagueSlug): st
 		// The id is an allowlisted charset, so it needs no decoding — and a
 		// recorded path is caller-supplied, so anything else is not looked up.
 		if (!isValidSchefterPostId(id)) return 'Schefter article';
-		const headline = findSchefterPost(id, league)?.post.headline;
+		const headline = findSnapshotSchefterPost(id, league)?.post.headline;
 		return headline ? `Schefter: ${headline}` : 'Schefter article';
 	}
 

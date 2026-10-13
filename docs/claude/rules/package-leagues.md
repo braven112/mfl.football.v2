@@ -116,6 +116,19 @@ MFL holds for the league.
 - **Several games a week on one score** (Archie's plays two): the page shows
   points per week, not per game.
 
+## Owner Activity — every league, private by default
+
+Every league gets `/activity` (no feature box: `PACKAGE_ROUTES['activity.astro']`
+is `null`), and it is PRIVATE: the site's platform admins always see it, a
+league's commissioner only after an admin ticks "Let the commissioner see this
+report" on the page (a per-league Redis flag, off by default, read fail-closed),
+owners never. The gate is `resolveOwnerActivityAccess`
+(`src/utils/owner-activity-access.ts`) in each route; the page is
+`components/shared/OwnerActivityPage.astro`. Because owners cannot open it, it
+is not a Schefter article destination and its search entries are `admin`.
+`tests/owner-activity-access.test.ts` fails on a league without the route or a
+route that renders the report without the gate.
+
 ## Review every launch and features PR with `/launch-check`
 
 `node scripts/launch-check.mjs <slug>` loads each of the league's pages in

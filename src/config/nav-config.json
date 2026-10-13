@@ -281,6 +281,17 @@
           "external": false,
           "leagueOnly": "archies",
           "description": "Every team's name, colours and marks"
+        },
+        {
+          "id": "archies-owner-activity",
+          "label": "Owner Activity",
+          "icon": "activity",
+          "path": "/activity",
+          "external": false,
+          "leagueOnly": "archies",
+          "visibility": "admin",
+          "platformAdminOnly": true,
+          "description": "Private to site admins: who has been around, and what they read"
         }
       ]
     },
@@ -531,6 +542,8 @@
           "icon": "pulse",
           "path": "/activity",
           "external": false,
+          "visibility": "admin",
+          "platformAdminOnly": true,
           "description": "See when each franchise owner last visited the site"
         },
         {

@@ -12,6 +12,7 @@ import { closeSync, fstatSync, openSync, readFileSync, readdirSync } from 'node:
 import { join, dirname } from 'node:path';
 import type { SchefterFeed, SchefterPost } from '../types/schefter';
 import { ALL_LEAGUES, getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { getSchefterFeedIfAny } from './schefter-league-data';
 
 /** A league running the Schefter feed. */
 export type SchefterLeague = CanonicalLeagueSlug;
@@ -32,11 +33,27 @@ interface FeedCacheEntry {
   byId: Map<string, SchefterPost>;
 }
 
-// Feeds are rewritten by cron scans while the server runs — read with fs
+// getSchefterFeedIfAny memoizes the live read; the id index is rebuilt only
+// when it hands back a different feed object.
+const liveIndexCache = new WeakMap<SchefterFeed, Map<string, SchefterPost>>();
+
+async function getLiveFeedIndex(league: SchefterLeague): Promise<Map<string, SchefterPost>> {
+  const leagueDef = getLeagueBySlug(league);
+  const feed = leagueDef ? await getSchefterFeedIfAny(leagueDef) : null;
+  if (!feed) return new Map();
+  let byId = liveIndexCache.get(feed);
+  if (!byId) {
+    byId = new Map((feed.posts ?? []).map((post) => [post.id, post]));
+    liveIndexCache.set(feed, byId);
+  }
+  return byId;
+}
+
+// The committed snapshot is rewritten by sync commits while the server runs — read with fs
 // (never `import`) and re-parse only when the file mtime moves.
 const feedCache = new Map<SchefterLeague, FeedCacheEntry>();
 
-function getFeedIndex(league: SchefterLeague): Map<string, SchefterPost> {
+function getSnapshotIndex(league: SchefterLeague): Map<string, SchefterPost> {
   const filePath = join(process.cwd(), feedPathFor(league));
   const cached = feedCache.get(league);
   // One open handle for both the mtime check and the read, so the bytes parsed
@@ -108,15 +125,40 @@ function getArchiveIndex(league: SchefterLeague): Map<string, SchefterPost> {
  *  branding. Falls back to the season archives for posts older than the
  *  active window. Returns null for unknown ids so the endpoint can 404
  *  instead of rendering arbitrary requests. */
-export function findSchefterPost(
+export async function findSchefterPost(
+  postId: string,
+  preferredLeague: SchefterLeague = 'theleague'
+): Promise<{ post: SchefterPost; league: SchefterLeague } | null> {
+  const order = leagueOrder(preferredLeague);
+  for (const league of order) {
+    const post = (await getLiveFeedIndex(league)).get(postId);
+    if (post) return { post, league };
+  }
+  return findInArchives(postId, order);
+}
+
+/** `findSchefterPost` against the committed daily snapshot, synchronously.
+ *  A post newer than the last snapshot is null here. */
+export function findSnapshotSchefterPost(
   postId: string,
   preferredLeague: SchefterLeague = 'theleague'
 ): { post: SchefterPost; league: SchefterLeague } | null {
-  const order: SchefterLeague[] = [preferredLeague, ...SCHEFTER_LEAGUES.filter((l) => l !== preferredLeague)];
+  const order = leagueOrder(preferredLeague);
   for (const league of order) {
-    const post = getFeedIndex(league).get(postId);
+    const post = getSnapshotIndex(league).get(postId);
     if (post) return { post, league };
   }
+  return findInArchives(postId, order);
+}
+
+function leagueOrder(preferredLeague: SchefterLeague): SchefterLeague[] {
+  return [preferredLeague, ...SCHEFTER_LEAGUES.filter((l) => l !== preferredLeague)];
+}
+
+function findInArchives(
+  postId: string,
+  order: SchefterLeague[]
+): { post: SchefterPost; league: SchefterLeague } | null {
   for (const league of order) {
     const post = getArchiveIndex(league).get(postId);
     if (post) return { post, league };

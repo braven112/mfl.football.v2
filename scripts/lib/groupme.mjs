@@ -17,6 +17,7 @@
  */
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
+import { leagueForGroupMeBot, scrubChatText } from '../../src/utils/league-name-guard.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
@@ -67,6 +68,7 @@ export function buildMentionAttachment(mentions) {
  * @param {{
  *   botId: string | undefined,
  *   text: string,
+ *   league?: string,
  *   attachments?: Array<object> | null,
  *   dryRun?: boolean,
  *   checkStatus?: boolean,
@@ -81,6 +83,7 @@ export function buildMentionAttachment(mentions) {
 export async function postToGroupMe({
   botId,
   text,
+  league,
   attachments = null,
   dryRun = false,
   checkStatus = false,
@@ -94,7 +97,12 @@ export async function postToGroupMe({
   // can print the exact bytes a live run would send. Callers that log their
   // own captured text still show the unsanitized original — take the argument.
   text = stripLinkAdjacentPunctuation(text);
-  const sent = (attachments ?? []).filter(Boolean);
+  let sent = (attachments ?? []).filter(Boolean);
+  // Another league's name never reaches a chat (src/utils/league-name-guard.mjs).
+  // The bot id says which league's chat this is, so no caller has to; mention
+  // offsets are re-based so a tag still lands on its name.
+  const chatLeague = league ?? leagueForGroupMeBot(botId);
+  if (chatLeague) ({ text, attachments: sent } = scrubChatText(text, chatLeague, sent));
   if (dryRun) {
     onDryRun?.(text, sent);
     return { posted: false, reason: 'dry-run' };

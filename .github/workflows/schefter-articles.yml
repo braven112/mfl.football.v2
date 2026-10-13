@@ -85,6 +85,17 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
+      # The Schefter feeds live in Redis; git holds a daily snapshot. Start from
+      # the live copy so this job's scripts never write on top of a day-old
+      # feed (scripts/lib/schefter-feed-store.mjs).
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
@@ -250,6 +261,10 @@ jobs:
         # nothing waiting on the announce step below.
         if: steps.resolve.outputs.type != '' && steps.resolve.outputs.type != 'owners-poll-nag'
         env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
         run: |
           # schefter-feed.json is append-only and written by several workflows

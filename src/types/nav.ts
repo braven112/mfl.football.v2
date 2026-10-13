@@ -91,6 +91,13 @@ export interface NavLink {
   /** Visibility restriction */
   visibility?: NavLinkVisibility;
 
+  /**
+   * Shown to the site's platform admins only (src/utils/league-admin.ts),
+   * whatever `visibility` says. For pages private to them, such as Owner
+   * Activity, whose own gate a commissioner's role does not pass.
+   */
+  platformAdminOnly?: boolean;
+
   /** Restrict to specific league only */
   leagueOnly?: LeagueSlug;
 

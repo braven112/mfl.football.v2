@@ -8,8 +8,10 @@
  */
 import SchefterArticlePage from '../../../components/shared/SchefterArticlePage.astro';
 import config from '../../../../data/__LEAGUE_SLUG__/__LEAGUE_SLUG__.config.json';
-import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+import type { SchefterPost } from '../../../types/schefter';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
 
 export const prerender = false;
 
@@ -21,11 +23,8 @@ const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[
   { import: 'default' },
 );
 
-// Read through a glob, not a static import: the feed is cron-written, and a
-// checkout without it must serve the archives rather than fail the build.
-const feedData = Object.values(
-  import.meta.glob<SchefterFeed>('../../../../data/__LEAGUE_SLUG__/schefter-feed.json', { eager: true, import: 'default' }),
-)[0];
+// The live feed (Redis), then the archives. Null for a league with no feed yet.
+const feedData = await getSchefterFeedIfAny(getLeagueBySlug('__LEAGUE_SLUG__')!);
 
 const { id } = Astro.params;
 const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;

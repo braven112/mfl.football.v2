@@ -127,7 +127,7 @@ describe('AFL-family roster styles reach the page', () => {
 
   it('the AFL phone band is a full-width block', () => {
     // The row AND its cell: a block cell inside a table-row still shrink-wraps.
-    const row = ".roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-group-row";
+    const row = ".roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row";
     expect(css).toContain(`${row},\n  ${row} > .roster-group-row__cell {\n    display: block;`);
   });
 });

@@ -102,6 +102,13 @@ export const LEAGUES = {
     shareCard: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
+    /**
+     * MFL League Settings (options O=26), checked 2026-10-13: a player must be
+     * classified "IR" before being deactivated, and an IR violation blocks the
+     * lineup (constitution § Injured Reserve agrees). See
+     * irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['IR'],
     /** Repo-relative data directory written by the fetch pipelines */
     dataPath: 'data/theleague',
     /** Apex domains that serve this league (bare + www) */
@@ -350,6 +357,12 @@ export const LEAGUES = {
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
     shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
+    /**
+     * MFL League Settings (options O=26), checked 2026-10-13: "IR or out or
+     * doubtful", and an IR violation blocks the lineup (docs/claude/afl-rules.md
+     * § Injured Reserve agrees). See irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['Doubtful', 'Out', 'IR'],
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
     /** See TheLeague entry — canonical host for absolute URLs. */
@@ -658,6 +671,12 @@ export const LEAGUES = {
     adminFranchiseIds: [],
     name: "Archie's Fantasy Football League",
     mflHost: 'www48.myfantasyleague.com',
+    /**
+     * MFL League Settings (options O=26), checked 2026-10-13: a player must be
+     * classified "IR" before being deactivated, and an IR violation blocks the
+     * lineup. See irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['IR'],
     dataPath: 'data/archies',
     /** Path-only on the shared host (mfl.football/archies), like Best Ball #1. */
     domains: [],

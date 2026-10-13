@@ -29,6 +29,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../SchefterFeedCompact.astro';
 import LeagueHero from '../league-hero/LeagueHero.astro';
 import OwnersPollHomeCard from '../owners-poll/OwnersPollHomeCard.astro';
+import type { BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
 import LiveScoringTestDrive from '../LiveScoringTestDrive.astro';
 import QuickLinks, { type QuickLinkPage } from '../hp-sections/QuickLinks.astro';
 import WhatsNewRow from '../WhatsNewRow.astro';
@@ -63,7 +64,7 @@ interface Props {
     userFranchiseId?: string;
   };
   /** The Owners' Poll card, or null when the league shows none now. */
-  ownersPoll: { issue: any; ballotHref: string } | null;
+  ownersPoll: { issue: any; ballotHref: string; ballotStandings?: BallotStandingsRow[] } | null;
   /** Passed to QuickLinks; undefined leaves its default. */
   quickLinksAuthenticated?: boolean;
   /** QuickLinks' cards, for a league with no page-directory entries; omit to read the directory. */
@@ -126,6 +127,7 @@ const {
           teams={getLeagueTeamBrands(leagueSlug)}
           leagueSlug={leagueSlug}
           ballotHref={ownersPoll.ballotHref}
+          ballotStandings={ownersPoll.ballotStandings}
         />
       )}
 

@@ -36,6 +36,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { getRedis } from '../src/utils/redis-client';
+import { OPUS_MODEL } from '../src/utils/claude-models.mjs';
 import { LEAGUE_CONSTITUTION } from '../src/data/league-constitution';
 import { RULEBOOK_ANCHORS } from '../src/data/rules-qa-system-prompt';
 import type { RulesQA } from '../src/types/rules-qa';
@@ -73,7 +74,7 @@ const REPORT_PATH = join(DATA_DIR, 'latest-report.md');
 const FIXTURE_PATH = join(repoRoot, 'tests', 'fixtures', 'roger-eval-cases.json');
 
 const REDIS_KEY = 'rules-qa:all';
-const JUDGE_MODEL = 'claude-opus-5';
+const JUDGE_MODEL = OPUS_MODEL;
 const DEFAULT_LIMIT = 20;
 
 // ---------------------------------------------------------------------------
@@ -163,6 +164,8 @@ async function judgeQa(qa: RulesQA): Promise<JudgeFinding> {
   const response = await client.messages.create({
     model: JUDGE_MODEL,
     max_tokens: 4096,
+    // Opus 5.5 defaults to medium effort; the judge was tuned at Opus 5's high.
+    output_config: { effort: 'high' },
     system: [{ type: 'text', text: JUDGE_SYSTEM, cache_control: { type: 'ephemeral' } }],
     messages: [
       {

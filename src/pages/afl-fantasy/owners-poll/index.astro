@@ -11,9 +11,8 @@
  *  - the issue glob, because Vite requires a literal glob pattern — the
  *    tallied results are still written into the weekly issue files.
  */
-import OwnersPollBallotPage, {
-  type BallotStandingsRow,
-} from '../../../components/shared/owners-poll/OwnersPollBallotPage.astro';
+import OwnersPollBallotPage from '../../../components/shared/owners-poll/OwnersPollBallotPage.astro';
+import type { BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
 import { resolveOwnersPollAccess } from '../../../utils/owners-poll-access';
 import { latestPollResult, resolveResultsUnlocked } from '../../../utils/owners-poll-results';
 import { getLeagueTeamConfigs } from '../../../utils/league-team-brands';

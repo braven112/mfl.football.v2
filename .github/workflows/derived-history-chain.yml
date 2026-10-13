@@ -49,6 +49,17 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
+      # The Schefter feeds live in Redis; git holds a daily snapshot. Start from
+      # the live copy so this job's scripts never write on top of a day-old
+      # feed (scripts/lib/schefter-feed-store.mjs).
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
@@ -69,6 +80,10 @@ jobs:
       # Through env + quotes because a ref name is not shell-safe.
       - name: Commit and push the chain + milestone posts
         env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
           TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "Derived History Bot"

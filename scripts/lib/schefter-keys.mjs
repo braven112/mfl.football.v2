@@ -84,3 +84,12 @@ export function globalSchefterKey(ns, id = '') {
   if (!prefix) throw new Error(`globalSchefterKey: unknown namespace "${ns}"`);
   return `${prefix}${id}`;
 }
+
+/**
+ * A league's live Schefter feed (the whole feed object, one key per league).
+ * Written by scripts/lib/schefter-feed-store.mjs, read per request by
+ * src/utils/schefter-league-data.ts#getSchefterFeed.
+ */
+export function schefterFeedKey(league) {
+  return schefterKey(league, 'feed:live');
+}

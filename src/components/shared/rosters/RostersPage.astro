@@ -1966,7 +1966,7 @@ const pageConfig = {
   <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
 
   <script>
-    import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+    import { initPlayerModalTrigger, openPlayerFromQuery } from '../../../utils/player-modal-trigger';
     import { initDomRosterGroups } from '../../../utils/rosters/dom-roster-groups';
     import {
       buildAflSheetFields,
@@ -2199,6 +2199,8 @@ const pageConfig = {
         };
       },
     });
+    // `?player=<id>` (Set Lineup's problems sheet) opens that player's sheet.
+    openPlayerFromQuery(pageRoot);
 
     // Warm the watch list so the sheet's Watch option opens in the right
     // state; the store caches per league and no-ops on repeat.

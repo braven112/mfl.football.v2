@@ -43,6 +43,9 @@ describe('homepage hero profile for any registry league', () => {
     const view = p.defaultView(new Date('2026-10-04T18:00:00Z'));
     expect(view.pill).toBe('SMITH LEAGUE');
     expect(view.summary).toBe('One champion. Welcome to Smith League.');
+    // The accent word finishes the headline ("NINE DIVISIONS. ONE CHAMP."); a bare
+    // "ONE." read as an unfinished sentence.
+    expect(view.accentWord).toBe('ONE CHAMP.');
   });
 
   it('spells numbers the way the copy needs', () => {
@@ -51,5 +54,10 @@ describe('homepage hero profile for any registry league', () => {
     expect(numberWord(40)).toBe('forty');
     expect(numberWord(99)).toBe('ninety-nine');
     expect(numberWord(120)).toBe('120');
+  });
+
+  it('finishes the AFL headline the same way', () => {
+    const view = getLeagueHeroProfile('afl-fantasy').defaultView(new Date('2026-10-04T18:00:00Z'));
+    expect(`${view.headline} ${view.accentWord}`).toBe('TWO CONFERENCES. ONE CHAMP.');
   });
 });

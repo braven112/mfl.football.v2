@@ -491,13 +491,23 @@ export function getVisiblePinnedLinks(
 export function getVisibleSections(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league),
+  /**
+   * The viewer is a platform admin (league-admin.ts). `platformAdminOnly`
+   * links show to them alone, in every league — including one where they hold
+   * no franchise, so no admin-franchise list could have let them through.
+   */
+  platformAdmin = false,
 ): NavSection[] {
   return navConfig.sections
     .filter(section => isSectionVisible(section, league, franchiseId, adminFranchiseIds))
     .map(section => ({
       ...section,
-      links: getVisibleLinks(section, league, franchiseId, adminFranchiseIds),
+      links: section.links.filter(link => {
+        if (!linkMatchesLeague(link, league)) return false;
+        if (link.platformAdminOnly) return platformAdmin;
+        return isLinkVisible(link, franchiseId, adminFranchiseIds);
+      }),
     }));
 }
 

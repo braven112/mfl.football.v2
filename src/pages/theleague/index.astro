@@ -12,6 +12,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
 import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
+import { newestIssueStandings } from '../../utils/owners-poll-ballot-teams';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES SeasonDailyHero rather than stacking
 // above it. Both halves gate on the same showTestDriveHero() call so the page
@@ -75,7 +76,7 @@ import {
   type BuiltLiveScoringProps,
 } from '../../utils/live-scoring-hero-props';
 import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
-import feedData from '../../data/theleague/schefter-feed.json';
+import { getSchefterFeed } from '../../utils/schefter-league-data';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
@@ -112,7 +113,7 @@ const showInstallBanner =
 const viewerClock = await readViewerClock(Astro.cookies, authUser, THELEAGUE.slug);
 const viewerCountry = viewerClock.prefs.country;
 
-const feed = feedData as FeedType;
+const feed: FeedType = await getSchefterFeed(THELEAGUE);
 
 // Merge GroupMe messages into the sidebar feed (auth-gated). NOT sliced here —
 // resolveSchefterRail needs the whole list, because taking the newest 30 and
@@ -239,6 +240,17 @@ const ownersPollIssue = Object.entries(ownersPollIssues)
 // Gated on the SEASON WINDOW, never on "the archive has a file". The feeds of
 // a finished season are complete by definition, so a file-based check would
 // leave last season's ranking on the homepage all summer.
+// Stats for the pop-up's ballot cards: the newest issue of THIS season (last
+// season's standings would put a stale record on every card in Week 1).
+const ownersPollStandings = newestIssueStandings(
+  Object.entries(ownersPollIssues)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+      return m ? { ...data, year: Number(m[1]), week: Number(m[2]) } : null;
+    })
+    .filter((x): x is any => !!x && x.year === getCurrentSeasonYear(heroReferenceDate)),
+);
+
 const showOwnersPollCard =
   THELEAGUE.ownersPoll?.enabled &&
   isSeasonWindowOpen(getCurrentSeasonYear(heroReferenceDate), heroReferenceDate);
@@ -938,6 +950,7 @@ const labels = await getPersonaLabels('theleague');
           teams={getLeagueTeamBrands(THELEAGUE.slug)}
           leagueSlug={THELEAGUE.slug}
           ballotHref={r('/theleague/owners-poll')}
+          ballotStandings={ownersPollStandings}
         />
       )}
 

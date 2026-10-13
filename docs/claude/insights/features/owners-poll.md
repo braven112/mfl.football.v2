@@ -4,6 +4,27 @@ Weekly owner vote. Published inside The Pecking Order until 2026-10-02; now its
 own feature at `/<league>/owners-poll` (vote, then see the owners' rankings).
 Plan: `docs/plans/owners-poll.md`, "Its own page".
 
+## 2026-10-11 — The homepage pop-up asks only the owners the poll needs
+
+Brandon asked for a more natural turnout nudge. Under standing votes "go vote"
+is true for exactly two owners — no ballot on file, or a stale one — so the
+pop-up (`OwnersPollPopup`, mounted inside `OwnersPollHomeCard` so every
+homepage gets it) renders nothing for everyone else, and at most once a week
+per device per league (`popupReason`, `src/utils/owners-poll-popup.ts`). The
+seen-stamp is written on OPEN, like the Throwback modal, and lives in
+localStorage because it is a viewer convenience nothing else reads.
+
+The sheet IS the ballot — the same `BallotBuilder`, in a `compact` layout that
+shows only the next empty slot so the team list starts on the first phone
+screen. Ranked rows now carry record · points · all-play too
+(`TeamMeta`); without them an owner lost the numbers the moment a team left
+the pool. The team list is built once (`buildBallotTeams`) for the poll page
+and the pop-up so the two can never show different stats.
+
+A lineup-save prompt was the other option and was NOT built: the deleted
+lineup-page strip is the precedent for owners finding poll asks on that page
+intrusive. Revisit only if turnout stays low.
+
 ## 2026-10-02 — Split out of The Pecking Order
 
 Owners found the poll confusing because every surface said "Pecking Order":

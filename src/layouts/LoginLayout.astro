@@ -45,7 +45,6 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
-		<SpeedInsights />
 	</head>
 	<body>
 		<StagingBanner />
@@ -54,6 +53,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 			<slot />
 		</main>
 		<Footer />
+		{/* Body, never <head>: it renders a custom element, which ends <head> early and
+		    pushes every stylesheet into <body> (unstyled flash). tests/head-custom-element-guard.test.ts */}
+		<SpeedInsights />
 	</body>
 </html>
 

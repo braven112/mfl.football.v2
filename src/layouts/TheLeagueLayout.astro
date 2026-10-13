@@ -48,6 +48,7 @@ import RosterLoader from '../components/shared/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
+import { isPlatformAdmin } from '../utils/league-admin';
 import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
@@ -309,7 +310,7 @@ const navFranchiseId =
 	(layoutAuthUser?.leagueId === currentLeagueMflId
 		? layoutAuthUser?.franchiseId
 		: null) || myteam;
-const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
+const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds, isPlatformAdmin(layoutAuthUser));
 const pinnedNavLinks = getVisiblePinnedLinks(league, navFranchiseId, adminFranchiseIds);
 
 // A league's PWA manifest must never be served on ANOTHER league's apex.
@@ -468,7 +469,6 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		    the `defaultPrevented` it sets. */}
 		<TransitionNoiseGuard />
 		<ClientRouter />
-		<SpeedInsights />
 	</head>
 	<body>
 		<StagingBanner />
@@ -772,6 +772,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 				window.addEventListener('load', settleProgress);
 			})();
 		</script>
+		{/* Body, never <head>: it renders a custom element, which ends <head> early and
+		    pushes every stylesheet into <body> (unstyled flash). tests/head-custom-element-guard.test.ts */}
+		<SpeedInsights />
 	</body>
 </html>
 <style>

@@ -16,7 +16,7 @@ import type { HeroState } from '../../../types/hero-state';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import RecapHeroStub from '../hero-stubs/RecapHeroStub.astro';
-import feedData from '../../../data/theleague/schefter-feed.json';
+import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import { findWeeklyRecapPost } from '../../../utils/hero-recap-destination';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getWeekInTheBooks } from '../../../utils/offseason-hero-data';
@@ -26,7 +26,7 @@ export interface Props {
 }
 
 const { state } = Astro.props;
-const feed = feedData as SchefterFeed;
+const feed = await getSchefterFeedBySlug('theleague');
 
 // The recap for the week actually in the books, matched by id. No date window
 // is needed: the id names the week, so a stale post cannot pass for a fresh one.

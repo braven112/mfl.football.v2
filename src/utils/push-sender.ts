@@ -18,6 +18,7 @@ import { getSubscriptions, pruneSubscriptions } from './push-subscriptions';
 import { readPreferences } from './push-preferences';
 import { isCategoryEnabled } from '../config/notification-categories';
 import { getLeagueById } from '../config/leagues';
+import { scrubLeagueNames } from './league-name-guard.mjs';
 import { isAdminFranchise } from '../config/nav-config';
 import { outboundAllowed } from './deploy-environment';
 
@@ -125,7 +126,12 @@ export async function sendPushToFranchise(
     },
     TTL: 60 * 60 * 24, // give offline devices a day to pick it up
   };
-  const body = JSON.stringify(payload);
+  // Another league's name never reaches a lock screen (league-name-guard.mjs).
+  const body = JSON.stringify({
+    ...payload,
+    title: scrubLeagueNames(payload.title, league.slug),
+    body: scrubLeagueNames(payload.body, league.slug),
+  });
 
   const deadEndpoints: string[] = [];
   await Promise.all(

@@ -141,7 +141,7 @@ export function loginFallbackPath(league: LeagueDefinition): string {
 }
 
 /** Why a gate refused someone. Selects a fixed message on the 403 route. */
-export type ForbiddenReason = 'commissioner' | 'league';
+export type ForbiddenReason = 'commissioner' | 'league' | 'admin';
 
 /**
  * The 403 route for a league — "You didn't ask Roger first."
