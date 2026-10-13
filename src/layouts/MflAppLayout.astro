@@ -154,7 +154,6 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 		<TeamIconDarkStyles />
 		<ClientRouter />
 		<title>{title}</title>
-		<SpeedInsights />
 	</head>
 	<body>
 		<a class="mfl-skip" href="#mfl-main">Skip to content</a>
@@ -226,6 +225,9 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 		<main id="mfl-main" class="mfl-main">
 			<slot />
 		</main>
+		{/* Body, never <head>: it renders a custom element, which ends <head> early and
+		    pushes every stylesheet into <body> (unstyled flash). tests/head-custom-element-guard.test.ts */}
+		<SpeedInsights />
 	</body>
 </html>
 
