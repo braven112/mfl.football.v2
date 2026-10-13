@@ -140,6 +140,7 @@ page wears one mark wherever it is searched from:
 | Owner Activity | `activity` | `pulse` |
 | Tip Schefter (nav, search, TheLeague header) | `user-secret` / `news` | `schefter` — Claude Schefter himself [DECIDED] |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
+| Roster (AFL family: nav, header, search) | `roster` | `roster-16` — the same jersey numbered 16, the AFL's roster size [DECIDED] |
 
 `jersey-ir` — a jersey lettered **IR** — is drawn for injured-reserve
 surfaces (today the IR / injury actions in `AFLActionModal` and
