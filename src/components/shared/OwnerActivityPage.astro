@@ -1,0 +1,383 @@
+---
+/**
+ * Owner Activity — the whole page, for every league.
+ *
+ * One component behind every league's `/activity` route (TheLeague, the AFL,
+ * and every package league through templates/package-league). The route keeps
+ * the two things that cannot live here: the ACCESS GATE (Astro.redirect and
+ * Astro.rewrite only work from a page; the decision is
+ * src/utils/owner-activity-access.ts) and the data GLOBS (a static import
+ * specifier cannot be a runtime variable, and globbing every league here
+ * would put every league's feeds in one chunk).
+ *
+ * Private by default: only platform admins and, when an admin has switched it
+ * on, the league's commissioner ever reach this. A platform admin also gets
+ * the switch itself, at the top of the page.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import OwnerActivityReport from './OwnerActivityReport.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueTeamConfigs } from '../../utils/league-team-brands';
+import { chooseTeamName } from '../../utils/team-names';
+import {
+	getAllActivity,
+	getDailyPageViews,
+	getGlobalPagePopularity,
+	getAnonPagePopularity,
+	getAllOwnerPagePopularity,
+	buildOwnerActivityRow,
+	sortByLastSeen,
+	getSurfaceSection,
+	mockSurfaceSection,
+	type SurfaceSection,
+	type OwnerActivityRow,
+} from '../../utils/owner-activity';
+import {
+	ANON_PAGEVIEW_FIELD,
+	buildEngagementRows,
+	buildPageInsights,
+	sortEngagement,
+	summarizeTraffic,
+} from '../../utils/site-analytics';
+import { getAdoptionSection, mockAdoptionSection, type AdoptionSection } from '../../utils/site-adoption';
+import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
+import { teamAccentVar } from '../../utils/team-accent-css';
+import { seasonOf, unwrapFeedModule, type LazyFeedGlob } from '../../utils/mfl-feed-glob';
+import { getCommissionerAccess } from '../../utils/owner-activity-access';
+
+interface Props {
+	leagueSlug: string;
+	/** Lazy glob over this league's per-season transactions feeds. */
+	transactionFeeds: LazyFeedGlob;
+	/** Lazy glob over this league's `owner-last-visit.json` (may match nothing). */
+	lastVisitFiles: LazyFeedGlob;
+	/** A platform admin: render the commissioner-access switch. */
+	canManage: boolean;
+}
+
+const { leagueSlug, transactionFeeds, lastVisitFiles, canManage } = Astro.props;
+const leagueDef = getLeagueBySlug(leagueSlug);
+if (!leagueDef) throw new Error(`OwnerActivityPage: unknown league ${leagueSlug}`);
+const leagueId = leagueDef.id;
+const leagueHref = resolveLeaguePath(`/${leagueDef.slug}`, Astro.locals.hideLeaguePrefix ?? false);
+const commissionerAccess = canManage ? await getCommissionerAccess(leagueDef.slug) : false;
+
+// The shape notification-categories.ts gates on: which alerts this league can
+// even offer. Registry-derived, never a second copy of the flags.
+const notificationLeague = { features: leagueDef.features, ownersPoll: leagueDef.ownersPoll };
+
+const teamConfigs: any[] = getLeagueTeamConfigs(leagueDef.slug);
+const franchiseIds: string[] = teamConfigs.map((t) => t.franchiseId);
+const teamName = (team: any, size?: 'short') =>
+	chooseTeamName(
+		{ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev },
+		size,
+	);
+
+let activityMap: Record<string, number> = {};
+let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };
+let globalPages: { page: string; count: number }[] = [];
+let anonPages: { page: string; count: number }[] = [];
+let ownerPages: Record<string, { page: string; count: number }[]> = {};
+// Undefined until read; the report drops each section when there is nothing.
+let surfaceSection: SurfaceSection | undefined;
+let adoption: AdoptionSection | undefined;
+let mflMoveMap: Record<string, MflMove> = {};
+let mflVisitMap: Record<string, number> = {};
+
+// ?mock fills every section with deterministic fixture data, for local work.
+const useMock = Astro.url.searchParams.has('mock');
+
+if (useMock) {
+	surfaceSection = mockSurfaceSection(franchiseIds);
+	adoption = mockAdoptionSection(franchiseIds, notificationLeague);
+	const seed = (s: number) => () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+
+	// A spread of active / idle / dormant / never-seen owners, sized to the league.
+	const profiles: Record<string, { baseViews: number; lastSeenHoursAgo: number }> = {};
+	franchiseIds.forEach((fid, idx) => {
+		const rng = seed(parseInt(fid, 10) * 2917 + 13);
+		const roll = rng();
+		if (idx % 11 === 0) profiles[fid] = { baseViews: 0, lastSeenHoursAgo: -1 };
+		else if (roll < 0.2) profiles[fid] = { baseViews: 2, lastSeenHoursAgo: 168 + Math.round(rng() * 200) };
+		else if (roll < 0.5) profiles[fid] = { baseViews: 5, lastSeenHoursAgo: 36 + Math.round(rng() * 60) };
+		else profiles[fid] = { baseViews: 8 + Math.round(rng() * 10), lastSeenHoursAgo: Math.round(rng() * 12) };
+	});
+	for (const [fid, p] of Object.entries(profiles)) {
+		if (p.lastSeenHoursAgo >= 0) activityMap[fid] = Date.now() - p.lastSeenHoursAgo * 3_600_000;
+	}
+
+	const dates: string[] = [];
+	for (let i = 29; i >= 0; i--) {
+		const d = new Date();
+		d.setDate(d.getDate() - i);
+		dates.push(d.toISOString().slice(0, 10));
+	}
+	const pvData: Record<string, Record<string, number>> = {};
+	for (const date of dates) {
+		pvData[date] = {};
+		for (const [fid, p] of Object.entries(profiles)) {
+			if (p.baseViews === 0) continue;
+			const rng = seed(parseInt(fid, 10) * 1000 + parseInt(date.replace(/-/g, ''), 10));
+			const day = new Date(date).getDay();
+			const recency = 1 + (dates.indexOf(date) / dates.length) * 0.5;
+			const weekend = day === 0 || day === 6 ? 1.4 : 1;
+			const views = Math.max(0, Math.round(p.baseViews * recency * weekend * (0.3 + rng() * 1.4)));
+			if (views > 0) pvData[date][fid] = views;
+		}
+		// Signed-out traffic rides in the same daily hash under a reserved field.
+		const anonRng = seed(parseInt(date.replace(/-/g, ''), 10));
+		const signedIn = Object.values(pvData[date]).reduce((sum, n) => sum + n, 0);
+		pvData[date][ANON_PAGEVIEW_FIELD] = Math.round(signedIn * (0.3 + anonRng() * 0.4));
+	}
+	pageViewData = { dates, data: pvData };
+
+	const pageWeights = [
+		{ page: '/rosters', weight: 280 },
+		{ page: '/standings', weight: 190 },
+		{ page: '/lineup', weight: 132 },
+		{ page: '/free-agents', weight: 110 },
+		{ page: '/transactions', weight: 84 },
+		{ page: '/playoffs', weight: 61 },
+		{ page: '/calendar', weight: 43 },
+		{ page: '/whats-new', weight: 27 },
+		{ page: '/rules', weight: 14 },
+	];
+	globalPages = pageWeights.map(({ page, weight }) => ({ page, count: weight }));
+	anonPages = [
+		{ page: '/standings', count: 88 },
+		{ page: '/', count: 65 },
+		{ page: '/playoffs', count: 37 },
+		{ page: '/rules', count: 21 },
+	];
+	for (const fid of franchiseIds) {
+		const p = profiles[fid];
+		if (!p || p.baseViews === 0) { ownerPages[fid] = []; continue; }
+		const rng = seed(parseInt(fid, 10) * 7919);
+		ownerPages[fid] = pageWeights
+			.slice(0, 5 + Math.floor(rng() * 4))
+			.map(({ page, weight }) => ({ page, count: Math.max(1, Math.round(weight * (p.baseViews / 10) * (0.5 + rng()))) }))
+			.sort((a, b) => b.count - a.count);
+	}
+
+	// MFL signals, deliberately NOT derived from the site profile: the rows
+	// worth seeing are the ones where the two disagree.
+	const MOCK_MOVE_TYPES = ['TRADE', 'FREE_AGENT', 'WAIVER', 'IR'];
+	for (const fid of franchiseIds) {
+		const n = parseInt(fid, 10);
+		const moves = (n % 4) + (n % 6) + (n % 5);
+		if (moves > 0) {
+			mflMoveMap[fid] = {
+				at: Date.now() - Math.max(0.25, 30 / (moves + 1)) * 86_400_000,
+				type: MOCK_MOVE_TYPES[n % MOCK_MOVE_TYPES.length],
+			};
+		}
+	}
+	// Every third franchise has no MFL login, so the move fallback shows too.
+	mflVisitMap = Object.fromEntries(
+		franchiseIds
+			.filter((_fid, i) => i % 3 !== 0)
+			.map((fid, i) => [fid, Date.now() - ((i * 7) % 60) * 3_600_000]),
+	);
+} else {
+	try {
+		[activityMap, pageViewData, globalPages, anonPages, ownerPages, surfaceSection, adoption] = await Promise.all([
+			getAllActivity(leagueId),
+			getDailyPageViews(leagueId, 30),
+			getGlobalPagePopularity(leagueId),
+			getAnonPagePopularity(leagueId),
+			getAllOwnerPagePopularity(leagueId, franchiseIds),
+			getSurfaceSection(leagueId, franchiseIds),
+			getAdoptionSection(leagueId, franchiseIds, notificationLeague),
+		]);
+	} catch {
+		/* Redis unavailable: the report renders its empty states. */
+	}
+
+	// ── MFL move recency ── the FALLBACK MFL signal for Last Seen. Newest season
+	// that actually has moves: early in a new league year the freshest feed can
+	// exist but be near-empty, which would leave every owner with no move.
+	const seasons = Object.keys(transactionFeeds)
+		.map((key) => ({ key, year: seasonOf(key) }))
+		.filter((s): s is { key: string; year: number } => s.year !== null)
+		.sort((a, b) => b.year - a.year);
+	for (const { key } of seasons) {
+		let data: any = null;
+		try {
+			data = unwrapFeedModule(await transactionFeeds[key]());
+		} catch {
+			continue;
+		}
+		const tx = data?.transactions?.transaction;
+		const rawTx: any[] = tx ? (Array.isArray(tx) ? tx : [tx]) : [];
+		if (rawTx.length > 0) {
+			mflMoveMap = lastMflMoveByFranchise(rawTx);
+			break;
+		}
+	}
+
+	// MFL's own `lastVisit`: the real last-login per franchise, synced by
+	// .github/workflows/sync-owner-last-visit.yml. Stored as epoch SECONDS.
+	const lastVisitKey = Object.keys(lastVisitFiles)[0];
+	if (lastVisitKey) {
+		try {
+			const data: any = unwrapFeedModule(await lastVisitFiles[lastVisitKey]());
+			const raw = data?.lastVisit;
+			if (raw && typeof raw === 'object') {
+				for (const [franchiseId, seconds] of Object.entries(raw)) {
+					const n = Number(seconds);
+					if (Number.isFinite(n) && n > 0) mflVisitMap[franchiseId] = n * 1000;
+				}
+			}
+		} catch {
+			/* No file yet: fall back to move recency. */
+		}
+	}
+}
+
+const teams: OwnerActivityRow[] = sortByLastSeen(
+	teamConfigs.map((team) =>
+		buildOwnerActivityRow({
+			franchiseId: team.franchiseId,
+			name: teamName(team),
+			icon: team.icon,
+			siteVisit: activityMap[team.franchiseId] ?? null,
+			mflVisit: mflVisitMap[team.franchiseId] ?? null,
+			move: mflMoveMap[team.franchiseId] ?? null,
+		}),
+	),
+);
+
+// A league whose franchises carry no accent color still needs distinct lines,
+// so the accent token falls back to a fixed palette by franchise number.
+const CHART_PALETTE = [
+	'#cc2936', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b',
+	'#e377c2', '#17becf', '#bcbd22', '#d62728', '#0d6efd', '#198754',
+	'#fd7e14', '#6f42c1', '#20c997', '#dc3545', '#0dcaf0', '#6610f2',
+	'#d63384', '#ffc107', '#495057', '#0a8754', '#b5179e', '#3a0ca3',
+];
+function paletteColor(franchiseId: string, index: number): string {
+	const n = parseInt(franchiseId, 10);
+	const i = Number.isFinite(n) ? n - 1 : index;
+	return CHART_PALETTE[((i % CHART_PALETTE.length) + CHART_PALETTE.length) % CHART_PALETTE.length];
+}
+
+const chartTeams = teamConfigs.map((team, idx) => ({
+	id: team.franchiseId,
+	name: teamName(team, 'short'),
+	color: teamAccentVar(team.franchiseId, paletteColor(team.franchiseId, idx)),
+	icon: team.icon,
+	values: pageViewData.dates.map((d) => pageViewData.data[d]?.[team.franchiseId] ?? 0),
+}));
+
+const traffic = summarizeTraffic(pageViewData);
+const engagement = sortEngagement(
+	buildEngagementRows(
+		teamConfigs.map((team) => ({ franchiseId: team.franchiseId, name: teamName(team), icon: team.icon })),
+		pageViewData,
+	),
+);
+const pageInsights = buildPageInsights({ league: leagueDef.slug, globalPages, anonPages, ownerPages });
+---
+
+<TheLeagueLayout title="Owner Activity">
+	<OwnerActivityReport
+		leagueName={leagueDef.shortName ?? leagueDef.name}
+		leagueHref={leagueHref}
+		teams={teams}
+		pages={pageInsights}
+		traffic={traffic}
+		engagement={engagement}
+		chartTeams={chartTeams}
+		chartDates={pageViewData.dates}
+		surfaces={surfaceSection?.surfaces}
+		ownerSurfaces={surfaceSection?.ownerSurfaces}
+		lastSurfaces={surfaceSection?.lastSurfaces}
+		adoption={adoption}
+	>
+		<div slot="access" class="oa-access" data-oa-access data-league={leagueDef.slug}>
+			{canManage ? (
+				<label class="oa-access__switch">
+					<input type="checkbox" data-oa-access-toggle checked={commissionerAccess} />
+					<span>Let the commissioner see this report</span>
+				</label>
+				<p class="oa-access__note" data-oa-access-status aria-live="polite">
+					Private to site admins{commissionerAccess ? ' and the commissioner' : ''}. Owners never see it.
+				</p>
+			) : (
+				<p class="oa-access__note">Private to site admins and the commissioner. Owners never see it.</p>
+			)}
+		</div>
+	</OwnerActivityReport>
+</TheLeagueLayout>
+
+<script>
+	// Lifecycle (ClientRouter): bind on every page load to the node the swap
+	// replaced, never a document-level listener, so nothing stacks or outlives
+	// the page. The league comes from that node, never from module scope.
+	function bindAccessToggle() {
+		const root = document.querySelector<HTMLElement>('[data-oa-access][data-league]');
+		const toggle = root?.querySelector<HTMLInputElement>('[data-oa-access-toggle]');
+		const status = root?.querySelector<HTMLElement>('[data-oa-access-status]');
+		if (!root || !toggle || !status || toggle.dataset.bound) return;
+		toggle.dataset.bound = '1';
+		const league = root.dataset.league ?? '';
+
+		toggle.addEventListener('change', async () => {
+			const wanted = toggle.checked;
+			toggle.disabled = true;
+			status.textContent = 'Saving…';
+			try {
+				const res = await fetch(`/api/admin/owner-activity-access?league=${encodeURIComponent(league)}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ commissionerAccess: wanted }),
+				});
+				const body = await res.json().catch(() => null);
+				if (!res.ok || !body?.ok) throw new Error(body?.error || 'Could not save.');
+				status.textContent = wanted
+					? 'Saved. The commissioner can now see this report. Owners never see it.'
+					: 'Saved. Private to site admins. Owners never see it.';
+			} catch (err) {
+				toggle.checked = !wanted;
+				status.textContent = err instanceof Error ? err.message : 'Could not save — try again.';
+			} finally {
+				toggle.disabled = false;
+			}
+		});
+	}
+	document.addEventListener('astro:page-load', bindAccessToggle);
+</script>
+
+<style>
+	.oa-access {
+		margin-top: 0.75rem;
+		padding: 0.625rem 0.75rem;
+		border: 1px solid var(--content-border, var(--color-gray-200));
+		border-radius: var(--radius-md, 8px);
+		background: var(--card-bg, transparent);
+	}
+	.oa-access__switch {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--font-size-sm, 0.875rem);
+		font-weight: 600;
+		color: var(--page-text);
+		cursor: pointer;
+	}
+	.oa-access__switch input {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-primary);
+	}
+	.oa-access__note {
+		margin: 0.25rem 0 0;
+		font-size: var(--font-size-xs, 0.75rem);
+		color: var(--color-gray-600);
+	}
+	.oa-access__switch + .oa-access__note {
+		margin-top: 0.375rem;
+	}
+</style>

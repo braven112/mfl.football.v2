@@ -1833,7 +1833,7 @@
       "quiet pages",
       "daily traffic"
     ],
-    "visibility": "all",
+    "visibility": "admin",
     "popularity": 35
   },
   {
@@ -4211,7 +4211,7 @@
       "quiet pages",
       "daily traffic"
     ],
-    "visibility": "all",
+    "visibility": "admin",
     "popularity": 30
   },
   {
@@ -6057,5 +6057,33 @@
     ],
     "visibility": "all",
     "popularity": 60
+  },
+  {
+    "id": "archies-owner-activity",
+    "title": "Owner Activity (Archie's)",
+    "description": "Private to site admins: when each Archie's owner was last on the site or MFL, daily page views, the most-visited pages and the app-vs-browser split",
+    "path": "/archies/activity",
+    "icon": "activity",
+    "category": "reports",
+    "tags": [
+      "activity",
+      "owner activity",
+      "owners",
+      "last seen",
+      "last visit",
+      "last login",
+      "inactive",
+      "dormant",
+      "engagement",
+      "page views",
+      "analytics",
+      "site analytics",
+      "traffic",
+      "admin",
+      "archies",
+      "Archie's"
+    ],
+    "visibility": "admin",
+    "popularity": 8
   }
 ]
