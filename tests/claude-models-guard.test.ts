@@ -55,9 +55,14 @@ describe('Claude model registry', () => {
       if (!/model: (HAIKU_MODEL|MOVE_STORY_MODEL|MODEL|modelName|model)\b/.test(src)) continue;
       if (!/\b(HAIKU|SONNET|OPUS)_MODEL\b/.test(src)) continue;
       if (/^\s*(temperature|top_p|top_k):/m.test(src)) problems.push(`${f}: sampling parameter`);
-      // A request body (model then max_tokens) must carry the thinking setting.
-      for (const m of src.matchAll(/model: HAIKU_MODEL,([\s\S]{0,160}?)max_tokens/g)) {
-        if (!m[1].includes('HAIKU_THINKING')) problems.push(`${f}: request without HAIKU_THINKING`);
+      // A Haiku request body (model then max_tokens) must carry the thinking
+      // setting, including the call sites that alias the model to a local name.
+      if (src.includes('HAIKU_MODEL')) {
+        const request =
+          /\bmodel(?:: (?:HAIKU_MODEL|MOVE_STORY_MODEL|MODEL|modelName|model))?,([\s\S]{0,160}?)max_tokens/g;
+        for (const m of src.matchAll(request)) {
+          if (!m[1].includes('HAIKU_THINKING')) problems.push(`${f}: request without HAIKU_THINKING`);
+        }
       }
       if (/\.content\??\.?\[0\]/.test(src)) problems.push(`${f}: reads content[0]`);
     }

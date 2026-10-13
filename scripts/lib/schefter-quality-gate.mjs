@@ -92,7 +92,8 @@ export async function scoreSchefterPost(
     },
     body: JSON.stringify({
       model,
-      thinking: HAIKU_THINKING,
+      // Only Haiku can turn thinking off; Sonnet and Opus answer that with a 400.
+      ...(model === HAIKU_MODEL ? { thinking: HAIKU_THINKING } : {}),
       max_tokens: 200,
       system: SCORING_PROMPT,
       messages: [{
