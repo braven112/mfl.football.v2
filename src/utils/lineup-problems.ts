@@ -62,9 +62,12 @@ export function findLineupProblems(input: FindLineupProblemsInput): LineupProble
 
   for (const v of input.irViolations ?? []) {
     const listed = v.injuryStatus ? `listed ${v.injuryStatus}` : 'not on the injury report';
-    const rule = input.irEligibleStatuses?.length
-      ? `IR is only for players listed ${joinOr(input.irEligibleStatuses)}`
-      : 'he no longer qualifies for IR';
+    const eligible = input.irEligibleStatuses ?? [];
+    const rule = eligible.length === 1 && eligible[0] === 'IR'
+      ? 'only players on the NFL’s IR list can stay on IR'
+      : eligible.length
+        ? `IR is only for players listed ${joinOr(eligible)}`
+        : 'he no longer qualifies for IR';
     out.push({
       kind: 'ir-violation',
       severity: 'blocking',

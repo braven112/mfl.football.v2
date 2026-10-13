@@ -38,6 +38,18 @@ describe('findLineupProblems', () => {
     expect(hasBlockingProblem(problems)).toBe(true);
   });
 
+  it('words an IR-only league plainly', () => {
+    const [p] = findLineupProblems({
+      slots: [],
+      players: players(),
+      week: 6,
+      irViolations: [{ id: '9', name: 'X', injuryStatus: 'Out' }],
+      irEligibleStatuses: ['IR'],
+    });
+    expect(p.detail).toContain('listed Out');
+    expect(p.detail).toContain('only players on the NFL’s IR list');
+  });
+
   it('stays league-neutral when the league declares no IR rule', () => {
     const [p] = findLineupProblems({
       slots: [],

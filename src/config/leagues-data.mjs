@@ -95,6 +95,12 @@ export const LEAGUES = {
     shareCard: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
+    /**
+     * MFL's IR eligibility for this league is "IR only" (owner, 2026-10-13;
+     * src/data/league-constitution.ts § Injured Reserve: only players on the
+     * official IR list). See irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['IR'],
     /** Repo-relative data directory written by the fetch pipelines */
     dataPath: 'data/theleague',
     /** Apex domains that serve this league (bare + www) */

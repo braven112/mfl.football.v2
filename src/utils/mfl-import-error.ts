@@ -68,9 +68,11 @@ function joinOr(items: readonly string[]): string {
 }
 
 export function irViolationMessage(eligible?: readonly string[]): string {
-  const why = eligible?.length
-    ? `a player on your IR is no longer listed ${joinOr(eligible)}`
-    : 'a player on your IR is no longer eligible for it';
+  const why = eligible?.length === 1 && eligible[0] === 'IR'
+    ? 'a player on your IR is no longer on the NFL’s IR list'
+    : eligible?.length
+      ? `a player on your IR is no longer listed ${joinOr(eligible)}`
+      : 'a player on your IR is no longer eligible for it';
   return `MFL won’t accept a lineup while your team has an IR violation: ${why}. `
     + 'Move him off IR (or release him), then submit again.';
 }
