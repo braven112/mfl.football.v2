@@ -1108,7 +1108,9 @@
         "src/components/shared/NetworkBadge.astro",
         "src/components/shared/NflGamesStrip.tsx",
         "src/components/shared/states/**",
-        "src/utils/state-html.ts"
+        "src/utils/state-html.ts",
+        "public/assets/icons/sprite.svg",
+        "public/assets/icons/sets/**"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
@@ -1133,7 +1135,8 @@
         "tests/league-palette-tokens.test.ts",
         "tests/cta-pattern.test.ts",
         "tests/player-modal-season-results-contrast.test.ts",
-        "tests/draft-timer-banner-contrast.test.ts"
+        "tests/draft-timer-banner-contrast.test.ts",
+        "tests/icon-set-parity.test.ts"
       ]
     },
     {
