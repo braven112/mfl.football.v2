@@ -74,7 +74,7 @@ cut reads as a photo negative. Swap on `html.dark` the way the logo cuts do.
 `schefter` (Tip Schefter's mark, Oct 2026) and `schefter-mono` are Claude
 Schefter in a suit: hand-inked over a reference portrait, not traced, with
 stubble. `schefter` has an orange-and-white striped tie in a fixed
-`#B5531F`, and a face that is always white (`#fff`, Brandon's call, Oct 2026: the face never takes the league colour, the suit and shirt do) — the only fixed colours in the drawing; `schefter-mono` is all
+`#B5531F`, and a face and neck that are always white (`#fff`, Brandon's call, Oct 2026: skin never takes the league colour, the suit and shirt do) — the only fixed colours in the drawing; `schefter-mono` is all
 `currentColor`, with a dark striped tie, and is the drop-in if a league wants
 the mark one-colour. Each SYMBOL carries both cuts and **swaps itself**:
 `<g style="display:var(--icon-cut-light, inline)">` and
