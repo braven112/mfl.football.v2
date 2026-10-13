@@ -11,7 +11,8 @@
  */
 import { resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { pathBelongsToLeague } from '../../config/footer-config';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import pageDirectory from '../../data/page-directory.json';
 
 interface Props {

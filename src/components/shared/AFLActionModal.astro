@@ -38,6 +38,8 @@ interface Props {
 
 const { leagueSlug = 'afl-fantasy', tradeBuilder = true } = Astro.props;
 const labels = await getPersonaLabels(leagueSlug);
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <div
@@ -100,7 +102,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action" data-aam-action="watch" type="button">
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use id="aam-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
+                  <svg aria-hidden="true"><use id="aam-watch-icon" href={`${spriteUrl}#icon-eye`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label" id="aam-watch-label">Watch player</span>
@@ -111,7 +113,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action" data-aam-action="ir-to" type="button" hidden>
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-ambulance" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-ambulance`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Move to IR</span>
@@ -122,7 +124,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action" data-aam-action="ir-from" type="button" hidden>
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-ambulance" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-ambulance`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Activate from IR</span>
@@ -133,7 +135,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action" data-aam-action="trade-bait-add" type="button" hidden>
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-bookmark" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-bookmark`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Add to Trade Block</span>
@@ -144,7 +146,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action" data-aam-action="trade-bait-remove" type="button" hidden>
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-bookmark" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-bookmark`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Remove from Trade Block</span>
@@ -157,7 +159,7 @@ const labels = await getPersonaLabels(leagueSlug);
                 <span class="aam-action__icon" aria-hidden="true">
                   {/* Handshake, not the swap arrows: this opens the Trade
                       Builder, so it wears the same mark the tool does. */}
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-transactions-2" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-transactions-2`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Trade Player</span>
@@ -168,7 +170,7 @@ const labels = await getPersonaLabels(leagueSlug);
             <li>
               <button class="aam-action aam-action--destructive" data-aam-action="cut" type="button">
                 <span class="aam-action__icon" aria-hidden="true">
-                  <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-user-times" /></svg>
+                  <svg aria-hidden="true"><use href={`${spriteUrl}#icon-user-times`} /></svg>
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label">Cut Player</span>
@@ -196,6 +198,7 @@ const labels = await getPersonaLabels(leagueSlug);
 </div>
 
 <script>
+  import { clientSpriteUrl } from '../../utils/sprite-url-client';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
   import { isWatched, toggleWatch, getWatchListAuth } from '../../utils/watch-list-client';
@@ -452,7 +455,7 @@ const labels = await getPersonaLabels(leagueSlug);
       btn.hidden = false;
       btn.disabled = false;
       btn.classList.toggle('aam-action--active', watched);
-      if (icon) icon.setAttribute('href', `/assets/icons/sprite.svg#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
+      if (icon) icon.setAttribute('href', `${clientSpriteUrl()}#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
       if (label) label.textContent = watched ? 'Stop watching' : 'Watch player';
       if (desc) {
         desc.textContent = signedOut

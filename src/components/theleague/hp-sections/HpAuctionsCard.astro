@@ -9,7 +9,8 @@
  * `/api/live-auction` every 60s and re-ticks the time-left cells in place.
  */
 import PlayerCell from '../../shared/PlayerCell.astro';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { formatCompactNumber } from '../../../utils/formatters';
 import type { HomepageAuctionRow } from '../../../utils/homepage-auctions';
 

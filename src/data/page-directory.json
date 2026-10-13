@@ -4,7 +4,7 @@
     "title": "Throwback Week Settings",
     "description": "Pick which legacy era your team throws back to during a designated Throwback Week — legacy icon, banner, and name shown on live scoring, matchups, and your lineup",
     "path": "/theleague/throwback-settings",
-    "icon": "history",
+    "icon": "throwback",
     "category": "my-team",
     "tags": [
       "throwback",
@@ -36,7 +36,7 @@
     "title": "AFL Throwback Week Settings",
     "description": "Pick which of your AFL franchise’s legacy eras it wears in Week 8 — the old name, crest, banner and colors, shown on live scoring, matchups and your lineup",
     "path": "/afl-fantasy/throwback-settings",
-    "icon": "history",
+    "icon": "throwback",
     "category": "my-team",
     "tags": [
       "throwback",
@@ -129,7 +129,7 @@
     "title": "Live Scoring",
     "description": "Real-time fantasy scoreboard — every matchup this week with live points, projected finals, win probability, and starter-by-starter breakdowns updated on Thursday, Sunday, and Monday game days",
     "path": "/theleague/live-scoring",
-    "icon": "goals",
+    "icon": "live-score",
     "category": "popular",
     "tags": [
       "live scoring",
@@ -328,7 +328,7 @@
     "title": "AFL Live Scoring",
     "description": "Real-time AFL scoreboard — all 24 franchises' doubleheader matchups with live points, projected finals, win probability, real NFL game clocks, red-zone alerts, per-player box scores and a scoring-play ticker",
     "path": "/afl-fantasy/live-scoring",
-    "icon": "goals",
+    "icon": "live-score",
     "category": "popular",
     "tags": [
       "live scoring",
@@ -486,7 +486,7 @@
     "title": "Roster",
     "description": "View all team rosters, salary cap details, contract years, and manage IR moves",
     "path": "/rosters",
-    "icon": "banknote",
+    "icon": "roster",
     "category": "popular",
     "tags": [
       "roster",
@@ -725,7 +725,7 @@
     "title": "Draft Order",
     "description": "Rookie draft order — projected from standings in-season, official once the playoffs wrap, final as drafted",
     "path": "/draft/order",
-    "icon": "draft-podium",
+    "icon": "draft-order",
     "category": "popular",
     "tags": [
       "draft",
@@ -762,7 +762,7 @@
     "title": "Standings",
     "description": "Current league standings with records, points, divisions, and playoff seeding",
     "path": "/standings",
-    "icon": "shield",
+    "icon": "standings",
     "category": "popular",
     "tags": [
       "standings",
@@ -814,7 +814,7 @@
     "title": "Playoffs",
     "description": "Playoff bracket, matchup results, championship game, and toilet bowl",
     "path": "/playoffs",
-    "icon": "champ",
+    "icon": "playoff",
     "category": "popular",
     "tags": [
       "playoffs",
@@ -899,7 +899,7 @@
     "title": "What's New",
     "description": "Latest features, enhancements, and bug fixes added to the site",
     "path": "/whats-new",
-    "icon": "star",
+    "icon": "sparkle",
     "category": "popular",
     "tags": [
       "whats new",
@@ -967,7 +967,7 @@
     "title": "Rules",
     "description": "League bylaws, scoring rules, roster limits, salary cap, and constitutional framework",
     "path": "/rules",
-    "icon": "gavel",
+    "icon": "scroll",
     "category": "info",
     "tags": [
       "rules",
@@ -1325,7 +1325,7 @@
     "title": "My Draft List",
     "description": "Build your draft board, then pull it from or push it to your MFL My Draft List",
     "path": "/cr",
-    "icon": "standings",
+    "icon": "rank-reorder",
     "category": "my-team",
     "tags": [
       "my draft list",
@@ -1783,7 +1783,7 @@
     "title": "Owner Activity",
     "description": "Site analytics for the league: daily page views per owner, the most-visited pages, the app-vs-browser split, and when each owner was last around",
     "path": "/activity",
-    "icon": "activity",
+    "icon": "pulse",
     "category": "reports",
     "tags": [
       "activity",
@@ -2457,7 +2457,7 @@
     "title": "Rosters",
     "description": "All 24 AFL franchise rosters across both conferences — players, status, contracts. Switch teams with the picker.",
     "path": "/afl-fantasy/rosters",
-    "icon": "users",
+    "icon": "roster",
     "category": "popular",
     "tags": [
       "afl",
@@ -2565,7 +2565,7 @@
     "title": "Top Players",
     "description": "Every player's weekly scores, season total, average and rank within position — free agents included.",
     "path": "/top-players",
-    "icon": "bar-chart",
+    "icon": "jersey-star",
     "category": "reports",
     "subcategory": "player-stats",
     "tags": [
@@ -2616,7 +2616,7 @@
     "title": "Top Players",
     "description": "Every AFL player's weekly scores, season total, average and rank within position — free agents included.",
     "path": "/afl-fantasy/top-players",
-    "icon": "bar-chart",
+    "icon": "jersey-star",
     "category": "reports",
     "subcategory": "player-stats",
     "tags": [
@@ -2668,7 +2668,7 @@
     "title": "Standings",
     "description": "AFL standings by conference, division, tier, and all-play — track promotion/relegation between Premier League and D-League.",
     "path": "/afl-fantasy/standings",
-    "icon": "trophy",
+    "icon": "standings",
     "category": "popular",
     "tags": [
       "afl",
@@ -2780,7 +2780,7 @@
     "title": "Keeper Report Card",
     "description": "Hindsight grades for every AFL keeper class — each previous-season roster re-ranked by this season's points, with hits, misses, and the ones that got away.",
     "path": "/afl-fantasy/keeper-analysis",
-    "icon": "history",
+    "icon": "report-card",
     "category": "reports",
     "tags": [
       "afl",
@@ -2947,7 +2947,7 @@
     "title": "Draft Order",
     "description": "AFL draft order for the upcoming season — projected from standings during the year, official once the playoffs and NIT wrap.",
     "path": "/afl-fantasy/draft/order",
-    "icon": "draft-podium",
+    "icon": "draft-order",
     "category": "tools",
     "tags": [
       "afl",
@@ -2984,7 +2984,7 @@
     "title": "Draft Broadcast",
     "description": "The AFL's draft-night big board — built for a TV. Follows the live MFL draft and throws every selection on screen with the player's headshot over his new team's colors.",
     "path": "/afl-fantasy/draft/broadcast",
-    "icon": "draft-podium",
+    "icon": "broadcast",
     "category": "tools",
     "tags": [
       "afl",
@@ -3022,7 +3022,7 @@
     "title": "Draft Broadcast",
     "description": "The rookie draft's big board — built for a TV. Follows the live MFL draft and throws every selection on screen over the drafting franchise's colors, with board rank and best-available.",
     "path": "/theleague/draft/broadcast",
-    "icon": "draft-podium",
+    "icon": "broadcast",
     "category": "tools",
     "tags": [
       "draft broadcast",
@@ -3091,7 +3091,7 @@
     "title": "Constitution",
     "description": "The AFL constitution — scoring, roster rules, keeper rules, draft format, playoffs, tier promotion/relegation, and dues.",
     "path": "/afl-fantasy/rules",
-    "icon": "gavel",
+    "icon": "scroll",
     "category": "info",
     "tags": [
       "afl",
@@ -3237,7 +3237,7 @@
     "title": "What's New",
     "description": "Changelog of new AFL features, page launches, enhancements, and bug fixes — filtered to AFL-tagged updates only.",
     "path": "/afl-fantasy/whats-new",
-    "icon": "star",
+    "icon": "sparkle",
     "category": "info",
     "tags": [
       "afl",
@@ -3746,7 +3746,7 @@
     "title": "Best Ball Rosters",
     "description": "All 12 Best Ball #1 rosters grouped by position — in best ball, the roster you draft is the team you ride",
     "path": "/best-ball-1/rosters",
-    "icon": "users",
+    "icon": "roster",
     "category": "reports",
     "tags": [
       "best ball",
@@ -3770,7 +3770,7 @@
     "title": "Best Ball Live Scoring",
     "description": "Real-time scoreboard for Best Ball #1 — live points, matchups, and player breakdowns on game days; in best ball, watching is the whole game",
     "path": "/best-ball-1/live-scoring",
-    "icon": "goals",
+    "icon": "live-score",
     "category": "popular",
     "tags": [
       "best ball",
@@ -3862,7 +3862,7 @@
     "title": "AFL My Draft List",
     "description": "Build your draft board, then pull it from or push it to your MFL My Draft List",
     "path": "/afl-fantasy/cr",
-    "icon": "standings",
+    "icon": "rank-reorder",
     "category": "tools",
     "tags": [
       "my draft list",
@@ -3933,7 +3933,7 @@
     "title": "Best Ball Rules",
     "description": "Best Ball #1's one-page constitution — the format, the draft, rosters and scoring, and where MFL settings are the fine print",
     "path": "/best-ball-1/rules",
-    "icon": "gavel",
+    "icon": "scroll",
     "category": "info",
     "tags": [
       "best ball",
@@ -3957,7 +3957,7 @@
     "title": "Best Ball What's New",
     "description": "New features, improvements, and updates to Best Ball #1 as they ship",
     "path": "/best-ball-1/whats-new",
-    "icon": "star",
+    "icon": "sparkle",
     "category": "info",
     "tags": [
       "best ball",
@@ -3981,7 +3981,7 @@
     "title": "Draft Room",
     "description": "TheLeague's live on-site draft room — follow picks in real time, view the board, and track who's on the clock during the rookie draft",
     "path": "/draft/room",
-    "icon": "draft-podium",
+    "icon": "draft-room",
     "category": "tools",
     "tags": [
       "draft room",
@@ -4176,7 +4176,7 @@
     "title": "Owner Activity (AFL)",
     "description": "Site analytics for the AFL: daily page views per owner, the most-visited pages, the app-vs-browser split, and when each owner was last around — here or on MFL",
     "path": "/afl-fantasy/activity",
-    "icon": "activity",
+    "icon": "pulse",
     "category": "reports",
     "tags": [
       "afl activity",
@@ -4520,7 +4520,7 @@
     "title": "Schedule Release",
     "description": "Release day for next season's schedule — a countdown, then the same locked schedule and headline matchups for every owner",
     "path": "/theleague/schedule-release",
-    "icon": "calendar",
+    "icon": "calendar-reveal",
     "category": "popular",
     "tags": [
       "schedule release",
@@ -4553,7 +4553,7 @@
     "title": "Schedule Release (AFL)",
     "description": "Release day for the AFL's next season — a countdown, then the same locked schedule and headline matchups for every owner",
     "path": "/afl-fantasy/schedule-release",
-    "icon": "calendar",
+    "icon": "calendar-reveal",
     "category": "popular",
     "tags": [
       "schedule release",
@@ -4809,7 +4809,7 @@
     "title": "Draft Results",
     "description": "Every draft the league has ever held, pick by pick — back to the startup draft",
     "path": "/draft/results",
-    "icon": "history",
+    "icon": "draft-results",
     "category": "reports",
     "visibility": "all",
     "popularity": 52,
@@ -4867,7 +4867,7 @@
     "title": "Draft Results",
     "description": "Every AFL draft back to 2003, pick by pick, by conference",
     "path": "/afl-fantasy/draft/results",
-    "icon": "history",
+    "icon": "draft-results",
     "category": "reports",
     "visibility": "all",
     "popularity": 50,
@@ -4895,7 +4895,7 @@
     "title": "Draft Room",
     "description": "The live AFL draft board — your conference’s picks, queue and clock as the draft runs",
     "path": "/afl-fantasy/draft/room",
-    "icon": "draft-podium",
+    "icon": "draft-room",
     "category": "tools",
     "visibility": "all",
     "popularity": 48,
@@ -5550,7 +5550,7 @@
     "title": "Rosters (Archie's)",
     "description": "Every team's roster in Archie's league, one team at a time, grouped by position",
     "path": "/archies/rosters",
-    "icon": "users",
+    "icon": "roster",
     "category": "my-team",
     "tags": [
       "rosters",
@@ -5627,7 +5627,7 @@
     "title": "Live Scoring (Archie's)",
     "description": "Real-time Archie's scoreboard — your two games first, then every matchup by division, with live points, projected finals, win probability, NFL game clocks, red-zone alerts and a scoring-play ticker",
     "path": "/archies/live-scoring",
-    "icon": "goals",
+    "icon": "live-score",
     "category": "popular",
     "tags": [
       "live scoring",
@@ -5832,7 +5832,7 @@
     "title": "What's New (Archie's)",
     "description": "New features, improvements and updates for Archie's Fantasy Football League",
     "path": "/archies/whats-new",
-    "icon": "star",
+    "icon": "sparkle",
     "category": "info",
     "tags": [
       "what's new",

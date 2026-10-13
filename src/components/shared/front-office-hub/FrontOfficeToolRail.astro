@@ -16,7 +16,8 @@
  * see FrontOfficeHubPage.astro), so the aria-labelledby is a nicety for the
  * landmark list rather than a disambiguation necessity.
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { frontOfficePagesFor, type FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
 

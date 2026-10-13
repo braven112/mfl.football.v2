@@ -40,6 +40,8 @@ const {
   bio,
   showSupport = false,
 } = Astro.props;
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <div class="rqa-page" data-league={league.slug}>
@@ -111,11 +113,11 @@ const {
             </p>
             <div class="rqa-donate-btns">
               <a href="https://paypal.me/mfladdons" target="_blank" rel="noopener noreferrer" class="cta cta--ghost rqa-donate-btn">
-                <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-paypal" /></svg>
+                <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-paypal`} /></svg>
                 PayPal
               </a>
               <a href="https://venmo.com/braven112" target="_blank" rel="noopener noreferrer" class="cta cta--ghost rqa-donate-btn">
-                <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-venmo" /></svg>
+                <svg class="rqa-donate-btn__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-venmo`} /></svg>
                 Venmo
               </a>
             </div>

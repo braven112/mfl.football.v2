@@ -14,6 +14,7 @@ import type { WhatsNewEntry } from '../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../types/whats-new';
 import { sortEntriesNewestFirst, enrichEntries } from '../../utils/whats-new-helpers';
 import { ALL_LEAGUES } from '../../config/leagues';
+import { spriteUrlFor } from '../../utils/sprite-url';
 
 interface Props {
   /** Raw What's New entries from whats-new.json */
@@ -48,7 +49,7 @@ const {
   count = 3,
   basePath = '/theleague',
   allReleasesLink = `${basePath}/whats-new`,
-  spriteUrl: sprite = '/assets/icons/sprite.svg',
+  spriteUrl: sprite = spriteUrlFor(Astro.url),
   lastVisitDate = null,
   urlHost = 'theleague.us',
   excludeId,

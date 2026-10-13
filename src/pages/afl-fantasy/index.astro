@@ -65,7 +65,8 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';

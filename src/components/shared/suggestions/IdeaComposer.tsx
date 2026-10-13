@@ -3,6 +3,7 @@ import type { IdeaCategory, WebsiteFields, WebsiteSuggestionType } from '../../.
 import ImageUploader from './ImageUploader';
 import GifPicker from './GifPicker';
 import ImageGallery from './ImageGallery';
+import { useSpriteUrl } from '../../../utils/sprite-url-context';
 
 interface SubmitData {
   title: string;
@@ -30,6 +31,7 @@ const CATEGORY_OPTIONS: { value: IdeaCategory; label: string; spriteId: string }
 ];
 
 export default function IdeaComposer({ onSubmit, initialTitle, initialBody, initialCategory, onCancel, submitLabel }: Props) {
+  const spriteUrl = useSpriteUrl();
   const [title, setTitle] = useState(initialTitle ?? '');
   const [category, setCategory] = useState<IdeaCategory>(initialCategory ?? 'general');
   const [body, setBody] = useState(initialBody ?? '');
@@ -125,7 +127,7 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
             aria-checked={category === opt.value}
             disabled={isSubmitting}
           >
-            <svg className="sb-category-pill__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${opt.spriteId}`} /></svg>
+            <svg className="sb-category-pill__icon" aria-hidden="true"><use href={`${spriteUrl}#${opt.spriteId}`} /></svg>
             {opt.label}
           </button>
         ))}

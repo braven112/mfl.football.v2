@@ -23,7 +23,8 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../YearSelector.astro';
 import EmptyState from '../states/EmptyState.astro';
 import '../../../styles/loading.css';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { BracketView } from '../../../utils/playoff-bracket-views';
 

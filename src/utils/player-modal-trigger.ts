@@ -138,7 +138,7 @@ export type SheetTabId = 'summary' | 'salary' | 'gamelog';
 
 /**
  * One action the sheet can offer. `icon` is a sprite symbol id
- * (`/assets/icons/sprite.svg#<icon>`).
+ * (`#icon-<icon>` in the page's sprite).
  */
 export interface SheetAction {
   id: string;

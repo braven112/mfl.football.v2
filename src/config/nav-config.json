@@ -4,8 +4,7 @@
       "id": "rosters",
       "label": "Roster",
       "labelAFL": "Rosters",
-      "icon": "banknote",
-      "iconAFL": "helmet",
+      "icon": "roster",
       "path": "/rosters",
       "external": false,
       "description": "View all team rosters and salary cap details"
@@ -21,7 +20,7 @@
     {
       "id": "live-scoring",
       "label": "Live Scoring",
-      "icon": "goals",
+      "icon": "live-score",
       "path": "/live-scoring",
       "external": false,
       "leagueOnly": "theleague",
@@ -30,7 +29,7 @@
     {
       "id": "afl-live-scoring",
       "label": "Live Scoring",
-      "icon": "goals",
+      "icon": "live-score",
       "path": "/live-scoring",
       "external": false,
       "leagueOnly": "afl",
@@ -57,7 +56,7 @@
     {
       "id": "standings",
       "label": "Standings",
-      "icon": "shield",
+      "icon": "standings",
       "path": "/standings",
       "external": false,
       "description": "Current league standings"
@@ -65,7 +64,7 @@
     {
       "id": "trade-builder",
       "label": "Trade Builder",
-      "icon": "exchange",
+      "icon": "transactions-2",
       "path": "/front-office/trade-builder",
       "external": false,
       "description": "Build and send trade offers, with cap impact for both teams"
@@ -111,7 +110,7 @@
         {
           "id": "bb-rosters",
           "label": "Rosters",
-          "icon": "users",
+          "icon": "roster",
           "path": "/rosters",
           "external": false,
           "leagueOnly": "bb1",
@@ -120,7 +119,7 @@
         {
           "id": "bb-live-scoring",
           "label": "Live Scoring",
-          "icon": "goals",
+          "icon": "live-score",
           "path": "/live-scoring",
           "external": false,
           "leagueOnly": "bb1",
@@ -147,7 +146,7 @@
         {
           "id": "bb-rules",
           "label": "Rules",
-          "icon": "gavel",
+          "icon": "scroll",
           "path": "/rules",
           "external": false,
           "leagueOnly": "bb1",
@@ -156,7 +155,7 @@
         {
           "id": "bb-whats-new",
           "label": "What's New",
-          "icon": "star",
+          "icon": "sparkle",
           "path": "/whats-new",
           "external": false,
           "leagueOnly": "bb1",
@@ -186,7 +185,7 @@
         {
           "id": "archies-rosters",
           "label": "Rosters",
-          "icon": "users",
+          "icon": "roster",
           "path": "/rosters",
           "external": false,
           "leagueOnly": "archies",
@@ -213,7 +212,7 @@
         {
           "id": "archies-live-scoring",
           "label": "Live Scoring",
-          "icon": "goals",
+          "icon": "live-score",
           "path": "/live-scoring",
           "external": false,
           "leagueOnly": "archies",
@@ -320,7 +319,7 @@
         {
           "id": "whats-new",
           "label": "What's New",
-          "icon": "star",
+          "icon": "sparkle",
           "path": "/whats-new",
           "external": false,
           "description": "See the latest features and improvements"
@@ -356,7 +355,7 @@
         {
           "id": "afl-throwback-settings",
           "label": "Throwback Week",
-          "icon": "history",
+          "icon": "throwback",
           "path": "/throwback-settings",
           "external": false,
           "leagueOnly": "afl",
@@ -382,7 +381,7 @@
         {
           "id": "playoffs",
           "label": "Playoffs",
-          "icon": "champ",
+          "icon": "playoff",
           "path": "/playoffs",
           "external": false,
           "description": "Playoff bracket and results"
@@ -390,7 +389,7 @@
         {
           "id": "top-players",
           "label": "Top Players",
-          "icon": "bar-chart",
+          "icon": "jersey-star",
           "path": "/top-players",
           "external": false,
           "description": "Weekly scores, totals and position ranks for every player"
@@ -417,7 +416,7 @@
         {
           "id": "schedule-release",
           "label": "Schedule Release",
-          "icon": "calendar",
+          "icon": "calendar-reveal",
           "path": "/schedule-release",
           "external": false,
           "description": "Next season's schedule, locked and revealed — plus the games to circle"
@@ -433,7 +432,7 @@
         {
           "id": "draft-predictor",
           "label": "Draft Order",
-          "icon": "draft-podium",
+          "icon": "draft-order",
           "path": "/draft/order",
           "external": false,
           "description": "Draft order — projected in-season, official once the playoffs wrap"
@@ -441,7 +440,7 @@
         {
           "id": "draft-results",
           "label": "Draft Results",
-          "icon": "history",
+          "icon": "draft-results",
           "path": "/draft/results",
           "external": false,
           "description": "Every draft the league has ever held, pick by pick"
@@ -449,7 +448,7 @@
         {
           "id": "draft-broadcast",
           "label": "Draft Broadcast",
-          "icon": "podium-empty",
+          "icon": "broadcast",
           "path": "/draft/broadcast",
           "external": false,
           "description": "The big board for draft night — plug a laptop into the TV and watch every pick land"
@@ -457,7 +456,7 @@
         {
           "id": "draft-room",
           "label": "Draft Room",
-          "icon": "draft-podium",
+          "icon": "draft-room",
           "path": "/draft/room",
           "external": false,
           "description": "The live board while the draft runs — picks, queue and who is on the clock"
@@ -482,7 +481,7 @@
         {
           "id": "afl-keeper-analysis",
           "label": "Keeper Report Card",
-          "icon": "history",
+          "icon": "report-card",
           "path": "/keeper-analysis",
           "external": false,
           "leagueOnly": "afl",
@@ -499,7 +498,7 @@
         {
           "id": "custom-rankings",
           "label": "Custom Rankings",
-          "icon": "standings",
+          "icon": "rank-reorder",
           "path": "/cr",
           "external": false,
           "visibility": "admin",
@@ -528,7 +527,7 @@
         {
           "id": "owner-activity",
           "label": "Owner Activity",
-          "icon": "activity",
+          "icon": "pulse",
           "path": "/activity",
           "external": false,
           "description": "See when each franchise owner last visited the site"
@@ -580,7 +579,7 @@
         {
           "id": "rules",
           "label": "Constitution",
-          "icon": "gavel",
+          "icon": "scroll",
           "path": "/rules",
           "external": false,
           "description": "League rules and bylaws"
@@ -625,7 +624,7 @@
         {
           "id": "admin-hub",
           "label": "Admin Hub",
-          "icon": "gavel",
+          "icon": "wrench",
           "path": "/admin",
           "external": false,
           "visibility": "admin",
@@ -635,7 +634,7 @@
         {
           "id": "throwback-settings-admin",
           "label": "Throwback Week",
-          "icon": "history",
+          "icon": "throwback",
           "path": "/throwback-settings",
           "external": false,
           "visibility": "admin",

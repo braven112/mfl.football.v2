@@ -8,6 +8,7 @@ import AdminToolbar from './AdminToolbar';
 import ImageGallery from './ImageGallery';
 import PollCard from './PollCard';
 import PollCreator from './PollCreator';
+import { useSpriteUrl } from '../../../utils/sprite-url-context';
 
 interface SubmitData {
   title: string;
@@ -151,6 +152,7 @@ export default function IdeaDetail({
   onVote,
   onDeletePoll,
 }: Props) {
+  const spriteUrl = useSpriteUrl();
   const [editing, setEditing] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
   const teamIcon = iconMap[idea.author.franchiseId];
@@ -213,7 +215,7 @@ export default function IdeaDetail({
           <div className="sb-detail__badges-row">
             {idea.category && (
               <span className={`sb-cat sb-cat--${idea.category === 'rule-change' ? 'rule' : idea.category}`}>
-                <svg className="sb-cat__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
+                <svg className="sb-cat__icon" aria-hidden="true"><use href={`${spriteUrl}#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
                 {' '}{(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).label}
               </span>
             )}

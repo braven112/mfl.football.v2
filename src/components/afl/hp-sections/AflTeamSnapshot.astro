@@ -8,7 +8,8 @@
  * resolved by `afl-team-spotlight.ts` (draft slot -> last title -> playoff
  * streak -> all-time record). Guests see a team picker prompt.
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';

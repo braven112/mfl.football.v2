@@ -17,7 +17,8 @@
  * registry — that test is what forces a new directory consumer to state them.)
  */
 import allPages from '../../../data/page-directory.json';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { pathBelongsToLeague } from '../../../config/footer-config';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';

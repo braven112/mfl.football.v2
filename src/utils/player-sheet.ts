@@ -18,6 +18,7 @@
  */
 
 import { escapeHtml } from './player-cell-html';
+import { clientSpriteUrl } from './sprite-url-client';
 import type {
   PlayerModalData,
   SalarySheetData,
@@ -27,7 +28,6 @@ import type {
   ThisWeekData,
 } from './player-modal-trigger';
 
-const SPRITE = '/assets/icons/sprite.svg';
 
 export const SHEET_TAB_LABELS: Record<SheetTabId, string> = {
   summary: 'Summary',
@@ -132,7 +132,7 @@ export function placeSheetMenu(input: MenuPlacementInput): { left: number; width
 }
 
 function icon(id: string, cls: string): string {
-  return `<span class="${cls}" aria-hidden="true"><svg aria-hidden="true"><use href="${SPRITE}#${escapeHtml(id)}"></use></svg></span>`;
+  return `<span class="${cls}" aria-hidden="true"><svg aria-hidden="true"><use href="${clientSpriteUrl()}#${escapeHtml(id)}"></use></svg></span>`;
 }
 
 /** The ⋮ glyph — the same three dots the roster table's action column draws. */

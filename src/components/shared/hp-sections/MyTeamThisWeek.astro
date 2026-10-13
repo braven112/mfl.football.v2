@@ -14,7 +14,8 @@
  * live read could not establish (`unknown`) shows no status line at all — the
  * card never says "not set" on a failed read (docs/claude/rules/lineups.md).
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';

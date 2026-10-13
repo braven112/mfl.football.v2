@@ -58,7 +58,8 @@ import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-help
 import { buildPlayoffRoundView } from '../../utils/hero-data/playoff-round-data';
 import fs from 'node:fs';
 import { resolveLeaguePath } from '../../utils/nav-utils';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { SALARY_YEARS } from '../../utils/salary-calculations';
 import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../utils/league-summary-utils';
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';

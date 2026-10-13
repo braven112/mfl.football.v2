@@ -43,6 +43,13 @@ export type DemoOnlyLeagueSlug = 'keeper';
 /** A league's homepage layout — see `homeStyle` on the registry entry. */
 export type HomeStyle = 'classic' | 'front-page';
 
+/**
+ * A league's icon set — see `iconSet` on the registry entry. `'classic'` is
+ * public/assets/icons/sprite.svg; any other name is
+ * public/assets/icons/sets/<name>/sprite.svg (docs/plans/icon-sets.md).
+ */
+export type IconSet = 'classic' | 'line';
+
 export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
 
 export interface LeagueFeatures {
@@ -383,6 +390,12 @@ export interface LeagueDefinition {
    * either — so a league (or a prospective client) can be shown both.
    */
   homeStyle?: HomeStyle;
+  /**
+   * Which icon set the league's pages draw from. Absent = `'classic'`. Every
+   * set carries the same glyph ids (tests/icon-set-parity.test.ts), so a
+   * league switches sets by changing this one value.
+   */
+  iconSet?: IconSet;
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
@@ -466,6 +479,11 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
 /** The league's homepage layout; `'classic'` for any league that names none. */
 export function leagueHomeStyle(slug: string): HomeStyle {
   return getLeagueBySlug(slug)?.homeStyle ?? 'classic';
+}
+
+/** The league's icon set; `'classic'` for any league that names none. */
+export function leagueIconSet(slug: string): IconSet {
+  return getLeagueBySlug(slug)?.iconSet ?? 'classic';
 }
 
 /**

@@ -12,7 +12,8 @@
  */
 import { type ResolvedLeagueEvent, CATEGORY_LABELS } from '../../types/league-events';
 import { formatEventDate, formatEventDateRange } from '../../utils/event-date-formatter';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 
 export interface Props {
   event: ResolvedLeagueEvent;

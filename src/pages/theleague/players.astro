@@ -897,6 +897,8 @@ const claimsPanelConfig = {
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
@@ -1002,7 +1004,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               would otherwise drop it from the accessible name too, since
               display: none removes text from the accessibility tree. */}
           <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false" aria-label="My Watch List">
-            <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <svg class="col-group-btn__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
             <span aria-hidden="true"><span class="col-group-btn__my">My </span>Watch List</span>
           </button>
         </div>
@@ -2319,11 +2321,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         : '';
       // MFL has him LOCKED (recently dropped) — its own page marks this `*`.
       const lockMark = p.locked
-        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
+        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="${document.documentElement.dataset.spriteUrl}#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
         : '';
       const watched = isWatchedId(p.id);
       const watchMark = watched
-        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
+        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="${document.documentElement.dataset.spriteUrl}#icon-eye"></use></svg></span>`
         : '';
       // Acquisition, now carried by the ⋮ button rather than a column of its
       // own. Free agents only, and not an already-won auction player (mirrors

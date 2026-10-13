@@ -1,7 +1,8 @@
 # Icon sets — a league picks its icons the way it picks its style and colors
 
-**Status:** assets and guard landed; the switch is NOT wired yet. Nothing on the
-site reads the new set until the steps under *Wiring it up* are done. Decisions
+**Status:** live on staging (Oct 2026). TheLeague, the AFL and Archie's draw the
+`line` set; every other league stays `classic`. Switching a league is one line —
+see *Switching a league* below. Decisions
 marked **[DECIDED]** came from Brandon (Oct 2026); **[OPEN]** ones still need a call.
 
 ## The model — three independent choices
@@ -19,13 +20,18 @@ fourth or fifth option is "add a folder", never "teach pages about it". For
 icons the contract is the glyph id: pages ask for `#icon-<name>` and never know
 which set is loaded.
 
-## What landed in this PR
+## What is where
 
 | File | What it is |
 |---|---|
 | `public/assets/icons/sets/line/sprite.svg` | The `line` set — all 140 glyph ids of the classic sprite, redrawn |
 | `docs/plans/icon-sets/line-review.html` | Open in a browser: every classic glyph beside its `line` redraw, at size and in an active colour |
 | `tests/icon-set-parity.test.ts` | Every set under `sets/` must define EXACTLY the classic sprite's ids (wired into the `theming-and-assets` path-guard domain) |
+| `src/config/leagues-data.mjs` → `iconSet` | The league setting; absent = `classic`. Read with `leagueIconSet(slug)` |
+| `src/utils/sprite-url.ts` | `spriteUrlFor(Astro.url)` — the page's sprite, with a per-file content hash |
+| `src/utils/sprite-url-client.ts` | `clientSpriteUrl()` for browser code, read from `<html data-sprite-url>` |
+| `src/utils/sprite-url-context.ts` | `SpriteUrlContext` / `useSpriteUrl()` for React islands |
+| `tests/sprite-url-guard.test.ts` | No literal sprite path in `src/`; every layout stamps `data-sprite-url`; the resolver's league lookup |
 
 `public/assets/icons/sprite.svg` is untouched and stays the `classic` set at
 its current path, so nothing moves for any page or test that reads it.
@@ -78,7 +84,7 @@ Premier League shield and NFL shield keep their own brand colours.
   `viewBox="2 26 124 76"` (1.6:1, letterboxed — see
   `docs/claude/rules/theming-and-assets.md` § Sprite icons carry meaning); the
   `line` one is square, so it fills its slot in the header instead of sitting at
-  ~18×11. Check the Transaction Hub button when the switch is wired.
+  ~18×11.
 - `helmet-2` is a simplified side-view helmet; `kick` is the ball in flight
   with speed lines; `fans` is a jersey with a centred 12.
 - `bookmark` stays a mortarboard (what classic actually draws), `champ` a
@@ -86,13 +92,14 @@ Premier League shield and NFL shield keep their own brand colours.
 - Meanings are unchanged: `bell` is notifications only, `transactions-2`
   (handshake) is trades, `exchange` is a trade event.
 
-## Nav icons — drawn, not yet wired (Oct 2026)
+## Nav icons (Oct 2026)
 
 An audit of TheLeague's and the AFL's nav (`src/config/nav-config.json`)
 found pages sharing one icon or wearing a vague one. Sixteen new glyphs were
 drawn for them, in BOTH sets (classic gets them as 2px outlines, since the
-parity test requires every set to carry every id). `nav-config.json` is NOT
-changed yet — point each link at its glyph when the switch lands:
+parity test requires every set to carry every id). `nav-config.json` and
+`page-directory.json` point at them for EVERY league's copy of the page, so a
+page wears one mark wherever it is searched from:
 
 | Nav link | Today | New glyph |
 |---|---|---|
@@ -107,7 +114,7 @@ changed yet — point each link at its glyph when the switch lands:
 | Constitution | `gavel` | `scroll` |
 | Schedule Release | `calendar` | `calendar-reveal` |
 | Custom Rankings | `standings` | `rank-reorder` |
-| Top Players | `bar-chart` | `player-star`, or `jersey-star` (jersey with a star) — Brandon to pick |
+| Top Players | `bar-chart` | `jersey-star` [DECIDED]; `player-star` (person with a star) is the unused alternative |
 | Owner Activity | `activity` | `pulse` |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
 
@@ -119,41 +126,39 @@ Four more need no new art, only a different existing glyph: Trade Builder
 `exchange` → `transactions-2` (the handshake IS the trade tool — see
 `theming-and-assets.md` § Sprite icons carry meaning; site search already
 uses it); Standings `shield` → `standings` (the shield is Franchises);
-Playoffs `champ` → `playoff`; Admin Hub `gavel` → `wrench`. Change the matching `page-directory.json`
-entries in the same edit so search and the nav agree.
+Playoffs `champ` → `playoff`; Admin Hub `gavel` → `wrench` — done in the same
+change, nav and search together.
 
-## Wiring it up (not done)
+## Switching a league
 
-1. **Registry field.** Mirror `homeStyle` exactly: `iconSet?: IconSet` on the
-   league entry (`src/config/leagues.ts`), `export type IconSet = 'classic' |
-   'line'`, and `leagueIconSet(slug)` returning `'classic'` for a league that
-   names none — so no league changes until someone opts in.
-2. **One resolver.** `src/utils/sprite-url.ts` today exports a single
-   `spriteUrl` with an md5 cache-buster. Make it `spriteUrlFor(set)` (one hash
-   per file, computed once at module load) and resolve the league's set where
-   the layout already writes `window.__spriteUrl` for client components. Keep
-   the content hash — `public/sw.js` serves `/assets/**` stale-while-revalidate,
-   and the hash is what makes an edited sprite show up.
-3. **Retire the hardcoded links.** 41 `<use href="/assets/icons/sprite.svg#…">`
-   in 20 files bypass `spriteUrl` and would stay on classic forever:
-   `AFLActionModal.astro` (8), `theleague/rosters.astro` (5),
-   `PlayerDetailsModal.astro` (5), `theleague/players.astro` (3),
-   `FreeAgentsPage.astro` (3), `SuggestionBoxPage.astro` (2),
-   `RulesChatPage.astro` (2), and one each in `player-modal-trigger.ts`,
-   `types/nav.ts`, `instructions.astro`, `SuggestionBox.tsx`, `IdeaDetail.tsx`,
-   `IdeaComposer.tsx`, `IdeaCard.tsx`, `custom-rankings/PlayerRow.tsx`,
-   `SchefterPostCardCompact.astro`, `SchefterPostCard.astro`,
-   `SchefterNewsPage.astro`, `SchefterFeedCompact.astro`,
-   `PlayerActionModal.astro`. `rosters.astro` needs
-   `scripts/roster-parity-check.mjs` before and after. Then pin it: a scan
-   guard that fails on a literal `sprite.svg#` outside `sprite-url.ts` and the
-   `icons.astro` catalogue pages (`/guard-test`).
-4. **Catalogue + theme pages.** `/<league>/icons` should show the league's own
-   set; the theme preview pages are the natural place to show both sets.
-5. **The sign-up chooser.** Style, icon set and colours picked together with a
+Change `iconSet` on the league's entry in `src/config/leagues-data.mjs`
+(`'line'` or `'classic'`) and deploy. Nothing else: every page resolves its
+sprite from the request, so the whole league moves at once.
+
+How a page finds its set, so a new page does not bypass it
+(`tests/sprite-url-guard.test.ts` fails on a literal path):
+
+- **`.astro`** — `const spriteUrl = spriteUrlFor(Astro.url);` The league comes
+  from the path prefix (which a league apex is rewritten to) or the host; a page
+  outside every league (`/live`, `/instructions`) gets classic.
+- **Browser code** (`<script>`, `src/utils/*` that runs client-side) —
+  `clientSpriteUrl()`, which reads `<html data-sprite-url>`. Every layout stamps
+  it and the ClientRouter copies it on a soft navigation, so read it per call,
+  never into a module-level constant. A `define:vars` script cannot import, so
+  it reads `document.documentElement.dataset.spriteUrl` directly.
+- **React islands** — the island's `.astro` parent passes
+  `spriteUrl={spriteUrlFor(Astro.url)}`; the island root wraps its tree in
+  `SpriteUrlContext.Provider`; leaves call `useSpriteUrl()`. Not
+  `clientSpriteUrl()`: an island also renders on the server, where there is no
+  document, and the two renders would disagree.
+
+## Still to do
+
+1. **The sign-up chooser.** Style, icon set and colours picked together with a
    live preview, changeable later (Launcher / package-league flow).
-6. **Try it on one league first** — set `iconSet: 'line'` on one entry and run
-   `/launch-check` in light and dark.
+2. **Archie's two cuts.** `archie` / `archie-dark` are in every set but nothing
+   renders them yet; when something does, swap them on `html.dark`.
+3. **The icons drawn inline** — see *Not covered*.
 
 ## Adding a third (fourth, fifth) set
 

@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { spriteUrlFor } from '../../utils/sprite-url';
 
 // Use process.cwd() so the path resolves correctly during both dev and prerender build
 const spritePath = path.join(process.cwd(), 'public/assets/icons/sprite.svg');
@@ -18,7 +19,8 @@ const uniqueIconEntries = iconEntries.filter(entry => {
   return true;
 }).sort((a, b) => a.id.localeCompare(b.id));
 
-const spriteUrl = '/assets/icons/sprite.svg';
+// The league's own icon set; ids are the same in every set (tests/icon-set-parity.test.ts).
+const spriteUrl = spriteUrlFor(Astro.url);
 
 // Synonym map for search — each icon gets related keywords
 const synonyms: Record<string, string[]> = {

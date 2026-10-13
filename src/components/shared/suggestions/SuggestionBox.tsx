@@ -3,6 +3,8 @@ import type { Idea, Comment, IdeaCategory, WebsiteFields } from '../../../types/
 import IdeaComposer from './IdeaComposer';
 import IdeaCard from './IdeaCard';
 import IdeaDetail from './IdeaDetail';
+import { SpriteUrlContext, useSpriteUrl } from '../../../utils/sprite-url-context';
+import { CLASSIC_SPRITE_PATH } from '../../../utils/sprite-url-client';
 
 interface SubmitData {
   title: string;
@@ -24,7 +26,17 @@ interface Props {
   userFranchiseId?: string;
 }
 
-export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, userFranchiseId }: Props) {
+/** The island root: provides the page's icon sprite to every card (src/utils/sprite-url-context.ts). */
+export default function SuggestionBox({ spriteUrl, ...props }: Props & { spriteUrl?: string }) {
+  return (
+    <SpriteUrlContext.Provider value={spriteUrl ?? CLASSIC_SPRITE_PATH}>
+      <SuggestionBoxInner {...props} />
+    </SpriteUrlContext.Provider>
+  );
+}
+
+function SuggestionBoxInner({ isAuthenticated, isAdmin, teamIcons, userFranchiseId }: Props) {
+  const spriteUrl = useSpriteUrl();
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [selectedComments, setSelectedComments] = useState<Comment[]>([]);
@@ -394,7 +406,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
               role="radio"
               aria-checked={categoryFilter === value}
             >
-              {spriteId && <svg className="sb-filter__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${spriteId}`} /></svg>}
+              {spriteId && <svg className="sb-filter__icon" aria-hidden="true"><use href={`${spriteUrl}#${spriteId}`} /></svg>}
               {label}
               <span className="sb-filter__count">
                 {value === 'all' ? ideas.length : ideas.filter(i => i.category === value).length}

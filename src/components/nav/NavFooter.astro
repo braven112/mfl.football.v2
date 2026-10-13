@@ -15,7 +15,8 @@
  */
 
 import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import leagueConfigData from '../../data/theleague.config.json';
 import ThemeToggle from '../shared/ThemeToggle.astro';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
@@ -564,6 +565,8 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
 
 {/* Client-side auth:login handler — swaps "Verify Your Team" → team info when login happens without page reload */}
 <script>
+  import { clientSpriteUrl } from '../../utils/sprite-url-client';
+
   let navFooterAuthLoginBound = false;
 
   function initAuthLoginListener() {
@@ -576,7 +579,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
 
       const teamMapRaw = footer.dataset.teamMap;
       const rosterUrl = footer.dataset.rosterUrl || '/theleague/rosters';
-      const spUrl = footer.dataset.spriteUrl || '/assets/icons/sprite.svg';
+      const spUrl = footer.dataset.spriteUrl || clientSpriteUrl();
       if (!teamMapRaw) return;
 
       let teamMap: Record<string, { name: string; icon: string | null }>;

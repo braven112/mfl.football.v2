@@ -2,7 +2,8 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAllResolvedAflEvents } from '../../utils/league-event-resolver';
 import { getAflLeagueYear } from '../../utils/league-year';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import type { ResolvedLeagueEvent } from '../../types/league-events';
 
 export const prerender = false;

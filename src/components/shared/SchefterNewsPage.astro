@@ -51,6 +51,8 @@ const {
 
 const { isGroupMeTab, isWatchingTab, profileAuthor, profileAvatar } = view;
 const pollGroupMe = isGroupMeTab && isAuthenticated;
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <div class="sf-news-page sf-news-page--with-rail">
@@ -85,7 +87,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
           {...(tab.active ? { 'aria-current': 'page' } : {})}
         >
           {tab.watching && (
-            <svg class="sf-source-tab__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <svg class="sf-source-tab__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
           )}
           {tab.label}
         </a>

@@ -13,7 +13,8 @@ import { loadSeasonFeed, type LazyFeedGlob } from '../../../utils/mfl-feed-glob'
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { parseTestDate } from '../../../utils/hero-resolver';
 import { buildPackageLeagueEvents, type MflCalendarEvent } from '../../../utils/package-league-events';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { CATEGORY_LABELS, type ResolvedLeagueEvent } from '../../../types/league-events';
 
 interface Props {
