@@ -136,14 +136,15 @@ describe('every chat send path strips HTML', () => {
 describe('Pecking Order fields are plain text', () => {
   it('applyAIVoice unwraps <p>-wrapped model output', () => {
     const teams = new Map([['0001', { name: 'Pacific Pigskins', nameMedium: 'Pigskins' }]]);
-    const issue = {
+    const input = {
       headline: 'h',
       lede: 'l',
       rankings: [{ franchiseId: '0001', rank: 1, blurb: 'raw' }],
       awards: { statOfWeek: { blurb: 'raw' } },
     };
-    const { issue: out } = applyAIVoice(
-      issue,
+    // applyAIVoice's JSDoc types the issue as a bare `object`.
+    const { issue } = applyAIVoice(
+      input,
       {
         headline: 'Pigskins Rule',
         lede: '<p>Pigskins are good.</p><p>Very good.</p>',
@@ -152,6 +153,11 @@ describe('Pecking Order fields are plain text', () => {
       },
       teams,
     );
+    const out = issue as {
+      lede: string;
+      rankings: Array<{ blurb: string }>;
+      awards: { statOfWeek: { blurb: string } };
+    };
     expect(out.rankings[0].blurb).toBe('Pigskins dropped 147.57.');
     expect(out.awards.statOfWeek.blurb).toBe('Boom. Pigskins.');
     expect(out.lede).toBe('Pigskins are good.\n\nVery good.');
