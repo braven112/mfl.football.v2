@@ -30,10 +30,20 @@ export const ICON_SET_PATHS: Record<IconSet, string> = {
   line: '/assets/icons/sets/line/sprite.svg',
 };
 
+/**
+ * Each set's sprite, read from a LITERAL path. Vercel's file tracer cannot
+ * follow a join built from a variable and falls back to bundling all of
+ * public/ into the server function, which pushed it past the 250 MB limit.
+ * Every path here also needs an `includeFiles` entry in astro.config.ts.
+ */
+const SPRITE_CONTENT: Record<IconSet, string> = {
+  classic: fs.readFileSync(path.join(process.cwd(), 'public/assets/icons/sprite.svg'), 'utf-8'),
+  line: fs.readFileSync(path.join(process.cwd(), 'public/assets/icons/sets/line/sprite.svg'), 'utf-8'),
+};
+
 const hashedUrls = Object.fromEntries(
   (Object.entries(ICON_SET_PATHS) as [IconSet, string][]).map(([set, publicPath]) => {
-    const content = fs.readFileSync(path.join(process.cwd(), 'public', publicPath), 'utf-8');
-    const hash = createHash('md5').update(content).digest('hex').slice(0, 8);
+    const hash = createHash('md5').update(SPRITE_CONTENT[set]).digest('hex').slice(0, 8);
     return [set, `${publicPath}?v=${hash}`];
   }),
 ) as Record<IconSet, string>;

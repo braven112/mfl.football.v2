@@ -93,3 +93,27 @@ describe('the iconSet league setting', () => {
     }
   });
 });
+
+/**
+ * sprite-url.ts reads every set's sprite with fs at module load, inside the
+ * server function. Vercel's file tracer only follows a LITERAL path: a join
+ * built from a variable made it bundle all of public/, and the function went
+ * to 288 MB, over the 250 MB limit, so the deploy failed (Oct 2026). And a
+ * sprite missing from the function would throw on load and blank every page.
+ */
+describe('every icon set sprite ships with the server function', () => {
+  const resolver = readFileSync(path.join(process.cwd(), 'src/utils/sprite-url.ts'), 'utf-8');
+  const config = readFileSync(path.join(process.cwd(), 'astro.config.ts'), 'utf-8');
+
+  for (const publicPath of Object.values(ICON_SET_PATHS)) {
+    const repoPath = `public${publicPath}`;
+    it(`${repoPath} is read by a literal path and listed in includeFiles`, () => {
+      expect(resolver).toContain(`'${repoPath}'`);
+      expect(config).toContain(`'${repoPath}'`);
+    });
+  }
+
+  it('never reads a sprite through a variable path', () => {
+    expect(resolver).not.toMatch(/'public'\s*,/);
+  });
+});
