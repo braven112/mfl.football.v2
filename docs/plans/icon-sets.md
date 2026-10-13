@@ -74,7 +74,7 @@ cut reads as a photo negative. Swap on `html.dark` the way the logo cuts do.
 `schefter` (Tip Schefter's mark, Oct 2026) and `schefter-mono` are Claude
 Schefter in a suit: hand-inked over a reference portrait, not traced, with
 stubble. `schefter` has an orange-and-white striped tie in a fixed
-`#B5531F`, the only fixed colour in the drawing; `schefter-mono` is all
+`#B5531F`, and a face and neck that are always white (`#fff`, Brandon's call, Oct 2026: skin never takes the league colour, the suit and shirt do) — the only fixed colours in the drawing; `schefter-mono` is all
 `currentColor`, with a dark striped tie, and is the drop-in if a league wants
 the mark one-colour. Each SYMBOL carries both cuts and **swaps itself**:
 `<g style="display:var(--icon-cut-light, inline)">` and
@@ -141,6 +141,7 @@ page wears one mark wherever it is searched from:
 | Tip Schefter (nav, search, TheLeague header) | `user-secret` / `news` | `schefter` — Claude Schefter himself [DECIDED] |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
 | Roster (AFL family: nav, header, search) | `roster` | `roster-16` — the same jersey numbered 16, the AFL's roster size [DECIDED] |
+| Live Scoring (AFL / TheLeague: nav, header, search) | `live-score` (7-0) | `live-score-03` (AFL, founded '03) / `live-score-07` (TheLeague); `scoreboard-03` / `scoreboard-07` are the matching board-only cuts, drawn as options and not yet wired [DECIDED] |
 
 `jersey-ir` — a jersey lettered **IR** — is drawn for injured-reserve
 surfaces (today the IR / injury actions in `AFLActionModal` and

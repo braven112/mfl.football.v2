@@ -345,7 +345,7 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
             <>
               <a href={liveScoringUrl} class="nav-icon-link" title="Live scoring" target={hasLiveScoring ? undefined : "_blank"} rel={hasLiveScoring ? undefined : "noopener noreferrer"}>
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-live-score`}></use>
+                  <use href={`${spriteUrl}#icon-${isAFL ? 'live-score-03' : league.slug === 'theleague' ? 'live-score-07' : 'live-score'}`}></use>
                 </svg>
                 <span class="nav-label">Live scoring</span>
               </a>
