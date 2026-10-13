@@ -1,0 +1,30 @@
+---
+/**
+ * The key to Editorial's seed chips, whose colour alone says how a team got
+ * in. Lists only the kinds present on the board. Primetime's seed line spells
+ * the seed out, so it needs no key.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import type { BoardBadge } from '../../../../utils/standings-board';
+
+interface Props {
+  theme: SiteTheme;
+  badges: BoardBadge[];
+}
+
+const { theme, badges } = Astro.props;
+const KEY = [
+  ['division_winner', 'Division leader'],
+  ['runner_up', 'Runner-up'],
+  ['wild_card', 'Wild card'],
+] as const;
+const present = KEY.filter(([b]) => badges.includes(b));
+---
+
+{theme === 'editorial' && present.length > 0 && (
+  <p class="stb-key">
+    {present.map(([b, label]) => (
+      <span><i class={`stb-seedchip stb-seedchip--${b}`} aria-hidden="true"></i>{label}</span>
+    ))}
+  </p>
+)}

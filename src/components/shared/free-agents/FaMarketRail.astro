@@ -1,0 +1,65 @@
+---
+/**
+ * The Primetime Free Agents rail: the league's market over the last week —
+ * the most added players across every pool, and the most dropped.
+ *
+ * Counts are league-wide (one add in any division counts), but whether a
+ * player is still on the wire is a per-POOL question, so each row lists the
+ * pools he is free in (`data-free-in`) and the page's pool switch flips its
+ * Available / Gone tag (`data-state`). The server sets the first state.
+ */
+export interface RailRow {
+  id: string;
+  name: string;
+  position: string;
+  team?: string;
+  count: number;
+  /** Pool ids he is free in; empty for a single-pool league. */
+  freeIn: string[];
+  /** Single-pool league: free league-wide. */
+  free: boolean;
+}
+
+interface Props {
+  leagueName: string;
+  hot: RailRow[];
+  dropped: RailRow[];
+  activePoolId: string | null;
+  windowDays: number;
+}
+
+const { leagueName, hot, dropped, activePoolId, windowDays } = Astro.props;
+
+const posLabel = (pos: string) => (pos === 'PK' ? 'K' : pos);
+const freeNow = (r: RailRow) => (activePoolId ? r.freeIn.includes(activePoolId) : r.free);
+const lists = [
+  { key: 'hot', title: `Hot in ${leagueName}`, sub: `Most added, last ${windowDays} days`, rows: hot, sign: '+' },
+  { key: 'dropped', title: 'Most dropped', sub: `Last ${windowDays} days`, rows: dropped, sign: '−' },
+];
+---
+
+<aside class="fa-rail" aria-label="The league's market this week">
+  {lists.map((list) => (
+    <section class="fa-rail__card" aria-labelledby={`fa-rail-${list.key}`}>
+      <h2 class="fa-sec" id={`fa-rail-${list.key}`}>{list.title}<small>{list.sub}</small></h2>
+      {list.rows.length === 0 ? (
+        <p class="fa-empty">No moves in the last {windowDays} days.</p>
+      ) : (
+        <ol class="fa-rail__list">
+          {list.rows.map((r, i) => (
+            <li class="fa-rail__row" data-free-in={r.freeIn.join(' ')} data-state={freeNow(r) ? 'free' : 'gone'}>
+              <span class="fa-rail__rank">{i + 1}</span>
+              <span class="fa-rail__who">
+                <b>{r.name}</b>
+                <small>{posLabel(r.position)}{r.team ? ` · ${r.team}` : ''}</small>
+              </span>
+              <span class="fa-rail__tag fa-rail__tag--free">Available</span>
+              <span class="fa-rail__tag fa-rail__tag--gone">Gone here</span>
+              <span class={`fa-rail__count fa-rail__count--${list.key}`}>{list.sign}{r.count}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  ))}
+</aside>

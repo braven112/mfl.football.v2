@@ -50,6 +50,16 @@ export type HomeStyle = 'classic' | 'front-page';
  */
 export type IconSet = 'classic' | 'line';
 
+/**
+ * A league's site theme — the visual language every themed component speaks.
+ * `'editorial'` is the site's long-standing look (docs/claude/components.md
+ * "Editorial Design Standard"); `'primetime'` is the broadcast look that
+ * started with the front-page homepage (team-coloured paint, the condensed
+ * display face). Components render in BOTH, so a league can switch, and
+ * `?theme=` previews the other one (src/utils/site-theme.ts).
+ */
+export type SiteTheme = 'editorial' | 'primetime';
+
 export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
 
 export interface LeagueFeatures {
@@ -396,6 +406,11 @@ export interface LeagueDefinition {
    * league switches sets by changing this one value.
    */
   iconSet?: IconSet;
+  /**
+   * The league's site theme (see `SiteTheme`). Absent means `'editorial'`.
+   * Distinct from `theme`, which names the league's colour PALETTE.
+   */
+  siteTheme?: SiteTheme;
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
@@ -474,6 +489,11 @@ export function getLeagueByPath(pathname: string): LeagueDefinition {
 /** Whether a feature is enabled for the given league slug. */
 export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): boolean {
   return getLeagueBySlug(slug)?.features[feature] ?? false;
+}
+
+/** The league's own site theme; `'editorial'` for any league that names none. */
+export function leagueSiteTheme(slug: string): SiteTheme {
+  return getLeagueBySlug(slug)?.siteTheme ?? 'editorial';
 }
 
 /** The league's homepage layout; `'classic'` for any league that names none. */

@@ -4,6 +4,8 @@ declare namespace App {
 	interface Locals {
 		/** True when accessed via theleague.us — omit /theleague prefix from links */
 		hideLeaguePrefix: boolean;
+		/** A `?theme=` preview of the other site theme, or null/absent for the league's own (src/utils/site-theme.ts). */
+		siteThemePreview?: import('./config/leagues').SiteTheme | null;
 	}
 }
 

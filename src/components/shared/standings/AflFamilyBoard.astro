@@ -1,0 +1,190 @@
+---
+/**
+ * The AFL family's standings board (the AFL and the keeper demo): the same
+ * board primitives the shared standings page draws, cut on the AFL's own
+ * structure. Divisions badge on their CONFERENCE ladder, the playoff picture is
+ * one field per conference, and the all-play view is the league's own tier
+ * competition (utils/tier-board.ts, rule 1c in
+ * docs/claude/rules/standings-brackets-draft-order.md).
+ *
+ * Rows arrive from AflFamilyStandingsPage already in MFL's (or all-play) order
+ * and are never re-sorted here.
+ */
+import './board/standings-board.css';
+import type { SiteTheme } from '../../../config/leagues';
+import type { TeamStanding } from '../../../types/standings';
+import type { StandingsTiering } from './standings-table-config';
+import {
+  buildSeedField,
+  toBoardTeam,
+  type BoardTeam,
+  type BoardTeamConfig,
+  type GroupRow,
+} from '../../../utils/standings-board';
+import { buildNitRows, buildProRelRows, buildTierRows, type TierMovement } from '../../../utils/tier-board';
+import ThemeImage from '../ThemeImage.astro';
+import LeaderStrip from './board/LeaderStrip.astro';
+import SeedKey from './board/SeedKey.astro';
+import GroupCard from './board/GroupCard.astro';
+import SeedField from './board/SeedField.astro';
+import FieldTable from './board/FieldTable.astro';
+
+interface Logo {
+  src: string;
+  darkSrc?: string;
+}
+
+interface Props {
+  theme: SiteTheme;
+  view: 'division' | 'league' | 'all_play';
+  leagueSlug: string;
+  teams: BoardTeamConfig[];
+  preferredTeamId?: string;
+  hrefFor: (id: string) => string | undefined;
+  divisions: Array<{ name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo; champion?: { name: string; icon: string; year: number } }>;
+  conferences: Array<{ id: string; name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo }>;
+  tiers: Array<{ tier: string; teams: TeamStanding[]; movement?: TierMovement; promotionCutoff?: number; logo?: Logo }>;
+  /** The promotion/relegation playoff (Premier League 9-10, D-League 3-4), ranked on all-play. */
+  proRel?: { teams: TeamStanding[]; logo?: Logo };
+  /** The NIT (conference seeds 5-12), ranked by power rank. */
+  nit?: TeamStanding[];
+}
+
+const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel, nit = [] } = Astro.props;
+
+const configById = new Map(teams.map((t) => [t.franchiseId, t]));
+const board = (t: TeamStanding, badgeSeeding?: StandingsTiering): BoardTeam =>
+  toBoardTeam(t, {
+    leagueSlug,
+    badgeSeeding,
+    usesVictoryPoints: false,
+    preferredTeamId,
+    hrefFor,
+    configFor: (id) => configById.get(id),
+  });
+
+// ---- Divisions: one leader each, badges on the division's conference ladder ----
+const boardDivisions = divisions.map((d) => ({ ...d, rows: d.teams.map((t) => board(t, d.seeding)) }));
+const divisionRows = (list: BoardTeam[]): GroupRow[] =>
+  list.map((team, i) => ({
+    team,
+    lead: i === 0,
+    cut: i === 1 ? 'plain' : undefined,
+    rank: { kind: 'seed', n: i + 1 },
+    cells: [{ text: team.record }, { text: team.pf.toFixed(1), strong: true }, { text: team.streak, hideSm: true }],
+  }));
+
+// ---- Playoffs: one field per conference, seeded on its own ladder ----
+const boardConferences = conferences.map((c) => {
+  const list = c.teams.map((t) => board(t, c.seeding));
+  const groups = buildSeedField(list, c.seeding);
+  const inField = groups.filter((g) => g.kind === 'tiles' || g.kind === 'chips').reduce((n, g) => n + g.teams.length, 0);
+  return { ...c, list, groups, inField };
+});
+
+// ---- Tiers: the league's own all-play competition ----
+const boardTiers = tiers.map((t) => {
+  const list = t.teams.map((team) => board(team));
+  return { ...t, rows: buildTierRows(list, { tier: t.tier, movement: t.movement, promotionCutoff: t.promotionCutoff, leagueSlug }) };
+});
+const nitRows = buildNitRows(nit.map((t) => ({ team: board(t), seed: t.conferenceSeed, pwr: t.pwr ?? '0' })));
+const proRelRows = proRel?.teams.length ? buildProRelRows(proRel.teams.map((t) => board(t))) : [];
+---
+
+<div class="stb">
+  {view === 'division' && (
+    <>
+      <section>
+        <h2 class="stb-sec">Division leaders</h2>
+        <LeaderStrip
+          theme={theme}
+          items={boardDivisions
+            .filter((d) => d.rows.length)
+            .map((d) => ({
+              team: d.rows[0],
+              top: d.name,
+              line: [d.rows[0].record, d.rows[0].seed ? `seed ${d.rows[0].seed}` : null].filter(Boolean).join(' · '),
+            }))}
+        />
+        <SeedKey theme={theme} badges={boardDivisions.flatMap((d) => d.rows.map((t) => t.badge))} />
+      </section>
+      <div class="stb-groups stb-groups--2">
+        {boardDivisions.map((d) => (
+          <GroupCard
+            theme={theme}
+            title={d.name}
+            meta={`${d.rows.length} teams`}
+            pills
+            labels={[{ text: 'W-L' }, { text: 'PF' }, { text: 'Strk', hideSm: true }]}
+            rows={divisionRows(d.rows)}
+            champion={d.champion}
+          >
+            {d.logo && <ThemeImage slot="logo" src={d.logo.src} darkSrc={d.logo.darkSrc ?? d.logo.src} alt="" />}
+          </GroupCard>
+        ))}
+      </div>
+    </>
+  )}
+
+  {view === 'league' &&
+    boardConferences.map((c) => (
+      <section class="stb-conference">
+        <h2 class="stb-sec stb-sec--logo">
+          {c.logo && <ThemeImage src={c.logo.src} darkSrc={c.logo.darkSrc ?? c.logo.src} alt="" class="stb-sec__logo" />}
+          {c.name}
+        </h2>
+        <SeedField theme={theme} groups={c.groups} />
+        <FieldTable
+          theme={theme}
+          teams={c.list}
+          groups={c.groups}
+          summary={`Full table · ${c.list.length} teams · ${c.inField} in the field`}
+        />
+      </section>
+    ))}
+
+  {view === 'league' && nitRows.length > 0 && (
+    <div class="stb-groups stb-groups--2 stb-groups--wide-last">
+      <GroupCard
+        theme={theme}
+        title="NIT"
+        meta={`${nitRows.length} teams · by power rank`}
+        labels={[{ text: 'Seed', hideSm: true }, { text: 'W-L' }, { text: 'Power' }]}
+        rows={nitRows}
+        rankLabel="#"
+      />
+    </div>
+  )}
+
+  {view === 'all_play' && (
+    <div class:list={['stb-groups', 'stb-groups--2', { 'stb-groups--wide-last': boardTiers.length > 2 }]}>
+      {boardTiers.map((t) => (
+        <GroupCard
+          theme={theme}
+          title={t.tier}
+          meta={`${t.rows.length} teams`}
+          labels={[{ text: 'All-play' }, { text: 'Pct', hideSm: true }, { text: '' }]}
+          rows={t.rows}
+          rankLabel="#"
+        >
+          {t.logo && <ThemeImage slot="logo" src={t.logo.src} darkSrc={t.logo.darkSrc ?? t.logo.src} alt="" />}
+        </GroupCard>
+      ))}
+    </div>
+  )}
+
+  {view === 'all_play' && proRelRows.length > 0 && (
+    <div class="stb-groups stb-groups--2">
+      <GroupCard
+        theme={theme}
+        title="Pro/Rel playoff"
+        meta={`${proRelRows.length} teams`}
+        labels={[{ text: 'All-play' }, { text: 'Pct', hideSm: true }, { text: '' }]}
+        rows={proRelRows}
+        rankLabel="#"
+      >
+        {proRel?.logo && <ThemeImage slot="logo" src={proRel.logo.src} darkSrc={proRel.logo.darkSrc ?? proRel.logo.src} alt="" />}
+      </GroupCard>
+    </div>
+  )}
+</div>

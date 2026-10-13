@@ -13,7 +13,8 @@
 
 import { getPersonaLabels } from '../../utils/persona-server';
 import { getLeagueContext } from '../../utils/league-context';
-import { getLeagueBySlug, leagueHasFeature, leagueHomeStyle, type CanonicalLeagueSlug } from '../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
+import { resolveSiteTheme } from '../../utils/site-theme';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrlFor } from '../../utils/sprite-url';
@@ -105,11 +106,11 @@ const isDemo = isDemoDeploy();
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels(league.slug);
 
-// The front-page style (registry `homeStyle`) has its own header on every
-// page: the league's score strip across the very top, then the logo with the
-// menu on the right. No icon row, and "Back to MFL" lives in the drawer
-// (NavDrawer's footer), so there is no breadcrumb bar.
-const frontStyle = leagueHomeStyle(league.slug) === 'front-page';
+// The Primetime site theme (registry `siteTheme`, or a `?theme=` preview) has
+// its own header on every page: the league's score strip across the very top,
+// then the logo with the menu on the right. No icon row, and "Back to MFL"
+// lives in the drawer (NavDrawer's footer), so there is no breadcrumb bar.
+const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) === 'primetime';
 ---
 
 {frontStyle && <HeaderScoreStrip leagueSlug={league.slug} hideLeaguePrefix={hideLeaguePrefix} />}

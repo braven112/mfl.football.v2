@@ -1,0 +1,18 @@
+---
+/**
+ * A team's name at the length the screen allows: MFL's official name on wide
+ * screens, the league's medium or short name on phones (never truncated).
+ */
+import type { BoardTeam } from '../../../../utils/standings-board';
+
+interface Props {
+  team: BoardTeam;
+  /** Which created name stands in on phones. */
+  size?: 'medium' | 'short';
+}
+
+const { team, size = 'medium' } = Astro.props;
+const alt = size === 'short' ? team.nameShort : team.nameMedium;
+---
+
+{alt === team.name ? team.name : <><span class="stb-nm-full">{team.name}</span><span class="stb-nm-alt">{alt}</span></>}

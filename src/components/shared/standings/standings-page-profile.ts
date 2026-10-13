@@ -39,6 +39,15 @@ export interface StandingsPageProfile {
   franchiseBaseUrl?: string;
   /** The league table's banner fallback — TheLeague's seeded table shows banners only. */
   leagueTeamCellFallback: 'name' | 'blank';
+  /** The standings board's playoff picture (src/components/shared/standings/board/). */
+  board?: {
+    /** What the top band is called ("Division leaders" where the race is still on). */
+    leaderLabel?: string;
+    /** How many teams below the line the picture shows; absent shows them all. */
+    chaseLimit?: number;
+    /** Tag on the #1 seed's tile (TheLeague's top seed earns the bye). */
+    topSeedTag?: string;
+  };
 }
 
 const THELEAGUE: StandingsPageProfile = {
@@ -54,6 +63,7 @@ const THELEAGUE: StandingsPageProfile = {
   badgeShowsSeed: true,
   franchiseBaseUrl: '/theleague/franchises',
   leagueTeamCellFallback: 'blank',
+  board: { topSeedTag: 'Bye' },
 };
 
 /**
@@ -168,6 +178,8 @@ function madProfile(
     badgeSeeding: tiering,
     leagueTiering: tiering,
     badgeShowsSeed: true,
+    // 99 teams: the picture shows the dozen nearest the line, the table the rest.
+    board: { leaderLabel: 'Division leaders', chaseLimit: 12 },
   };
 }
 
