@@ -37,6 +37,7 @@
  */
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
+import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
 import { leagueForGroupMeBot, scrubChatText } from '../../src/utils/league-name-guard.mjs';
 
 import { isPlannedToday, describeRefusal } from './groupme-day-plan.mjs';
@@ -115,7 +116,8 @@ export function buildSpeculationGroupMeText({ body, ctaUrl }) {
   // so scrub the whole composed message rather than just the CTA line. Done
   // here (not at POST time) so the returned `text` — which the dry-run log and
   // the unit tests both read — is the exact payload.
-  return stripLinkAdjacentPunctuation(`${body}\n\n${SPECULATION_CTA_PREFIX} ${ctaUrl}`);
+  // Plain text first: GroupMe shows HTML tags literally (chat-plain-text.mjs).
+  return stripLinkAdjacentPunctuation(toChatPlainText(`${body}\n\n${SPECULATION_CTA_PREFIX} ${ctaUrl}`));
 }
 
 /**

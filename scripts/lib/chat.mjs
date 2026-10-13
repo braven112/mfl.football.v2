@@ -22,6 +22,8 @@
  *    rename shows up in the channel without anyone touching the Slack app.
  */
 
+import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
+
 const SLACK_POST_URL = 'https://slack.com/api/chat.postMessage';
 
 /** Sentence punctuation that belongs to the prose, not the URL before it. */
@@ -54,6 +56,9 @@ export function chatConfigFor(league) {
  */
 export function toSlackText(text) {
   if (typeof text !== 'string' || !text) return '';
+  // Model-written HTML would otherwise be ESCAPED below and print as literal
+  // `<p>` tags in the channel (src/utils/chat-plain-text.mjs).
+  text = toChatPlainText(text);
   const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return escaped.replace(/https?:\/\/[^\s<>]+/g, (match) => {
     const tail = match.match(TRAILING_URL_PUNCTUATION)?.[0] ?? '';

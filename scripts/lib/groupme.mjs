@@ -17,6 +17,7 @@
  */
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
+import { toChatPlainTextWithMentions } from '../../src/utils/chat-plain-text.mjs';
 import { leagueForGroupMeBot, scrubChatText } from '../../src/utils/league-name-guard.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
@@ -96,8 +97,12 @@ export async function postToGroupMe({
   // Applied before the dry-run bail, and handed to onDryRun, so a rehearsal
   // can print the exact bytes a live run would send. Callers that log their
   // own captured text still show the unsanitized original — take the argument.
-  text = stripLinkAdjacentPunctuation(text);
   let sent = (attachments ?? []).filter(Boolean);
+  // GroupMe renders plain text, so model-written HTML (`<p>…</p>`) would show
+  // as literal tags (src/utils/chat-plain-text.mjs). First, so the link and
+  // league-name passes below see the final prose.
+  ({ text, attachments: sent } = toChatPlainTextWithMentions(text, sent));
+  text = stripLinkAdjacentPunctuation(text);
   // Another league's name never reaches a chat (src/utils/league-name-guard.mjs).
   // The bot id says which league's chat this is, so no caller has to; mention
   // offsets are re-based so a tag still lands on its name.

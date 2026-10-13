@@ -8,6 +8,7 @@
 
 import type { GroupMeApiMessage, GroupMeMessagesResponse, GroupMeUserResponse, GroupMeGroupResponse, GroupMeMember } from '../types/groupme';
 import { stripLinkAdjacentPunctuation } from './link-punctuation.mjs';
+import { toChatPlainText } from './chat-plain-text.mjs';
 import { outboundAllowed } from './deploy-environment';
 
 const API_BASE = 'https://api.groupme.com/v3';
@@ -317,7 +318,8 @@ export async function postAsBot(text: string): Promise<boolean> {
   const res = await fetch(`${API_BASE}/bots/post`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bot_id: botId, text: stripLinkAdjacentPunctuation(text) }),
+    // HTML never reaches the chat as literal tags — see chat-plain-text.mjs.
+    body: JSON.stringify({ bot_id: botId, text: stripLinkAdjacentPunctuation(toChatPlainText(text)) }),
   });
 
   if (!res.ok) {
