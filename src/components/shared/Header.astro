@@ -311,7 +311,7 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
           )}
           <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL || isKeeper ? "Rosters" : "Roster"}>
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-roster`}></use>
+              <use href={`${spriteUrl}#icon-${isAFL || isKeeper ? 'roster-16' : 'roster'}`}></use>
             </svg>
             <span class="nav-label">{isAFL || isKeeper ? "Rosters" : "Roster"}</span>
           </a>
