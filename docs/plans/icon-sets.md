@@ -38,6 +38,13 @@ its current path, so nothing moves for any page or test that reads it.
   colour follows `currentColor` exactly like the classic set and no CSS
   change is needed. (Checked: no stylesheet sets `fill` on sprite icons in a
   way that would fight it.)
+- **One artboard for every glyph:** drawn content (stroke included) stays
+  inside the 2–22 live area and is centred to within 1px on both axes, so any
+  two icons sit side by side at the same visual weight. Wide marks (rivalry,
+  lineup, the handshake) are scaled down to fit 20px wide, with the stroke
+  compensated so it still renders at 1.25px. Basic UI glyphs (close, plus,
+  check, chevrons, arrows, sort) are deliberately smaller, at 13–16px — the
+  usual convention, so a chevron does not outweigh a trophy.
 - Detail level was tuned with Brandon over several rounds: realistic shapes,
   minimal interior lines, nothing that turns to mush at 18–24px.
 - **Edit the sprite directly** — paths are short, hand-written and readable.
