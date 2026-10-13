@@ -111,12 +111,11 @@ changed yet — point each link at its glyph when the switch lands:
 | Owner Activity | `activity` | `pulse` |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
 
-Five more need no new art, only a different existing glyph: Trade Builder
+Four more need no new art, only a different existing glyph: Trade Builder
 `exchange` → `transactions-2` (the handshake IS the trade tool — see
 `theming-and-assets.md` § Sprite icons carry meaning; site search already
 uses it); Standings `shield` → `standings` (the shield is Franchises);
-Playoffs `champ` → `playoff`; Admin Hub `gavel` → `wrench`; TheLeague's
-pinned Roster `banknote` → `users`. Change the matching `page-directory.json`
+Playoffs `champ` → `playoff`; Admin Hub `gavel` → `wrench`. Change the matching `page-directory.json`
 entries in the same edit so search and the nav agree.
 
 ## Wiring it up (not done)
