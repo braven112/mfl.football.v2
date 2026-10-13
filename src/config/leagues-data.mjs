@@ -96,9 +96,10 @@ export const LEAGUES = {
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
     /**
-     * MFL's IR eligibility for this league is "IR only" (owner, 2026-10-13;
-     * src/data/league-constitution.ts § Injured Reserve: only players on the
-     * official IR list). See irEligibleInjuryStatuses in leagues.ts.
+     * MFL League Settings (options O=26), checked 2026-10-13: a player must be
+     * classified "IR" before being deactivated, and an IR violation blocks the
+     * lineup (constitution § Injured Reserve agrees). See
+     * irEligibleInjuryStatuses in leagues.ts.
      */
     irEligibleInjuryStatuses: ['IR'],
     /** Repo-relative data directory written by the fetch pipelines */
@@ -348,9 +349,9 @@ export const LEAGUES = {
     shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
     /**
-     * Constitution: only players listed Doubtful, Out or on the NFL's IR may
-     * sit on IR (docs/claude/afl-rules.md § Injured Reserve). MFL enforces it
-     * by refusing the lineup import — see irEligibleInjuryStatuses in leagues.ts.
+     * MFL League Settings (options O=26), checked 2026-10-13: "IR or out or
+     * doubtful", and an IR violation blocks the lineup (docs/claude/afl-rules.md
+     * § Injured Reserve agrees). See irEligibleInjuryStatuses in leagues.ts.
      */
     irEligibleInjuryStatuses: ['Doubtful', 'Out', 'IR'],
     dataPath: 'data/afl-fantasy',
@@ -659,6 +660,12 @@ export const LEAGUES = {
     adminFranchiseIds: [],
     name: "Archie's Fantasy Football League",
     mflHost: 'www48.myfantasyleague.com',
+    /**
+     * MFL League Settings (options O=26), checked 2026-10-13: a player must be
+     * classified "IR" before being deactivated, and an IR violation blocks the
+     * lineup. See irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['IR'],
     dataPath: 'data/archies',
     /** Path-only on the shared host (mfl.football/archies), like Best Ball #1. */
     domains: [],
