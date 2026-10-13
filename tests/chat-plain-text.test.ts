@@ -60,6 +60,9 @@ describe('toChatPlainText', () => {
     expect(toChatPlainText('<img src="x.png" alt="Pigskins logo"> rule')).toBe('Pigskins logo rule');
     expect(toChatPlainText('<custom-tag data-x="1">Hi</custom-tag><!-- note -->')).toBe('Hi');
     expect(toChatPlainText('&copy; 2026 &bull; &trade; &frac12;')).toBe('© 2026 • ™ ½');
+    // Nested shapes that a single pass would reassemble into a tag.
+    expect(toChatPlainText('<scr<b>ipt>x</scr</b>ipt>')).toBe('x');
+    expect(toChatPlainText('a<!<!---->-- x -->b')).toBe('ab');
   });
 
   it('leaves ordinary chat prose alone, byte for byte', () => {

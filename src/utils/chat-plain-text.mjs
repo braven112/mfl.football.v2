@@ -69,12 +69,25 @@ export function hasChatHtml(text) {
   return typeof text === 'string' && HAS_HTML_RE.test(text);
 }
 
+/**
+ * Remove every match, repeating until nothing changes: one pass over
+ * `<scr<b>ipt>` or `<!<!---->-- x -->` leaves a fresh tag behind.
+ */
+function removeAll(text, re) {
+  let prev;
+  let out = text;
+  do {
+    prev = out;
+    out = out.replace(re, '');
+  } while (out !== prev);
+  return out;
+}
+
 /** The conversion, without trimming the ends (mention segments need theirs). */
 function convert(text) {
-  return text
-    .replace(COMMENT_RE, '')
+  const converted = removeAll(text, COMMENT_RE)
     .replace(ANCHOR_RE, (_m, _q, href, inner) => {
-      const label = inner.replace(ANY_TAG_RE, '').trim();
+      const label = removeAll(inner, ANY_TAG_RE).trim();
       return /^https?:\/\//i.test(href) && !label.includes(href) ? `${label} ${href}`.trim() : label;
     })
     .replace(IMG_RE, (_m, _q, alt) => alt)
@@ -82,8 +95,8 @@ function convert(text) {
     .replace(HR_RE, '\n')
     .replace(PARA_BREAK_RE, '\n\n')
     .replace(LI_OPEN_RE, '\n• ')
-    .replace(LIST_RE, '\n')
-    .replace(ANY_TAG_RE, '')
+    .replace(LIST_RE, '\n');
+  return removeAll(converted, ANY_TAG_RE)
     .replace(ENTITY_RE, decodeEntity)
     // Tidy what the tags left behind: no spaces hugging a newline, at most
     // one blank line.
