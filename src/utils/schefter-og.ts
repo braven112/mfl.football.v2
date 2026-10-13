@@ -17,7 +17,7 @@
  *     slow CDN can never hang or break an unfurl.
  */
 
-import { closeSync, fstatSync, openSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
@@ -28,6 +28,7 @@ import { getNflTeamColors, hexToRgba } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
 import { isValidSchefterPostId, schefterPostOgText } from './schefter-feed';
 import { isEspnCdnUrl } from './espn-cdn';
+import { getSchefterFeedIfAny } from './schefter-league-data';
 import { ALL_LEAGUES, getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 export const OG_WIDTH = 1200;
@@ -48,44 +49,22 @@ function feedPathFor(league: OgLeague): string {
   return (getLeagueBySlug(league) as { schefterFeedPath?: string } | null)?.schefterFeedPath ?? '';
 }
 
-interface FeedCacheEntry {
-  mtimeMs: number;
-  byId: Map<string, SchefterPost>;
-}
+// The active feed is live in Redis (the committed file is only a daily
+// snapshot), so a share card for a post written this morning resolves too.
+// getSchefterFeedIfAny memoizes the read; the id index is rebuilt only when it
+// hands back a different feed object.
+const feedIndexCache = new WeakMap<SchefterFeed, Map<string, SchefterPost>>();
 
-// Feeds are rewritten by cron scans while the server runs — read with fs
-// (never `import`) and re-parse only when the file mtime moves.
-const feedCache = new Map<OgLeague, FeedCacheEntry>();
-
-function getFeedIndex(league: OgLeague): Map<string, SchefterPost> {
-  const filePath = join(process.cwd(), feedPathFor(league));
-  const cached = feedCache.get(league);
-  // One open handle for both the mtime check and the read, so the bytes parsed
-  // are the bytes whose mtime was checked (CodeQL js/file-system-race).
-  let fd: number;
-  try {
-    fd = openSync(filePath, 'r');
-  } catch {
-    return new Map();
+async function getFeedIndex(league: OgLeague): Promise<Map<string, SchefterPost>> {
+  const leagueDef = getLeagueBySlug(league);
+  const feed = leagueDef ? await getSchefterFeedIfAny(leagueDef) : null;
+  if (!feed) return new Map();
+  let byId = feedIndexCache.get(feed);
+  if (!byId) {
+    byId = new Map((feed.posts ?? []).map((post) => [post.id, post]));
+    feedIndexCache.set(feed, byId);
   }
-  try {
-    const mtimeMs = fstatSync(fd).mtimeMs;
-    if (cached && cached.mtimeMs === mtimeMs) return cached.byId;
-
-    const byId = new Map<string, SchefterPost>();
-    try {
-      const feed = JSON.parse(readFileSync(fd, 'utf-8')) as SchefterFeed;
-      for (const post of feed.posts ?? []) byId.set(post.id, post);
-    } catch {
-      // A cron job may be rewriting the file mid-read — serve the last good
-      // index rather than 404ing every known post until the next clean read.
-      return cached ? cached.byId : new Map();
-    }
-    feedCache.set(league, { mtimeMs, byId });
-    return byId;
-  } finally {
-    closeSync(fd);
-  }
+  return byId;
 }
 
 // ── Archive fallback ─────────────────────────────────────────────────────
@@ -129,13 +108,13 @@ function getArchiveIndex(league: OgLeague): Map<string, SchefterPost> {
  *  branding. Falls back to the season archives for posts older than the
  *  active window. Returns null for unknown ids so the endpoint can 404
  *  instead of rendering arbitrary requests. */
-export function findSchefterPost(
+export async function findSchefterPost(
   postId: string,
   preferredLeague: OgLeague = 'theleague'
-): { post: SchefterPost; league: OgLeague } | null {
+): Promise<{ post: SchefterPost; league: OgLeague } | null> {
   const order: OgLeague[] = [preferredLeague, ...OG_LEAGUES.filter((l) => l !== preferredLeague)];
   for (const league of order) {
-    const post = getFeedIndex(league).get(postId);
+    const post = (await getFeedIndex(league)).get(postId);
     if (post) return { post, league };
   }
   for (const league of order) {

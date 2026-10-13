@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ params, url }) => {
     ? (leagueParam as OgLeague)
     : 'theleague';
 
-  const found = findSchefterPost(postId, preferredLeague);
+  const found = await findSchefterPost(postId, preferredLeague);
   if (!found) {
     return new Response('Not found', { status: 404 });
   }

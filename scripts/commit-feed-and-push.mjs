@@ -19,17 +19,33 @@
  * `mfl-feeds` snapshots) are expanded to their individual changed paths, so
  * the speculation workflow's `git add <dir>` style commit works too.
  *
+ * Schefter feeds go to Redis, not git (scripts/lib/schefter-feed-store.mjs).
+ * A changed `schefter-feed.json` is merged into its league's Redis copy and
+ * left out of the commit, because every commit to main is a production build
+ * and the site reads the feed from Redis per request. `--snapshot` commits the
+ * feeds too — the once-a-day backup. With no Redis credentials, or if the
+ * Redis write fails, the feed is committed exactly as before: a failed
+ * optimization must never cost a post.
+ *
  * Usage:
  *   node scripts/commit-feed-and-push.mjs \
  *     --branch main \
  *     --message "chore: …" \
- *     --files "src/data/theleague/schefter-feed.json,data/theleague/mfl-feeds"
+ *     --files "src/data/theleague/schefter-feed.json,data/theleague/mfl-feeds" \
+ *     [--snapshot | --git-only]
+ *
+ * Only a run committing to `main` publishes to Redis: a branch run (the
+ * derived-chain and backfill lanes take `github.ref_name`) keeps its posts on
+ * its branch, as before. `--git-only` skips Redis on purpose — the archive
+ * lane, whose pruned feed must become visible together with the archive files
+ * it moved posts into, which only a deploy ships.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { mergeByPath } from './lib/merge-schefter-feed.mjs';
 import { leagueForFeedPath, scrubFeedText } from '../src/utils/league-name-guard.mjs';
+import { feedStoreConfig, leagueForFeedPath as feedStoreLeague, mergeFeedIntoRedis } from './lib/schefter-feed-store.mjs';
 
 const MAX_ATTEMPTS = 5;
 
@@ -40,6 +56,8 @@ function parseArgs(argv) {
     if (a === '--branch') out.branch = argv[++i];
     else if (a === '--message') out.message = argv[++i];
     else if (a === '--files') out.files = argv[++i];
+    else if (a === '--snapshot') out.snapshot = true;
+    else if (a === '--git-only') out.gitOnly = true;
   }
   return out;
 }
@@ -117,19 +135,69 @@ function guardLeagueNames(repoPath, text) {
   }
 }
 
-function main() {
-  const { branch, message, files } = parseArgs(process.argv.slice(2));
+/**
+ * Merge each changed Schefter feed into Redis. Returns path → the merged live
+ * feed for every feed Redis now holds; the caller leaves those out of the
+ * commit. A feed whose Redis write failed is not returned, so it is committed
+ * as before.
+ */
+export async function publishFeedsToRedis(changes, { redis = feedStoreConfig(), merge = mergeFeedIntoRedis } = {}) {
+  const published = new Map();
+  if (!redis) return published;
+  for (const c of changes) {
+    if (c.deleted) continue;
+    const league = feedStoreLeague(c.path);
+    if (!league) continue;
+    try {
+      // The same league-name gate the git path applies, so Redis — which the
+      // site now reads — never holds a post naming another league.
+      const ours = JSON.parse(guardLeagueNames(c.path, readFileSync(c.path, 'utf8')));
+      const { written, feed } = await merge(redis, league.slug, ours);
+      console.log(`  ${c.path}: ${written ? 'merged into Redis' : 'Redis already current'}`);
+      published.set(c.path, feed);
+    } catch (err) {
+      console.warn(`::warning::${c.path}: Redis write failed (${err.message}) — committing it to git instead.`);
+    }
+  }
+  return published;
+}
+
+async function main() {
+  const { branch, message, files, snapshot, gitOnly } = parseArgs(process.argv.slice(2));
   if (!branch || !message || !files) {
-    console.error('Usage: --branch <b> --message <m> --files <comma,separated,paths>');
+    console.error('Usage: --branch <b> --message <m> --files <comma,separated,paths> [--snapshot | --git-only]');
     process.exit(2);
   }
   const entries = files.split(',').map((f) => f.trim()).filter(Boolean);
 
-  const changes = collectChanges(entries);
+  let changes = collectChanges(entries);
   if (changes.length === 0) {
     console.log('No feed changes to commit.');
     return;
   }
+
+  const inRedis = branch === 'main' && !gitOnly ? await publishFeedsToRedis(changes) : new Map();
+  try {
+    if (inRedis.size && !snapshot) {
+      changes = changes.filter((c) => !inRedis.has(c.path));
+      if (changes.length === 0) {
+        console.log('Feeds are in Redis; nothing else to commit.');
+        return;
+      }
+    }
+    commitAndPush(branch, message, changes);
+  } finally {
+    // The git cycle hard-resets to origin, whose feed is the day-old snapshot.
+    // Put the live feed back so a later step in this job (the announce drain,
+    // a second league's scan) reads what was just published. That feed comes
+    // back from this repo's own Redis key, which only this script writes.
+    for (const [p, feed] of inRedis) {
+      writeFileSync(p, JSON.stringify(feed, null, 2) + '\n'); // lgtm[js/http-to-file-access] codeql[js/http-to-file-access]
+    }
+  }
+}
+
+function commitAndPush(branch, message, changes) {
   console.log(`Committing ${changes.length} changed path(s): ${changes.map((c) => c.path).join(', ')}`);
 
   // Snapshot exactly what THIS run produced before we touch the working tree.
@@ -170,8 +238,10 @@ function main() {
       }
     }
 
-    // Stage adds, modifications, AND deletions across the requested entries.
-    git(['add', '-A', '--', ...entries]);
+    // Stage adds, modifications, AND deletions — only the paths this run is
+    // committing (a feed handed to Redis is back at origin's copy after the
+    // reset, so it would stage nothing anyway).
+    git(['add', '-A', '--', ...changes.map((c) => c.path)]);
     if (gitText(['diff', '--cached', '--name-only']).trim() === '') {
       console.log('Our content already present on origin — nothing to push.');
       return;
@@ -195,4 +265,5 @@ function main() {
   process.exit(1);
 }
 
-main();
+const isMain = process.argv[1] && process.argv[1].endsWith('commit-feed-and-push.mjs');
+if (isMain) await main();

@@ -31,7 +31,8 @@ import { getGlobalPlayerMap, type PlayerIdentity } from '../../../utils/player-m
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import { postByline } from '../../../utils/persona-server';
-import { indexMoveStories, loadMoveStoryPosts, type MoveStory } from '../../../utils/transaction-stories';
+import { indexMoveStories, loadMoveStoryPosts, withLiveFeed, type MoveStory } from '../../../utils/transaction-stories';
+import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { chosenZone } from '../../../utils/viewer-preferences';
 import { loadTransactionsSeason, loadLedgerLeagueContext, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/transactions-feeds';
@@ -93,7 +94,9 @@ const [rows, ledger, storyPosts] = await Promise.all([
   // Per SEASON, from that season's league.json — a league can change its bid
   // rules or its divisions between years.
   loadLedgerLeagueContext(leagueFeeds, year),
-  schefterPosts ? loadMoveStoryPosts(schefterPosts, year) : Promise.resolve([]),
+  schefterPosts
+    ? loadMoveStoryPosts(withLiveFeed(schefterPosts, () => getSchefterFeedIfAny(league)), year)
+    : Promise.resolve([]),
 ]);
 const stories = indexMoveStories(storyPosts);
 // A FAAB league has no salary cap, but its bids ARE what a move cost, so the

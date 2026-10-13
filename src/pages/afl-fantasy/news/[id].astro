@@ -16,7 +16,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import { getLeaguePersona, postByline } from '../../../utils/persona-server';
 import { personaLabels } from '../../../utils/persona.mjs';
-import feedData from '../../../../data/afl-fantasy/schefter-feed.json';
+import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
@@ -39,7 +39,7 @@ const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[
 );
 
 const { id } = Astro.params;
-const feed = feedData as SchefterFeed;
+const feed = await getSchefterFeedBySlug('afl-fantasy');
 const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;
 let post = feed.posts.find(isArticle);
 

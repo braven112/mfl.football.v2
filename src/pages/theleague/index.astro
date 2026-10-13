@@ -74,7 +74,7 @@ import {
   type BuiltLiveScoringProps,
 } from '../../utils/live-scoring-hero-props';
 import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
-import feedData from '../../data/theleague/schefter-feed.json';
+import { getSchefterFeed } from '../../utils/schefter-league-data';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
@@ -108,7 +108,7 @@ const showInstallBanner =
 const viewerClock = await readViewerClock(Astro.cookies, authUser, THELEAGUE.slug);
 const viewerCountry = viewerClock.prefs.country;
 
-const feed = feedData as FeedType;
+const feed: FeedType = await getSchefterFeed(THELEAGUE);
 
 // Merge GroupMe messages into the sidebar feed (auth-gated). NOT sliced here —
 // resolveSchefterRail needs the whole list, because taking the newest 30 and

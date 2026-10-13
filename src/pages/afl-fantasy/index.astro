@@ -36,7 +36,7 @@ import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflCon
 import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
 
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import feedData from '../../../data/afl-fantasy/schefter-feed.json';
+import { getSchefterFeed } from '../../utils/schefter-league-data';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 
 import type { SchefterFeed as FeedType } from '../../types/schefter';
@@ -83,6 +83,8 @@ if (myTeamParam) {
 
 /** This league's registry entry — resolved once, not per use site. */
 const AFL = getLeagueBySlug('afl-fantasy')!;
+// Live from Redis; the committed file is only the daily snapshot.
+const feed: FeedType = await getSchefterFeed(AFL);
 
 const cookiePref = getAFLPreference(Astro.cookies);
 const authUser = getAuthUser(Astro.request);
@@ -337,7 +339,7 @@ const heroState = await resolveLeagueHomeHero({
   userPoolId: userConferenceId,
   userTier: userTeam?.tier,
   poolOf: getFranchiseConference,
-  posts: (feedData as FeedType).posts,
+  posts: feed.posts,
   waiverCalendar: aflWaiverCalendar,
   leagueYear: aflLeagueYearForHero,
   timeline,
@@ -367,7 +369,6 @@ const spotlight = !inSeasonVariant && userFranchiseId
 // The rail IS the owner's Watching feed. The WHOLE feed goes in: slicing to
 // 30 first and filtering after leaves almost nothing, because the newest posts
 // are overwhelmingly wire.
-const feed = feedData as FeedType;
 const rail = await resolveSchefterRail({ league: AFL, posts: feed.posts, authUser, now: effectiveDate });
 
 // Hide the What's Next card that the hero already promotes — EXCEPT when the

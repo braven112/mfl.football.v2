@@ -26,6 +26,7 @@ import { getLeagueById, type LeagueDefinition } from '../../../../config/leagues
 import { getLeaguePersona } from '../../../../utils/persona-server';
 import { isDefaultPersona, personaByline } from '../../../../utils/persona.mjs';
 import { scrubLeagueNames } from '../../../../utils/league-name-guard.mjs';
+import { getSchefterFeedIfAny } from '../../../../utils/schefter-league-data';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -66,23 +67,11 @@ Rules:
 - Never mention being an AI or language model
 - Be the voice of reason, but make it entertaining`;
 
-// Every league's feed, loaded lazily (a feed is ~1 MB): TheLeague's lives
-// under src/data, the rest under data/. Keyed by the registry's
-// `schefterFeedPath`, so a new league needs no edit here.
-const SRC_FEEDS = import.meta.glob('../../../../data/*/schefter-feed.json', { import: 'default' });
-const ROOT_FEEDS = import.meta.glob('../../../../../data/*/schefter-feed.json', { import: 'default' });
-const FEED_LOADERS: Record<string, () => Promise<unknown>> = Object.fromEntries([
-  ...Object.entries(SRC_FEEDS).map(([k, load]) => [`src/${k.replace(/^(\.\.\/)+/, '')}`, load]),
-  ...Object.entries(ROOT_FEEDS).map(([k, load]) => [k.replace(/^(\.\.\/)+/, ''), load]),
-]);
-
-/** Find the original post in the league's own feed */
+/** Find the original post in the league's own feed (live, from Redis). */
 async function findPost(league: LeagueDefinition, postId: string): Promise<SchefterPost | null> {
-  const load = league.schefterFeedPath ? FEED_LOADERS[league.schefterFeedPath] : undefined;
-  if (!load) return null;
   try {
-    const feed = (await load()) as { posts?: SchefterPost[] };
-    return (feed.posts ?? []).find((p) => p.id === postId) ?? null;
+    const feed = await getSchefterFeedIfAny(league);
+    return (feed?.posts ?? []).find((p) => p.id === postId) ?? null;
   } catch {
     return null;
   }

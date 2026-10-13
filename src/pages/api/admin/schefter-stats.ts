@@ -1003,7 +1003,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
   const league = resolved.league;
 
-  const feed = getSchefterFeed(league) as unknown as FeedShape;
+  const feed = (await getSchefterFeed(league)) as unknown as FeedShape;
   const teamLookup = buildTeamLookup(getSchefterLeagueConfig(league));
   const keys = buildKeys(league.navSlug);
 
