@@ -42,11 +42,26 @@ export interface ParseMflImportErrorOptions {
   /** League web host without protocol, e.g. 'www44.myfantasyleague.com'. */
   mflHost: string;
   year: string | number;
+  /**
+   * The league's IR-eligible designations (registry `irEligibleInjuryStatuses`).
+   * IR rules differ by league, so the explanation only names them when the
+   * league declares them; otherwise it stays league-neutral.
+   */
+  irEligibleStatuses?: readonly string[];
 }
 
-export const IR_VIOLATION_MESSAGE =
-  'MFL won’t accept a lineup while your team has an IR violation: a player on your IR is no longer '
-  + 'listed Doubtful, Out or on the NFL’s IR. Move him off IR (or release him), then submit again.';
+/** "Doubtful, Out or IR" */
+function joinOr(items: readonly string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
+}
+
+export function irViolationMessage(eligible?: readonly string[]): string {
+  const why = eligible?.length
+    ? `a player on your IR is no longer listed ${joinOr(eligible)}`
+    : 'a player on your IR is no longer eligible for it';
+  return `MFL won’t accept a lineup while your team has an IR violation: ${why}. `
+    + 'Move him off IR (or release him), then submit again.';
+}
 
 /**
  * @param raw the inner text of MFL's `<error>` element, as returned (still
@@ -54,7 +69,9 @@ export const IR_VIOLATION_MESSAGE =
  */
 export function parseMflImportError(raw: string, opts: ParseMflImportErrorOptions): MflImportError {
   const html = decodeEntities(raw);
-  const text = decodeEntities(html.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+  // Rendered with textContent, but strip every remaining angle bracket too so
+  // no tag can survive a nested or entity-encoded fragment.
+  const text = decodeEntities(html.replace(/<[^>]*>/g, '')).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
 
   let fixUrl: string | undefined;
   const href = html.match(/<a\s[^>]*href\s*=\s*["']([^"']+)["']/i)?.[1];
@@ -71,7 +88,7 @@ export function parseMflImportError(raw: string, opts: ParseMflImportErrorOption
   }
 
   if (/IR\s+Violation/i.test(text)) {
-    return { message: IR_VIOLATION_MESSAGE, reason: 'ir-violation', fixUrl };
+    return { message: irViolationMessage(opts.irEligibleStatuses), reason: 'ir-violation', fixUrl };
   }
   return { message: text || 'Unknown MFL error', fixUrl };
 }

@@ -80,7 +80,11 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
         // MFL's error is an escaped HTML fragment, and some of them (an IR
         // violation) can never succeed on retry — so the page needs a plain
         // sentence it can SHOW, plus MFL's own link to the fix.
-        const parsed = parseMflImportError(errorMsg, { mflHost: league.mflHost, year });
+        const parsed = parseMflImportError(errorMsg, {
+          mflHost: league.mflHost,
+          year,
+          irEligibleStatuses: league.irEligibleInjuryStatuses,
+        });
         return json({ error: parsed.message, reason: parsed.reason, fixUrl: parsed.fixUrl }, 422);
       }
 
