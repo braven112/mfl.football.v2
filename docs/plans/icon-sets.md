@@ -23,7 +23,7 @@ which set is loaded.
 
 | File | What it is |
 |---|---|
-| `public/assets/icons/sets/line/sprite.svg` | The `line` set — all 139 glyph ids of the classic sprite, redrawn |
+| `public/assets/icons/sets/line/sprite.svg` | The `line` set — all 140 glyph ids of the classic sprite, redrawn |
 | `docs/plans/icon-sets/line-review.html` | Open in a browser: every classic glyph beside its `line` redraw, at size and in an active colour |
 | `tests/icon-set-parity.test.ts` | Every set under `sets/` must define EXACTLY the classic sprite's ids (wired into the `theming-and-assets` path-guard domain) |
 
@@ -89,7 +89,7 @@ Premier League shield and NFL shield keep their own brand colours.
 ## Nav icons — drawn, not yet wired (Oct 2026)
 
 An audit of TheLeague's and the AFL's nav (`src/config/nav-config.json`)
-found pages sharing one icon or wearing a vague one. Fifteen new glyphs were
+found pages sharing one icon or wearing a vague one. Sixteen new glyphs were
 drawn for them, in BOTH sets (classic gets them as 2px outlines, since the
 parity test requires every set to carry every id). `nav-config.json` is NOT
 changed yet — point each link at its glyph when the switch lands:
@@ -110,6 +110,10 @@ changed yet — point each link at its glyph when the switch lands:
 | Top Players | `bar-chart` | `player-star`, or `jersey-star` (jersey with a star) — Brandon to pick |
 | Owner Activity | `activity` | `pulse` |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
+
+`jersey-ir` — a jersey lettered **IR** — is drawn for injured-reserve
+surfaces (today the IR / injury actions in `AFLActionModal` and
+`PlayerDetailsModal` use `ambulance`); no nav link maps to it yet.
 
 Four more need no new art, only a different existing glyph: Trade Builder
 `exchange` → `transactions-2` (the handshake IS the trade tool — see
