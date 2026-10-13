@@ -101,6 +101,14 @@
       "impact": "user",
       "area": "design-system",
       "league": "both"
+    },
+    {
+      "date": "2026-10-13",
+      "type": "bug-fix",
+      "summary": "When MFL refuses a lineup (for example over an IR violation), Set Lineup now says why and links to the MFL page that fixes it, instead of just \"Failed — Retry\".",
+      "impact": "user",
+      "area": "lineups",
+      "league": "both"
     }
   ]
 }

@@ -30,6 +30,7 @@ import { invalidateAppBadge } from './app-badge-cache';
 import { getCurrentWeekForYear } from './current-week';
 import { buildMflExportUrl } from './mfl-url';
 import { json } from './api-response';
+import { parseMflImportError } from './mfl-import-error';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; POST: APIRoute } {
@@ -74,9 +75,13 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
 
       // MFL returns XML: <status>OK</status> on success, <error>msg</error> on failure
       if (text.includes('<error>')) {
-        const errorMsg = text.match(/<error>(.*?)<\/error>/)?.[1] || 'Unknown MFL error';
+        const errorMsg = text.match(/<error>([\s\S]*?)<\/error>/)?.[1] || 'Unknown MFL error';
         console.error('[lineup] MFL submit error:', errorMsg);
-        return json({ error: `MFL: ${errorMsg}` }, 422);
+        // MFL's error is an escaped HTML fragment, and some of them (an IR
+        // violation) can never succeed on retry — so the page needs a plain
+        // sentence it can SHOW, plus MFL's own link to the fix.
+        const parsed = parseMflImportError(errorMsg, { mflHost: league.mflHost, year });
+        return json({ error: parsed.message, reason: parsed.reason, fixUrl: parsed.fixUrl }, 422);
       }
 
       if (text.includes('<status>OK</status>') || text.includes('>OK<')) {

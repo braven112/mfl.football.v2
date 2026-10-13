@@ -892,6 +892,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </ul>
     </section>
 
+    <!-- Why the last submit failed, in words. The button alone said only
+         "Failed — Retry", which for a block like an IR violation can never
+         succeed — the owner needs MFL's reason and the page that fixes it. -->
+    <div class="lineup-submit-error" id="lineup-submit-error" role="alert" hidden>
+      <p class="lineup-submit-error__text" id="lineup-submit-error-text"></p>
+      <a class="lineup-submit-error__link" id="lineup-submit-error-link" target="_blank" rel="noopener" hidden>Fix it on MFL</a>
+    </div>
+
     <!-- Submit bar (fixed bottom) -->
     <div class="lineup-submit-bar" id="lineup-submit-bar">
       <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
@@ -1069,6 +1077,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const announcer = document.getElementById('lineup-announcer')!;
       const toastEl = document.getElementById('lineup-toast')!;
       const toastText = document.getElementById('lineup-toast-text')!;
+      const submitErrorEl = document.getElementById('lineup-submit-error')!;
+      const submitErrorText = document.getElementById('lineup-submit-error-text')!;
+      const submitErrorLink = document.getElementById('lineup-submit-error-link') as HTMLAnchorElement;
       const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
       const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
       const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
@@ -1146,6 +1157,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         submitBtn.className = state.className;
         submitBtn.disabled = state.disabled;
         submitText.textContent = state.text;
+        // Any edit after a failure makes the old reason stale.
+        hideSubmitError();
         changesEl.style.display = state.showChanges ? '' : 'none';
         changesEl.querySelector('strong')!.textContent = String(changes);
 
@@ -1788,6 +1801,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         submitBtn.disabled = true;
         submitBtn.setAttribute('aria-busy', 'true');
         submitText.textContent = 'Submitting...';
+        hideSubmitError();
 
         try {
           const res = await fetch(lineupApi, {
@@ -1833,15 +1847,33 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             submitBtn.removeAttribute('aria-busy');
             submitText.textContent = 'Failed — Retry';
             submitBtn.disabled = false;
-            announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
+            // The alert region announces the reason itself.
+            showSubmitError(result.error || 'Lineup submission failed. Please try again.', result.fixUrl);
           }
         } catch {
           submitBtn.className = 'lineup-submit lineup-submit--error';
           submitBtn.removeAttribute('aria-busy');
           submitText.textContent = 'Failed — Retry';
           submitBtn.disabled = false;
-          announce('Lineup submission failed. Please try again.');
+          showSubmitError('Couldn’t reach the server. Check your connection and try again.');
         }
+      }
+
+      function showSubmitError(message: string, fixUrl?: string) {
+        submitErrorText.textContent = message;
+        // Only MFL's own pages, as the route resolves them — never a raw href.
+        if (fixUrl && /^https:\/\/[a-z0-9.-]*myfantasyleague\.com\//i.test(fixUrl)) {
+          submitErrorLink.href = fixUrl;
+          submitErrorLink.hidden = false;
+        } else {
+          submitErrorLink.removeAttribute('href');
+          submitErrorLink.hidden = true;
+        }
+        submitErrorEl.hidden = false;
+      }
+
+      function hideSubmitError() {
+        submitErrorEl.hidden = true;
       }
 
       // ---------------------------------------------------------------------------
@@ -2532,6 +2564,36 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     background: var(--lineup-submit-error);
     color: #fff;
   }
+  /* The icon is a checkmark — wrong on a failure. */
+  .lineup-submit--error .lineup-submit__icon { display: none; }
+
+  .lineup-submit-error {
+    position: fixed;
+    left: var(--lineup-page-px);
+    right: var(--lineup-page-px);
+    bottom: calc(var(--lineup-submit-height) + 0.5rem);
+    z-index: var(--z-sticky, 100);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--badge-error-text);
+    border-radius: 8px;
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+    box-shadow: var(--shadow-md);
+  }
+  .lineup-submit-error[hidden] { display: none; }
+  .lineup-submit-error__text { margin: 0; }
+  .lineup-submit-error__link {
+    align-self: flex-start;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  .lineup-submit-error__link[hidden] { display: none; }
 
   .lineup-submit--success {
     background: var(--color-success-fill);
@@ -2911,6 +2973,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       left: 50%;
       transform: translateX(-50%);
       border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+    }
+    .lineup-submit-error {
+      max-width: calc(440px - 2 * var(--lineup-page-px));
+      left: 50%;
+      right: auto;
+      width: 100%;
+      transform: translateX(-50%);
     }
   }
 
