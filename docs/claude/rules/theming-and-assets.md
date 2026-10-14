@@ -727,7 +727,7 @@ next to icons that do.
 
 `src/config/page-icons.json` is the only place a page's icon is chosen: one
 glyph per league-local path, plus `leagueOverrides` for the few chosen per
-league on purpose (the AFL's `roster-16`, the `live-score-03` / `-07` boards).
+league on purpose (the AFL's `roster-16`, Archie's `roster-14`, the `live-score-03` / `-07` boards).
 Anything that renders a LINK TO A PAGE — the menu, site search, quick links,
 the related-pages card, the draft and Front Office sub-navs, homepage tiles,
 hero quick links — takes its icon from `pageIcon(path, leagueSlug)`
