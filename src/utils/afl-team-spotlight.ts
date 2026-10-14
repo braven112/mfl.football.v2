@@ -35,6 +35,7 @@
 import type { AwardSlug } from './afl-awards';
 import { getFranchiseTrophyCase } from './afl-awards';
 import { getAflCareerStats } from './afl-career-stats';
+import { pageIcon } from './page-icon';
 
 export type AflSpotlightKind = 'draft' | 'title' | 'streak' | 'record';
 
@@ -184,7 +185,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
       label: 'Draft Slot',
       value: base,
       sub: `${conf} · ${slot.draftYear}`,
-      icon: 'draft-podium',
+      icon: pageIcon('/draft/order', 'afl-fantasy'),
       href: '/afl-fantasy/draft/order',
       hint: `Your earned slot in the ${slot.draftYear} ${conf} draft: pick ${slot.basePick} of round 1.`,
     };
@@ -197,7 +198,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
       label: 'Draft Slot',
       value: `${base}*`,
       sub: 'traded away',
-      icon: 'draft-podium',
+      icon: pageIcon('/draft/order', 'afl-fantasy'),
       href: '/afl-fantasy/draft/order',
       hint: `You earned the ${base} slot in the ${slot.draftYear} ${conf} draft but traded out of round 1.`,
     };
@@ -209,7 +210,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
     label: 'Draft Slot',
     value: `${base}*`,
     sub: `traded · now ${nowLabels.join(', ')}`,
-    icon: 'draft-podium',
+    icon: pageIcon('/draft/order', 'afl-fantasy'),
     href: '/afl-fantasy/draft/order',
     hint: `You earned the ${base} slot in the ${slot.draftYear} ${conf} draft; after trades you pick ${nowLabels.join(' and ')} in round 1.`,
   };
@@ -315,7 +316,7 @@ export function resolveAflStreakSpotlight(
     label: 'Playoffs',
     value: `${streak}`,
     sub: streak === 1 ? 'straight season' : 'straight seasons',
-    icon: 'playoff',
+    icon: pageIcon('/playoffs', 'afl-fantasy'),
     href: '/afl-fantasy/playoffs',
     hint:
       streak === 1

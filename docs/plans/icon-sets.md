@@ -141,6 +141,7 @@ page wears one mark wherever it is searched from:
 | Tip Schefter (nav, search, TheLeague header) | `user-secret` / `news` | `schefter` — Claude Schefter himself [DECIDED] |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
 | Roster (AFL family: nav, header, search) | `roster` | `roster-16` — the same jersey numbered 16, the AFL's roster size [DECIDED] |
+| Roster (Archie's: nav, search, tiles) | `roster` | `roster-14` — the same jersey numbered 14, Archie's roster size; the number is centred on the jersey's x = 12 axis like the 25 [DECIDED] |
 | Live Scoring (AFL / TheLeague: nav, header, search) | `live-score` (7-0) | `live-score-03` (AFL, founded '03) / `live-score-07` (TheLeague); `scoreboard-03` / `scoreboard-07` are the matching board-only cuts, drawn as options and not yet wired [DECIDED] |
 
 `jersey-ir` — a jersey lettered **IR** — is drawn for injured-reserve

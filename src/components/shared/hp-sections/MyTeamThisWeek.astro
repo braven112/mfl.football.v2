@@ -17,6 +17,7 @@
 import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { pageIcon } from '../../../utils/page-icon';
 import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import type { MyTeamWeek, LineupProblem } from '../../../utils/my-team-week';
@@ -50,6 +51,8 @@ const { leagueSlug, teamName, teamIcon, data, rosterCount, rosterLimit, extraTil
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const href = (path: string) => resolveLeaguePath(ensureLeaguePrefix(league, path), hideLeaguePrefix);
+// A link wears its page's own icon (src/config/page-icons.json), the one the menu shows.
+const icon = (path: string) => pageIcon(path, league.slug);
 
 const brands = getLeagueTeamBrands(leagueSlug);
 const opponentNames = data.games.map((g) => brands[g.opponentId]?.nameShort ?? `Team ${g.opponentId}`);
@@ -65,21 +68,21 @@ const tiles: MyTeamTile[] = [
     value: recordText,
     sub: data.pointsFor != null ? `${data.pointsFor.toFixed(1)} pts for` : 'this season',
     href: href('/standings'),
-    icon: 'standings',
+    icon: icon('/standings'),
   },
   {
     label: `Week ${data.week}`,
     value: firstGame ? (firstGame.isHome ? 'vs.' : 'at') : 'TBD',
     sub: opponentNames.length ? opponentNames.join(' & ') : 'see the schedule',
     href: href('/schedule'),
-    icon: 'exchange',
+    icon: icon('/schedule'),
   },
   {
     label: 'Roster',
     value: rosterCount != null ? `${rosterCount}` : '—',
     sub: rosterLimit ? `of ${rosterLimit} slots` : 'players',
     href: href('/rosters'),
-    icon: 'users',
+    icon: icon('/rosters'),
     alert: rosterLimit != null && rosterCount != null && rosterCount > rosterLimit,
   },
   ...(extraTile ? [extraTile] : []),
@@ -102,10 +105,10 @@ const listed = lineup?.problems.slice(0, MAX_LISTED) ?? [];
 const unlisted = (lineup?.problems.length ?? 0) - listed.length;
 
 const actions = [
-  { label: 'Set Lineup', href: href('/lineup'), icon: 'lineup', primary: lineupNeedsWork },
-  { label: 'Free Agents', href: href('/players'), icon: 'user-plus', primary: false },
-  { label: 'Trade Builder', href: href('/front-office/trade-builder'), icon: 'exchange', primary: false },
-  { label: 'My Roster', href: href('/rosters'), icon: 'users', primary: false },
+  { label: 'Set Lineup', href: href('/lineup'), icon: icon('/lineup'), primary: lineupNeedsWork },
+  { label: 'Free Agents', href: href('/players'), icon: icon('/players'), primary: false },
+  { label: 'Trade Builder', href: href('/front-office/trade-builder'), icon: icon('/front-office/trade-builder'), primary: false },
+  { label: 'My Roster', href: href('/rosters'), icon: icon('/rosters'), primary: false },
 ];
 ---
 
