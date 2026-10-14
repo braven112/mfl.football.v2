@@ -24,6 +24,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import Breadcrumbs from '../Breadcrumbs.astro';
 import { DRAFT_HUB_PATH, draftPagesFor, type DraftLeagueSlug } from './draft-pages';
+import { pageIcon } from '../../../utils/page-icon';
 
 interface Props {
   leagueSlug: DraftLeagueSlug;
@@ -68,7 +69,7 @@ const pages = draftPagesFor(leagueSlug);
     class:list={['dnav__item', 'dnav__item--hub', { 'dnav__item--on': current === 'hub' }]}
     aria-current={current === 'hub' ? 'page' : undefined}
   >
-    <svg class="dnav__icon" viewBox="0 0 512 512" aria-hidden="true"><use href={`${spriteUrl}#icon-draft-podium`} /></svg>
+    <svg class="dnav__icon" viewBox="0 0 512 512" aria-hidden="true"><use href={`${spriteUrl}#icon-${pageIcon(DRAFT_HUB_PATH)}`} /></svg>
     <span class="dnav__label">Draft</span>
   </a>
   <span class="dnav__divider" aria-hidden="true"></span>

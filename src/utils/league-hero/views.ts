@@ -25,6 +25,7 @@ import { randomHeroPlayer } from '../hero-players';
 import { resolveFeatureHeadline } from '../whats-new-hero-headline';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { leagueClock } from '../../config/leagues';
+import { pageIcon } from '../page-icon';
 import type { RecapDestination } from '../hero-recap-destination';
 import { waiverDeadlineCopy, type WaiverDeadlineCopy } from '../waiver-deadline-copy';
 import {
@@ -452,7 +453,7 @@ export function gameDayPreviewSlotView({ env, week, lineupSubmitted }: SlotConte
     link: lineupHref(env),
     linkLabel: lineup.label.toUpperCase(),
     isExternal: lineup.external || undefined,
-    icon: 'clipboard',
+    icon: pageIcon('/lineup'),
     // Your lineup, your deadline: a team event.
     composite: { wordmark: 'GAME\u00a0DAY', accent: 'gold', tone: null, scope: 'team' },
     accent: ACCENT_AMBER,
@@ -804,7 +805,7 @@ export function regularSeasonContent(
         summary: `Lineups lock at kickoff. ${profile.copy.gameDayContent}`,
         link: lineupHref(env),
         linkLabel: profile.facts.lineup.label,
-        icon: 'clipboard',
+        icon: pageIcon('/lineup'),
         accentColor: 'var(--cat-regular-season, #1c497c)',
         kicker: 'Game Day',
       };

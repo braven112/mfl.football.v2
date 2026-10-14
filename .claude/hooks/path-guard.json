@@ -1123,10 +1123,13 @@
         "src/utils/state-html.ts",
         "public/assets/icons/sprite.svg",
         "public/assets/icons/sets/**",
-        "src/utils/sprite-url*.ts"
+        "src/utils/sprite-url*.ts",
+        "src/config/page-icons.json",
+        "src/utils/page-icon.ts"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
+        "tests/page-icons.test.ts",
         "tests/league-themes.test.ts",
         "tests/dialog-closed-display.test.ts",
         "tests/position-pill-tokens.test.ts",

@@ -7,6 +7,7 @@
 import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { pageIcon } from '../../../utils/page-icon';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { formatCompactNumber } from '../../../utils/formatters';
@@ -72,7 +73,7 @@ const metrics: MetricDef[] = [
     value: `${rosterCount}`,
     sub: `of ${TARGET_ACTIVE_COUNT} slots`,
     href: r('/theleague/rosters'),
-    icon: 'users',
+    icon: pageIcon('/rosters', 'theleague'),
     alert: isOverRoster,
   },
   {
@@ -87,7 +88,7 @@ const metrics: MetricDef[] = [
     value: `${draftPicks}`,
     sub: 'owned',
     href: r('/theleague/draft/order'),
-    icon: 'draft-podium',
+    icon: pageIcon('/draft/order', 'theleague'),
   },
 ];
 ---

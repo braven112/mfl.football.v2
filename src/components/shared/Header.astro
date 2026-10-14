@@ -18,6 +18,7 @@ import { resolveSiteTheme } from '../../utils/site-theme';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrlFor } from '../../utils/sprite-url';
+import { pageIcon } from '../../utils/page-icon';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
@@ -279,25 +280,25 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
                    the draft surfaces plus the scoreboard ARE the nav. -->
               <a href={resolveLeaguePath("/best-ball-1/draft-room", hideLeaguePrefix)} class="nav-icon-link" title="Draft Room">
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-draft-podium`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/draft-room', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Draft Room</span>
               </a>
               <a href={resolveLeaguePath("/best-ball-1/draft-board", hideLeaguePrefix)} class="nav-icon-link" title="Draft Board">
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-chalkboard`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/draft-board', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Draft Board</span>
               </a>
               <a href={resolveLeaguePath("/best-ball-1/rosters", hideLeaguePrefix)} class="nav-icon-link" title="Rosters">
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-roster`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/rosters', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Rosters</span>
               </a>
               <a href={resolveLeaguePath("/best-ball-1/live-scoring", hideLeaguePrefix)} class="nav-icon-link" title="Live scoring">
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-live-score`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/live-scoring', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Live scoring</span>
               </a>
@@ -307,32 +308,32 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
           {!isAFL && !isKeeper && (
             <a href="/theleague/schefter/tip" class="nav-icon-link" title={labels.tip}>
               <svg class="nav-icon" aria-hidden="true">
-                <use href={`${spriteUrl}#icon-schefter`}></use>
+                <use href={`${spriteUrl}#icon-${pageIcon('/schefter/tip', league.slug)}`}></use>
               </svg>
               <span class="nav-label">{labels.tip}</span>
             </a>
           )}
           <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL || isKeeper ? "Rosters" : "Roster"}>
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-${isAFL || isKeeper ? 'roster-16' : 'roster'}`}></use>
+              <use href={`${spriteUrl}#icon-${pageIcon('/rosters', league.slug)}`}></use>
             </svg>
             <span class="nav-label">{isAFL || isKeeper ? "Rosters" : "Roster"}</span>
           </a>
           <a href={submitLineupUrl} class="nav-icon-link" title="Set Lineup">
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-lineup`}></use>
+              <use href={`${spriteUrl}#icon-${pageIcon('/lineup', league.slug)}`}></use>
             </svg>
             <span class="nav-label">Set Lineup</span>
           </a>
           <a href={freeAgentsUrl} class="nav-icon-link" title="Free Agents">
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-binoculars`}></use>
+              <use href={`${spriteUrl}#icon-${pageIcon('/players', league.slug)}`}></use>
             </svg>
             <span class="nav-label">Free Agents</span>
           </a>
           <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/standings` : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-standings`}></use>
+              <use href={`${spriteUrl}#icon-${pageIcon('/standings', league.slug)}`}></use>
             </svg>
             <span class="nav-label">Standings</span>
           </a>
@@ -340,7 +341,7 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
             /* The demo's keeper slot has neither page below; it has the planner hub. */
             <a href={resolveLeaguePath("/keeper/keepers", hideLeaguePrefix)} class="nav-icon-link" title="Keepers">
               <svg class="nav-icon" aria-hidden="true">
-                <use href={`${spriteUrl}#icon-history`}></use>
+                <use href={`${spriteUrl}#icon-${pageIcon('/keepers', league.slug)}`}></use>
               </svg>
               <span class="nav-label">Keepers</span>
             </a>
@@ -348,13 +349,13 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
             <>
               <a href={liveScoringUrl} class="nav-icon-link" title="Live scoring" target={hasLiveScoring ? undefined : "_blank"} rel={hasLiveScoring ? undefined : "noopener noreferrer"}>
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-${isAFL ? 'live-score-03' : league.slug === 'theleague' ? 'live-score-07' : 'live-score'}`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/live-scoring', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Live scoring</span>
               </a>
               <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs", hideLeaguePrefix)} class="nav-icon-link" title="Playoffs">
                 <svg class="nav-icon" aria-hidden="true">
-                  <use href={`${spriteUrl}#icon-playoff`}></use>
+                  <use href={`${spriteUrl}#icon-${pageIcon('/playoffs', league.slug)}`}></use>
                 </svg>
                 <span class="nav-label">Playoffs</span>
               </a>

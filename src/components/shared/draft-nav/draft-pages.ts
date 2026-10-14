@@ -15,6 +15,8 @@
  * would send AFL readers to the other league's site.
  */
 
+import { pageIcon } from '../../../utils/page-icon';
+
 export type DraftLeagueSlug = 'theleague' | 'afl-fantasy';
 
 export interface DraftPage {
@@ -25,8 +27,6 @@ export interface DraftPage {
   shortLabel: string;
   /** League-neutral path. */
   path: string;
-  /** Sprite icon id, without the leading `#`. */
-  icon: string;
   /** What this page is for — the hub shows it; the strip doesn't. */
   blurb: string;
   leagues: DraftLeagueSlug[];
@@ -40,7 +40,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Draft Order',
     shortLabel: 'Order',
     path: '/draft/order',
-    icon: 'icon-draft-podium',
     blurb: 'Where you pick — projected through the season, official once the playoffs wrap.',
     leagues: BOTH,
   },
@@ -49,7 +48,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Draft Results',
     shortLabel: 'Results',
     path: '/draft/results',
-    icon: 'icon-history',
     blurb: 'Every draft the league has ever held, pick by pick.',
     leagues: BOTH,
   },
@@ -58,7 +56,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Draft Broadcast',
     shortLabel: 'Broadcast',
     path: '/draft/broadcast',
-    icon: 'icon-scoreboard-2',
     blurb: 'The big board for draft night — plug a laptop into the TV and watch every pick land.',
     leagues: BOTH,
   },
@@ -67,7 +64,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Draft Room',
     shortLabel: 'Room',
     path: '/draft/room',
-    icon: 'icon-podium-persona',
     // The AFL joined once its room learned that the AL drafts live in MFL's
     // applet while the NL runs a slow email draft — see utils/afl-draft-room.
     blurb: 'The live board while the draft runs — picks, queue and who is on the clock.',
@@ -78,7 +74,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Mock Draft',
     shortLabel: 'Mock',
     path: '/draft/mock',
-    icon: 'icon-podium-empty',
     // The AFL joined once its mock learned to draft from the pool its KEEPERS
     // left behind — conference-scoped, and shut until the cuts land. See
     // utils/afl-mock-draft.
@@ -90,7 +85,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'Import Rankings',
     shortLabel: 'Rankings',
     path: '/import-rankings',
-    icon: 'icon-rank',
     blurb: 'Bring your own rankings in, or use the built-in sources.',
     leagues: BOTH,
   },
@@ -99,15 +93,22 @@ export const DRAFT_PAGES: DraftPage[] = [
     label: 'My Draft List',
     shortLabel: 'My List',
     path: '/cr',
-    icon: 'icon-clipboard',
     blurb: 'Your own board, ordered your way, ready for draft day.',
     leagues: BOTH,
   },
 ];
 
-/** The draft pages a given league actually has, in section order. */
-export function draftPagesFor(league: DraftLeagueSlug): DraftPage[] {
-  return DRAFT_PAGES.filter((p) => p.leagues.includes(league));
+/**
+ * The draft pages a given league actually has, in section order. `icon` is
+ * the sprite symbol id (`icon-…`), and it is the page's own icon from
+ * src/config/page-icons.json, never one picked here — so the strip and the
+ * hub show what the menu shows.
+ */
+export function draftPagesFor(league: DraftLeagueSlug): (DraftPage & { icon: string })[] {
+  return DRAFT_PAGES.filter((p) => p.leagues.includes(league)).map((p) => ({
+    ...p,
+    icon: `icon-${pageIcon(p.path, league)}`,
+  }));
 }
 
 /** The hub itself — not in DRAFT_PAGES, because it links to all of them. */
