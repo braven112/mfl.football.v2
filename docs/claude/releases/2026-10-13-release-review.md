@@ -86,3 +86,25 @@ Derived output changed only in stamps and live data.
 - **Duplication:** no new duplicates beyond the follow-ups.
 - **GroupMe change:** scripts only, with no storage.
 - **Chromatic:** new stories come from #1350, #1362, the Standings commits and Free Agents in Primetime. Icon changes only added glyphs.
+
+## Promotion — 2026-10-13 23:45 PT
+
+**Shipped:** `2b43738e51..9fb4b2e5da` fast-forwarded to `main` (30 non-merge commits). That includes #1381 (Archie's
+rivalry record ignores meetings with a franchise number's earlier holder) and, riding along at the owner's request,
+#1378 (`toChatPlainText` on every GroupMe and Slack send path, so no chat post carries HTML).
+
+- Merge-down healthy after #1379 and #1380 (Archie's derived chain recomputed). Fast-forward OK. Blackout clear (Tuesday PT).
+- CI green on the exact SHA `9fb4b2e5da` (run 38521113063).
+- **Chromatic was not a real check again.** The monthly snapshot quota is still exhausted, so the build ran LIMITED
+  with no UI review. `PREBUILD_FULL=1 pnpm prebuild` exited 0; its only failures were network (CHI/NYG dark logos,
+  2027 ADP and FantasySharks 404s).
+
+**Production:** deployment `dpl_8E3hKGWVuD3muyB4Fh3t2Vxcx5WG` READY and aliased to theleague.us, afl-fantasy.com and
+v2.mfl.football. The apex hosts answer bot traffic with a Cloudflare challenge, so the signed-out smoke test ran
+against the production deployment URL: 11 pages across TheLeague, the AFL and Archie's returned 200 with correct
+titles, and `/activity` and `/lineup` redirect to sign-in as expected.
+
+**Announced:** `weekly-changelog-rollup.yml` run 38524556843 published `weekly-rollup-2026-10-12` for theleague, afl
+and archies (commit `643b3faacc`), waited for the permalink, and sent the site-update push.
+
+**Left open:** the five follow-ups above; Chromatic quota.
