@@ -178,7 +178,7 @@ function buildChangeLine(change) {
  * room" wants them together); features do not, because a week has two or three
  * and a heading per area would be more chrome than content.
  */
-export function buildDescription({ features, fixes, dateRange }) {
+export function buildDescription({ features, fixes, dateRange, hasGuides = true }) {
   /**
    * Annotated rather than inferred: without it TypeScript widens the list
    * blocks' `type` to `string`, which is not the literal `'list'` that
@@ -210,10 +210,14 @@ export function buildDescription({ features, fixes, dateRange }) {
 
   // "in the week of" rather than "between": a one-day range reads as
   // "between Sep 7", which is not a range at all.
+  // Only a league with a /guides route may link it: a package league such as
+  // Archie's has none, and the link 404s there (tests/whats-new-links.test.ts).
   blocks.push(
     `Everything above shipped in the week of ${dateRange}. Older weeks are in ` +
-      `<a href="/whats-new">the archive</a>, and the how-to pages for each feature ` +
-      `live in <a href="/guides">the guides</a>.`,
+      (hasGuides
+        ? `<a href="/whats-new">the archive</a>, and the how-to pages for each feature ` +
+          `live in <a href="/guides">the guides</a>.`
+        : `<a href="/whats-new">the archive</a>.`),
   );
 
   return blocks;
