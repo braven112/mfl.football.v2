@@ -31,13 +31,14 @@ import {
   buildWire,
   opponentsInWeek,
   podium,
+  meetingsBetween,
   rivalryFacts,
   storiesFromPosts,
   stripWeek,
   teamsMentioned,
   topScorer,
   type FrontStory,
-  type Meeting,
+  type SeriesFranchise,
   type MoveInput,
   type ParsedWeek,
 } from '../../../utils/front-page';
@@ -118,7 +119,7 @@ const opponents = opponentsInWeek(thisWeek, mine);
 // ── Stories ─────────────────────────────────────────────────────────────────
 const historyModule = Object.values(historyFeeds)[0];
 const franchiseHistory = (historyModule ? unwrapFeedModule(await historyModule().catch(() => null)) : null) as {
-  franchises?: Record<string, { matchupHistory?: Record<string, Meeting[]> }>;
+  franchises?: Record<string, SeriesFranchise>;
 } | null;
 
 const stories: FrontStory[] = [];
@@ -127,7 +128,7 @@ const overlays: Record<string, { text: string; label?: string }> = {};
 if (mine && teamsById[mine] && thisWeek) {
   for (const opp of opponents) {
     if (!teamsById[opp]) continue;
-    const meetings = franchiseHistory?.franchises?.[mine]?.matchupHistory?.[opp];
+    const meetings = meetingsBetween(franchiseHistory?.franchises, mine, opp, Boolean(league.renumbersFranchises));
     const f = rivalryFacts(meetings);
     overlays[`rivalry-${thisWeek.week}-${opp}`] =
       f.meetings === 0
