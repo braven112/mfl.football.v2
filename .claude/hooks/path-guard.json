@@ -837,7 +837,8 @@
         "src/utils/throwback-request-state.ts",
         "src/utils/rosters/*.ts",
         "src/components/shared/rosters/*.astro",
-        "src/components/shared/AFLActionModal.astro"
+        "src/components/shared/AFLActionModal.astro",
+        "src/styles/roster*.css"
       ],
       "tests": [
         "tests/shared-rosters-page.test.ts",
@@ -859,6 +860,7 @@
         "tests/rosters-sim-summary.test.ts",
         "tests/rosters-phone-inventory.test.ts",
         "tests/afl-rosters-phone.test.ts",
+        "tests/rosters-phone-every-league.test.ts",
         "tests/nfl-odds-weather-guard.test.ts"
       ]
     },
@@ -883,6 +885,9 @@
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
         "scripts/lib/merge-schefter-feed.mjs",
+        "src/utils/league-name-guard.mjs",
+        "scripts/guard-feed-league-names.mjs",
+        "scripts/commit-feed-and-push.mjs",
         "scripts/lib/speculation-budget.mjs",
         "scripts/lib/speculation-cadence.mjs",
         "src/utils/owner-trade-reports.ts",
@@ -918,7 +923,9 @@
         "tests/speculation-copy.test.ts",
         "tests/schefter-once-per-season-dedupe.test.ts",
         "tests/merge-schefter-feed.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/league-name-guard.test.ts",
+        "tests/cron-commit-churn.test.ts",
+        "tests/schefter-live-feed-reader.test.ts"
       ]
     },
     {
@@ -1044,7 +1051,9 @@
         "tests/derived-chain-lane.test.ts",
         "tests/weekly-player-results-schedule.test.ts",
         "tests/weekly-player-results-full-pool.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/cron-commit-churn.test.ts",
+        "tests/schefter-feed-store.test.ts",
+        "tests/schefter-feed-redis-workflows.test.ts"
       ]
     },
     {
@@ -1423,6 +1432,16 @@
         "tests/playoff-bracket-index.test.ts"
       ],
       "rules": "docs/claude/rules/package-leagues.md"
+    },
+    {
+      "name": "layout-head",
+      "rules": "docs/claude/rules/theming-and-assets.md",
+      "paths": [
+        "src/layouts/*.astro"
+      ],
+      "tests": [
+        "tests/head-custom-element-guard.test.ts"
+      ]
     }
   ]
 }

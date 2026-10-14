@@ -10,7 +10,7 @@
  * src/utils/owners-poll-builder.ts and are tested there.
  */
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import EnablePushButton from './EnablePushButton';
 import {
   isComplete,
@@ -36,6 +36,10 @@ export interface BallotTeam {
    */
   record?: string | null;
   ppg?: number | null;
+  /** Season points for. */
+  pf?: number | null;
+  /** All-play W-L(-T), e.g. "48-12". */
+  allPlay?: string | null;
 }
 
 interface Props {
@@ -59,6 +63,14 @@ interface Props {
    * back to the site's own clock.
    */
   officialClock?: LeagueClock;
+  /** Called after every successful save — the homepage pop-up uses it. */
+  onSaved?: () => void;
+  /**
+   * The homepage pop-up's layout: no intro line (the sheet has its own), and
+   * only the NEXT empty slot instead of all of them, so the team list starts
+   * on the first screen of a phone rather than below seven blank rows.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -86,6 +98,8 @@ export default function BallotBuilder({
   revealOnSave = false,
   vapidPublicKey = '',
   officialClock,
+  onSaved,
+  compact = false,
 }: Props) {
   const [load, setLoad] = useState<LoadState>('loading');
   const [status, setStatus] = useState<WindowStatus>('none');
@@ -163,6 +177,7 @@ export default function BallotBuilder({
       setFromPrefill(false);
       setJustSaved(true);
       if (data?.turnout) setTurnout(data.turnout);
+      onSaved?.();
       if (revealOnSave) {
         // The rankings are server-rendered behind the ballot check, so the
         // only way to show them is a fresh render. Land on them, not the top.
@@ -174,7 +189,7 @@ export default function BallotBuilder({
     } finally {
       setSaving(false);
     }
-  }, [endpoint, selection, revealOnSave]);
+  }, [endpoint, selection, revealOnSave, onSaved]);
 
   const complete = isComplete(selection, slots);
   const dirty =
@@ -219,9 +234,11 @@ export default function BallotBuilder({
             Rank your top {slots}
             {window_ ? ` · Week ${window_.week}` : ''}
           </h2>
-          <p className="op-builder__sub">
-            Tap teams in the order you rate them. You can rank your own team.
-          </p>
+          {!compact && (
+            <p className="op-builder__sub">
+              Tap teams in the order you rate them. You can rank your own team.
+            </p>
+          )}
         </div>
         {turnout && (
           <p className="op-turnout" aria-live="polite">
@@ -247,13 +264,15 @@ export default function BallotBuilder({
       )}
 
       <ol className="op-slots" aria-label={`Your top ${slots}`}>
-        {Array.from({ length: slots }, (_, i) => {
+        {Array.from({ length: compact ? Math.min(slots, selectedInOrder.length + 1) : slots }, (_, i) => {
           const team = selectedInOrder[i];
           if (!team) {
             return (
               <li key={`empty-${i}`} className="op-slot op-slot--empty">
                 <span className="op-slot__rank">{i + 1}</span>
-                <span className="op-slot__placeholder">Tap a team below</span>
+                <span className="op-slot__placeholder">
+                  {compact && i > 0 ? `Tap a team below for #${i + 1}` : 'Tap a team below'}
+                </span>
               </li>
             );
           }
@@ -265,7 +284,12 @@ export default function BallotBuilder({
             >
               <span className="op-slot__rank">{i + 1}</span>
               {team.icon && <img className="op-slot__crest" src={team.icon} alt="" loading="lazy" />}
-              <span className="op-slot__name">{team.nameShort}</span>
+              <span className="op-slot__body">
+                <span className="op-slot__name">{team.nameShort}</span>
+                {/* Kept on the ranked row too: once a team leaves the pool the
+                    owner still needs its numbers to order it against the rest. */}
+                <TeamMeta team={team} />
+              </span>
               <span className="op-slot__actions">
                 <button
                   type="button"
@@ -371,12 +395,7 @@ export default function BallotBuilder({
                     {team.nameShort}
                     {isOwn && <span className="op-card__you"> · you</span>}
                   </span>
-                  {(team.record || team.ppg != null) && (
-                    <span className="op-card__meta">
-                      {team.record ?? ''}
-                      {team.ppg != null ? `${team.record ? ' · ' : ''}${team.ppg.toFixed(1)} PPG` : ''}
-                    </span>
-                  )}
+                  <TeamMeta team={team} />
                 </span>
               </button>
             </li>
@@ -384,6 +403,44 @@ export default function BallotBuilder({
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Record · points for · all-play — the same line on a pool card and on a
+ * ranked slot, so comparing two teams never means remembering one of them.
+ * Renders nothing when the issue carried no standings.
+ */
+function TeamMeta({ team }: { team: BallotTeam }) {
+  // Whole points and "AP": the ranked slot shares its row with three buttons,
+  // and at phone width the long form wrapped to three lines per team. Each
+  // part is nowrap so a narrow row breaks between stats, never inside one.
+  const parts: Array<{ key: string; node: ReactNode }> = [];
+  if (team.record) parts.push({ key: 'rec', node: team.record });
+  if (team.pf != null) parts.push({ key: 'pf', node: `${Math.round(team.pf)} pts` });
+  if (team.allPlay) {
+    parts.push({
+      key: 'ap',
+      node: (
+        <>
+          {team.allPlay} <abbr title="All-play record: wins and losses against every team, every week">AP</abbr>
+        </>
+      ),
+    });
+  }
+  if (parts.length === 0) return null;
+  return (
+    <span className="op-card__meta">
+      {parts.map((p, i) => (
+        // The separator sits OUTSIDE the nowrap span: inside it, the space is
+        // not a break opportunity and the whole line becomes one unbreakable
+        // run that pushes the ranked row's buttons off a phone screen.
+        <Fragment key={p.key}>
+          {i > 0 ? ' · ' : ''}
+          <span className="op-card__stat">{p.node}</span>
+        </Fragment>
+      ))}
+    </span>
   );
 }
 

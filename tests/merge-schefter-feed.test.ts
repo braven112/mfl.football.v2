@@ -70,6 +70,27 @@ describe('mergeFeed', () => {
     expect(mergeFeed(theirs2, ours).tradeBaitState).toEqual({ side: 'theirs' });
   });
 
+  it('keeps the tradeBaitState that CHANGED last, not the side that scanned last', () => {
+    // This run changed the state at 10:30 but, finding no new transactions,
+    // never bumped lastScanTimestamp. Origin's 11:00 scan touched only posts.
+    const ours = {
+      lastScanTimestamp: '2026-05-23T09:00:00Z',
+      tradeBaitStateAt: '2026-05-23T10:30:00Z',
+      tradeBaitState: { side: 'ours' },
+      posts: [],
+    };
+    const theirs = {
+      lastScanTimestamp: '2026-05-23T11:00:00Z',
+      tradeBaitStateAt: '2026-05-23T08:00:00Z',
+      tradeBaitState: { side: 'theirs' },
+      posts: [],
+    };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.tradeBaitState).toEqual({ side: 'ours' });
+    expect(merged.tradeBaitStateAt).toBe('2026-05-23T10:30:00Z');
+    expect(mergeFeed(ours, theirs).tradeBaitState).toEqual({ side: 'ours' });
+  });
+
   it('is idempotent when both sides are identical', () => {
     const feed = {
       lastScanTimestamp: '2026-05-23T10:00:00Z',
@@ -113,6 +134,15 @@ describe('mergeByPath', () => {
     const ours = JSON.stringify({ _schema: { maxEntries: 30 }, posts: [post('b', '2026-05-23T10:00:00Z')] });
     const out = mergeByPath('data/schefter/theleague/post-history.json', theirs, ours);
     expect(JSON.parse(out).posts.map((p: any) => p.id)).toEqual(['b', 'a']);
+  });
+
+  it('unions season archives by id, keeping the backfilled story', () => {
+    const story = { ...post('a', '2026-05-23T09:00:00Z'), headline: 'story', storyVersion: 2 };
+    const theirs = JSON.stringify([story]);
+    const ours = JSON.stringify([post('b', '2026-05-23T10:00:00Z'), post('a', '2026-05-23T09:00:00Z')]);
+    const out = JSON.parse(mergeByPath('data/afl-fantasy/schefter-archive/2026.json', theirs, ours));
+    expect(out.map((p: any) => p.id)).toEqual(['b', 'a']);
+    expect(out[1].headline).toBe('story');
   });
 
   it('takes ours verbatim for non-feed files (e.g. resolved-events.json)', () => {

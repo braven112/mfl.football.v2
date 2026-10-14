@@ -44,6 +44,8 @@ export const PACKAGE_ROUTES = {
   'playoffs.astro': 'playoffs',
   'franchises/index.astro': 'franchisePages',
   'franchises/[id].astro': 'franchisePages',
+  // Every league, always: private to site admins by default (owner-activity-access.ts).
+  'activity.astro': null,
 };
 
 /**

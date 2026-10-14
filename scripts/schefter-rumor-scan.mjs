@@ -177,6 +177,7 @@ import {
   secondsUntilPtMidnight,
   isFridayPt,
 } from './lib/pt-date.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -2460,8 +2461,9 @@ HARD RULES (all of these, every time):
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 120,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 160,
         system,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -2472,7 +2474,7 @@ HARD RULES (all of these, every time):
       return fallback;
     }
     const data = await res.json();
-    const text = data?.content?.[0]?.text ?? '';
+    const text = responseText(data);
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
       warn('  [quiet-day] no JSON in response — falling back to template');
@@ -2834,8 +2836,9 @@ The greeting is a SHORT (2–6 words) cold-open BEFORE the actual post body — 
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: mode === 'mailbag' ? 600 : 260,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: mode === 'mailbag' ? 800 : 340,
         system,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -2845,7 +2848,7 @@ The greeting is a SHORT (2–6 words) cold-open BEFORE the actual post body — 
       return null;
     }
     const data = await res.json();
-    const text = (data.content?.[0]?.text ?? '').trim();
+    const text = responseText(data).trim();
     const post = parseAiResponse(text);
     if (!post) {
       // Either the model returned {"post": null} (explicit drop), the JSON

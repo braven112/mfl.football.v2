@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request }) => {
   // Fast path: if the feed JSON already has `threadId` stamped on posts we
   // can serve without touching Redis. Keeps the API usable even if the
   // Redis thread registry ever drifts.
-  const feed = getSchefterFeed(league);
+  const feed = await getSchefterFeed(league);
   const feedMatches = feed.posts
     .filter((p) => p.threadId === threadId && p.transactionSubType === 'rumor_mill')
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());

@@ -132,16 +132,9 @@ export const DESTINATIONS = {
   suggestions: { path: '/suggestions', label: 'the suggestion board', leagues: ['theleague', 'afl-fantasy'] },
   faq: { path: '/faq', label: 'the FAQ', leagues: ['theleague', 'afl-fantasy'] },
 
-  // Same path, genuinely different pages: TheLeague's /activity tracks when
-  // owners last visited the site, the AFL's is the transaction log. One label
-  // would have Schefter promise the wrong page in one of the two leagues, so
-  // the label is per-league here rather than the destination being split.
-  activity: {
-    path: '/activity',
-    label: 'the activity tracker',
-    labels: { 'afl-fantasy': 'the transaction log' },
-    leagues: BOTH,
-  },
+  // No `activity`: Owner Activity is private to site admins in every league
+  // (src/utils/owner-activity-access.ts), so an article plugging it would
+  // send owners to a 403.
 
   // ── AFL only ──
   keepers: { path: '/keepers', label: 'your keeper declarations', leagues: ['afl-fantasy'] },

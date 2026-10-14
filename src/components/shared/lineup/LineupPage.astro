@@ -37,6 +37,8 @@ import { resolveThrowbackIdentity } from '../../../utils/throwback-identity';
 import { isThrowbackWeekForScope, type ThrowbackScope } from '../../../utils/throwback-scope';
 import { getThrowbackFranchiseBrand } from '../../../utils/franchise-brand';
 import { lineupApiPath, lineupDraftStorageKey } from '../../../utils/lineup-page-keys';
+import { findIrViolations } from '../../../utils/lineup-ir-violations';
+import { buildMflOptionUrl } from '../../../utils/mfl-url';
 import { getAllThrowbackPreferences } from '../../../utils/throwback-store';
 import { resolveSubmitButtonState } from '../../../utils/lineup-submit-state';
 import { selectBenchPlayers } from '../../../utils/lineup-bench';
@@ -52,6 +54,8 @@ import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channe
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import type { LineupPlayer } from '../../../types/lineups';
 import { DEFAULT_LINEUP_SLOTS, eligibleSlotsFor, exceedsPositionMax, type LineupSlotLayout } from '../../../utils/lineup-slots';
+import { findLineupProblems, hasBlockingProblem } from '../../../utils/lineup-problems';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 interface Props {
   league: LeagueDefinition;
@@ -616,6 +620,38 @@ for (let w = 1; w <= 22; w++) {
   });
 }
 
+// An IR violation makes MFL refuse EVERY lineup submit, so say so before the
+// owner sets anything. MFL's IR page is option 07 (the one its own refusal
+// links).
+const MFL_IR_OPTION = '07';
+const irViolations = weekIsPast
+  ? []
+  : findIrViolations(roster, lineupInjuries, league.irEligibleInjuryStatuses);
+const irFixUrl = irViolations.length && user?.franchiseId
+  ? `${buildMflOptionUrl({ leagueId: MFL_LEAGUE_ID, year: leagueYear, option: MFL_IR_OPTION, host: `https://${league.mflHost}` })}&F=${user.franchiseId}`
+  : null;
+
+// The problems sheet: what is wrong with this lineup and where each one is
+// fixed. Only for a week that can still take a lineup — a played or
+// unscheduled week has nothing to fix. A player problem links to the owner's
+// roster with that player's sheet open (`?player=`), where Activate from IR
+// and Cut live.
+const problemsEnabled = !weekIsPast && (fillState.canSubmitEdits || fillState.canSubmitUnsaved);
+const rosterPlayerPath = resolveLeaguePath(
+  `/${PAGE_LEAGUE_SLUG}/rosters?franchise=${user.franchiseId}`,
+  Astro.locals.hideLeaguePrefix ?? false,
+);
+const initialProblems = problemsEnabled
+  ? findLineupProblems({
+      slots,
+      players: new Map(roster.map((p) => [p.id, p])),
+      week,
+      irViolations,
+      irEligibleStatuses: league.irEligibleInjuryStatuses,
+    })
+  : [];
+const initialProblemsBlocking = hasBlockingProblem(initialProblems);
+
 // ---------------------------------------------------------------------------
 // Serialize payload for client
 // ---------------------------------------------------------------------------
@@ -646,6 +682,15 @@ const lineupPayload = {
   // What the slots represent — a saved draft from a different mode was built
   // on a different base and must not be replayed.
   fillMode: fillState.mode,
+  // The problems sheet (utils/lineup-problems.ts). IR violations come from the
+  // server; starter problems are recomputed from the live slots.
+  problems: {
+    enabled: problemsEnabled,
+    irViolations,
+    irEligibleStatuses: league.irEligibleInjuryStatuses ?? [],
+    rosterPlayerPath,
+    irFixUrl,
+  },
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -710,6 +755,30 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </button>
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
+
+    <!-- What's wrong with this lineup, one tap from the sheet that explains
+         it. Filled and kept current by the script; rendered here so the
+         first paint already shows it. -->
+    <button
+      type="button"
+      class:list={['lineup-issues-badge', initialProblemsBlocking && 'lineup-issues-badge--blocking']}
+      id="lineup-issues-badge"
+      aria-haspopup="dialog"
+      aria-controls="lineup-issues"
+      hidden={initialProblems.length === 0}
+    >
+      <span class="lineup-issues-badge__icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor"/><path d="M8 6v3.5M8 11.6v.1" stroke="var(--lineup-issues-icon-ink)" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="lineup-issues-badge__text" id="lineup-issues-badge-text">
+        {initialProblemsBlocking
+          ? 'MFL won’t save this lineup'
+          : `${initialProblems.length} lineup ${initialProblems.length === 1 ? 'issue' : 'issues'}`}
+      </span>
+      <span class="lineup-issues-badge__cta">Review
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </button>
 
     {fillState.mode !== 'saved' && (
       <p class:list={['lineup-unsaved-note',
@@ -901,6 +970,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         <svg class="lineup-submit__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
+        <svg class="lineup-submit__icon lineup-submit__icon--alert" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 4.75v3.75M8 11v.15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
         <span class="lineup-submit__text">{initialSubmitState.text}</span>
       </button>
     </div>
@@ -938,6 +1011,44 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </div>
     </div>
 
+    <!-- Problems sheet: every lineup problem, why it matters, and the one tap
+         that fixes it. Bottom sheet on a phone, centred dialog on desktop
+         (the CDM shell). Opens by itself for a problem MFL will refuse the
+         lineup over, and after a refused submit. -->
+    <div class="lineup-cdm lineup-issues" id="lineup-issues" role="dialog" aria-modal="true"
+         aria-labelledby="lineup-issues-title" aria-hidden="true">
+      <div class="lineup-cdm__overlay" data-issues-close></div>
+      <div class="lineup-cdm__sheet lineup-issues__sheet">
+        <div class="lineup-cdm__handle" aria-hidden="true">
+          <span class="lineup-cdm__handle-bar"></span>
+        </div>
+        <button class="lineup-cdm__close" aria-label="Close" data-issues-close>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <header class="lineup-issues__head">
+          <span class="lineup-issues__mark" id="lineup-issues-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 16 16"><path d="M8 1.5 15 14H1L8 1.5Z" fill="currentColor"/><path d="M8 6v3.5M8 11.6v.1" stroke="var(--lineup-issues-icon-ink)" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+          <div>
+            <h2 class="lineup-issues__title" id="lineup-issues-title">Fix your lineup</h2>
+            <p class="lineup-issues__sub" id="lineup-issues-sub"></p>
+          </div>
+        </header>
+        <div class="lineup-issues__refusal" id="lineup-issues-refusal" role="alert" hidden>
+          <p class="lineup-issues__refusal-label">MFL didn’t save your lineup</p>
+          <p class="lineup-issues__refusal-text" id="lineup-issues-refusal-text"></p>
+          <a class="cta-link lineup-issues__refusal-link" id="lineup-issues-refusal-link" target="_blank" rel="noopener" hidden>Open the fix on MFL</a>
+        </div>
+        <ul class="lineup-issues__list" id="lineup-issues-list"></ul>
+        <div class="lineup-issues__foot">
+          <button type="button" class="cta cta--primary" id="lineup-issues-retry" hidden>Try again</button>
+          <button type="button" class="cta cta--ghost" data-issues-close>Done</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Undo toast -->
     <div class="lineup-toast" id="lineup-toast" aria-hidden="true">
       <span id="lineup-toast-text">Shake to undo</span>
@@ -962,6 +1073,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../../utils/lineup-rankings';
     import type { LineupPlayer } from '../../../types/lineups';
     import { exceedsPositionMax } from '../../../utils/lineup-slots';
+    import { findLineupProblems, hasBlockingProblem, type LineupProblem } from '../../../utils/lineup-problems';
     /**
      * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
      * astro:page-load"). This module is bundled, so it is evaluated ONCE per
@@ -1069,6 +1181,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const announcer = document.getElementById('lineup-announcer')!;
       const toastEl = document.getElementById('lineup-toast')!;
       const toastText = document.getElementById('lineup-toast-text')!;
+      const issuesEl = document.getElementById('lineup-issues')!;
+      const issuesBadge = document.getElementById('lineup-issues-badge') as HTMLButtonElement;
+      const issuesBadgeText = document.getElementById('lineup-issues-badge-text')!;
+      const issuesSub = document.getElementById('lineup-issues-sub')!;
+      const issuesList = document.getElementById('lineup-issues-list')!;
+      const issuesRefusal = document.getElementById('lineup-issues-refusal')!;
+      const issuesRefusalText = document.getElementById('lineup-issues-refusal-text')!;
+      const issuesRefusalLink = document.getElementById('lineup-issues-refusal-link') as HTMLAnchorElement;
+      const issuesRetry = document.getElementById('lineup-issues-retry') as HTMLButtonElement;
       const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
       const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
       const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
@@ -1077,6 +1198,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const benchCount = document.getElementById('bench-count')!;
 
       let activeSlotIndex: number | null = null;
+      /** Why MFL refused the last submit; cleared by any edit. */
+      let refusal: { message: string; reason?: string; fixUrl?: string } | null = null;
 
       // ── Rankings ──
       // The owner's top board (composite "My Rank" when they've built one), shown
@@ -1146,6 +1269,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         submitBtn.className = state.className;
         submitBtn.disabled = state.disabled;
         submitText.textContent = state.text;
+        // Any edit after a refusal makes the old reason stale.
+        refusal = null;
+        renderIssues();
         changesEl.style.display = state.showChanges ? '' : 'none';
         changesEl.querySelector('strong')!.textContent = String(changes);
 
@@ -1763,6 +1889,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       // ---------------------------------------------------------------------------
       async function submitLineup() {
         if (submitBtn.disabled) return;
+        // After a refusal the button reads "see why": nothing has changed, so
+        // a resubmit would only be refused again. The sheet's Try again is the
+        // deliberate retry.
+        if (refusal) { openIssues(); return; }
 
         const starterIds = currentSlots.map(s => s.playerId).filter(Boolean);
         if (starterIds.length !== 9) {
@@ -1829,19 +1959,156 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             // button to disabled/"Lineup Saved" would bury that edit.
             setTimeout(updateSubmitBar, 2000);
           } else {
+            // Refused: say why in the problems sheet, next to the problems
+            // that cause it. "Failed — Retry" alone sent the owner round a
+            // retry loop that could never succeed (2026-10-13).
             submitBtn.className = 'lineup-submit lineup-submit--error';
             submitBtn.removeAttribute('aria-busy');
-            submitText.textContent = 'Failed — Retry';
+            submitText.textContent = 'Not saved — see why';
             submitBtn.disabled = false;
-            announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
+            refusal = {
+              message: result.error || 'Lineup submission failed. Please try again.',
+              reason: typeof result.reason === 'string' ? result.reason : undefined,
+              fixUrl: typeof result.fixUrl === 'string' ? result.fixUrl : undefined,
+            };
+            renderIssues();
+            openIssues();
+            haptic('heavy');
           }
         } catch {
+          // Never reached the server: nothing to explain, so a straight retry.
           submitBtn.className = 'lineup-submit lineup-submit--error';
           submitBtn.removeAttribute('aria-busy');
           submitText.textContent = 'Failed — Retry';
           submitBtn.disabled = false;
-          announce('Lineup submission failed. Please try again.');
+          showToast('Couldn’t reach the server. Check your connection and try again.');
+          announce('Lineup not submitted. Couldn’t reach the server.');
         }
+      }
+
+      // ---------------------------------------------------------------------------
+      // Problems sheet
+      // ---------------------------------------------------------------------------
+      const problemsCfg: {
+        enabled: boolean;
+        irViolations: { id: string; name: string; injuryStatus: string | null }[];
+        irEligibleStatuses: string[];
+        rosterPlayerPath: string;
+        irFixUrl: string | null;
+      } = data.problems ?? { enabled: false, irViolations: [], irEligibleStatuses: [], rosterPlayerPath: '', irFixUrl: null };
+
+      function currentProblems(): LineupProblem[] {
+        if (!problemsCfg.enabled) return [];
+        return findLineupProblems({
+          slots: currentSlots,
+          players: rosterMap,
+          week: data.week,
+          irViolations: problemsCfg.irViolations,
+          irEligibleStatuses: problemsCfg.irEligibleStatuses,
+        });
+      }
+
+      /** Only MFL's own pages, as the route resolved them — never a raw href. */
+      const safeMflUrl = (url: string | null | undefined): string | null =>
+        url && /^https:\/\/[a-z0-9.-]*myfantasyleague\.com\//i.test(url) ? url : null;
+      const escAttr = (str: string) => esc(str).replace(/"/g, '&quot;');
+
+      const ISSUE_ICONS: Record<LineupProblem['kind'], string> = {
+        // A red cross: the player's IR spot.
+        'ir-violation': '<path d="M6.5 2.5h3v4h4v3h-4v4h-3v-4h-4v-3h4z" fill="currentColor"/>',
+        // A dashed, empty seat.
+        'empty-slot': '<circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.2 2"/>',
+        // A calendar with a slash: no game this week.
+        bye: '<rect x="2.5" y="3.5" width="11" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3M5 12l6-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+        // A stop sign: ruled out.
+        out: '<path d="M5.5 1.5h5l4 4v5l-4 4h-5l-4-4v-5z" fill="currentColor"/><path d="M5.5 8h5" stroke="var(--lineup-issues-icon-ink)" stroke-width="1.6" stroke-linecap="round"/>',
+      };
+
+      function problemHTML(p: LineupProblem): string {
+        let actions = '';
+        if (p.kind === 'ir-violation' && p.playerId) {
+          const sheetHref = `${problemsCfg.rosterPlayerPath}&player=${encodeURIComponent(p.playerId)}`;
+          const mfl = safeMflUrl(problemsCfg.irFixUrl);
+          actions = `<a class="cta cta--primary lineup-issue__action" href="${escAttr(sheetHref)}">Open his player card</a>`
+            + (mfl ? `<a class="cta-link lineup-issue__alt" href="${escAttr(mfl)}" target="_blank" rel="noopener">Or fix it on MFL</a>` : '');
+        } else if (p.slotIndex != null) {
+          actions = `<button type="button" class="cta cta--ghost lineup-issue__action" data-issue-slot="${p.slotIndex}">${p.kind === 'empty-slot' ? 'Pick a player' : 'Swap him out'}</button>`;
+        }
+        return `<li class="lineup-issue lineup-issue--${p.severity}">
+          <span class="lineup-issue__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16">${ISSUE_ICONS[p.kind]}</svg></span>
+          <div class="lineup-issue__body">
+            <p class="lineup-issue__title">${esc(p.title)}</p>
+            <p class="lineup-issue__detail">${esc(p.detail)}</p>
+            ${actions ? `<div class="lineup-issue__actions">${actions}</div>` : ''}
+          </div>
+        </li>`;
+      }
+
+      function renderIssues() {
+        const problems = currentProblems();
+        const blocking = hasBlockingProblem(problems) || refusal != null;
+        const count = problems.length;
+
+        issuesBadge.hidden = count === 0 && !refusal;
+        issuesBadge.classList.toggle('lineup-issues-badge--blocking', blocking);
+        issuesBadgeText.textContent = blocking
+          ? 'MFL won’t save this lineup'
+          : `${count} lineup ${count === 1 ? 'issue' : 'issues'}`;
+
+        issuesEl.classList.toggle('lineup-issues--blocking', blocking);
+        issuesSub.textContent = refusal
+          ? 'Here’s why, and how to fix it.'
+          : blocking
+            ? 'MFL won’t save any lineup until this is fixed.'
+            : count
+              ? `${count} ${count === 1 ? 'thing' : 'things'} to check before kickoff.`
+              : 'Nothing to fix. Your lineup is good to go.';
+
+        // MFL's own reason, unless the list below already says the same thing.
+        const refusalShown = refusal != null
+          && !(refusal.reason === 'ir-violation' && problems.some((p) => p.kind === 'ir-violation'));
+        issuesRefusal.hidden = !refusalShown;
+        if (refusalShown && refusal) {
+          issuesRefusalText.textContent = refusal.message;
+          const mfl = safeMflUrl(refusal.fixUrl);
+          if (mfl) issuesRefusalLink.href = mfl;
+          else issuesRefusalLink.removeAttribute('href');
+          issuesRefusalLink.hidden = !mfl;
+        }
+
+        issuesList.innerHTML = problems.map(problemHTML).join('');
+        issuesRetry.hidden = !refusal;
+      }
+
+      let issuesOpen = false;
+      let issuesPrevFocus: HTMLElement | null = null;
+
+      function openIssues() {
+        if (issuesOpen) return;
+        issuesOpen = true;
+        issuesPrevFocus = document.activeElement as HTMLElement;
+        renderIssues();
+        issuesEl.ariaHidden = 'false';
+        issuesEl.classList.add('lineup-cdm--open');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+          const first = issuesEl.querySelector<HTMLElement>('.lineup-issue__action, #lineup-issues-retry:not([hidden])')
+            ?? issuesEl.querySelector<HTMLElement>('.lineup-cdm__close');
+          first?.focus();
+        }, 320);
+      }
+
+      /** `restoreFocus` false when another sheet opens next and takes focus. */
+      function closeIssues(restoreFocus = true) {
+        if (!issuesOpen) return;
+        issuesOpen = false;
+        issuesEl.classList.remove('lineup-cdm--open');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+          if (issuesOpen) return;
+          issuesEl.ariaHidden = 'true';
+          if (restoreFocus) issuesPrevFocus?.focus();
+        }, 260);
       }
 
       // ---------------------------------------------------------------------------
@@ -1915,6 +2182,27 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       });
 
       submitBtn.addEventListener('click', submitLineup);
+      issuesBadge.addEventListener('click', openIssues);
+      issuesRetry.addEventListener('click', () => {
+        refusal = null;
+        closeIssues(false);
+        void submitLineup();
+      });
+      issuesEl.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const slotBtn = target.closest<HTMLElement>('[data-issue-slot]');
+        if (slotBtn) {
+          // Straight into the replacement sheet for that slot.
+          const idx = Number(slotBtn.dataset.issueSlot);
+          closeIssues(false);
+          if (Number.isInteger(idx) && currentSlots[idx]) setTimeout(() => openCDM(idx), 200);
+          return;
+        }
+        if (target.closest('[data-issues-close]')) closeIssues();
+      });
+      issuesEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeIssues();
+      });
       optimalBtn.addEventListener('click', setOptimalLineup);
       // Long-press to clear (1300ms hold)
       const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
@@ -2013,6 +2301,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       // ---------------------------------------------------------------------------
       loadDraft();
       updateSubmitBar();
+      // A problem MFL refuses EVERY lineup over opens the sheet by itself —
+      // once per session for the same problem, so it isn't a nag on every
+      // visit. Smaller problems wait behind the badge.
+      const blockingNow = currentProblems().filter((p) => p.severity === 'blocking');
+      if (blockingNow.length) {
+        const seenKey = `lineup-issues-seen:${leagueSlug}:${data.week}:${blockingNow.map((p) => p.playerId).join(',')}`;
+        let seen = false;
+        try { seen = sessionStorage.getItem(seenKey) === '1'; sessionStorage.setItem(seenKey, '1'); } catch {}
+        if (!seen) setTimeout(openIssues, 400);
+      }
       for (let i = 0; i < currentSlots.length; i++) {
         if (currentSlots[i].playerId !== originalSlots[i].playerId) {
           renderSlotCard(i);
@@ -2532,6 +2830,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     background: var(--lineup-submit-error);
     color: #fff;
   }
+  /* A failed submit swaps the checkmark for an alert mark. */
+  .lineup-submit__icon--alert { display: none; }
+  .lineup-submit--error .lineup-submit__icon { display: none; }
+  .lineup-submit--error .lineup-submit__icon--alert { display: block; }
 
   .lineup-submit--success {
     background: var(--color-success-fill);
@@ -2968,4 +3270,169 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     color: var(--badge-warning-text);
     border-color: var(--badge-warning-text);
   }
+
+
+  /* ===================================================================
+     Lineup problems — the badge and the sheet it opens
+     =================================================================== */
+  .lineup-page {
+    /* The ink cut out of a filled icon (the "!" in the triangle). */
+    --lineup-issues-icon-ink: var(--card-bg, #ffffff);
+  }
+
+  .lineup-issues-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    margin: 0 0 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--badge-warning-text);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .lineup-issues-badge[hidden] { display: none; }
+  .lineup-issues-badge--blocking {
+    border-color: var(--badge-error-text);
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+  }
+  .lineup-issues-badge:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+  .lineup-issues-badge__icon { display: flex; flex-shrink: 0; }
+  .lineup-issues-badge__text { flex: 1; min-width: 0; }
+  .lineup-issues-badge__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .lineup-issues__sheet { min-height: auto; padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); }
+
+  .lineup-issues__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.25rem 2.5rem 1rem 0;
+  }
+  .lineup-issues__mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+  }
+  .lineup-issues--blocking .lineup-issues__mark {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+  }
+  .lineup-issues__title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+  .lineup-issues__sub {
+    margin: 0.125rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  .lineup-issues__refusal {
+    margin: 0 0 0.75rem;
+    padding: 0.75rem;
+    border-left: 3px solid var(--badge-error-text);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--badge-error-bg);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+  }
+  .lineup-issues__refusal[hidden] { display: none; }
+  .lineup-issues__refusal-label {
+    margin: 0 0 0.25rem;
+    font-weight: 700;
+    color: var(--badge-error-text);
+  }
+  .lineup-issues__refusal-text { margin: 0; }
+  .lineup-issues__refusal-link { margin-top: 0.5rem; font-size: var(--font-size-sm); }
+  .lineup-issues__refusal-link[hidden] { display: none; }
+
+  .lineup-issues__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lineup-issues__list:empty { display: none; }
+
+  .lineup-issue {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg-muted);
+  }
+  .lineup-issue__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+  }
+  .lineup-issue--blocking { border-color: var(--badge-error-text); }
+  .lineup-issue--blocking .lineup-issue__icon {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+  }
+  .lineup-issue__body { flex: 1; min-width: 0; }
+  .lineup-issue__title {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: 700;
+  }
+  .lineup-issue__detail {
+    margin: 0.125rem 0 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+    color: var(--content-text-muted);
+  }
+  .lineup-issue__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 0.625rem;
+  }
+  .lineup-issue__action { padding: 0.4375rem 0.875rem; font-size: var(--font-size-sm); }
+  .lineup-issue__alt { font-size: var(--font-size-sm); }
+
+  .lineup-issues__foot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .lineup-issues__foot [hidden] { display: none; }
 </style>

@@ -10,6 +10,8 @@
 // to allowing the send. Suppressing legitimate posts because Anthropic is
 // rate-limited is worse than letting an occasional flat post through.
 
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claude-models.mjs';
+
 // Posts scoring below this (1-10 scale) are suppressed from GroupMe.
 // Edit this value to tune strictness — 6 is the default sweet spot.
 export const QUALITY_THRESHOLD = 6;
@@ -21,7 +23,7 @@ export const QUALITY_THRESHOLD = 6;
 // option; scores of 1-2 (hallucinated / contradictory) still suppress.
 export const RELAXED_QUALITY_THRESHOLD = 3;
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+const DEFAULT_MODEL = HAIKU_MODEL;
 
 const SCORING_PROMPT = `You score a single Schefter Report post for whether it's worth pinging an entire fantasy football GroupMe chat about.
 
@@ -90,7 +92,9 @@ export async function scoreSchefterPost(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 150,
+      // Only Haiku can turn thinking off; Sonnet and Opus answer that with a 400.
+      ...(model === HAIKU_MODEL ? { thinking: HAIKU_THINKING } : {}),
+      max_tokens: 200,
       system: SCORING_PROMPT,
       messages: [{
         role: 'user',
@@ -104,7 +108,7 @@ export async function scoreSchefterPost(
     throw new Error(`anthropic ${res.status}: ${text.slice(0, 200)}`);
   }
   const data = await res.json();
-  return parseScorerResponse(data?.content?.[0]?.text ?? '');
+  return parseScorerResponse(responseText(data));
 }
 
 // Decide whether to fire the GroupMe send. Returns { allow, score, reason, error }.

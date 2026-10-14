@@ -42,8 +42,10 @@ regrows a 7 GB `.git` or a 30 MB server chunk:
   `archivedThroughTimestamp` watermark stops the recurring scans from
   resurrecting archived posts. Article permalinks and the OG renderer
   fall back to the archives — new single-post surfaces must too.
-- **The build never writes a committed feed.** Only a run that COMMITS
-  `schefter-feed.json` may add posts to it. `prebuild` recomputes
+- **The build never writes a committed feed.** Only a workflow run may add
+  posts to `schefter-feed.json` — since Oct 2026 by publishing it to Redis
+  through `commit-feed-and-push.mjs` (see "The Schefter feed lives in Redis"
+  below), or by committing it. `prebuild` recomputes
   `franchise-history.json` on every production deploy, and until Sept 2026
   that run also prepended milestone posts to the DEPLOYED feed: three week-1
   "season honor" posts were live on theleague.us and in no commit, so git
@@ -206,11 +208,11 @@ stale roster page is usually Redis, not the cron**, and triage that starts at
 the sync will chase the wrong thing.
 
 What is genuinely build-baked, and therefore what the cadence actually protects:
-the **Schefter feed** (`schefter-league-data.ts` uses a STATIC import, so it
-cannot even fall back), `activity.astro` (eager glob, no overlay), standings,
+`activity.astro` (eager glob, no overlay), standings,
 weekly results, `players.json`, draft results and the derived payloads. Note
 that `schefter-scan` rides the same dropped scheduler, so after the 08-27 cliff
-the news feed was doubly behind.
+the news feed was doubly behind. The Schefter feed itself is no longer on this
+list: it has been live from Redis since Oct 2026 (next section but one).
 
 Nothing polls for rosters client-side. Every client `fetch` on `rosters.astro`
 is a write action (declare, cut, trade bait, auth); the only real client polling
@@ -354,6 +356,51 @@ both-leagues union and the DST wall-clock recurrence.
 `tests/block-comment-terminators.test.ts` catches the comment trap at edit time
 rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
 domain.
+
+## The Schefter feed lives in Redis; git keeps a daily snapshot
+
+Until Oct 2026 every feed write was a commit to `main`, and every commit to
+`main` is a production build: the scan, rumor, article and lineup lanes were
+about half of all bot commits. Now each league's feed lives under one Redis key
+(`schefterFeedKey`, `scripts/lib/schefter-keys.mjs`), the site reads it per
+request, and the committed file is the backup and the fallback.
+
+- **Writers did not change shape.** A job checks out, runs
+  `node scripts/schefter-feed-sync.mjs pull` (Redis → the working-tree file),
+  lets its scripts edit the file as they always have, and ends in
+  `commit-feed-and-push.mjs`, which merges each changed feed into Redis under a
+  lock with the same `mergeFeed` the git path used, then leaves it OUT of the
+  commit. A job with nothing else changed commits nothing.
+- **Every feed-writing job needs the pull right after checkout and Redis env
+  on the pull and the commit step.** Skip the pull and the job writes on top
+  of a day-old snapshot (no post is lost, but its dedup watermarks are a day
+  stale, so it re-posts). Skip the env and the feed silently falls back to a
+  git commit — a build per write. `tests/schefter-feed-redis-workflows.test.ts`
+  pins both for every workflow whose `--files` names or builds a feed path.
+- **It fails open to git, never closed.** No credentials, or a Redis write
+  that throws, and the feed is committed exactly as before.
+- **Only a run committing to `main` publishes.** The derived-chain and
+  backfill lanes take `github.ref_name`, so a branch run keeps its posts on
+  its branch instead of putting them on the live site.
+- **The archive lane is `--git-only`, on purpose.** Its pruned feed's
+  `archivedThroughTimestamp` hides the rotated posts, and the archive files
+  now holding them only reach the site with a deploy; published to Redis
+  first, every just-archived permalink and share card 404s until then. The
+  next writer's pull folds the watermark into Redis. It is the only opt-out
+  the workflow guard allows.
+- **The daily snapshot rides `schefter-scan.yml`** (`--snapshot`, when the
+  newest feed commit is 24h old), because the Vercel cron dispatches that job
+  at least hourly and a `schedule:` of its own would be dropped. One build a
+  day. Exactly one job may take it (same test).
+- **Readers go through `getSchefterFeed` / `getSchefterFeedIfAny`**
+  (`src/utils/schefter-league-data.ts`): Redis merged with the bundled
+  snapshot, memoized 30s per instance, the snapshot alone if Redis is down.
+  A new page must never import `schefter-feed.json` directly — it would show
+  this morning's feed all day. Archives (`schefter-archive/*.json`) are still
+  committed and read from the bundle.
+- **Lanes that still commit a feed to git** (`backfill-historical-feeds.yml`
+  through the commit-push action) are folded into Redis by the next job's
+  pull, because the pull merges file and Redis rather than overwriting.
 
 ## A job's league list comes from the registry, never the workflow
 

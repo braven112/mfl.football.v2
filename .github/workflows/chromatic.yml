@@ -87,6 +87,7 @@ on:
       - 'src/components/shared/LineupGameStrip.astro'
       - 'src/components/shared/NetworkBadge.astro'
       - 'src/components/shared/WaiverClaimModal.astro'
+      - 'src/components/shared/transactions/TransactionRecord.astro'
       - 'src/components/shared/sunday-ticket/SundayTicketBoard.astro'
       - 'src/components/shared/live/LvBench.tsx'
       - 'src/components/shared/live/LvEmptyState.tsx'
@@ -424,6 +425,17 @@ on:
   # the `workflow_dispatch` trigger, and it runs on any ref. The `visual-check`
   # label CANNOT do this — a PR into `staging` never reaches this workflow.
       - 'src/components/shared/package-league/MadQualifiers.astro'
+      # The Owners' Poll homepage card and the islands it renders.
+      - 'src/components/shared/owners-poll/BallotBuilder.tsx'
+      - 'src/components/shared/owners-poll/EnablePushButton.tsx'
+      - 'src/components/shared/owners-poll/OwnersPollHomeCard.astro'
+      - 'src/components/shared/owners-poll/OwnersPollHomeCardPrompt.tsx'
+      - 'src/components/shared/owners-poll/OwnersPollPopup.tsx'
+      - 'src/styles/owners-poll-card.css'
+      - 'src/styles/owners-poll.css'
+      - 'src/utils/owners-poll-ballot-teams.ts'
+      - 'src/utils/owners-poll-builder.ts'
+      - 'src/utils/owners-poll-popup.ts'
   pull_request:
     branches: [main]
     types: [opened, ready_for_review, labeled, synchronize]
@@ -485,6 +497,7 @@ on:
       - 'src/components/shared/LineupGameStrip.astro'
       - 'src/components/shared/NetworkBadge.astro'
       - 'src/components/shared/WaiverClaimModal.astro'
+      - 'src/components/shared/transactions/TransactionRecord.astro'
       - 'src/components/shared/sunday-ticket/SundayTicketBoard.astro'
       - 'src/components/shared/live/LvBench.tsx'
       - 'src/components/shared/live/LvEmptyState.tsx'
@@ -780,6 +793,17 @@ on:
       - 'scripts/lib/rookie-salary-slots.mjs'
 
       - 'src/components/shared/package-league/MadQualifiers.astro'
+      # The Owners' Poll homepage card and the islands it renders.
+      - 'src/components/shared/owners-poll/BallotBuilder.tsx'
+      - 'src/components/shared/owners-poll/EnablePushButton.tsx'
+      - 'src/components/shared/owners-poll/OwnersPollHomeCard.astro'
+      - 'src/components/shared/owners-poll/OwnersPollHomeCardPrompt.tsx'
+      - 'src/components/shared/owners-poll/OwnersPollPopup.tsx'
+      - 'src/styles/owners-poll-card.css'
+      - 'src/styles/owners-poll.css'
+      - 'src/utils/owners-poll-ballot-teams.ts'
+      - 'src/utils/owners-poll-builder.ts'
+      - 'src/utils/owners-poll-popup.ts'
   workflow_dispatch:
 
 concurrency:

@@ -81,6 +81,12 @@ runs:
 
         git config user.name "$INPUT_USER_NAME"
         git config user.email "$INPUT_USER_EMAIL"
+        # No league's feed may name another league (src/utils/league-name-guard.mjs).
+        # Rewrites in place only when a post needs it; fails open so a guard
+        # crash never blocks a data sync (the CI data test still catches it).
+        if [ -f scripts/guard-feed-league-names.mjs ]; then
+          node scripts/guard-feed-league-names.mjs || echo "::warning::league-name guard failed; committing as-is"
+        fi
         git add $INPUT_ADD_PATHS
         git commit -m "$INPUT_MESSAGE"
 

@@ -49,7 +49,7 @@ describe('checkGroupMeQuality', () => {
   it('allows when score >= threshold', async () => {
     const fetchFn = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ content: [{ text: '{"score": 8, "reason": "good"}' }] }),
+      json: async () => ({ content: [{ type: 'text', text: '{"score": 8, "reason": "good"}' }] }),
     });
     const result = await scoreSchefterPost(post, { apiKey: 'k', fetchFn });
     expect(result.score).toBe(8);
@@ -77,7 +77,7 @@ describe('checkGroupMeQuality', () => {
     const original = global.fetch;
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ content: [{ text: '{"score": 3, "reason": "flat"}' }] }),
+      json: async () => ({ content: [{ type: 'text', text: '{"score": 3, "reason": "flat"}' }] }),
     }) as typeof fetch;
     try {
       const result = await checkGroupMeQuality(post, { apiKey: 'k', threshold: 6, log: () => {}, warn: () => {} });
@@ -93,7 +93,7 @@ describe('scoreSchefterPost — scope/topic plumbing', () => {
   it('passes scope and topic to the scorer when provided', async () => {
     const fetchFn = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ content: [{ text: '{"score": 7, "reason": "ok"}' }] }),
+      json: async () => ({ content: [{ type: 'text', text: '{"score": 7, "reason": "ok"}' }] }),
     });
     await scoreSchefterPost(
       { headline: 'h', body: 'b', tier: 'rumor', scope: 'division', topic: 'roster' },
@@ -110,7 +110,7 @@ describe('scoreSchefterPost — scope/topic plumbing', () => {
   it('omits scope/topic from the payload when not provided', async () => {
     const fetchFn = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ content: [{ text: '{"score": 7, "reason": "ok"}' }] }),
+      json: async () => ({ content: [{ type: 'text', text: '{"score": 7, "reason": "ok"}' }] }),
     });
     await scoreSchefterPost(
       { headline: 'h', body: 'b', tier: 'rumor' },

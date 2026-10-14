@@ -25,6 +25,9 @@ export const prerender = false;
 
 const transactionFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json');
 const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json');
+// Schefter's feed and its archive years, for the story on each move. Same
+// lazy shape: only the files for the season being viewed are read.
+const schefterPosts = import.meta.glob(['../../../data/afl-fantasy/schefter-feed.json', '../../../data/afl-fantasy/schefter-archive/*.json']);
 ---
 
-<TransactionsPage leagueSlug="afl-fantasy" transactionFeeds={transactionFeeds} leagueFeeds={leagueFeeds} />
+<TransactionsPage leagueSlug="afl-fantasy" transactionFeeds={transactionFeeds} leagueFeeds={leagueFeeds} schefterPosts={schefterPosts} />

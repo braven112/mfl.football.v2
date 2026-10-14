@@ -25,6 +25,9 @@ import type { SchefterPost } from '../../../../types/schefter';
 import { getLeagueById, type LeagueDefinition } from '../../../../config/leagues';
 import { getLeaguePersona } from '../../../../utils/persona-server';
 import { isDefaultPersona, personaByline } from '../../../../utils/persona.mjs';
+import { scrubLeagueNames } from '../../../../utils/league-name-guard.mjs';
+import { getSchefterFeedIfAny } from '../../../../utils/schefter-league-data';
+import { HAIKU_MODEL, HAIKU_THINKING } from '../../../../utils/claude-models.mjs';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -65,23 +68,11 @@ Rules:
 - Never mention being an AI or language model
 - Be the voice of reason, but make it entertaining`;
 
-// Every league's feed, loaded lazily (a feed is ~1 MB): TheLeague's lives
-// under src/data, the rest under data/. Keyed by the registry's
-// `schefterFeedPath`, so a new league needs no edit here.
-const SRC_FEEDS = import.meta.glob('../../../../data/*/schefter-feed.json', { import: 'default' });
-const ROOT_FEEDS = import.meta.glob('../../../../../data/*/schefter-feed.json', { import: 'default' });
-const FEED_LOADERS: Record<string, () => Promise<unknown>> = Object.fromEntries([
-  ...Object.entries(SRC_FEEDS).map(([k, load]) => [`src/${k.replace(/^(\.\.\/)+/, '')}`, load]),
-  ...Object.entries(ROOT_FEEDS).map(([k, load]) => [k.replace(/^(\.\.\/)+/, ''), load]),
-]);
-
-/** Find the original post in the league's own feed */
+/** Find the original post in the league's own feed (live, from Redis). */
 async function findPost(league: LeagueDefinition, postId: string): Promise<SchefterPost | null> {
-  const load = league.schefterFeedPath ? FEED_LOADERS[league.schefterFeedPath] : undefined;
-  if (!load) return null;
   try {
-    const feed = (await load()) as { posts?: SchefterPost[] };
-    return (feed.posts ?? []).find((p) => p.id === postId) ?? null;
+    const feed = await getSchefterFeedIfAny(league);
+    return (feed?.posts ?? []).find((p) => p.id === postId) ?? null;
   } catch {
     return null;
   }
@@ -182,9 +173,9 @@ export const POST: APIRoute = async ({ params, request }) => {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
-      temperature: 0.8,
+      model: HAIKU_MODEL,
+      thinking: HAIKU_THINKING,
+      max_tokens: 130,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
     });
@@ -204,7 +195,8 @@ export const POST: APIRoute = async ({ params, request }) => {
       id: generateReplyId(),
       postId,
       parentId: userReply.id,
-      body: aiText,
+      // Another league's name never publishes (utils/league-name-guard.mjs).
+      body: scrubLeagueNames(aiText, league.slug),
       author: {
         type: 'ai',
         name: byline.name,

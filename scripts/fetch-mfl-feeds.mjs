@@ -182,7 +182,10 @@ const refreshLive = process.argv.includes('--refresh-live');
 
 // Keys excluded from change detection: they advance every fetch even when the
 // payload is identical (playoff-brackets.lastFetched).
-const VOLATILE_FEED_KEYS = ['lastFetched'];
+// `generatedAt` is stamped by our own transforms (injuries) on every run, so
+// it must not count as a change — it was committing injuries.json, and with it
+// a production build, on nearly every sync whose payload had not moved.
+const VOLATILE_FEED_KEYS = ['lastFetched', 'generatedAt'];
 
 const isFreshToday = () => {
   if (!fs.existsSync(metaFile)) return false;
@@ -367,8 +370,12 @@ const writeTradeBaitByFranchise = (data, flatIds) => {
     fetchedAt: Date.now(),
     franchises,
   };
-  fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf8');
-  console.log(`Saved tradeBait-by-franchise -> ${file}`);
+  // `fetchedAt` changes every run; an unchanged trade block must not commit.
+  if (writeJsonIfChanged(file, payload, { ignoreKeys: ['fetchedAt'] })) {
+    console.log(`Saved tradeBait-by-franchise -> ${file}`);
+  } else {
+    console.log(`Unchanged tradeBait-by-franchise; leaving ${file} untouched.`);
+  }
 };
 
 // Mirrors normalizeInjuryStatus in scripts/fetch-live-lineups.mjs and

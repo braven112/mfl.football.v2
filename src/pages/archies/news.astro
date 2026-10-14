@@ -3,8 +3,8 @@
  * League news — Archie's Fantasy Football League.
  *
  * Thin route wrapper over the shared page body
- * (src/components/shared/SchefterNewsPage.astro). Only the feed import lives
- * here: a static import specifier cannot be a runtime variable.
+ * (src/components/shared/SchefterNewsPage.astro). The feed is read live from
+ * Redis (getSchefterFeedIfAny); the committed file is only a daily snapshot.
  *
  * No tips lane (`schefterTips` is off), so the tip link is not offered; the
  * league's chat is Slack, so there is no Group Chat tab either. The feed's
@@ -17,18 +17,16 @@ import SchefterNewsPage from '../../components/shared/SchefterNewsPage.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveSchefterNewsView } from '../../utils/schefter-news-view';
+import { getSchefterFeedIfAny } from '../../utils/schefter-league-data';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
-
-let feed: FeedType = { lastScanTimestamp: '', lastProcessedMflTimestamp: '0', posts: [] };
-try {
-  const raw = await import('../../../data/archies/schefter-feed.json');
-  feed = raw.default as unknown as FeedType;
-} catch {
-  // Feed not yet populated
-}
 
 const authUser = getAuthUser(Astro.request);
 const league = getLeagueBySlug('archies')!;
+const feed: FeedType = (await getSchefterFeedIfAny(league)) ?? {
+  lastScanTimestamp: '',
+  lastProcessedMflTimestamp: '0',
+  posts: [],
+};
 
 const view = await resolveSchefterNewsView({
   league,

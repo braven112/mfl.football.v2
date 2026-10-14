@@ -4652,7 +4652,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     getPlayerImageUrl, getPlayerHeadshot, getNflLogoUrl,
   } from '../../constants/roster-constants';
   import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
-  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { initPlayerModalTrigger, openPlayerFromQuery } from '../../utils/player-modal-trigger';
   import {
     buildRosterSheetFields,
     createRosterSheetActionHandler,
@@ -10311,6 +10311,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       rowTapMedia: '(max-width: 767px)',
       enrich: (data, { row }) => buildRosterSheetPayload(data, row),
     });
+    // `?player=<id>` (Set Lineup's problems sheet) opens that player's sheet.
+    if (rosterTbody) openPlayerFromQuery(rosterTbody);
 
     // ================================================================
     //  Contract Demo — guided walkthrough with mock data injection

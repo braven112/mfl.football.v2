@@ -70,6 +70,9 @@ import '../src/styles/league-history.css';
 // The Primetime Free Agents board (position leaders, market rail). Its page
 // imports it; the board's blocks are `.fa-*`-scoped, so it restyles nothing else.
 import '../src/styles/free-agents-primetime.css';
+// The Owners' Poll homepage card imports its own sheet from frontmatter,
+// which never reaches the canvas (Trap 2). Every selector is `.ophc*`.
+import '../src/styles/owners-poll-card.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:

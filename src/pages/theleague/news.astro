@@ -19,8 +19,7 @@ import { getFranchiseBrand } from '../../utils/franchise-brand';
 import { resolveSchefterNewsView } from '../../utils/schefter-news-view';
 import { loadHottestDesks, loadGroupMePosts } from '../../utils/schefter-news-loaders';
 import { enrichPostsWithOgPreviews } from '../../utils/groupme-storage';
-import type { SchefterFeed as FeedType } from '../../types/schefter';
-import feedData from '../../data/theleague/schefter-feed.json';
+import { getSchefterFeed } from '../../utils/schefter-league-data';
 
 const authUser = getAuthUser(Astro.request);
 const [groupMePosts, hottestDesks] = await Promise.all([
@@ -30,7 +29,7 @@ const [groupMePosts, hottestDesks] = await Promise.all([
 
 const view = await resolveSchefterNewsView({
   league: getLeagueBySlug('theleague')!,
-  feed: feedData as FeedType,
+  feed: await getSchefterFeed(getLeagueBySlug('theleague')!),
   authUser,
   url: Astro.url,
   groupMePosts,

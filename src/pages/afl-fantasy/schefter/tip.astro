@@ -37,7 +37,7 @@ if (
 }
 
 const league = getLeagueBySlug('afl-fantasy')!;
-const feed = getSchefterFeed(league);
+const feed = await getSchefterFeed(league);
 const teams = getSchefterLeagueConfig(league).teams.map((t) => ({
   ...t,
   division:

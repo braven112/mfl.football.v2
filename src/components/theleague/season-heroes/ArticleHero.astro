@@ -35,7 +35,7 @@ import type { EventHeroView } from '../../../utils/league-hero/types';
 import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
 import { LEAGUES, leagueClock } from '../../../config/leagues';
 import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
-import feedData from '../../../data/theleague/schefter-feed.json';
+import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 
 export interface Props {
   state: HeroState;
@@ -44,7 +44,7 @@ export interface Props {
 
 const { state, articleType = 'generic' } = Astro.props;
 
-const feed = feedData as SchefterFeed;
+const feed = await getSchefterFeedBySlug('theleague');
 
 /**
  * Which article this slot would rather have. A miss falls through to the

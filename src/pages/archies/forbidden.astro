@@ -29,6 +29,7 @@ const league = getLeagueBySlug('archies')!;
 // error page is a stored-XSS shape. It only selects from a fixed table.
 const REASONS: Record<string, string> = {
   commissioner: 'This page is commissioner-only.',
+  admin: 'This page is private to the site admins.',
   league: `This page belongs to a league you don't own a team in.`,
 };
 const reason = REASONS[Astro.url.searchParams.get('why') ?? ''] ?? REASONS.commissioner;

@@ -329,3 +329,39 @@ function enrichSafely(
     return data;
   }
 }
+
+/**
+ * Open a player's sheet from the URL: `?player=<MFL id>` (Set Lineup's
+ * problems sheet links here, so "fix this player" lands on the sheet that
+ * holds the fix — Activate from IR, Cut, …). Clicks the player's own
+ * `[data-player-modal]` name, so the sheet opens through the same delegated
+ * listener (and `enrich`) a tap would. Call AFTER `initPlayerModalTrigger`
+ * and after the rows render.
+ *
+ * The param is dropped from the URL first, so a reload or Back does not
+ * reopen the sheet the owner already closed.
+ *
+ * @returns true when a sheet was opened.
+ */
+export function openPlayerFromQuery(container: ParentNode, param = 'player'): boolean {
+  const url = new URL(window.location.href);
+  const id = url.searchParams.get(param);
+  if (!id) return false;
+  url.searchParams.delete(param);
+  history.replaceState(history.state, '', url.toString());
+  if (!/^\d+$/.test(id)) return false;
+
+  for (const el of Array.from(container.querySelectorAll<HTMLElement>('[data-player-modal]'))) {
+    let parsed: { id?: unknown } | null = null;
+    try {
+      parsed = JSON.parse(el.getAttribute('data-player-modal') || 'null');
+    } catch {
+      continue;
+    }
+    if (String(parsed?.id ?? '') !== id) continue;
+    el.closest('tr')?.scrollIntoView({ block: 'center' });
+    el.click();
+    return true;
+  }
+  return false;
+}
