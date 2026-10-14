@@ -701,7 +701,7 @@ Two icons in `sprite.svg` look interchangeable and are not:
 |---|---|---|
 | `bell` | **notifications** — alerts, push, the settings page | `/theleague/notifications`, `/afl-fantasy/notifications`, the notification-command-center What's New entry |
 | `transactions-2` (handshake) | **trades and waivers** | the Transaction Hub button in `Header.astro`, both Trade Builder page-directory entries, the "Trade Player" action in `AFLActionModal` |
-| `exchange` (swap arrows) | a trade **event** or a roster move, not the trade tool | the Trading Deadline calendar event and hero in both leagues, the AFL next-opponent card |
+| `exchange` (swap arrows) | a trade **event** or a roster move, not the trade tool | the Trading Deadline calendar event and hero in both leagues (the next-opponent cards link the Schedule, so they wear its `scoreboard-2` — see below) |
 
 The site renders **no bell outside notifications**. `icon-bell` appears in
 `src/` only inside `icons.astro`, which is the catalogue page listing every
@@ -722,6 +722,38 @@ decorative.** `icon-transactions-2` is `viewBox="2 26 124 76"` — a 1.6:1 mark
 that letterboxes to about 18×11 in an 18×18 slot. That is how it
 renders in the header on the CLASSIC set (the `line` set's handshake is square); it is not a bug, but do not expect it to fill a square
 next to icons that do.
+
+## A page wears ONE icon — `pageIcon()`, never a hand-typed id
+
+`src/config/page-icons.json` is the only place a page's icon is chosen: one
+glyph per league-local path, plus `leagueOverrides` for the few chosen per
+league on purpose (the AFL's `roster-16`, Archie's `roster-14`, the `live-score-03` / `-07` boards).
+Anything that renders a LINK TO A PAGE — the menu, site search, quick links,
+the related-pages card, the draft and Front Office sub-navs, homepage tiles,
+hero quick links — takes its icon from `pageIcon(path, leagueSlug)`
+(`src/utils/page-icon.ts`). `nav-config.json` and `page-directory.json` still
+store an `icon` per link, because the menu and search read them directly, but
+those are copies the test checks, not choices.
+
+Why: in Oct 2026 an audit found 24 pages wearing a different icon depending on
+where the link sat. Playoffs was the bracket in the menu and the title belt in
+the related-pages card below it; the draft sub-nav still wore the glyphs the
+menu had retired a day earlier; Archie's menu had its own picks for five pages.
+Each copy had been chosen by hand, so each copy drifted.
+
+- **New page:** `scripts/scaffold-page.mjs --icon` writes the registry entry
+  along with the page-directory one. A page-directory path with no registry
+  icon fails the build.
+- **Changing a page's icon** is one line in `page-icons.json` plus the two
+  stored copies; the test names every copy that disagrees.
+- **Not a page link?** A calendar event ("Playoffs begin" = `playoff`,
+  "Championship" = `champ`), a player action or a stat tile (Cap Space,
+  Expiring) is its own concept and keeps its own glyph.
+
+Guard: `tests/page-icons.test.ts` — both stored copies equal the registry, the
+sub-nav/related-card resolvers resolve, every `pageIcon('…')` literal names a
+real page, and a source scan fails any object literal that pairs a page
+`path`/`href` with a hand-typed `icon` disagreeing with the registry.
 
 ## Icon sets — resolve the sprite, never write its path
 

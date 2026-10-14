@@ -376,6 +376,13 @@ tags generously (synonyms, data types, actions, slang a user might type).
 `tests/page-directory-data.test.ts` enforces the tag minimum, but nothing
 tells you to add the entry in the first place — you have to remember.
 
+**A page's icon is chosen once, in `src/config/page-icons.json`.** Every link to
+the page — menu, search, related cards, sub-navs, homepage tiles — reads it via
+`pageIcon(path, league)`; never hand-type a glyph next to a page link (24 pages
+had drifted to two or three icons each). `scaffold-page.mjs --icon` writes it;
+`tests/page-icons.test.ts` fails on any copy that disagrees. See
+`docs/claude/rules/theming-and-assets.md` § "A page wears ONE icon".
+
 ## Second league's copy of a page — build a component, not a second page
 
 **Custom (standard-package) leagues get the REAL page, never a lite version.**

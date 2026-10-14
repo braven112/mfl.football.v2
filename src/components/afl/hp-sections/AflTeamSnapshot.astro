@@ -12,6 +12,7 @@ import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { pageIcon } from '../../../utils/page-icon';
 import { getLeagueBySlug } from '../../../config/leagues';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
@@ -156,14 +157,14 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: record ? `${record.wins}-${record.losses}${record.ties ? `-${record.ties}` : ''}` : '—',
         sub: userConferenceName ? `${userConferenceName} conf.` : 'in conference',
         href: '/afl-fantasy/standings',
-        icon: 'star',
+        icon: pageIcon('/standings', 'afl-fantasy'),
       },
       {
         label: 'Tier',
         value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
-        icon: 'trophy',
+        icon: pageIcon('/standings?view=tier', 'afl-fantasy'),
         ...tierLogo,
       },
       {
@@ -171,7 +172,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: rosterCount != null ? `${rosterCount}` : '—',
         sub: rosterLimit ? `of ${rosterLimit} slots` : 'players',
         href: '/afl-fantasy/rosters',
-        icon: 'users',
+        icon: pageIcon('/rosters', 'afl-fantasy'),
         alert: rosterLimit ? (rosterCount ?? 0) > rosterLimit : false,
       },
       {
@@ -179,7 +180,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: nextOpponent?.name ? (nextOpponent.isHome === false ? 'at' : 'vs.') : 'TBD',
         sub: nextOpponent?.name ?? 'see the schedule',
         href: '/afl-fantasy/schedule',
-        icon: 'exchange',
+        icon: pageIcon('/schedule', 'afl-fantasy'),
       },
     ]
   : [
@@ -188,7 +189,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
-        icon: 'trophy',
+        icon: pageIcon('/standings?view=tier', 'afl-fantasy'),
         ...tierLogo,
       },
       {
@@ -196,7 +197,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: conferenceId ? getConferenceShort(conferenceId) : '—',
         sub: userTeam?.division ?? '',
         href: '/afl-fantasy/standings',
-        icon: 'star',
+        icon: pageIcon('/standings', 'afl-fantasy'),
         ...conferenceLogo,
       },
       ...(spotlight
@@ -214,7 +215,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         value: rosterCount != null ? `${rosterCount}` : '—',
         sub: rosterYear ? `${rosterYear} roster` : 'players',
         href: '/afl-fantasy/rosters',
-        icon: 'users',
+        icon: pageIcon('/rosters', 'afl-fantasy'),
       },
     ];
 ---

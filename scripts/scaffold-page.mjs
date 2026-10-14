@@ -33,6 +33,8 @@ import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, LEAGUES } from '../src/config/leagues
 
 const ROOT = process.cwd();
 const DIRECTORY = 'src/data/page-directory.json';
+/** The one icon each page wears everywhere it is linked (src/utils/page-icon.ts). */
+const PAGE_ICONS = 'src/config/page-icons.json';
 const CATEGORIES = ['popular', 'my-team', 'reports', 'tools', 'info'];
 const VISIBILITIES = ['all', 'admin'];
 
@@ -65,7 +67,11 @@ function validate(a) {
   if (!a.title) errors.push('--title is required');
   if (!a.description) errors.push('--description is required (one sentence, what the page answers)');
   if (!CATEGORIES.includes(a.category)) errors.push(`--category must be one of ${CATEGORIES.join(', ')}`);
-  if (!a.icon) errors.push('--icon is required (a sprite icon id used elsewhere in page-directory.json)');
+  if (!a.icon) errors.push('--icon is required: the glyph this page wears in the menu, search and every card that links it (src/config/page-icons.json)');
+  else {
+    const sprite = readFileSync(join(ROOT, 'public/assets/icons/sprite.svg'), 'utf8');
+    if (!sprite.includes(`id="icon-${a.icon}"`)) errors.push(`--icon "${a.icon}" is not a glyph in public/assets/icons/sprite.svg (pass the bare id, no "icon-")`);
+  }
   if (!VISIBILITIES.includes(a.visibility)) errors.push(`--visibility must be one of ${VISIBILITIES.join(', ')}`);
   if (!Number.isInteger(a.popularity) || a.popularity < 0 || a.popularity > 100) errors.push('--popularity must be an integer 0-100');
   if (a.tags.length < 10) errors.push(`--tags needs 10+ comma-separated tags (got ${a.tags.length}); write synonyms, data types, actions, slang`);
@@ -184,6 +190,8 @@ function main() {
   ];
 
   const directory = JSON.parse(readFileSync(join(ROOT, DIRECTORY), 'utf8'));
+  const pageIcons = JSON.parse(readFileSync(join(ROOT, PAGE_ICONS), 'utf8'));
+  const localPath = `/${a.route}`;
   const entries = leagues.map((slug) => {
     const isDefault = slug === DEFAULT_LEAGUE_SLUG;
     return {
@@ -202,12 +210,16 @@ function main() {
   for (const entry of entries) {
     if (directory.some((e) => e.id === entry.id || e.path === entry.path)) clashes.push(`${DIRECTORY} (id ${entry.id} / path ${entry.path})`);
   }
+  if (pageIcons.pages[localPath] && pageIcons.pages[localPath] !== a.icon) {
+    clashes.push(`${PAGE_ICONS} (${localPath} already wears "${pageIcons.pages[localPath]}")`);
+  }
   if (clashes.length) {
     console.error('scaffold-page: refusing to overwrite\n  ' + clashes.join('\n  '));
     process.exit(2);
   }
 
   for (const f of files) console.log(`${a.dryRun ? 'would write' : 'write'}  ${f.path}`);
+  console.log(`${a.dryRun ? 'would set' : 'set'}    ${PAGE_ICONS} ← ${localPath}: ${a.icon}`);
   for (const entry of entries) console.log(`${a.dryRun ? 'would append' : 'append'} ${DIRECTORY} ← ${JSON.stringify({ id: entry.id, path: entry.path, tags: entry.tags.length })}`);
   if (a.dryRun) return;
 
@@ -217,11 +229,15 @@ function main() {
   }
   directory.push(...entries);
   writeFileSync(join(ROOT, DIRECTORY), JSON.stringify(directory, null, 2) + '\n');
+  pageIcons.pages[localPath] = a.icon;
+  pageIcons.pages = Object.fromEntries(Object.entries(pageIcons.pages).sort(([x], [y]) => x.localeCompare(y)));
+  writeFileSync(join(ROOT, PAGE_ICONS), JSON.stringify(pageIcons, null, 2) + '\n');
 
   console.log(`
 Next:
   1. Fill in the body of ${files[0].path}.
-  2. node_modules/.bin/vitest run tests/page-directory-data.test.ts tests/page-fork-ratchet.test.ts tests/design-token-guard.test.ts
+  2. node_modules/.bin/vitest run tests/page-directory-data.test.ts tests/page-icons.test.ts tests/page-fork-ratchet.test.ts tests/design-token-guard.test.ts
+     Anything that links this page takes its icon from pageIcon('${localPath}', league) — never a hand-typed id.
   3. Add a story if the page has visual states (docs/claude/rules/storybook.md).
   4. /update-whats-new — a new page needs an entry with a screenshot and inline links.
   5. If the page shows a year: /rollover-check /${leagues[0]}/${a.route}`);
