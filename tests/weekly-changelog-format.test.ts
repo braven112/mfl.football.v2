@@ -118,6 +118,16 @@ describe('buildDescription — the article body', () => {
     expect(headings).toEqual(['New this week', 'Fixes & polish']);
   });
 
+  it('links /guides only for a league that has the route', () => {
+    const withGuides = JSON.stringify(buildDescription({ features: [], fixes: [change()], dateRange }));
+    const without = JSON.stringify(
+      buildDescription({ features: [], fixes: [change()], dateRange, hasGuides: false }),
+    );
+    expect(withGuides).toContain('href=\\"/guides\\"');
+    expect(without).not.toContain('/guides');
+    expect(without).toContain('href=\\"/whats-new\\"');
+  });
+
   it('omits a section entirely rather than shipping an empty heading', () => {
     const fixesOnly = buildDescription({ features: [], fixes: [change()], dateRange });
     expect(listBlock(fixesOnly, 'New this week')).toBeUndefined();

@@ -31,7 +31,7 @@
  * Run manually or via GitHub Actions every Monday at 8pm PT.
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
@@ -348,7 +348,12 @@ for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
     date: today,
     title: featured?.headline || `The Week in Review (${dateRange})`,
     summary: featured?.lede || buildSummary({ features, fixes }),
-    description: buildDescription({ features, fixes, dateRange }),
+    description: buildDescription({
+      features,
+      fixes,
+      dateRange,
+      hasGuides: existsSync(resolve(ROOT, 'src/pages', leagueSlug, 'guides')),
+    }),
     category: 'weekly',
     // No `link`: the homepage card and the hero CTA both fall back to this
     // entry's own article, which is where the week's detail actually is.

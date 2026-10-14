@@ -38,6 +38,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
+import { recordCommissionerVisit, trackedAccountName } from '../../utils/commissioner-visits';
 import { createHmac, createHash } from 'node:crypto';
 import { recordVisit, recordAnonymousVisit } from '../../utils/owner-activity';
 import { canonicalPath, isDirectoryPath } from '../../utils/site-analytics';
@@ -173,6 +174,10 @@ export const POST: APIRoute = async ({ request, url }) => {
 	}
 
 	if (league) await recordVisit(user.leagueId, user.franchiseId, rawPage || '/', visit);
+	// Commissioner accounts are also counted by MFL account name, which is the
+	// only way the report can tell two commissioner logins apart (commissioner-visits.ts).
+	const account = league ? trackedAccountName(user, league.id) : null;
+	if (league && account) await recordCommissionerVisit(league.id, account);
 	const signedInPage = league && rawPage ? canonicalPath(rawPage, league.slug) : rawPage || '/';
 	await recordInsightVisit({
 		...describeInsightVisit(url, league, signedInPage, surface),

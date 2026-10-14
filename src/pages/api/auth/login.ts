@@ -8,6 +8,10 @@ import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
 import { recordInsightLogin } from '../../../utils/site-insights';
+import { recordCommissionerLogin, trackedAccountName } from '../../../utils/commissioner-visits';
+import type { AuthUser } from '../../../utils/auth';
+
+type AuthRole = AuthUser['role'];
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
@@ -230,6 +234,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       franchiseId: mflResponse.franchiseId,
       username: String(username),
     });
+
+    // Owner Activity's Commissioners section: a commissioner ACCOUNT's
+    // sign-in, by name. Owners are never recorded; never throws.
+    const commissionerAccount = openLeague
+      ? null
+      : trackedAccountName(
+          { name: String(username), role: (mflResponse.role as AuthRole) || 'owner', leagueId: resolvedLeagueId },
+          resolvedLeagueId,
+        );
+    if (commissionerAccount) await recordCommissionerLogin(resolvedLeagueId, commissionerAccount);
 
     return new Response(
       JSON.stringify({
