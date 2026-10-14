@@ -1,5 +1,158 @@
 [
   {
+    "id": "weekly-rollup-2026-10-12",
+    "date": "2026-10-12",
+    "title": "Schefter now reports every move",
+    "summary": "The Transactions page leads with Claude Schefter's take on each pickup, cut and trade this season. Tap See details for MFL's official record.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "Homepage My Team card shows this week in season: whether your lineup is set (and who's on bye or out), your record, next opponent, and one-tap Set Lineup, Free Agents, Trade Builder and Roster.",
+          "The menu now opens with the pages you use most — Roster, Set Lineup, Live Scoring, Free Agents, Standings, Trade Builder and Tip Schefter — pinned at the top all year.",
+          "The pages you use most now end with a card of related pages — Sunday Ticket on Live Scoring, Schedule and Playoffs on Standings, Ask Roger on Rules, and more.",
+          "The homepage now spotlights the season's top scorer, with a one-tap link to Top Players.",
+          "Search: results now rank by what owners actually open, so Tip Schefter and Set Lineup come up before rarely used pages.",
+          "Roster and transaction moves made on MFL's own site now show up here within a minute, down from two.",
+          "Standings got a new look: division leaders up top, a playoff picture of who is in and who is chasing, and all-play with a luck column.",
+          "A new, lighter icon style across the site, with clearer menu icons for Roster, Live Scoring, the draft pages and more — and Tip Schefter now wears Schefter himself.",
+          "The Live Scoring icon now reads 0-7.",
+          "Transactions is now Schefter's wire: every move gets his write-up, with the official record under See details, and past seasons tucked in a menu.",
+          "Haven't voted in the Owners' Poll, or your ballot is a few weeks old? The homepage now opens a quick ballot, at most once a week."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Schefter's trade speculation no longer calls two teams division rivals unless they actually share a division.",
+          "<strong>Schefter Report</strong> — Quieter GroupMe: the Pecking Order and Gauntlet posts are now one line and a link, and trade rumors stay in the news feed and opt-in push alerts.",
+          "<strong>Schefter Report</strong> — Claude Schefter's chat posts and the Pecking Order page no longer show stray HTML tags like <p> around the blurbs.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: Trade block moved into the ⋮ menu with a label, the trade icon and a ✓ when he's on the block — the old unlabelled circle looked like it did nothing.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: This Week's Projected shows the projection alone again, instead of every stat run together.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: Recent weeks leaves out a week with no score instead of printing \"W2 -\".",
+          "<strong>Admin</strong> — Owner Activity: moved pages like Draft Room are no longer listed as never opened, and articles and franchise pages show their names.",
+          "<strong>Owners' Poll</strong> — Teams you've ranked on your Owners' Poll ballot keep their record, points and all-play next to them, so reordering never means scrolling back to compare.",
+          "<strong>Design System & Theming</strong> — Pages no longer flash an unstyled, oversized logo for a moment while they load.",
+          "<strong>Set Lineup</strong> — Set Lineup now lists what's wrong with your lineup (IR violations, empty slots, starters on bye or out) and takes you straight to the fix, including a refused save."
+        ]
+      },
+      "Everything above shipped in the week of Oct 8-13. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ],
+    "image": "transactions-schefter-wire.webp",
+    "imageAlt": "The Transactions page showing Schefter's write-ups of the day's pickups, one opened to show the official record"
+  },
+  {
+    "id": "weekly-rollup-2026-10-12-afl",
+    "date": "2026-10-12",
+    "title": "Schefter now reports every move",
+    "summary": "The Transactions page leads with Claude Schefter's take on each pickup, cut and trade this season. Tap See details for MFL's official record.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "Homepage My Team card shows this week in season: whether your lineup is set (and who's on bye or out), your record, next opponent, and one-tap Set Lineup, Free Agents, Trade Builder and Roster.",
+          "The menu now opens with the pages you use most — Roster, Set Lineup, Live Scoring, Free Agents, Standings, Trade Builder and Tip Schefter — pinned at the top all year.",
+          "The pages you use most now end with a card of related pages — Sunday Ticket on Live Scoring, Schedule and Playoffs on Standings, Ask Roger on Rules, and more.",
+          "The homepage now spotlights the season's top scorer, with a one-tap link to Top Players.",
+          "Search: results now rank by what owners actually open, so Tip Schefter and Set Lineup come up before rarely used pages.",
+          "Roster and transaction moves made on MFL's own site now show up here within a minute, down from two.",
+          "Standings got a new look: division leaders up top, a playoff picture of who is in and who is chasing, and all-play with a luck column.",
+          "A new, lighter icon style across the site, with clearer menu icons for Roster, Live Scoring, the draft pages and more — and Tip Schefter now wears Schefter himself.",
+          "The Rosters icon now wears number 16, one for each of the AFL's roster spots.",
+          "The Live Scoring icon now reads 0-3, for the league founded in '03.",
+          "Transactions is now Schefter's wire: every move gets his write-up, with the official record under See details, and past seasons tucked in a menu.",
+          "Haven't voted in the Owners' Poll, or your ballot is a few weeks old? The homepage now opens a quick ballot, at most once a week."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Rosters</strong> — AFL Rosters on a phone: position headers span the full card again, and the sort chips scroll inside it and read like TheLeague's (\"Pts ↓\").",
+          "<strong>Rosters</strong> — Player sheet on Rosters: Trade block moved into the ⋮ menu with a label, the trade icon and a ✓ when he's on the block — the old unlabelled circle looked like it did nothing.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: This Week's Projected shows the projection alone again, instead of every stat run together.",
+          "<strong>Schefter Report</strong> — Quieter GroupMe: the Pecking Order and Gauntlet posts are now one line and a link, and trade rumors stay in the news feed and opt-in push alerts.",
+          "<strong>Schefter Report</strong> — Schefter can no longer use another league's name in AFL news, chat posts or notifications; the Week 5 Gauntlet headline now says the AFL.",
+          "<strong>Schefter Report</strong> — Claude Schefter's chat posts and the Pecking Order page no longer show stray HTML tags like <p> around the blurbs.",
+          "<strong>Admin</strong> — Owner Activity: moved pages like Draft Room are no longer listed as never opened, and articles and franchise pages show their names.",
+          "<strong>Homepage</strong> — The home page headline now reads \"Two conferences. One champ.\" instead of stopping at \"One.\".",
+          "<strong>Owners' Poll</strong> — Teams you've ranked on your Owners' Poll ballot keep their record, points and all-play next to them, so reordering never means scrolling back to compare.",
+          "<strong>Design System & Theming</strong> — Pages no longer flash an unstyled, oversized logo for a moment while they load.",
+          "<strong>Set Lineup</strong> — Set Lineup now lists what's wrong with your lineup (IR violations, empty slots, starters on bye or out) and takes you straight to the fix, including a refused save."
+        ]
+      },
+      "Everything above shipped in the week of Oct 7-13. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ],
+    "image": "transactions-schefter-wire.webp",
+    "imageAlt": "The Transactions page showing Schefter's write-ups of the day's pickups, one opened to show the official record"
+  },
+  {
+    "id": "weekly-rollup-2026-10-12-archies",
+    "date": "2026-10-12",
+    "title": "Archie's gets a front page",
+    "summary": "The homepage now reads like a sports front page: the week's lead story, your rivalry with this week's opponents, the latest moves and the race at the top of the standings.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "The menu now opens with the pages you use most — Roster, Set Lineup, Live Scoring, Free Agents, Standings, Trade Builder and Tip Schefter — pinned at the top all year.",
+          "The pages you use most now end with a card of related pages — Sunday Ticket on Live Scoring, Schedule and Playoffs on Standings, Ask Roger on Rules, and more.",
+          "The homepage now spotlights the season's top scorer, with a one-tap link to Top Players.",
+          "Search: results now rank by what owners actually open, so Tip Schefter and Set Lineup come up before rarely used pages.",
+          "Roster and transaction moves made on MFL's own site now show up here within a minute, down from two.",
+          "A new front-page homepage with your weekly rivalry pinned to the headlines, plus a slimmer header that carries this week's scores across the top of every page.",
+          "Standings got a new look: division leaders up top, a playoff picture of who is in and who is chasing, and all-play with a luck column.",
+          "Standings now match the front page: team-colour division leaders, a MAD POWER 99 playoff picture and an all-play luck column.",
+          "Free Agents now opens on the best available player at each position, with the most added and most dropped players this week beside the list.",
+          "A new, lighter icon style across the site, with clearer menu icons for Roster, Live Scoring, the draft pages and more — and Tip Schefter now wears Schefter himself.",
+          "A new, lighter icon style across the site, with clearer icons in the menu for Roster, Live Scoring, the draft pages, Throwback Week and more.",
+          "Transactions is now Schefter's wire: every move gets his write-up, with the official record under See details, and past seasons tucked in a menu."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Quieter GroupMe: the Pecking Order and Gauntlet posts are now one line and a link, and trade rumors stay in the news feed and opt-in push alerts.",
+          "<strong>Schefter Report</strong> — Claude Schefter's chat posts and the Pecking Order page no longer show stray HTML tags like <p> around the blurbs.",
+          "<strong>Franchise Pages</strong> — Franchise pages now follow each team through MFL renumbering: the SeaBirds keep their 2023–24 seasons, and no team shows another team’s old seasons.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: Trade block moved into the ⋮ menu with a label, the trade icon and a ✓ when he's on the block — the old unlabelled circle looked like it did nothing.",
+          "<strong>Rosters</strong> — Player sheet on Rosters: This Week's Projected shows the projection alone again, instead of every stat run together.",
+          "<strong>Rosters</strong> — Rosters on a phone now show player cards instead of a sideways-scrolling table, the same as the AFL.",
+          "<strong>Admin</strong> — Owner Activity: moved pages like Draft Room are no longer listed as never opened, and articles and franchise pages show their names.",
+          "<strong>Homepage</strong> — The home page headline now reads \"Nine divisions. One champ.\" instead of stopping at \"One.\".",
+          "<strong>Design System & Theming</strong> — Pages no longer flash an unstyled, oversized logo for a moment while they load.",
+          "<strong>Set Lineup</strong> — Set Lineup now lists what's wrong with your lineup (IR violations, empty slots, starters on bye or out) and takes you straight to the fix, including a refused save."
+        ]
+      },
+      "Everything above shipped in the week of Oct 8-13. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": false,
+    "leagues": [
+      "archies"
+    ],
+    "image": "archies-front-page.webp",
+    "imageAlt": "Archie's new homepage with the score strip, your team band, the Gauntlet lead story and top headlines"
+  },
+  {
     "id": "weekly-rollup-2026-10-05",
     "date": "2026-10-05",
     "title": "See exactly where every point came from",
@@ -1307,76 +1460,5 @@
     ],
     "image": "afl-owner-award-badges.webp",
     "imageAlt": "Jim Shea's AFL owner page showing the career record alongside a row of award badge chips: AFL Champion, NL Champion ×3, NL West ×2 and NL Pacific"
-  },
-  {
-    "id": "sunday-ticket",
-    "date": "2026-09-04",
-    "category": "new-page",
-    "icon": "goals",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Four Boxes, Two Windows, Every League You're In",
-    "heroHeadline": "See what's worth",
-    "heroAccentWord": "Watching.",
-    "link": "/sunday-ticket",
-    "linkLabel": "Build your Sunday",
-    "summary": "Sunday Ticket gives you four boxes per window and no opinion about which games belong in them. The new Sunday Ticket page has one: the games with the most of your starters on the field, ranked, with the real network on each, RedZone in any open box — and it counts your other leagues too.",
-    "description": [
-      "There is a version of Sunday afternoon where you have the multiview up, four boxes lit, and you are watching the one game that has none of your guys in it because you set it up at 9:58 with a coffee in one hand. The <a href=\"/sunday-ticket\">Sunday Ticket page</a> is the fix. It looks at every game kicking off in the 1 PM ET window and again in the 4 PM ET window, counts how many of your starters are in each one, and hands you the four to put on. Fewer than four? RedZone takes the open box, which is what you were going to do anyway.",
-      "It reads your <a href=\"/lineup\">submitted lineup</a>, so a bench player does not get a box a starter should have — and if you haven't set one yet it says so and works from the roster. Each box lists your players with that league's projection, and the network chip is the real one from the broadcast schedule, not a guess: CBS is CBS, FOX is FOX, and the Thursday, Sunday night and Monday night games sit in their own row underneath, because those are not on the package and pretending otherwise is how you end up flipping to a channel you don't have.",
-      "The part that took the longest is the part you'll notice second. If you're in both of our leagues — or in three others somewhere else on MFL — the board counts all of them. Sign in once and every league your account belongs to shows up as a chip across the top; toggle any of them off and the four boxes re-rank. A quarterback you start in two leagues is two reasons to watch that game, and the board says so.",
-      "Once the early games kick off the page hands you a link to <a href=\"/live-scoring\">Live Scoring</a>, which is where Sunday actually happens. Saturday morning and Sunday before 10 is when this one earns its keep. The homepage's “Your Sunday Ticket” panel now points here too — its “Full Preview” button has been a dead link for longer than anyone wants to admit."
-    ],
-    "image": "sunday-ticket.webp",
-    "imageAlt": "The Sunday Ticket page: a 2×2 multiview grid for the early window with four games, each listing the owner's starters, projections and the network, and a RedZone box filling the late window"
-  },
-  {
-    "id": "owners-poll",
-    "date": "2026-09-04",
-    "category": "new-page",
-    "icon": "rank",
-    "leagues": [
-      "theleague"
-    ],
-    "title": "The Room Gets A Vote",
-    "link": "/pecking-order/ballot",
-    "linkLabel": "Cast your ballot",
-    "summary": "Every Tuesday The Pecking Order ranks the league by the numbers. Now you get a say. Rank your top 7 — your own team included, if you think you belong — and the consensus runs in Tuesday's column right next to the algorithm. The week's real story is the room versus the machine.",
-    "description": [
-      "For two years The Pecking Order has ranked this league with math: half all-play record, half rolling three-week scoring, no opinions involved. It has been right often enough to be annoying and wrong often enough to be worth arguing with. The arguing has been happening in the group chat, where it dies.",
-      "So now it happens on the record. The ballot opens with <a href=\"/pecking-order\">the column</a> every Tuesday and closes Thursday at the week's first kickoff — not Wednesday night, deliberately. Setting a lineup is the one thing everybody in this league reliably does, and it mostly happens Wednesday through Sunday, so a Wednesday deadline was asking you to make a second trip. Now it's the same trip: there's a ballot strip on <a href=\"/lineup\">your lineup page</a>, and you can vote from there without going anywhere.",
-      "You rank seven of sixteen. First pick is worth 7 points, seventh is worth 1, every ballot counts the same, and you may absolutely rank yourself — that is not a loophole anybody is closing. It is the entire source of the Homer Index, which measures how much higher you rated your own team than the room did, and which is going to make somebody very famous around here. Eight ballots are needed for a consensus to publish; below that the column runs on the numbers alone and everybody knows why.",
-      "Ballots stay sealed until the poll closes, then all of them publish. There is a <a href=\"/pecking-order/voters\">voters page</a> keeping the receipts: who voted, how often, and how well they actually read the league — every ballot is scored against how the season plays out, so being loudly wrong in Week 3 is a thing that follows you to Week 14. The Contrarian Index is there too, for the owner whose ballot agrees with nobody. Sometimes that owner is the only one who saw it coming.",
-      "The chat will not be nagging you about this. It gets one automated post a day now, total, and the poll has to share that budget with everything else — so the reminders come to your phone instead, and only if you asked for them, on <a href=\"/notifications\">the notifications page</a>. Ballot opens, ballot closing, where the room put your team. Turn on the ones you want and ignore the rest."
-    ],
-    "image": "owners-poll.webp",
-    "imageAlt": "The Owners' Poll ballot page on The League. A commissioner strip reads \"Ballot open · Week 1 · 5/16 in\"; below it a card headed \"Rank your top 7 · Week 1\" shows \"5 of 16 ballots in\" and \"Closes Thursday, 10:00 AM PDT\", with seven numbered slots filled — Wabbits, Magicians, Dangsters, Vitside, Pain, Pigskins, CPU Jocks — each with its franchise crest, a team-colored accent bar, and up/down/remove controls."
-  },
-  {
-    "id": "notification-command-center",
-    "date": "2026-09-04",
-    "category": "new-feature",
-    "icon": "bell",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Fourteen Ways To Be Told, And You Pick",
-    "heroHeadline": "Pick how you get",
-    "heroAccentWord": "Notified.",
-    "link": "/notifications",
-    "linkLabel": "Choose your alerts",
-    "summary": "The group chat now gets one automated post a day. Everything else moved to your phone — trade offers, a broken lineup before kickoff, injuries to your guys, the rumor mill, your final score. Fourteen alert types, four groups, four on by default, and every single one is a switch you own.",
-    "description": [
-      "The league had a volume problem, and it was us. Six bots with something to say and one group chat to say it in is how a chat gets muted, and a muted chat is worse than a quiet one — the deadline reminder that actually mattered went into the same silence as the fourth waiver-claim announcement of the afternoon.",
-      "So the chat is now rationed. One automated post a day, on a fixed weekly calendar, and that's the whole budget. Anything a human types is exempt, and so is Roger answering a rules question or reminding you about a deadline — those were never the problem. Everything else moved somewhere you can actually control it.",
-      "That somewhere is <a href=\"/notifications\">Notifications</a>, and it is now a proper command center. Fourteen alert types in four groups: things waiting on <strong>your team</strong>, <a href=\"/pecking-order\">the Owners' Poll</a>, league news, and game day. Four are on by default — a trade offer, a broken <a href=\"/lineup\">starting lineup</a> while there's still time to fix it, a league deadline, and where the room ranked you. Those four are the ones that cost you something if you miss them. The other ten are off, sitting there, waiting for you to decide you want them.",
-      "The new arrivals are worth a look. <strong>News on your players</strong> watches the injury report and tells you when a status changes on someone you actually roster — including when a guy is CLEARED, which is the version you want on a Saturday when you're deciding whether to start him. <strong>Your final score</strong> lands when your matchup is genuinely over, per matchup, so a Sunday-only week doesn't make you wait on somebody else's Monday-night kicker. And <strong>close-game swings</strong> only fires once the early window is done and the lead actually changes hands — because a lead change at 10:30 in the morning, with eleven starters yet to play, is not a result. It's noise, and we're done sending noise.",
-      "Turn on everything. Turn on nothing. Turn on the firehose — <strong>Every transaction</strong> is right there and it is genuinely a firehose, dozens some weeks, and if that's your idea of a good time nobody here is going to stop you. The point is that it's your call now instead of ours."
-    ],
-    "image": "notification-command-center.webp",
-    "imageAlt": "The Notifications command center on The League, headed \"Choose your alerts\" and reading \"4 of 14 on\". The \"Your team\" group is expanded with Turn all on beside it: Trade offers, Lineup problems before kickoff and League deadlines are switched on and badged ON BY DEFAULT, and News on your players is switched off. The Owners' Poll group begins below."
   }
 ]
