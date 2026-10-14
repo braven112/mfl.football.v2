@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   arrangeStories,
@@ -7,6 +8,7 @@ import {
   buildWire,
   opponentsInWeek,
   podium,
+  meetingsBetween,
   rivalryFacts,
   stripWeek,
   topScorer,
@@ -218,5 +220,49 @@ describe('a trade as a story', () => {
     expect(story?.franchiseIds).toEqual(['0001', '0002']);
     expect(story?.kicker).toBe('Trade');
     expect(story?.at).toBe('2026-10-10T00:00:00.000Z');
+  });
+});
+
+describe('the series in a league that renumbers its franchises', () => {
+  // 0013 was the Chickens in 2021 and is the Jackalopes from 2026; the Pirates
+  // played as 0002 in 2021. Both 2021 games sit under key '0013'.
+  const franchises = {
+    '0079': {
+      franchiseId: '0079',
+      yearByYear: [{ year: 2026, sourceFranchiseId: null }, { year: 2021, sourceFranchiseId: '0002' }],
+      matchupHistory: {
+        '0013': [
+          { year: 2021, week: 1, score: 102, opponentScore: 86, opponentSourceId: '0013' },
+          { year: 2021, week: 14, score: 90, opponentScore: 89, opponentSourceId: '0013' },
+          { year: 2026, week: 4, score: 105, opponentScore: 156, opponentSourceId: null },
+        ],
+        '0040': [{ year: 2022, week: 3, score: 99, opponentScore: 120, opponentSourceId: '0040' }],
+      },
+    },
+    '0013': { franchiseId: '0013', yearByYear: [{ year: 2026, sourceFranchiseId: null }] },
+    '0055': {
+      franchiseId: '0055',
+      yearByYear: [{ year: 2026, sourceFranchiseId: null }, { year: 2022, sourceFranchiseId: '0040' }],
+    },
+  };
+
+  it("counts only the games against the team that holds the id today", () => {
+    const f = rivalryFacts(meetingsBetween(franchises, '0079', '0013', true));
+    expect(f).toMatchObject({ meetings: 1, wins: 0, losses: 1 });
+  });
+
+  it('follows the opponent back through its own old ids', () => {
+    expect(meetingsBetween(franchises, '0079', '0055', true)).toHaveLength(1);
+  });
+
+  it('reads the plain bucket in a league whose ids are identities', () => {
+    expect(meetingsBetween(franchises, '0079', '0013', false)).toHaveLength(3);
+  });
+
+  it("matches the derived Archie's history (Pirates vs Jackalopes is 0–1, not 2–1)", () => {
+    const history = JSON.parse(readFileSync('data/archies/derived/franchise-history.json', 'utf8'));
+    const f = rivalryFacts(meetingsBetween(history.franchises, '0079', '0013', true));
+    expect(f.wins).toBe(0);
+    expect(f.meetings).toBeGreaterThanOrEqual(1);
   });
 });
