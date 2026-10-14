@@ -440,6 +440,8 @@
         "src/config/league-archetypes.mjs",
         "scripts/lib/schefter-public-url.mjs",
         "src/utils/link-punctuation.mjs",
+        "src/utils/chat-plain-text.mjs",
+        "scripts/lib/chat.mjs",
         "src/utils/mfl-url.ts",
         "scripts/lib/groupme*",
         "src/utils/groupme*"
@@ -451,7 +453,8 @@
         "tests/league-year-for-slug.test.ts",
         "tests/league-staging-domains.test.ts",
         "tests/league-feature-catalog.test.ts",
-        "tests/phantom-league.test.ts"
+        "tests/phantom-league.test.ts",
+        "tests/chat-plain-text.test.ts"
       ]
     },
     {

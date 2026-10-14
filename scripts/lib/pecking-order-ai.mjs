@@ -9,6 +9,7 @@
 
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
+import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
 
 // ─── Quality-gate constants ────────────────────────────────────────
 
@@ -156,6 +157,7 @@ NEVER
 - Invent franchise or player names. Only use names that appear in the ALLOWED FRANCHISE NAME TOKENS list.
 - Use curly/smart quotes — straight ASCII only.
 - Use markdown code fences.
+- Use HTML. Every field is PLAIN TEXT: the page prints it as text and the GroupMe announcement quotes it verbatim, so a <p> or <a> tag shows up literally. This overrides the "Wrap paragraphs in <p> tags" rule above, which is for full articles.
 - Hedge with "I'm an AI", "as a language model", "It appears that", "I hope this helps", "in conclusion".
 
 LENGTH
@@ -279,6 +281,19 @@ export function applyAIVoice(issue, aiOutput, teams) {
     awardBlurbs: { applied: 0, fallback: 0, fails: [] },
   };
   const out = { ...issue };
+  // The prompt forbids HTML, but the shared base block tells the model to wrap
+  // paragraphs in <p> tags and it sometimes obeys that instead: TheLeague's
+  // 2026 Week 5 issue shipped every blurb as `<p>…</p>`, printed literally on
+  // the page and in the GroupMe post. Every field here renders as text, so
+  // normalise before validating rather than trusting the instruction.
+  const plain = (v) => (typeof v === 'string' ? toChatPlainText(v) : v);
+  aiOutput = aiOutput && {
+    ...aiOutput,
+    headline: plain(aiOutput.headline),
+    lede: plain(aiOutput.lede),
+    blurbs: aiOutput.blurbs && Object.fromEntries(Object.entries(aiOutput.blurbs).map(([k, v]) => [k, plain(v)])),
+    awardBlurbs: aiOutput.awardBlurbs && Object.fromEntries(Object.entries(aiOutput.awardBlurbs).map(([k, v]) => [k, plain(v)])),
+  };
 
   // Headline
   if (aiOutput?.headline) {
