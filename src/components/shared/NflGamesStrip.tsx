@@ -32,6 +32,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../constants/roster-constants';
 import { useNflScoreboard } from '../../hooks/useNflScoreboard';
 import { resolveChannel, type CountryCode } from '../../utils/broadcast-channels';
+import { kickoffInClock, type KickoffClock } from '../../utils/live-scoring-view';
 
 const nflLogoUrl = (code: string) => (code ? `/assets/nfl-logos/${normalizeTeamCode(code)}.svg` : '');
 
@@ -51,10 +52,21 @@ export interface NflGamesStripProps {
    * viewer preference writes cookies and an island cannot.
    */
   country?: CountryCode;
+  /**
+   * The clock a not-yet-started game's kickoff prints in (`viewerClockZone`,
+   * from the ROUTE for the same reason as `country`). Omitted, the card keeps
+   * ESPN's own text, which is always Eastern.
+   */
+  kickoffClock?: KickoffClock | null;
 }
 
 function GameCard(
-  { game, country, unconfirmed }: { game: NflGame; country: CountryCode; unconfirmed: boolean },
+  { game, country, unconfirmed, kickoffClock }: {
+    game: NflGame;
+    country: CountryCode;
+    unconfirmed: boolean;
+    kickoffClock: KickoffClock | null;
+  },
 ) {
   // `unconfirmed` = these games came from the SERVER slate and no poll has ever
   // succeeded. The scores and clock are real but frozen, so the live treatment
@@ -91,6 +103,10 @@ function GameCard(
   };
 
   const downDistance = live ? game.situation?.shortDownDistanceText ?? '' : '';
+  // ESPN's pre-game text is Eastern for everyone; rebuild it from the instant
+  // in the viewer's clock ("Sun 10:00 AM PT"). TBD / Postponed stay ESPN's.
+  const kickoff = kickoffInClock(game, kickoffClock);
+  const preText = kickoff ? `${kickoff.weekday} ${kickoff.time} ${kickoff.label}`.trim() : game.shortDetail;
 
   return (
     <article className={`nfl-game ${game.state}`}>
@@ -102,7 +118,7 @@ function GameCard(
             <span className="nfl-game__live"><span className="nfl-dot" />{game.shortDetail || `Q${game.period} ${game.clock}`}</span>
           ) : (
             <span className="nfl-game__pre" title={unconfirmed && game.state === 'in' ? 'Live scores are not updating right now' : undefined}>
-              {game.state === 'post' ? 'Final' : game.shortDetail}
+              {game.state === 'post' ? 'Final' : preText}
             </span>
           )}
           {downDistance && <span className="nfl-game__dd">{downDistance}</span>}
@@ -121,7 +137,7 @@ function GameCard(
   );
 }
 
-export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames, country = 'US' }: NflGamesStripProps) {
+export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames, country = 'US', kickoffClock = null }: NflGamesStripProps) {
   // Demo mode renders the bundled sample and does no network at all, so the
   // live feed can't overwrite it.
   const { games, status, fetchedAt } = useNflScoreboard(week, year, {
@@ -146,7 +162,7 @@ export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games',
     <section className="nfl-strip" aria-label={label ?? 'NFL games'}>
       {label && <span className="nfl-strip__label">{label}</span>}
       <div className="nfl-strip__rail">
-        {sorted.map((g) => <GameCard key={g.id} game={g} country={country} unconfirmed={unconfirmed} />)}
+        {sorted.map((g) => <GameCard key={g.id} game={g} country={country} unconfirmed={unconfirmed} kickoffClock={kickoffClock} />)}
       </div>
     </section>
   );

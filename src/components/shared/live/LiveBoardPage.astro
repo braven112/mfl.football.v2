@@ -32,6 +32,7 @@ import ThrowbackPreviewBar from '../ThrowbackPreviewBar.astro';
 import RelatedPagesCard from '../RelatedPagesCard.astro';
 import { getAuthUser } from '../../../utils/auth';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { viewerClockZone } from '../../../utils/viewer-clock';
 import { getLeagueContext } from '../../../utils/league-context';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
@@ -102,7 +103,13 @@ const authUser = getAuthUser(Astro.request);
 // resolver writes preference cookies and a component cannot set one (see the
 // header), and a viewer who has chosen nothing gets the country default —
 // exactly what this rail showed before it named a channel at all.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser, slug)).prefs.country;
+const viewerClock = await readViewerClock(Astro.cookies, authUser, slug);
+const viewerCountry = viewerClock.prefs.country;
+// The clock kickoffs print in, on the rail AND the player rows. ESPN's own
+// pre-game text is Eastern for everyone, which is how an owner on Pacific was
+// shown ET here. One clock (the compact-surface form): the viewer's own once
+// chosen, the league's official clock until then.
+const kickoffClock = viewerClockZone(viewerClock, now);
 
 // Started HERE, awaited below, so ESPN overlaps the MFL read instead of adding
 // its timeout to the render serially.
@@ -167,6 +174,7 @@ const settingsPath = resolveLeaguePath(
       isLive={isLive}
       preSeason={preSeason}
       demoLabel={assembled.demoLabel}
+      kickoffClock={kickoffClock}
     />
 
     <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
@@ -187,6 +195,7 @@ const settingsPath = resolveLeaguePath(
         demo={plainReplay}
         initialGames={nflGames}
         country={viewerCountry}
+        kickoffClock={kickoffClock}
       />
     </div>
 

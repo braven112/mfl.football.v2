@@ -46,7 +46,8 @@ import {
 import { orderPanelMatchups, pairingKey, selectMatchupMoments } from '../../../utils/live/model';
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
-import type { FeedSnapshot } from '../../../utils/live-scoring-view';
+import type { FeedSnapshot, KickoffClock } from '../../../utils/live-scoring-view';
+import { KickoffClockContext } from './LvPlayerRow';
 import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
@@ -84,6 +85,12 @@ export interface LiveBoardProps {
   viewerFirst?: boolean;
   /** The NFL games rail, rendered by the page so it keeps its own poller. */
   rail?: ReactNode;
+  /**
+   * The clock a not-yet-started game's kickoff prints in on the player rows
+   * (`viewerClockZone`, resolved by the route). Omitted, the rows keep ESPN's
+   * own text, which is always Eastern.
+   */
+  kickoffClock?: KickoffClock | null;
   /**
    * There is no NFL week yet — the pre-Week-1 window.
    *
@@ -226,6 +233,7 @@ export default function LiveBoard({
   viewerFirst = false,
   panelHrefBase,
   rail,
+  kickoffClock = null,
   preSeason = false,
   title = 'Live Scoring',
   demoLabel,
@@ -604,6 +612,7 @@ export default function LiveBoard({
   );
 
   return (
+    <KickoffClockContext.Provider value={kickoffClock}>
     <div className="lv" ref={rootRef}>
       <div className="lv-head">
         <h1>
@@ -736,5 +745,6 @@ export default function LiveBoard({
         </>
       )}
     </div>
+    </KickoffClockContext.Provider>
   );
 }
