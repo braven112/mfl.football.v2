@@ -51,7 +51,7 @@ laptop to follow my teams.
 - [ ] A touchdown or big play shows as a slide-in banner across the top/bottom,
       never a full-screen takeover, and never covers the matchup the owner has
       expanded.
-- [ ] Tapping a matchup expands it: both lineups, live points, projection,
+- [ ] Tapping a matchup expands it: both starting lineups, live points, projection,
       yet-to-play, and who is on the field right now. Tap again or swipe down to
       close.
 - [ ] Tapping a player opens a mini card: live points, projection left, NFL game
@@ -64,14 +64,28 @@ laptop to follow my teams.
       in `prefers-reduced-motion`.
 - [ ] `pnpm test:unit` passes; `pnpm test:types` does not move up.
 
-## What already exists (so no new data work)
+## What already exists, and the two gaps
 
 - The poll (`BroadcastPollResponse`, `src/types/live-broadcast.ts`) already
-  carries every team's full player list (`BroadcastTeamScore.players`, each a
-  `LivePlayerRow` with `live`, `projected`, `secondsRemaining`, `status`),
-  win probability, all NFL games with `possession` and `situation.isRedZone`,
-  moments and red-zone alerts. Expand, player card and "on the field now" are
-  display work over data already on the client.
+  carries each team's STARTER rows (`BroadcastTeamScore.players`, each a
+  `LivePlayerRow` with `live`, `secondsRemaining`, `status`), win probability,
+  all NFL games with `possession` and `situation.isRedZone`, moments and
+  red-zone alerts. Expand and "on the field now" are display work over data
+  already on the client.
+- **Gap 1, bench: the expanded matchup is STARTERS ONLY in this cut.**
+  `scoreLeague` (`src/utils/broadcast-live-source.ts`) deliberately returns
+  starter rows only; bench rows stay in `snapshot.bench` so nothing can sum
+  them into a projection or win probability by accident. Do not add bench to
+  `players`. A bench view, if wanted later, is a separate field that stays out
+  of every total.
+- **Gap 2, per-player projections are NOT on the rows today.** `scoreLeague`
+  feeds the league's projections into the team totals but returns the raw
+  snapshot rows, so `row.projected` is unset on the broadcast poll. The mini
+  card needs it: enrich the rows in `scoreLeague` with `attachRowProjections`
+  (`live-scoring-view.ts`), the same way `mfl-live-board.ts` (~line 303) does,
+  and compute "projection left" from that full-game value. This is a small
+  server change; confirm the TV board renders identically after it (it adds a
+  field, and nothing on the TV should read it).
 - Wake Lock is already done once, in `DraftBroadcast.tsx` (~line 648). Reuse
   its shape; consider extracting a shared hook.
 - `MomentLowerThird.tsx` is already a non-occluding banner (`occludes:
@@ -134,11 +148,12 @@ Each phase is its own PR, and each leaves the TV board identical.
 
 ### Phase 2 — tap to dig in
 
-1. Tap a matchup → expanded view (sheet or in-place), both lineups from
-   `teams[franchiseId].players`, starters first, using the existing player
+1. Tap a matchup → expanded view (sheet or in-place), both STARTING lineups
+   from `teams[franchiseId].players` (no bench, see Gap 1), using the existing player
    name/headshot resolution (`playerMeta`). Close by tap, swipe down or Escape.
-2. Tap a player → mini card. Projection is `row.projected`, never
-   `playerMeta.projected` (see the insights doc's 2026-09-21 entry — it is a
+2. Tap a player → mini card. First land Gap 2 (rows enriched with
+   `attachRowProjections` in `scoreLeague`). Projection is `row.projected`,
+   never `playerMeta.projected` (see the insights doc's 2026-09-21 entry — it is a
    deliberate 0 in the shared map).
 3. A banner that arrives while a matchup is expanded must not cover it.
 4. Expanded state survives a poll (key by league + matchup index, not array
