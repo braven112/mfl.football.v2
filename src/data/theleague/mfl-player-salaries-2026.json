@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-15T00:05:06.364Z"
+    "fetchedAt": "2026-10-15T01:01:28.214Z"
   },
   "players": [
     {
@@ -1352,7 +1352,7 @@
         "id": "10955",
         "fullName": "Chad Ryland",
         "team": "ARI",
-        "age": 26,
+        "age": 27,
         "height": "72",
         "weight": "195",
         "number": 38,
@@ -1806,7 +1806,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -1836,7 +1836,12 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16596",
+          "name": "Allen, Braelon"
+        }
+      ]
     },
     {
       "id": "15261",
@@ -2294,7 +2299,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -2326,12 +2331,7 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": [
-        {
-          "id": "15708",
-          "name": "Hall, Breece"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14832",
@@ -2815,12 +2815,12 @@
       "gamesPlayed": 5,
       "depthChartAhead": [
         {
-          "id": "15708",
-          "name": "Hall, Breece"
-        },
-        {
           "id": "16596",
           "name": "Allen, Braelon"
+        },
+        {
+          "id": "15708",
+          "name": "Hall, Breece"
         }
       ]
     },
@@ -3004,7 +3004,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "RB"
         ],
@@ -3844,7 +3844,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -3994,7 +3994,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -4302,8 +4302,8 @@
           "TE"
         ],
         "experience": 6,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Shoulder",
         "gsisId": null
       },
       "nflverse": {
@@ -4793,7 +4793,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -7375,7 +7375,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -7414,10 +7414,6 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
-        },
-        {
-          "id": "17134",
-          "name": "Williams, Kyle"
         }
       ]
     },
@@ -9443,12 +9439,12 @@
           "name": "Douglas, Demario"
         },
         {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
           "id": "17269",
           "name": "Chism, Efton"
+        },
+        {
+          "id": "17134",
+          "name": "Williams, Kyle"
         }
       ]
     },
@@ -9703,7 +9699,7 @@
         "id": "10226",
         "fullName": "Andrei Iosivas",
         "team": "CIN",
-        "age": 26,
+        "age": 27,
         "height": "75",
         "weight": "210",
         "number": 80,
@@ -11943,7 +11939,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -12112,6 +12108,161 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": null
+    },
+    {
+      "id": "16628",
+      "name": "McMillan, Jalen",
+      "position": "WR",
+      "salary": 605000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 0,
+      "team": "TB",
+      "draftYear": 2024,
+      "draftTeam": "TBB",
+      "birthdate": 1007701200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16628_thumb.jpg",
+      "externalIds": {
+        "mfl": "16628",
+        "sleeper": "11618",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11618",
+        "fullName": "Jalen McMillan",
+        "team": "TB",
+        "age": 24,
+        "height": "73",
+        "weight": "192",
+        "number": 11,
+        "college": "Washington",
+        "birthDate": "2001-12-07",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 7,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 2,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee - PCL",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Jalen McMillan",
+        "team": "TB",
+        "position": "WR",
+        "offenseSnaps": 2,
+        "offenseSnapPct": 0.03,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "McMiJa01",
+        "gamesPlayed": 2,
+        "gamesPlayedWeeks": [
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 2,
+      "depthChartAhead": [
+        {
+          "id": "17081",
+          "name": "Egbuka, Emeka"
+        },
+        {
+          "id": "13163",
+          "name": "Godwin, Chris"
+        },
+        {
+          "id": "17520",
+          "name": "Hurst, Ted"
+        },
+        {
+          "id": "17079",
+          "name": "Johnson, Tez"
+        }
+      ]
+    },
+    {
+      "id": "17078",
+      "name": "Bech, Jack",
+      "position": "WR",
+      "salary": 880000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 13.3,
+      "team": "LV",
+      "draftYear": 2025,
+      "draftTeam": "LVR",
+      "birthdate": 1040187600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17078_thumb.jpg",
+      "externalIds": {
+        "mfl": "17078",
+        "sleeper": "12483",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12483",
+        "fullName": "Jack Bech",
+        "team": "LV",
+        "age": 23,
+        "height": "73",
+        "weight": "214",
+        "number": 18,
+        "college": "TCU",
+        "birthDate": "2002-12-18",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 10,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 1,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Forearm",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Jack Bech",
+        "team": "LV",
+        "position": "WR",
+        "offenseSnaps": 11,
+        "offenseSnapPct": 0.16,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.07,
+        "pfrPlayerId": "BechJa00",
+        "gamesPlayed": 3,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 3,
+      "depthChartAhead": [
+        {
+          "id": "16287",
+          "name": "Tucker, Tre"
+        },
+        {
+          "id": "15786",
+          "name": "Nailor, Jalen"
+        }
+      ]
     },
     {
       "id": "17107",
@@ -12925,171 +13076,16 @@
           "name": "Douglas, Demario"
         },
         {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
           "id": "17269",
           "name": "Chism, Efton"
         },
         {
+          "id": "17134",
+          "name": "Williams, Kyle"
+        },
+        {
           "id": "13289",
           "name": "Hollins, Mack"
-        }
-      ]
-    },
-    {
-      "id": "16628",
-      "name": "McMillan, Jalen",
-      "position": "WR",
-      "salary": 605000,
-      "franchiseId": "0008",
-      "status": "INJURED_RESERVE",
-      "contractYear": "3",
-      "points": 0,
-      "team": "TB",
-      "draftYear": 2024,
-      "draftTeam": "TBB",
-      "birthdate": 1007701200,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16628_thumb.jpg",
-      "externalIds": {
-        "mfl": "16628",
-        "sleeper": "11618",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11618",
-        "fullName": "Jalen McMillan",
-        "team": "TB",
-        "age": 24,
-        "height": "73",
-        "weight": "192",
-        "number": 11,
-        "college": "Washington",
-        "birthDate": "2001-12-07",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Knee - PCL",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Jalen McMillan",
-        "team": "TB",
-        "position": "WR",
-        "offenseSnaps": 2,
-        "offenseSnapPct": 0.03,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "McMiJa01",
-        "gamesPlayed": 2,
-        "gamesPlayedWeeks": [
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 2,
-      "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        },
-        {
-          "id": "13163",
-          "name": "Godwin, Chris"
-        },
-        {
-          "id": "17520",
-          "name": "Hurst, Ted"
-        },
-        {
-          "id": "17079",
-          "name": "Johnson, Tez"
-        }
-      ]
-    },
-    {
-      "id": "17078",
-      "name": "Bech, Jack",
-      "position": "WR",
-      "salary": 880000,
-      "franchiseId": "0008",
-      "status": "INJURED_RESERVE",
-      "contractYear": "4",
-      "points": 13.3,
-      "team": "LV",
-      "draftYear": 2025,
-      "draftTeam": "LVR",
-      "birthdate": 1040187600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17078_thumb.jpg",
-      "externalIds": {
-        "mfl": "17078",
-        "sleeper": "12483",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12483",
-        "fullName": "Jack Bech",
-        "team": "LV",
-        "age": 23,
-        "height": "73",
-        "weight": "214",
-        "number": 18,
-        "college": "TCU",
-        "birthDate": "2002-12-18",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": 10,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 1,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Forearm",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Jack Bech",
-        "team": "LV",
-        "position": "WR",
-        "offenseSnaps": 11,
-        "offenseSnapPct": 0.16,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.07,
-        "pfrPlayerId": "BechJa00",
-        "gamesPlayed": 3,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16287",
-          "name": "Tucker, Tre"
-        },
-        {
-          "id": "15786",
-          "name": "Nailor, Jalen"
         }
       ]
     },
@@ -14082,7 +14078,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -14122,6 +14118,10 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
+        },
+        {
+          "id": "17269",
+          "name": "Chism, Efton"
         }
       ]
     },
@@ -14530,6 +14530,85 @@
       ]
     },
     {
+      "id": "16387",
+      "name": "Brooks, Chris",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 10.15,
+      "team": "GB",
+      "draftYear": 2023,
+      "draftTeam": "FA",
+      "birthdate": 947566800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16387_thumb.jpg",
+      "externalIds": {
+        "mfl": "16387",
+        "sleeper": "11370",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11370",
+        "fullName": "Chris Brooks",
+        "team": "GB",
+        "age": 26,
+        "height": "73",
+        "weight": "219",
+        "number": 30,
+        "college": "BYU",
+        "birthDate": "2000-01-11",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 5,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Ankle",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 4,
+        "season": "2026",
+        "player": "Chris Brooks",
+        "team": "GB",
+        "position": "RB",
+        "offenseSnaps": 10,
+        "offenseSnapPct": 0.17,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.11,
+        "pfrPlayerId": "BrooCh00",
+        "gamesPlayed": 4,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "gamesPlayed": 4,
+      "depthChartAhead": [
+        {
+          "id": "16604",
+          "name": "Lloyd, MarShawn"
+        },
+        {
+          "id": "17048",
+          "name": "Johnson, Kaleb"
+        },
+        {
+          "id": "14073",
+          "name": "Jacobs, Josh"
+        }
+      ]
+    },
+    {
       "id": "17752",
       "name": "Meyers, Dohnte",
       "position": "WR",
@@ -14638,7 +14717,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 7,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -14717,85 +14796,6 @@
         {
           "id": "15261",
           "name": "Hubbard, Chuba"
-        }
-      ]
-    },
-    {
-      "id": "16387",
-      "name": "Brooks, Chris",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0009",
-      "status": "INJURED_RESERVE",
-      "contractYear": "1",
-      "points": 10.15,
-      "team": "GB",
-      "draftYear": 2023,
-      "draftTeam": "FA",
-      "birthdate": 947566800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16387_thumb.jpg",
-      "externalIds": {
-        "mfl": "16387",
-        "sleeper": "11370",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11370",
-        "fullName": "Chris Brooks",
-        "team": "GB",
-        "age": 26,
-        "height": "73",
-        "weight": "219",
-        "number": 30,
-        "college": "BYU",
-        "birthDate": "2000-01-11",
-        "status": "Inactive",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 5,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 3,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Ankle",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 4,
-        "season": "2026",
-        "player": "Chris Brooks",
-        "team": "GB",
-        "position": "RB",
-        "offenseSnaps": 10,
-        "offenseSnapPct": 0.17,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.11,
-        "pfrPlayerId": "BrooCh00",
-        "gamesPlayed": 4,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4
-        ]
-      },
-      "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "16604",
-          "name": "Lloyd, MarShawn"
-        },
-        {
-          "id": "17048",
-          "name": "Johnson, Kaleb"
-        },
-        {
-          "id": "14073",
-          "name": "Jacobs, Josh"
         }
       ]
     },
@@ -16518,7 +16518,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -17706,7 +17706,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -19757,7 +19757,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -22207,8 +22207,8 @@
           "TE"
         ],
         "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Foot",
         "gsisId": null
       },
       "nflverse": {
@@ -22618,6 +22618,73 @@
       "depthChartAhead": null
     },
     {
+      "id": "17497",
+      "name": "Tate, Carnell",
+      "position": "WR",
+      "salary": 2900000,
+      "franchiseId": "0014",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 1.1,
+      "team": "TEN",
+      "draftYear": 2026,
+      "draftTeam": "TEN",
+      "birthdate": 1106110800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17497_thumb.jpg",
+      "externalIds": {
+        "mfl": "17497",
+        "sleeper": "13279",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13279",
+        "fullName": "Carnell Tate",
+        "team": "TEN",
+        "age": 21,
+        "height": "74",
+        "weight": "192",
+        "number": 14,
+        "college": "Ohio State",
+        "birthDate": "2005-01-19",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 5,
+        "season": "2026",
+        "player": "Carnell Tate",
+        "team": "TEN",
+        "position": "WR",
+        "offenseSnaps": 48,
+        "offenseSnapPct": 0.76,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "TateCa00",
+        "gamesPlayed": 5,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "gamesPlayed": 5,
+      "depthChartAhead": null
+    },
+    {
       "id": "13633",
       "name": "Kirk, Christian",
       "position": "WR",
@@ -22857,73 +22924,6 @@
           "name": "Whittington, Jordan"
         }
       ]
-    },
-    {
-      "id": "17497",
-      "name": "Tate, Carnell",
-      "position": "WR",
-      "salary": 2900000,
-      "franchiseId": "0014",
-      "status": "TAXI_SQUAD",
-      "contractYear": "4",
-      "points": 1.1,
-      "team": "TEN",
-      "draftYear": 2026,
-      "draftTeam": "TEN",
-      "birthdate": 1106110800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17497_thumb.jpg",
-      "externalIds": {
-        "mfl": "17497",
-        "sleeper": "13279",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13279",
-        "fullName": "Carnell Tate",
-        "team": "TEN",
-        "age": 21,
-        "height": "74",
-        "weight": "192",
-        "number": 14,
-        "college": "Ohio State",
-        "birthDate": "2005-01-19",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 5,
-        "season": "2026",
-        "player": "Carnell Tate",
-        "team": "TEN",
-        "position": "WR",
-        "offenseSnaps": 48,
-        "offenseSnapPct": 0.76,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "TateCa00",
-        "gamesPlayed": 5,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ]
-      },
-      "gamesPlayed": 5,
-      "depthChartAhead": null
     },
     {
       "id": "16190",
