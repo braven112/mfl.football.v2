@@ -307,6 +307,11 @@ on:
       - 'src/types/league-events.ts'
       - 'src/types/live-scoring.ts'
       - 'src/types/live.ts'
+      # Handheld broadcast board story (stories/live-broadcast/).
+      - 'src/components/shared/live-broadcast/HandheldBoard.tsx'
+      - 'src/styles/live-broadcast-handheld.css'
+      - 'src/types/live-broadcast.ts'
+      - 'src/utils/broadcast-layout.ts'
       - 'src/types/nav.ts'
       - 'src/types/schefter.ts'
       - 'src/types/whats-new.ts'
@@ -709,6 +714,11 @@ on:
       - 'src/types/league-events.ts'
       - 'src/types/live-scoring.ts'
       - 'src/types/live.ts'
+      # Handheld broadcast board story (stories/live-broadcast/).
+      - 'src/components/shared/live-broadcast/HandheldBoard.tsx'
+      - 'src/styles/live-broadcast-handheld.css'
+      - 'src/types/live-broadcast.ts'
+      - 'src/utils/broadcast-layout.ts'
       - 'src/types/nav.ts'
       - 'src/types/schefter.ts'
       - 'src/types/whats-new.ts'
