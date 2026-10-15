@@ -1,0 +1,440 @@
+/**
+ * The handheld board — a phone or tablet beside the owner.
+ *
+ * EVERY rule in this file sits under `.lbh`, and nothing in
+ * `live-broadcast.css` mentions it. That separation is the whole guarantee
+ * that this work did not move the television: the TV board renders `.lbc`
+ * and never `.lbh`, so no rule here can reach it.
+ * `tests/broadcast-handheld-isolation.test.ts` enforces both halves.
+ *
+ * Dark in BOTH themes, like the TV board it mirrors. A scoreboard that flips
+ * to white with the site theme stops reading as the broadcast, and every
+ * franchise swatch on it was resolved server-side against a dark panel — so
+ * there is deliberately no `html.dark` here, and no light variant to keep in
+ * step.
+ */
+
+.lbh {
+  --lbh-ink: #05070b;
+  --lbh-panel: #0b1220;
+  --lbh-panel-2: #121c2e;
+  --lbh-hairline: rgba(255, 255, 255, 0.12);
+  --lbh-text: #ebebeb;
+  --lbh-text-dim: rgba(255, 255, 255, 0.78);
+  --lbh-text-faint: rgba(255, 255, 255, 0.68);
+  --lbh-live: #16a34a;
+  --lbh-live-text: #4ade80;
+  --lbh-alert: #fbbf24;
+  --lbh-redzone: #991b1b;
+  /* Written inline per card and per banner by HandheldBoard; declared here
+     with their neutral defaults so a missing value is never a silent
+     fallback (design-token-guard reads CSS only). */
+  --lbh-mine: #64748b;
+  --lbh-theirs: #334155;
+  --lbh-banner: #1c497c;
+
+  /* Full bleed out of the layout's content column, like the TV board. */
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  box-sizing: border-box;
+  /* `dvh`, so mobile browser chrome sliding in and out does not leave the
+     bottom cards under the toolbar. `vh` first for the browsers without it. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  background: var(--lbh-ink);
+  color: var(--lbh-text);
+  font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lbh *,
+.lbh *::before,
+.lbh *::after {
+  box-sizing: border-box;
+}
+
+/* ── The top bar ─────────────────────────────────────────────────────────── */
+
+.lbh .lbh__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 1.75rem;
+  font-size: var(--font-size-xs);
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--lbh-hairline);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: var(--font-size-2xs);
+}
+
+.lbh .lbh__live.is-live {
+  color: var(--lbh-live-text);
+  border-color: var(--lbh-live);
+}
+
+.lbh .lbh__live.is-live::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--lbh-live-text);
+}
+
+.lbh .lbh__week {
+  font-weight: 600;
+  color: var(--lbh-text);
+}
+
+.lbh .lbh__status {
+  margin-left: auto;
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__status.is-error {
+  color: var(--lbh-alert);
+}
+
+/* ── Red zone — a persistent state, never animated past its entrance ────── */
+
+.lbh .lbh__redzone {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.5rem;
+  background: var(--lbh-redzone);
+  color: #fff;
+  font-size: var(--font-size-sm);
+}
+
+.lbh .lbh__redzone-tag {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: var(--font-size-2xs);
+}
+
+.lbh .lbh__redzone-who {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.lbh .lbh__redzone-dd {
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* ── The matchup cards ───────────────────────────────────────────────────── */
+
+.lbh .lbh__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  /* Portrait phone: one column, scrolling. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+/* A portrait tablet has room for two. */
+@media (min-width: 600px) {
+  .lbh .lbh__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Landscape — the second-screen case. As many columns as fit at a width a
+   card stays legible, so a phone at ~844 px shows three across and two rows:
+   six matchups with no scrolling, which covers the ordinary Sunday. */
+@media (orientation: landscape) {
+  .lbh .lbh__cards {
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  }
+}
+
+.lbh .lbh__card {
+  position: relative;
+  padding: 0.5rem 0.7rem 0.55rem;
+  border-radius: 0.6rem;
+  background: var(--lbh-panel);
+  border: 1px solid var(--lbh-hairline);
+  /* The owner's colour as a rule down the leading edge: the card reads as
+     "mine" at a glance without spending a row on it. */
+  border-left: 0.3rem solid var(--lbh-mine);
+}
+
+.lbh .lbh__card.is-unavailable {
+  opacity: 0.7;
+}
+
+.lbh .lbh__tag {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.3rem;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__tag > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbh .lbh__clock {
+  flex: none;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__note {
+  margin: 0.2rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__side {
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.15rem 0;
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__side.is-leading {
+  color: var(--lbh-text);
+}
+
+.lbh .lbh__crest {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+}
+
+.lbh .lbh__crest img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* The ring a light franchise cut needs on a dark board. The TV's own rule is
+   scoped under `.lbc`, so it does not reach here; same filter, a width sized
+   for a 30 px crest. */
+.lbh .lbc-crest--stroked {
+  filter: drop-shadow(1px 0 0 var(--lbc-crest-stroke)) drop-shadow(-1px 0 0 var(--lbc-crest-stroke))
+    drop-shadow(0 1px 0 var(--lbc-crest-stroke)) drop-shadow(0 -1px 0 var(--lbc-crest-stroke));
+}
+
+.lbh .lbh__ident {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lbh .lbh__tn {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbh .lbh__ytp {
+  font-size: var(--font-size-2xs);
+  color: var(--lbh-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbh .lbh__score {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lbh .lbh__wp {
+  height: 0.3rem;
+  margin: 0.25rem 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--lbh-theirs);
+}
+
+.lbh .lbh__wp-fill {
+  height: 100%;
+  background: var(--lbh-mine);
+}
+
+.lbh .lbh__wp-label {
+  margin: 0.2rem 0 0;
+  font-size: var(--font-size-2xs);
+  color: var(--lbh-text-faint);
+  text-align: right;
+}
+
+/* A short landscape phone: tighten the vertical rhythm so two rows of cards
+   fit under the bar without scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .lbh {
+    gap: 0.35rem;
+    padding-top: 0.35rem;
+  }
+
+  .lbh .lbh__card {
+    padding: 0.35rem 0.6rem 0.4rem;
+  }
+
+  .lbh .lbh__tag {
+    margin-bottom: 0.15rem;
+  }
+
+  .lbh .lbh__side {
+    padding: 0.05rem 0;
+  }
+
+  .lbh .lbh__score {
+    font-size: var(--font-size-lg);
+  }
+
+  .lbh .lbh__crest {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .lbh .lbh__side {
+    grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  }
+}
+
+/* ── The moment banner — every reveal, mine included ─────────────────────── */
+
+.lbh .lbh__banner {
+  position: fixed;
+  left: max(0.75rem, env(safe-area-inset-left));
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  animation: lbh-slide-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Mine: a field of my colour, the same "big colour = mine" signal as the
+   TV's takeover. White ink — the primary was resolved for it server-side. */
+.lbh .lbh__banner.is-mine {
+  background: var(--lbh-banner);
+  color: #fff;
+}
+
+/* Theirs: dark, their colour only as the rule — bad news gets less paint. */
+.lbh .lbh__banner.is-theirs {
+  background: var(--lbh-panel-2);
+  color: var(--lbh-text);
+  border-left: 0.35rem solid var(--lbh-banner);
+}
+
+.lbh .lbh__banner .lbh__crest {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+.lbh .lbh__banner-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lbh .lbh__banner-kicker {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.lbh .lbh__banner-name {
+  font-size: var(--font-size-base);
+  font-weight: 800;
+}
+
+.lbh .lbh__banner-play {
+  font-size: var(--font-size-xs);
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbh .lbh__banner-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.lbh .lbh__banner-pts {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.lbh .lbh__banner-line {
+  font-size: var(--font-size-xs);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+@keyframes lbh-slide-in {
+  from {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lbh .lbh__banner {
+    animation: none;
+  }
+}
