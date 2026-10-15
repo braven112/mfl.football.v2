@@ -8,6 +8,7 @@
  * Gap 1).
  */
 
+import type { BroadcastLeaguePanel, BroadcastLeagueScore } from '../types/live-broadcast';
 import type { LivePlayerRow, NflGame, PlayerMeta } from '../types/live-scoring';
 import { gamesByTeam, playerGameClock, type StripRow } from './broadcast-layout';
 import { projectPlayerRemaining } from './live-win-probability';
@@ -69,4 +70,121 @@ export function handheldLineup(
       state,
     };
   });
+}
+
+// ── Swipe between league pages ──────────────────────────────────────────────
+
+/**
+ * Split the board's cards into pages of at most `capacity`, keeping a league's
+ * cards together wherever they fit — a league is never split across a swipe
+ * unless it alone overflows a page. `capacity` null (portrait: one scrolling
+ * list) or anything below 1 means one page holding everything.
+ */
+export function paginateByLeague<T>(
+  items: readonly T[],
+  leagueOf: (item: T) => string,
+  capacity: number | null,
+): T[][] {
+  if (items.length === 0) return [];
+  if (capacity === null || !Number.isFinite(capacity) || capacity < 1 || items.length <= capacity) {
+    return [[...items]];
+  }
+  const cap = Math.floor(capacity);
+
+  // Consecutive cards of one league are one group; the board already lists a
+  // league's cards together, so this keeps its order.
+  const groups: T[][] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && leagueOf(last[0]) === leagueOf(item)) last.push(item);
+    else groups.push([item]);
+  }
+
+  const pages: T[][] = [];
+  let page: T[] = [];
+  for (const group of groups) {
+    if (page.length > 0 && page.length + group.length > cap) {
+      pages.push(page);
+      page = [];
+    }
+    for (const item of group) {
+      // A league bigger than a page fills pages of its own.
+      if (page.length === cap) {
+        pages.push(page);
+        page = [];
+      }
+      page.push(item);
+    }
+  }
+  if (page.length > 0) pages.push(page);
+  return pages;
+}
+
+// ── On the field now ────────────────────────────────────────────────────────
+
+/** One of the owner's starters whose NFL team has the ball right now. */
+export interface FieldPlayer {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  headshot: string;
+  /** His team has the ball inside the 20. */
+  redZone: boolean;
+  /** The leagues he starts for the owner in, in board order. */
+  leagues: string[];
+}
+
+/**
+ * The owner's own starters whose NFL team is on OFFENSE in a live game.
+ *
+ * The same possession rule the red-zone banner uses (`selectRedZoneAlerts`):
+ * `isRedZone` belongs to the team with the ball, so a player is flagged only
+ * when his own team is the one holding it, never while it is on defense. Only
+ * the owner's side: this row answers "which of MY guys are out there".
+ * A player started in two leagues is one face, naming both.
+ */
+export function onFieldNow(
+  panels: readonly BroadcastLeaguePanel[],
+  scores: Record<string, BroadcastLeagueScore>,
+  games: readonly NflGame[],
+  meta: Record<string, PlayerMeta>,
+): FieldPlayer[] {
+  const offense = new Map<string, boolean>();
+  for (const game of games) {
+    // A `situation` can linger on an ended game; only a game being played counts.
+    if (game.state !== 'in') continue;
+    const team = game.situation?.possession || game.possession || '';
+    if (!team) continue;
+    offense.set(team, !!(game.situation?.isRedZone && game.situation.possession === team));
+  }
+  if (offense.size === 0) return [];
+
+  const byId = new Map<string, FieldPlayer>();
+  for (const panel of panels) {
+    if (panel.status === 'unavailable') continue;
+    const fids = new Set(panel.matchups.map((m) => m.mine.franchiseId));
+    for (const fid of fids) {
+      for (const row of scores[panel.leagueId]?.teams[fid]?.players ?? []) {
+        const who = meta[row.id];
+        if (!who?.nflTeam || !offense.has(who.nflTeam)) continue;
+        const seen = byId.get(row.id);
+        if (seen) {
+          if (!seen.leagues.includes(panel.leagueName)) seen.leagues.push(panel.leagueName);
+          continue;
+        }
+        byId.set(row.id, {
+          id: row.id,
+          name: who.name,
+          position: who.position,
+          nflTeam: who.nflTeam,
+          headshot: who.headshot,
+          redZone: offense.get(who.nflTeam) === true,
+          leagues: [panel.leagueName],
+        });
+      }
+    }
+  }
+  // Red zone first; otherwise board order (the sort is stable).
+  return [...byId.values()].sort((a, b) => Number(b.redZone) - Number(a.redZone));
 }

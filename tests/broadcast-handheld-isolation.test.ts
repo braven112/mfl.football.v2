@@ -25,6 +25,7 @@ import type {
   BroadcastTeam,
 } from '../src/types/live-broadcast';
 import type { BroadcastMoment } from '../src/utils/broadcast-moments';
+import type { NflGame } from '../src/types/live-scoring';
 
 const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -230,5 +231,40 @@ describe('the handheld board renders', () => {
     );
     expect(theirs).toContain('lbh__banner is-theirs');
     expect(theirs).toContain('Against you');
+  });
+
+  it('starts as one list of cards: pages are measured on the device, never assumed', () => {
+    const html = renderToString(createElement(HandheldBoard, base));
+    expect(html).toContain('class="lbh__cards"');
+    expect(html).not.toContain('lbh__pager');
+    expect(html).not.toContain('lbh__dot');
+  });
+
+  it("puts the owner's players whose team has the ball in the bar, ringed in the red zone", () => {
+    const withRows = {
+      ...scores,
+      '13522': {
+        ...scores['13522'],
+        teams: {
+          ...scores['13522'].teams,
+          '0001': { ...scores['13522'].teams['0001'], players: [{ id: 'p1', live: 9, secondsRemaining: 900, status: 'starter' }] },
+        },
+      },
+    } as Record<string, BroadcastLeagueScore>;
+    const meta = { p1: { id: 'p1', name: 'Pat Mahomes', position: 'QB', nflTeam: 'KC', headshot: '', espnId: null, projected: 0 } };
+    const game = (isRedZone: boolean) =>
+      ({
+        id: 'g', state: 'in', shortDetail: 'Q2', period: 2, clock: '', date: '',
+        home: { code: 'KC', score: 7 }, away: { code: 'LV', score: 3 }, possession: 'KC',
+        situation: { possession: 'KC', isRedZone, downDistanceText: '', shortDownDistanceText: '', lastPlay: '' },
+      }) as NflGame;
+    const html = renderToString(createElement(HandheldBoard, { ...base, scores: withRows, meta, games: [game(true)] }));
+    expect(html).toContain('lbh__field');
+    expect(html).toContain('lbh__field-p is-redzone');
+    expect(html).toContain('Mahomes');
+    expect(html).toContain('in the red zone');
+    // Nobody on offense: no row at all.
+    const quiet = renderToString(createElement(HandheldBoard, { ...base, scores: withRows, meta, games: [] }));
+    expect(quiet).not.toContain('lbh__field');
   });
 });
