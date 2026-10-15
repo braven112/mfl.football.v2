@@ -91,9 +91,9 @@ describe('the cookie follows the URL, and only when asked', () => {
 
 describe('the pre-paint script agrees with the resolver', () => {
   it('uses the same short-side threshold', () => {
-    const page = readFileSync('src/components/shared/live-broadcast/LiveBroadcastPage.astro', 'utf8');
+    const page = readFileSync('src/components/shared/live-broadcast/HandheldPrepaint.astro', 'utf8');
     const m = page.match(/short > 0 && short <= (\d+)/);
-    expect(m, 'pre-paint handheld check not found in LiveBroadcastPage.astro').not.toBeNull();
+    expect(m, 'pre-paint handheld check not found in HandheldPrepaint.astro').not.toBeNull();
     expect(Number(m![1])).toBe(HANDHELD_MAX_SHORT_SIDE);
     // And it asks for touch points, the signal that keeps every TV out.
     expect(page).toMatch(/navigator\.maxTouchPoints > 0/);
