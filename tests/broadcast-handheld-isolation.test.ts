@@ -63,8 +63,11 @@ describe('the handheld stylesheet is scoped', () => {
     expect(selectors(css).length).toBeGreaterThan(20);
   });
 
-  it('every selector starts at .lbh', () => {
-    const loose = selectors(css).filter((s) => !/^\.lbh(?![\w-])/.test(s));
+  it('every selector starts at .lbh, or at an .lbh__ class only the handheld board renders', () => {
+    // A bare `.lbh__x` rule is allowed because the TV render carries no `lbh`
+    // class at all (checked below). The player-cell chip guard needs one: it
+    // reads the chip class's own rule (`tests/player-cell-chip-sizing-guard`).
+    const loose = selectors(css).filter((s) => !/^\.lbh(?:__[\w-]+)?(?![\w-])/.test(s));
     expect(loose, `selectors outside .lbh can reach the TV board:\n${loose.join('\n')}`).toEqual([]);
   });
 });
@@ -171,6 +174,22 @@ describe('the handheld board renders', () => {
     expect(html).toContain('Game 2');
     expect(html).toContain('87.0');
     expect(html).toContain('91.2');
+  });
+
+  it('makes each readable card one button that opens its lineups', () => {
+    const html = renderToString(createElement(HandheldBoard, base));
+    expect((html.match(/class="lbh__card-hit"/g) ?? []).length).toBe(2);
+    expect(html).toContain('data-matchup="13522:1"');
+    expect(html).toContain('aria-haspopup="dialog"');
+    // Closed on first paint: no sheet until a tap.
+    expect(html).not.toContain('lbh__sheet');
+  });
+
+  it('gives an unreadable feed no button, since there are no lineups to show', () => {
+    const html = renderToString(
+      createElement(HandheldBoard, { ...base, panels: [{ ...panel, status: 'unavailable' }] }),
+    );
+    expect(html).not.toContain('lbh__card-hit');
   });
 
   it('shows an em-dash, never 0.0, for a league whose feed could not be read', () => {

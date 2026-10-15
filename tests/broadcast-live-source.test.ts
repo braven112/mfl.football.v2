@@ -198,6 +198,17 @@ describe('scoreLeague', () => {
     expect(scored.teams['0001'].remainingPoints).toBeCloseTo(30, 5);
   });
 
+  it('stamps each starter row with ITS league\'s projection, for the handheld player card', () => {
+    // The card reads `row.projected`, never `meta.projected` (a shared 0).
+    // A player the league has no number for is left without one rather than
+    // stamped 0: "no projection" and "projected for nothing" differ.
+    const scored = scoreLeague(theLeague.id, snapshot(), true, '0001', meta, new Map([['a', 24]]));
+    expect(scored.teams['0001'].players[0].projected).toBe(24);
+    expect(scored.teams['0002'].players[0].projected).toBeUndefined();
+    // The stamp changes no total: the same 24 the test above pins at 62.
+    expect(scored.teams['0001'].projectedFinal).toBeCloseTo(62, 5);
+  });
+
   it('never lets one league’s projections score another league’s lineup', () => {
     // A projection belongs to a player IN A LEAGUE — the same back is worth
     // different points under two rule sets, so the maps must stay separate.

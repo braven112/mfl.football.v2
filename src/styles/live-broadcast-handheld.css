@@ -32,6 +32,8 @@
   --lbh-mine: #64748b;
   --lbh-theirs: #334155;
   --lbh-banner: #1c497c;
+  --lbh-scrim: rgba(0, 0, 0, 0.6);
+  --lbh-focus: #93c5fd;
 
   /* Full bleed out of the layout's content column, like the TV board. */
   width: 100vw;
@@ -338,6 +340,313 @@
   }
 }
 
+/* ── Tap a card: the whole card is the button ─────────────────────────────── */
+
+.lbh .lbh__card-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lbh .lbh__card-hit:focus-visible {
+  outline: 2px solid var(--lbh-focus);
+  outline-offset: 2px;
+}
+
+.lbh .lbh__card.is-tappable:active {
+  background: var(--lbh-panel-2);
+}
+
+/* ── The matchup sheet ───────────────────────────────────────────────────── */
+
+.lbh .lbh__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--lbh-scrim);
+}
+
+/* Portrait: a bottom sheet. Landscape (below): a centred panel, full height. */
+.lbh .lbh__sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  max-height: 88dvh;
+  padding: 0 max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  border-radius: 1rem 1rem 0 0;
+  background: var(--lbh-panel);
+  border-top: 1px solid var(--lbh-hairline);
+  box-shadow: var(--shadow-xl);
+  animation: lbh-sheet-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (orientation: landscape) {
+  .lbh .lbh__sheet {
+    top: max(0.5rem, env(safe-area-inset-top));
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    left: 50%;
+    right: auto;
+    width: min(56rem, calc(100vw - 1.5rem));
+    max-height: none;
+    transform: translateX(-50%);
+    border-radius: 1rem;
+    border: 1px solid var(--lbh-hairline);
+    padding-bottom: 0.75rem;
+    animation-name: lbh-fade-in;
+  }
+}
+
+.lbh .lbh__sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0 0.5rem;
+  /* The header takes the swipe; let the browser know not to scroll it. */
+  touch-action: none;
+}
+
+.lbh .lbh__grabber {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  width: 2.5rem;
+  height: 0.25rem;
+  margin-left: -1.25rem;
+  border-radius: 999px;
+  background: var(--lbh-hairline);
+}
+
+.lbh .lbh__sheet-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__sheet-close,
+.lbh .lbh__pcard-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--lbh-text);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lbh .lbh__sheet-close:focus-visible,
+.lbh .lbh__pcard-close:focus-visible,
+.lbh .lbh__player:focus-visible {
+  outline: 2px solid var(--lbh-focus);
+  outline-offset: 2px;
+}
+
+.lbh .lbh__lineups {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+/* Side by side as soon as two columns fit: a landscape phone, any tablet. */
+@media (min-width: 560px) {
+  .lbh .lbh__lineups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lbh .lbh__lineup-head {
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0 0.4rem;
+  border-bottom: 0.2rem solid var(--lbh-mine);
+}
+
+.lbh .lbh__lineup.is-theirs .lbh__lineup-head {
+  border-bottom-color: var(--lbh-theirs);
+}
+
+.lbh .lbh__lineup-total {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.lbh .lbh__players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lbh .lbh__player {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.3rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--lbh-hairline);
+  background: transparent;
+  color: var(--lbh-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lbh .lbh__player.is-open,
+.lbh .lbh__player:active {
+  background: var(--lbh-panel-2);
+}
+
+.lbh .lbh__player-pos {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__player-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lbh .lbh__player-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbh .lbh__player-clock {
+  font-size: var(--font-size-2xs);
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__player-pts {
+  font-size: var(--font-size-base);
+  font-weight: 800;
+}
+
+/* ── The player card — over the bottom of the sheet ──────────────────────── */
+
+.lbh .lbh__pcard {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'face who close'
+    'stats stats stats';
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.75rem;
+  background: var(--lbh-panel-2);
+  border: 1px solid var(--lbh-hairline);
+  border-left: 0.3rem solid var(--lbh-mine);
+  box-shadow: var(--shadow-lg);
+  animation: lbh-fade-in 160ms ease-out both;
+}
+
+.lbh .lbh__pcard.is-theirs {
+  border-left-color: var(--lbh-theirs);
+}
+
+/* Sized through the player-cell chip's own property, never width/height:
+   those tie with .player-cell__avatar and lose on stylesheet order
+   (tests/player-cell-chip-sizing-guard.test.ts). */
+.lbh__pcard-face {
+  grid-area: face;
+  --player-avatar-size: 3.25rem;
+}
+
+.lbh .lbh__pcard-who {
+  grid-area: who;
+  min-width: 0;
+}
+
+.lbh .lbh__pcard-close {
+  grid-area: close;
+  align-self: start;
+}
+
+.lbh .lbh__pcard-name {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 800;
+}
+
+.lbh .lbh__pcard-meta {
+  margin: 0.1rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--lbh-text-dim);
+}
+
+.lbh .lbh__pcard-stats {
+  grid-area: stats;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.lbh .lbh__pcard-stats > div {
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--lbh-panel);
+}
+
+.lbh .lbh__pcard-stats dt {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__pcard-stats dd {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
 /* ── The moment banner — every reveal, mine included ─────────────────────── */
 
 .lbh .lbh__banner {
@@ -422,6 +731,14 @@
   white-space: nowrap;
 }
 
+/* Inside an open sheet: in the flow, under the header, covering nothing. */
+.lbh .lbh__banner.is-inline {
+  position: static;
+  max-width: none;
+  margin: 0 0 0.6rem;
+  box-shadow: none;
+}
+
 @keyframes lbh-slide-in {
   from {
     transform: translateY(120%);
@@ -433,8 +750,28 @@
   }
 }
 
+@keyframes lbh-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes lbh-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .lbh .lbh__banner {
+  .lbh .lbh__banner,
+  .lbh .lbh__sheet,
+  .lbh .lbh__pcard {
     animation: none;
   }
 }
