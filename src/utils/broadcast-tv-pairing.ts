@@ -305,6 +305,24 @@ export async function listPasses(store: PairingStore, owner: string): Promise<Pa
   return live;
 }
 
+/**
+ * The stored hash of one of THIS owner's passes, by its public id — the only
+ * way the phone remote addresses a TV (`broadcast-tv-remote.ts`). An id not
+ * in this owner's own index answers null, so no owner can reach another's TV.
+ */
+export async function passHashForOwner(store: PairingStore, owner: string, id: string): Promise<string | null> {
+  const index = (await store.get<(PassSummary & { hash: string })[]>(ownerIndexKey(owner))) ?? [];
+  const entry = index.find((e) => e.id === id);
+  if (!entry) return null;
+  // An expired pass is not a TV any more, even while its index row lingers.
+  return (await store.get(passKeyFromHash(entry.hash))) ? entry.hash : null;
+}
+
+/** The hash a TV's own cookie is stored under. Never the pass itself. */
+export function passHashOfToken(token: string): string {
+  return sha(token);
+}
+
 /** Unpair one TV. Only ever reaches the passes in THIS owner's index. */
 export async function revokePass(store: PairingStore, owner: string, id: string): Promise<boolean> {
   return withOwnerLock(store, owner, async () => {

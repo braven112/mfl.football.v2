@@ -32,6 +32,8 @@ import MomentTakeover from './MomentTakeover';
 import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
 import HandheldBoard from './HandheldBoard';
+import BroadcastRemote from './BroadcastRemote';
+import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import {
   BROADCAST_MODE_COOKIE,
   modeCookieAction,
@@ -55,6 +57,9 @@ import {
 
 
 const STRIP_PAGE_MS = 12_000;
+/** How often a paired TV checks for a remote command while a phone has it open. */
+const REMOTE_CHECK_MS = 1000;
+const REMOTE_CHECK_TIMEOUT_MS = 4000;
 /** Must equal `--lbc-fade` in live-broadcast.css — the handoff's one duration. */
 const FADE_MS = 930;
 const SAVER_SCENE_MS = 30_000;
@@ -265,6 +270,19 @@ export default function LiveBroadcast({ pageData }: Props) {
   const demoStartRef = useRef(Date.now());
   const demoLoopRef = useRef(0);
 
+  /**
+   * The phone remote's latest word, for a PAIRED TV only — the poll carries
+   * it for nobody else (docs/plans/broadcast-handheld.md, Phase 4). Replaced
+   * only when it changes, so the 1-second check does not re-render the board.
+   */
+  const [remote, setRemote] = useState<RemoteState | null>(null);
+  const takeRemote = useCallback((next: RemoteState | undefined) => {
+    if (!next || typeof next.seq !== 'number') return;
+    setRemote((prev) =>
+      prev && prev.seq === next.seq && prev.active === next.active ? prev : next,
+    );
+  }, []);
+
   const runPoll = useCallback(async () => {
     // The demo never touches the network, and the real poller never runs while
     // it is on — a rehearsal that could be confused with live scores would be
@@ -299,6 +317,7 @@ export default function LiveBroadcast({ pageData }: Props) {
       carryRef.current = carried;
 
       setPoll({ ...body, leagues });
+      takeRemote(body.remote);
       setFetchedAt(Date.parse(body.fetchedAt) || Date.now());
       setStatus('ok');
       pollRef.current.errors = 0;
@@ -319,7 +338,7 @@ export default function LiveBroadcast({ pageData }: Props) {
     } finally {
       pollRef.current.lastDone = Date.now();
     }
-  }, [data.enabled, data.week]);
+  }, [data.enabled, data.week, takeRemote]);
 
   /**
    * Drive the board from the script instead of the network.
@@ -460,6 +479,19 @@ export default function LiveBroadcast({ pageData }: Props) {
   );
 
   /**
+   * The league the phone remote has focused, or null. Display-only and never
+   * persisted: a reload is back to the full board. With nothing focused this
+   * IS `data.panels`, the same reference, so a TV nobody controls renders
+   * exactly as it did before the remote existed.
+   */
+  const [pinned, setPinned] = useState<string | null>(null);
+  const boardPanels = useMemo(() => {
+    if (!pinned) return data.panels;
+    const only = data.panels.filter((p) => p.leagueId === pinned);
+    return only.length > 0 ? only : data.panels;
+  }, [data.panels, pinned]);
+
+  /**
    * Which leagues get a full-size panel, and which get the thin row.
    *
    * `base` is the collapsed answer and it is computed EITHER WAY, because it
@@ -468,7 +500,7 @@ export default function LiveBroadcast({ pageData }: Props) {
    * would make the control that collapses the row vanish the moment it was
    * used.
    */
-  const base = useMemo(() => splitPanels(data.panels), [data.panels]);
+  const base = useMemo(() => splitPanels(boardPanels), [boardPanels]);
   const hasExtras = base.compact.length > 0;
   /**
    * Expanded is still a SPLIT, not "every panel in the grid".
@@ -481,8 +513,8 @@ export default function LiveBroadcast({ pageData }: Props) {
    * the ninth stays on the compact row, legible, rather than vanishing.
    */
   const expanded = useMemo(
-    () => splitPanels(data.panels, Number.POSITIVE_INFINITY),
-    [data.panels],
+    () => splitPanels(boardPanels, Number.POSITIVE_INFINITY),
+    [boardPanels],
   );
   const { featured, compact } = extrasOpen ? expanded : base;
 
@@ -504,13 +536,13 @@ export default function LiveBroadcast({ pageData }: Props) {
   const pages = useMemo<StripPage[]>(
     () =>
       buildStripPages({
-        panels: data.panels,
+        panels: boardPanels,
         scores: teamScores,
         meta,
         games: poll.games,
         rowsPerPage,
       }),
-    [data.panels, teamScores, meta, poll.games, rowsPerPage],
+    [boardPanels, teamScores, meta, poll.games, rowsPerPage],
   );
 
   const anyLive = useMemo(
@@ -857,6 +889,85 @@ export default function LiveBroadcast({ pageData }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [data.pathname, rememberSound, unlockAudio]);
 
+  // ── the phone remote (a paired TV only) ──────────────────────────────────
+  /**
+   * Apply each remote command once, by its sequence number.
+   *
+   * Parsed again here, whatever the server said: a command is a closed-list
+   * string, and anything else (or a focus on a league this board is not
+   * showing) is ignored whole, never half-applied. On FIRST sight — a TV
+   * that has just loaded — only a focus carries over; a page turn or a sound
+   * change pressed minutes ago is not replayed.
+   */
+  const lastRemoteSeq = useRef<number | null>(null);
+  useEffect(() => {
+    if (!remote) return;
+    const first = lastRemoteSeq.current === null;
+    if (!first && remote.seq <= (lastRemoteSeq.current ?? 0)) return;
+    lastRemoteSeq.current = remote.seq;
+    const cmd = parseRemoteCommand(remote.command);
+    if (!cmd) return;
+    if (first && cmd.kind !== 'pin-league' && cmd.kind !== 'reset') return;
+    switch (cmd.kind) {
+      case 'pin-league':
+        if (data.panels.some((p) => p.leagueId === cmd.leagueId)) {
+          setPinned(cmd.leagueId);
+          setOutgoingKey(null);
+          setPageIndex(0);
+        }
+        break;
+      case 'reset':
+        setPinned(null);
+        setOutgoingKey(null);
+        setPageIndex(0);
+        break;
+      case 'page':
+        if (pages.length > 1) {
+          const n = pages.length;
+          const from = Math.min(pageIndex, n - 1);
+          setOutgoingKey(pages[from]?.key ?? null);
+          setPageIndex((from + (cmd.dir === 'next' ? 1 : -1) + n) % n);
+        }
+        break;
+      case 'sound':
+        // Muting always works. Turning sound ON only sticks once someone has
+        // touched the TV itself — a browser rule the remote's panel states.
+        setSound(cmd.on);
+        rememberSound(cmd.on);
+        document.dispatchEvent(new CustomEvent('lbc:sound', { detail: { on: cmd.on, from: 'board' } }));
+        break;
+    }
+  }, [remote]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * While a phone has the remote open, check for its commands every second
+   * instead of waiting for the 8-second poll; back to the poll alone the
+   * moment the remote goes quiet. One small read per second, and only then.
+   */
+  const remoteActive = !!remote?.active && !data.demo;
+  useEffect(() => {
+    if (!remoteActive) return;
+    let stopped = false;
+    let timer = 0;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/broadcast-tv/remote-poll', {
+          signal: AbortSignal.timeout(REMOTE_CHECK_TIMEOUT_MS),
+          headers: { accept: 'application/json' },
+        });
+        if (res.ok && !stopped) takeRemote((await res.json()) as RemoteState);
+      } catch (_err) {
+        /* the next check, or the 8-second poll, carries it */
+      }
+      if (!stopped) timer = window.setTimeout(check, REMOTE_CHECK_MS);
+    };
+    timer = window.setTimeout(check, REMOTE_CHECK_MS);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [remoteActive, takeRemote]);
+
   /**
    * The strip above the board and the board are on the same page, so the
    * toggle up there has to reach the island — otherwise the cookie changes and
@@ -976,6 +1087,14 @@ export default function LiveBroadcast({ pageData }: Props) {
   const page = pages[Math.min(pageIndex, Math.max(0, pages.length - 1))] ?? null;
   const outgoing = outgoingKey ? (pages.find((p) => p.key === outgoingKey) ?? null) : null;
 
+  // Memoised so the handheld board's `memo` is not defeated by a fresh element
+  // every render. No remote in the rehearsal: it would be a real command to a
+  // real TV from a fake board.
+  const remoteButton = useMemo(
+    () => (data.demo ? undefined : <BroadcastRemote panels={data.panels} />),
+    [data.demo, data.panels],
+  );
+
   if (mode === 'handheld') {
     return (
       <>
@@ -998,6 +1117,7 @@ export default function LiveBroadcast({ pageData }: Props) {
                 : ''
           }
           statusError={status === 'error'}
+          remote={remoteButton}
           demoText={
             data.demo
               ? `Demo · ${Math.floor(demoElapsed(nowTick, demoStartRef.current) / 1000)}s`

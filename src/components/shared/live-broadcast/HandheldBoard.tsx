@@ -81,6 +81,8 @@ interface Props {
   statusText: string;
   statusError: boolean;
   demoText?: string;
+  /** The phone's TV remote button, when the owner has a TV paired. */
+  remote?: ReactNode;
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
@@ -320,6 +322,7 @@ function HandheldBoard({
   statusText,
   statusError,
   demoText,
+  remote,
 }: Props) {
   const redZoneNames = redZone.flatMap((a) =>
     a.players.map((p) => `${p.playerName}${p.side === 'opponent' ? ' (against you)' : ''}`),
@@ -596,6 +599,7 @@ function HandheldBoard({
           <span className={`lbh__status${statusError ? ' is-error' : ''}`}>{statusText}</span>
         )}
         {demoText && <span className="lbh__status">{demoText}</span>}
+        {remote}
         {onField.length > 0 && <FieldRow players={onField} />}
       </header>
 

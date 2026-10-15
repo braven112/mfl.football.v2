@@ -149,6 +149,8 @@ describe('the island server-renders the TV board, never the handheld one', () =>
     );
     expect(html).toContain('lbc is-board');
     expect(html).not.toMatch(/\blbh/);
+    // No remote either: a TV nobody controls renders as it always has.
+    expect(html).not.toContain('TV remote');
   });
 });
 
