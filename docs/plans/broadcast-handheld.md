@@ -24,12 +24,13 @@ anything — every rule in it is a bug that shipped on a real television.
 | Big-play takeovers on a handheld | Shrink to a slide-in banner; never full screen |
 | Tablets | Get the touch features too, same as phones |
 | Order | After the landing-page redesign merges; TV board untouched |
+| Phone as a TV remote | Yes, as Phase 4, after the phone features (Brandon, 2026-10-15) |
 
 Ideas NOT in the first cut (kept for later, see
 `/mnt/project-files/broadcast-phone/brainstorm.md` in the project): haptics,
 pin a matchup, hide a league for the day, play-feed drawer, game picker that
-follows the TV, sweat meter, what-if slider, trash-talk shortcut, phone as a TV
-remote.
+follows the TV, sweat meter, what-if slider, trash-talk shortcut. (Phone as a
+TV remote was added as Phase 4 on 2026-10-15.)
 
 ## User story
 
@@ -122,7 +123,8 @@ This is the part most likely to break the TV, so settle it first.
 
 ## Phases
 
-Each phase is its own PR, and each leaves the TV board identical.
+Each phase is its own PR. Phases 1 to 3 leave the TV board identical; Phase 4
+changes it only when a paired owner sends a command.
 
 ### Phase 1 — mode, landscape layout, awake screen, banners
 
@@ -168,6 +170,54 @@ Each phase is its own PR, and each leaves the TV board identical.
    game's `possession`, highlighted when `situation.isRedZone` — the same
    possession check the red-zone banner uses, so a player is never flagged
    while his team is on defense.
+
+### Phase 4 — the phone as a remote for a paired TV
+
+Builds on the TV pairing from PR #1388 (`src/utils/broadcast-tv-pairing.ts`):
+a paired TV holds an opaque, watch-only pass (`bc_tv` cookie; Redis keeps only
+its SHA-256), and the owner's paired TVs are listed under `bctv:owner:<owner>`.
+This phase adds a DISPLAY-ONLY control channel from the owner's phone to those
+TVs. It is the one phase that changes what the TV does, so it changes it only
+in response to a command, and a TV that never receives one behaves exactly as
+before.
+
+1. **Remote UI on the phone.** In handheld mode, a "Your TVs" control lists the
+   owner's paired TVs (the list the landing page already shows). Buttons: pin a
+   league, open a matchup, next / previous page, sound on / off, back to the
+   normal rotation.
+2. **Command endpoint.** `POST /api/broadcast-tv/command` with `{ passId,
+   command }`. Auth is the owner's SESSION (`getAuthUser`), never a pass; the
+   server refuses any `passId` not in that owner's `bctv:owner` list. Rate
+   limit it with `src/utils/rate-limit.ts`. Store the latest command under the
+   pass hash with a short TTL (last write wins).
+3. **Commands are a closed allowlist** of display actions, validated on the
+   server and again on the TV: e.g. `pin-league:<leagueId>` (must be one of the
+   board's enabled leagues), `open-matchup:<leagueId>:<index>`, `page:next`,
+   `page:prev`, `sound:on|off`, `reset`. A command never carries free text, a
+   URL or HTML, so nothing can make a TV render someone else's content or
+   navigate anywhere.
+4. **Delivery: fast poll while active, not a socket.** Vercel functions cannot
+   hold a connection open, and the TV board's score poll is 8 s
+   (`POLL_MS`, `broadcast-cadence.ts`). The TV reads a tiny "remote active"
+   flag on its normal poll; when an owner has opened the remote in the last few
+   minutes, the TV also checks a command key about once a second, then drops
+   back to the normal cadence. Check the Redis command budget for this
+   (`tests/redis-command-reductions.test.ts` is the repo's precedent): a
+   1-second check is ~3,600 reads an hour per TV, so it must only run while a
+   remote is active. A hosted real-time service (Pusher, Ably) would make it
+   instant but adds a vendor; not in this cut.
+5. **What a remote cannot do.** Browsers only grant full screen and audio after
+   a gesture ON that device, so the remote cannot enter full screen or start
+   sound on a TV nobody has touched; say so in the remote UI instead of showing
+   a button that silently fails. Muting an already-unlocked TV is fine.
+6. **Security notes.** The TV's pass stays watch-only: it can receive commands,
+   never send them. Unpairing a TV (already built) ends both watching and
+   control. No guest remote in this cut; a friend who scans a TV code gets
+   nothing to control. Worst case of a stolen owner session is a changed
+   scoreboard, which is why this stays display-only.
+7. **TV guard.** A test that a TV with no command behaves byte-for-byte as
+   before, and that an unknown or malformed command is ignored rather than
+   partially applied.
 
 ## Things to verify before building
 
