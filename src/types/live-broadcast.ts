@@ -221,4 +221,10 @@ export interface LiveBroadcastPageData {
   available: { id: string; name: string; registered: boolean; enabled: boolean }[];
   /** Where the picker's links point. */
   pathname: string;
+  /**
+   * `'tv'` pins the TV board whatever the device — for a page whose job is to
+   * show what the TELEVISION will show (the landing page's preview). Absent,
+   * the device decides (`broadcast-mode.ts`).
+   */
+  modeHint?: 'tv';
 }

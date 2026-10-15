@@ -1,0 +1,34 @@
+---
+/**
+ * Pre-paint for the handheld board. Render it directly before the
+ * `<LiveBroadcast>` island on any page that can show the board on a phone.
+ *
+ * On a device that LOOKS hand-held, this hides the TV board until the island
+ * has decided. The island renders the TV board first to match the server,
+ * then swaps. Without this a phone flashes the television layout.
+ *
+ * Nothing here can touch a TV: a television browser reports no touch points,
+ * so the attribute is never set there. The island lifts it the moment it
+ * decides, and the timeout lifts it anyway if the island never hydrates, so a
+ * failed script can never leave a blank page.
+ *
+ * The 1100 must equal HANDHELD_MAX_SHORT_SIDE in broadcast-mode.ts;
+ * tests/broadcast-mode.test.ts pins the two.
+ */
+import '../../../styles/live-broadcast-handheld.css';
+---
+
+<script is:inline>
+  (function () {
+    try {
+      var short = Math.min(screen.width, screen.height);
+      if (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches && short > 0 && short <= 1100) {
+        document.documentElement.dataset.lbcPending = '1';
+        setTimeout(function () { delete document.documentElement.dataset.lbcPending; }, 4000);
+      }
+    } catch (e) {}
+  })();
+</script>
+<style is:inline>
+  html[data-lbc-pending] .lbc { visibility: hidden; }
+</style>

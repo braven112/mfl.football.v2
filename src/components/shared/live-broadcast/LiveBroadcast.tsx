@@ -31,6 +31,13 @@ import BroadcastScreensaver, { type SaverScene } from './BroadcastScreensaver';
 import MomentTakeover from './MomentTakeover';
 import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
+import HandheldBoard from './HandheldBoard';
+import {
+  BROADCAST_MODE_COOKIE,
+  modeCookieAction,
+  resolveBroadcastMode,
+  type BroadcastMode,
+} from '../../../utils/broadcast-mode';
 import { DEMO_PERIOD_MS, demoElapsed, demoLoopIndex, demoPollAt } from '../../../utils/broadcast-demo';
 import { carryLeagueScores, seedCarry, type CarriedLeagueScore } from '../../../utils/broadcast-carry';
 import {
@@ -111,6 +118,98 @@ export default function LiveBroadcast({ pageData }: Props) {
   const [outgoingKey, setOutgoingKey] = useState<string | null>(null);
   const [saverScene, setSaverScene] = useState(0);
   const [drift, setDrift] = useState({ x: 0, y: 0, x2: 0, y2: 0 });
+
+  /**
+   * TV or handheld (docs/plans/broadcast-handheld.md).
+   *
+   * Starts as `'tv'` on the server and on the first client render, so the
+   * hydrated markup matches the server's and a television never renders
+   * anything else. The device decides once, after mount; a phone renders the
+   * handheld board from then on. The pre-paint script in
+   * `LiveBroadcastPage.astro` hides the TV board on a likely phone until this
+   * has run, so a phone does not flash the television layout first.
+   */
+  const [mode, setMode] = useState<BroadcastMode>('tv');
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('mode');
+    const cookie = document.cookie.match(new RegExp(`(?:^|;\\s*)${BROADCAST_MODE_COOKIE}=([^;]*)`))?.[1] ?? null;
+    let coarse = false;
+    try {
+      coarse = window.matchMedia('(pointer: coarse)').matches;
+    } catch (_err) {
+      /* no matchMedia: not a phone browser */
+    }
+    const next = resolveBroadcastMode({
+      hint: data.modeHint ?? null,
+      param,
+      cookie,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+      coarsePointer: coarse,
+      screenShortSide: Math.min(window.screen?.width ?? 0, window.screen?.height ?? 0),
+    });
+    // A preview pinned to the TV must never write the device's choice.
+    if (!data.modeHint) {
+      const action = modeCookieAction(param);
+      try {
+        if (action === 'clear') {
+          document.cookie = `${BROADCAST_MODE_COOKIE}=; path=/; max-age=0; samesite=lax`;
+        } else if (action) {
+          document.cookie = `${BROADCAST_MODE_COOKIE}=${action.set}; path=/; max-age=${180 * 24 * 60 * 60}; samesite=lax`;
+        }
+      } catch (_err) {
+        /* a board that cannot remember is still a board */
+      }
+    }
+    setMode(next);
+    // Lift the pre-paint hide whichever way this went.
+    delete document.documentElement.dataset.lbcPending;
+  }, [data.modeHint]);
+
+  /**
+   * A phone on the coffee table must not go dark between scores. Handheld
+   * only: the television's behaviour does not change. Best-effort, and
+   * re-taken when the tab comes back, because the OS drops the lock on hide.
+   */
+  useEffect(() => {
+    if (mode !== 'handheld') return;
+    let lock: { release?: () => Promise<void> } | null = null;
+    let released = false;
+    const acquire = async () => {
+      try {
+        lock = await (navigator as unknown as {
+          wakeLock?: { request: (t: 'screen') => Promise<{ release?: () => Promise<void> }> };
+        }).wakeLock?.request('screen') ?? null;
+      } catch (_err) {
+        /* unsupported or denied — the board still works */
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !released) void acquire();
+    };
+    void acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      released = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      try {
+        void lock?.release?.().catch(() => {});
+      } catch (_err) {
+        /* already gone */
+      }
+    };
+  }, [mode]);
+
+  /** Landscape on a phone: bring the board up past the site nav, once. */
+  useEffect(() => {
+    if (mode !== 'handheld') return;
+    try {
+      if (window.matchMedia('(orientation: landscape)').matches) {
+        document.querySelector('.lbh')?.scrollIntoView({ block: 'start' });
+      }
+    } catch (_err) {
+      /* cosmetic */
+    }
+  }, [mode]);
 
   // ── the poll loop ────────────────────────────────────────────────────────
   const pollRef = useRef<{
@@ -729,7 +828,7 @@ export default function LiveBroadcast({ pageData }: Props) {
       const key = e.key.toLowerCase();
       if (key === 'f') {
         e.preventDefault();
-        const root = document.querySelector('.lbc');
+        const root = document.querySelector('.lbc, .lbh');
         if (!document.fullscreenElement) void root?.requestFullscreen?.().catch(() => {});
         else void document.exitFullscreen().catch(() => {});
       } else if (key === 'm') {
@@ -875,6 +974,41 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   const page = pages[Math.min(pageIndex, Math.max(0, pages.length - 1))] ?? null;
   const outgoing = outgoingKey ? (pages.find((p) => p.key === outgoingKey) ?? null) : null;
+
+  if (mode === 'handheld') {
+    return (
+      <>
+        <HandheldBoard
+          week={data.week}
+          panels={data.panels}
+          scores={scoresByLeague}
+          games={poll.games}
+          meta={meta}
+          live={anyLive}
+          moment={current}
+          momentTeam={current ? teamFor(current) : null}
+          momentScoreLine={current ? scoreLineFor(current) : ''}
+          redZone={poll.redZone}
+          statusText={
+            fetchedAt === 0
+              ? 'Connecting…'
+              : status === 'error' || isStale
+                ? `Reconnecting — scores from ${Math.max(1, Math.round(ageMs / 60000))}m ago`
+                : ''
+          }
+          statusError={status === 'error'}
+          demoText={
+            data.demo
+              ? `Demo · ${Math.floor(demoElapsed(nowTick, demoStartRef.current) / 1000)}s`
+              : undefined
+          }
+        />
+        <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </div>
+      </>
+    );
+  }
 
   return (
     <main

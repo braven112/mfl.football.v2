@@ -369,6 +369,8 @@ const fmtDate = (ms: number) =>
    * Every element is looked up per init (the router replaces them), and every
    * handler is ASSIGNED rather than added.
    */
+  import { BROADCAST_MODE_COOKIE, resolveBroadcastMode } from '../../../utils/broadcast-mode';
+
   type FsElement = Element & {
     webkitRequestFullscreen?: () => Promise<void> | void;
   };
@@ -397,8 +399,18 @@ const fmtDate = (ms: number) =>
   function initFullscreen() {
     // Support is a property of the browser; check it on the root element.
     if (!requestFn(document.documentElement as FsElement)) return;
+    // A phone or tablet follows the link to `?view=board`, which renders the
+    // handheld board. Fullscreening the preview would give it the TV board,
+    // which this preview is pinned to.
+    const handheld = resolveBroadcastMode({
+      cookie: document.cookie.match(new RegExp(`(?:^|;\\s*)${BROADCAST_MODE_COOKIE}=([^;]*)`))?.[1] ?? null,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+      coarsePointer: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      screenShortSide: Math.min(window.screen?.width ?? 0, window.screen?.height ?? 0),
+    }) === 'handheld';
     document.querySelectorAll<HTMLAnchorElement>('[data-bcl-fullscreen]').forEach((link) => {
       link.onclick = (e: MouseEvent) => {
+        if (handheld) return; // fall through to the link
         const board = document.querySelector('[data-bcl-viewport] .lbc.is-board') as FsElement | null;
         const request = requestFn(board);
         if (!board || !request) return; // fall through to the link

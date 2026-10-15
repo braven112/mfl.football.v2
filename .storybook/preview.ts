@@ -70,6 +70,9 @@ import '../src/styles/league-history.css';
 // The Primetime Free Agents board (position leaders, market rail). Its page
 // imports it; the board's blocks are `.fa-*`-scoped, so it restyles nothing else.
 import '../src/styles/free-agents-primetime.css';
+// The broadcast's handheld board. Every selector is under `.lbh`, so it
+// restyles nothing else (tests/broadcast-handheld-isolation.test.ts).
+import '../src/styles/live-broadcast-handheld.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:

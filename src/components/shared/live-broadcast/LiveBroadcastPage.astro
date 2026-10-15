@@ -18,6 +18,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import LiveBroadcast from './LiveBroadcast';
 import BroadcastControls from './BroadcastControls.astro';
+import HandheldPrepaint from './HandheldPrepaint.astro';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
 import {
   broadcastHref,
@@ -30,6 +31,8 @@ import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../util
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import type { AuthUser } from '../../../utils/auth';
 import '../../../styles/live-broadcast.css';
+// The handheld board's own sheet. Every rule in it sits under `.lbh`, which
+// the TV board never renders (tests/broadcast-handheld-isolation.test.ts).
 // The global `.visually-hidden` — imported in FRONTMATTER, never with an
 // `@import` inside a <style> block, which Vite scopes and which would render
 // the live region as visible page text.
@@ -164,6 +167,7 @@ const title = `Live Broadcast — Week ${week}`;
         variant="strip"
         pickerHref={pickerHref}
       />
+      <HandheldPrepaint />
       <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
     </Fragment>
   )

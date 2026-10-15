@@ -26,6 +26,7 @@
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import BroadcastLanding from '../../../components/shared/live-broadcast/BroadcastLanding.astro';
 import LiveBroadcast from '../../../components/shared/live-broadcast/LiveBroadcast';
+import HandheldPrepaint from '../../../components/shared/live-broadcast/HandheldPrepaint.astro';
 import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
 import { rememberBroadcastChoices } from '../../../utils/broadcast-cookies';
 import { assembleBroadcastBoard, toPageData, type AssembledBoard } from '../../../utils/broadcast-board';
@@ -113,6 +114,7 @@ const title = boardOnly ? `Broadcast — Week ${week} — MFL Live` : 'Broadcast
   {boardOnly && pageData ? (
     <div class="bcl-board-only">
       <a class="bcl-board-only__back" href="/live/broadcast">&larr; Broadcast</a>
+      <HandheldPrepaint />
       <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
     </div>
   ) : (
@@ -127,7 +129,7 @@ const title = boardOnly ? `Broadcast — Week ${week} — MFL Live` : 'Broadcast
       tvs={tvs}
       host={Astro.url.host.replace(/^www\./, '')}
     >
-      {pageData && <LiveBroadcast slot="board" client:load pageData={JSON.stringify(pageData)} />}
+      {pageData && <LiveBroadcast slot="board" client:load pageData={JSON.stringify({ ...pageData, modeHint: 'tv' })} />}
     </BroadcastLanding>
   )}
 </MflAppLayout>
