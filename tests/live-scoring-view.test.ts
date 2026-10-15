@@ -14,6 +14,7 @@ import {
   describeGameState,
   formatFeedAge,
   formatGameClock,
+  kickoffInClock,
   formatPlayClock,
   isPlayerInRedZone,
   playerDownDistance,
@@ -47,6 +48,39 @@ const game = (over: Partial<NflGame> = {}): NflGame => ({
     lastPlay: 'P.Mahomes pass short right to T.Kelce for 12 yards.',
   },
   ...over,
+});
+
+describe('kickoff in the viewer\'s clock', () => {
+  // ESPN's pre-game text is Eastern whoever is looking; the instant is not.
+  const pre = game({
+    state: 'pre',
+    shortDetail: '10/19 - 1:00 PM EDT',
+    date: '2026-10-19T17:00Z',
+  });
+  const PT = { zone: 'America/Los_Angeles', label: 'PT' };
+
+  it('rebuilds the kickoff from the instant in the chosen zone', () => {
+    expect(kickoffInClock(pre, PT)).toEqual({
+      weekday: 'Mon',
+      monthDay: '10/19',
+      time: '10:00 AM',
+      label: 'PT',
+    });
+    expect(formatGameClock('not-started', pre, PT)).toBe('10/19 10:00a');
+  });
+
+  it('crosses midnight into the viewer\'s own day', () => {
+    const late = game({ state: 'pre', shortDetail: '10/19 - 8:15 PM EDT', date: '2026-10-20T00:15Z' });
+    expect(kickoffInClock(late, { zone: 'Australia/Sydney', label: 'AEDT' })?.monthDay).toBe('10/20');
+  });
+
+  it('keeps ESPN\'s text with no clock, a TBD, or a game under way', () => {
+    expect(kickoffInClock(pre, null)).toBeNull();
+    expect(formatGameClock('not-started', pre)).toBe('10/19 1:00p');
+    expect(kickoffInClock(game({ state: 'pre', shortDetail: 'TBD', date: '2026-10-19T17:00Z' }), PT)).toBeNull();
+    expect(kickoffInClock(game({ date: '2026-10-19T17:00Z' }), PT)).toBeNull();
+    expect(kickoffInClock(game({ state: 'pre', shortDetail: '10/19 - 1:00 PM EDT', date: '' }), PT)).toBeNull();
+  });
 });
 
 describe('formatGameClock', () => {

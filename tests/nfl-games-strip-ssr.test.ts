@@ -84,4 +84,13 @@ describe('NflGamesStrip — server render', () => {
     expect(ssr({ initialGames: [], demo: false })).toBe('');
     expect(ssr({ demo: false })).toBe('');
   });
+
+  it('prints a kickoff in the viewer\'s clock, not ESPN\'s Eastern text', () => {
+    const espn = game({ shortDetail: '9/13 - 1:00 PM EDT' });
+    const pt = ssr({ initialGames: [espn], demo: false, kickoffClock: { zone: 'America/Los_Angeles', label: 'PT' } });
+    expect(pt).toContain('Sun 10:00 AM PT');
+    expect(pt).not.toContain('EDT');
+    // No clock handed down (a story, a demo): ESPN's own words, as before.
+    expect(ssr({ initialGames: [espn], demo: false })).toContain('9/13 - 1:00 PM EDT');
+  });
 });

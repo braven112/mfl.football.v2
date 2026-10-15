@@ -34,11 +34,12 @@
  * the narrow name column. Nested, a real line wrapped to two rows on a desktop
  * card and SIX on a 390px phone.
  */
-import type { JSX } from 'react';
+import { createContext, useContext, type JSX } from 'react';
 import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import {
   describeGameState,
   formatGameClock,
+  type KickoffClock,
   isPlayerInRedZone,
   nflGameStateFromSeconds,
   playerDownDistance,
@@ -84,6 +85,16 @@ export interface LvPlayerRowProps {
   onOpen?: () => void;
 }
 
+/**
+ * The viewer's kickoff clock, for every row inside one LiveBoard island.
+ *
+ * A context rather than a prop because this row sits several components below
+ * the island root and none of the layers between has any use for it. `null`
+ * (no provider) means "print ESPN's own text" — always Eastern — which is what
+ * a board with no route behind it (a story, a demo) always did.
+ */
+export const KickoffClockContext = createContext<KickoffClock | null>(null);
+
 export default function LvPlayerRow({
   row,
   meta,
@@ -96,6 +107,7 @@ export default function LvPlayerRow({
   const position = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
   const isDef = position === 'DEF';
+  const kickoffClock = useContext(KickoffClockContext);
 
   // ESPN decides whether his game is under way; MFL's seconds are the
   // fallback. Reading the dot from MFL and the clock from ESPN is what put a
@@ -255,7 +267,7 @@ export default function LvPlayerRow({
                 no numbers. The old helper divided MFL's seconds by 900 and
                 printed a confident "Q3 7:24" that drifted all afternoon,
                 because the NFL clock stops and that number does not. */}
-            {formatGameClock(state, game)}
+            {formatGameClock(state, game, kickoffClock)}
           </span>
           {redZone && <span className="lv-rz">RED ZONE</span>}
           {!redZone && downDistance && <span className="lv-dd">{downDistance}</span>}

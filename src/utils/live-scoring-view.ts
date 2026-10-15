@@ -51,10 +51,20 @@ export function resolveGameState(fallback: NflGameState, game?: NflGame): NflGam
   return 'not-started';
 }
 
-export function formatGameClock(state: NflGameState, game?: NflGame): string {
+export function formatGameClock(
+  state: NflGameState,
+  game?: NflGame,
+  kickoffClock?: KickoffClock | null,
+): string {
   if (game) {
     if (game.state === 'post') return 'Final';
-    if (game.state === 'pre') return compactKickoff(game.shortDetail) || 'Yet to play';
+    if (game.state === 'pre') {
+      // The row's compact shape ("10/19 10:00a"), in the viewer's clock when
+      // the route handed one down; ESPN's Eastern text otherwise.
+      const k = kickoffInClock(game, kickoffClock);
+      if (k) return `${k.monthDay} ${k.time.replace(/\s*([AP])M$/i, (_, p: string) => p.toLowerCase())}`;
+      return compactKickoff(game.shortDetail) || 'Yet to play';
+    }
     // ESPN's shortDetail is already "8:12 - 3rd"; fall back to assembling it
     // only if that string is missing.
     if (game.shortDetail) return game.shortDetail;
@@ -92,6 +102,62 @@ export function formatGameClock(state: NflGameState, game?: NflGame): string {
  * Anything that does not parse as a kickoff time comes back UNCHANGED. This
  * shortens a known shape; it never guesses at an unknown one.
  */
+/**
+ * The zone a kickoff prints in: an IANA id plus the label after the time.
+ *
+ * Resolved by the ROUTE (`viewerClockZone`: the viewer's own clock, the
+ * league's as the floor) and handed down, because an island cannot resolve a
+ * preference. One clock, not two: every place this lands is a compact surface.
+ */
+export interface KickoffClock {
+  zone: string;
+  label: string;
+}
+
+const KICKOFF_TIME_RE = /\d{1,2}:\d{2}\s*(AM|PM)\b/i;
+
+/**
+ * A not-yet-started game's kickoff, re-read from its INSTANT in the viewer's
+ * clock — or null when it should stay ESPN's own text.
+ *
+ * ESPN's `shortDetail` ("10/19 - 1:00 PM EDT") is always Eastern, whoever is
+ * looking, which is how the live-scoring page printed ET to an owner who had
+ * chosen Pacific. `date` is the real instant, so the time is rebuilt from it.
+ * Only a detail that IS a kickoff time is replaced: "TBD", "Postponed" and
+ * anything else unrecognised are ESPN's words and come back as null.
+ */
+export function kickoffInClock(
+  game: NflGame | undefined,
+  clock: KickoffClock | null | undefined,
+): { weekday: string; monthDay: string; time: string; label: string } | null {
+  if (!game || game.state !== 'pre' || !clock?.zone || !game.date) return null;
+  if (!KICKOFF_TIME_RE.test(game.shortDetail ?? '')) return null;
+  const at = new Date(game.date);
+  if (Number.isNaN(at.getTime())) return null;
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: clock.zone,
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).formatToParts(at);
+  } catch {
+    return null;
+  }
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  // Assembled from parts: ICU puts a narrow no-break space before the day
+  // period, which a joined string would carry into the DOM (viewer-clock.ts).
+  return {
+    weekday: part('weekday'),
+    monthDay: `${part('month')}/${part('day')}`,
+    time: `${part('hour')}:${part('minute')} ${part('dayPeriod')}`.trim(),
+    label: clock.label,
+  };
+}
+
 export function compactKickoff(shortDetail: string): string {
   const m = /^\s*(.*?)\s*(?:-\s*)?(\d{1,2}:\d{2})\s*(AM|PM)\b\s*[A-Z]{0,4}\s*$/i.exec(shortDetail ?? '');
   if (!m) return shortDetail ?? '';
