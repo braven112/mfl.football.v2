@@ -305,8 +305,8 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
             </>
           ) : (
           <>
-          {!isAFL && !isKeeper && (
-            <a href="/theleague/schefter/tip" class="nav-icon-link" title={labels.tip}>
+          {!isKeeper && (
+            <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/schefter/tip" : "/theleague/schefter/tip", hideLeaguePrefix)} class="nav-icon-link" title={labels.tip}>
               <svg class="nav-icon" aria-hidden="true">
                 <use href={`${spriteUrl}#icon-${pageIcon('/schefter/tip', league.slug)}`}></use>
               </svg>
