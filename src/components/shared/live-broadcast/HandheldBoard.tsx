@@ -28,10 +28,20 @@
  * another game. While it is open a moment banner sits inside its header rather
  * than over the lineups.
  *
+ * In landscape the cards are laid out a screen at a time. When there are more
+ * than fit, they become pages you swipe between (a league's cards stay on one
+ * page wherever they fit), with dots underneath, arrow keys on a tablet with a
+ * keyboard, and a slow automatic advance that stops while the owner is
+ * touching the board or has a sheet open. Portrait stays one scrolling list.
+ *
+ * "On the field" in the bar shows the owner's own starters whose NFL team has
+ * the ball, ringed when that drive is in the red zone (`onFieldNow`, the same
+ * possession rule as the red-zone banner).
+ *
  * Everything else is props, so it renders under `renderToString` in tests.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
   BroadcastLeaguePanel,
   BroadcastLeagueScore,
@@ -41,7 +51,14 @@ import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import type { BroadcastMoment, RedZoneAlert } from '../../../utils/broadcast-moments';
 import { matchupTimeLeft } from '../../../utils/broadcast-layout';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
-import { handheldLineup, matchupKey, type HandheldPlayer } from '../../../utils/broadcast-handheld';
+import {
+  handheldLineup,
+  matchupKey,
+  onFieldNow,
+  paginateByLeague,
+  type FieldPlayer,
+  type HandheldPlayer,
+} from '../../../utils/broadcast-handheld';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 
 interface Props {
@@ -74,6 +91,65 @@ const shortName = (t: BroadcastTeam) => t.nameShort || t.name;
 
 /** How far a downward swipe on the sheet's header must travel to close it. */
 const SWIPE_CLOSE_PX = 60;
+
+/** How long a page of cards shows before the board turns to the next. */
+const PAGE_DWELL_MS = 12_000;
+/** After the owner touches the board, how long it stays where they left it. */
+const INTERACTION_HOLD_MS = 30_000;
+/**
+ * Height kept free under the cards for the page dots. The red-zone line is
+ * not counted: on a short landscape phone the stylesheet hides it (the ringed
+ * "on the field" pill carries it there), so a drive never re-paginates.
+ */
+const PAGE_RESERVE_PX = 32;
+
+/**
+ * How many cards fit on one landscape screen of the board, or null for one
+ * scrolling list (portrait, or nothing to measure yet).
+ *
+ * Columns are read off the grid the stylesheet already laid out; rows are
+ * the viewport height under the bar divided by a card's height. Measured
+ * against the bar, never the live rows under it, so a red-zone drive starting
+ * does not re-paginate the board.
+ */
+function measureCapacity(root: HTMLElement): number | null {
+  if (!window.matchMedia('(orientation: landscape)').matches) return null;
+  const grid = root.querySelector<HTMLElement>('.lbh__cards');
+  const bar = root.querySelector<HTMLElement>('.lbh__bar');
+  const cards = grid ? Array.from(grid.querySelectorAll<HTMLElement>('.lbh__card')) : [];
+  if (!grid || !bar || cards.length === 0) return null;
+  const style = getComputedStyle(grid);
+  const cols = style.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+  const gap = parseFloat(style.rowGap) || 0;
+  const cardH = Math.max(...cards.map((c) => c.offsetHeight));
+  if (!cardH) return null;
+  const above = bar.getBoundingClientRect().bottom - root.getBoundingClientRect().top;
+  const avail = window.innerHeight - above - PAGE_RESERVE_PX;
+  const rows = Math.max(1, Math.floor((avail + gap) / (cardH + gap)));
+  return cols * rows;
+}
+
+function FieldRow({ players }: { players: readonly FieldPlayer[] }) {
+  return (
+    <div className="lbh__field">
+      <span className="lbh__field-tag" aria-hidden="true">On the field</span>
+      <ul className="lbh__field-list" aria-label="Your players on the field now">
+        {players.map((p) => (
+          <li key={p.id} className={`lbh__field-p${p.redZone ? ' is-redzone' : ''}`}>
+            <BroadcastFace
+              player={{ id: p.id, mflId: p.id, position: p.position, nflTeam: p.nflTeam, headshot: p.headshot }}
+              className="lbh__field-face"
+            />
+            <span className="lbh__field-name" aria-hidden="true">{p.name.split(' ').slice(-1)[0]}</span>
+            <span className="visually-hidden">
+              {`${p.name}, ${[p.position, p.nflTeam].filter(Boolean).join(' ')}${p.redZone ? ', in the red zone' : ''}. ${p.leagues.join(', ')}.`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function Crest({ team }: { team: BroadcastTeam }) {
   return (
@@ -117,6 +193,13 @@ function Banner({
       </span>
     </aside>
   );
+}
+
+/** One drawn card, with the league it belongs to so a page keeps leagues whole. */
+interface Card {
+  key: string;
+  leagueId: string;
+  node: ReactNode;
 }
 
 /** The open player, by side and id — enough to find the live row each poll. */
@@ -248,6 +331,19 @@ function HandheldBoard({
   const closeRef = useRef<HTMLButtonElement>(null);
   const swipeFrom = useRef<number | null>(null);
 
+  const rootRef = useRef<HTMLElement>(null);
+  const pagerRef = useRef<HTMLDivElement>(null);
+  const [capacity, setCapacity] = useState<number | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const lastTouch = useRef(0);
+  const [touchTick, setTouchTick] = useState(0);
+  const noteInteraction = useCallback(() => {
+    lastTouch.current = Date.now();
+    setTouchTick((t) => t + 1);
+  }, []);
+
+  const onField = onFieldNow(panels, scores, games, meta);
+
   // The open matchup, re-found on every render from live props. A sheet whose
   // matchup is gone (the owner changed leagues) simply is not drawn.
   const open = (() => {
@@ -300,8 +396,199 @@ function HandheldBoard({
     return handheldLineup(rows ?? [], meta, games);
   };
 
+  const cards: Card[] = panels.flatMap((panel): Card[] => {
+    const leagueScore = scores[panel.leagueId];
+    const readable = panel.status !== 'unavailable';
+
+    if (panel.matchups.length === 0) {
+      return [{ key: panel.leagueId, leagueId: panel.leagueId, node: (
+        <li key={panel.leagueId} className="lbh__card is-empty">
+          <p className="lbh__tag">{panel.leagueName}</p>
+          <p className="lbh__note">
+            {panel.status === 'unavailable' ? 'Feed unavailable' : 'No matchup this week'}
+          </p>
+        </li>
+      ) }];
+    }
+
+    // Every matchup is its own card — a doubleheader league is two real
+    // games against two different opponents, never `matchups[0]`.
+    return panel.matchups.map((matchup) => {
+      const mine = leagueScore?.teams[matchup.mine.franchiseId];
+      const theirs = matchup.opponent
+        ? leagueScore?.teams[matchup.opponent.franchiseId]
+        : undefined;
+      const wp = leagueScore?.winProbability[matchup.index] ?? 0.5;
+      const mineLive = mine?.live ?? 0;
+      const theirsLive = theirs?.live ?? 0;
+      const clock = matchupTimeLeft(
+        [...(mine?.players ?? []), ...(theirs?.players ?? [])],
+        games,
+        meta,
+      );
+      const doubleheader = panel.matchups.length > 1;
+      const key = matchupKey(panel.leagueId, matchup.index);
+      const summary = `${panel.leagueName}: ${matchup.mine.name} ${score(mineLive, readable)}${
+        matchup.opponent
+          ? `, ${matchup.opponent.name} ${score(theirsLive, readable)}.${readable ? ` Win probability ${pct(wp)}.` : ''}`
+          : '. No opponent this week.'
+      }${readable ? '' : ' This league’s feed could not be read.'}`;
+
+      return { key, leagueId: panel.leagueId, node: (
+        <li
+          key={key}
+          className={`lbh__card${readable ? ' is-tappable' : ' is-unavailable'}`}
+          style={{
+            ['--lbh-mine' as string]: matchup.mine.swatch,
+            ['--lbh-theirs' as string]: matchup.opponent?.swatch ?? '#334155',
+          }}
+        >
+          {/* The whole card is the button. Its text is the summary a
+              screen reader needs; the drawn card beside it is hidden
+              from one, so nothing is read twice. An unreadable feed has
+              no lineups to show, so it gets no button. */}
+          {readable ? (
+            <button
+              type="button"
+              className="lbh__card-hit"
+              data-matchup={key}
+              aria-haspopup="dialog"
+              onClick={() => {
+                setOpenPlayer(null);
+                setOpenKey(key);
+              }}
+            >
+              <span className="visually-hidden">{`${summary} Show lineups.`}</span>
+            </button>
+          ) : (
+            <p className="visually-hidden">{summary}</p>
+          )}
+
+          <div aria-hidden="true">
+            <p className="lbh__tag">
+              <span>
+                {panel.leagueName}
+                {doubleheader ? ` · Game ${matchup.index + 1}` : ''}
+              </span>
+              <span className="lbh__tag-end">
+                {clock && readable && <span className="lbh__clock">{clock}</span>}
+                {!readable && <span className="lbh__clock">Feed unavailable</span>}
+                {/* A short landscape phone moves the win line up here to
+                    save the card a row (the CSS shows one or the other). */}
+                {matchup.opponent && readable && <span className="lbh__tag-wp">{pct(wp)} win</span>}
+              </span>
+            </p>
+
+            <div className={`lbh__side is-mine${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
+              <Crest team={matchup.mine} />
+              <span className="lbh__ident">
+                <span className="lbh__tn">{shortName(matchup.mine)}</span>
+                <span className="lbh__ytp">
+                  {readable ? `${mine?.yetToPlay ?? 0} to play · Proj ${score(mine?.projectedFinal, readable)}` : ''}
+                </span>
+              </span>
+              <span className="lbh__score">{score(mineLive, readable)}</span>
+            </div>
+
+            {matchup.opponent && readable && (
+              <div className="lbh__wp">
+                <div className="lbh__wp-fill" style={{ width: pct(wp) }} />
+              </div>
+            )}
+
+            {matchup.opponent ? (
+              <div className={`lbh__side${readable && theirsLive > mineLive ? ' is-leading' : ''}`}>
+                <Crest team={matchup.opponent} />
+                <span className="lbh__ident">
+                  <span className="lbh__tn">{shortName(matchup.opponent)}</span>
+                  <span className="lbh__ytp">
+                    {readable ? `${theirs?.yetToPlay ?? 0} to play · Proj ${score(theirs?.projectedFinal, readable)}` : ''}
+                  </span>
+                </span>
+                <span className="lbh__score">{score(theirsLive, readable)}</span>
+              </div>
+            ) : (
+              <p className="lbh__note">Bye week</p>
+            )}
+
+            {matchup.opponent && readable && <p className="lbh__wp-label">{pct(wp)} win</p>}
+          </div>
+        </li>
+      ) };
+    });
+  });
+
+  const pages = paginateByLeague(cards, (c) => c.leagueId, capacity);
+  const currentPage = Math.min(pageIndex, Math.max(0, pages.length - 1));
+
+  const goToPage = useCallback((i: number) => {
+    const el = pagerRef.current;
+    setPageIndex(i);
+    if (el) el.scrollTo({ left: i * el.clientWidth });
+  }, []);
+
+  // Re-measure when the number of cards changes and whenever the screen does
+  // (rotation, a tablet's split view). Never per poll: a card's height does
+  // not move with its numbers.
+  const cardCount = cards.length;
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let frame = 0;
+    const run = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const next = measureCapacity(root);
+        setCapacity((prev) => (prev === next ? prev : next));
+      });
+    };
+    run();
+    window.addEventListener('resize', run);
+    window.addEventListener('orientationchange', run);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', run);
+      window.removeEventListener('orientationchange', run);
+    };
+  }, [cardCount]);
+
+  // A re-pagination (rotation) keeps the owner on the page they were on, or
+  // the last one if it no longer exists.
+  useEffect(() => {
+    const el = pagerRef.current;
+    if (el) el.scrollTo({ left: currentPage * el.clientWidth, behavior: 'instant' as ScrollBehavior });
+  }, [pages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The slow automatic turn, so an owner who never touches the phone still
+  // sees every matchup. It waits while a sheet is open and for a while after
+  // the owner last touched the board — they are reading something.
+  useEffect(() => {
+    if (pages.length <= 1 || sheetOpen) return;
+    const wait = Math.max(PAGE_DWELL_MS, lastTouch.current + INTERACTION_HOLD_MS - Date.now());
+    const id = window.setTimeout(() => goToPage((currentPage + 1) % pages.length), wait);
+    return () => window.clearTimeout(id);
+  }, [currentPage, pages.length, sheetOpen, touchTick, goToPage]);
+
+  // Arrow keys on a tablet with a keyboard. Not while a sheet is open (its
+  // own keys are Escape) and never while something is focused for typing.
+  useEffect(() => {
+    if (pages.length <= 1 || sheetOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      e.preventDefault();
+      noteInteraction();
+      const next = currentPage + (e.key === 'ArrowRight' ? 1 : -1);
+      goToPage(Math.min(pages.length - 1, Math.max(0, next)));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [currentPage, pages.length, sheetOpen, goToPage, noteInteraction]);
+
   return (
-    <main className="lbh" data-mode="handheld" aria-label="Live scoring broadcast">
+    <main ref={rootRef} className="lbh" data-mode="handheld" aria-label="Live scoring broadcast">
       <header className="lbh__bar">
         <span className={`lbh__live${live ? ' is-live' : ''}`}>{live ? 'Live' : 'Not live'}</span>
         <span className="lbh__week">Week {week}</span>
@@ -309,6 +596,7 @@ function HandheldBoard({
           <span className={`lbh__status${statusError ? ' is-error' : ''}`}>{statusText}</span>
         )}
         {demoText && <span className="lbh__status">{demoText}</span>}
+        {onField.length > 0 && <FieldRow players={onField} />}
       </header>
 
       {redZone.length > 0 && (
@@ -319,124 +607,53 @@ function HandheldBoard({
         </p>
       )}
 
-      <ul className="lbh__cards">
-        {panels.map((panel) => {
-          const leagueScore = scores[panel.leagueId];
-          const readable = panel.status !== 'unavailable';
-
-          if (panel.matchups.length === 0) {
-            return (
-              <li key={panel.leagueId} className="lbh__card is-empty">
-                <p className="lbh__tag">{panel.leagueName}</p>
-                <p className="lbh__note">
-                  {panel.status === 'unavailable' ? 'Feed unavailable' : 'No matchup this week'}
-                </p>
-              </li>
-            );
-          }
-
-          // Every matchup is its own card — a doubleheader league is two real
-          // games against two different opponents, never `matchups[0]`.
-          return panel.matchups.map((matchup) => {
-            const mine = leagueScore?.teams[matchup.mine.franchiseId];
-            const theirs = matchup.opponent
-              ? leagueScore?.teams[matchup.opponent.franchiseId]
-              : undefined;
-            const wp = leagueScore?.winProbability[matchup.index] ?? 0.5;
-            const mineLive = mine?.live ?? 0;
-            const theirsLive = theirs?.live ?? 0;
-            const clock = matchupTimeLeft(
-              [...(mine?.players ?? []), ...(theirs?.players ?? [])],
-              games,
-              meta,
-            );
-            const doubleheader = panel.matchups.length > 1;
-            const key = matchupKey(panel.leagueId, matchup.index);
-            const summary = `${panel.leagueName}: ${matchup.mine.name} ${score(mineLive, readable)}${
-              matchup.opponent
-                ? `, ${matchup.opponent.name} ${score(theirsLive, readable)}.${readable ? ` Win probability ${pct(wp)}.` : ''}`
-                : '. No opponent this week.'
-            }${readable ? '' : ' This league’s feed could not be read.'}`;
-
-            return (
-              <li
-                key={key}
-                className={`lbh__card${readable ? ' is-tappable' : ' is-unavailable'}`}
-                style={{
-                  ['--lbh-mine' as string]: matchup.mine.swatch,
-                  ['--lbh-theirs' as string]: matchup.opponent?.swatch ?? '#334155',
-                }}
+      {pages.length > 1 ? (
+        <>
+          <div
+            ref={pagerRef}
+            className="lbh__pager"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Matchups"
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              if (!el.clientWidth) return;
+              const i = Math.round(el.scrollLeft / el.clientWidth);
+              if (i !== pageIndex) setPageIndex(i);
+            }}
+            onPointerDown={noteInteraction}
+            onWheel={noteInteraction}
+          >
+            {pages.map((page, i) => (
+              <ul
+                key={i}
+                className="lbh__cards lbh__page"
+                aria-roledescription="slide"
+                aria-label={`Page ${i + 1} of ${pages.length}`}
               >
-                {/* The whole card is the button. Its text is the summary a
-                    screen reader needs; the drawn card beside it is hidden
-                    from one, so nothing is read twice. An unreadable feed has
-                    no lineups to show, so it gets no button. */}
-                {readable ? (
-                  <button
-                    type="button"
-                    className="lbh__card-hit"
-                    data-matchup={key}
-                    aria-haspopup="dialog"
-                    onClick={() => {
-                      setOpenPlayer(null);
-                      setOpenKey(key);
-                    }}
-                  >
-                    <span className="visually-hidden">{`${summary} Show lineups.`}</span>
-                  </button>
-                ) : (
-                  <p className="visually-hidden">{summary}</p>
-                )}
-
-                <div aria-hidden="true">
-                  <p className="lbh__tag">
-                    <span>
-                      {panel.leagueName}
-                      {doubleheader ? ` · Game ${matchup.index + 1}` : ''}
-                    </span>
-                    {clock && readable && <span className="lbh__clock">{clock}</span>}
-                    {!readable && <span className="lbh__clock">Feed unavailable</span>}
-                  </p>
-
-                  <div className={`lbh__side is-mine${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
-                    <Crest team={matchup.mine} />
-                    <span className="lbh__ident">
-                      <span className="lbh__tn">{shortName(matchup.mine)}</span>
-                      <span className="lbh__ytp">
-                        {readable ? `${mine?.yetToPlay ?? 0} to play · Proj ${score(mine?.projectedFinal, readable)}` : ''}
-                      </span>
-                    </span>
-                    <span className="lbh__score">{score(mineLive, readable)}</span>
-                  </div>
-
-                  {matchup.opponent && readable && (
-                    <div className="lbh__wp">
-                      <div className="lbh__wp-fill" style={{ width: pct(wp) }} />
-                    </div>
-                  )}
-
-                  {matchup.opponent ? (
-                    <div className={`lbh__side${readable && theirsLive > mineLive ? ' is-leading' : ''}`}>
-                      <Crest team={matchup.opponent} />
-                      <span className="lbh__ident">
-                        <span className="lbh__tn">{shortName(matchup.opponent)}</span>
-                        <span className="lbh__ytp">
-                          {readable ? `${theirs?.yetToPlay ?? 0} to play · Proj ${score(theirs?.projectedFinal, readable)}` : ''}
-                        </span>
-                      </span>
-                      <span className="lbh__score">{score(theirsLive, readable)}</span>
-                    </div>
-                  ) : (
-                    <p className="lbh__note">Bye week</p>
-                  )}
-
-                  {matchup.opponent && readable && <p className="lbh__wp-label">{pct(wp)} win</p>}
-                </div>
-              </li>
-            );
-          });
-        })}
-      </ul>
+                {page.map((card) => card.node)}
+              </ul>
+            ))}
+          </div>
+          <div className="lbh__dots">
+            {pages.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`lbh__dot${i === currentPage ? ' is-current' : ''}`}
+                aria-label={`Page ${i + 1} of ${pages.length}`}
+                aria-current={i === currentPage ? 'true' : undefined}
+                onClick={() => {
+                  noteInteraction();
+                  goToPage(i);
+                }}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <ul className="lbh__cards">{cards.map((card) => card.node)}</ul>
+      )}
 
       {open && (() => {
         const { panel, matchup } = open;

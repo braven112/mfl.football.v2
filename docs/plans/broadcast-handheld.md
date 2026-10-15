@@ -171,6 +171,16 @@ changes it only when a paired owner sends a command.
    possession check the red-zone banner uses, so a player is never flagged
    while his team is on defense.
 
+Shipped as built: pages are measured on the device (grid columns × the rows
+that fit under the bar), a league's cards stay on one page wherever they fit
+(`paginateByLeague`), and the pages turn on their own every 12 s, holding
+30 s after any touch and while a sheet is open. The TV strip's rotation is
+paused in handheld mode, since the handheld board draws no strip. "On the
+field" lives in the top bar so it never costs the cards a row. On a short
+landscape phone the win line moves into the card's tag and the separate
+red-zone line is hidden (the ringed pill carries it), so two rows of cards
+plus the dots fit a sideways phone and a drive never re-paginates.
+
 ### Phase 4 — the phone as a remote for a paired TV
 
 Builds on the TV pairing from PR #1388 (`src/utils/broadcast-tv-pairing.ts`):

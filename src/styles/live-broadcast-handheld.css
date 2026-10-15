@@ -147,6 +147,77 @@
   opacity: 0.85;
 }
 
+/* ── On the field now ─────────────────────────────────────────────────────── */
+
+/* In the bar, so it never costs the cards a row: in landscape it takes the
+   bar's spare width and scrolls sideways; in portrait it wraps to its own
+   line under the bar. */
+.lbh .lbh__field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  order: 5;
+}
+
+.lbh .lbh__field-tag {
+  flex: none;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--lbh-text-faint);
+}
+
+.lbh .lbh__field-list {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.1rem;
+  list-style: none;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lbh .lbh__field-list::-webkit-scrollbar {
+  display: none;
+}
+
+.lbh .lbh__field-p {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.1rem 0.5rem 0.1rem 0.1rem;
+  border-radius: 999px;
+  background: var(--lbh-panel-2);
+  border: 1px solid var(--lbh-hairline);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+
+/* The red zone wears the banner's red, so the two read as one signal. */
+.lbh .lbh__field-p.is-redzone {
+  background: var(--lbh-redzone);
+  border-color: var(--lbh-alert);
+}
+
+.lbh__field-face {
+  --player-avatar-size: 1.5rem;
+}
+
+@media (orientation: portrait) {
+  .lbh .lbh__bar {
+    flex-wrap: wrap;
+  }
+
+  .lbh .lbh__field {
+    flex-basis: 100%;
+  }
+}
+
 /* ── The matchup cards ───────────────────────────────────────────────────── */
 
 .lbh .lbh__cards {
@@ -208,6 +279,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lbh .lbh__tag-end {
+  display: inline-flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.lbh .lbh__tag-wp {
+  display: none;
+  color: var(--lbh-text-faint);
 }
 
 .lbh .lbh__clock {
@@ -318,6 +400,23 @@
     padding: 0.35rem 0.6rem 0.4rem;
   }
 
+  /* The win line moves up into the tag, saving each card a row, so two rows
+     of cards and the page dots fit a phone held sideways. */
+  .lbh .lbh__wp-label {
+    display: none;
+  }
+
+  .lbh .lbh__tag-wp {
+    display: inline;
+  }
+
+  /* No room for a line of its own here: the ringed "on the field" pill and
+     the moment banner carry the red zone instead, and a drive starting must
+     not push the bottom row of cards off the screen. */
+  .lbh .lbh__redzone {
+    display: none;
+  }
+
   .lbh .lbh__tag {
     margin-bottom: 0.15rem;
   }
@@ -338,6 +437,67 @@
   .lbh .lbh__side {
     grid-template-columns: 1.6rem minmax(0, 1fr) auto;
   }
+}
+
+/* ── Swipe between pages (landscape, more cards than fit) ────────────────── */
+
+/* Native horizontal scrolling with one snap point per page: the swipe is the
+   browser's own, momentum and all, and a page never stops half-turned. */
+.lbh .lbh__pager {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.lbh .lbh__pager::-webkit-scrollbar {
+  display: none;
+}
+
+.lbh .lbh__pager > .lbh__page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.lbh .lbh__dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+/* A 1.5rem touch target around a small dot. */
+.lbh .lbh__dot {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.lbh .lbh__dot::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--lbh-text-faint);
+  opacity: 0.5;
+}
+
+.lbh .lbh__dot.is-current::before {
+  background: var(--lbh-text);
+  opacity: 1;
+}
+
+.lbh .lbh__dot:focus-visible {
+  outline: 2px solid var(--lbh-focus);
+  outline-offset: -2px;
+  border-radius: 50%;
 }
 
 /* ── Tap a card: the whole card is the button ─────────────────────────────── */
@@ -769,6 +929,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .lbh .lbh__pager {
+    scroll-behavior: auto;
+  }
+
   .lbh .lbh__banner,
   .lbh .lbh__sheet,
   .lbh .lbh__pcard {

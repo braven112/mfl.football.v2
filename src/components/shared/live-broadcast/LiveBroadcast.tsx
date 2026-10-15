@@ -652,8 +652,9 @@ export default function LiveBroadcast({ pageData }: Props) {
   // ── the strip's rotation ─────────────────────────────────────────────────
   // Pauses while a stage occludes the strip, and resumes on the page it was on
   // with a FULL fresh dwell — the room's attention was on the reveal, so the
-  // page they come back to has effectively not been read yet.
-  const stripPaused = !!current || isQuiet;
+  // page they come back to has effectively not been read yet. The handheld
+  // board draws no strip (it pages its own cards), so there it never turns.
+  const stripPaused = !!current || isQuiet || mode === 'handheld';
 
   useEffect(() => {
     if (stripPaused || pages.length <= 1) return;
