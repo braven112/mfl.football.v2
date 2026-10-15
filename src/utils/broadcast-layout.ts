@@ -252,6 +252,44 @@ export interface BuildStripInput {
   rowsPerPage: number;
 }
 
+/** Every NFL game on the slate, keyed by both clubs' codes. */
+export function gamesByTeam(games: readonly NflGame[]): Map<string, NflGame> {
+  const byTeam = new Map<string, NflGame>();
+  for (const g of games) {
+    byTeam.set(g.home.code, g);
+    byTeam.set(g.away.code, g);
+  }
+  return byTeam;
+}
+
+/**
+ * A player's game, as every broadcast surface prints it: the TV strip and the
+ * handheld lineup read this one function so the two can never disagree.
+ */
+export function playerGameClock(
+  row: Pick<LivePlayerRow, 'secondsRemaining'>,
+  nflTeam: string | undefined,
+  byTeam: ReadonlyMap<string, NflGame>,
+): { clock: string; state: StripRow['state'] } {
+  const game = nflTeam ? byTeam.get(nflTeam) : undefined;
+  const state = resolveGameState(nflGameStateFromSeconds(row.secondsRemaining), game);
+  // The clock is ESPN's or it is a STATE word. Never a number derived from
+  // MFL's `gameSecondsRemaining`, which does not tick and drifts all
+  // afternoon into a confident-looking lie.
+  const clock = game
+    ? game.state === 'post'
+      ? 'Final'
+      : game.state === 'pre'
+        ? 'Yet to play'
+        : game.shortDetail || 'In progress'
+    : state === 'final'
+      ? 'Final'
+      : state === 'not-started'
+        ? 'Yet to play'
+        : 'In progress';
+  return { clock, state };
+}
+
 /** Resolve one franchise's starters into strip rows. */
 function rowsFor(
   rows: readonly LivePlayerRow[],
@@ -259,16 +297,11 @@ function rowsFor(
   games: readonly NflGame[],
   ctx: { leagueId: string; leagueName: string; side: MomentSide; crest: string; crestStroke?: string },
 ): StripRow[] {
-  const byTeam = new Map<string, NflGame>();
-  for (const g of games) {
-    byTeam.set(g.home.code, g);
-    byTeam.set(g.away.code, g);
-  }
+  const byTeam = gamesByTeam(games);
 
   return rows.map((row) => {
     const who = meta[row.id];
-    const game = who?.nflTeam ? byTeam.get(who.nflTeam) : undefined;
-    const state = resolveGameState(nflGameStateFromSeconds(row.secondsRemaining), game);
+    const { clock, state } = playerGameClock(row, who?.nflTeam, byTeam);
     return {
       key: `${ctx.leagueId}:${ctx.side}:${row.id}`,
       leagueId: ctx.leagueId,
@@ -282,20 +315,7 @@ function rowsFor(
       crest: ctx.crest,
       ...(ctx.crestStroke ? { crestStroke: ctx.crestStroke } : {}),
       points: row.live,
-      // The clock is ESPN's or it is a STATE word. Never a number derived from
-      // MFL's `gameSecondsRemaining`, which does not tick and drifts all
-      // afternoon into a confident-looking lie.
-      clock: game
-        ? game.state === 'post'
-          ? 'Final'
-          : game.state === 'pre'
-            ? 'Yet to play'
-            : game.shortDetail || 'In progress'
-        : state === 'final'
-          ? 'Final'
-          : state === 'not-started'
-            ? 'Yet to play'
-            : 'In progress',
+      clock,
       state,
     };
   });

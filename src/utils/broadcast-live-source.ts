@@ -26,7 +26,7 @@ import {
 } from './live-scoring-snapshot';
 import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
-import { computeTeamTotals } from './live-scoring-view';
+import { attachRowProjections, computeTeamTotals } from './live-scoring-view';
 import { winProbability } from './live-win-probability';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from './league-year';
 import { projectionsForWeek, readLeagueFeed } from './sunday-ticket-sources';
@@ -167,7 +167,11 @@ export function scoreLeague(
       yetToPlayFallback: snapshot.playersYetToPlay[fid],
       projections,
     });
-    return { ...totals, players: rows };
+    // Each row carries THIS league's projection for the handheld board's
+    // player card. Stamped on the row, never on `meta`: `meta` is shared by
+    // every league on the board and holds a deliberate 0. The TV reads no
+    // row projection, so this changes nothing it draws.
+    return { ...totals, players: attachRowProjections(rows, projections) };
   };
 
   teams[franchiseId] = totalsFor(franchiseId);
