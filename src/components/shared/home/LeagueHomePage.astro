@@ -7,11 +7,14 @@
  * The page owns the shell every league shares:
  *   install banner     the app prompt, for a signed-in owner of THIS league
  *   hero               LeagueHero (or the preseason live-scoring test drive)
- *   Owners' Poll       when the league runs one and its window is open
+ *   rail               the league's news desk (SchefterFeedCompact) — the
+ *                      right-hand column on desktop, stacked straight under
+ *                      the hero on a phone (opening on three stories)
+ *   Owners' Poll       the quick-vote pop-up, when the league runs one and its
+ *                      window is open (the homepage card was removed Oct 2026)
  *   quick links        the league's pages from the page directory
  *   What's New         platform updates, minus the one the hero features
  *   debug strip        under ?testDate
- *   rail               the league's news desk (SchefterFeedCompact)
  *
  * A league's own cards come in through slots, in this order: `snapshot` (its
  * team card), `after-snapshot`, `whats-next`, `standings`, `extras`. They are
@@ -28,13 +31,12 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../SchefterFeedCompact.astro';
 import LeagueHero from '../league-hero/LeagueHero.astro';
-import OwnersPollHomeCard from '../owners-poll/OwnersPollHomeCard.astro';
+import OwnersPollHomePopup from '../owners-poll/OwnersPollHomePopup.astro';
 import type { BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
 import LiveScoringTestDrive from '../LiveScoringTestDrive.astro';
 import QuickLinks, { type QuickLinkPage } from '../hp-sections/QuickLinks.astro';
 import WhatsNewRow from '../WhatsNewRow.astro';
 import InstallAppPrompt from '../pwa/InstallAppPrompt.astro';
-import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import type { SchefterPost } from '../../../types/schefter';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 
@@ -63,8 +65,8 @@ interface Props {
     standings?: any[];
     userFranchiseId?: string;
   };
-  /** The Owners' Poll card, or null when the league shows none now. */
-  ownersPoll: { issue: any; ballotHref: string; ballotStandings?: BallotStandingsRow[] } | null;
+  /** The Owners' Poll pop-up, or null when the league's poll is not open now. */
+  ownersPoll: { ballotHref: string; ballotStandings?: BallotStandingsRow[] } | null;
   /** Passed to QuickLinks; undefined leaves its default. */
   quickLinksAuthenticated?: boolean;
   /** QuickLinks' cards, for a league with no page-directory entries; omit to read the directory. */
@@ -104,7 +106,13 @@ const {
 <TheLeagueLayout title={title}>
   <div class="league-hp">
     {installBanner && <InstallAppPrompt variant="banner" leagueName={installBanner.leagueName} leagueSlug={leagueSlug} />}
-    <section class="league-hp__main" aria-labelledby="league-hp-hero-heading">
+    {/*
+      DOM order is hero → rail → everything else, so a phone (one column)
+      reads the news straight under the hero. On desktop the rail is placed
+      in the right-hand column spanning both rows, which looks exactly as it
+      did when it came last in the source.
+    */}
+    <section class="league-hp__lead" aria-labelledby="league-hp-hero-heading">
       <h2 id="league-hp-hero-heading" class="visually-hidden">League Overview</h2>
 
       {testDriveHero ? (
@@ -120,11 +128,23 @@ const {
           backdrop={hero.backdrop}
         />
       )}
+    </section>
 
+    <aside class="league-hp__sidebar" aria-label={rail.label} tabindex="0">
+      <SchefterFeedCompact
+        posts={rail.posts}
+        isAuthenticated={rail.isAuthenticated}
+        userFranchiseId={rail.userFranchiseId}
+        personalized={rail.personalized}
+        forYouIds={rail.forYouIds}
+        watching={rail.watching}
+        emptyText={rail.emptyText}
+      />
+    </aside>
+
+    <div class="league-hp__main">
       {ownersPoll && (
-        <OwnersPollHomeCard
-          issue={ownersPoll.issue}
-          teams={getLeagueTeamBrands(leagueSlug)}
+        <OwnersPollHomePopup
           leagueSlug={leagueSlug}
           ballotHref={ownersPoll.ballotHref}
           ballotStandings={ownersPoll.ballotStandings}
@@ -151,19 +171,7 @@ const {
           </div>
         </div>
       )}
-    </section>
-
-    <aside class="league-hp__sidebar" aria-label={rail.label} tabindex="0">
-      <SchefterFeedCompact
-        posts={rail.posts}
-        isAuthenticated={rail.isAuthenticated}
-        userFranchiseId={rail.userFranchiseId}
-        personalized={rail.personalized}
-        forYouIds={rail.forYouIds}
-        watching={rail.watching}
-        emptyText={rail.emptyText}
-      />
-    </aside>
+    </div>
   </div>
 </TheLeagueLayout>
 
@@ -171,18 +179,26 @@ const {
   .league-hp {
     display: grid;
     grid-template-columns: 1fr 380px;
-    gap: 1.5rem;
+    gap: 2rem 1.5rem;
     align-items: start;
   }
 
+  .league-hp__lead,
   .league-hp__main {
+    grid-column: 1;
     min-width: 0;
+  }
+
+  .league-hp__main {
     display: flex;
     flex-direction: column;
     gap: 2rem;
   }
 
+  /* Right-hand column, beside both the hero and the cards below it. */
   .league-hp__sidebar {
+    grid-column: 2;
+    grid-row: span 2;
     min-width: 0;
     position: sticky;
     top: 2rem;
@@ -207,25 +223,31 @@ const {
   @container (max-width: 1024px) {
     .league-hp {
       grid-template-columns: 1fr 320px;
-      gap: 1rem;
+      column-gap: 1rem;
     }
   }
 
   @container (max-width: 880px) {
     .league-hp {
       grid-template-columns: 1fr;
-      gap: 1rem;
     }
 
+    /* Stacked under the hero: the feed opens on three stories plus "Show
+       more" (SchefterFeedCompact reads --sfc-stacked), so the owner's team
+       card is still near the top of the page. */
     .league-hp__sidebar {
+      grid-column: 1;
+      grid-row: auto;
       position: static;
       max-height: none;
       overflow-y: visible;
-      /* Restore the breathing room above the sidebar once it stacks below the
-         main column. The desktop margin-top was removed because it offset the
-         two columns; in single-column flow there's no alignment to preserve, so
-         the extra separation is purely visual and worth keeping. */
-      margin-top: 2rem;
+      --sfc-stacked: 1;
+    }
+
+    /* Hold those three before the feed's script runs (it sets
+       data-sfc-ready), so the page does not paint ten and then collapse. */
+    .league-hp__sidebar :global(.sfc-feed:not([data-sfc-ready]) .sfc-feed__item:nth-child(n + 4)) {
+      display: none;
     }
   }
 </style>

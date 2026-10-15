@@ -139,7 +139,19 @@ const spriteUrl = spriteUrlFor(Astro.url);
     if (!list) return;
 
     const PAGE_SIZE = 5;
-    const initialLimit = parseInt(list.getAttribute('data-initial-limit') ?? '10', 10);
+    // A page that stacks the rail under its hero on a phone (both homepages)
+    // sets `--sfc-stacked: 1` on the rail at that width, and the feed opens on
+    // three stories there instead of ten, so it does not bury the owner's team
+    // card. Read per render (not once): the custom property follows the
+    // container query, so a rotated phone picks up the other limit on its next
+    // tab switch. The page holds the same three with a CSS rule until this
+    // runs; keep the two in step.
+    const STACKED_LIMIT = 3;
+    const fullLimit = parseInt(list.getAttribute('data-initial-limit') ?? '10', 10);
+    const openingLimit = () =>
+      getComputedStyle(feed).getPropertyValue('--sfc-stacked').trim() === '1'
+        ? Math.min(STACKED_LIMIT, fullLimit)
+        : fullLimit;
     const items = Array.from(list.querySelectorAll('.sfc-feed__item')) as HTMLElement[];
     const moreWrap = feed.querySelector('[data-sfc-load-more-wrap]') as HTMLElement | null;
     const btn = feed.querySelector('[data-sfc-load-more]') as HTMLButtonElement | null;
@@ -147,7 +159,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     const tabs = Array.from(feed.querySelectorAll('[data-sfc-tab]')) as HTMLButtonElement[];
 
     let mode = feed.getAttribute('data-sfc-active-tab') ?? 'all';
-    let showing = initialLimit;
+    let showing = openingLimit();
 
     const matching = () =>
       mode === 'foryou' ? items.filter((el) => el.dataset.foryou === 'true') : items;
@@ -173,7 +185,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
       tab.addEventListener('click', () => {
         mode = tab.dataset.sfcTab ?? 'all';
         // A tab switch is a fresh view — collapse back to one page.
-        showing = initialLimit;
+        showing = openingLimit();
         for (const t of tabs) {
           const active = t === tab;
           t.classList.toggle('sfc-tab--active', active);
@@ -185,6 +197,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     }
 
     render();
+    feed.setAttribute('data-sfc-ready', '');
   }
 
   document.addEventListener('astro:page-load', initCompactFeed);

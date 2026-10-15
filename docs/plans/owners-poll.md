@@ -42,7 +42,7 @@ are now separate features, with one flow: **vote → see the results.**
 - **Tuesday's Pecking Order GroupMe post has no poll line** (`buildOpenLine` is
   gone). The poll's chat presence is Claude's results post later in the week
   (`buildRevealMessage`), which ends with the vote link. The feed reveal post,
-  every push, and the homepage card all link `/owners-poll` too
+  every push, and the homepage pop-up all link `/owners-poll` too
   (`BALLOT_PATH` in `owners-poll-pass.mjs`).
 - Results are still TALLIED into the weekly issue file — that is storage, not
   presentation, and moving it would mean migrating every archived week.
