@@ -654,3 +654,28 @@ cadence pair, and the numbers differ deliberately by payload cost. The
 difference is that this one's invariants are now tested rather than
 commented — `useNflScoreboard.ts:93` reasons about the same
 idle-poll-vs-stale-window relationship in prose.
+
+## 2026-10-15 — the MFL Live landing (`/live/broadcast`) and TV pairing (`/tv`)
+
+The board got a product page in MFL Live; the fullscreen board itself is
+unchanged and the league routes (`/theleague/broadcast`, `/afl-fantasy/broadcast`)
+still render the old `LiveBroadcastPage`.
+
+- **The preview IS the real island**, rendered at the viewport's own size
+  (`--bcl-vw` × `--bcl-vh`) and shrunk with `transform: scale(--bcl-s)` inside
+  the TV frame (`BroadcastLanding.astro`). Fullscreen escapes the transform
+  because the top layer drops it, so "Go full screen" requests fullscreen on
+  that same `.lbc.is-board` node. Do not swap the preview for a screenshot or
+  a second instance — two islands poll twice and fire every reveal twice.
+- **No Fullscreen API (iPhone)** → "Go full screen" is a plain link to
+  `?view=board`, the island alone in the page.
+- **A TV gets a watch-only PASS, never a session.** Device-code flow
+  (`src/utils/broadcast-tv-pairing.ts`): `/tv` mints a 6-char code + QR, the
+  phone approves at `/live/broadcast/pair`, the TV's poll collects an HttpOnly
+  `bc_tv` cookie (opaque token; Redis holds only its sha256). A session JWT
+  carries the owner's MFL cookie, so handing one to a TV would hand it write
+  access to every league. The pass resolves to its owner ONLY through
+  `getBroadcastViewer`, and only the board page and `/api/broadcast-live` may
+  call it — `tests/broadcast-tv-pass-scope.test.ts` pins that.
+- A dead pass is cleared by the board route, not by `/tv`, so the two pages
+  cannot bounce a revoked TV between them.

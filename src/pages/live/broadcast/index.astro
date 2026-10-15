@@ -1,0 +1,143 @@
+---
+/**
+ * MFL Live — the Broadcast. `/live/broadcast`.
+ *
+ * The board's home in MFL Live, where it is sold: a landing that reads like a
+ * product (the live board playing inside a TV frame, one big "Go full screen",
+ * the leagues it watches, and pairing a television by QR code), which hands
+ * off to the same fullscreen board the league routes have always shown.
+ *
+ * Three kinds of visitor, and the route decides which before anything renders:
+ *
+ *  - an owner signed in to MFL Live (`getMflLiveUser`);
+ *  - a TELEVISION holding a watch-only pass from `/tv`. It has no session; its
+ *    pass resolves to the owner who paired it, through `getBroadcastViewer`,
+ *    which is read here and by the board's poll and nowhere else;
+ *  - anyone else, who gets the pitch and the two ways in.
+ *
+ * The route owns every cookie write (`rememberBroadcastChoices`, clearing a
+ * dead TV pass): `Astro.cookies.set()` from an imported component runs after
+ * the headers are committed and blanks the page.
+ *
+ * `?view=board` is the board alone, in the page. It exists for the browsers
+ * with no Fullscreen API — an iPhone above all — where "Go full screen" has
+ * nothing to call and becomes a link here instead.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import BroadcastLanding from '../../../components/shared/live-broadcast/BroadcastLanding.astro';
+import LiveBroadcast from '../../../components/shared/live-broadcast/LiveBroadcast';
+import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
+import { rememberBroadcastChoices } from '../../../utils/broadcast-cookies';
+import { assembleBroadcastBoard, toPageData, type AssembledBoard } from '../../../utils/broadcast-board';
+import {
+  BROADCAST_LEAGUE_COOKIE,
+  BROADCAST_SOUND_COOKIE,
+  resolveBroadcastSound,
+} from '../../../utils/broadcast-selection';
+import { listPasses, ownerKeyFor, TV_PASS_COOKIE, type PassSummary } from '../../../utils/broadcast-tv-pairing';
+import { getPairingStore } from '../../../utils/broadcast-tv-store';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import '../../../styles/live-broadcast.css';
+import '../../../styles/utilities.css';
+
+export const prerender = false;
+
+rememberBroadcastChoices(Astro.url, Astro.cookies);
+
+const viewer = await getBroadcastViewer(Astro.request);
+
+// A pass that no longer resolves — revoked, or past its thirty days — is
+// cleared here, so `/tv` (which sends any pass-holder straight to this page)
+// makes a fresh code instead of bouncing between the two.
+if (!viewer && Astro.cookies.has(TV_PASS_COOKIE)) {
+  Astro.cookies.delete(TV_PASS_COOKIE, { path: '/' });
+}
+
+// Same clocks and clamps as the league routes' board (LiveBroadcastPage).
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const year = getCurrentSeasonYear(testDate);
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const explicitWeek = Number.isFinite(parsedWeek) && parsedWeek >= 1 && parsedWeek <= 25;
+const week = explicitWeek ? parsedWeek : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
+
+const sound = resolveBroadcastSound(
+  Astro.url.searchParams.get('sound'),
+  Astro.cookies.get(BROADCAST_SOUND_COOKIE)?.value ?? null,
+);
+// Never remembered — see LiveBroadcastPage.
+const demo = Astro.url.searchParams.get('demo') === '1';
+const boardOnly = Astro.url.searchParams.get('view') === 'board';
+
+let board: AssembledBoard | null = null;
+let failed = false;
+let tvs: PassSummary[] = [];
+
+if (viewer) {
+  try {
+    board = await assembleBroadcastBoard({
+      user: viewer.user,
+      leaguesParam: Astro.url.searchParams.get('leagues'),
+      // A TV's own choice first, then the set the phone that paired it watched.
+      leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      week,
+      year,
+    });
+  } catch {
+    failed = true;
+  }
+
+  // Only an owner sees the list of TVs; a TV sees only itself.
+  if (viewer.via === 'session') {
+    try {
+      const store = await getPairingStore();
+      if (store) tvs = await listPasses(store, ownerKeyFor(viewer.user));
+    } catch {
+      tvs = [];
+    }
+  }
+}
+
+const pageData = board
+  ? toPageData(board, { week, year, sound, pathname: Astro.url.pathname, demo })
+  : null;
+
+const title = boardOnly ? `Broadcast — Week ${week} — MFL Live` : 'Broadcast — MFL Live';
+---
+
+<MflAppLayout
+  title={title}
+  description="Every score from every league you play in, built for the TV across the room."
+>
+  {boardOnly && pageData ? (
+    <div class="bcl-board-only">
+      <a class="bcl-board-only__back" href="/live/broadcast">&larr; Broadcast</a>
+      <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
+    </div>
+  ) : (
+    <BroadcastLanding
+      viewer={viewer ? { via: viewer.via, name: viewer.user.name, device: viewer.pass?.device ?? null } : null}
+      board={board}
+      pageData={pageData}
+      failed={failed}
+      week={week}
+      explicitWeek={explicitWeek}
+      sound={sound}
+      tvs={tvs}
+      host={Astro.url.host.replace(/^www\./, '')}
+    >
+      {pageData && <LiveBroadcast slot="board" client:load pageData={JSON.stringify(pageData)} />}
+    </BroadcastLanding>
+  )}
+</MflAppLayout>
+
+<style>
+  .bcl-board-only__back {
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+</style>

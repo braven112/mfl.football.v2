@@ -1,0 +1,330 @@
+---
+/**
+ * MFL Live — approve a TV. Where the QR code on `/tv` lands, on a phone.
+ *
+ * Signed-in owners only: approving mints a watch-only pass for THIS session's
+ * owner (see `broadcast-tv-pairing.ts`). A signed-out phone is sent to sign in
+ * and brought straight back here, code and all.
+ *
+ * With no `?code=` this is the type-it-in form, for anyone pairing without a
+ * camera.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import { getMflLiveUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import {
+  formatUserCode,
+  normalizeUserCode,
+  peekPairing,
+  USER_CODE_LENGTH,
+  type Pairing,
+} from '../../../utils/broadcast-tv-pairing';
+import { getPairingStore } from '../../../utils/broadcast-tv-store';
+import { discoverBoardLeagues } from '../../../utils/cross-league-live';
+import { BROADCAST_LEAGUE_COOKIE, resolveBroadcastLeagues } from '../../../utils/broadcast-selection';
+import '../../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const user = getMflLiveUser(Astro.request);
+if (!user) {
+  return Astro.redirect(mflLoginUrl(Astro.url.pathname + Astro.url.search), 302);
+}
+
+const rawCode = Astro.url.searchParams.get('code');
+const code = normalizeUserCode(rawCode);
+const typedBadCode = rawCode !== null && rawCode.trim() !== '' && !code;
+
+let pairing: Pairing | null = null;
+let storeDown = false;
+if (code) {
+  const store = await getPairingStore();
+  if (store) pairing = await peekPairing(store, code).catch(() => null);
+  else storeDown = true;
+}
+
+// What the TV will show: the league set THIS phone's broadcast is watching,
+// which is exactly what approval copies onto the pass.
+let leagueNames: string[] = [];
+if (pairing?.status === 'pending') {
+  try {
+    const leagues = await discoverBoardLeagues(user);
+    const { enabled } = resolveBroadcastLeagues(
+      null,
+      Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
+      leagues,
+    );
+    leagueNames = leagues.filter((l) => enabled.includes(l.id)).map((l) => l.name);
+  } catch {
+    leagueNames = [];
+  }
+}
+
+const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
+  ? 'enter'
+  : storeDown
+    ? 'down'
+    : !pairing
+      ? 'expired'
+      : pairing.status === 'pending'
+        ? 'confirm'
+        : 'used';
+---
+
+<MflAppLayout title="Pair a TV — MFL Live" description="Send your MFL Live broadcast to a TV.">
+  <section class="pair" aria-labelledby="pair-title">
+    <a class="pair__back" href="/live/broadcast">&larr; Broadcast</a>
+
+    {state === 'confirm' && pairing && code && (
+      <div class="pair__card" data-pair-confirm data-code={code}>
+        <p class="pair__eyebrow">Pair a TV</p>
+        <h1 id="pair-title" class="pair__title">Send your broadcast to this {pairing.device}?</h1>
+        <p class="pair__code">{formatUserCode(code)}</p>
+        <p class="pair__lede">Check that this matches the code on the TV.</p>
+
+        {leagueNames.length > 0 && (
+          <div class="pair__leagues">
+            <p class="pair__label">It will show</p>
+            <ul>
+              {leagueNames.map((name) => <li>{name}</li>)}
+            </ul>
+          </div>
+        )}
+
+        <p class="pair__fine">
+          The TV can only watch your scoreboard. It can&rsquo;t see or change anything else in
+          your leagues, and you can unpair it any time from the Broadcast page.
+        </p>
+
+        <div class="pair__actions">
+          <button type="button" class="cta cta--primary pair__go" data-pair-approve>Approve</button>
+          <a class="cta cta--ghost" href="/live/broadcast">Cancel</a>
+        </div>
+        <p class="pair__result" data-pair-result role="status" aria-live="polite"></p>
+      </div>
+    )}
+
+    {(state === 'enter' || state === 'expired' || state === 'used' || state === 'down') && (
+      <div class="pair__card">
+        <p class="pair__eyebrow">Pair a TV</p>
+        <h1 id="pair-title" class="pair__title">
+          {state === 'enter' && 'Enter the code on your TV'}
+          {state === 'expired' && 'That code has expired'}
+          {state === 'used' && 'That code has already been used'}
+          {state === 'down' && 'Pairing is unavailable right now'}
+        </h1>
+        <p class="pair__lede">
+          {state === 'enter' && (
+            <>On the TV&rsquo;s web browser, go to <strong>{Astro.url.host}/tv</strong>. It shows a six-character code.</>
+          )}
+          {state === 'expired' && 'Codes last five minutes. The TV makes a fresh one on its own, so enter the new one.'}
+          {state === 'used' && 'If your TV still shows a code, enter the one on screen now.'}
+          {state === 'down' && 'Give it a minute and try again.'}
+        </p>
+        <form class="pair__form" method="get" action="/live/broadcast/pair">
+          <label class="pair__label" for="pair-code">Code</label>
+          <input
+            id="pair-code"
+            class="pair__input"
+            name="code"
+            inputmode="text"
+            autocomplete="one-time-code"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength={USER_CODE_LENGTH + 2}
+            placeholder="K7Q 4M2"
+            required
+          />
+          {typedBadCode && <p class="pair__error">Codes are six letters and numbers, like K7Q 4M2.</p>}
+          <button type="submit" class="cta cta--primary pair__go">Continue</button>
+        </form>
+      </div>
+    )}
+  </section>
+</MflAppLayout>
+
+<script>
+  function initPairApprove() {
+    const root = document.querySelector<HTMLElement>('[data-pair-confirm]');
+    if (!root) return;
+    const button = root.querySelector<HTMLButtonElement>('[data-pair-approve]');
+    const result = root.querySelector<HTMLElement>('[data-pair-result]');
+    if (!button || !result) return;
+
+    // ASSIGNED, not added: a re-run replaces the handler instead of stacking.
+    button.onclick = async () => {
+      button.disabled = true;
+      result.textContent = 'Approving…';
+      try {
+        const res = await fetch('/api/broadcast-tv/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ code: root.dataset.code }),
+        });
+        const body = (await res.json()) as { result?: string };
+        if (body.result === 'approved') {
+          root.classList.add('is-done');
+          result.textContent = 'Done. Your TV is switching to the board now.';
+          button.textContent = 'Approved';
+          return;
+        }
+        result.textContent =
+          body.result === 'expired'
+            ? 'That code expired. Enter the new one your TV is showing.'
+            : body.result === 'already-used'
+              ? 'That code was already used.'
+              : body.result === 'slow-down'
+                ? 'Too many tries. Wait a few minutes and try again.'
+                : 'Something went wrong. Try again.';
+      } catch {
+        result.textContent = 'Couldn’t reach MFL Live. Check your connection and try again.';
+      }
+      button.disabled = false;
+    };
+  }
+
+  initPairApprove();
+  document.addEventListener('astro:page-load', initPairApprove);
+</script>
+
+<style>
+  .pair {
+    max-width: 32rem;
+    margin: 0 auto;
+  }
+
+  .pair__back {
+    display: inline-block;
+    margin-bottom: 1rem;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .pair__card {
+    padding: clamp(1.25rem, 5vw, 2rem);
+    border-radius: 1rem;
+    background: var(--card-bg);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+  }
+
+  .pair__eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-xs);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--league-accent);
+  }
+
+  .pair__title {
+    margin: 0 0 1rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 6vw, 2.25rem);
+    line-height: 1.05;
+    color: var(--color-text-primary);
+  }
+
+  .pair__code {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    letter-spacing: 0.1em;
+    color: var(--color-text-primary);
+  }
+
+  .pair__lede {
+    margin: 0.25rem 0 1.25rem;
+    color: var(--color-text-secondary);
+  }
+
+  .pair__lede strong {
+    color: var(--color-text-primary);
+  }
+
+  .pair__label {
+    display: block;
+    margin: 0 0 0.4rem;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .pair__leagues ul {
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .pair__leagues li {
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+  }
+
+  .pair__fine {
+    margin: 0 0 1.5rem;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+  }
+
+  .pair__actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .pair__go {
+    flex: 1;
+    justify-content: center;
+    padding: 0.85rem 1.25rem;
+    font-size: var(--font-size-base);
+  }
+
+  .pair__result {
+    min-height: 1.5em;
+    margin: 1rem 0 0;
+    color: var(--color-text-secondary);
+  }
+
+  .is-done .pair__result {
+    color: var(--color-success, #2e8743);
+    font-weight: 600;
+  }
+
+  .pair__form {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .pair__input {
+    box-sizing: border-box;
+    width: 100%;
+    font: inherit;
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
+  }
+
+  .pair__error {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--league-accent);
+  }
+</style>

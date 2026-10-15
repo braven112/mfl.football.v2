@@ -1,0 +1,338 @@
+---
+/**
+ * mfl.football/tv — put the broadcast on a television.
+ *
+ * The address is short on purpose: it is typed with a TV remote, one letter at
+ * a time, on an on-screen keyboard. Everything after it is done on a phone.
+ *
+ * The pairing is started HERE, in the frontmatter, and the QR code is drawn
+ * server-side as an inline SVG. A TV browser therefore shows a working code
+ * with no JavaScript at all; script only adds the wait-and-go (polling for
+ * approval, then navigating to the board). See `broadcast-tv-pairing.ts` for
+ * the flow and why the TV gets a watch-only pass rather than a session.
+ */
+import QRCode from 'qrcode';
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { getMflLiveUser } from '../utils/auth';
+import {
+  deviceLabel,
+  formatUserCode,
+  PAIRING_TTL_S,
+  startPairing,
+  TV_PASS_COOKIE,
+} from '../utils/broadcast-tv-pairing';
+import { getPairingStore } from '../utils/broadcast-tv-store';
+import { checkRateLimit } from '../utils/rate-limit';
+
+export const prerender = false;
+
+// Already watching: a TV that holds a pass, or someone signed in on this very
+// browser, goes straight to the board. A pass that has since been revoked is
+// caught there, and the board clears the dead cookie, so this cannot loop.
+if (Astro.cookies.has(TV_PASS_COOKIE) || getMflLiveUser(Astro.request)) {
+  return Astro.redirect('/live/broadcast', 302);
+}
+
+// Starting a pairing is unauthenticated by nature, so it is limited by
+// address. Thirty codes in ten minutes is far past any real TV refreshing.
+const ip =
+  Astro.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+  Astro.clientAddress ||
+  'unknown';
+const limit = await checkRateLimit('broadcast-tv-start', ip, 30, 10 * 60);
+
+let pairing: { userCode: string; deviceCode: string; expiresAt: number } | null = null;
+let qrSvg = '';
+let pairUrl = '';
+if (limit.allowed) {
+  const store = await getPairingStore();
+  if (store) {
+    try {
+      pairing = await startPairing(store, { device: deviceLabel(Astro.request.headers.get('user-agent')) });
+      // Built with the URL constructor against THIS host, never concatenated:
+      // a TV on staging pairs through staging.
+      const url = new URL('/live/broadcast/pair', Astro.url.origin);
+      url.searchParams.set('code', pairing.userCode);
+      pairUrl = url.toString();
+      qrSvg = await QRCode.toString(pairUrl, {
+        type: 'svg',
+        margin: 0,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#0b0c0f', light: '#ffffff' },
+      });
+    } catch {
+      pairing = null;
+    }
+  }
+}
+
+const shortHost = Astro.url.host.replace(/^www\./, '');
+---
+
+<MflAppLayout title="Watch on your TV — MFL Live" description="Pair this TV with your MFL Live broadcast.">
+  <section class="tvp" aria-labelledby="tvp-title">
+    {pairing ? (
+      <div
+        class="tvp__grid"
+        data-tv-pairing
+        data-device={pairing.deviceCode}
+        data-expires={String(pairing.expiresAt)}
+      >
+        <div class="tvp__copy">
+          <p class="tvp__eyebrow"><span class="tvp__dot" aria-hidden="true"></span> MFL Live · Broadcast</p>
+          <h1 id="tvp-title" class="tvp__title">Put your Sunday on this TV</h1>
+          <ol class="tvp__steps">
+            <li><span>1</span><p>Point your phone&rsquo;s camera at the code.</p></li>
+            <li><span>2</span><p>Sign in to MFL Live if it asks, then tap <strong>Approve</strong>.</p></li>
+            <li><span>3</span><p>This screen switches to your board on its own.</p></li>
+          </ol>
+          <p class="tvp__alt">
+            No camera handy? On your phone, go to <strong>{shortHost}/live/broadcast/pair</strong> and enter the code.
+          </p>
+        </div>
+
+        <div class="tvp__card">
+          <div class="tvp__qr" set:html={qrSvg} role="img" aria-label="QR code that opens the pairing page on your phone"></div>
+          <p class="tvp__code-label">Or enter this code</p>
+          <p class="tvp__code" aria-live="off">{formatUserCode(pairing.userCode)}</p>
+          <p class="tvp__status" data-tv-status aria-live="polite">
+            Waiting for your phone&hellip;
+          </p>
+        </div>
+      </div>
+    ) : (
+      <div class="tvp__fail">
+        <h1 id="tvp-title" class="tvp__title">Couldn&rsquo;t make a code just now</h1>
+        <p class="tvp__alt">
+          {limit.allowed
+            ? 'Pairing is unavailable for the moment. Give it a minute and refresh this page.'
+            : 'Too many codes from this network in the last few minutes. Wait a little, then refresh.'}
+        </p>
+        <a class="cta cta--primary" href="/tv">Try again</a>
+      </div>
+    )}
+  </section>
+</MflAppLayout>
+
+<script>
+  /**
+   * Wait for the phone, then go. Polls every three seconds; on approval the
+   * poll response itself carries the pass as an HttpOnly cookie, so all this
+   * script does is navigate. On expiry it reloads for a fresh code.
+   *
+   * Gated on a node the page swap replaces, and the timer is cleared on every
+   * init, so a ClientRouter navigation away and back never leaves two pollers.
+   */
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  function initTvPairing() {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    const root = document.querySelector<HTMLElement>('[data-tv-pairing]');
+    if (!root) return;
+    const deviceCode = root.dataset.device ?? '';
+    const expires = Number(root.dataset.expires ?? '0');
+    const status = root.querySelector<HTMLElement>('[data-tv-status]');
+
+    const tick = async () => {
+      if (!document.body.contains(root)) return;
+      if (Date.now() > expires) {
+        window.location.reload();
+        return;
+      }
+      try {
+        const res = await fetch('/api/broadcast-tv/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ deviceCode }),
+        });
+        const body = (await res.json()) as { status?: string; next?: string };
+        if (body.status === 'approved') {
+          if (status) status.textContent = 'Approved. Starting your board…';
+          root.classList.add('is-approved');
+          window.location.href = body.next || '/live/broadcast';
+          return;
+        }
+        if (body.status === 'expired') {
+          window.location.reload();
+          return;
+        }
+      } catch {
+        // A dropped poll is not a failed pairing — try again next tick.
+      }
+      timer = setTimeout(tick, 3000);
+    };
+    timer = setTimeout(tick, 3000);
+  }
+
+  initTvPairing();
+  document.addEventListener('astro:page-load', initTvPairing);
+</script>
+
+<style>
+  /* A TV screen first: dark in both themes, sized in viewport units so it
+     reads from the sofa at 720p, 1080p or 4K alike. */
+  .tvp {
+    margin: calc(-1 * clamp(1rem, 4vw, 2rem)) calc(-1 * clamp(0.75rem, 3vw, 1.25rem)) 0;
+    min-height: calc(100vh - 3rem);
+    display: grid;
+    place-items: center;
+    padding: 4vh 5vw;
+    box-sizing: border-box;
+    color: #fff;
+    background:
+      radial-gradient(ellipse 60% 70% at 78% 50%, rgba(216, 27, 65, 0.28), transparent 70%),
+      radial-gradient(ellipse 50% 60% at 10% 100%, rgba(216, 27, 65, 0.12), transparent 70%),
+      #0b0c0f;
+  }
+
+  .tvp__grid {
+    width: min(100%, 110rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 6vw;
+    align-items: center;
+  }
+
+  .tvp__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    margin: 0 0 1.5vh;
+    font-size: clamp(0.8rem, 1.4vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ef5350;
+  }
+
+  .tvp__dot {
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 50%;
+    background: #ef5350;
+    outline: 0.3em solid rgba(239, 83, 80, 0.25);
+  }
+
+  .tvp__title {
+    margin: 0 0 4vh;
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5.6vw, 6.5rem);
+    line-height: 0.95;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .tvp__steps {
+    list-style: none;
+    margin: 0 0 4vh;
+    padding: 0;
+    display: grid;
+    gap: 2.2vh;
+    font-size: clamp(1rem, 1.9vw, 2rem);
+    color: #e6e8eb;
+  }
+
+  .tvp__steps li {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+  }
+
+  .tvp__steps p {
+    margin: 0;
+  }
+
+  .tvp__steps span {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.9em;
+    height: 1.9em;
+    border-radius: 50%;
+    background: #2a2e35;
+    font-weight: 800;
+  }
+
+  .tvp__alt {
+    margin: 0;
+    font-size: clamp(0.9rem, 1.3vw, 1.4rem);
+    color: #9aa0a9;
+  }
+
+  .tvp__alt strong {
+    color: #fff;
+  }
+
+  .tvp__card {
+    justify-self: center;
+    width: min(100%, 34vw);
+    min-width: 16rem;
+    padding: 3vh 2.5vw 3.5vh;
+    border-radius: 1.5rem;
+    background: rgba(30, 33, 38, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-xl);
+    text-align: center;
+  }
+
+  .tvp__qr {
+    padding: 1.2rem;
+    border-radius: 1rem;
+    background: #fff;
+    line-height: 0;
+  }
+
+  .tvp__qr :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  .tvp__code-label {
+    margin: 3vh 0 0.5vh;
+    font-size: clamp(0.75rem, 1.1vw, 1.2rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9aa0a9;
+  }
+
+  .tvp__code {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 4.6vw, 5.5rem);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .tvp__status {
+    margin: 2vh 0 0;
+    font-size: clamp(0.85rem, 1.2vw, 1.3rem);
+    color: #9aa0a9;
+  }
+
+  .is-approved .tvp__status {
+    color: #3ecf8e;
+  }
+
+  .tvp__fail {
+    max-width: 40rem;
+    text-align: center;
+  }
+
+  .tvp__fail .tvp__alt {
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 760px), (orientation: portrait) {
+    .tvp__grid {
+      grid-template-columns: 1fr;
+      gap: 4vh;
+    }
+    .tvp__card {
+      width: min(100%, 26rem);
+    }
+  }
+</style>

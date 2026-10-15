@@ -145,6 +145,13 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/api/live-standings.ts',
 		'src/pages/api/live-leagues.ts',
 		'src/pages/api/league-board.ts',
+		// The Broadcast in MFL Live and pairing a TV to it. The board reads MFL
+		// with the owner's own cookie, like every other /live board.
+		'src/utils/broadcast-viewer.ts',
+		'src/pages/tv.astro',
+		'src/pages/live/broadcast/pair.astro',
+		'src/pages/api/broadcast-tv/approve.ts',
+		'src/pages/api/broadcast-tv/revoke.ts',
 	]);
 
 	function walk(dir: string, out: string[] = []): string[] {
