@@ -13,7 +13,7 @@
  *
  * MOUNT WITH client:idle, never client:visible — an island that renders null
  * until it has fetched has zero height and never hydrates (the same note as
- * OwnersPollHomeCardPrompt).
+ * OwnersPollHomePopup).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

@@ -11,7 +11,7 @@ import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
-import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
+import OwnersPollHomePopup from '../../components/shared/owners-poll/OwnersPollHomePopup.astro';
 import { newestIssueStandings } from '../../utils/owners-poll-ballot-teams';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES SeasonDailyHero rather than stacking
@@ -45,7 +45,6 @@ import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
 import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
-import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
@@ -204,14 +203,10 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 // split them would render no hero at all (review finding, #569).
 const heroReferenceDate = effectiveDate ?? new Date();
 // ---------------------------------------------------------------------------
-// The Owners' Poll card — the room's ranking, permanently on the homepage.
-//
-// Read from the COMMITTED ARCHIVE, never Redis. Redis holds ballots rather
-// than a tally, so rendering "the current ranking" from it would publish a
-// running total mid-cycle — which the ballot API refuses to do on purpose,
-// because it lets a late voter see where things stand before deciding. The
-// archive is also a build-time glob, so this costs the site's hottest route
-// zero request-time I/O.
+// The Owners' Poll pop-up — the once-a-week quick-vote sheet. The permanent
+// homepage card that used to sit under the hero came off in Oct 2026 (unused);
+// the pop-up is what collects ballots. It needs only this season's newest
+// standings, for the stats on its ballot cards.
 //
 // A literal glob: Vite cannot take a runtime variable here, which is the same
 // reason the ballot page's data import lives in its route rather than in the
@@ -221,25 +216,6 @@ const ownersPollIssues = import.meta.glob<any>(
   { eager: true, import: 'default' },
 );
 
-// Newest issue that actually published a consensus. A week nobody voted in has
-// `ranked: null` and is skipped rather than rendered as an empty card.
-const ownersPollIssue = Object.entries(ownersPollIssues)
-  .map(([file, data]) => {
-    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
-  })
-  .filter((x): x is { year: number; week: number; data: any } => !!x)
-  // THIS season only. Without it the newest archived result wins outright, so
-  // between Labor Day and the season's first count the card publishes LAST
-  // season's ranking — today that is the seeded synthetic example — under a
-  // heading that reads as the current room's opinion.
-  .filter((x) => x.year === getCurrentSeasonYear(heroReferenceDate))
-  .filter((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
-  .sort((a, b) => b.year - a.year || b.week - a.week)[0] ?? null;
-
-// Gated on the SEASON WINDOW, never on "the archive has a file". The feeds of
-// a finished season are complete by definition, so a file-based check would
-// leave last season's ranking on the homepage all summer.
 // Stats for the pop-up's ballot cards: the newest issue of THIS season (last
 // season's standings would put a stale record on every card in Week 1).
 const ownersPollStandings = newestIssueStandings(
@@ -251,7 +227,8 @@ const ownersPollStandings = newestIssueStandings(
     .filter((x): x is any => !!x && x.year === getCurrentSeasonYear(heroReferenceDate)),
 );
 
-const showOwnersPollCard =
+// Gated on the SEASON WINDOW, never on "the archive has a file".
+const showOwnersPollPopup =
   THELEAGUE.ownersPoll?.enabled &&
   isSeasonWindowOpen(getCurrentSeasonYear(heroReferenceDate), heroReferenceDate);
 
@@ -915,7 +892,12 @@ const labels = await getPersonaLabels('theleague');
 <TheLeagueLayout title="Home">
   <div class="hp2">
     {showInstallBanner && <InstallAppPrompt variant="banner" leagueName="The League" leagueSlug="theleague" />}
-    <section class="hp2__main" aria-labelledby="hp2-hero-heading">
+    {/*
+      DOM order is hero → rail → everything else, so a phone (one column)
+      reads the news straight under the hero. On desktop the rail is placed
+      in the right-hand column spanning both rows (see the styles).
+    */}
+    <section class="hp2__lead" aria-labelledby="hp2-hero-heading">
       <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
       {testDriveHero ? (
         <LiveScoringTestDrive slug={THELEAGUE.slug} referenceDate={heroReferenceDate} />
@@ -944,10 +926,25 @@ const labels = await getPersonaLabels('theleague');
         waiver={tlWaiverCopy}
       />
       )}
-      {showOwnersPollCard && (
-        <OwnersPollHomeCard
-          issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
-          teams={getLeagueTeamBrands(THELEAGUE.slug)}
+    </section>
+
+    <aside class="hp2__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
+      <SchefterFeedCompact
+        posts={rail.posts}
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+        personalized={rail.personalized}
+        forYouIds={rail.forYouIds}
+        watching={rail.watchingByPost}
+        emptyText={rail.emptyText}
+      />
+    </aside>
+
+    <div class="hp2__main">
+      {showOwnersPollPopup && (
+        <OwnersPollHomePopup
           leagueSlug={THELEAGUE.slug}
           ballotHref={r('/theleague/owners-poll')}
           ballotStandings={ownersPollStandings}
@@ -974,6 +971,12 @@ const labels = await getPersonaLabels('theleague');
         thisWeek={myTeamWeek}
       />
 
+      <HpStandingsCompact
+        userFranchiseId={userFranchiseId}
+        teamSummaries={teamSummaries}
+        referenceDate={effectiveDate}
+      />
+
       <HpUnsignedFaCard
         isAuthenticated={isAuthenticated}
         userFranchiseId={userFranchiseId}
@@ -981,12 +984,6 @@ const labels = await getPersonaLabels('theleague');
         franchiseName={userTeamName}
         alerts={unsignedFaAlerts}
         referenceDate={now}
-      />
-
-      <HpStandingsCompact
-        userFranchiseId={userFranchiseId}
-        teamSummaries={teamSummaries}
-        referenceDate={effectiveDate}
       />
 
       <TopPlayersPromo leagueSlug={THELEAGUE.slug} data={topPlayersData as unknown as TopPlayersFile} />
@@ -1019,21 +1016,7 @@ const labels = await getPersonaLabels('theleague');
           </div>
         </div>
       )}
-    </section>
-
-    <aside class="hp2__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
-      <SchefterFeedCompact
-        posts={rail.posts}
-        isAuthenticated={isAuthenticated}
-        userFranchiseId={userFranchiseId}
-        userTeamName={userTeamName}
-        userTeamIcon={userTeamIcon}
-        personalized={rail.personalized}
-        forYouIds={rail.forYouIds}
-        watching={rail.watchingByPost}
-        emptyText={rail.emptyText}
-      />
-    </aside>
+    </div>
   </div>
 </TheLeagueLayout>
 
@@ -1041,12 +1024,17 @@ const labels = await getPersonaLabels('theleague');
   .hp2 {
     display: grid;
     grid-template-columns: 1fr 380px;
-    gap: 1.5rem;
+    gap: 2rem 1.5rem;
     align-items: start;
   }
 
+  .hp2__lead,
   .hp2__main {
+    grid-column: 1;
     min-width: 0;
+  }
+
+  .hp2__main {
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -1097,7 +1085,10 @@ const labels = await getPersonaLabels('theleague');
     text-align: center;
   }
 
+  /* Right-hand column, beside both the hero and the cards below it. */
   .hp2__sidebar {
+    grid-column: 2;
+    grid-row: span 2;
     min-width: 0;
     position: sticky;
     top: 2rem;
@@ -1112,21 +1103,31 @@ const labels = await getPersonaLabels('theleague');
   @container (max-width: 1024px) {
     .hp2 {
       grid-template-columns: 1fr 320px;
-      gap: 1rem;
+      column-gap: 1rem;
     }
   }
 
   @container (max-width: 880px) {
     .hp2 {
       grid-template-columns: 1fr;
-      gap: 1rem;
     }
 
+    /* Stacked under the hero: the feed opens on three stories plus "Show
+       more" (SchefterFeedCompact reads --sfc-stacked), so the owner's team
+       card is still near the top of the page. */
     .hp2__sidebar {
+      grid-column: 1;
+      grid-row: auto;
       position: static;
       max-height: none;
       overflow-y: visible;
-      margin-top: 2rem;
+      --sfc-stacked: 1;
+    }
+
+    /* Hold those three before the feed's script runs (it sets
+       data-sfc-ready), so the page does not paint ten and then collapse. */
+    .hp2__sidebar :global(.sfc-feed:not([data-sfc-ready]) .sfc-feed__item:nth-child(n + 4)) {
+      display: none;
     }
   }
 </style>

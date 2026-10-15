@@ -179,9 +179,6 @@ const seasonIssues = Object.entries(peckingOrderIssues)
 const latestIssue = (seasonIssues[0]?.data as PeckingOrderData | undefined) ?? null;
 
 // ── Owners' Poll: only when the registry turns it on ─────────────────────────
-const pollIssue = league.ownersPoll?.enabled
-  ? seasonIssues.find((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0) ?? null
-  : null;
 const showOwnersPoll = !!league.ownersPoll?.enabled && isSeasonWindowOpen(seasonYear, now);
 
 // ── Transactions (site only) ────────────────────────────────────────────────
@@ -350,7 +347,6 @@ const testMode = !!Astro.url.searchParams.get('testDate');
   }}
   ownersPoll={showOwnersPoll
     ? {
-        issue: pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null,
         ballotHref: r(`${base}/owners-poll`),
         ballotStandings: newestIssueStandings(seasonIssues.map((x) => ({ ...x.data, year: x.year, week: x.week }))),
       }
