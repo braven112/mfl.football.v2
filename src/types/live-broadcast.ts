@@ -15,6 +15,7 @@
 
 import type { LivePlayerRow, NflGame, PlayerMeta } from './live-scoring';
 import type { BroadcastMoment, RedZoneAlert } from '../utils/broadcast-moments';
+import type { RemoteState } from '../utils/broadcast-remote-commands';
 
 /**
  * One marquee defender standing in for a team defense on the takeover.
@@ -185,6 +186,13 @@ export interface BroadcastPollResponse {
   games: NflGame[];
   /** Per-player identity for anyone new since the first paint (a promoted starter). */
   playerMeta?: Record<string, PlayerMeta>;
+  /**
+   * A paired TV only: the phone remote's latest command, and whether a phone
+   * has the remote open (the TV then checks every second instead of waiting
+   * for this poll). Absent for a signed-in viewer, so no screen but a paired
+   * TV ever takes a command (docs/plans/broadcast-handheld.md, Phase 4).
+   */
+  remote?: RemoteState;
 }
 
 /** Everything the island needs once, at mount. */

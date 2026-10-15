@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
-import { getBroadcastViewer } from '../../utils/broadcast-viewer';
+import { getBroadcastViewer, readTvPassToken } from '../../utils/broadcast-viewer';
+import { passHashOfToken } from '../../utils/broadcast-tv-pairing';
+import { getPairingStore } from '../../utils/broadcast-tv-store';
+import { readRemoteState } from '../../utils/broadcast-tv-remote';
+import type { RemoteState } from '../../utils/broadcast-remote-commands';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleBroadcastBoard } from '../../utils/broadcast-board';
@@ -69,6 +73,18 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   if (!viewer) return json(failed(week), 401);
   const { user } = viewer;
 
+  // A paired TV also learns, on this same poll, whether its owner's phone has
+  // the remote open (docs/plans/broadcast-handheld.md, Phase 4). One read of
+  // one key, for a TV only; a signed-in viewer's poll never carries it.
+  const remote: Promise<RemoteState | undefined> =
+    viewer.via === 'tv'
+      ? (async () => {
+          const token = readTvPassToken(request);
+          const store = token ? await getPairingStore() : null;
+          return token && store ? readRemoteState(store, passHashOfToken(token)) : undefined;
+        })().catch(() => undefined)
+      : Promise.resolve(undefined);
+
   try {
     const board = await assembleBroadcastBoard({
       user,
@@ -82,7 +98,8 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       // cannot change during a Sunday and this route does not return it.
       mode: 'poll',
     });
-    return json(board.poll, 200);
+    const remoteState = await remote;
+    return json(remoteState ? { ...board.poll, remote: remoteState } : board.poll, 200);
   } catch (error) {
     console.warn('[broadcast-live] assembly failed:', (error as Error)?.message);
     return json(failed(week), 200);

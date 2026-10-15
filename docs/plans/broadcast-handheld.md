@@ -229,6 +229,22 @@ before.
    before, and that an unknown or malformed command is ignored rather than
    partially applied.
 
+Shipped as built (first cut, "core four"): focus one league (`pin-league`),
+next / previous strip page, sound on / off, and back to normal (`reset`).
+`open-matchup` is NOT in this cut: the TV board has no single-matchup view,
+so it would mean a new TV surface. The command list lives in
+`src/utils/broadcast-remote-commands.ts` (no server imports, so the island
+re-parses on arrival); the store half is `broadcast-tv-remote.ts`, one record
+per TV at `bctv:remote:<passHash>` holding `{ activeUntil, seq, command }`.
+The phone posts to `/api/broadcast-tv/remote` (session only, rate limited,
+pass id resolved in the owner's own list); the TV reads the record on its
+normal poll (`remote` on `BroadcastPollResponse`, TV passes only) and, while
+`active`, every second from `/api/broadcast-tv/remote-poll`. Opening the
+remote sends `open`, which wakes the TV without replaying a command; on
+first sight a freshly loaded TV carries over only a focus, never a page turn
+or a sound change. A focus is island state only, so a reload is the full
+board. Guards: `tests/broadcast-tv-remote.test.ts`.
+
 ## Things to verify before building
 
 - The ClientRouter lifecycle: any new listeners (touch, swipe, visibility) go

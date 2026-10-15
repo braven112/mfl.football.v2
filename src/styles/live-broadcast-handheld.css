@@ -439,6 +439,108 @@
   }
 }
 
+/* ── The TV remote (a phone controlling a paired TV) ──────────────────────── */
+
+/* In the bar, after the week and the status, before "On the field" (which
+   wraps to its own line in portrait). */
+.lbh .lbh__remote-btn {
+  order: 4;
+  margin-left: auto;
+  flex: none;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--lbh-hairline);
+  background: var(--lbh-panel-2);
+  color: var(--lbh-text);
+  font: inherit;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lbh .lbh__remote-btn:focus-visible,
+.lbh .lbh__remote-chip:focus-visible {
+  outline: 2px solid var(--lbh-focus);
+  outline-offset: 2px;
+}
+
+.lbh .lbh__remote-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 0.25rem 0.25rem 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lbh .lbh__remote-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.lbh .lbh__remote-label {
+  flex: 0 0 4.5rem;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--lbh-text-faint);
+}
+
+/* A comfortable thumb target: 2.75rem tall. */
+.lbh .lbh__remote-chip {
+  min-height: 2.75rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--lbh-hairline);
+  background: var(--lbh-panel-2);
+  color: var(--lbh-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lbh .lbh__remote-chip[aria-pressed='true'] {
+  background: var(--lbh-text);
+  color: var(--lbh-ink);
+  border-color: var(--lbh-text);
+}
+
+.lbh .lbh__remote-chip:active {
+  transform: scale(0.97);
+}
+
+.lbh .lbh__remote-hint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--lbh-text-dim);
+}
+
+/* A phone held sideways: tighter rows, so every control fits without a
+   scroll (the body still scrolls if it must). */
+@media (orientation: landscape) and (max-height: 500px) {
+  .lbh .lbh__remote-body {
+    gap: 0.4rem;
+  }
+
+  .lbh .lbh__remote-chip {
+    min-height: 2.25rem;
+    font-size: var(--font-size-xs);
+  }
+}
+
+.lbh .lbh__remote-note {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--lbh-live-text);
+}
+
 /* ── Swipe between pages (landscape, more cards than fit) ────────────────── */
 
 /* Native horizontal scrolling with one snap point per page: the swipe is the
