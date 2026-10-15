@@ -97,6 +97,42 @@ const deviceKey = (deviceCode: string) => `bctv:device:${sha(deviceCode)}`;
 const passKey = (token: string) => `bctv:pass:${sha(token)}`;
 const passKeyFromHash = (hash: string) => `bctv:pass:${hash}`;
 const ownerIndexKey = (owner: string) => `bctv:owner:${owner}`;
+// One-shot claims and the per-owner lock. Each is an `nx` write, which is the
+// only atomic primitive the store offers: whoever's write lands owns the step.
+const approveClaimKey = (code: string) => `bctv:approve:${code}`;
+const collectClaimKey = (deviceCode: string) => `bctv:collect:${sha(deviceCode)}`;
+const ownerLockKey = (owner: string) => `bctv:lock:${owner}`;
+
+/** True for exactly one caller per key while it lives. */
+async function claimOnce(store: PairingStore, key: string, ttlS: number): Promise<boolean> {
+  return (await store.set(key, 1, { ex: ttlS, nx: true })) !== null;
+}
+
+const OWNER_LOCK_TTL_S = 10;
+const OWNER_LOCK_TRIES = 40;
+const OWNER_LOCK_WAIT_MS = 50;
+
+/**
+ * Serialise every read-modify-write of one owner's TV index. Without it, two
+ * approvals (or an approval and a Remove) each write back their own snapshot
+ * and one TV drops out of the list while its pass keeps working — a TV the
+ * owner can no longer see or unpair. The lock expires on its own, so a crashed
+ * holder blocks the next caller for seconds, not forever.
+ */
+async function withOwnerLock<T>(store: PairingStore, owner: string, fn: () => Promise<T>): Promise<T> {
+  const key = ownerLockKey(owner);
+  for (let i = 0; i < OWNER_LOCK_TRIES; i++) {
+    if (await claimOnce(store, key, OWNER_LOCK_TTL_S)) {
+      try {
+        return await fn();
+      } finally {
+        await store.del(key);
+      }
+    }
+    await new Promise((r) => setTimeout(r, OWNER_LOCK_WAIT_MS));
+  }
+  throw new Error('broadcast TV list is busy');
+}
 
 /**
  * Whose TVs these are. League id + franchise id, never franchise id alone:
@@ -189,6 +225,10 @@ export async function approvePairing(
   const pairing = await store.get<Pairing>(pairKey(userCode));
   if (!pairing) return 'expired';
   if (pairing.status !== 'pending') return 'already-used';
+  // Two phones approving the same code at once both read `pending`; only the
+  // one that lands this claim mints a pass, so the TV can never end up on the
+  // broadcast of whichever owner happened to write last.
+  if (!(await claimOnce(store, approveClaimKey(userCode), PAIRING_TTL_S))) return 'already-used';
 
   const token = randomBytes(32).toString('base64url');
   const pass: TvPass = {
@@ -198,18 +238,21 @@ export async function approvePairing(
     device: pairing.device,
     createdAt: now,
   };
-  await store.set(passKey(token), pass, { ex: PASS_TTL_S });
-
   const owner = ownerKeyFor(user);
-  const index = (await store.get<(PassSummary & { hash: string })[]>(ownerIndexKey(owner))) ?? [];
-  index.push({ id: pass.id, device: pass.device, createdAt: now, hash: sha(token) });
-  // Oldest out first. Its pass is deleted too, so a dropped TV is really gone
-  // rather than invisible-but-working.
-  while (index.length > MAX_PASSES_PER_OWNER) {
-    const dropped = index.shift()!;
-    await store.del(passKeyFromHash(dropped.hash));
-  }
-  await store.set(ownerIndexKey(owner), index, { ex: PASS_TTL_S });
+  await withOwnerLock(store, owner, async () => {
+    // The pass is written inside the lock too, so no pass exists that the
+    // owner's index does not list.
+    await store.set(passKey(token), pass, { ex: PASS_TTL_S });
+    const index = (await store.get<(PassSummary & { hash: string })[]>(ownerIndexKey(owner))) ?? [];
+    index.push({ id: pass.id, device: pass.device, createdAt: now, hash: sha(token) });
+    // Oldest out first. Its pass is deleted too, so a dropped TV is really gone
+    // rather than invisible-but-working.
+    while (index.length > MAX_PASSES_PER_OWNER) {
+      const dropped = index.shift()!;
+      await store.del(passKeyFromHash(dropped.hash));
+    }
+    await store.set(ownerIndexKey(owner), index, { ex: PASS_TTL_S });
+  });
 
   const approved: Pairing = { ...pairing, status: 'approved', passToken: token };
   // Keep the pairing's own remaining life; a fresh full TTL is close enough
@@ -234,6 +277,9 @@ export async function pollPairing(store: PairingStore, deviceCode: string): Prom
   const pairing = await store.get<Pairing>(pairKey(userCode));
   if (!pairing) return { status: 'expired' };
   if (pairing.status !== 'approved' || !pairing.passToken) return { status: 'pending' };
+  // Two overlapping polls can both read the approved pairing; only the one
+  // that lands this claim is handed the token.
+  if (!(await claimOnce(store, collectClaimKey(deviceCode), PAIRING_TTL_S))) return { status: 'pending' };
   await store.del(pairKey(userCode));
   await store.del(deviceKey(deviceCode));
   return { status: 'approved', passToken: pairing.passToken };
@@ -261,16 +307,18 @@ export async function listPasses(store: PairingStore, owner: string): Promise<Pa
 
 /** Unpair one TV. Only ever reaches the passes in THIS owner's index. */
 export async function revokePass(store: PairingStore, owner: string, id: string): Promise<boolean> {
-  const index = (await store.get<(PassSummary & { hash: string })[]>(ownerIndexKey(owner))) ?? [];
-  const entry = index.find((e) => e.id === id);
-  if (!entry) return false;
-  await store.del(passKeyFromHash(entry.hash));
-  await store.set(
-    ownerIndexKey(owner),
-    index.filter((e) => e.id !== id),
-    { ex: PASS_TTL_S },
-  );
-  return true;
+  return withOwnerLock(store, owner, async () => {
+    const index = (await store.get<(PassSummary & { hash: string })[]>(ownerIndexKey(owner))) ?? [];
+    const entry = index.find((e) => e.id === id);
+    if (!entry) return false;
+    await store.del(passKeyFromHash(entry.hash));
+    await store.set(
+      ownerIndexKey(owner),
+      index.filter((e) => e.id !== id),
+      { ex: PASS_TTL_S },
+    );
+    return true;
+  });
 }
 
 /** Unpair the TV holding this token — its own "Unpair this TV" button. */

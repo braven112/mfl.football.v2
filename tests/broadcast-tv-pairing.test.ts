@@ -174,3 +174,56 @@ describe('deviceLabel', () => {
     expect(deviceLabel(ua)).toBe(label);
   });
 });
+
+describe('overlapping requests', () => {
+  it('lets only one of two simultaneous approvals through', async () => {
+    const { store } = clockStore();
+    const { userCode, deviceCode } = await startPairing(store, { device: 'TV' });
+    const results = await Promise.all([
+      approvePairing(store, userCode, owner, { leagues: null }),
+      approvePairing(store, userCode, other, { leagues: null }),
+    ]);
+    expect(results.filter((r) => r === 'approved')).toHaveLength(1);
+    const poll = await pollPairing(store, deviceCode);
+    expect(poll.status).toBe('approved');
+    const winner = results[0] === 'approved' ? owner : other;
+    const pass = await readPass(store, poll.status === 'approved' ? poll.passToken : null);
+    expect(pass?.user.id).toBe(winner.id);
+    // The loser minted nothing.
+    const loser = winner === owner ? other : owner;
+    expect(await listPasses(store, ownerKeyFor(loser))).toEqual([]);
+  });
+
+  it('hands the token to only one of two simultaneous polls', async () => {
+    const { store } = clockStore();
+    const { userCode, deviceCode } = await startPairing(store, { device: 'TV' });
+    await approvePairing(store, userCode, owner, { leagues: null });
+    const polls = await Promise.all([pollPairing(store, deviceCode), pollPairing(store, deviceCode)]);
+    expect(polls.filter((p) => p.status === 'approved')).toHaveLength(1);
+  });
+
+  it('keeps every TV listed when one owner approves two at once', async () => {
+    const { store } = clockStore();
+    const a = await startPairing(store, { device: 'Xbox' });
+    const b = await startPairing(store, { device: 'Fire TV' });
+    await Promise.all([
+      approvePairing(store, a.userCode, owner, { leagues: null }),
+      approvePairing(store, b.userCode, owner, { leagues: null }),
+    ]);
+    const devices = (await listPasses(store, ownerKeyFor(owner))).map((p) => p.device).sort();
+    expect(devices).toEqual(['Fire TV', 'Xbox']);
+  });
+
+  it('keeps a TV approved while another is being removed', async () => {
+    const { store } = clockStore();
+    const a = await startPairing(store, { device: 'Xbox' });
+    await approvePairing(store, a.userCode, owner, { leagues: null });
+    const [first] = await listPasses(store, ownerKeyFor(owner));
+    const b = await startPairing(store, { device: 'Fire TV' });
+    await Promise.all([
+      revokePass(store, ownerKeyFor(owner), first.id),
+      approvePairing(store, b.userCode, owner, { leagues: null }),
+    ]);
+    expect((await listPasses(store, ownerKeyFor(owner))).map((p) => p.device)).toEqual(['Fire TV']);
+  });
+});

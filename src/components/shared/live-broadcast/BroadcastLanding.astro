@@ -685,6 +685,12 @@ const fmtDate = (ms: number) =>
     border-radius: 0;
   }
 
+  /* pointer-events is inherited, and the top layer does not reset it: the
+     fullscreen board would otherwise ignore every tap ("Show more leagues"). */
+  .bcl-screen__viewport :global(.lbc:fullscreen) {
+    pointer-events: auto;
+  }
+
   .bcl-screen__hit {
     position: absolute;
     inset: 10px;
