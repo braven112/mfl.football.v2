@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getBroadcastViewer } from '../../utils/broadcast-viewer';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleBroadcastBoard } from '../../utils/broadcast-board';
@@ -16,8 +16,10 @@ export const prerender = false;
  * fetches its own API to render itself puts our own edge in the path of the
  * paint, and that hop has already silently stopped landing once.
  *
- * Scope comes from the SESSION, never from a param. `?leagues=` can only
- * narrow the set the owner's own MFL cookie already returned, because the
+ * Scope comes from the SESSION, never from a param. A paired TV has no
+ * session; its pass resolves to the owner who paired it, through
+ * `getBroadcastViewer` — the one place a pass is read, and this route is one
+ * of the two it may be read for. `?leagues=` can only narrow the set the owner's own MFL cookie already returned, because the
  * resolver only ever answers with ids present in that list. There is no value
  * a caller can send that reaches a league this owner is not in.
  *
@@ -63,14 +65,17 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     return getCurrentNFLWeek(testDate ?? new Date()) ?? 1;
   })();
 
-  const user = getAuthUser(request);
-  if (!user) return json(failed(week), 401);
+  const viewer = await getBroadcastViewer(request);
+  if (!viewer) return json(failed(week), 401);
+  const { user } = viewer;
 
   try {
     const board = await assembleBroadcastBoard({
       user,
       leaguesParam: url.searchParams.get('leagues'),
-      leaguesCookie: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
+      // A TV's own choice first; failing that, the set the phone that paired
+      // it was watching.
+      leaguesCookie: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
       week,
       year: getCurrentSeasonYear(testDate),
       // Only the numbers. Panel identity — colours, crests, name forms —

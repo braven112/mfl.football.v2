@@ -73,6 +73,7 @@ const {
 const BOARD_LINKS = [
 	{ href: '/live', label: 'Live board', icon: 'board', requiresAuth: false },
 	{ href: '/live/standings', label: 'Live standings', icon: 'standings', requiresAuth: false },
+	{ href: '/live/broadcast', label: 'Broadcast', icon: 'tv', requiresAuth: false },
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
@@ -151,6 +152,12 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 								<Fragment>
 									<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
 									<circle cx="7.5" cy="7.5" r="1.5" />
+								</Fragment>
+							) : link.icon === 'tv' ? (
+								<Fragment>
+									<rect x="3" y="5" width="18" height="12" rx="2" />
+									<path d="M8 21h8" />
+									<path d="M12 17v4" />
 								</Fragment>
 							) : link.icon === 'standings' ? (
 								<Fragment>
