@@ -161,15 +161,13 @@ const effectiveDate = parseTestDate(testDateParam) ?? new Date();
 const testDriveHero = showTestDriveHero(AFL.slug, effectiveDate);
 
 // ---------------------------------------------------------------------------
-// The Owners' Poll card. Same shape as TheLeague's — one shared component, each
-// route bringing its own league's data — because a static glob specifier
-// cannot be a runtime variable. See that page for why this reads the committed
-// archive rather than Redis.
+// The Owners' Poll pop-up. Same shape as TheLeague's — one shared component,
+// each route bringing its own league's data — because a static glob specifier
+// cannot be a runtime variable.
 const ownersPollIssues = import.meta.glob<any>(
   '../../../data/afl-fantasy/pecking-order/*.json',
   { eager: true, import: 'default' },
 );
-
 
 // Stats for the pop-up's ballot cards — newest issue of THIS season, as TheLeague.
 const ownersPollStandings = newestIssueStandings(
