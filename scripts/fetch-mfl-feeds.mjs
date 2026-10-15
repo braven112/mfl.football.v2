@@ -39,6 +39,7 @@ import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { BRACKET_INDEX_PATH, isRealBracketFeed, recordBracketLeague } from '../src/utils/playoff-bracket-index.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
+import { stripScheduleSpreads } from './lib/mfl-schedule-feed.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
 import { reduceWeekScores, weekOfScores, weekMergeDecision } from '../src/utils/player-week-scores.mjs';
@@ -606,7 +607,8 @@ const endpoints = [
     // been backfilled (AFL 2026 had none). Schedule-strength depends on it.
     key: 'schedule',
     url: `${host}/${year}/export?TYPE=schedule&L=${leagueId}&JSON=1`,
-    parser: (t) => JSON.parse(t),
+    // Projected spreads move every run and nothing reads them.
+    parser: (t) => stripScheduleSpreads(JSON.parse(t)),
   },
   {
     key: 'weekly-results',
