@@ -25,7 +25,8 @@
  * typed here.
  */
 import { MFL_LIVE_PRO_PRICE } from '../../../data/products';
-import { showcaseLeagues } from '../../../data/league-showcase';
+import { mflLiveIncludedNames, showcaseLeagues } from '../../../data/league-showcase';
+import ProductInterest from '../ProductInterest.astro';
 import { crossHostLeagueHref } from '../../../config/leagues';
 
 interface Props {
@@ -38,7 +39,7 @@ interface Props {
 const { seasonYear, hostname } = Astro.props;
 
 const leagues = showcaseLeagues();
-const includedNames = leagues.map((l) => l.showcase.short);
+const includedNames = mflLiveIncludedNames();
 const includedList =
 	includedNames.length > 1
 		? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
@@ -179,14 +180,19 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	<section class="mll-pricing" aria-labelledby="mll-pricing">
 		<div>
 			<h2 id="mll-pricing" class="mll-h2">Season pass</h2>
-			<p>Live scores are free for every MFL owner. MFL Live Pro adds the Broadcast, live and projected standings, full boards for every league, and game-day alerts.</p>
+			<p>Live scores are free. MFL Live Pro adds the Broadcast, live and projected standings, full boards for every league, and game-day alerts.</p>
 			<div class="mll-included">
 				<span class="mll-included__logos">
 					{leagues.map((l) => <img src={l.logo.dark} alt="" width="36" height="36" />)}
 				</span>
 				<span><strong>Owners in {includedList}:</strong> Pro is included for the rest of the {seasonYear} season.</span>
 			</div>
-			<a class="cta cta--primary" href={signIn}>Sign in with MyFantasyLeague</a>
+			<div class="mll-pricing__ctas">
+				<a class="cta cta--primary" href={signIn}>Sign in with MyFantasyLeague</a>
+				{/* Sign-in is open to those leagues only, so everyone else gets the
+				    "coming soon" door (ProductInterest) rather than a dead end. */}
+				<button type="button" class="cta cta--ghost mll-door" data-interest="owner-suite" data-interest-name="MFL Live for your league">In another league? I'm interested</button>
+			</div>
 		</div>
 		<div class="mll-ticket">
 			<div class="mll-ticket__top"><span>MFL Live Pro</span><span>{seasonYear} season</span></div>
@@ -220,6 +226,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 			))}
 		</div>
 	</section>
+	<ProductInterest />
 </div>
 
 <style>
@@ -245,7 +252,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		border-radius: var(--radius-md);
 		background: var(--mll-studio);
 		color: var(--mll-studio-muted);
-		font-size: 0.8rem;
+		font-size: var(--font-size-xs);
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -276,7 +283,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	}
 	.mll-h1 span { color: var(--league-accent); }
 	.mll-hero__side p {
-		font-size: 1.1rem;
+		font-size: var(--font-size-base);
 		color: var(--color-text-secondary);
 		margin: 0 0 1.25rem;
 	}
@@ -287,7 +294,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		align-items: center;
 		gap: 0.6rem;
 		margin: 0 0 0.5rem;
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 		font-weight: 700;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
@@ -324,7 +331,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 0.5rem;
-		font-size: 0.7rem;
+		font-size: var(--font-size-2xs);
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--mll-studio-muted);
@@ -332,17 +339,17 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-mu__league { display: inline-flex; align-items: center; gap: 0.45rem; }
 	.mll-mu__league img { width: 20px; height: 20px; object-fit: contain; }
 	.mll-mu__row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
-	.mll-mu__row b { font-family: var(--font-display); font-size: 1.75rem; line-height: 1; }
+	.mll-mu__row b { font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 1; }
 	.mll-mu__row--trail b { color: var(--mll-studio-muted); }
 	.mll-mu__bar { height: 4px; border-radius: 4px; background: #39425a; margin: 0.5rem 0 0.3rem; overflow: hidden; }
 	.mll-mu__bar span { display: block; height: 100%; background: var(--mll-red); }
-	.mll-mu__foot { font-size: 0.75rem; color: var(--mll-studio-muted); }
+	.mll-mu__foot { font-size: var(--font-size-xs); color: var(--mll-studio-muted); }
 
 	.mll-dot {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 		font-weight: 600;
 		color: var(--mll-live);
 	}
@@ -358,7 +365,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	}
 	.mll-chap__n {
 		font-family: var(--font-display);
-		font-size: 6.5rem;
+		font-size: calc(var(--font-size-3xl) * 1.75);
 		line-height: 0.8;
 		color: transparent;
 		-webkit-text-stroke: 2px var(--league-accent);
@@ -372,18 +379,18 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		margin: 0 0 1rem;
 		color: var(--page-text);
 	}
-	.mll-chap p, .mll-leagues > p { color: var(--color-text-secondary); font-size: 1.05rem; margin: 0 0 0.9rem; }
+	.mll-chap p, .mll-leagues > p { color: var(--color-text-secondary); font-size: var(--font-size-base); margin: 0 0 0.9rem; }
 	.mll-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.25rem 0; }
 	.mll-facts div {
 		border-left: 3px solid var(--league-accent);
 		padding-left: 0.75rem;
-		font-size: 0.9rem;
+		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 	}
 	.mll-facts b {
 		display: block;
 		font-family: var(--font-display);
-		font-size: 1.75rem;
+		font-size: var(--font-size-xl);
 		line-height: 1.1;
 		color: var(--page-text);
 	}
@@ -393,7 +400,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		border: 1px solid var(--content-border);
 		border-radius: 1rem;
 		overflow: hidden;
-		font-size: 0.9rem;
+		font-size: var(--font-size-sm);
 	}
 	.mll-card__head {
 		display: flex;
@@ -405,7 +412,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-card__title {
 		font-family: var(--font-display);
 		font-weight: 700;
-		font-size: 1.25rem;
+		font-size: var(--font-size-base);
 		text-transform: uppercase;
 		color: var(--page-text);
 	}
@@ -415,7 +422,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		padding: 3px;
 		border-radius: 999px;
 		background: var(--color-surface-3);
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 		font-weight: 600;
 	}
 	.mll-seg span { padding: 0.3rem 0.75rem; border-radius: 999px; color: var(--color-text-secondary); }
@@ -424,7 +431,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-table th {
 		text-align: left;
 		padding: 0.6rem 1.1rem 0.35rem;
-		font-size: 0.7rem;
+		font-size: var(--font-size-2xs);
 		font-weight: 600;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -435,7 +442,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-table .rk { width: 1.75rem; color: var(--color-text-secondary); }
 	.mll-table tr.me td { background: color-mix(in srgb, var(--league-accent) 9%, transparent); }
 	.mll-table tr.cut td { border-top: 2px dashed color-mix(in srgb, var(--league-accent) 55%, transparent); }
-	.mv { margin-left: 0.4rem; font-size: 0.7rem; font-weight: 700; }
+	.mv { margin-left: 0.4rem; font-size: var(--font-size-2xs); font-weight: 700; }
 	.mv--up { color: var(--color-success); }
 	.mv--down { color: var(--league-accent); }
 
@@ -451,8 +458,8 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		color: var(--mll-studio-ink);
 	}
 	.mll-pricing .mll-h2 { color: var(--mll-studio-ink); font-size: clamp(2.75rem, 6vw, 4.5rem); }
-	.mll-pricing p { color: #b4bac6; font-size: 1.05rem; margin: 0 0 1.25rem; }
-	.mll-included { display: flex; gap: 0.9rem; align-items: center; margin: 0 0 1.5rem; font-size: 0.95rem; color: #e7e9ee; }
+	.mll-pricing p { color: #b4bac6; font-size: var(--font-size-base); margin: 0 0 1.25rem; }
+	.mll-included { display: flex; gap: 0.9rem; align-items: center; margin: 0 0 1.5rem; font-size: var(--font-size-sm); color: #e7e9ee; }
 	.mll-included__logos { display: flex; gap: 0.4rem; flex: none; }
 	.mll-included__logos img { width: 36px; height: 36px; object-fit: contain; }
 
@@ -479,21 +486,25 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-ticket__top {
 		display: flex;
 		justify-content: space-between;
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 		font-weight: 700;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		opacity: 0.85;
 	}
-	.mll-ticket__amt { font-family: var(--font-display); font-size: 6rem; line-height: 1; margin: 1.1rem 0 0.25rem; }
-	.mll-ticket__amt s { font-size: 3rem; opacity: 0.55; margin-right: 0.75rem; }
-	.mll-ticket__note { font-size: 0.9rem; opacity: 0.9; }
+	.mll-ticket__amt { font-family: var(--font-display); font-size: calc(var(--font-size-3xl) * 1.6); line-height: 1; margin: 1.1rem 0 0.25rem; }
+	.mll-ticket__amt s { font-size: var(--font-size-3xl); opacity: 0.55; margin-right: 0.75rem; }
+	.mll-ticket__note { font-size: var(--font-size-sm); opacity: 0.9; }
 	.mll-ticket hr { border: 0; border-top: 2px dashed rgba(255, 255, 255, 0.35); margin: 1.5rem 0; }
-	.mll-ticket ul { list-style: none; margin: 0; padding: 0; columns: 2; font-size: 0.9rem; }
+	.mll-ticket ul { list-style: none; margin: 0; padding: 0; columns: 2; font-size: var(--font-size-sm); }
 	.mll-ticket li { margin-bottom: 0.5rem; break-inside: avoid; }
-	.mll-ticket li::before { content: '● '; font-size: 0.55rem; vertical-align: middle; }
+	.mll-ticket li::before { content: '● '; font-size: var(--font-size-3xs); vertical-align: middle; }
 
 	.mll-leagues { padding-bottom: 3rem; }
+	.mll-pricing__ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+	/* The ghost CTA is drawn for a light ground; this band is dark in both themes. */
+	.mll-door { color: #e7e9ee; border-color: #3a4150; background: transparent; }
+	.mll-door:hover, .mll-door:focus-visible { color: #ffffff; border-color: #e7e9ee; }
 	.mll-rows { display: grid; gap: 0.75rem; margin-top: 1.5rem; }
 	.mll-row {
 		display: grid;
@@ -514,13 +525,13 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-row__name {
 		display: block;
 		font-family: var(--font-display);
-		font-size: 2.1rem;
+		font-size: var(--font-size-xl);
 		line-height: 1;
 		text-transform: uppercase;
 	}
-	.mll-row__meta { display: block; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8; }
-	.mll-row__stat { text-align: right; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
-	.mll-row__stat b { display: block; font-family: var(--font-display); font-size: 2rem; letter-spacing: 0; }
+	.mll-row__meta { display: block; margin-top: 0.25rem; font-size: var(--font-size-sm); opacity: 0.8; }
+	.mll-row__stat { text-align: right; font-size: var(--font-size-xs); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+	.mll-row__stat b { display: block; font-family: var(--font-display); font-size: var(--font-size-xl); letter-spacing: 0; }
 
 	@media (max-width: 760px) {
 		.mll-hero__top,
@@ -530,15 +541,15 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		.mll-facts { grid-template-columns: 1fr; }
 		.mll-hero__top { gap: 1.5rem; }
 		.mll-chap { gap: 1.25rem; padding: 3rem 0; }
-		.mll-chap__n { font-size: 4.5rem; }
+		.mll-chap__n { font-size: calc(var(--font-size-3xl) * 1.2); }
 		.mll-pricing { padding: 1.75rem; gap: 2rem; }
 		.mll-ticket { padding: 1.75rem 1.5rem; }
-		.mll-ticket__amt { font-size: 4.5rem; }
+		.mll-ticket__amt { font-size: calc(var(--font-size-3xl) * 1.2); }
 		.mll-ticket ul { columns: 1; }
 		.mll-included { flex-direction: column; align-items: flex-start; }
 		.mll-row { grid-template-columns: 3rem 1fr; gap: 1rem; padding: 1.1rem; }
 		.mll-row img { width: 48px; height: 48px; }
 		.mll-row__stat { display: none; }
-		.mll-row__name { font-size: 1.6rem; }
+		.mll-row__name { font-size: var(--font-size-xl); }
 	}
 </style>

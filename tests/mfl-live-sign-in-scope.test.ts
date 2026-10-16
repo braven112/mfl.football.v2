@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  ALL_LEAGUES,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
 } from '../src/config/leagues-data.mjs';
+// The typed registry: the raw .mjs union has no `bestBall` on most entries.
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 /**
  * Who may sign in to MFL Live on the shared host.

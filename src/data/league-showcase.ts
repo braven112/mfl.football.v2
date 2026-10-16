@@ -25,10 +25,24 @@ const SHOWCASE: Partial<Record<CanonicalLeagueSlug, ShowcaseMeta>> = {
 
 export type ShowcaseLeague = (typeof ALL_LEAGUES)[number] & { showcase: ShowcaseMeta };
 
-/** The full-management leagues with a showcase entry, in registry order. */
+/**
+ * The leagues a public page may SHOW (logos, example boards, league rows):
+ * full-management leagues with a showcase entry, minus any package league
+ * whose owner has not agreed to be listed (`advertiseOnSharedHost: false`,
+ * the same rule the splash follows). Registry order.
+ */
 export function showcaseLeagues(): ShowcaseLeague[] {
-	return ALL_LEAGUES.filter((l) => !l.bestBall && SHOWCASE[l.slug]).map((l) => ({
-		...l,
-		showcase: SHOWCASE[l.slug]!,
-	}));
+	return ALL_LEAGUES.filter((l) => !l.bestBall && l.advertiseOnSharedHost !== false && SHOWCASE[l.slug]).map(
+		(l) => ({ ...l, showcase: SHOWCASE[l.slug]! }),
+	);
+}
+
+/**
+ * The short names of every league whose owners have MFL Live Pro included —
+ * every full-management league, listed or not. Naming who it is free for is
+ * the offer itself, not an advertisement of the league, so this is wider than
+ * `showcaseLeagues`.
+ */
+export function mflLiveIncludedNames(): string[] {
+	return ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => SHOWCASE[l.slug]?.short ?? l.name);
 }

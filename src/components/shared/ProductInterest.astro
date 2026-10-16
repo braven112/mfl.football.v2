@@ -1,0 +1,239 @@
+---
+/**
+ * The "coming soon" dialog behind every product button that is not on sale
+ * yet (a fake door). Render this once per page; any element carrying
+ * `data-interest="<product slug>"` opens it. Opening counts one click for that
+ * product, and the visitor may leave an email so they hear when it launches.
+ * Storage and the endpoint: src/utils/product-interest.ts,
+ * src/pages/api/product-interest.ts. The owner reads the totals on Site
+ * Insights.
+ *
+ * Dark in both themes, like MFL Live's studio pieces, so it reads the same on
+ * the homepage and on `/live` without borrowing either page's tokens.
+ */
+---
+
+<dialog class="pi" id="product-interest" aria-labelledby="pi-title">
+	<form method="dialog" class="pi__close-form">
+		<button class="pi__close" aria-label="Close">×</button>
+	</form>
+	<p class="pi__kicker">Coming soon</p>
+	<h2 class="pi__title" id="pi-title">
+		<span data-pi-name>This product</span> isn’t available yet
+	</h2>
+	<p class="pi__body">
+		Thanks for clicking. That tells us you’re interested, and it helps us decide what to build first.
+	</p>
+	<p class="pi__note" data-pi-note hidden></p>
+	<form class="pi__form" data-pi-form novalidate>
+		<label class="pi__label" for="pi-email">Want to hear when it launches? (optional)</label>
+		<div class="pi__row">
+			<input class="pi__input" id="pi-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" maxlength="254" />
+			<button class="cta cta--primary" type="submit">Notify me</button>
+		</div>
+		<p class="pi__status" data-pi-status role="status" aria-live="polite"></p>
+	</form>
+</dialog>
+
+<script>
+	// Delegated from `document` at module scope: a bundled script runs once per
+	// session under the ClientRouter, so this is one listener, never stacked,
+	// and it re-reads the dialog on every click rather than holding a node a
+	// page swap would replace.
+	const VISITOR_KEY = 'productInterest.visitor';
+
+	function visitorId(): string {
+		try {
+			let id = localStorage.getItem(VISITOR_KEY);
+			if (!id) {
+				id = crypto.randomUUID();
+				localStorage.setItem(VISITOR_KEY, id);
+			}
+			return id;
+		} catch {
+			// No storage (private window): a per-page id still counts the click.
+			return crypto.randomUUID();
+		}
+	}
+
+	function send(payload: Record<string, string>): Promise<Response> {
+		return fetch('/api/product-interest', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ...payload, visitor: visitorId() }),
+		});
+	}
+
+	document.addEventListener('click', (event) => {
+		const trigger = (event.target as Element | null)?.closest<HTMLElement>('[data-interest]');
+		if (!trigger) return;
+		const dialog = document.getElementById('product-interest') as HTMLDialogElement | null;
+		if (!dialog) return;
+		event.preventDefault();
+
+		const product = trigger.dataset.interest!;
+		dialog.dataset.product = product;
+		dialog.querySelector('[data-pi-name]')!.textContent = trigger.dataset.interestName || 'This product';
+		const note = dialog.querySelector<HTMLElement>('[data-pi-note]')!;
+		note.textContent = trigger.dataset.interestNote ?? '';
+		note.hidden = !trigger.dataset.interestNote;
+		const form = dialog.querySelector<HTMLFormElement>('[data-pi-form]')!;
+		form.reset();
+		form.hidden = false;
+		dialog.querySelector('[data-pi-status]')!.textContent = '';
+		dialog.showModal();
+
+		send({ product }).catch(() => {});
+	});
+
+	document.addEventListener('submit', async (event) => {
+		const form = (event.target as Element | null)?.closest<HTMLFormElement>('[data-pi-form]');
+		if (!form) return;
+		event.preventDefault();
+		const dialog = form.closest<HTMLDialogElement>('dialog')!;
+		const status = form.querySelector<HTMLElement>('[data-pi-status]')!;
+		const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim();
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			status.textContent = 'Enter an email address, or just close this.';
+			return;
+		}
+		status.textContent = 'Saving…';
+		try {
+			const res = await send({ product: dialog.dataset.product ?? '', email });
+			status.textContent = res.ok ? 'Thanks. We’ll email you when it launches.' : 'That didn’t save. Please try again.';
+		} catch {
+			status.textContent = 'That didn’t save. Please try again.';
+		}
+	});
+</script>
+
+<style>
+	.pi {
+		--pi-ground: #12151c;
+		--pi-ink: #f4f5f7;
+		--pi-muted: #aab1bf;
+		--pi-line: #2a303c;
+		--pi-red: #e0263c;
+		width: min(28rem, calc(100vw - 2rem));
+		/* Pages reset margins globally; a modal dialog centres itself only with auto. */
+		margin: auto;
+		box-sizing: border-box;
+		padding: 1.75rem;
+		border: 1px solid var(--pi-line);
+		border-radius: 16px;
+		background: var(--pi-ground);
+		color: var(--pi-ink);
+		box-shadow: var(--shadow-xl);
+	}
+
+	.pi::backdrop {
+		background: rgb(0 0 0 / 0.6);
+	}
+
+	.pi__close-form {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		margin: 0;
+	}
+
+	.pi__close {
+		width: 2.25rem;
+		height: 2.25rem;
+		border: 0;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--pi-muted);
+		font-size: var(--font-size-lg);
+		cursor: pointer;
+	}
+
+	.pi__close:hover,
+	.pi__close:focus-visible {
+		color: var(--pi-ink);
+		background: var(--pi-line);
+	}
+
+	.pi__kicker {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #ff6b7c;
+	}
+
+	.pi__kicker::before {
+		content: '';
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background: var(--pi-red);
+	}
+
+	.pi__title {
+		margin: 0.6rem 2rem 0.75rem 0;
+		/* lg, not xl: the splash layout redefines xl as a 60px headline. */
+		font-size: calc(var(--font-size-lg) * 1.3);
+		line-height: 1.1;
+		color: var(--pi-ink);
+	}
+
+	.pi__body,
+	.pi__note {
+		margin: 0 0 1rem;
+		color: var(--pi-muted);
+		font-size: var(--font-size-sm);
+		line-height: 1.5;
+	}
+
+	.pi__note {
+		color: var(--pi-ink);
+	}
+
+	.pi__form {
+		margin: 1.25rem 0 0;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--pi-line);
+	}
+
+	.pi__label {
+		display: block;
+		margin-bottom: 0.5rem;
+		font-size: var(--font-size-sm);
+		font-weight: 600;
+	}
+
+	.pi__row {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.pi__input {
+		flex: 1 1 12rem;
+		min-width: 0;
+		padding: 0.65rem 0.8rem;
+		border: 1px solid var(--pi-line);
+		border-radius: 8px;
+		background: #0b0d12;
+		color: var(--pi-ink);
+		font: inherit;
+		font-size: var(--font-size-sm);
+	}
+
+	.pi__input:focus-visible {
+		outline: 2px solid var(--pi-red);
+		outline-offset: 1px;
+	}
+
+	.pi__status {
+		min-height: 1.25em;
+		margin: 0.6rem 0 0;
+		font-size: var(--font-size-sm);
+		color: var(--pi-muted);
+	}
+</style>
