@@ -212,6 +212,7 @@ const AUTOMATED = [
 ];
 ---
 <SplashLayout title="MFL.football — skins, live scoring and league sites for MyFantasyLeague">
+  <div class="home">
   <header class="top">
     <a class="brand" href="/">MFL<span>.</span>football</a>
     <nav class="top__links" aria-label="Sections">
@@ -389,9 +390,35 @@ const AUTOMATED = [
   </footer>
 
   <ProductInterest />
+  </div>
 </SplashLayout>
 
 <style>
+  /* MFL.football's brand is red and black, in BOTH themes. The splash layout's
+     default theme would paint this page navy (CTAs, headings) in light and
+     blue/green in dark, so the page sets its own values for the tokens it and
+     the shared CTA (src/styles/cta.css) read. Dark keeps the brand: near-white
+     ink on the dark ground, with a lighter red that holds contrast there. */
+  .home {
+    --brand-ink: #111111;
+    --brand-red: #c8102e;
+    --brand-red-hover: #a10d25;
+    --primary-link-default-text-color: var(--brand-ink);
+    --primary-link-hover-text-color: var(--brand-red);
+    --secondary-color: var(--brand-red);
+    --cta-fill: var(--brand-red);
+    --cta-fill-hover: var(--brand-red-hover);
+    --on-cta-fill: #ffffff;
+    --btn-primary-border-hover: var(--brand-red);
+  }
+
+  :global(html.dark) .home {
+    --brand-ink: #f2f3f5;
+    --brand-red: #ff4d5e;
+    --brand-red-hover: #ff7380;
+    --on-cta-fill: #111111;
+  }
+
   /* Quieter than MFL Live's landing: the page follows the theme, and the one
      loud surface is the MFL Live band, which is dark in BOTH themes (MFL
      Live's own ground, #14161a family) so its literals do not flip. */
