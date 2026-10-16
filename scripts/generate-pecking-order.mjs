@@ -38,6 +38,7 @@ import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { capSentences, LEDE_MAX_SENTENCES } from '../src/utils/pecking-order-lede.mjs';
+import { spellOutShorthand } from '../src/utils/pecking-order-wording.mjs';
 import {
   openPoll,
   closePoll,
@@ -414,7 +415,7 @@ function rankingBlurb(row, standingsByFid) {
   })();
   const streak = parseStreak(standing?.strk);
   const streakStr = streak.length >= 2
-    ? (streak.type === 'W' ? `${streak.length}-game win streak` : `${streak.length}-game skid`)
+    ? `${streak.length}-game ${streak.type === 'W' ? 'winning' : 'losing'} streak`
     : null;
 
   const parts = [];
@@ -423,7 +424,7 @@ function rankingBlurb(row, standingsByFid) {
   if (streakStr) parts.push(`Riding a ${streakStr}.`);
   if (trendStr) parts.push(`Pecking order: ${trendStr}.`);
   if (parts.length === 0) parts.push(`Reset week — limited data.`);
-  return parts.join(' ');
+  return spellOutShorthand(parts.join(' '));
 }
 
 // ─── Standings snapshot ─────────────────────────────────────────────

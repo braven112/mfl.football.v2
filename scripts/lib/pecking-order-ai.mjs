@@ -11,6 +11,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../src/utils/pecking-order-lede.mjs';
+import { spellOutShorthand } from '../../src/utils/pecking-order-wording.mjs';
 
 // ─── Quality-gate constants ────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export function buildFactSheet({
   // keys (or keys by team name), every blurb misses its row in applyAIVoice,
   // and the whole column silently falls back to templated voice — which is
   // exactly what shipped from launch until 2026-08-14.
-  lines.push('Format: rank | team | trend | all-play % | rolling-3wk record | rolling-3wk PPG | streak | season PPG | blurb key');
+  lines.push('Format: rank | team | trend | all-play % | record over the last three weeks | PPG over the last three weeks | streak | season PPG | blurb key');
   for (const r of rows) {
     const team = teams.get(r.franchiseId);
     const name = team?.nameMedium ?? team?.name ?? r.franchiseId;
@@ -94,11 +95,11 @@ export function buildFactSheet({
     const seasonPpg = r.metrics.seasonPpg != null ? r.metrics.seasonPpg.toFixed(1) : '—';
     const allPlay = r.metrics.allPlayPct != null ? `${(r.metrics.allPlayPct * 100).toFixed(1)}% all-play` : '—';
     const factsForBlurb = r.factsForBlurb || {}; // optional caller enrichment
-    const recStr = factsForBlurb.last3Record ? `${factsForBlurb.last3Record.wins}-${factsForBlurb.last3Record.losses}${factsForBlurb.last3Record.ties ? `-${factsForBlurb.last3Record.ties}` : ''} L3` : '—';
+    const recStr = factsForBlurb.last3Record ? `${factsForBlurb.last3Record.wins}-${factsForBlurb.last3Record.losses}${factsForBlurb.last3Record.ties ? `-${factsForBlurb.last3Record.ties}` : ''} over the last three weeks` : '—';
     const streakStr = factsForBlurb.streak && factsForBlurb.streak.length >= 2
-      ? `${factsForBlurb.streak.type}${factsForBlurb.streak.length}`
+      ? `${factsForBlurb.streak.length}-game ${factsForBlurb.streak.type === 'W' ? 'winning' : 'losing'} streak`
       : 'no active streak';
-    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG L3 | ${streakStr} | ${seasonPpg} season PPG | blurb key: ${r.franchiseId}`);
+    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG over the last three weeks | ${streakStr} | ${seasonPpg} season PPG | blurb key: ${r.franchiseId}`);
   }
   lines.push('');
 
@@ -150,7 +151,8 @@ Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for every
 
 VOICE RULES
 - Schefter: confident, punchy, opinionated. "League sources tell me…", "Boom.", "Money is nice, but championships are better."
-- One blurb per team max. Specific. Reference the team's all-play %, L3 record, PPG, streak, or trend from the fact sheet.
+- One blurb per team max. Specific. Reference the team's all-play %, record over the last three weeks, PPG, streak, or trend from the fact sheet.
+- Write in plain English, never box-score shorthand: "a 2-game winning streak", never "W2"; "a 3-game losing streak", never "L3 streak"; "over the last three weeks", never "L3".
 - Lede: 2-3 sentences. Frame the week's biggest story (rise to #1, fall, hot streak, blowup).
 - Headline: ≤100 chars, punchy, no period. Bias toward action verbs.
 
@@ -287,7 +289,7 @@ export function applyAIVoice(issue, aiOutput, teams) {
   // 2026 Week 5 issue shipped every blurb as `<p>…</p>`, printed literally on
   // the page and in the GroupMe post. Every field here renders as text, so
   // normalise before validating rather than trusting the instruction.
-  const plain = (v) => (typeof v === 'string' ? toChatPlainText(v) : v);
+  const plain = (v) => (typeof v === 'string' ? spellOutShorthand(toChatPlainText(v)) : v);
   aiOutput = aiOutput && {
     ...aiOutput,
     headline: plain(aiOutput.headline),

@@ -55,7 +55,7 @@ const topN = leagueDef.peckingOrder?.topN ?? null;
 // The sample's own methodology string, so this page and the issue below it
 // can't drift apart on the formula.
 const methodology = latest?.data.methodology
-  ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+  ?? '50% all-play record · 50% scoring over the last three weeks';
 
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels(leagueDef.slug);

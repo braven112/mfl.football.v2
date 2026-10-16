@@ -24,6 +24,7 @@ import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../utils/pecking-order-lede.mjs';
+import { spellOutShorthand } from '../../utils/pecking-order-wording.mjs';
 import type { OwnersPollBlock } from './owners-poll/OwnersPollResults.astro';
 
 export interface RankingRow {
@@ -184,7 +185,7 @@ const showDateline = !isSample && !isRetroactivelyGenerated(issue);
 // keeps describing its own math. The fallback matches describeMethodology()
 // (scripts/lib/pecking-order-math.mjs) for issues written before that field.
 const methodology = issue.methodology
-  ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+  ?? '50% all-play record · 50% scoring over the last three weeks';
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels(leagueDef.slug);
 
@@ -195,7 +196,8 @@ const labels = await getPersonaLabels(leagueDef.slug);
  * for. Older issues carry longer ledes, so the cap is applied here as well as
  * in the generator.
  */
-const lede = capSentences(issue.lede, LEDE_MAX_SENTENCES);
+// Published issues still carry "W2" / "L3" shorthand; spell it out for every issue.
+const lede = spellOutShorthand(capSentences(issue.lede, LEDE_MAX_SENTENCES));
 
 // ── Top-N cut (a 99-team league) ────────────────────────────────────────────
 // Rows ranked 1..N carry a blurb and render as cards; the rest of the order
@@ -246,11 +248,11 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
               </span>
             ) : null}
           </div>
-          <p class="pr-card__blurb">{row.blurb}</p>
+          <p class="pr-card__blurb">{spellOutShorthand(row.blurb)}</p>
           {(row.metrics.allPlayPct != null || row.metrics.rolling3Ppg != null) && (
             <p class="pr-card__stats">
               {row.metrics.allPlayPct != null && <span><strong>{(row.metrics.allPlayPct * 100).toFixed(1)}%</strong> all-play</span>}
-              {row.metrics.rolling3Ppg != null && <span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong> PPG last 3</span>}
+              {row.metrics.rolling3Ppg != null && <span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong> PPG, last three weeks</span>}
             </p>
           )}
         </li>
