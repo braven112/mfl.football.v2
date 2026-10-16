@@ -42,17 +42,24 @@
 	// page swap would replace.
 	const VISITOR_KEY = 'productInterest.visitor';
 
+	// randomUUID exists only in a secure context; plain http on a LAN address
+	// has getRandomValues alone.
+	function newId(): string {
+		if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+		return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+	}
+
 	function visitorId(): string {
 		try {
 			let id = localStorage.getItem(VISITOR_KEY);
 			if (!id) {
-				id = crypto.randomUUID();
+				id = newId();
 				localStorage.setItem(VISITOR_KEY, id);
 			}
 			return id;
 		} catch {
 			// No storage (private window): a per-page id still counts the click.
-			return crypto.randomUUID();
+			return newId();
 		}
 	}
 

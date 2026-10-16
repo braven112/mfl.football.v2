@@ -50,12 +50,20 @@ export async function recordInterestClick(slug: ProductSlug, visitor: string): P
 	return true;
 }
 
+/**
+ * The most addresses one product keeps. The endpoint has no session, so this
+ * bounds what a determined caller can write; a real launch list is far below it.
+ */
+export const MAX_EMAILS_PER_PRODUCT = 5000;
+
 /** Keep an email left in the dialog. The same address twice keeps the first time. */
 export async function recordInterestEmail(slug: ProductSlug, email: string, now = new Date()): Promise<boolean> {
 	const redis = await getRedis();
 	if (!redis) return false;
 	const existing = await redis.hget(emailsKey(slug), email);
-	if (!existing) await redis.hset(emailsKey(slug), { [email]: now.toISOString() });
+	if (!existing && (await redis.hlen(emailsKey(slug))) < MAX_EMAILS_PER_PRODUCT) {
+		await redis.hset(emailsKey(slug), { [email]: now.toISOString() });
+	}
 	return true;
 }
 

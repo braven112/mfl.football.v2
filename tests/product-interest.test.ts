@@ -31,6 +31,7 @@ const fakeRedis = {
 		hashes.set(k, h);
 		return 1;
 	},
+	hlen: async (k: string) => hashes.get(k)?.size ?? 0,
 	hgetall: async (k: string) => (hashes.has(k) ? Object.fromEntries(hashes.get(k)!) : null),
 	incr: async () => 1,
 	expire: async () => 1,
@@ -41,11 +42,11 @@ vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => fakeRedis })
 const mod = await import('../src/utils/product-interest');
 const { POST } = await import('../src/pages/api/product-interest');
 
-const post = (body: unknown) =>
+const post = (body: unknown, contentType = 'application/json') =>
 	POST({
 		request: new Request('http://x/api/product-interest', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': contentType },
 			body: JSON.stringify(body),
 		}),
 	} as any) as Promise<Response>;
@@ -95,6 +96,11 @@ describe('product interest', () => {
 		expect((await post({ product: 'free-money', visitor: 'visitor-aaaa' })).status).toBe(400);
 		expect((await post({ product: 'league-hub', visitor: '<script>' })).status).toBe(400);
 		expect((await post({ product: 'league-hub', visitor: 'visitor-aaaa', email: 'x' })).status).toBe(400);
+		expect(sets.size + hashes.size).toBe(0);
+	});
+
+	it('refuses a body that is not sent as JSON, so a cross-site form cannot post one', async () => {
+		expect((await post({ product: 'league-hub', visitor: 'visitor-aaaa' }, 'text/plain')).status).toBe(415);
 		expect(sets.size + hashes.size).toBe(0);
 	});
 });
