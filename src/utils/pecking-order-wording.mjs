@@ -5,7 +5,8 @@
  * L3"), and the writer echoed it into published blurbs: "a 2-1 L3 with a W2
  * streak". Owners read that as a puzzle (Brandon, Oct 2026: say "a 2-game
  * winning streak", and if you mean last three, say last three). New issues
- * are generated without the shorthand; this rewrites any that slips through,
+ * are generated without the shorthand (nor "rolling record", which nobody
+ * says either); this rewrites any that slips through,
  * and is applied at render time so issues already published read the same.
  *
  * "L3" here always means the rolling last-three-WEEKS window (a week can hold
@@ -30,6 +31,12 @@ export function spellOutShorthand(text) {
       const a = takesAn(n) ? 'an' : 'a';
       return `${article[0] === 'A' ? a[0].toUpperCase() + a.slice(1) : a} ${phrase}`;
     })
+    // "a 3-1 rolling record" → "a 3-1 record over the last three weeks"
+    .replace(/\b(\d+-\d+(?:-\d+)?)\s+rolling\s+record\b/g, '$1 record over the last three weeks')
+    // "151.9 PPG rolling average" / "82.1 PPG rolling" → "… PPG over the last three weeks"
+    .replace(/\bPPG\s+rolling(?:\s+average)?\b/g, 'PPG over the last three weeks')
+    // "a perfect 4-0 L3" → "a perfect 4-0 record over the last three weeks"
+    .replace(/\b(an?|the|their|perfect|ugly|brutal|crisp|dominant)\s+(\d+-\d+(?:-\d+)?)\s+L3\b(?!\s+record)/g, '$1 $2 record over the last three weeks')
     // "2-1 L3 record" → "2-1 record over the last three weeks"
     .replace(/\b(\d+-\d+(?:-\d+)?)\s+L3\s+record\b/g, '$1 record over the last three weeks')
     // "2-1 L3" → "2-1 over the last three weeks"
@@ -39,5 +46,17 @@ export function spellOutShorthand(text) {
     // anything left: "their L3 record" → "their last-three record"
     .replace(/\bL3\b/g, 'last-three')
     // "over their last 3" → "over their last three"
-    .replace(/\blast ([2-9])\b(?![.\d])/g, (_m, n) => `last ${NUMBER_WORDS[n]}`);
+    .replace(/\blast ([2-9])\b(?![.\d])/g, (_m, n) => `last ${NUMBER_WORDS[n]}`)
+    // "a 2-2 record over the last three weeks and 112.2 PPG over the last
+    // three weeks" says it once: keep only the clause's last one.
+    .split(/(?<=[.;!?—])(?=\s)/)
+    .map(dedupeWindow)
+    .join('');
+}
+
+const WINDOW = ' over the last three weeks';
+function dedupeWindow(clause) {
+  const last = clause.lastIndexOf(WINDOW);
+  if (last < 0 || clause.indexOf(WINDOW) === last) return clause;
+  return clause.slice(0, last).split(WINDOW).join('') + clause.slice(last);
 }
