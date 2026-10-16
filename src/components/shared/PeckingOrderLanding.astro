@@ -57,6 +57,9 @@ const topN = leagueDef.peckingOrder?.topN ?? null;
 const methodology = latest?.data.methodology
   ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
 
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(leagueDef.slug);
+
 const HOW_IT_WORKS = [
   {
     title: 'One number, two halves',
@@ -76,22 +79,16 @@ const HOW_IT_WORKS = [
     title: 'Movement is the story',
     body: `Every card carries its arrow and how far it moved since last week. Climbing five spots is worth more than sitting at #6 all year.`,
   },
-  {
-    title: 'Awards, weekly',
-    body: `Stat of the Week, Bench Blunder, Heater, Cooler, and the Matchup of the Week — the highest-ranked clash on the coming slate.`,
-  },
   topN
     ? {
-        title: 'Every team, every division',
-        body: `The top ${topN} get the write-up; every division follows, each team in pecking order with its league-wide rank, so nobody is left off the board.`,
+        title: 'Every team gets a place',
+        body: `The top ${topN} get the write-up; everyone else follows in one compact list with their record and movement, so nobody is left off the board.`,
       }
     : {
-        title: 'Standings, on the same page',
-        body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
+        title: 'Every team gets the write-up',
+        body: `${teamCount ? `All ${teamCount} teams get` : 'Every team gets'} a card with ${labels.name}'s take, their record and the two numbers behind the rank. Nothing else crowds the page.`,
       },
 ];
-// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
-const labels = await getPersonaLabels(leagueDef.slug);
 ---
 
 {isPreview && (

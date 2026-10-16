@@ -17,8 +17,19 @@ export const LEDE_MAX_SENTENCES = 3;
 export function splitSentences(text) {
   const flat = String(text ?? '').replace(/\s+/g, ' ').trim();
   if (!flat) return [];
-  return flat.split(/(?<=[.!?]["”’)]?)\s+(?=["“‘(]?[A-Z#0-9])/);
+  const pieces = flat.split(/(?<=[.!?]['"”’)]?)\s+(?=['"“‘(]?[A-Z#0-9])/);
+  // Re-join a piece that ended on an abbreviation ("No. 1", "Jr. Smith") or an
+  // initial ("A.J. Brown") — the period there does not end the sentence.
+  const out = [];
+  for (const piece of pieces) {
+    const prev = out[out.length - 1];
+    if (prev !== undefined && NOT_A_SENTENCE_END.test(prev)) out[out.length - 1] = `${prev} ${piece}`;
+    else out.push(piece);
+  }
+  return out;
 }
+
+const NOT_A_SENTENCE_END = /(?:^|[\s(])(?:No|Nos|Jr|Sr|St|Mr|Mrs|Ms|Dr|vs|Wk|Pt|Pts|[A-Z](?:\.[A-Z])*)\.$/;
 
 /**
  * First `max` sentences. Paragraph breaks between kept sentences survive —

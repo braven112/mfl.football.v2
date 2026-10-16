@@ -21,6 +21,19 @@ describe('Pecking Order lede cap', () => {
     );
   });
 
+  it('does not end a sentence on an abbreviation or an initial', () => {
+    expect(capSentences('Pigskins lead. Fire Ready slipped. The No. 1 team scored 147.57 points. Extra.')).toBe(
+      'Pigskins lead. Fire Ready slipped. The No. 1 team scored 147.57 points.',
+    );
+    expect(splitSentences('A.J. Brown went off. Jr. Smith did not.')).toEqual(['A.J. Brown went off.', 'Jr. Smith did not.']);
+  });
+
+  it('counts a sentence in straight quotes', () => {
+    expect(capSentences("Tigers lead the order. 'Boom.' Cellmates are on the rise. The rest are chasing.")).toBe(
+      "Tigers lead the order. 'Boom.' Cellmates are on the rise.",
+    );
+  });
+
   it('keeps paragraph breaks and a short lede whole', () => {
     expect(capSentences('One thing.\n\nTwo things!')).toBe('One thing.\n\nTwo things!');
     expect(capSentences('One. Two.\n\nThree. Four.')).toBe('One. Two.\n\nThree.');
