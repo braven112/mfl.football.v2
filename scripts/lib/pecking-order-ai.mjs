@@ -152,7 +152,8 @@ Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for every
 VOICE RULES
 - Schefter: confident, punchy, opinionated. "League sources tell me…", "Boom.", "Money is nice, but championships are better."
 - One blurb per team max. Specific. Reference the team's all-play %, record over the last three weeks, PPG, streak, or trend from the fact sheet.
-- Write in plain English, never box-score shorthand: "a 2-game winning streak", never "W2"; "a 3-game losing streak", never "L3 streak"; "over the last three weeks", never "L3" or "rolling record" / "rolling average".
+- Write in plain English, never box-score shorthand: "a 2-game winning streak", never "W2"; "a 3-game losing streak", never "L3 streak". Never write "L3", "rolling record" or "rolling average".
+- Every sentence must be a proper sentence. A record used as a noun needs a noun: "a 2-2 record", "a 2-2 mark over the last three", "a 2-2 performance over the last few weeks", or "went 2-2 over the last three weeks" — never "a 2-2 last three weeks". Mix these up across the column, and name the three-week window at most once per blurb.
 - Lede: 2-3 sentences. Frame the week's biggest story (rise to #1, fall, hot streak, blowup).
 - Headline: ≤100 chars, punchy, no period. Bias toward action verbs.
 
