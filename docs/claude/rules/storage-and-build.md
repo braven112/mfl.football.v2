@@ -402,6 +402,38 @@ request, and the committed file is the backup and the fallback.
   through the commit-push action) are folded into Redis by the next job's
   pull, because the pull merges file and Redis rather than overwriting.
 
+## Roster sync holds live-read files out of its commit
+
+Since Oct 2026 the roster sync commits only real league changes. Three outputs
+that moved on most runs, but that no page reads from the bundle when it can
+help it, no longer ride every commit (every commit to `main` is a production
+build):
+
+- **`live-odds.json` is not written in season.** The site fetches odds from
+  ESPN per request (`loadLiveOdds`, `coach-data.ts`) and reads this file only
+  off-season (Feb 14 → Labor Day), so `fetch-live-odds.mjs` returns early in
+  season unless given `--week`.
+- **Injuries and TheLeague's salary copy are held.**
+  `scripts/hold-sync-files.mjs` runs as the step right before the commit: it
+  publishes each league's `injuries.json` to `mfl:injuries:<slug>` and puts the
+  committed copies back, letting each group through once a day so git keeps a
+  snapshot (the timer lives in Redis, because the job's checkout is shallow).
+  No credentials, or any Redis error, and the files commit exactly as before.
+  The groups live in `HELD_GROUPS` (`scripts/lib/held-sync-files.mjs`).
+- **Pages read injuries through `loadLiveInjuryMap`**
+  (`src/utils/mfl-injuries-live.ts`, server-only): Redis when it is at least as
+  new as the bundled feed, else the bundle. `loadInjuryMap` alone now shows a
+  report up to a day old. The salary copy has no page reader; its one reader,
+  `schefter-trade-speculation.mjs`, reads the daily snapshot from disk.
+- **Nothing may run between the hold step and the commit**, or it could
+  rewrite a file the hold just restored. `tests/sync-noise-commit-guard.test.ts`
+  pins the order, the Redis env, the in-season odds skip and the pages' reader.
+
+Holding a file is right only when every reader can take a day-old copy or reads
+it live. Scores, weekly results and standings feed the derived chain and about
+30 pages from disk, so they are not held; they belong to
+`docs/plans/league-data-out-of-deploy.md`.
+
 ## A job's league list comes from the registry, never the workflow
 
 Every recurring job that runs once per league asks

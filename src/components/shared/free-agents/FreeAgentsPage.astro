@@ -71,7 +71,7 @@ import '../../../styles/free-agents-primetime.css';
 import { resolveSiteTheme } from '../../../utils/site-theme';
 import { tallyMarketMoves, isAvailableIn, positionLeaders, topMoves, nextGamesByTeam, type NextGame } from '../../../utils/free-agent-market';
 import { getCachedRecentTransactions, mergeTransactionRows } from '../../../utils/mfl-transactions-cache';
-import { loadInjuryMap } from '../../../utils/mfl-injuries';
+import { loadLiveInjuryMap } from '../../../utils/mfl-injuries-live';
 import { viewerClockZone } from '../../../utils/viewer-clock';
 import { formatKickoffCompact } from '../../../utils/rosters/phone-row';
 
@@ -528,7 +528,7 @@ if (primetime) {
     MARKET_WINDOW_DAYS,
   );
   nextGames = nextGamesByTeam(scheduleFeed, nowSec);
-  const injuries = loadInjuryMap(league.slug);
+  const injuries = await loadLiveInjuryMap(league.slug);
   const injuryStatus = (id: string) => injuries[id]?.injuryStatus ?? null;
   const leaderPositions = ['QB', 'RB', 'WR', 'TE', 'DEF'].filter((pos) => poolPositions.includes(pos));
   const poolIds: Array<string | null> = conferenceMeta?.ids?.length ? conferenceMeta.ids : [null];

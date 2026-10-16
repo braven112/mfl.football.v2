@@ -69,4 +69,36 @@ describe('sync writers skip timestamp-only changes', () => {
       },
     });
   });
+
+  it('holds live-read files out of the roster-sync commit, right before it', () => {
+    const wf = read('.github/workflows/roster-sync.yml');
+    const hold = wf.indexOf('run: node ./scripts/hold-sync-files.mjs');
+    const commit = wf.indexOf('- name: Commit and push updates');
+    expect(hold, 'hold step missing').toBeGreaterThan(-1);
+    // Nothing may run between the hold and the commit, or it could rewrite a restored file.
+    expect(wf.slice(hold, commit)).not.toMatch(/\n\s+run:/);
+    const step = wf.slice(wf.lastIndexOf('- name:', hold), hold);
+    expect(step).toContain('UPSTASH_REDIS_REST_URL');
+    expect(step).toContain('UPSTASH_REDIS_REST_TOKEN');
+  });
+
+  it('leaves live-odds.json alone in season, when the site reads ESPN instead', () => {
+    const odds = read('scripts/fetch-live-odds.mjs');
+    expect(odds).toMatch(/if \(weekIndex === -1 && !isOffSeason\(\)\)/);
+    expect(read('src/utils/coach-data.ts')).toMatch(/if \(isOffSeason && fallbackData\) return fallbackData;/);
+  });
+
+  it('renders injuries through the live reader, since the committed copy is a daily snapshot', () => {
+    for (const page of [
+      'src/components/shared/rosters/RostersPage.astro',
+      'src/components/shared/free-agents/FreeAgentsPage.astro',
+      'src/components/shared/lineup/LineupPage.astro',
+      'src/pages/theleague/rosters.astro',
+    ]) {
+      const src = read(page);
+      expect(src, page).toMatch(/await loadLiveInjuryMap\(/);
+      expect(src, page).not.toMatch(/\bloadInjuryMap\(/);
+    }
+  });
 });
+

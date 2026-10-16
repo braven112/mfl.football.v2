@@ -20,6 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import { getCurrentYears } from './lib/league-years.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -198,6 +199,12 @@ function saveOddsData(oddsData) {
   );
 }
 
+/** Feb 14 → Labor Day, the same test loadLiveOdds uses to pick this file over ESPN. */
+export function isOffSeason(now = new Date()) {
+  const { currentLeagueYear, currentSeasonYear } = getCurrentYears(now);
+  return currentLeagueYear > currentSeasonYear;
+}
+
 /**
  * Main
  */
@@ -206,6 +213,16 @@ async function main() {
   const args = process.argv.slice(2);
   const weekIndex = args.indexOf('--week');
   const week = weekIndex !== -1 ? parseInt(args[weekIndex + 1], 10) : getCurrentNFLWeek();
+
+  // In season the site fetches odds from ESPN per request (loadLiveOdds,
+  // src/utils/coach-data.ts) and never reads this file; it is only the
+  // off-season fallback. Rewriting it whenever a line moved made it the most
+  // common reason a roster sync committed, and every commit to main is a
+  // production build. An explicit --week still writes.
+  if (weekIndex === -1 && !isOffSeason()) {
+    console.log('In season: the site reads live odds from ESPN, so live-odds.json is left as is.');
+    return;
+  }
 
   console.log('═'.repeat(50));
   console.log('  NFL Live Odds Fetcher');
@@ -230,4 +247,5 @@ async function main() {
   }
 }
 
-main();
+// Run only as a script, so tests can import isOffSeason.
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) main();

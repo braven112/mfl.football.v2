@@ -25,7 +25,8 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../PlayerCell.astro';
 import { DEFAULT_LEAGUE_SLUG } from '../../../config/leagues';
-import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../../utils/mfl-injuries';
+import { injuryBadgeLabel, injuryBadgeTitle } from '../../../utils/mfl-injuries';
+import { loadLiveInjuryMap } from '../../../utils/mfl-injuries-live';
 import '../../../styles/injury-indicator.css';
 import type { LeagueDefinition } from '../../../config/leagues';
 import type { AuthUser } from '../../../utils/auth';
@@ -84,7 +85,7 @@ const PAGE_LEAGUE_SLUG = league.slug;
 // player cannot start, the designation says he might not play. Both lineup
 // pages carried `injury: null` since they shipped, so the one screen where an
 // owner decides who to sit never showed either half of that.
-const lineupInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
+const lineupInjuries = await loadLiveInjuryMap(PAGE_LEAGUE_SLUG);
 
 // ---------------------------------------------------------------------------
 // Core data loading
