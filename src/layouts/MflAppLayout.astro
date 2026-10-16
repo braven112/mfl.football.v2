@@ -163,18 +163,21 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 
 		<header class="mfl-bar">
 			<a class="mfl-bar__brand" href="/live" aria-label="MFL Live — home">
-				<svg class="mfl-bar__mark" viewBox="0 0 156 100" aria-hidden="true" focusable="false">
+				{/* The MFL.football mark (public/assets/logos/mfl-football-mark.svg),
+				    inlined so the bars take the bar's fixed ink and the football the
+				    accent. viewBox is cropped to the glyph's own bounds. */}
+				<svg class="mfl-bar__mark" viewBox="8 11 48 44" aria-hidden="true" focusable="false">
+					<g fill="currentColor">
+						<rect x="9" y="12" width="12" height="42" rx="6" />
+						<rect x="26" y="30" width="12" height="24" rx="6" />
+						<rect x="43" y="12" width="12" height="42" rx="6" />
+					</g>
 					<g
-						fill="none"
-						stroke="currentColor"
-						stroke-width="14"
-						stroke-linecap="round"
-						stroke-linejoin="round"
+						fill="var(--league-accent)"
+						stroke="var(--league-accent)"
+						transform="translate(32 20) rotate(-15)"
 					>
-						<path d="M7 85 L7 22 L29 58 L51 22 L51 85" />
-						<path d="M67 85 L67 22 L101 22" />
-						<path d="M67 53 L94 53" />
-						<path d="M117 22 L117 85 L149 85" />
+						<path d="M-6.5 0Q0-5.4 6.5 0Q0 5.4-6.5 0Z" stroke-width="4.5" stroke-linejoin="round" />
 					</g>
 				</svg>
 				<span class="mfl-bar__live">Live</span>
@@ -300,7 +303,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	}
 
 	.mfl-bar__mark {
-		height: 1.05rem;
+		height: 1.3rem;
 		width: auto;
 		display: block;
 		align-self: center;
