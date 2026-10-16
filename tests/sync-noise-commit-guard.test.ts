@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { stripScheduleSpreads } from '../scripts/lib/mfl-schedule-feed.mjs';
 
 const read = (p: string) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 
@@ -44,5 +45,28 @@ describe('sync writers skip timestamp-only changes', () => {
     // The one direct assignment allowed is inside the helper itself.
     expect(scan.match(/feed\.tradeBaitState\s*=(?!=)/g)?.length).toBe(1);
     expect(scan.match(/(?<!function )setTradeBaitState\(feed, nextState\)/g)?.length).toBe(2);
+  });
+
+  it('drops the projected matchup spreads from schedule.json before writing', () => {
+    // MFL recomputes these from live projections, so they moved on most
+    // syncs and kept schedule.json a "real" change no reader cared about.
+    expect(feeds).toMatch(/key: 'schedule',[\s\S]{0,200}parser: \(t\) => stripScheduleSpreads\(JSON\.parse\(t\)\)/);
+    const feed = {
+      schedule: {
+        weeklySchedule: [
+          { week: '9', matchup: [{ franchise: [{ id: '0001', spread: '1.4', isHome: '1' }, { id: '0002', spread: '-1.4' }] }] },
+          // MFL collapses one-element arrays to a bare object.
+          { week: '10', matchup: { franchise: { id: '0003', spread: '7', score: '101.2' } } },
+        ],
+      },
+    };
+    expect(stripScheduleSpreads(feed)).toEqual({
+      schedule: {
+        weeklySchedule: [
+          { week: '9', matchup: [{ franchise: [{ id: '0001', isHome: '1' }, { id: '0002' }] }] },
+          { week: '10', matchup: { franchise: { id: '0003', score: '101.2' } } },
+        ],
+      },
+    });
   });
 });
