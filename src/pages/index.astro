@@ -214,7 +214,10 @@ const AUTOMATED = [
 <SplashLayout title="MFL.football — skins, live scoring and league sites for MyFantasyLeague">
   <div class="home">
   <header class="top">
-    <a class="brand" href="/">MFL<span>.</span>football</a>
+    <a class="brand" href="/" aria-label="MFL.football home">
+      <img class="brand__mark brand__mark--light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
+      <img class="brand__mark brand__mark--dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
+    </a>
     <nav class="top__links" aria-label="Sections">
       <a href="#free">Free tools</a>
       <a class="top__live" href="/live">MFL Live</a>
@@ -431,13 +434,25 @@ const AUTOMATED = [
   }
 
   .brand {
-    font-family: var(--font-display);
-    font-size: var(--font-size-lg);
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
   }
 
-  .brand span {
-    color: var(--secondary-color);
+  /* The wordmark's letters are outlined paths (public/assets/logos/), so it
+     needs no font. One cut per theme, like the league panels' logos. */
+  .brand__mark {
+    display: block;
+    width: auto;
+    height: 1.6rem;
+  }
+
+  .brand__mark--dark,
+  :global(html.dark) .brand__mark--light {
+    display: none;
+  }
+
+  :global(html.dark) .brand__mark--dark {
+    display: block;
   }
 
   .top__links {
