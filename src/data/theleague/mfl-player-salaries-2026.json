@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-16T02:31:24.685Z"
+    "fetchedAt": "2026-10-16T10:01:36.836Z"
   },
   "players": [
     {
@@ -8530,16 +8530,16 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "15282",
-          "name": "Smith, DeVonta"
-        },
-        {
           "id": "16195",
           "name": "Wicks, Dontayvion"
         },
         {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
         },
         {
           "id": "17499",
@@ -9112,7 +9112,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -9142,7 +9142,16 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
+        },
+        {
+          "id": "17333",
+          "name": "Cooper, Darius"
+        }
+      ]
     },
     {
       "id": "8851",
@@ -9553,7 +9562,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -9586,10 +9595,6 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": [
-        {
-          "id": "15282",
-          "name": "Smith, DeVonta"
-        },
         {
           "id": "16195",
           "name": "Wicks, Dontayvion"
@@ -10727,7 +10732,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -12505,7 +12510,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -24198,7 +24203,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -24230,12 +24235,7 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": [
-        {
-          "id": "15282",
-          "name": "Smith, DeVonta"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16171",
@@ -26340,16 +26340,16 @@
       "gamesPlayed": 5,
       "depthChartAhead": [
         {
-          "id": "15282",
-          "name": "Smith, DeVonta"
-        },
-        {
           "id": "16195",
           "name": "Wicks, Dontayvion"
         },
         {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
         }
       ]
     }
