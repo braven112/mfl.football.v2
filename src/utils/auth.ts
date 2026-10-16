@@ -10,7 +10,7 @@
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
-import { getLeagueById, MFL_LIVE_OPEN_SIGN_IN, MFL_LIVE_PILOT_LEAGUE_IDS } from '../config/leagues';
+import { getLeagueById, MFL_LIVE_OPEN_SIGN_IN, MFL_LIVE_PILOT_LEAGUE_IDS, mflLiveSignInLeagueIds } from '../config/leagues';
 import { isDemoDeploy } from './deploy-environment';
 
 export interface AuthUser {
@@ -88,7 +88,10 @@ export function getAuthUser(request: Request): AuthUser | null {
 export function getMflLiveUser(request: Request): AuthUser | null {
   const user = readSession(request);
   if (!user) return null;
-  if (isSiteSessionLeague(user.leagueId)) return user;
+  // The MFL Live list, not every site league: a best-ball session is valid on
+  // its own league's pages but is not an MFL Live session.
+  if (mflLiveSignInLeagueIds().includes(user.leagueId)) return user;
+  if (getLeagueById(user.leagueId)) return null;
   if (!MFL_LIVE_OPEN_SIGN_IN || !/^\d+$/.test(user.leagueId)) return null;
   return { ...user, role: 'owner' };
 }
