@@ -8,9 +8,11 @@ import { loadInjuryMap } from '../src/utils/mfl-injuries';
 import {
   LIVE_INJURIES_TTL_MS,
   liveInjuriesKey,
-  loadLiveInjuryMap,
+  liveIsFresher,
+  loadLiveInjuryFeed,
   resetLiveInjuryMemo,
 } from '../src/utils/mfl-injuries-live';
+import { loadLiveInjuryMap } from '../src/utils/mfl-injuries-live-map';
 
 const SLUG = 'theleague';
 const NOW = Date.parse('2026-10-16T12:00:00Z');
@@ -56,5 +58,42 @@ describe('loadLiveInjuryMap', () => {
     expect(gets).toBe(1);
     await loadLiveInjuryMap(SLUG, c, NOW + LIVE_INJURIES_TTL_MS);
     expect(gets).toBe(2);
+  });
+});
+
+describe('freshness', () => {
+  const BASE = { year: 2026, generatedAt: '2026-10-16T10:00:00Z' };
+
+  it('a same-year live copy wins only when its stamp is no older than the base', () => {
+    expect(liveIsFresher({ year: 2026, generatedAt: '2026-10-16T11:00:00Z', injuries: {} }, BASE)).toBe(true);
+    expect(liveIsFresher({ year: 2026, generatedAt: '2026-10-16T10:00:00Z', injuries: {} }, BASE)).toBe(true);
+    // A failed publish committed a newer report; the stale live copy must not override it.
+    expect(liveIsFresher({ year: 2026, generatedAt: '2026-10-16T09:00:00Z', injuries: {} }, BASE)).toBe(false);
+    expect(liveIsFresher({ year: 2026, injuries: {} }, BASE)).toBe(false);
+  });
+
+  it('year still decides across years, and an unstamped base loses to a same-year live copy', () => {
+    expect(liveIsFresher({ year: 2027, injuries: {} }, BASE)).toBe(true);
+    expect(liveIsFresher({ year: 2025, generatedAt: '2030-01-01T00:00:00Z', injuries: {} }, BASE)).toBe(false);
+    expect(liveIsFresher({ year: 2026, injuries: {} }, { year: 2026 })).toBe(true);
+  });
+});
+
+describe('loadLiveInjuryFeed', () => {
+  beforeEach(() => resetLiveInjuryMemo());
+  const DISK = { year: 2026, generatedAt: '2026-10-16T10:00:00Z', injuries: { '2': { injuryStatus: 'Questionable' } } };
+
+  it('replaces the disk feed with a fresher live report for the same year', async () => {
+    const live = { ...LIVE, year: 2026, generatedAt: '2026-10-16T11:00:00Z' };
+    expect(await loadLiveInjuryFeed(SLUG, 2026, DISK, client(live), NOW)).toEqual(live);
+  });
+
+  it('keeps the disk feed when the live report is older, another year, or missing', async () => {
+    const older = { ...LIVE, year: 2026, generatedAt: '2026-10-16T09:00:00Z' };
+    expect(await loadLiveInjuryFeed(SLUG, 2026, DISK, client(older), NOW)).toBe(DISK);
+    resetLiveInjuryMemo();
+    expect(await loadLiveInjuryFeed(SLUG, 2026, DISK, client({ ...LIVE, year: 2027 }), NOW)).toBe(DISK);
+    resetLiveInjuryMemo();
+    expect(await loadLiveInjuryFeed(SLUG, 2026, null, client(null), NOW)).toBeNull();
   });
 });

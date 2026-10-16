@@ -63,13 +63,17 @@ export function loadInjuryMap(slug: string): InjuryMap {
   return newestBundledInjuries(slug).injuries;
 }
 
-/** The bundled feed's newest year and its map ({ year: -1, injuries: {} } when there is none). */
-export function newestBundledInjuries(slug: string): { year: number; injuries: InjuryMap } {
+/**
+ * The bundled feed's newest year, its map and when the sync wrote it
+ * ({ year: -1, injuries: {} } when there is none).
+ */
+export function newestBundledInjuries(slug: string): { year: number; generatedAt?: string; injuries: InjuryMap } {
   const feeds = INJURY_FEEDS[slug];
   if (!feeds) return { year: -1, injuries: {} };
 
   let newestYear = -1;
   let newest: InjuryMap = {};
+  let generatedAt: string | undefined;
 
   for (const [path, mod] of Object.entries(feeds)) {
     const matched = path.match(/mfl-feeds\/(\d{4})\//);
@@ -82,9 +86,11 @@ export function newestBundledInjuries(slug: string): { year: number; injuries: I
 
     newestYear = year;
     newest = injuries as InjuryMap;
+    const stamp = (data as { generatedAt?: unknown }).generatedAt;
+    generatedAt = typeof stamp === 'string' ? stamp : undefined;
   }
 
-  return { year: newestYear, injuries: newest };
+  return { year: newestYear, generatedAt, injuries: newest };
 }
 
 

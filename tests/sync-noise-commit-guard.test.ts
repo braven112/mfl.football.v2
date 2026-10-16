@@ -100,5 +100,11 @@ describe('sync writers skip timestamp-only changes', () => {
       expect(src, page).not.toMatch(/\bloadInjuryMap\(/);
     }
   });
+
+  it('feeds the lineup warnings and app badge the live report, not the disk copy alone', () => {
+    for (const file of ['src/utils/my-team-week.ts', 'src/pages/api/app-badge.ts']) {
+      expect(read(file), file).toMatch(/await loadLiveInjuryFeed\(league\.slug, \w+, readFeed\(league, \w+, 'injuries\.json'\)/);
+    }
+  });
 });
 

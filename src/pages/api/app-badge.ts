@@ -36,6 +36,7 @@ import { getLeagueYearForMflId } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 import { getRedis } from '../../utils/redis-client';
+import { loadLiveInjuryFeed, type InjuryFeed } from '../../utils/mfl-injuries-live';
 import { appBadgeCacheKey } from '../../utils/app-badge-cache';
 import {
   readBallot,
@@ -173,7 +174,8 @@ async function countLineup(
 
   const players = readFeed(league, year, 'players.json');
   const leagueJson = readFeed(league, year, 'league.json');
-  const injuries = readFeed(league, year, 'injuries.json');
+  // Live: the sync holds injuries.json out of most commits (held-sync-files.mjs).
+  const injuries = await loadLiveInjuryFeed(league.slug, year, readFeed(league, year, 'injuries.json') as InjuryFeed | null);
   if (!players || !leagueJson) return 0;
 
   // Byes are NFL-wide and are NOT among the committed feeds, so this is the

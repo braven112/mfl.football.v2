@@ -71,23 +71,59 @@ export function snapshotDue(lastMs, nowMs = Date.now()) {
 }
 
 /**
+ * Each league's current injury report on disk: the newest year's file per
+ * league, from every path the run has (not just the modified ones). Publishing
+ * from the git diff missed a report that reverted: committed A, a sync
+ * publishes B and restores A, the next report is A again, `writeJsonIfChanged`
+ * leaves the file alone, git sees no change and Redis keeps serving B.
+ */
+export function currentInjuryFiles(paths) {
+  const newest = new Map();
+  for (const p of paths) {
+    const m = p.match(/^data\/([^/]+)\/mfl-feeds\/(\d{4})\/injuries\.json$/);
+    if (!m) continue;
+    const prev = newest.get(m[1]);
+    if (!prev || Number(m[2]) > prev.year) newest.set(m[1], { path: p, key: injuriesKey(m[1]), year: Number(m[2]) });
+  }
+  return [...newest.values()].map(({ path, key }) => ({ path, key }));
+}
+
+/**
+ * Publish every live-read file to Redis, changed or not, so one failed run is
+ * repaired by the next. Returns false on any failure (malformed file included)
+ * — the caller then holds nothing that depends on Redis.
+ */
+export async function publishLiveFiles(files, { redis, readFile, command = redisCommand, log = () => {} }) {
+  try {
+    for (const f of files) {
+      // Store the parsed value's JSON so a malformed file fails here, not on the site.
+      const body = JSON.stringify(JSON.parse(readFile(f.path)));
+      await command(redis, ['SET', f.key, body]);
+    }
+    return true;
+  } catch (err) {
+    log(`[held-sync] publish failed: ${err.message} — live-read files commit as before`);
+    return false;
+  }
+}
+
+/**
  * Decide each held group's fate. Returns `{ restore: string[], commit: string[] }`:
  * paths to put back to their committed copy, and paths left for the commit.
- * `readFile(path)` returns the file's text; `command` is the Redis REST call.
+ * `published` is publishLiveFiles' result: a group with a live reader is held
+ * only when its report reached Redis. `command` is the Redis REST call.
  */
-export async function planHeldFiles(changes, { redis, readFile, command = redisCommand, nowMs = Date.now(), log = () => {} }) {
+export async function planHeldFiles(changes, { redis, published, command = redisCommand, nowMs = Date.now(), log = () => {} }) {
   const restore = [];
   const commit = [];
   for (const [group, { def, files }] of changes) {
     const paths = files.map((f) => f.path);
+    if (def.redisKey && !published) {
+      log(`[held-sync] ${group}: not published — committing ${paths.length} file(s)`);
+      commit.push(...paths);
+      continue;
+    }
     try {
-      if (def.redisKey) {
-        for (const f of files) {
-          // Store the parsed value's JSON so a malformed file fails here, not on the site.
-          const body = JSON.stringify(JSON.parse(readFile(f.path)));
-          await command(redis, ['SET', def.redisKey(f.match), body]);
-        }
-      }
       const last = Number(await command(redis, ['GET', snapshotKey(group)])) || 0;
       if (snapshotDue(last, nowMs)) {
         await command(redis, ['SET', snapshotKey(group), String(nowMs)]);

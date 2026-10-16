@@ -6,10 +6,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  currentInjuryFiles,
   heldChanges,
   injuriesKey,
   modifiedPaths,
   planHeldFiles,
+  publishLiveFiles,
   SNAPSHOT_EVERY_MS,
 } from '../scripts/lib/held-sync-files.mjs';
 
@@ -54,43 +56,67 @@ describe('which files are held', () => {
   });
 });
 
+describe('publishLiveFiles', () => {
+  it('publishes the newest report per league from every path, not just the modified ones', () => {
+    const OLD = 'data/theleague/mfl-feeds/2025/injuries.json';
+    expect(currentInjuryFiles([OLD, INJ, ROSTERS, AFL_INJ])).toEqual([
+      { path: INJ, key: injuriesKey('theleague') },
+      { path: AFL_INJ, key: injuriesKey('afl-fantasy') },
+    ]);
+  });
+
+  it('repairs Redis when a report reverts to the committed copy (A -> B -> A)', async () => {
+    const A = JSON.stringify({ year: 2026, injuries: { '1': { injuryStatus: 'Out' } } });
+    const B = JSON.stringify({ year: 2026, injuries: {} });
+    const r = fakeRedis();
+    const publish = (text: string) =>
+      publishLiveFiles(currentInjuryFiles([INJ]), { redis: {}, readFile: () => text, command: r.command });
+    await publish(B); // B published, A restored in git
+    // Next sync: the report is A again, so the file matches git and is not modified...
+    expect(heldChanges(modifiedPaths('')).size).toBe(0);
+    // ...but the current report is still published.
+    expect(await publish(A)).toBe(true);
+    expect(JSON.parse(r.store[injuriesKey('theleague')])).toEqual(JSON.parse(A));
+  });
+
+  it('reports failure on a Redis error or a malformed file, publishing nothing broken', async () => {
+    const down = fakeRedis({}, { failOn: 'SET' });
+    expect(await publishLiveFiles(currentInjuryFiles([INJ]), { redis: {}, readFile, command: down.command })).toBe(false);
+    const r = fakeRedis();
+    expect(await publishLiveFiles(currentInjuryFiles([INJ]), { redis: {}, readFile: () => '{not json', command: r.command })).toBe(false);
+    expect(r.store[injuriesKey('theleague')]).toBeUndefined();
+  });
+});
+
 describe('planHeldFiles', () => {
-  it('publishes each league injury report under its own key and holds it out', async () => {
+  it('holds a published injury report out of the commit', async () => {
     const r = fakeRedis({ 'mfl:held-sync:snapshot-at:injuries': String(NOW - 60_000) });
-    const plan = await planHeldFiles(heldChanges([INJ, AFL_INJ]), { redis: {}, readFile, command: r.command, nowMs: NOW });
+    const plan = await planHeldFiles(heldChanges([INJ, AFL_INJ]), { redis: {}, published: true, command: r.command, nowMs: NOW });
     expect(plan).toEqual({ restore: [INJ, AFL_INJ], commit: [] });
-    expect(JSON.parse(r.store[injuriesKey('theleague')])).toEqual(JSON.parse(files[INJ]));
-    expect(r.store[injuriesKey('afl-fantasy')]).toBeDefined();
+  });
+
+  it('commits an injury report that did not reach Redis', async () => {
+    const r = fakeRedis({ 'mfl:held-sync:snapshot-at:injuries': String(NOW - 60_000) });
+    const plan = await planHeldFiles(heldChanges([INJ, SAL]), { redis: {}, published: false, command: r.command, nowMs: NOW });
+    expect(plan.commit).toContain(INJ);
   });
 
   it('lets a group through once a day and restarts its clock', async () => {
     const r = fakeRedis({ 'mfl:held-sync:snapshot-at:theleague-salaries': String(NOW - SNAPSHOT_EVERY_MS) });
-    const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, readFile, command: r.command, nowMs: NOW });
+    const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, published: true, command: r.command, nowMs: NOW });
     expect(plan).toEqual({ restore: [], commit: [SAL] });
     expect(r.store['mfl:held-sync:snapshot-at:theleague-salaries']).toBe(String(NOW));
   });
 
   it('commits when no snapshot has ever been taken', async () => {
     const r = fakeRedis();
-    const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, readFile, command: r.command, nowMs: NOW });
+    const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, published: true, command: r.command, nowMs: NOW });
     expect(plan.commit).toEqual([SAL]);
   });
 
   it('commits as before when Redis fails, so nothing is lost', async () => {
-    const r = fakeRedis({}, { failOn: 'SET' });
-    const plan = await planHeldFiles(heldChanges([INJ]), { redis: {}, readFile, command: r.command, nowMs: NOW });
-    expect(plan).toEqual({ restore: [], commit: [INJ] });
-  });
-
-  it('commits a malformed injury file instead of publishing it', async () => {
-    const r = fakeRedis({ 'mfl:held-sync:snapshot-at:injuries': String(NOW) });
-    const plan = await planHeldFiles(heldChanges([INJ]), {
-      redis: {},
-      readFile: () => '{not json',
-      command: r.command,
-      nowMs: NOW,
-    });
-    expect(plan.commit).toEqual([INJ]);
-    expect(r.store[injuriesKey('theleague')]).toBeUndefined();
+    const r = fakeRedis({}, { failOn: 'GET' });
+    const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, published: true, command: r.command, nowMs: NOW });
+    expect(plan).toEqual({ restore: [], commit: [SAL] });
   });
 });

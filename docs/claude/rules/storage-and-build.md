@@ -415,19 +415,25 @@ build):
   season unless given `--week`.
 - **Injuries and TheLeague's salary copy are held.**
   `scripts/hold-sync-files.mjs` runs as the step right before the commit: it
-  publishes each league's `injuries.json` to `mfl:injuries:<slug>` and puts the
-  committed copies back, letting each group through once a day so git keeps a
+  publishes each league's CURRENT `injuries.json` to `mfl:injuries:<slug>` on
+  every run, changed or not (publishing only git-modified files left Redis
+  stale when a report reverted to the committed copy), and puts the committed
+  copies back, letting each group through once a day so git keeps a
   snapshot (the timer lives in Redis, because the job's checkout is shallow).
   No credentials, or any Redis error, and the files commit exactly as before.
   The groups live in `HELD_GROUPS` (`scripts/lib/held-sync-files.mjs`).
-- **Pages read injuries through `loadLiveInjuryMap`**
-  (`src/utils/mfl-injuries-live.ts`, server-only): Redis when it is at least as
-  new as the bundled feed, else the bundle. `loadInjuryMap` alone now shows a
-  report up to a day old. The salary copy has no page reader; its one reader,
+- **Every injury reader goes through `src/utils/mfl-injuries-live.ts`**
+  (server-only): pages via `loadLiveInjuryMap` (`mfl-injuries-live-map.ts`,
+  split off so the story graph never imports the globbed feeds), the disk readers (lineup
+  warnings in `my-team-week.ts`, `/api/app-badge`) via `loadLiveInjuryFeed`.
+  Redis wins only when it is at least as FRESH as the copy on disk — same
+  year AND a `generatedAt` no older — because a run whose publish failed
+  commits a report newer than the one Redis still holds. `loadInjuryMap` or a
+  raw `injuries.json` read alone now shows a report up to a day old. The salary copy has no page reader; its one reader,
   `schefter-trade-speculation.mjs`, reads the daily snapshot from disk.
 - **Nothing may run between the hold step and the commit**, or it could
   rewrite a file the hold just restored. `tests/sync-noise-commit-guard.test.ts`
-  pins the order, the Redis env, the in-season odds skip and the pages' reader.
+  pins the order, the Redis env, the in-season odds skip and every injury reader.
 
 Holding a file is right only when every reader can take a day-old copy or reads
 it live. Scores, weekly results and standings feed the derived chain and about
