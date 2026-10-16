@@ -55,7 +55,10 @@ const topN = leagueDef.peckingOrder?.topN ?? null;
 // The sample's own methodology string, so this page and the issue below it
 // can't drift apart on the formula.
 const methodology = latest?.data.methodology
-  ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+  ?? '50% all-play record · 50% scoring over the last three weeks';
+
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(leagueDef.slug);
 
 const HOW_IT_WORKS = [
   {
@@ -70,28 +73,22 @@ const HOW_IT_WORKS = [
   },
   {
     title: 'Last three weeks, not last September',
-    body: `The other half is a rolling three-week average, so a hot month actually moves you and one bad Sunday in Week 2 stops following you around in November.`,
+    body: `The other half is your scoring over the last three weeks, so a hot month actually moves you and one bad Sunday in Week 2 stops following you around in November.`,
   },
   {
     title: 'Movement is the story',
     body: `Every card carries its arrow and how far it moved since last week. Climbing five spots is worth more than sitting at #6 all year.`,
   },
-  {
-    title: 'Awards, weekly',
-    body: `Stat of the Week, Bench Blunder, Heater, Cooler, and the Matchup of the Week — the highest-ranked clash on the coming slate.`,
-  },
   topN
     ? {
-        title: 'Every team, every division',
-        body: `The top ${topN} get the write-up; every division follows, each team in pecking order with its league-wide rank, so nobody is left off the board.`,
+        title: 'Every team gets a place',
+        body: `The top ${topN} get the write-up; everyone else follows in one compact list with their record and movement, so nobody is left off the board.`,
       }
     : {
-        title: 'Standings, on the same page',
-        body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
+        title: 'Every team gets the write-up',
+        body: `${teamCount ? `All ${teamCount} teams get` : 'Every team gets'} a card with ${labels.name}'s take, their record and the two numbers behind the rank. Nothing else crowds the page.`,
       },
 ];
-// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
-const labels = await getPersonaLabels(leagueDef.slug);
 ---
 
 {isPreview && (
@@ -151,8 +148,8 @@ const labels = await getPersonaLabels(leagueDef.slug);
       <PeckingOrderIssue issue={latest.data} league={league} variant={isPreview ? 'sample' : 'live'} />
     </div>
     {older.length > 0 && (
-      <aside class="pr-archive">
-        <h2 class="pr-archive__title">{isPreview ? 'More past issues' : 'Past Issues'}</h2>
+      <details class="pr-archive">
+        <summary class="pr-archive__title">{isPreview ? 'More past issues' : 'Past issues'} ({older.length})</summary>
         <ul class="pr-archive__list">
           {older.map(i => (
             <li>
@@ -162,7 +159,7 @@ const labels = await getPersonaLabels(leagueDef.slug);
             </li>
           ))}
         </ul>
-      </aside>
+      </details>
     )}
   </>
 ) : (
@@ -287,13 +284,16 @@ const labels = await getPersonaLabels(leagueDef.slug);
   padding-left: 1rem;
   margin-left: 0.1rem;
 }
+/* Collapsed by default: the archive is navigation, not part of the column,
+   and the rankings are the page (commissioner, 2026-10-15). */
 .pr-archive {
-  margin: 0 0 3rem;
+  max-width: 760px;
+  margin: calc(-1 * var(--spacing-xl)) 0 var(--spacing-2xl);
+  font-size: var(--font-size-sm);
 }
 .pr-archive__title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
   color: var(--page-text, #111827);
 }
 .pr-archive__list {
@@ -302,6 +302,7 @@ const labels = await getPersonaLabels(leagueDef.slug);
   margin: 0;
   display: grid;
   gap: 0.4rem;
+  margin-top: var(--spacing-sm);
 }
 .pr-archive__list a {
   color: var(--page-text, #111827);
