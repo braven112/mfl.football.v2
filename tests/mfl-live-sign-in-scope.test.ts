@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  ALL_LEAGUES,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
 } from '../src/config/leagues-data.mjs';
+// The typed registry: the raw .mjs union has no `bestBall` on most entries.
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 /**
  * Who may sign in to MFL Live on the shared host.
@@ -46,11 +47,17 @@ const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0] ?? '55555';
 const signInIds = () => [...new Set([...mflLiveSignInLeagueIds(), pilot])];
 
 describe('mflLiveSignInLeagueIds', () => {
-  it('lists every registered league in registry order, then the pilot leagues', () => {
+  it('lists every full-management league in registry order, then the pilot leagues', () => {
     expect(mflLiveSignInLeagueIds()).toEqual([
-      ...ALL_LEAGUES.map((l) => l.id),
+      ...ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.id),
       ...MFL_LIVE_PILOT_LEAGUE_IDS,
     ]);
+  });
+
+  it('leaves out every draft-only best-ball league', () => {
+    const bestBall = ALL_LEAGUES.filter((l) => l.bestBall);
+    expect(bestBall.length).toBeGreaterThan(0);
+    for (const league of bestBall) expect(mflLiveSignInLeagueIds(), league.slug).not.toContain(league.id);
   });
 
   it('includes 10105, the 2026 pilot that became a registered league', () => {

@@ -36,6 +36,7 @@ import {
 	visitorKey,
 } from '../../utils/site-insights-model';
 import { canonicalPath, directoryTitle } from '../../utils/site-analytics';
+import { readProductInterest } from '../../utils/product-interest';
 import { recordedPageTitle } from '../../utils/recorded-page-title';
 import { formatLastSeen } from '../../utils/owner-activity';
 import { getLeagueTeamConfig, getLeagueTeamConfigs } from '../../utils/league-team-brands';
@@ -83,6 +84,16 @@ if (useMock) {
 }
 
 const report = buildInsightsReport({ days: raw ?? [], people, section });
+
+// The homepage's "coming soon" product buttons. All-time, whatever the range.
+let interest: Awaited<ReturnType<typeof readProductInterest>> = null;
+if (!useMock) {
+	try {
+		interest = await readProductInterest();
+	} catch (err) {
+		console.warn('[live/analytics] product interest read failed:', err);
+	}
+}
 
 // ── Display helpers ─────────────────────────────────────────────────────────
 
@@ -478,6 +489,33 @@ const sectionChips = [
 						</tbody>
 					</table>
 					</div>
+				</section>
+
+				<section class="ins__card" aria-labelledby="ins-interest">
+					<h2 class="ins__h2" id="ins-interest">Product interest</h2>
+					<p class="ins__note">
+						Clicks on the "coming soon" product buttons, all time. People counts each browser once per product.
+					</p>
+					{interest === null ? (
+						<p class="ins__note">Not available right now.</p>
+					) : (
+						<div class="ins__scroll">
+						<table class="ins__table">
+							<thead><tr><th>Product</th><th class="num">People</th><th class="num">Clicks</th><th class="num">Emails</th><th>Emails left</th></tr></thead>
+							<tbody>
+								{interest.map((r) => (
+									<tr>
+										<td>{r.name}</td>
+										<td class="num">{n(r.people)}</td>
+										<td class="num">{n(r.clicks)}</td>
+										<td class="num">{n(r.emails.length)}</td>
+										<td class="ins__muted">{r.emails.length === 0 ? '—' : r.emails.map((e) => e.email).join(', ')}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+						</div>
+					)}
 				</section>
 			</Fragment>
 		)}

@@ -290,11 +290,17 @@ export const FEATURES: Feature[] = [
 	},
 ];
 
+/**
+ * Owner Suite Pro's price, in whole dollars. Read by the product page below and
+ * by MFL Live's landing (`/live`), so the number a visitor sees is one value.
+ */
+export const MFL_LIVE_PRO_PRICE = { season: 24, month: 5 } as const;
+
 const OWNER_SUITE: Product = {
 	slug: 'owner-suite',
 	kind: 'owner',
 	name: 'Owner Suite',
-	price: 'Free · Pro $24/season',
+	price: `Free · Pro $${MFL_LIVE_PRO_PRICE.season}/season`,
 	tagline: 'All your MFL leagues on one live screen.',
 	buyer: 'Any owner in any MyFantasyLeague league',
 	screenshot: shot('live-scoring.webp', 'Live scoreboard: every matchup across your leagues on one screen.'),
@@ -316,7 +322,7 @@ const OWNER_SUITE: Product = {
 			{ label: 'Game Day Planner', values: ['No', 'Yes'] },
 			{ label: 'Installs to your home screen', values: ['Yes', 'Yes'] },
 		],
-		note: 'Pro is $24/season or $5/month in season. Every owner in a League Hub or League Package league gets Pro at no charge while their league’s plan is active.',
+		note: `Pro is $${MFL_LIVE_PRO_PRICE.season}/season or $${MFL_LIVE_PRO_PRICE.month}/month in season. Every owner in a League Hub or League Package league gets Pro at no charge while their league’s plan is active.`,
 	},
 	sections: [
 		{
@@ -330,7 +336,7 @@ const OWNER_SUITE: Product = {
 		{
 			heading: 'Pricing and renewal',
 			bullets: [
-				'Pro is $24 for the season, or $5 a month during the NFL season.',
+				`Pro is $${MFL_LIVE_PRO_PRICE.season} for the season, or $${MFL_LIVE_PRO_PRICE.month} a month during the NFL season.`,
 				'The season plan renews on August 1, with an email reminder 30 days before.',
 				'Cancel any time before renewal; the free tier stays.',
 			],

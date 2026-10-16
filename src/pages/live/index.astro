@@ -34,6 +34,8 @@
  * dropped and owners landed on TheLeague's homepage instead.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import MflLiveLanding from '../../components/shared/mfl-live/MflLiveLanding.astro';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import LiveBoard from '../../components/shared/live/LiveBoard';
 import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
 import { getMflLiveUser } from '../../utils/auth';
@@ -85,6 +87,10 @@ const week = Number.isFinite(weekParam) && weekParam > 0 ? weekParam : currentWe
 // a score all game.
 const isLive = getDailySlot(now).slot === 'live-scoring';
 
+// The season Pro is included for on the signed-out landing: results-shaped,
+// so the season-year clock.
+const seasonYear = getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined);
+
 let board: Board | null = null;
 let assemblyFailed = false;
 
@@ -110,14 +116,7 @@ if (authUser && week) {
 	description="Live scoring for every one of your MyFantasyLeague teams, in one place."
 >
 	{!authUser ? (
-		<section class="mfl-live-intro">
-			<h1 class="mfl-live-intro__title">All your fantasy teams, one board</h1>
-			<p class="mfl-live-intro__sub">
-				Every matchup from every league your MyFantasyLeague account is in, scoring
-				live on one screen.
-			</p>
-			<a class="cta cta--primary mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
-		</section>
+		<MflLiveLanding seasonYear={seasonYear} hostname={Astro.url.hostname} />
 	) : !week ? (
 		<section class="mfl-live-intro">
 			<h1 class="mfl-live-intro__title">The season hasn&rsquo;t kicked off</h1>

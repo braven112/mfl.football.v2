@@ -14,7 +14,8 @@
  * - `isCommissionerOrAdmin` is false for any league outside the registry.
  *
  * With the switch off (the shipped state), `getMflLiveUser` is exactly
- * `getAuthUser`.
+ * `getAuthUser`, except that a draft-only best-ball league's session is not an
+ * MFL Live session in either state (`mflLiveSignInLeagueIds`).
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -32,6 +33,7 @@ import { pickOpenSignInLeague } from '../src/utils/mfl-login';
 const ROOT = join(__dirname, '..');
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const FOREIGN_ID = '54321';
+const BEST_BALL_ID = getLeagueBySlug('best-ball-1')!.id;
 
 const requestWith = (leagueId: string, role: 'owner' | 'commissioner' = 'owner') =>
 	new Request('https://example.test/', {
@@ -73,6 +75,16 @@ describe('the switch ships OFF', () => {
 		expect(auth.getMflLiveUser(requestWith(FOREIGN_ID))).toBeNull();
 		expect(auth.getMflLiveUser(requestWith(THELEAGUE_ID))).toEqual(auth.getAuthUser(requestWith(THELEAGUE_ID)));
 	});
+});
+
+describe('a best-ball session is not an MFL Live session', () => {
+	for (const open of [false, true]) {
+		it(`switch ${open ? 'ON' : 'OFF'}: getMflLiveUser refuses it while getAuthUser keeps it`, async () => {
+			const auth = await loadAuth(open);
+			expect(auth.getAuthUser(requestWith(BEST_BALL_ID))).toMatchObject({ leagueId: BEST_BALL_ID });
+			expect(auth.getMflLiveUser(requestWith(BEST_BALL_ID))).toBeNull();
+		});
+	}
 });
 
 describe('switch ON: a foreign session is MFL-Live-only', () => {

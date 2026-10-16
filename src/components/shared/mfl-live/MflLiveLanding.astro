@@ -1,0 +1,555 @@
+---
+/**
+ * MFL Live's landing — what a signed-out visitor meets at `/live`.
+ *
+ * MFL.football is the brand; MFL Live is one product it sells. This page sells
+ * it: the three things it does (live scoring across every MFL league you play
+ * in, the Broadcast for your TV, live standings), what Pro costs, and who has
+ * Pro free this season. Signed in, `/live` is the board itself and this page
+ * never renders.
+ *
+ * ── NOTHING HERE IS A LIVE SCORE ──────────────────────────────────────────
+ * The matchup cards and the standings table are illustrations, labelled as
+ * such, with made-up teams. A signed-out visitor has no board to show, and a
+ * real league's score on a sales page would be stale the moment it rendered.
+ * The ticker names features, not scores, for the same reason.
+ *
+ * ── TWO KINDS OF SURFACE ──────────────────────────────────────────────────
+ * The page follows the theme (page and card tokens). The "studio" pieces — the
+ * example board, the price ticket — are dark in BOTH themes, the way a TV is,
+ * so they carry their own local values (`--mll-*`) rather than theme tokens
+ * that would turn them white in light mode.
+ *
+ * The price is `MFL_LIVE_PRO_PRICE` (src/data/products.ts) and the leagues with
+ * Pro included are the registry's full-management leagues, so neither is
+ * typed here.
+ */
+import { MFL_LIVE_PRO_PRICE } from '../../../data/products';
+import { mflLiveIncludedNames, showcaseLeagues } from '../../../data/league-showcase';
+import ProductInterest from '../ProductInterest.astro';
+import { crossHostLeagueHref } from '../../../config/leagues';
+
+interface Props {
+	/** The NFL season Pro is included for (the season-year clock). */
+	seasonYear: number;
+	/** This request's hostname, so a league link leaves for its own domain when it has one. */
+	hostname: string;
+}
+
+const { seasonYear, hostname } = Astro.props;
+
+const leagues = showcaseLeagues();
+const includedNames = mflLiveIncludedNames();
+const includedList =
+	includedNames.length > 1
+		? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
+		: (includedNames[0] ?? '');
+
+const price = `$${MFL_LIVE_PRO_PRICE.season}`;
+const signIn = '/login';
+
+// Illustrations only — see the header. One card per showcased league so the
+// "every league you play in" claim is drawn, not just stated.
+const EXAMPLE_TEAMS: Array<[string, number, string, number, number]> = [
+	['Harbor Hawks', 76.9, 'Gridiron Geeks', 64.3, 68],
+	['Tidewater Kraken', 58.1, 'Badlands Outlaws', 71.4, 44],
+	['Iron Mike’s', 88.2, 'Sod Busters', 80.0, 81],
+];
+const examples = leagues.slice(0, EXAMPLE_TEAMS.length).map((league, i) => {
+	const [home, homePts, away, awayPts, winPct] = EXAMPLE_TEAMS[i];
+	return { league, home, homePts, away, awayPts, winPct };
+});
+
+const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings', 'Projected standings', 'Close-game alerts', 'Pair any TV by QR code'];
+---
+
+<div class="mll">
+	<div class="mll-ticker" aria-hidden="true">
+		<span class="mll-ticker__live">Live</span>
+		{TICKER.map((t) => <span>{t}</span>)}
+	</div>
+
+	<header class="mll-hero">
+		<div class="mll-hero__top">
+			<h1 class="mll-h1">All your leagues. <span>Live.</span></h1>
+			<div class="mll-hero__side">
+				<p>
+					MFL Live is game day for MyFantasyLeague owners: every team you own scored on one board, a
+					broadcast for your TV, and standings that move with every play.
+				</p>
+				<div class="mll-ctas">
+					<a class="cta cta--primary" href={signIn}>Sign in with MyFantasyLeague</a>
+					<a class="cta cta--ghost" href="/live/broadcast">See the Broadcast</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="mll-now">
+			<figure class="mll-now__tv">
+				<figcaption class="mll-label">On the Broadcast</figcaption>
+				<div class="mll-tv">
+					<img src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" alt="A field goal takes over the TV in the scoring team's colours" />
+				</div>
+			</figure>
+			<div class="mll-now__stack">
+				<p class="mll-label">Example board</p>
+				{examples.map((ex) => (
+					<div class="mll-mu">
+						<div class="mll-mu__top">
+							<span class="mll-mu__league"><img src={ex.league.logo.dark} alt="" width="20" height="20" />{ex.league.showcase.short}</span>
+							<span class="mll-dot">Live</span>
+						</div>
+						<div class="mll-mu__row"><span>{ex.home}</span><b>{ex.homePts.toFixed(1)}</b></div>
+						<div class="mll-mu__row mll-mu__row--trail"><span>{ex.away}</span><b>{ex.awayPts.toFixed(1)}</b></div>
+						<div class="mll-mu__bar"><span style={`width:${ex.winPct}%`}></span></div>
+						<div class="mll-mu__foot">{ex.winPct}% win</div>
+					</div>
+				))}
+			</div>
+		</div>
+	</header>
+
+	<section class="mll-chap" aria-labelledby="mll-scoring">
+		<div class="mll-chap__n" aria-hidden="true">01</div>
+		<div>
+			<h2 id="mll-scoring" class="mll-h2">Live scoring for every MFL league</h2>
+			<p>Sign in once with your MyFantasyLeague account. Every league you play in lands on one scoreboard, updating as the plays happen.</p>
+			<div class="mll-facts">
+				<div><b>Every</b>league on your MFL account</div>
+				<div><b>Live</b>win probability and projections</div>
+			</div>
+		</div>
+		<div class="mll-card">
+			<div class="mll-card__head"><span class="mll-card__title">Week 6 · Your board</span><span class="mll-dot">Example</span></div>
+			<table class="mll-table">
+				<thead><tr><th>League</th><th>Matchup</th><th class="num">Score</th></tr></thead>
+				<tbody>
+					{examples.map((ex) => (
+						<tr><td>{ex.league.showcase.short}</td><td>{ex.home} vs {ex.away}</td><td class="num">{ex.homePts.toFixed(1)}–{ex.awayPts.toFixed(1)}</td></tr>
+					))}
+					<tr><td>Your home league</td><td>Thunder vs Hawks</td><td class="num">49.0–55.2</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="mll-chap" aria-labelledby="mll-broadcast">
+		<div class="mll-chap__n" aria-hidden="true">02</div>
+		<div>
+			<h2 id="mll-broadcast" class="mll-h2">The Broadcast</h2>
+			<p>Your fantasy Sunday, produced like TV. Touchdowns take the whole screen in your team's colours, and your opponent's scores slide in without hiding your board.</p>
+			<div class="mll-facts">
+				<div><b>Scan to pair</b>No passwords on a TV remote</div>
+				<div><b>All day</b>Burn-in protection built in</div>
+			</div>
+			<a class="cta-link" href="/live/broadcast">Open the Broadcast</a>
+		</div>
+		<div class="mll-tv">
+			<img src="/assets/mfl-live/landing-board.webp" width="1440" height="810" loading="lazy" alt="The Broadcast board: your matchup on top, your players' scores below" />
+		</div>
+	</section>
+
+	<section class="mll-chap" aria-labelledby="mll-standings">
+		<div class="mll-chap__n" aria-hidden="true">03</div>
+		<div>
+			<h2 id="mll-standings" class="mll-h2">Live standings</h2>
+			<p>The table moves while the games play. Switch to Projected to see where the week is heading, with the playoff line drawn in.</p>
+			<div class="mll-facts">
+				<div><b>3 views</b>Live, Projected and Final</div>
+				<div><b>Every play</b>Movement as it happens</div>
+			</div>
+		</div>
+		<div class="mll-card">
+			<div class="mll-card__head">
+				<span class="mll-card__title">Example league</span>
+				<span class="mll-seg" aria-hidden="true"><span class="on">Live</span><span>Projected</span><span>Final</span></span>
+			</div>
+			<table class="mll-table">
+				<thead><tr><th></th><th>Team</th><th class="num">W-L</th><th class="num">PF</th></tr></thead>
+				<tbody>
+					<tr><td class="rk">1</td><td>Gridiron Geeks</td><td class="num">5-1</td><td class="num">712.4</td></tr>
+					<tr class="me"><td class="rk">2</td><td>Harbor Hawks <span class="mv mv--up">▲2</span></td><td class="num">5-1</td><td class="num">698.0</td></tr>
+					<tr><td class="rk">3</td><td>Tidewater Kraken <span class="mv mv--down">▼1</span></td><td class="num">4-2</td><td class="num">701.9</td></tr>
+					<tr><td class="rk">4</td><td>Badlands Outlaws <span class="mv mv--down">▼1</span></td><td class="num">4-2</td><td class="num">655.3</td></tr>
+					<tr class="cut"><td class="rk">5</td><td>Sod Busters</td><td class="num">3-3</td><td class="num">640.2</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="mll-pricing" aria-labelledby="mll-pricing">
+		<div>
+			<h2 id="mll-pricing" class="mll-h2">Season pass</h2>
+			<p>Live scores are free. MFL Live Pro adds the Broadcast, live and projected standings, full boards for every league, and game-day alerts.</p>
+			<div class="mll-included">
+				<span class="mll-included__logos">
+					{leagues.map((l) => <img src={l.logo.dark} alt="" width="36" height="36" />)}
+				</span>
+				<span><strong>Owners in {includedList}:</strong> Pro is included for the rest of the {seasonYear} season.</span>
+			</div>
+			<div class="mll-pricing__ctas">
+				<a class="cta cta--primary" href={signIn}>Sign in with MyFantasyLeague</a>
+				{/* Sign-in is open to those leagues only, so everyone else gets the
+				    "coming soon" door (ProductInterest) rather than a dead end. */}
+				<button type="button" class="cta cta--ghost mll-door" data-interest="owner-suite" data-interest-name="MFL Live for your league">In another league? I'm interested</button>
+			</div>
+		</div>
+		<div class="mll-ticket">
+			<div class="mll-ticket__top"><span>MFL Live Pro</span><span>{seasonYear} season</span></div>
+			<div class="mll-ticket__amt"><s>{price}</s>Free</div>
+			<div class="mll-ticket__note">Normally {price}/season or ${MFL_LIVE_PRO_PRICE.month}/month during the NFL season</div>
+			<hr />
+			<ul>
+				<li>The Broadcast for your TV</li>
+				<li>Live and projected standings</li>
+				<li>Full boards for every league</li>
+				<li>Close-game alerts</li>
+				<li>Final-score alerts</li>
+				<li>Game Day Planner</li>
+			</ul>
+		</div>
+	</section>
+
+	<section class="mll-leagues" aria-labelledby="mll-leagues">
+		<h2 id="mll-leagues" class="mll-h2">The leagues on MFL.football</h2>
+		<p>Very different leagues, one platform.</p>
+		<div class="mll-rows">
+			{leagues.map((l) => (
+				<a class="mll-row" data-league={l.slug} href={crossHostLeagueHref(hostname, `/${l.slug}`)}>
+					<img src={l.logo.dark} alt="" width="64" height="64" loading="lazy" />
+					<span>
+						<span class="mll-row__name">{l.name}</span>
+						<span class="mll-row__meta">{l.showcase.format}</span>
+					</span>
+					<span class="mll-row__stat"><b>{l.showcase.teams}</b>Teams · since {l.showcase.estYear}</span>
+				</a>
+			))}
+		</div>
+	</section>
+	<ProductInterest />
+</div>
+
+<style>
+	/* Studio values: dark in both themes, like the TV they stand for. */
+	.mll {
+		--mll-studio: #0b0d12;
+		--mll-studio-2: #121a2c;
+		--mll-studio-line: #1e2840;
+		--mll-studio-ink: #ffffff;
+		--mll-studio-muted: #9aa4b8;
+		--mll-red: #e0263c;
+		--mll-live: #22c55e;
+		max-width: 76rem;
+		margin: 0 auto;
+	}
+
+	.mll-ticker {
+		display: flex;
+		gap: 2rem;
+		overflow: hidden;
+		white-space: nowrap;
+		padding: 0.55rem 1rem;
+		border-radius: var(--radius-md);
+		background: var(--mll-studio);
+		color: var(--mll-studio-muted);
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		border-bottom: 3px solid var(--mll-red);
+	}
+	.mll-ticker__live {
+		background: var(--mll-red);
+		color: var(--mll-studio-ink);
+		padding: 0 0.5rem;
+		border-radius: 4px;
+	}
+
+	.mll-hero { padding: 2.5rem 0 1rem; }
+	.mll-hero__top {
+		display: grid;
+		grid-template-columns: 1.5fr 1fr;
+		gap: 3rem;
+		align-items: end;
+	}
+	.mll-h1 {
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: clamp(3.5rem, 9vw, 7.5rem);
+		line-height: 0.86;
+		text-transform: uppercase;
+		margin: 0;
+		color: var(--page-text);
+	}
+	.mll-h1 span { color: var(--league-accent); }
+	.mll-hero__side p {
+		font-size: var(--font-size-base);
+		color: var(--color-text-secondary);
+		margin: 0 0 1.25rem;
+	}
+	.mll-ctas { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+	.mll-label {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 0 0 0.5rem;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-text-secondary);
+	}
+	.mll-label::after { content: ''; flex: 1; height: 1px; background: var(--content-border); }
+
+	.mll-now {
+		margin-top: 2.5rem;
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: 1.1rem;
+	}
+	.mll-now__tv { margin: 0; }
+	.mll-now__stack { display: grid; gap: 0.75rem; align-content: start; }
+
+	.mll-tv {
+		background: #050608;
+		border-radius: 1rem;
+		padding: 0.6rem;
+		box-shadow: 0 2.5rem 5rem -2rem rgba(0, 0, 0, 0.55);
+	}
+	.mll-tv img { display: block; width: 100%; height: auto; border-radius: 0.6rem; }
+
+	.mll-mu {
+		background: var(--mll-studio);
+		border: 1px solid var(--mll-studio-line);
+		color: var(--mll-studio-ink);
+		border-radius: 0.85rem;
+		padding: 0.85rem 1rem;
+	}
+	.mll-mu__top {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		font-size: var(--font-size-2xs);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--mll-studio-muted);
+	}
+	.mll-mu__league { display: inline-flex; align-items: center; gap: 0.45rem; }
+	.mll-mu__league img { width: 20px; height: 20px; object-fit: contain; }
+	.mll-mu__row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+	.mll-mu__row b { font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 1; }
+	.mll-mu__row--trail b { color: var(--mll-studio-muted); }
+	.mll-mu__bar { height: 4px; border-radius: 4px; background: #39425a; margin: 0.5rem 0 0.3rem; overflow: hidden; }
+	.mll-mu__bar span { display: block; height: 100%; background: var(--mll-red); }
+	.mll-mu__foot { font-size: var(--font-size-xs); color: var(--mll-studio-muted); }
+
+	.mll-dot {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		color: var(--mll-live);
+	}
+	.mll-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--mll-live); }
+
+	.mll-chap {
+		display: grid;
+		grid-template-columns: 7rem 1fr 1.2fr;
+		gap: 2.5rem;
+		align-items: start;
+		padding: 4.5rem 0;
+		border-top: 1px solid var(--content-border);
+	}
+	.mll-chap__n {
+		font-family: var(--font-display);
+		font-size: calc(var(--font-size-3xl) * 1.75);
+		line-height: 0.8;
+		color: transparent;
+		-webkit-text-stroke: 2px var(--league-accent);
+	}
+	.mll-h2 {
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: clamp(2.5rem, 5vw, 3.5rem);
+		line-height: 0.92;
+		text-transform: uppercase;
+		margin: 0 0 1rem;
+		color: var(--page-text);
+	}
+	.mll-chap p, .mll-leagues > p { color: var(--color-text-secondary); font-size: var(--font-size-base); margin: 0 0 0.9rem; }
+	.mll-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.25rem 0; }
+	.mll-facts div {
+		border-left: 3px solid var(--league-accent);
+		padding-left: 0.75rem;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.mll-facts b {
+		display: block;
+		font-family: var(--font-display);
+		font-size: var(--font-size-xl);
+		line-height: 1.1;
+		color: var(--page-text);
+	}
+
+	.mll-card {
+		background: var(--card-bg);
+		border: 1px solid var(--content-border);
+		border-radius: 1rem;
+		overflow: hidden;
+		font-size: var(--font-size-sm);
+	}
+	.mll-card__head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.9rem 1.1rem;
+		border-bottom: 1px solid var(--content-border);
+	}
+	.mll-card__title {
+		font-family: var(--font-display);
+		font-weight: 700;
+		font-size: var(--font-size-base);
+		text-transform: uppercase;
+		color: var(--page-text);
+	}
+	.mll-seg {
+		display: inline-flex;
+		gap: 2px;
+		padding: 3px;
+		border-radius: 999px;
+		background: var(--color-surface-3);
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+	}
+	.mll-seg span { padding: 0.3rem 0.75rem; border-radius: 999px; color: var(--color-text-secondary); }
+	.mll-seg .on { background: var(--cta-fill); color: var(--on-cta-fill); }
+	.mll-table { width: 100%; border-collapse: collapse; color: var(--page-text); }
+	.mll-table th {
+		text-align: left;
+		padding: 0.6rem 1.1rem 0.35rem;
+		font-size: var(--font-size-2xs);
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--color-text-secondary);
+	}
+	.mll-table td { padding: 0.55rem 1.1rem; border-top: 1px solid var(--content-border); }
+	.mll-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+	.mll-table .rk { width: 1.75rem; color: var(--color-text-secondary); }
+	.mll-table tr.me td { background: color-mix(in srgb, var(--league-accent) 9%, transparent); }
+	.mll-table tr.cut td { border-top: 2px dashed color-mix(in srgb, var(--league-accent) 55%, transparent); }
+	.mv { margin-left: 0.4rem; font-size: var(--font-size-2xs); font-weight: 700; }
+	.mv--up { color: var(--color-success); }
+	.mv--down { color: var(--league-accent); }
+
+	.mll-pricing {
+		display: grid;
+		grid-template-columns: 1fr 1.1fr;
+		gap: 3.5rem;
+		align-items: center;
+		margin: 1rem 0 4rem;
+		padding: 3.5rem;
+		border-radius: 1.25rem;
+		background: var(--mll-studio);
+		color: var(--mll-studio-ink);
+	}
+	.mll-pricing .mll-h2 { color: var(--mll-studio-ink); font-size: clamp(2.75rem, 6vw, 4.5rem); }
+	.mll-pricing p { color: #b4bac6; font-size: var(--font-size-base); margin: 0 0 1.25rem; }
+	.mll-included { display: flex; gap: 0.9rem; align-items: center; margin: 0 0 1.5rem; font-size: var(--font-size-sm); color: #e7e9ee; }
+	.mll-included__logos { display: flex; gap: 0.4rem; flex: none; }
+	.mll-included__logos img { width: 36px; height: 36px; object-fit: contain; }
+
+	.mll-ticket {
+		position: relative;
+		overflow: hidden;
+		padding: 2.1rem 2.25rem;
+		border-radius: 1.1rem;
+		background: linear-gradient(135deg, var(--mll-red), #8f0f22);
+	}
+	.mll-ticket::before,
+	.mll-ticket::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		width: 36px;
+		height: 36px;
+		margin-top: -18px;
+		border-radius: 50%;
+		background: var(--mll-studio);
+	}
+	.mll-ticket::before { left: -18px; }
+	.mll-ticket::after { right: -18px; }
+	.mll-ticket__top {
+		display: flex;
+		justify-content: space-between;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		opacity: 0.85;
+	}
+	.mll-ticket__amt { font-family: var(--font-display); font-size: calc(var(--font-size-3xl) * 1.6); line-height: 1; margin: 1.1rem 0 0.25rem; }
+	.mll-ticket__amt s { font-size: var(--font-size-3xl); opacity: 0.55; margin-right: 0.75rem; }
+	.mll-ticket__note { font-size: var(--font-size-sm); opacity: 0.9; }
+	.mll-ticket hr { border: 0; border-top: 2px dashed rgba(255, 255, 255, 0.35); margin: 1.5rem 0; }
+	.mll-ticket ul { list-style: none; margin: 0; padding: 0; columns: 2; font-size: var(--font-size-sm); }
+	.mll-ticket li { margin-bottom: 0.5rem; break-inside: avoid; }
+	.mll-ticket li::before { content: '● '; font-size: var(--font-size-3xs); vertical-align: middle; }
+
+	.mll-leagues { padding-bottom: 3rem; }
+	.mll-pricing__ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+	/* The ghost CTA is drawn for a light ground; this band is dark in both themes. */
+	.mll-door { color: #e7e9ee; border-color: #3a4150; background: transparent; }
+	.mll-door:hover, .mll-door:focus-visible { color: #ffffff; border-color: #e7e9ee; }
+	.mll-rows { display: grid; gap: 0.75rem; margin-top: 1.5rem; }
+	.mll-row {
+		display: grid;
+		grid-template-columns: 4.5rem 1fr auto;
+		gap: 1.75rem;
+		align-items: center;
+		padding: 1.35rem 1.75rem;
+		border-radius: 0.65rem;
+		background: linear-gradient(90deg, var(--league-accent-bg, #1f2430), var(--mll-studio));
+		color: var(--mll-studio-ink);
+		text-decoration: none;
+	}
+	.mll-row[data-league='theleague'] { --league-accent-bg: #0d5c3f; }
+	.mll-row[data-league='afl-fantasy'] { --league-accent-bg: #16357a; }
+	.mll-row[data-league='archies'] { --league-accent-bg: #7a5410; }
+	.mll-row:hover { color: var(--mll-studio-ink); text-decoration: none; filter: brightness(1.1); }
+	.mll-row img { width: 64px; height: 64px; object-fit: contain; }
+	.mll-row__name {
+		display: block;
+		font-family: var(--font-display);
+		font-size: var(--font-size-xl);
+		line-height: 1;
+		text-transform: uppercase;
+	}
+	.mll-row__meta { display: block; margin-top: 0.25rem; font-size: var(--font-size-sm); opacity: 0.8; }
+	.mll-row__stat { text-align: right; font-size: var(--font-size-xs); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+	.mll-row__stat b { display: block; font-family: var(--font-display); font-size: var(--font-size-xl); letter-spacing: 0; }
+
+	@media (max-width: 760px) {
+		.mll-hero__top,
+		.mll-now,
+		.mll-chap,
+		.mll-pricing,
+		.mll-facts { grid-template-columns: 1fr; }
+		.mll-hero__top { gap: 1.5rem; }
+		.mll-chap { gap: 1.25rem; padding: 3rem 0; }
+		.mll-chap__n { font-size: calc(var(--font-size-3xl) * 1.2); }
+		.mll-pricing { padding: 1.75rem; gap: 2rem; }
+		.mll-ticket { padding: 1.75rem 1.5rem; }
+		.mll-ticket__amt { font-size: calc(var(--font-size-3xl) * 1.2); }
+		.mll-ticket ul { columns: 1; }
+		.mll-included { flex-direction: column; align-items: flex-start; }
+		.mll-row { grid-template-columns: 3rem 1fr; gap: 1rem; padding: 1.1rem; }
+		.mll-row img { width: 48px; height: 48px; }
+		.mll-row__stat { display: none; }
+		.mll-row__name { font-size: var(--font-size-xl); }
+	}
+</style>

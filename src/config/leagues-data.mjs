@@ -963,7 +963,15 @@ export const MFL_LIVE_OPEN_SIGN_IN = false;
 
 /**
  * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE
- * order: the registry's leagues in registry order, then the pilot leagues.
+ * order: the registry's FULL-MANAGEMENT leagues in registry order, then the
+ * pilot leagues.
+ *
+ * A draft-only best-ball league is left out (owner's call, Oct 2026: MFL Live
+ * is TheLeague, the AFL and Archie's, and nobody else until it launches). Its
+ * owners still sign in to their own league's pages; only the shared host's
+ * MFL Live sign-in refuses them, unless they also own a team in a listed
+ * league. Derived from `bestBall`, never a slug list, so a fourth full league
+ * gets MFL Live the day it is added and a best-ball sister never does.
  *
  * The order matters. An account in several of these gets a session scoped to
  * the FIRST one it belongs to, so an owner of TheLeague keeps the TheLeague
@@ -974,7 +982,7 @@ export const MFL_LIVE_OPEN_SIGN_IN = false;
  * @returns {string[]}
  */
 export function mflLiveSignInLeagueIds() {
-  return [...ALL_LEAGUES.map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
+  return [...ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
 }
 
 /** @param {string} slug Canonical slug ('theleague' | 'afl-fantasy') */

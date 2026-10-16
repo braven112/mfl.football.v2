@@ -33,6 +33,9 @@ on:
       # Components a story renders.
       # Standings board stories (stories/standings/).
       - 'src/components/shared/standings/AflFamilyBoard.astro'
+      - 'src/components/shared/ProductInterest.astro'
+      - 'src/components/shared/mfl-live/MflLiveLanding.astro'
+      - 'src/data/league-showcase.ts'
       - 'src/components/shared/standings/board/AllPlayTable.astro'
       - 'src/components/shared/standings/board/FieldTable.astro'
       - 'src/components/shared/standings/board/GroupCard.astro'
@@ -443,6 +446,9 @@ on:
       # Components a story renders.
       # Standings board stories (stories/standings/).
       - 'src/components/shared/standings/AflFamilyBoard.astro'
+      - 'src/components/shared/ProductInterest.astro'
+      - 'src/components/shared/mfl-live/MflLiveLanding.astro'
+      - 'src/data/league-showcase.ts'
       - 'src/components/shared/standings/board/AllPlayTable.astro'
       - 'src/components/shared/standings/board/FieldTable.astro'
       - 'src/components/shared/standings/board/GroupCard.astro'
