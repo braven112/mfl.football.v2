@@ -147,14 +147,16 @@ const includedList =
     ? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
     : (includedNames[0] ?? '');
 
+// Prices: only MFL Live Pro's is public (Brandon, Oct 2026). Every other
+// product shows what it does, not what it costs, until its price is ready to
+// announce — a card without `price` simply leaves the line out.
 interface PaidCard {
   slug: ProductSlug;
   name: string;
   who: string;
-  price: string;
-  per: string;
+  price?: string;
+  per?: string;
   body: string;
-  featured?: boolean;
   /** Shown in the dialog under "coming soon", when the door needs a word more. */
   note?: string;
 }
@@ -173,46 +175,42 @@ const PAID: PaidCard[] = [
     slug: 'league-history',
     name: 'Full History',
     who: 'For any MFL, Sleeper or Yahoo league',
-    price: '$149',
-    per: '/ year',
     body: 'Every season back to your first: standings, playoffs, owner pages, rivalries and records.',
   },
   {
     slug: 'league-hub',
     name: 'League Hub',
     who: 'For a commissioner who wants a real site',
-    price: '$2,000',
-    per: '/ year',
     body: 'A branded site on your own domain with the draft hub, an AI league reporter, push alerts and more.',
-    featured: true,
-  },
-  {
-    slug: 'league-package',
-    name: 'League Package',
-    who: 'For a league that wants features built',
-    price: '$10,000',
-    per: 'first year',
-    body: 'Everything in League Hub plus custom features built for your league, and priority support.',
   },
   {
     slug: 'contest-package',
     name: 'Contest Package',
     who: 'For organizers running many leagues',
-    price: '$2,500',
-    per: 'setup + $4/team/season',
     body: 'One competition across dozens or hundreds of MFL leagues.',
   },
   {
     slug: 'add-ons',
     name: 'Add-ons',
-    who: 'For League Hub and Package leagues',
-    price: '$500–$2,000',
-    per: 'each',
+    who: 'For League Hub and League Package leagues',
     body: 'Side games, custom standings, prizes, contracts and large-league support.',
   },
 ];
----
 
+// The top package is sold on automation, not features: everything a
+// commissioner does by hand, the system does. Each line is a feature the
+// platform already runs for The League and the AFL (src/data/products.ts).
+const AUTOMATED = [
+  'Deadline and lineup reminders to every owner',
+  'Draft order, the draft room and results',
+  'Dues and prize payouts written into MFL’s books',
+  'Contracts, the salary cap and extensions tracked',
+  'Rules questions answered from your constitution',
+  'League news, trades and recaps written for you',
+  'Weekly power rankings and an owners’ poll',
+  'News and reminders posted to your group chat',
+];
+---
 <SplashLayout title="MFL.football — skins, live scoring and league sites for MyFantasyLeague">
   <header class="top">
     <a class="brand" href="/">MFL<span>.</span>football</a>
@@ -273,7 +271,7 @@ const PAID: PaidCard[] = [
         <span class="tag tag--soon">Free · Coming soon</span>
         <h3>League History page</h3>
         <p>Your league's champions and a trophy case for every franchise.</p>
-        <span class="card__up">Upgrade: <b>Full History $149/yr</b></span>
+        <span class="card__up">Upgrade: <b>Full History</b></span>
         <span class="card__more">I'm interested →</span>
       </button>
     </div>
@@ -301,18 +299,41 @@ const PAID: PaidCard[] = [
       <div><span class="tag tag--paid">When you want more</span><h2 id="products-h">Products</h2></div>
       <p>From one owner's game day to a fully custom league site. Coming soon: tap one to tell us you want it.</p>
     </div>
+    <button
+      type="button"
+      class="auto"
+      data-interest="league-package"
+      data-interest-name="League Package"
+      data-interest-note="Anything a commissioner does by hand, our system handles: a one-time setup fee, then an automation fee to run your league."
+    >
+      <span class="auto__copy">
+        <span class="plan__who">Our biggest package · for a league that wants it all handled</span>
+        <h3>League Package</h3>
+        <span class="auto__lede">Anything the commissioner does manually, our system handles.</span>
+        <span class="auto__body">Your own site with every feature on the platform, custom features built for how your league plays, and priority support.</span>
+        {/* The pricing SHAPE, without amounts (Brandon, Oct 2026). */}
+        <span class="auto__fees">
+          <span><b>Setup fee</b> We build your league's site and features once.</span>
+          <span><b>Automation fee</b> We run your league from then on.</span>
+        </span>
+        <span class="card__more">Coming soon · I'm interested →</span>
+      </span>
+      <ul class="auto__list">
+        {AUTOMATED.map((line) => <li>{line}</li>)}
+      </ul>
+    </button>
     <div class="paid">
       {PAID.map((p) => (
         <button
           type="button"
-          class:list={['plan', { 'plan--featured': p.featured }]}
+          class="plan"
           data-interest={p.slug}
           data-interest-name={p.name}
           data-interest-note={p.note}
         >
           <span class="plan__who">{p.who}</span>
           <h3>{p.name}</h3>
-          <span class="plan__price">{p.price} <small>{p.per}</small></span>
+          {p.price && <span class="plan__price">{p.price} <small>{p.per}</small></span>}
           <p>{p.body}</p>
           <span class="card__more">Coming soon · I'm interested →</span>
         </button>
@@ -693,9 +714,99 @@ const PAID: PaidCard[] = [
     gap: 1rem;
   }
 
-  .plan--featured {
-    border-color: var(--primary-link-default-text-color);
-    box-shadow: 0 0 0 1px var(--primary-link-default-text-color);
+  /* The automation band: the top package, wider and quieter-loud than a card.
+     Same box as .plan (border, ground) so it reads as one of the products. */
+  .auto {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem 2.5rem;
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 1.75rem;
+    border: 1px solid var(--primary-link-default-text-color);
+    border-radius: 16px;
+    background: var(--primary-content-bg-color);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform var(--transition-fast);
+  }
+
+  .auto:hover {
+    transform: translateY(-2px);
+  }
+
+  .auto:focus-visible {
+    outline: 2px solid var(--secondary-color);
+    outline-offset: 3px;
+  }
+
+  .auto__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .auto h3 {
+    margin: 0.2rem 0 0;
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .auto__lede {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--primary-link-default-text-color);
+  }
+
+  .auto__body {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+  }
+
+  .auto__fees {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-600);
+  }
+
+  .auto__fees > span {
+    padding: 0.6rem 0.75rem;
+    border: 1px dashed var(--primary-content-border-color);
+    border-radius: 10px;
+  }
+
+  .auto__fees b {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--primary-link-default-text-color);
+  }
+
+  .auto__list {
+    display: grid;
+    gap: 0.55rem;
+    align-content: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm);
+  }
+
+  .auto__list li {
+    display: flex;
+    gap: 0.6rem;
+    color: var(--color-gray-600);
+  }
+
+  .auto__list li::before {
+    content: '✓';
+    flex: none;
+    font-weight: 700;
+    color: var(--color-success-dark);
   }
 
   .plan__who {
@@ -898,6 +1009,7 @@ const PAID: PaidCard[] = [
 
     .hero,
     .live,
+    .auto,
     .free-grid,
     .paid,
     .wn-grid,
@@ -926,6 +1038,7 @@ const PAID: PaidCard[] = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .auto,
     .card,
     .plan {
       transition: none;
