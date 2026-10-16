@@ -23,8 +23,8 @@ import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
+import { capSentences, LEDE_MAX_SENTENCES } from '../../utils/pecking-order-lede.mjs';
 import type { OwnersPollBlock } from './owners-poll/OwnersPollResults.astro';
-import '../../styles/owners-poll-section.css';
 
 export interface RankingRow {
   rank: number;
@@ -158,58 +158,27 @@ const franchiseHref = (franchiseId: string) => {
 
 /**
  * Brand accent for a card — the site-wide franchise token, not the raw config
- * color. It paints the rank numeral (28px bold — WCAG "large text") and the
- * card's brand edge, so it has to clear 3:1 on whichever theme is rendering;
- * the token carries a value per theme (src/utils/team-accent-css.ts). Raw
- * brand colors miss that badly in one direction or the other — Bring The
- * Pain's near-black is 1.2:1 on a dark card, Midwestside's yellow 1.5:1 on a
- * white one.
+ * color. It paints the rank numeral and the card's top edge, so it has to clear
+ * 3:1 on whichever theme is rendering; the token carries a value per theme
+ * (src/utils/team-accent-css.ts). Raw brand colors miss that badly in one
+ * direction or the other — Bring The Pain's near-black is 1.2:1 on a dark
+ * card, Midwestside's yellow 1.5:1 on a white one.
  */
 const accentStyle = (franchiseId: string | undefined) =>
   `--pr-accent: ${teamAccentVar(franchiseId ?? '', 'var(--color-primary, #2563eb)')}`;
 
-/**
- * Three awards carry a meaning-colored edge instead of the winner's brand
- * color — cold blue for the cooler, hot orange-red for the heater, pink for
- * the bench blunder. The values are theme-pair tokens declared on `.pr-issue`
- * below (a raw hex here would be stuck on one theme); everything else keeps
- * the franchise accent.
- */
-const AWARD_ACCENTS: Record<string, string> = {
-  coolerOfWeek: 'var(--pr-award-cooler)',
-  heaterOfWeek: 'var(--pr-award-heater)',
-  benchBlunder: 'var(--pr-award-blunder)',
-};
-
-const awardAccentStyle = (key: string, franchiseId: string | undefined) =>
-  AWARD_ACCENTS[key] ? `--pr-accent: ${AWARD_ACCENTS[key]}` : accentStyle(franchiseId);
-
-const trendGlyph = (t: 'up' | 'down' | 'flat') =>
-  t === 'up' ? '▲' : t === 'down' ? '▼' : '–';
-
 const formattedDate = new Date(issue.publishedAt).toLocaleDateString('en-US', {
-  year: 'numeric', month: 'long', day: 'numeric',
+  month: 'short', day: 'numeric',
 });
 
 /**
  * The dateline is only shown when `publishedAt` is actually a publication
  * date. Issues generated after the fact (launch seeds, backfills) carry the
  * day the FILE was written, and printing that as a dateline stamped a Week 14
- * 2025 issue "August 14, 2026" — which reads as this morning's column. Every
- * committed issue today is such a seed. There is no honest date to substitute,
- * so the eyebrow just carries the week it covers.
+ * 2025 issue "August 14, 2026" — which reads as this morning's column. There
+ * is no honest date to substitute, so the kicker just carries the week.
  */
 const showDateline = !isSample && !isRetroactivelyGenerated(issue);
-
-const orderedAwards: { key: string; card: AwardCard | null }[] = [
-  { key: 'statOfWeek',     card: issue.awards.statOfWeek },
-  { key: 'benchBlunder',   card: issue.awards.benchBlunder },
-  { key: 'heaterOfWeek',   card: issue.awards.heaterOfWeek },
-  { key: 'coolerOfWeek',   card: issue.awards.coolerOfWeek },
-  { key: 'matchupOfWeek',  card: issue.awards.matchupOfWeek },
-  { key: 'tradeOfWeek',    card: issue.awards.tradeOfWeek },
-  { key: 'cutOfShame',     card: issue.awards.cutOfShame },
-];
 
 // Issues carry the methodology they were generated under, so an archived issue
 // keeps describing its own math. The fallback matches describeMethodology()
@@ -219,344 +188,155 @@ const methodology = issue.methodology
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels(leagueDef.slug);
 
+/**
+ * The column is the RANKINGS (commissioner, 2026-10-15): the intro is capped at
+ * three sentences, and the awards, division tables and standings snapshot that
+ * used to follow the order are gone — they buried the one thing owners come
+ * for. Older issues carry longer ledes, so the cap is applied here as well as
+ * in the generator.
+ */
+const lede = capSentences(issue.lede, LEDE_MAX_SENTENCES);
+
 // ── Top-N cut (a 99-team league) ────────────────────────────────────────────
+// Rows ranked 1..N carry a blurb and render as cards; the rest of the order
+// follows as compact rows so every team is still placed.
 const featured = issue.topN ? issue.rankings.filter((r) => r.rank <= issue.topN!) : issue.rankings;
-const rankOf = new Map(issue.rankings.map((r) => [r.franchiseId, r]));
+const remainder = issue.topN ? issue.rankings.filter((r) => r.rank > issue.topN!) : [];
 const recordOf = new Map(
   (issue.standings?.divisions ?? []).flatMap((d) => d.teams.map((t) => [t.franchiseId, t] as const)),
 );
-// Every division's teams in PECKING ORDER (not standings order): the column's
-// verdict, compactly, for the teams outside the top N.
-const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderData['rankings'][number] }[] }[] = issue.topN
-  ? (issue.standings?.divisions ?? []).map((d) => ({
-      name: d.name,
-      rows: d.teams
-        .map((t) => rankOf.get(t.franchiseId))
-        .filter((r): r is PeckingOrderData['rankings'][number] => !!r)
-        .sort((a, b) => a.rank - b.rank)
-        .map((row, i) => ({ place: i + 1, row })),
-    }))
-  : [];
+const record = (franchiseId: string) => {
+  const t = recordOf.get(franchiseId);
+  return t ? `${t.wins}-${t.losses}${t.ties ? `-${t.ties}` : ''}` : null;
+};
+/** Places moved since last week: positive is up. Null when there is no prior rank. */
+const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previousRank - row.rank);
 ---
 
 <article class="pr-issue">
   <header class="pr-hero">
-    <div class="pr-hero__eyebrow">
-      <span class="pr-hero__badge">The Pecking Order</span>
-      <span class="pr-hero__dot" aria-hidden="true"></span>
-      <span>Week {issue.week} · {issue.year}</span>
+    <p class="pr-hero__kicker">
+      The Pecking Order <span aria-hidden="true">·</span> Week {issue.week}, {issue.year}
       {showDateline && (
-        <>
-          <span class="pr-hero__dot" aria-hidden="true"></span>
-          <time datetime={issue.publishedAt}>{formattedDate}</time>
-        </>
+        <> <span aria-hidden="true">·</span> <time datetime={issue.publishedAt}>{formattedDate}</time></>
       )}
-    </div>
+    </p>
     <HeadlineTag class="pr-hero__title">{issue.headline}</HeadlineTag>
-    <p class="pr-hero__lede">{issue.lede}</p>
+    <p class="pr-hero__lede">{lede}</p>
   </header>
 
-  <section class="pr-section" aria-label={`The Pecking Order 1-${featured.length}`}>
-    <h2 class="pr-section__title pr-section__title--brand">
-      <img
-        class="pr-section__avatar"
-        src={labels.avatar}
-        alt=""
-        aria-hidden="true"
-        width="36"
-        height="36"
-        loading="lazy"
-      />
-      <span>{issue.topN ? `The Pecking Order · Top ${featured.length} of ${issue.rankings.length}` : 'The Pecking Order'}</span>
-    </h2>
-    <ol class="pr-rankings">
-      {featured.map(row => {
-        const team = teams.get(row.franchiseId);
-        return (
-          <li class="pr-card" style={accentStyle(row.franchiseId)}>
-            <div class="pr-card__rank">
-              <div class="pr-card__rank-num">{row.rank}</div>
-              {row.previousRank != null && (
-                <div class={`pr-card__trend pr-card__trend--${row.trend}`} title={`Previous: #${row.previousRank}`}>
-                  {trendGlyph(row.trend)}
-                  {row.trend !== 'flat' && (
-                    <span class="pr-card__trend-delta">{Math.abs(row.previousRank - row.rank)}</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div class="pr-card__body">
-              <h3 class="pr-card__name">
-                {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="28" height="28" />}
-                <a href={franchiseHref(row.franchiseId)}>{team?.name ?? row.franchiseId}</a>
-              </h3>
-              <p class="pr-card__blurb">{row.blurb}</p>
-              <div class="pr-card__metrics">
-                {row.metrics.allPlayPct != null && (
-                  <span class="pr-card__metric"><span>All-play</span><strong>{(row.metrics.allPlayPct * 100).toFixed(1)}%</strong></span>
-                )}
-                {row.metrics.rolling3Ppg != null && (
-                  <span class="pr-card__metric"><span>L3 PPG</span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong></span>
-                )}
-                {row.metrics.seasonPpg != null && (
-                  <span class="pr-card__metric"><span>Season PPG</span><strong>{row.metrics.seasonPpg.toFixed(1)}</strong></span>
-                )}
-                {row.metrics.avgMargin != null && (
-                  <span class="pr-card__metric"><span>Avg margin</span><strong>{row.metrics.avgMargin > 0 ? '+' : ''}{row.metrics.avgMargin.toFixed(1)}</strong></span>
-                )}
-                {row.metrics.composite != null && (
-                  <span class="pr-card__metric"><span>Score</span><strong>{row.metrics.composite.toFixed(1)}</strong></span>
-                )}
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  </section>
-
-  {/*
-    The Owners' Poll is its own feature now (/owners-poll). The column keeps a
-    one-line teaser and nothing else: the owner rankings sit behind a vote on
-    the poll page, and printing them here would hand every reader the payoff
-    that is meant to bring them to the ballot.
-  */}
-  {issue.ownersPoll && (
-    <aside class="op-strip op-strip--teaser" aria-label="The Owners' Poll">
-      <p class="op-strip__title">What does the room think?</p>
-      <p class="op-strip__cta">
-        The Owners’ Poll ranks the league by owner vote, not the numbers.{' '}
-        <a href={resolveLeaguePath(`${getLeaguePrefix(league)}/owners-poll`, hideLeaguePrefix)}>
-          Vote to see the owners’ rankings ›
-        </a>
-      </p>
-    </aside>
-  )}
-
-  <section class="pr-section" aria-label="Weekly awards">
-    <h2 class="pr-section__title">Awards</h2>
-    <div class="pr-awards">
-      {orderedAwards.filter(a => a.card).map(({ key, card }) => {
-        const fid = card!.franchiseId ?? card!.homeId;
-        const team = fid ? teams.get(fid) : null;
-        const second = card!.awayId ? teams.get(card!.awayId) : null;
-        return (
-          <div class="pr-award" style={awardAccentStyle(key, fid)}>
-            <div class="pr-award__title">{card!.title}</div>
-            <div class="pr-award__recipient">
-              {team?.icon && <img src={team.icon} alt="" loading="lazy" width="28" height="28" />}
-              <span>{team?.nameMedium ?? fid ?? '—'}</span>
-              {second && (
-                <>
-                  <span class="pr-award__vs">vs</span>
-                  {second?.icon && <img src={second.icon} alt="" loading="lazy" width="28" height="28" />}
-                  <span>{second?.nameMedium}</span>
-                </>
-              )}
-            </div>
-            <p class="pr-award__blurb">{card!.blurb}</p>
+  <ol class="pr-rankings" aria-label={issue.topN ? `The Pecking Order, top ${featured.length} of ${issue.rankings.length}` : 'The Pecking Order'}>
+    {featured.map((row) => {
+      const team = teams.get(row.franchiseId);
+      const delta = moved(row);
+      const wl = record(row.franchiseId);
+      return (
+        <li class="pr-card" style={accentStyle(row.franchiseId)}>
+          <div class="pr-card__head">
+            <span class="pr-card__rank">{row.rank}</span>
+            {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="36" height="36" />}
+            <h3 class="pr-card__name">
+              <a href={franchiseHref(row.franchiseId)}>{team?.name ?? row.franchiseId}</a>
+              {wl && <span class="pr-card__record">{wl}</span>}
+            </h3>
+            {delta ? (
+              <span class={`pr-move pr-move--${delta > 0 ? 'up' : 'down'}`} title={`Last week: #${row.previousRank}`}>
+                <span aria-hidden="true">{delta > 0 ? '▲' : '▼'}</span>
+                <span class="sr-only">{delta > 0 ? 'Up' : 'Down'}</span> {Math.abs(delta)}
+              </span>
+            ) : null}
           </div>
-        );
-      })}
-    </div>
-  </section>
+          <p class="pr-card__blurb">{row.blurb}</p>
+          {(row.metrics.allPlayPct != null || row.metrics.rolling3Ppg != null) && (
+            <p class="pr-card__stats">
+              {row.metrics.allPlayPct != null && <span><strong>{(row.metrics.allPlayPct * 100).toFixed(1)}%</strong> all-play</span>}
+              {row.metrics.rolling3Ppg != null && <span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong> PPG last 3</span>}
+            </p>
+          )}
+        </li>
+      );
+    })}
+  </ol>
 
-  {issue.topN && divisionOrder.length > 0 && (
-    <section class="pr-section" aria-label="Pecking order by division">
-      <h2 class="pr-section__title">By division</h2>
-      <p class="pr-section__note">Every team, in pecking order within its division. # is the league-wide rank.</p>
-      <div class="pr-divs">
-        {divisionOrder.map((d) => (
-          <div class="pr-table-block">
-            <h3 class="pr-table-block__title">{d.name}</h3>
-            <div class="pr-table-wrap">
-              <table class="pr-table">
-                <thead>
-                  <tr><th>Div</th><th class="pr-table__team">Team</th><th>#</th><th>W-L</th><th>L3 PPG</th></tr>
-                </thead>
-                <tbody>
-                  {d.rows.map(({ place, row }) => {
-                    const team = teams.get(row.franchiseId);
-                    const rec = recordOf.get(row.franchiseId);
-                    return (
-                      <tr>
-                        <td>{place}</td>
-                        <td class="pr-table__team">
-                          <a href={franchiseHref(row.franchiseId)}>{team?.nameMedium ?? team?.name ?? row.franchiseId}</a>
-                        </td>
-                        <td>
-                          {row.rank}
-                          {row.previousRank != null && row.trend !== 'flat' && (
-                            <span class={`pr-card__trend--${row.trend}`}> {trendGlyph(row.trend)}</span>
-                          )}
-                        </td>
-                        <td>{rec ? `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''}` : '—'}</td>
-                        <td>{row.metrics.rolling3Ppg != null ? row.metrics.rolling3Ppg.toFixed(1) : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )}
-
-  {issue.standings && !issue.topN && (
-    <section class="pr-section" aria-label="Standings snapshot">
-      <h2 class="pr-section__title">Standings Snapshot</h2>
-      <div class="pr-standings">
-        <div class="pr-standings__col">
-          {issue.standings.divisions.map(div => (
-            <div class="pr-table-block">
-              <h3 class="pr-table-block__title">
-                {div.conference && <span class="pr-table-block__conf">{div.conference} · </span>}{div.name}
-              </h3>
-              <div class="pr-table-wrap">
-                <table class="pr-table">
-                  <thead>
-                    <tr><th class="pr-table__team">Team</th><th>W-L</th><th>PF</th><th>PPG</th></tr>
-                  </thead>
-                  <tbody>
-                    {div.teams.map(t => (
-                      <tr>
-                        <td class="pr-table__team">{t.nameMedium}</td>
-                        <td>{t.wins}-{t.losses}{t.ties ? `-${t.ties}` : ''}</td>
-                        <td>{t.pf.toFixed(1)}</td>
-                        <td>{t.ppg.toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div class="pr-standings__col">
-          <div class="pr-table-block">
-            <h3 class="pr-table-block__title">All-Play</h3>
-            <div class="pr-table-wrap">
-              <table class="pr-table">
-                <thead>
-                  <tr><th class="pr-table__team">Team</th><th>All-Play</th><th>Pct</th><th>PF</th></tr>
-                </thead>
-                <tbody>
-                  {issue.standings.allPlay.map(t => (
-                    <tr>
-                      <td class="pr-table__team">{t.nameMedium}</td>
-                      <td>{t.allPlayWLT || '—'}</td>
-                      <td>{(t.allPlayPct * 100).toFixed(1)}%</td>
-                      <td>{t.pf.toFixed(1)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
+  {remainder.length > 0 && (
+    <section class="pr-rest" aria-labelledby="pr-rest-title">
+      <h2 class="pr-rest__title" id="pr-rest-title">The rest of the order</h2>
+      <ol class="pr-rest__list">
+        {remainder.map((row) => {
+          const team = teams.get(row.franchiseId);
+          const delta = moved(row);
+          return (
+            <li class="pr-rest__row" style={accentStyle(row.franchiseId)}>
+              <span class="pr-rest__rank">{row.rank}</span>
+              <a class="pr-rest__name" href={franchiseHref(row.franchiseId)}>{team?.nameMedium ?? team?.name ?? row.franchiseId}</a>
+              <span class="pr-rest__record">{record(row.franchiseId) ?? ''}</span>
+              <span class={`pr-move pr-move--${delta ? (delta > 0 ? 'up' : 'down') : 'flat'}`}>
+                {delta ? <><span aria-hidden="true">{delta > 0 ? '▲' : '▼'}</span><span class="sr-only">{delta > 0 ? 'Up' : 'Down'}</span> {Math.abs(delta)}</> : <span aria-label="No change">–</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   )}
 
   <footer class="pr-footnote">
-    <p>
-      Composite score: {methodology}. Rankings and awards are computed from the
-      week's final MFL feeds; commentary is {labels.name}'s.
-    </p>
+    {/*
+      The Owners' Poll is its own feature (/owners-poll); the column keeps a
+      single link to it and nothing else — the owner rankings sit behind a vote.
+    */}
+    {issue.ownersPoll && (
+      <a class="pr-footnote__link" href={resolveLeaguePath(`${getLeaguePrefix(league)}/owners-poll`, hideLeaguePrefix)}>
+        The Owners’ Poll: how the owners rank it ›
+      </a>
+    )}
+    <details class="pr-footnote__how">
+      <summary>How the order is calculated</summary>
+      <p>
+        Composite score: {methodology}. Rankings are computed from the week's
+        final MFL feeds; commentary is {labels.name}'s.
+      </p>
+    </details>
   </footer>
 </article>
 
 <style>
 /* No container of its own: <main> in the layout is already the site's content
-   column (1232px, centered, with its own padding), so a second centered
-   1100px box inside it inset this column ~47px from where every other page's
-   content starts. Fill main and the left edge matches the rest of the site. */
-.pr-issue {
-  padding: 1.5rem 0 4rem;
+   column, so this fills it and the left edge matches the rest of the site. */
 
-  /* Award edge colors that mean something rather than naming a team: cold blue
-     for the cooler, hot orange-red for the heater, pink for the bench blunder.
-     Light values first, dark below — each side clears 3:1 on its own card
-     surface (5.2:1 / 5.2:1 / 6.0:1 on white, 6.0:1 / 6.7:1 / 5.7:1 on #262626). */
-  --pr-award-cooler: #2563eb;
-  --pr-award-heater: #c2410c;
-  --pr-award-blunder: #be185d;
+/* <main>'s phone gutter is 8px, which left the intro paragraph touching the
+   screen edge. Every Pecking Order route wraps its breadcrumbs and this column
+   in .pr-page, so the extra gutter goes there (styled from here, where all
+   three leagues' routes share it, rather than in six route wrappers) and the
+   breadcrumbs stay aligned with the column. Above 768px main grows its own. */
+@media (max-width: 767px) {
+  :global(.pr-page) { padding-inline: var(--spacing-sm); }
 }
-:global(html.dark) .pr-issue {
-  --pr-award-cooler: #60a5fa;
-  --pr-award-heater: #fb923c;
-  --pr-award-blunder: #f472b6;
+.pr-issue {
+  padding: var(--spacing-lg) 0 var(--spacing-2xl);
+  max-width: 760px;
 }
-.pr-hero {
-  border-bottom: 1px solid var(--content-border, #e5e7eb);
-  padding-bottom: 1.5rem;
-  margin-bottom: 2rem;
-}
-.pr-hero__eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.pr-hero { margin-bottom: var(--spacing-lg); }
+.pr-hero__kicker {
+  margin: 0 0 var(--spacing-sm);
   font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--content-text-muted, #6b7280);
-  margin-bottom: 0.75rem;
-}
-.pr-hero__badge {
-  background: var(--color-primary-fill, var(--color-primary, #2563eb));
-  color: var(--on-color-primary, #fff);
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.25rem;
-  font-weight: 600;
-}
-.pr-hero__dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--content-text-muted, #6b7280);
 }
 .pr-hero__title {
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-size: var(--font-size-2xl);
   line-height: 1.1;
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--spacing-md);
   color: var(--page-text, #111827);
 }
 .pr-hero__lede {
-  font-size: 1.05rem;
+  font-size: var(--font-size-base);
   line-height: 1.6;
   color: var(--content-text-muted, #4b5563);
   margin: 0;
-  max-width: 70ch;
-}
-
-.pr-section { margin-bottom: 2.5rem; }
-.pr-section__title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 1rem;
-  color: var(--page-text, #111827);
-  border-left: 3px solid var(--color-primary, #2563eb);
-  padding-left: 0.6rem;
-}
-/* Avatar + heading, in normal flow, starting on the page's content edge. */
-.pr-section__title--brand {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  border-left: none;
-  padding-left: 0;
-  font-size: 1.75rem;
-}
-.pr-section__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 2px solid var(--content-border, #e5e7eb);
-  background: var(--content-bg-muted, #f3f4f6);
+  max-width: 62ch;
 }
 
 .pr-rankings {
@@ -564,204 +344,160 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.6rem;
+  gap: var(--spacing-md);
 }
-/* rank | text. The crest sits inline with the team name rather than in its own
-   column: on a phone a dedicated crest column cost ~3rem of every blurb line.
-   The name, blurb and metric row still share one left edge. */
 .pr-card {
-  display: grid;
-  grid-template-columns: 3.5rem 1fr;
-  column-gap: 0.75rem;
-  align-items: center;
-  padding: 0.85rem;
-  border: 1px solid var(--content-border, #e5e7eb);
-  border-left: 4px solid var(--pr-accent);
-  border-radius: 0.5rem;
   background: var(--card-bg, #fff);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-top: 4px solid var(--pr-accent);
+  border-radius: 12px;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md);
+}
+.pr-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
 }
 .pr-card__rank {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-}
-.pr-card__rank-num {
-  font-size: 1.75rem;
-  font-weight: 800;
-  line-height: 1;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  line-height: 0.9;
+  min-width: 1.6ch;
   color: var(--pr-accent);
+  font-variant-numeric: tabular-nums;
 }
-.pr-card__trend {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-/* The delta is 11px bold — small text, so it needs 4.5:1 in both themes. Light
-   literals are darkened from the old #16a34a/#dc2626 (3.1:1 / 4.5:1 on white);
-   dark mode takes the token pair, which is tuned for a dark surface. */
-.pr-card__trend--up { color: #15803d; }
-.pr-card__trend--down { color: #b91c1c; }
-:global(html.dark) .pr-card__trend--up { color: var(--color-success-dark, #6ee7b7); }
-:global(html.dark) .pr-card__trend--down { color: var(--color-error-dark, #fca5a5); }
-.pr-card__trend--flat { color: var(--content-text-muted, #6b7280); }
 .pr-card__icon {
   flex: none;
-  border-radius: 0.25rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 .pr-card__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.05rem;
-  margin: 0 0 0.25rem;
+  flex-direction: column;
+  /* The layout gives every h3 the condensed display face; a team name in a
+     card reads in the body face like the blurb under it. */
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
   font-weight: 700;
+  line-height: 1.2;
 }
-.pr-card__name a { color: inherit; text-decoration: none; }
+.pr-card__name a { color: var(--page-text, #111827); text-decoration: none; }
 .pr-card__name a:hover { text-decoration: underline; }
-.pr-card__blurb {
-  margin: 0.1rem 0 0.4rem;
-  color: var(--content-text-muted, #4b5563);
-  font-size: 0.95rem;
-  line-height: 1.4;
+.pr-card__record {
+  margin-top: 0.15rem;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--content-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
 }
-.pr-card__metrics {
+.pr-card__blurb {
+  margin: var(--spacing-md) 0 0;
+  font-size: var(--font-size-base);
+  line-height: 1.55;
+  color: var(--page-text, #111827);
+}
+.pr-card__stats {
+  margin: var(--spacing-md) 0 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--spacing-xs) var(--spacing-lg);
   font-size: var(--font-size-xs);
   color: var(--content-text-muted, #6b7280);
 }
-.pr-card__metric {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.25rem;
-}
-.pr-card__metric strong {
-  color: var(--page-text, #111827);
+.pr-card__stats strong { color: var(--page-text, #111827); font-weight: 700; }
+
+/* Movement chip. 12px bold — small text, so 4.5:1 in both themes: the light
+   literals are darkened greens/reds, dark mode takes the token pair. */
+.pr-move {
+  flex: none;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-}
-
-.pr-awards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.75rem;
-}
-.pr-award {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
-  border-top: 3px solid var(--pr-accent);
-  border-radius: 0.5rem;
-  padding: 0.85rem;
-}
-.pr-award__title {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--content-text-muted, #6b7280);
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-}
-.pr-award__recipient {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 0.35rem;
-}
-.pr-award__vs {
-  font-weight: 400;
-  color: var(--content-text-muted, #6b7280);
-}
-.pr-award__blurb {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  color: var(--content-text-muted, #4b5563);
-}
-
-/* A top-N league's division lists: as many columns as fit. */
-.pr-divs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: 1.25rem;
-  align-items: start;
-}
-.pr-divs .pr-table th.pr-table__team,
-.pr-divs .pr-table td.pr-table__team { text-align: left; }
-.pr-section__note {
-  margin: -0.25rem 0 1rem;
-  font-size: var(--font-size-sm);
-  color: var(--content-text-muted);
-}
-
-.pr-standings {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  align-items: start;
-}
-@media (max-width: 860px) {
-  .pr-standings { grid-template-columns: 1fr; }
-}
-.pr-standings__col {
-  display: grid;
-  gap: 1rem;
-}
-.pr-table-block__title {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--content-text-muted, #6b7280);
-  margin: 0 0 0.4rem;
-}
-/* Conference qualifier on a division heading (AFL only — TheLeague's four
-   divisions have no parent). Lighter than the division itself so the eye lands
-   on the part that changes between blocks. */
-.pr-table-block__conf { font-weight: 400; opacity: 0.75; }
-.pr-table-wrap { overflow-x: auto; }
-.pr-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
-  border-radius: 0.5rem;
-}
-.pr-table th,
-.pr-table td {
-  padding: 0.4rem 0.6rem;
-  text-align: right;
   white-space: nowrap;
-  border-bottom: 1px solid var(--content-border, #e5e7eb);
+  font-variant-numeric: tabular-nums;
+}
+.pr-card .pr-move {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--content-bg-muted, #f3f4f6);
+}
+.pr-move--up { color: #15803d; }
+.pr-move--down { color: #b91c1c; }
+:global(html.dark) .pr-move--up { color: var(--color-success-dark, #6ee7b7); }
+:global(html.dark) .pr-move--down { color: var(--color-error-dark, #fca5a5); }
+.pr-move--flat { color: var(--content-text-muted, #6b7280); }
+
+/* A top-N league's tail: every remaining team, one compact row each. */
+.pr-rest { margin-top: var(--spacing-xl); }
+.pr-rest__title {
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--spacing-sm);
   color: var(--page-text, #111827);
 }
-.pr-table th {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--content-text-muted, #6b7280);
+.pr-rest__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-radius: 12px;
+  overflow: hidden;
 }
-.pr-table tbody tr:last-child td { border-bottom: none; }
-.pr-table__team { text-align: left; font-weight: 600; }
+.pr-rest__row {
+  display: grid;
+  grid-template-columns: 3ch 1fr auto 3.5ch;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--spacing-md);
+  border-left: 4px solid var(--pr-accent);
+}
+.pr-rest__row + .pr-rest__row { border-top: 1px solid var(--content-border, #e5e7eb); }
+.pr-rest__rank {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pr-rest__name {
+  font-weight: 600;
+  color: var(--page-text, #111827);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-rest__name:hover { text-decoration: underline; }
+.pr-rest__record {
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+.pr-rest__row .pr-move { text-align: right; }
 
 .pr-footnote {
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--content-border, #e5e7eb);
-  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--content-border, #e5e7eb);
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted, #6b7280);
 }
-.pr-footnote p { margin: 0; }
+.pr-footnote__link { color: var(--page-text, #111827); font-weight: 600; }
+.pr-footnote__how summary { cursor: pointer; }
+.pr-footnote__how p { margin: var(--spacing-sm) 0 0; line-height: 1.5; }
 
-@media (max-width: 720px) {
-  .pr-section__title--brand { font-size: 1.5rem; }
-  .pr-section__avatar { width: 32px; height: 32px; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 </style>

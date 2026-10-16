@@ -151,8 +151,8 @@ const labels = await getPersonaLabels(leagueDef.slug);
       <PeckingOrderIssue issue={latest.data} league={league} variant={isPreview ? 'sample' : 'live'} />
     </div>
     {older.length > 0 && (
-      <aside class="pr-archive">
-        <h2 class="pr-archive__title">{isPreview ? 'More past issues' : 'Past Issues'}</h2>
+      <details class="pr-archive">
+        <summary class="pr-archive__title">{isPreview ? 'More past issues' : 'Past issues'} ({older.length})</summary>
         <ul class="pr-archive__list">
           {older.map(i => (
             <li>
@@ -162,7 +162,7 @@ const labels = await getPersonaLabels(leagueDef.slug);
             </li>
           ))}
         </ul>
-      </aside>
+      </details>
     )}
   </>
 ) : (
@@ -287,13 +287,16 @@ const labels = await getPersonaLabels(leagueDef.slug);
   padding-left: 1rem;
   margin-left: 0.1rem;
 }
+/* Collapsed by default: the archive is navigation, not part of the column,
+   and the rankings are the page (commissioner, 2026-10-15). */
 .pr-archive {
-  margin: 0 0 3rem;
+  max-width: 760px;
+  margin: calc(-1 * var(--spacing-xl)) 0 var(--spacing-2xl);
+  font-size: var(--font-size-sm);
 }
 .pr-archive__title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
   color: var(--page-text, #111827);
 }
 .pr-archive__list {
@@ -302,6 +305,7 @@ const labels = await getPersonaLabels(leagueDef.slug);
   margin: 0;
   display: grid;
   gap: 0.4rem;
+  margin-top: var(--spacing-sm);
 }
 .pr-archive__list a {
   color: var(--page-text, #111827);

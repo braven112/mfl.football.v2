@@ -10,6 +10,7 @@
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
+import { capSentences, LEDE_MAX_SENTENCES } from '../../src/utils/pecking-order-lede.mjs';
 
 // ─── Quality-gate constants ────────────────────────────────────────
 
@@ -200,7 +201,7 @@ ${factSheet}
 OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Punchy headline (~60 chars)",
-  "lede": "2-3 sentence lede in Schefter's voice.",
+  "lede": "2-3 sentence lede in Schefter's voice. Never more than three sentences.",
   "blurbs": {
     "<franchiseId>": "One sentence about that franchise (≤240 chars)",
     ...
@@ -311,7 +312,9 @@ export function applyAIVoice(issue, aiOutput, teams) {
   if (aiOutput?.lede) {
     const errs = validateBlurb(aiOutput.lede, { maxLength: LEDE_MAX });
     if (errs.length === 0) {
-      out.lede = aiOutput.lede.trim();
+      // The prompt asks for 2-3 sentences and the model has written six; the
+      // page shows at most three, so the stored lede does too.
+      out.lede = capSentences(aiOutput.lede.trim(), LEDE_MAX_SENTENCES);
       report.lede = 'ai';
     } else {
       report.lede = 'fallback';

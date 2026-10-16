@@ -37,6 +37,7 @@ import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
+import { capSentences, LEDE_MAX_SENTENCES } from '../src/utils/pecking-order-lede.mjs';
 import {
   openPoll,
   closePoll,
@@ -501,7 +502,7 @@ function buildHeadlineAndLede({ teams, rankings, awards, week }) {
     ledeParts.push(`${team?.nameMedium ?? moverDown.franchiseId} slide ${moverDown.rank - moverDown.previousRank} to #${moverDown.rank}.`);
   }
 
-  return { headline, lede: ledeParts.join(' ') };
+  return { headline, lede: capSentences(ledeParts.join(' '), LEDE_MAX_SENTENCES) };
 }
 
 // ─── Main ──────────────────────────────────────────────────────────
