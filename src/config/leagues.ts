@@ -40,9 +40,6 @@ export type CanonicalLeagueSlug = keyof typeof RAW_LEAGUES | DemoOnlyLeagueSlug;
 export type DemoOnlyLeagueSlug = 'keeper';
 
 /** Starting presets for a league's features — see src/config/league-archetypes.mjs. */
-/** A league's homepage layout — see `homeStyle` on the registry entry. */
-export type HomeStyle = 'classic' | 'front-page';
-
 /**
  * A league's icon set — see `iconSet` on the registry entry. `'classic'` is
  * public/assets/icons/sprite.svg; any other name is
@@ -392,15 +389,6 @@ export interface LeagueDefinition {
    */
   renumbersFranchises?: boolean;
   /**
-   * Which homepage layout the league renders. `'classic'` (absent) is the
-   * hero-led page every league has had; `'front-page'` is the news-led front
-   * page (src/components/shared/front-page/): a score strip, the viewer's team
-   * band, one lead story beside a headline list, then story cards, the race and
-   * the NFL wire. Styles are interchangeable — every league keeps working on
-   * either — so a league (or a prospective client) can be shown both.
-   */
-  homeStyle?: HomeStyle;
-  /**
    * Which icon set the league's pages draw from. Absent = `'classic'`. Every
    * set carries the same glyph ids (tests/icon-set-parity.test.ts), so a
    * league switches sets by changing this one value.
@@ -502,11 +490,6 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
 /** The league's own site theme; `'editorial'` for any league that names none. */
 export function leagueSiteTheme(slug: string): SiteTheme {
   return getLeagueBySlug(slug)?.siteTheme ?? 'editorial';
-}
-
-/** The league's homepage layout; `'classic'` for any league that names none. */
-export function leagueHomeStyle(slug: string): HomeStyle {
-  return getLeagueBySlug(slug)?.homeStyle ?? 'classic';
 }
 
 /** The league's icon set; `'classic'` for any league that names none. */

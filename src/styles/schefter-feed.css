@@ -601,12 +601,14 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-widget__title {
-  font-size: var(--font-size-xs);
+  font-size: var(--style-section-size, var(--font-size-xs));
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding-left: 0.625rem;
-  border-left: 2px solid var(--sf-accent);
+  letter-spacing: var(--style-section-tracking, 0.06em);
+  padding-left: var(--style-section-rule-gap, 0.625rem);
+  border-left: var(--style-section-rule, 2px solid var(--sf-accent));
+  font-family: var(--style-section-font, inherit);
+  font-style: var(--style-section-style, inherit);
   color: var(--sf-text-primary);
 }
 

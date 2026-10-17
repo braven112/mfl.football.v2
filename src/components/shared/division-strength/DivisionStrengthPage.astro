@@ -1487,13 +1487,15 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .section-title,
   .section-header__title {
     margin: 0;
-    font-size: var(--ds-section-size);
+    font-size: var(--style-section-size, var(--ds-section-size));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--style-section-tracking, 0.08em);
     color: var(--ds-ink);
-    border-left: 2px solid var(--ds-accent);
-    padding-left: 0.625rem;
+    border-left: var(--style-section-rule, 2px solid var(--ds-accent));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
     line-height: 1.3;
   }
   .section-header { margin: 2.5rem 0 1rem; }

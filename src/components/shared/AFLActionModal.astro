@@ -899,13 +899,15 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   .aam-section__title {
     margin: 0 0 0.625rem;
-    padding-left: 0.625rem;
-    font-size: var(--font-size-xs);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
-    letter-spacing: 0.075em;
+    letter-spacing: var(--style-section-tracking, 0.075em);
     text-transform: uppercase;
     color: var(--color-gray-500, #6b7280);
-    border-left: 3px solid var(--color-primary, #1c497c);
+    border-left: var(--style-section-rule, 3px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     line-height: 1.4;
   }
 

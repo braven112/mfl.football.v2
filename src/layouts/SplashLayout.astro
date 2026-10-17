@@ -120,6 +120,8 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	@import '../styles/tokens-dark.css';
 	/* Per-league theme palettes (generated from src/themes/*.json) */
 	@import '../styles/league-themes.generated.css';
+	/* Site style tokens — Editorial / Primetime (generated from src/styles/site-styles/*.json) */
+	@import '../styles/site-styles.generated.css';
 
 	/* Splash overrides of THEMED tokens (src/config/theme-tokens.mjs). The
 	   default theme sets these on html:not([data-league]) at 0,1,1, which a

@@ -69,6 +69,40 @@ and Storybook). Plan and later phases: `docs/plans/league-themes.md`.
   complete, every league's theme exists, no themed token in the shared token
   files, no themed token on a weak `:root`/`html` selector.
 
+## Site styles — a STYLE reaches every page through `--style-*` tokens
+
+A league's site has three independent visual dimensions: its colour THEME
+(above), light/dark, and its site STYLE — Editorial (the original look) or
+Primetime (broadcast caps, no editorial borders). The registry's `siteTheme`
+picks the style per league (`leagueSiteTheme(slug)`); `?theme=primetime|
+editorial|default` previews one for a browser session. Type goes with the
+style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
+
+- **The style is site-wide, not per page.** `TheLeagueLayout` puts
+  `data-site-theme` on `<html>` from `resolveSiteTheme(slug, preview)`, and
+  `src/styles/site-styles.generated.css` (compiled from
+  `src/styles/site-styles/<id>.json` by `scripts/generate-site-styles.mjs`)
+  sets the tokens there, so every component on every page answers at once.
+- **Consume a style token with your own value as the fallback:**
+  `var(--style-section-rule, 2px solid var(--color-primary))`. Editorial
+  leaves every token null, so the fallback renders and TheLeague/AFL stay
+  pixel-identical. A new token goes in `src/config/style-tokens.mjs`, and
+  every style file must name it (null is a valid answer).
+- **A section title's stripe is the style's to draw.** Any 2–4px left border
+  on a title/header selector goes through `--style-section-rule` (and its
+  padding through `--style-section-rule-gap`). A state mark (pinned, yours,
+  selected) is not a stripe and keeps its border in every style.
+- **Branching on a style is the exception.** `=== 'primetime'` or a
+  `[data-site-theme=…]` selector is for a page-specific LAYOUT within a style
+  (the Primetime standings board, the Primetime free-agents page, the
+  front-page homepage). Reach for a token first; the per-file count of
+  branches is a shrink-only baseline.
+- Guard: `tests/site-styles.test.ts` — generated CSS fresh, every style names
+  every token, no overlap with the colour-theme contract, Editorial all null,
+  the layout sets the attribute, no raw title stripe, the branch baseline
+  (`tests/fixtures/site-style-branch-baseline.json`), and Storybook's Style
+  toolbar lists every style.
+
 ## The polish layer — motion, type, states, touch, surfaces
 
 Adopted Sep 2026 from the Impeccable design guidance (pbakaus/impeccable),

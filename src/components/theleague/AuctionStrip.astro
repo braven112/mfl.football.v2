@@ -144,13 +144,15 @@ const secondaryLinks: StripLink[] = [
 
   /* ── Title (editorial section-title variant) ── */
   .auction-strip__title {
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--style-section-tracking, 0.06em);
     color: var(--color-gray-700, #374151);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--cat-free-agency, #2e8743);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--cat-free-agency, #2e8743));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     white-space: nowrap;
     flex-shrink: 0;
   }

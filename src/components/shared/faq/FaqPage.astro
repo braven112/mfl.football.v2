@@ -450,13 +450,15 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   }
   .faq__section-title {
     margin: 0 0 0.5rem;
-    padding-left: 0.5rem;
-    font-size: var(--font-size-xs);
+    padding-left: var(--style-section-rule-gap, 0.5rem);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--style-section-tracking, 0.08em);
     color: var(--content-text-muted, #6b7280);
-    border-left: 3px solid var(--league-accent, #1c497c);
+    border-left: var(--style-section-rule, 3px solid var(--league-accent, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
   }
   .faq__section-note,
   .faq__lede {

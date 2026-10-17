@@ -199,14 +199,16 @@ export default function TradeAnalysisSummary({
           margin-top: 1rem;
         }
         .trade-analysis__title {
-          font-size: var(--font-size-xs);
+          font-size: var(--style-section-size, var(--font-size-xs));
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
+          letter-spacing: var(--style-section-tracking, 0.06em);
           color: var(--color-gray-900, #111827);
           margin: 0 0 0.75rem;
-          padding-left: 0.625rem;
-          border-left: 2px solid var(--color-primary, #1c497c);
+          padding-left: var(--style-section-rule-gap, 0.625rem);
+          border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          font-family: var(--style-section-font, inherit);
+          font-style: var(--style-section-style, inherit);
         }
         .trade-analysis__grid {
           display: grid;
@@ -220,14 +222,16 @@ export default function TradeAnalysisSummary({
           border: 1px solid var(--content-border, #e2e8f0);
         }
         .trade-analysis__card-title {
-          font-size: var(--font-size-xs);
+          font-size: var(--style-section-size, var(--font-size-xs));
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
+          letter-spacing: var(--style-section-tracking, 0.06em);
           color: var(--color-gray-900, #111827);
           margin: 0 0 0.5rem;
-          padding-left: 0.625rem;
-          border-left: 2px solid var(--color-primary, #1c497c);
+          padding-left: var(--style-section-rule-gap, 0.625rem);
+          border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          font-family: var(--style-section-font, inherit);
+          font-style: var(--style-section-style, inherit);
         }
         .trade-analysis__columns {
           display: grid;

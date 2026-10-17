@@ -1,9 +1,9 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-16",
+  "recordedAt": "2026-10-17",
   "totals": {
     "transition": 202,
-    "fontSize": 2042,
+    "fontSize": 2037,
     "shadow": 234
   },
   "files": {
@@ -30,10 +30,7 @@
       "shadow": 1
     },
     "src/components/afl/hp-sections/AflTeamSnapshot.astro": {
-      "fontSize": 3
-    },
-    "src/components/afl/hp-sections/AflWhatsNext.astro": {
-      "fontSize": 1
+      "fontSize": 2
     },
     "src/components/bigleague/BigLeagueHomePage.astro": {
       "fontSize": 8
@@ -249,7 +246,7 @@
       "shadow": 2
     },
     "src/components/shared/hp-sections/QuickLinks.astro": {
-      "fontSize": 4
+      "fontSize": 3
     },
     "src/components/shared/keepers/KeeperPlanner.astro": {
       "transition": 4,
@@ -378,7 +375,7 @@
       "shadow": 5
     },
     "src/components/shared/schedule-strength/GauntletArticleSection.astro": {
-      "fontSize": 2
+      "fontSize": 1
     },
     "src/components/shared/schedule-strength/GauntletDashboard.astro": {
       "fontSize": 2
@@ -747,9 +744,6 @@
     },
     "src/pages/best-ball-1/rosters.astro": {
       "fontSize": 5
-    },
-    "src/pages/best-ball-1/rules.astro": {
-      "fontSize": 1
     },
     "src/pages/demo/index.astro": {
       "fontSize": 5

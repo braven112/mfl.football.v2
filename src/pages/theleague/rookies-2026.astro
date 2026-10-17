@@ -1071,13 +1071,15 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     margin-bottom: 1rem;
   }
   .rsp-section-title {
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--style-section-tracking, 0.06em);
     color: var(--color-gray-900, #111827);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     margin: 0 0 0.25rem;
   }
   .rsp-section-sub {
@@ -1431,13 +1433,15 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     border-top: 1px solid var(--content-border, #e2e8f0);
   }
   .grade-legend__title {
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--style-section-tracking, 0.06em);
     color: var(--color-gray-900, #111827);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     margin: 0 0 0.875rem;
   }
   .grade-legend__grid {
@@ -1585,12 +1589,14 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     margin-bottom: 1rem;
   }
   .affinity-panel__title {
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    letter-spacing: var(--style-section-tracking, 0.06em);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     color: var(--color-gray-800, #1f2937);
     margin: 0 0 0.25rem;
   }

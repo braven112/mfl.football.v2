@@ -305,8 +305,8 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           gap: 1rem;
         }
         .lm-section-header {
-          padding-left: 0.625rem;
-          border-left: 2px solid var(--color-primary, #1c497c);
+          padding-left: var(--style-section-rule-gap, 0.625rem);
+          border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
           margin-bottom: -0.25rem;
         }
         .lm-section-title {

@@ -16,7 +16,7 @@ import {
   type ParsedWeek,
   teamsMentioned,
 } from '../src/utils/front-page';
-import { getLeagueBySlug, leagueHomeStyle } from '../src/config/leagues';
+import { leagueSiteTheme } from '../src/config/leagues';
 import type { SchefterPost } from '../src/types/schefter';
 
 const game = (a: string, b: string, sa: number | null = null, sb: number | null = null) => ({
@@ -166,11 +166,12 @@ describe('the race, the wire and moves', () => {
 });
 
 describe('homepage style', () => {
-  it("defaults every league to the classic homepage, with Archie's on the front page", () => {
-    expect(leagueHomeStyle('theleague')).toBe('classic');
-    expect(leagueHomeStyle('afl-fantasy')).toBe('classic');
-    expect(getLeagueBySlug('archies')?.homeStyle).toBe('front-page');
-    expect(leagueHomeStyle('archies')).toBe('front-page');
+  // The site style picks the homepage: one setting for the whole site, so the
+  // front page and every other page can never disagree about a league's style.
+  it("puts Archie's (Primetime) on the front page and every other league on the classic homepage", () => {
+    expect(leagueSiteTheme('theleague')).toBe('editorial');
+    expect(leagueSiteTheme('afl-fantasy')).toBe('editorial');
+    expect(leagueSiteTheme('archies')).toBe('primetime');
   });
 });
 

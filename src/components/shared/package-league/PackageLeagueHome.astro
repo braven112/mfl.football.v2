@@ -27,7 +27,8 @@ import MadQualifiers from './MadQualifiers.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
 import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
-import { getLeagueBySlug, leagueHasFeature, leagueHomeStyle, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveSiteTheme } from '../../../utils/site-theme';
 import { packageLeagueHasPath } from '../../../config/package-league-routes.mjs';
 import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-props';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
@@ -83,7 +84,7 @@ interface Props {
   /** The Explore cards, for a league with no page-directory entries (the keeper slot). */
   quickLinks?: QuickLinkPage[];
   /**
-   * The front-page style's extra reads (registry `homeStyle: 'front-page'`):
+   * The front-page style's extra reads (the Primetime site style):
    * franchise history for the weekly rivalry story, YTD player scores for the
    * race's star. Optional, so a classic-style caller passes neither.
    */
@@ -124,9 +125,10 @@ const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, fra
 const teamHref = (id: string) =>
   leagueHasBrandBook(league.slug) && teamSlugs[id] ? r(`${base}/brand/${teamSlugs[id]}`) : r(`${base}/rosters?franchise=${id}`);
 const signInHref = loginUrlForRequest(Astro, league);
-// The homepage style the registry picks for this league: the classic shared
-// page, or the news-led front page (PackageFrontPage).
-const frontPage = leagueHomeStyle(league.slug) === 'front-page';
+// The league's site style picks the homepage: Primetime renders the news-led
+// front page (PackageFrontPage), Editorial the classic shared page. One
+// setting for the whole site (registry `siteTheme`, or a `?theme=` preview).
+const frontPage = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) === 'primetime';
 
 // ── Results-shaped data: the SEASON year ─────────────────────────────────────
 const seasonYear = getCurrentSeasonYear(now);

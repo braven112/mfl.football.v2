@@ -57,6 +57,20 @@ blockquote {
   text-wrap-style: pretty;
 }
 
+/* ── Site style: headings ────────────────────────────────────────────────
+   Page and section headings speak the league's site STYLE (Editorial /
+   Primetime — src/config/style-tokens.mjs), set on <html> for the whole
+   site, so a heading no component has styled still takes Primetime's italic
+   broadcast caps. `:where()` keeps this at zero specificity: any component
+   that sets its own font, style, case or tracking keeps it. Editorial leaves
+   the tokens unset, so `inherit` renders exactly what it did before. */
+:where(h1, h2) {
+  font-family: var(--style-heading-font, inherit);
+  font-style: var(--style-heading-style, inherit);
+  text-transform: var(--style-heading-transform, inherit);
+  letter-spacing: var(--style-heading-tracking, inherit);
+}
+
 /* ── Browser surfaces ────────────────────────────────────────────────────
    The parts of the page the browser draws for us, brought into the brand:
    text selection, the input caret, native checkboxes/radios/ranges, link
