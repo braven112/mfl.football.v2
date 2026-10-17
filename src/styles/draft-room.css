@@ -208,7 +208,7 @@ html.dark .draft-room {
 html.dark .dr-panel-board,
 html.dark .dr-side-panel {
   box-shadow:
-    0 0 0 1px var(--content-border, #555555),
+    0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
     var(--shadow-lg);
 }
 
@@ -559,6 +559,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.625rem);
   border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   margin-right: 0.5rem;
@@ -748,6 +750,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.625rem);
   border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   line-height: 1.2;
@@ -1006,6 +1010,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.625rem);
   border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   line-height: 1.2;
@@ -1273,6 +1279,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.625rem);
   border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   line-height: 1.4;

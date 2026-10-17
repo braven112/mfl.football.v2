@@ -71,6 +71,7 @@ import { sortSlotSpansHtml } from '../../../utils/rosters/sort-value-slot';
 // <style> would not.
 import '../../../styles/rosters-mobile.css';
 import '../../../styles/roster-position-groups.css';
+import '../../../styles/rosters-primetime.css';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { resolveOwnerPresence } from '../../../utils/rosters/owner-presence';
@@ -2358,7 +2359,7 @@ const pageConfig = {
 
     :global(html.dark) .roster-summary article {
       box-shadow:
-        0 0 0 1px var(--content-border, #555555),
+        0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
         var(--shadow-md);
     }
 
@@ -2404,7 +2405,7 @@ const pageConfig = {
 
     :global(html.dark) .roster-table-card {
       box-shadow:
-        0 0 0 1px var(--content-border, #555555),
+        0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
         var(--shadow-lg);
     }
 
@@ -2670,7 +2671,7 @@ const pageConfig = {
 
     :global(html.dark) .chart-card {
       box-shadow:
-        0 0 0 1px var(--content-border, #555555),
+        0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
         0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
@@ -2980,6 +2981,8 @@ const pageConfig = {
     .section-header {
       padding-left: var(--style-section-rule-gap, 0.625rem);
       border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+      background: var(--style-section-mark, none);
+      padding-bottom: var(--style-section-mark-pad, 0);
     }
 
     .section-header__title {
@@ -3077,7 +3080,7 @@ const pageConfig = {
     :global(html.dark) .empty-state,
     :global(html.dark) .coming-soon {
       box-shadow:
-        0 0 0 1px var(--content-border, #555555),
+        0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
         0 4px 12px rgba(0, 0, 0, 0.06);
     }
 

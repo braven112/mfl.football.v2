@@ -273,7 +273,8 @@ const tools = [
     gap: 0.6rem;
     padding: 1rem;
     background: var(--card-surface);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg);
   }
   .blh__h2 {

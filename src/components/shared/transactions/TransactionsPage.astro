@@ -620,7 +620,8 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
     margin-top: 0.4rem;
     padding: var(--spacing-md, 1rem);
     background: var(--tx-surface-muted);
-    border: 1px solid var(--tx-border);
+    border: var(--style-card-border, 1px solid var(--tx-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
   }
   .tx__field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
@@ -675,7 +676,8 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
   .tx-card {
     padding: 0.8rem 0.95rem;
     background: var(--tx-surface);
-    border: 1px solid var(--tx-border);
+    border: var(--style-card-border, 1px solid var(--tx-border));
+    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--tx-team, var(--tx-accent));
     border-radius: var(--radius-md, 8px);
     min-width: 0;

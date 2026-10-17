@@ -240,7 +240,8 @@ function gradeColor(grade: string): string {
 
   .sf-article__card {
     background: var(--sf-bg, #fff);
-    border: 1px solid var(--sf-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--sf-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg, 0.75rem);
     overflow: hidden;
   }
@@ -383,7 +384,8 @@ function gradeColor(grade: string): string {
   }
 
   .sf-grade-card {
-    border: 1px solid var(--sf-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--sf-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     overflow: hidden;
   }

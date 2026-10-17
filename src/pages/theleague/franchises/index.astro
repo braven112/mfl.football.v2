@@ -282,7 +282,8 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
 
   .card-body {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e5e5e5);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e5e5));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
     padding: 0.875rem 1rem 1rem;
     display: flex;
@@ -292,7 +293,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   }
   :global(html.dark) .card-body {
-    box-shadow: 0 0 0 1px var(--content-border, #555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555));
   }
   .franchise-card:hover .card-body {
     transform: translateY(-2px);

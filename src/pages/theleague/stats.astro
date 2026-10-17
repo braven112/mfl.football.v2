@@ -179,6 +179,8 @@ for (const section of SECTIONS) {
     letter-spacing: var(--style-section-tracking, 0.06em);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--hub-accent));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 0.5rem 0;
@@ -219,7 +221,7 @@ for (const section of SECTIONS) {
      nearly identical to the section card behind it (#1e1e1e); add a ring
      so tiles read as distinct cards instead of washing out. */
   :global(html.dark) .stats-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   :global(html.dark) .stats-card:hover {

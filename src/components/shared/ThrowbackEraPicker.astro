@@ -462,7 +462,8 @@ const rows: Row[] = [
     overflow-wrap: anywhere;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
-    border: 1px solid var(--card-border);
+    border: var(--style-card-border, 1px solid var(--card-border));
+    box-shadow: var(--style-card-shadow, none);
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
     font-weight: 700;

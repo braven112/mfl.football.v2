@@ -108,7 +108,8 @@ const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
 
   .team-stat-card {
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: var(--style-card-border, 1px solid #e2e8f0);
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     padding: 1rem;
     display: flex;

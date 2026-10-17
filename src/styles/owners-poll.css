@@ -201,7 +201,8 @@
   padding: 0.6rem;
   min-height: 3.25rem;
   background: var(--content-bg);
-  border: 1px solid var(--content-border);
+  border: var(--style-card-border, 1px solid var(--content-border));
+  box-shadow: var(--style-card-shadow, none);
   border-left: 4px solid var(--op-team, var(--content-border));
   border-radius: var(--radius-md, 8px);
   color: var(--page-text);
@@ -216,7 +217,7 @@
   /* The "· you" label already marks the owner's own team. A dashed ring on top
      of the picked state's team-coloured border read as an error box in dark
      mode, so the marker stays textual. */
-  box-shadow: inset 0 0 0 1px var(--content-border);
+  box-shadow: inset 0 0 0 1px var(--style-card-ring, var(--content-border));
 }
 
 .op-card__slot {
@@ -515,4 +516,4 @@
 }
 /* The layouts theme by `html.dark` (TheLeagueLayout), same as the Throwback modal. */
 html.dark .op-popup::backdrop { background: rgba(0, 0, 0, 0.6); }
-html.dark .op-popup { box-shadow: var(--shadow-xl), 0 0 0 1px var(--content-border); }
+html.dark .op-popup { box-shadow: var(--shadow-xl), 0 0 0 1px var(--style-card-ring, var(--content-border)); }

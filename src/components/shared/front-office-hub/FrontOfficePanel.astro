@@ -436,6 +436,8 @@ const clientConfig = {
     color: var(--page-text, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--league-accent, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
   }
@@ -481,7 +483,7 @@ const clientConfig = {
 
   :global(html.dark) .fo-private {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       0 4px 12px rgba(0, 0, 0, 0.06);
   }
 

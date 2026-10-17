@@ -90,7 +90,8 @@ const { band, signInHref, leagueName } = Astro.props;
     grid-template-columns: 1fr auto;
     background: var(--card-bg);
     color: var(--page-text);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
   }
   .fp-band--guest p { margin: 0; color: var(--content-text-muted); }
   .fp-band__team { display: flex; align-items: center; gap: 0.85rem; min-width: 0; }

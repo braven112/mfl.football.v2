@@ -465,7 +465,7 @@ export default function PendingTradesPanel({
         /* Dark mode: raised-card ring (light stays borderless) */
         html.dark .ptp-panel {
           box-shadow:
-            0 0 0 1px var(--content-border, #555555),
+            0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
             0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
         @keyframes ptp-slide-in {
@@ -515,6 +515,8 @@ export default function PendingTradesPanel({
         .ptp-section-header {
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           margin-bottom: 0.75rem;
         }
         .ptp-section-title {
@@ -588,7 +590,8 @@ export default function PendingTradesPanel({
           padding-top: 1.5rem;
         }
         .ptp-draft-card {
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.875rem;
           background: var(--content-bg, #fff);

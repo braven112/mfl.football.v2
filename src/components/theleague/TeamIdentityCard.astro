@@ -49,7 +49,8 @@ const { icon, name, division, label, class: className } = Astro.props;
     padding: 1.5rem;
     background: var(--card-bg-color, #ffffff);
     border-radius: 12px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--border-color, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   .team-identity-card__icon {

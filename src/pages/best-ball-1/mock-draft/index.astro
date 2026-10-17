@@ -274,7 +274,8 @@ const STATUS_LABELS: Record<string, string> = {
     align-items: center;
     gap: 0.9rem;
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #dddddd);
+    border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 0.8rem 1rem;
     text-decoration: none;

@@ -1006,6 +1006,8 @@ const busiestDayLabel = traffic.busiest
 	.section-header {
 		padding-left: var(--style-section-rule-gap, 0.625rem);
 		border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+		background: var(--style-section-mark, none);
+		padding-bottom: var(--style-section-mark-pad, 0);
 		margin-bottom: 1rem;
 	}
 
@@ -1036,7 +1038,7 @@ const busiestDayLabel = traffic.busiest
 	   card), and the muted gray-50 well color reads as flat against navy —
 	   add the raised-card ring. */
 	:global(html.dark) .chart-container {
-		box-shadow: 0 0 0 1px var(--content-border, #555555);
+		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
 	}
 
 	.chart-container :global(.chart-svg) {
@@ -1056,7 +1058,7 @@ const busiestDayLabel = traffic.busiest
 	}
 
 	:global(html.dark) .chart-empty {
-		box-shadow: 0 0 0 1px var(--content-border, #555555);
+		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
 	}
 
 	.chart-empty p { margin: 0; }
@@ -1247,7 +1249,7 @@ const busiestDayLabel = traffic.busiest
 	}
 
 	:global(html.dark) .activity-page__empty {
-		box-shadow: 0 0 0 1px var(--content-border, #555555);
+		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
 	}
 
 	/* ── Table ── */
@@ -1262,7 +1264,7 @@ const busiestDayLabel = traffic.busiest
 	}
 
 	:global(html.dark) .activity-table {
-		box-shadow: 0 0 0 1px var(--content-border, #555);
+		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555));
 	}
 
 	.activity-table__th {
@@ -1376,7 +1378,7 @@ const busiestDayLabel = traffic.busiest
 		padding: 0.75rem 0.875rem;
 		border-radius: var(--radius-md, 0.375rem);
 		background: var(--card-bg, #fff);
-		box-shadow: 0 0 0 1px var(--content-border, var(--color-gray-200, #e5e7eb));
+		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, var(--color-gray-200, #e5e7eb)));
 	}
 
 	.surface-card__label {

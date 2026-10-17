@@ -1022,7 +1022,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       box-shadow: var(--shadow-md);
       overflow: hidden;
       transition: opacity 0.4s ease, transform 0.4s ease, box-shadow var(--transition-base);
-      border: 1px solid var(--content-border);
+      border: var(--style-card-border, 1px solid var(--content-border));
     }
 
     .decl-card:hover {
@@ -1184,6 +1184,8 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       letter-spacing: var(--style-section-tracking, 0.06em);
       padding-left: var(--style-section-rule-gap, 0.625rem);
       border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+      background: var(--style-section-mark, none);
+      padding-bottom: var(--style-section-mark-pad, 0);
       font-family: var(--style-section-font, inherit);
       font-style: var(--style-section-style, inherit);
       margin: 0 0 0.75rem;

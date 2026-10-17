@@ -196,7 +196,8 @@ const hero = HERO_COPY[phase];
 
   .bb-home__card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #dddddd);
+    border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 1.1rem 1.2rem;
     text-decoration: none;

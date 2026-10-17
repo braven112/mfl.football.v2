@@ -1422,6 +1422,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 var(--spacing-lg, 1.5rem);
@@ -1432,7 +1434,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
      ======================================== */
   .ds-card {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     padding: var(--spacing-lg, 1.5rem);
     margin-bottom: var(--spacing-md, 1rem);
@@ -1517,6 +1520,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
   }
@@ -1633,7 +1638,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-metric-card {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.5rem;
     text-align: center;
@@ -1930,7 +1936,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-left: 2px solid var(--color-gray-300, #cbd5e1);
     border-radius: 6px;
     background: var(--content-bg-muted, #fafbfc);
@@ -2037,7 +2044,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   :global(html.dark) .ds-shadow-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555));
   }
 
   .ds-shadow-label {
@@ -2125,7 +2132,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
      ======================================== */
   .ds-profile-card {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
     border-radius: var(--radius-lg, 1rem);
     padding: 1.75rem;
     display: flex;

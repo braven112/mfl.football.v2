@@ -167,7 +167,8 @@ const hasAnyPicks = madePicks.length > 0;
 
   .bb-rosters__card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #dddddd);
+    border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 1rem 1.1rem;
   }

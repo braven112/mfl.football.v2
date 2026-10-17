@@ -538,6 +538,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
   margin: 0 0 1rem;
   color: var(--page-text, #111827);
   border-left: var(--style-section-rule, 3px solid var(--color-primary, #2563eb));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   padding-left: var(--style-section-rule-gap, 0.6rem);
 }
 /* Avatar + heading, in normal flow, starting on the page's content edge. */
@@ -575,7 +577,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
   column-gap: 0.75rem;
   align-items: center;
   padding: 0.85rem;
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-left: 4px solid var(--pr-accent);
   border-radius: 0.5rem;
   background: var(--card-bg, #fff);
@@ -654,7 +657,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
 }
 .pr-award {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-top: 3px solid var(--pr-accent);
   border-radius: 0.5rem;
   padding: 0.85rem;
@@ -731,7 +735,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
   border-collapse: collapse;
   font-size: 0.85rem;
   background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: 0.5rem;
 }
 .pr-table th,

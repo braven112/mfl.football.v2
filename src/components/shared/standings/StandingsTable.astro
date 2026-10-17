@@ -540,7 +540,7 @@ const bannerLabelFor = (name: string) =>
     overflow-x: auto;
   }
   :global(html.dark) .v-std {
-    box-shadow: 0 0 0 1px var(--content-border, #555555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555)), var(--shadow-lg);
   }
   .v-std.branded {
     padding-top: 0;
@@ -875,7 +875,7 @@ const bannerLabelFor = (name: string) =>
   }
   :global(html.dark) .v-league {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0.16) 22%, var(--card-surface, #262626) 52%);
-    box-shadow: 0 0 0 1px var(--content-border, #555555), 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555)), 0 2px 8px rgba(0, 0, 0, 0.1);
   }
   .v-league .st-table {
     width: 100%;
@@ -1126,7 +1126,7 @@ const bannerLabelFor = (name: string) =>
       color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 50%, transparent) 0%,
       color-mix(in srgb, var(--division-accent, var(--league-accent, #ef5350)) 16%, transparent) 22%,
       var(--card-surface, #16283c) 52%);
-    box-shadow: 0 0 0 1px var(--content-border, #555555), 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555)), 0 10px 15px -3px rgb(0 0 0 / 0.1);
   }
   :global(html.dark) .v-conf .conference-title {
     background: transparent;
@@ -1375,7 +1375,7 @@ const bannerLabelFor = (name: string) =>
       color-mix(in srgb, var(--league-accent, #ef5350) 50%, transparent) 0%,
       color-mix(in srgb, var(--league-accent, #ef5350) 16%, transparent) 22%,
       var(--card-surface, #16283c) 52%);
-    box-shadow: 0 0 0 1px var(--content-border, #555555), var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555)), var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
   :global(html.dark) .v-tier .tier-header-section {
     background: transparent;

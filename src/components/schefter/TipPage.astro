@@ -632,7 +632,7 @@ const preselectTeam = (() => {
 
   .tip-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
     border-radius: 0.75rem;
     padding: 1.25rem;
     display: flex;
@@ -647,7 +647,7 @@ const preselectTeam = (() => {
   :global(html.dark) .tip-rail-card {
     border-color: transparent;
     box-shadow:
-      0 0 0 1px var(--content-border, #5f6885),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885)),
       var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
 
@@ -657,6 +657,8 @@ const preselectTeam = (() => {
     gap: 0.25rem;
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
   }
   .section-header__title {
     font-size: var(--font-size-xs);
@@ -985,7 +987,7 @@ const preselectTeam = (() => {
   /* Right rail: How this works card */
   .tip-rail-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
     border-radius: 0.75rem;
     padding: 1rem;
     display: flex;
@@ -1459,6 +1461,8 @@ const preselectTeam = (() => {
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 0.25rem;
@@ -1476,7 +1480,8 @@ const preselectTeam = (() => {
     flex-direction: column;
     border-radius: var(--radius-lg, 0.5rem);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
+    box-shadow: var(--style-card-shadow, none);
     text-decoration: none;
     color: inherit;
     overflow: hidden;
@@ -1490,7 +1495,7 @@ const preselectTeam = (() => {
   /* Dark: gray-100/200 borders invert to near-black — translucent edge
      so the nested article tile keeps its outline. */
   :global(html.dark) .tip-rail-article-card {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--style-card-border-color, rgba(255, 255, 255, 0.12));
   }
   :global(html.dark) .tip-rail-article-card:hover {
     border-color: rgba(255, 255, 255, 0.24);

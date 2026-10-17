@@ -456,6 +456,8 @@ export default function TradeConfirmationModal({
           margin-bottom: 0.5rem;
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
         }
         /* Whole crest, no round crop — see TeamPanel's team icon. */
         .tcm-team-icon {
@@ -542,7 +544,8 @@ export default function TradeConfirmationModal({
         }
         .tcm-cap-card {
           background: var(--color-gray-50, #f9fafb);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.625rem;
           text-align: center;

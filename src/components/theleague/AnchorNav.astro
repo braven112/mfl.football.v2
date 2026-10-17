@@ -110,7 +110,7 @@ const { links, title = "On This Page" } = Astro.props;
   :global(html.dark) .anchor-nav__container {
     border-color: var(--content-border, #555);
     box-shadow:
-      0 0 0 1px var(--content-border, #555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555)),
       var(--shadow-lg);
   }
 
@@ -123,7 +123,7 @@ const { links, title = "On This Page" } = Astro.props;
 
   :global(html.dark) .anchor-nav__container:hover {
     box-shadow:
-      0 0 0 1px var(--content-border, #555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555)),
       var(--shadow-xl, var(--shadow-lg));
   }
 
@@ -368,7 +368,7 @@ const { links, title = "On This Page" } = Astro.props;
   }
 
   :global(html.dark) .anchor-modal__content {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-xl, var(--shadow-lg));
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-xl, var(--shadow-lg));
   }
 
   .anchor-modal.is-open .anchor-modal__content {

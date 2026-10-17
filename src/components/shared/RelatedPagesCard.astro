@@ -46,7 +46,7 @@ const headingId = `related-${hostPath.replace(/[^a-z0-9]+/gi, '-')}`;
   .rpc {
     margin-top: var(--spacing-2xl);
     background: var(--card-bg);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     padding: 1.25rem 1.5rem;

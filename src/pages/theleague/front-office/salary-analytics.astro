@@ -361,6 +361,8 @@ const serializedConfig = JSON.stringify({
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0;
@@ -423,7 +425,7 @@ const serializedConfig = JSON.stringify({
 
   .position-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm);
     padding: 1.25rem;
@@ -460,7 +462,8 @@ const serializedConfig = JSON.stringify({
 
   .metric-card {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-sm, 0.25rem);
     padding: 0.625rem 0.375rem;
     text-align: center;
@@ -535,6 +538,8 @@ const serializedConfig = JSON.stringify({
   .section-header {
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
   }
 
   .section-header__title {

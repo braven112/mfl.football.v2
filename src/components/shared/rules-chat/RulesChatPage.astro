@@ -160,7 +160,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
   :global(html.dark) .rqa-hero {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .rqa-hero__icon {
     width: 56px;
@@ -180,6 +180,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     letter-spacing: var(--style-section-tracking, 0.06em);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--rqa-accent));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     color: var(--color-gray-900, #111827);
@@ -199,7 +201,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     padding: 1.5rem;
   }
   :global(html.dark) .rqa-body {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
 
   /* ── Right: Sticky Sidebar ── */
@@ -222,7 +224,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     text-align: center;
   }
   :global(html.dark) .rqa-roger-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .rqa-roger-card__avatar {
     width: 80px;
@@ -267,7 +269,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     padding: 1rem 1.25rem;
   }
   :global(html.dark) .rqa-sidebar__section {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .rqa-sidebar__label {
     font-size: var(--font-size-3xs);
@@ -642,7 +644,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     margin-top: 0.25rem;
     padding: 0.25rem 0.5rem;
     background: none;
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-sm, 0.25rem);
     color: var(--color-gray-500, #6b7280);
     font-size: var(--font-size-2xs);
@@ -657,7 +660,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
   .rqa-card__report-cancel {
     padding: 0.25rem 0.5rem;
     background: none;
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-sm, 0.25rem);
     color: var(--color-gray-500, #6b7280);
     font-size: var(--font-size-2xs);
@@ -684,7 +688,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
   .rqa-card__report-input {
     width: 100%;
     padding: 0.375rem 0.5rem;
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-sm, 0.25rem);
     background: var(--input-bg, #ffffff);
     color: var(--input-text, #111827);
