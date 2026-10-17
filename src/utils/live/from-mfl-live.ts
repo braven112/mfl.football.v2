@@ -62,6 +62,7 @@ function toMatchup(matchup: MflLiveMatchup): LiveMatchup {
     // still read the viewer-relative names; it outlived that sheet, and a
     // rename nobody reads is how the ink variants went missing on this board.
     colorVars: matchup.colorVars,
+    ...(matchup.noProjections ? { noProjections: true } : {}),
   };
 }
 
@@ -71,6 +72,7 @@ export function fromMflLiveBoard(board: MflLiveBoard): LiveBoard {
     leagueName: panel.leagueName,
     slug: (panel.slug as CanonicalLeagueSlug | null) ?? null,
     registered: panel.registered,
+    ...(panel.provider ? { provider: panel.provider } : {}),
     viewerFranchiseId: panel.franchiseId,
     status: panel.status,
     matchups: panel.matchups.map(toMatchup),

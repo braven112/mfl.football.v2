@@ -28,6 +28,13 @@ export interface BoardLeague {
   host: string | null;
   /** True for the league the session belongs to. */
   isSession: boolean;
+  /**
+   * Which fantasy host runs the league. Absent means MFL — every board but MFL
+   * Live only ever holds MFL leagues. A Sleeper league (`src/utils/sleeper/`)
+   * has no MFL host, no MFL cookie and no MFL exports, so anything that reads
+   * MFL must skip it.
+   */
+  provider?: 'sleeper';
 }
 
 export const LEAGUE_SELECTION_COOKIE = 'st_leagues';

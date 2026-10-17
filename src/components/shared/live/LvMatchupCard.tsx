@@ -49,6 +49,12 @@ export default function LvMatchupCard({
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
   const pFirst = winProbabilityFor(matchup, first);
+  /**
+   * No projections (a Sleeper league): the bar would split on the live score
+   * alone and print a hard 100/0, and every "proj" would repeat the live
+   * number. Both are dropped rather than drawn wrong.
+   */
+  const noProj = matchup.noProjections === true;
 
   /**
    * THE COUNT IS SPLIT PER TEAM, never summed.
@@ -113,7 +119,7 @@ export default function LvMatchupCard({
           )
         )}
       </span>
-      <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
+      {!noProj && <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>}
       {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE
           against the card. See `resolveMatchupColorVars`. */}
       <span className="lv-side__score" style={{ color: `var(--t${which}-ink)` }}>
@@ -176,7 +182,7 @@ export default function LvMatchupCard({
         {sideRow(b, !aLeads, second)}
       </div>
 
-      {!isFinal && (
+      {!isFinal && !noProj && (
         <LvWinProbBar
           mini
           p0={pFirst}
@@ -187,9 +193,7 @@ export default function LvMatchupCard({
       )}
 
       <div className="lv-card__foot">
-        <span>
-          Proj {fmt(a.projectedFinal)} – {fmt(b.projectedFinal)}
-        </span>
+        <span>{noProj ? '' : `Proj ${fmt(a.projectedFinal)} – ${fmt(b.projectedFinal)}`}</span>
         <span>Open matchup →</span>
       </div>
     </button>

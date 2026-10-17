@@ -29,6 +29,10 @@ import {
   resolveMflLiveLeagues,
 } from '../../utils/mfl-live-selection';
 import { resolveFranchiseIdentity } from '../../utils/mfl-live-identity';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getSleeperLink, type SleeperLink } from '../../utils/sleeper/link';
+import { discoverSleeperBoardLeagues, readSleeperViewerMarks } from '../../utils/sleeper/live';
+import { sleeperAvatarUrl } from '../../utils/sleeper/client';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -44,10 +48,18 @@ let enabled: string[] = [];
 /** League id -> the viewer's own franchise name and mark, for leagues myleagues left blank. */
 let viewerNames: Awaited<ReturnType<typeof readViewerFranchiseNames>> = {};
 let loadFailed = false;
+let sleeperLink: SleeperLink | null = null;
 
 if (authUser) {
   try {
-    leagues = await discoverBoardLeagues(authUser);
+    // Sleeper is optional and never fatal: a failed Sleeper read leaves the
+    // MFL leagues to toggle and the link form to retry.
+    sleeperLink = await getSleeperLink(authUser).catch(() => null);
+    const [mflLeagues, sleeperLeagues] = await Promise.all([
+      discoverBoardLeagues(authUser),
+      discoverSleeperBoardLeagues(sleeperLink, getCurrentSeasonYear()).catch(() => []),
+    ]);
+    leagues = [...mflLeagues, ...sleeperLeagues];
     ({ enabled } = resolveMflLiveLeagues(
       Astro.url.searchParams.get('leagues'),
       Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
@@ -55,7 +67,14 @@ if (authUser) {
     ));
     // Never fatal: a missing name costs a sub-line, and this page's job is
     // the toggles.
-    viewerNames = await readViewerFranchiseNames(authUser, leagues).catch(() => ({}));
+    viewerNames = await readViewerFranchiseNames(
+      authUser,
+      leagues.filter((l) => l.provider !== 'sleeper'),
+    ).catch(() => ({}));
+    const sleeperMarks = await readSleeperViewerMarks(leagues);
+    for (const [id, mark] of Object.entries(sleeperMarks)) {
+      viewerNames[id] = { ...mark, leagueHasMarks: !!mark.icon };
+    }
   } catch {
     loadFailed = true;
   }
@@ -68,6 +87,18 @@ if (authUser) {
  * paint rather than appearing after hydration — and so the client never needs
  * the league configs the ladder reads.
  */
+/** The link form's one-word outcome, from `/api/live-sleeper`'s redirect. */
+const SLEEPER_NOTICE: Record<string, string> = {
+  linked: 'Sleeper account linked. Its leagues are on the board.',
+  unlinked: 'Sleeper account unlinked.',
+  'not-found': 'Sleeper has no account with that username.',
+  invalid: 'That is not a Sleeper username.',
+  unavailable: 'Couldn\u2019t reach Sleeper just now. Try again in a minute.',
+  error: 'Couldn\u2019t save that just now. Try again in a minute.',
+};
+const sleeperNotice = SLEEPER_NOTICE[Astro.url.searchParams.get('sleeper') ?? ''] ?? '';
+const sleeperAvatar = sleeperAvatarUrl(sleeperLink?.avatar);
+
 const rows = leagues.map((league) => {
   // The ladder's name, not `league.franchiseName`. `myleagues` fills that for
   // a real MFL cookie, but the session FALLBACK — the path that puts the
@@ -91,6 +122,7 @@ const rows = leagues.map((league) => {
     name: league.name,
     franchiseName: identity.name,
     registered: !!league.registered,
+    ...(league.provider ? { provider: league.provider } : {}),
     icon: identity.icon,
     initials: identity.initials,
     // The renderer crops only the uploaded-mark rung square — see
@@ -134,6 +166,56 @@ const rows = leagues.map((league) => {
 			) : (
 				<LeagueToggles client:load leagues={rows} initialEnabled={enabled} />
 			)}
+
+			{/* Sleeper. A username and nothing else: Sleeper's API is public and
+			    read-only, so there is no password to ask for. A plain form, so it
+			    works before (and without) hydration. */}
+			<section class="mls-sleeper" aria-labelledby="mls-sleeper-title">
+				<h2 class="mls-sleeper__title" id="mls-sleeper-title">Sleeper</h2>
+				{sleeperNotice && <p class="mls-sleeper__notice" role="status">{sleeperNotice}</p>}
+				{sleeperLink ? (
+					<div class="mls-sleeper__linked">
+						<span class="mls__mark mls__mark--crop">
+							{sleeperAvatar ? (
+								<img src={sleeperAvatar} alt="" loading="lazy" />
+							) : null}
+						</span>
+						<span class="mls__id">
+							<span class="mls__name">{sleeperLink.displayName}</span>
+							<span class="mls__sub">@{sleeperLink.username}</span>
+						</span>
+						<form method="post" action="/api/live-sleeper">
+							<input type="hidden" name="action" value="unlink" />
+							<button type="submit" class="cta cta--ghost">Unlink</button>
+						</form>
+					</div>
+				) : (
+					<form class="mls-sleeper__form" method="post" action="/api/live-sleeper">
+						<p class="mls__lede">
+							Play on Sleeper too? Add your Sleeper username and those leagues
+							show up on the board with live scores.
+						</p>
+						<input type="hidden" name="action" value="link" />
+						<label class="mls-sleeper__label" for="mls-sleeper-username">Sleeper username</label>
+						<div class="mls-sleeper__row">
+							<input
+								class="mls-sleeper__input"
+								id="mls-sleeper-username"
+								name="username"
+								type="text"
+								inputmode="text"
+								autocomplete="username"
+								autocapitalize="none"
+								spellcheck="false"
+								maxlength="40"
+								pattern="@?[A-Za-z0-9_]{1,40}"
+								required
+							/>
+							<button type="submit" class="cta cta--primary">Add</button>
+						</div>
+					</form>
+				)}
+			</section>
 		</section>
 	)}
 </MflAppLayout>

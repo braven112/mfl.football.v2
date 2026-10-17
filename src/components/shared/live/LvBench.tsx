@@ -35,6 +35,8 @@ export interface LvBenchProps {
   boxScore?: Record<string, PlayerBoxScore>;
   detailStatus?: 'ok' | 'error' | 'pending';
   onOpenPlayer?: (row: LivePlayerRow, side: 0 | 1) => void;
+  /** No projections behind this matchup — see `LiveMatchup.noProjections`. */
+  hideProjection?: boolean;
 }
 
 export default function LvBench({
@@ -47,6 +49,7 @@ export default function LvBench({
   boxScore,
   detailStatus,
   onOpenPlayer,
+  hideProjection,
 }: LvBenchProps): JSX.Element | null {
   const [open, setOpen] = useState(false);
 
@@ -85,6 +88,7 @@ export default function LvBench({
               boxScore={boxScore}
               detailStatus={detailStatus}
               onOpenPlayer={onOpenPlayer}
+              hideProjection={hideProjection}
             />
           ) : (
             <div className="lv-bench__none">No bench players</div>

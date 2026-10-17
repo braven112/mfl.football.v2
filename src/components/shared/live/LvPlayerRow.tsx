@@ -83,6 +83,11 @@ export interface LvPlayerRowProps {
    * stories render rows that open nothing.
    */
   onOpen?: () => void;
+  /**
+   * The league has no projections (a Sleeper league on MFL Live), so "proj"
+   * would only repeat the live score. Dropped rather than printed.
+   */
+  hideProjection?: boolean;
 }
 
 /**
@@ -103,6 +108,7 @@ export default function LvPlayerRow({
   box,
   detailStatus = 'ok',
   onOpen,
+  hideProjection = false,
 }: LvPlayerRowProps): JSX.Element {
   const position = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
@@ -278,7 +284,7 @@ export default function LvPlayerRow({
           }`}
         >
           <span className="lv-plive">{fmt(row.live)}</span>
-          <span className="lv-pproj">proj {fmt(projFinal)}</span>
+          {!hideProjection && <span className="lv-pproj">proj {fmt(projFinal)}</span>}
         </span>
         {statLine && <span className="lv-pstat">{statLine}</span>}
       </span>

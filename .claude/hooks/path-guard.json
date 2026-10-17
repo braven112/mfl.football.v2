@@ -548,7 +548,8 @@
         "src/utils/mfl-live-identity.ts",
         "src/utils/remote-image.ts",
         "src/utils/cross-league-live.ts",
-        "src/utils/mfl-live-board.ts"
+        "src/utils/mfl-live-board.ts",
+        "src/utils/sleeper/**"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
@@ -587,7 +588,9 @@
         "tests/live-row-projections.test.ts",
         "tests/live-schedule-pairings.test.ts",
         "tests/mfl-live-uploaded-mark.test.ts",
-        "tests/poll-hydration-snapshot.test.ts"
+        "tests/poll-hydration-snapshot.test.ts",
+        "tests/sleeper-live.test.ts",
+        "tests/live-no-projections.test.ts"
       ]
     },
     {

@@ -53,6 +53,14 @@ export interface MflLiveMatchup {
    */
   winProbability: number;
   /**
+   * The league has no projections, so `winProbability` and `projectedFinal`
+   * carry no information and must not be drawn. True for every Sleeper
+   * matchup (live scores only, by decision). An empty projections map makes
+   * the bar read a hard 100/0 off the live score alone, which is confidently
+   * wrong rather than absent.
+   */
+  noProjections?: boolean;
+  /**
    * Split-bar colours, both themes, as CSS custom properties. Two of each
    * because this board has a light card and a dark one and the legible answer
    * differs — resolved server-side by `resolveTeamColorPair` against each
@@ -86,6 +94,8 @@ export interface MflLiveLeaguePanel {
   slug: string | null;
   /** True when this site runs the league — drives the "not on this site" tag. */
   registered: boolean;
+  /** Absent for an MFL league. See `BoardLeague.provider`. */
+  provider?: 'sleeper';
   status: MflLiveLeagueStatus;
   matchups: MflLiveMatchup[];
 }

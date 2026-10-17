@@ -27,6 +27,8 @@ export interface LvLineupProps {
   bench?: boolean;
   /** Tapping a row opens that player's stat sheet; `side` is 0 (left) or 1. */
   onOpenPlayer?: (row: LivePlayerRow, side: 0 | 1) => void;
+  /** No projections behind this matchup — see `LiveMatchup.noProjections`. */
+  hideProjection?: boolean;
 }
 
 export default function LvLineup({
@@ -38,6 +40,7 @@ export default function LvLineup({
   detailStatus = 'ok',
   bench = false,
   onOpenPlayer,
+  hideProjection = false,
 }: LvLineupProps): JSX.Element {
   // The two sides can legitimately differ in length — a franchise may start
   // fewer players, and a bench is routinely lopsided. The pair count is the
@@ -58,6 +61,7 @@ export default function LvLineup({
           box={boxScore[row.id]}
           detailStatus={detailStatus}
           onOpen={onOpenPlayer ? () => onOpenPlayer(row, side === 'left' ? 0 : 1) : undefined}
+          hideProjection={hideProjection}
         />
       </div>
     );

@@ -156,6 +156,9 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/api/live-board.ts',
 		'src/pages/api/live-standings.ts',
 		'src/pages/api/live-leagues.ts',
+		// Links a Sleeper account to the viewer's own MFL Live board, keyed on
+		// the MFL username — never on franchiseId.
+		'src/pages/api/live-sleeper.ts',
 		'src/pages/api/league-board.ts',
 		// The Broadcast in MFL Live and pairing a TV to it. The board reads MFL
 		// with the owner's own cookie, like every other /live board.

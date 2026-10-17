@@ -678,7 +678,13 @@ export default function LiveBoard({
           isFinal={isMatchupFinal(open.matchup)}
           // Only on a LIVE board: the bundled sample has no box scores to
           // itemize, so every sheet there would read "Loading stats…" forever.
-          leagueId={demoLabel || !pollUrl ? undefined : open.panel.leagueId}
+          // Never for a Sleeper league either: the sheet itemizes a score
+          // against MFL's scoring rules, and Sleeper's league has none there.
+          leagueId={
+            demoLabel || !pollUrl || open.panel.provider === 'sleeper'
+              ? undefined
+              : open.panel.leagueId
+          }
           year={board.year}
           onBack={() => setSelected(null)}
         />
@@ -696,7 +702,9 @@ export default function LiveBoard({
             <section key={panel.leagueId} className="lv-panel">
               {showPanelName && (
                 <h2 className="lv-panel__name">
-                  {panelHrefBase && panel.leagueId ? (
+                  {/* No league board exists for a Sleeper league, so its
+                      heading is plain text rather than a dead link. */}
+                  {panelHrefBase && panel.leagueId && panel.provider !== 'sleeper' ? (
                     // The heading IS the link — the whole line, so it is a
                     // thumb target rather than a word.
                     <a

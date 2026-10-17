@@ -72,6 +72,8 @@ export default function LvMatchupDetail({
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
   const pFirst = winProbabilityFor(matchup, first);
+  // No projections (a Sleeper league): no win-probability bar, no "proj".
+  const noProj = matchup.noProjections === true;
   // The header is top-aligned, so the "today's name" line is all-or-nothing:
   // when only one side's Throwback era renamed its club, the other side holds
   // an empty placeholder line or its score sits one line higher.
@@ -140,7 +142,7 @@ export default function LvMatchupDetail({
         </div>
       </div>
 
-      {!isFinal && (
+      {!isFinal && !noProj && (
         <div className="lv-detail__wp">
           <LvWinProbBar
             p0={pFirst}
@@ -162,6 +164,7 @@ export default function LvMatchupDetail({
           boxScore={boxScore}
           detailStatus={detailStatus}
           onOpenPlayer={onOpenPlayer}
+          hideProjection={noProj}
         />
         <LvBench
           side0={a.bench}
@@ -173,6 +176,7 @@ export default function LvMatchupDetail({
           boxScore={boxScore}
           detailStatus={detailStatus}
           onOpenPlayer={onOpenPlayer}
+          hideProjection={noProj}
         />
       </div>
 
