@@ -180,7 +180,7 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
   :global(html.dark) .dtm {
     box-shadow:
       var(--shadow-xl),
-      0 0 0 1px var(--content-border, #3a3a3a);
+      0 0 0 1px var(--style-card-ring, var(--content-border, #3a3a3a));
   }
 
   :global(html.dark) .dtm::backdrop {

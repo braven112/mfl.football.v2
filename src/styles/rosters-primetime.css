@@ -1,0 +1,37 @@
+/*
+ * The Rosters page under the Primetime site style: the team is the picture.
+ * A big crest and a big italic name on the franchise plate, position groups
+ * headed in the broadcast face, and no left status stripe on a row (Primetime
+ * carries no left-side marks; the Grouped view already sets IR and taxi
+ * apart). Every rule keys off html[data-site-theme='primetime'], so the
+ * Editorial page is untouched. Counted in site-style-branch-baseline.json.
+ */
+
+html[data-site-theme='primetime'] .rhdr__crest {
+  width: 6.5rem;
+  height: 6.5rem;
+  filter: drop-shadow(0 6px 14px rgb(0 0 0 / 0.35));
+}
+html[data-site-theme='primetime'] .rhdr__identity { gap: 1.25rem; }
+html[data-site-theme='primetime'] .rhdr__plate .rhdr__name {
+  font-size: clamp(2.2rem, 5.6vw, 3.4rem);
+  line-height: 0.92;
+}
+
+html[data-site-theme='primetime'] .roster-group-row__toggle {
+  font-family: var(--font-display);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: var(--font-size-lg);
+}
+
+/* !important: the page's own rule carries Astro's scope attribute on every
+   compound selector, which outweighs any selector this sheet can write. */
+html[data-site-theme='primetime'] .roster-table tbody tr {
+  border-left-width: 0 !important;
+}
+
+@media (max-width: 640px) {
+  html[data-site-theme='primetime'] .rhdr__crest { width: 4.25rem; height: 4.25rem; }
+}

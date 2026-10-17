@@ -307,7 +307,7 @@ const { title = 'Player actions' } = Astro.props;
     animation: pam-pop 140ms ease-out;
   }
   html.dark .pam__content {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--content-border, #2e4560);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--style-card-ring, var(--content-border, #2e4560));
   }
   @keyframes pam-pop {
     from { opacity: 0; transform: translateY(8px) scale(0.98); }

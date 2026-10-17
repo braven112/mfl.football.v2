@@ -160,7 +160,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
   :global(html.dark) .sb-hero {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-hero__icon {
     width: 56px;
@@ -206,7 +206,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     padding: 1.5rem;
   }
   :global(html.dark) .sb-body {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
 
   /* ── Sidebar ── */
@@ -229,7 +229,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     text-align: center;
   }
   :global(html.dark) .sb-about-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-about-card__icon-wrap {
     width: 64px;
@@ -268,7 +268,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     padding: 1rem 1.25rem;
   }
   :global(html.dark) .sb-sidebar__section {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-sidebar__label {
     font-size: var(--font-size-3xs);
@@ -1437,7 +1437,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     width: 240px;
   }
   html.dark .sb-emoji-picker {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-emoji-picker__grid {
     display: grid;
@@ -1541,7 +1541,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     overflow: hidden;
   }
   html.dark .sb-gif-popover {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-gif-search {
     padding: 0.5rem 0.625rem;
@@ -2000,7 +2000,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     min-width: 160px;
   }
   html.dark .sb-admin__dropdown {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
   .sb-admin__dropdown-item {
     display: flex;

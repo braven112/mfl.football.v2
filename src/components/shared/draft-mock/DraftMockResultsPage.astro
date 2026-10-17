@@ -348,7 +348,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
      section-card wrapper, so the pick tiles themselves are the card surface. */
   :global(html.dark) .results__pick-card {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 
@@ -426,7 +426,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
 
   :global(html.dark) .results__team-card {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 

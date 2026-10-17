@@ -293,7 +293,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   /* Dark mode: --color-gray-100 border == --card-bg (#1e1e1e) — invisible
      without swapping to the real content-border token. */
   :global(html.dark) .sf-rail-article-card {
-    border-color: var(--content-border, #555555);
+    border-color: var(--style-card-border-color, var(--content-border, #555555));
   }
   .sf-rail-article-card:hover {
     border-color: var(--color-gray-200, #e5e7eb);

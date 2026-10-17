@@ -575,7 +575,7 @@ const copyIcons = `
   }
 
   :global(html.dark) .league-gallery--afl .gallery-header {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   .league-gallery--afl .gallery-header p {
@@ -779,7 +779,7 @@ const copyIcons = `
      border and use the single-ring shadow so there's no double edge. */
   :global(html.dark) .master-card {
     border-color: transparent;
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   .master-card__info {

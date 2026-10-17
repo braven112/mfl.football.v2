@@ -385,7 +385,7 @@ const tradeBuilderHref = resolveLeaguePath(
      box — panel stays pixel-identical in light). Paired with --shadow-lg it
      lifts the panel off the dark page as a raised surface. */
   :global(html.dark) .thm-content {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
 
   @keyframes thm-enter {

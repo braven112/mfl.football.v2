@@ -413,7 +413,7 @@ const boardTiers = hasTierRecord
      section from the navy page floor; add the border ring. */
   :global(html.dark) .standings-hero {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--box-shadow-lg);
   }
 @media screen and (min-width: 600px) {
@@ -456,7 +456,7 @@ const boardTiers = hasTierRecord
 
   :global(html.dark) .card {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--box-shadow-lg);
   }
 
@@ -486,7 +486,7 @@ const boardTiers = hasTierRecord
 
   :global(html.dark) .standings-header-bar {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       0 2px 8px rgba(0, 0, 0, 0.1);
   }
    @media (min-width: 550px) {

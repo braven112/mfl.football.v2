@@ -47,6 +47,8 @@ export const STYLE_TOKEN_GROUPS = [
     label: 'Cards',
     tokens: [
       { name: '--style-card-border', use: 'A card or panel’s edge (Editorial: its 1px neutral border). A border value.' },
+      { name: '--style-card-border-color', use: 'A card’s border colour where a dark-mode rule restates only the colour (Editorial: null). A colour.' },
+      { name: '--style-card-ring', use: 'The colour of a dark-mode 0 0 0 1px ring that stands in for a card’s border (Editorial: null). A colour.' },
       { name: '--style-card-shadow', use: 'The shadow of a card whose border was its only edge (Editorial: none). A box-shadow value.' },
     ],
   },

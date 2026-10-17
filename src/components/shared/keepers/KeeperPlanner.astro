@@ -1968,7 +1968,7 @@ try {
   html.dark .kp-statusbar,
   html.dark .kp-picks {
     background: var(--card-bg, #1e1e1e);
-    box-shadow: 0 0 0 1px var(--content-border, #5f6885);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885));
   }
 
   html.dark .kp-intro__title {
@@ -2047,7 +2047,7 @@ try {
 
   /* Slots */
   html.dark .kp-slot {
-    border-color: var(--content-border, #5f6885);
+    border-color: var(--style-card-border-color, var(--content-border, #5f6885));
   }
 
   html.dark .kp-slot--empty .kp-slot__hint {
@@ -2130,7 +2130,7 @@ try {
   /* Cut-pool cards */
   html.dark .kp-card {
     background: var(--card-surface, #16283c);
-    border-color: var(--content-border, #5f6885);
+    border-color: var(--style-card-border-color, var(--content-border, #5f6885));
   }
 
   html.dark .kp-card:hover {
@@ -2155,7 +2155,7 @@ try {
   /* Finalize modal */
   html.dark .kp-finalize__content {
     background: var(--card-surface, #16283c);
-    box-shadow: 0 0 0 1px var(--content-border, #5f6885), 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885)), 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
   html.dark .kp-finalize__title {

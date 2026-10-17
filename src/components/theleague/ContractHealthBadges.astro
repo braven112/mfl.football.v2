@@ -134,7 +134,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   /* Dark mode: raised-card treatment — background alone can't separate
      the card from the page floor; add the border ring. */
   :global(html.dark) .health-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   /* Hover overwrites box-shadow, so the ring must be re-composed with
@@ -142,7 +142,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   :global(html.dark) .health-card:hover {
     border-color: var(--content-text-muted, #8a8a8a);
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       0 4px 6px rgba(0, 0, 0, 0.05);
   }
 

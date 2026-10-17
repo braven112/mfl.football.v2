@@ -221,7 +221,7 @@ for (const section of SECTIONS) {
      nearly identical to the section card behind it (#1e1e1e); add a ring
      so tiles read as distinct cards instead of washing out. */
   :global(html.dark) .stats-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   :global(html.dark) .stats-card:hover {

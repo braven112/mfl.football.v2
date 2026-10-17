@@ -1,0 +1,30 @@
+/*
+ * The live scoring board under the Primetime site style: the teams lead.
+ * Crests grow from a 1.4rem chip to a mark you can read across the room, and
+ * team names take the broadcast face. Scores, bars and layout are untouched,
+ * so an owner still finds the numbers where they always are. Keys off
+ * html[data-site-theme='primetime']; counted in site-style-branch-baseline.json.
+ */
+
+html[data-site-theme='primetime'] .lv-side__crest,
+html[data-site-theme='primetime'] .lv-side__initials {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+html[data-site-theme='primetime'] .lv-card--lead .lv-side__crest,
+html[data-site-theme='primetime'] .lv-card--lead .lv-side__initials {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+html[data-site-theme='primetime'] .lv-side { gap: 0.65rem; }
+
+html[data-site-theme='primetime'] .lv-side__name {
+  font-family: var(--font-display);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: var(--font-size-base);
+}
+html[data-site-theme='primetime'] .lv-card--lead .lv-side__name {
+  font-size: var(--font-size-xl);
+}

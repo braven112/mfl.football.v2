@@ -465,7 +465,7 @@ export default function PendingTradesPanel({
         /* Dark mode: raised-card ring (light stays borderless) */
         html.dark .ptp-panel {
           box-shadow:
-            0 0 0 1px var(--content-border, #555555),
+            0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
             0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
         @keyframes ptp-slide-in {

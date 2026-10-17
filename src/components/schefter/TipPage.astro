@@ -647,7 +647,7 @@ const preselectTeam = (() => {
   :global(html.dark) .tip-rail-card {
     border-color: transparent;
     box-shadow:
-      0 0 0 1px var(--content-border, #5f6885),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885)),
       var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
 
@@ -1495,7 +1495,7 @@ const preselectTeam = (() => {
   /* Dark: gray-100/200 borders invert to near-black — translucent edge
      so the nested article tile keeps its outline. */
   :global(html.dark) .tip-rail-article-card {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--style-card-border-color, rgba(255, 255, 255, 0.12));
   }
   :global(html.dark) .tip-rail-article-card:hover {
     border-color: rgba(255, 255, 255, 0.24);

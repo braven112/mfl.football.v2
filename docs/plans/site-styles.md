@@ -46,7 +46,10 @@ The contract is `src/config/style-tokens.mjs`. Rules and guards:
    2026). Editorial is unchanged. Section titles also gain
    `--style-section-mark`: Primetime draws a short slanted accent under each
    one in place of any left-side mark.
-3. **Page layouts, by traffic.** Rosters, Live Scoring, Set Lineup, then the
+3. **Page layouts, by traffic.** Started Oct 2026 with the restyle the owner
+   chose (same tables and data, the team leads): Rosters gets a big crest and
+   name and drops the left row stripe; Live Scoring's matchup cards get big
+   crests and broadcast names; Set Lineup needed only the card edges. Then the
    rest: where Primetime wants a different emphasis, a page-specific layout
    within the style, keyed off the same attribute.
 4. **A third style.** The test of the system: adding one is a style file plus

@@ -898,7 +898,7 @@ const formatBid = (n: number): string => {
      (#181818) reads almost identical to the page floor (#121212) without
      a ring to separate them. */
   :global(html.dark) .quick-stats {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
   .stat { display: flex; flex-direction: column; gap: 0.125rem; }
   .stat-label {
@@ -938,7 +938,7 @@ const formatBid = (n: number): string => {
   }
 
   :global(html.dark) .highlight {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
   .hl-label {
     font-size: var(--font-size-xs);
@@ -992,7 +992,7 @@ const formatBid = (n: number): string => {
   }
 
   :global(html.dark) .scoring-chart {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
   .bar {
     background: var(--accent);
@@ -1064,7 +1064,7 @@ const formatBid = (n: number): string => {
      empty cards) get a ring — the color-mix tints alone don't separate the
      card from the page floor at a glance. */
   :global(html.dark) .award-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   .badges-section {
@@ -1174,7 +1174,7 @@ const formatBid = (n: number): string => {
   }
 
   :global(html.dark) .rival-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
   .rival-card:hover {
     transform: translateY(-1px);
@@ -1184,7 +1184,7 @@ const formatBid = (n: number): string => {
   /* Hover must re-assert the dark ring — a bare hover box-shadow drops it. */
   :global(html.dark) .rival-card:hover {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       0 4px 12px rgba(0,0,0,0.3);
   }
   .rival-icon {
