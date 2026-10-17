@@ -281,6 +281,8 @@ export default function TradeValueAnalysis({
           margin: 0 0 0.75rem;
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           font-family: var(--style-section-font, inherit);
           font-style: var(--style-section-style, inherit);
         }

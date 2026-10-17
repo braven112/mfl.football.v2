@@ -218,6 +218,8 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.75rem);
   border-left: var(--style-section-rule, 2px solid var(--hcp-accent));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   line-height: 1;
@@ -549,6 +551,8 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   color: var(--color-gray-900, #111827);
   padding-left: var(--style-section-rule-gap, 0.75rem);
   border-left: var(--style-section-rule, 2px solid var(--hcp-accent));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-family: var(--style-section-font, inherit);
   font-style: var(--style-section-style, inherit);
   margin: 0 0 0.5rem;

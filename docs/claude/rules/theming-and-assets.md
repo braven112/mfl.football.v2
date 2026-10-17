@@ -92,6 +92,13 @@ style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
   on a title/header selector goes through `--style-section-rule` (and its
   padding through `--style-section-rule-gap`). A state mark (pinned, yours,
   selected) is not a stripe and keeps its border in every style.
+- **A section title's under-mark rides with its stripe.** Every block that
+  writes `--style-section-rule` also writes
+  `background: var(--style-section-mark, none)` and
+  `padding-bottom: var(--style-section-mark-pad, <its own>)`. Primetime draws
+  a short slanted accent there instead of the stripe (the owner ruled out ANY
+  left-side mark on a heading, Oct 2026). A wrapper holding a title and a
+  blurb puts the mark on its heading and says `section mark: on the …`.
 - **A card's resting outline is the style's to draw too.** A card, panel or
   tile whose edge is a neutral 1px border writes
   `border: var(--style-card-border, <its border>)` and, when it casts no

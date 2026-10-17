@@ -515,6 +515,8 @@ export default function PendingTradesPanel({
         .ptp-section-header {
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           margin-bottom: 0.75rem;
         }
         .ptp-section-title {

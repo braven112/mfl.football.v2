@@ -14,6 +14,7 @@
  *  - Editorial leaves every token null, which is what keeps TheLeague and the
  *    AFL pixel-identical to the site before styles existed;
  *  - the league layout sets data-site-theme on <html>;
+ *  - a section title's under-mark goes through --style-section-mark;
  *  - a section title's stripe goes through --style-section-rule, so a style
  *    can drop it (Primetime has no editorial borders);
  *  - a card's neutral 1px outline goes through --style-card-border, so a
@@ -136,6 +137,27 @@ describe('section-title stripes go through the style', () => {
     }
     // Wrap it: border-left: var(--style-section-rule, <your stripe>) and
     // padding-left: var(--style-section-rule-gap, <your gap>).
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('section titles carry the style\'s under-mark', () => {
+  it('every block wearing --style-section-rule also wears --style-section-mark', () => {
+    const offenders: string[] = [];
+    for (const f of SRC_FILES.filter((x) => /\.(astro|css|tsx)$/.test(x))) {
+      const s = fs.readFileSync(f, 'utf8');
+      for (const m of s.matchAll(/^[ \t]*border-left: var\(--style-section-rule,/gm)) {
+        const open = s.lastIndexOf('{', m.index);
+        const body = s.slice(open, s.indexOf('}', m.index));
+        // A wrapper that holds a title AND a blurb puts the mark on its
+        // heading instead, and says so with this comment.
+        if (/--style-section-mark-pad/.test(body) && /--style-section-mark,/.test(body)) continue;
+        if (/section mark: on the/.test(body)) continue;
+        offenders.push(`${rel(f)} :: ${s.slice(s.lastIndexOf('}', open) + 1, open).trim().slice(-60)}`);
+      }
+    }
+    // Add: background: var(--style-section-mark, none);
+    //      padding-bottom: var(--style-section-mark-pad, <your padding-bottom>);
     expect(offenders).toEqual([]);
   });
 });
