@@ -1,6 +1,6 @@
 /**
- * View models for the front-page homepage style (registry `homeStyle:
- * 'front-page'`; src/components/shared/front-page/). Pure functions over the
+ * View models for the Primetime front-page homepage (registry `siteTheme:
+ * 'primetime'`; src/components/shared/front-page/). Pure functions over the
  * feeds a league's homepage already loads, so the components hold markup only
  * and every rule here is testable.
  *

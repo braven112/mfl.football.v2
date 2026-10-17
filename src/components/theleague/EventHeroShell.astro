@@ -540,17 +540,17 @@ const countAriaLabel = hasCount
   :global(.tl-hero-panel__title) {
     margin: 0;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--style-section-tracking, 0.08em);
     /* The PANEL accent, not the headline's: this type is 0.75rem and sits over
        the gradient's far end under the thinnest wash, which is a different
        surface and a stricter floor. Falls back to `--ev-accent` so a hero with
        no franchise backdrop is unchanged. */
     color: var(--hero-fb-accent-panel, var(--ev-accent));
-    border-left: 3px solid var(--hero-fb-accent-panel, var(--ev-accent));
-    padding-left: 0.5rem;
+    border-left: var(--style-section-rule, 3px solid var(--hero-fb-accent-panel, var(--ev-accent)));
+    padding-left: var(--style-section-rule-gap, 0.5rem);
   }
   :global(.tl-hero-panel__row) {
     display: flex;

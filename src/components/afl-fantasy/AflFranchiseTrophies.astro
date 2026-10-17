@@ -405,12 +405,14 @@ function lockedLabel(t: TrophyCaseItem): string {
     align-items: center;
     flex-wrap: wrap;
     gap: 0.625rem;
-    font-size: var(--font-size-sm);
+    font-size: var(--style-section-size, var(--font-size-sm));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--afl-trophy-gold, #c9a44c);
+    letter-spacing: var(--style-section-tracking, 0.06em);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--afl-trophy-gold, #c9a44c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     margin: 0 0 var(--spacing-md, 16px) 0;
     color: var(--page-text, #1a1a1a);
   }

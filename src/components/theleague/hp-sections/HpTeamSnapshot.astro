@@ -174,12 +174,14 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__title {
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--dh-accent);
+    letter-spacing: var(--style-section-tracking, 0.06em);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--dh-accent));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     margin: 0;
     line-height: 1;
     color: var(--color-gray-700, #374151);

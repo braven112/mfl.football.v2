@@ -1125,7 +1125,10 @@
         "public/assets/icons/sets/**",
         "src/utils/sprite-url*.ts",
         "src/config/page-icons.json",
-        "src/utils/page-icon.ts"
+        "src/utils/page-icon.ts",
+        "src/config/style-tokens.mjs",
+        "scripts/generate-site-styles.mjs",
+        "src/utils/site-theme.ts"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
@@ -1153,7 +1156,8 @@
         "tests/player-modal-season-results-contrast.test.ts",
         "tests/draft-timer-banner-contrast.test.ts",
         "tests/icon-set-parity.test.ts",
-        "tests/sprite-url-guard.test.ts"
+        "tests/sprite-url-guard.test.ts",
+        "tests/site-styles.test.ts"
       ]
     },
     {
@@ -1446,7 +1450,8 @@
         "src/layouts/*.astro"
       ],
       "tests": [
-        "tests/head-custom-element-guard.test.ts"
+        "tests/head-custom-element-guard.test.ts",
+        "tests/site-styles.test.ts"
       ]
     }
   ]

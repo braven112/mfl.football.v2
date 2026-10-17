@@ -454,8 +454,8 @@ export default function TradeConfirmationModal({
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
-          padding-left: 0.625rem;
-          border-left: 2px solid var(--color-primary, #1c497c);
+          padding-left: var(--style-section-rule-gap, 0.625rem);
+          border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
         }
         /* Whole crest, no round crop — see TeamPanel's team icon. */
         .tcm-team-icon {

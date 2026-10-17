@@ -875,13 +875,15 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   .pdm-section__title {
     margin: 0 0 0.75rem;
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--style-section-tracking, 0.06em);
     color: var(--content-text-muted, #6b7280);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
   }
 
   /* Dark: the accent border rides --league-accent so it's the per-league

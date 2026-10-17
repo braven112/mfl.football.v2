@@ -1091,12 +1091,14 @@ const hasHighlights = Boolean(
 
   .name-history__subheading {
     margin: 1.25rem 0 0.625rem;
-    font-size: var(--font-size-xs);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--league-accent, #1c497c);
+    letter-spacing: var(--style-section-tracking, 0.06em);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--league-accent, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     color: var(--content-text-muted, #6b7280);
   }
 

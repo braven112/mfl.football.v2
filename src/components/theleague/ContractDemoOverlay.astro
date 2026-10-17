@@ -688,13 +688,15 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   }
 
   .cdemo-panel__kicker {
-    font-size: var(--font-size-2xs);
+    font-size: var(--style-section-size, var(--font-size-2xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--style-section-tracking, 0.08em);
     color: var(--color-primary, #1c497c);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
   }
 
   .cdemo-panel__title {
@@ -1157,13 +1159,15 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   }
 
   .cdemo-glossary__kicker {
-    font-size: var(--font-size-2xs);
+    font-size: var(--style-section-size, var(--font-size-2xs));
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--style-section-tracking, 0.08em);
     color: var(--color-primary, #1c497c);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
     margin-bottom: 0.25rem;
   }
 

@@ -1178,12 +1178,14 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: var(--font-size-xs);
+      font-size: var(--style-section-size, var(--font-size-xs));
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding-left: 0.625rem;
-      border-left: 2px solid var(--color-primary, #1c497c);
+      letter-spacing: var(--style-section-tracking, 0.06em);
+      padding-left: var(--style-section-rule-gap, 0.625rem);
+      border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+      font-family: var(--style-section-font, inherit);
+      font-style: var(--style-section-style, inherit);
       margin: 0 0 0.75rem;
       color: var(--color-gray-700, #374151);
     }

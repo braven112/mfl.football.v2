@@ -274,11 +274,13 @@ const fonts = [
 
   .theme-review__section-title {
     margin: 0;
-    padding-left: var(--spacing-sm);
-    border-left: 2px solid var(--league-accent);
-    font-size: var(--font-size-xs);
+    padding-left: var(--style-section-rule-gap, var(--spacing-sm));
+    border-left: var(--style-section-rule, 2px solid var(--league-accent));
+    font-family: var(--style-section-font, inherit);
+    font-style: var(--style-section-style, inherit);
+    font-size: var(--style-section-size, var(--font-size-xs));
     font-weight: var(--font-weight-bold);
-    letter-spacing: var(--tracking-caps);
+    letter-spacing: var(--style-section-tracking, var(--tracking-caps));
     text-transform: uppercase;
   }
 

@@ -11,6 +11,7 @@ import { STORYBOOK_NFL_DARK_BASE_PATH, STORYBOOK_NFL_DARK_CODES } from './nfl-da
 import '../src/styles/tokens.css';
 import '../src/styles/tokens-dark.css';
 import '../src/styles/league-themes.generated.css';
+import '../src/styles/site-styles.generated.css';
 import '../src/styles/utilities.css';
 import '../src/styles/polish.css';
 import '../src/styles/states.css';
@@ -79,6 +80,7 @@ import '../src/styles/live-broadcast-handheld.css';
  *
  *   - light/dark  -> `html.dark`                 (src/styles/tokens-dark.css)
  *   - league skin -> `html[data-league="..."]`   (src/styles/league-themes.generated.css)
+ *   - site style  -> `html[data-site-theme="..."]` (src/styles/site-styles.generated.css)
  *
  * Nothing is decided in frontmatter, which is why a story pre-rendered once
  * still re-skins correctly across all four combinations — and why these map
@@ -93,11 +95,15 @@ import '../src/styles/live-broadcast-handheld.css';
  * anyway: theme and league are applied to <html> by CSS at view time, in the
  * browser, where this function actually runs.
  */
-function applyGlobals(theme: string, league: string) {
+function applyGlobals(theme: string, league: string, style: string) {
   if (typeof document === 'undefined') return;
   const html = document.documentElement;
   html.classList.toggle('dark', theme === 'dark');
   html.setAttribute('data-league', league);
+  // The site STYLE (src/styles/site-styles.generated.css): the layout sets it
+  // from the league's registry `siteTheme`; here it is its own toolbar so any
+  // component can be checked in any style against any league skin.
+  html.setAttribute('data-site-theme', style);
 }
 
 /**
@@ -219,6 +225,19 @@ const preview = definePreview({
         dynamicTitle: true,
       },
     },
+    style: {
+      description: 'Site style (html[data-site-theme])',
+      defaultValue: 'editorial',
+      toolbar: {
+        title: 'Style',
+        icon: 'paintbrush',
+        items: [
+          { value: 'editorial', title: 'Editorial' },
+          { value: 'primetime', title: 'Primetime' },
+        ],
+        dynamicTitle: true,
+      },
+    },
   },
 
   decorators: [
@@ -227,6 +246,7 @@ const preview = definePreview({
       applyGlobals(
         String(context.globals.theme ?? 'light'),
         String(context.globals.league ?? 'theleague'),
+        String(context.globals.style ?? 'editorial'),
       );
       return story();
     },
