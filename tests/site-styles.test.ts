@@ -109,7 +109,7 @@ describe('site-style library', () => {
 });
 
 /** A selector that names a section title or header. */
-const TITLE_SELECTOR = /title|header|heading|kicker|eyebrow|subheading|section h2/i;
+const TITLE_SELECTOR = /title|header|heading|kicker|eyebrow|subheading|section h2|__h[1-6]\b/i;
 /** Title-shaped selectors whose left border is not the editorial stripe. */
 const STRIPE_ALLOW = [
   'thead', // table header rows: a column divider, not a stripe

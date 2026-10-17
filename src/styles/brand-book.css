@@ -162,8 +162,10 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--color-gray-500, #6b7280);
-    border-left: 3px solid var(--color-primary, #1f6feb);
-    padding-left: 0.6rem;
+    border-left: var(--style-section-rule, 3px solid var(--color-primary, #1f6feb));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
+    padding-left: var(--style-section-rule-gap, 0.6rem);
   }
   .cb__note {
     margin: 0 0 0.9rem;

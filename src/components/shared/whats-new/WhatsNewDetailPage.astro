@@ -398,7 +398,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   /* ── Article card ── */
   .wn-detail__article {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg, 1rem);
     overflow: hidden;
   }

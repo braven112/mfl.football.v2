@@ -657,7 +657,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
 }
 .pr-award {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-top: 3px solid var(--pr-accent);
   border-radius: 0.5rem;
   padding: 0.85rem;
@@ -734,7 +735,8 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
   border-collapse: collapse;
   font-size: 0.85rem;
   background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: 0.5rem;
 }
 .pr-table th,
