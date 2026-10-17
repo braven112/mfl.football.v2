@@ -203,7 +203,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
        card separates from the page in both themes. The 4px category stripe
        overrides just the left edge. */
     background: var(--card-bg, #fff);
-    border: 1px solid var(--card-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
     border-left: 4px solid var(--wnr-category-color, var(--cat-new-feature));
     border-radius: 0.75rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));

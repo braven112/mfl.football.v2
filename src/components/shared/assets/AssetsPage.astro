@@ -635,11 +635,13 @@ const copyIcons = `
 
   /* Team-card border fallback differs between the two leagues. */
   .league-gallery--theleague .team-card {
-    border: 1px solid var(--content-border-color, #dddcdc);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #dddcdc));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   .league-gallery--afl .team-card {
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   .team-card__header {
@@ -766,7 +768,8 @@ const copyIcons = `
     gap: 0.75rem;
     padding: 1rem;
     border-radius: 0.75rem;
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
     background: var(--content-bg, #fff);
   }
 
@@ -855,7 +858,8 @@ const copyIcons = `
   }
 
   .asset-card {
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
     padding: 0.75rem;
     display: flex;

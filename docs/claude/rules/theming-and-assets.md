@@ -92,6 +92,14 @@ style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
   on a title/header selector goes through `--style-section-rule` (and its
   padding through `--style-section-rule-gap`). A state mark (pinned, yours,
   selected) is not a stripe and keeps its border in every style.
+- **A card's resting outline is the style's to draw too.** A card, panel or
+  tile whose edge is a neutral 1px border writes
+  `border: var(--style-card-border, <its border>)` and, when it casts no
+  shadow of its own, `box-shadow: var(--style-card-shadow, none)`. Primetime
+  makes the border transparent (the 1px box stays, so nothing shifts) and
+  lifts the card with a soft shadow, a darker one in dark mode. A card that
+  already has a shadow keeps it; hover/selected/yours states and overlays
+  (sheets, modals, menus) are not resting edges and are left alone.
 - **Branching on a style is the exception.** `=== 'primetime'` or a
   `[data-site-theme=…]` selector is for a page-specific LAYOUT within a style
   (the Primetime standings board, the Primetime free-agents page, the
@@ -99,7 +107,7 @@ style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
   branches is a shrink-only baseline.
 - Guard: `tests/site-styles.test.ts` — generated CSS fresh, every style names
   every token, no overlap with the colour-theme contract, Editorial all null,
-  the layout sets the attribute, no raw title stripe, the branch baseline
+  the layout sets the attribute, no raw title stripe, no raw neutral card outline, the branch baseline
   (`tests/fixtures/site-style-branch-baseline.json`), and Storybook's Style
   toolbar lists every style.
 

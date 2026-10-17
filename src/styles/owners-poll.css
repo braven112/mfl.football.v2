@@ -201,7 +201,8 @@
   padding: 0.6rem;
   min-height: 3.25rem;
   background: var(--content-bg);
-  border: 1px solid var(--content-border);
+  border: var(--style-card-border, 1px solid var(--content-border));
+  box-shadow: var(--style-card-shadow, none);
   border-left: 4px solid var(--op-team, var(--content-border));
   border-radius: var(--radius-md, 8px);
   color: var(--page-text);

@@ -224,7 +224,8 @@ const labels = await getPersonaLabels(leagueDef.slug);
 }
 .po-how__card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--content-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-left: 3px solid var(--color-primary, #2563eb);
   border-radius: 0.5rem;
   padding: 0.85rem 1rem;

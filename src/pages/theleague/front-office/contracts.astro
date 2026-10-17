@@ -1022,7 +1022,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       box-shadow: var(--shadow-md);
       overflow: hidden;
       transition: opacity 0.4s ease, transform 0.4s ease, box-shadow var(--transition-base);
-      border: 1px solid var(--content-border);
+      border: var(--style-card-border, 1px solid var(--content-border));
     }
 
     .decl-card:hover {

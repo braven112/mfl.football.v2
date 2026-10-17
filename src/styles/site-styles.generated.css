@@ -4,7 +4,7 @@
 /* Editorial (editorial) — The site's original look: data-dense sports editorial. Small uppercase section titles beside a 2px primary stripe, upright headings, outlined cards. Every token is null because Editorial is the components' own values (docs/claude/components.md, Editorial Design Standard). */
 /* Every token is the components’ own value. */
 
-/* Primetime (primetime) — The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture (no stripe beside a title). */
+/* Primetime (primetime) — The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture: no stripe beside a title, no outline on a card (a soft shadow lifts it off the page instead). */
 html[data-site-theme="primetime"] {
   --style-heading-font: var(--font-display);
   --style-heading-style: italic;
@@ -16,4 +16,9 @@ html[data-site-theme="primetime"] {
   --style-section-size: var(--font-size-base);
   --style-section-style: italic;
   --style-section-tracking: 0.02em;
+  --style-card-border: 1px solid transparent;
+  --style-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.08);
+}
+html.dark[data-site-theme="primetime"] {
+  --style-card-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 6px 18px rgb(0 0 0 / 0.35);
 }

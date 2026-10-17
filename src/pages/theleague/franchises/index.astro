@@ -282,7 +282,8 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
 
   .card-body {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e5e5e5);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e5e5));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
     padding: 0.875rem 1rem 1rem;
     display: flex;

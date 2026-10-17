@@ -147,7 +147,8 @@ export default function TeamPanel({
       <style>{`
         .team-panel {
           background: var(--content-bg, #fff);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-lg, 1rem);
           padding: 1rem;
           display: flex;

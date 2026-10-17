@@ -667,7 +667,8 @@ const hasBrackets = brackets.length > 0;
 
   .matchup-card {
     background: var(--content-bg-muted, #f8fafc);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 12px;
     padding: 0.75rem;
     position: relative;

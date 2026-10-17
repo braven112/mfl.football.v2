@@ -353,7 +353,8 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 .hc-brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 56rem; }
 .hc-brand-card {
   background: var(--color-gray-50, #f9fafb);
-  border: 1px solid var(--content-border, #e2e8f0);
+  border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+  box-shadow: var(--style-card-shadow, none);
   border-top: 3px solid var(--hcp-accent);
   border-radius: var(--radius-md, 0.5rem);
   padding: 1.1rem 1.2rem;

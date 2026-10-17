@@ -588,7 +588,8 @@ export default function PendingTradesPanel({
           padding-top: 1.5rem;
         }
         .ptp-draft-card {
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.875rem;
           background: var(--content-bg, #fff);

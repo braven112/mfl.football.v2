@@ -994,7 +994,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   }
   .rsp-metrics__card {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.5rem;
     padding: 0.875rem 1rem;
     display: flex;
@@ -1256,7 +1257,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     gap: 1rem;
   }
   .sleeper-card {
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-left: 2px solid var(--content-border, #e2e8f0);
     border-radius: 0.5rem;
     overflow: hidden;
@@ -1402,7 +1404,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   }
   .overview-card {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.5rem;
     padding: 1.25rem;
   }
@@ -1582,7 +1585,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     margin: 2rem 0;
     padding: 1.25rem 1.5rem;
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
   }
   .affinity-panel__header {
@@ -1616,7 +1620,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     gap: 0.625rem;
     padding: 0.5rem 0.75rem;
     background: var(--content-bg, #fff);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.5rem;
   }
   .affinity-card--high { border-left: 3px solid var(--color-success-dark, #16a34a); }

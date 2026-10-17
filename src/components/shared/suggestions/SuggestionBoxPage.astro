@@ -719,7 +719,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     height: 48px;
     object-fit: cover;
     border-radius: var(--radius-sm, 0.25rem);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
   }
   .sb-card__more-images {
     display: flex;

@@ -250,7 +250,8 @@
     height: 92px;
     padding: 0.6rem;
     border-radius: var(--radius-sm, 4px);
-    border: 1px solid var(--color-gray-300, #d1d5db);
+    border: var(--style-card-border, 1px solid var(--color-gray-300, #d1d5db));
+    box-shadow: var(--style-card-shadow, none);
   }
   /* Each box paints its own ground — never the page theme's. */
   .cb__cut-box.is-light {

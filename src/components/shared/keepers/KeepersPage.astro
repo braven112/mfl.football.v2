@@ -200,7 +200,8 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-md, 16px);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--content-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     text-decoration: none;
     color: var(--page-text, #1a1a1a);

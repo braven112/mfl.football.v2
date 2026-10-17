@@ -726,7 +726,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   }
 
   .cdemo-minicard {
-    border: 1px solid #e2e8f0;
+    border: var(--style-card-border, 1px solid #e2e8f0);
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     padding: 0.75rem;
     display: flex;
@@ -811,7 +812,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
      ================================================================ */
   .cdemo-panel__mockup {
     margin-top: 0.5rem;
-    border: 1px solid #e2e8f0;
+    border: var(--style-card-border, 1px solid #e2e8f0);
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     overflow: hidden;
     background: #fff;

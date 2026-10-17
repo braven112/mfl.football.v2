@@ -425,13 +425,15 @@ const routes = PACKAGE_ROUTES;
     width: 100%;
     max-width: 24rem;
     padding: 0.5rem 0.6rem;
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 6px;
     background: var(--content-bg);
     color: var(--page-text);
   }
   .launcher__card {
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 10px;
     background: var(--card-bg);
     padding: 0.75rem 1rem 1rem;

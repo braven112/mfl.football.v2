@@ -1,7 +1,7 @@
 {
   "id": "primetime",
   "name": "Primetime",
-  "description": "The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture (no stripe beside a title).",
+  "description": "The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture: no stripe beside a title, no outline on a card (a soft shadow lifts it off the page instead).",
   "tokens": {
     "--style-heading-font": "var(--font-display)",
     "--style-heading-style": "italic",
@@ -12,6 +12,11 @@
     "--style-section-font": "var(--font-display)",
     "--style-section-size": "var(--font-size-base)",
     "--style-section-style": "italic",
-    "--style-section-tracking": "0.02em"
+    "--style-section-tracking": "0.02em",
+    "--style-card-border": "1px solid transparent",
+    "--style-card-shadow": "0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.08)"
+  },
+  "dark": {
+    "--style-card-shadow": "0 1px 2px rgb(0 0 0 / 0.45), 0 6px 18px rgb(0 0 0 / 0.35)"
   }
 }

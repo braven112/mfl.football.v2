@@ -414,7 +414,8 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
     display: block;
     text-decoration: none;
     color: inherit;
-    border: 1px solid var(--content-border, #e5e5e5);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e5e5));
+    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--accent);
     border-radius: 0.625rem;
     background: var(--card-bg, #fff);

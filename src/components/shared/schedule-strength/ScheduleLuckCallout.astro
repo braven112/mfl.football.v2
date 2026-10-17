@@ -46,7 +46,8 @@ function blurb(row: LuckRow): string {
     gap: 0.9rem;
   }
   .luck__card {
-    border: 1px solid var(--gnt-border, var(--content-border, #e2e8f0));
+    border: var(--style-card-border, 1px solid var(--gnt-border, var(--content-border, #e2e8f0)));
+    box-shadow: var(--style-card-shadow, none);
     background: var(--gnt-callout-bg, var(--color-gray-50, #f8fafc));
     border-radius: 0.5rem;
     padding: 0.9rem 1rem;

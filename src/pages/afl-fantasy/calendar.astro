@@ -198,7 +198,8 @@ function countdownLabel(daysUntil: number): string {
 
   .event-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--content-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 10px;
     padding: var(--spacing-md, 16px);
     display: flex;

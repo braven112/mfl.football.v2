@@ -197,7 +197,8 @@ const { leagueSlug, title, heading, breadcrumbs, lede, notes, groups, CardBadges
 
   .card-body {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--content-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
     padding: 0.875rem 1rem 1rem;
     display: flex;

@@ -119,7 +119,8 @@ const sortedMetrics = [...metrics].sort((a, b) => {
 
   .health-card {
     background: var(--card-bg, white);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     padding: 1.5rem;
     transition: all 0.2s;

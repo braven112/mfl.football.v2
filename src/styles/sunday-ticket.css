@@ -374,7 +374,8 @@
   padding: 0.75rem 0.85rem 0.8rem;
   border-radius: var(--radius-md);
   background: var(--card-surface);
-  border: 1px solid var(--card-border);
+  border: var(--style-card-border, 1px solid var(--card-border));
+  box-shadow: var(--style-card-shadow, none);
   min-height: 9rem;
 }
 .st-box__rank {

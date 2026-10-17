@@ -542,7 +542,8 @@ export default function TradeConfirmationModal({
         }
         .tcm-cap-card {
           background: var(--color-gray-50, #f9fafb);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.625rem;
           text-align: center;

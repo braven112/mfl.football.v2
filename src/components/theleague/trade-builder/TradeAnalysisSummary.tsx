@@ -219,7 +219,8 @@ export default function TradeAnalysisSummary({
           padding: 0.75rem;
           background: var(--color-gray-50, #f9fafb);
           border-radius: var(--radius-md, 0.5rem);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
         }
         .trade-analysis__card-title {
           font-size: var(--style-section-size, var(--font-size-xs));

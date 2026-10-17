@@ -41,6 +41,13 @@ export const STYLE_TOKEN_GROUPS = [
       { name: '--style-section-tracking', use: 'letter-spacing of a section title.' },
     ],
   },
+  {
+    label: 'Cards',
+    tokens: [
+      { name: '--style-card-border', use: 'A card or panel’s edge (Editorial: its 1px neutral border). A border value.' },
+      { name: '--style-card-shadow', use: 'The shadow of a card whose border was its only edge (Editorial: none). A box-shadow value.' },
+    ],
+  },
 ];
 
 /** Every style token, flat. */

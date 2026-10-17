@@ -1605,7 +1605,8 @@ try {
     gap: 0.5rem;
     padding: 0.5rem 0.625rem;
     background: #fff;
-    border: 1px solid #e5e7eb;
+    border: var(--style-card-border, 1px solid #e5e7eb);
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.5rem;
     cursor: grab;
     transition: border-color 120ms ease, box-shadow 120ms ease;

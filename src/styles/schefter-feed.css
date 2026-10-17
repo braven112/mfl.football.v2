@@ -38,7 +38,8 @@
 
 .sf-news-card {
   background: var(--sf-bg);
-  border: 1px solid var(--sf-border);
+  border: var(--style-card-border, 1px solid var(--sf-border));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
 }
@@ -812,7 +813,8 @@ html.dark[data-league='afl'] .sf-post__link--external {
 /* Embed cards (X, Instagram, generic links) */
 .sf-post__embed-card {
   margin-top: 0.5rem;
-  border: 1px solid var(--sf-border);
+  border: var(--style-card-border, 1px solid var(--sf-border));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
   transition: background var(--transition-fast);
@@ -874,7 +876,8 @@ html.dark[data-league='afl'] .sf-post__link--external {
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  border: 1px solid var(--sf-border);
+  border: var(--style-card-border, 1px solid var(--sf-border));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
   text-decoration: none;

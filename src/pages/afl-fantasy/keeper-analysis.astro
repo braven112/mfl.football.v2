@@ -452,7 +452,8 @@ const labels = await getPersonaLabels('afl-fantasy');
 
   .ka-tile {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--content-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 12px;
     padding: 0.9rem 1rem;
     display: flex;

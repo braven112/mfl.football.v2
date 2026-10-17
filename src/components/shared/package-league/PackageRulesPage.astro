@@ -97,7 +97,8 @@ const askHref = league.features?.rulesQa ? `/${league.slug}/rules-chat` : null;
     margin: 0;
   }
   .rules__card {
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 10px;
     background: var(--card-bg);
     padding: 1rem 1.25rem 1.25rem;

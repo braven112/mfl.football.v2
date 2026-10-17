@@ -234,7 +234,7 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
 
 <style>
   .push-card {
-    border: 1px solid var(--card-border);
+    border: var(--style-card-border, 1px solid var(--card-border));
     border-radius: var(--radius-lg);
     background: var(--card-surface);
     box-shadow: var(--shadow-sm);
@@ -268,7 +268,8 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
     gap: 1rem;
     flex-wrap: wrap;
     padding: 0.75rem 1rem;
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md);
     background: var(--content-bg-muted);
   }
