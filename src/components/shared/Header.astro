@@ -23,6 +23,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 import HeaderScoreStrip from './front-page/HeaderScoreStrip.astro';
+import HeaderSearch from './search/HeaderSearch.astro';
 import navConfig from '../../config/nav-config.json';
 import { packageLinkVisible } from '../../config/package-league-routes.mjs';
 
@@ -94,6 +95,8 @@ const liveScoringUrl = hasLiveScoring
   ? resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/live-scoring` : '/theleague/live-scoring', hideLeaguePrefix)
   : `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 // Site search — every league that HAS a search page gets the magnifying glass.
+// The glass opens the inline search panel (search/HeaderSearch.astro) in place;
+// its href is the no-JS / new-tab fallback and the panel's "See all results".
 // It was hardcoded to /theleague/search behind a `!isAFL` gate, which is how
 // the AFL ended up with no way into a page directory it had 41 entries in.
 // getSearchPath is the single source for both this and the footer's link.
@@ -145,11 +148,14 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
         <span class="breadcrumb-bell__dot" id="nav-trade-bell-dot" style="display: none;" aria-hidden="true"></span>
       </button>
       {searchHref && (
-        <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages">
+        <>
+        <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages" data-header-search-toggle aria-haspopup="dialog" aria-expanded="false" aria-controls="header-search-panel">
           <svg viewBox="0 0 512 512" aria-hidden="true">
             <use href={`${spriteUrl}#icon-search`}></use>
           </svg>
         </a>
+        <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} />
+        </>
       )}
       <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
       <NavToggleButton
@@ -250,11 +256,14 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
           <span class="breadcrumb-bell__dot" id="nav-trade-bell-dot" style="display: none;" aria-hidden="true"></span>
         </button>
         {searchHref && (
-          <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages">
+          <>
+          <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages" data-header-search-toggle aria-haspopup="dialog" aria-expanded="false" aria-controls="header-search-panel">
             <svg viewBox="0 0 512 512" aria-hidden="true">
               <use href={`${spriteUrl}#icon-search`}></use>
             </svg>
           </a>
+          <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} />
+          </>
         )}
         <NavToggleButton ariaLabel="Toggle navigation menu" controlsId="nav-drawer" />
       </div>

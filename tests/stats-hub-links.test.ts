@@ -128,7 +128,11 @@ describe("TheLeague's directory hrefs", () => {
  */
 const CONSUMERS: Record<string, { scope: boolean; href: boolean; why?: string }> = {
   'src/pages/theleague/stats.astro': { scope: true, href: true },
-  'src/components/shared/search/SearchPage.astro': { scope: true, href: true },
+  'src/utils/page-search-index.ts': {
+    scope: true,
+    href: true,
+    why: 'one builder behind the /search page and the header inline search',
+  },
   'src/components/theleague/RelatedReports.astro': { scope: true, href: true },
   'src/components/shared/hp-sections/QuickLinks.astro': { scope: true, href: true },
   'src/config/footer-config.ts': {

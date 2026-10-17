@@ -6,66 +6,32 @@
  * TheLeague's page alone until Sep 2026; extracted here rather than copied so
  * the AFL's copy can't drift (see tests/page-fork-ratchet.test.ts).
  *
- * page-directory.json is ONE global list shared by every league, so the FIRST
- * thing this does is scope it with pathBelongsToLeague() — without that, AFL's
- * search would list TheLeague's contracts and salary pages, every one of which
- * 404s under /afl-fantasy. Hrefs go through resolveDirectoryHref() for the
- * same reason: directory paths are inconsistently prefixed by design, so a
- * hand-built href emits /afl-fantasy/theleague/lineup.
- *
- * (Both obligations are declared in tests/stats-hub-links.test.ts's CONSUMERS
- * registry — that test is what forces a new directory consumer to state them.)
+ * The index (league scoping, hrefs, usage ranking) is built by
+ * src/utils/page-search-index.ts, which the header's inline search
+ * (HeaderSearch.astro) reads too. `?q=` arrives pre-typed when someone presses
+ * "See all results" in that dropdown.
  */
-import allPages from '../../../data/page-directory.json';
 import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { pathBelongsToLeague } from '../../../config/footer-config';
-import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
-import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
-import { getPageUsage } from '../../../utils/page-usage';
-import { canonicalPath } from '../../../utils/site-analytics';
+import { type CanonicalLeagueSlug } from '../../../config/leagues';
+import { buildPageSearchIndex } from '../../../utils/page-search-index';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
 }
 
 const { leagueSlug } = Astro.props;
-const navSlug = getLeagueBySlug(leagueSlug)?.navSlug ?? 'theleague';
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-
-// Strip the league prefix on an apex host (theleague.us, afl-fantasy.com) so
-// these hrefs match the clean URLs the visitor is already browsing — same
-// href() the footer builds.
-const href = (path: string) =>
-  resolveLeaguePath(resolveDirectoryHref(path, navSlug), hideLeaguePrefix);
 
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
-const thisLeaguePages = allPages.filter(p => pathBelongsToLeague(p.path, leagueSlug));
-
-// Filter out pages tagged "hidden" for non-admin users
-const pages = isAdmin ? thisLeaguePages : thisLeaguePages.filter(p => !p.tags.includes('hidden'));
-
-// Build search data server-side: title + description + tags joined into one lowercase string per entry
-const searchData: Record<string, string> = {};
-for (const page of pages) {
-  searchData[page.id] = [page.title, page.description, ...page.tags, page.category].join(' ').toLowerCase();
-}
-
-// Search results rank by REAL use: owners' visits (the commissioner's
-// excluded) plus signed-out views, from the same counters /activity reads.
-// The hand-set `popularity` only breaks ties, which in practice orders the
-// pages nobody has opened yet — a brand-new page, or any page while the
-// counters are unreachable. See src/utils/page-usage.ts.
-const usage = await getPageUsage(leagueSlug);
-const views = (path: string) => usage.get(canonicalPath(path, leagueSlug)) ?? 0;
-const searchRank = new Map(
-  [...pages]
-    .sort((a, b) => views(b.path) - views(a.path) || b.popularity - a.popularity)
-    .map((page, index) => [page.id, index]),
-);
+// Scoped to this league, hrefs prefixed for this host, ranked by real use —
+// all in the builder the header's inline search reads too.
+const pages = await buildPageSearchIndex(leagueSlug, {
+  isAdmin,
+  hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
+});
 
 const categories = [
   { id: 'popular', label: 'Popular' },
@@ -111,11 +77,11 @@ const categories = [
   <div class="directory__grid">
     {pages.map(page => (
       <a
-        href={href(page.path)}
+        href={page.href}
         class="directory__card"
-        data-search={searchData[page.id]}
+        data-search={page.search}
         data-category={page.category}
-        data-rank={searchRank.get(page.id)}
+        data-rank={page.rank}
       >
         <div class="directory__card-icon">
           <svg viewBox="0 0 512 512" aria-hidden="true">
@@ -125,7 +91,7 @@ const categories = [
         <div class="directory__card-content">
           <div class="directory__card-title-row">
             <h2 class="directory__card-title">{page.title}</h2>
-            {page.visibility === 'admin' && (
+            {page.admin && (
               <span class="directory__admin-badge">Admin</span>
             )}
           </div>
@@ -397,86 +363,98 @@ const categories = [
 </style>
 
 <script>
-  const searchInput = document.querySelector('.directory__search') as HTMLInputElement;
-  const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>('.directory__card'));
-  const originalOrder = [...cards]; // preserve initial DOM order
-  const chips = document.querySelectorAll<HTMLButtonElement>('.directory__chip:not(.directory__chip--clear)');
-  const clearBtn = document.querySelector('.directory__chip--clear') as HTMLButtonElement;
-  const countEl = document.querySelector('.directory__count') as HTMLSpanElement;
-  const noResults = document.querySelector('.directory__no-results') as HTMLParagraphElement;
-  const grid = document.querySelector('.directory__grid') as HTMLElement;
-  const total = cards.length;
-  let activeCategory: string | null = null;
+  import { matchPages } from '../../../utils/page-search-match';
 
-  function filterAndSort() {
-    const query = searchInput?.value.trim().toLowerCase() || '';
-    let visible = 0;
+  // Runs once per session under the ClientRouter, so the page is wired on
+  // every astro:page-load and every element is read fresh inside init().
+  function init() {
+    const searchInput = document.querySelector<HTMLInputElement>('.directory__search');
+    const grid = document.querySelector<HTMLElement>('.directory__grid');
+    if (!searchInput || !grid || grid.dataset.wired) return;
+    grid.dataset.wired = '1';
 
-    // Filter cards
-    cards.forEach(card => {
-      const searchStr = card.dataset.search || '';
-      const cardCat = card.dataset.category || '';
+    const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>('.directory__card'));
+    const originalOrder = [...cards]; // preserve initial DOM order
+    const entries = cards.map((card) => ({
+      card,
+      search: card.dataset.search || '',
+      title: card.querySelector('.directory__card-title')?.textContent ?? '',
+      rank: parseInt(card.dataset.rank || '0', 10),
+    }));
+    const chips = document.querySelectorAll<HTMLButtonElement>('.directory__chip:not(.directory__chip--clear)');
+    const clearBtn = document.querySelector<HTMLButtonElement>('.directory__chip--clear');
+    const countEl = document.querySelector<HTMLSpanElement>('.directory__count');
+    const noResults = document.querySelector<HTMLParagraphElement>('.directory__no-results');
+    const total = cards.length;
+    let activeCategory: string | null = null;
 
-      const matchesSearch = !query || searchStr.includes(query);
-      const matchesCategory = !activeCategory || cardCat === activeCategory;
+    function filterAndSort() {
+      const query = searchInput!.value.trim();
+      // Same matcher as the header's inline search, so both find the same pages.
+      const matched = query ? new Set(matchPages(entries, query).map((e) => e.card)) : null;
+      let visible = 0;
 
-      const show = matchesSearch && matchesCategory;
-      card.hidden = !show;
-      if (show) visible++;
-    });
+      cards.forEach((card) => {
+        const matchesSearch = !matched || matched.has(card);
+        const matchesCategory = !activeCategory || card.dataset.category === activeCategory;
+        const show = matchesSearch && matchesCategory;
+        card.hidden = !show;
+        if (show) visible++;
+      });
 
-    // When searching, sort visible cards by real use (rank 0 = most used)
-    // When not searching, restore original order
-    if (query) {
-      const sorted = cards
-        .filter(c => !c.hidden)
-        .sort((a, b) => {
-          const rankA = parseInt(a.dataset.rank || '0', 10);
-          const rankB = parseInt(b.dataset.rank || '0', 10);
-          return rankA - rankB;
-        });
-
-      sorted.forEach(card => grid.appendChild(card));
-      cards.filter(c => c.hidden).forEach(card => grid.appendChild(card));
-    } else {
-      originalOrder.forEach(card => grid.appendChild(card));
-    }
-
-    // Update count
-    const hasFilter = query || activeCategory;
-    if (countEl) {
-      countEl.textContent = hasFilter ? `${visible} of ${total} pages` : `${total} pages`;
-    }
-    if (noResults) {
-      noResults.style.display = visible === 0 ? 'block' : 'none';
-    }
-    if (clearBtn) {
-      clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
-    }
-  }
-
-  function clearAll() {
-    activeCategory = null;
-    chips.forEach(c => c.classList.remove('active'));
-    if (searchInput) searchInput.value = '';
-    filterAndSort();
-  }
-
-  searchInput?.addEventListener('input', filterAndSort);
-  clearBtn?.addEventListener('click', clearAll);
-
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      const cat = chip.dataset.category || '';
-      if (activeCategory === cat) {
-        activeCategory = null;
-        chip.classList.remove('active');
+      // When searching, order visible cards as the matcher does (title hits,
+      // then real use);
+      // when not, restore the original order.
+      if (query) {
+        matchPages(entries, query)
+          .filter((e) => !e.card.hidden)
+          .forEach((e) => grid!.appendChild(e.card));
+        cards.filter((c) => c.hidden).forEach((card) => grid!.appendChild(card));
       } else {
-        chips.forEach(c => c.classList.remove('active'));
-        activeCategory = cat;
-        chip.classList.add('active');
+        originalOrder.forEach((card) => grid!.appendChild(card));
       }
+
+      const hasFilter = query || activeCategory;
+      if (countEl) {
+        countEl.textContent = hasFilter ? `${visible} of ${total} pages` : `${total} pages`;
+      }
+      if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
+      if (clearBtn) clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+    }
+
+    function clearAll() {
+      activeCategory = null;
+      chips.forEach((c) => c.classList.remove('active'));
+      searchInput!.value = '';
       filterAndSort();
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    clearBtn?.addEventListener('click', clearAll);
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.category || '';
+        if (activeCategory === cat) {
+          activeCategory = null;
+          chip.classList.remove('active');
+        } else {
+          chips.forEach((c) => c.classList.remove('active'));
+          activeCategory = cat;
+          chip.classList.add('active');
+        }
+        filterAndSort();
+      });
     });
-  });
+
+    // "See all results" in the header's inline search arrives as ?q=.
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) {
+      searchInput.value = q;
+      filterAndSort();
+    }
+    searchInput.focus();
+  }
+
+  document.addEventListener('astro:page-load', init);
 </script>
