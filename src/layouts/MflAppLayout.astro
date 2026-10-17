@@ -132,8 +132,12 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<ThemeScript />
-		<link rel="icon" type="image/svg+xml" href="/assets/mfl-live/icon.svg" />
-		<link rel="apple-touch-icon" href="/assets/mfl-live/apple-touch-icon.png" />
+		{/* The `-v2` in every icon filename is a cache-bust, not a variant. A
+		    browser keeps a favicon or touch icon for hours (and a CDN for a
+		    year) keyed on its URL, so redrawing an icon in place left everyone
+		    on the old placeholder. Give a redrawn icon a new filename. */}
+		<link rel="icon" type="image/svg+xml" href="/assets/mfl-live/icon-v2.svg" />
+		<link rel="apple-touch-icon" href="/assets/mfl-live/apple-touch-icon-v2.png" />
 		{onSharedHost && (
 			<link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
 		)}
