@@ -72,6 +72,13 @@ export function buildSeasonalMarkCss(
       rules.push(
         `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png"); filter: none;${scale ? ` transform: scale(${scale});` : ''} }`,
       );
+      // A scaled mark overhangs its box, and crest frames clip (live scoring's
+      // `.lv-side__crest` is overflow:hidden), so its direct parent lets it show.
+      if (scale) {
+        rules.push(
+          `${selectors.map((sel) => sel.replace(/ img\[/, ' :has(> img[') + ')').join(',\n')} { overflow: visible; }`,
+        );
+      }
     }
   }
   return rules.join('\n');
