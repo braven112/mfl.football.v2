@@ -228,7 +228,14 @@ const fmtDate = (ms: number) =>
         <h2 id="bcl-leagues-title">On this broadcast</h2>
         <p>Tap a league to put it on the board or take it off.</p>
       </header>
-      <ul class="bcl-leagues">
+      <ul
+        class="bcl-leagues"
+        data-bcl-leagues
+        data-all={allIds.join(',')}
+        data-defaults={defaults.join(',')}
+        data-week={weekForHref ?? ''}
+        data-path={PATH}
+      >
         {leagueCards.map((card) => {
           const inner = (
             <Fragment>
@@ -257,13 +264,19 @@ const fmtDate = (ms: number) =>
                   `aria-current` marks the on state; `aria-pressed` is not
                   valid on an anchor. */}
               {card.locked ? (
-                <span class:list={['bcl-league', 'is-on', 'is-locked']} title="At least one league stays on">
+                <span
+                  class:list={['bcl-league', 'is-on', 'is-locked']}
+                  data-league-id={card.id}
+                  title="At least one league stays on"
+                >
                   {inner}
                 </span>
               ) : (
                 <a
                   class:list={['bcl-league', { 'is-on': card.on }]}
                   href={card.href}
+                  data-league-id={card.id}
+                  data-name={card.name}
                   aria-current={card.on ? 'true' : undefined}
                   aria-label={`${card.name}: ${card.on ? 'on — tap to remove' : 'off — tap to add'}`}
                 >
@@ -370,6 +383,12 @@ const fmtDate = (ms: number) =>
    * handler is ASSIGNED rather than added.
    */
   import { BROADCAST_MODE_COOKIE, resolveBroadcastMode } from '../../../utils/broadcast-mode';
+  import {
+    BROADCAST_LEAGUE_COOKIE,
+    BROADCAST_LEAGUE_MAX_AGE,
+    broadcastHref,
+    toggleLeagueSelection,
+  } from '../../../utils/broadcast-selection';
 
   type FsElement = Element & {
     webkitRequestFullscreen?: () => Promise<void> | void;
@@ -476,12 +495,115 @@ const fmtDate = (ms: number) =>
     }
   }
 
+  /**
+   * League toggles change in place. They are LINKS (a TV browser with no
+   * script still follows them), and following one re-rendered the whole page:
+   * scroll back to the top and the preview board rebuilt from nothing, for
+   * one switch.
+   *
+   * With script, a tap flips the switch at once, then fetches the same href in
+   * the background. That request is what remembers the choice (the route
+   * sets the cookie), and its page supplies the fresh league rows, the
+   * numbers in the hero and the preview board. Only the newest tap's answer
+   * is applied, so a quick second tap is never undone by the first one's.
+   * That holds for the cookie too: the older request is aborted, and the
+   * newest choice is written here as well, because two requests' Set-Cookie
+   * headers land in whatever order the server answers them.
+   */
+  let toggleSeq = 0;
+  let toggleAbort: AbortController | null = null;
+
+  const ids = (raw: string | undefined) => (raw ? raw.split(',').filter(Boolean) : []);
+
+  function paintCard(card: HTMLElement, on: boolean) {
+    card.classList.toggle('is-on', on);
+    card.querySelector<HTMLElement>('.bcl-switch')?.setAttribute('data-on', on ? 'true' : 'false');
+    const line = card.querySelector('.bcl-league__text > span');
+    if (line) line.textContent = on ? 'On the broadcast' : 'Not on the broadcast';
+    if (card instanceof HTMLAnchorElement) {
+      if (on) card.setAttribute('aria-current', 'true');
+      else card.removeAttribute('aria-current');
+      card.setAttribute('aria-label', `${card.dataset.name ?? ''}: ${on ? 'on — tap to remove' : 'off — tap to add'}`);
+    }
+  }
+
+  /** The new page's island in place of the old one, unmounted first so it stops polling. */
+  function swapBoard(next: Document) {
+    const oldIsland = document.querySelector('[data-bcl-viewport] astro-island');
+    const newIsland = next.querySelector('[data-bcl-viewport] astro-island');
+    if (!oldIsland || !newIsland) return;
+    oldIsland.dispatchEvent(new CustomEvent('astro:unmount'));
+    oldIsland.replaceWith(document.importNode(newIsland, true));
+  }
+
+  async function applyToggle(href: string, seq: number) {
+    toggleAbort?.abort();
+    const abort = new AbortController();
+    toggleAbort = abort;
+    let html: string;
+    try {
+      const res = await fetch(href, {
+        credentials: 'same-origin',
+        headers: { accept: 'text/html' },
+        signal: abort.signal,
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      html = await res.text();
+    } catch {
+      if (seq === toggleSeq) window.location.href = href;
+      return;
+    }
+    if (seq !== toggleSeq) return;
+    const leagues = new URL(href, location.href).searchParams.get('leagues') ?? 'default';
+    try {
+      document.cookie = `${BROADCAST_LEAGUE_COOKIE}=${encodeURIComponent(leagues)}; path=/; max-age=${BROADCAST_LEAGUE_MAX_AGE}; samesite=lax`;
+    } catch {
+      /* the server's own Set-Cookie still stands */
+    }
+    const next = new DOMParser().parseFromString(html, 'text/html');
+    const list = document.querySelector('[data-bcl-leagues]');
+    const freshList = next.querySelector('[data-bcl-leagues]');
+    if (list && freshList) list.replaceWith(document.importNode(freshList, true));
+    const stats = document.querySelector('.bcl-stats');
+    const freshStats = next.querySelector('.bcl-stats');
+    if (stats && freshStats) stats.replaceWith(document.importNode(freshStats, true));
+    swapBoard(next);
+    // A reload keeps what is on screen: the URL carries the set the cookie now holds.
+    history.replaceState(history.state, '', href);
+    initLeagueToggles();
+  }
+
+  function initLeagueToggles() {
+    const list = document.querySelector<HTMLElement>('[data-bcl-leagues]');
+    if (!list) return;
+    list.onclick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const card = (e.target as Element | null)?.closest<HTMLElement>('[data-league-id]');
+      if (!card || !list.contains(card)) return;
+      e.preventDefault();
+      if (card.classList.contains('is-locked')) return;
+      const cards = Array.from(list.querySelectorAll<HTMLElement>('[data-league-id]'));
+      const enabled = cards.filter((c) => c.classList.contains('is-on')).map((c) => c.dataset.leagueId!);
+      const id = card.dataset.leagueId!;
+      // The last league on stays on: an empty selection means "the default"
+      // to the resolver, which would silently turn the others back on.
+      if (enabled.length === 1 && enabled[0] === id) return;
+      const all = ids(list.dataset.all);
+      const selection = toggleLeagueSelection(enabled, all, id, ids(list.dataset.defaults));
+      const week = list.dataset.week ? Number(list.dataset.week) : null;
+      paintCard(card, !card.classList.contains('is-on'));
+      toggleSeq += 1;
+      void applyToggle(broadcastHref(list.dataset.path || '/live/broadcast', selection, week), toggleSeq);
+    };
+  }
+
   function initBroadcastLanding() {
     if (!document.querySelector('.bcl')) return;
     sizePreview();
     initFullscreen();
     initSound();
     initUnpair();
+    initLeagueToggles();
   }
 
   // Registered once at module scope; each looks its nodes up per event.
