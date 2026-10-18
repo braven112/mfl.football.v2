@@ -13,6 +13,7 @@
  * 200×200, the mark trimmed and centred like the 100×100 icons it replaces
  * (shown at 2×).
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +41,10 @@ const outDir = path.join(ROOT, 'public/assets', league, season.marks);
 fs.mkdirSync(outDir, { recursive: true });
 
 const picks = Object.entries(manifest).filter(([id]) => /^\d{4}$/.test(id));
+// Content hash per mark, appended to its URL as ?v= by seasonal-mark-css.ts:
+// the PNG path never changes, so a redrawn mark would otherwise sit behind a
+// browser's cached copy (max-age 3600) of the one it replaced.
+const versions = {};
 for (const [id, file] of picks) {
   // Ink coverage becomes alpha: black → opaque, white → clear.
   const alpha = await sharp(path.join(sourceDir, file), { density: 144 }).flatten({ background: '#fff' }).greyscale().negate().raw().toBuffer({ resolveWithObject: true });
@@ -54,6 +59,9 @@ for (const [id, file] of picks) {
     .extend({ top: 4, bottom: 4, left: 4, right: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png({ compressionLevel: 9, palette: true })
     .toFile(path.join(outDir, `${id}.png`));
+  versions[id] = crypto.createHash('sha256').update(fs.readFileSync(path.join(outDir, `${id}.png`))).digest('hex').slice(0, 8);
   console.log(`${file} → ${path.relative(ROOT, path.join(outDir, `${id}.png`))}`);
 }
+manifest._v = versions;
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`${picks.length} marks`);

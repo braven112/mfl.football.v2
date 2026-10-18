@@ -46,6 +46,13 @@ function markScale(navSlug: string, seasonId: string, franchiseId: string): numb
   return typeof scale === 'number' && scale > 0 && scale !== 1 ? scale : null;
 }
 
+/** The mark's content hash (`_v`, written by build-seasonal-marks.mjs), as a cache-busting query. */
+function markVersion(navSlug: string, seasonId: string, franchiseId: string): string {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _v?: Record<string, string> } | undefined;
+  const v = set?._v?.[franchiseId];
+  return typeof v === 'string' && /^[0-9a-f]+$/.test(v) ? `?v=${v}` : '';
+}
+
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export function buildSeasonalMarkCss(
@@ -70,7 +77,7 @@ export function buildSeasonalMarkCss(
       );
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
-        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png"); filter: none;${scale ? ` transform: scale(${scale});` : ''} }`,
+        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none;${scale ? ` transform: scale(${scale});` : ''} }`,
       );
       // A scaled mark overhangs its box, and crest frames clip (live scoring's
       // `.lv-side__crest` is overflow:hidden), so its direct parent lets it show.
