@@ -77,13 +77,17 @@ export function buildSeasonalMarkCss(
       );
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
-        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none;${scale ? ` transform: scale(${scale});` : ''} }`,
+        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none;${scale ? ` scale: ${scale};` : ''} }`,
       );
+      // `scale`, not `transform`: a watermark centres itself with
+      // transform: translate(-50%, -50%), which a transform here would replace.
       // A scaled mark overhangs its box, and crest frames clip (live scoring's
-      // `.lv-side__crest` is overflow:hidden), so its direct parent lets it show.
+      // `.lv-side__crest` is overflow:hidden), so its direct parent lets it show
+      // — except a watermark's, a whole panel whose clip is the design (the
+      // lineup faceoff card spilled CPU Jocks' crest across both teams).
       if (scale) {
         rules.push(
-          `${selectors.map((sel) => sel.replace(/ img\[/, ' :has(> img[') + ')').join(',\n')} { overflow: visible; }`,
+          `${selectors.map((sel) => sel.replace(/ img\[/, ' :has(> img[') + ':not([class*="watermark"]))').join(',\n')} { overflow: visible; }`,
         );
       }
     }
