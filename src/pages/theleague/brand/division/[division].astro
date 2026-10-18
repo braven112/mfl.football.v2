@@ -1,0 +1,37 @@
+---
+/**
+ * One division's Brand Book page (theleague) — thin route wrapper. An unknown
+ * division redirects to the Brand Book index; the redirect lives HERE because
+ * Astro.redirect() only redirects from a page.
+ */
+import BrandSubjectPage from '../../../../components/shared/brand/BrandSubjectPage.astro';
+import { brandSubject, type BrandBookAssets, type BrandBookConfig } from '../../../../utils/brand-book-subjects';
+import { resolveLeaguePath } from '../../../../utils/nav-utils';
+import leagueConfig from '../../../../data/theleague.config.json';
+import aggregatedAssets from '../../../../data/theleague.assets.json';
+
+// SSR, not prerender: the page's links read `Astro.locals.hideLeaguePrefix`,
+// which middleware derives from the HOSTNAME (same reason as brand.astro).
+export const prerender = false;
+
+const slug = 'theleague' as const;
+const subject = brandSubject(
+  slug,
+  aggregatedAssets as BrandBookAssets,
+  leagueConfig as BrandBookConfig,
+  'division',
+  Astro.params.division ?? '',
+);
+if (!subject) {
+  return Astro.redirect(resolveLeaguePath(`/${slug}/brand`, Astro.locals.hideLeaguePrefix ?? false), 302);
+}
+const assetDomain = ((leagueConfig as { assetDomain?: string }).assetDomain || '').replace(/\/+$/, '');
+---
+
+<BrandSubjectPage
+  leagueSlug={slug}
+  subject={subject}
+  assets={aggregatedAssets as BrandBookAssets}
+  config={leagueConfig as BrandBookConfig}
+  assetDomain={assetDomain}
+/>

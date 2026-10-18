@@ -23,6 +23,8 @@ import { codeFromSlug } from '../../../utils/nfl-marks';
 import { franchiseIdFromSlug } from '../../../utils/franchise-marks';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import leagueConfig from '../../../data/theleague.config.json';
+import aggregatedAssets from '../../../data/theleague.assets.json';
+import type { BrandBookAssets } from '../../../utils/brand-book-subjects';
 
 // SSR, not prerender: every one of these reads `Astro.locals.hideLeaguePrefix`,
 // which middleware derives from the HOSTNAME. The same compiled page answers
@@ -43,7 +45,12 @@ const assetDomain = ((leagueConfig as { assetDomain?: string }).assetDomain || '
 
 {
   franchiseId ? (
-    <FranchiseBrandPage leagueSlug={slug} franchiseId={franchiseId} assetDomain={assetDomain} />
+    <FranchiseBrandPage
+      leagueSlug={slug}
+      franchiseId={franchiseId}
+      assetDomain={assetDomain}
+      assets={aggregatedAssets as BrandBookAssets}
+    />
   ) : (
     <ClubBrandPage leagueSlug={slug} code={code as string} />
   )

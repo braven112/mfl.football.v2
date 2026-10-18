@@ -1,0 +1,41 @@
+---
+/**
+ * Tiles for the Brand Book's non-club subjects — the league, a conference, a
+ * division, the retired-club archive — in the index's `brand__*` tile markup.
+ *
+ * These marks have no colour of their own to stand on, so each tile paints
+ * the ground its art was drawn for: white under a light cut, the dark card
+ * under a dark-only one.
+ */
+import type { SubjectTile } from '../../../utils/brand-book-subjects';
+import '../../../styles/brand-book.css';
+
+interface Props {
+  tiles: SubjectTile[];
+}
+
+const { tiles } = Astro.props;
+---
+
+<ul class="brand__grid">
+  {
+    tiles.map((t) => (
+      <li class="brand__cell">
+        <a
+          class="brand__tile brand__tile--plain"
+          href={t.href}
+          style={t.artForDark ? '--tile-bg:#1e1e1e;--tile-ink:#ffffff' : '--tile-bg:#ffffff;--tile-ink:#111827'}
+        >
+          <span class="brand__art">
+            {t.art && <img src={t.art} alt="" loading="lazy" width="72" height="72" />}
+          </span>
+          <span class="brand__name">
+            <span class="brand__city">{t.eyebrow}</span>
+            <span class="brand__nick brand__nick--franchise">{t.name}</span>
+          </span>
+          {t.flag && <span class="brand__flag">{t.flag}</span>}
+        </a>
+      </li>
+    ))
+  }
+</ul>

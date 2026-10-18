@@ -1,0 +1,70 @@
+---
+/**
+ * The Brand Book's archive: every club that has left the league, with every
+ * file it left behind. One page for all of them (owner's call, Oct 2026) —
+ * the clubs a current franchise grew out of also appear under that
+ * franchise's Former identities, and link there from here.
+ *
+ * Read from the league's aggregated asset file (`category: 'former'`), so a
+ * newly retired club lands here when its art is filed under history/.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import BrandFileStrip from './BrandFileStrip.astro';
+import BrandCopy from './BrandCopy.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { retiredClubs, type BrandBookAssets } from '../../../utils/brand-book-subjects';
+import '../../../styles/brand-book.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  assets: BrandBookAssets;
+  assetDomain?: string;
+}
+
+const { leagueSlug, assets, assetDomain = '' } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`BrandArchivePage: unknown league ${leagueSlug}`);
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const brandHref = (path: string) => resolveLeaguePath(`/${leagueSlug}/brand${path ? `/${path}` : ''}`, hide);
+const clubs = retiredClubs(leagueSlug, assets);
+---
+
+<TheLeagueLayout title={`Retired clubs | Brand Book | ${league.name}`}>
+  <main class="cb brand">
+    <nav class="cb__crumb"><a href={brandHref('')}>&larr; Brand Book</a></nav>
+
+    <header class="brand__header">
+      <p class="brand__eyebrow">Archive &middot; {clubs.length} clubs</p>
+      <h1>Retired clubs</h1>
+      <p class="brand__lede">
+        Every club that no longer plays in the league under that name, with the art it wore.
+      </p>
+    </header>
+
+    <section class="cb__section">
+      {
+        clubs.map((club) => (
+          <article class="cb__retired">
+            <h2 class="cb__retired-name">{club.name}</h2>
+            {(club.franchise || club.aliases.length > 0) && (
+              <p class="cb__retired-meta">
+                {club.aliases.length > 0 && <>Also known as {club.aliases.join(', ')}. </>}
+                {club.franchise && (
+                  <>
+                    That franchise plays today as{' '}
+                    <a href={brandHref(club.franchise.slug)}>{club.franchise.name}</a>.
+                  </>
+                )}
+              </p>
+            )}
+            <BrandFileStrip files={club.files} assetDomain={assetDomain} subject={club.name} />
+          </article>
+        ))
+      }
+    </section>
+
+    <BrandCopy />
+  </main>
+</TheLeagueLayout>

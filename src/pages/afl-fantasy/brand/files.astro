@@ -1,17 +1,17 @@
 ---
 /**
- * Brand Book — the searchable file list (the AFL).
+ * The retired Brand Files library (afl-fantasy). Everything it listed now lives
+ * on a Brand Book page (owner's call, Oct 2026) — club files on the club's
+ * page, league, conference and division art on their own pages, retired clubs
+ * on the archive — so the old address forwards to the Brand Book index, whose
+ * search finds any file by name. Asset URLs themselves never moved.
  *
- * See the TheLeague copy for why the old Asset Library survives the Brand Book
- * rather than being replaced by it: 109 former AFL clubs and the league art
- * have no brand page of their own, and finding one file by name is the thing
- * this view is genuinely good at.
+ * 302, not 301: a permanent redirect is cached indefinitely and cannot be
+ * taken back without minting a new URL (same rule as /assets).
  */
-import AssetsPage from '../../../components/shared/assets/AssetsPage.astro';
-import leagueConfig from '../../../../data/afl-fantasy/afl.config.json';
-import aggregatedAssets from '../../../../data/afl-fantasy/afl.assets.json';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 export const prerender = false;
----
 
-<AssetsPage slug="afl-fantasy" leagueConfig={leagueConfig} aggregatedAssets={aggregatedAssets} />
+return Astro.redirect(resolveLeaguePath('/afl-fantasy/brand', Astro.locals.hideLeaguePrefix ?? false), 302);
+---

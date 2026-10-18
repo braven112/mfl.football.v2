@@ -799,3 +799,220 @@
     gap: 0.2rem;
   }
 }
+
+/* ══ Index tiles and header ═══════════════════════════════════════════════
+   The index's tile grid and page header, lifted out of BrandPage's scoped
+   block so the league, conference, division and archive pages draw the SAME
+   tiles (a division page's franchise grid is the index's franchise grid).
+   The dark-swap opt-out for the tile art stays pinned in BrandPage too
+   (tests/franchise-brand-page.test.ts); this copy covers the subject pages. */
+html.dark .brand__art img {
+  content: normal !important;
+}
+/* A club nickname is one word; a franchise name is up to four ("Running Down
+   The Dream"), so the franchise tiles take a smaller, balanced line rather
+   than the nickname's size. Everything else about the tile is identical. */
+.brand__nick--franchise {
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.brand__nfl-h2 {
+  margin-top: 2.5rem;
+}
+/* Tokens with fallbacks only — a var() with no definition renders its
+   fallback in BOTH themes (docs/claude/rules/theming-and-assets.md). */
+.brand {
+  max-width: var(--container-max-width, 1100px);
+  margin: 0 auto;
+  padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
+}
+.brand__header {
+  margin-bottom: var(--spacing-lg, 1.5rem);
+}
+.brand__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gray-500, #6b7280);
+}
+.brand h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.85rem;
+  line-height: 1.1;
+}
+.brand__lede {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--color-gray-600, #4b5563);
+}
+.brand__note {
+  margin: 0.75rem 0 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-gray-500, #6b7280);
+}
+.brand__note a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.brand__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--spacing-sm, 0.75rem);
+}
+.brand__cell {
+  margin: 0;
+}
+.brand__tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0.75rem 0.9rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--tile-bg);
+  color: var(--tile-ink);
+  text-decoration: none;
+  min-height: 148px;
+  justify-content: center;
+}
+.brand__tile:hover,
+.brand__tile:focus-visible {
+  outline: 2px solid var(--tile-ink);
+  outline-offset: 2px;
+}
+.brand__art img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+}
+.brand__name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.brand__city {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.brand__nick {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.brand__flag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm, 4px);
+  background: color-mix(in srgb, var(--tile-ink) 18%, transparent);
+}
+
+@media (max-width: 480px) {
+  .brand__grid {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+  .brand__art img {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* ── Subject pages: league, conference, division, archive ──────────────── */
+/* A file name is one long word ("acer_fc_edge_icon_circle.png"); without a
+   break it runs into the next cut's caption. */
+.cb__cut-meta {
+  overflow-wrap: anywhere;
+}
+/* A layered source has no preview; the box names the format instead. */
+.cb__cut-source {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-gray-500, #6b7280);
+}
+/* The seasonal set's name in code, printed beside its display name so the
+   page and the code use one name. */
+.cb__set-id {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.cb__retired {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: var(--spacing-md, 1rem);
+  border-top: 1px solid var(--content-border, #e2e8f0);
+}
+.cb__retired + .cb__retired {
+  margin-top: var(--spacing-md, 1rem);
+}
+.cb__retired-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.cb__retired-meta {
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-gray-500, #6b7280);
+}
+.cb__retired-meta a {
+  color: inherit;
+  font-weight: 700;
+}
+/* The index's "find a file" search: a field, then matching rows. */
+.brand__search {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--content-border, #e2e8f0);
+  background: var(--content-bg, #ffffff);
+  color: var(--page-text, #111827);
+}
+.brand__hits {
+  list-style: none;
+  margin: var(--spacing-sm, 0.75rem) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.brand__hit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+.brand__hit code {
+  font-size: 0.75rem;
+  color: var(--color-gray-500, #6b7280);
+}
+.brand__hit a {
+  font-weight: 600;
+}
+/* A subject tile stands on white or the dark card, not a club colour, so it
+   needs an edge to read as a tile on a page of the same ground. */
+.brand__tile--plain {
+  border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+}

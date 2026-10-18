@@ -8,6 +8,9 @@
  * also belong here — a static import specifier can't be a runtime variable.
  */
 import BrandPage from '../../components/shared/brand/BrandPage.astro';
+import type { BrandBookAssets, BrandBookConfig } from '../../utils/brand-book-subjects';
+import leagueConfig from '../../data/theleague.config.json';
+import aggregatedAssets from '../../data/theleague.assets.json';
 
 // SSR, not prerender: every one of these reads `Astro.locals.hideLeaguePrefix`,
 // which middleware derives from the HOSTNAME. The same compiled page answers
@@ -17,4 +20,8 @@ import BrandPage from '../../components/shared/brand/BrandPage.astro';
 export const prerender = false;
 ---
 
-<BrandPage leagueSlug="theleague" />
+<BrandPage
+  leagueSlug="theleague"
+  assets={aggregatedAssets as BrandBookAssets}
+  config={leagueConfig as BrandBookConfig}
+/>
