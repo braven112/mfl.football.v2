@@ -59,11 +59,17 @@ const showConferences = groups.length > 1;
 const manyConferences = groups.length > 2;
 
 /**
- * Which conference opens. `groups` already arrives in the viewer's own order
- * (`conferenceOrder`), so the first one IS theirs — resolved from the session,
- * then their remembered club, then the historical AL-first default.
+ * Which conference opens: the one holding the club being VIEWED, so the ringed
+ * crest is always on screen — an AL owner looking at an NL club used to get
+ * their own AL row open and no sign of the club they were on. The ORDER still
+ * follows the viewer (`conferenceOrder`), so switching never reshuffles the
+ * rails; only which one is open follows the club. No active club in the row →
+ * the first group, which is the viewer's own.
  */
-const openIndex = 0;
+const activeIndex = groups.findIndex((group) =>
+  group.divisions.some((division) => division.teams.some((team) => team.franchiseId === activeFranchiseId)),
+);
+const openIndex = activeIndex >= 0 ? activeIndex : 0;
 
 /** Unique per render, so two headers on one document cannot share a group. */
 const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
