@@ -38,7 +38,12 @@ import {
 import { resolveMatchupColorVars } from './live/model';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
+import { getSleeperLink, sleeperViewerKey } from './sleeper/link';
+import { applyPlayerFixes, readViewerFixes } from './sleeper/player-fixes';
+import { discoverSleeperBoardLeagues, readSleeperLive } from './sleeper/live';
+import { loadSleeperPlayerMap, UNRESOLVED_PREFIX, type SleeperPlayerMap } from './sleeper/players';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
+import type { LiveSnapshot } from './live-scoring-snapshot';
 import type {
   MflLiveBoard,
   MflLiveLeaguePanel,
@@ -151,18 +156,41 @@ function statusFor(read: LeagueLiveRead, pairCount: number): MflLiveLeagueStatus
   return pairCount > 0 ? 'ok' : 'no-matchup';
 }
 
+/**
+ * How many of the viewer's OWN players a Sleeper league could not match to an
+ * MFL player, starters and bench — the panel's "fix" prompt. Only the
+ * viewer's team: the fix list on settings lists only their roster, so a count
+ * that included the opponent would point at players they cannot fix there.
+ */
+function unmatchedOnTeam(snapshot: LiveSnapshot, franchiseId: string): { unmatched?: number } {
+  const rows = [...(snapshot.players[franchiseId] ?? []), ...(snapshot.bench[franchiseId] ?? [])];
+  const n = rows.filter((r) => r.id.startsWith(UNRESOLVED_PREFIX)).length;
+  return n > 0 ? { unmatched: n } : {};
+}
+
 export async function assembleMflLiveBoard(
   input: AssembleMflLiveInput,
 ): Promise<AssembledMflLive> {
   const { user, week } = input;
   const year = input.year ?? getCurrentSeasonYear();
 
-  const leagues = await discoverBoardLeagues(user);
+  // MFL and Sleeper are discovered together. A Sleeper account is optional and
+  // linked on /live/settings; with none linked, or with Sleeper down, the
+  // second list is empty and the board is exactly the MFL board.
+  const [mflLeagues, sleeperLeagues] = await Promise.all([
+    discoverBoardLeagues(user),
+    getSleeperLink(user)
+      .then((link) => discoverSleeperBoardLeagues(link, year))
+      .catch(() => []),
+  ]);
+  const leagues = [...mflLeagues, ...sleeperLeagues];
   // The param narrows what the SESSION already allows and can never widen it:
   // `resolveMflLiveLeagues` only returns ids present in `leagues`, and
   // `leagues` came from this owner's own MFL cookie.
   const { enabled } = resolveMflLiveLeagues(input.leaguesParam, input.leaguesCookie, leagues);
   const on = leagues.filter((l) => enabled.includes(l.id));
+  const onMfl = on.filter((l) => l.provider !== 'sleeper');
+  const onSleeper = on.filter((l) => l.provider === 'sleeper');
 
   // The league fan-out and the two ESPN reads run together. ESPN is fetched
   // WITHOUT the owner's cookie and is per-NFL-GAME rather than per league, so
@@ -170,13 +198,45 @@ export async function assembleMflLiveBoard(
   // ticker and the red-zone banner are affordable on an all-leagues-on board.
   // Either can fail without costing the scores: the board simply has no rail
   // and no ticker, which is visibly less rather than wrong.
-  const [reads, scoreboard, detail] = await Promise.all([
+  const scoreboardRead = fetchNflScoreboard({ week, year }).catch(() => ({
+    ok: false,
+    week,
+    games: [] as NflGame[],
+  }));
+  // Sleeper sends points but no game clock, so its read waits on the
+  // scoreboard (for each starter's seconds left) and on the player id map —
+  // and on nothing else, so it still overlaps the MFL fan-out.
+  // With the crowd's fixes filled in: everyone's applied ones plus this
+  // viewer's own picks (`player-fixes.ts`). They only fill blanks the join
+  // left, so a missing fix read costs the names, never a score.
+  const sleeperPlayers: Promise<SleeperPlayerMap> = onSleeper.length
+    ? Promise.all([
+        loadSleeperPlayerMap(year).catch((): SleeperPlayerMap => ({})),
+        readViewerFixes(sleeperViewerKey(user)).catch(() => ({})),
+      ]).then(([map, fixes]) => applyPlayerFixes(map, fixes))
+    : Promise.resolve({});
+  const sleeperReads: Promise<LeagueLiveRead[]> = onSleeper.length
+    ? Promise.all([scoreboardRead, sleeperPlayers]).then(([sb, players]) =>
+        // A failed scoreboard is NOT an empty slate: read as one, every starter
+        // has zero seconds left and every live matchup reads Final. Passing
+        // null marks the Sleeper reads unavailable, so the board holds the
+        // last panel it confirmed instead.
+        readSleeperLive({ leagues: onSleeper, week, players, games: sb.ok ? (sb.games ?? []) : null }),
+      )
+    : Promise.resolve([]);
+  const [mflReads, scoreboard, detail, sleeperRows, sleeperMap] = await Promise.all([
     // This board NAMES every franchise, including in leagues the site does
     // not host, so it is the caller that wants the extra read.
-    readCrossLeagueLive({ user, leagues: on, week, year, withFranchiseNames: true }),
-    fetchNflScoreboard({ week, year }).catch(() => ({ ok: false, week, games: [] as NflGame[] })),
+    readCrossLeagueLive({ user, leagues: onMfl, week, year, withFranchiseNames: true }),
+    scoreboardRead,
     loadNflGameDetail({ week, year }).catch(() => null),
+    sleeperReads,
+    sleeperPlayers,
   ]);
+  // Back into the order the leagues were listed in, so a league keeps its
+  // place on the board whichever host it lives on.
+  const readById = new Map([...mflReads, ...sleeperRows].map((r) => [r.league.id, r]));
+  const reads = on.map((l) => readById.get(l.id)).filter((r): r is LeagueLiveRead => !!r);
 
   // Player identity for everyone on the board. The SEASON map: this is
   // results-shaped, and a player's identity for scoring purposes belongs to
@@ -185,6 +245,22 @@ export async function assembleMflLiveBoard(
   const playerMeta: Record<string, PlayerMeta> = {};
   const addMeta = (playerId: string) => {
     if (playerMeta[playerId]) return;
+    // A Sleeper starter the id map could not resolve to an MFL player keeps
+    // Sleeper's own name, position and club. He scores; he simply cannot be
+    // matched to an ESPN play.
+    if (playerId.startsWith(UNRESOLVED_PREFIX)) {
+      const sp = sleeperMap[playerId.slice(UNRESOLVED_PREFIX.length)];
+      playerMeta[playerId] = {
+        id: playerId,
+        name: sp?.name ?? 'Unknown player',
+        position: sp?.position ?? '',
+        nflTeam: sp?.team ?? '',
+        headshot: '',
+        espnId: null,
+        projected: 0,
+      };
+      return;
+    }
     const who = identity.get(playerId);
     playerMeta[playerId] = {
       id: playerId,
@@ -228,6 +304,7 @@ export async function assembleMflLiveBoard(
         franchiseId: league.franchiseId,
         slug,
         registered: !!league.registered,
+        ...(league.provider ? { provider: league.provider } : {}),
         status,
         matchups: [],
       });
@@ -322,6 +399,9 @@ export async function assembleMflLiveBoard(
         mine,
         opponent,
         winProbability: scores.winProbability[index] ?? 0.5,
+        // Sleeper ships live scores only (no projections), so its bar and
+        // projected finals would be read off the live score alone.
+        ...(league.provider === 'sleeper' ? { noProjections: true } : {}),
         colorVars: matchupColorVars(
           identityFor(league.franchiseId, league.franchiseName).colors,
           identityFor(pair.opponentId, `Franchise ${pair.opponentId}`).colors,
@@ -335,6 +415,8 @@ export async function assembleMflLiveBoard(
       franchiseId: league.franchiseId,
       slug,
       registered: !!league.registered,
+      ...(league.provider ? { provider: league.provider } : {}),
+      ...(league.provider === 'sleeper' ? unmatchedOnTeam(snapshot, league.franchiseId) : {}),
       status: 'ok',
       matchups,
     });

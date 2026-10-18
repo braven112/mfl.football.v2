@@ -25,6 +25,8 @@ export interface ToggleLeague {
   name: string;
   franchiseName: string;
   registered: boolean;
+  /** Absent for an MFL league; a Sleeper league is tagged as one. */
+  provider?: 'sleeper';
   icon: string;
   initials: string;
   /**
@@ -121,7 +123,11 @@ export default function LeagueToggles({ leagues, initialEnabled }: Props) {
                 <span className="mls__name">{league.name}</span>
                 <span className="mls__sub">
                   {league.franchiseName && <span>{league.franchiseName}</span>}
-                  {!league.registered && <span className="mls__tag">Not on this site</span>}
+                  {league.provider === 'sleeper' ? (
+                    <span className="mls__tag">Sleeper</span>
+                  ) : (
+                    !league.registered && <span className="mls__tag">Not on this site</span>
+                  )}
                 </span>
               </span>
 

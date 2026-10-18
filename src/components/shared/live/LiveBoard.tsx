@@ -51,6 +51,7 @@ import { KickoffClockContext } from './LvPlayerRow';
 import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
+import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
 
 /** Matches the cadence the board this replaces used. */
 const POLL_LIVE_MS = 25_000;
@@ -678,7 +679,13 @@ export default function LiveBoard({
           isFinal={isMatchupFinal(open.matchup)}
           // Only on a LIVE board: the bundled sample has no box scores to
           // itemize, so every sheet there would read "Loading stats…" forever.
-          leagueId={demoLabel || !pollUrl ? undefined : open.panel.leagueId}
+          // Never for a Sleeper league either: the sheet itemizes a score
+          // against MFL's scoring rules, and Sleeper's league has none there.
+          leagueId={
+            demoLabel || !pollUrl || open.panel.provider === 'sleeper'
+              ? undefined
+              : open.panel.leagueId
+          }
           year={board.year}
           onBack={() => setSelected(null)}
         />
@@ -696,7 +703,9 @@ export default function LiveBoard({
             <section key={panel.leagueId} className="lv-panel">
               {showPanelName && (
                 <h2 className="lv-panel__name">
-                  {panelHrefBase && panel.leagueId ? (
+                  {/* No league board exists for a Sleeper league, so its
+                      heading is plain text rather than a dead link. */}
+                  {panelHrefBase && panel.leagueId && panel.provider !== 'sleeper' ? (
                     // The heading IS the link — the whole line, so it is a
                     // thumb target rather than a word.
                     <a
@@ -711,6 +720,20 @@ export default function LiveBoard({
                   )}
                 </h2>
               )}
+
+              {/* A Sleeper team with players the id join could not match:
+                  they score, but miss headshots and the ticker. The owner
+                  can fix them, and their fix helps everyone. */}
+              {panel.unmatched ? (
+                <p className="lv-panel__fix">
+                  {panel.unmatched === 1
+                    ? '1 player on your team isn\u2019t matched yet.'
+                    : `${panel.unmatched} players on your team aren\u2019t matched yet.`}{' '}
+                  <a className="cta-link" href={PLAYER_FIX_HREF}>
+                    Match players
+                  </a>
+                </p>
+              ) : null}
 
               {/* A held panel renders as an ordinary one, so the strip is the
                   only thing telling the reader these numbers have stopped

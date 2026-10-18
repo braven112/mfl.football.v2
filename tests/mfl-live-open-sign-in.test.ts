@@ -156,6 +156,12 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/api/live-board.ts',
 		'src/pages/api/live-standings.ts',
 		'src/pages/api/live-leagues.ts',
+		// Links a Sleeper account to the viewer's own MFL Live board, keyed on
+		// the MFL username — never on franchiseId.
+		'src/pages/api/live-sleeper.ts',
+		// An owner's crowd fix for a Sleeper player on their own roster, voted
+		// under the same hashed MFL username — never franchiseId.
+		'src/pages/api/live-sleeper-fix.ts',
 		'src/pages/api/league-board.ts',
 		// The Broadcast in MFL Live and pairing a TV to it. The board reads MFL
 		// with the owner's own cookie, like every other /live board.
@@ -187,6 +193,14 @@ describe('only the MFL Live surfaces read an open session', () => {
 
 	it('/live/analytics stays on getAuthUser', () => {
 		expect(readFileSync(join(ROOT, 'src/pages/live/analytics.astro'), 'utf8')).not.toContain('getMflLiveUser');
+	});
+
+	it('the player-fix admin page and endpoint stay on getAuthUser', () => {
+		for (const f of ['src/pages/live/player-fixes.astro', 'src/pages/api/live-sleeper-fix-admin.ts']) {
+			const src = readFileSync(join(ROOT, f), 'utf8');
+			expect(src).not.toContain('getMflLiveUser');
+			expect(src).toContain('canViewSiteInsights');
+		}
 	});
 });
 

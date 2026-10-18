@@ -14,6 +14,47 @@ Their reasoning is still why the current code looks the way it does — the CSS
 rules in particular were harvested into the rewrite — but the file and symbol
 names in them no longer exist. Read them as history, not as a map.
 
+## 2026-10-18 - A second fantasy host joins the board through the SAME shapes (Sleeper, PR #1404)
+
+**Context:** Sleeper leagues on MFL Live (`src/utils/sleeper/`, plan
+`docs/plans/mfl-live-sleeper.md`).
+
+**Insight — convert at the edge, never branch in the kit.** Sleeper produces
+`BoardLeague`, `LeagueLiveRead` and `LiveSnapshot`, so the board, ticker and
+red zone draw it with MFL's code. The kit learned only three optional fields:
+`provider` (skip the MFL-only league link and stat sheet), `noProjections`
+(no win-probability bar or "proj", since an empty projections map makes the
+bar read a hard 100/0) and `unmatched` (the fix prompt). Anything reading MFL
+must check `provider` first.
+
+**Insight — an explicit league selection never widens, so a league the owner
+CAUSED to appear must be switched on by the act that caused it.** Linking a
+Sleeper account appended its league ids to the `live_leagues` cookie
+(`withLeaguesEnabled`). Otherwise anyone who had ever toggled a league saw
+"Its leagues are on the board" and got nothing.
+
+**Insight — a crowd fix may only FILL a blank.** Crowd player matches
+(`player-fixes.ts`) never re-point a match the id join made. That one rule is
+what makes two-owner agreement safe without moderation up front.
+
+**Insight — anything the board island imports must stay free of server code.**
+`UNRESOLVED_PREFIX` moved to the dependency-free `sleeper/ids.ts` so the
+island doesn't bundle `node:fs` and Redis. Chromatic's path filter then
+demanded it be listed in `.github/workflows/chromatic.yml`
+(`node scripts/chromatic-story-deps.mjs` prints the list).
+
+**Insight — a polled read that fails must say "unavailable", never "empty".**
+Two silent ones shipped in the first draft. A failed Sleeper league list read
+as "in no leagues" and dropped every Sleeper panel, so discovery now returns
+the last list that succeeded. A failed ESPN scoreboard read as an empty slate,
+which gave every starter zero seconds and marked live matchups Final, so the
+Sleeper reads are now unavailable without it. Pinned by
+`tests/sleeper-live-resilience.test.ts`.
+
+**Insight — Upstash parses a stored digit string back to a NUMBER.** Every id
+hash in `player-fixes.ts` is read through `idHash`. The test's fake Redis
+serializes and parses the way Upstash does, so it reproduces this.
+
 ## 2026-09-22 - `:last-of-type` Does Not Mean "Last One of This Class"
 
 **Context:** Restyling the bench disclosure into a centred pill. The pill was

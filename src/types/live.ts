@@ -117,6 +117,13 @@ export interface LiveMatchup {
    */
   p0: number;
   /**
+   * No projections back this matchup, so `p0` and every `projectedFinal` are
+   * meaningless and the UI draws neither the win-probability bar nor a
+   * projected figure. Set for Sleeper leagues on MFL Live, which ship live
+   * scores only. Absent means projections exist.
+   */
+  noProjections?: boolean;
+  /**
    * The two franchise colours as CSS custom properties, resolved SERVER-SIDE
    * and once PER THEME.
    *
@@ -160,6 +167,17 @@ export interface LivePanel {
   slug: CanonicalLeagueSlug | null;
   /** True when this site runs the league — drives the "not on this site" tag. */
   registered: boolean;
+  /**
+   * Absent for an MFL league. A Sleeper panel has no league board page and no
+   * MFL scoring rules, so the UI links to neither.
+   */
+  provider?: 'sleeper';
+  /**
+   * Sleeper only: how many of the viewer's own players could not be matched
+   * to an MFL player. Absent when none, and for every MFL league. Drives the
+   * panel's link to the fix list on Live settings.
+   */
+  unmatched?: number;
   /**
    * The viewer's franchise in THIS league, or null.
    *
