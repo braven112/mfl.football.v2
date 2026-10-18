@@ -98,6 +98,20 @@ describe('opted-in leagues', () => {
         }
         expect(css).toContain(`url("/assets/${league.navSlug}/${season.marks}/${file}")`);
       });
+      it(`${league.slug}: every ${id} sprite icon swap names a real icon and a drawn file`, () => {
+        const set = JSON.parse(
+          fs.readFileSync(path.join(ROOT, 'src/data/seasonal-marks', `${league.navSlug}-${id}.json`), 'utf8'),
+        ) as { _icons?: Record<string, string> };
+        const sprite = fs.readFileSync(path.join(ROOT, 'public/assets/icons/sprite.svg'), 'utf8');
+        const css = buildSeasonalMarkCss(league.navSlug, [id], []);
+        for (const [icon, file] of Object.entries(set._icons ?? {})) {
+          expect(sprite, `no icon-${icon} in the sprite`).toContain(`id="icon-${icon}"`);
+          expect(fs.existsSync(path.join(ROOT, 'public/assets', league.navSlug, season.marks!, file)), `${file} not drawn`).toBe(true);
+          const scope = `html[data-league="${league.navSlug}"][data-season="${id}"]`;
+          expect(css).toContain(`${scope} svg:has(> use[href$="#icon-${icon}"]) { background: url("/assets/${league.navSlug}/${season.marks}/${file}")`);
+          expect(css).toContain(`${scope} use[href$="#icon-${icon}"] { visibility: hidden; }`);
+        }
+      });
       it(`${league.slug}: every ${id} art swap replaces a real asset with a drawn file`, () => {
         const set = JSON.parse(
           fs.readFileSync(path.join(ROOT, 'src/data/seasonal-marks', `${league.navSlug}-${id}.json`), 'utf8'),
@@ -128,7 +142,8 @@ describe('opted-in leagues', () => {
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       for (const selector of block.split('{')[0]!.split(',')) {
-        expect(selector).toMatch(/html\[data-league="\w+"\]\[data-season="halloween"\] img\[src=/);
+        // an <img> by its src, or a sprite icon's <svg> by its <use>
+        expect(selector).toMatch(/html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|svg:has\(> use\[href\$=)/);
       }
     }
   });

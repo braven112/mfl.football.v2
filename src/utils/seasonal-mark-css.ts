@@ -27,6 +27,11 @@
  * inlines as raw SVG (the AFL's year-stamped division badges) asks
  * `seasonalSwapPath` and inlines the drawn file itself, since CSS cannot reach
  * inside an inlined SVG.
+ *
+ * Sprite icons swap too: `_icons` maps a sprite icon id (the Premier League
+ * page's icon) to a drawn file. A `<use>` cannot take `content:`, so the
+ * referencing <svg> wears the drawing as its background and the `<use>` is
+ * hidden; every sprite call site (menu, search, related-page cards) follows.
  */
 import { SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
@@ -91,6 +96,16 @@ export function seasonalSwapPath(navSlug: string, seasonId: string | null | unde
   return hit ? `/assets/${navSlug}/${marks}/${hit[1]}` : null;
 }
 
+/** Sprite icon id → drawn file in the marks directory (`_icons`). */
+function seasonalIcons(navSlug: string, seasonId: string): Array<[string, string]> {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _icons?: unknown } | undefined;
+  const icons = set?._icons;
+  if (!icons || typeof icons !== 'object') return [];
+  return Object.entries(icons as Record<string, unknown>).filter(
+    (e): e is [string, string] => /^[a-z0-9-]+$/.test(e[0]) && typeof e[1] === 'string' && /^([\w-]+\/)*[\w.-]+\.(svg|png)$/.test(e[1]),
+  );
+}
+
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export function buildSeasonalMarkCss(
@@ -114,6 +129,14 @@ export function buildSeasonalMarkCss(
     for (const [from, file] of seasonalSwaps(navSlug, id)) {
       rules.push(
         `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"] { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
+      );
+    }
+    for (const [icon, file] of seasonalIcons(navSlug, id)) {
+      const scope = `html[data-league="${navSlug}"][data-season="${id}"]`;
+      const use = `use[href$="#icon-${icon}"]`;
+      rules.push(
+        `${scope} svg:has(> ${use}) { background: url("/assets/${navSlug}/${marks}/${file}") center / contain no-repeat; }`,
+        `${scope} ${use} { visibility: hidden; }`,
       );
     }
     const drawn = seasonalMarkIds(navSlug, id);
