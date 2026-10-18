@@ -15,6 +15,11 @@
  * builds the PNGs from it). Only franchises listed there get a rule; any other
  * franchise keeps its normal crest for the season. Nothing is converted
  * automatically (owner's call, Oct 2026).
+ *
+ * The league's own logo swaps the same way: a set's `_logo` names a file in
+ * the marks directory, and every <img> showing the league's registry logo
+ * (header, nav drawer) renders it instead. Drawn on the logo's own viewBox,
+ * so the swap keeps the box it replaces.
  */
 import { SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
@@ -53,17 +58,32 @@ function markVersion(navSlug: string, seasonId: string, franchiseId: string): st
   return typeof v === 'string' && /^[0-9a-f]+$/.test(v) ? `?v=${v}` : '';
 }
 
+/** The league logo drawn for the season (`_logo`), as a file name in the marks directory, or null. */
+export function seasonalLogoFile(navSlug: string, seasonId: string): string | null {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _logo?: unknown } | undefined;
+  return typeof set?._logo === 'string' && /^[\w.-]+\.(svg|png)$/.test(set._logo) ? set._logo : null;
+}
+
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export function buildSeasonalMarkCss(
   navSlug: string,
   seasonalThemes: readonly string[] | undefined,
   teams: SeasonalTeamLike[],
+  logo?: { light?: string; dark?: string },
 ): string {
   const rules: string[] = [];
   for (const id of seasonalThemes ?? []) {
     const marks = SEASONAL_THEMES[id]?.marks;
     if (!marks) continue;
+    const logoFile = seasonalLogoFile(navSlug, id);
+    const logoSrcs = [logo?.light, logo?.dark].filter((s): s is string => Boolean(s));
+    if (logoFile && logoSrcs.length) {
+      const selectors = [...new Set(logoSrcs)].map(
+        (src) => `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(src)}"]`,
+      );
+      rules.push(`${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${logoFile}"); filter: none; }`);
+    }
     const drawn = seasonalMarkIds(navSlug, id);
     for (const team of teams) {
       if (!team?.franchiseId || !drawn.has(team.franchiseId)) continue;

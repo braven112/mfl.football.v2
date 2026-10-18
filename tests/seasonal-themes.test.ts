@@ -11,7 +11,7 @@ import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
 import { SEASONAL_THEMES, activeSeasonalTheme, resolveSeasonPreview } from '../src/config/seasonal-themes.mjs';
 import { getLeagueTeams } from '../src/utils/league-config';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
-import { buildSeasonalMarkCss, seasonalMarkIds } from '../src/utils/seasonal-mark-css';
+import { buildSeasonalMarkCss, seasonalLogoFile, seasonalMarkIds } from '../src/utils/seasonal-mark-css';
 
 const ROOT = path.resolve(__dirname, '..');
 const at = (iso: string) => activeSeasonalTheme(['halloween'], new Date(iso))?.id ?? null;
@@ -80,6 +80,16 @@ describe('opted-in leagues', () => {
         expect(fs.existsSync(path.join(ROOT, 'src/themes', `${season.theme}.json`))).toBe(true);
       });
       if (!season?.marks) continue;
+      it(`${league.slug}: its ${id} league logo is drawn and swapped in for both registry cuts`, () => {
+        const file = seasonalLogoFile(league.navSlug, id);
+        expect(file, `no _logo in ${league.navSlug}-${id}.json`).toBeTruthy();
+        expect(fs.existsSync(path.join(ROOT, 'public/assets', league.navSlug, season.marks!, file!))).toBe(true);
+        const css = buildSeasonalMarkCss(league.navSlug, [id], [], league.logo);
+        for (const src of [league.logo.light, league.logo.dark]) {
+          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${src}"]`);
+        }
+        expect(css).toContain(`url("/assets/${league.navSlug}/${season.marks}/${file}")`);
+      });
       it(`${league.slug}: every listed ${id} mark is a real franchise with a built file`, () => {
         const franchises = new Set(getLeagueTeams(league.navSlug).map((t) => t.franchiseId));
         for (const fid of seasonalMarkIds(league.navSlug, id)) {

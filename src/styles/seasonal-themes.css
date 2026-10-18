@@ -2,8 +2,8 @@
    Every rule keys on <html data-season="<id>">, which the layout stamps only
    while that season's window is open (src/config/seasonal-themes.mjs), so
    nothing here can show outside it. The palette itself is generated
-   (league-themes.generated.css); the franchise marks are swapped by
-   team-icon-dark-styles.ts. */
+   (league-themes.generated.css); the franchise marks and the league logo are
+   swapped by team-icon-dark-styles.ts. */
 
 /* Jolly Lodger (SIL Open Font License, Google Fonts), latin subset. */
 @font-face {
@@ -28,12 +28,6 @@ html[data-season='halloween'] :is(h1, h2, h3) {
    do nothing; hide it rather than offer a dead switch. */
 html[data-season='halloween'] .theme-toggle {
   display: none;
-}
-
-/* TheLeague's shield is green in both cuts; drained to bone white for the
-   season so the header carries only black, white and orange. */
-html[data-season='halloween'] .header-logo-img {
-  filter: grayscale(1) brightness(1.35);
 }
 
 /* Standings seed badges: gold and silver become the season's orange and bone.
