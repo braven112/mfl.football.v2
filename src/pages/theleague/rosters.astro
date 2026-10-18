@@ -4706,6 +4706,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
   import { createCdmWizard } from '../../utils/cdm-wizard';
   import { refreshConfigFromElement, replaceContents } from '../../utils/rosters/config-refresh';
+  import { revealActiveTeamCrest } from '../../utils/rosters/reveal-active-team';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
   // Same selection function the deadline job runs — the Cutdown Plan preview
@@ -9938,6 +9939,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // below showed someone else. It no-ops when the header is already on
       // this club, so the click path is unchanged.
       applyRosterHeader(currentTeam);
+      // Scroll the switcher to the viewed club's crest if it is off-screen
+      // (phones); a crest the owner just tapped is visible, so this no-ops.
+      revealActiveTeamCrest(rosterHeader);
       // The header's cap space is the table's Cap Space cell, recomputed with
       // every simulated cut / extension / tag, so the two can never disagree.
       // Only for the season the header is about — a historical season in the

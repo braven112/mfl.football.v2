@@ -1969,6 +1969,7 @@ const pageConfig = {
   <script>
     import { initPlayerModalTrigger, openPlayerFromQuery } from '../../../utils/player-modal-trigger';
     import { initDomRosterGroups } from '../../../utils/rosters/dom-roster-groups';
+    import { revealActiveTeamCrest } from '../../../utils/rosters/reveal-active-team';
     import {
       buildAflSheetFields,
       createAflSheetActionHandler,
@@ -2108,6 +2109,9 @@ const pageConfig = {
         : null;
       if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
       pageRoot.dataset.aflInit = '1';
+
+      // ── Team switcher: the viewed club's crest on screen (phones scroll it) ──
+      revealActiveTeamCrest(pageRoot);
 
       // ── Sorting + position-group bands (dom-roster-groups.ts) ──
       initDomRosterGroups({

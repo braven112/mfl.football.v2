@@ -152,12 +152,15 @@ describe('one conference at a time, with no client script', () => {
     expect(STYLE).toMatch(/\.rhdr-teams__conf:has\(> \.rhdr-teams__radio:checked\)\s*\{\s*flex:\s*1 0 auto;/);
   });
 
-  it('opens exactly one, and it is the viewer’s own', () => {
-    // `groups` arrives in the viewer's order (`conferenceOrder`), so the first
-    // group IS theirs — which is why the open index is a constant rather than
-    // a second resolution of the same fact.
+  it('opens exactly one: the viewed club’s, else the viewer’s own', () => {
+    // The open conference follows the club on screen, so its ringed crest is
+    // always visible — an AL owner viewing an NL club got their own AL row and
+    // no sign of the club they were on. The ORDER stays the viewer's
+    // (`conferenceOrder`), so the rails never reshuffle; with no active club in
+    // the row the first group — the viewer's — opens.
     expect(TEAM_ROW).toMatch(/checked=\{index === openIndex\}/);
-    expect(TEAM_ROW).toMatch(/const openIndex = 0;/);
+    expect(TEAM_ROW).toMatch(/team\.franchiseId === activeFranchiseId\)\),?\s*\);/);
+    expect(TEAM_ROW).toMatch(/const openIndex = activeIndex >= 0 \? activeIndex : 0;/);
   });
 
   it('keeps the radios reachable by keyboard', () => {
