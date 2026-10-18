@@ -30,8 +30,15 @@
  *
  * Sprite icons swap too: `_icons` maps a sprite icon id (the Premier League
  * page's icon) to a drawn file. A `<use>` cannot take `content:`, so the
- * referencing <svg> wears the drawing as its background and the `<use>` is
- * hidden; every sprite call site (menu, search, related-page cards) follows.
+ * referencing <svg> is masked by the drawing and filled with `currentColor`
+ * (so the mark takes the icon colour of wherever it sits, like the rest of the
+ * sprite) and the `<use>` is hidden; every sprite call site (menu, search,
+ * related-page cards) follows.
+ *
+ * The side nav draws the AFL's tier link with the tier logo <img> instead of a
+ * sprite icon. `_menuIcons` maps such an image path to a drawing that, inside a
+ * nav icon slot only, is tinted the nav's icon colour the same way; the same
+ * image elsewhere keeps the plain `_swaps` drawing.
  */
 import { SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
@@ -106,6 +113,17 @@ function seasonalIcons(navSlug: string, seasonId: string): Array<[string, string
   );
 }
 
+/** Image path shown in a nav icon slot → drawn file to tint there (`_menuIcons`). */
+function seasonalMenuIcons(navSlug: string, seasonId: string): Array<[string, string]> {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _menuIcons?: unknown } | undefined;
+  const icons = set?._menuIcons;
+  if (!icons || typeof icons !== 'object') return [];
+  return Object.entries(icons as Record<string, unknown>).filter(
+    (e): e is [string, string] =>
+      e[0].startsWith('/assets/') && typeof e[1] === 'string' && /^([\w-]+\/)*[\w.-]+\.(svg|png)$/.test(e[1]),
+  );
+}
+
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export function buildSeasonalMarkCss(
@@ -135,8 +153,17 @@ export function buildSeasonalMarkCss(
       const scope = `html[data-league="${navSlug}"][data-season="${id}"]`;
       const use = `use[href$="#icon-${icon}"]`;
       rules.push(
-        `${scope} svg:has(> ${use}) { background: url("/assets/${navSlug}/${marks}/${file}") center / contain no-repeat; }`,
+        `${scope} svg:has(> ${use}) { --seasonal-icon: url("/assets/${navSlug}/${marks}/${file}"); background-color: currentColor; -webkit-mask: var(--seasonal-icon) center / contain no-repeat; mask: var(--seasonal-icon) center / contain no-repeat; }`,
         `${scope} ${use} { visibility: hidden; }`,
+      );
+    }
+    for (const [from, file] of seasonalMenuIcons(navSlug, id)) {
+      const img = `html[data-league="${navSlug}"][data-season="${id}"] .nav-links__icon img[src="${esc(from)}"]`;
+      // object-position pushes the image itself out of its box; the box then
+      // shows the icon colour through the drawing's silhouette.
+      rules.push(
+        `${img} { content: normal; object-position: -9999px 0; --seasonal-icon: url("/assets/${navSlug}/${marks}/${file}"); background-color: var(--color-primary, #1c497c); -webkit-mask: var(--seasonal-icon) center / contain no-repeat; mask: var(--seasonal-icon) center / contain no-repeat; }`,
+        `html[data-league="${navSlug}"][data-season="${id}"] .nav-links__link--active .nav-links__icon img[src="${esc(from)}"] { background-color: #ffffff; }`,
       );
     }
     const drawn = seasonalMarkIds(navSlug, id);

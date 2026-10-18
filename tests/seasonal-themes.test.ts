@@ -108,8 +108,21 @@ describe('opted-in leagues', () => {
           expect(sprite, `no icon-${icon} in the sprite`).toContain(`id="icon-${icon}"`);
           expect(fs.existsSync(path.join(ROOT, 'public/assets', league.navSlug, season.marks!, file)), `${file} not drawn`).toBe(true);
           const scope = `html[data-league="${league.navSlug}"][data-season="${id}"]`;
-          expect(css).toContain(`${scope} svg:has(> use[href$="#icon-${icon}"]) { background: url("/assets/${league.navSlug}/${season.marks}/${file}")`);
+          expect(css).toContain(`${scope} svg:has(> use[href$="#icon-${icon}"]) { --seasonal-icon: url("/assets/${league.navSlug}/${season.marks}/${file}"); background-color: currentColor;`);
           expect(css).toContain(`${scope} use[href$="#icon-${icon}"] { visibility: hidden; }`);
+        }
+      });
+      it(`${league.slug}: every ${id} side-nav icon is tinted from a real asset and drawn file`, () => {
+        const set = JSON.parse(
+          fs.readFileSync(path.join(ROOT, 'src/data/seasonal-marks', `${league.navSlug}-${id}.json`), 'utf8'),
+        ) as { _menuIcons?: Record<string, string> };
+        const css = buildSeasonalMarkCss(league.navSlug, [id], []);
+        for (const [from, file] of Object.entries(set._menuIcons ?? {})) {
+          expect(fs.existsSync(path.join(ROOT, 'public', from)), `${from} does not exist`).toBe(true);
+          expect(fs.existsSync(path.join(ROOT, 'public/assets', league.navSlug, season.marks!, file)), `${file} not drawn`).toBe(true);
+          expect(css).toContain(
+            `html[data-league="${league.navSlug}"][data-season="${id}"] .nav-links__icon img[src="${from}"] { content: normal; object-position: -9999px 0; --seasonal-icon: url("/assets/${league.navSlug}/${season.marks}/${file}")`,
+          );
         }
       });
       it(`${league.slug}: every ${id} art swap replaces a real asset with a drawn file`, () => {
@@ -142,8 +155,10 @@ describe('opted-in leagues', () => {
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       for (const selector of block.split('{')[0]!.split(',')) {
-        // an <img> by its src, or a sprite icon's <svg> by its <use>
-        expect(selector).toMatch(/html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|svg:has\(> use\[href\$=)/);
+        // an <img> by its src, a sprite icon's <svg> by its <use>, or a nav icon slot's <img>
+        expect(selector).toMatch(
+          /html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|svg:has\(> use\[href\$=|(\.nav-links__link--active )?\.nav-links__icon img\[src=)/,
+        );
       }
     }
   });
