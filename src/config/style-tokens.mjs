@@ -35,10 +35,21 @@ export const STYLE_TOKEN_GROUPS = [
     tokens: [
       { name: '--style-section-rule', use: 'The rule beside a section title (Editorial: the 2px primary stripe). A border-left value.' },
       { name: '--style-section-rule-gap', use: 'padding-left between that rule and the title.' },
+      { name: '--style-section-mark', use: 'The accent drawn UNDER a section title (Editorial: none). A background value.' },
+      { name: '--style-section-mark-pad', use: 'padding-bottom that makes room for that mark (Editorial: 0).' },
       { name: '--style-section-font', use: 'font-family of a section title.' },
       { name: '--style-section-size', use: 'font-size of a section title.' },
       { name: '--style-section-style', use: 'font-style of a section title.' },
       { name: '--style-section-tracking', use: 'letter-spacing of a section title.' },
+    ],
+  },
+  {
+    label: 'Cards',
+    tokens: [
+      { name: '--style-card-border', use: 'A card or panel’s edge (Editorial: its 1px neutral border). A border value.' },
+      { name: '--style-card-border-color', use: 'A card’s border colour where a dark-mode rule restates only the colour (Editorial: null). A colour.' },
+      { name: '--style-card-ring', use: 'The colour of a dark-mode 0 0 0 1px ring that stands in for a card’s border (Editorial: null). A colour.' },
+      { name: '--style-card-shadow', use: 'The shadow of a card whose border was its only edge (Editorial: none). A box-shadow value.' },
     ],
   },
 ];

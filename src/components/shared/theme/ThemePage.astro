@@ -276,6 +276,8 @@ const fonts = [
     margin: 0;
     padding-left: var(--style-section-rule-gap, var(--spacing-sm));
     border-left: var(--style-section-rule, 2px solid var(--league-accent));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     font-size: var(--style-section-size, var(--font-size-xs));
@@ -289,7 +291,7 @@ const fonts = [
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
     background: var(--card-bg);
-    border: 1px solid var(--card-border);
+    border: var(--style-card-border, 1px solid var(--card-border));
     border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }

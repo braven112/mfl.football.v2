@@ -745,7 +745,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   :global(html.dark) .afl-action-modal__content {
     box-shadow:
       0 25px 50px -12px rgba(0, 0, 0, 0.6),
-      0 0 0 1px var(--content-border, #2e4560);
+      0 0 0 1px var(--style-card-ring, var(--content-border, #2e4560));
   }
 
   @keyframes aam-pop {
@@ -906,6 +906,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     text-transform: uppercase;
     color: var(--color-gray-500, #6b7280);
     border-left: var(--style-section-rule, 3px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     line-height: 1.4;

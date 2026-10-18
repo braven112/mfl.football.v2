@@ -143,7 +143,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
   }
 
   :global(html.dark) .afl-keepers__notice {
-    box-shadow: 0 0 0 1px var(--content-border, #555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555));
   }
 
   .afl-keepers__notice h2 {
@@ -200,7 +200,8 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-md, 16px);
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--content-border, #e5e7eb);
+    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     text-decoration: none;
     color: var(--page-text, #1a1a1a);
@@ -213,11 +214,11 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
   }
 
   :global(html.dark) .keeper-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555));
   }
 
   :global(html.dark) .keeper-card:hover {
-    box-shadow: 0 0 0 1px var(--content-border, #555), 0 4px 12px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), 0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
   .keeper-card__icon-wrap {

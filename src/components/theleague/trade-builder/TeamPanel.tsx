@@ -147,7 +147,8 @@ export default function TeamPanel({
       <style>{`
         .team-panel {
           background: var(--content-bg, #fff);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-lg, 1rem);
           padding: 1rem;
           display: flex;
@@ -217,6 +218,8 @@ export default function TeamPanel({
           margin: 0 0 0.5rem;
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           font-family: var(--style-section-font, inherit);
           font-style: var(--style-section-style, inherit);
         }

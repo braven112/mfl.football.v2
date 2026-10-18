@@ -120,7 +120,8 @@ export default function PlayerCard({
       <style>{`
         .player-card {
           background: var(--content-bg, #fff);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem;
           display: flex;

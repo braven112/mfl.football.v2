@@ -575,7 +575,7 @@ const copyIcons = `
   }
 
   :global(html.dark) .league-gallery--afl .gallery-header {
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   .league-gallery--afl .gallery-header p {
@@ -635,11 +635,13 @@ const copyIcons = `
 
   /* Team-card border fallback differs between the two leagues. */
   .league-gallery--theleague .team-card {
-    border: 1px solid var(--content-border-color, #dddcdc);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #dddcdc));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   .league-gallery--afl .team-card {
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   .team-card__header {
@@ -667,6 +669,8 @@ const copyIcons = `
     letter-spacing: var(--style-section-tracking, 0.06em);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--league-accent, var(--color-primary, #1c497c)));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     color: var(--color-gray-700, #374151);
@@ -766,7 +770,8 @@ const copyIcons = `
     gap: 0.75rem;
     padding: 1rem;
     border-radius: 0.75rem;
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
     background: var(--content-bg, #fff);
   }
 
@@ -774,7 +779,7 @@ const copyIcons = `
      border and use the single-ring shadow so there's no double edge. */
   :global(html.dark) .master-card {
     border-color: transparent;
-    box-shadow: 0 0 0 1px var(--content-border, #555555);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555));
   }
 
   .master-card__info {
@@ -855,7 +860,8 @@ const copyIcons = `
   }
 
   .asset-card {
-    border: 1px solid var(--content-border-color, #e2e2e2);
+    border: var(--style-card-border, 1px solid var(--content-border-color, #e2e2e2));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.75rem;
     padding: 0.75rem;
     display: flex;

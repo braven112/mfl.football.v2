@@ -339,6 +339,8 @@
   color: var(--page-text);
   padding-left: var(--style-section-rule-gap, 0.6rem);
   border-left: var(--style-section-rule, 3px solid var(--league-accent));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   line-height: 1;
 }
 .st-window__label { font-size: 0.78rem; color: var(--content-text-muted); }
@@ -374,7 +376,8 @@
   padding: 0.75rem 0.85rem 0.8rem;
   border-radius: var(--radius-md);
   background: var(--card-surface);
-  border: 1px solid var(--card-border);
+  border: var(--style-card-border, 1px solid var(--card-border));
+  box-shadow: var(--style-card-shadow, none);
   min-height: 9rem;
 }
 .st-box__rank {

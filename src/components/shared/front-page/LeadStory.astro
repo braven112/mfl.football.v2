@@ -41,7 +41,8 @@ const storyTeams = story.franchiseIds.map((id) => teams[id]).filter(Boolean);
 <style>
   .fp-lead {
     background: var(--card-bg);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg);
     overflow: hidden;
     min-width: 0;

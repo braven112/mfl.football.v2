@@ -415,7 +415,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
      panel reads as a raised card, matching rosters.astro's .roster-table-card. */
   :global(html.dark) .draft-round {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
   }
 
@@ -538,7 +538,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
   :global(html.dark) .draft-grid-legend {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
   }
 

@@ -805,6 +805,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 1rem 0;
@@ -854,7 +856,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .team-rank-card {
     background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.875rem 1rem;
     display: flex;
@@ -1036,6 +1038,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 1rem 0;
@@ -1057,6 +1061,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 0.75rem 0;
@@ -1117,7 +1123,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     justify-content: space-between;
     align-items: center;
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--shame-accent, var(--color-error, #dc2626));
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.5rem 0.75rem;

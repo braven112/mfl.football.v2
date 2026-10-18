@@ -14,8 +14,11 @@
  *  - Editorial leaves every token null, which is what keeps TheLeague and the
  *    AFL pixel-identical to the site before styles existed;
  *  - the league layout sets data-site-theme on <html>;
+ *  - a section title's under-mark goes through --style-section-mark;
  *  - a section title's stripe goes through --style-section-rule, so a style
  *    can drop it (Primetime has no editorial borders);
+ *  - a card's neutral 1px outline goes through --style-card-border, so a
+ *    style can drop it (Primetime lifts cards with --style-card-shadow);
  *  - per-style branches (`=== 'primetime'`, `[data-site-theme=`) only shrink:
  *    a style should arrive through tokens, and a page-specific layout within
  *    a style is the exception, pinned in tests/fixtures/site-style-branch-baseline.json.
@@ -106,7 +109,7 @@ describe('site-style library', () => {
 });
 
 /** A selector that names a section title or header. */
-const TITLE_SELECTOR = /title|header|heading|kicker|eyebrow|subheading|section h2/i;
+const TITLE_SELECTOR = /title|header|heading|kicker|eyebrow|subheading|section h2|__h[1-6]\b/i;
 /** Title-shaped selectors whose left border is not the editorial stripe. */
 const STRIPE_ALLOW = [
   'thead', // table header rows: a column divider, not a stripe
@@ -134,6 +137,56 @@ describe('section-title stripes go through the style', () => {
     }
     // Wrap it: border-left: var(--style-section-rule, <your stripe>) and
     // padding-left: var(--style-section-rule-gap, <your gap>).
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('section titles carry the style\'s under-mark', () => {
+  it('every block wearing --style-section-rule also wears --style-section-mark', () => {
+    const offenders: string[] = [];
+    for (const f of SRC_FILES.filter((x) => /\.(astro|css|tsx)$/.test(x))) {
+      const s = fs.readFileSync(f, 'utf8');
+      for (const m of s.matchAll(/^[ \t]*border-left: var\(--style-section-rule,/gm)) {
+        const open = s.lastIndexOf('{', m.index);
+        const body = s.slice(open, s.indexOf('}', m.index));
+        // A wrapper that holds a title AND a blurb puts the mark on its
+        // heading instead, and says so with this comment.
+        if (/--style-section-mark-pad/.test(body) && /--style-section-mark,/.test(body)) continue;
+        if (/section mark: on the/.test(body)) continue;
+        offenders.push(`${rel(f)} :: ${s.slice(s.lastIndexOf('}', open) + 1, open).trim().slice(-60)}`);
+      }
+    }
+    // Add: background: var(--style-section-mark, none);
+    //      padding-bottom: var(--style-section-mark-pad, <your padding-bottom>);
+    expect(offenders).toEqual([]);
+  });
+});
+
+/** Selectors that name a card-like surface, plus the front page's sections,
+ *  which are cards in all but name. Kept in step with the sweep that
+ *  introduced the card tokens (Phase 2, docs/plans/site-styles.md). */
+const CARD_SELECTOR = /card|panel|tile|box\b|widget|\.fp-(heads|lead|wire|strip|band--guest)$/i;
+/** A STATE of a card (hover, selected, yours…) or an overlay is not its resting edge. */
+const CARD_SKIP = /:hover|--active|--selected|is-|:focus|\.active|\.selected|--yours|--pinned|--mine|--you|--highlight|--current|--live|--warn|--error|--danger|--success|\[aria-|\[data-site-theme|:checked|--open|::|html\.dark|sheet|modal|dialog|popover|drawer|menu|tooltip|dropdown/i;
+/** The neutral greys a card outline is drawn in. */
+const NEUTRAL_EDGE = /(--content-border|--card-border\b(?!-strength)|--color-gray-(100|200|300)|#e2e8f0|#e5e7eb|#e5e5e5|#e2e2e2|#dddddd|#ddd\b|--sf-border|--content-border-color|--primary-content-border-color|--border-color|--color-border)/;
+
+describe('card outlines go through the style', () => {
+  it('no card block draws a raw neutral 1px outline', () => {
+    const offenders: string[] = [];
+    for (const f of SRC_FILES.filter((x) => /\.(astro|css|tsx)$/.test(x))) {
+      const s = fs.readFileSync(f, 'utf8');
+      for (const m of s.matchAll(/^[ \t]*border: *(1px solid [^;\n]+);/gm)) {
+        if (!NEUTRAL_EDGE.test(m[1]!) || /transparent/.test(m[1]!)) continue;
+        const open = s.lastIndexOf('{', m.index);
+        const start = Math.max(s.lastIndexOf('}', open), s.lastIndexOf('*/', open) + 1, s.lastIndexOf('{', open - 1) + 1);
+        const sel = s.slice(start + 1, open).trim().replace(/\s+/g, ' ');
+        if (!CARD_SELECTOR.test(sel) || CARD_SKIP.test(sel) || sel.startsWith('@')) continue;
+        offenders.push(`${rel(f)} :: ${sel.slice(-80)}`);
+      }
+    }
+    // Wrap it: border: var(--style-card-border, <your border>), and, if the
+    // card has no shadow of its own, box-shadow: var(--style-card-shadow, none).
     expect(offenders).toEqual([]);
   });
 });

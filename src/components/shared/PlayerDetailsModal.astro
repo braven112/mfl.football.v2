@@ -486,7 +486,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   :global(html.dark) .player-details-modal__content {
     box-shadow:
       var(--shadow-xl),
-      0 0 0 1px var(--content-border, #3a3a3a);
+      0 0 0 1px var(--style-card-ring, var(--content-border, #3a3a3a));
   }
 
   @keyframes pdm-enter {
@@ -882,6 +882,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     color: var(--content-text-muted, #6b7280);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
   }
@@ -1508,7 +1510,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
   }
   .pdm-salary :global(.pdm-saltile) {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.625rem 0.5rem;
     text-align: center;

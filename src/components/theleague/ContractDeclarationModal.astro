@@ -338,7 +338,7 @@ import '../../styles/player-modal-band.css';
   :global(html.dark) .cdm-content {
     box-shadow:
       var(--shadow-xl),
-      0 0 0 1px var(--content-border, #5f6885);
+      0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885));
   }
 
   @keyframes cdm-enter {
@@ -758,6 +758,8 @@ import '../../styles/player-modal-band.css';
     color: var(--color-gray-400, #9ca3af);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
   }
@@ -1195,7 +1197,8 @@ import '../../styles/player-modal-band.css';
 
   .cdm-action-options :global(.cdm-roster-move-card) {
     background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.625rem 0.75rem;
     margin-bottom: 0.75rem;

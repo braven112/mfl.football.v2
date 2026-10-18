@@ -285,11 +285,12 @@ const isMultiGame = cards.length > 1;
   .lineup-faceoff {
     overflow: hidden;
     border-radius: var(--radius-lg, 0.75rem);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
   }
 
   :global(html.dark) .lineup-faceoff {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--style-card-border-color, rgba(255, 255, 255, 0.12));
   }
 
   .lineup-faceoff__band {

@@ -213,7 +213,8 @@ if (session) {
 
   .bb-draft-setup__card {
     background: var(--card-bg, var(--content-bg, #ffffff));
-    border: 1px solid var(--card-border, #dddddd);
+    border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg, 10px);
     padding: 1.5rem;
     text-align: left;

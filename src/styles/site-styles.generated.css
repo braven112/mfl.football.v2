@@ -4,7 +4,7 @@
 /* Editorial (editorial) — The site's original look: data-dense sports editorial. Small uppercase section titles beside a 2px primary stripe, upright headings, outlined cards. Every token is null because Editorial is the components' own values (docs/claude/components.md, Editorial Design Standard). */
 /* Every token is the components’ own value. */
 
-/* Primetime (primetime) — The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture (no stripe beside a title). */
+/* Primetime (primetime) — The broadcast look, first worn by Archie's: the condensed display face in italic caps for headings and section titles, team-coloured paint, and no editorial furniture: no stripe beside a title (a short slanted accent sits under it instead), no outline on a card (a soft shadow lifts it off the page instead). */
 html[data-site-theme="primetime"] {
   --style-heading-font: var(--font-display);
   --style-heading-style: italic;
@@ -12,8 +12,17 @@ html[data-site-theme="primetime"] {
   --style-heading-tracking: 0.01em;
   --style-section-rule: none;
   --style-section-rule-gap: 0;
+  --style-section-mark: linear-gradient(110deg, transparent 0.1rem, var(--league-accent, var(--color-primary)) 0.1rem, var(--league-accent, var(--color-primary)) calc(100% - 0.1rem), transparent calc(100% - 0.1rem)) left bottom / 2.75rem 0.25rem no-repeat;
+  --style-section-mark-pad: 0.5rem;
   --style-section-font: var(--font-display);
   --style-section-size: var(--font-size-base);
   --style-section-style: italic;
   --style-section-tracking: 0.02em;
+  --style-card-border: 1px solid transparent;
+  --style-card-border-color: transparent;
+  --style-card-ring: transparent;
+  --style-card-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 14px rgb(15 23 42 / 0.08);
+}
+html.dark[data-site-theme="primetime"] {
+  --style-card-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 6px 18px rgb(0 0 0 / 0.35);
 }

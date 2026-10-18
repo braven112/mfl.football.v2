@@ -846,6 +846,8 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   .mock-lobby__section-header {
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     margin-bottom: 1rem;
   }
 
@@ -874,7 +876,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   html.dark .mock-lobby__auth-wall {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 
@@ -963,13 +965,15 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   html.dark .mock-lobby__board {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 
   .mock-lobby__board-head {
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
   }
 
   .mock-lobby__board-title {
@@ -1207,14 +1211,14 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
      card reads as raised. The left-rail status accent border is untouched. */
   html.dark .mock-lobby__session-card {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 
   html.dark .mock-lobby__session-card:hover,
   html.dark .mock-lobby__session-card:focus-visible {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 
@@ -1561,7 +1565,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   html.dark .mock-lobby__gate {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
   }
 

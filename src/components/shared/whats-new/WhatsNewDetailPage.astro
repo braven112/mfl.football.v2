@@ -354,7 +354,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   :global(html.dark) .wn-detail__author-card,
   :global(html.dark) .wn-detail__release-card,
   :global(html.dark) .wn-detail__nav-card {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
 
   /* ── Author card ── */
@@ -398,7 +398,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   /* ── Article card ── */
   .wn-detail__article {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg, 1rem);
     overflow: hidden;
   }
@@ -608,6 +609,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     color: var(--color-gray-900, #111827);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     margin: 0 0 var(--spacing-md, 1rem);

@@ -1081,7 +1081,8 @@ const pausedMetaLine = pausedState.paused
   .cdr-cards { display: grid; gap: 1rem; }
   .cdr-card {
     background: var(--content-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
+    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: 12px; padding: 1rem 1.1rem;
   }
   /* Negative-state pattern: subtle left border, never a red-flooded card. */

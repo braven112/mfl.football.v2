@@ -207,6 +207,8 @@ export default function TradeAnalysisSummary({
           margin: 0 0 0.75rem;
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           font-family: var(--style-section-font, inherit);
           font-style: var(--style-section-style, inherit);
         }
@@ -219,7 +221,8 @@ export default function TradeAnalysisSummary({
           padding: 0.75rem;
           background: var(--color-gray-50, #f9fafb);
           border-radius: var(--radius-md, 0.5rem);
-          border: 1px solid var(--content-border, #e2e8f0);
+          border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+          box-shadow: var(--style-card-shadow, none);
         }
         .trade-analysis__card-title {
           font-size: var(--style-section-size, var(--font-size-xs));
@@ -230,6 +233,8 @@ export default function TradeAnalysisSummary({
           margin: 0 0 0.5rem;
           padding-left: var(--style-section-rule-gap, 0.625rem);
           border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+          background: var(--style-section-mark, none);
+          padding-bottom: var(--style-section-mark-pad, 0);
           font-family: var(--style-section-font, inherit);
           font-style: var(--style-section-style, inherit);
         }

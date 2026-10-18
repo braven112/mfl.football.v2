@@ -56,7 +56,8 @@ const { stories, teams, leagueMark, times } = Astro.props;
 <style>
   .fp-heads {
     background: var(--card-bg);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg);
     padding: 1rem 1rem 0.4rem;
     min-width: 0;

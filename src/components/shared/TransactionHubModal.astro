@@ -385,7 +385,7 @@ const tradeBuilderHref = resolveLeaguePath(
      box — panel stays pixel-identical in light). Paired with --shadow-lg it
      lifts the panel off the dark page as a raised surface. */
   :global(html.dark) .thm-content {
-    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);
   }
 
   @keyframes thm-enter {
@@ -867,7 +867,8 @@ const tradeBuilderHref = resolveLeaguePath(
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 0.5rem);
     background: var(--card-bg, #fff);
     cursor: pointer;
@@ -1078,6 +1079,8 @@ const tradeBuilderHref = resolveLeaguePath(
     letter-spacing: var(--style-section-tracking, 0.06em);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     color: var(--color-gray-700, #374151);

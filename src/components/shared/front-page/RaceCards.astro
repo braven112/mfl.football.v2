@@ -1,9 +1,10 @@
 ---
 /**
  * "The race": the top three in the standings, in MFL's own order (never
- * re-sorted), as podium cards in each franchise's colours with the team's
- * best scorer standing on it — F1's standings podium, in this league's art.
- * The leader's card is raised; on a phone it comes first.
+ * re-sorted), as podium cards in each franchise's colours — F1's standings
+ * podium, in this league's art. The race is between TEAMS, so the crest is
+ * the card's art; the team's best scorer is a small face beside the record,
+ * never the picture. The leader's card is raised; on a phone it comes first.
  */
 import type { RaceEntry } from './types';
 
@@ -28,9 +29,6 @@ const order = (place: number) => (place === 1 ? 2 : place === 2 ? 1 : 3);
           style={`background:${e.team.gradient};--fp-order:${order(e.place)}`}
         >
           <a class="fp-race__link" href={e.team.href}>
-            {e.star && (
-              <img class="fp-race__star" src={e.star.headshot} alt={e.star.name} loading="lazy" decoding="async" />
-            )}
             {e.team.crest && (
               <img
                 class:list={['fp-race__crest', { 'fp-race__crest--round': e.team.round }]}
@@ -44,7 +42,13 @@ const order = (place: number) => (place === 1 ? 2 : place === 2 ? 1 : 3);
             <span class="fp-race__text">
               <span class="fp-race__place">{e.place}</span>
               <span class="fp-race__name">{e.team.name}</span>
-              <span class="fp-race__line">{e.line}{e.star ? ` · ${e.star.name}` : ''}</span>
+              <span class="fp-race__line">{e.line}</span>
+              {e.star && (
+                <span class="fp-race__star">
+                  <img class="fp-race__star-face" src={e.star.headshot} alt="" width="28" height="28" loading="lazy" decoding="async" />
+                  {e.star.name}
+                </span>
+              )}
             </span>
           </a>
         </li>
@@ -82,13 +86,15 @@ const order = (place: number) => (place === 1 ? 2 : place === 2 ? 1 : 3);
   }
   .fp-race__link { position: absolute; inset: 0; color: inherit; text-decoration: none; }
   .fp-race__link:hover { color: inherit; text-decoration: none; }
-  .fp-race__star { position: absolute; right: 0; bottom: 0; height: 88%; width: auto; max-width: 70%; object-fit: contain; object-position: bottom right; }
-  .fp-race__crest { position: absolute; top: 0.75rem; right: 0.75rem; width: 3.25rem; height: 3.25rem; object-fit: contain; z-index: 2; }
+  /* The crest IS the card's art: as tall as the card allows, on the right. */
+  .fp-race__crest { position: absolute; top: 50%; right: 0.9rem; transform: translateY(-50%); height: 76%; width: auto; max-width: 52%; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 6px 14px rgb(0 0 0 / 0.35)); }
   .fp-race__crest--round { border-radius: var(--radius-full); object-fit: cover; }
-  .fp-race__text { position: absolute; left: 0.9rem; bottom: 0.9rem; right: 40%; display: grid; gap: 0.15rem; z-index: 1; }
+  .fp-race__text { position: absolute; left: 0.9rem; bottom: 0.9rem; right: 52%; display: grid; gap: 0.15rem; z-index: 1; }
   .fp-race__place { font-family: var(--font-display); font-size: var(--font-size-3xl); line-height: 0.85; font-style: italic; }
   .fp-race__name { font-family: var(--font-display); font-size: var(--font-size-lg); line-height: 1; text-transform: uppercase; }
   .fp-race__line { font-size: var(--font-size-xs); opacity: 0.9; }
+  .fp-race__star { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.2rem; font-size: var(--font-size-2xs); opacity: 0.8; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fp-race__star-face { flex: none; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-full); object-fit: cover; object-position: top; background: rgb(255 255 255 / 0.15); }
   .fp-race__more { display: inline-block; margin-top: 0.75rem; }
 
   @container (max-width: 760px) {

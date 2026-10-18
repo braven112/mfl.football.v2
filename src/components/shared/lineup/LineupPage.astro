@@ -2479,6 +2479,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     letter-spacing: var(--style-section-tracking, 0.06em);
     padding-left: var(--style-section-rule-gap, 0.625rem);
     border-left: var(--style-section-rule, 2px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-family: var(--style-section-font, inherit);
     font-style: var(--style-section-style, inherit);
     color: var(--color-gray-700, #374151);
@@ -2502,7 +2504,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     align-items: center;
     width: 100%;
     background: var(--lineup-slot-bg);
-    border: 1px solid var(--lineup-slot-border);
+    border: var(--style-card-border, 1px solid var(--lineup-slot-border));
     border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
     padding: 0.625rem;
@@ -2896,7 +2898,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   /* Dark mode: raised-card ring (light stays borderless) */
   html.dark .lineup-cdm__sheet {
     box-shadow:
-      0 0 0 1px var(--content-border, #555555),
+      0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-xl, 0 20px 25px rgba(0,0,0,.1));
   }
 

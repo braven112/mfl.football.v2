@@ -181,10 +181,13 @@ const {
   .gauntlet__section { display: flex; flex-direction: column; gap: 1rem; }
   .gauntlet__stitle {
     border-left: var(--style-section-rule, 3px solid var(--color-primary, #1c497c));
+    /* section mark: on the h2 below, so it sits under the title, not the blurb */
     padding-left: var(--style-section-rule-gap, 0.75rem);
   }
   .gauntlet__stitle h2 {
     margin: 0;
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     font-size: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;

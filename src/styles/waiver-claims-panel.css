@@ -19,7 +19,8 @@
   .wcp {
   margin: 0 0 1rem;
   padding: 0.9rem 1.1rem 1rem;
-  border: 1px solid var(--card-border, #e5e7eb);
+  border: var(--style-card-border, 1px solid var(--card-border, #e5e7eb));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-md, 0.5rem);
   background: var(--content-bg, #fff);
 }

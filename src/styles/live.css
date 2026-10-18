@@ -372,7 +372,8 @@ html.dark .lv-matchup {
   gap: 0.3rem;
   width: 100%;
   padding: 0.7rem 0.75rem;
-  border: 1px solid var(--card-border);
+  border: var(--style-card-border, 1px solid var(--card-border));
+  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-md);
   background: var(--card-surface);
   color: var(--page-text);

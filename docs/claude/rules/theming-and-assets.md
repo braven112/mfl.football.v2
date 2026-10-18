@@ -92,6 +92,31 @@ style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
   on a title/header selector goes through `--style-section-rule` (and its
   padding through `--style-section-rule-gap`). A state mark (pinned, yours,
   selected) is not a stripe and keeps its border in every style.
+- **A card's dark-mode edge is the style's too.** A dark rule that restates
+  only the colour writes `border-color: var(--style-card-border-color, <its
+  colour>)`, and a `0 0 0 1px var(--content-border…)` ring standing in for a
+  border writes its colour through `--style-card-ring`. Both are transparent
+  in Primetime; missing either brings the outline back in dark mode only.
+- **A page's Primetime layout lives in its own sheet.** `rosters-primetime.css`,
+  `live-primetime.css` and `free-agents-primetime.css` key every rule off the
+  style attribute and are counted in `site-style-branch-baseline.json`; reach
+  for a token first, and use a sheet only for a change in emphasis (a bigger
+  crest, a dropped row stripe) that no token describes.
+- **A section title's under-mark rides with its stripe.** Every block that
+  writes `--style-section-rule` also writes
+  `background: var(--style-section-mark, none)` and
+  `padding-bottom: var(--style-section-mark-pad, <its own>)`. Primetime draws
+  a short slanted accent there instead of the stripe (the owner ruled out ANY
+  left-side mark on a heading, Oct 2026). A wrapper holding a title and a
+  blurb puts the mark on its heading and says `section mark: on the …`.
+- **A card's resting outline is the style's to draw too.** A card, panel or
+  tile whose edge is a neutral 1px border writes
+  `border: var(--style-card-border, <its border>)` and, when it casts no
+  shadow of its own, `box-shadow: var(--style-card-shadow, none)`. Primetime
+  makes the border transparent (the 1px box stays, so nothing shifts) and
+  lifts the card with a soft shadow, a darker one in dark mode. A card that
+  already has a shadow keeps it; hover/selected/yours states and overlays
+  (sheets, modals, menus) are not resting edges and are left alone.
 - **Branching on a style is the exception.** `=== 'primetime'` or a
   `[data-site-theme=…]` selector is for a page-specific LAYOUT within a style
   (the Primetime standings board, the Primetime free-agents page, the
@@ -99,7 +124,7 @@ style: a colour theme carries no fonts. Plan: `docs/plans/site-styles.md`.
   branches is a shrink-only baseline.
 - Guard: `tests/site-styles.test.ts` — generated CSS fresh, every style names
   every token, no overlap with the colour-theme contract, Editorial all null,
-  the layout sets the attribute, no raw title stripe, the branch baseline
+  the layout sets the attribute, no raw title stripe, no raw neutral card outline, the branch baseline
   (`tests/fixtures/site-style-branch-baseline.json`), and Storybook's Style
   toolbar lists every style.
 

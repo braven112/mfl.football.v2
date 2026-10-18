@@ -73,11 +73,12 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
   .fp-strip {
     background: var(--content-bg);
     color: var(--page-text);
-    border: 1px solid var(--content-border);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
-  .fp-strip--bar { border-radius: 0; border-width: 0 0 1px; }
+  .fp-strip--bar { border-radius: 0; border: 0; border-bottom: 1px solid var(--content-border); box-shadow: none; }
   .fp-strip--bar .fp-strip__inner { max-width: 1180px; margin: 0 auto; }
   .fp-strip__inner {
     display: flex;

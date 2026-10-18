@@ -173,7 +173,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
     box-shadow: var(--shadow-md);
   }
 
-  :global(html.dark) .fo-proj { box-shadow: 0 0 0 1px var(--content-border, #555555); }
+  :global(html.dark) .fo-proj { box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555555)); }
 
   .fo-proj__header {
     display: flex;
