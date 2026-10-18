@@ -18,9 +18,9 @@ const ROOT = path.resolve(__dirname, '..');
 const at = (iso: string) => activeSeasonalTheme(['halloween'], new Date(iso))?.id ?? null;
 
 describe('Halloween window', () => {
-  it('opens ten days before Halloween, at midnight Pacific', () => {
-    expect(at('2026-10-21T06:59:00Z')).toBeNull(); // Oct 20, 11:59pm PDT
-    expect(at('2026-10-21T07:00:00Z')).toBe('halloween');
+  it('opens the Tuesday that starts the first of its two NFL weeks (Oct 20 in 2026)', () => {
+    expect(at('2026-10-20T06:59:00Z')).toBeNull(); // Oct 19, 11:59pm PDT
+    expect(at('2026-10-20T07:00:00Z')).toBe('halloween');
   });
 
   it('runs through the Monday night game of Halloween week (Nov 2 in 2026)', () => {
@@ -28,11 +28,17 @@ describe('Halloween window', () => {
     expect(at('2026-11-03T08:00:00Z')).toBeNull();
   });
 
-  it('ends on the first Monday on or after Oct 31 every year', () => {
-    const end = (y: number) => SEASONAL_THEMES.halloween.window(y).end;
-    expect(end(2027)).toEqual({ y: 2027, m: 11, d: 1 });
-    expect(end(2028)).toEqual({ y: 2028, m: 11, d: 6 });
-    expect(end(2033)).toEqual({ y: 2033, m: 10, d: 31 }); // Halloween on a Monday
+  it('is always two NFL weeks, Halloween week last when it falls Thursday to Monday', () => {
+    const w = (y: number) => SEASONAL_THEMES.halloween.window(y);
+    expect(w(2027)).toEqual({ start: { y: 2027, m: 10, d: 19 }, end: { y: 2027, m: 11, d: 1 } }); // Sunday
+    expect(w(2030)).toEqual({ start: { y: 2030, m: 10, d: 22 }, end: { y: 2030, m: 11, d: 4 } }); // Thursday
+    expect(w(2033)).toEqual({ start: { y: 2033, m: 10, d: 18 }, end: { y: 2033, m: 10, d: 31 } }); // Monday
+  });
+
+  it('a Tuesday or Wednesday Halloween takes the two weeks just played, through Halloween itself', () => {
+    const w = (y: number) => SEASONAL_THEMES.halloween.window(y);
+    expect(w(2028)).toEqual({ start: { y: 2028, m: 10, d: 17 }, end: { y: 2028, m: 10, d: 31 } }); // Tuesday
+    expect(w(2029)).toEqual({ start: { y: 2029, m: 10, d: 16 }, end: { y: 2029, m: 10, d: 31 } }); // Wednesday
   });
 
   it('a preview opens the season early, only for a league that wears it', () => {
