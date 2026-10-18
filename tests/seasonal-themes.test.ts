@@ -11,7 +11,8 @@ import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
 import { SEASONAL_THEMES, activeSeasonalTheme, resolveSeasonPreview } from '../src/config/seasonal-themes.mjs';
 import { getLeagueTeams } from '../src/utils/league-config';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
-import { buildSeasonalMarkCss, seasonalLogoFile, seasonalMarkIds } from '../src/utils/seasonal-mark-css';
+import { buildSeasonalMarkCss, seasonalLogoFile, seasonalMarkIds, seasonalSwapPath } from '../src/utils/seasonal-mark-css';
+import { stampBadgeYear } from '../src/utils/afl-badge';
 
 const ROOT = path.resolve(__dirname, '..');
 const at = (iso: string) => activeSeasonalTheme(['halloween'], new Date(iso))?.id ?? null;
@@ -69,7 +70,8 @@ describe('opted-in leagues', () => {
 
   it('a franchise with no drawn mark keeps its crest (no rule is emitted for it)', () => {
     const css = buildSeasonalMarkCss('theleague', ['halloween'], [{ franchiseId: '0099', icon: '/x/undrawn.png' }]);
-    expect(css).toBe('');
+    expect(css).not.toContain('undrawn');
+    expect(css).not.toContain('0099');
   });
 
   for (const league of optedIn) {
@@ -89,6 +91,19 @@ describe('opted-in leagues', () => {
           expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${src}"]`);
         }
         expect(css).toContain(`url("/assets/${league.navSlug}/${season.marks}/${file}")`);
+      });
+      it(`${league.slug}: every ${id} art swap replaces a real asset with a drawn file`, () => {
+        const set = JSON.parse(
+          fs.readFileSync(path.join(ROOT, 'src/data/seasonal-marks', `${league.navSlug}-${id}.json`), 'utf8'),
+        ) as { _swaps?: Record<string, string> };
+        const css = buildSeasonalMarkCss(league.navSlug, [id], []);
+        for (const [from, file] of Object.entries(set._swaps ?? {})) {
+          expect(fs.existsSync(path.join(ROOT, 'public', from)), `${from} does not exist`).toBe(true);
+          const drawn = seasonalSwapPath(league.navSlug, id, from);
+          expect(drawn, `${from} → ${file} was rejected`).toBe(`/assets/${league.navSlug}/${season.marks}/${file}`);
+          expect(fs.existsSync(path.join(ROOT, 'public', drawn!)), `${drawn} not drawn`).toBe(true);
+          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"] { content: url("${drawn}")`);
+        }
       });
       it(`${league.slug}: every listed ${id} mark is a real franchise with a built file`, () => {
         const franchises = new Set(getLeagueTeams(league.navSlug).map((t) => t.franchiseId));
@@ -110,5 +125,20 @@ describe('opted-in leagues', () => {
         expect(selector).toMatch(/html\[data-league="\w+"\]\[data-season="halloween"\] img\[src=/);
       }
     }
+  });
+});
+
+describe('inlined AFL badge art follows the season', () => {
+  it('swaps a redrawn division badge in while Halloween is open, and only then', async () => {
+    const { aflBadgeSvgs } = await import('../src/utils/afl-badge-art');
+    const normal = aflBadgeSvgs(null);
+    const halloween = aflBadgeSvgs('halloween');
+    expect(Object.keys(halloween).sort()).toEqual(Object.keys(normal).sort());
+    expect(normal['al-north.svg']).not.toContain('<mask');
+    expect(halloween['al-north.svg']).toContain('<mask id="hm-awards-al-north"');
+    // the year stays stampable on the drawn badge
+    expect(stampBadgeYear(halloween['al-north.svg']!, 2019)).toContain('★  2019  ★');
+    // a badge the season does not redraw keeps its art
+    expect(halloween['afl-championship.svg']).toBe(normal['afl-championship.svg']);
   });
 });

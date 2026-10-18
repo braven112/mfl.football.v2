@@ -20,6 +20,13 @@
  * the marks directory, and every <img> showing the league's registry logo
  * (header, nav drawer) renders it instead. Drawn on the logo's own viewBox,
  * so the swap keeps the box it replaces.
+ *
+ * Other league art swaps by path: `_swaps` maps a served asset path (a division
+ * badge, a conference or tier logo, light and dark cuts alike) to a file in the
+ * marks directory. An <img> of that path gets the rule below; art a component
+ * inlines as raw SVG (the AFL's year-stamped division badges) asks
+ * `seasonalSwapPath` and inlines the drawn file itself, since CSS cannot reach
+ * inside an inlined SVG.
  */
 import { SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
@@ -64,6 +71,26 @@ export function seasonalLogoFile(navSlug: string, seasonId: string): string | nu
   return typeof set?._logo === 'string' && /^[\w.-]+\.(svg|png)$/.test(set._logo) ? set._logo : null;
 }
 
+/** Asset path → drawn file in the marks directory (`_swaps`), entries with a safe file name only. */
+function seasonalSwaps(navSlug: string, seasonId: string): Array<[string, string]> {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _swaps?: unknown } | undefined;
+  const swaps = set?._swaps;
+  if (!swaps || typeof swaps !== 'object') return [];
+  return Object.entries(swaps as Record<string, unknown>).filter(
+    (e): e is [string, string] =>
+      e[0].startsWith('/assets/') && typeof e[1] === 'string' && /^([\w-]+\/)*[\w.-]+\.(svg|png)$/.test(e[1]),
+  );
+}
+
+/** The served path of the drawn replacement for `assetPath` while `seasonId` is open, or null. */
+export function seasonalSwapPath(navSlug: string, seasonId: string | null | undefined, assetPath: string): string | null {
+  if (!seasonId) return null;
+  const marks = SEASONAL_THEMES[seasonId]?.marks;
+  if (!marks) return null;
+  const hit = seasonalSwaps(navSlug, seasonId).find(([from]) => from === assetPath);
+  return hit ? `/assets/${navSlug}/${marks}/${hit[1]}` : null;
+}
+
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export function buildSeasonalMarkCss(
@@ -83,6 +110,11 @@ export function buildSeasonalMarkCss(
         (src) => `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(src)}"]`,
       );
       rules.push(`${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${logoFile}"); filter: none; }`);
+    }
+    for (const [from, file] of seasonalSwaps(navSlug, id)) {
+      rules.push(
+        `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"] { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
+      );
     }
     const drawn = seasonalMarkIds(navSlug, id);
     for (const team of teams) {

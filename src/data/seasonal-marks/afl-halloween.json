@@ -1,6 +1,20 @@
 {
   "_source": "AFL Halloween marks, the 24 locked *-final.svg picks in afl-halloween-final-sheet.png (Oct 2026); the 5 franchises shared with TheLeague reuse its marks. Rebuild: node scripts/build-seasonal-marks.mjs <folder of these files> --league afl",
   "_logo": "logo.svg",
+  "_swaps": {
+    "/assets/afl/conferences/al.svg": "conferences/al.svg",
+    "/assets/afl/conferences/al-dark.svg": "conferences/al.svg",
+    "/assets/afl/conferences/nl.svg": "conferences/nl.svg",
+    "/assets/afl/conferences/nl-dark.svg": "conferences/nl.svg",
+    "/assets/afl/premier.svg": "premier.svg",
+    "/assets/afl/premier-dark.svg": "premier.svg",
+    "/assets/afl/dleague.svg": "dleague.svg",
+    "/assets/afl/dleague-dark.svg": "dleague.svg",
+    "/assets/afl/awards/al-north.svg": "awards/al-north.svg",
+    "/assets/afl/awards/al-south.svg": "awards/al-south.svg",
+    "/assets/afl/awards/nl-east.svg": "awards/nl-east.svg",
+    "/assets/afl/awards/nl-west.svg": "awards/nl-west.svg"
+  },
   "_scale": {
     "0005": 1.3
   },

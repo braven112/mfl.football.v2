@@ -6,6 +6,7 @@
  * competition — the shared page never learns them.
  */
 import { stripBadgeYear, namespaceBadgeIds } from '../../utils/afl-badge';
+import { aflBadgeSvgs, aflPageSeasonId } from '../../utils/afl-badge-art';
 import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../utils/afl-tier-logo';
 import type { TitleTypeKey, TitleTypeProgress } from '../../utils/afl-awards';
 import ThemeImage from '../shared/ThemeImage.astro';
@@ -23,15 +24,8 @@ const { team, titles } = Astro.props;
 // Badge art loaded raw (same pattern as the franchise detail page) so the
 // year stamp can be stripped for this "timeless" aggregate-count context —
 // the card shows a lifetime total, not a single win, so no year applies.
-const badgeSvgRaw = import.meta.glob('../../../public/assets/afl/awards/*.svg', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
-const BADGE_SVG: Record<string, string> = {};
-for (const [p, raw] of Object.entries(badgeSvgRaw)) {
-  BADGE_SVG[p.split('/').pop() as string] = raw;
-}
+// A seasonal theme (Halloween) swaps in its redrawn badges (afl-badge-art.ts).
+const BADGE_SVG = aflBadgeSvgs(aflPageSeasonId(Astro.url, Astro.locals.seasonPreview));
 // Strip once per FILE up front (there are only ~13), not once per card — the
 // same badge file (e.g. afl-championship.svg) renders once per franchise
 // that's won it, and stripBadgeYear's output only depends on the filename.
