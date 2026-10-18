@@ -50,7 +50,10 @@ export interface SleeperPlayerEntry {
   /** MFL player id, or '' when no rung of the join resolved him. */
   mfl: string;
   name: string;
-  /** MFL's position vocabulary: QB RB WR TE PK Def. */
+  /**
+   * MFL's position vocabulary (QB RB WR TE PK Def, and DE DT LB CB S for a
+   * defensive player), or Sleeper's own DL / DB where MFL splits the group.
+   */
   position: string;
   /** ESPN-format NFL code (KC, WSH, …), or ''. */
   team: string;
@@ -76,7 +79,31 @@ const POSITION: Record<string, string> = {
   TE: 'TE',
   K: 'PK',
   DEF: 'Def',
+  // Individual defensive players: a Sleeper IDP league starts them, and a
+  // player missing from the map renders as "Unknown player" with no way to
+  // fix him. Sleeper's DL and DB span two MFL positions each, so they keep
+  // Sleeper's word and join against both (`mflPositionsFor`).
+  DE: 'DE',
+  DT: 'DT',
+  NT: 'DT',
+  DL: 'DL',
+  LB: 'LB',
+  ILB: 'LB',
+  OLB: 'LB',
+  CB: 'CB',
+  S: 'S',
+  SS: 'S',
+  FS: 'S',
+  DB: 'DB',
 };
+
+const POSITION_GROUP: Record<string, readonly string[]> = { DL: ['DE', 'DT'], DB: ['CB', 'S'] };
+const DEFENSIVE = new Set(['DE', 'DT', 'DL', 'LB', 'CB', 'S', 'DB']);
+
+/** The MFL positions a map entry's position covers. */
+export function mflPositionsFor(position: string): readonly string[] {
+  return POSITION_GROUP[position] ?? [position];
+}
 
 export { UNRESOLVED_PREFIX } from './ids';
 
@@ -121,6 +148,9 @@ export function buildSleeperPlayerMap(
     const position = POSITION[String(p?.position ?? '').toUpperCase()];
     if (!position) continue;
     const team = p?.team ? canonicalNflCode(String(p.team)) : '';
+    // Sleeper lists thousands of defenders who never played a snap; one with
+    // no club is not in anyone's lineup, and the map is stored whole.
+    if (DEFENSIVE.has(position) && !team) continue;
 
     if (position === 'Def') {
       // Sleeper keys a defence by its club code, so the id IS the team.
@@ -138,16 +168,30 @@ export function buildSleeperPlayerMap(
     const mflId =
       byEspn.get(idOf(p?.espn_id)) ??
       byRotowire.get(idOf(p?.rotowire_id)) ??
-      byName.get(`${normalizePlayerName(name)}|${position}`) ??
+      byNameAt(byName, normalizePlayerName(name), position) ??
       '';
     out[sid] = { mfl: mflId || '', name: name || `Player ${sid}`, position, team };
   }
   return out;
 }
 
+/** The name rung: one MFL player with this name across the position's group, else null. */
+function byNameAt(byName: ReadonlyMap<string, string | null>, name: string, position: string): string | null {
+  let found: string | null = null;
+  for (const pos of mflPositionsFor(position)) {
+    const key = `${name}|${pos}`;
+    if (!byName.has(key)) continue;
+    const id = byName.get(key);
+    if (!id || (found && found !== id)) return null;
+    found = id;
+  }
+  return found;
+}
+
 // ── Loading ─────────────────────────────────────────────────────────────────
 
-const REDIS_KEY = 'live:sleeper:players:v1';
+// v2: defensive players joined the map; a v1 copy would hide them for a day.
+const REDIS_KEY = 'live:sleeper:players:v2';
 const REDIS_TTL_S = 24 * 60 * 60;
 const MEMORY_TTL_MS = 60 * 60 * 1000;
 /** A failed build is retried, but not on every poll — that is how a board gets itself blocked. */
@@ -192,7 +236,7 @@ export interface MflPlayerChoice {
   team: string;
 }
 
-const FANTASY_POSITIONS = new Set(Object.values(POSITION));
+const FANTASY_POSITIONS = new Set(Object.values(POSITION).flatMap(mflPositionsFor));
 let indexMemory: { year: number; at: number; index: Map<string, MflPlayerChoice> } | null = null;
 
 /**
@@ -238,7 +282,7 @@ export function searchMflPlayers(
     if (!name.includes(q)) continue;
     const last = name.split(' ').slice(1).join(' ');
     let score = 0;
-    if (position && p.position === position) score += 4;
+    if (position && mflPositionsFor(position).includes(p.position)) score += 4;
     if (name.startsWith(q) || last.startsWith(q)) score += 2;
     if (name === q) score += 1;
     scored.push({ p, score });
@@ -265,7 +309,7 @@ export function suggestMflPlayers(
   if (!last || last.length < 2) return [];
   const out: MflPlayerChoice[] = [];
   for (const p of index) {
-    if (p.position !== player.position) continue;
+    if (!mflPositionsFor(player.position).includes(p.position)) continue;
     const name = normalizePlayerName(p.name).split(' ');
     if (name.slice(1).join(' ') === last || name[name.length - 1] === parts[parts.length - 1]) out.push(p);
   }

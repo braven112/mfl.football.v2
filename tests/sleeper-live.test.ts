@@ -31,6 +31,10 @@ const MFL = [
   { id: '20002', name: 'Williams, Mike', position: 'WR', team: 'PIT' },
   { id: '20003', name: 'Tucker, Justin', position: 'PK', team: 'BAL' },
   { id: '0507', name: 'Chiefs, Kansas City', position: 'Def', team: 'KCC' },
+  { id: '30001', name: 'Warner, Fred', position: 'LB', team: 'SFO' },
+  { id: '30002', name: 'Hamilton, Kyle', position: 'S', team: 'BAL' },
+  { id: '30003', name: 'Jones, Chris', position: 'DE', team: 'KCC' },
+  { id: '30004', name: 'Jones, Chris', position: 'DT', team: 'ARI' },
 ];
 
 const SLEEPER = {
@@ -44,6 +48,13 @@ const SLEEPER = {
   KC: { first_name: 'Kansas City', last_name: 'Chiefs', position: 'DEF', team: 'KC' },
   // Not a fantasy position — dropped from the compact map.
   '9999': { full_name: 'Long Snapper', position: 'LS', team: 'KC' },
+  // Defenders an IDP league starts. Sleeper's DB spans MFL's CB and S.
+  '8001': { full_name: 'Fred Warner', position: 'LB', team: 'SF' },
+  '8002': { full_name: 'Kyle Hamilton', position: 'DB', team: 'BAL' },
+  // Sleeper's DL spans DE and DT; MFL has one of each by this name.
+  '8003': { full_name: 'Chris Jones', position: 'DL', team: 'KC' },
+  // A defender with no club is in nobody's lineup.
+  '8004': { full_name: 'Retired Linebacker', position: 'LB', team: null },
 };
 
 describe('buildSleeperPlayerMap', () => {
@@ -72,6 +83,16 @@ describe('buildSleeperPlayerMap', () => {
 
   it('keeps fantasy positions only', () => {
     expect(map['9999']).toBeUndefined();
+  });
+
+  it('keeps defensive players, joining a Sleeper group across its MFL positions', () => {
+    expect(map['8001']).toMatchObject({ mfl: '30001', position: 'LB', team: 'SF' });
+    expect(map['8002']).toMatchObject({ mfl: '30002', position: 'DB' });
+  });
+
+  it('refuses a name shared across the group, and drops a clubless defender', () => {
+    expect(map['8003']).toMatchObject({ mfl: '', name: 'Chris Jones', position: 'DL' });
+    expect(map['8004']).toBeUndefined();
   });
 });
 

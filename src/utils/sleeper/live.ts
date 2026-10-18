@@ -120,6 +120,7 @@ async function loadLeagueMeta(sleeperLeagueId: string): Promise<SleeperLeagueMet
 /** Exported for tests only. */
 export function clearSleeperLeagueCache(): void {
   memoryMeta.clear();
+  memoryDiscovered.clear();
 }
 
 /** The viewer's roster in a league: the one they own, else one they co-own. */
@@ -139,13 +140,31 @@ export interface SleeperBoardLeague extends BoardLeague {
   provider: 'sleeper';
 }
 
+/** The last discovery that succeeded, per account and season. */
+const DISCOVERED_TTL_S = 7 * 24 * 60 * 60;
+const discoveredKey = (userId: string, season: number) => `live:sleeper:discovered:${userId}:${season}`;
+const memoryDiscovered = new Map<string, SleeperBoardLeague[]>();
+
+async function lastDiscovered(userId: string, season: number): Promise<SleeperBoardLeague[]> {
+  const key = discoveredKey(userId, season);
+  const held = memoryDiscovered.get(key);
+  if (held) return held;
+  const redis = await getRedis().catch(() => null);
+  const cached = await redis?.get<SleeperBoardLeague[]>(key).catch(() => null);
+  return Array.isArray(cached) ? cached : [];
+}
+
 /**
  * The linked account's Sleeper NFL leagues for `season`, as board leagues.
  *
- * A league whose rosters cannot be read, or in which the account owns no
- * roster, is left out rather than listed as a league the viewer has no team
- * in. Never throws; a failed read is an empty list, so the board falls back
- * to MFL alone.
+ * A league in which the account owns no roster is left out rather than listed
+ * as a league the viewer has no team in. Never throws.
+ *
+ * The board polls this, so a Sleeper hiccup must not read as "you are in no
+ * leagues": that would drop every Sleeper panel from an otherwise good board.
+ * A failed league list returns the last one that succeeded, and a league whose
+ * rosters cannot be read right now keeps its last known entry. Only a
+ * successful read can remove a league.
  */
 export async function discoverSleeperBoardLeagues(
   link: SleeperLink | null,
@@ -153,16 +172,18 @@ export async function discoverSleeperBoardLeagues(
 ): Promise<SleeperBoardLeague[]> {
   if (!link?.userId) return [];
   const body = await sleeperGet(`/user/${encodeURIComponent(link.userId)}/leagues/nfl/${season}`);
-  if (!Array.isArray(body)) return [];
+  if (!Array.isArray(body)) return lastDiscovered(link.userId, season);
   const leagues = (body as SleeperLeague[]).filter((l) => l && typeof l.league_id === 'string');
+  const before = new Map((await lastDiscovered(link.userId, season)).map((l) => [l.id, l]));
 
   const settled = await mapWithConcurrency(leagues, FAN_OUT, async (l): Promise<SleeperBoardLeague | null> => {
+    const id = sleeperBoardLeagueId(l.league_id);
     const meta = await loadLeagueMeta(l.league_id);
-    if (!meta) return null;
+    if (!meta) return before.get(id) ?? null;
     const rid = findViewerRoster(meta, link.userId);
     if (!rid) return null;
     return {
-      id: sleeperBoardLeagueId(l.league_id),
+      id,
       name: String(l.name ?? '').trim() || 'Sleeper league',
       franchiseId: rid,
       franchiseName: meta.names[rid] ?? '',
@@ -173,10 +194,20 @@ export async function discoverSleeperBoardLeagues(
     };
   });
   const out: SleeperBoardLeague[] = [];
-  for (const outcome of settled) {
-    if (outcome.status === 'fulfilled' && outcome.value) out.push(outcome.value);
+  settled.forEach((outcome, i) => {
+    const kept = outcome.status === 'fulfilled' ? outcome.value : before.get(sleeperBoardLeagueId(leagues[i].league_id));
+    if (kept) out.push(kept);
+  });
+  out.sort((a, b) => a.name.localeCompare(b.name));
+
+  const key = discoveredKey(link.userId, season);
+  memoryDiscovered.set(key, out);
+  // Written only when it changed: this runs on every poll.
+  if (JSON.stringify(out) !== JSON.stringify([...before.values()])) {
+    const redis = await getRedis().catch(() => null);
+    await redis?.set(key, out, { ex: DISCOVERED_TTL_S }).catch(() => undefined);
   }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
 }
 
 /** The viewer's own team name and mark in each Sleeper league, for the settings rows. */
@@ -336,8 +367,12 @@ export async function readSleeperLive(input: {
   leagues: readonly BoardLeague[];
   week: number;
   players: SleeperPlayerMap;
-  games: readonly NflGame[];
+  /** The week's NFL games, or null when the scoreboard could not be read. */
+  games: readonly NflGame[] | null;
 }): Promise<LeagueLiveRead[]> {
+  // Sleeper sends no clock, so without the scoreboard there is no telling a
+  // live matchup from a finished one. Unavailable, not guessed.
+  if (!input.games) return input.leagues.map(failed);
   const secondsByTeam = secondsRemainingByTeam(input.games);
   const settled = await mapWithConcurrency(input.leagues, FAN_OUT, async (league) => {
     const sid = sleeperLeagueIdOf(league.id);

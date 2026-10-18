@@ -43,6 +43,18 @@ island doesn't bundle `node:fs` and Redis. Chromatic's path filter then
 demanded it be listed in `.github/workflows/chromatic.yml`
 (`node scripts/chromatic-story-deps.mjs` prints the list).
 
+**Insight — a polled read that fails must say "unavailable", never "empty".**
+Two silent ones shipped in the first draft. A failed Sleeper league list read
+as "in no leagues" and dropped every Sleeper panel, so discovery now returns
+the last list that succeeded. A failed ESPN scoreboard read as an empty slate,
+which gave every starter zero seconds and marked live matchups Final, so the
+Sleeper reads are now unavailable without it. Pinned by
+`tests/sleeper-live-resilience.test.ts`.
+
+**Insight — Upstash parses a stored digit string back to a NUMBER.** Every id
+hash in `player-fixes.ts` is read through `idHash`. The test's fake Redis
+serializes and parses the way Upstash does, so it reproduces this.
+
 ## 2026-09-22 - `:last-of-type` Does Not Mean "Last One of This Class"
 
 **Context:** Restyling the bench disclosure into a centred pill. The pill was

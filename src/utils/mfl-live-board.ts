@@ -217,7 +217,11 @@ export async function assembleMflLiveBoard(
     : Promise.resolve({});
   const sleeperReads: Promise<LeagueLiveRead[]> = onSleeper.length
     ? Promise.all([scoreboardRead, sleeperPlayers]).then(([sb, players]) =>
-        readSleeperLive({ leagues: onSleeper, week, players, games: sb.games ?? [] }),
+        // A failed scoreboard is NOT an empty slate: read as one, every starter
+        // has zero seconds left and every live matchup reads Final. Passing
+        // null marks the Sleeper reads unavailable, so the board holds the
+        // last panel it confirmed instead.
+        readSleeperLive({ leagues: onSleeper, week, players, games: sb.ok ? (sb.games ?? []) : null }),
       )
     : Promise.resolve([]);
   const [mflReads, scoreboard, detail, sleeperRows, sleeperMap] = await Promise.all([

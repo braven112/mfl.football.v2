@@ -113,6 +113,38 @@ export function applyPlayerFixes(
 
 // ── Reads ──────────────────────────────────────────────────────────────────
 
+/**
+ * A hash of ids, as strings. @upstash/redis JSON-parses every value it reads,
+ * so a stored "14000" comes back as the NUMBER 14000 — which would put a
+ * number in a row id (and throw at `.startsWith`) and slip past every `===`
+ * against a string id. Every id hash is read through this.
+ */
+function idHash(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (v !== null && v !== undefined && v !== '') out[k] = String(v);
+  }
+  return out;
+}
+
+/** An applied fix, with its id as a string (see `idHash`). */
+function globalFix(raw: unknown): GlobalFix | null {
+  const fix = raw as Partial<GlobalFix> | null;
+  if (!fix || fix.mfl === undefined || fix.mfl === null || fix.mfl === '') return null;
+  return { mfl: String(fix.mfl), source: fix.source === 'admin' ? 'admin' : 'agreement', at: String(fix.at ?? '') };
+}
+
+function globalHash(raw: unknown): Record<string, GlobalFix> {
+  const out: Record<string, GlobalFix> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [sid, v] of Object.entries(raw as Record<string, unknown>)) {
+    const fix = globalFix(v);
+    if (fix) out[sid] = fix;
+  }
+  return out;
+}
+
 const GLOBAL_TTL_MS = 60 * 1000;
 let globalMemory: { at: number; fixes: Record<string, GlobalFix> } | null = null;
 
@@ -129,7 +161,7 @@ async function redisOrNull() {
 export async function readGlobalFixes(): Promise<Record<string, GlobalFix>> {
   if (globalMemory && Date.now() - globalMemory.at < GLOBAL_TTL_MS) return globalMemory.fixes;
   const redis = await redisOrNull();
-  const fixes = ((await redis?.hgetall<GlobalFix>(GLOBAL).catch(() => null)) ?? {}) as Record<string, GlobalFix>;
+  const fixes = globalHash(await redis?.hgetall(GLOBAL).catch(() => null));
   globalMemory = { at: Date.now(), fixes };
   return fixes;
 }
@@ -138,7 +170,7 @@ export async function readGlobalFixes(): Promise<Record<string, GlobalFix>> {
 export async function readMyFixes(voter: string | null): Promise<Record<string, string>> {
   if (!voter) return {};
   const redis = await redisOrNull();
-  return ((await redis?.hgetall<string>(MINE(voter)).catch(() => null)) ?? {}) as Record<string, string>;
+  return idHash(await redis?.hgetall(MINE(voter)).catch(() => null));
 }
 
 /** What this viewer's board applies: everyone's fixes plus their own. */
@@ -159,16 +191,14 @@ async function settle(
   redis: NonNullable<Awaited<ReturnType<typeof redisOrNull>>>,
   sid: string,
 ): Promise<string | null> {
-  const [votes, blocked, current] = await Promise.all([
-    redis.hgetall<string>(VOTES(sid)),
-    redis.hgetall<string>(BLOCKED(sid)),
-    redis.hget<GlobalFix>(GLOBAL, sid),
+  const [votes, blocked, raw] = await Promise.all([
+    redis.hgetall(VOTES(sid)),
+    redis.hgetall(BLOCKED(sid)),
+    redis.hget(GLOBAL, sid),
   ]);
+  const current = globalFix(raw);
   if (current?.source === 'admin') return current.mfl;
-  const agreed = agreedMatch(
-    (votes ?? {}) as Record<string, string>,
-    new Set(Object.keys(blocked ?? {})),
-  );
+  const agreed = agreedMatch(idHash(votes), new Set(Object.keys(blocked ?? {})));
   if (agreed && agreed !== current?.mfl) {
     await redis.hset(GLOBAL, { [sid]: { mfl: agreed, source: 'agreement', at: new Date().toISOString() } });
   } else if (!agreed && current) {
@@ -253,24 +283,19 @@ export async function listFixReviews(): Promise<FixReview[] | null> {
   const redis = await redisOrNull();
   if (!redis) return null;
   try {
-    const [index, global] = await Promise.all([
+    const [index, rawGlobal] = await Promise.all([
       redis.hgetall<FixSubject>(INDEX),
-      redis.hgetall<GlobalFix>(GLOBAL),
+      redis.hgetall(GLOBAL),
     ]);
+    const global = globalHash(rawGlobal);
     const subjects = Object.entries((index ?? {}) as Record<string, FixSubject>);
     const rows = await Promise.all(
       subjects.map(async ([sid, subject]) => {
         const [votes, blocked] = await Promise.all([
-          redis.hgetall<string>(VOTES(sid)),
-          redis.hgetall<string>(BLOCKED(sid)),
+          redis.hgetall(VOTES(sid)),
+          redis.hgetall(BLOCKED(sid)),
         ]);
-        return buildFixReview(
-          sid,
-          subject,
-          (votes ?? {}) as Record<string, string>,
-          (blocked ?? {}) as Record<string, string>,
-          ((global ?? {}) as Record<string, GlobalFix>)[sid] ?? null,
-        );
+        return buildFixReview(sid, subject, idHash(votes), idHash(blocked), global[sid] ?? null);
       }),
     );
     return rows.sort((a, b) => String(b.subject.at).localeCompare(String(a.subject.at)));
@@ -304,11 +329,9 @@ export async function rejectPlayerFix(sid: string, mfl: string): Promise<boolean
   const redis = await redisOrNull();
   if (!redis) return false;
   try {
-    const [votes, current] = await Promise.all([
-      redis.hgetall<string>(VOTES(sid)),
-      redis.hget<GlobalFix>(GLOBAL, sid),
-    ]);
-    const voters = Object.entries((votes ?? {}) as Record<string, string>)
+    const [votes, raw] = await Promise.all([redis.hgetall(VOTES(sid)), redis.hget(GLOBAL, sid)]);
+    const current = globalFix(raw);
+    const voters = Object.entries(idHash(votes))
       .filter(([, pick]) => pick === mfl)
       .map(([voter]) => voter);
     await Promise.all([

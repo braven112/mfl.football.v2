@@ -11,17 +11,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // An in-memory hash store standing in for Upstash: the part of the client
-// player-fixes.ts uses, with Upstash's own "missing hash reads as null".
-const store = new Map<string, Map<string, unknown>>();
+// player-fixes.ts uses, with Upstash's own "missing hash reads as null" AND its
+// deserialization — values are stored serialized and JSON-parsed on read, so a
+// stored "14000" comes back as the number 14000, exactly as in production
+// (`tests/roger-redis-deserialization.test.ts`).
+const store = new Map<string, Map<string, string>>();
+const serialize = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v));
+const parse = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+};
 const fake = {
-  hget: async (k: string, f: string) => store.get(k)?.get(f) ?? null,
+  hget: async (k: string, f: string) => {
+    const raw = store.get(k)?.get(f);
+    return raw === undefined ? null : parse(raw);
+  },
   hgetall: async (k: string) => {
     const h = store.get(k);
-    return h && h.size ? Object.fromEntries(h) : null;
+    return h && h.size ? Object.fromEntries([...h].map(([f, raw]) => [f, parse(raw)])) : null;
   },
   hset: async (k: string, values: Record<string, unknown>) => {
     const h = store.get(k) ?? new Map();
-    for (const [f, v] of Object.entries(values)) h.set(f, v);
+    for (const [f, v] of Object.entries(values)) h.set(f, serialize(v));
     store.set(k, h);
     return Object.keys(values).length;
   },
@@ -126,6 +140,17 @@ describe('submitting and withdrawing', () => {
     await pick('a', '14000');
     expect(await pick('a', '14000')).toBe('saved');
     expect(await readGlobalFixes()).toEqual({});
+  });
+
+  it('ids read back as strings, though Upstash parses a digit string to a number', async () => {
+    await pick('a', '14000');
+    await pick('b', '14000');
+    const mine = await readMyFixes('a');
+    expect(typeof mine['5848']).toBe('string');
+    expect(typeof (await readGlobalFixes())['5848'].mfl).toBe('string');
+    // A string compare must still find the votes it is rejecting.
+    await rejectPlayerFix('5848', '14000');
+    expect(await readMyFixes('a')).toEqual({});
   });
 
   it('withdrawing a vote below agreement un-applies it', async () => {
