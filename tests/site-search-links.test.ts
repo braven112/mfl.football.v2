@@ -147,3 +147,16 @@ describe('the header search opens in place', () => {
   });
 });
 
+
+describe('search admin entries are scoped to the league searched', () => {
+  // Both leagues' indexes are one ?league= (or one click) apart, and the plain
+  // role check carries no league: a TheLeague commissioner would see the AFL's
+  // admin-only pages listed.
+  for (const file of ['src/pages/api/page-search.ts', 'src/components/shared/search/SearchPage.astro']) {
+    it(file, () => {
+      const src = readFileSync(path.join(process.cwd(), file), 'utf8');
+      expect(src).toContain('isCommissionerOrAdminForLeague(');
+      expect(src).not.toMatch(/\bisCommissionerOrAdmin\(/);
+    });
+  }
+});

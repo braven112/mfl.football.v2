@@ -17,8 +17,8 @@
  */
 import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { buildPageSearchIndex } from '../../../utils/page-search-index';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { playerIndexUrl } from '../../../utils/player-search-client';
@@ -30,7 +30,10 @@ interface Props {
 const { leagueSlug } = Astro.props;
 
 const authUser = getAuthUser(Astro.request);
-const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+// Admin of THIS league: the plain role check carries no league, and both
+// leagues' search pages are one click apart on the shared host.
+const leagueId = getLeagueBySlug(leagueSlug)?.id;
+const isAdmin = !!authUser && !!leagueId && isCommissionerOrAdminForLeague(authUser, leagueId);
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 

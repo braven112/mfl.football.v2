@@ -77,7 +77,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     </button>
   </form>
   <ul class="header-search__results" id="header-search-results" role="listbox" aria-label="Search results"></ul>
-  <p class="header-search__status" data-header-search-status hidden></p>
+  <p class="header-search__status" data-header-search-status aria-live="polite" hidden></p>
   <a class="header-search__all" data-header-search-all href={searchHref}>See all pages</a>
 </div>
 
@@ -403,6 +403,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
       for (const r of rows) items.push(row(r, n++, panel.dataset.sprite ?? ''));
     }
     list.replaceChildren(...items);
+    // Enter acts only on rows drawn for what is in the box now.
+    panel.dataset.renderedQuery = query;
 
     const failed = !pages && (!query || !players);
     status.hidden = n > 0 && !failed;
@@ -457,7 +459,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     // Already on the search page: its own box is the search.
     const pageBox = document.querySelector<HTMLInputElement>('[data-site-search-input]');
     if (pageBox) { pageBox.focus(); pageBox.scrollIntoView({ block: 'center' }); return; }
-    if (panelEl()?.hidden === false) close(); else open();
+    if (panelEl()?.hidden === false) close({ restoreFocus: true }); else open();
   }, { capture: true });
 
   document.addEventListener('click', (event) => {
@@ -486,9 +488,19 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   // Enter: the highlighted page, or the full search page when nothing matches.
   document.addEventListener('submit', (event) => {
-    const form = (event.target as Element | null)?.closest('.header-search__bar');
+    const form = (event.target as Element | null)?.closest<HTMLFormElement>('.header-search__bar');
     const panel = form?.closest<HTMLElement>('[data-header-search]');
     if (!panel) return;
+    const query = panel.querySelector<HTMLInputElement>('.header-search__input')?.value.trim() ?? '';
+    // Rows still showing an earlier query (the first index load is in flight):
+    // wait for this query's rows rather than open a stale one.
+    if (panel.dataset.renderedQuery !== query) {
+      event.preventDefault();
+      void render(panel).then(() => {
+        if (panel.dataset.renderedQuery === query) form?.requestSubmit();
+      });
+      return;
+    }
     const picked = panel.querySelector<HTMLAnchorElement>('.header-search__result[aria-selected="true"]');
     if (picked) {
       event.preventDefault();

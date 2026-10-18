@@ -14,7 +14,7 @@
 import type { APIRoute } from 'astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues';
 import { getSearchPath } from '../../utils/nav-utils';
-import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../utils/auth';
 import { buildPageSearchIndex } from '../../utils/page-search-index';
 
 export const prerender = false;
@@ -31,7 +31,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   const user = getAuthUser(request);
   const entries = await buildPageSearchIndex(league.slug as CanonicalLeagueSlug, {
-    isAdmin: !!user && isCommissionerOrAdmin(user),
+    // Admin of THIS league: the plain role check carries no league.
+    isAdmin: !!user && isCommissionerOrAdminForLeague(user, league.id),
     hideLeaguePrefix: locals.hideLeaguePrefix ?? false,
   });
 
