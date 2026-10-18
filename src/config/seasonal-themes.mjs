@@ -44,15 +44,21 @@ export const SEASONAL_THEMES = {
     /** Franchise marks: public/assets/<navSlug>/<marks>/<franchiseId>.png. */
     marks: 'halloween-marks',
     /**
-     * The ten days before Halloween through the Monday night game of
-     * Halloween's NFL week: the first Monday ON or after Oct 31 (Nov 2 in
-     * 2026). Both ends inclusive, whole days in the league's zone.
+     * Two NFL weeks, each Tuesday through its Monday night game (owner's rule,
+     * Oct 2026). Halloween on a Thursday or later falls inside a game week, so
+     * that week is the second one: it ends the first Monday after Oct 31 (Nov 2
+     * in 2026, opening Tuesday Oct 20, the day the release reaches production).
+     * Halloween on a Tuesday or Wednesday falls between game weeks, so the two
+     * weeks are the ones just played, and the window runs on through Halloween
+     * itself. Both ends inclusive, whole days in the league's zone.
      */
     window: (year) => {
       const halloween = { y: year, m: 10, d: 31 };
+      const wd = weekday(halloween);
+      const lastMonday = wd === 2 || wd === 3 ? addDays(halloween, 1 - wd) : addDays(halloween, (8 - wd) % 7);
       return {
-        start: addDays(halloween, -10),
-        end: addDays(halloween, (8 - weekday(halloween)) % 7),
+        start: addDays(lastMonday, -13),
+        end: wd === 2 || wd === 3 ? halloween : lastMonday,
       };
     },
   },
