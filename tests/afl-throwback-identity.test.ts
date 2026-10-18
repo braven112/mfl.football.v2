@@ -97,11 +97,12 @@ describe('AFL throwback — scope separation', () => {
     expect(id.icon).toBe('/assets/afl/history/da_dangsters_2003_icon.png');
   });
 
-  it('runs Week 8, and NOT TheLeague\'s Week 4', () => {
-    expect(isThrowbackWeekForScope(8, 'afl')).toBe(true);
+  it('runs Week 11, and NOT TheLeague\'s Week 4 or the Halloween-window Week 8', () => {
+    expect(isThrowbackWeekForScope(11, 'afl')).toBe(true);
+    expect(isThrowbackWeekForScope(8, 'afl')).toBe(false);
     expect(isThrowbackWeekForScope(4, 'afl')).toBe(false);
     expect(isThrowbackWeekForScope(4, 'theleague')).toBe(true);
-    expect(isThrowbackWeekForScope(8, 'theleague')).toBe(false);
+    expect(isThrowbackWeekForScope(11, 'theleague')).toBe(false);
   });
 
   it('resolves AFL franchises against AFL rules, not TheLeague\'s', () => {

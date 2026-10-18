@@ -4,11 +4,12 @@ import { buildThrowbackWelcome } from '../src/utils/throwback-welcome';
 import { buildFranchiseBandBrands } from '../src/utils/franchise-band-brand';
 
 // TheLeague's throwback week is NFL Week 4 (registry), which became current
-// on 2026-09-29 and kicked off 2026-10-01 17:15 PT. The AFL's is Week 8.
+// on 2026-09-29 and kicked off 2026-10-01 17:15 PT. The AFL's is Week 11
+// (Nov 19-23 2026).
 const BEFORE_KICKOFF = new Date('2026-09-30T18:00:00Z');
 const AFTER_KICKOFF = new Date('2026-10-03T18:00:00Z');
 const WEEK_AFTER = new Date('2026-10-10T18:00:00Z');
-const AFL_WEEK_8 = new Date('2026-10-28T18:00:00Z');
+const AFL_WEEK_11 = new Date('2026-11-18T18:00:00Z');
 
 describe('buildThrowbackWelcome', () => {
   it('announces the identity and offers the picker before the first kickoff', () => {
@@ -26,14 +27,14 @@ describe('buildThrowbackWelcome', () => {
 
   it('is silent outside the throwback week', () => {
     expect(buildThrowbackWelcome({ league: 'theleague', franchiseId: '0001', now: WEEK_AFTER, overrides: {} })).toBeNull();
-    // Week 8 is the AFL's, not TheLeague's.
-    expect(buildThrowbackWelcome({ league: 'theleague', franchiseId: '0001', now: AFL_WEEK_8, overrides: {} })).toBeNull();
+    // Week 11 is the AFL's, not TheLeague's.
+    expect(buildThrowbackWelcome({ league: 'theleague', franchiseId: '0001', now: AFL_WEEK_11, overrides: {} })).toBeNull();
   });
 
   it('uses each league\'s own week and its own storage key', () => {
-    const w = buildThrowbackWelcome({ league: 'afl', franchiseId: '0001', now: AFL_WEEK_8, overrides: {} });
-    expect(w?.week).toBe(8);
-    expect(w?.storageKey).toBe('throwback-welcome:afl:2026:w8');
+    const w = buildThrowbackWelcome({ league: 'afl', franchiseId: '0001', now: AFL_WEEK_11, overrides: {} });
+    expect(w?.week).toBe(11);
+    expect(w?.storageKey).toBe('throwback-welcome:afl:2026:w11');
   });
 
   it('is silent with no session franchise, or for a league with no Throwback Week', () => {
