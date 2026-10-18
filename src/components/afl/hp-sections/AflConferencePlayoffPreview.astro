@@ -18,6 +18,7 @@ import {
   getConferenceShort,
 } from '../../../utils/afl-conference';
 import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
+import { aflBadgeSvgs, aflPageSeasonId } from '../../../utils/afl-badge-art';
 import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import TeamIconCell from '../../shared/TeamIconCell.astro';
@@ -30,16 +31,13 @@ import TeamIconCell from '../../shared/TeamIconCell.astro';
 // identical across shields, so first-wins resolves to the right shape) but the
 // gradients are already per-division, which is the divergence that would make
 // `sh` diverge next — so namespace rather than re-audit the art each time.
-const badgeSvgRaw = import.meta.glob<string>(
-  '../../../../public/assets/afl/awards/*.svg',
-  { query: '?raw', import: 'default', eager: true }
-);
+// A seasonal theme (Halloween) swaps in its redrawn badges (afl-badge-art.ts).
+const badgeSvgRaw = aflBadgeSvgs(aflPageSeasonId(Astro.url, Astro.locals.seasonPreview));
 // Strip the ★ YYYY ★ stamp: this marks "leads the division right now", not a
 // win in any particular season.
 const DIVISION_BADGE_SVG: Record<string, string> = {};
-for (const [p, raw] of Object.entries(badgeSvgRaw)) {
-  DIVISION_BADGE_SVG[(p.split('/').pop() as string).replace(/\.svg$/, '')] =
-    stripBadgeYear(raw);
+for (const [file, raw] of Object.entries(badgeSvgRaw)) {
+  DIVISION_BADGE_SVG[file.replace(/\.svg$/, '')] = stripBadgeYear(raw);
 }
 
 interface Team {
