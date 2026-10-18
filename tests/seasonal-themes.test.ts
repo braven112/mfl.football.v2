@@ -174,7 +174,12 @@ describe('inlined AFL badge art follows the season', () => {
     expect(halloween['al-north.svg']).toContain('<mask id="hm-awards-al-north"');
     // the year stays stampable on the drawn badge
     expect(stampBadgeYear(halloween['al-north.svg']!, 2019)).toContain('★  2019  ★');
+    // the championship badges are redrawn too, and keep a stampable year
+    for (const f of ['afl-championship.svg', 'afl-cup.svg', 'premier-league.svg', 'dleague-champion.svg', 'al-champion.svg', 'nl-champion.svg']) {
+      expect(halloween[f], f).toContain(`<mask id="hm-awards-${f.replace('.svg', '')}"`);
+      expect(stampBadgeYear(halloween[f]!, 2019), f).toContain('2019');
+    }
     // a badge the season does not redraw keeps its art
-    expect(halloween['afl-championship.svg']).toBe(normal['afl-championship.svg']);
+    expect(halloween['nit.svg']).toBe(normal['nit.svg']);
   });
 });
