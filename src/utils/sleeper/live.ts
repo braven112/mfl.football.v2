@@ -195,6 +195,36 @@ export async function readSleeperViewerMarks(
   return out;
 }
 
+/**
+ * Every Sleeper player on the viewer's own rosters, with the leagues he is in.
+ *
+ * Read fresh (a roster changes with every waiver claim) and only by the two
+ * places that act on the viewer's own team: the fix list and the endpoint
+ * that checks a fix is for a player the owner actually rosters. A league that
+ * cannot be read contributes nobody; it is never an error.
+ */
+export async function readViewerSleeperPlayers(
+  leagues: readonly BoardLeague[],
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  const sleeperLeagues = leagues.filter((l) => isSleeperLeagueId(l.id));
+  const settled = await mapWithConcurrency(sleeperLeagues, FAN_OUT, async (league) => {
+    const body = await sleeperGet(`/league/${sleeperLeagueIdOf(league.id)}/rosters`);
+    if (!Array.isArray(body)) return [];
+    const mine = (body as SleeperRoster[]).find((r) => String(r?.roster_id) === league.franchiseId);
+    return (mine?.players ?? []).filter((sid) => sid && sid !== '0');
+  });
+  settled.forEach((outcome, i) => {
+    if (outcome.status !== 'fulfilled') return;
+    for (const sid of outcome.value) {
+      const list = out.get(sid) ?? [];
+      if (!list.includes(sleeperLeagues[i].name)) list.push(sleeperLeagues[i].name);
+      out.set(sid, list);
+    }
+  });
+  return out;
+}
+
 // ── One week's live read ────────────────────────────────────────────────────
 
 /** A full NFL game, in seconds — `nflGameStateFromSeconds`'s "not started" line. */

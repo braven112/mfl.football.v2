@@ -30,10 +30,20 @@ export interface SleeperLink {
 /** One season and change; re-linking is one form post. */
 const TTL_S = 400 * 24 * 60 * 60;
 
-export function sleeperLinkKey(user: Pick<AuthUser, 'name'>): string | null {
+/**
+ * A stable, non-reversible id for the MFL Live viewer: the hashed, lower-cased
+ * MFL username. Also who a crowd player fix is credited to (`player-fixes.ts`),
+ * so two fixes from one account always count as one owner.
+ */
+export function sleeperViewerKey(user: Pick<AuthUser, 'name'>): string | null {
   const account = String(user.name ?? '').trim().toLowerCase();
   if (!account) return null;
-  return `live:sleeper:link:${createHash('sha256').update(account).digest('hex').slice(0, 32)}`;
+  return createHash('sha256').update(account).digest('hex').slice(0, 32);
+}
+
+export function sleeperLinkKey(user: Pick<AuthUser, 'name'>): string | null {
+  const viewer = sleeperViewerKey(user);
+  return viewer ? `live:sleeper:link:${viewer}` : null;
 }
 
 export async function getSleeperLink(user: Pick<AuthUser, 'name'>): Promise<SleeperLink | null> {

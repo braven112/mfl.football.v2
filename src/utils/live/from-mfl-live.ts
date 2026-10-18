@@ -73,6 +73,7 @@ export function fromMflLiveBoard(board: MflLiveBoard): LiveBoard {
     slug: (panel.slug as CanonicalLeagueSlug | null) ?? null,
     registered: panel.registered,
     ...(panel.provider ? { provider: panel.provider } : {}),
+    ...(panel.unmatched ? { unmatched: panel.unmatched } : {}),
     viewerFranchiseId: panel.franchiseId,
     status: panel.status,
     matchups: panel.matchups.map(toMatchup),

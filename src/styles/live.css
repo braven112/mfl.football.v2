@@ -949,6 +949,12 @@ button.lv-card:focus-visible {
 .lv-pclock--live { color: var(--lv-live); }
 .lv-pclock--pre { color: var(--lv-pre); }
 
+.lv-punmatched {
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted);
+}
+
 .lv-rz {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
@@ -1168,6 +1174,12 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+
+.lv-panel__fix {
+  margin: 0;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted);
 }
 

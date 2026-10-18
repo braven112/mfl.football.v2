@@ -59,6 +59,7 @@ import {
   getPlayerAvatarRing,
   getPlayerAvatarRingDark,
 } from '../../../utils/nfl-team-colors';
+import { isUnresolvedPlayerId } from '../../../utils/sleeper/ids';
 
 /** One decimal, always — a score that gains a digit must not shift the column. */
 const fmt = (n: number) => n.toFixed(1);
@@ -275,6 +276,14 @@ export default function LvPlayerRow({
                 because the NFL clock stops and that number does not. */}
             {formatGameClock(state, game, kickoffClock)}
           </span>
+          {/* A Sleeper player the id join left unmatched: he scores, but has
+              no headshot or ticker. Plain text, not a link: the row is
+              already a button, and the panel carries the link to fix it. */}
+          {isUnresolvedPlayerId(row.id) && (
+            <span className="lv-punmatched" title="Not matched to an MFL player yet">
+              Unmatched
+            </span>
+          )}
           {redZone && <span className="lv-rz">RED ZONE</span>}
           {!redZone && downDistance && <span className="lv-dd">{downDistance}</span>}
         </span>

@@ -42,6 +42,8 @@ export interface SleeperRoster {
   roster_id: number;
   owner_id: string | null;
   co_owners?: string[] | null;
+  /** Every player on the roster (starters, bench, reserve). */
+  players?: string[] | null;
 }
 
 export interface SleeperLeagueUser {

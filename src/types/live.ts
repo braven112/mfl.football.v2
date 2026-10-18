@@ -173,6 +173,12 @@ export interface LivePanel {
    */
   provider?: 'sleeper';
   /**
+   * Sleeper only: how many of the viewer's own players could not be matched
+   * to an MFL player. Absent when none, and for every MFL league. Drives the
+   * panel's link to the fix list on Live settings.
+   */
+  unmatched?: number;
+  /**
    * The viewer's franchise in THIS league, or null.
    *
    * League-scoped, and that is load-bearing: franchise ids collide across

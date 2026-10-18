@@ -21,7 +21,8 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
-import { getMflLiveUser } from '../../utils/auth';
+import { getAuthUser, getMflLiveUser } from '../../utils/auth';
+import { canViewSiteInsights } from '../../utils/site-insights';
 import { discoverBoardLeagues, readViewerFranchiseNames } from '../../utils/cross-league-live';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
@@ -30,8 +31,20 @@ import {
 } from '../../utils/mfl-live-selection';
 import { resolveFranchiseIdentity } from '../../utils/mfl-live-identity';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { getSleeperLink, type SleeperLink } from '../../utils/sleeper/link';
-import { discoverSleeperBoardLeagues, readSleeperViewerMarks } from '../../utils/sleeper/live';
+import { getSleeperLink, sleeperViewerKey, type SleeperLink } from '../../utils/sleeper/link';
+import {
+	discoverSleeperBoardLeagues,
+	readSleeperViewerMarks,
+	readViewerSleeperPlayers,
+} from '../../utils/sleeper/live';
+import {
+	loadMflPlayerIndex,
+	loadSleeperPlayerMap,
+	searchMflPlayers,
+	suggestMflPlayers,
+	type MflPlayerChoice,
+} from '../../utils/sleeper/players';
+import { readGlobalFixes, readMyFixes } from '../../utils/sleeper/player-fixes';
 import { sleeperAvatarUrl } from '../../utils/sleeper/client';
 import '../../styles/mfl-live.css';
 
@@ -79,6 +92,99 @@ if (authUser) {
     loadFailed = true;
   }
 }
+
+/**
+ * The fix list: Sleeper players on the viewer's own rosters that the id join
+ * could not match to an MFL player (`players.ts`), and the viewer's own picks.
+ * See `player-fixes.ts` for how a pick spreads to everyone.
+ *
+ * Players already fixed for everyone are not listed — there is nothing left
+ * for this viewer to do about them. Never fatal: a failed read just leaves
+ * the section out.
+ */
+interface FixRow {
+	sid: string;
+	name: string;
+	position: string;
+	team: string;
+	leagues: string[];
+	candidates: MflPlayerChoice[];
+	searched: boolean;
+	query: string;
+}
+interface MineRow {
+	sid: string;
+	name: string;
+	position: string;
+	team: string;
+	match: MflPlayerChoice | null;
+	everyone: boolean;
+}
+const fixRows: FixRow[] = [];
+const mineRows: MineRow[] = [];
+const sleeperLeaguesOn = leagues.filter((l) => l.provider === 'sleeper');
+if (authUser && sleeperLink && sleeperLeaguesOn.length) {
+	try {
+		const year = getCurrentSeasonYear();
+		const [map, rostered, global, mine] = await Promise.all([
+			loadSleeperPlayerMap(year),
+			readViewerSleeperPlayers(sleeperLeaguesOn),
+			readGlobalFixes(),
+			readMyFixes(sleeperViewerKey(authUser)),
+		]);
+		const index = loadMflPlayerIndex(year);
+		const find = Astro.url.searchParams.get('find') ?? '';
+		const query = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 40);
+		for (const [sid, inLeagues] of rostered) {
+			const p = map[sid];
+			if (!p || p.mfl) continue;
+			if (mine[sid]) {
+				mineRows.push({
+					sid,
+					name: p.name,
+					position: p.position,
+					team: p.team,
+					match: index.get(mine[sid]) ?? null,
+					everyone: global[sid]?.mfl === mine[sid],
+				});
+				continue;
+			}
+			if (global[sid]?.mfl) continue;
+			const searched = find === sid && query.length >= 2;
+			fixRows.push({
+				sid,
+				name: p.name,
+				position: p.position,
+				team: p.team,
+				leagues: inLeagues,
+				candidates: searched
+					? searchMflPlayers(index.values(), query, p.position)
+					: suggestMflPlayers(index.values(), p),
+				searched,
+				query: searched ? query : '',
+			});
+		}
+		fixRows.sort((a, b) => a.name.localeCompare(b.name));
+		mineRows.sort((a, b) => a.name.localeCompare(b.name));
+	} catch {
+		// Leave the section out; the board still scores every player.
+	}
+}
+
+/** The fix forms' one-word outcome, from `/api/live-sleeper-fix`'s redirect. */
+const FIX_NOTICE: Record<string, string> = {
+	saved: 'Saved. It applies to your board now, and to everyone once another owner picks the same player.',
+	agreed: 'Matched for everyone. Another owner picked the same player.',
+	cleared: 'Match removed.',
+	blocked: 'That match was turned down for this player. Pick another.',
+	'not-yours': 'That player isn\u2019t on one of your Sleeper teams.',
+	pick: 'Pick a player first.',
+	invalid: 'Couldn\u2019t use that match. Try again.',
+	error: 'Couldn\u2019t save that just now. Try again in a minute.',
+	'signed-out': 'Sign in to match players.',
+};
+const fixNotice = FIX_NOTICE[Astro.url.searchParams.get('fix') ?? ''] ?? '';
+const isFixAdmin = canViewSiteInsights(getAuthUser(Astro.request));
 
 /**
  * The rows, as plain data for the island.
@@ -216,6 +322,110 @@ const rows = leagues.map((league) => {
 					</form>
 				)}
 			</section>
+
+			{(fixRows.length > 0 || mineRows.length > 0 || fixNotice) && (
+				<section class="mls-fix" id="sleeper-fixes" aria-labelledby="mls-fix-title">
+					<h2 class="mls-sleeper__title" id="mls-fix-title">Players we couldn&rsquo;t match</h2>
+					{fixNotice && <p class="mls-sleeper__notice" role="status">{fixNotice}</p>}
+					<p class="mls__lede">
+						These players on your Sleeper teams don&rsquo;t line up with an MFL player, so
+						they score but have no headshot and don&rsquo;t show in the scoring ticker. Pick
+						who each one is. Your pick applies to your board right away, and to everyone
+						once another owner picks the same player.
+					</p>
+					{fixRows.length === 0 && (
+						<p class="mls__lede">Every player on your Sleeper teams is matched.</p>
+					)}
+					{fixRows.length > 0 && (
+						<ul class="mls-fix__list">
+							{fixRows.map((r) => (
+								<li class="mls-fix__item">
+									<span class="mls__id">
+										<span class="mls__name">{r.name}</span>
+										<span class="mls__sub">
+											{[r.position, r.team || 'Free agent', ...r.leagues].join(' · ')}
+										</span>
+									</span>
+									<form class="mls-fix__pick" method="post" action="/api/live-sleeper-fix">
+										<input type="hidden" name="action" value="match" />
+										<input type="hidden" name="sid" value={r.sid} />
+										{r.candidates.length > 0 ? (
+											<>
+												<fieldset class="mls-fix__choices">
+													<legend class="mls-sleeper__label">
+														{r.searched ? `MFL players matching \u201c${r.query}\u201d` : 'Pick the right player'}
+													</legend>
+													{r.candidates.map((c) => (
+														<label class="mls-fix__choice">
+															<input type="radio" name="mfl" value={c.id} required />
+															<span class="mls__name">{c.name}</span>
+															<span class="mls__sub">{[c.position, c.team || 'Free agent'].join(' · ')}</span>
+														</label>
+													))}
+												</fieldset>
+												<button type="submit" class="cta cta--primary">Match</button>
+											</>
+										) : (
+											<p class="mls-fix__none">
+												{r.searched
+													? `No MFL player matches \u201c${r.query}\u201d.`
+													: 'No likely matches. Search for him by name.'}
+											</p>
+										)}
+									</form>
+									<form class="mls-sleeper__row" method="get" action="/live/settings#sleeper-fixes">
+										<input type="hidden" name="find" value={r.sid} />
+										<input
+											class="mls-sleeper__input"
+											name="q"
+											type="search"
+											aria-label={`Search MFL players for ${r.name}`}
+											placeholder="Search MFL players"
+											value={r.query}
+											minlength="2"
+											maxlength="40"
+											required
+										/>
+										<button type="submit" class="cta cta--ghost">Search</button>
+									</form>
+								</li>
+							))}
+						</ul>
+					)}
+					{mineRows.length > 0 && (
+						<>
+							<h3 class="mls-fix__subtitle">Your matches</h3>
+							<ul class="mls-fix__list">
+								{mineRows.map((r) => (
+									<li class="mls-fix__item mls-fix__item--mine">
+										<span class="mls__id">
+											<span class="mls__name">
+												{r.name} &rarr; {r.match?.name ?? 'an MFL player'}
+											</span>
+											<span class="mls__sub">
+												{r.everyone
+													? 'Applied for everyone'
+													: 'On your board. Waiting for another owner to agree.'}
+											</span>
+										</span>
+										<form method="post" action="/api/live-sleeper-fix">
+											<input type="hidden" name="action" value="clear" />
+											<input type="hidden" name="sid" value={r.sid} />
+											<button type="submit" class="cta cta--ghost">Undo</button>
+										</form>
+									</li>
+								))}
+							</ul>
+						</>
+					)}
+				</section>
+			)}
+
+			{isFixAdmin && (
+				<p class="mls-fix__admin">
+					<a class="cta-link" href="/live/player-fixes">Review everyone&rsquo;s player matches</a>
+				</p>
+			)}
 		</section>
 	)}
 </MflAppLayout>

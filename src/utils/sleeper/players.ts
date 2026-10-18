@@ -78,8 +78,7 @@ const POSITION: Record<string, string> = {
   DEF: 'Def',
 };
 
-/** Prefix for a row id Sleeper could not resolve. Never collides with an MFL id, which is all digits. */
-export const UNRESOLVED_PREFIX = 'sleeper:';
+export { UNRESOLVED_PREFIX } from './ids';
 
 const idOf = (v: unknown): string => {
   if (v === null || v === undefined) return '';
@@ -182,6 +181,95 @@ function readMflPlayers(year: number): MflPlayerRow[] {
   }
   const identity = getPlayerMap(year);
   return rows.map((r) => ({ ...r, espn_id: identity.get(r.id)?.nflEspnId ?? r.espn_id ?? '' }));
+}
+
+/** One MFL player, as the fix list shows and searches him. */
+export interface MflPlayerChoice {
+  id: string;
+  /** "First Last". */
+  name: string;
+  position: string;
+  team: string;
+}
+
+const FANTASY_POSITIONS = new Set(Object.values(POSITION));
+let indexMemory: { year: number; at: number; index: Map<string, MflPlayerChoice> } | null = null;
+
+/**
+ * Every fantasy-position MFL player, by id — what a crowd fix may point at.
+ * Read from the committed feed, so it costs no network; held for an hour.
+ */
+export function loadMflPlayerIndex(year: number): Map<string, MflPlayerChoice> {
+  if (indexMemory && indexMemory.year === year && Date.now() - indexMemory.at < MEMORY_TTL_MS) {
+    return indexMemory.index;
+  }
+  const index = new Map<string, MflPlayerChoice>();
+  for (const r of readMflPlayers(year)) {
+    if (!r?.id || !r.position || !FANTASY_POSITIONS.has(r.position)) continue;
+    index.set(r.id, {
+      id: r.id,
+      name: formatMflName(r.name ?? '') || `Player ${r.id}`,
+      position: r.position,
+      team: r.team ? canonicalNflCode(r.team) : '',
+    });
+  }
+  indexMemory = { year, at: Date.now(), index };
+  return index;
+}
+
+/**
+ * MFL players whose name contains `query`, best first. Pure.
+ *
+ * Ranked: same position as the player being fixed, then a name that STARTS
+ * with the query (or whose last name does), then alphabetical. A one-letter
+ * query matches nobody, so an accidental submit is not 2,000 radio buttons.
+ */
+export function searchMflPlayers(
+  index: Iterable<MflPlayerChoice>,
+  query: string,
+  position = '',
+  limit = 8,
+): MflPlayerChoice[] {
+  const q = normalizePlayerName(query);
+  if (q.length < 2) return [];
+  const scored: Array<{ p: MflPlayerChoice; score: number }> = [];
+  for (const p of index) {
+    const name = normalizePlayerName(p.name);
+    if (!name.includes(q)) continue;
+    const last = name.split(' ').slice(1).join(' ');
+    let score = 0;
+    if (position && p.position === position) score += 4;
+    if (name.startsWith(q) || last.startsWith(q)) score += 2;
+    if (name === q) score += 1;
+    scored.push({ p, score });
+  }
+  return scored
+    .sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name))
+    .slice(0, limit)
+    .map((s) => s.p);
+}
+
+/**
+ * Likely matches for an unmatched Sleeper player, with no typing: MFL players
+ * at his position sharing his last name. Sleeper and MFL usually disagree on a
+ * FIRST name (a nickname, an initial, a suffix), which is exactly what the
+ * name rung of the join refuses to guess at.
+ */
+export function suggestMflPlayers(
+  index: Iterable<MflPlayerChoice>,
+  player: Pick<SleeperPlayerEntry, 'name' | 'position'>,
+  limit = 5,
+): MflPlayerChoice[] {
+  const parts = normalizePlayerName(player.name).split(' ');
+  const last = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
+  if (!last || last.length < 2) return [];
+  const out: MflPlayerChoice[] = [];
+  for (const p of index) {
+    if (p.position !== player.position) continue;
+    const name = normalizePlayerName(p.name).split(' ');
+    if (name.slice(1).join(' ') === last || name[name.length - 1] === parts[parts.length - 1]) out.push(p);
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name)).slice(0, limit);
 }
 
 /**

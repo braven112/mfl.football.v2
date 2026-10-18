@@ -38,10 +38,12 @@ import {
 import { resolveMatchupColorVars } from './live/model';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
-import { getSleeperLink } from './sleeper/link';
+import { getSleeperLink, sleeperViewerKey } from './sleeper/link';
+import { applyPlayerFixes, readViewerFixes } from './sleeper/player-fixes';
 import { discoverSleeperBoardLeagues, readSleeperLive } from './sleeper/live';
 import { loadSleeperPlayerMap, UNRESOLVED_PREFIX, type SleeperPlayerMap } from './sleeper/players';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
+import type { LiveSnapshot } from './live-scoring-snapshot';
 import type {
   MflLiveBoard,
   MflLiveLeaguePanel,
@@ -154,6 +156,18 @@ function statusFor(read: LeagueLiveRead, pairCount: number): MflLiveLeagueStatus
   return pairCount > 0 ? 'ok' : 'no-matchup';
 }
 
+/**
+ * How many of the viewer's OWN players a Sleeper league could not match to an
+ * MFL player, starters and bench — the panel's "fix" prompt. Only the
+ * viewer's team: the fix list on settings lists only their roster, so a count
+ * that included the opponent would point at players they cannot fix there.
+ */
+function unmatchedOnTeam(snapshot: LiveSnapshot, franchiseId: string): { unmatched?: number } {
+  const rows = [...(snapshot.players[franchiseId] ?? []), ...(snapshot.bench[franchiseId] ?? [])];
+  const n = rows.filter((r) => r.id.startsWith(UNRESOLVED_PREFIX)).length;
+  return n > 0 ? { unmatched: n } : {};
+}
+
 export async function assembleMflLiveBoard(
   input: AssembleMflLiveInput,
 ): Promise<AssembledMflLive> {
@@ -192,8 +206,14 @@ export async function assembleMflLiveBoard(
   // Sleeper sends points but no game clock, so its read waits on the
   // scoreboard (for each starter's seconds left) and on the player id map —
   // and on nothing else, so it still overlaps the MFL fan-out.
+  // With the crowd's fixes filled in: everyone's applied ones plus this
+  // viewer's own picks (`player-fixes.ts`). They only fill blanks the join
+  // left, so a missing fix read costs the names, never a score.
   const sleeperPlayers: Promise<SleeperPlayerMap> = onSleeper.length
-    ? loadSleeperPlayerMap(year).catch(() => ({}))
+    ? Promise.all([
+        loadSleeperPlayerMap(year).catch((): SleeperPlayerMap => ({})),
+        readViewerFixes(sleeperViewerKey(user)).catch(() => ({})),
+      ]).then(([map, fixes]) => applyPlayerFixes(map, fixes))
     : Promise.resolve({});
   const sleeperReads: Promise<LeagueLiveRead[]> = onSleeper.length
     ? Promise.all([scoreboardRead, sleeperPlayers]).then(([sb, players]) =>
@@ -392,6 +412,7 @@ export async function assembleMflLiveBoard(
       slug,
       registered: !!league.registered,
       ...(league.provider ? { provider: league.provider } : {}),
+      ...(league.provider === 'sleeper' ? unmatchedOnTeam(snapshot, league.franchiseId) : {}),
       status: 'ok',
       matchups,
     });

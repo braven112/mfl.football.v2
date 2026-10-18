@@ -1,0 +1,114 @@
+---
+/**
+ * MFL Live — the crowd's Sleeper player matches, for the admin to review.
+ *
+ * Owners match Sleeper players the id join could not resolve (the fix list on
+ * `/live/settings`); two owners agreeing applies a match to everyone. Here the
+ * admin can apply any candidate outright, or reject one — which blocks it for
+ * that player, withdraws it from every voter's board, and undoes it if it was
+ * applied. Rules: `src/utils/sleeper/player-fixes.ts`.
+ *
+ * Gated exactly like `/live/analytics` (`canViewSiteInsights`): one viewer.
+ * Everyone else is sent to the board. Not in the page directory, for the same
+ * reason analytics is not: search would show it to people it refuses.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewSiteInsights } from '../../utils/site-insights';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { loadMflPlayerIndex } from '../../utils/sleeper/players';
+import { listFixReviews } from '../../utils/sleeper/player-fixes';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!authUser) return Astro.redirect(mflLoginUrl('/live/player-fixes'));
+if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
+
+const reviews = await listFixReviews();
+const index = loadMflPlayerIndex(getCurrentSeasonYear());
+const mflName = (id: string) => {
+	const p = index.get(id);
+	return p ? `${p.name} · ${[p.position, p.team || 'Free agent'].join(' · ')}` : `MFL player ${id}`;
+};
+
+const DONE: Record<string, string> = {
+	approved: 'Applied for everyone.',
+	rejected: 'Rejected. That match is blocked for this player and withdrawn from everyone who picked it.',
+	invalid: 'Couldn’t use that. Try again.',
+	error: 'Couldn’t save that just now. Try again in a minute.',
+};
+const notice = DONE[Astro.url.searchParams.get('done') ?? ''] ?? '';
+---
+
+<MflAppLayout title="Player matches — MFL Live" description="Admin review of crowd Sleeper player matches">
+	<section class="mls">
+		<a class="mls__back" href="/live/settings">&larr; Settings</a>
+		<h1 class="mls__title">Player matches</h1>
+		<p class="mls__lede">
+			Sleeper players owners have matched to MFL players. A match applies to everyone once
+			two owners agree, or when you apply it here. Rejecting one blocks it for that player.
+		</p>
+		{notice && <p class="mls-sleeper__notice" role="status">{notice}</p>}
+
+		{reviews === null ? (
+			<p class="mls__lede">Couldn&rsquo;t read the matches just now.</p>
+		) : reviews.length === 0 ? (
+			<p class="mls__lede">Nobody has matched a player yet.</p>
+		) : (
+			<ul class="mls-fix__list">
+				{reviews.map((r) => (
+					<li class="mls-fix__item">
+						<span class="mls__id">
+							<span class="mls__name">{r.subject.name}</span>
+							<span class="mls__sub">
+								{[r.subject.position, r.subject.team || 'Free agent', `Sleeper ${r.sid}`].join(' · ')}
+							</span>
+							<span class="mls__sub">
+								{r.applied
+									? `Applied: ${mflName(r.applied.mfl)} (${r.applied.source === 'admin' ? 'by you' : 'owners agreed'})`
+									: 'Not applied for everyone yet'}
+							</span>
+						</span>
+						<ul class="mls-fix__list">
+							{r.candidates.map((c) => (
+								<li class="mls-fix__item mls-fix__item--mine">
+									<span class="mls__id">
+										<span class="mls__name">{mflName(c.mfl)}</span>
+										<span class="mls__sub">
+											{c.blocked
+												? 'Rejected'
+												: `${c.votes} ${c.votes === 1 ? 'owner' : 'owners'}${r.applied?.mfl === c.mfl ? ' · applied' : ''}`}
+										</span>
+									</span>
+									<span class="mls-sleeper__row">
+										{r.applied?.mfl !== c.mfl && (
+											<form method="post" action="/api/live-sleeper-fix-admin">
+												<input type="hidden" name="action" value="approve" />
+												<input type="hidden" name="sid" value={r.sid} />
+												<input type="hidden" name="mfl" value={c.mfl} />
+												<button type="submit" class="cta cta--primary">Apply</button>
+											</form>
+										)}
+										{!c.blocked && (
+											<form method="post" action="/api/live-sleeper-fix-admin">
+												<input type="hidden" name="action" value="reject" />
+												<input type="hidden" name="sid" value={r.sid} />
+												<input type="hidden" name="mfl" value={c.mfl} />
+												<button type="submit" class="cta cta--ghost">
+													{r.applied?.mfl === c.mfl ? 'Undo' : 'Reject'}
+												</button>
+											</form>
+										)}
+									</span>
+								</li>
+							))}
+						</ul>
+					</li>
+				))}
+			</ul>
+		)}
+	</section>
+</MflAppLayout>
