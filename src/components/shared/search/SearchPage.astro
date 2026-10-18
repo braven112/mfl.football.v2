@@ -21,6 +21,7 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { type CanonicalLeagueSlug } from '../../../config/leagues';
 import { buildPageSearchIndex } from '../../../utils/page-search-index';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { playerIndexUrl } from '../../../utils/player-search-client';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -31,14 +32,12 @@ const { leagueSlug } = Astro.props;
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 // Scoped to this league, hrefs prefixed for this host, ranked by real use —
 // all in the builder the header's inline search reads too.
-const pages = await buildPageSearchIndex(leagueSlug, {
-  isAdmin,
-  hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
-});
+const pages = await buildPageSearchIndex(leagueSlug, { isAdmin, hideLeaguePrefix });
 
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 // Where a player opens: his team's roster, or Free Agents for a free agent.
 const rostersHref = resolveLeaguePath(`/${leagueSlug}/rosters`, hideLeaguePrefix);
 const freeAgentsHref = resolveLeaguePath(`/${leagueSlug}/players`, hideLeaguePrefix);
@@ -54,7 +53,7 @@ const categories = [
 
 <section
   class="directory"
-  data-player-index-url={`/api/player-search/${encodeURIComponent(leagueSlug)}.json`}
+  data-player-index-url={playerIndexUrl(leagueSlug)}
   data-rosters-href={rostersHref}
   data-free-agents-href={freeAgentsHref}
 >
@@ -72,6 +71,7 @@ const categories = [
       <input
         type="search"
         class="directory__search"
+        data-site-search-input
         placeholder="Search pages and players... (e.g. trade, Josh Allen)"
         autocomplete="off"
       />
@@ -477,7 +477,7 @@ const categories = [
 
 <script>
   import { matchPages } from '../../../utils/page-search-match';
-  import { loadPlayerIndex, playerLinks, type PlayerLink } from '../../../utils/player-search-client';
+  import { loadPlayerIndex, searchPlayers, type PlayerLink } from '../../../utils/player-search-client';
 
   const MAX_PLAYERS = 12;
 
@@ -552,9 +552,7 @@ const categories = [
             rostersHref: section!.dataset.rostersHref!,
             freeAgentsHref: section!.dataset.freeAgentsHref!,
           };
-          links = matchPages(index.players, query)
-            .flatMap((p) => playerLinks(index, p, hrefs))
-            .slice(0, MAX_PLAYERS);
+          links = searchPlayers(index, query, hrefs, MAX_PLAYERS);
         }
       }
       playerCount = links.length;
@@ -566,7 +564,8 @@ const categories = [
     function filterAndSort() {
       const query = searchInput!.value.trim();
       // Same matcher as the header's inline search, so both find the same pages.
-      const matched = query ? new Set(matchPages(entries, query).map((e) => e.card)) : null;
+      const hits = query ? matchPages(entries, query) : null;
+      const matched = hits ? new Set(hits.map((e) => e.card)) : null;
       let visible = 0;
 
       cards.forEach((card) => {
@@ -580,8 +579,8 @@ const categories = [
       // When searching, order visible cards as the matcher does (title hits,
       // then real use);
       // when not, restore the original order.
-      if (query) {
-        matchPages(entries, query)
+      if (hits) {
+        hits
           .filter((e) => !e.card.hidden)
           .forEach((e) => grid!.appendChild(e.card));
         cards.filter((c) => c.hidden).forEach((card) => grid!.appendChild(card));

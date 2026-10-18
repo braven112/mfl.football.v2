@@ -17,6 +17,8 @@ import path from 'node:path';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
 import { getOwnersByPlayer } from './offseason-hero-data';
+import { asArray } from './mfl-normalize';
+import { formatMflName } from './player-name-matching';
 
 export interface PlayerSearchEntry {
   id: string;
@@ -26,8 +28,6 @@ export interface PlayerSearchEntry {
   team: string;
   /** Franchise ids holding him, in roster order; empty for a free agent. */
   owners: string[];
-  /** name both ways + team + position, lowercased — what a query matches. */
-  search: string;
 }
 
 export interface PlayerSearchIndex {
@@ -43,14 +43,6 @@ function readFeed(dataPath: string, year: number, file: string): any {
   } catch {
     return null;
   }
-}
-
-const asArray = <T,>(v: T | T[] | undefined): T[] => (v == null ? [] : Array.isArray(v) ? v : [v]);
-
-/** "Allen, Josh" → "Josh Allen"; a team unit ("Bills, Buffalo") reads "Buffalo Bills". */
-export function displayName(mflName: string): string {
-  const [last, first] = mflName.split(',').map((s) => s.trim());
-  return first ? `${first} ${last}` : mflName.trim();
 }
 
 export function buildPlayerSearchIndex(league: CanonicalLeagueSlug): PlayerSearchIndex {
@@ -77,15 +69,12 @@ export function buildPlayerSearchIndex(league: CanonicalLeagueSlug): PlayerSearc
   for (const p of players) {
     if (!p?.id || !p.name || !rosteredPositions.has(p.position)) continue;
     const id = String(p.id);
-    const name = displayName(String(p.name));
-    const team = String(p.team ?? '');
     entries.push({
       id,
-      name,
+      name: formatMflName(String(p.name)),
       pos: String(p.position),
-      team,
+      team: String(p.team ?? ''),
       owners: owners.get(id) ?? [],
-      search: [name, p.name, team, p.position].join(' ').toLowerCase(),
     });
   }
   return { year, teams, players: entries };

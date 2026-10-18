@@ -51,8 +51,7 @@ describe('buildPageSearchIndex', () => {
 
 describe('buildPlayerSearchIndex', () => {
   it('lists only rostered positions, with every owner and a readable name', async () => {
-    const { buildPlayerSearchIndex, displayName } = await import('../src/utils/player-search-index');
-    expect(displayName('Allen, Josh')).toBe('Josh Allen');
+    const { buildPlayerSearchIndex } = await import('../src/utils/player-search-index');
     for (const league of ['theleague', 'afl-fantasy'] as const) {
       const index = buildPlayerSearchIndex(league);
       expect(index.players.length, league).toBeGreaterThan(100);

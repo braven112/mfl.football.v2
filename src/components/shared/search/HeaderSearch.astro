@@ -24,6 +24,7 @@
  * header on every navigation while this module runs once per session.
  */
 import { spriteUrlFor } from '../../../utils/sprite-url';
+import { playerIndexUrl } from '../../../utils/player-search-client';
 
 interface Props {
   /** The league's search page — the no-JS target and "See all results". */
@@ -45,7 +46,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   data-header-search
   data-league={leagueSlug}
   data-index-url={`/api/page-search?league=${encodeURIComponent(leagueSlug)}`}
-  data-player-index-url={`/api/player-search/${encodeURIComponent(leagueSlug)}.json`}
+  data-player-index-url={playerIndexUrl(leagueSlug)}
   data-search-href={searchHref}
   data-rosters-href={rostersHref}
   data-free-agents-href={freeAgentsHref}
@@ -254,7 +255,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
 <script>
   import { matchPages } from '../../../utils/page-search-match';
-  import { loadPlayerIndex, playerLinks } from '../../../utils/player-search-client';
+  import { cachedJson, loadPlayerIndex, searchPlayers } from '../../../utils/player-search-client';
 
   interface Entry {
     title: string;
@@ -286,20 +287,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   const panelEl = () => document.querySelector<HTMLElement>('[data-header-search]');
   const toggleEl = () => document.querySelector<HTMLElement>('[data-header-search-toggle]');
 
-  function cached<T>(cache: Map<string, Promise<T>>, url: string, read: (body: any) => T): Promise<T> {
-    let hit = cache.get(url);
-    if (!hit) {
-      hit = fetch(url, { credentials: 'same-origin' })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then(read)
-        // A failed load is not cached: the next open tries again.
-        .catch((err) => { cache.delete(url); throw err; });
-      cache.set(url, hit);
-    }
-    return hit;
-  }
-
-  const loadPages = (url: string) => cached(pageIndexes, url, (body: { pages: Entry[] }) => body.pages);
+  const loadPages = (url: string) => cachedJson(pageIndexes, url, (body: { pages: Entry[] }) => body.pages);
 
   /** Sit under the glass: right-aligned to it on a wide screen, edge to edge on a phone. */
   function place(panel: HTMLElement, toggle: HTMLElement) {
@@ -401,10 +389,9 @@ const spriteUrl = spriteUrlFor(Astro.url);
       if (pages) sections.push(['Pages', matchPages(pages, query).slice(0, MAX_PAGES).map(pageRow)]);
       if (players) {
         const hrefs = { rostersHref: panel.dataset.rostersHref!, freeAgentsHref: panel.dataset.freeAgentsHref! };
-        const hits = matchPages(players.players, query)
-          .flatMap((p) => playerLinks(players, p, hrefs))
+        const hits = searchPlayers(players, query, hrefs, MAX_PLAYERS)
           .map((l): Row => ({ href: l.href, title: l.name, detail: l.detail, badge: l.pos, reload: l.reload }));
-        sections.push(['Players', hits.slice(0, MAX_PLAYERS)]);
+        sections.push(['Players', hits]);
       }
     }
 
@@ -468,7 +455,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     event.preventDefault();
     event.stopPropagation();
     // Already on the search page: its own box is the search.
-    const pageBox = document.querySelector<HTMLInputElement>('.directory__search');
+    const pageBox = document.querySelector<HTMLInputElement>('[data-site-search-input]');
     if (pageBox) { pageBox.focus(); pageBox.scrollIntoView({ block: 'center' }); return; }
     if (panelEl()?.hidden === false) close(); else open();
   }, { capture: true });

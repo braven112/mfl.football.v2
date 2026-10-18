@@ -21,13 +21,8 @@ export const getStaticPaths: GetStaticPaths = () =>
     .map((league) => ({ params: { league } }));
 
 export const GET: APIRoute = ({ params }) => {
-  const index = buildPlayerSearchIndex(params.league as CanonicalLeagueSlug);
-  // `search` is rebuilt on the client from name + team + pos to keep the file small.
-  const body = {
-    teams: index.teams,
-    players: index.players.map(({ id, name, pos, team, owners }) => ({ id, name, pos, team, owners })),
-  };
-  return new Response(JSON.stringify(body), {
+  const { teams, players } = buildPlayerSearchIndex(params.league as CanonicalLeagueSlug);
+  return new Response(JSON.stringify({ teams, players }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
