@@ -105,3 +105,28 @@ fits well inside the limit at our scale, and it uses the same fan-out limit and
 - A Sleeper panel has no league-board link and no stat sheet (both read MFL).
 - Only the MFL Live board and its settings page read Sleeper. `/broadcast`,
   Sunday Ticket, standings and the league boards are untouched.
+
+## Crowd player matching (Oct 2026)
+
+Brandon: owners should be able to resolve their own unmatched players, and
+those fixes should come back to everyone. Decisions, all three as recommended:
+
+1. **Where:** a "Players we couldn't match" list on `/live/settings`
+   (`#sleeper-fixes`), listing only the viewer's own rostered players. The
+   board marks unmatched rows and each Sleeper panel links to the list.
+2. **When a fix counts for everyone:** at once for the owner who made it; for
+   everyone once **two** different owners pick the same MFL player, or the
+   admin applies it.
+3. **Admin page:** `/live/player-fixes`, gated like `/live/analytics`. Apply
+   or reject any candidate. A rejection blocks that pick for that player and
+   withdraws it from every voter.
+
+Rules that are load-bearing (`src/utils/sleeper/player-fixes.ts`, pinned by
+`tests/sleeper-player-fixes.test.ts`):
+
+- A fix only FILLS a blank the join left. It can never re-point a match.
+- One MFL account is one vote (`sleeperViewerKey`, the hashed username).
+- Two candidates that each have agreement form a dispute, and neither applies
+  until the admin settles it.
+- An admin apply is never overturned by a count, only by an admin reject.
+- Fixes are keyed by Sleeper player id, which is stable across seasons.
