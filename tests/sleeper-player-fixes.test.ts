@@ -222,3 +222,18 @@ describe('ids', () => {
     expect(sleeperViewerKey({ name: '' })).toBeNull();
   });
 });
+
+describe('linking switches the new Sleeper leagues on', async () => {
+  const { withLeaguesEnabled } = await import('../src/utils/mfl-live-selection');
+
+  it('appends to an explicit selection, which would otherwise never widen', () => {
+    expect(withLeaguesEnabled('13522,19621', ['sl-1', 'sl-2'])).toBe('13522,19621,sl-1,sl-2');
+  });
+
+  it('writes nothing when the default already includes them, or nothing is new', () => {
+    expect(withLeaguesEnabled(undefined, ['sl-1'])).toBeNull();
+    expect(withLeaguesEnabled('default', ['sl-1'])).toBeNull();
+    expect(withLeaguesEnabled('13522,sl-1', ['sl-1'])).toBeNull();
+    expect(withLeaguesEnabled('13522', [])).toBeNull();
+  });
+});

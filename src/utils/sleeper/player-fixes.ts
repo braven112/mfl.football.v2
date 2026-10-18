@@ -31,6 +31,11 @@
 import { getRedis } from '../redis-client';
 import type { SleeperPlayerMap } from './players';
 
+/** A Sleeper player id: digits, or a defence's club code. */
+export const SLEEPER_PLAYER_ID = /^[A-Z0-9]{1,12}$/;
+/** An MFL player id. */
+export const MFL_PLAYER_ID = /^\d{4,6}$/;
+
 /** Distinct owners who must pick the same player before it applies to everyone. */
 export const AGREEMENT = 2;
 

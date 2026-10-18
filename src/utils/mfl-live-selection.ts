@@ -83,6 +83,24 @@ export function resolveMflLiveLeagues(
   return { enabled: defaultMflLiveSelection(available), explicit: false };
 }
 
+/**
+ * The stored selection with `ids` switched ON, or null when nothing changes.
+ *
+ * For a league that APPEARS because the owner did something to make it
+ * appear (linking a Sleeper account): an owner who has ever toggled has an
+ * explicit list, and an explicit list deliberately never widens on its own, so
+ * without this the leagues they just linked would arrive switched off. With
+ * no cookie, or `default`, the default already includes everything, so there
+ * is nothing to write.
+ */
+export function withLeaguesEnabled(cookie: string | null | undefined, ids: readonly string[]): string | null {
+  const current = (cookie ?? '').trim();
+  if (!current || current === 'default' || current === 'all') return null;
+  const list = current.split(',').map((s) => s.trim()).filter(Boolean);
+  const added = ids.filter((id) => !list.includes(id));
+  return added.length ? [...list, ...added].join(',') : null;
+}
+
 // ── Remembering the choice — from the ROUTE, never a component ───────────
 
 /** The slice of `Astro.cookies` this needs, typed structurally so the module stays runtime-free. */

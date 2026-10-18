@@ -23,7 +23,7 @@ import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getSleeperLink, sleeperViewerKey } from '../../utils/sleeper/link';
 import { discoverSleeperBoardLeagues, readViewerSleeperPlayers } from '../../utils/sleeper/live';
 import { loadMflPlayerIndex, loadSleeperPlayerMap } from '../../utils/sleeper/players';
-import { clearPlayerFix, submitPlayerFix } from '../../utils/sleeper/player-fixes';
+import { MFL_PLAYER_ID, SLEEPER_PLAYER_ID, clearPlayerFix, submitPlayerFix } from '../../utils/sleeper/player-fixes';
 
 export const prerender = false;
 
@@ -33,9 +33,6 @@ const back = (outcome: string) =>
     headers: { Location: `/live/settings?fix=${outcome}#sleeper-fixes`, 'Cache-Control': 'no-store' },
   });
 
-/** Sleeper ids are digits, except a defence, which is its club code. */
-const SLEEPER_ID = /^[A-Z0-9]{1,12}$/;
-const MFL_ID = /^\d{4,6}$/;
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getMflLiveUser(request);
@@ -45,7 +42,7 @@ export const POST: APIRoute = async ({ request }) => {
   const form = await request.formData().catch(() => null);
   const action = String(form?.get('action') ?? '');
   const sid = String(form?.get('sid') ?? '');
-  if (!SLEEPER_ID.test(sid)) return back('invalid');
+  if (!SLEEPER_PLAYER_ID.test(sid)) return back('invalid');
 
   if (action === 'clear') {
     return back((await clearPlayerFix(voter, sid)) ? 'cleared' : 'error');
@@ -53,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (action !== 'match') return back('invalid');
 
   const mfl = String(form?.get('mfl') ?? '');
-  if (!MFL_ID.test(mfl)) return back('pick');
+  if (!MFL_PLAYER_ID.test(mfl)) return back('pick');
 
   const year = getCurrentSeasonYear();
   const [map, link] = await Promise.all([

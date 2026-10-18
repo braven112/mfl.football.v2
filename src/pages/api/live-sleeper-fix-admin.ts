@@ -11,15 +11,13 @@ import { getAuthUser } from '../../utils/auth';
 import { canViewSiteInsights } from '../../utils/site-insights';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { loadMflPlayerIndex } from '../../utils/sleeper/players';
-import { approvePlayerFix, rejectPlayerFix } from '../../utils/sleeper/player-fixes';
+import { MFL_PLAYER_ID, SLEEPER_PLAYER_ID, approvePlayerFix, rejectPlayerFix } from '../../utils/sleeper/player-fixes';
 
 export const prerender = false;
 
 const to = (location: string) =>
   new Response(null, { status: 303, headers: { Location: location, 'Cache-Control': 'no-store' } });
 
-const SLEEPER_ID = /^[A-Z0-9]{1,12}$/;
-const MFL_ID = /^\d{4,6}$/;
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -29,7 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
   const action = String(form?.get('action') ?? '');
   const sid = String(form?.get('sid') ?? '');
   const mfl = String(form?.get('mfl') ?? '');
-  if (!SLEEPER_ID.test(sid) || !MFL_ID.test(mfl)) return to('/live/player-fixes?done=invalid');
+  if (!SLEEPER_PLAYER_ID.test(sid) || !MFL_PLAYER_ID.test(mfl)) return to('/live/player-fixes?done=invalid');
 
   if (action === 'approve') {
     if (!loadMflPlayerIndex(getCurrentSeasonYear()).has(mfl)) return to('/live/player-fixes?done=invalid');

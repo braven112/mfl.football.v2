@@ -118,7 +118,8 @@ interface MineRow {
 	position: string;
 	team: string;
 	match: MflPlayerChoice | null;
-	everyone: boolean;
+	/** Whether everyone sees this pick, someone else's pick, or nothing yet. */
+	status: 'everyone' | 'differs' | 'pending';
 }
 const fixRows: FixRow[] = [];
 const mineRows: MineRow[] = [];
@@ -145,7 +146,11 @@ if (authUser && sleeperLink && sleeperLeaguesOn.length) {
 					position: p.position,
 					team: p.team,
 					match: index.get(mine[sid]) ?? null,
-					everyone: global[sid]?.mfl === mine[sid],
+					status: !global[sid]?.mfl
+						? 'pending'
+						: global[sid].mfl === mine[sid]
+							? 'everyone'
+							: 'differs',
 				});
 				continue;
 			}
@@ -403,9 +408,11 @@ const rows = leagues.map((league) => {
 												{r.name} &rarr; {r.match?.name ?? 'an MFL player'}
 											</span>
 											<span class="mls__sub">
-												{r.everyone
+												{r.status === 'everyone'
 													? 'Applied for everyone'
-													: 'On your board. Waiting for another owner to agree.'}
+													: r.status === 'differs'
+														? 'On your board. Everyone else sees a different match.'
+														: 'On your board. Waiting for another owner to agree.'}
 											</span>
 										</span>
 										<form method="post" action="/api/live-sleeper-fix">

@@ -19,6 +19,13 @@ import type { APIRoute } from 'astro';
 import { getMflLiveUser } from '../../utils/auth';
 import { fetchSleeperUser, normalizeSleeperUsername } from '../../utils/sleeper/client';
 import { clearSleeperLink, setSleeperLink } from '../../utils/sleeper/link';
+import { discoverSleeperBoardLeagues } from '../../utils/sleeper/live';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import {
+  MFL_LIVE_LEAGUE_COOKIE,
+  MFL_LIVE_LEAGUE_MAX_AGE,
+  withLeaguesEnabled,
+} from '../../utils/mfl-live-selection';
 
 export const prerender = false;
 
@@ -28,7 +35,7 @@ const back = (outcome: string) =>
     headers: { Location: `/live/settings?sleeper=${outcome}`, 'Cache-Control': 'no-store' },
   });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const user = getMflLiveUser(request);
   if (!user) return back('signed-out');
 
@@ -46,11 +53,28 @@ export const POST: APIRoute = async ({ request }) => {
   if (!ok) return back('unavailable');
   if (!sleeper) return back('not-found');
 
-  const saved = await setSleeperLink(user, {
+  const link = {
     userId: sleeper.user_id,
     username: sleeper.username,
     displayName: sleeper.display_name,
     avatar: sleeper.avatar,
-  });
-  return back(saved ? 'linked' : 'error');
+  };
+  const saved = await setSleeperLink(user, link);
+  if (!saved) return back('error');
+
+  // An owner who has ever toggled a league has an explicit selection, which
+  // never widens by itself, so the leagues they just linked would arrive
+  // switched OFF. Switch them on. A failed discovery leaves the selection as
+  // it was; the toggles on settings still offer them.
+  const leagues = await discoverSleeperBoardLeagues({ ...link, linkedAt: '' }, getCurrentSeasonYear()).catch(() => []);
+  const next = withLeaguesEnabled(cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value, leagues.map((l) => l.id));
+  if (next) {
+    cookies.set(MFL_LIVE_LEAGUE_COOKIE, next, {
+      maxAge: MFL_LIVE_LEAGUE_MAX_AGE,
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: false,
+    });
+  }
+  return back('linked');
 };
