@@ -254,6 +254,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
 <script>
   import { matchPages } from '../../../utils/page-search-match';
+  import { loadPlayerIndex, playerLinks } from '../../../utils/player-search-client';
 
   interface Entry {
     title: string;
@@ -263,19 +264,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     admin: boolean;
     search: string;
     rank: number;
-  }
-
-  interface Player {
-    id: string;
-    name: string;
-    pos: string;
-    team: string;
-    owners: string[];
-  }
-
-  interface PlayerIndex {
-    teams: Record<string, string>;
-    players: Array<Player & { search: string; rank: number }>;
   }
 
   /** One row as drawn: a page, or a player on one team (or a free agent). */
@@ -294,7 +282,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
   const POPULAR = 6;
   /** Indexes per URL, kept across ClientRouter navigations. */
   const pageIndexes = new Map<string, Promise<Entry[]>>();
-  const playerIndexes = new Map<string, Promise<PlayerIndex>>();
 
   const panelEl = () => document.querySelector<HTMLElement>('[data-header-search]');
   const toggleEl = () => document.querySelector<HTMLElement>('[data-header-search-toggle]');
@@ -313,16 +300,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
   }
 
   const loadPages = (url: string) => cached(pageIndexes, url, (body: { pages: Entry[] }) => body.pages);
-  const loadPlayers = (url: string) =>
-    cached(playerIndexes, url, (body: { teams: Record<string, string>; players: Player[] }) => ({
-      teams: body.teams,
-      // Rostered players first: they are who owners look up.
-      players: body.players.map((p) => ({
-        ...p,
-        search: `${p.name} ${p.team} ${p.pos}`.toLowerCase(),
-        rank: p.owners.length ? 0 : 1,
-      })),
-    }));
 
   /** Sit under the glass: right-aligned to it on a wide screen, edge to edge on a phone. */
   function place(panel: HTMLElement, toggle: HTMLElement) {
@@ -338,31 +315,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
       panel.style.width = '';
       panel.style.right = `${Math.max(gutter, Math.round(window.innerWidth - rect.right))}px`;
     }
-  }
-
-  const withParams = (href: string, params: Record<string, string>) =>
-    `${href}${href.includes('?') ? '&' : '?'}${new URLSearchParams(params).toString()}`;
-
-  /** A rostered player is one row per team holding him; a free agent is one row. */
-  function playerRows(panel: HTMLElement, index: PlayerIndex, player: Player): Row[] {
-    const base = `${player.pos}${player.team && player.team !== 'FA' ? ` · ${player.team}` : ''}`;
-    if (!player.owners.length) {
-      return [{
-        href: withParams(panel.dataset.freeAgentsHref!, { player: player.id, q: player.name }),
-        title: player.name,
-        detail: `${base} · Free agent`,
-        badge: player.pos,
-      }];
-    }
-    return player.owners.map((fid) => ({
-      href: withParams(panel.dataset.rostersHref!, { franchise: fid, player: player.id }),
-      title: player.name,
-      detail: `${base} · ${index.teams[fid] ?? 'Rostered'}`,
-      badge: player.pos,
-      // Through the ClientRouter, TheLeague's roster consumed ?player= before
-      // its sheet was wired and opened nothing; a real load opens it.
-      reload: true,
-    }));
   }
 
   function group(label: string): HTMLLIElement {
@@ -437,7 +389,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     // Either index may fail on its own; the other still answers.
     const [pages, players] = await Promise.all([
       loadPages(panel.dataset.indexUrl!).catch(() => null),
-      query ? loadPlayers(panel.dataset.playerIndexUrl!).catch(() => null) : Promise.resolve(null),
+      query ? loadPlayerIndex(panel.dataset.playerIndexUrl!).catch(() => null) : Promise.resolve(null),
     ]);
     // The box may have moved on while the indexes loaded.
     if (input.value.trim() !== query || !panel.isConnected) return;
@@ -448,7 +400,10 @@ const spriteUrl = spriteUrlFor(Astro.url);
     } else {
       if (pages) sections.push(['Pages', matchPages(pages, query).slice(0, MAX_PAGES).map(pageRow)]);
       if (players) {
-        const hits = matchPages(players.players, query).flatMap((p) => playerRows(panel, players, p));
+        const hrefs = { rostersHref: panel.dataset.rostersHref!, freeAgentsHref: panel.dataset.freeAgentsHref! };
+        const hits = matchPages(players.players, query)
+          .flatMap((p) => playerLinks(players, p, hrefs))
+          .map((l): Row => ({ href: l.href, title: l.name, detail: l.detail, badge: l.pos, reload: l.reload }));
         sections.push(['Players', hits.slice(0, MAX_PLAYERS)]);
       }
     }

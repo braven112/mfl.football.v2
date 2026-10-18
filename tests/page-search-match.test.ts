@@ -64,3 +64,21 @@ describe('buildPlayerSearchIndex', () => {
     }
   });
 });
+
+describe('playerLinks', () => {
+  it('links each owning team to its roster, and a free agent to Free Agents', async () => {
+    const { playerLinks } = await import('../src/utils/player-search-client');
+    const index = { teams: { '0001': 'Pigskins', '0013': 'Rebels' }, players: [] };
+    const hrefs = { rostersHref: '/afl-fantasy/rosters', freeAgentsHref: '/afl-fantasy/players' };
+    const held = playerLinks(index, { id: '15', name: 'Josh Allen', pos: 'QB', team: 'BUF', owners: ['0001', '0013'] }, hrefs);
+    expect(held.map((l) => l.href)).toEqual([
+      '/afl-fantasy/rosters?franchise=0001&player=15',
+      '/afl-fantasy/rosters?franchise=0013&player=15',
+    ]);
+    expect(held[1].detail).toBe('QB · BUF · Rebels');
+    expect(held.every((l) => l.reload)).toBe(true);
+    const [fa] = playerLinks(index, { id: '9', name: 'Al Free', pos: 'WR', team: 'FA', owners: [] }, hrefs);
+    expect(fa.href).toBe('/afl-fantasy/players?player=9&q=Al+Free');
+    expect(fa.detail).toBe('WR · Free agent');
+  });
+});
