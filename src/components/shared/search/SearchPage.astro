@@ -6,66 +6,44 @@
  * TheLeague's page alone until Sep 2026; extracted here rather than copied so
  * the AFL's copy can't drift (see tests/page-fork-ratchet.test.ts).
  *
- * page-directory.json is ONE global list shared by every league, so the FIRST
- * thing this does is scope it with pathBelongsToLeague() — without that, AFL's
- * search would list TheLeague's contracts and salary pages, every one of which
- * 404s under /afl-fantasy. Hrefs go through resolveDirectoryHref() for the
- * same reason: directory paths are inconsistently prefixed by design, so a
- * hand-built href emits /afl-fantasy/theleague/lineup.
+ * The index (league scoping, hrefs, usage ranking) is built by
+ * src/utils/page-search-index.ts, which the header's inline search
+ * (HeaderSearch.astro) reads too. `?q=` arrives pre-typed when someone presses
+ * "See all results" in that dropdown.
  *
- * (Both obligations are declared in tests/stats-hub-links.test.ts's CONSUMERS
- * registry — that test is what forces a new directory consumer to state them.)
+ * Typing a player's name lists him above the pages, from the same prerendered
+ * player index and the same links as the header's search
+ * (src/utils/player-search-client.ts), fetched on the first keystroke.
  */
-import allPages from '../../../data/page-directory.json';
 import { spriteUrlFor } from '../../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { pathBelongsToLeague } from '../../../config/footer-config';
-import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
-import { getPageUsage } from '../../../utils/page-usage';
-import { canonicalPath } from '../../../utils/site-analytics';
+import { buildPageSearchIndex } from '../../../utils/page-search-index';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { playerIndexUrl } from '../../../utils/player-search-client';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
 }
 
 const { leagueSlug } = Astro.props;
-const navSlug = getLeagueBySlug(leagueSlug)?.navSlug ?? 'theleague';
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-
-// Strip the league prefix on an apex host (theleague.us, afl-fantasy.com) so
-// these hrefs match the clean URLs the visitor is already browsing — same
-// href() the footer builds.
-const href = (path: string) =>
-  resolveLeaguePath(resolveDirectoryHref(path, navSlug), hideLeaguePrefix);
 
 const authUser = getAuthUser(Astro.request);
-const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+// Admin of THIS league: the plain role check carries no league, and both
+// leagues' search pages are one click apart on the shared host.
+const leagueId = getLeagueBySlug(leagueSlug)?.id;
+const isAdmin = !!authUser && !!leagueId && isCommissionerOrAdminForLeague(authUser, leagueId);
 
-const thisLeaguePages = allPages.filter(p => pathBelongsToLeague(p.path, leagueSlug));
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
-// Filter out pages tagged "hidden" for non-admin users
-const pages = isAdmin ? thisLeaguePages : thisLeaguePages.filter(p => !p.tags.includes('hidden'));
+// Scoped to this league, hrefs prefixed for this host, ranked by real use —
+// all in the builder the header's inline search reads too.
+const pages = await buildPageSearchIndex(leagueSlug, { isAdmin, hideLeaguePrefix });
 
-// Build search data server-side: title + description + tags joined into one lowercase string per entry
-const searchData: Record<string, string> = {};
-for (const page of pages) {
-  searchData[page.id] = [page.title, page.description, ...page.tags, page.category].join(' ').toLowerCase();
-}
-
-// Search results rank by REAL use: owners' visits (the commissioner's
-// excluded) plus signed-out views, from the same counters /activity reads.
-// The hand-set `popularity` only breaks ties, which in practice orders the
-// pages nobody has opened yet — a brand-new page, or any page while the
-// counters are unreachable. See src/utils/page-usage.ts.
-const usage = await getPageUsage(leagueSlug);
-const views = (path: string) => usage.get(canonicalPath(path, leagueSlug)) ?? 0;
-const searchRank = new Map(
-  [...pages]
-    .sort((a, b) => views(b.path) - views(a.path) || b.popularity - a.popularity)
-    .map((page, index) => [page.id, index]),
-);
+// Where a player opens: his team's roster, or Free Agents for a free agent.
+const rostersHref = resolveLeaguePath(`/${leagueSlug}/rosters`, hideLeaguePrefix);
+const freeAgentsHref = resolveLeaguePath(`/${leagueSlug}/players`, hideLeaguePrefix);
 
 const categories = [
   { id: 'popular', label: 'Popular' },
@@ -76,13 +54,18 @@ const categories = [
 ];
 ---
 
-<section class="directory">
+<section
+  class="directory"
+  data-player-index-url={playerIndexUrl(leagueSlug)}
+  data-rosters-href={rostersHref}
+  data-free-agents-href={freeAgentsHref}
+>
   <header class="directory__header">
     <div class="directory__title-row">
       <h1 class="directory__title">Search</h1>
       <span class="directory__count">{pages.length} pages</span>
     </div>
-    <p class="directory__subtitle">Find any page on the site by name, category, or keyword.</p>
+    <p class="directory__subtitle">Find any page by name, category, or keyword, or any player by name.</p>
 
     <div class="directory__search-bar">
       <svg class="directory__search-icon" viewBox="0 0 512 512" aria-hidden="true">
@@ -91,7 +74,8 @@ const categories = [
       <input
         type="search"
         class="directory__search"
-        placeholder="Search pages... (e.g. money, bracket, trade)"
+        data-site-search-input
+        placeholder="Search pages and players... (e.g. trade, Josh Allen)"
         autocomplete="off"
       />
     </div>
@@ -108,14 +92,20 @@ const categories = [
     </button>
   </nav>
 
+  <div class="directory__players" hidden>
+    <h2 class="directory__section-title">Players</h2>
+    <div class="directory__player-grid"></div>
+    <h2 class="directory__section-title" data-pages-title>Pages</h2>
+  </div>
+
   <div class="directory__grid">
     {pages.map(page => (
       <a
-        href={href(page.path)}
+        href={page.href}
         class="directory__card"
-        data-search={searchData[page.id]}
+        data-search={page.search}
         data-category={page.category}
-        data-rank={searchRank.get(page.id)}
+        data-rank={page.rank}
       >
         <div class="directory__card-icon">
           <svg viewBox="0 0 512 512" aria-hidden="true">
@@ -125,7 +115,7 @@ const categories = [
         <div class="directory__card-content">
           <div class="directory__card-title-row">
             <h2 class="directory__card-title">{page.title}</h2>
-            {page.visibility === 'admin' && (
+            {page.admin && (
               <span class="directory__admin-badge">Admin</span>
             )}
           </div>
@@ -140,7 +130,7 @@ const categories = [
     ))}
   </div>
 
-  <p class="directory__no-results" style="display:none;">No pages match your search.</p>
+  <p class="directory__no-results" style="display:none;">Nothing matches your search.</p>
 </section>
 
 <style>
@@ -378,6 +368,94 @@ const categories = [
     letter-spacing: 0.03em;
   }
 
+  /* Players: shown above the pages while a search names one */
+  .directory__players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .directory__players[hidden] {
+    display: none;
+  }
+
+  .directory__section-title {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #64748b);
+  }
+
+  .directory__player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Player cards are built in the script, so they carry no scope attribute:
+     style them through the scoped grid that holds them. */
+  .directory__player-grid :global(.directory__player) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border: 1px solid var(--color-gray-100, #e2e8f0);
+    border-radius: 12px;
+    background: var(--card-bg, #fff);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .directory__player-grid :global(.directory__player:hover) {
+    border-color: var(--color-gray-200, #cbd5e1);
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(html.dark) .directory__player-grid :global(.directory__player) {
+    border-color: var(--content-border, #555);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .directory__player-grid :global(.directory__pos) {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-gray-50, #f8fafc);
+    color: var(--color-primary, #1c497c);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+  }
+
+  .directory__player-grid :global(.directory__player-text) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .directory__player-grid :global(.directory__player-name) {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-gray-900, #0f172a);
+    line-height: 1.3;
+  }
+
+  .directory__player-grid :global(.directory__player-detail) {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500, #64748b);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .directory__no-results {
     text-align: center;
     color: var(--color-gray-500, #64748b);
@@ -393,90 +471,169 @@ const categories = [
     .directory__search-bar {
       max-width: none;
     }
+
+    .directory__player-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
 <script>
-  const searchInput = document.querySelector('.directory__search') as HTMLInputElement;
-  const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>('.directory__card'));
-  const originalOrder = [...cards]; // preserve initial DOM order
-  const chips = document.querySelectorAll<HTMLButtonElement>('.directory__chip:not(.directory__chip--clear)');
-  const clearBtn = document.querySelector('.directory__chip--clear') as HTMLButtonElement;
-  const countEl = document.querySelector('.directory__count') as HTMLSpanElement;
-  const noResults = document.querySelector('.directory__no-results') as HTMLParagraphElement;
-  const grid = document.querySelector('.directory__grid') as HTMLElement;
-  const total = cards.length;
-  let activeCategory: string | null = null;
+  import { matchPages } from '../../../utils/page-search-match';
+  import { loadPlayerIndex, searchPlayers, type PlayerLink } from '../../../utils/player-search-client';
 
-  function filterAndSort() {
-    const query = searchInput?.value.trim().toLowerCase() || '';
-    let visible = 0;
+  const MAX_PLAYERS = 12;
 
-    // Filter cards
-    cards.forEach(card => {
-      const searchStr = card.dataset.search || '';
-      const cardCat = card.dataset.category || '';
-
-      const matchesSearch = !query || searchStr.includes(query);
-      const matchesCategory = !activeCategory || cardCat === activeCategory;
-
-      const show = matchesSearch && matchesCategory;
-      card.hidden = !show;
-      if (show) visible++;
-    });
-
-    // When searching, sort visible cards by real use (rank 0 = most used)
-    // When not searching, restore original order
-    if (query) {
-      const sorted = cards
-        .filter(c => !c.hidden)
-        .sort((a, b) => {
-          const rankA = parseInt(a.dataset.rank || '0', 10);
-          const rankB = parseInt(b.dataset.rank || '0', 10);
-          return rankA - rankB;
-        });
-
-      sorted.forEach(card => grid.appendChild(card));
-      cards.filter(c => c.hidden).forEach(card => grid.appendChild(card));
-    } else {
-      originalOrder.forEach(card => grid.appendChild(card));
-    }
-
-    // Update count
-    const hasFilter = query || activeCategory;
-    if (countEl) {
-      countEl.textContent = hasFilter ? `${visible} of ${total} pages` : `${total} pages`;
-    }
-    if (noResults) {
-      noResults.style.display = visible === 0 ? 'block' : 'none';
-    }
-    if (clearBtn) {
-      clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
-    }
+  function playerCard(link: PlayerLink): HTMLAnchorElement {
+    const a = document.createElement('a');
+    a.className = 'directory__player';
+    a.href = link.href;
+    if (link.reload) a.setAttribute('data-astro-reload', '');
+    const pos = document.createElement('span');
+    pos.className = 'directory__pos';
+    pos.setAttribute('aria-hidden', 'true');
+    pos.textContent = link.pos;
+    const text = document.createElement('span');
+    text.className = 'directory__player-text';
+    const name = document.createElement('span');
+    name.className = 'directory__player-name';
+    name.textContent = link.name;
+    const detail = document.createElement('span');
+    detail.className = 'directory__player-detail';
+    detail.textContent = link.detail;
+    text.append(name, detail);
+    a.append(pos, text);
+    return a;
   }
 
-  function clearAll() {
-    activeCategory = null;
-    chips.forEach(c => c.classList.remove('active'));
-    if (searchInput) searchInput.value = '';
-    filterAndSort();
-  }
 
-  searchInput?.addEventListener('input', filterAndSort);
-  clearBtn?.addEventListener('click', clearAll);
+  // Runs once per session under the ClientRouter, so the page is wired on
+  // every astro:page-load and every element is read fresh inside init().
+  function init() {
+    const searchInput = document.querySelector<HTMLInputElement>('.directory__search');
+    const grid = document.querySelector<HTMLElement>('.directory__grid');
+    if (!searchInput || !grid || grid.dataset.wired) return;
+    grid.dataset.wired = '1';
 
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      const cat = chip.dataset.category || '';
-      if (activeCategory === cat) {
-        activeCategory = null;
-        chip.classList.remove('active');
-      } else {
-        chips.forEach(c => c.classList.remove('active'));
-        activeCategory = cat;
-        chip.classList.add('active');
+    const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>('.directory__card'));
+    const originalOrder = [...cards]; // preserve initial DOM order
+    const entries = cards.map((card) => ({
+      card,
+      search: card.dataset.search || '',
+      title: card.querySelector('.directory__card-title')?.textContent ?? '',
+      rank: parseInt(card.dataset.rank || '0', 10),
+    }));
+    const chips = document.querySelectorAll<HTMLButtonElement>('.directory__chip:not(.directory__chip--clear)');
+    const clearBtn = document.querySelector<HTMLButtonElement>('.directory__chip--clear');
+    const countEl = document.querySelector<HTMLSpanElement>('.directory__count');
+    const noResults = document.querySelector<HTMLParagraphElement>('.directory__no-results');
+    const total = cards.length;
+    const section = document.querySelector<HTMLElement>('.directory');
+    const playersBox = document.querySelector<HTMLElement>('.directory__players');
+    const playerGrid = document.querySelector<HTMLElement>('.directory__player-grid');
+    let activeCategory: string | null = null;
+    let visiblePages = total;
+    let playerCount = 0;
+
+    function updateNoResults() {
+      if (noResults) noResults.style.display = visiblePages === 0 && playerCount === 0 ? 'block' : 'none';
+      const pagesTitle = playersBox?.querySelector<HTMLElement>('[data-pages-title]');
+      if (pagesTitle) pagesTitle.hidden = visiblePages === 0;
+    }
+
+    // Players are not pages, so a category chip hides them.
+    async function renderPlayers() {
+      const query = searchInput!.value.trim();
+      const url = section?.dataset.playerIndexUrl;
+      let links: PlayerLink[] = [];
+      if (query && !activeCategory && url && playersBox && playerGrid) {
+        const index = await loadPlayerIndex(url).catch(() => null);
+        // The box may have moved on while the index loaded.
+        if (searchInput!.value.trim() !== query || activeCategory || !playersBox.isConnected) return;
+        if (index) {
+          const hrefs = {
+            rostersHref: section!.dataset.rostersHref!,
+            freeAgentsHref: section!.dataset.freeAgentsHref!,
+          };
+          links = searchPlayers(index, query, hrefs, MAX_PLAYERS);
+        }
       }
+      playerCount = links.length;
+      playerGrid?.replaceChildren(...links.map(playerCard));
+      if (playersBox) playersBox.hidden = !playerCount;
+      updateNoResults();
+    }
+
+    function filterAndSort() {
+      const query = searchInput!.value.trim();
+      // Same matcher as the header's inline search, so both find the same pages.
+      const hits = query ? matchPages(entries, query) : null;
+      const matched = hits ? new Set(hits.map((e) => e.card)) : null;
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const matchesSearch = !matched || matched.has(card);
+        const matchesCategory = !activeCategory || card.dataset.category === activeCategory;
+        const show = matchesSearch && matchesCategory;
+        card.hidden = !show;
+        if (show) visible++;
+      });
+
+      // When searching, order visible cards as the matcher does (title hits,
+      // then real use);
+      // when not, restore the original order.
+      if (hits) {
+        hits
+          .filter((e) => !e.card.hidden)
+          .forEach((e) => grid!.appendChild(e.card));
+        cards.filter((c) => c.hidden).forEach((card) => grid!.appendChild(card));
+      } else {
+        originalOrder.forEach((card) => grid!.appendChild(card));
+      }
+
+      const hasFilter = query || activeCategory;
+      if (countEl) {
+        countEl.textContent = hasFilter ? `${visible} of ${total} pages` : `${total} pages`;
+      }
+      visiblePages = visible;
+      updateNoResults();
+      if (clearBtn) clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+      void renderPlayers();
+    }
+
+    function clearAll() {
+      activeCategory = null;
+      chips.forEach((c) => c.classList.remove('active'));
+      searchInput!.value = '';
       filterAndSort();
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    clearBtn?.addEventListener('click', clearAll);
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.category || '';
+        if (activeCategory === cat) {
+          activeCategory = null;
+          chip.classList.remove('active');
+        } else {
+          chips.forEach((c) => c.classList.remove('active'));
+          activeCategory = cat;
+          chip.classList.add('active');
+        }
+        filterAndSort();
+      });
     });
-  });
+
+    // "See all results" in the header's inline search arrives as ?q=.
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) {
+      searchInput.value = q;
+      filterAndSort();
+    }
+    searchInput.focus();
+  }
+
+  document.addEventListener('astro:page-load', init);
 </script>

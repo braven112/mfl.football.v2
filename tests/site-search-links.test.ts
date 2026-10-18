@@ -117,3 +117,46 @@ describe('the footer links search exactly once', () => {
     });
   }
 });
+
+describe('the header search opens in place', () => {
+  // The glass used to be a plain link to the search page; it now opens the
+  // inline panel on whatever page you are on. Both halves must stay wired:
+  // the toggle attribute the panel's script delegates on, and the panel
+  // itself next to each glass — or the click does nothing at all.
+  const header = readFileSync(path.join(ROOT, 'src/components/shared/Header.astro'), 'utf8');
+  const panel = readFileSync(path.join(ROOT, 'src/components/shared/search/HeaderSearch.astro'), 'utf8');
+
+  it('renders a panel beside every glass', () => {
+    const toggles = header.match(/data-header-search-toggle/g)?.length ?? 0;
+    const panels = header.match(/<HeaderSearch /g)?.length ?? 0;
+    expect(toggles).toBeGreaterThan(0);
+    expect(panels).toBe(toggles);
+  });
+
+  it('reads the same index the search page renders', () => {
+    const api = readFileSync(path.join(ROOT, 'src/pages/api/page-search.ts'), 'utf8');
+    const page = readFileSync(path.join(ROOT, 'src/components/shared/search/SearchPage.astro'), 'utf8');
+    expect(panel).toContain('/api/page-search?league=');
+    expect(api).toContain('buildPageSearchIndex(');
+    expect(page).toContain('buildPageSearchIndex(');
+  });
+
+  it('keeps the search page as the no-JS and "see all" target', () => {
+    expect(panel).toContain('action={searchHref}');
+    expect(panel).toContain('data-header-search-all href={searchHref}');
+  });
+});
+
+
+describe('search admin entries are scoped to the league searched', () => {
+  // Both leagues' indexes are one ?league= (or one click) apart, and the plain
+  // role check carries no league: a TheLeague commissioner would see the AFL's
+  // admin-only pages listed.
+  for (const file of ['src/pages/api/page-search.ts', 'src/components/shared/search/SearchPage.astro']) {
+    it(file, () => {
+      const src = readFileSync(path.join(process.cwd(), file), 'utf8');
+      expect(src).toContain('isCommissionerOrAdminForLeague(');
+      expect(src).not.toMatch(/\bisCommissionerOrAdmin\(/);
+    });
+  }
+});

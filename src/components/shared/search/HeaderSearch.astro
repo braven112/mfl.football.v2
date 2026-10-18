@@ -1,0 +1,522 @@
+---
+/**
+ * Inline site search — the panel the header's magnifying glass opens.
+ *
+ * The glass used to be a plain link to the search page. Now it opens this
+ * panel in place, on whatever page you are on: matching pages and players
+ * appear as you type, Enter (or a click) goes to one. A rostered player opens
+ * on his team's roster page with his sheet up (one row per team holding him:
+ * an AFL player is often held in both conferences); a free agent opens on Free
+ * Agents the same way (src/utils/player-search-deeplink.ts). The link's href is kept, so with
+ * no JavaScript — or a cmd/ctrl-click — it still opens the full search page,
+ * and "See all results" hands the query to that page as `?q=`. On the search
+ * page itself the glass just focuses that page's own box.
+ *
+ * The index is the same one the /search page renders
+ * (src/utils/page-search-index.ts), fetched from /api/page-search the first
+ * time the panel opens and kept for the rest of the browser session. Players
+ * come from a prerendered file per league (/api/player-search/<league>.json),
+ * fetched on the first keystroke.
+ *
+ * Header.astro renders the glass (`[data-header-search-toggle]`) and this
+ * panel side by side; every listener is delegated from `document` and looks
+ * the CURRENT panel up at event time, because the ClientRouter replaces the
+ * header on every navigation while this module runs once per session.
+ */
+import { spriteUrlFor } from '../../../utils/sprite-url';
+import { playerIndexUrl } from '../../../utils/player-search-client';
+
+interface Props {
+  /** The league's search page — the no-JS target and "See all results". */
+  searchHref: string;
+  leagueSlug: string;
+  /** The league's rosters page: a rostered player opens there, his sheet up. */
+  rostersHref: string;
+  /** The league's Free Agents page: a free agent opens there, his sheet up. */
+  freeAgentsHref: string;
+}
+
+const { searchHref, leagueSlug, rostersHref, freeAgentsHref } = Astro.props;
+const spriteUrl = spriteUrlFor(Astro.url);
+---
+
+<div
+  class="header-search"
+  id="header-search-panel"
+  data-header-search
+  data-league={leagueSlug}
+  data-index-url={`/api/page-search?league=${encodeURIComponent(leagueSlug)}`}
+  data-player-index-url={playerIndexUrl(leagueSlug)}
+  data-search-href={searchHref}
+  data-rosters-href={rostersHref}
+  data-free-agents-href={freeAgentsHref}
+  data-sprite={spriteUrl}
+  role="dialog"
+  aria-label="Search pages and players"
+  hidden
+>
+  <form class="header-search__bar" role="search" action={searchHref} method="get">
+    <svg class="header-search__icon" viewBox="0 0 512 512" aria-hidden="true">
+      <use href={`${spriteUrl}#icon-search`}></use>
+    </svg>
+    <input
+      type="search"
+      name="q"
+      class="header-search__input"
+      placeholder="Search pages and players…"
+      autocomplete="off"
+      spellcheck="false"
+      role="combobox"
+      aria-expanded="true"
+      aria-autocomplete="list"
+      aria-controls="header-search-results"
+      aria-label="Search pages and players"
+    />
+    <button type="button" class="header-search__close" data-header-search-close aria-label="Close search">
+      Esc
+    </button>
+  </form>
+  <ul class="header-search__results" id="header-search-results" role="listbox" aria-label="Search results"></ul>
+  <p class="header-search__status" data-header-search-status aria-live="polite" hidden></p>
+  <a class="header-search__all" data-header-search-all href={searchHref}>See all pages</a>
+</div>
+
+<style>
+  .header-search {
+    position: fixed;
+    z-index: 1000;
+    width: min(440px, calc(100vw - 1rem));
+    max-height: min(70vh, 560px);
+    display: flex;
+    flex-direction: column;
+    background: var(--content-bg);
+    color: var(--page-text);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .header-search[hidden] { display: none; }
+
+  .header-search__bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.625rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+
+  .header-search__icon {
+    position: absolute;
+    left: 1.375rem;
+    width: 16px;
+    height: 16px;
+    fill: var(--content-text-muted);
+    pointer-events: none;
+  }
+
+  .header-search__input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.75rem 0.55rem 2.25rem;
+    border: 2px solid var(--input-border);
+    border-radius: 10px;
+    background: var(--input-bg);
+    color: var(--input-text);
+    /* A size of at least 16px stops iOS zooming the page when the box takes focus. */
+    font-size: var(--font-size-base);
+    outline: none;
+  }
+
+  .header-search__input:focus { border-color: var(--color-primary); }
+  .header-search__input::placeholder { color: var(--content-text-muted); }
+  /* The clear "x" duplicates Esc and crowds a phone-width box. */
+  .header-search__input::-webkit-search-cancel-button { display: none; }
+
+  .header-search__close {
+    flex-shrink: 0;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--content-border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .header-search__close:hover { color: var(--page-text); background: var(--content-bg-muted); }
+
+  /* Section labels ("Pages", "Players") are built by the script. */
+  .header-search :global(.header-search__group) {
+    padding: 0.5rem 0.5rem 0.25rem;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+
+  .header-search__results {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0.375rem;
+    overflow-y: auto;
+  }
+
+  .header-search__results:empty { display: none; }
+
+  .header-search__status {
+    margin: 0;
+    padding: 1rem 0.875rem;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  .header-search__status[hidden] { display: none; }
+
+  .header-search__all {
+    display: block;
+    padding: 0.625rem 0.875rem;
+    border-top: 1px solid var(--content-border);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: none;
+  }
+
+  .header-search__all:hover { background: var(--content-bg-muted); }
+
+  /* Result rows are built by the script, so they sit outside this
+     component's scope hash. */
+  .header-search :global(.header-search__result) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .header-search :global(.header-search__result[aria-selected='true']),
+  .header-search :global(.header-search__result:hover) {
+    background: var(--content-bg-muted);
+  }
+
+  .header-search :global(.header-search__result-icon) {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--content-bg-muted);
+  }
+
+  .header-search :global(.header-search__result-icon--pos) {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-primary);
+  }
+
+  .header-search :global(.header-search__result-icon svg) {
+    width: 18px;
+    height: 18px;
+    fill: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .header-search :global(.header-search__result-text) {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-search :global(.header-search__result-title) {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .header-search :global(.header-search__result-desc) {
+    font-size: var(--font-size-xs);
+    line-height: 1.35;
+    color: var(--content-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<script>
+  import { matchPages } from '../../../utils/page-search-match';
+  import { cachedJson, loadPlayerIndex, searchPlayers } from '../../../utils/player-search-client';
+
+  interface Entry {
+    title: string;
+    description: string;
+    href: string;
+    icon: string;
+    admin: boolean;
+    search: string;
+    rank: number;
+  }
+
+  /** One row as drawn: a page, or a player on one team (or a free agent). */
+  interface Row {
+    href: string;
+    title: string;
+    detail: string;
+    icon?: string;
+    badge?: string;
+    /** Full page load: the roster page wires its player sheet only on one. */
+    reload?: boolean;
+  }
+
+  const MAX_PAGES = 5;
+  const MAX_PLAYERS = 5;
+  const POPULAR = 6;
+  /** Indexes per URL, kept across ClientRouter navigations. */
+  const pageIndexes = new Map<string, Promise<Entry[]>>();
+
+  const panelEl = () => document.querySelector<HTMLElement>('[data-header-search]');
+  const toggleEl = () => document.querySelector<HTMLElement>('[data-header-search-toggle]');
+
+  const loadPages = (url: string) => cachedJson(pageIndexes, url, (body: { pages: Entry[] }) => body.pages);
+
+  /** Sit under the glass: right-aligned to it on a wide screen, edge to edge on a phone. */
+  function place(panel: HTMLElement, toggle: HTMLElement) {
+    const rect = toggle.getBoundingClientRect();
+    const gutter = 8;
+    panel.style.top = `${Math.round(rect.bottom + 6)}px`;
+    if (window.innerWidth < 640) {
+      panel.style.left = `${gutter}px`;
+      panel.style.right = `${gutter}px`;
+      panel.style.width = 'auto';
+    } else {
+      panel.style.left = 'auto';
+      panel.style.width = '';
+      panel.style.right = `${Math.max(gutter, Math.round(window.innerWidth - rect.right))}px`;
+    }
+  }
+
+  function group(label: string): HTMLLIElement {
+    const li = document.createElement('li');
+    li.className = 'header-search__group';
+    li.setAttribute('role', 'presentation');
+    li.textContent = label;
+    return li;
+  }
+
+  function row(entry: Row, index: number, sprite: string): HTMLLIElement {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'presentation');
+    const a = document.createElement('a');
+    a.className = 'header-search__result';
+    a.href = entry.href;
+    a.id = `header-search-opt-${index}`;
+    a.setAttribute('role', 'option');
+    a.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+    if (entry.reload) a.setAttribute('data-astro-reload', '');
+
+    const icon = document.createElement('span');
+    icon.className = 'header-search__result-icon';
+    if (entry.icon) {
+      const svgNs = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNs, 'svg');
+      svg.setAttribute('viewBox', '0 0 512 512');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS(svgNs, 'use');
+      use.setAttribute('href', `${sprite}#icon-${entry.icon}`);
+      svg.appendChild(use);
+      icon.appendChild(svg);
+    } else {
+      icon.classList.add('header-search__result-icon--pos');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = entry.badge ?? '';
+    }
+
+    const text = document.createElement('span');
+    text.className = 'header-search__result-text';
+    const title = document.createElement('span');
+    title.className = 'header-search__result-title';
+    title.textContent = entry.title;
+    const desc = document.createElement('span');
+    desc.className = 'header-search__result-desc';
+    desc.textContent = entry.detail;
+    text.append(title, desc);
+
+    a.append(icon, text);
+    li.appendChild(a);
+    return li;
+  }
+
+  const pageRow = (e: Entry): Row => ({
+    href: e.href,
+    title: e.admin ? `${e.title} · Admin` : e.title,
+    detail: e.description,
+    icon: e.icon,
+  });
+
+  async function render(panel: HTMLElement) {
+    const input = panel.querySelector<HTMLInputElement>('.header-search__input')!;
+    const list = panel.querySelector<HTMLUListElement>('.header-search__results')!;
+    const status = panel.querySelector<HTMLElement>('[data-header-search-status]')!;
+    const all = panel.querySelector<HTMLAnchorElement>('[data-header-search-all]')!;
+    const query = input.value.trim();
+    const searchHref = panel.dataset.searchHref!;
+
+    all.href = query ? `${searchHref}?q=${encodeURIComponent(query)}` : searchHref;
+    all.textContent = query ? `See all pages for “${query}”` : 'See all pages';
+
+    // Either index may fail on its own; the other still answers.
+    const [pages, players] = await Promise.all([
+      loadPages(panel.dataset.indexUrl!).catch(() => null),
+      query ? loadPlayerIndex(panel.dataset.playerIndexUrl!).catch(() => null) : Promise.resolve(null),
+    ]);
+    // The box may have moved on while the indexes loaded.
+    if (input.value.trim() !== query || !panel.isConnected) return;
+
+    const sections: Array<[string, Row[]]> = [];
+    if (!query) {
+      if (pages) sections.push(['Popular', [...pages].sort((a, b) => a.rank - b.rank).slice(0, POPULAR).map(pageRow)]);
+    } else {
+      if (pages) sections.push(['Pages', matchPages(pages, query).slice(0, MAX_PAGES).map(pageRow)]);
+      if (players) {
+        const hrefs = { rostersHref: panel.dataset.rostersHref!, freeAgentsHref: panel.dataset.freeAgentsHref! };
+        const hits = searchPlayers(players, query, hrefs, MAX_PLAYERS)
+          .map((l): Row => ({ href: l.href, title: l.name, detail: l.detail, badge: l.pos, reload: l.reload }));
+        sections.push(['Players', hits]);
+      }
+    }
+
+    const items: HTMLLIElement[] = [];
+    let n = 0;
+    for (const [label, rows] of sections) {
+      if (!rows.length) continue;
+      items.push(group(label));
+      for (const r of rows) items.push(row(r, n++, panel.dataset.sprite ?? ''));
+    }
+    list.replaceChildren(...items);
+    // Enter acts only on rows drawn for what is in the box now.
+    panel.dataset.renderedQuery = query;
+
+    const failed = !pages && (!query || !players);
+    status.hidden = n > 0 && !failed;
+    status.textContent = failed
+      ? 'Search could not load. Try the full search page below.'
+      : n === 0 && query ? `Nothing matches “${query}”.` : '';
+    input.setAttribute('aria-activedescendant', n ? 'header-search-opt-0' : '');
+  }
+
+  function open() {
+    const panel = panelEl();
+    const toggle = toggleEl();
+    if (!panel || !toggle) return;
+    place(panel, toggle);
+    panel.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    const input = panel.querySelector<HTMLInputElement>('.header-search__input')!;
+    input.focus();
+    input.select();
+    void render(panel);
+  }
+
+  function close({ restoreFocus = false } = {}) {
+    const panel = panelEl();
+    if (!panel || panel.hidden) return;
+    panel.hidden = true;
+    const toggle = toggleEl();
+    toggle?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) toggle?.focus();
+  }
+
+  function move(panel: HTMLElement, step: number) {
+    const options = Array.from(panel.querySelectorAll<HTMLElement>('.header-search__result'));
+    if (!options.length) return;
+    const current = options.findIndex((o) => o.getAttribute('aria-selected') === 'true');
+    const next = (current + step + options.length) % options.length;
+    options.forEach((o, i) => o.setAttribute('aria-selected', i === next ? 'true' : 'false'));
+    options[next].scrollIntoView({ block: 'nearest' });
+    panel.querySelector('.header-search__input')?.setAttribute('aria-activedescendant', options[next].id);
+  }
+
+  // CAPTURE phase: the ClientRouter's own click listener on document would
+  // otherwise see the glass first and navigate to the search page.
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element | null;
+    if (!target?.closest('[data-header-search-toggle]')) return;
+    // A new-tab click keeps meaning "open the search page".
+    const e = event as MouseEvent;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    // Already on the search page: its own box is the search.
+    const pageBox = document.querySelector<HTMLInputElement>('[data-site-search-input]');
+    if (pageBox) { pageBox.focus(); pageBox.scrollIntoView({ block: 'center' }); return; }
+    if (panelEl()?.hidden === false) close({ restoreFocus: true }); else open();
+  }, { capture: true });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element | null;
+    if (target?.closest('[data-header-search-close]')) { close({ restoreFocus: true }); return; }
+    // Following a result or "See all" closes the panel; so does any click outside it.
+    if (target?.closest('.header-search__result, [data-header-search-all]') || !target?.closest('[data-header-search]')) {
+      close();
+    }
+  });
+
+  document.addEventListener('input', (event) => {
+    const input = (event.target as Element | null)?.closest('.header-search__input');
+    const panel = input?.closest<HTMLElement>('[data-header-search]');
+    if (panel) void render(panel);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const panel = panelEl();
+    if (!panel || panel.hidden) return;
+    if (event.key === 'Escape') { event.preventDefault(); close({ restoreFocus: true }); return; }
+    if (!(event.target as Element | null)?.closest('.header-search__input')) return;
+    if (event.key === 'ArrowDown') { event.preventDefault(); move(panel, 1); }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); move(panel, -1); }
+  });
+
+  // Enter: the highlighted page, or the full search page when nothing matches.
+  document.addEventListener('submit', (event) => {
+    const form = (event.target as Element | null)?.closest<HTMLFormElement>('.header-search__bar');
+    const panel = form?.closest<HTMLElement>('[data-header-search]');
+    if (!panel) return;
+    const query = panel.querySelector<HTMLInputElement>('.header-search__input')?.value.trim() ?? '';
+    // Rows still showing an earlier query (the first index load is in flight):
+    // wait for this query's rows rather than open a stale one.
+    if (panel.dataset.renderedQuery !== query) {
+      event.preventDefault();
+      void render(panel).then(() => {
+        if (panel.dataset.renderedQuery === query) form?.requestSubmit();
+      });
+      return;
+    }
+    const picked = panel.querySelector<HTMLAnchorElement>('.header-search__result[aria-selected="true"]');
+    if (picked) {
+      event.preventDefault();
+      close();
+      picked.click();
+    } else {
+      close();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    const panel = panelEl();
+    const toggle = toggleEl();
+    if (panel && toggle && !panel.hidden) place(panel, toggle);
+  });
+
+  // The header is replaced on navigation; a panel left open must not follow.
+  document.addEventListener('astro:before-swap', () => close());
+</script>
