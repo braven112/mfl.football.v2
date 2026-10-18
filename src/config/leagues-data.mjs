@@ -29,6 +29,11 @@ export const LEAGUES = {
      */
     theme: 'theleague',
     /**
+     * Seasonal themes this league wears while their window is open — ids in
+     * src/config/seasonal-themes.mjs. Absent = none.
+     */
+    seasonalThemes: ['halloween'],
+    /**
      * Icon set — a folder under public/assets/icons/sets/, or 'classic' (the
      * original public/assets/icons/sprite.svg). Absent = 'classic'. Every set
      * carries the same glyph ids, so switching is this one line
@@ -290,6 +295,8 @@ export const LEAGUES = {
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
     theme: 'afl',
+    /** Seasonal themes — see TheLeague's entry. */
+    seasonalThemes: ['halloween'],
     /** Icon set — see TheLeague's entry. */
     iconSet: 'line',
     archetype: 'deluxe-keeper',

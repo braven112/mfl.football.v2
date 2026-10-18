@@ -31,6 +31,9 @@ import '../styles/states.css';
 // state rules must out-rank this layout's global a:hover, which a scoped copy
 // could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
 import '../styles/cta.css';
+// Seasonal looks (Halloween): rules keyed on <html data-season>, global for
+// the same reason.
+import '../styles/seasonal-themes.css';
 import TheLeagueHeader from '../components/shared/Header.astro';
 import TheLeagueFooter from '../components/shared/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
@@ -47,6 +50,7 @@ import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
 import RosterLoader from '../components/shared/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../utils/league-year';
+import { activeSeasonalTheme } from '../config/seasonal-themes.mjs';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { isPlatformAdmin } from '../utils/league-admin';
 import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
@@ -374,6 +378,19 @@ const pwaGate = {
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
+
+// A seasonal theme (Halloween) stamps <html data-season> while its window is
+// open; the palette, headline face and marks all key on that attribute. A
+// seasonal lock outranks the viewer's preference but never a page's own pin
+// (the theme review pages). ?testDate= previews a window for one page;
+// ?seasonPreview= (middleware) keeps it on while clicking around.
+const season = activeSeasonalTheme(
+	getLeagueBySlug(leagueContext.slug)?.seasonalThemes,
+	getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+	Astro.locals.seasonPreview,
+);
+const modeLock = themeLock ?? season?.lock ?? undefined;
+
 import StagingBanner from '../components/shared/StagingBanner.astro';
 import DemoBanner from '../components/shared/DemoBanner.astro';
 import DemoTour from '../components/shared/DemoTour.astro';
@@ -392,7 +409,7 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-sprite-url={pageSpriteUrl} data-league={league} data-site-theme={siteStyle} data-theme-lock={themeLock} class:list={[{ dark: themeLock ? themeLock === 'dark' : themePref === 'dark' }]}>
+<html lang="en" data-sprite-url={pageSpriteUrl} data-league={league} data-site-theme={siteStyle} data-season={season?.id} data-theme-lock={modeLock} class:list={[{ dark: modeLock ? modeLock === 'dark' : themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -261,6 +261,8 @@ export interface LeagueDefinition {
   navSlug: LeagueSlug;
   /** Color theme id — a file in src/themes/ (see scripts/generate-league-themes.mjs). */
   theme: string;
+  /** Seasonal theme ids (src/config/seasonal-themes.mjs) this league wears in their windows. */
+  seasonalThemes?: readonly string[];
   /**
    * The preset this league's feature checkboxes started from
    * (src/config/league-archetypes.mjs). Informational: code gates on
