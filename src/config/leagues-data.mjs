@@ -519,17 +519,25 @@ export const LEAGUES = {
     // not on by default — it overrates youth for a one-season horizon.
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
     /**
-     * Week 8, deliberately NOT TheLeague's Week 4 — the two leagues share
+     * Week 11, deliberately NOT TheLeague's Week 4 — the two leagues share
      * owners and a site, so spacing the events apart gives each its own
      * moment instead of one crowded weekend.
      *
-     * Week 8 is also a plain 12-matchup slate. The AFL plays doubleheaders in
+     * It was Week 8 until Oct 2026, but Week 8 falls inside the Halloween
+     * window (`seasonal-themes.mjs`) EVERY year, and the drawn Halloween marks
+     * swap only a team's current logo, so era art rendered in full colour on
+     * the Midnight pages. Week 11 never meets Halloween or Thanksgiving; it
+     * opens the day after the AFL trade deadline (the Wednesday between weeks
+     * 10 and 11), which the owner accepted. Weeks 6 and 10 were also clear of
+     * Halloween; Week 9 is not (2030, 2031, 2036).
+     *
+     * Week 11 is also a plain 12-matchup slate. The AFL plays doubleheaders in
      * weeks 1, 2 and one LATE week that moves year to year (12 in 2023/2026,
      * 13 in 2024/2025) — picking one of those would have made the throwback
      * week a derived value rather than a constant, with the same
      * copy-last-year's-number trap `schedule-optimization.md` documents.
      */
-    throwbackWeeks: [8],
+    throwbackWeeks: [11],
   },
   'best-ball-1': {
     id: '37610',

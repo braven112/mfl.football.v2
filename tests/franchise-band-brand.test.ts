@@ -349,7 +349,7 @@ describe('buildFranchiseBandBrands', () => {
     expect(notItsWeek.teams).toEqual(plain.teams);
 
     // ...but its own week does.
-    const aflWeek = [8, 9, 10].find((w) => isThrowbackWeekForScope(w, aflScope))!;
+    const aflWeek = Array.from({ length: 18 }, (_, i) => i + 1).find((w) => isThrowbackWeekForScope(w, aflScope))!;
     const itsWeek = buildFranchiseBandBrands('afl', {
       throwbackActive: isThrowbackWeekForScope(aflWeek, aflScope),
     });
