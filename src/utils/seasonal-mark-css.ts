@@ -28,6 +28,11 @@
  * `seasonalSwapPath` and inlines the drawn file itself, since CSS cannot reach
  * inside an inlined SVG.
  *
+ * Franchise marks also swap on a non-league surface wearing the same season
+ * (MFL Live, SURFACE_SEASONAL_THEMES): its <html data-league> is a theme key,
+ * so each league's franchise-mark and logo rules gain that scope beside
+ * their own.
+ *
  * Sprite icons swap too: `_icons` maps a sprite icon id (the Premier League
  * page's icon) to a drawn file. A `<use>` cannot take `content:`, so the
  * referencing <svg> is masked by the drawing and filled with `currentColor`
@@ -40,7 +45,7 @@
  * nav icon slot only, is tinted the nav's icon colour the same way; the same
  * image elsewhere keeps the plain `_swaps` drawing.
  */
-import { SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
+import { SEASONAL_THEMES, SURFACE_SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
 
 /** Every current-identity mark a franchise renders: its icon, dark icon and GroupMe avatar (both themes). Era crests are history and keep their art. */
@@ -136,11 +141,22 @@ export function buildSeasonalMarkCss(
   for (const id of seasonalThemes ?? []) {
     const marks = SEASONAL_THEMES[id]?.marks;
     if (!marks) continue;
+    // The league's own pages, plus every non-league surface wearing the same
+    // season (MFL Live): this league's franchises show their drawn marks
+    // there, and a league that does not wear the season emits nothing, so
+    // its franchises keep their logos on that surface. Franchise marks and the
+    // league logo only — art swaps and sprite icons are this league's chrome.
+    const scopes = [
+      navSlug,
+      ...Object.entries(SURFACE_SEASONAL_THEMES)
+        .filter(([, ids]) => ids.includes(id))
+        .map(([surface]) => surface),
+    ];
     const logoFile = seasonalLogoFile(navSlug, id);
     const logoSrcs = [logo?.light, logo?.dark].filter((s): s is string => Boolean(s));
     if (logoFile && logoSrcs.length) {
-      const selectors = [...new Set(logoSrcs)].map(
-        (src) => `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(src)}"]`,
+      const selectors = scopes.flatMap((scope) =>
+        [...new Set(logoSrcs)].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
       );
       rules.push(`${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${logoFile}"); filter: none; }`);
     }
@@ -174,8 +190,8 @@ export function buildSeasonalMarkCss(
         const src = team[field];
         if (src) iconSrcVariants(src).forEach((s) => srcs.add(s));
       }
-      const selectors = [...srcs].map(
-        (src) => `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(src)}"]`,
+      const selectors = scopes.flatMap((scope) =>
+        [...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
       );
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(

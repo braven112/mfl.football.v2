@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
-import { SEASONAL_THEMES, activeSeasonalTheme, resolveSeasonPreview } from '../src/config/seasonal-themes.mjs';
+import { SEASONAL_THEMES, SURFACE_SEASONAL_THEMES, activeSeasonalTheme, resolveSeasonPreview } from '../src/config/seasonal-themes.mjs';
 import { getLeagueTeams } from '../src/utils/league-config';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 import { buildSeasonalMarkCss, seasonalLogoFile, seasonalMarkIds, seasonalSwapPath } from '../src/utils/seasonal-mark-css';
@@ -181,5 +181,39 @@ describe('inlined AFL badge art follows the season', () => {
     }
     // a badge the season does not redraw keeps its art
     expect(halloween['nit.svg']).toBe(normal['nit.svg']);
+  });
+});
+
+describe('MFL Live wears the season for everyone', () => {
+  const layout = fs.readFileSync(path.join(ROOT, 'src/layouts/MflAppLayout.astro'), 'utf8');
+  const palette = fs.readFileSync(path.join(ROOT, 'src/styles/league-themes.generated.css'), 'utf8');
+
+  it('wears Halloween, stamped and locked by its own layout', () => {
+    expect(SURFACE_SEASONAL_THEMES.mfl).toContain('halloween');
+    expect(layout).toMatch(/activeSeasonalTheme\(\s*SURFACE_SEASONAL_THEMES\.mfl/);
+    expect(layout).toContain('data-season={season?.id}');
+    expect(layout).toContain('data-theme-lock={modeLock}');
+  });
+
+  it('gets the Halloween palette in both modes', () => {
+    expect(palette).toContain('html[data-league="mfl"][data-season="halloween"]');
+    expect(palette).toContain('html.dark[data-league="mfl"][data-season="halloween"]');
+  });
+
+  it("a league that wears the season shows its drawn marks there; one that does not keeps its logos", () => {
+    const icon = '/assets/theleague/icons/0001.png';
+    const wearing = buildSeasonalMarkCss('theleague', ['halloween'], [{ franchiseId: '0001', icon }]);
+    expect(wearing).toContain(`html[data-league="mfl"][data-season="halloween"] img[src="${icon}"]`);
+    expect(buildSeasonalMarkCss('theleague', [], [{ franchiseId: '0001', icon }])).toBe('');
+  });
+
+  it("only franchise marks and the league logo reach MFL Live, never a league's art swaps or sprite icons", () => {
+    const blocks = buildAllTeamIconDarkCss()
+      .split('}')
+      .filter((b) => b.includes('halloween-marks') && b.includes('data-league="mfl"'));
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) {
+      expect(block).toMatch(/halloween-marks\/(\d{4}\.png|logo\.svg)/);
+    }
   });
 });

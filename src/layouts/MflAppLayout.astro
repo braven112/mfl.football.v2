@@ -85,6 +85,11 @@ import '../styles/states.css';
 // state rules must out-rank this layout's global a:hover, which a scoped copy
 // could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
 import '../styles/cta.css';
+// Seasonal looks (Halloween): the headline face and the hidden theme control,
+// keyed on <html data-season> like everything seasonal.
+import '../styles/seasonal-themes.css';
+import { activeSeasonalTheme, SURFACE_SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
+import { getTestDateFromSearchParams } from '../utils/league-year';
 
 export interface Props {
 	title: string;
@@ -97,6 +102,19 @@ const { title, description } = Astro.props as Props;
 // 'auto' renders no class — the pre-paint ThemeScript resolves it against
 // prefers-color-scheme before first paint.
 const themePref = getThemePreference(Astro.cookies);
+
+// A seasonal theme (Halloween) is worn by the WHOLE app while its window is
+// open, whatever leagues the viewer plays in (SURFACE_SEASONAL_THEMES). The
+// palette keys on data-season here exactly as on a league page; franchise
+// marks swap only for leagues that wear the season themselves. Its lock
+// outranks the viewer's light/dark choice. ?testDate= / ?seasonPreview=
+// preview it, as on the league sites.
+const season = activeSeasonalTheme(
+	SURFACE_SEASONAL_THEMES.mfl,
+	getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+	Astro.locals.seasonPreview,
+);
+const modeLock = season?.lock ?? undefined;
 
 // See the manifest note above.
 const onSharedHost = isSharedAppHost(Astro.url.hostname);
@@ -127,7 +145,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-sprite-url={pageSpriteUrl} data-league="mfl" class:list={[{ dark: themePref === 'dark' }]}>
+<html lang="en" data-sprite-url={pageSpriteUrl} data-league="mfl" data-season={season?.id} data-theme-lock={modeLock} class:list={[{ dark: modeLock ? modeLock === 'dark' : themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
