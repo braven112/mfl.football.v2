@@ -3298,12 +3298,15 @@ const spriteUrl = spriteUrlFor(Astro.url);
      load's page-load event from binding a second listener. -->
 <script>
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { openSearchedPlayer } from '../../utils/player-search-deeplink';
 
   function initModalTrigger() {
     const tbody = document.getElementById('player-table-body');
     if (tbody && !tbody.dataset.modalInit) {
       tbody.dataset.modalInit = 'true';
       initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
+      // `?player=&q=` from the header's inline search opens that player's sheet.
+      openSearchedPlayer();
     }
   }
 

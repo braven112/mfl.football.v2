@@ -48,3 +48,19 @@ describe('buildPageSearchIndex', () => {
     expect(ranks).toEqual(owner.map((_, i) => i));
   });
 });
+
+describe('buildPlayerSearchIndex', () => {
+  it('lists only rostered positions, with every owner and a readable name', async () => {
+    const { buildPlayerSearchIndex, displayName } = await import('../src/utils/player-search-index');
+    expect(displayName('Allen, Josh')).toBe('Josh Allen');
+    for (const league of ['theleague', 'afl-fantasy'] as const) {
+      const index = buildPlayerSearchIndex(league);
+      expect(index.players.length, league).toBeGreaterThan(100);
+      const rostered = index.players.filter((p) => p.owners.length);
+      expect(rostered.length, league).toBeGreaterThan(50);
+      for (const p of rostered) for (const fid of p.owners) expect(index.teams[fid], `${league} ${fid}`).toBeTruthy();
+      expect(index.players.some((p) => p.pos === 'DT'), league).toBe(false);
+      expect(index.players.every((p) => !p.name.includes(',')), league).toBe(true);
+    }
+  });
+});

@@ -88,6 +88,11 @@ const freeAgentsUrl = resolveLeaguePath(
   isAFL || isKeeper ? `${aflFamilyPrefix}/players` : "/theleague/players",
   hideLeaguePrefix
 );
+// The inline search opens a rostered player on his team's roster page.
+const rostersUrl = resolveLeaguePath(
+  isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : '/theleague/rosters',
+  hideLeaguePrefix
+);
 // Self-hosted live scoring when the league has it enabled; otherwise fall back
 // to the MFL-hosted "live scoring summary" page (the surface we're replacing).
 const hasLiveScoring = leagueHasFeature(league.slug, 'liveScoring');
@@ -154,7 +159,7 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
             <use href={`${spriteUrl}#icon-search`}></use>
           </svg>
         </a>
-        <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} />
+        <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} rostersHref={rostersUrl} freeAgentsHref={freeAgentsUrl} />
         </>
       )}
       <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
@@ -262,7 +267,7 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
               <use href={`${spriteUrl}#icon-search`}></use>
             </svg>
           </a>
-          <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} />
+          <HeaderSearch searchHref={searchHref} leagueSlug={league.slug} rostersHref={rostersUrl} freeAgentsHref={freeAgentsUrl} />
           </>
         )}
         <NavToggleButton ariaLabel="Toggle navigation menu" controlsId="nav-drawer" />

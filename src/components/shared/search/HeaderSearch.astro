@@ -3,15 +3,20 @@
  * Inline site search — the panel the header's magnifying glass opens.
  *
  * The glass used to be a plain link to the search page. Now it opens this
- * panel in place, on whatever page you are on: type, see matching pages as
- * you type, Enter (or a click) goes to one. The link's href is kept, so with
+ * panel in place, on whatever page you are on: matching pages and players
+ * appear as you type, Enter (or a click) goes to one. A rostered player opens
+ * on his team's roster page with his sheet up (one row per team holding him:
+ * an AFL player is often held in both conferences); a free agent opens on Free
+ * Agents the same way (src/utils/player-search-deeplink.ts). The link's href is kept, so with
  * no JavaScript — or a cmd/ctrl-click — it still opens the full search page,
  * and "See all results" hands the query to that page as `?q=`. On the search
  * page itself the glass just focuses that page's own box.
  *
  * The index is the same one the /search page renders
  * (src/utils/page-search-index.ts), fetched from /api/page-search the first
- * time the panel opens and kept for the rest of the browser session.
+ * time the panel opens and kept for the rest of the browser session. Players
+ * come from a prerendered file per league (/api/player-search/<league>.json),
+ * fetched on the first keystroke.
  *
  * Header.astro renders the glass (`[data-header-search-toggle]`) and this
  * panel side by side; every listener is delegated from `document` and looks
@@ -24,9 +29,13 @@ interface Props {
   /** The league's search page — the no-JS target and "See all results". */
   searchHref: string;
   leagueSlug: string;
+  /** The league's rosters page: a rostered player opens there, his sheet up. */
+  rostersHref: string;
+  /** The league's Free Agents page: a free agent opens there, his sheet up. */
+  freeAgentsHref: string;
 }
 
-const { searchHref, leagueSlug } = Astro.props;
+const { searchHref, leagueSlug, rostersHref, freeAgentsHref } = Astro.props;
 const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
@@ -36,10 +45,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
   data-header-search
   data-league={leagueSlug}
   data-index-url={`/api/page-search?league=${encodeURIComponent(leagueSlug)}`}
+  data-player-index-url={`/api/player-search/${encodeURIComponent(leagueSlug)}.json`}
   data-search-href={searchHref}
+  data-rosters-href={rostersHref}
+  data-free-agents-href={freeAgentsHref}
   data-sprite={spriteUrl}
   role="dialog"
-  aria-label="Search pages"
+  aria-label="Search pages and players"
   hidden
 >
   <form class="header-search__bar" role="search" action={searchHref} method="get">
@@ -50,21 +62,20 @@ const spriteUrl = spriteUrlFor(Astro.url);
       type="search"
       name="q"
       class="header-search__input"
-      placeholder="Search pages…"
+      placeholder="Search pages and players…"
       autocomplete="off"
       spellcheck="false"
       role="combobox"
       aria-expanded="true"
       aria-autocomplete="list"
       aria-controls="header-search-results"
-      aria-label="Search pages"
+      aria-label="Search pages and players"
     />
     <button type="button" class="header-search__close" data-header-search-close aria-label="Close search">
       Esc
     </button>
   </form>
-  <p class="header-search__heading" data-header-search-heading>Popular</p>
-  <ul class="header-search__results" id="header-search-results" role="listbox" aria-label="Matching pages"></ul>
+  <ul class="header-search__results" id="header-search-results" role="listbox" aria-label="Search results"></ul>
   <p class="header-search__status" data-header-search-status hidden></p>
   <a class="header-search__all" data-header-search-all href={searchHref}>See all pages</a>
 </div>
@@ -138,9 +149,9 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   .header-search__close:hover { color: var(--page-text); background: var(--content-bg-muted); }
 
-  .header-search__heading {
-    margin: 0;
-    padding: 0.625rem 0.875rem 0.25rem;
+  /* Section labels ("Pages", "Players") are built by the script. */
+  .header-search :global(.header-search__group) {
+    padding: 0.5rem 0.5rem 0.25rem;
     font-size: var(--font-size-2xs);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -205,6 +216,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
     background: var(--content-bg-muted);
   }
 
+  .header-search :global(.header-search__result-icon--pos) {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-primary);
+  }
+
   .header-search :global(.header-search__result-icon svg) {
     width: 18px;
     height: 18px;
@@ -247,26 +265,64 @@ const spriteUrl = spriteUrlFor(Astro.url);
     rank: number;
   }
 
-  const MAX_RESULTS = 8;
+  interface Player {
+    id: string;
+    name: string;
+    pos: string;
+    team: string;
+    owners: string[];
+  }
+
+  interface PlayerIndex {
+    teams: Record<string, string>;
+    players: Array<Player & { search: string; rank: number }>;
+  }
+
+  /** One row as drawn: a page, or a player on one team (or a free agent). */
+  interface Row {
+    href: string;
+    title: string;
+    detail: string;
+    icon?: string;
+    badge?: string;
+    /** Full page load: the roster page wires its player sheet only on one. */
+    reload?: boolean;
+  }
+
+  const MAX_PAGES = 5;
+  const MAX_PLAYERS = 5;
   const POPULAR = 6;
-  /** Index per league URL, kept across ClientRouter navigations. */
-  const indexes = new Map<string, Promise<Entry[]>>();
+  /** Indexes per URL, kept across ClientRouter navigations. */
+  const pageIndexes = new Map<string, Promise<Entry[]>>();
+  const playerIndexes = new Map<string, Promise<PlayerIndex>>();
 
   const panelEl = () => document.querySelector<HTMLElement>('[data-header-search]');
   const toggleEl = () => document.querySelector<HTMLElement>('[data-header-search-toggle]');
 
-  function loadIndex(url: string): Promise<Entry[]> {
-    let hit = indexes.get(url);
+  function cached<T>(cache: Map<string, Promise<T>>, url: string, read: (body: any) => T): Promise<T> {
+    let hit = cache.get(url);
     if (!hit) {
       hit = fetch(url, { credentials: 'same-origin' })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((body: { pages: Entry[] }) => body.pages)
+        .then(read)
         // A failed load is not cached: the next open tries again.
-        .catch((err) => { indexes.delete(url); throw err; });
-      indexes.set(url, hit);
+        .catch((err) => { cache.delete(url); throw err; });
+      cache.set(url, hit);
     }
     return hit;
   }
+
+  const loadPages = (url: string) => cached(pageIndexes, url, (body: { pages: Entry[] }) => body.pages);
+  const loadPlayers = (url: string) =>
+    cached(playerIndexes, url, (body: { teams: Record<string, string>; players: Player[] }) => ({
+      teams: body.teams,
+      // Rostered players first: they are who owners look up.
+      players: body.players.map((p) => ({
+        ...p,
+        search: `${p.name} ${p.team} ${p.pos}`.toLowerCase(),
+        rank: p.owners.length ? 0 : 1,
+      })),
+    }));
 
   /** Sit under the glass: right-aligned to it on a wide screen, edge to edge on a phone. */
   function place(panel: HTMLElement, toggle: HTMLElement) {
@@ -284,7 +340,40 @@ const spriteUrl = spriteUrlFor(Astro.url);
     }
   }
 
-  function row(entry: Entry, index: number, sprite: string): HTMLLIElement {
+  const withParams = (href: string, params: Record<string, string>) =>
+    `${href}${href.includes('?') ? '&' : '?'}${new URLSearchParams(params).toString()}`;
+
+  /** A rostered player is one row per team holding him; a free agent is one row. */
+  function playerRows(panel: HTMLElement, index: PlayerIndex, player: Player): Row[] {
+    const base = `${player.pos}${player.team && player.team !== 'FA' ? ` · ${player.team}` : ''}`;
+    if (!player.owners.length) {
+      return [{
+        href: withParams(panel.dataset.freeAgentsHref!, { player: player.id, q: player.name }),
+        title: player.name,
+        detail: `${base} · Free agent`,
+        badge: player.pos,
+      }];
+    }
+    return player.owners.map((fid) => ({
+      href: withParams(panel.dataset.rostersHref!, { franchise: fid, player: player.id }),
+      title: player.name,
+      detail: `${base} · ${index.teams[fid] ?? 'Rostered'}`,
+      badge: player.pos,
+      // Through the ClientRouter, TheLeague's roster consumed ?player= before
+      // its sheet was wired and opened nothing; a real load opens it.
+      reload: true,
+    }));
+  }
+
+  function group(label: string): HTMLLIElement {
+    const li = document.createElement('li');
+    li.className = 'header-search__group';
+    li.setAttribute('role', 'presentation');
+    li.textContent = label;
+    return li;
+  }
+
+  function row(entry: Row, index: number, sprite: string): HTMLLIElement {
     const li = document.createElement('li');
     li.setAttribute('role', 'presentation');
     const a = document.createElement('a');
@@ -293,26 +382,33 @@ const spriteUrl = spriteUrlFor(Astro.url);
     a.id = `header-search-opt-${index}`;
     a.setAttribute('role', 'option');
     a.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+    if (entry.reload) a.setAttribute('data-astro-reload', '');
 
     const icon = document.createElement('span');
     icon.className = 'header-search__result-icon';
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('viewBox', '0 0 512 512');
-    svg.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS(svgNs, 'use');
-    use.setAttribute('href', `${sprite}#icon-${entry.icon}`);
-    svg.appendChild(use);
-    icon.appendChild(svg);
+    if (entry.icon) {
+      const svgNs = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNs, 'svg');
+      svg.setAttribute('viewBox', '0 0 512 512');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS(svgNs, 'use');
+      use.setAttribute('href', `${sprite}#icon-${entry.icon}`);
+      svg.appendChild(use);
+      icon.appendChild(svg);
+    } else {
+      icon.classList.add('header-search__result-icon--pos');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = entry.badge ?? '';
+    }
 
     const text = document.createElement('span');
     text.className = 'header-search__result-text';
     const title = document.createElement('span');
     title.className = 'header-search__result-title';
-    title.textContent = entry.admin ? `${entry.title} · Admin` : entry.title;
+    title.textContent = entry.title;
     const desc = document.createElement('span');
     desc.className = 'header-search__result-desc';
-    desc.textContent = entry.description;
+    desc.textContent = entry.detail;
     text.append(title, desc);
 
     a.append(icon, text);
@@ -320,41 +416,58 @@ const spriteUrl = spriteUrlFor(Astro.url);
     return li;
   }
 
+  const pageRow = (e: Entry): Row => ({
+    href: e.href,
+    title: e.admin ? `${e.title} · Admin` : e.title,
+    detail: e.description,
+    icon: e.icon,
+  });
+
   async function render(panel: HTMLElement) {
     const input = panel.querySelector<HTMLInputElement>('.header-search__input')!;
     const list = panel.querySelector<HTMLUListElement>('.header-search__results')!;
-    const heading = panel.querySelector<HTMLElement>('[data-header-search-heading]')!;
     const status = panel.querySelector<HTMLElement>('[data-header-search-status]')!;
     const all = panel.querySelector<HTMLAnchorElement>('[data-header-search-all]')!;
     const query = input.value.trim();
     const searchHref = panel.dataset.searchHref!;
 
     all.href = query ? `${searchHref}?q=${encodeURIComponent(query)}` : searchHref;
-    all.textContent = query ? `See all results for “${query}”` : 'See all pages';
+    all.textContent = query ? `See all pages for “${query}”` : 'See all pages';
 
-    let entries: Entry[];
-    try {
-      entries = await loadIndex(panel.dataset.indexUrl!);
-    } catch {
-      list.replaceChildren();
-      heading.hidden = true;
-      status.hidden = false;
-      status.textContent = 'Search could not load. Try the full search page below.';
-      return;
-    }
-    // The box may have moved on while the index loaded.
+    // Either index may fail on its own; the other still answers.
+    const [pages, players] = await Promise.all([
+      loadPages(panel.dataset.indexUrl!).catch(() => null),
+      query ? loadPlayers(panel.dataset.playerIndexUrl!).catch(() => null) : Promise.resolve(null),
+    ]);
+    // The box may have moved on while the indexes loaded.
     if (input.value.trim() !== query || !panel.isConnected) return;
 
-    const shown = query
-      ? matchPages(entries, query).slice(0, MAX_RESULTS)
-      : [...entries].sort((a, b) => a.rank - b.rank).slice(0, POPULAR);
+    const sections: Array<[string, Row[]]> = [];
+    if (!query) {
+      if (pages) sections.push(['Popular', [...pages].sort((a, b) => a.rank - b.rank).slice(0, POPULAR).map(pageRow)]);
+    } else {
+      if (pages) sections.push(['Pages', matchPages(pages, query).slice(0, MAX_PAGES).map(pageRow)]);
+      if (players) {
+        const hits = matchPages(players.players, query).flatMap((p) => playerRows(panel, players, p));
+        sections.push(['Players', hits.slice(0, MAX_PLAYERS)]);
+      }
+    }
 
-    heading.hidden = !!query && shown.length === 0;
-    heading.textContent = query ? 'Pages' : 'Popular';
-    status.hidden = !(query && shown.length === 0);
-    status.textContent = query ? `No pages match “${query}”.` : '';
-    list.replaceChildren(...shown.map((e, i) => row(e, i, panel.dataset.sprite ?? '')));
-    input.setAttribute('aria-activedescendant', shown.length ? 'header-search-opt-0' : '');
+    const items: HTMLLIElement[] = [];
+    let n = 0;
+    for (const [label, rows] of sections) {
+      if (!rows.length) continue;
+      items.push(group(label));
+      for (const r of rows) items.push(row(r, n++, panel.dataset.sprite ?? ''));
+    }
+    list.replaceChildren(...items);
+
+    const failed = !pages && (!query || !players);
+    status.hidden = n > 0 && !failed;
+    status.textContent = failed
+      ? 'Search could not load. Try the full search page below.'
+      : n === 0 && query ? `Nothing matches “${query}”.` : '';
+    input.setAttribute('aria-activedescendant', n ? 'header-search-opt-0' : '');
   }
 
   function open() {

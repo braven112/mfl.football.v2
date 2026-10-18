@@ -1,0 +1,33 @@
+/**
+ * The player index behind the header's inline search, one static file per
+ * league that has search (getSearchPath). Prerendered from the committed MFL
+ * feeds (src/utils/player-search-index.ts), so it is rebuilt with every sync
+ * commit like the rest of the build-baked pages and served from the CDN.
+ *
+ * It carries ids, not hrefs: the roster and Free Agents links depend on the
+ * visitor's host (prefixed or not), which a static file cannot know, so the
+ * panel builds them from hrefs the header renders server-side.
+ */
+import type { APIRoute, GetStaticPaths } from 'astro';
+import { ALL_LEAGUES, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getSearchPath } from '../../../utils/nav-utils';
+import { buildPlayerSearchIndex } from '../../../utils/player-search-index';
+
+export const prerender = true;
+
+export const getStaticPaths: GetStaticPaths = () =>
+  ALL_LEAGUES.map((l) => l.slug as CanonicalLeagueSlug)
+    .filter((slug) => getSearchPath(slug))
+    .map((league) => ({ params: { league } }));
+
+export const GET: APIRoute = ({ params }) => {
+  const index = buildPlayerSearchIndex(params.league as CanonicalLeagueSlug);
+  // `search` is rebuilt on the client from name + team + pos to keep the file small.
+  const body = {
+    teams: index.teams,
+    players: index.players.map(({ id, name, pos, team, owners }) => ({ id, name, pos, team, owners })),
+  };
+  return new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
