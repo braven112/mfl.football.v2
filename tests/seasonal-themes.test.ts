@@ -47,6 +47,11 @@ describe('opted-in leagues', () => {
     expect(seasonalMarkIds('theleague', 'halloween').size).toBe(16);
   });
 
+  it('the AFL wears Halloween, with all 24 marks drawn', () => {
+    expect(optedIn.map((l) => l.slug)).toContain('afl-fantasy');
+    expect(seasonalMarkIds('afl', 'halloween').size).toBe(24);
+  });
+
   it('a franchise with no drawn mark keeps its crest (no rule is emitted for it)', () => {
     const css = buildSeasonalMarkCss('theleague', ['halloween'], [{ franchiseId: '0099', icon: '/x/undrawn.png' }]);
     expect(css).toBe('');
