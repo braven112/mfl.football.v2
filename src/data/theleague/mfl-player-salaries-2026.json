@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-17T11:01:27.151Z"
+    "fetchedAt": "2026-10-18T11:01:34.052Z"
   },
   "players": [
     {
@@ -1744,7 +1744,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -1776,7 +1776,12 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        }
+      ]
     },
     {
       "id": "15708",
@@ -2921,7 +2926,7 @@
         "number": 14,
         "college": "Michigan",
         "birthDate": "2001-06-19",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
@@ -2930,7 +2935,7 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Finger",
         "gsisId": null
       },
@@ -2965,10 +2970,6 @@
         {
           "id": "17503",
           "name": "Bernard, Germie"
-        },
-        {
-          "id": "14842",
-          "name": "Pittman, Michael"
         }
       ]
     },
@@ -3133,7 +3134,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -3247,7 +3248,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "LWR",
+        "depthChartPosition": "RWR",
         "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
@@ -5816,7 +5817,7 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "IND",
+      "team": "FA",
       "draftYear": 2019,
       "draftTeam": "NYG",
       "birthdate": 853045200,
@@ -6305,7 +6306,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -6452,7 +6453,7 @@
         "number": 1,
         "college": "Oklahoma",
         "birthDate": "1998-08-07",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
@@ -6461,7 +6462,7 @@
           "QB"
         ],
         "experience": 6,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Calf",
         "gsisId": null
       },
@@ -6836,7 +6837,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -7339,7 +7340,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -7371,6 +7372,10 @@
       },
       "gamesPlayed": 4,
       "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
         {
           "id": "15779",
           "name": "Doubs, Romeo"
@@ -8494,16 +8499,16 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        },
+        {
           "id": "16195",
           "name": "Wicks, Dontayvion"
         },
         {
           "id": "17333",
           "name": "Cooper, Darius"
-        },
-        {
-          "id": "15282",
-          "name": "Smith, DeVonta"
         },
         {
           "id": "17499",
@@ -9076,7 +9081,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -9106,16 +9111,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
-        },
-        {
-          "id": "17333",
-          "name": "Cooper, Darius"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "8851",
@@ -9367,7 +9363,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -9399,6 +9395,10 @@
       },
       "gamesPlayed": 4,
       "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
         {
           "id": "15779",
           "name": "Doubs, Romeo"
@@ -9446,16 +9446,16 @@
         "number": 23,
         "college": "Western Michigan",
         "birthDate": "2000-09-10",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Ankle",
         "gsisId": null
       },
@@ -9526,7 +9526,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -9559,6 +9559,10 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": [
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        },
         {
           "id": "16195",
           "name": "Wicks, Dontayvion"
@@ -9798,7 +9802,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -9938,13 +9942,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Shoulder",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -9969,12 +9973,7 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "17256",
-          "name": "Croskey-Merritt, Jacory"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16148",
@@ -10344,12 +10343,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Groin",
         "gsisId": null
       },
@@ -10376,7 +10375,12 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15721",
+          "name": "White, Rachaad"
+        }
+      ]
     },
     {
       "id": "16193",
@@ -11071,8 +11075,8 @@
           "TE"
         ],
         "experience": 5,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Calf",
         "gsisId": null
       },
       "nflverse": {
@@ -11909,7 +11913,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -12484,7 +12488,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -12933,7 +12937,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -13005,16 +13009,16 @@
         "number": 1,
         "college": "Ole Miss",
         "birthDate": "1997-06-30",
-        "status": "Inactive",
+        "status": "Active",
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": "IR",
+        "injuryStatus": "Questionable",
         "injuryBodyPart": "Ankle",
         "gsisId": " 00-0035676"
       },
@@ -13037,28 +13041,7 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": [
-        {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        },
-        {
-          "id": "16342",
-          "name": "Douglas, Demario"
-        },
-        {
-          "id": "17269",
-          "name": "Chism, Efton"
-        },
-        {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
-          "id": "13289",
-          "name": "Hollins, Mack"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17520",
@@ -13372,7 +13355,7 @@
         "id": "10236",
         "fullName": "Dalton Kincaid",
         "team": "BUF",
-        "age": 26,
+        "age": 27,
         "height": "75",
         "weight": "246",
         "number": 86,
@@ -14054,7 +14037,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -14087,6 +14070,10 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
         {
           "id": "15779",
           "name": "Doubs, Romeo"
@@ -14272,8 +14259,8 @@
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Illness",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": " 00-0035640"
       },
       "nflverse": {
@@ -14739,7 +14726,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -14772,6 +14759,10 @@
         {
           "id": "15261",
           "name": "Hubbard, Chuba"
+        },
+        {
+          "id": "17056",
+          "name": "Etienne, Trevor"
         }
       ]
     },
@@ -14956,7 +14947,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -15571,8 +15562,8 @@
         "status": "Inactive",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartPosition": null,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -15602,16 +15593,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "14102",
-          "name": "Metcalf, DK"
-        },
-        {
-          "id": "17503",
-          "name": "Bernard, Germie"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14127",
@@ -16440,12 +16422,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "IR",
+        "injuryStatus": "Questionable",
         "injuryBodyPart": "Ankle",
         "gsisId": null
       },
@@ -16455,10 +16437,6 @@
         {
           "id": "15261",
           "name": "Hubbard, Chuba"
-        },
-        {
-          "id": "16597",
-          "name": "Brooks, Jonathon"
         }
       ]
     },
@@ -16568,7 +16546,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -17719,6 +17697,10 @@
         {
           "id": "15293",
           "name": "Bateman, Rashod"
+        },
+        {
+          "id": "17517",
+          "name": "Lane, Ja'Kobi"
         }
       ]
     },
@@ -17836,7 +17818,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -17869,6 +17851,10 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
         {
           "id": "15779",
           "name": "Doubs, Romeo"
@@ -19725,16 +19711,16 @@
         "number": 6,
         "college": "USC",
         "birthDate": "2004-05-05",
-        "status": "Inactive",
+        "status": "Active",
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "IR",
+        "injuryStatus": "Questionable",
         "injuryBodyPart": "Wrist",
         "gsisId": null
       },
@@ -19765,10 +19751,6 @@
         {
           "id": "15293",
           "name": "Bateman, Rashod"
-        },
-        {
-          "id": "17505",
-          "name": "Sarratt, Elijah"
         }
       ]
     },
@@ -23392,8 +23374,8 @@
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Hamstring",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": " 00-0035659"
       },
       "nflverse": {
@@ -23913,7 +23895,7 @@
           "QB"
         ],
         "experience": 11,
-        "injuryStatus": "Doubtful",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Knee - MCL",
         "gsisId": "00-0032268"
       },
@@ -24184,7 +24166,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -24216,7 +24198,12 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        }
+      ]
     },
     {
       "id": "16171",
@@ -26317,16 +26304,16 @@
       "gamesPlayed": 5,
       "depthChartAhead": [
         {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        },
+        {
           "id": "16195",
           "name": "Wicks, Dontayvion"
         },
         {
           "id": "17333",
           "name": "Cooper, Darius"
-        },
-        {
-          "id": "15282",
-          "name": "Smith, DeVonta"
         }
       ]
     }
