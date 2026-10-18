@@ -60,6 +60,7 @@ export function buildAllTeamIconDarkCss(): string {
   const leagues = ALL_LEAGUES.map((l) => ({
     slug: l.navSlug,
     seasonalThemes: l.seasonalThemes,
+    logo: l.logo,
     teams: getLeagueTeams(l.navSlug),
   })).filter(
     (l) => l.teams.length > 0,
@@ -78,7 +79,7 @@ export function buildAllTeamIconDarkCss(): string {
     buildTvLogoThemeCss(),
     // Seasonal marks (Halloween) LAST: keyed on [data-season], they outrank
     // every swap and stroke above for as long as the season is open.
-    ...leagues.map((l) => buildSeasonalMarkCss(l.slug, l.seasonalThemes, l.teams)),
+    ...leagues.map((l) => buildSeasonalMarkCss(l.slug, l.seasonalThemes, l.teams, l.logo)),
   ]
     .filter(Boolean)
     .join('\n');
