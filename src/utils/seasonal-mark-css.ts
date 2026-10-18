@@ -23,7 +23,7 @@ import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
 type SeasonalTeamLike = DarkIconTeamLike & { groupMe?: string; groupMeDark?: string };
 const MARK_FIELDS = ['icon', 'iconDark', 'groupMe', 'groupMeDark'] as const;
 
-const MARK_SETS = import.meta.glob<Record<string, string>>('../data/seasonal-marks/*.json', {
+const MARK_SETS = import.meta.glob<Record<string, unknown>>('../data/seasonal-marks/*.json', {
   eager: true,
   import: 'default',
 });
@@ -32,6 +32,18 @@ const MARK_SETS = import.meta.glob<Record<string, string>>('../data/seasonal-mar
 export function seasonalMarkIds(navSlug: string, seasonId: string): Set<string> {
   const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] ?? {};
   return new Set(Object.keys(set).filter((k) => /^\d{4}$/.test(k)));
+}
+
+/**
+ * Optical size: a mark much wider than it is tall (Computer Jocks' flexing
+ * pixel man) fills the tile's width yet reads small beside rounder marks, and
+ * no square PNG can make it larger. `_scale` in the set lists those marks with
+ * the factor to draw them at; they overhang their box a little, as intended.
+ */
+function markScale(navSlug: string, seasonId: string, franchiseId: string): number | null {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _scale?: Record<string, number> } | undefined;
+  const scale = set?._scale?.[franchiseId];
+  return typeof scale === 'number' && scale > 0 && scale !== 1 ? scale : null;
 }
 
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -56,8 +68,9 @@ export function buildSeasonalMarkCss(
       const selectors = [...srcs].map(
         (src) => `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(src)}"]`,
       );
+      const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
-        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png"); filter: none; }`,
+        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png"); filter: none;${scale ? ` transform: scale(${scale});` : ''} }`,
       );
     }
   }

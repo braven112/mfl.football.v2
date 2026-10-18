@@ -45,6 +45,7 @@ import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
 import { getAuthUser } from './utils/auth';
 import { resolveThemePreview, THEME_PREVIEW_COOKIE, THEME_PREVIEW_PARAM } from './utils/site-theme';
+import { resolveSeasonPreview, SEASON_PREVIEW_COOKIE, SEASON_PREVIEW_PARAM } from './config/seasonal-themes.mjs';
 import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
@@ -177,6 +178,18 @@ const handle: MiddlewareHandler = async (context, next) => {
       context.cookies.delete(THEME_PREVIEW_COOKIE, { path: '/' });
     }
     context.locals.siteThemePreview = preview.kind === 'clear' ? null : preview.theme;
+
+    // `?seasonPreview=halloween` — the same, for a seasonal look (src/config/seasonal-themes.mjs).
+    const season = resolveSeasonPreview(
+      context.url.searchParams.get(SEASON_PREVIEW_PARAM),
+      context.cookies.get(SEASON_PREVIEW_COOKIE)?.value
+    );
+    if (season.kind === 'set') {
+      context.cookies.set(SEASON_PREVIEW_COOKIE, season.id, { path: '/', sameSite: 'lax' });
+    } else if (season.kind === 'clear') {
+      context.cookies.delete(SEASON_PREVIEW_COOKIE, { path: '/' });
+    }
+    context.locals.seasonPreview = season.kind === 'clear' ? null : season.id;
   }
 
   // The shared app host is not a second front door for a league that has its

@@ -72,13 +72,16 @@ const ord = ({ y, m, d }) => y * 10000 + m * 100 + d;
 
 /**
  * The seasonal theme open for `seasonalThemes` (a registry entry's list) at
- * `now`, or null. The first listed wins should two ever overlap.
+ * `now`, or null. The first listed wins should two ever overlap. A `preview`
+ * id (resolveSeasonPreview) opens that season early for a league that wears it.
  * @param {readonly string[] | undefined} seasonalThemes
  * @param {Date} [now]
+ * @param {string | null} [preview]
  * @returns {SeasonalTheme | null}
  */
-export function activeSeasonalTheme(seasonalThemes, now = new Date()) {
+export function activeSeasonalTheme(seasonalThemes, now = new Date(), preview = null) {
   if (!seasonalThemes?.length) return null;
+  if (preview && seasonalThemes.includes(preview) && SEASONAL_THEMES[preview]) return SEASONAL_THEMES[preview];
   const today = zonedDate(now);
   for (const id of seasonalThemes) {
     const season = SEASONAL_THEMES[id];
@@ -87,4 +90,24 @@ export function activeSeasonalTheme(seasonalThemes, now = new Date()) {
     if (ord(today) >= ord(start) && ord(today) <= ord(end)) return season;
   }
   return null;
+}
+
+/**
+ * `?seasonPreview=<id>` shows a season outside its window for the rest of the
+ * browser session (a cookie, so it survives clicking around, which
+ * `?testDate=` does not); `?seasonPreview=off` ends it. Read in middleware.
+ */
+export const SEASON_PREVIEW_PARAM = 'seasonPreview';
+export const SEASON_PREVIEW_COOKIE = 'season-preview';
+
+/**
+ * @param {string | null} param
+ * @param {string | null | undefined} cookie
+ * @returns {{ kind: 'set', id: string } | { kind: 'clear' } | { kind: 'keep', id: string | null }}
+ */
+export function resolveSeasonPreview(param, cookie) {
+  const p = param?.trim().toLowerCase();
+  if (p === 'off') return { kind: 'clear' };
+  if (p && SEASONAL_THEMES[p]) return { kind: 'set', id: p };
+  return { kind: 'keep', id: cookie && SEASONAL_THEMES[cookie] ? cookie : null };
 }

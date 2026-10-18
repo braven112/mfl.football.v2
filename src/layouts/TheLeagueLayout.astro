@@ -382,10 +382,12 @@ const themePref = getThemePreference(Astro.cookies);
 // A seasonal theme (Halloween) stamps <html data-season> while its window is
 // open; the palette, headline face and marks all key on that attribute. A
 // seasonal lock outranks the viewer's preference but never a page's own pin
-// (the theme review pages). ?testDate= previews a window.
+// (the theme review pages). ?testDate= previews a window for one page;
+// ?seasonPreview= (middleware) keeps it on while clicking around.
 const season = activeSeasonalTheme(
 	getLeagueBySlug(leagueContext.slug)?.seasonalThemes,
 	getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+	Astro.locals.seasonPreview,
 );
 const modeLock = themeLock ?? season?.lock ?? undefined;
 

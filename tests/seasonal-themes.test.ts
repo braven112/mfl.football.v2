@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
-import { SEASONAL_THEMES, activeSeasonalTheme } from '../src/config/seasonal-themes.mjs';
+import { SEASONAL_THEMES, activeSeasonalTheme, resolveSeasonPreview } from '../src/config/seasonal-themes.mjs';
 import { getLeagueTeams } from '../src/utils/league-config';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 import { buildSeasonalMarkCss, seasonalMarkIds } from '../src/utils/seasonal-mark-css';
@@ -32,6 +32,21 @@ describe('Halloween window', () => {
     expect(end(2027)).toEqual({ y: 2027, m: 11, d: 1 });
     expect(end(2028)).toEqual({ y: 2028, m: 11, d: 6 });
     expect(end(2033)).toEqual({ y: 2033, m: 10, d: 31 }); // Halloween on a Monday
+  });
+
+  it('a preview opens the season early, only for a league that wears it', () => {
+    const oct18 = new Date('2026-10-18T19:00:00Z');
+    expect(activeSeasonalTheme(['halloween'], oct18)).toBeNull();
+    expect(activeSeasonalTheme(['halloween'], oct18, 'halloween')?.id).toBe('halloween');
+    expect(activeSeasonalTheme(undefined, oct18, 'halloween')).toBeNull();
+    expect(activeSeasonalTheme(['halloween'], oct18, 'nope')).toBeNull();
+  });
+
+  it('?seasonPreview= sets, keeps and clears the session preview', () => {
+    expect(resolveSeasonPreview('Halloween', undefined)).toEqual({ kind: 'set', id: 'halloween' });
+    expect(resolveSeasonPreview(null, 'halloween')).toEqual({ kind: 'keep', id: 'halloween' });
+    expect(resolveSeasonPreview(null, 'bogus')).toEqual({ kind: 'keep', id: null });
+    expect(resolveSeasonPreview('off', 'halloween')).toEqual({ kind: 'clear' });
   });
 
   it('is off for a league that does not opt in', () => {

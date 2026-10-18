@@ -6,6 +6,8 @@ declare namespace App {
 		hideLeaguePrefix: boolean;
 		/** A `?theme=` preview of the other site theme, or null/absent for the league's own (src/utils/site-theme.ts). */
 		siteThemePreview?: import('./config/leagues').SiteTheme | null;
+		/** A `?seasonPreview=` seasonal look shown outside its window, or null/absent (src/config/seasonal-themes.mjs). */
+		seasonPreview?: string | null;
 	}
 }
 
