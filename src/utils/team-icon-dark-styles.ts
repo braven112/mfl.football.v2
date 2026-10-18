@@ -23,7 +23,7 @@
  * Every registry league's rules are always emitted, with no league branching:
  * the selectors are exact `src` matches, which can never collide across leagues.
  */
-import { ALL_LEAGUES } from '../config/leagues-data.mjs';
+import { ALL_LEAGUES } from '../config/leagues';
 import { getLeagueTeams } from './league-config';
 import { buildTeamIconDarkCss } from './team-icon-dark-css';
 import { buildCrestDarkStrokeCss, withStrokeColors } from './crest-dark-stroke-css';
@@ -33,6 +33,7 @@ import {
   buildEraCrestDarkStrokeCss,
 } from './era-crest-stroke-css';
 import { buildTvLogoThemeCss } from './tv-logo-theme-css';
+import { buildSeasonalMarkCss } from './seasonal-mark-css';
 
 /** Each league's franchise icons live at /assets/<navSlug>/icons/<id>.png. */
 const iconDirFor = (navSlug: string) => `/assets/${navSlug}/icons`;
@@ -56,7 +57,11 @@ const iconDirFor = (navSlug: string) => `/assets/${navSlug}/icons`;
 export function buildAllTeamIconDarkCss(): string {
   // Every registry league with teams, in registry order; a league without
   // dark art, measured strokes or eras contributes nothing.
-  const leagues = ALL_LEAGUES.map((l) => ({ slug: l.navSlug, teams: getLeagueTeams(l.navSlug) })).filter(
+  const leagues = ALL_LEAGUES.map((l) => ({
+    slug: l.navSlug,
+    seasonalThemes: l.seasonalThemes,
+    teams: getLeagueTeams(l.navSlug),
+  })).filter(
     (l) => l.teams.length > 0,
   );
   return [
@@ -71,6 +76,9 @@ export function buildAllTeamIconDarkCss(): string {
     // in both directions — a broadcaster's brand can be pale (Channel 5, Kayo)
     // where a crest never is, so this block carries `html:not(.dark)` rules too.
     buildTvLogoThemeCss(),
+    // Seasonal marks (Halloween) LAST: keyed on [data-season], they outrank
+    // every swap and stroke above for as long as the season is open.
+    ...leagues.map((l) => buildSeasonalMarkCss(l.slug, l.seasonalThemes, l.teams)),
   ]
     .filter(Boolean)
     .join('\n');

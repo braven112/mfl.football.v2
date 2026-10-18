@@ -29,6 +29,11 @@ export const LEAGUES = {
      */
     theme: 'theleague',
     /**
+     * Seasonal themes this league wears while their window is open — ids in
+     * src/config/seasonal-themes.mjs. Absent = none.
+     */
+    seasonalThemes: ['halloween'],
+    /**
      * Icon set — a folder under public/assets/icons/sets/, or 'classic' (the
      * original public/assets/icons/sprite.svg). Absent = 'classic'. Every set
      * carries the same glyph ids, so switching is this one line

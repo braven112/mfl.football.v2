@@ -19,6 +19,8 @@
  * dark mode, so no theme can leak another's value through the cascade.
  * Specificity: light html[data-league] is 0,1,1 (beats :root), dark
  * html.dark[data-league] is 0,2,1 (beats html.dark and the light block).
+ * A seasonal block adds [data-season] (0,2,1 / 0,3,1), so it outranks its
+ * league's own block in both modes while the attribute is present.
  *
  * Plan: docs/plans/league-themes.md. Guard: tests/league-themes.test.ts.
  */
@@ -64,6 +66,26 @@ export async function loadSurfaces() {
   return { ...surfaces, ...THEMED_SURFACES };
 }
 
+/**
+ * Seasonal theme id → the navSlugs that wear it, from each registry entry's
+ * `seasonalThemes`. Each is compiled onto `[data-season="<id>"]` of those
+ * leagues only (src/config/seasonal-themes.mjs), one attribute above the
+ * league's own block so it wins only while the layout stamps the attribute.
+ */
+export async function loadSeasonalSurfaces() {
+  process.env.DEMO_PROFILE ||= '1';
+  const { ALL_LEAGUES } = await import('../src/config/leagues-data.mjs');
+  const { SEASONAL_THEMES } = await import('../src/config/seasonal-themes.mjs');
+  const seasons = {};
+  for (const league of ALL_LEAGUES) {
+    for (const id of league.seasonalThemes ?? []) {
+      if (!SEASONAL_THEMES[id]) throw new Error(`league "${league.slug}" names unknown seasonal theme "${id}"`);
+      (seasons[id] ??= { theme: SEASONAL_THEMES[id].theme, slugs: [] }).slugs.push(league.navSlug);
+    }
+  }
+  return seasons;
+}
+
 const comment = (text) => `/* ${text.replace(/\*\//g, '* /')} */`;
 
 function block(selectors, values, tokens, notes) {
@@ -77,7 +99,7 @@ function block(selectors, values, tokens, notes) {
   return `${selectors.join(',\n')} {\n${lines.join('\n')}\n}\n`;
 }
 
-export function buildThemeCss(themes, surfaces, tokens) {
+export function buildThemeCss(themes, surfaces, tokens, seasons = {}) {
   const byTheme = {};
   for (const [slug, id] of Object.entries(surfaces)) {
     if (!themes[id]) throw new Error(`surface "${slug}" names unknown theme "${id}"`);
@@ -99,12 +121,21 @@ export function buildThemeCss(themes, surfaces, tokens) {
     css += block(light, theme.light, tokens, theme.notes);
     css += block(dark, theme.dark, tokens);
   }
+  for (const id of Object.keys(seasons).sort()) {
+    const { theme: themeId, slugs } = seasons[id];
+    const theme = themes[themeId];
+    if (!theme) throw new Error(`seasonal theme "${id}" names unknown theme "${themeId}"`);
+    const sorted = [...slugs].sort();
+    css += `\n${comment(`Seasonal: ${theme.name} (${themeId}) on [data-season="${id}"] — ${theme.description}`)}\n`;
+    css += block(sorted.map((s) => `html[data-league="${s}"][data-season="${id}"]`), theme.light, tokens, theme.notes);
+    css += block(sorted.map((s) => `html.dark[data-league="${s}"][data-season="${id}"]`), theme.dark, tokens);
+  }
   return css;
 }
 
 async function main() {
   const { THEMED_TOKENS } = await import('../src/config/theme-tokens.mjs');
-  const css = buildThemeCss(loadThemes(), await loadSurfaces(), THEMED_TOKENS);
+  const css = buildThemeCss(loadThemes(), await loadSurfaces(), THEMED_TOKENS, await loadSeasonalSurfaces());
   let current = '';
   try {
     current = fs.readFileSync(OUTPUT, 'utf8');

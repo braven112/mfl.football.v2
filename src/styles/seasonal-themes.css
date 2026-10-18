@@ -1,0 +1,37 @@
+/* Seasonal themes — the parts of a seasonal look that are not palette tokens.
+   Every rule keys on <html data-season="<id>">, which the layout stamps only
+   while that season's window is open (src/config/seasonal-themes.mjs), so
+   nothing here can show outside it. The palette itself is generated
+   (league-themes.generated.css); the franchise marks are swapped by
+   team-icon-dark-styles.ts. */
+
+/* Jolly Lodger (SIL Open Font License, Google Fonts), latin subset. */
+@font-face {
+  font-family: 'Jolly Lodger';
+  src: url('/assets/fonts/JollyLodger-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Halloween (Midnight) ────────────────────────────────────────────── */
+
+/* Headlines only. h4 and below are labels and stay in the base face, and
+   --font-display is left alone because scores and stat numerals read it. */
+html[data-season='halloween'] :is(h1, h2, h3) {
+  font-family: 'Jolly Lodger', var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+/* The season locks the page to dark, so a Light / Auto / Dark control would
+   do nothing; hide it rather than offer a dead switch. */
+html[data-season='halloween'] .theme-toggle {
+  display: none;
+}
+
+/* TheLeague's shield is green in both cuts; drained to bone white for the
+   season so the header carries only black, white and orange. */
+html[data-season='halloween'] .header-logo-img {
+  filter: grayscale(1) brightness(1.35);
+}
