@@ -129,8 +129,11 @@ export function buildSeasonalMarkCss(
       );
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
-        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none;${scale ? ` scale: ${scale};` : ''} }`,
+        `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none; border-radius: 0;${scale ? ` scale: ${scale};` : ''} }`,
       );
+      // border-radius: 0 because many crest slots round the <img> itself to a
+      // circle, which suits the regular round crests but cuts the corners off
+      // a square mark (Dark Magicians' card frame on the home scoring card).
       // `scale`, not `transform`: a watermark centres itself with
       // transform: translate(-50%, -50%), which a transform here would replace.
       // A scaled mark overhangs its box, and crest frames clip (live scoring's
