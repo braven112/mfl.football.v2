@@ -35,3 +35,14 @@ html[data-season='halloween'] .theme-toggle {
 html[data-season='halloween'] .header-logo-img {
   filter: grayscale(1) brightness(1.35);
 }
+
+/* Standings seed badges: gold and silver become the season's orange and bone.
+   Team-colour stripes and painted rows stay as they are (owner's call). */
+html[data-season='halloween'] .stb-seedchip--division_winner {
+  background: var(--color-primary);
+  color: #111;
+}
+html[data-season='halloween'] .stb-seedchip--wild_card {
+  background: var(--color-text-primary);
+  color: #111;
+}
