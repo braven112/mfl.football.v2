@@ -29,7 +29,9 @@ export const LightAndDarkCutsWithASource = {
     files: [
       { label: 'Premier League', filename: 'premier.svg', url: '/assets/afl/premier.svg', forDark: false },
       { label: 'Premier League, dark', filename: 'premier-dark.svg', url: '/assets/afl/premier-dark.svg', forDark: true },
-      { label: 'AFL Team Logo (master PSD)', filename: 'afl_team_logo.psd', url: '/assets/afl/psds/afl_team_logo.psd', forDark: false, source: true },
+      { label: 'AFL Team Logo (master PSD)', filename: 'afl_team_logo.psd', // Not an /assets path: a PSD renders as a label box, never an image, and
+      // the master file is not in the repo for the Chromatic asset scan to find.
+      url: 'afl_team_logo.psd', forDark: false, source: true },
     ],
   },
 };

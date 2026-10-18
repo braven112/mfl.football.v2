@@ -28,11 +28,11 @@ over all of it. Every seasonal mark set appears on the page of the thing it
 redraws, under the set's id (`halloween`). `src/utils/brand-book-subjects.ts`
 derives all of it from the asset folders and the seasonal sets, and
 `tests/brand-book-coverage.test.ts` fails the build on any file no page shows.
-`/brand/files` 302s to the index.
+`/brand/files` 301s to the index.
 
-`/<league>/assets` now 302s to the book. Not 301: a permanent redirect is cached
-by the browser indefinitely and cannot be taken back without minting a new URL,
-and this is a product decision that may yet be revisited.
+`/<league>/assets` now 301s to the book. It first shipped as a 302 while the
+decision could still be revisited; the owner's rule (Oct 2026) is that a page
+we are done with gets a permanent redirect, and 302 is for ones that may change.
 
 ## One book, two subjects
 

@@ -6,12 +6,12 @@
  * on the archive — so the old address forwards to the Brand Book index, whose
  * search finds any file by name. Asset URLs themselves never moved.
  *
- * 302, not 301: a permanent redirect is cached indefinitely and cannot be
- * taken back without minting a new URL (same rule as /assets).
+ * 301: the library is retired for good, and a page we are done with gets a
+ * permanent redirect (same as /assets).
  */
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 export const prerender = false;
 
-return Astro.redirect(resolveLeaguePath('/theleague/brand', Astro.locals.hideLeaguePrefix ?? false), 302);
+return Astro.redirect(resolveLeaguePath('/theleague/brand', Astro.locals.hideLeaguePrefix ?? false), 301);
 ---

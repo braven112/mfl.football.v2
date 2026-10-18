@@ -165,16 +165,15 @@ describe('Brand Book — routes', () => {
       const src = read(`src/pages/${league}/assets.astro`);
       expect(src).toMatch(/Astro\.redirect\(/);
       expect(src).toContain(`/${league}/brand`);
-      // 302, not 301: a permanent redirect is cached indefinitely and cannot
-      // be taken back without minting a new URL.
-      expect(src).toMatch(/302/);
+      // 301: the Asset Library is retired for good (owner's call, Oct 2026).
+      expect(src).toMatch(/\b301\b/);
     });
 
     it(`/${league}/brand/files forwards to the Brand Book it was folded into`, () => {
       const src = read(`src/pages/${league}/brand/files.astro`);
       expect(src).toMatch(/Astro\.redirect\(/);
       expect(src).toContain(`/${league}/brand'`);
-      expect(src).toMatch(/302/);
+      expect(src).toMatch(/\b301\b/);
       expect(src).not.toContain('AssetsPage');
     });
 
