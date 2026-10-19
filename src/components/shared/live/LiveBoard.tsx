@@ -638,7 +638,15 @@ export default function LiveBoard({
           {!hideWeekPicker && <LvWeekPicker week={board.week} onSelect={onSelectWeek} />}
           {pill}
         </div>
-        {haunted && <LvHauntedStats stats={haunted} />}
+        {haunted && (
+          <LvHauntedStats
+            stats={haunted}
+            onOpenScariest={(game) => {
+              boardScrollY.current = window.scrollY;
+              setSelected({ leagueId: game.leagueId, pairing: game.pairing });
+            }}
+          />
+        )}
       </div>
 
       {/* Outside the branch, on purpose — see the header. */}

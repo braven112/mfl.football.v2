@@ -33,8 +33,16 @@ export const Both = {
   args: {
     stats: {
       monster: { playerId: '1', name: 'James Cook', points: 20.9, owners: 'Ninjas' },
-      scariest: { names: ['Pigskins', 'Ninjas'], margin: 7, yetToPlay: 2, final: false },
+      scariest: {
+        names: ['Pigskins', 'Ninjas'],
+        margin: 7,
+        yetToPlay: 2,
+        final: false,
+        leagueId: 'demo',
+        pairing: '0001-0002',
+      },
     },
+    onOpenScariest: () => {},
   },
 };
 
@@ -42,7 +50,14 @@ export const ScariestOnlyFinal = {
   args: {
     stats: {
       monster: null,
-      scariest: { names: ['Dead Cap', 'The Dream'], margin: 3.3, yetToPlay: 0, final: true },
+      scariest: {
+        names: ['Dead Cap', 'The Dream'],
+        margin: 3.3,
+        yetToPlay: 0,
+        final: true,
+        leagueId: 'demo',
+        pairing: '0003-0004',
+      },
     },
   },
 };

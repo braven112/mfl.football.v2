@@ -15,6 +15,8 @@
 import type { LiveMatchup, LivePanel } from '../../types/live';
 import type { PlayerMeta } from '../../types/live-scoring';
 import { hasStarted, isMatchupFinal } from './standings-projection';
+import { pairingKey } from './model';
+import { buildLeaders } from './leaders';
 
 export interface HauntedMonster {
   playerId: string;
@@ -32,6 +34,9 @@ export interface HauntedGame {
   /** Starters still to play across both sides. 0 once the game is over. */
   yetToPlay: number;
   final: boolean;
+  /** Where the board finds this matchup to open it: its panel and pairing. */
+  leagueId: string;
+  pairing: string;
 }
 
 export interface HauntedStats {
@@ -52,7 +57,10 @@ function findMonster(panels: LivePanel[], meta: Record<string, PlayerMeta>): Hau
   let best: HauntedMonster | null = null;
   for (const panel of panels) {
     if (panel.status !== 'ok') continue;
-    for (const row of panel.leaders?.players ?? []) {
+    // Only MFL Live's board fills `leaders`; the league boards leave it unset,
+    // so derive it here from the panel's own starters when it is missing.
+    const leaders = panel.leaders ?? buildLeaders(panel, { playerLimit: 1 });
+    for (const row of leaders.players) {
       if (!(row.points > 0)) continue;
       if (best && row.points <= best.points) continue;
       best = {
@@ -84,6 +92,8 @@ function findScariest(panels: LivePanel[]): HauntedGame | null {
         margin: Math.abs(a.live - b.live),
         yetToPlay: a.yetToPlay + b.yetToPlay,
         final: isMatchupFinal(m),
+        leagueId: panel.leagueId,
+        pairing: pairingKey(m),
       };
       if (!best) {
         best = game;

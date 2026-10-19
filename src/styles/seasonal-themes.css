@@ -91,7 +91,7 @@ html[data-season='halloween'] .lv-page:has(.lv-head) {
 .lv-haunt {
   align-self: end;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 17rem));
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: var(--spacing-sm);
   max-width: 34rem;
 }
@@ -104,6 +104,23 @@ html[data-season='halloween'] .lv-page:has(.lv-head) {
   background: rgb(8 7 10 / 0.82);
   border: 1px solid #3b2d22;
   border-radius: 12px;
+}
+/* The Scariest Game card opens its matchup: a button that keeps the card's
+   look, with the border warming to the accent on hover and focus. */
+.lv-haunt__card--link {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.lv-haunt__card--link:hover,
+.lv-haunt__card--link:focus-visible {
+  border-color: var(--color-primary);
+}
+.lv-haunt__card--link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .lv-haunt__label {
   font-size: var(--font-size-2xs);

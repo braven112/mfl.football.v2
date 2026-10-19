@@ -18,7 +18,7 @@ const side = (name: string, live: number, secondsRemaining: number, yetToPlay = 
     nameShort: name,
     live,
     yetToPlay,
-    players: [{ playerId: `${name}-1`, points: live, secondsRemaining }],
+    players: [{ id: `${name}-1`, live, secondsRemaining }],
     bench: [],
   }) as unknown as LiveMatchup['sides'][number];
 
@@ -63,6 +63,19 @@ describe('hauntedStats', () => {
     expect(stats.monster).toEqual({ playerId: 'p1', name: 'James Cook', points: 20.9, owners: 'Ninjas, Smokane' });
   });
 
+  it('derives the monster from the starters when the panel carries no leaders', () => {
+    const game = matchup(side('A', 31.5, 0), side('B', 12, 0));
+    const p = panel([game]);
+    delete (p as { leaders?: unknown }).leaders;
+    const stats = hauntedStats([p], meta);
+    expect(stats.monster).toMatchObject({ playerId: 'A-1', points: 31.5, owners: 'A' });
+  });
+
+  it('carries the matchup it names so the card can open it', () => {
+    const game = matchup(side('C', 70, 600), side('D', 68.5, 600));
+    expect(hauntedStats([panel([game])], meta).scariest).toMatchObject({ leagueId: 'L' });
+  });
+
   it('names an unmapped player by id rather than dropping him', () => {
     const stats = hauntedStats([panel([], [{ playerId: 'p9', points: 5 }])], meta);
     expect(stats.monster?.name).toBe('Player p9');
@@ -72,7 +85,7 @@ describe('hauntedStats', () => {
     const closeFinal = matchup(side('A', 90, 0), side('B', 89, 0));
     const liveGame = matchup(side('C', 95.3, 600, 1), side('D', 88.3, 0, 1));
     const stats = hauntedStats([panel([closeFinal, liveGame])], meta);
-    expect(stats.scariest).toEqual({ names: ['C', 'D'], margin: 7, yetToPlay: 2, final: false });
+    expect(stats.scariest).toMatchObject({ names: ['C', 'D'], margin: 7, yetToPlay: 2, final: false });
   });
 
   it('picks the smallest margin among live games', () => {
