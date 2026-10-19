@@ -160,3 +160,80 @@ html[data-season='halloween'] .lv-page:has(.lv-head) {
   font-size: var(--font-size-xs);
   color: var(--content-text-muted, #bdb4a8);
 }
+
+/* MFL Live (/live): the same haunted scene at the top of the signed-in board
+   and of the signed-out landing. MflAppLayout has no .lv-page frame, so these
+   cancel ITS gutters (`.mfl-main`'s padding, literal clamps in the layout)
+   instead, and the scene hangs straight off the app bar. */
+html[data-season='halloween'] .mfl-live-board .lv-head {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  justify-content: stretch;
+  align-items: start;
+  gap: var(--spacing-md);
+  min-height: 25rem;
+  margin: calc(clamp(1rem, 4vw, 2rem) * -1) calc(clamp(0.75rem, 3vw, 1.25rem) * -1) 0;
+  padding: var(--spacing-xl) clamp(0.75rem, 3vw, 1.25rem) var(--spacing-lg);
+  background: #0a0a0c url('/assets/seasonal/halloween/haunted-house.svg') right bottom / auto 100% no-repeat;
+  overflow: hidden;
+}
+html[data-season='halloween'] .mfl-live-board .lv-head h1 {
+  font-size: clamp(2.5rem, 9vw, 3.25rem);
+  line-height: 1;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.7);
+}
+html[data-season='halloween'] .mfl-live-board .lv-head__right {
+  justify-content: flex-start;
+}
+@media (min-width: 768px) {
+  html[data-season='halloween'] .mfl-live-board .lv-head {
+    min-height: 20rem;
+  }
+}
+
+/* The landing: the scene sits behind the headline alone, so the copy and the
+   sign-in buttons below it stay on the plain ground and never cross the house.
+   The hero goes to one column for the season; the .mll column is capped at
+   76rem, so the scene is a 100vw pseudo-element centred under the headline
+   (which now spans that column), the way the league boards draw it on
+   desktop. The page clips the sideways overflow (`clip`, so no scroll
+   container is made). */
+html[data-season='halloween'] body:has(.mll-hero__top) {
+  overflow-x: clip;
+}
+html[data-season='halloween'] main:has(> .mll) {
+  padding-top: 0;
+}
+/* The ticker moves below the scene so the scene hangs off the app bar. */
+html[data-season='halloween'] .mll {
+  display: flex;
+  flex-direction: column;
+}
+html[data-season='halloween'] .mll-hero {
+  order: -1;
+  padding-top: 0;
+}
+html[data-season='halloween'] .mll-hero__top {
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+html[data-season='halloween'] .mll-hero__top .mll-h1 {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(10rem, 24vw, 14rem) 0 var(--spacing-lg);
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.7);
+}
+html[data-season='halloween'] .mll-hero__top .mll-h1::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  z-index: -1;
+  background: #0a0a0c url('/assets/seasonal/halloween/haunted-house.svg') right bottom / auto 100% no-repeat;
+}
+html[data-season='halloween'] .mll-hero__side {
+  max-width: 40rem;
+}
