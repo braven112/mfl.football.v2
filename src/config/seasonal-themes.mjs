@@ -64,6 +64,19 @@ export const SEASONAL_THEMES = {
   },
 };
 
+/**
+ * Seasons worn by the surfaces that are not registry leagues, keyed by their
+ * data-league THEME KEY (THEMED_SURFACES in scripts/generate-league-themes.mjs).
+ *
+ * MFL Live (`mfl`) spans every league its viewer plays in, Sleeper included,
+ * so it wears the season for EVERYONE (owner's call, Oct 2026): the palette,
+ * the headline face and the dark lock apply to the whole page. Franchise
+ * marks follow each LEAGUE's own opt-in instead: a league whose registry
+ * entry lists the season shows its drawn marks there too
+ * (src/utils/seasonal-mark-css.ts); every other league keeps its own logos.
+ */
+export const SURFACE_SEASONAL_THEMES = { mfl: ['halloween'] };
+
 /** The calendar date `now` falls on in the league's zone. */
 function zonedDate(now) {
   const parts = Object.fromEntries(

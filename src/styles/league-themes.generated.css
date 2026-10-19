@@ -1183,6 +1183,7 @@ html.dark:not([data-league]) {
 
 /* Seasonal: Halloween (Midnight) (halloween) on [data-season="halloween"] — Seasonal: true-black chrome, bone-white text and marks, pumpkin orange for actions, live state and your team. Worn dark-only (the season locks the page to dark); the light block is a black-and-orange fallback that stays legible should the lock ever be lifted. */
 html[data-league="afl"][data-season="halloween"],
+html[data-league="mfl"][data-season="halloween"],
 html[data-league="theleague"][data-season="halloween"] {
   --card-bg: var(--color-white);
   --card-border: var(--content-border);
@@ -1280,6 +1281,7 @@ html[data-league="theleague"][data-season="halloween"] {
   --primary-content-boxshadow-color: #c2410c28;
 }
 html.dark[data-league="afl"][data-season="halloween"],
+html.dark[data-league="mfl"][data-season="halloween"],
 html.dark[data-league="theleague"][data-season="halloween"] {
   --card-bg: radial-gradient(92% 96% at 2% -6%, rgb(255 122 26 / 14%), #151517 62%);
   --card-border: var(--color-border-default, #2e2e33);

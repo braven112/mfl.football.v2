@@ -26,7 +26,8 @@ html[data-season='halloween'] :is(h1, h2, h3) {
 
 /* The season locks the page to dark, so a Light / Auto / Dark control would
    do nothing; hide it rather than offer a dead switch. */
-html[data-season='halloween'] .theme-toggle {
+html[data-season='halloween'] .theme-toggle,
+html[data-season='halloween'] .mfl-menu__theme {
   display: none;
 }
 

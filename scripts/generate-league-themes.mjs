@@ -68,20 +68,26 @@ export async function loadSurfaces() {
 
 /**
  * Seasonal theme id → the navSlugs that wear it, from each registry entry's
- * `seasonalThemes`. Each is compiled onto `[data-season="<id>"]` of those
+ * `seasonalThemes` plus SURFACE_SEASONAL_THEMES (MFL Live). Each is compiled onto `[data-season="<id>"]` of those
  * leagues only (src/config/seasonal-themes.mjs), one attribute above the
  * league's own block so it wins only while the layout stamps the attribute.
  */
 export async function loadSeasonalSurfaces() {
   process.env.DEMO_PROFILE ||= '1';
   const { ALL_LEAGUES } = await import('../src/config/leagues-data.mjs');
-  const { SEASONAL_THEMES } = await import('../src/config/seasonal-themes.mjs');
+  const { SEASONAL_THEMES, SURFACE_SEASONAL_THEMES } = await import('../src/config/seasonal-themes.mjs');
   const seasons = {};
-  for (const league of ALL_LEAGUES) {
-    for (const id of league.seasonalThemes ?? []) {
-      if (!SEASONAL_THEMES[id]) throw new Error(`league "${league.slug}" names unknown seasonal theme "${id}"`);
-      (seasons[id] ??= { theme: SEASONAL_THEMES[id].theme, slugs: [] }).slugs.push(league.navSlug);
+  const wear = (name, navSlug, ids) => {
+    for (const id of ids ?? []) {
+      if (!SEASONAL_THEMES[id]) throw new Error(`"${name}" names unknown seasonal theme "${id}"`);
+      (seasons[id] ??= { theme: SEASONAL_THEMES[id].theme, slugs: [] }).slugs.push(navSlug);
     }
+  };
+  for (const league of ALL_LEAGUES) wear(league.slug, league.navSlug, league.seasonalThemes);
+  // Non-league surfaces (MFL Live) that wear a season, by their theme key.
+  for (const [surface, ids] of Object.entries(SURFACE_SEASONAL_THEMES)) {
+    if (!(surface in THEMED_SURFACES)) throw new Error(`seasonal surface "${surface}" is not a THEMED_SURFACES key`);
+    wear(surface, surface, ids);
   }
   return seasons;
 }
