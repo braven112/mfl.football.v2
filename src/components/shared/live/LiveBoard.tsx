@@ -53,6 +53,7 @@ import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
 import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
 import LvHauntedStats from './LvHauntedStats';
+import LvHauntedScene from './LvHauntedScene';
 import { hauntedStats } from '../../../utils/live/haunted-stats';
 
 /** Matches the cadence the board this replaces used. */
@@ -439,6 +440,13 @@ export default function LiveBoard({
   // describe the same moment as the scores under them.
   const haunted =
     season === 'halloween' ? hauntedStats(panelViews.map((v) => v.panel), board.playerMeta) : null;
+  // Every score on the board, in one string: when it changes, the haunted
+  // house stirs (LvHauntedScene).
+  const hauntPulse = haunted
+    ? panelViews
+        .map((v) => v.panel.matchups.map((m) => m.sides.map((side) => side.live).join(',')).join(';'))
+        .join('|')
+    : '';
 
   const heldSince = panelViews.reduce(
     (oldest, v) => (v.heldSince === null ? oldest : oldest === 0 ? v.heldSince : Math.min(oldest, v.heldSince)),
@@ -630,6 +638,7 @@ export default function LiveBoard({
     <KickoffClockContext.Provider value={kickoffClock}>
     <div className="lv" ref={rootRef}>
       <div className="lv-head">
+        {haunted && <LvHauntedScene pulse={hauntPulse} />}
         <h1>
           {title}
           {demoLabel && <span className="lv-sample">{demoLabel}</span>}

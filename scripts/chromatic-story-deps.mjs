@@ -121,6 +121,8 @@ export const STORY_ASSET_GLOBS = [
   // Channel + Sunday Ticket carrier marks the SundayTicketBoard stories render
   // (18 small PNGs, all of them the subject, so the whole directory).
   'public/assets/tv-logos/**',
+  // The haunted house the Live Scoring Halloween header animates over.
+  'public/assets/seasonal/halloween/haunted-house.svg',
   // The Brand Book file-strip and tile stories (a division badge, its
   // Halloween redraw, AFL conference and division art).
   'public/assets/afl/awards/al-central.svg',
