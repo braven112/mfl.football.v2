@@ -19,7 +19,7 @@ import RecapHeroStub from '../hero-stubs/RecapHeroStub.astro';
 import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import { findWeeklyRecapPost } from '../../../utils/hero-recap-destination';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
-import { getWeekInTheBooks } from '../../../utils/offseason-hero-data';
+import { getRecapWeek } from '../../../utils/offseason-hero-data';
 
 export interface Props {
   state: HeroState;
@@ -33,7 +33,7 @@ const feed = await getSchefterFeedBySlug('theleague');
 const seasonYear = getCurrentSeasonYear();
 // `referenceDate`, not the system clock — the cap must agree with the date
 // the slot was resolved on, or ?testDate renders another week's card.
-const completedWeek = getWeekInTheBooks(seasonYear, 'theleague', state.metadata.referenceDate);
+const completedWeek = getRecapWeek(seasonYear, 'theleague', state.metadata.referenceDate).week;
 const recap: SchefterPost | null = findWeeklyRecapPost(feed.posts, seasonYear, completedWeek);
 
 const author = recap ? getAuthor(recap.authorId) : null;

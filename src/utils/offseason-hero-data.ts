@@ -536,6 +536,27 @@ export function getWeekInTheBooks(
   return Math.max(0, Math.min(scored, ceiling));
 }
 
+/**
+ * The week a recap card is about. Tuesday onward that is the week in the
+ * books (`getWeekInTheBooks`). On a MONDAY the recap slot runs before MNF
+ * (`mondayRecapSlot`), so it covers the week still being played: Sunday's
+ * games are final and the live feed already holds that week. It takes that
+ * week only when the feed agrees, so a feed that has not caught up yet falls
+ * back to the last finished week rather than a week with no scores.
+ */
+export function getRecapWeek(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+  now: Date = new Date(),
+): { week: number; sundayOnly: boolean } {
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(now);
+  if (weekday === 'Mon') {
+    const live = nflWeekFor(seasonYear, now);
+    if (live > 0 && getLatestScoredWeek(seasonYear, league) === live) return { week: live, sundayOnly: true };
+  }
+  return { week: getWeekInTheBooks(seasonYear, league, now), sundayOnly: false };
+}
+
 /** playerId → actual points from the playerScores feed (the completed week). */
 function getActualScoreMap(
   seasonYear: number,
