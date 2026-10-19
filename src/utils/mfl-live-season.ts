@@ -8,7 +8,7 @@ import { getTestDateFromSearchParams } from './league-year';
  * exactly when the scene behind them does. ?testDate= / ?seasonPreview=
  * preview it, as on the league sites.
  */
-export function mflLiveSeason(url: URL, seasonPreview: string | undefined) {
+export function mflLiveSeason(url: URL, seasonPreview: string | null | undefined) {
   return activeSeasonalTheme(
     SURFACE_SEASONAL_THEMES.mfl,
     getTestDateFromSearchParams(url.searchParams) ?? new Date(),
