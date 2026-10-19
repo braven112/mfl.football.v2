@@ -34,7 +34,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     actionLinks: [
       {
         label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
+        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=28',
         external: true,
       },
     ],
@@ -85,7 +85,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     actionLinks: [
       {
         label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
+        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=28',
         external: true,
       },
     ],
@@ -103,7 +103,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     actionLinks: [
       {
         label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
+        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=28',
         external: true,
       },
     ],

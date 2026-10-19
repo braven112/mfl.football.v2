@@ -212,10 +212,12 @@ describe('resolveAllEvents', () => {
     const ref = new Date(2026, 1, 5); // Feb 5, 2026
     const resolved = resolveAllEvents(THE_LEAGUE_EVENTS, 2026, ref, TEST_LINK_VARS);
 
-    // Tagging period links to the forum (static URL, no template vars)
+    // Tagging period links to the league's MFL message board (O=28)
     const tagging = resolved.find((e) => e.definition.id === 'tagging-period');
     expect(tagging?.actionLinks.length).toBeGreaterThan(0);
-    expect(tagging?.actionLinks[0].url).toContain('theleague.us/forum');
+    expect(tagging?.actionLinks[0].url).toContain('www49.myfantasyleague.com');
+    expect(tagging?.actionLinks[0].url).toContain('O=28');
+    expect(tagging?.actionLinks[0].url).not.toContain('{');
 
     // FA auction link uses template vars
     const fa = resolved.find((e) => e.definition.id === 'offseason-fa-opens');

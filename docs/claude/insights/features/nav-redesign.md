@@ -883,7 +883,7 @@ await drawer.screenshot({
 
 **Key takeaways:**
 - **Owner preference, don't re-add:** the hamburger toggle gets *no* background fill in any state or theme — future dark-mode passes should resist giving it a "button plate."
-- `public/embed/phpbb-nav.html` is a hand-synced copy of the nav CSS with a `.tl-` prefix (used on the phpBB forum). It is not generated — any visual change to `NavToggleButton.astro` / drawer styles must be manually mirrored there, and there's a "Last synced from source" date in its header comment worth bumping.
+- `public/embed/phpbb-nav.html` is a hand-synced copy of the nav CSS with a `.tl-` prefix (used on the phpBB forum). It is not generated — any visual change to `NavToggleButton.astro` / drawer styles must be manually mirrored there, and there's a "Last synced from source" date in its header comment worth bumping. **Retired Oct 2026:** the phpBB forum was shut down and the embed files deleted; nothing to sync any more.
 - On touch devices `:hover` backgrounds persist after a tap until the next touch, so a hover-only background reads as a stuck highlight on mobile — prefer color shifts on the glyph itself for hover feedback on icon buttons.
 
 ## 2026-07-20 - League Switch Links Must Be Absolute Cross-Domain URLs on Apex Hosts
