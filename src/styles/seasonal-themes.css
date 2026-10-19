@@ -56,7 +56,9 @@ html[data-season='halloween'] .lv-page .lv-head {
   gap: var(--spacing-md);
   min-height: 25rem;
   padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-lg);
-  margin: 0 calc(-1 * var(--spacing-md));
+  /* Full bleed on a phone: cancel the layout's `main` gutter and `.lv-page`'s
+     own, by name, the way `.lv-page .lv-detail` does in live.css. */
+  margin: 0 calc((var(--padding-sm) + var(--spacing-md)) * -1);
   background: #0a0a0c url('/assets/seasonal/halloween/haunted-house.svg') right bottom / auto 100% no-repeat;
   overflow: hidden;
 }
@@ -68,12 +70,22 @@ html[data-season='halloween'] .lv-page .lv-head h1 {
 html[data-season='halloween'] .lv-page .lv-head__right {
   justify-content: flex-start;
 }
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   html[data-season='halloween'] .lv-page .lv-head {
     min-height: 20rem;
     margin: 0;
-    border-radius: var(--radius-lg, 12px);
+    border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
   }
+}
+/* The scene hangs straight off the site header, with no gap above it: drop
+   the header's bottom margin and the two top paddings below it (`main`'s from
+   768px, `.lv-page`'s always). Same move the Free Agents hero makes. */
+html[data-season='halloween'] body:has(.lv-page .lv-head) .container-header {
+  margin-bottom: 0;
+}
+html[data-season='halloween'] main:has(> .lv-page .lv-head),
+html[data-season='halloween'] .lv-page:has(.lv-head) {
+  padding-top: 0;
 }
 
 .lv-haunt {
