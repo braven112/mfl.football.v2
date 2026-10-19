@@ -40,3 +40,72 @@ html[data-season='halloween'] .stb-seedchip--wild_card {
   background: var(--color-text-primary);
   color: #111;
 }
+
+/* Live Scoring header: the title, week picker and live pill sit over a haunted
+   house on a hill, with Monster of the Week and Scariest Game cards along the
+   bottom (LvHauntedStats). Scoped to .lv-page, the league boards' frame, so
+   /live and the broadcast board keep their own headers. The scene is drawn
+   wide and fitted to the header's HEIGHT, anchored right: a phone sees the
+   house and the edge of the moon, a desktop sees the hills run off left. */
+html[data-season='halloween'] .lv-page .lv-head {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  justify-content: stretch;
+  align-items: start;
+  gap: var(--spacing-md);
+  min-height: 25rem;
+  padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-lg);
+  margin: 0 calc(-1 * var(--spacing-md));
+  background: #0a0a0c url('/assets/seasonal/halloween/haunted-house.svg') right bottom / auto 100% no-repeat;
+  overflow: hidden;
+}
+html[data-season='halloween'] .lv-page .lv-head h1 {
+  font-size: clamp(2.5rem, 9vw, 3.25rem);
+  line-height: 1;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.7);
+}
+html[data-season='halloween'] .lv-page .lv-head__right {
+  justify-content: flex-start;
+}
+@media (min-width: 640px) {
+  html[data-season='halloween'] .lv-page .lv-head {
+    min-height: 20rem;
+    margin: 0;
+    border-radius: var(--radius-lg, 12px);
+  }
+}
+
+.lv-haunt {
+  align-self: end;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 17rem));
+  gap: var(--spacing-sm);
+  max-width: 34rem;
+}
+.lv-haunt__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  background: rgb(8 7 10 / 0.82);
+  border: 1px solid #3b2d22;
+  border-radius: 12px;
+}
+.lv-haunt__label {
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.lv-haunt__main {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+.lv-haunt__sub {
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted, #bdb4a8);
+}

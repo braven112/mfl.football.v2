@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 430" preserveAspectRatio="xMaxYMax slice">
+  <!-- The Live Scoring header's Halloween scene. Drawn wide so the header can
+       show it height-fitted and right-anchored: a phone sees the house and the
+       moon at the right edge, a desktop sees the hills run off to the left. -->
+  <defs>
+    <radialGradient id="moonGlow" gradientUnits="userSpaceOnUse" cx="2400" cy="50" r="900">
+      <stop offset="0" stop-color="#3a2a1c"/>
+      <stop offset="0.3" stop-color="#17121c"/>
+      <stop offset="1" stop-color="#0a0a0c"/>
+    </radialGradient>
+    <radialGradient id="houseGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#1d3170" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="#122050" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#0d1430" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fog" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0a0c" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0a0a0c" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="2400" height="430" fill="url(#moonGlow)"/>
+
+  <!-- Full moon, mostly off the right edge and dimmed so it never fights the title. -->
+  <circle cx="2412" cy="58" r="62" fill="#cdbfa6" opacity="0.55"/>
+  <g fill="#a99c86" opacity="0.45">
+    <circle cx="2386" cy="44" r="9"/>
+    <circle cx="2394" cy="84" r="6"/>
+    <circle cx="2372" cy="70" r="4"/>
+  </g>
+
+  <!-- Bats -->
+  <g fill="#050507">
+    <path d="M2120 70 l10 6 l10 -6 l-4 8 l4 3 l-10 -3 l-10 3 l4 -3 z"/>
+    <path d="M2340 150 l7 4 l7 -4 l-3 6 l3 2 l-7 -2 l-7 2 l3 -2 z"/>
+    <path d="M2210 40 l6 4 l6 -4 l-2 5 l2 2 l-6 -2 l-6 2 l2 -2 z"/>
+    <path d="M1720 96 l8 5 l8 -5 l-3 7 l3 2 l-8 -2 l-8 2 l3 -2 z"/>
+    <path d="M1480 60 l6 4 l6 -4 l-2 5 l2 2 l-6 -2 l-6 2 l2 -2 z"/>
+  </g>
+
+  <!-- Deep blue glow that lifts the house off the night sky. -->
+  <ellipse cx="2232" cy="236" rx="130" ry="100" fill="url(#houseGlow)"/>
+
+  <!-- Far hills -->
+  <path d="M0 320 C 200 300 420 312 640 296 C 880 280 1100 300 1320 292 C 1560 284 1800 300 2010 300 C 2070 290 2130 300 2180 285 C 2240 268 2310 290 2400 270 L2400 430 L0 430 Z" fill="#141018"/>
+
+  <!-- House on the hill -->
+  <g fill="#060508">
+    <rect x="2206" y="190" width="12" height="40"/>
+    <path d="M2160 300 L2160 230 L2192 200 L2224 230 L2224 300 Z"/>
+    <path d="M2216 300 L2216 248 L2260 214 L2304 248 L2304 300 Z"/>
+    <path d="M2250 214 L2260 160 L2270 214 Z"/>
+    <rect x="2256" y="150" width="8" height="14"/>
+  </g>
+  <g fill="#ff8a2a">
+    <rect x="2174" y="244" width="10" height="14"/>
+    <rect x="2200" y="244" width="10" height="14" opacity="0.35"/>
+    <rect x="2232" y="258" width="10" height="14"/>
+    <rect x="2254" y="258" width="10" height="14" opacity="0.5"/>
+    <rect x="2276" y="258" width="10" height="14"/>
+    <circle cx="2260" cy="196" r="5"/>
+  </g>
+
+  <!-- Near ground -->
+  <path d="M0 350 C 260 330 520 342 780 326 C 1040 312 1300 334 1560 322 C 1780 312 1900 336 2010 360 C 2090 330 2170 320 2240 312 C 2310 305 2350 310 2400 300 L2400 430 L0 430 Z" fill="#060508"/>
+
+  <!-- Dead trees -->
+  <g stroke="#060508" stroke-width="5" fill="none" stroke-linecap="round">
+    <path d="M2070 340 C 2068 300 2072 270 2066 230"/>
+    <path d="M2068 280 C 2050 268 2040 262 2028 250"/>
+    <path d="M2067 260 C 2084 246 2094 238 2108 236"/>
+    <path d="M2066 236 C 2056 222 2054 212 2046 204"/>
+    <path d="M1440 336 C 1438 300 1444 276 1436 244"/>
+    <path d="M1439 290 C 1458 278 1468 272 1482 268"/>
+    <path d="M1438 268 C 1420 254 1414 246 1404 236"/>
+  </g>
+
+  <rect y="300" width="2400" height="130" fill="url(#fog)"/>
+</svg>
