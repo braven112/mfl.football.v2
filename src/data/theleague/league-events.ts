@@ -34,7 +34,8 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     actionLinks: [
       {
         label: 'Message Board',
-        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=28',
+        // Feb 1-14 is before the Feb 14 league rollover: the live board is last year's.
+        url: 'https://{mflHost}/{prevYear}/options?L={leagueId}&O=28',
         external: true,
       },
     ],

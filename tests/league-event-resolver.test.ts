@@ -217,6 +217,8 @@ describe('resolveAllEvents', () => {
     expect(tagging?.actionLinks.length).toBeGreaterThan(0);
     expect(tagging?.actionLinks[0].url).toContain('www49.myfantasyleague.com');
     expect(tagging?.actionLinks[0].url).toContain('O=28');
+    // Feb 5 is before the Feb 14 rollover, so the live board is still 2025's
+    expect(tagging?.actionLinks[0].url).toContain('/2025/');
     expect(tagging?.actionLinks[0].url).not.toContain('{');
 
     // FA auction link uses template vars
