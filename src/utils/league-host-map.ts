@@ -41,7 +41,6 @@ export const SKIP_REWRITE_PREFIXES: readonly string[] = [
   '/_astro/',
   '/_image',
   '/_server-islands/',
-  '/forum/',
   '/404',
   '/favicon.ico',
   '/assets/',

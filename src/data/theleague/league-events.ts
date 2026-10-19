@@ -33,9 +33,9 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     endDate: { type: 'fixed', month: 2, day: 14, time: '20:45' },
     actionLinks: [
       {
-        label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
-        external: true,
+        label: 'Tag a Player',
+        url: '/theleague/rosters?myteam={franchiseId}',
+        external: false,
       },
     ],
     urgencyDays: 3,
@@ -82,13 +82,6 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 15 },
     endDate: { type: 'fixed', month: 2, day: 28, time: '20:45' },
-    actionLinks: [
-      {
-        label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
-        external: true,
-      },
-    ],
     urgencyDays: 3,
     sortOrder: 5,
   },
@@ -100,13 +93,6 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     category: 'preseason',
     startDate: { type: 'fixed', month: 3, day: 1 },
     endDate: { type: 'fixed', month: 3, day: 7, time: '20:45' },
-    actionLinks: [
-      {
-        label: 'Message Board',
-        url: 'https://www.theleague.us/forum/index.php',
-        external: true,
-      },
-    ],
     urgencyDays: 2,
     sortOrder: 6,
   },

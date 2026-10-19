@@ -322,27 +322,5 @@
       ],
       "statusCode": 301
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/forum/:path*",
-      "destination": "https://forum.theleague.us/forum/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.theleague.us"
-        }
-      ]
-    },
-    {
-      "source": "/forum/:path*",
-      "destination": "https://forum.theleague.us/forum/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "theleague.us"
-        }
-      ]
-    }
   ]
 }
