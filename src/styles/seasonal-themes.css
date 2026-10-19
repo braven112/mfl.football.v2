@@ -70,11 +70,32 @@ html[data-season='halloween'] .lv-page .lv-head h1 {
 html[data-season='halloween'] .lv-page .lv-head__right {
   justify-content: flex-start;
 }
+/* Desktop: the scene runs the full width of the screen while the title,
+   picker and cards stay on the page's own column. The scene moves to a
+   pseudo-element centred under the header and 100vw wide; `100vw` counts a
+   classic scrollbar, so the page clips the overflow sideways (`clip`, not
+   `hidden`, so no scroll container is made and sticky elements still work). */
 @media (min-width: 768px) {
+  html[data-season='halloween'] body:has(.lv-page .lv-head) {
+    overflow-x: clip;
+  }
   html[data-season='halloween'] .lv-page .lv-head {
     min-height: 20rem;
     margin: 0;
-    border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+    padding-inline: 0;
+    background: none;
+    overflow: visible;
+    isolation: isolate;
+  }
+  html[data-season='halloween'] .lv-page .lv-head::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    z-index: -1;
+    background: #0a0a0c url('/assets/seasonal/halloween/haunted-house.svg') right bottom / auto 100% no-repeat;
   }
 }
 /* The scene hangs straight off the site header, with no gap above it: drop
@@ -112,7 +133,7 @@ html[data-season='halloween'] .lv-page:has(.lv-head) {
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast);
 }
 .lv-haunt__card--link:hover,
 .lv-haunt__card--link:focus-visible {
