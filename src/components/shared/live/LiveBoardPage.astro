@@ -34,14 +34,15 @@ import { getAuthUser } from '../../../utils/auth';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { viewerClockZone } from '../../../utils/viewer-clock';
 import { getLeagueContext } from '../../../utils/league-context';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { activeSeasonalTheme } from '../../../config/seasonal-themes.mjs';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getDailySlot } from '../../../utils/hero-resolver';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { fetchInitialNflGames } from '../../../utils/nfl-scoreboard-source';
 import { assembleLeagueBoard } from '../../../utils/live/league-board';
 import { strictThrowbackScopeForLeagueSlug } from '../../../utils/throwback-scope';
-import { leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
 import '../../../styles/live.css';
 import '../../../styles/live-primetime.css';
 import '../../../styles/nfl-games-strip.css';
@@ -156,6 +157,14 @@ const nflGames = plainReplay ? assembled.sampleGames : await nflGamesPromise;
 // the markup.
 const board = { ...assembled.board, games: nflGames ?? [] };
 
+// The same resolution the layout makes for <html data-season>, so the header's
+// Halloween cards appear exactly when the scene behind them does.
+const season = activeSeasonalTheme(
+  getLeagueBySlug(slug)?.seasonalThemes,
+  getTestDateFromSearchParams(Astro.url.searchParams) ?? now,
+  Astro.locals.seasonPreview,
+)?.id;
+
 const settingsPath = resolveLeaguePath(
   `/${slug}/throwback-settings`,
   Astro.locals.hideLeaguePrefix ?? false,
@@ -176,6 +185,7 @@ const settingsPath = resolveLeaguePath(
       preSeason={preSeason}
       demoLabel={assembled.demoLabel}
       kickoffClock={kickoffClock}
+      season={season}
     />
 
     <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has

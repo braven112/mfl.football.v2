@@ -14,6 +14,19 @@ Their reasoning is still why the current code looks the way it does — the CSS
 rules in particular were harvested into the rewrite — but the file and symbol
 names in them no longer exist. Read them as history, not as a map.
 
+## 2026-10-19 - `panel.leaders` is filled on MFL Live ONLY (Halloween header, PR #1419)
+
+`buildLeaders` runs inside `mfl-league-board.ts`, so `/live` panels carry
+`leaders` and the league boards (`assembleLeagueBoard`) leave it unset. Code
+that reads `panel.leaders` on a league board sees nothing and renders nothing,
+silently: the Halloween header's Monster of the Week card shipped invisible on
+TheLeague for exactly this reason. Read `panel.leaders ?? buildLeaders(panel)`
+(`haunted-stats.ts`) rather than trusting the field to exist.
+
+Also: the board's open matchup is island STATE (`setSelected({leagueId,
+pairing})`), not a route, so anything that "links to a matchup" is a button
+that calls it, never an `<a href>`.
+
 ## 2026-10-18 - A second fantasy host joins the board through the SAME shapes (Sleeper, PR #1404)
 
 **Context:** Sleeper leagues on MFL Live (`src/utils/sleeper/`, plan

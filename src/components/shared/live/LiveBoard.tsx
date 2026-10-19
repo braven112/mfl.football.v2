@@ -52,6 +52,8 @@ import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboar
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
 import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
+import LvHauntedStats from './LvHauntedStats';
+import { hauntedStats } from '../../../utils/live/haunted-stats';
 
 /** Matches the cadence the board this replaces used. */
 const POLL_LIVE_MS = 25_000;
@@ -104,6 +106,12 @@ export interface LiveBoardProps {
   preSeason?: boolean;
   /** Page heading. */
   title?: string;
+  /**
+   * The seasonal theme open for this page, or omitted. `'halloween'` adds the
+   * header's Monster of the Week and Scariest Game cards; the haunted scene
+   * behind them is CSS keyed on <html data-season> (seasonal-themes.css).
+   */
+  season?: string;
   /**
    * Bundled-sample mode. The label is shown as a badge and the pill is
    * suppressed, because with the pollers off there is no freshness to report
@@ -237,6 +245,7 @@ export default function LiveBoard({
   kickoffClock = null,
   preSeason = false,
   title = 'Live Scoring',
+  season,
   demoLabel,
   extraFeeds,
   hideWeekPicker = false,
@@ -425,6 +434,11 @@ export default function LiveBoard({
   // Scores is the board's job; a poll that drops the standings must not strand
   // the reader on a tab that no longer has anything behind it.
   const activeTab = hasStandings && soloPanel ? tab : 'scores';
+
+  // From the panels AS DRAWN, like the leaders strip, so the header cards
+  // describe the same moment as the scores under them.
+  const haunted =
+    season === 'halloween' ? hauntedStats(panelViews.map((v) => v.panel), board.playerMeta) : null;
 
   const heldSince = panelViews.reduce(
     (oldest, v) => (v.heldSince === null ? oldest : oldest === 0 ? v.heldSince : Math.min(oldest, v.heldSince)),
@@ -624,6 +638,15 @@ export default function LiveBoard({
           {!hideWeekPicker && <LvWeekPicker week={board.week} onSelect={onSelectWeek} />}
           {pill}
         </div>
+        {haunted && (
+          <LvHauntedStats
+            stats={haunted}
+            onOpenScariest={(game) => {
+              boardScrollY.current = window.scrollY;
+              setSelected({ leagueId: game.leagueId, pairing: game.pairing });
+            }}
+          />
+        )}
       </div>
 
       {/* Outside the branch, on purpose — see the header. */}
