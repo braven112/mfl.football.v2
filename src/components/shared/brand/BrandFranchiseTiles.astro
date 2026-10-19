@@ -1,0 +1,56 @@
+---
+/**
+ * A grid of franchise tiles — the franchise's own colour wearing the cut that
+ * ground takes, linking to its brand page. The Brand Book index and the
+ * conference and division pages all draw franchises with this one grid.
+ */
+import { inkOn, type FranchiseBrand } from '../../../utils/franchise-marks';
+import '../../../styles/brand-book.css';
+
+interface Props {
+  franchises: FranchiseBrand[];
+  hrefFor: (slug: string) => string;
+}
+
+const { franchises, hrefFor } = Astro.props;
+---
+
+{/*
+  The SAME `brand__*` tile markup the index's NFL grid uses, not a
+  parallel set. The franchise half briefly had its own classes and
+  promptly re-shipped a bug the club template had already fixed.
+*/}
+<ul class="brand__grid">
+  {franchises.map((fr) => {
+    const tileBg = fr.bandColor;
+    const tileInk = inkOn(tileBg);
+    const tileBand = fr.grounds.find((g) => g.ground === 'band');
+    return (
+      <li class="brand__cell">
+        <a
+          class="brand__tile"
+          href={hrefFor(fr.slug)}
+          style={`--tile-bg:${tileBg};--tile-ink:${tileInk}`}
+        >
+          <span class="brand__art">
+            {tileBand && (
+              <img
+                src={tileBand.url}
+                alt=""
+                loading="lazy"
+                width="72"
+                height="72"
+                style={tileBand.filter ? `filter:${tileBand.filter}` : undefined}
+              />
+            )}
+          </span>
+          <span class="brand__name">
+            {fr.division && <span class="brand__city">{fr.division}</span>}
+            <span class="brand__nick brand__nick--franchise">{fr.name}</span>
+          </span>
+          {!fr.hasDarkCut && <span class="brand__flag">light only</span>}
+        </a>
+      </li>
+    );
+  })}
+</ul>

@@ -20,6 +20,9 @@ const ROOT = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 const PAGE = read('src/components/shared/brand/FranchiseBrandPage.astro');
 const INDEX = read('src/components/shared/brand/BrandPage.astro');
+// The copy behaviour every Brand Book page shares, lifted out of the franchise
+// page when the league, conference, division and archive pages arrived.
+const COPY = read('src/components/shared/brand/BrandCopy.astro');
 const CSS = read('src/styles/brand-book.css');
 
 describe('FranchiseBrandPage — ONE template with the club page', () => {
@@ -155,8 +158,9 @@ describe('FranchiseBrandPage — the dark-swap opt-out', () => {
   it('uses a visually-hidden class that actually exists', () => {
     // A live region styled by a class defined nowhere renders as visible body
     // text reading "Copied https://…".
-    expect(PAGE).toContain('class="visually-hidden" id="cb-copy-status"');
-    expect(PAGE).not.toContain('class="sr-only"');
+    expect(PAGE).toContain('<BrandCopy />');
+    expect(COPY).toContain('class="visually-hidden" id="cb-copy-status"');
+    expect(COPY).not.toContain('class="sr-only"');
     const utilities = read('src/styles/utilities.css');
     expect(utilities).toMatch(/\.visually-hidden\s*\{/);
   });
@@ -192,20 +196,20 @@ describe('FranchiseBrandPage — client script lifecycle', () => {
    * hold and replace its registration stacks a second copy on every arrival.
    */
   it('registers on document exactly once, replacing any prior handler', () => {
-    expect(PAGE).toMatch(/window\.__brandBookCopy/);
-    expect(PAGE).toMatch(/document\.removeEventListener\('click', window\.__brandBookCopy\)/);
-    expect(PAGE).toMatch(/document\.addEventListener\('click', onClick\)/);
+    expect(COPY).toMatch(/window\.__brandBookCopy/);
+    expect(COPY).toMatch(/document\.removeEventListener\('click', window\.__brandBookCopy\)/);
+    expect(COPY).toMatch(/document\.addEventListener\('click', onClick\)/);
   });
 
   it('gates on a node the swap replaced, never a window global', () => {
     // The Sept 2026 lineup outage was a gate on a `window` global: it survived
     // the swap, so the departing page's listener ran on the arriving page.
-    expect(PAGE).toMatch(/document\.querySelector\('\.cb'\)/);
+    expect(COPY).toMatch(/document\.querySelector\('\.cb'\)/);
   });
 
   it('falls back off the clipboard API rather than failing silently on http', () => {
-    expect(PAGE).toMatch(/isSecureContext/);
-    expect(PAGE).toMatch(/execCommand\('copy'\)/);
+    expect(COPY).toMatch(/isSecureContext/);
+    expect(COPY).toMatch(/execCommand\('copy'\)/);
   });
 });
 
@@ -233,9 +237,16 @@ describe('FranchiseBrandPage — what it renders', () => {
     expect(PAGE).not.toMatch(/linear-gradient\(115deg/);
   });
 
-  it('links the searchable file list, which nothing else reaches', () => {
-    expect(PAGE).toContain('/brand/files');
-    expect(INDEX).toContain('/brand/files');
+  it('carries the retired file library: seasonal marks, extra files and a file search', () => {
+    // /brand/files was folded into the Brand Book (Oct 2026). Its job now is
+    // split across the pages; tests/brand-book-coverage.test.ts proves every
+    // file landed on one, and these pin that the pages render them.
+    expect(PAGE).toContain('franchiseSeasonalMarks(');
+    expect(PAGE).toContain('franchiseExtraFiles(');
+    expect(INDEX).toContain('id="brand-file-search"');
+    expect(INDEX).toContain('allBrandFiles(');
+    expect(PAGE).not.toContain('/brand/files');
+    expect(INDEX).not.toContain('/brand/files');
   });
 });
 

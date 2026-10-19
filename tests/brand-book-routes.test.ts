@@ -10,8 +10,8 @@
  *
  * It also pins the things a reader would notice immediately if they broke: a
  * slug that is not unique inside its league, a franchise whose page would have
- * no artwork on it, and the static `files` route being reachable at all next
- * to the dynamic `[team]` one.
+ * no artwork on it, and the static `files` route (now a redirect) being
+ * reachable at all next to the dynamic `[team]` one.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -165,15 +165,23 @@ describe('Brand Book — routes', () => {
       const src = read(`src/pages/${league}/assets.astro`);
       expect(src).toMatch(/Astro\.redirect\(/);
       expect(src).toContain(`/${league}/brand`);
-      // 302, not 301: a permanent redirect is cached indefinitely and cannot
-      // be taken back without minting a new URL.
-      expect(src).toMatch(/302/);
+      // 301: the Asset Library is retired for good (owner's call, Oct 2026).
+      expect(src).toMatch(/\b301\b/);
     });
 
-    it(`/${league}/brand/files still serves the searchable library`, () => {
+    it(`/${league}/brand/files forwards to the Brand Book it was folded into`, () => {
       const src = read(`src/pages/${league}/brand/files.astro`);
-      expect(src).toContain('AssetsPage');
-      expect(src).toContain('aggregatedAssets');
+      expect(src).toMatch(/Astro\.redirect\(/);
+      expect(src).toContain(`/${league}/brand'`);
+      expect(src).toMatch(/\b301\b/);
+      expect(src).not.toContain('AssetsPage');
+    });
+
+    it(`/${league}/brand has league, archive and division pages that own their redirects`, () => {
+      for (const f of ['league.astro', 'archive.astro', 'division/[division].astro']) {
+        expect(() => read(`src/pages/${league}/brand/${f}`), f).not.toThrow();
+      }
+      expect(read(`src/pages/${league}/brand/division/[division].astro`)).toMatch(/return Astro\.redirect\(/);
     });
   }
 

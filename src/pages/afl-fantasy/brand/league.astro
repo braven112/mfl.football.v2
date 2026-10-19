@@ -1,0 +1,28 @@
+---
+/**
+ * The league's own Brand Book page (afl-fantasy) — thin route wrapper.
+ * A STATIC segment, so it wins over `[team].astro` next to it, and
+ * tests/brand-book-coverage.test.ts keeps "league" out of franchise reach.
+ */
+import BrandSubjectPage from '../../../components/shared/brand/BrandSubjectPage.astro';
+import { brandSubject, type BrandBookAssets, type BrandBookConfig } from '../../../utils/brand-book-subjects';
+import leagueConfig from '../../../../data/afl-fantasy/afl.config.json';
+import aggregatedAssets from '../../../../data/afl-fantasy/afl.assets.json';
+
+// SSR, not prerender: the page's links read `Astro.locals.hideLeaguePrefix`,
+// which middleware derives from the HOSTNAME (same reason as brand.astro).
+export const prerender = false;
+
+const slug = 'afl-fantasy' as const;
+const subject = brandSubject(slug, aggregatedAssets as BrandBookAssets, leagueConfig as BrandBookConfig, 'league', 'league');
+if (!subject) throw new Error('Brand Book: no league subject');
+const assetDomain = ((leagueConfig as { assetDomain?: string }).assetDomain || '').replace(/\/+$/, '');
+---
+
+<BrandSubjectPage
+  leagueSlug={slug}
+  subject={subject}
+  assets={aggregatedAssets as BrandBookAssets}
+  config={leagueConfig as BrandBookConfig}
+  assetDomain={assetDomain}
+/>

@@ -1,0 +1,70 @@
+---
+/**
+ * The Brand Book's Copy URL / Copy hex behaviour: one live region and one
+ * delegated click listener, shared by every Brand Book page that prints a
+ * `.cb-copy` button (franchise, league, conference, division, archive).
+ *
+ * Lifted out of FranchiseBrandPage when the subject pages arrived, so the
+ * listener exists once rather than once per page that needs it.
+ */
+---
+
+{/*
+  `visually-hidden` (src/styles/utilities.css), NOT `sr-only` — this repo
+  has no such class, and a live region styled by a class that does not
+  exist renders as visible body text reading "Copied https://…".
+*/}
+<p class="visually-hidden" id="cb-copy-status" role="status" aria-live="polite"></p>
+
+<script is:inline>
+  (() => {
+    /**
+     * CLIENTROUTER-SAFE INIT. `document` is one of the two nodes the router
+     * does NOT replace, so a listener registered here survives every
+     * navigation — hold the registration and replace it rather than stacking a
+     * second one.
+     *
+     * The gate asks a node the swap REPLACED (`.cb` in the new document), never
+     * a `window` global — that was the Sept 2026 lineup outage. This component
+     * is SHARED between both leagues and every Brand Book page rather than
+     * forked, so there is no same-id-different-league hazard beyond that: one
+     * module, one copy, whichever league's route rendered it.
+     */
+    const copyText = async (text) => {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      // http:// dev fallback — the clipboard API requires a secure context.
+      const scratch = document.createElement('textarea');
+      scratch.value = text;
+      scratch.style.position = 'fixed';
+      scratch.style.opacity = '0';
+      document.body.appendChild(scratch);
+      scratch.select();
+      document.execCommand('copy');
+      scratch.remove();
+    };
+
+    const onClick = async (event) => {
+      const btn = event.target.closest('.cb-copy');
+      if (!btn || !document.querySelector('.cb') || !btn.dataset.copy) return;
+      try {
+        await copyText(btn.dataset.copy);
+        btn.classList.add('is-copied');
+        clearTimeout(btn._cbTimer);
+        btn._cbTimer = setTimeout(() => btn.classList.remove('is-copied'), 1500);
+        const status = document.getElementById('cb-copy-status');
+        if (status) status.textContent = `Copied ${btn.dataset.copy}`;
+      } catch {
+        /* clipboard denied — the value stays visible and selectable by hand */
+      }
+    };
+
+    if (window.__brandBookCopy) {
+      document.removeEventListener('click', window.__brandBookCopy);
+    }
+    window.__brandBookCopy = onClick;
+    document.addEventListener('click', onClick);
+  })();
+</script>

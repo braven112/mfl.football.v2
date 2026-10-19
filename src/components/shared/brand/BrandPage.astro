@@ -39,14 +39,33 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { allClubs, inkOn } from '../../../utils/nfl-marks';
 import { allFranchiseBrands, leagueHasBrandBook } from '../../../utils/franchise-marks';
+import BrandFranchiseTiles from './BrandFranchiseTiles.astro';
+import BrandSubjectTiles from './BrandSubjectTiles.astro';
+import {
+  allBrandFiles,
+  brandSubjects,
+  subjectPath,
+  subjectTile,
+  type BrandBookAssets,
+  type BrandBookConfig,
+  type SubjectTile,
+} from '../../../utils/brand-book-subjects';
 import '../../../styles/brand-book.css';
 
 interface Props {
   /** Omitted on the shared host, where this page belongs to no league. */
   leagueSlug?: CanonicalLeagueSlug;
+  /**
+   * The league's aggregated asset file and config, from the route. With them
+   * the index adds the league, conference, division and archive pages and the
+   * file search; without them (the shared host, a package league) it is the
+   * club grids alone.
+   */
+  assets?: BrandBookAssets;
+  config?: BrandBookConfig;
 }
 
-const { leagueSlug } = Astro.props;
+const { leagueSlug, assets, config } = Astro.props;
 const league = leagueSlug ? getLeagueBySlug(leagueSlug) : null;
 if (leagueSlug && !league) throw new Error(`BrandPage: unknown league ${leagueSlug}`);
 
@@ -68,7 +87,37 @@ const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
 const franchises = leagueSlug && leagueHasBrandBook(leagueSlug) ? allFranchiseBrands(leagueSlug) : [];
 const franchiseHref = (slug: string) =>
   leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/${slug}`, hide) : `/brand/${slug}`;
-const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, hide) : null;
+
+/**
+ * The league's own subjects — the Brand Files library's league, championship,
+ * conference and division art, and its retired clubs — each on its own page
+ * now, reached from these tiles.
+ */
+const brandHref = (path: string) => (leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/${path}`, hide) : `/brand/${path}`);
+const subjects = leagueSlug && assets && config ? brandSubjects(leagueSlug, assets, config) : [];
+const SUBJECT_EYEBROW = { league: 'League', conference: 'Conference' } as const;
+const subjectTiles: SubjectTile[] = subjects.map((s) =>
+  subjectTile(s, brandHref(subjectPath(s)), s.kind === 'division' ? (s.parent?.name ?? 'Division') : SUBJECT_EYEBROW[s.kind]),
+);
+if (subjects.length && assets?.teams?.some((t) => t.category === 'former')) {
+  subjectTiles.push({ href: brandHref('archive'), name: 'Retired clubs', eyebrow: 'Archive', art: null, artForDark: false });
+}
+
+/**
+ * Every file the league's Brand Book pages show, for "Find a file" — what the
+ * retired library was good AT. Shipped as JSON and rendered on input, rather
+ * than as several hundred hidden rows.
+ */
+const fileIndex =
+  leagueSlug && assets && config
+    ? allBrandFiles(leagueSlug, assets, config).map((f) => ({
+        l: f.label,
+        f: f.filename,
+        u: f.url,
+        p: f.pageName,
+        h: brandHref(f.page),
+      }))
+    : [];
 ---
 
 <Layout title={league ? `Brand Book | ${league.name}` : 'NFL Brand Book'}>
@@ -85,13 +134,6 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
         dark card, or the club's own colour.
       </p>
       {
-        filesHref && (
-          <p class="brand__note">
-            Every asset is in the <a href={filesHref}>searchable file list</a>.
-          </p>
-        )
-      }
-      {
         derived.length > 0 && (
           <p class="brand__note">
             {derived.map((c, i) => (
@@ -107,51 +149,47 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
     </header>
 
     {
+      subjectTiles.length > 0 && league && (
+        <section class="cb__section">
+          <h2 class="cb__h2">League marks</h2>
+          <p class="cb__note">
+            The league's own marks, its conferences and divisions, and the clubs that have left.
+          </p>
+          <BrandSubjectTiles tiles={subjectTiles} />
+        </section>
+      )
+    }
+
+    {
       franchises.length > 0 && league && (
         <section class="cb__section">
           <h2 class="cb__h2">{league.name} clubs</h2>
           <p class="cb__note">
             Each tile is the club's official colour wearing the cut that ground takes.
           </p>
-          {/*
-            The SAME `brand__*` tile markup the NFL grid below uses, not a
-            parallel set. The franchise half briefly had its own classes and
-            promptly re-shipped a bug the club template had already fixed.
-          */}
-          <ul class="brand__grid">
-            {franchises.map((fr) => {
-              const tileBg = fr.bandColor;
-              const tileInk = inkOn(tileBg);
-              const tileBand = fr.grounds.find((g) => g.ground === 'band');
-              return (
-                <li class="brand__cell">
-                  <a
-                    class="brand__tile"
-                    href={franchiseHref(fr.slug)}
-                    style={`--tile-bg:${tileBg};--tile-ink:${tileInk}`}
-                  >
-                    <span class="brand__art">
-                      {tileBand && (
-                        <img
-                          src={tileBand.url}
-                          alt=""
-                          loading="lazy"
-                          width="72"
-                          height="72"
-                          style={tileBand.filter ? `filter:${tileBand.filter}` : undefined}
-                        />
-                      )}
-                    </span>
-                    <span class="brand__name">
-                      {fr.division && <span class="brand__city">{fr.division}</span>}
-                      <span class="brand__nick brand__nick--franchise">{fr.name}</span>
-                    </span>
-                    {!fr.hasDarkCut && <span class="brand__flag">light only</span>}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+          <BrandFranchiseTiles franchises={franchises} hrefFor={franchiseHref} />
+        </section>
+      )
+    }
+
+    {
+      fileIndex.length > 0 && (
+        <section class="cb__section">
+          <h2 class="cb__h2">
+            <label for="brand-file-search">Find a file</label>
+          </h2>
+          <p class="cb__note">
+            Search all {fileIndex.length} files by club, league, division or file name.
+          </p>
+          <input
+            class="brand__search"
+            id="brand-file-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Pigskins, east.svg, banner…"
+          />
+          <ul class="brand__hits" id="brand-file-hits" aria-live="polite"></ul>
+          <script type="application/json" id="brand-file-index" set:html={JSON.stringify(fileIndex).replace(/</g, '\\u003c')} />
         </section>
       )
     }
@@ -192,6 +230,61 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
   </main>
 </Layout>
 
+<script is:inline>
+  (() => {
+    /**
+     * "Find a file". CLIENTROUTER-SAFE: the listener sits on `document`, which
+     * survives every swap, so the previous registration is replaced rather
+     * than stacked; the gate and the data are read from the CURRENT document
+     * on every keystroke, never captured, so a swap to the other league's
+     * Brand Book searches that league's files.
+     */
+    const MAX = 40;
+    const onInput = (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.id !== 'brand-file-search') return;
+      const list = document.getElementById('brand-file-hits');
+      const data = document.getElementById('brand-file-index');
+      if (!list || !data) return;
+      const q = input.value.trim().toLowerCase();
+      list.replaceChildren();
+      if (q.length < 2) return;
+      let files = [];
+      try {
+        files = JSON.parse(data.textContent || '[]');
+      } catch {
+        return;
+      }
+      const hits = files.filter((f) => `${f.l} ${f.f} ${f.p}`.toLowerCase().includes(q));
+      for (const f of hits.slice(0, MAX)) {
+        const li = document.createElement('li');
+        li.className = 'brand__hit';
+        const page = document.createElement('a');
+        page.href = f.h;
+        page.textContent = `${f.p} — ${f.l}`;
+        const name = document.createElement('code');
+        name.textContent = f.f;
+        const dl = document.createElement('a');
+        dl.className = 'cb__dl';
+        dl.href = f.u;
+        dl.setAttribute('download', '');
+        dl.textContent = 'Download';
+        li.append(page, name, dl);
+        list.append(li);
+      }
+      const more = document.createElement('li');
+      more.className = 'brand__hit';
+      more.textContent = hits.length === 0 ? 'No files match.' : hits.length > MAX ? `${hits.length - MAX} more — keep typing to narrow it.` : '';
+      if (more.textContent) list.append(more);
+    };
+    if (window.__brandBookSearch) {
+      document.removeEventListener('input', window.__brandBookSearch);
+    }
+    window.__brandBookSearch = onInput;
+    document.addEventListener('input', onInput);
+  })();
+</script>
+
 <style>
 
   /* ── The Brand Book opts OUT of the global dark swap ────────────────────
@@ -223,128 +316,4 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
      bare in dark. The `revert-layer` that was meant to rescue the inline ring
      could not: the style attribute is not a cascade layer, so it rolled back to
      the UA value `none`. */
-  /* A club nickname is one word; a franchise name is up to four ("Running Down
-     The Dream"), so the franchise tiles take a smaller, balanced line rather
-     than the nickname's size. Everything else about the tile is identical. */
-  .brand__nick--franchise {
-    font-size: 0.9rem;
-    line-height: 1.2;
-    text-wrap: balance;
-  }
-  .brand__nfl-h2 {
-    margin-top: 2.5rem;
-  }
-  /* Tokens with fallbacks only — a var() with no definition renders its
-     fallback in BOTH themes (docs/claude/rules/theming-and-assets.md). */
-  .brand {
-    max-width: var(--container-max-width, 1100px);
-    margin: 0 auto;
-    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
-  }
-  .brand__header {
-    margin-bottom: var(--spacing-lg, 1.5rem);
-  }
-  .brand__eyebrow {
-    margin: 0 0 0.35rem;
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-gray-500, #6b7280);
-  }
-  .brand h1 {
-    margin: 0 0 0.5rem;
-    font-size: 1.85rem;
-    line-height: 1.1;
-  }
-  .brand__lede {
-    margin: 0;
-    max-width: 62ch;
-    color: var(--color-gray-600, #4b5563);
-  }
-  .brand__note {
-    margin: 0.75rem 0 0;
-    font-size: var(--font-size-sm);
-    color: var(--color-gray-500, #6b7280);
-  }
-  .brand__note a {
-    color: inherit;
-    font-weight: 700;
-  }
-
-  .brand__grid {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--spacing-sm, 0.75rem);
-  }
-  .brand__cell {
-    margin: 0;
-  }
-  .brand__tile {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 1.1rem 0.75rem 0.9rem;
-    border-radius: var(--radius-md, 8px);
-    background: var(--tile-bg);
-    color: var(--tile-ink);
-    text-decoration: none;
-    min-height: 148px;
-    justify-content: center;
-  }
-  .brand__tile:hover,
-  .brand__tile:focus-visible {
-    outline: 2px solid var(--tile-ink);
-    outline-offset: 2px;
-  }
-  .brand__art img {
-    width: 72px;
-    height: 72px;
-    object-fit: contain;
-    display: block;
-  }
-  .brand__name {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    line-height: 1.15;
-  }
-  .brand__city {
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-  .brand__nick {
-    font-size: 1.05rem;
-    font-weight: 700;
-  }
-  .brand__flag {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.1rem 0.35rem;
-    border-radius: var(--radius-sm, 4px);
-    background: color-mix(in srgb, var(--tile-ink) 18%, transparent);
-  }
-
-  @media (max-width: 480px) {
-    .brand__grid {
-      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    }
-    .brand__art img {
-      width: 56px;
-      height: 56px;
-    }
-  }
 </style>

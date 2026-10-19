@@ -28,12 +28,19 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import TeamIconCell from '../TeamIconCell.astro';
+import BrandCopy from './BrandCopy.astro';
 import CompositeHero from '../CompositeHero.astro';
 import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
 import { franchiseBrand, inkOn, type FranchiseBrand } from '../../../utils/franchise-marks';
+import BrandFileStrip from './BrandFileStrip.astro';
+import {
+  franchiseExtraFiles,
+  franchiseSeasonalMarks,
+  type BrandBookAssets,
+} from '../../../utils/brand-book-subjects';
 /* The Brand Book's template AND its dark-swap opt-out, shared with the club
    page. The opt-out lives in the sheet rather than in a scoped block here
    because it is the same rule for both halves, and two copies of a rule whose
@@ -45,16 +52,21 @@ interface Props {
   franchiseId: string;
   /** Absolute origin for the copy-URL buttons, from the league's `assetDomain`. */
   assetDomain?: string;
+  /** The league's aggregated asset file, for files on disk no cut above names. */
+  assets?: BrandBookAssets;
 }
 
-const { leagueSlug, franchiseId, assetDomain = '' } = Astro.props;
+const { leagueSlug, franchiseId, assetDomain = '', assets } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`FranchiseBrandPage: unknown league ${leagueSlug}`);
 
 const brand = franchiseBrand(leagueSlug, franchiseId) as FranchiseBrand;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const indexPath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
-const filesPath = resolveLeaguePath(`/${leagueSlug}/brand/files`, hide);
+
+/** This franchise in each seasonal set (the set's name in code is its id), and any file on disk the cuts above do not name. */
+const seasonal = franchiseSeasonalMarks(leagueSlug, franchiseId);
+const extraFiles = assets ? franchiseExtraFiles(assets, brand) : [];
 
 const bg = brand.bandColor;
 const ink = inkOn(bg);
@@ -322,6 +334,31 @@ const USAGE: Array<{ term: string; detail: string }> = [
       }
     </section>
 
+    {
+      seasonal.map((set) => (
+        <section class="cb__section">
+          <h2 class="cb__h2">
+            Seasonal marks: {set.name} <code class="cb__set-id">{set.id}</code>
+          </h2>
+          <p class="cb__note">
+            Drawn for the {set.name} theme. While it is open, every crest of this franchise on the
+            site shows this mark instead.
+          </p>
+          <BrandFileStrip files={set.files} assetDomain={assetDomain} subject={`${brand.name}, ${set.name}`} />
+        </section>
+      ))
+    }
+
+    {
+      extraFiles.length > 0 && (
+        <section class="cb__section">
+          <h2 class="cb__h2">More files</h2>
+          <p class="cb__note">Also in this club's folders, though no current cut uses them.</p>
+          <BrandFileStrip files={extraFiles} assetDomain={assetDomain} subject={brand.name} />
+        </section>
+      )
+    }
+
     <section class="cb__section">
       <h2 class="cb__h2">What each ground draws</h2>
       <p class="cb__note">
@@ -470,8 +507,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">Using these marks</h2>
       <p class="cb__note">
-        What each file is for. Every path here is also in the
-        <a href={filesPath}>searchable file list</a>.
+        What each file is for. The Brand Book's <a href={indexPath}>file search</a> finds any file
+        in the league by name.
       </p>
       <dl class="cb__specs">
         {
@@ -509,65 +546,6 @@ const USAGE: Array<{ term: string; detail: string }> = [
       </dl>
     </section>
 
-    {/*
-      `visually-hidden` (src/styles/utilities.css), NOT `sr-only` — this repo
-      has no such class, and a live region styled by a class that does not
-      exist renders as visible body text reading "Copied https://…".
-    */}
-    <p class="visually-hidden" id="cb-copy-status" role="status" aria-live="polite"></p>
+    <BrandCopy />
   </main>
 </TheLeagueLayout>
-
-
-<script is:inline>
-  (() => {
-    /**
-     * CLIENTROUTER-SAFE INIT. `document` is one of the two nodes the router
-     * does NOT replace, so a listener registered here survives every
-     * navigation — hold the registration and replace it rather than stacking a
-     * second one.
-     *
-     * The gate asks a node the swap REPLACED (`.cb` in the new document), never
-     * a `window` global — that was the Sept 2026 lineup outage. This component
-     * is SHARED between both leagues rather than forked, so there is no
-     * same-id-different-league hazard beyond that: one module, one copy,
-     * whichever league's route rendered it.
-     */
-    const copyText = async (text) => {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return;
-      }
-      // http:// dev fallback — the clipboard API requires a secure context.
-      const scratch = document.createElement('textarea');
-      scratch.value = text;
-      scratch.style.position = 'fixed';
-      scratch.style.opacity = '0';
-      document.body.appendChild(scratch);
-      scratch.select();
-      document.execCommand('copy');
-      scratch.remove();
-    };
-
-    const onClick = async (event) => {
-      const btn = event.target.closest('.cb-copy');
-      if (!btn || !document.querySelector('.cb') || !btn.dataset.copy) return;
-      try {
-        await copyText(btn.dataset.copy);
-        btn.classList.add('is-copied');
-        clearTimeout(btn._cbTimer);
-        btn._cbTimer = setTimeout(() => btn.classList.remove('is-copied'), 1500);
-        const status = document.getElementById('cb-copy-status');
-        if (status) status.textContent = `Copied ${btn.dataset.copy}`;
-      } catch {
-        /* clipboard denied — the value stays visible and selectable by hand */
-      }
-    };
-
-    if (window.__brandBookCopy) {
-      document.removeEventListener('click', window.__brandBookCopy);
-    }
-    window.__brandBookCopy = onClick;
-    document.addEventListener('click', onClick);
-  })();
-</script>

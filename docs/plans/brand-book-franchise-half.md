@@ -19,9 +19,20 @@ ones and the championship / league / conference / division art have no brand
 page of their own, and finding one file by name across all of that is the thing
 that view is genuinely good at.
 
-`/<league>/assets` now 302s to the book. Not 301: a permanent redirect is cached
-by the browser indefinitely and cannot be taken back without minting a new URL,
-and this is a product decision that may yet be revisited.
+**Update, Oct 2026: the library is retired.** Each of those now has a Brand
+Book page of its own — `/brand/league` (logo, competition marks, championship
+art, source PSDs), `/brand/conference/<al|nl>`, `/brand/division/<name>`
+(former divisions included, flagged) and `/brand/archive` (every retired club,
+one page by the owner's call) — and the index carries a "Find a file" search
+over all of it. Every seasonal mark set appears on the page of the thing it
+redraws, under the set's id (`halloween`). `src/utils/brand-book-subjects.ts`
+derives all of it from the asset folders and the seasonal sets, and
+`tests/brand-book-coverage.test.ts` fails the build on any file no page shows.
+`/brand/files` 301s to the index.
+
+`/<league>/assets` now 301s to the book. It first shipped as a 302 while the
+decision could still be revisited; the owner's rule (Oct 2026) is that a page
+we are done with gets a permanent redirect, and 302 is for ones that may change.
 
 ## One book, two subjects
 

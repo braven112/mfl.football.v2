@@ -1,0 +1,157 @@
+---
+/**
+ * The Brand Book page for one of a league's non-club subjects — the league
+ * itself, a conference or a division. Every mark on file for the subject,
+ * each seasonal set's drawing of it, and (for a conference or division) the
+ * franchises that play in it.
+ *
+ * Everything on the page comes from `brandSubjects`
+ * (src/utils/brand-book-subjects.ts), which reads the league's asset folders
+ * and seasonal mark sets: a new mark in either lands here with no edit, and
+ * tests/brand-book-coverage.test.ts fails the build if one would not.
+ *
+ * Thin route wrappers own the redirect for an unknown subject and the
+ * per-league data imports (Astro.redirect() only redirects from a page, and a
+ * static import specifier cannot be a runtime variable).
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import BrandFileStrip from './BrandFileStrip.astro';
+import BrandFranchiseTiles from './BrandFranchiseTiles.astro';
+import BrandSubjectTiles from './BrandSubjectTiles.astro';
+import BrandCopy from './BrandCopy.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import {
+  brandSubjects,
+  subjectPath,
+  subjectTile,
+  type BrandBookAssets,
+  type BrandBookConfig,
+  type BrandSubject,
+} from '../../../utils/brand-book-subjects';
+import '../../../styles/brand-book.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  subject: BrandSubject;
+  assets: BrandBookAssets;
+  config: BrandBookConfig;
+  assetDomain?: string;
+}
+
+const { leagueSlug, subject, assets, config, assetDomain = '' } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`BrandSubjectPage: unknown league ${leagueSlug}`);
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const brandHref = (path: string) => resolveLeaguePath(`/${leagueSlug}/brand${path ? `/${path}` : ''}`, hide);
+
+const all = brandSubjects(leagueSlug, assets, config);
+const KIND_LABEL = { league: 'League', conference: 'Conference', division: 'Division' } as const;
+
+/** Where this page leads: the league page to its conferences and divisions, a conference to its own divisions. */
+const children =
+  subject.kind === 'league'
+    ? all.filter((s) => s.kind !== 'league')
+    : subject.kind === 'conference'
+      ? all.filter((s) => s.kind === 'division' && s.parent?.slug === subject.slug)
+      : [];
+const childTiles = children.map((s) =>
+  subjectTile(s, brandHref(subjectPath(s)), s.parent ? s.parent.name : KIND_LABEL[s.kind]),
+);
+
+const eyebrow = [KIND_LABEL[subject.kind], subject.parent?.name, subject.current ? null : 'Former division']
+  .filter(Boolean)
+  .join(' · ');
+const fileCount = subject.groups.reduce((n, g) => n + g.files.length, 0);
+---
+
+<TheLeagueLayout title={`${subject.kind === 'league' ? 'League' : subject.name} brand | Brand Book | ${league.name}`}>
+  <main class="cb brand">
+    <nav class="cb__crumb">
+      <a href={brandHref('')}>&larr; Brand Book</a>
+      {
+        subject.parent && (
+          <>
+            {' '}&middot; <a href={brandHref(`conference/${subject.parent.slug}`)}>{subject.parent.name}</a>
+          </>
+        )
+      }
+    </nav>
+
+    <header class="brand__header">
+      <p class="brand__eyebrow">{eyebrow}</p>
+      <h1>{subject.name}</h1>
+      <p class="brand__lede">
+        {
+          subject.kind === 'league'
+            ? 'The league’s own marks: its logo, its competitions and the art for its titles.'
+            : subject.current
+              ? `Every mark on file for the ${subject.name}, and the clubs that play in it.`
+              : `The ${subject.name} has no clubs today. Its badge stays on file for the seasons it was played.`
+        }
+      </p>
+    </header>
+
+    {
+      subject.groups.map((g) => (
+        <section class="cb__section">
+          <h2 class="cb__h2">{g.title}</h2>
+          {g.note && <p class="cb__note">{g.note}</p>}
+          <BrandFileStrip files={g.files} assetDomain={assetDomain} subject={subject.name} />
+        </section>
+      ))
+    }
+    {fileCount === 0 && <p class="cb__note">No marks on file yet.</p>}
+
+    {
+      subject.seasonal.map((set) => (
+        <section class="cb__section">
+          <h2 class="cb__h2">
+            Seasonal marks: {set.name} <code class="cb__set-id">{set.id}</code>
+          </h2>
+          <p class="cb__note">
+            Drawn for the {set.name} theme. While it is open the site shows these in place of the
+            marks above. Files live in <code>/assets/{league.navSlug}/{set.folder}/</code>.
+          </p>
+          <BrandFileStrip files={set.files} assetDomain={assetDomain} subject={`${subject.name}, ${set.name}`} />
+        </section>
+      ))
+    }
+
+    {
+      subject.franchises.length > 0 && (
+        <section class="cb__section">
+          <h2 class="cb__h2">Clubs</h2>
+          <BrandFranchiseTiles
+            franchises={subject.franchises}
+            hrefFor={(slug) => brandHref(slug)}
+          />
+        </section>
+      )
+    }
+
+    {
+      childTiles.length > 0 && (
+        <section class="cb__section">
+          <h2 class="cb__h2">{subject.kind === 'league' ? 'Conferences and divisions' : 'Divisions'}</h2>
+          <BrandSubjectTiles tiles={childTiles} />
+        </section>
+      )
+    }
+
+    {
+      subject.kind === 'league' && (
+        <section class="cb__section">
+          <h2 class="cb__h2">Retired clubs</h2>
+          <p class="cb__note">
+            Every club that has left the league, with the art it wore, is in the{' '}
+            <a href={brandHref('archive')}>archive</a>.
+          </p>
+        </section>
+      )
+    }
+
+    <BrandCopy />
+  </main>
+</TheLeagueLayout>

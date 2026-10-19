@@ -31,6 +31,10 @@ on:
     branches: [main]
     paths:
       # Components a story renders.
+      # Brand Book stories (stories/shared/BrandBook*.stories.ts).
+      - 'src/components/shared/brand/BrandFileStrip.astro'
+      - 'src/components/shared/brand/BrandFranchiseTiles.astro'
+      - 'src/components/shared/brand/BrandSubjectTiles.astro'
       # Standings board stories (stories/standings/).
       - 'src/components/shared/standings/AflFamilyBoard.astro'
       - 'src/components/shared/ProductInterest.astro'
@@ -44,6 +48,7 @@ on:
       # Primetime Free Agents board stories (stories/free-agents/).
       - 'src/components/shared/free-agents/FaMarketRail.astro'
       - 'src/components/shared/free-agents/FaPositionLeaders.astro'
+      - 'src/styles/brand-book.css'
       - 'src/styles/free-agents-primetime.css'
       - 'src/utils/free-agent-market.ts'
       - 'src/utils/rosters/phone-row.ts'
@@ -155,6 +160,7 @@ on:
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/article-hero-view.ts'
+      - 'src/utils/brand-book-subjects.ts'
       - 'src/utils/broadcast-channels.ts'
       - 'src/utils/broadcast-moments.ts'
       - 'src/utils/claim-context-shape.ts'
@@ -294,7 +300,10 @@ on:
       - 'src/data/college-dark-logos-manifest.json'
       - 'src/data/college-logos.json'
       - 'src/data/crest-dark-stroke-manifest.json'
+      - 'src/data/nfl-brand-kit.json'
       - 'src/data/nfl-dark-logos-manifest.json'
+      - 'src/data/nfl-mark-assignments.json'
+      - 'src/data/nfl-mark-reversals.json'
       - 'src/data/nfl/week-starts.mjs'
       - 'src/data/owners-registry.json'
       - 'src/data/page-directory.json'
@@ -362,6 +371,11 @@ on:
       - 'public/assets/nfl-logos/**'
       - 'public/assets/archies/icons/**'
       - 'public/assets/tv-logos/**'
+      - 'public/assets/afl/awards/al-central.svg'
+      - 'public/assets/afl/awards/al-north.svg'
+      - 'public/assets/afl/conferences/al.svg'
+      - 'public/assets/theleague/division-badges/east.svg'
+      - 'public/assets/theleague/halloween-marks/division-badges/east.svg'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
       - 'public/assets/icons/**'
@@ -377,9 +391,11 @@ on:
       - 'scripts/chromatic-story-deps.mjs'
       - '.github/workflows/chromatic.yml'
       - 'src/utils/draft-pick-cap-impact.ts'
+      - 'src/utils/franchise-marks.ts'
       - 'src/utils/lineup-submitted.ts'
       - 'src/utils/my-team-week.ts'
       - 'src/utils/nfl-bye-weeks.ts'
+      - 'src/utils/nfl-marks.ts'
       - 'src/utils/related-pages.ts'
       - 'src/utils/schedule-data.mjs'
       - 'src/utils/top-players-promo.ts'
@@ -451,6 +467,10 @@ on:
     types: [opened, ready_for_review, labeled, synchronize]
     paths:
       # Components a story renders.
+      # Brand Book stories (stories/shared/BrandBook*.stories.ts).
+      - 'src/components/shared/brand/BrandFileStrip.astro'
+      - 'src/components/shared/brand/BrandFranchiseTiles.astro'
+      - 'src/components/shared/brand/BrandSubjectTiles.astro'
       # Standings board stories (stories/standings/).
       - 'src/components/shared/standings/AflFamilyBoard.astro'
       - 'src/components/shared/ProductInterest.astro'
@@ -464,6 +484,7 @@ on:
       # Primetime Free Agents board stories (stories/free-agents/).
       - 'src/components/shared/free-agents/FaMarketRail.astro'
       - 'src/components/shared/free-agents/FaPositionLeaders.astro'
+      - 'src/styles/brand-book.css'
       - 'src/styles/free-agents-primetime.css'
       - 'src/utils/free-agent-market.ts'
       - 'src/utils/rosters/phone-row.ts'
@@ -575,6 +596,7 @@ on:
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/article-hero-view.ts'
+      - 'src/utils/brand-book-subjects.ts'
       - 'src/utils/broadcast-channels.ts'
       - 'src/utils/broadcast-moments.ts'
       - 'src/utils/claim-context-shape.ts'
@@ -714,7 +736,10 @@ on:
       - 'src/data/college-dark-logos-manifest.json'
       - 'src/data/college-logos.json'
       - 'src/data/crest-dark-stroke-manifest.json'
+      - 'src/data/nfl-brand-kit.json'
       - 'src/data/nfl-dark-logos-manifest.json'
+      - 'src/data/nfl-mark-assignments.json'
+      - 'src/data/nfl-mark-reversals.json'
       - 'src/data/nfl/week-starts.mjs'
       - 'src/data/owners-registry.json'
       - 'src/data/page-directory.json'
@@ -782,6 +807,11 @@ on:
       - 'public/assets/nfl-logos/**'
       - 'public/assets/archies/icons/**'
       - 'public/assets/tv-logos/**'
+      - 'public/assets/afl/awards/al-central.svg'
+      - 'public/assets/afl/awards/al-north.svg'
+      - 'public/assets/afl/conferences/al.svg'
+      - 'public/assets/theleague/division-badges/east.svg'
+      - 'public/assets/theleague/halloween-marks/division-badges/east.svg'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
       - 'public/assets/icons/**'
@@ -797,9 +827,11 @@ on:
       - 'scripts/chromatic-story-deps.mjs'
       - '.github/workflows/chromatic.yml'
       - 'src/utils/draft-pick-cap-impact.ts'
+      - 'src/utils/franchise-marks.ts'
       - 'src/utils/lineup-submitted.ts'
       - 'src/utils/my-team-week.ts'
       - 'src/utils/nfl-bye-weeks.ts'
+      - 'src/utils/nfl-marks.ts'
       - 'src/utils/related-pages.ts'
       - 'src/utils/schedule-data.mjs'
       - 'src/utils/top-players-promo.ts'

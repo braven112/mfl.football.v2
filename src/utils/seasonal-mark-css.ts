@@ -57,6 +57,11 @@ const MARK_SETS = import.meta.glob<Record<string, unknown>>('../data/seasonal-ma
   import: 'default',
 });
 
+/** The raw set file for `navSlug` and `seasonId`, or null — the Brand Book lists every file it names. */
+export function seasonalMarkSet(navSlug: string, seasonId: string): Record<string, unknown> | null {
+  return MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] ?? null;
+}
+
 /** Franchise ids with a drawn mark in `navSlug`'s set for `seasonId`. */
 export function seasonalMarkIds(navSlug: string, seasonId: string): Set<string> {
   const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] ?? {};

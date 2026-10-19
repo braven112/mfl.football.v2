@@ -1,0 +1,18 @@
+---
+/**
+ * The Brand Book's retired-club archive (theleague) — thin route wrapper.
+ * A STATIC segment, so it wins over `[team].astro` next to it.
+ */
+import BrandArchivePage from '../../../components/shared/brand/BrandArchivePage.astro';
+import type { BrandBookAssets } from '../../../utils/brand-book-subjects';
+import leagueConfig from '../../../data/theleague.config.json';
+import aggregatedAssets from '../../../data/theleague.assets.json';
+
+// SSR, not prerender: the page's links read `Astro.locals.hideLeaguePrefix`,
+// which middleware derives from the HOSTNAME (same reason as brand.astro).
+export const prerender = false;
+
+const assetDomain = ((leagueConfig as { assetDomain?: string }).assetDomain || '').replace(/\/+$/, '');
+---
+
+<BrandArchivePage leagueSlug="theleague" assets={aggregatedAssets as BrandBookAssets} assetDomain={assetDomain} />

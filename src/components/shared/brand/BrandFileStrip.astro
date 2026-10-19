@@ -1,0 +1,49 @@
+---
+/**
+ * A filmstrip of Brand Book files: each one previewed on the ground it was
+ * drawn for, captioned, with Copy URL and Download — the actions the retired
+ * Brand Files library offered for every file. Same `cb__film` markup as a
+ * franchise's "Marks on file", so every Brand Book page lists files one way.
+ *
+ * Needs <BrandCopy /> on the page for the Copy buttons to work.
+ */
+import type { BrandFile } from '../../../utils/brand-book-subjects';
+
+interface Props {
+  files: BrandFile[];
+  /** Absolute origin for Copy URL, from the league config's `assetDomain`. */
+  assetDomain?: string;
+  /** Prefixed to each file's label in its alt text ("Pacific Pigskins — Icon"). */
+  subject: string;
+}
+
+const { files, assetDomain = '', subject } = Astro.props;
+// An asset path on the CDN the config names, not a league route — a join, not
+// the origin + route concatenation docs/claude/rules/league-urls.md forbids.
+const absolute = (path: string) => (assetDomain ? `${assetDomain}${path}` : path);
+---
+
+<ul class="cb__film">
+  {
+    files.map((f) => (
+      <li class="cb__cut">
+        <span class={`cb__cut-box ${f.forDark ? 'is-dark' : 'is-light'}`}>
+          {f.source ? (
+            <span class="cb__cut-source">PSD</span>
+          ) : (
+            <img src={f.url} alt={`${subject} — ${f.label}`} loading="lazy" />
+          )}
+        </span>
+        <span class="cb__cut-label">{f.label}</span>
+        <span class="cb__cut-meta">{f.filename}</span>
+        <span class="cb__actions">
+          <button class="cb-copy" type="button" data-copy={absolute(f.url)} aria-label={`Copy ${f.label} URL`}>
+            <span class="cb-copy__idle">Copy URL</span>
+            <span class="cb-copy__done">Copied</span>
+          </button>
+          <a class="cb__dl" href={f.url} download>Download</a>
+        </span>
+      </li>
+    ))
+  }
+</ul>

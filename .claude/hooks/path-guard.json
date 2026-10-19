@@ -158,7 +158,6 @@
       ],
       "note": "These pages have each shipped a 'goes dead after in-site navigation' bug: init must re-run on astro:page-load, and module-level state must not capture the previous page's DOM.",
       "tests": [
-        "tests/assets-page-clientrouter.test.ts",
         "tests/salary-page-clientrouter.test.ts",
         "tests/trade-builder-clientrouter.test.ts",
         "tests/shared-trade-builder.test.ts",
@@ -1387,15 +1386,18 @@
       "rules": "docs/claude/rules/theming-and-assets.md",
       "paths": [
         "src/components/shared/brand/**",
-        "src/components/shared/assets/**",
         "src/utils/franchise-marks.ts",
+        "src/utils/brand-book-subjects.ts",
         "src/styles/brand-book.css",
         "src/pages/*/brand/**",
-        "src/pages/*/assets.astro"
+        "src/pages/*/assets.astro",
+        "src/data/seasonal-marks/*.json"
       ],
+      "note": "The Brand Book is the league's ONLY file library since /brand/files was retired (Oct 2026): every file in a league's aggregated asset list and every seasonal mark folder must be shown on some Brand Book page (src/utils/brand-book-subjects.ts), and tests/brand-book-coverage.test.ts fails on one that is not. Give a new mark a home there rather than allowlisting it.",
       "tests": [
         "tests/brand-book-routes.test.ts",
-        "tests/franchise-brand-page.test.ts"
+        "tests/franchise-brand-page.test.ts",
+        "tests/brand-book-coverage.test.ts"
       ]
     },
     {
