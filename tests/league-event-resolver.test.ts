@@ -212,14 +212,11 @@ describe('resolveAllEvents', () => {
     const ref = new Date(2026, 1, 5); // Feb 5, 2026
     const resolved = resolveAllEvents(THE_LEAGUE_EVENTS, 2026, ref, TEST_LINK_VARS);
 
-    // Tagging period links to the league's MFL message board (O=28)
+    // Tagging period opens the roster page, where the ⋮ menu applies a tag
     const tagging = resolved.find((e) => e.definition.id === 'tagging-period');
     expect(tagging?.actionLinks.length).toBeGreaterThan(0);
-    expect(tagging?.actionLinks[0].url).toContain('www49.myfantasyleague.com');
-    expect(tagging?.actionLinks[0].url).toContain('O=28');
-    // Feb 5 is before the Feb 14 rollover, so the live board is still 2025's
-    expect(tagging?.actionLinks[0].url).toContain('/2025/');
-    expect(tagging?.actionLinks[0].url).not.toContain('{');
+    expect(tagging?.actionLinks[0].url).toContain('/theleague/rosters');
+    expect(tagging?.actionLinks[0].external).toBe(false);
 
     // FA auction link uses template vars
     const fa = resolved.find((e) => e.definition.id === 'offseason-fa-opens');
