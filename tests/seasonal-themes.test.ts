@@ -187,10 +187,14 @@ describe('inlined AFL badge art follows the season', () => {
 describe('MFL Live wears the season for everyone', () => {
   const layout = fs.readFileSync(path.join(ROOT, 'src/layouts/MflAppLayout.astro'), 'utf8');
   const palette = fs.readFileSync(path.join(ROOT, 'src/styles/league-themes.generated.css'), 'utf8');
+  const helper = fs.readFileSync(path.join(ROOT, 'src/utils/mfl-live-season.ts'), 'utf8');
+  const livePage = fs.readFileSync(path.join(ROOT, 'src/pages/live/index.astro'), 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'src/styles/seasonal-themes.css'), 'utf8');
 
   it('wears Halloween, stamped and locked by its own layout', () => {
     expect(SURFACE_SEASONAL_THEMES.mfl).toContain('halloween');
-    expect(layout).toMatch(/activeSeasonalTheme\(\s*SURFACE_SEASONAL_THEMES\.mfl/);
+    expect(layout).toContain('mflLiveSeason(Astro.url, Astro.locals.seasonPreview)');
+    expect(helper).toMatch(/activeSeasonalTheme\(\s*SURFACE_SEASONAL_THEMES\.mfl/);
     expect(layout).toContain('data-season={season?.id}');
     expect(layout).toContain('data-theme-lock={modeLock}');
   });
@@ -215,5 +219,16 @@ describe('MFL Live wears the season for everyone', () => {
     for (const block of blocks) {
       expect(block).toMatch(/halloween-marks\/(\d{4}\.png|logo\.svg)/);
     }
+  });
+
+  it('the /live board header gets the haunted scene and its cards, from the same resolution', () => {
+    expect(livePage).toContain('mflLiveSeason(Astro.url, Astro.locals.seasonPreview)');
+    expect(livePage).toMatch(/<LiveBoard[\s\S]*season=\{season\}/);
+    expect(livePage).toContain('class="mfl-live-board"');
+    expect(css).toContain("html[data-season='halloween'] .mfl-live-board .lv-head");
+  });
+
+  it('the signed-out landing hero gets the haunted scene too', () => {
+    expect(css).toContain("html[data-season='halloween'] .mll-hero__top");
   });
 });

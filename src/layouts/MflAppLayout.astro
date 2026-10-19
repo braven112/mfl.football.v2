@@ -88,8 +88,7 @@ import '../styles/cta.css';
 // Seasonal looks (Halloween): the headline face and the hidden theme control,
 // keyed on <html data-season> like everything seasonal.
 import '../styles/seasonal-themes.css';
-import { activeSeasonalTheme, SURFACE_SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
-import { getTestDateFromSearchParams } from '../utils/league-year';
+import { mflLiveSeason } from '../utils/mfl-live-season';
 
 export interface Props {
 	title: string;
@@ -109,11 +108,7 @@ const themePref = getThemePreference(Astro.cookies);
 // marks swap only for leagues that wear the season themselves. Its lock
 // outranks the viewer's light/dark choice. ?testDate= / ?seasonPreview=
 // preview it, as on the league sites.
-const season = activeSeasonalTheme(
-	SURFACE_SEASONAL_THEMES.mfl,
-	getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
-	Astro.locals.seasonPreview,
-);
+const season = mflLiveSeason(Astro.url, Astro.locals.seasonPreview);
 const modeLock = season?.lock ?? undefined;
 
 // See the manifest note above.
