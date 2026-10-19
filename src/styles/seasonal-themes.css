@@ -110,6 +110,76 @@ html[data-season='halloween'] .lv-page:has(.lv-head) {
   padding-top: 0;
 }
 
+/* The haunted house's moving parts (LvHauntedScene): a box laid exactly over
+   the scene background, holding the glow, the windows and the house redrawn
+   over the glow; the glow and windows play when the scores change. The box
+   defaults to the header's own padding box, where the phone board and MFL
+   Live draw the background; the league boards' desktop override below moves
+   it onto the 100vw strip with the ::before. */
+.lv-haunt-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Height-fitted and anchored bottom-right, like `right bottom / auto 100%`. */
+.lv-haunt-scene__svg {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 2400 / 430;
+}
+html[data-season='halloween'] .lv-head > :not(.lv-haunt-scene) {
+  position: relative;
+  z-index: 1;
+}
+@media (min-width: 768px) {
+  html[data-season='halloween'] .lv-page .lv-haunt-scene {
+    left: 50%;
+    right: auto;
+    width: 100vw;
+    overflow: visible;
+    transform: translateX(-50%);
+  }
+}
+.lv-haunt-scene__glow {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lv-haunt-surge 3.2s ease-in-out both;
+}
+.lv-haunt-scene__window {
+  opacity: 0;
+  animation: lv-haunt-flicker 1.6s steps(1, end) both;
+}
+.lv-haunt-scene__window--1 { animation-delay: 0.15s; }
+.lv-haunt-scene__window--2 { animation-delay: 0.35s; }
+/* Swell, sag, swell again, then fade back to the resting glow. */
+@keyframes lv-haunt-surge {
+  0% { opacity: 0; transform: scale(0.85); }
+  30% { opacity: 1; transform: scale(1.15); }
+  55% { opacity: 0.45; transform: scale(1); }
+  72% { opacity: 0.9; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+/* Out, back on bright, stutter, settle: a lamp catching a draught. */
+@keyframes lv-haunt-flicker {
+  0% { opacity: 1; fill: #060508; }
+  12% { opacity: 0; }
+  20% { opacity: 1; fill: #ffc46b; }
+  30% { opacity: 1; fill: #060508; }
+  38% { opacity: 1; fill: #ffd890; }
+  60% { opacity: 0.6; fill: #ffb24a; }
+  100% { opacity: 0; fill: #ff8a2a; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-haunt-scene__glow,
+  .lv-haunt-scene__window { display: none; }
+}
+
 .lv-haunt {
   align-self: end;
   display: grid;
