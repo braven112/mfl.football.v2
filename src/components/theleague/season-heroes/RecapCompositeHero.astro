@@ -19,7 +19,7 @@
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
-import { getWeeklyTopScorerCandidates, getWeekInTheBooks } from '../../../utils/offseason-hero-data';
+import { getWeeklyTopScorerCandidates, getRecapWeek } from '../../../utils/offseason-hero-data';
 import { castBestScoredModel } from '../../../utils/hero-casting';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
@@ -51,7 +51,9 @@ const players = getPlayerMap(year);
 // disagree. Passing `undefined` there would DISABLE the filter and caption an
 // unfiltered top scorer as "Week 0" — the confidently-wrong card this scoping
 // exists to prevent — so a weekless read yields no candidates instead.
-const week = getWeekInTheBooks(year, 'theleague', state.metadata.referenceDate);
+// On a Monday morning (before MNF) the slot recaps the week still being played
+// — Sunday's games are final — so the card says "so far" instead of "led".
+const { week, sundayOnly } = getRecapWeek(year, 'theleague', state.metadata.referenceDate);
 const candidates = week > 0 ? getWeeklyTopScorerCandidates(year, 'theleague', week) : [];
 const model = candidates.length > 0 ? castBestScoredModel(candidates, players, undefined, 'Top Scorer') : null;
 
@@ -80,9 +82,10 @@ const recap = resolveRecapDestination({
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const points = winner ? winner.score.toFixed(1) : '';
+const soFar = sundayOnly ? ' so far' : '';
 const summary = franchiseName
-  ? `${franchiseName} rostered the week's highest score. See how the rest of the league stacked up.`
-  : "The week's highest fantasy score. See how the rest of the league stacked up.";
+  ? `${franchiseName} rostered the week's highest score${soFar}. See how the rest of the league stacked up.`
+  : `The week's highest fantasy score${soFar}. See how the rest of the league stacked up.`;
 ---
 
 {model ? (
@@ -97,9 +100,9 @@ const summary = franchiseName
     glowColor={franchiseColor}
     glowAlphaDark={0.42}
     glowAlphaLight={0.24}
-    pill={`Weekly Recap · Week ${week}`}
+    pill={`${sundayOnly ? 'Sunday Recap' : 'Weekly Recap'} · Week ${week}`}
     title={model.name}
-    titleAccent="led the week."
+    titleAccent={sundayOnly ? 'leads the week.' : 'led the week.'}
     summary={summary}
     styleVars="--cmh-min-h: clamp(240px, 24vw, 290px); --cmh-min-h-mobile: 260px; --cmh-model-w: clamp(275px, 35vw, 412px); --cmh-model-right: calc(clamp(0.25rem, 2vw, 1.75rem) - 50px); --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-count-size: 1.5rem; --cmh-model-w-mobile: 170px; --cmh-divider: var(--cmh-pill-border);"
   >

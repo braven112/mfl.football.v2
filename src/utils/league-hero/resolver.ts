@@ -372,13 +372,16 @@ function isQuietOffseason(events: RoledEvent[], now: Date): boolean {
 export function slotFor(
   profile: LeagueHeroProfile,
   now: Date,
-  have: { peckingOrder: boolean; column: boolean },
+  have: { peckingOrder: boolean; column: boolean; regularSeason?: boolean },
 ): { slot: HeroSlot; gameWindow: GameWindow } {
   const base = getDailySlot(now);
   let slot: HeroSlot = base.slot;
   const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(now);
   if (slot === 'waiver-wire' && weekday === 'Tue' && have.peckingOrder && heroRunsSlot(profile, 'pecking-order')) {
     slot = 'pecking-order';
+  }
+  if (slot === 'standings' && weekday === 'Mon' && have.regularSeason && profile.capabilities.mondayRecapSlot) {
+    slot = 'recap';
   }
   if (slot === 'article' && weekday === 'Wed' && have.column && heroRunsSlot(profile, 'column')) {
     slot = 'column';
@@ -538,7 +541,8 @@ export interface StepContext {
   /** The league's fresh (≤7 day) What's New entries. */
   fresh: () => WhatsNewEntry[];
   /** The daily slot rotation's fields, for the season phases that run it. */
-  slotState: () => SlotStateFields;
+  /** `regularSeason`: only the regular-season rung may move Monday's standings to the recap. */
+  slotState: (opts?: { regularSeason?: boolean }) => SlotStateFields;
   isRegularSeason: () => boolean;
   isPlayoffs: () => boolean;
 }
@@ -670,7 +674,7 @@ const calendarLeadStep: HeroStep = (ctx) => {
 /** P0: Regular season — the daily slot rotation. */
 const regularSeasonStep: HeroStep = (ctx) =>
   ctx.isRegularSeason()
-    ? { kind: 'regular-season', priority: 'P0', ...ctx.slotState(), resolvedBy: 'isRegularSeason' }
+    ? { kind: 'regular-season', priority: 'P0', ...ctx.slotState({ regularSeason: true }), resolvedBy: 'isRegularSeason' }
     : null;
 
 /**
@@ -841,11 +845,12 @@ export function resolveLeagueHeroState(input: LeagueHeroResolverInput): LeagueHe
     isRegularSeason: () =>
       profile.clock?.isRegularSeason ? profile.clock.isRegularSeason(now) : isRegularSeasonActive(raw, now),
     isPlayoffs: () => (profile.clock?.isPlayoffs ? profile.clock.isPlayoffs(now) : isInPlayoffsPhase(raw, now)),
-    slotState: () => {
+    slotState: (opts) => {
       if (slot) return slot;
       const { slot: s, gameWindow } = slotFor(profile, now, {
         peckingOrder: !!input.peckingOrder,
         column: !!input.column,
+        regularSeason: !!opts?.regularSeason,
       });
       const week = getCurrentNFLWeek(now) ?? undefined;
       const sctx: SlotContext = {

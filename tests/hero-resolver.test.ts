@@ -6,6 +6,8 @@ import {
   isTradeDeadlineDay, getDailySlot, parseTestDate,
 } from '../src/utils/hero-resolver';
 import { resolveHeroState } from '../src/utils/league-hero/season-state';
+import { slotFor } from '../src/utils/league-hero/resolver';
+import { getLeagueHeroProfile } from '../src/utils/league-hero/profiles';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent, LeagueEventDefinition } from '../src/types/league-events';
 
@@ -1068,11 +1070,26 @@ describe('resolveHeroState', () => {
       expect(state.metadata.gameWindow).toBe('sunday');
     });
 
-    it('should return regular-season with standings on Monday morning', () => {
-      // 2027: Oct 4 = Monday
+    it('should return regular-season with the Sunday recap on Monday morning', () => {
+      // 2027: Oct 4 = Monday. TheLeague runs `mondayRecapSlot`: a bare
+      // standings table read as "no hero", so Sunday's results lead until MNF.
       const state = resolveHeroState(new Date(2027, 9, 4, 10, 0), true);
       expect(state.phase).toBe('regular-season');
-      expect(state.slot).toBe('standings');
+      expect(state.slot).toBe('recap');
+    });
+
+    it('keeps standings on Monday morning for a league without mondayRecapSlot', () => {
+      const profile = getLeagueHeroProfile('afl-fantasy');
+      expect(profile.capabilities.mondayRecapSlot).toBe(false);
+      const mon = new Date(2027, 9, 4, 10, 0);
+      expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('standings');
+    });
+
+    it('only the regular-season rung moves Monday to the recap', () => {
+      const profile = getLeagueHeroProfile('theleague');
+      const mon = new Date(2027, 9, 4, 10, 0);
+      expect(slotFor(profile, mon, { peckingOrder: false, column: false }).slot).toBe('standings');
+      expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('recap');
     });
 
     it('should return regular-season with recap on Tuesday morning', () => {

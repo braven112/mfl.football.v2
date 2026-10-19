@@ -145,6 +145,12 @@ export interface LeagueHeroProfile {
      * rotation keeps running through the playoffs, as it does all season.
      */
     bracketHero: boolean;
+    /**
+     * Monday morning (before MNF) recaps Sunday's games instead of showing the
+     * standings table. Regular season only: a playoff Monday keeps its
+     * standings slot, which is where a bracket round hero renders.
+     */
+    mondayRecapSlot: boolean;
   };
   facts: {
     keepers: { count: number; time: string; deadline: string; lockLabel: string; countLabel: string; path: string };
@@ -340,6 +346,7 @@ const aflProfile: LeagueHeroProfile = {
     columnSlot: false,
     // The conference bracket and the AL-vs-NL title card.
     bracketHero: true,
+    mondayRecapSlot: false,
   },
   facts: {
     keepers: {
@@ -476,6 +483,7 @@ export function buildPackageHeroProfile(
       // The weekly column runs in the league's news feed.
       columnSlot: def.features.schefterFeed,
       bracketHero: false,
+      mondayRecapSlot: false,
     },
     facts: {
       keepers: {
@@ -657,6 +665,9 @@ const theleagueProfile: LeagueHeroProfile = {
     // TheLeague's playoff weeks keep the slot rotation (its bracket is the
     // Monday standings slot's round hero).
     bracketHero: false,
+    // Brandon's call (Oct 2026): a plain standings table read as "no hero" on
+    // Monday mornings, so Sunday's results lead the page until MNF.
+    mondayRecapSlot: true,
   },
   facts: {
     keepers: { count: 0, time: '', deadline: '', lockLabel: '', countLabel: '', path: '/rosters' },
