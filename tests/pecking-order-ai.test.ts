@@ -185,9 +185,9 @@ describe('buildFactSheet', () => {
     const sheet = buildFactSheet({ issue, teams });
     expect(sheet).toContain('#1 | Pigskins');
     expect(sheet).toContain('up 4 (was #5)');
-    expect(sheet).toContain('3-0 L3');
-    expect(sheet).toContain('132.5 PPG L3');
-    expect(sheet).toContain('W4');
+    expect(sheet).toContain('3-0 over the last three weeks');
+    expect(sheet).toContain('132.5 PPG over the last three weeks');
+    expect(sheet).toContain('4-game winning streak');
     expect(sheet).toContain('#2 | Da Dangsters');
     expect(sheet).toContain('down 1 (was #1)');
   });

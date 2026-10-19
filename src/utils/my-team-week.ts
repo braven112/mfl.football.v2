@@ -28,6 +28,7 @@ import { readLiveWeekResults } from './lineup-submitted';
 import { byeWeeksForSeason } from './nfl-bye-weeks';
 import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
 import { asArray } from './mfl-normalize';
+import { loadLiveInjuryFeed } from './mfl-injuries-live';
 import {
   buildLineupWarnings,
   buildPlayerIndex,
@@ -230,7 +231,10 @@ export async function loadMyTeamWeek(input: {
       franchiseId,
       starters,
       players,
-      injuries: parseInjuries(readFeed(league, leagueYear, 'injuries.json')),
+      // Live: the sync holds injuries.json out of most commits (held-sync-files.mjs).
+      injuries: parseInjuries(
+        await loadLiveInjuryFeed(league.slug, leagueYear, readFeed(league, leagueYear, 'injuries.json')),
+      ),
       byeTeams,
       kickoffsByTeam: parseKickoffsByTeam(nflWeek ? { nflSchedule: nflWeek } : null),
       requiredStarters: parseRequiredStarters(readFeed(league, leagueYear, 'league.json')),
