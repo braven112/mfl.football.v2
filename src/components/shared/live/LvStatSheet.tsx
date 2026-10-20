@@ -30,37 +30,10 @@ import {
 } from '../../../utils/live/scoring-rules';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
 import { useScoreFormat } from './score-format';
+import { loadRules } from './rules-cache';
 
 const fmt = (n: number) => n.toFixed(2);
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
-
-/**
- * One request per (league, year) per page life. A FAILED read is dropped from
- * the cache so the next open retries — never pin a failure.
- */
-const rulesCache = new Map<string, Promise<LiveScoringRulesResponse>>();
-
-function loadRules(leagueId: string, year: number): Promise<LiveScoringRulesResponse> {
-  const key = `${leagueId}:${year}`;
-  let hit = rulesCache.get(key);
-  if (!hit) {
-    const failed: LiveScoringRulesResponse = { ok: false, leagueId, year: String(year), rules: null };
-    hit = fetch(
-      `/api/live-scoring-rules?L=${encodeURIComponent(leagueId)}&year=${encodeURIComponent(String(year))}`,
-      { headers: { Accept: 'application/json' } },
-    )
-      .then((res) => res.json())
-      // `res.ok` is not "the data is good" — gate on the flag.
-      .then((data: LiveScoringRulesResponse) => (data && data.ok === true ? data : failed))
-      .catch(() => failed)
-      .then((data) => {
-        if (!data.ok) rulesCache.delete(key);
-        return data;
-      });
-    rulesCache.set(key, hit);
-  }
-  return hit;
-}
 
 type RulesState =
   | { status: 'loading' }
