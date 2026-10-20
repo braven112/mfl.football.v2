@@ -20,8 +20,8 @@ Each test host holds its **own** session, separate from production. That is
 the intended design, not a limitation — you can sit signed in as one owner on
 test and another on prod. Sharing one session across both would mean setting
 `Domain=.theleague.us`, which hands `session_token` to every subdomain
-(`forum.theleague.us` included, which `vercel.json` rewrites to a third-party
-forum) and lets the existing host-only cookies shadow the domain-scoped ones
+(including any third-party host, as the retired `forum.theleague.us` phpBB
+board was) and lets the existing host-only cookies shadow the domain-scoped ones
 until they expire. Not worth it.
 
 ## The hosts

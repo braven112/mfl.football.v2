@@ -1043,6 +1043,11 @@
       "rules": "docs/claude/rules/storage-and-build.md",
       "paths": [
         "scripts/lib/canonical-json.mjs",
+        "scripts/lib/held-sync-files.mjs",
+        "scripts/hold-sync-files.mjs",
+        "scripts/fetch-live-odds.mjs",
+        "src/utils/mfl-injuries-live.ts",
+        "src/utils/mfl-injuries-live-map.ts",
         "scripts/fetch-mfl-feeds.mjs",
         "scripts/prebuild.mjs",
         "scripts/lib/archived-feed-files.mjs",
@@ -1061,7 +1066,10 @@
         "tests/weekly-player-results-full-pool.test.ts",
         "tests/cron-commit-churn.test.ts",
         "tests/schefter-feed-store.test.ts",
-        "tests/schefter-feed-redis-workflows.test.ts"
+        "tests/schefter-feed-redis-workflows.test.ts",
+        "tests/sync-noise-commit-guard.test.ts",
+        "tests/held-sync-files.test.ts",
+        "tests/mfl-injuries-live.test.ts"
       ]
     },
     {

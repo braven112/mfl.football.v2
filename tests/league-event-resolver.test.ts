@@ -212,10 +212,11 @@ describe('resolveAllEvents', () => {
     const ref = new Date(2026, 1, 5); // Feb 5, 2026
     const resolved = resolveAllEvents(THE_LEAGUE_EVENTS, 2026, ref, TEST_LINK_VARS);
 
-    // Tagging period links to the forum (static URL, no template vars)
+    // Tagging period opens the roster page, where the ⋮ menu applies a tag
     const tagging = resolved.find((e) => e.definition.id === 'tagging-period');
     expect(tagging?.actionLinks.length).toBeGreaterThan(0);
-    expect(tagging?.actionLinks[0].url).toContain('theleague.us/forum');
+    expect(tagging?.actionLinks[0].url).toContain('/theleague/rosters');
+    expect(tagging?.actionLinks[0].external).toBe(false);
 
     // FA auction link uses template vars
     const fa = resolved.find((e) => e.definition.id === 'offseason-fa-opens');
