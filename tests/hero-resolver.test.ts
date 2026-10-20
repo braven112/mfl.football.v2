@@ -1008,8 +1008,14 @@ describe('getDailySlot', () => {
   });
 
   it('should return standings on Monday morning', () => {
-    const result = getDailySlot(new Date(2027, 8, 20, 10, 0)); // Mon 10am
+    const result = getDailySlot(new Date(2027, 8, 20, 9, 59)); // Mon 9:59am
     expect(result.slot).toBe('standings');
+  });
+
+  it('hands Monday to the MNF spotlight from 10am, long before kickoff', () => {
+    const result = getDailySlot(new Date(2027, 8, 20, 10, 0)); // Mon 10am
+    expect(result.slot).toBe('live-scoring');
+    expect(result.gameWindow).toBe('mnf');
   });
 
   it('should return live-scoring on Monday evening (MNF)', () => {
@@ -1073,21 +1079,28 @@ describe('resolveHeroState', () => {
     it('should return regular-season with the Sunday recap on Monday morning', () => {
       // 2027: Oct 4 = Monday. TheLeague runs `mondayRecapSlot`: a bare
       // standings table read as "no hero", so Sunday's results lead until MNF.
-      const state = resolveHeroState(new Date(2027, 9, 4, 10, 0), true);
+      const state = resolveHeroState(new Date(2027, 9, 4, 9, 0), true);
       expect(state.phase).toBe('regular-season');
       expect(state.slot).toBe('recap');
     });
 
-    it('keeps standings on Monday morning for a league without mondayRecapSlot', () => {
+    it('runs the same Monday recap in the AFL as in TheLeague', () => {
       const profile = getLeagueHeroProfile('afl-fantasy');
+      expect(profile.capabilities.mondayRecapSlot).toBe(true);
+      const mon = new Date(2027, 9, 4, 9, 0);
+      expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('recap');
+    });
+
+    it('keeps standings on Monday morning for a league without mondayRecapSlot', () => {
+      const profile = getLeagueHeroProfile('archies');
       expect(profile.capabilities.mondayRecapSlot).toBe(false);
-      const mon = new Date(2027, 9, 4, 10, 0);
+      const mon = new Date(2027, 9, 4, 9, 0);
       expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('standings');
     });
 
     it('only the regular-season rung moves Monday to the recap', () => {
       const profile = getLeagueHeroProfile('theleague');
-      const mon = new Date(2027, 9, 4, 10, 0);
+      const mon = new Date(2027, 9, 4, 9, 0);
       expect(slotFor(profile, mon, { peckingOrder: false, column: false }).slot).toBe('standings');
       expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('recap');
     });

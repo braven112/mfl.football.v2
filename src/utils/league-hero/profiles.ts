@@ -146,7 +146,7 @@ export interface LeagueHeroProfile {
      */
     bracketHero: boolean;
     /**
-     * Monday morning (before MNF) recaps Sunday's games instead of showing the
+     * Monday morning (before 10am PT) recaps Sunday's games instead of showing the
      * standings table. Regular season only: a playoff Monday keeps its
      * standings slot, which is where a bracket round hero renders.
      */
@@ -346,7 +346,9 @@ const aflProfile: LeagueHeroProfile = {
     columnSlot: false,
     // The conference bracket and the AL-vs-NL title card.
     bracketHero: true,
-    mondayRecapSlot: false,
+    // Same day-by-day schedule as TheLeague (Brandon, Oct 2026): Sunday's
+    // recap leads Monday morning in both leagues.
+    mondayRecapSlot: true,
   },
   facts: {
     keepers: {
@@ -666,7 +668,7 @@ const theleagueProfile: LeagueHeroProfile = {
     // Monday standings slot's round hero).
     bracketHero: false,
     // Brandon's call (Oct 2026): a plain standings table read as "no hero" on
-    // Monday mornings, so Sunday's results lead the page until MNF.
+    // Monday mornings, so Sunday's results lead the page until 10am PT.
     mondayRecapSlot: true,
   },
   facts: {

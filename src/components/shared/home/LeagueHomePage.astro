@@ -59,6 +59,8 @@ interface Props {
   hero: {
     state: any;
     liveScoring?: any;
+    /** Monday's closest-game spotlight (monday-spotlight-props.ts). */
+    mondaySpotlight?: any;
     backdrop?: any;
     /** Optional inputs some heroes read (the AFL's tier/standings slots). */
     config?: any;
@@ -122,6 +124,7 @@ const {
           league={leagueSlug}
           state={hero.state}
           liveScoring={hero.liveScoring}
+          mondaySpotlight={hero.mondaySpotlight}
           config={hero.config}
           standings={hero.standings}
           userFranchiseId={hero.userFranchiseId}

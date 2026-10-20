@@ -180,7 +180,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
     // yet — and `wordmark` is a treatment the /showcase gallery enumerates, so
     // a second value needs a gallery card for no reader benefit. What must not
     // survive is the CLAIM, asserted above.
-    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.view.pill).toBe('WEEKLY RECAP');
     expect(state.view.composite.wordmark).toBe('RECAP');
   });
 
@@ -191,7 +191,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(`${state.view.headline} ${state.view.accentWord}`).toBe('THE WEEK IN REVIEW.');
     expect(state.view.summary).toContain('Week 3 is in the books');
     expect(state.view.summary).toContain('top scorers');
-    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.view.pill).toBe('WEEKLY RECAP');
     expect(state.content.kicker).toBe('Weekly Recap');
   });
 
@@ -249,12 +249,16 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // Top Players rather than an article whose id had to be minted from a year
     // — so the week is the ONE place the live clock can still be swapped for
     // the walked-back one. The negative assertions are the real protection.
+    // The week now comes from `getRecapWeek` — the week in the books, or on a
+    // Monday morning the week whose Sunday is scored — read on the live year.
     const call = HERO.slice(
-      HERO.indexOf('resolveRecapDestination({'),
+      HERO.indexOf('getRecapWeek('),
       HERO.indexOf('resolveRecapDestination({') + 400,
     );
-    expect(call).toContain('getWeekInTheBooks(liveSeasonYear');
+    expect(call).toContain('getRecapWeek(liveSeasonYear');
+    expect(call).toContain('completedWeek: recapWeek.week');
     expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
+    expect(call).not.toMatch(/getRecapWeek\(seasonYear\b/);
     expect(call).not.toMatch(/seasonYear:\s*seasonYear\b/);
   });
 

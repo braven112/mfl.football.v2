@@ -46,6 +46,8 @@ import type { BreakingStory } from '../../utils/offseason-hero-data';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { DEFAULT_COUNTRY, type CountryCode } from '../../utils/broadcast-channels';
 import type { WaiverDeadlineCopy } from '../../utils/waiver-deadline-copy';
+import type { MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
+import MondayNightHero from '../shared/MondayNightHero.astro';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -64,6 +66,8 @@ export interface Props {
    * simply did not have the field, so nothing was wrong to forget it.
    */
   liveScoring?: BuiltLiveScoringProps;
+  /** Monday's closest-game spotlight; replaces the scoreboard when present. */
+  mondaySpotlight?: MondaySpotlightHeroProps;
   /** Logged-in user's franchise ID (for personalized heroes) */
   userFranchiseId?: string;
   /** Saturday-evening gate for the Sunday Ticket hero: the owner's lineup is in (true) / not (false) / unknown (null). Resolved by the page. */
@@ -119,7 +123,7 @@ export interface Props {
   waiver?: WaiverDeadlineCopy | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, lineupSubmitted = null, country = DEFAULT_COUNTRY, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null, waiver = null } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, mondaySpotlight, userFranchiseId, lineupSubmitted = null, country = DEFAULT_COUNTRY, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null, waiver = null } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -191,7 +195,14 @@ const isFridayArticle = ptWeekday === 'Fri';
 )}
 
 {/* Daily rotation slots (regular-season, playoffs, championship) */}
-{slot === 'live-scoring' && liveScoring && (
+{slot === 'live-scoring' && liveScoring && mondaySpotlight && (
+  <MondayNightHero
+    spotlight={mondaySpotlight}
+    liveScoringHref={resolveLeaguePath('/theleague/live-scoring')}
+    viewerFranchiseId={userFranchiseId}
+  />
+)}
+{slot === 'live-scoring' && liveScoring && !mondaySpotlight && (
   <LiveScoringHero
     client:load
     {...liveScoring}

@@ -525,17 +525,20 @@ export function recapSlotView({ env, recap }: SlotContext): EventHeroView {
     // with no week: they name the SLOT, and it genuinely is Tuesday's recap
     // slot — the falsehood was never the branding, it was the headline/summary
     // asserting a finished week and promising its content.
-    pill: 'TUESDAY RECAP',
+    // Monday morning recaps a week Monday night has not finished: say Sunday.
+    pill: recap?.sundayOnly ? 'SUNDAY RECAP' : 'WEEKLY RECAP',
     // No completed week means there is no week in review to headline — the
     // kickoff-to-first-results window (issue #1086 F2).
-    headline: recap?.week ? 'THE WEEK IN' : 'THE SEASON IS',
-    accentWord: recap?.week ? 'REVIEW.' : 'UNDER WAY.',
+    headline: recap?.sundayOnly ? 'SUNDAY IN' : recap?.week ? 'THE WEEK IN' : 'THE SEASON IS',
+    accentWord: recap?.sundayOnly ? 'REVIEW.' : recap?.week ? 'REVIEW.' : 'UNDER WAY.',
     // The week in the BOOKS, which is not `week`: `getCurrentNFLWeek` rolls to
     // the upcoming week on Tuesday — the morning this slot runs — so falling
     // back to it would name games not yet played.
-    summary: recap?.week
-      ? `Week ${recap.week} is in the books — top scorers, biggest swings, and the games that moved the standings.`
-      : 'No week is in the books yet. Here is the latest from around the league while the first results come in.',
+    summary: recap?.sundayOnly
+      ? `Sunday of Week ${recap.week} is in the books — top scorers so far, with Monday night still to play.`
+      : recap?.week
+        ? `Week ${recap.week} is in the books — top scorers, biggest swings, and the games that moved the standings.`
+        : 'No week is in the books yet. Here is the latest from around the league while the first results come in.',
     // The recap column when one was written, else the completed week's own
     // scoreboard. NOT the news listing: a card headlined "THE WEEK IN REVIEW."
     // that lands on the undifferentiated feed makes the reader go find it.
