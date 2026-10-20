@@ -29,6 +29,7 @@ import {
   type LiveScoringRulesResponse,
 } from '../../../utils/live/scoring-rules';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
+import { useScoreFormat } from './score-format';
 
 const fmt = (n: number) => n.toFixed(2);
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
@@ -89,6 +90,7 @@ export default function LvStatSheet({
   franchiseName,
   onClose,
 }: LvStatSheetProps): JSX.Element | null {
+  const score = useScoreFormat();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const [rules, setRules] = useState<RulesState>({ status: 'loading' });
@@ -223,8 +225,8 @@ export default function LvStatSheet({
               {[positionLabel(position) || position, team, franchiseName].filter(Boolean).join(' · ')}
             </p>
           </div>
-          <div className="lv-sheet__total" aria-label={`${fmt(row.live)} points`}>
-            {row.live.toFixed(1)}
+          <div className="lv-sheet__total" aria-label={`${score(row.live)} points`}>
+            {score(row.live)}
             <span className="lv-sheet__pts">pts</span>
           </div>
           <button type="button" className="lv-sheet__close" onClick={close} aria-label="Close">
@@ -293,7 +295,7 @@ export default function LvStatSheet({
                   <th scope="row" colSpan={showPoints ? 2 : 1}>
                     Total
                   </th>
-                  <td className="lv-sheet__num">{fmt(row.live)}</td>
+                  <td className="lv-sheet__num">{score(row.live)}</td>
                 </tr>
               </tfoot>
             </table>

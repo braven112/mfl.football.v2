@@ -23,8 +23,7 @@ import LvLineup from './LvLineup';
 import LvBench from './LvBench';
 import LvMomentTicker from './LvMomentTicker';
 import LvStatSheet from './LvStatSheet';
-
-const fmt = (n: number) => n.toFixed(1);
+import { useScoreFormat } from './score-format';
 
 export interface LvMatchupDetailProps {
   matchup: LiveMatchup;
@@ -68,6 +67,8 @@ export default function LvMatchupDetail({
   year,
   onBack,
 }: LvMatchupDetailProps): JSX.Element {
+  // The league's own MFL setting, so every number matches MFL's.
+  const fmt = useScoreFormat();
   const [first, second] = renderOrder(matchup, viewerFirst);
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
