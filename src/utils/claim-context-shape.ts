@@ -6,8 +6,7 @@
  * server resolver) reaches MFL, the session and the auth helpers, while
  * `player-claim-client.ts` ships to the browser inside PlayerDetailsModal — and
  * a plain `import type` from the server module still puts that whole chain in
- * the module graph as far as the Storybook dependency scan is concerned
- * (tests/chromatic-path-filter.test.ts). The two type imports below are to
+ * the module graph a Storybook story reaches. The two type imports below are to
  * dependency-free modules, deliberately: re-declaring the rules shape here
  * would be the drift this repo keeps paying for.
  */

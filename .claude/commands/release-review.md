@@ -262,21 +262,17 @@ If the range touches nothing under `scripts/` or `src/**/*.mjs`, the pipeline
 cannot have changed — say so in one line and skip the run rather than spending
 the network fetches.
 
-## Step 6c: Visual diffs land at the promotion
+## Step 6c: Visual changes need a human look
 
-Chromatic does not run on staging PRs — it runs on the promotion, where the
-whole week's snapshots are reviewed at once and a human accepts or rejects in
-the Chromatic UI. Two consequences for this pass:
+No automated visual-regression check runs right now (Chromatic was removed in
+Oct 2026; its replacement is not built yet). So:
 
-- **Expect a batch, and help with attribution.** Fifteen changed snapshots with
-  no context is the known cost of this placement. If the range touched anything
-  in the story import closure (`.github/workflows/chromatic.yml` lists it, and
-  `scripts/chromatic-story-deps.mjs` generates it), name those commits in the
-  report so the diffs can be matched to features rather than guessed at.
+- **Help with attribution.** If the range touched components, stylesheets or
+  assets that render, name those commits in the report so the promotion's
+  visual look (`/promote` step 5b) knows which surfaces to open.
 - **A visual regression has been live on staging all week.** Real owners use
   those hosts. If anything in the range looks like it could have changed
-  rendering and nobody mentioned it, that is worth a direct look rather than
-  waiting for the Chromatic run.
+  rendering and nobody mentioned it, that is worth a direct look now.
 
 ## Step 7: Adjudicate
 

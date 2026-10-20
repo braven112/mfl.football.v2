@@ -11,7 +11,7 @@
  * Pages use loadLiveInjuryMap (./mfl-injuries-live-map.ts). It lives apart
  * because it needs the globbed bundle in mfl-injuries.ts, and this module is
  * reached from the homepages' story graph (via my-team-week.ts), which must
- * not import cron-written feeds (tests/chromatic-path-filter.test.ts).
+ * not import cron-written feeds (a snapshot must never read live data).
  */
 import { getRedis } from './redis-client';
 

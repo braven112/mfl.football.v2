@@ -2,7 +2,7 @@
  * MadQualifiers story data: a frozen copy of archies' Week 4 2026 MAD seeding
  * (30 qualifiers + 3 of the field, so the "seeds 31-N" link renders). Inline
  * rather than read from data/archies/mfl-feeds — a story must not depend on a
- * cron-written feed (tests/chromatic-path-filter.test.ts).
+ * cron-written feed.
  */
 export const madTiers = [
   {
