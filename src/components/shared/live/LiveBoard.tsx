@@ -48,6 +48,8 @@ import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
 import type { FeedSnapshot, KickoffClock } from '../../../utils/live-scoring-view';
 import { KickoffClockContext } from './LvPlayerRow';
+import { ScorePrecisionContext } from './score-format';
+import { DEFAULT_SCORE_PRECISION } from '../../../utils/live/score-precision';
 import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
@@ -620,9 +622,13 @@ export default function LiveBoard({
     openRef.current = open;
   });
 
+  // Each league's own MFL decimal setting — a cross-league board can mix them.
   const card = (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => (
-    <LvMatchupCard
+    <ScorePrecisionContext.Provider
       key={`${panel.leagueId}:${matchup.index}:${matchup.sides[0].franchiseId}`}
+      value={panel.scorePrecision ?? DEFAULT_SCORE_PRECISION}
+    >
+    <LvMatchupCard
       matchup={matchup}
       viewerFirst={viewerFirst}
       isFinal={isMatchupFinal(matchup)}
@@ -632,6 +638,7 @@ export default function LiveBoard({
         setSelected({ leagueId: panel.leagueId, pairing: pairingKey(matchup) });
       }}
     />
+    </ScorePrecisionContext.Provider>
   );
 
   return (
@@ -696,6 +703,7 @@ export default function LiveBoard({
             screen is a held one. Uncaptioned, that is the worse bug in the
             other direction, so it gets the same strip the cards get. */}
         {open.heldSince !== null && <LvStaleNotice heldSince={open.heldSince} />}
+        <ScorePrecisionContext.Provider value={open.panel.scorePrecision ?? DEFAULT_SCORE_PRECISION}>
         <LvMatchupDetail
           matchup={open.matchup}
           meta={board.playerMeta}
@@ -721,6 +729,7 @@ export default function LiveBoard({
           year={board.year}
           onBack={() => setSelected(null)}
         />
+        </ScorePrecisionContext.Provider>
         </>
       ) : activeTab === 'standings' && soloPanel ? (
         <LvStandings

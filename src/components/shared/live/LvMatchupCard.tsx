@@ -19,8 +19,7 @@ import type { LiveMatchup, LiveTeam } from '../../../types/live';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
 import LvMark from './LvMark';
-
-const fmt = (n: number) => n.toFixed(1);
+import { useScoreFormat } from './score-format';
 
 export interface LvMatchupCardProps {
   matchup: LiveMatchup;
@@ -45,6 +44,8 @@ export default function LvMatchupCard({
   lead = false,
   onOpen,
 }: LvMatchupCardProps): JSX.Element {
+  // The league's own MFL setting, so every number matches MFL's.
+  const fmt = useScoreFormat();
   const [first, second] = renderOrder(matchup, viewerFirst);
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
