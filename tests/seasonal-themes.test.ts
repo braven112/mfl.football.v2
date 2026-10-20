@@ -195,9 +195,9 @@ describe('opted-in leagues', () => {
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       for (const selector of block.split('{')[0]!.split(',')) {
-        // an <img> by its src, a sprite icon's <svg> by its <use>, or a nav icon slot's <img>
+        // an <img> by its src or by the club id it names, a sprite icon's <svg> by its <use>, or a nav icon slot's <img>
         expect(selector).toMatch(
-          /html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|svg:has\(> use\[href\$=|(\.nav-links__link--active )?\.nav-links__icon img\[src=)/,
+          /html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|img\[data-seasonal-franchise=|svg:has\(> use\[href\$=|(\.nav-links__link--active )?\.nav-links__icon img\[src=)/,
         );
       }
     }

@@ -224,9 +224,13 @@ export function buildSeasonalMarkCss(
         const src = team[field];
         if (src) iconSrcVariants(src).forEach((s) => srcs.add(s));
       }
-      const selectors = scopes.flatMap((scope) =>
-        [...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
-      );
+      const selectors = scopes.flatMap((scope) => [
+        ...[...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
+        // An era crest naming a club that still plays (a defending champion
+        // under last season's identity) asks for the season's mark by id.
+        // League pages only: both leagues have a franchise 0013.
+        ...(scope === navSlug ? [`html[data-league="${scope}"][data-season="${id}"] img[data-seasonal-franchise="${team.franchiseId}"]`] : []),
+      ]);
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
         `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none; border-radius: 0;${scale ? ` scale: ${scale};` : ''} }`,

@@ -284,7 +284,7 @@ const boardDivisions = divisionStandings.map((d) => ({
   seeding: divisionBadgeSeeding(d.name),
   logo: logoFor(divisionToConf[d.name]),
   champion: defendingChampions[d.name]?.icon
-    ? { name: defendingChampions[d.name].name, icon: defendingChampions[d.name].icon, year: previousYear }
+    ? { name: defendingChampions[d.name].name, icon: defendingChampions[d.name].icon, year: previousYear, id: defendingChampions[d.name].id }
     : undefined,
 }));
 const boardConferences = conferenceLadders.map(({ id, standings }) => ({

@@ -62,7 +62,7 @@ const board = (t: TeamStanding) =>
   });
 
 // A division's defending champion, cropped the way that club's crest is cropped.
-type Champion = { name: string; icon: string; year: number; round?: boolean };
+type Champion = { name: string; icon: string; year: number; round?: boolean; id?: string };
 const roundById = new Map<string, boolean>();
 for (const division of divisions) {
   for (const team of division.teams) roundById.set(team.id, Boolean(board(team).round));
@@ -70,7 +70,7 @@ for (const division of divisions) {
 const championFor = (division: string): Champion | undefined => {
   const c = defendingChampions?.[division];
   if (!c?.icon || !championYear) return undefined;
-  return { name: c.name, icon: c.icon, year: championYear, round: c.id ? roundById.get(c.id) : undefined };
+  return { name: c.name, icon: c.icon, year: championYear, round: c.id ? roundById.get(c.id) : undefined, id: c.id };
 };
 
 // ---- Division board ----

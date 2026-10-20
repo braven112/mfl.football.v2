@@ -22,7 +22,7 @@ interface Props {
   showSeed?: boolean;
   rankLabel?: string;
   /** Last season's winner of this group, shown in the header in place of `meta`. */
-  champion?: { name: string; icon: string; year: number; round?: boolean };
+  champion?: { name: string; icon: string; year: number; round?: boolean; id?: string };
 }
 
 const { theme, title, meta, labels, rows, pills = false, showSeed = true, rankLabel = '', champion } = Astro.props;
@@ -37,7 +37,7 @@ const primetime = theme === 'primetime';
     <h3>{title}</h3>
     {champion ? (
       <span class="stb-champ" title={`${champion.name}, ${champion.year} division champion`}>
-        <img class:list={{ 'stb-round': champion.round }} src={champion.icon} alt="" loading="lazy" decoding="async" width="28" height="28" />
+        <img class:list={{ 'stb-round': champion.round }} src={champion.icon} data-seasonal-franchise={champion.id} alt="" loading="lazy" decoding="async" width="28" height="28" />
         <span><small>Defending</small> {champion.year} champ</span>
       </span>
     ) : (
