@@ -15,7 +15,7 @@ import { themeModes } from '../../.storybook/modes';
  *
  *  - **PicksOpen** — before the week's first kickoff: the picker CTA leads.
  *  - **PicksLocked** — after kickoff: no picker, one primary "Let's go".
- *  - **AflTeam** — the AFL's week 8, a different crest shape and palette.
+ *  - **AflTeam** — the AFL's week 11, a different crest shape and palette.
  */
 const welcome = (league: 'theleague' | 'afl', franchiseId: string, iso: string) =>
   buildThrowbackWelcome({ league, franchiseId, now: new Date(iso), overrides: {} })!;
@@ -43,7 +43,7 @@ export const PicksLocked = {
 
 export const AflTeam = {
   args: {
-    welcome: welcome('afl', '0001', '2026-10-28T18:00:00Z'),
+    welcome: welcome('afl', '0001', '2026-11-18T18:00:00Z'),
     leagueSlug: 'afl-fantasy',
     pickerHref: '/afl-fantasy/throwback-settings',
   },
