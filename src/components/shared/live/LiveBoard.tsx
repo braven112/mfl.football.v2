@@ -57,6 +57,8 @@ import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
 import LvHauntedStats from './LvHauntedStats';
 import LvHauntedScene from './LvHauntedScene';
 import { hauntedStats } from '../../../utils/live/haunted-stats';
+import { overlayPanel, type OverlayMemory } from '../../../utils/live/espn-overlay';
+import { useLeagueRules } from './rules-cache';
 
 /** Matches the cadence the board this replaces used. */
 const POLL_LIVE_MS = 25_000;
@@ -415,12 +417,83 @@ export default function LiveBoard({
   const panelMemory = useRef<Map<string, PanelMemory>>(new Map());
   /** Retires a held panel at its exact expiry — see `holdExpiry` below. */
   const [, setHoldTick] = useState(0);
+  /**
+   * The NFL slate.
+   *
+   * Through `useNflScoreboard` rather than off `board.games`, for three
+   * reasons: it SHARES the poll store with the games rail, so there is no
+   * second poller; it keeps the slate current between board polls, which a
+   * board payload carrying `games: []` would otherwise blank; and it supplies
+   * `byTeam` and the live count the rows and the pill both need.
+   *
+   * The server-rendered slate rides in on `board.games` as the fallback, which
+   * is what puts it in the markup — the store is empty during SSR.
+   */
+  const slate = useNflScoreboard(board.week, board.year, {
+    enabled: !demoLabel && !!pollUrl,
+    live: isLive,
+    fallbackGames: board.games,
+  });
+
+  /**
+   * "Live" is claimed from the NFL SLATE, never from a franchise still having
+   * seconds left — that is true all week and says nothing about right now.
+   */
+  const gamesLive = slate.liveCount;
+  // Kept current for the poll loop's cadence, which reads it at tick time.
+  slateRef.current = slate.games;
+
+  /**
+   * ESPN box scores and scoring plays.
+   *
+   * Off in bundled-sample mode so a live fetch cannot overwrite the replay,
+   * and off when the board itself is not polling — a static render (a story, a
+   * server snapshot) has no business opening a second poller, and `pollUrl` is
+   * the one prop that already says "this board is live".
+   *
+   * Everything it returns is keyed by MFL PLAYER ID. The join to ESPN athlete
+   * ids happens server-side, deliberately: `PlayerMeta.espnId` can hold a
+   * COLLEGE athlete id and both are plain digits, so a bad join resolves the
+   * wrong person instead of failing.
+   */
+  const detail = useNflGameDetail(board.week, board.year, {
+    enabled: !demoLabel && !!pollUrl,
+    anyLive: gamesLive > 0,
+  });
+
+  /**
+   * The newest score for every row: ESPN's box score, scored by each league's
+   * own MFL rules, moves a player the moment ESPN has the stat, and MFL takes
+   * back over once it catches up (`espn-overlay.ts`). Totals and win odds move
+   * with the rows. Off wherever the detail feed is off (sample, static render).
+   */
+  const overlayOn = !demoLabel && !!pollUrl;
+  const leagueRules = useLeagueRules(
+    board.panels.filter((p) => p.provider !== 'sleeper').map((p) => p.leagueId),
+    board.year,
+    overlayOn,
+  );
+  const overlayMemory = useRef<OverlayMemory>(new Map());
+  const overlayNow = Date.now();
   const panelViews = resolvePanelViews({
     panels: board.panels,
     week: board.week,
     memory: panelMemory.current,
-    now: Date.now(),
-  });
+    now: overlayNow,
+  }).map((v) =>
+    overlayOn
+      ? {
+          ...v,
+          panel: overlayPanel(v.panel, {
+            boxScore: detail.boxScore,
+            rules: leagueRules.get(v.panel.leagueId),
+            meta: board.playerMeta,
+            memory: overlayMemory.current,
+            now: overlayNow,
+          }),
+        }
+      : v,
+  );
   /**
    * The oldest confirmation still on screen, or 0 when nothing is held.
    *
@@ -477,49 +550,6 @@ export default function LiveBoard({
     return () => clearTimeout(t);
   }, [holdExpiry]);
 
-  /**
-   * The NFL slate.
-   *
-   * Through `useNflScoreboard` rather than off `board.games`, for three
-   * reasons: it SHARES the poll store with the games rail, so there is no
-   * second poller; it keeps the slate current between board polls, which a
-   * board payload carrying `games: []` would otherwise blank; and it supplies
-   * `byTeam` and the live count the rows and the pill both need.
-   *
-   * The server-rendered slate rides in on `board.games` as the fallback, which
-   * is what puts it in the markup — the store is empty during SSR.
-   */
-  const slate = useNflScoreboard(board.week, board.year, {
-    enabled: !demoLabel && !!pollUrl,
-    live: isLive,
-    fallbackGames: board.games,
-  });
-
-  /**
-   * "Live" is claimed from the NFL SLATE, never from a franchise still having
-   * seconds left — that is true all week and says nothing about right now.
-   */
-  const gamesLive = slate.liveCount;
-  // Kept current for the poll loop's cadence, which reads it at tick time.
-  slateRef.current = slate.games;
-
-  /**
-   * ESPN box scores and scoring plays.
-   *
-   * Off in bundled-sample mode so a live fetch cannot overwrite the replay,
-   * and off when the board itself is not polling — a static render (a story, a
-   * server snapshot) has no business opening a second poller, and `pollUrl` is
-   * the one prop that already says "this board is live".
-   *
-   * Everything it returns is keyed by MFL PLAYER ID. The join to ESPN athlete
-   * ids happens server-side, deliberately: `PlayerMeta.espnId` can hold a
-   * COLLEGE athlete id and both are plain digits, so a bad join resolves the
-   * wrong person instead of failing.
-   */
-  const detail = useNflGameDetail(board.week, board.year, {
-    enabled: !demoLabel && !!pollUrl,
-    anyLive: gamesLive > 0,
-  });
 
   /**
    * This island's own feed, as the pill should read it.
