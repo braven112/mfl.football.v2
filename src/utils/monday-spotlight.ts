@@ -20,7 +20,9 @@
  * The viewer's own game leads when it qualifies; otherwise the league's
  * closest. Pure: the page loads the snapshot and the projections.
  */
+import type { CanonicalLeagueSlug } from '../config/leagues';
 import type { LivePlayerRow, MatchupPairing } from '../types/live-scoring';
+import type { HeroModel } from './hero-casting';
 import { projectMatchup, projectPlayerRemaining } from './live-win-probability';
 
 /** The side behind needs at least this chance for the game to count as close. */
@@ -58,6 +60,25 @@ export interface MondaySpotlight {
   players: SpotlightPlayer[];
   /** The other close games, closest first. */
   others: SpotlightGame[];
+}
+
+export interface SpotlightTeam {
+  name: string;
+  shortName: string;
+  color: string;
+}
+
+/** What the page hands `MondayNightHero` (built by monday-spotlight-props.ts). */
+export interface MondaySpotlightHeroProps {
+  league: CanonicalLeagueSlug;
+  week: number;
+  game: SpotlightGame;
+  others: SpotlightGame[];
+  teams: Record<string, SpotlightTeam>;
+  /** The face: the most projected points still to play in `game` that has a cutout. */
+  model: HeroModel | null;
+  /** Who the featured player is, even when no cutout could be cast. */
+  player: { playerId: string; name: string; franchiseId: string; remainingProjection: number };
 }
 
 export interface SelectMondaySpotlightInput {

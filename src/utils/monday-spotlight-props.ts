@@ -11,28 +11,12 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getCurrentSeasonYear } from './league-year';
 import { loadLiveScoringPayload } from './live-scoring-source';
 import { loadLeagueWeekProjections } from './live/projections';
-import { selectMondaySpotlight, type SpotlightGame } from './monday-spotlight';
-import { castBestScoredModel, type HeroModel } from './hero-casting';
+import { selectMondaySpotlight, type MondaySpotlightHeroProps, type SpotlightTeam } from './monday-spotlight';
+
+export type { MondaySpotlightHeroProps, SpotlightTeam };
+import { castBestScoredModel } from './hero-casting';
 import { getPlayerMap } from './player-map';
 import type { LiveScoringTeamSource } from './live-scoring-hero-props';
-
-export interface SpotlightTeam {
-  name: string;
-  shortName: string;
-  color: string;
-}
-
-export interface MondaySpotlightHeroProps {
-  league: CanonicalLeagueSlug;
-  week: number;
-  game: SpotlightGame;
-  others: SpotlightGame[];
-  teams: Record<string, SpotlightTeam>;
-  /** The face: the most projected points still to play in `game` that has a cutout. */
-  model: HeroModel | null;
-  /** Who the featured player is, even when no cutout could be cast. */
-  player: { playerId: string; name: string; franchiseId: string; remainingProjection: number };
-}
 
 export interface BuildMondaySpotlightInput {
   league: CanonicalLeagueSlug;
