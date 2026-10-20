@@ -35,6 +35,10 @@ MENORAH = ["G.G.G", "X.X.X", "XXXXX", "..X..", ".XXX."]
 # binary for Computer Jocks, a pot leaf for Smokane (owner, Oct 2026)
 ONE = ["..X..", ".XX..", "..X..", "..X..", ".XXX."]
 ZERO = [".XXX.", "X...X", "X...X", "X...X", ".XXX."]
+# a pitchfork with a wooden (G) handle for Avenging Amish
+PITCHFORK = ["X.X.X", "X.X.X", "XXXXX", "..G..", "..G..", "..G..", "..G.."]
+# a three-leaf clover for Muck Juggling Micks
+CLOVER = ["...XXX...", "...XXX...", ".XX.X.XX.", ".XXX.XXX.", ".XX.X.XX.", "....X....", ".....X..."]
 LEAF = ["....X....", "X...X...X", ".X.XXX.X.", "..XXXXX..", "XXX.X.XXX", "....X....", "....X...."]
 
 def hexrgb(h): return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
@@ -153,7 +157,7 @@ def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, cen
     o = Image.new('RGBA', (768, 768)); o.paste(img, (0, 0), mask)
     return o
 
-MOTIFS, PATTERNS = [TREE, FLAKE], {'carrot': CARROT, 'menorah': [MENORAH, FLAKE], 'binary': [ONE, ZERO, ONE, ONE, ZERO], 'leaf': [LEAF]}
+MOTIFS, PATTERNS = [TREE, FLAKE], {'carrot': CARROT, 'menorah': [MENORAH, FLAKE], 'binary': [ONE, ZERO, ONE, ONE, ZERO], 'leaf': [LEAF], 'pitchfork': [PITCHFORK], 'clover': [CLOVER]}
 
 def rgb(h): return tuple(int(h[i:i+2], 16) / 255 for i in (1, 3, 5))
 def lum(h):
@@ -179,6 +183,8 @@ OVERRIDES = {
     ('theleague', '0010'): {'motif': ['#2b972b'], 'pattern': 'binary'},
     ('afl', '0005'): {'motif': ['#2b972b'], 'pattern': 'binary'},
     ('afl', '0001'): {'pattern': 'leaf'},
+    ('afl', '0007'): {'pattern': 'pitchfork', 'leaf': '#8a5a32'},
+    ('afl', '0013'): {'pattern': 'clover', 'motif': ['#f4f1ea']},
     ('theleague', '0005'): {'motif': ['#de3f3f', '#2f8b59']},
     ('afl', '0015'): {'motif': ['#de3f3f', '#2f8b59']},
     # Drunk Indians: blue and red first; yellow only as a rare accent.
