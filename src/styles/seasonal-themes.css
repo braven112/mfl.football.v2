@@ -342,11 +342,9 @@ html[data-season='christmas'] .stb-seedchip--wild_card {
 }
 
 /* The snow frame (owner's pick, Oct 2026): a snowy ground around the edges and
-   every page's content on one dark charcoal sheet. The palette has ONE text
-   colour for page and cards alike, so a light page under dark cards cannot be
-   done in tokens; the page stays dark (the generated palette) and only the
-   ground OUTSIDE `main` turns to snow. Nothing with text sits on the snow: the
-   header and footer are red bands, and `main` carries its own --page-bg. */
+   every page's content on one light sheet (the season locks light). Nothing
+   with text sits on the snow: the header and footer are red bands, and `main`
+   carries its own --page-bg. */
 html[data-season='christmas'],
 html[data-season='christmas'] body {
   background-color: #dfe7ee;
@@ -589,3 +587,11 @@ html[data-season='christmas'] .league_logo::after {
   transform: rotate(-18deg);
   pointer-events: none;
 }
+
+/* The header band is red in a light page, so the league logo wears its cut
+   for a dark ground. */
+html[data-season='christmas'] #league_logo .header-logo-img--light { display: none; }
+html[data-season='christmas'] #league_logo .header-logo-img--dark { display: block; }
+/* "The" and ".us" read the secondary name colour, which is navy on the
+   red header; the themed palette has no slot for it, so it is set here. */
+html[data-season='christmas'] .theleague-header { --logo-name-secondary-color: #ffd9de; }

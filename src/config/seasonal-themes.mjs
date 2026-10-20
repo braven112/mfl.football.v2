@@ -65,16 +65,14 @@ export const SEASONAL_THEMES = {
   },
   christmas: {
     id: 'christmas',
-    /** The palette — Candy Cane: charcoal content on a snowy frame. */
+    /** The palette — Candy Cane: a light sheet on a snowy frame. */
     theme: 'christmas',
     /**
-     * Dark, under a snow frame (owner's call, Oct 2026). The look is a light
-     * snowy page with dark content on it, but the token set has ONE text
-     * colour for the page and its cards, so the content is a dark sheet
-     * (seasonal-themes.css) on the snow rather than dark cards on a light
-     * page, which would strand every page title in light text on snow.
+     * Light (owner's call, Oct 2026: the dark sheet read as black, then as
+     * dark green, neither of them a holiday look). The content is a light
+     * sheet (seasonal-themes.css) on the snow under the red header.
      */
-    lock: 'dark',
+    lock: 'light',
     /** Franchise marks: each team knit into an ugly-sweater patch in its own colours. */
     marks: 'christmas-marks',
     /**

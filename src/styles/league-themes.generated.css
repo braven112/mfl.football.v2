@@ -1181,7 +1181,7 @@ html.dark:not([data-league]) {
   --primary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
 }
 
-/* Seasonal: Christmas (Candy Cane) (christmas) on [data-season="christmas"] — Seasonal: deep evergreen content under a red header and peppermint stripe, framed by snow; candy-cane red for actions, evergreen for live state. Worn dark-only (the season locks the page to dark; seasonal-themes.css paints the snow frame around the evergreen content sheet); the light block is a snow-and-red fallback that stays legible should the lock ever be lifted. */
+/* Seasonal: Christmas (Candy Cane) (christmas) on [data-season="christmas"] — Seasonal: a light sheet under a red header and peppermint stripe, framed by snow; candy-cane red for actions, evergreen for live state. Worn light-only (the season locks the page to light; seasonal-themes.css paints the snow frame around the content sheet); the dark block stays legible should the lock ever be lifted. */
 html[data-league="afl"][data-season="christmas"],
 html[data-league="mfl"][data-season="christmas"],
 html[data-league="theleague"][data-season="christmas"] {
@@ -1248,8 +1248,14 @@ html[data-league="theleague"][data-season="christmas"] {
   --on-league-accent: #ffffff;
   --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, black);
   --on-color-accent: #ffffff;
-  --header-nav-icon-color: var(--color-primary);
-  --header-nav-icon-hover-color: var(--color-secondary);
+  --breadcrumb-bar-bg: #b5121b;
+  --breadcrumb-bar-border: #b5121b;
+  --header-nav-icon-color: #ffffff;
+  --header-nav-icon-hover-color: #ffffff;
+  --header-nav-label-color: #ffffff;
+  --header-nav-label-hover-color: #ffffff;
+  --logo-name-primary-color: #ffffff;
+  --logo-secondary-color: #ffffff;
   --hero-ink: #000000;
   --hero-surface: #111111;
   --hero-accent: #c8102e;
