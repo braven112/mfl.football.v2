@@ -551,3 +551,25 @@ html[data-season='christmas'] .rhdr__plate[data-franchise] > .rhdr__inner {
 @media (max-width: 640px) {
   html[data-season='christmas'] .rhdr__plate[data-franchise] { --rhdr-trim-h: 30px; }
 }
+
+/* A string of lights hangs under the peppermint stripe. Every swag of wire is
+   one bulb wide, so stepping the tile one bulb at a time leaves the wire
+   still and walks the colours along it: chase lights from a single image. */
+html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -30px;
+  height: 24px;
+  background: url('/assets/seasonal/christmas/lights.svg') 0 0 / 120px 24px repeat-x;
+  pointer-events: none;
+  z-index: 5;
+  animation: xmas-lights-chase 3.2s steps(4) infinite;
+}
+@keyframes xmas-lights-chase {
+  to { background-position: 120px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before { animation: none; }
+}
