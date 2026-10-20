@@ -2,18 +2,18 @@
   "metadata": {
     "leagueId": "13522",
     "season": "2026",
-    "week": 5,
-    "detectedWeek": 5,
+    "week": 6,
+    "detectedWeek": 6,
     "freezeWeek": 14,
     "frozenWeek": null,
     "sources": {
-      "rosters": "https://api.myfantasyleague.com/2026/export?TYPE=rosters&L=13522&JSON=1&W=5",
+      "rosters": "https://api.myfantasyleague.com/2026/export?TYPE=rosters&L=13522&JSON=1&W=6",
       "players": "https://api.myfantasyleague.com/2026/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2026/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1",
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-19T12:01:29.304Z"
+    "fetchedAt": "2026-10-20T12:01:34.616Z"
   },
   "players": [
     {
@@ -24,7 +24,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 41.9,
+      "points": 55.8,
       "team": "BUF",
       "draftYear": 2024,
       "draftTeam": "BUF",
@@ -86,79 +86,6 @@
         {
           "id": "15761",
           "name": "Shakir, Khalil"
-        }
-      ]
-    },
-    {
-      "id": "16080",
-      "name": "Shaheed, Rashid",
-      "position": "WR",
-      "salary": 425000,
-      "franchiseId": "0001",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 36.94,
-      "team": "SEA",
-      "draftYear": 2022,
-      "draftTeam": "FA",
-      "birthdate": 904539600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16080_thumb.jpg",
-      "externalIds": {
-        "mfl": "16080",
-        "sleeper": "8676",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "8676",
-        "fullName": "Rashid Shaheed",
-        "team": "SEA",
-        "age": 28,
-        "height": "72",
-        "weight": "180",
-        "number": 22,
-        "college": "Weber State",
-        "birthDate": "1998-08-31",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 6,
-        "season": "2026",
-        "player": "Rashid Shaheed",
-        "team": "SEA",
-        "position": "WR",
-        "offenseSnaps": 39,
-        "offenseSnapPct": 0.46,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 11,
-        "stSnapPct": 0.41,
-        "pfrPlayerId": "ShahRa00",
-        "gamesPlayed": 6,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6
-        ]
-      },
-      "gamesPlayed": 6,
-      "depthChartAhead": [
-        {
-          "id": "16185",
-          "name": "Smith-Njigba, Jaxon"
         }
       ]
     },
@@ -236,7 +163,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 47.5,
+      "points": 67.4,
       "team": "PIT",
       "draftYear": 2014,
       "draftTeam": "FA",
@@ -304,7 +231,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 35.8,
+      "points": 49.8,
       "team": "CLE",
       "draftYear": 1970,
       "draftTeam": "CLE",
@@ -350,7 +277,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 24,
+      "points": 42.5,
       "team": "CHI",
       "draftYear": 2025,
       "draftTeam": "CHI",
@@ -418,7 +345,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 26.35,
+      "points": 30.53,
       "team": "TB",
       "draftYear": 2021,
       "draftTeam": "PHI",
@@ -464,7 +391,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 47.35,
+      "points": 52.55,
       "team": "SEA",
       "draftYear": 2023,
       "draftTeam": "FA",
@@ -532,7 +459,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 32.35,
+      "points": 43.7,
       "team": "DEN",
       "draftYear": 2020,
       "draftTeam": "BAL",
@@ -600,7 +527,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 2.4,
+      "points": 8.6,
       "team": "DAL",
       "draftYear": 1970,
       "draftTeam": "DAL",
@@ -646,7 +573,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 40.15,
+      "points": 37.35,
       "team": "LV",
       "draftYear": 1970,
       "draftTeam": "OAK",
@@ -736,7 +663,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 78.75,
+      "points": 87.05,
       "team": "PIT",
       "draftYear": 2022,
       "draftTeam": "FA",
@@ -804,7 +731,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 81.6,
+      "points": 87,
       "team": "LAR",
       "draftYear": 2014,
       "draftTeam": "GBP",
@@ -829,13 +756,13 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 12,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Knee",
         "gsisId": "00-0031381"
       },
       "nflverse": {
@@ -866,6 +793,10 @@
         {
           "id": "16211",
           "name": "Nacua, Puka"
+        },
+        {
+          "id": "16633",
+          "name": "Whittington, Jordan"
         }
       ]
     },
@@ -877,7 +808,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 71.28,
+      "points": 79.89,
       "team": "JAX",
       "draftYear": 2023,
       "draftTeam": "JAC",
@@ -1012,7 +943,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 63.8,
+      "points": 74.82,
       "team": "SEA",
       "draftYear": 2018,
       "draftTeam": "NYJ",
@@ -1146,7 +1077,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 7.5,
+      "points": 13.15,
       "team": "PIT",
       "draftYear": 2020,
       "draftTeam": "FA",
@@ -1282,7 +1213,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 39.7,
+      "points": 44.1,
       "team": "DEN",
       "draftYear": 2021,
       "draftTeam": "MIA",
@@ -1350,7 +1281,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 12,
+      "points": 32.5,
       "team": "ARI",
       "draftYear": 2023,
       "draftTeam": "NEP",
@@ -1408,6 +1339,50 @@
         ]
       },
       "gamesPlayed": 6,
+      "depthChartAhead": null
+    },
+    {
+      "id": "15889",
+      "name": "Okonkwo, Chigoziem",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 20,
+      "team": "WAS",
+      "draftYear": 2022,
+      "draftTeam": "TEN",
+      "birthdate": 936766800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15889_thumb.jpg",
+      "externalIds": {
+        "mfl": "15889",
+        "sleeper": null,
+        "gsis": null
+      },
+      "sleeper": null,
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Chig Okonkwo",
+        "team": "WAS",
+        "position": "TE",
+        "offenseSnaps": 51,
+        "offenseSnapPct": 0.76,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "OkonCh00",
+        "gamesPlayed": 4,
+        "gamesPlayedWeeks": [
+          1,
+          4,
+          5,
+          6
+        ]
+      },
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -1554,28 +1529,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Antonio Williams",
         "team": "WAS",
         "position": "WR",
-        "offenseSnaps": 42,
-        "offenseSnapPct": 0.68,
+        "offenseSnaps": 45,
+        "offenseSnapPct": 0.67,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.06,
+        "stSnaps": 0,
+        "stSnapPct": 0,
         "pfrPlayerId": "WillAn04",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": [
         {
           "id": "14109",
@@ -1595,7 +1571,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 51.4,
+      "points": 70,
       "team": "TB",
       "draftYear": 2019,
       "draftTeam": "FA",
@@ -1663,7 +1639,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 90.8,
+      "points": 103.1,
       "team": "ARI",
       "draftYear": 2022,
       "draftTeam": "ARI",
@@ -1731,7 +1707,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 40.4,
+      "points": 51.1,
       "team": "NE",
       "draftYear": 2022,
       "draftTeam": "GBP",
@@ -1752,16 +1728,16 @@
         "number": 87,
         "college": "Nevada",
         "birthDate": "2000-04-13",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Shoulder",
         "gsisId": null
       },
@@ -1793,6 +1769,22 @@
         {
           "id": "14104",
           "name": "Brown, A.J."
+        },
+        {
+          "id": "16342",
+          "name": "Douglas, Demario"
+        },
+        {
+          "id": "17269",
+          "name": "Chism, Efton"
+        },
+        {
+          "id": "17134",
+          "name": "Williams, Kyle"
+        },
+        {
+          "id": "13289",
+          "name": "Hollins, Mack"
         }
       ]
     },
@@ -1878,7 +1870,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 71.5,
+      "points": 89.85,
       "team": "CAR",
       "draftYear": 2021,
       "draftTeam": "CAR",
@@ -1970,7 +1962,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -2016,7 +2008,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 37.2,
+      "points": 39.6,
       "team": "ATL",
       "draftYear": 1970,
       "draftTeam": "ATL",
@@ -2062,7 +2054,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 38.04,
+      "points": 36.44,
       "team": "HOU",
       "draftYear": 1970,
       "draftTeam": "HOU",
@@ -2184,7 +2176,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 23.8,
+      "points": 28.5,
       "team": "LAC",
       "draftYear": 2025,
       "draftTeam": "LAC",
@@ -2303,7 +2295,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 39.25,
+      "points": 50.15,
       "team": "NYJ",
       "draftYear": 2024,
       "draftTeam": "NYJ",
@@ -2371,7 +2363,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 95.6,
+      "points": 107.1,
       "team": "DAL",
       "draftYear": 2020,
       "draftTeam": "DAL",
@@ -2439,7 +2431,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 81.66,
+      "points": 95.64,
       "team": "NYJ",
       "draftYear": 2013,
       "draftTeam": "NYJ",
@@ -2507,7 +2499,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 37.7,
+      "points": 45.3,
       "team": "TEN",
       "draftYear": 2019,
       "draftTeam": "DAL",
@@ -2647,7 +2639,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 64.4,
+      "points": 72.88,
       "team": "NYG",
       "draftYear": 2015,
       "draftTeam": "TBB",
@@ -2714,7 +2706,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 21.6,
+      "points": 25.16,
       "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "HOU",
@@ -2787,7 +2779,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 1.95,
+      "points": 4.8,
       "team": "NYJ",
       "draftYear": 2024,
       "draftTeam": "NYJ",
@@ -2860,7 +2852,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 28.8,
+      "points": 37.3,
       "team": "NYG",
       "draftYear": 2026,
       "draftTeam": "FA",
@@ -2919,82 +2911,6 @@
       },
       "gamesPlayed": 6,
       "depthChartAhead": null
-    },
-    {
-      "id": "16629",
-      "name": "Wilson, Roman",
-      "position": "WR",
-      "salary": 475000,
-      "franchiseId": "0002",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 0,
-      "team": "PIT",
-      "draftYear": 2024,
-      "draftTeam": "PIT",
-      "birthdate": 992926800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16629_thumb.jpg",
-      "externalIds": {
-        "mfl": "16629",
-        "sleeper": "11630",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11630",
-        "fullName": "Roman Wilson",
-        "team": "PIT",
-        "age": 25,
-        "height": "72",
-        "weight": "192",
-        "number": 14,
-        "college": "Michigan",
-        "birthDate": "2001-06-19",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": 9,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Finger",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 5,
-        "season": "2026",
-        "player": "Roman Wilson",
-        "team": "PIT",
-        "position": "WR",
-        "offenseSnaps": 20,
-        "offenseSnapPct": 0.33,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "WilsRo02",
-        "gamesPlayed": 5,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ]
-      },
-      "gamesPlayed": 5,
-      "depthChartAhead": [
-        {
-          "id": "14102",
-          "name": "Metcalf, DK"
-        },
-        {
-          "id": "17503",
-          "name": "Bernard, Germie"
-        }
-      ]
     },
     {
       "id": "16594",
@@ -3187,6 +3103,82 @@
       },
       "gamesPlayed": 2,
       "depthChartAhead": null
+    },
+    {
+      "id": "16629",
+      "name": "Wilson, Roman",
+      "position": "WR",
+      "salary": 475000,
+      "franchiseId": "0002",
+      "status": "INJURED_RESERVE",
+      "contractYear": "5",
+      "points": 0,
+      "team": "PIT",
+      "draftYear": 2024,
+      "draftTeam": "PIT",
+      "birthdate": 992926800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16629_thumb.jpg",
+      "externalIds": {
+        "mfl": "16629",
+        "sleeper": "11630",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11630",
+        "fullName": "Roman Wilson",
+        "team": "PIT",
+        "age": 25,
+        "height": "72",
+        "weight": "192",
+        "number": 14,
+        "college": "Michigan",
+        "birthDate": "2001-06-19",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 9,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 2,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Finger",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 5,
+        "season": "2026",
+        "player": "Roman Wilson",
+        "team": "PIT",
+        "position": "WR",
+        "offenseSnaps": 20,
+        "offenseSnapPct": 0.33,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "WilsRo02",
+        "gamesPlayed": 5,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "gamesPlayed": 5,
+      "depthChartAhead": [
+        {
+          "id": "14102",
+          "name": "Metcalf, DK"
+        },
+        {
+          "id": "17503",
+          "name": "Bernard, Germie"
+        }
+      ]
     },
     {
       "id": "17467",
@@ -3469,7 +3461,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 12.1,
+      "points": 21,
       "team": "CLE",
       "draftYear": 2020,
       "draftTeam": "DEN",
@@ -3546,7 +3538,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 9.39,
+      "points": 14.99,
       "team": "IND",
       "draftYear": 1970,
       "draftTeam": "IND",
@@ -3592,7 +3584,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 50.2,
+      "points": 59,
       "team": "SF",
       "draftYear": 1970,
       "draftTeam": "SFO",
@@ -3715,7 +3707,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 8.9,
+      "points": 9.6,
       "team": "DEN",
       "draftYear": 2024,
       "draftTeam": "DEN",
@@ -3816,7 +3808,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 47.16,
+      "points": 76.26,
       "team": "ATL",
       "draftYear": 2024,
       "draftTeam": "ATL",
@@ -3919,7 +3911,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 29.05,
+      "points": 41.4,
       "team": "DEN",
       "draftYear": 2025,
       "draftTeam": "DEN",
@@ -3991,7 +3983,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 25,
+      "points": 27.25,
       "team": "NE",
       "draftYear": 2025,
       "draftTeam": "NEP",
@@ -4233,7 +4225,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 49.2,
+      "points": 50.2,
       "team": "DAL",
       "draftYear": 2023,
       "draftTeam": "FA",
@@ -4301,7 +4293,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 6.4,
+      "points": 20.5,
       "team": "LAR",
       "draftYear": 2020,
       "draftTeam": "SEA",
@@ -4428,7 +4420,12 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17469",
+          "name": "Daniels, Jalon"
+        }
+      ]
     },
     {
       "id": "13116",
@@ -4438,7 +4435,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 101.58,
+      "points": 112.06,
       "team": "KC",
       "draftYear": 2017,
       "draftTeam": "KCC",
@@ -4529,7 +4526,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 15.69,
+      "points": 19.09,
       "team": "CAR",
       "draftYear": 2022,
       "draftTeam": "HOU",
@@ -4861,7 +4858,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 44.23,
+      "points": 56.43,
       "team": "CHI",
       "draftYear": 1970,
       "draftTeam": "CHI",
@@ -4907,7 +4904,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 48.98,
+      "points": 67.48,
       "team": "CHI",
       "draftYear": 2024,
       "draftTeam": "CHI",
@@ -4972,7 +4969,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 37.1,
+      "points": 50.5,
       "team": "KC",
       "draftYear": 2017,
       "draftTeam": "CAR",
@@ -5039,7 +5036,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 14.6,
+      "points": 20.8,
       "team": "LAC",
       "draftYear": 2023,
       "draftTeam": "LAC",
@@ -5111,7 +5108,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 27.95,
+      "points": 41.35,
       "team": "NO",
       "draftYear": 2017,
       "draftTeam": "NOS",
@@ -5324,7 +5321,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 3.93,
+      "points": 6.09,
       "team": "WAS",
       "draftYear": 2024,
       "draftTeam": "WAS",
@@ -5359,25 +5356,26 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Luke McCaffrey",
         "team": "WAS",
         "position": "WR",
-        "offenseSnaps": 0,
-        "offenseSnapPct": 0,
+        "offenseSnaps": 8,
+        "offenseSnapPct": 0.12,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 14,
-        "stSnapPct": 0.42,
+        "stSnaps": 13,
+        "stSnapPct": 0.57,
         "pfrPlayerId": "McCaLu00",
-        "gamesPlayed": 2,
+        "gamesPlayed": 3,
         "gamesPlayedWeeks": [
           3,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 2,
+      "gamesPlayed": 3,
       "depthChartAhead": [
         {
           "id": "14109",
@@ -5469,7 +5467,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 3,
+      "points": 16.9,
       "team": "JAX",
       "draftYear": 2025,
       "draftTeam": "JAC",
@@ -5634,7 +5632,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 49.7,
+      "points": 55.4,
       "team": "NO",
       "draftYear": 2024,
       "draftTeam": "DEN",
@@ -5707,7 +5705,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 29.57,
+      "points": 34.32,
       "team": "LAC",
       "draftYear": 2024,
       "draftTeam": "LAC",
@@ -5784,7 +5782,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 11.7,
+      "points": 15.25,
       "team": "NYG",
       "draftYear": 2019,
       "draftTeam": "BUF",
@@ -5954,7 +5952,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 16.6,
+      "points": 17.6,
       "team": "BUF",
       "draftYear": 2019,
       "draftTeam": "BUF",
@@ -6073,7 +6071,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 49.55,
+      "points": 53.15,
       "team": "NE",
       "draftYear": 2021,
       "draftTeam": "NEP",
@@ -6211,7 +6209,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 0.3,
+      "points": 2.5,
       "team": "NYJ",
       "draftYear": 2026,
       "draftTeam": "NYJ",
@@ -6388,6 +6386,10 @@
       "gamesPlayed": 4,
       "depthChartAhead": [
         {
+          "id": "15717",
+          "name": "Pierce, Dameon"
+        },
+        {
           "id": "13604",
           "name": "Barkley, Saquon"
         }
@@ -6475,73 +6477,6 @@
       ]
     },
     {
-      "id": "14783",
-      "name": "Hurts, Jalen",
-      "position": "QB",
-      "salary": 7150000,
-      "franchiseId": "0005",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 96.02,
-      "team": "PHI",
-      "draftYear": 2020,
-      "draftTeam": "PHI",
-      "birthdate": 902466000,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14783_thumb.jpg",
-      "externalIds": {
-        "mfl": "14783",
-        "sleeper": "6904",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "6904",
-        "fullName": "Jalen Hurts",
-        "team": "PHI",
-        "age": 28,
-        "height": "73",
-        "weight": "223",
-        "number": 1,
-        "college": "Oklahoma",
-        "birthDate": "1998-08-07",
-        "status": "Inactive",
-        "active": true,
-        "position": "QB",
-        "depthChartPosition": "QB",
-        "depthChartOrder": 2,
-        "fantasyPositions": [
-          "QB"
-        ],
-        "experience": 6,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Calf",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 5,
-        "season": "2026",
-        "player": "Jalen Hurts",
-        "team": "PHI",
-        "position": "QB",
-        "offenseSnaps": 62,
-        "offenseSnapPct": 1,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "HurtJa00",
-        "gamesPlayed": 5,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ]
-      },
-      "gamesPlayed": 5,
-      "depthChartAhead": null
-    },
-    {
       "id": "15715",
       "name": "Cook, James",
       "position": "RB",
@@ -6549,7 +6484,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 84.05,
+      "points": 106.1,
       "team": "BUF",
       "draftYear": 2022,
       "draftTeam": "BUF",
@@ -6617,7 +6552,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 32.93,
+      "points": 44.33,
       "team": "BUF",
       "draftYear": 2022,
       "draftTeam": "BUF",
@@ -6685,7 +6620,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 13.4,
+      "points": 12.4,
       "team": "BUF",
       "draftYear": 1970,
       "draftTeam": "BUF",
@@ -6731,7 +6666,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 30.3,
+      "points": 32.5,
       "team": "LAC",
       "draftYear": 2024,
       "draftTeam": "LAC",
@@ -6890,7 +6825,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -7007,7 +6942,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 44.3,
+      "points": 57.8,
       "team": "CHI",
       "draftYear": 2025,
       "draftTeam": "CHI",
@@ -7075,7 +7010,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 19.66,
+      "points": 22.5,
       "team": "TB",
       "draftYear": 2025,
       "draftTeam": "TBB",
@@ -7396,7 +7331,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -7432,10 +7367,6 @@
         {
           "id": "14104",
           "name": "Brown, A.J."
-        },
-        {
-          "id": "15779",
-          "name": "Doubs, Romeo"
         },
         {
           "id": "16342",
@@ -7497,7 +7428,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 34.9,
+      "points": 47,
       "team": "PHI",
       "draftYear": 2018,
       "draftTeam": "PHI",
@@ -7563,7 +7494,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 33.7,
+      "points": 35.7,
       "team": "PHI",
       "draftYear": 2017,
       "draftTeam": "CIN",
@@ -7631,7 +7562,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 12.1,
+      "points": 20.4,
       "team": "KC",
       "draftYear": 2021,
       "draftTeam": "KCC",
@@ -7812,7 +7743,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 14.8,
+      "points": 22,
       "team": "ARI",
       "draftYear": 2017,
       "draftTeam": "FA",
@@ -7885,7 +7816,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 25,
+      "points": 29.2,
       "team": "LAR",
       "draftYear": 2016,
       "draftTeam": "RAM",
@@ -7946,6 +7877,69 @@
       "depthChartAhead": null
     },
     {
+      "id": "15702",
+      "name": "McKee, Tanner",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0005",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 14.6,
+      "team": "PHI",
+      "draftYear": 2023,
+      "draftTeam": "PHI",
+      "birthdate": 956811600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15702_thumb.jpg",
+      "externalIds": {
+        "mfl": "15702",
+        "sleeper": "9230",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "9230",
+        "fullName": "Tanner McKee",
+        "team": "PHI",
+        "age": 26,
+        "height": "78",
+        "weight": "231",
+        "number": 16,
+        "college": "Stanford",
+        "birthDate": "2000-04-27",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Tanner McKee",
+        "team": "PHI",
+        "position": "QB",
+        "offenseSnaps": 64,
+        "offenseSnapPct": 1,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "McKeTa01",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          6
+        ]
+      },
+      "gamesPlayed": 1,
+      "depthChartAhead": null
+    },
+    {
       "id": "13146",
       "name": "Conner, James",
       "position": "RB",
@@ -7993,6 +7987,78 @@
         {
           "id": "15712",
           "name": "Allgeier, Tyler"
+        }
+      ]
+    },
+    {
+      "id": "14783",
+      "name": "Hurts, Jalen",
+      "position": "QB",
+      "salary": 7150000,
+      "franchiseId": "0005",
+      "status": "INJURED_RESERVE",
+      "contractYear": "2",
+      "points": 96.02,
+      "team": "PHI",
+      "draftYear": 2020,
+      "draftTeam": "PHI",
+      "birthdate": 902466000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14783_thumb.jpg",
+      "externalIds": {
+        "mfl": "14783",
+        "sleeper": "6904",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "6904",
+        "fullName": "Jalen Hurts",
+        "team": "PHI",
+        "age": 28,
+        "height": "73",
+        "weight": "223",
+        "number": 1,
+        "college": "Oklahoma",
+        "birthDate": "1998-08-07",
+        "status": "Inactive",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 6,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Calf",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 5,
+        "season": "2026",
+        "player": "Jalen Hurts",
+        "team": "PHI",
+        "position": "QB",
+        "offenseSnaps": 62,
+        "offenseSnapPct": 1,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "HurtJa00",
+        "gamesPlayed": 5,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "gamesPlayed": 5,
+      "depthChartAhead": [
+        {
+          "id": "15702",
+          "name": "McKee, Tanner"
         }
       ]
     },
@@ -8216,7 +8282,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 85.4,
+      "points": 109.3,
       "team": "NYG",
       "draftYear": 2022,
       "draftTeam": "BAL",
@@ -8284,7 +8350,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 25.8,
+      "points": 31.6,
       "team": "LAC",
       "draftYear": 1970,
       "draftTeam": "FA",
@@ -8398,7 +8464,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 23.6,
+      "points": 46.6,
       "team": "TEN",
       "draftYear": 1970,
       "draftTeam": "TEN",
@@ -8444,7 +8510,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 30.37,
+      "points": 31.12,
       "team": "DAL",
       "draftYear": 2022,
       "draftTeam": "FA",
@@ -8605,7 +8671,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 14.8,
+      "points": 15.85,
       "team": "TEN",
       "draftYear": 2023,
       "draftTeam": "TEN",
@@ -8815,7 +8881,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
+        "depthChartPosition": "LWR",
         "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
@@ -8872,7 +8938,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 101.3,
+      "points": 108.22,
       "team": "ARI",
       "draftYear": 2016,
       "draftTeam": "NEP",
@@ -8940,7 +9006,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 26.9,
+      "points": 49.9,
       "team": "ATL",
       "draftYear": 2021,
       "draftTeam": "ATL",
@@ -9008,7 +9074,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 40,
+      "points": 56.4,
       "team": "NYJ",
       "draftYear": 2018,
       "draftTeam": "MIA",
@@ -9142,7 +9208,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 39,
+      "points": 56,
       "team": "PHI",
       "draftYear": 2021,
       "draftTeam": "PHI",
@@ -9208,7 +9274,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 47.2,
+      "points": 48.2,
       "team": "ATL",
       "draftYear": 2007,
       "draftTeam": "DAL",
@@ -9267,156 +9333,6 @@
       },
       "gamesPlayed": 6,
       "depthChartAhead": null
-    },
-    {
-      "id": "17473",
-      "name": "Price, Jadarian",
-      "position": "RB",
-      "salary": 2200000,
-      "franchiseId": "0006",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 11,
-      "team": "SEA",
-      "draftYear": 2026,
-      "draftTeam": "SEA",
-      "birthdate": 1065672000,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17473_thumb.jpg",
-      "externalIds": {
-        "mfl": "17473",
-        "sleeper": "13286",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13286",
-        "fullName": "Jadarian Price",
-        "team": "SEA",
-        "age": 23,
-        "height": "71",
-        "weight": "209",
-        "number": 8,
-        "college": "Notre Dame",
-        "birthDate": "2003-10-09",
-        "status": "Inactive",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 8,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 0,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Chest",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Jadarian Price",
-        "team": "SEA",
-        "position": "RB",
-        "offenseSnaps": 19,
-        "offenseSnapPct": 0.28,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "PricJa02",
-        "gamesPlayed": 3,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16432",
-          "name": "Wilson, Emanuel"
-        },
-        {
-          "id": "16169",
-          "name": "Charbonnet, Zach"
-        }
-      ]
-    },
-    {
-      "id": "17062",
-      "name": "Sanders, Raheim",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0006",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 15.99,
-      "team": "CLE",
-      "draftYear": 2025,
-      "draftTeam": "FA",
-      "birthdate": 1023508800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17062_thumb.jpg",
-      "externalIds": {
-        "mfl": "17062",
-        "sleeper": "12472",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12472",
-        "fullName": "Raheim Sanders",
-        "team": "CLE",
-        "age": 24,
-        "height": "72",
-        "weight": "230",
-        "number": 23,
-        "college": "South Carolina",
-        "birthDate": "2002-06-08",
-        "status": "Inactive",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 7,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 1,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Hip",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 5,
-        "season": "2026",
-        "player": "Raheim Sanders",
-        "team": "CLE",
-        "position": "RB",
-        "offenseSnaps": 20,
-        "offenseSnapPct": 0.29,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.07,
-        "pfrPlayerId": "SandRa00",
-        "gamesPlayed": 5,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ]
-      },
-      "gamesPlayed": 5,
-      "depthChartAhead": [
-        {
-          "id": "17047",
-          "name": "Sampson, Dylan"
-        },
-        {
-          "id": "17051",
-          "name": "Judkins, Quinshon"
-        }
-      ]
     },
     {
       "id": "13289",
@@ -9486,10 +9402,6 @@
         {
           "id": "14104",
           "name": "Brown, A.J."
-        },
-        {
-          "id": "15779",
-          "name": "Doubs, Romeo"
         },
         {
           "id": "16342",
@@ -9589,7 +9501,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 14.1,
+      "points": 16.64,
       "team": "PHI",
       "draftYear": 2025,
       "draftTeam": "FA",
@@ -9659,6 +9571,83 @@
         {
           "id": "17499",
           "name": "Lemon, Makai"
+        }
+      ]
+    },
+    {
+      "id": "17527",
+      "name": "Cameron, Josh",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 1.38,
+      "team": "JAX",
+      "draftYear": 2026,
+      "draftTeam": "JAC",
+      "birthdate": 1047963600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17527_thumb.jpg",
+      "externalIds": {
+        "mfl": "17527",
+        "sleeper": "13394",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13394",
+        "fullName": "Josh Cameron",
+        "team": "JAX",
+        "age": 23,
+        "height": "73",
+        "weight": "224",
+        "number": 19,
+        "college": "Baylor",
+        "birthDate": "2003-03-18",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Josh Cameron",
+        "team": "JAX",
+        "position": "WR",
+        "offenseSnaps": 36,
+        "offenseSnapPct": 0.51,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 16,
+        "stSnapPct": 0.55,
+        "pfrPlayerId": "CameJo01",
+        "gamesPlayed": 6,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "gamesPlayed": 6,
+      "depthChartAhead": [
+        {
+          "id": "16192",
+          "name": "Washington, Parker"
+        },
+        {
+          "id": "14127",
+          "name": "Meyers, Jakobi"
         }
       ]
     },
@@ -9812,6 +9801,156 @@
       ]
     },
     {
+      "id": "17473",
+      "name": "Price, Jadarian",
+      "position": "RB",
+      "salary": 2200000,
+      "franchiseId": "0006",
+      "status": "INJURED_RESERVE",
+      "contractYear": "4",
+      "points": 11,
+      "team": "SEA",
+      "draftYear": 2026,
+      "draftTeam": "SEA",
+      "birthdate": 1065672000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17473_thumb.jpg",
+      "externalIds": {
+        "mfl": "17473",
+        "sleeper": "13286",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13286",
+        "fullName": "Jadarian Price",
+        "team": "SEA",
+        "age": 23,
+        "height": "71",
+        "weight": "209",
+        "number": 8,
+        "college": "Notre Dame",
+        "birthDate": "2003-10-09",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 8,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 0,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Chest",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Jadarian Price",
+        "team": "SEA",
+        "position": "RB",
+        "offenseSnaps": 19,
+        "offenseSnapPct": 0.28,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "PricJa02",
+        "gamesPlayed": 3,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 3,
+      "depthChartAhead": [
+        {
+          "id": "16432",
+          "name": "Wilson, Emanuel"
+        },
+        {
+          "id": "16169",
+          "name": "Charbonnet, Zach"
+        }
+      ]
+    },
+    {
+      "id": "17062",
+      "name": "Sanders, Raheim",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0006",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 15.99,
+      "team": "CLE",
+      "draftYear": 2025,
+      "draftTeam": "FA",
+      "birthdate": 1023508800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17062_thumb.jpg",
+      "externalIds": {
+        "mfl": "17062",
+        "sleeper": "12472",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12472",
+        "fullName": "Raheim Sanders",
+        "team": "CLE",
+        "age": 24,
+        "height": "72",
+        "weight": "230",
+        "number": 23,
+        "college": "South Carolina",
+        "birthDate": "2002-06-08",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 7,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 1,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Hip",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 5,
+        "season": "2026",
+        "player": "Raheim Sanders",
+        "team": "CLE",
+        "position": "RB",
+        "offenseSnaps": 20,
+        "offenseSnapPct": 0.29,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.07,
+        "pfrPlayerId": "SandRa00",
+        "gamesPlayed": 5,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "gamesPlayed": 5,
+      "depthChartAhead": [
+        {
+          "id": "17047",
+          "name": "Sampson, Dylan"
+        },
+        {
+          "id": "17051",
+          "name": "Judkins, Quinshon"
+        }
+      ]
+    },
+    {
       "id": "17466",
       "name": "Beck, Carson",
       "position": "QB",
@@ -9943,7 +10082,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 62.7,
+      "points": 72.9,
       "team": "ATL",
       "draftYear": 2022,
       "draftTeam": "ATL",
@@ -10011,7 +10150,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 31.51,
+      "points": 44.21,
       "team": "WAS",
       "draftYear": 2022,
       "draftTeam": "TBB",
@@ -10046,27 +10185,28 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Rachaad White",
         "team": "WAS",
         "position": "RB",
-        "offenseSnaps": 37,
-        "offenseSnapPct": 0.6,
+        "offenseSnaps": 46,
+        "offenseSnapPct": 0.69,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 6,
-        "stSnapPct": 0.18,
+        "stSnaps": 5,
+        "stSnapPct": 0.22,
         "pfrPlayerId": "WhitRa01",
-        "gamesPlayed": 4,
+        "gamesPlayed": 5,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 4,
+      "gamesPlayed": 5,
       "depthChartAhead": null
     },
     {
@@ -10077,7 +10217,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 108.62,
+      "points": 132.46,
       "team": "CAR",
       "draftYear": 2023,
       "draftTeam": "CAR",
@@ -10209,7 +10349,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 51.1,
+      "points": 61.1,
       "team": "JAX",
       "draftYear": 2024,
       "draftTeam": "JAC",
@@ -10277,7 +10417,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 41.81,
+      "points": 54.01,
       "team": "GB",
       "draftYear": 1970,
       "draftTeam": "GBP",
@@ -10323,7 +10463,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 56.95,
+      "points": 78.65,
       "team": "JAX",
       "draftYear": 2025,
       "draftTeam": "JAC",
@@ -10436,7 +10576,7 @@
         "number": 22,
         "college": "Arizona",
         "birthDate": "2001-04-12",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
@@ -10445,7 +10585,7 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Groin",
         "gsisId": null
       },
@@ -10487,7 +10627,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 21.3,
+      "points": 23.9,
       "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "NEP",
@@ -10640,7 +10780,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 45.7,
+      "points": 56.6,
       "team": "CAR",
       "draftYear": 2025,
       "draftTeam": "FA",
@@ -10707,7 +10847,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 103.16,
+      "points": 136.12,
       "team": "NO",
       "draftYear": 2025,
       "draftTeam": "NOS",
@@ -10775,7 +10915,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 5.19,
+      "points": 6.93,
       "team": "SF",
       "draftYear": 2025,
       "draftTeam": "SFO",
@@ -10810,7 +10950,7 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Jordan James",
         "team": "SF",
@@ -10819,17 +10959,18 @@
         "offenseSnapPct": 0,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 15,
-        "stSnapPct": 0.45,
+        "stSnaps": 12,
+        "stSnapPct": 0.52,
         "pfrPlayerId": "JameJo01",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           2,
           3,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": [
         {
           "id": "13130",
@@ -10962,7 +11103,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 60,
+      "points": 56.6,
       "team": "JAX",
       "draftYear": 1970,
       "draftTeam": "JAC",
@@ -11008,7 +11149,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 64.6,
+      "points": 75.5,
       "team": "SF",
       "draftYear": 2014,
       "draftTeam": "TBB",
@@ -11038,33 +11179,34 @@
           "WR"
         ],
         "experience": 12,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ribs",
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Achilles",
         "gsisId": "00-0031408"
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Mike Evans",
         "team": "SF",
         "position": "WR",
-        "offenseSnaps": 38,
-        "offenseSnapPct": 0.63,
+        "offenseSnaps": 25,
+        "offenseSnapPct": 0.4,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "EvanMi00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": null
     },
     {
@@ -11146,7 +11288,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 60.3,
+      "points": 63.4,
       "team": "PIT",
       "draftYear": 2021,
       "draftTeam": "PIT",
@@ -11612,7 +11754,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 41.2,
+      "points": 44.5,
       "team": "DAL",
       "draftYear": 2022,
       "draftTeam": "DAL",
@@ -11747,7 +11889,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 34.9,
+      "points": 41.6,
       "team": "IND",
       "draftYear": 2023,
       "draftTeam": "IND",
@@ -11861,7 +12003,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 40.15,
+      "points": 48.75,
       "team": "HOU",
       "draftYear": 2025,
       "draftTeam": "HOU",
@@ -12054,6 +12196,10 @@
         {
           "id": "15753",
           "name": "Wilson, Garrett"
+        },
+        {
+          "id": "16630",
+          "name": "Williams, Isaiah"
         }
       ]
     },
@@ -12132,7 +12278,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 42.8,
+      "points": 57.1,
       "team": "TB",
       "draftYear": 2025,
       "draftTeam": "TBB",
@@ -12191,243 +12337,6 @@
       },
       "gamesPlayed": 6,
       "depthChartAhead": null
-    },
-    {
-      "id": "16628",
-      "name": "McMillan, Jalen",
-      "position": "WR",
-      "salary": 605000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "3",
-      "points": 0,
-      "team": "TB",
-      "draftYear": 2024,
-      "draftTeam": "TBB",
-      "birthdate": 1007701200,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16628_thumb.jpg",
-      "externalIds": {
-        "mfl": "16628",
-        "sleeper": "11618",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11618",
-        "fullName": "Jalen McMillan",
-        "team": "TB",
-        "age": 24,
-        "height": "73",
-        "weight": "192",
-        "number": 11,
-        "college": "Washington",
-        "birthDate": "2001-12-07",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Knee - PCL",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Jalen McMillan",
-        "team": "TB",
-        "position": "WR",
-        "offenseSnaps": 2,
-        "offenseSnapPct": 0.03,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "McMiJa01",
-        "gamesPlayed": 2,
-        "gamesPlayedWeeks": [
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 2,
-      "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        },
-        {
-          "id": "13163",
-          "name": "Godwin, Chris"
-        },
-        {
-          "id": "17520",
-          "name": "Hurst, Ted"
-        },
-        {
-          "id": "17079",
-          "name": "Johnson, Tez"
-        }
-      ]
-    },
-    {
-      "id": "17078",
-      "name": "Bech, Jack",
-      "position": "WR",
-      "salary": 880000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 13.3,
-      "team": "LV",
-      "draftYear": 2025,
-      "draftTeam": "LVR",
-      "birthdate": 1040187600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17078_thumb.jpg",
-      "externalIds": {
-        "mfl": "17078",
-        "sleeper": "12483",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12483",
-        "fullName": "Jack Bech",
-        "team": "LV",
-        "age": 23,
-        "height": "73",
-        "weight": "214",
-        "number": 18,
-        "college": "TCU",
-        "birthDate": "2002-12-18",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": 10,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 1,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Forearm",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Jack Bech",
-        "team": "LV",
-        "position": "WR",
-        "offenseSnaps": 11,
-        "offenseSnapPct": 0.16,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.07,
-        "pfrPlayerId": "BechJa00",
-        "gamesPlayed": 3,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16287",
-          "name": "Tucker, Tre"
-        },
-        {
-          "id": "15786",
-          "name": "Nailor, Jalen"
-        }
-      ]
-    },
-    {
-      "id": "17107",
-      "name": "Ferguson, Terrance",
-      "position": "TE",
-      "salary": 605000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 19.3,
-      "team": "LAR",
-      "draftYear": 2025,
-      "draftTeam": "LAR",
-      "birthdate": 1047013200,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17107_thumb.jpg",
-      "externalIds": {
-        "mfl": "17107",
-        "sleeper": "12487",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12487",
-        "fullName": "Terrance Ferguson",
-        "team": "LAR",
-        "age": 23,
-        "height": "77",
-        "weight": "252",
-        "number": 18,
-        "college": "Oregon",
-        "birthDate": "2003-03-07",
-        "status": "Inactive",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": 5,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 1,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Ankle",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 3,
-        "season": "2026",
-        "player": "Terrance Ferguson",
-        "team": "LAR",
-        "position": "TE",
-        "offenseSnaps": 22,
-        "offenseSnapPct": 0.26,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 1,
-        "stSnapPct": 0.03,
-        "pfrPlayerId": "FergTe00",
-        "gamesPlayed": 3,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3
-        ]
-      },
-      "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "12678",
-          "name": "Higbee, Tyler"
-        },
-        {
-          "id": "14871",
-          "name": "Parkinson, Colby"
-        },
-        {
-          "id": "16219",
-          "name": "Allen, Davis"
-        },
-        {
-          "id": "17547",
-          "name": "Klare, Max"
-        }
-      ]
     },
     {
       "id": "16214",
@@ -12504,7 +12413,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 77.18,
+      "points": 81.66,
       "team": "DEN",
       "draftYear": 2024,
       "draftTeam": "DEN",
@@ -12628,7 +12537,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15717",
+          "name": "Pierce, Dameon"
+        }
+      ]
     },
     {
       "id": "15786",
@@ -12638,7 +12552,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 7.7,
+      "points": 9.1,
       "team": "LV",
       "draftYear": 2022,
       "draftTeam": "MIN",
@@ -12710,7 +12624,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 17.95,
+      "points": 29.75,
       "team": "NO",
       "draftYear": 1970,
       "draftTeam": "NOS",
@@ -12807,7 +12721,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 27.4,
+      "points": 40.9,
       "team": "DAL",
       "draftYear": 2024,
       "draftTeam": "DAL",
@@ -12956,7 +12870,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 29.8,
+      "points": 44.7,
       "team": "NO",
       "draftYear": 2018,
       "draftTeam": "MIN",
@@ -13017,12 +12931,450 @@
       "depthChartAhead": null
     },
     {
+      "id": "15717",
+      "name": "Pierce, Dameon",
+      "position": "RB",
+      "salary": 725000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 12,
+      "team": "PHI",
+      "draftYear": 2022,
+      "draftTeam": "HOU",
+      "birthdate": 950936400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15717_thumb.jpg",
+      "externalIds": {
+        "mfl": "15717",
+        "sleeper": "8129",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8129",
+        "fullName": "Dameon Pierce",
+        "team": "PHI",
+        "age": 26,
+        "height": "70",
+        "weight": "218",
+        "number": 39,
+        "college": "Florida",
+        "birthDate": "2000-02-19",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Dameon Pierce",
+        "team": "PHI",
+        "position": "RB",
+        "offenseSnaps": 61,
+        "offenseSnapPct": 0.95,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "PierDa01",
+        "gamesPlayed": 2,
+        "gamesPlayedWeeks": [
+          5,
+          6
+        ]
+      },
+      "gamesPlayed": 2,
+      "depthChartAhead": null
+    },
+    {
+      "id": "16630",
+      "name": "Williams, Isaiah",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "2",
+      "points": 0.4,
+      "team": "NYJ",
+      "draftYear": 2024,
+      "draftTeam": "FA",
+      "birthdate": 980744400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16630_thumb.jpg",
+      "externalIds": {
+        "mfl": "16630",
+        "sleeper": "11608",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11608",
+        "fullName": "Isaiah Williams",
+        "team": "NYJ",
+        "age": 25,
+        "height": "70",
+        "weight": "185",
+        "number": 18,
+        "college": "Illinois",
+        "birthDate": "2001-01-29",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 2,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Isaiah Williams",
+        "team": "NYJ",
+        "position": "WR",
+        "offenseSnaps": 9,
+        "offenseSnapPct": 0.15,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.08,
+        "pfrPlayerId": "WillIs03",
+        "gamesPlayed": 6,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "gamesPlayed": 6,
+      "depthChartAhead": [
+        {
+          "id": "15753",
+          "name": "Wilson, Garrett"
+        }
+      ]
+    },
+    {
+      "id": "14104",
+      "name": "Brown, A.J.",
+      "position": "WR",
+      "salary": 8360000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 8.3,
+      "team": "NE",
+      "draftYear": 2019,
+      "draftTeam": "TEN",
+      "birthdate": 867646800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14104_thumb.jpg",
+      "externalIds": {
+        "mfl": "14104",
+        "sleeper": "5859",
+        "gsis": " 00-0035676"
+      },
+      "sleeper": {
+        "id": "5859",
+        "fullName": "A.J. Brown",
+        "team": "NE",
+        "age": 29,
+        "height": "73",
+        "weight": "226",
+        "number": 1,
+        "college": "Ole Miss",
+        "birthDate": "1997-06-30",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Ankle",
+        "gsisId": " 00-0035676"
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "A.J. Brown",
+        "team": "NE",
+        "position": "WR",
+        "offenseSnaps": 52,
+        "offenseSnapPct": 0.76,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 1,
+        "stSnapPct": 0.04,
+        "pfrPlayerId": "BrowAJ00",
+        "gamesPlayed": 2,
+        "gamesPlayedWeeks": [
+          1,
+          6
+        ]
+      },
+      "gamesPlayed": 2,
+      "depthChartAhead": null
+    },
+    {
+      "id": "16628",
+      "name": "McMillan, Jalen",
+      "position": "WR",
+      "salary": 605000,
+      "franchiseId": "0008",
+      "status": "INJURED_RESERVE",
+      "contractYear": "3",
+      "points": 0,
+      "team": "TB",
+      "draftYear": 2024,
+      "draftTeam": "TBB",
+      "birthdate": 1007701200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16628_thumb.jpg",
+      "externalIds": {
+        "mfl": "16628",
+        "sleeper": "11618",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11618",
+        "fullName": "Jalen McMillan",
+        "team": "TB",
+        "age": 24,
+        "height": "73",
+        "weight": "192",
+        "number": 11,
+        "college": "Washington",
+        "birthDate": "2001-12-07",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 7,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 2,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee - PCL",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Jalen McMillan",
+        "team": "TB",
+        "position": "WR",
+        "offenseSnaps": 2,
+        "offenseSnapPct": 0.03,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "McMiJa01",
+        "gamesPlayed": 2,
+        "gamesPlayedWeeks": [
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 2,
+      "depthChartAhead": [
+        {
+          "id": "17081",
+          "name": "Egbuka, Emeka"
+        },
+        {
+          "id": "13163",
+          "name": "Godwin, Chris"
+        },
+        {
+          "id": "17520",
+          "name": "Hurst, Ted"
+        },
+        {
+          "id": "17079",
+          "name": "Johnson, Tez"
+        }
+      ]
+    },
+    {
+      "id": "17078",
+      "name": "Bech, Jack",
+      "position": "WR",
+      "salary": 880000,
+      "franchiseId": "0008",
+      "status": "INJURED_RESERVE",
+      "contractYear": "4",
+      "points": 13.3,
+      "team": "LV",
+      "draftYear": 2025,
+      "draftTeam": "LVR",
+      "birthdate": 1040187600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17078_thumb.jpg",
+      "externalIds": {
+        "mfl": "17078",
+        "sleeper": "12483",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12483",
+        "fullName": "Jack Bech",
+        "team": "LV",
+        "age": 23,
+        "height": "73",
+        "weight": "214",
+        "number": 18,
+        "college": "TCU",
+        "birthDate": "2002-12-18",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 10,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 1,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Forearm",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Jack Bech",
+        "team": "LV",
+        "position": "WR",
+        "offenseSnaps": 11,
+        "offenseSnapPct": 0.16,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.07,
+        "pfrPlayerId": "BechJa00",
+        "gamesPlayed": 3,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 3,
+      "depthChartAhead": [
+        {
+          "id": "16287",
+          "name": "Tucker, Tre"
+        },
+        {
+          "id": "15786",
+          "name": "Nailor, Jalen"
+        }
+      ]
+    },
+    {
+      "id": "17107",
+      "name": "Ferguson, Terrance",
+      "position": "TE",
+      "salary": 605000,
+      "franchiseId": "0008",
+      "status": "INJURED_RESERVE",
+      "contractYear": "4",
+      "points": 19.3,
+      "team": "LAR",
+      "draftYear": 2025,
+      "draftTeam": "LAR",
+      "birthdate": 1047013200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17107_thumb.jpg",
+      "externalIds": {
+        "mfl": "17107",
+        "sleeper": "12487",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12487",
+        "fullName": "Terrance Ferguson",
+        "team": "LAR",
+        "age": 23,
+        "height": "77",
+        "weight": "252",
+        "number": 18,
+        "college": "Oregon",
+        "birthDate": "2003-03-07",
+        "status": "Inactive",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 5,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 1,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Ankle",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 3,
+        "season": "2026",
+        "player": "Terrance Ferguson",
+        "team": "LAR",
+        "position": "TE",
+        "offenseSnaps": 22,
+        "offenseSnapPct": 0.26,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 1,
+        "stSnapPct": 0.03,
+        "pfrPlayerId": "FergTe00",
+        "gamesPlayed": 3,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3
+        ]
+      },
+      "gamesPlayed": 3,
+      "depthChartAhead": [
+        {
+          "id": "12678",
+          "name": "Higbee, Tyler"
+        },
+        {
+          "id": "14871",
+          "name": "Parkinson, Colby"
+        },
+        {
+          "id": "16219",
+          "name": "Allen, Davis"
+        },
+        {
+          "id": "17547",
+          "name": "Klare, Max"
+        }
+      ]
+    },
+    {
       "id": "16601",
       "name": "Shipley, Will",
       "position": "RB",
       "salary": 425000,
       "franchiseId": "0008",
-      "status": "ROSTER",
+      "status": "INJURED_RESERVE",
       "contractYear": "1",
       "points": 7.55,
       "team": "PHI",
@@ -13083,6 +13435,10 @@
       "gamesPlayed": 5,
       "depthChartAhead": [
         {
+          "id": "15717",
+          "name": "Pierce, Dameon"
+        },
+        {
           "id": "13604",
           "name": "Barkley, Saquon"
         },
@@ -13091,70 +13447,6 @@
           "name": "Bigsby, Tank"
         }
       ]
-    },
-    {
-      "id": "14104",
-      "name": "Brown, A.J.",
-      "position": "WR",
-      "salary": 8360000,
-      "franchiseId": "0008",
-      "status": "INJURED_RESERVE",
-      "contractYear": "3",
-      "points": 4.1,
-      "team": "NE",
-      "draftYear": 2019,
-      "draftTeam": "TEN",
-      "birthdate": 867646800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14104_thumb.jpg",
-      "externalIds": {
-        "mfl": "14104",
-        "sleeper": "5859",
-        "gsis": " 00-0035676"
-      },
-      "sleeper": {
-        "id": "5859",
-        "fullName": "A.J. Brown",
-        "team": "NE",
-        "age": 29,
-        "height": "73",
-        "weight": "226",
-        "number": 1,
-        "college": "Ole Miss",
-        "birthDate": "1997-06-30",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": " 00-0035676"
-      },
-      "nflverse": {
-        "week": 6,
-        "season": "2026",
-        "player": "A.J. Brown",
-        "team": "NE",
-        "position": "WR",
-        "offenseSnaps": 52,
-        "offenseSnapPct": 0.76,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 1,
-        "stSnapPct": 0.04,
-        "pfrPlayerId": "BrowAJ00",
-        "gamesPlayed": 2,
-        "gamesPlayedWeeks": [
-          1,
-          6
-        ]
-      },
-      "gamesPlayed": 2,
-      "depthChartAhead": null
     },
     {
       "id": "17520",
@@ -13389,7 +13681,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 87.65,
+      "points": 107.25,
       "team": "IND",
       "draftYear": 2020,
       "draftTeam": "IND",
@@ -13457,7 +13749,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 49.7,
+      "points": 60.5,
       "team": "BUF",
       "draftYear": 2023,
       "draftTeam": "BUF",
@@ -13525,7 +13817,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 26.03,
+      "points": 32.23,
       "team": "LAR",
       "draftYear": 1970,
       "draftTeam": "FA",
@@ -13571,7 +13863,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 17,
+      "points": 21.9,
       "team": "HOU",
       "draftYear": 2024,
       "draftTeam": "ARI",
@@ -13662,7 +13954,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 42.2,
+      "points": 48.6,
       "team": "TB",
       "draftYear": 1970,
       "draftTeam": "TBB",
@@ -13708,7 +14000,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 16.6,
+      "points": 18.9,
       "team": "CHI",
       "draftYear": 2020,
       "draftTeam": "CHI",
@@ -13781,7 +14073,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 93.1,
+      "points": 102.56,
       "team": "CLE",
       "draftYear": 2017,
       "draftTeam": "HOU",
@@ -13849,7 +14141,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 35.2,
+      "points": 36.2,
       "team": "GB",
       "draftYear": 2024,
       "draftTeam": "GBP",
@@ -13992,7 +14284,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 71.2,
+      "points": 82.2,
       "team": "LV",
       "draftYear": 2024,
       "draftTeam": "LVR",
@@ -14134,7 +14426,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 32.32,
+      "points": 35.25,
       "team": "NE",
       "draftYear": 2025,
       "draftTeam": "NEP",
@@ -14159,7 +14451,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -14198,10 +14490,6 @@
           "name": "Brown, A.J."
         },
         {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        },
-        {
           "id": "16342",
           "name": "Douglas, Demario"
         },
@@ -14219,7 +14507,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 38.7,
+      "points": 53.5,
       "team": "NE",
       "draftYear": 2016,
       "draftTeam": "SDC",
@@ -14353,7 +14641,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 39.1,
+      "points": 53.9,
       "team": "PIT",
       "draftYear": 2019,
       "draftTeam": "SEA",
@@ -14421,7 +14709,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 106.86,
+      "points": 142.2,
       "team": "JAX",
       "draftYear": 2021,
       "draftTeam": "JAC",
@@ -14489,7 +14777,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 116.56,
+      "points": 139.08,
       "team": "LV",
       "draftYear": 2012,
       "draftTeam": "WAS",
@@ -14557,7 +14845,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 9.8,
+      "points": 14.8,
       "team": "LAC",
       "draftYear": 2022,
       "draftTeam": "BAL",
@@ -14617,85 +14905,6 @@
         {
           "id": "17099",
           "name": "Gadsden, Oronde"
-        }
-      ]
-    },
-    {
-      "id": "16387",
-      "name": "Brooks, Chris",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 10.15,
-      "team": "GB",
-      "draftYear": 2023,
-      "draftTeam": "FA",
-      "birthdate": 947566800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16387_thumb.jpg",
-      "externalIds": {
-        "mfl": "16387",
-        "sleeper": "11370",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11370",
-        "fullName": "Chris Brooks",
-        "team": "GB",
-        "age": 26,
-        "height": "73",
-        "weight": "219",
-        "number": 30,
-        "college": "BYU",
-        "birthDate": "2000-01-11",
-        "status": "Inactive",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 5,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 3,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Ankle",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 4,
-        "season": "2026",
-        "player": "Chris Brooks",
-        "team": "GB",
-        "position": "RB",
-        "offenseSnaps": 10,
-        "offenseSnapPct": 0.17,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 2,
-        "stSnapPct": 0.11,
-        "pfrPlayerId": "BrooCh00",
-        "gamesPlayed": 4,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4
-        ]
-      },
-      "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "16604",
-          "name": "Lloyd, MarShawn"
-        },
-        {
-          "id": "17048",
-          "name": "Johnson, Kaleb"
-        },
-        {
-          "id": "14073",
-          "name": "Jacobs, Josh"
         }
       ]
     },
@@ -14774,6 +14983,69 @@
           "name": "Higgins, Tee"
         }
       ]
+    },
+    {
+      "id": "16444",
+      "name": "Grupe, Blake",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 4.4,
+      "team": "LAR",
+      "draftYear": 2023,
+      "draftTeam": "FA",
+      "birthdate": 910242000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16444_thumb.jpg",
+      "externalIds": {
+        "mfl": "16444",
+        "sleeper": "11058",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11058",
+        "fullName": "Blake Grupe",
+        "team": "LAR",
+        "age": 27,
+        "height": "67",
+        "weight": "156",
+        "number": 19,
+        "college": "Notre Dame",
+        "birthDate": "1998-11-05",
+        "status": "Inactive",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 3,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Blake Grupe",
+        "team": "LAR",
+        "position": "K",
+        "offenseSnaps": 0,
+        "offenseSnapPct": 0,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.08,
+        "pfrPlayerId": "GrupBl00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          6
+        ]
+      },
+      "gamesPlayed": 1,
+      "depthChartAhead": null
     },
     {
       "id": "17083",
@@ -14891,6 +15163,85 @@
         {
           "id": "17056",
           "name": "Etienne, Trevor"
+        }
+      ]
+    },
+    {
+      "id": "16387",
+      "name": "Brooks, Chris",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 10.15,
+      "team": "GB",
+      "draftYear": 2023,
+      "draftTeam": "FA",
+      "birthdate": 947566800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16387_thumb.jpg",
+      "externalIds": {
+        "mfl": "16387",
+        "sleeper": "11370",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11370",
+        "fullName": "Chris Brooks",
+        "team": "GB",
+        "age": 26,
+        "height": "73",
+        "weight": "219",
+        "number": 30,
+        "college": "BYU",
+        "birthDate": "2000-01-11",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 5,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Ankle",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 4,
+        "season": "2026",
+        "player": "Chris Brooks",
+        "team": "GB",
+        "position": "RB",
+        "offenseSnaps": 10,
+        "offenseSnapPct": 0.17,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.11,
+        "pfrPlayerId": "BrooCh00",
+        "gamesPlayed": 4,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "gamesPlayed": 4,
+      "depthChartAhead": [
+        {
+          "id": "16604",
+          "name": "Lloyd, MarShawn"
+        },
+        {
+          "id": "17048",
+          "name": "Johnson, Kaleb"
+        },
+        {
+          "id": "14073",
+          "name": "Jacobs, Josh"
         }
       ]
     },
@@ -15013,28 +15364,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Kaelon Black",
         "team": "SF",
         "position": "RB",
-        "offenseSnaps": 11,
-        "offenseSnapPct": 0.18,
+        "offenseSnaps": 14,
+        "offenseSnapPct": 0.23,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "BlacKa00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": [
         {
           "id": "13130",
@@ -15190,7 +15542,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 107.7,
+      "points": 113.5,
       "team": "ATL",
       "draftYear": 2023,
       "draftTeam": "ATL",
@@ -15258,7 +15610,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 101.18,
+      "points": 130.16,
       "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "HOU",
@@ -15326,7 +15678,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 8.06,
+      "points": 26.41,
       "team": "NYG",
       "draftYear": 2024,
       "draftTeam": "NYG",
@@ -15403,7 +15755,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 34.75,
+      "points": 37.76,
       "team": "LAC",
       "draftYear": 2023,
       "draftTeam": "FA",
@@ -15476,7 +15828,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 44.1,
+      "points": 60.6,
       "team": "LV",
       "draftYear": 2023,
       "draftTeam": "LVR",
@@ -15549,7 +15901,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 103.22,
+      "points": 133.02,
       "team": "NE",
       "draftYear": 2024,
       "draftTeam": "NEP",
@@ -15697,7 +16049,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 6,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -15737,7 +16089,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 39.9,
+      "points": 50.7,
       "team": "JAX",
       "draftYear": 2019,
       "draftTeam": "FA",
@@ -15810,7 +16162,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 29.2,
+      "points": 34.9,
       "team": "TB",
       "draftYear": 2017,
       "draftTeam": "TBB",
@@ -15883,7 +16235,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 35,
+      "points": 43.2,
       "team": "NE",
       "draftYear": 2025,
       "draftTeam": "NEP",
@@ -15929,7 +16281,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 61.5,
+      "points": 73.1,
       "team": "CAR",
       "draftYear": 2025,
       "draftTeam": "CAR",
@@ -15996,7 +16348,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 44.67,
+      "points": 57.37,
       "team": "CAR",
       "draftYear": 2024,
       "draftTeam": "FA",
@@ -16067,7 +16419,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 50.5,
+      "points": 59.9,
       "team": "JAX",
       "draftYear": 2023,
       "draftTeam": "JAC",
@@ -16160,12 +16512,12 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
         "experience": 1,
-        "injuryStatus": "Doubtful",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Shoulder",
         "gsisId": null
       },
@@ -16208,7 +16560,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 59.4,
+      "points": 81.9,
       "team": "NYG",
       "draftYear": 2024,
       "draftTeam": "NYG",
@@ -16301,7 +16653,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -16348,7 +16700,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 31.8,
+      "points": 51.2,
       "team": "KC",
       "draftYear": 1970,
       "draftTeam": "KCC",
@@ -16394,7 +16746,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 16.34,
+      "points": 18.11,
       "team": "LV",
       "draftYear": 2024,
       "draftTeam": "LVR",
@@ -16467,7 +16819,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 20.09,
+      "points": 23.33,
       "team": "IND",
       "draftYear": 2026,
       "draftTeam": "IND",
@@ -16751,7 +17103,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 40.7,
+      "points": 44.4,
       "team": "TEN",
       "draftYear": 2022,
       "draftTeam": "NYG",
@@ -16824,7 +17176,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 14.19,
+      "points": 24.59,
       "team": "ARI",
       "draftYear": 1970,
       "draftTeam": "ARI",
@@ -16870,7 +17222,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 41.4,
+      "points": 38,
       "team": "NYG",
       "draftYear": 1970,
       "draftTeam": "NYG",
@@ -16916,7 +17268,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 39.8,
+      "points": 48.8,
       "team": "CHI",
       "draftYear": 2014,
       "draftTeam": "FA",
@@ -17056,7 +17408,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 22,
+      "points": 22.8,
       "team": "TEN",
       "draftYear": 2025,
       "draftTeam": "TEN",
@@ -17133,7 +17485,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 51.7,
+      "points": 53.6,
       "team": "CLE",
       "draftYear": 2025,
       "draftTeam": "CLE",
@@ -17247,7 +17599,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 45.85,
+      "points": 50.75,
       "team": "LAC",
       "draftYear": 2025,
       "draftTeam": "LAC",
@@ -17366,7 +17718,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 47.7,
+      "points": 56.4,
       "team": "GB",
       "draftYear": 2023,
       "draftTeam": "GBP",
@@ -17458,7 +17810,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 63.68,
+      "points": 72.44,
       "team": "LAC",
       "draftYear": 2020,
       "draftTeam": "LAC",
@@ -17665,7 +18017,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 14.91,
+      "points": 17.39,
       "team": "ATL",
       "draftYear": 2026,
       "draftTeam": "ATL",
@@ -17738,7 +18090,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 17.67,
+      "points": 22.07,
       "team": "KC",
       "draftYear": 2026,
       "draftTeam": "KCC",
@@ -17962,7 +18314,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 28.7,
+      "points": 44.8,
       "team": "NE",
       "draftYear": 2023,
       "draftTeam": "NEP",
@@ -17987,7 +18339,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -18024,10 +18376,6 @@
         {
           "id": "14104",
           "name": "Brown, A.J."
-        },
-        {
-          "id": "15779",
-          "name": "Doubs, Romeo"
         }
       ]
     },
@@ -18039,7 +18387,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 22.7,
+      "points": 27.12,
       "team": "CHI",
       "draftYear": 2016,
       "draftTeam": "FA",
@@ -18443,7 +18791,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 79.2,
+      "points": 91.5,
       "team": "NO",
       "draftYear": 2022,
       "draftTeam": "NOS",
@@ -18511,7 +18859,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 55,
+      "points": 65.3,
       "team": "DAL",
       "draftYear": 2022,
       "draftTeam": "PIT",
@@ -18584,7 +18932,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 25.3,
+      "points": 30.35,
       "team": "ARI",
       "draftYear": 2022,
       "draftTeam": "ATL",
@@ -18652,7 +19000,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 89.05,
+      "points": 96.5,
       "team": "LAR",
       "draftYear": 2022,
       "draftTeam": "LAR",
@@ -18720,7 +19068,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 36.41,
+      "points": 46.01,
       "team": "CAR",
       "draftYear": 1970,
       "draftTeam": "CAR",
@@ -18766,7 +19114,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 0.2,
+      "points": 18.52,
       "team": "NYG",
       "draftYear": 2024,
       "draftTeam": "MIN",
@@ -18835,7 +19183,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 11.55,
+      "points": 15.25,
       "team": "BUF",
       "draftYear": 2024,
       "draftTeam": "BUF",
@@ -18912,7 +19260,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 55.8,
+      "points": 62.6,
       "team": "SEA",
       "draftYear": 1970,
       "draftTeam": "SEA",
@@ -18958,7 +19306,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 44,
+      "points": 57.4,
       "team": "WAS",
       "draftYear": 2015,
       "draftTeam": "MIN",
@@ -18988,32 +19336,33 @@
           "WR"
         ],
         "experience": 11,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Hamstring",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0031588"
       },
       "nflverse": {
-        "week": 4,
+        "week": 6,
         "season": "2026",
         "player": "Stefon Diggs",
         "team": "WAS",
         "position": "WR",
-        "offenseSnaps": 42,
-        "offenseSnapPct": 0.66,
+        "offenseSnaps": 41,
+        "offenseSnapPct": 0.61,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "DiggSt00",
-        "gamesPlayed": 4,
+        "gamesPlayed": 5,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
-          4
+          4,
+          6
         ]
       },
-      "gamesPlayed": 4,
+      "gamesPlayed": 5,
       "depthChartAhead": [
         {
           "id": "14109",
@@ -19029,7 +19378,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 67.11,
+      "points": 86.51,
       "team": "GB",
       "draftYear": 2025,
       "draftTeam": "GBP",
@@ -19167,7 +19516,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 155.96,
+      "points": 178.26,
       "team": "BUF",
       "draftYear": 2018,
       "draftTeam": "BUF",
@@ -19235,7 +19584,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 48.4,
+      "points": 55.7,
       "team": "HOU",
       "draftYear": 2018,
       "draftTeam": "DAL",
@@ -19303,7 +19652,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 83.25,
+      "points": 94.75,
       "team": "DAL",
       "draftYear": 2021,
       "draftTeam": "DEN",
@@ -19371,7 +19720,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 103.16,
+      "points": 123.18,
       "team": "PIT",
       "draftYear": 2005,
       "draftTeam": "FA",
@@ -19439,7 +19788,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 34.1,
+      "points": 40.1,
       "team": "LAC",
       "draftYear": 2022,
       "draftTeam": "FA",
@@ -19507,7 +19856,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 106.98,
+      "points": 127.86,
       "team": "LAR",
       "draftYear": 2009,
       "draftTeam": "DET",
@@ -19575,7 +19924,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 71.8,
+      "points": 89.7,
       "team": "SF",
       "draftYear": 2017,
       "draftTeam": "SFO",
@@ -19610,28 +19959,29 @@
         "gsisId": "00-0033288"
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "George Kittle",
         "team": "SF",
         "position": "TE",
         "offenseSnaps": 55,
-        "offenseSnapPct": 0.92,
+        "offenseSnapPct": 0.89,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "KittGe00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": null
     },
     {
@@ -19642,7 +19992,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 34.2,
+      "points": 53.1,
       "team": "BUF",
       "draftYear": 2020,
       "draftTeam": "BUF",
@@ -19950,7 +20300,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 110.12,
+      "points": 132.36,
       "team": "GB",
       "draftYear": 2020,
       "draftTeam": "GBP",
@@ -20018,7 +20368,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 101.1,
+      "points": 127.5,
       "team": "KC",
       "draftYear": 2022,
       "draftTeam": "SEA",
@@ -20042,7 +20392,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 36.2,
+      "points": 37.6,
       "team": "TB",
       "draftYear": 2022,
       "draftTeam": "TBB",
@@ -20180,7 +20530,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 42.3,
+      "points": 66.5,
       "team": "LV",
       "draftYear": 2023,
       "draftTeam": "LVR",
@@ -20248,7 +20598,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 70.3,
+      "points": 90.3,
       "team": "CHI",
       "draftYear": 2020,
       "draftTeam": "DET",
@@ -20316,7 +20666,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 20.71,
+      "points": 25.99,
       "team": "TEN",
       "draftYear": 2025,
       "draftTeam": "TEN",
@@ -20401,7 +20751,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 48.45,
+      "points": 69.16,
       "team": "HOU",
       "draftYear": 2025,
       "draftTeam": "HOU",
@@ -20478,7 +20828,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 11.41,
+      "points": 11.21,
       "team": "GB",
       "draftYear": 2025,
       "draftTeam": "PIT",
@@ -20551,7 +20901,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 53.34,
+      "points": 69.1,
       "team": "IND",
       "draftYear": 2019,
       "draftTeam": "NYG",
@@ -20619,7 +20969,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 14.27,
+      "points": 16.46,
       "team": "SEA",
       "draftYear": 2025,
       "draftTeam": "SEA",
@@ -20682,10 +21032,6 @@
           "name": "Smith-Njigba, Jaxon"
         },
         {
-          "id": "16080",
-          "name": "Shaheed, Rashid"
-        },
-        {
           "id": "13164",
           "name": "Kupp, Cooper"
         }
@@ -20699,7 +21045,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 58.7,
+      "points": 70.6,
       "team": "HOU",
       "draftYear": 2016,
       "draftTeam": "FA",
@@ -20834,7 +21180,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 52.6,
+      "points": 61.9,
       "team": "KC",
       "draftYear": 2013,
       "draftTeam": "KCC",
@@ -20901,7 +21247,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 21.8,
+      "points": 23.8,
       "team": "PHI",
       "draftYear": 1970,
       "draftTeam": "PHI",
@@ -20947,7 +21293,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 21.9,
+      "points": 24.8,
       "team": "DEN",
       "draftYear": 2018,
       "draftTeam": "DEN",
@@ -21020,7 +21366,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 96.4,
+      "points": 104.3,
       "team": "GB",
       "draftYear": 2022,
       "draftTeam": "GBP",
@@ -21088,7 +21434,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 22.5,
+      "points": 42.4,
       "team": "TEN",
       "draftYear": 2019,
       "draftTeam": "FA",
@@ -21156,7 +21502,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 10.45,
+      "points": 10.65,
       "team": "NYG",
       "draftYear": 2021,
       "draftTeam": "PIT",
@@ -21500,7 +21846,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 46.4,
+      "points": 49.8,
       "team": "NYJ",
       "draftYear": 1970,
       "draftTeam": "NYJ",
@@ -21546,7 +21892,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 49.58,
+      "points": 54.78,
       "team": "ARI",
       "draftYear": 2023,
       "draftTeam": "ARI",
@@ -21683,7 +22029,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 24.15,
+      "points": 29.65,
       "team": "JAX",
       "draftYear": 2023,
       "draftTeam": "WAS",
@@ -21756,7 +22102,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 24.4,
+      "points": 31.9,
       "team": "SEA",
       "draftYear": 2017,
       "draftTeam": "LAR",
@@ -21818,10 +22164,6 @@
         {
           "id": "16185",
           "name": "Smith-Njigba, Jaxon"
-        },
-        {
-          "id": "16080",
-          "name": "Shaheed, Rashid"
         }
       ]
     },
@@ -21833,7 +22175,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 33.15,
+      "points": 45.65,
       "team": "LAR",
       "draftYear": 2024,
       "draftTeam": "LAR",
@@ -21906,7 +22248,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 30.3,
+      "points": 34.9,
       "team": "SEA",
       "draftYear": 2024,
       "draftTeam": "SEA",
@@ -21974,7 +22316,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 29.5,
+      "points": 41.7,
       "team": "IND",
       "draftYear": 2013,
       "draftTeam": "SDC",
@@ -22046,7 +22388,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 68.1,
+      "points": 80.9,
       "team": "LV",
       "draftYear": 2025,
       "draftTeam": "LVR",
@@ -22139,7 +22481,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -22175,10 +22517,6 @@
         {
           "id": "16211",
           "name": "Nacua, Puka"
-        },
-        {
-          "id": "11675",
-          "name": "Adams, Davante"
         }
       ]
     },
@@ -22304,7 +22642,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 38.7,
+      "points": 44,
       "team": "SF",
       "draftYear": 2018,
       "draftTeam": "CHI",
@@ -22617,7 +22955,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 43.4,
+      "points": 61,
       "team": "DEN",
       "draftYear": 1970,
       "draftTeam": "DEN",
@@ -22732,7 +23070,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 37.6,
+      "points": 50.1,
       "team": "LV",
       "draftYear": 2019,
       "draftTeam": "TBB",
@@ -22793,41 +23131,41 @@
       "depthChartAhead": null
     },
     {
-      "id": "17497",
-      "name": "Tate, Carnell",
-      "position": "WR",
-      "salary": 2900000,
+      "id": "17469",
+      "name": "Daniels, Jalon",
+      "position": "QB",
+      "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "4",
-      "points": 1.1,
-      "team": "TEN",
+      "contractYear": "1",
+      "points": 12.16,
+      "team": "TB",
       "draftYear": 2026,
-      "draftTeam": "TEN",
-      "birthdate": 1106110800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17497_thumb.jpg",
+      "draftTeam": "FA",
+      "birthdate": 1035867600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17469_thumb.jpg",
       "externalIds": {
-        "mfl": "17497",
-        "sleeper": "13279",
+        "mfl": "17469",
+        "sleeper": "13425",
         "gsis": null
       },
       "sleeper": {
-        "id": "13279",
-        "fullName": "Carnell Tate",
-        "team": "TEN",
-        "age": 21,
-        "height": "74",
-        "weight": "192",
-        "number": 14,
-        "college": "Ohio State",
-        "birthDate": "2005-01-19",
+        "id": "13425",
+        "fullName": "Jalon Daniels",
+        "team": "TB",
+        "age": 23,
+        "height": "72",
+        "weight": "219",
+        "number": 10,
+        "college": "Kansas",
+        "birthDate": "2002-10-29",
         "status": "Active",
         "active": true,
-        "position": "WR",
-        "depthChartPosition": "LWR",
+        "position": "QB",
+        "depthChartPosition": "QB",
         "depthChartOrder": 1,
         "fantasyPositions": [
-          "WR"
+          "QB"
         ],
         "experience": 0,
         "injuryStatus": null,
@@ -22837,27 +23175,25 @@
       "nflverse": {
         "week": 6,
         "season": "2026",
-        "player": "Carnell Tate",
-        "team": "TEN",
-        "position": "WR",
-        "offenseSnaps": 34,
-        "offenseSnapPct": 0.74,
+        "player": "Jalon Daniels",
+        "team": "TB",
+        "position": "QB",
+        "offenseSnaps": 74,
+        "offenseSnapPct": 1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
-        "pfrPlayerId": "TateCa00",
-        "gamesPlayed": 6,
+        "pfrPlayerId": "DaniJa03",
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
-          1,
-          2,
           3,
           4,
           5,
           6
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -23093,14 +23429,82 @@
           "name": "Nacua, Puka"
         },
         {
-          "id": "11675",
-          "name": "Adams, Davante"
-        },
-        {
           "id": "16633",
           "name": "Whittington, Jordan"
+        },
+        {
+          "id": "11675",
+          "name": "Adams, Davante"
         }
       ]
+    },
+    {
+      "id": "17497",
+      "name": "Tate, Carnell",
+      "position": "WR",
+      "salary": 2900000,
+      "franchiseId": "0014",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 1.1,
+      "team": "TEN",
+      "draftYear": 2026,
+      "draftTeam": "TEN",
+      "birthdate": 1106110800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17497_thumb.jpg",
+      "externalIds": {
+        "mfl": "17497",
+        "sleeper": "13279",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13279",
+        "fullName": "Carnell Tate",
+        "team": "TEN",
+        "age": 21,
+        "height": "74",
+        "weight": "192",
+        "number": 14,
+        "college": "Ohio State",
+        "birthDate": "2005-01-19",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 6,
+        "season": "2026",
+        "player": "Carnell Tate",
+        "team": "TEN",
+        "position": "WR",
+        "offenseSnaps": 34,
+        "offenseSnapPct": 0.74,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "TateCa00",
+        "gamesPlayed": 6,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "gamesPlayed": 6,
+      "depthChartAhead": null
     },
     {
       "id": "16190",
@@ -23110,7 +23514,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 68.8,
+      "points": 78.5,
       "team": "BAL",
       "draftYear": 2023,
       "draftTeam": "BAL",
@@ -23177,7 +23581,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 15.43,
+      "points": 20.63,
       "team": "WAS",
       "draftYear": 1970,
       "draftTeam": "WAS",
@@ -23223,7 +23627,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 62.3,
+      "points": 73.3,
       "team": "LAR",
       "draftYear": 2023,
       "draftTeam": "LAR",
@@ -23289,7 +23693,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 33.8,
+      "points": 39.2,
       "team": "CHI",
       "draftYear": 2024,
       "draftTeam": "CHI",
@@ -23362,7 +23766,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 70.66,
+      "points": 95.66,
       "team": "WAS",
       "draftYear": 2024,
       "draftTeam": "WAS",
@@ -23397,26 +23801,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Jayden Daniels",
         "team": "WAS",
         "position": "QB",
-        "offenseSnaps": 62,
+        "offenseSnaps": 67,
         "offenseSnapPct": 1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "DaniJa02",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -23462,28 +23867,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Ben Sinnott",
         "team": "WAS",
         "position": "TE",
-        "offenseSnaps": 23,
-        "offenseSnapPct": 0.37,
+        "offenseSnaps": 18,
+        "offenseSnapPct": 0.27,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 13,
-        "stSnapPct": 0.39,
+        "stSnaps": 12,
+        "stSnapPct": 0.52,
         "pfrPlayerId": "SinnBe00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": null
     },
     {
@@ -23494,7 +23900,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 55.5,
+      "points": 64.4,
       "team": "SEA",
       "draftYear": 2014,
       "draftTeam": "FA",
@@ -23562,7 +23968,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 35.3,
+      "points": 38.5,
       "team": "WAS",
       "draftYear": 2019,
       "draftTeam": "WAS",
@@ -23592,32 +23998,33 @@
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Knee",
         "gsisId": " 00-0035659"
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Terry McLaurin",
         "team": "WAS",
         "position": "WR",
-        "offenseSnaps": 36,
-        "offenseSnapPct": 0.58,
+        "offenseSnaps": 7,
+        "offenseSnapPct": 0.1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "McLaTe00",
-        "gamesPlayed": 4,
+        "gamesPlayed": 5,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 4,
+      "gamesPlayed": 5,
       "depthChartAhead": null
     },
     {
@@ -23628,7 +24035,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 47.6,
+      "points": 56.2,
       "team": "NE",
       "draftYear": 1970,
       "draftTeam": "NEP",
@@ -23674,7 +24081,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 15.9,
+      "points": 19.1,
       "team": "BUF",
       "draftYear": 2019,
       "draftTeam": "DET",
@@ -23745,7 +24152,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 7.2,
+      "points": 14.5,
       "team": "NYJ",
       "draftYear": 2025,
       "draftTeam": "NYJ",
@@ -23816,7 +24223,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 77.05,
+      "points": 101,
       "team": "SF",
       "draftYear": 2017,
       "draftTeam": "CAR",
@@ -23851,28 +24258,29 @@
         "gsisId": "00-0033280"
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Christian McCaffrey",
         "team": "SF",
         "position": "RB",
-        "offenseSnaps": 49,
-        "offenseSnapPct": 0.82,
+        "offenseSnaps": 53,
+        "offenseSnapPct": 0.85,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "McCaCh01",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": null
     },
     {
@@ -23883,7 +24291,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 28.1,
+      "points": 31.4,
       "team": "DEN",
       "draftYear": 2017,
       "draftTeam": "NYG",
@@ -24019,7 +24427,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 43.7,
+      "points": 45.1,
       "team": "BAL",
       "draftYear": 2018,
       "draftTeam": "BAL",
@@ -24157,7 +24565,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 53.22,
+      "points": 55.14,
       "team": "ATL",
       "draftYear": 2022,
       "draftTeam": "WAS",
@@ -24230,7 +24638,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 111.84,
+      "points": 124.86,
       "team": "DAL",
       "draftYear": 2016,
       "draftTeam": "FA",
@@ -24298,7 +24706,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 83.1,
+      "points": 92.8,
       "team": "IND",
       "draftYear": 2024,
       "draftTeam": "FA",
@@ -24366,7 +24774,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 40.5,
+      "points": 43.9,
       "team": "PHI",
       "draftYear": 2023,
       "draftTeam": "GBP",
@@ -24439,7 +24847,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 12.34,
+      "points": 19.84,
       "team": "NO",
       "draftYear": 2023,
       "draftTeam": "NOS",
@@ -24511,7 +24919,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 30.49,
+      "points": 32.49,
       "team": "CLE",
       "draftYear": 2026,
       "draftTeam": "CLE",
@@ -24763,7 +25171,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 142.64,
+      "points": 162,
       "team": "SF",
       "draftYear": 2022,
       "draftTeam": "SFO",
@@ -24798,28 +25206,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 5,
+        "week": 6,
         "season": "2026",
         "player": "Brock Purdy",
         "team": "SF",
         "position": "QB",
-        "offenseSnaps": 60,
+        "offenseSnaps": 62,
         "offenseSnapPct": 1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "PurdBr00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
-          5
+          5,
+          6
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": null
     },
     {
@@ -24830,7 +25239,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 120.96,
+      "points": 140.36,
       "team": "SEA",
       "draftYear": 2023,
       "draftTeam": "SEA",
@@ -24906,10 +25315,32 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16286_thumb.jpg",
       "externalIds": {
         "mfl": "16286",
-        "sleeper": null,
+        "sleeper": "10937",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "10937",
+        "fullName": "Jake Moody",
+        "team": "BAL",
+        "age": 26,
+        "height": "73",
+        "weight": "210",
+        "number": 45,
+        "college": "Michigan",
+        "birthDate": "1999-11-23",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -24989,7 +25420,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 46.8,
+      "points": 59.4,
       "team": "PIT",
       "draftYear": 1970,
       "draftTeam": "PIT",
@@ -25035,7 +25466,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 67.45,
+      "points": 72.85,
       "team": "TB",
       "draftYear": 2024,
       "draftTeam": "TBB",
@@ -25181,7 +25612,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 26.3,
+      "points": 37.1,
       "team": "KC",
       "draftYear": 2024,
       "draftTeam": "KCC",
@@ -25248,7 +25679,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 105.8,
+      "points": 110.05,
       "team": "BAL",
       "draftYear": 2016,
       "draftTeam": "TEN",
@@ -25316,7 +25747,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 67.74,
+      "points": 76.52,
       "team": "TEN",
       "draftYear": 2025,
       "draftTeam": "TEN",
@@ -25451,7 +25882,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 58.3,
+      "points": 62.7,
       "team": "BAL",
       "draftYear": 2025,
       "draftTeam": "BAL",
@@ -25595,7 +26026,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 70.9,
+      "points": 77.3,
       "team": "NYJ",
       "draftYear": 2022,
       "draftTeam": "NYJ",
@@ -25663,7 +26094,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 53.1,
+      "points": 62.5,
       "team": "HOU",
       "draftYear": 2021,
       "draftTeam": "HOU",
@@ -25729,7 +26160,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 31.8,
+      "points": 44,
       "team": "BAL",
       "draftYear": 1970,
       "draftTeam": "BAL",
@@ -25826,7 +26257,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 19.2,
+      "points": 39.8,
       "team": "CAR",
       "draftYear": 2021,
       "draftTeam": "CAR",
@@ -25970,7 +26401,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 23.7,
+      "points": 36.1,
       "team": "GB",
       "draftYear": 2026,
       "draftTeam": "GBP",
