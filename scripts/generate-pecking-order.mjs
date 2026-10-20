@@ -712,28 +712,37 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
 }
 
 /**
- * WHY THIS LANE QUEUES BUT DOES NOT WAIT.
+ * The Tuesday column waits for its own issue permalink before announcing.
  *
- * The announcement still moves behind the workflow's commit step (so it cannot
- * go out at all if that step failed, and never before the push) — but unlike
- * the Schefter columns it does not probe a URL first, because neither
- * candidate can answer honestly today:
+ * The landing page `/pecking-order` cannot be the probe: it answers 200 in
+ * every week of the season, and while the deploy is in flight it is the page
+ * that shows LAST week's column. That is exactly what owners saw on
+ * 2026-10-20, when this lane announced with no wait at all: the Week 6 post
+ * went out at 11:29, the deploy carrying Week 6 had only just started
+ * building, and GroupMe's unfurl (and every owner who tapped within those
+ * minutes) got Week 5.
  *
- *  - `/pecking-order` answers 200 in every week of the season. It is the page
- *    that shows LAST week's column while the deploy is in flight, so waiting
- *    on it is waiting on nothing.
- *  - `/<league>/pecking-order/<year>/<week>` would be the honest probe — it is
- *    prerendered per issue, so an undeployed week has no path — except that
- *    route returns **500 in production today**, on every issue, in both
- *    leagues. A probe against it could only ever burn its full timeout and
- *    push the announcement 12 minutes late. The Thursday reveal, which lands
- *    against a kickoff margin, is the worst possible place for that.
- *
- * Both halves — the 500, and the marker the reveal needs on top of a status
- * code because it AMENDS a page rather than creating one — are written up in
+ * `/<league>/pecking-order/<year>/<week>` is honest: it is server-rendered off
+ * the deployed bundle's own glob of issue files and answers 404 for a week it
+ * does not have, so it turns 200 in the same deploy that updates the landing
+ * page. It used to be prerendered, which made it 500 on every apex host and
+ * forced this lane to skip the wait — see
  * docs/claude/followups/2026-09-17-pecking-order-permalink-500.md.
+ *
+ * League-PREFIXED, like every verifyPath: `awaitPublished` runs it through
+ * `leagueUrl`, which strips the prefix on the league's apex host.
  */
-const VERIFY_PATH = null;
+export function issuePermalink(league, year, week) {
+  return `/${league.slug}/pecking-order/${year}/${week}`;
+}
+
+/**
+ * The Thursday reveal still sends without a wait. It AMENDS Tuesday's issue,
+ * so the permalink has answered 200 since Tuesday and a status code cannot
+ * tell the tallied page from the open ballot — it needs a body marker (step 3
+ * of the follow-up doc above), which does not exist yet.
+ */
+const REVEAL_VERIFY_PATH = null;
 
 /**
  * Queue Tuesday's announcement. It is SENT by
@@ -747,7 +756,10 @@ async function queueAnnouncement(issue, teams, league, { year, week, push, voter
     league: league.slug,
     kind: 'pecking-order',
     postId: `pecking-order-${year}-${week}`,
-    verifyPath: VERIFY_PATH,
+    verifyPath: issuePermalink(league, year, week),
+    // A post that beats the deploy sends owners to last week's column, so on
+    // a timeout say nothing rather than say the wrong thing.
+    skipIfNotLive: true,
     groupMeText: buildGroupMeAnnouncement(issue, teams, league),
     botEnv: GROUPME_BOT_ENV[league.slug],
     push,
@@ -876,14 +888,14 @@ async function runClosePoll(opts, league) {
     // before the deploy sends every owner to a page still showing an open
     // ballot and inviting them to vote in a poll that has closed.
     //
-    // No probe — see VERIFY_PATH. Note the reveal's own feed post could not
+    // No probe — see REVEAL_VERIFY_PATH. Note the reveal's own feed post could not
     // have served as one either: buildRevealFeedPost emits
     // type 'power-ranking', and news/[id].astro only ever serves an article.
     const { file, size } = await enqueueAnnounce(projectRoot, {
       league: league.slug,
       kind: 'owners-poll-close',
       postId: `owners-poll-close-${redisWindowYear}-${week}`,
-      verifyPath: VERIFY_PATH,
+      verifyPath: REVEAL_VERIFY_PATH,
       groupMeText: text || null,
       botEnv: GROUPME_BOT_ENV[league.slug],
       push: null,

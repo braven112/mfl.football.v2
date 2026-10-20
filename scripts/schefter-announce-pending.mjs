@@ -83,6 +83,21 @@ export async function announceOne(entry, {
   const published = entry.verifyPath && !isDry
     ? await wait({ league, path: entry.verifyPath, log })
     : { live: true, attempts: 0 };
+
+  // Failing open is right for an article, whose promo still points somewhere
+  // useful once the deploy lands. It is wrong for a lane whose link would
+  // show LAST week's content until then (the Pecking Order): there, a late
+  // post is worth nothing and an early one tells the league the wrong week.
+  // Such an entry opts out with `skipIfNotLive`, and every channel in it —
+  // chat and both pushes — is dropped together so they cannot disagree.
+  if (!published.live && entry.skipIfNotLive) {
+    log.warn?.(
+      `  [announce] ${entry.postId} is not live after the full wait — NOT announcing ` +
+        '(skipIfNotLive). The page itself still publishes when the deploy lands.',
+    );
+    return { announced: false, reason: 'not live', live: false };
+  }
+
   let posted = false;
 
   // A Slack league posts the same copy to its channel, as its persona, under

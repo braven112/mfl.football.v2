@@ -265,20 +265,43 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
     }
   });
 
-  it('queues without a probe — neither candidate URL can answer honestly', () => {
+  it('the Tuesday column waits on its issue permalink, never the landing page', async () => {
     // `/pecking-order` answers 200 every week of the season, so waiting on it
-    // is waiting on nothing. The per-issue permalink WOULD be honest (it is
-    // prerendered, so an undeployed week has no path) except that route 500s
-    // in production today, in both leagues — a probe against it could only
-    // burn its full timeout and push the reveal into the kickoff margin.
-    // docs/claude/followups/2026-09-17-pecking-order-permalink-500.md
-    expect(generator).toMatch(/const VERIFY_PATH = null;/);
-    expect(generator.match(/verifyPath: VERIFY_PATH,/g) ?? []).toHaveLength(2);
+    // is waiting on nothing — and announcing with NO wait is what showed
+    // owners Week 5 under the Week 6 post on 2026-10-20 (the deploy carrying
+    // Week 6 started building the minute the chat message went out).
+    expect(generator).toMatch(/verifyPath: issuePermalink\(league, year, week\),/);
+    // And it does NOT fail open: an early post names the wrong week, so on a
+    // timeout the column says nothing (Brandon, 2026-10-20).
+    expect(generator).toMatch(/skipIfNotLive: true,/);
     expect(generator).not.toMatch(/verifyPath: '\/pecking-order'/);
+    const { issuePermalink } = await import('../scripts/generate-pecking-order.mjs');
+    expect(issuePermalink({ slug: 'afl-fantasy' }, 2026, 6)).toBe('/afl-fantasy/pecking-order/2026/6');
+
+    // The reveal AMENDS Tuesday's issue, so a status code cannot tell it apart
+    // from the open ballot: it stays unprobed until it has a body marker.
+    // docs/claude/followups/2026-09-17-pecking-order-permalink-500.md
+    expect(generator).toMatch(/const REVEAL_VERIFY_PATH = null;/);
+    expect(generator.match(/verifyPath: REVEAL_VERIFY_PATH,/g) ?? []).toHaveLength(1);
 
     // Queueing is still the point: the announcement cannot go out ahead of the
     // commit step, and cannot go out at all if that step failed.
     expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(2);
+  });
+
+  it('the probed permalink is server-rendered and 404s a week it does not have', async () => {
+    // Prerendered, the route was a static file the apex-host middleware rewrite
+    // never reached, so it 500'd on every league domain and could not be a
+    // probe. And it must 404 an undeployed week, or the probe passes early.
+    for (const league of ['theleague', 'afl-fantasy', 'archies']) {
+      const src = await fs.readFile(
+        path.join(REPO_ROOT, `src/pages/${league}/pecking-order/[year]/[week].astro`),
+        'utf8',
+      );
+      expect(src, league).toMatch(/export const prerender = false;/);
+      expect(src, league).not.toMatch(/getStaticPaths/);
+      expect(src, league).toMatch(/if \(!issue\) Astro\.response\.status = 404;/);
+    }
   });
 
   it('the reveal could not have probed its own feed post', () => {
@@ -400,5 +423,37 @@ describe('announceOne', () => {
       { dryRun: true, log: silent },
     );
     expect(bad.announced).toBe(false);
+  });
+  it('skipIfNotLive drops every channel when the page never went live', async () => {
+    // The Pecking Order's link shows LAST week's column until the deploy
+    // lands, so a timed-out wait must announce nothing — not chat, not push.
+    const { announceOne } = await import('../scripts/schefter-announce-pending.mjs');
+    const lines: string[] = [];
+    const entry = {
+      league: 'theleague',
+      kind: 'roger-reply',
+      postId: 'po_skip',
+      verifyPath: '/theleague/pecking-order/2026/6',
+      groupMeText: 'x',
+      botEnv: 'GROUPME_BOT_ID_DELIBERATELY_UNSET',
+      push: { franchiseIds: ['0001'], title: 'T', body: 'B', url: '/x', tag: 'po_skip' },
+      voterPushes: [{ franchiseId: '0001' }],
+      skipIfNotLive: true,
+    };
+    const result = await announceOne(entry, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (...a: unknown[]) => lines.push(a.join(' ')), warn: (...a: unknown[]) => lines.push(a.join(' ')) },
+    });
+    expect(result).toMatchObject({ announced: false, reason: 'not live' });
+    expect(lines.join('\n')).toContain('NOT announcing');
+    expect(lines.join('\n')).not.toContain('not set'); // never reached the chat send
+
+    // Without the flag the default stays fail-open, as articles want.
+    const order: string[] = [];
+    await announceOne({ ...entry, push: null, voterPushes: null, skipIfNotLive: undefined }, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (m: string) => { if (String(m).includes('not set')) order.push('send'); }, warn: () => {} },
+    });
+    expect(order).toEqual(['send']);
   });
 });
