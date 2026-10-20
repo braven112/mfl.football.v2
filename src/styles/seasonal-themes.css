@@ -573,3 +573,19 @@ html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before {
 @media (prefers-reduced-motion: reduce) {
   html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before { animation: none; }
 }
+
+/* A Santa hat cocked on the league crest in the header. */
+html[data-season='christmas'] .league_logo {
+  position: relative;
+}
+html[data-season='christmas'] .league_logo::after {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: -9px;
+  width: 34px;
+  height: 30px;
+  background: url('/assets/seasonal/christmas/santa-hat.svg') center / contain no-repeat;
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
