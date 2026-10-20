@@ -757,6 +757,9 @@ async function queueAnnouncement(issue, teams, league, { year, week, push, voter
     kind: 'pecking-order',
     postId: `pecking-order-${year}-${week}`,
     verifyPath: issuePermalink(league, year, week),
+    // A post that beats the deploy sends owners to last week's column, so on
+    // a timeout say nothing rather than say the wrong thing.
+    skipIfNotLive: true,
     groupMeText: buildGroupMeAnnouncement(issue, teams, league),
     botEnv: GROUPME_BOT_ENV[league.slug],
     push,
