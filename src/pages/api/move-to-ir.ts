@@ -13,10 +13,11 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
+import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
-import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueById } from '../../config/leagues';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -54,8 +55,13 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+    // Leagues roll to the new MFL year on different clocks (TheLeague Feb 14,
+    // AFL June 1) — same rule cut-player.ts follows.
+    const league = getLeagueById(leagueId);
+    const year = league?.leagueYearRollover
+      ? getRolloverLeagueYear(league.leagueYearRollover)
+      : getCurrentLeagueYear();
 
     const mflClient = createMFLApiClient({
       leagueId,
@@ -63,13 +69,30 @@ export const POST: APIRoute = async ({ request }) => {
       mflUserId: user.id,
     });
 
-    // Verify the player is on the user's roster (active OR currently on IR)
-    const rosters = await mflClient.getRosters();
+    // Verify the player is on the user's roster (active OR currently on IR),
+    // reading MFL live — never the roster cache, which can lag a write.
+    const rosters = await mflClient.getRosterEntries();
     const userRoster = rosters[user.franchiseId] || [];
-    if (!userRoster.includes(playerId)) {
+    const entry = userRoster.find((p) => p.id === playerId);
+    if (!entry) {
       return new Response(
         JSON.stringify({ success: false, message: 'You can only move players from your own roster.' }),
         { status: 403, headers: JSON_HEADERS },
+      );
+    }
+
+    // Already where the owner asked to put him. MFL answers a repeat
+    // DEACTIVATE with "Cannot Be Deactivated Because Is Not On Franchise …
+    // Roster" (it means the ACTIVE roster), which reads as if the player had
+    // been dropped. Report the real state instead, as a success, so a page
+    // still showing the pre-move roster catches up rather than erroring.
+    const onIR = entry.status === 'INJURED_RESERVE';
+    if ((direction === 'to' && onIR) || (direction === 'from' && !onIR)) {
+      await bustRosterCaches(String(year), leagueId).catch(() => {});
+      const message = direction === 'to' ? 'Player is already on IR' : 'Player is already active';
+      return new Response(
+        JSON.stringify({ success: true, message, alreadyDone: true }),
+        { status: 200, headers: JSON_HEADERS },
       );
     }
 
@@ -87,6 +110,10 @@ export const POST: APIRoute = async ({ request }) => {
         { status: result.blocked ? 503 : 400, headers: JSON_HEADERS },
       );
     }
+
+    // The roster page reads a 60 s Redis cache; without this bust a reload
+    // right after the move still shows the player on the active roster.
+    await bustRosterCaches(String(year), leagueId).catch(() => {});
 
     const message = direction === 'to' ? 'Player moved to IR' : 'Player activated from IR';
     return new Response(

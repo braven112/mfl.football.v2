@@ -17,6 +17,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
@@ -186,6 +187,10 @@ export const POST: APIRoute = async ({ request }) => {
         { status: result.blocked ? 503 : 400, headers: JSON_HEADERS },
       );
     }
+
+    // Same 60 s roster cache as /api/move-to-ir: bust it or a reload still
+    // shows the pre-move roster.
+    await bustRosterCaches(year, leagueId).catch(() => {});
 
     const message = direction === 'to' ? 'Player moved to practice squad' : 'Player promoted to active roster';
     return new Response(

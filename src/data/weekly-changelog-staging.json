@@ -207,6 +207,14 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-10-20",
+      "type": "bug-fix",
+      "summary": "Moving a player to or from IR now moves him to the right section of your roster right away, and trying the same move twice no longer shows a confusing MFL error.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
     }
   ]
 }
