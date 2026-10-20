@@ -189,6 +189,12 @@ export interface LivePanel {
   status: LiveLeagueStatus;
   matchups: LiveMatchup[];
   /**
+   * Decimal places this league shows fantasy points with — MFL's own
+   * `precision` league setting. Absent where it could not be read; the board
+   * then shows `DEFAULT_SCORE_PRECISION`.
+   */
+  scorePrecision?: number;
+  /**
    * MFL's official standings, in MFL's order — the Standings tab.
    *
    * OPTIONAL, and the three states are distinct on purpose:

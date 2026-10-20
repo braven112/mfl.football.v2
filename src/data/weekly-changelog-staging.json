@@ -191,6 +191,22 @@
       "impact": "user",
       "area": "rankings",
       "league": "both"
+    },
+    {
+      "date": "2026-10-19",
+      "type": "bug-fix",
+      "summary": "Live matchup scores now show two decimals, so every player and team total matches MFL exactly.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-20",
+      "type": "enhancement",
+      "summary": "Live scores now move the moment ESPN records a stat, before MFL catches up, so player points, team totals and win odds update faster.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

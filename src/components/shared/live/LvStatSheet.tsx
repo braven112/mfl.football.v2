@@ -29,37 +29,11 @@ import {
   type LiveScoringRulesResponse,
 } from '../../../utils/live/scoring-rules';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
+import { useScoreFormat } from './score-format';
+import { loadRules } from './rules-cache';
 
 const fmt = (n: number) => n.toFixed(2);
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
-
-/**
- * One request per (league, year) per page life. A FAILED read is dropped from
- * the cache so the next open retries — never pin a failure.
- */
-const rulesCache = new Map<string, Promise<LiveScoringRulesResponse>>();
-
-function loadRules(leagueId: string, year: number): Promise<LiveScoringRulesResponse> {
-  const key = `${leagueId}:${year}`;
-  let hit = rulesCache.get(key);
-  if (!hit) {
-    const failed: LiveScoringRulesResponse = { ok: false, leagueId, year: String(year), rules: null };
-    hit = fetch(
-      `/api/live-scoring-rules?L=${encodeURIComponent(leagueId)}&year=${encodeURIComponent(String(year))}`,
-      { headers: { Accept: 'application/json' } },
-    )
-      .then((res) => res.json())
-      // `res.ok` is not "the data is good" — gate on the flag.
-      .then((data: LiveScoringRulesResponse) => (data && data.ok === true ? data : failed))
-      .catch(() => failed)
-      .then((data) => {
-        if (!data.ok) rulesCache.delete(key);
-        return data;
-      });
-    rulesCache.set(key, hit);
-  }
-  return hit;
-}
 
 type RulesState =
   | { status: 'loading' }
@@ -89,6 +63,7 @@ export default function LvStatSheet({
   franchiseName,
   onClose,
 }: LvStatSheetProps): JSX.Element | null {
+  const score = useScoreFormat();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const [rules, setRules] = useState<RulesState>({ status: 'loading' });
@@ -223,8 +198,8 @@ export default function LvStatSheet({
               {[positionLabel(position) || position, team, franchiseName].filter(Boolean).join(' · ')}
             </p>
           </div>
-          <div className="lv-sheet__total" aria-label={`${fmt(row.live)} points`}>
-            {row.live.toFixed(1)}
+          <div className="lv-sheet__total" aria-label={`${score(row.live)} points`}>
+            {score(row.live)}
             <span className="lv-sheet__pts">pts</span>
           </div>
           <button type="button" className="lv-sheet__close" onClick={close} aria-label="Close">
@@ -293,7 +268,7 @@ export default function LvStatSheet({
                   <th scope="row" colSpan={showPoints ? 2 : 1}>
                     Total
                   </th>
-                  <td className="lv-sheet__num">{fmt(row.live)}</td>
+                  <td className="lv-sheet__num">{score(row.live)}</td>
                 </tr>
               </tfoot>
             </table>
