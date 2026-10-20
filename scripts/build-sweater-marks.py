@@ -81,6 +81,11 @@ def stitch(d, x, y, col, rot=False):
     # one knit "V": two tilted lobes; rot turns it 90 degrees so the V runs
     # along a side edge
     cx, cy = x + CELL / 2, y + CELL / 2
+    bright = sum(col) / 3 > 200
+    if bright:
+        # fill the gaps between the lobes too, so the dark ground does not
+        # bleed through and tint a white mark
+        d.rectangle((x, y, x + CELL, y + CELL), fill=shade(col, 0.8))
     T = (lambda p: (cx - (p[1] - cy), cy + (p[0] - cx))) if rot else (lambda p: p)
     for sgn in (-1, 1):
         a = math.radians(sgn * 28)
@@ -91,7 +96,9 @@ def stitch(d, x, y, col, rot=False):
             rx = ex * math.cos(a) - ey * math.sin(a)
             ry = ex * math.sin(a) + ey * math.cos(a)
             pts.append((cx + sgn * CELL * 0.2 + rx, cy + ry))
-        d.polygon([T(p) for p in pts], fill=shade(col, 0.72))
+        # light yarn keeps most of its brightness in the shadow lobe, or a
+        # white mark knits up grey (owner, Oct 2026: "the brights are faded")
+        d.polygon([T(p) for p in pts], fill=shade(col, 0.88 if bright else 0.72))
         inner = [((px - cx) * 0.8 + cx - sgn * 1, (py - cy) * 0.8 + cy - 2) for px, py in pts]
         d.polygon([T(p) for p in inner], fill=col)
         hl = [((px - cx) * 0.35 + cx + sgn * CELL * 0.07 - 3, (py - cy) * 0.45 + cy - CELL * 0.12) for px, py in pts]
@@ -323,7 +330,8 @@ def palette(t, league=None):
     motif = max(others, key=lambda c: min(cr(c, base), 3) + .3 * cr(c, ink)) if others else ink
     if cr(motif, base) < 1.6: motif = ink
     o = OVERRIDES.get((league, t['franchiseId']), {})
-    return yarn(o.get('base', base)), yarn(o.get('ink', ink)), o.get('motif', yarn(motif))
+    # the centre mark's white stays pure white; only body and trim yarn is warmed
+    return yarn(o.get('base', base)), o.get('ink', ink), o.get('motif', yarn(motif))
 
 
 def main():
