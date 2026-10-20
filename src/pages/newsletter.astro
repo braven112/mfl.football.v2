@@ -1,0 +1,122 @@
+---
+/**
+ * /newsletter — signup for the monthly mfl.football email.
+ *
+ * Belongs to no league, so it lives at the root of the shared host like
+ * /instructions, in the MFL app shell. The form posts to
+ * /api/newsletter/subscribe, which hands the address to Kit and redirects back
+ * here with ?status=. Kit sends the confirmation email (double opt-in) and owns
+ * unsubscribes, so this page never stores an address.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { KIT_NEWSLETTER_FORM_ID } from '../utils/kit';
+
+// SSR: the status message comes from the query string after the redirect.
+export const prerender = false;
+
+const open = Boolean(KIT_NEWSLETTER_FORM_ID);
+
+const MESSAGES: Record<string, { tone: 'ok' | 'warn'; text: string }> = {
+	ok: { tone: 'ok', text: 'Almost done. Check your inbox and click the confirmation link to finish subscribing.' },
+	invalid: { tone: 'warn', text: "That email address doesn't look right. Please check it and try again." },
+	busy: { tone: 'warn', text: 'Too many attempts from this connection. Please try again in an hour.' },
+	closed: { tone: 'warn', text: "Signups aren't open just yet. Please check back soon." },
+	error: { tone: 'warn', text: "Something went wrong on our end and you weren't subscribed. Please try again later." },
+};
+const message = MESSAGES[Astro.url.searchParams.get('status') ?? ''];
+---
+
+<MflAppLayout title="Newsletter — mfl.football" description="A short monthly email about what's new on mfl.football: new features for MyFantasyLeague leagues, in one place.">
+	<article class="nl">
+		<h1 class="nl__title">The mfl.football newsletter</h1>
+		<p class="nl__lede">
+			One short email a month about what's new on mfl.football: live scoring, draft tools, league
+			news and everything else built for MyFantasyLeague leagues. No spam, and you can unsubscribe
+			with one click from any issue.
+		</p>
+
+		{message && (
+			<p class={`nl__status nl__status--${message.tone}`} role="status">{message.text}</p>
+		)}
+
+		{open ? (
+			<form class="nl__form" method="post" action="/api/newsletter/subscribe">
+				<label class="nl__field">
+					<span>First name <span class="nl__optional">(optional)</span></span>
+					<input type="text" name="first_name" autocomplete="given-name" maxlength="60" />
+				</label>
+				<label class="nl__field">
+					<span>Email</span>
+					<input type="email" name="email" autocomplete="email" required maxlength="254" />
+				</label>
+				<label class="nl__trap" aria-hidden="true">
+					Leave this empty
+					<input type="text" name="website" tabindex="-1" autocomplete="off" />
+				</label>
+				<button type="submit" class="cta cta--primary">Subscribe</button>
+				<p class="nl__fine">We'll email you a link to confirm. Your address is only used for this newsletter.</p>
+			</form>
+		) : (
+			!message && <p class="nl__status nl__status--warn">Signups aren't open just yet. Please check back soon.</p>
+		)}
+	</article>
+</MflAppLayout>
+
+<style>
+	.nl {
+		max-width: 36rem;
+		margin: 0 auto;
+		color: var(--page-text);
+	}
+	.nl__title {
+		margin: 0 0 0.35rem;
+		font-size: clamp(1.6rem, 5vw, 2.2rem);
+	}
+	.nl__lede {
+		margin: 0 0 1.25rem;
+		line-height: 1.55;
+		color: var(--color-text-secondary);
+	}
+	.nl__status {
+		padding: 0.6rem 0.8rem;
+		border-left: 3px solid var(--league-accent);
+		background: var(--card-bg);
+	}
+	.nl__form {
+		display: grid;
+		gap: 0.9rem;
+	}
+	.nl__field {
+		display: grid;
+		gap: 0.3rem;
+		font-weight: 600;
+	}
+	.nl__field input {
+		padding: 0.55rem 0.7rem;
+		font: inherit;
+		font-weight: 400;
+		color: var(--page-text);
+		background: var(--card-bg);
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 6px;
+	}
+	.nl__optional {
+		font-weight: 400;
+		color: var(--color-text-secondary);
+	}
+	.nl__trap {
+		position: absolute;
+		left: -10000px;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+	}
+	.nl__form .cta {
+		justify-self: start;
+	}
+	.nl__fine {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+</style>

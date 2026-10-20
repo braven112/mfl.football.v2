@@ -1,0 +1,55 @@
+name: Newsletter Monthly Draft
+
+# Drafts last month's mfl.football newsletter in Kit from the month's What's
+# New articles. DRAFT ONLY: nothing is emailed until Brandon sends it from Kit.
+# The work happens in production (/api/newsletter/monthly-draft) because the
+# Kit key lives in Vercel; this job only calls it.
+#
+# The 2nd of the month at 17:00 UTC, so the last Monday rollup of the month has
+# landed. GitHub drops scheduled runs at times; the route is idempotent per
+# month, so a manual dispatch catches up safely.
+
+on:
+  schedule:
+    - cron: "0 17 2 * *"
+  workflow_dispatch:
+    inputs:
+      month:
+        description: "Month to draft as YYYY-MM (blank = last month)"
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: "Build the issue and print it without creating a Kit draft"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: newsletter-monthly-draft
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Draft the newsletter in Kit
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          MONTH: ${{ inputs.month }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=()
+          if [ -n "$MONTH" ]; then ARGS+=(--month "$MONTH"); fi
+          if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
+          node ./scripts/newsletter-monthly-draft.mjs "${ARGS[@]}"
