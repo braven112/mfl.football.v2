@@ -70,7 +70,10 @@ for (const division of divisions) {
 const championFor = (division: string): Champion | undefined => {
   const c = defendingChampions?.[division];
   if (!c?.icon || !championYear) return undefined;
-  return { name: c.name, icon: c.icon, year: championYear, round: c.id ? roundById.get(c.id) : undefined, id: c.id };
+  return { name: c.name, icon: c.icon, year: championYear, round: c.id ? roundById.get(c.id) : undefined,
+    // Only a club still playing under its name wears today's seasonal mark; a
+    // retired identity keeps its own crest (owner, Oct 2026).
+    id: c.id && configById.get(c.id)?.name === c.name ? c.id : undefined };
 };
 
 // ---- Division board ----
