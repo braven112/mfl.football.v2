@@ -24,7 +24,7 @@ SEASON, MARKS, SIZE = 'christmas', 'christmas-marks', 200
 
 COLS = ROWS = 60
 CELL = 32          # supersampled cell size
-BAND = 7           # rows per border band
+# a border band is its motif's height plus a row of accent above and below
 
 TREE = ["..X..", ".XXX.", "..X..", ".XXX.", "XXXXX"]
 FLAKE = ["X.X.X", ".XXX.", "XX.XX", ".XXX.", "X.X.X"]
@@ -32,6 +32,10 @@ FLAKE = ["X.X.X", ".XXX.", "XX.XX", ".XXX.", "X.X.X"]
 CARROT = [".G.G.", ".XXX.", ".XXX.", "..X..", "..X.."]
 # a menorah with lit (G) flames: Harambe's nod to Hanukkah (owner, Oct 2026)
 MENORAH = ["G.G.G", "X.X.X", "XXXXX", "..X..", ".XXX."]
+# binary for Computer Jocks, a pot leaf for Smokane (owner, Oct 2026)
+ONE = ["..X..", ".XX..", "..X..", "..X..", ".XXX."]
+ZERO = [".XXX.", "X...X", "X...X", "X...X", ".XXX."]
+LEAF = ["....X....", "X...X...X", ".X.XXX.X.", "..XXXXX..", "XXX.X.XXX", "....X....", "....X...."]
 
 def hexrgb(h): return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
 def shade(c, f): return tuple(max(0, min(255, int(v * f))) for v in c)
@@ -60,10 +64,11 @@ def band_grid(motif, accent, alt, base, leaf=None):
     # `motif` is one shape, or a list of same-sized shapes knit in turn
     shapes = motif if isinstance(motif[0], list) else [motif]
     motif = shapes[0]
-    g = [[base] * COLS for _ in range(BAND)]
+    band = len(motif) + 2
+    g = [[base] * COLS for _ in range(band)]
     for c in range(COLS):
         g[0][c] = accent
-        g[BAND - 1][c] = accent
+        g[band - 1][c] = accent
     w = len(motif[0]) + 1
     # centre the repeat: equal margin left and right of the motif run
     off = (COLS - (COLS // w) * w + 1) // 2
@@ -83,24 +88,27 @@ def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, cen
     base, ink, accent = map(hexrgb, (base, ink, accent))
     grid = [[base] * COLS for _ in range(ROWS)]
     top = band_grid(motif, accent, alt, base, hexrgb(leaf) if leaf else None)
-    for r in range(BAND):
+    band = len(top)
+    for r in range(band):
         grid[r] = top[r][:]
-        grid[ROWS - 1 - r] = top[r][:]
+        # the bottom band repeats the top one rather than mirroring it, so
+        # motifs with an up (carrots, menorahs, digits) stay upright
+        grid[ROWS - band + r] = top[r][:]
     # zigzag separators
     for c in range(COLS):
         z = c % 4
-        grid[BAND][c] = accent if z in (0,) else base
-        grid[BAND + 1][c] = accent if z in (1, 3) else base
-        grid[ROWS - 1 - BAND][c] = accent if z in (0,) else base
-        grid[ROWS - 2 - BAND][c] = accent if z in (1, 3) else base
-    area = ROWS - 2 * (BAND + 2) - 4
+        grid[band][c] = accent if z in (0,) else base
+        grid[band + 1][c] = accent if z in (1, 3) else base
+        grid[ROWS - 1 - band][c] = accent if z in (0,) else base
+        grid[ROWS - 2 - band][c] = accent if z in (1, 3) else base
+    area = ROWS - 2 * (band + 2) - 4
     m = Image.open(mark_path).convert('RGBA').split()[3]
     m = m.crop(m.getbbox())
     w, h = m.size
     sc = area / max(w, h)
     mw, mh = max(1, round(w * sc)), max(1, round(h * sc))
     m = m.resize((mw, mh), Image.BOX)
-    r0 = BAND + 3 + (area - mh) // 2
+    r0 = band + 3 + (area - mh) // 2
     # centre by the mark's visual weight, not its bounding box: a lopsided
     # outline (Wabbits' ears) otherwise sits visibly off to one side
     # `centre_rows` limits that to a band of the mark (Wabbits: the face,
@@ -145,7 +153,7 @@ def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, cen
     o = Image.new('RGBA', (768, 768)); o.paste(img, (0, 0), mask)
     return o
 
-MOTIFS, PATTERNS = [TREE, FLAKE], {'carrot': CARROT, 'menorah': [MENORAH, FLAKE]}
+MOTIFS, PATTERNS = [TREE, FLAKE], {'carrot': CARROT, 'menorah': [MENORAH, FLAKE], 'binary': [ONE, ZERO, ONE, ONE, ZERO], 'leaf': [LEAF]}
 
 def rgb(h): return tuple(int(h[i:i+2], 16) / 255 for i in (1, 3, 5))
 def lum(h):
@@ -168,8 +176,9 @@ def yarn(h):  # pure white yarn reads better slightly warm
 # Computer Jocks' borders; Mariachi Ninjas' borders mix their red and green.
 OVERRIDES = {
     ('theleague', '0006'): {'ink': '#ffffff'},
-    ('theleague', '0010'): {'motif': ['#2b972b']},
-    ('afl', '0005'): {'motif': ['#2b972b']},
+    ('theleague', '0010'): {'motif': ['#2b972b'], 'pattern': 'binary'},
+    ('afl', '0005'): {'motif': ['#2b972b'], 'pattern': 'binary'},
+    ('afl', '0001'): {'pattern': 'leaf'},
     ('theleague', '0005'): {'motif': ['#de3f3f', '#2f8b59']},
     ('afl', '0015'): {'motif': ['#de3f3f', '#2f8b59']},
     # Drunk Indians: blue and red first; yellow only as a rare accent.
