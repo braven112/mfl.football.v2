@@ -56,6 +56,7 @@ import type { MflLiveBoard } from '../../../types/mfl-live';
 import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
 import LvHauntedStats from './LvHauntedStats';
 import LvHauntedScene from './LvHauntedScene';
+import LvCabinScene from './LvCabinScene';
 import { hauntedStats } from '../../../utils/live/haunted-stats';
 import { overlayPanel, type OverlayMemory } from '../../../utils/live/espn-overlay';
 import { useLeagueRules } from './rules-cache';
@@ -113,7 +114,8 @@ export interface LiveBoardProps {
   title?: string;
   /**
    * The seasonal theme open for this page, or omitted. `'halloween'` adds the
-   * header's Monster of the Week and Scariest Game cards; the haunted scene
+   * header's Monster of the Week and Scariest Game cards and the haunted
+   * house's moving parts; `'christmas'` adds the snowed-in cabin's. The scene
    * behind them is CSS keyed on <html data-season> (seasonal-themes.css).
    */
   season?: string;
@@ -516,8 +518,8 @@ export default function LiveBoard({
   const haunted =
     season === 'halloween' ? hauntedStats(panelViews.map((v) => v.panel), board.playerMeta) : null;
   // Every score on the board, in one string: when it changes, the haunted
-  // house stirs (LvHauntedScene).
-  const hauntPulse = haunted
+  // house (LvHauntedScene) or the snowed-in cabin (LvCabinScene) stirs.
+  const scenePulse = haunted || season === 'christmas'
     ? panelViews
         .map((v) => v.panel.matchups.map((m) => m.sides.map((side) => side.live).join(',')).join(';'))
         .join('|')
@@ -675,7 +677,8 @@ export default function LiveBoard({
     <KickoffClockContext.Provider value={kickoffClock}>
     <div className="lv" ref={rootRef}>
       <div className="lv-head">
-        {haunted && <LvHauntedScene pulse={hauntPulse} />}
+        {haunted && <LvHauntedScene pulse={scenePulse} />}
+        {season === 'christmas' && <LvCabinScene pulse={scenePulse} />}
         <h1>
           {title}
           {demoLabel && <span className="lv-sample">{demoLabel}</span>}
