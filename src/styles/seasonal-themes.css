@@ -515,3 +515,39 @@ html[data-season='christmas'] :is(.lv-side__score, .lv-scorehead__score) {
   .lv-cabin-scene__window,
   .lv-cabin-scene__smoke { display: none; }
 }
+
+/* Roster header plates wear the club's sweater trim, knit top and bottom
+   (owner, Oct 2026). Each club's strips arrive as custom properties from the
+   seasonal mark rules (seasonal-mark-css.ts `_trim`); a plate without them
+   (a club with no drawn set) stays as it is. One height for every club, so
+   the plates line up; the stitch scales a touch to fit it. */
+html[data-season='christmas'] .rhdr__plate[data-franchise] {
+  --rhdr-trim-h: 40px;
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::before,
+html[data-season='christmas'] .rhdr__plate[data-franchise]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--rhdr-trim-h);
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::before {
+  top: 0;
+  background-image: var(--rhdr-trim-top, none);
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::after {
+  bottom: 0;
+  background-image: var(--rhdr-trim-bottom, none);
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise] > .rhdr__inner {
+  padding-top: calc(var(--rhdr-trim-h) + 0.75rem);
+  padding-bottom: calc(var(--rhdr-trim-h) + 0.75rem);
+}
+@media (max-width: 640px) {
+  html[data-season='christmas'] .rhdr__plate[data-franchise] { --rhdr-trim-h: 30px; }
+}

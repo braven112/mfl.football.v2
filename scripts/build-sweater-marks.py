@@ -39,6 +39,39 @@ ZERO = [".XXX.", "X...X", "X...X", "X...X", ".XXX."]
 PITCHFORK = ["X.X.X", "X.X.X", "XXXXX", "..G..", "..G..", "..G..", "..G.."]
 # a three-leaf clover for Muck Juggling Micks
 CLOVER = ["...XXX...", "...XXX...", ".XX.X.XX.", ".XXX.XXX.", ".XX.X.XX.", "....X....", ".....X..."]
+# One motif per club (owner, Oct 2026: "each team should have a unique trim").
+# W = white yarn, a third colour beside the motif (X) and leaf (G) yarns.
+WAVE = ["...XXX..", "..X...X.", "..X.X.X.", ".X..XX..", "X.......", "XXXXXXXX"]  # Pacific; seamless
+CORN = ["..X..", ".XXX.", ".XXX.", "GXXXG", "GXXXG", ".GGG.", "..G.."]
+DOLLAR = ["..X..", ".XXXX", "X.X..", ".XXX.", "..X.X", "XXXX.", "..X.."]
+JET = ["...X...", "..XXX..", ".XXXXX.", "XX.X.XX", "...X...", "..XXX.."]
+SKULL = [".XXX.", "XXXXX", "X.X.X", "XXXXX", ".XXX.", ".X.X."]
+CHILI = ["....G", "...G.", "..XX.", ".XXX.", ".XX..", "X...."]
+NOTE = ["..XX.", "..X.X", "..X..", "..X..", "XXX..", "XXX.."]
+FLAME = ["..X..", ".XX..", ".XXX.", "XX.XX", "X.G.X", "XGGGX", ".XXX."]
+BOLT = ["...XX", "..XX.", ".XX..", "XXXXX", "..XX.", ".XX..", "XX..."]
+ELEPHANT = [".XXX....", "XXXXXXX.", "XWXXXXXX", "XXXXXXXX", "X.XXXXXX", "X.XX..XX", "..XX..XX"]
+PI = ["XXXXX", ".X.X.", ".X.X.", ".X.X.", "X...X"]
+HORSESHOE = ["XX.XX", "X...X", "X...X", "X...X", ".XXX."]
+WIZARD_HAT = ["...X.", "..XX.", "..XX.", ".XGX.", ".XXXX", "XXXXX"]
+GUITAR = ["..X..", "..X..", "..X..", ".XXX.", "XX.XX", "XXXXX", ".XXX."]
+MUG = ["GGGG..", "XXXX..", "XXXXXX", "XXXX.X", "XXXXXX", "XXXX.."]
+MINT = [".XXXXX.", "XX.X.XX", "X.XXX.X", "XXX.XXX", "X.XXX.X", "XX.X.XX", ".XXXXX."]
+MOUSTACHE = ["..XX.XX..", ".XXXXXXX.", "XXX...XXX", "X.......X"]
+GINGERBREAD = [".XXX.", ".XXX.", "XXXXX", ".XGX.", ".XXX.", "XX.XX"]
+CUP = ["WWWWW", "XXXXX", "XXXXX", ".XXX.", ".XXX.", ".XXX."]
+PAW = ["X.X.X", ".....", ".XXX.", "XXXXX", ".XXX."]
+HEART = [".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."]
+DIAMOND = ["..X..", ".XXX.", "XXXXX", ".XXX.", "..X.."]
+DREIDEL = ["..X..", "XXXXX", "XXGXX", "XXXXX", ".XXX.", "..X.."]
+SHADES = ["XXXXXXXXX", "XXXX.XXXX", ".XXX.XXX.", "..X...X.."]
+CONICAL_HAT = ["....X....", "...XXX...", "..XXXXX..", ".XXXXXXX.", "XXXXXXXXX"]  # Vietnamese non la
+CROSS = ["..X..", ".XXX.", "XXXXX", ".XXX.", "..X..", "..X.."]
+BUBBLE = [".XXXXX.", "XXXXXXX", "XGXGXGX", "XXXXXXX", ".XXXXX.", "XX....."]
+ORNAMENT = ["..G..", ".XXX.", "XXXXX", "XXWXX", "XXXXX", ".XXX."]
+MIC = [".XXX.", ".XGX.", ".XXX.", "..X..", "..X..", ".XXX."]
+SOUP = [".G.G.G.", "..G.G..", "XXXXXXX", ".XXXXX.", "..XXX.."]
+SEAMLESS = {'wave'}
 LEAF = ["....X....", "X...X...X", ".X.XXX.X.", "..XXXXX..", "XXX.X.XXX", "....X....", "....X...."]
 
 def hexrgb(h): return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
@@ -64,7 +97,9 @@ def stitch(d, x, y, col, rot=False):
         hl = [((px - cx) * 0.35 + cx + sgn * CELL * 0.07 - 3, (py - cy) * 0.45 + cy - CELL * 0.12) for px, py in pts]
         d.polygon([T(p) for p in hl], fill=shade(col, 1.12))
 
-def band_grid(motif, accent, alt, base, leaf=None):
+WHITE = (243, 238, 227)
+
+def band_grid(motif, accent, alt, base, leaf=None, gap=1):
     # `motif` is one shape, or a list of same-sized shapes knit in turn
     shapes = motif if isinstance(motif[0], list) else [motif]
     motif = shapes[0]
@@ -73,7 +108,7 @@ def band_grid(motif, accent, alt, base, leaf=None):
     for c in range(COLS):
         g[0][c] = accent
         g[band - 1][c] = accent
-    w = len(motif[0]) + 1
+    w = len(motif[0]) + gap
     # centre the repeat: equal margin left and right of the motif run
     off = (COLS - (COLS // w) * w + 1) // 2
     for c in range(COLS):
@@ -85,13 +120,15 @@ def band_grid(motif, accent, alt, base, leaf=None):
                 g[r + 1][c] = alt[((c - off) // w) % len(alt)]
             elif m < len(motif[0]) and motif[r][m] == 'G' and leaf:
                 g[r + 1][c] = leaf
+            elif m < len(motif[0]) and motif[r][m] == 'W':
+                g[r + 1][c] = WHITE
     return g
 
-def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, centre_rows=(0, 1)):
+def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, centre_rows=(0, 1), gap=1, band_base=None):
     alt = [hexrgb(a) for a in (alt if isinstance(alt, (list, tuple)) else [alt])]
     base, ink, accent = map(hexrgb, (base, ink, accent))
     grid = [[base] * COLS for _ in range(ROWS)]
-    top = band_grid(motif, accent, alt, base, hexrgb(leaf) if leaf else None)
+    top = band_grid(motif, accent, alt, hexrgb(band_base) if band_base else base, hexrgb(leaf) if leaf else None, gap)
     band = len(top)
     for r in range(band):
         grid[r] = top[r][:]
@@ -157,7 +194,47 @@ def build(mark_path, base, ink, accent, alt, motif, leaf=None, regions=None, cen
     o = Image.new('RGBA', (768, 768)); o.paste(img, (0, 0), mask)
     return o
 
-MOTIFS, PATTERNS = [TREE, FLAKE], {'carrot': CARROT, 'menorah': [MENORAH, FLAKE], 'binary': [ONE, ZERO, ONE, ONE, ZERO], 'leaf': [LEAF], 'pitchfork': [PITCHFORK], 'clover': [CLOVER]}
+# A team's trim as a strip for the roster header (owner, Oct 2026: "decorate
+# the coloured team header like a Christmas sweater"): the patch's own band,
+# accent rows, motif run and zigzag, knit as a tile that repeats sideways. The
+# zigzag sits on the edge facing the header, so `bottom` flips only that.
+TRIM_CELL = 10     # px per stitch in the PNG; the page draws it at half that
+
+def trim(base, accent, alt, motif, leaf=None, bottom=False, gap=1, band_base=None):
+    shapes = motif if isinstance(motif[0], list) else [motif]
+    alts = [hexrgb(a) for a in (alt if isinstance(alt, (list, tuple)) else [alt])]
+    base, accent = hexrgb(base), hexrgb(accent)
+    band = hexrgb(band_base) if band_base else base
+    w = len(shapes[0][0]) + gap
+    reps = math.lcm(len(shapes), len(alts))
+    cols = math.lcm(w * reps, 4)
+    while cols < 48: cols *= 2
+    rows = [[accent] * cols]
+    for r in range(len(shapes[0])):
+        row = [band] * cols
+        for c in range(cols):
+            m, k = c % w, c // w
+            sh = shapes[k % len(shapes)]
+            if m < len(sh[0]) and sh[r][m] == 'X': row[c] = alts[k % len(alts)]
+            elif m < len(sh[0]) and sh[r][m] == 'G' and leaf: row[c] = hexrgb(leaf)
+            elif m < len(sh[0]) and sh[r][m] == 'W': row[c] = WHITE
+        rows.append(row)
+    rows.append([accent] * cols)
+    zig = [[accent if c % 4 == 0 else base for c in range(cols)],
+           [accent if c % 4 in (1, 3) else base for c in range(cols)]]
+    rows = zig[::-1] + rows if bottom else rows + zig
+    img = Image.new('RGB', (cols * CELL, len(rows) * CELL), shade(base, 0.55))
+    d = ImageDraw.Draw(img)
+    for r, row in enumerate(rows):
+        for c, col in enumerate(row):
+            stitch(d, c * CELL, r * CELL, col)
+    return img.resize((cols * TRIM_CELL, len(rows) * TRIM_CELL), Image.LANCZOS)
+
+MOTIFS, PATTERNS = [TREE, FLAKE], {'wave': WAVE, 'corn': CORN, 'dollar': DOLLAR, 'hat': CONICAL_HAT, 'jet': JET, 'skull': SKULL,
+    'chili': CHILI, 'note': NOTE, 'flame': FLAME, 'bolt': BOLT, 'elephant': ELEPHANT, 'pi': PI, 'horseshoe': HORSESHOE,
+    'wizard': WIZARD_HAT, 'guitar': GUITAR, 'mug': MUG, 'mint': MINT, 'moustache': MOUSTACHE, 'gingerbread': GINGERBREAD,
+    'cup': CUP, 'paw': PAW, 'heart': HEART, 'diamond': DIAMOND, 'dreidel': DREIDEL, 'shades': SHADES, 'cross': CROSS,
+    'bubble': BUBBLE, 'ornament': ORNAMENT, 'mic': MIC, 'soup': SOUP, 'carrot': CARROT, 'menorah': [MENORAH, FLAKE], 'binary': [ONE, ZERO, ONE, ONE, ZERO], 'leaf': [LEAF], 'pitchfork': [PITCHFORK], 'clover': [CLOVER]}
 
 def rgb(h): return tuple(int(h[i:i+2], 16) / 255 for i in (1, 3, 5))
 def lum(h):
@@ -195,6 +272,46 @@ OVERRIDES = {
     ('afl', '0008'): {'motif': ['#418bbe', '#aeadad'], 'pattern': 'menorah', 'leaf': '#f2c14e'},
 }
 
+# Each club's own trim motif (owner, Oct 2026), with the yarns it needs. A club
+# in both leagues knits the same trim in each.
+CLUB_TRIMS = {
+    ('theleague', '0001'): {'pattern': 'wave', 'motif': ['#f3eee3']},                       # Pacific Pigskins
+    ('theleague', '0002'): {'pattern': 'hat', 'motif': ['#e8d29a']},          # Da Dangsters: Vietnamese                     # Da Dangsters
+    ('afl', '0006'): {'pattern': 'hat', 'motif': ['#e8d29a']},
+    ('theleague', '0003'): {'pattern': 'jet', 'motif': ['#ebd0a1']},                        # Maverick
+    ('theleague', '0004'): {'pattern': 'skull', 'motif': ['#e3e6e8']},                      # Dead Cap Walking
+    ('theleague', '0005'): {'pattern': 'chili', 'motif': ['#de3f3f'], 'leaf': '#2f8b59'},   # Mariachi Ninjas
+    ('afl', '0015'): {'pattern': 'chili', 'motif': ['#de3f3f'], 'leaf': '#2f8b59'},
+    ('theleague', '0006'): {'pattern': 'note', 'motif': ['#c8102e', '#4883db']},           # Music City Mafia
+    ('theleague', '0007'): {'pattern': 'flame', 'motif': ['#d7141a'], 'leaf': '#f6b21a'},  # Fire Ready Aim
+    ('theleague', '0008'): {'pattern': 'bolt', 'motif': ['#e9e9e9']},                      # Bring The Pain
+    ('theleague', '0011'): {'pattern': 'corn', 'motif': ['#ffcd00'], 'leaf': '#4caf50', 'band_base': '#181818'},   # Midwestside Connection
+    ('afl', '0011'): {'pattern': 'corn', 'motif': ['#ffcd00'], 'leaf': '#4caf50', 'band_base': '#181818'},
+    ('theleague', '0012'): {'pattern': 'elephant', 'motif': ['#aa322b']},                  # Vitside Mafia: Thai/Lao
+    ('afl', '0009'): {'pattern': 'elephant', 'motif': ['#aa322b']},
+    ('theleague', '0013'): {'pattern': 'pi', 'motif': ['#f68428']},                        # Gridiron Geeks
+    ('theleague', '0014'): {'pattern': 'horseshoe', 'motif': ['#d32a3e']},                 # Cowboy Up
+    ('theleague', '0015'): {'pattern': 'wizard', 'motif': ['#8a78be'], 'leaf': '#f2c14e'}, # Dark Magicians
+    ('theleague', '0016'): {'pattern': 'guitar', 'motif': ['#d4af37']},                    # Running down the Dream
+    ('afl', '0002'): {'pattern': 'mug', 'motif': ['#f9b813'], 'leaf': '#ffffff'},          # Drunk Indians
+    ('afl', '0003'): {'pattern': 'mint', 'motif': ['#e9e9e9']},                            # Team Minty Fresh
+    ('afl', '0004'): {'pattern': 'moustache', 'motif': ['#181818']},                       # Get off my Ditka
+    ('afl', '0010'): {'pattern': 'gingerbread', 'motif': ['#b0682e'], 'leaf': '#ffffff'},  # Fullybaked
+    ('afl', '0012'): {'pattern': 'cup', 'motif': ['#d53a2b'], 'band_base': '#f3eee3'},                             # Suh girls, one cup
+    ('afl', '0014'): {'pattern': 'paw', 'motif': ['#e59923']},                             # A Bruin Pegs Me
+    ('afl', '0016'): {'pattern': 'heart', 'motif': ['#ffffff', '#c8102e']},                # Swiftie 4 Life
+    ('afl', '0017'): {'pattern': 'diamond', 'motif': ['#ffb612', '#c60c30', '#00539b']},   # Titsburgh Feelers
+    ('afl', '0018'): {'pattern': 'dreidel', 'motif': ['#e9e9e9'], 'leaf': '#199b5d'},      # Jewpacabra
+    ('afl', '0019'): {'pattern': 'shades', 'motif': ['#f3eee3']},                          # Badd Boys
+    ('afl', '0020'): {'pattern': 'cross', 'motif': ['#e9e9e9']},                           # Boondock Saints
+    ('afl', '0021'): {'pattern': 'bubble', 'motif': ['#181818'], 'leaf': '#ffffff'},       # Chatmaster
+    ('afl', '0022'): {'pattern': 'ornament', 'motif': ['#c8102e', '#2f8b59', '#181818'], 'leaf': '#d4af37'},  # Balls Deep
+    ('afl', '0023'): {'pattern': 'mic', 'motif': ['#cc9ca6'], 'leaf': '#8b8f93'},          # The Show
+    ('afl', '0024'): {'pattern': 'soup', 'motif': ['#c93803'], 'leaf': '#e9e9e9'},         # No Soup For You
+}
+for key, trim_o in CLUB_TRIMS.items():
+    OVERRIDES[key] = {**OVERRIDES.get(key, {}), **trim_o}
+
 def palette(t, league=None):
     cols = [c for c in (t.get('colorPrimary'), t.get('colorSecondary'), t.get('colorTertiary'), t.get('colorQuaternary')) if c]
     base = cols[0]
@@ -219,15 +336,23 @@ def main():
             '_source': 'Ugly-sweater patches knit from each team\'s Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py',
             '_logo': None,
         }
-        versions, tiles = {}, []
+        versions, tiles, trims = {}, [], {}
         for i, t in enumerate(teams):
             fid = t['franchiseId']
             base, ink, motif = palette(t, league)
             o = OVERRIDES.get((league, fid), {})
             patch = build(os.path.join(ROOT, 'public/assets', league, 'halloween-marks', f'{fid}.png'),
                           base, ink, o.get('accent', ink), motif, PATTERNS.get(o.get('pattern'), MOTIFS[i % 2]),
-                          o.get('leaf'), o.get('regions'), o.get('centre_rows', (0, 1)))
+                          o.get('leaf'), o.get('regions'), o.get('centre_rows', (0, 1)), 0 if o.get('pattern') in SEAMLESS else 1, o.get('band_base'))
             tiles.append((t['name'], patch))
+            os.makedirs(os.path.join(out_dir, 'trim'), exist_ok=True)
+            pattern = PATTERNS.get(o.get('pattern'), MOTIFS[i % 2])
+            for edge in ('top', 'bottom'):
+                strip = trim(base, o.get('accent', ink), motif, pattern, o.get('leaf'), edge == 'bottom',
+                             0 if o.get('pattern') in SEAMLESS else 1, o.get('band_base'))
+                tdest = os.path.join(out_dir, 'trim', f'{fid}-{edge}.png')
+                strip.save(tdest, optimize=True)
+                trims.setdefault(fid, {})[edge] = hashlib.sha256(open(tdest, 'rb').read()).hexdigest()[:8]
             small = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
             small.paste(patch.resize((SIZE - 8, SIZE - 8), Image.LANCZOS), (4, 4))
             dest = os.path.join(out_dir, f'{fid}.png')
@@ -235,6 +360,7 @@ def main():
             manifest[fid] = f'sweater:{base},{ink}'
             versions[fid] = hashlib.sha256(open(dest, 'rb').read()).hexdigest()[:8]
         manifest['_v'] = versions
+        manifest['_trim'] = trims
         with open(os.path.join(ROOT, 'src/data/seasonal-marks', f'{league}-{SEASON}.json'), 'w') as f:
             f.write(json.dumps(manifest, indent=2) + '\n')
         print(f'{league}: {len(versions)} marks')
