@@ -271,6 +271,9 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
     // owners Week 5 under the Week 6 post on 2026-10-20 (the deploy carrying
     // Week 6 started building the minute the chat message went out).
     expect(generator).toMatch(/verifyPath: issuePermalink\(league, year, week\),/);
+    // And it does NOT fail open: an early post names the wrong week, so on a
+    // timeout the column says nothing (Brandon, 2026-10-20).
+    expect(generator).toMatch(/skipIfNotLive: true,/);
     expect(generator).not.toMatch(/verifyPath: '\/pecking-order'/);
     const { issuePermalink } = await import('../scripts/generate-pecking-order.mjs');
     expect(issuePermalink({ slug: 'afl-fantasy' }, 2026, 6)).toBe('/afl-fantasy/pecking-order/2026/6');
@@ -420,5 +423,37 @@ describe('announceOne', () => {
       { dryRun: true, log: silent },
     );
     expect(bad.announced).toBe(false);
+  });
+  it('skipIfNotLive drops every channel when the page never went live', async () => {
+    // The Pecking Order's link shows LAST week's column until the deploy
+    // lands, so a timed-out wait must announce nothing — not chat, not push.
+    const { announceOne } = await import('../scripts/schefter-announce-pending.mjs');
+    const lines: string[] = [];
+    const entry = {
+      league: 'theleague',
+      kind: 'roger-reply',
+      postId: 'po_skip',
+      verifyPath: '/theleague/pecking-order/2026/6',
+      groupMeText: 'x',
+      botEnv: 'GROUPME_BOT_ID_DELIBERATELY_UNSET',
+      push: { franchiseIds: ['0001'], title: 'T', body: 'B', url: '/x', tag: 'po_skip' },
+      voterPushes: [{ franchiseId: '0001' }],
+      skipIfNotLive: true,
+    };
+    const result = await announceOne(entry, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (...a: unknown[]) => lines.push(a.join(' ')), warn: (...a: unknown[]) => lines.push(a.join(' ')) },
+    });
+    expect(result).toMatchObject({ announced: false, reason: 'not live' });
+    expect(lines.join('\n')).toContain('NOT announcing');
+    expect(lines.join('\n')).not.toContain('not set'); // never reached the chat send
+
+    // Without the flag the default stays fail-open, as articles want.
+    const order: string[] = [];
+    await announceOne({ ...entry, push: null, voterPushes: null, skipIfNotLive: undefined }, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (m: string) => { if (String(m).includes('not set')) order.push('send'); }, warn: () => {} },
+    });
+    expect(order).toEqual(['send']);
   });
 });

@@ -58,6 +58,11 @@ export function queuePath(projectRoot) {
  *   notifications (the Owners' Poll open and reveal), sent through
  *   `sendVoterPushes`. Separate from `push` because it is not a broadcast:
  *   each owner gets different copy, and only voters get it at all.
+ * @property {boolean} [skipIfNotLive] Drop the whole announcement (chat and
+ *   pushes) when `verifyPath` is still not live after the full wait, instead
+ *   of the default fail-open send. For a lane whose link shows stale content
+ *   until the deploy lands — the Pecking Order's `/pecking-order` shows last
+ *   week's column — so an early post is worse than none.
  * @property {boolean} [dryRun]
  */
 
