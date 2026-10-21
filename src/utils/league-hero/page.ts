@@ -74,6 +74,8 @@ export interface LeagueHomeHeroInput {
   /** The franchise leading the standings, for the Monday card's face. */
   standingsLeaderId?: string;
   /** THIS week's power-rankings issue, when the league runs one and it is out. */
+  /** See `LeagueHeroResolverInput.mondayNightQuiet`. */
+  mondayNightQuiet?: boolean;
   peckingOrder?: PeckingOrderHeroIssue;
   /**
    * Which feed posts are the league's weekly column. Absent, the league has no
@@ -174,6 +176,7 @@ export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise
     waiver,
     article,
     peckingOrder: input.peckingOrder,
+    mondayNightQuiet: input.mondayNightQuiet,
     column,
   });
 

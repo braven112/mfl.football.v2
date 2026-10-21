@@ -137,7 +137,10 @@ const slot = state.slot;
 // The live slot with no scoreboard to draw — an MFL outage, or an unplayed
 // week (live-scoring-hero-props.ts) — shows the standings card rather than
 // nothing at all: it is the rotation's own card, and it needs no live data.
-const shownSlot = slot === 'live-scoring' && !liveScoring ? 'standings' : slot;
+// Monday night with no close game left (or no scores): the Sunday recap again,
+// never the bare scoreboard — Brandon, Oct 2026 (see monday-spotlight.ts).
+const mondayNightQuiet = slot === 'live-scoring' && state.metadata.gameWindow === 'mnf' && state.phase === 'regular-season' && !mondaySpotlight;
+const shownSlot = mondayNightQuiet ? 'recap' : slot === 'live-scoring' && !liveScoring ? 'standings' : slot;
 const fallback = state.fallbackHero;
 
 // Article slot disambiguation: Friday → weekend preview, else → waiver pickup report
@@ -202,7 +205,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     viewerFranchiseId={userFranchiseId}
   />
 )}
-{slot === 'live-scoring' && liveScoring && !mondaySpotlight && (
+{slot === 'live-scoring' && liveScoring && !mondaySpotlight && !mondayNightQuiet && (
   <LiveScoringHero
     client:load
     {...liveScoring}
@@ -228,7 +231,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {shownSlot === 'standings' && ((phase !== 'playoffs' && phase !== 'championship') || !state.playoffProps) && (
   <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
 )}
-{slot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{shownSlot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} waiver={waiver} />}
 {slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
 {slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}

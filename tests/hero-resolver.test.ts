@@ -1098,6 +1098,17 @@ describe('resolveHeroState', () => {
       expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true }).slot).toBe('standings');
     });
 
+    it('falls back to the recap on a quiet Monday night, never the scoreboard', () => {
+      const mon = new Date(2027, 9, 4, 11, 0);
+      for (const slug of ['theleague', 'afl-fantasy'] as const) {
+        const profile = getLeagueHeroProfile(slug);
+        expect(slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true })).toEqual({ slot: 'live-scoring', gameWindow: 'mnf' });
+        expect(
+          slotFor(profile, mon, { peckingOrder: false, column: false, regularSeason: true, mondayNightQuiet: true }),
+        ).toEqual({ slot: 'recap', gameWindow: null });
+      }
+    });
+
     it('only the regular-season rung moves Monday to the recap', () => {
       const profile = getLeagueHeroProfile('theleague');
       const mon = new Date(2027, 9, 4, 9, 0);

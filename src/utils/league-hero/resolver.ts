@@ -372,10 +372,11 @@ function isQuietOffseason(events: RoledEvent[], now: Date): boolean {
 export function slotFor(
   profile: LeagueHeroProfile,
   now: Date,
-  have: { peckingOrder: boolean; column: boolean; regularSeason?: boolean },
+  have: { peckingOrder: boolean; column: boolean; regularSeason?: boolean; mondayNightQuiet?: boolean },
 ): { slot: HeroSlot; gameWindow: GameWindow } {
   const base = getDailySlot(now);
   let slot: HeroSlot = base.slot;
+  let gameWindow = base.gameWindow;
   const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(now);
   if (slot === 'waiver-wire' && weekday === 'Tue' && have.peckingOrder && heroRunsSlot(profile, 'pecking-order')) {
     slot = 'pecking-order';
@@ -383,10 +384,22 @@ export function slotFor(
   if (slot === 'standings' && weekday === 'Mon' && have.regularSeason && profile.capabilities.mondayRecapSlot) {
     slot = 'recap';
   }
+  // Monday night with nothing left to swing: the Sunday recap again, never the
+  // bare scoreboard (Brandon, Oct 2026).
+  if (
+    slot === 'live-scoring' &&
+    gameWindow === 'mnf' &&
+    have.mondayNightQuiet &&
+    have.regularSeason &&
+    profile.capabilities.mondayRecapSlot
+  ) {
+    slot = 'recap';
+    gameWindow = null;
+  }
   if (slot === 'article' && weekday === 'Wed' && have.column && heroRunsSlot(profile, 'column')) {
     slot = 'column';
   }
-  return { slot, gameWindow: base.gameWindow };
+  return { slot, gameWindow };
 }
 
 function slotView(slot: HeroSlot, ctx: SlotContext, input: LeagueHeroResolverInput): EventHeroView {
@@ -851,6 +864,7 @@ export function resolveLeagueHeroState(input: LeagueHeroResolverInput): LeagueHe
         peckingOrder: !!input.peckingOrder,
         column: !!input.column,
         regularSeason: !!opts?.regularSeason,
+        mondayNightQuiet: !!input.mondayNightQuiet,
       });
       const week = getCurrentNFLWeek(now) ?? undefined;
       const sctx: SlotContext = {

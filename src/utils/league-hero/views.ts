@@ -535,7 +535,7 @@ export function recapSlotView({ env, recap }: SlotContext): EventHeroView {
     // the upcoming week on Tuesday — the morning this slot runs — so falling
     // back to it would name games not yet played.
     summary: recap?.sundayOnly
-      ? `Sunday of Week ${recap.week} is in the books — top scorers so far, with Monday night still to play.`
+      ? `Sunday of Week ${recap.week} is in the books — the top scorers so far.`
       : recap?.week
         ? `Week ${recap.week} is in the books — top scorers, biggest swings, and the games that moved the standings.`
         : 'No week is in the books yet. Here is the latest from around the league while the first results come in.',

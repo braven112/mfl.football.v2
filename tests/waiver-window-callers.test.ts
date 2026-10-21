@@ -182,7 +182,12 @@ function calendarYearVars(source: string): string[] {
  */
 const HERO_PAGES = walk(SRC_ROOT)
   .filter((f) => f.endsWith('.astro'))
-  .filter((f) => /resolveLeagueHomeHero\s*\(\{[\s\S]*?waiverCalendar/.test(readFileSync(f, 'utf8')))
+  .filter((f) => {
+    // The input may be built inline or as a `heroInput` object first (the AFL
+    // re-resolves it for a quiet Monday night), so ask for both, not one shape.
+    const source = readFileSync(f, 'utf8');
+    return /resolveLeagueHomeHero\s*\(/.test(source) && /\bwaiverCalendar:/.test(source);
+  })
   .sort();
 
 describe('the shared hero is handed its calendars by the pages that own them', () => {

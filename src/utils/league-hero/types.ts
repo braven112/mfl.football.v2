@@ -294,6 +294,13 @@ export interface LeagueHeroResolverInput {
    * The newest power-rankings issue for this season, when the league runs one.
    * Omitted → the `pecking-order` slot hands its day to the slot it replaced.
    */
+  /**
+   * Monday after 10am PT with no close game left (monday-spotlight.ts): the
+   * Monday-night slot falls back to the Sunday recap rather than a scoreboard.
+   * The page learns this only after reading the live scores, so it resolves
+   * again with this set.
+   */
+  mondayNightQuiet?: boolean;
   peckingOrder?: PeckingOrderHeroIssue;
   /**
    * The newest weekly column (`column` slot), when the league runs one.

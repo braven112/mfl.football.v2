@@ -237,8 +237,11 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     expect(HERO).not.toMatch(/resolveSeasonYearWithData|seasonYear:\s*seasonYear\b/);
     // The call's own arguments only: the page goes on to use the walk-back
     // legitimately right after it (the in-season My Team card).
-    const start = PAGE.indexOf('resolveLeagueHomeHero({');
-    const call = PAGE.slice(start, PAGE.indexOf('\n});', start));
+    // The page builds the input once (`heroInput`) because a quiet Monday night
+    // resolves it a second time; every call spreads that one object.
+    const start = PAGE.indexOf('const heroInput = {');
+    const call = PAGE.slice(start, PAGE.indexOf('\n};', start));
+    expect(start).toBeGreaterThan(-1);
     expect(call).toMatch(/castFranchiseId/);
     expect(call).not.toMatch(/\bseasonYear\b/);
   });

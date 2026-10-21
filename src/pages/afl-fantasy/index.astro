@@ -316,7 +316,7 @@ const aflLeagueYearForHero = getAflLeagueYear(effectiveDate);
 const aflWaiverCalendar =
   (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflLeagueYearForHero}/`))?.[1] as any)?.default ?? [];
 
-const heroState = await resolveLeagueHomeHero({
+const heroInput = {
   league: AFL,
   effectiveDate,
   testMode,
@@ -335,7 +335,8 @@ const heroState = await resolveLeagueHomeHero({
   timeline,
   whatsNewEntries: aflWhatsNew,
   standingsLeaderId,
-});
+};
+let heroState = await resolveLeagueHomeHero(heroInput);
 
 const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
 
@@ -429,6 +430,13 @@ if (aflLiveScoring && heroState.kind === 'regular-season' && 'gameWindow' in her
     userFranchiseId: aflLiveScoring.userFranchiseId,
     scopeFranchiseIds: aflLiveScoring.scopeFranchiseIds,
   });
+}
+
+// Monday night with no close game left (or no scores to read): the Sunday
+// recap again, never the bare scoreboard — same as TheLeague.
+if (!aflMondaySpotlight && heroState.kind === 'regular-season' && heroState.gameWindow === 'mnf') {
+  heroState = await resolveLeagueHomeHero({ ...heroInput, mondayNightQuiet: true });
+  aflLiveScoring = undefined;
 }
 
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
