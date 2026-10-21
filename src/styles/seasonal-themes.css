@@ -310,19 +310,21 @@ html[data-season='halloween'] .mll-hero__side {
 
 /* ── Christmas Week (Candy Cane, snow frame) ─────────────────────────── */
 
-/* Berkshire Swash (SIL Open Font License, Google Fonts), latin subset. */
+/* Cinzel Decorative Bold (SIL Open Font License, Google Fonts), latin subset.
+   Carol-card lettering (owner's pick, Oct 2026: Berkshire Swash read as
+   Halloween). */
 @font-face {
-  font-family: 'Berkshire Swash';
-  src: url('/assets/fonts/BerkshireSwash-Regular.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Cinzel Decorative';
+  src: url('/assets/fonts/CinzelDecorative-Bold.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 /* Headlines only, for the same reason as Halloween's. */
 html[data-season='christmas'] :is(h1, h2, h3) {
-  font-family: 'Berkshire Swash', var(--font-display);
-  font-weight: 400;
+  font-family: 'Cinzel Decorative', var(--font-display);
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
