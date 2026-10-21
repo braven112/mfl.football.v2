@@ -293,7 +293,11 @@ syncs every league and their waiver runs are an hour apart.
   cannot pile up in exchange.
 - **Absence is watched separately, and NOT from Vercel.**
   `scripts/check-sync-freshness.mjs` alerts (`ops-job-failure`, admin-only) when
-  `main`'s newest sync commit ages past two hours. It runs from
+  the newest SUCCESSFUL `roster-sync.yml` run on `main` ages past two hours.
+  It measures RUNS, never commits: a run that found nothing commits nothing,
+  so a quiet night (00:00-04:00 PT on 2026-10-21, every run green) aged the
+  newest sync commit past the threshold and paged an admin for a healthy
+  chain. It runs from
   `job-failure-watch.yml` on GitHub deliberately: a watchdog sharing a substrate
   with its subject goes dark in the one outage it exists to report. GitHub's
   delivery is unreliable, so detection may be hours late — late still beats

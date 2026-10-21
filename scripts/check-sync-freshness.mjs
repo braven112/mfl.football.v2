@@ -24,17 +24,22 @@
  * may be hours late, but late detection of a dead sync still beats none, and
  * "eventually" is guaranteed in a way "never" is not.
  *
- * WHAT COUNTS AS FRESH. The newest commit on `main` from the sync bot. That is
- * the honest signal rather than "did the workflow run", because a run that
- * fetched nothing and committed nothing leaves the SITE unchanged — and the
- * site is what owners see. The committed feeds are baked into the build, so no
- * commit means no deploy means the page cannot move.
+ * WHAT COUNTS AS FRESH. The newest SUCCESSFUL Roster Sync run on `main` —
+ * not the newest sync commit. A healthy run that found nothing changed commits
+ * nothing on purpose (`writeJsonIfChanged`), so on a quiet night MFL can go
+ * four hours without a single change and the commit trail goes silent while
+ * the chain is perfectly healthy. Measuring commits paged an admin at 3:34 AM
+ * on 2026-10-21 for exactly that: every hourly run from 00:00 to 04:00 PT had
+ * succeeded with nothing to commit. A finished run is the thing that actually
+ * stops when the Vercel cron, `CRON_SECRET` or `GH_PAT` breaks — the dispatch
+ * never arrives, so no run exists. A run that dispatches and goes red is
+ * `push-job-failures.mjs`'s to report, which is why only `success` counts here.
  *
  * Never fails the workflow: an alerting job that goes red is one more silent
  * failure of the kind it exists to report.
  *
  * Env:
- *   GITHUB_TOKEN       required — reads the commits API
+ *   GITHUB_TOKEN       required — reads the Actions runs API (actions: read)
  *   GITHUB_REPOSITORY  owner/repo (set by Actions)
  *   CRON_SECRET        required to push; unset logs and sends nothing
  *
@@ -50,23 +55,25 @@ const TAG = '[sync-freshness]';
 const DRY_RUN = process.argv.includes('--dry-run');
 
 /**
- * How stale `main` may get before this is worth waking someone for.
+ * How long since the last successful sync run before this is worth waking
+ * someone for.
  *
  * The cadence floor is hourly — `sync-cadence.ts`'s `idle` tier always runs on
- * the hour, in every month of the year — so anything past two hours means the
- * chain is broken rather than quiet. Two hours also clears a slow build and a
- * genuinely unchanged hour without crying wolf.
+ * the hour, in every month of the year — so two hours without a finished run
+ * means one whole tick was missed: the chain is broken, not quiet. A run takes
+ * ~2 minutes, so a slow one cannot reach the threshold on its own.
  */
 const STALE_AFTER_HOURS = 2;
 
-/** The committer the sync workflow pushes as. */
-const SYNC_AUTHOR = 'Roster Sync Bot';
+/** The workflow the Vercel cron dispatches. */
+const SYNC_WORKFLOW = 'roster-sync.yml';
 
 const hoursSince = (iso) => (Date.now() - new Date(iso).getTime()) / 3_600_000;
 
-async function latestSyncCommit(repo, token) {
+async function latestSuccessfulRun(repo, token) {
   const res = await fetch(
-    `https://api.github.com/repos/${repo}/commits?sha=main&per_page=40`,
+    `https://api.github.com/repos/${repo}/actions/workflows/${SYNC_WORKFLOW}/runs` +
+      '?branch=main&status=success&per_page=1',
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -76,12 +83,12 @@ async function latestSyncCommit(repo, token) {
       signal: AbortSignal.timeout(15_000),
     },
   );
-  if (!res.ok) throw new Error(`commits API HTTP ${res.status}`);
-  const commits = await res.json();
-  if (!Array.isArray(commits)) throw new Error('commits API returned a non-array');
-  return (
-    commits.find((c) => c?.commit?.author?.name === SYNC_AUTHOR) ?? null
-  );
+  if (!res.ok) throw new Error(`workflow runs API HTTP ${res.status}`);
+  const body = await res.json();
+  if (!Array.isArray(body?.workflow_runs)) {
+    throw new Error('workflow runs API returned no workflow_runs array');
+  }
+  return body.workflow_runs[0] ?? null;
 }
 
 async function main() {
@@ -92,17 +99,18 @@ async function main() {
     return;
   }
 
-  const commit = await latestSyncCommit(repo, token);
-  if (!commit) {
-    // Forty commits deep with no sync commit is itself the alarm: on a healthy
-    // day the sync is the most common commit on main by a wide margin.
-    console.warn(`${TAG} no sync commit in the last 40 on main — treating as stale.`);
+  const run = await latestSuccessfulRun(repo, token);
+  if (!run) {
+    // The repo has run this workflow thousands of times; none at all succeeding
+    // is itself the alarm.
+    console.warn(`${TAG} no successful ${SYNC_WORKFLOW} run on main — treating as stale.`);
   }
 
-  const at = commit?.commit?.author?.date ?? null;
+  // `updated_at` is when a completed run finished.
+  const at = run?.updated_at ?? null;
   const age = at ? hoursSince(at) : Infinity;
   console.log(
-    `${TAG} newest sync commit: ${at ?? 'none found'}` +
+    `${TAG} newest successful sync run finished: ${at ?? 'none found'}` +
       (Number.isFinite(age) ? ` (${age.toFixed(1)}h ago)` : ''),
   );
 
@@ -119,8 +127,8 @@ async function main() {
     dryRun: DRY_RUN,
     title: 'Roster sync has stopped',
     body:
-      `No roster sync has landed on main for ${readableAge}. The site is frozen ` +
-      `at the last deploy. Check the Vercel cron, CRON_SECRET and GH_PAT.`,
+      `No roster sync has run for ${readableAge}, so the site is frozen at the ` +
+      `last deploy. Check the Vercel cron, CRON_SECRET and GH_PAT.`,
     // NO `url`, matching buildFailureNotification next door: the service worker
     // takes `data.url` only when it startsWith('/'), so a push cannot send a
     // tap off-site and an absolute GitHub link would silently open the
