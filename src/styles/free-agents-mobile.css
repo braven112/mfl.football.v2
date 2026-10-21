@@ -84,4 +84,18 @@
     min-width: 0;
     margin: 0 0 0.75rem;
   }
+
+  /* Sorting by a column the phone hides swaps it into the Proj spot
+     (free-agents-sort-chips.ts): the header names the sort instead. */
+  .players-table th[data-fa-slot] > .th-content {
+    display: none;
+  }
+
+  /* --fa-slot-color is the page's own sorted-header colour, read off the
+     (hidden) sorted header, so each league and style keeps its accent. */
+  .players-table th[data-fa-slot]::after {
+    content: attr(data-fa-slot);
+    color: var(--fa-slot-color, currentColor);
+    white-space: nowrap;
+  }
 }

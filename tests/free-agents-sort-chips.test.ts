@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildFaSortChips, faChipTap, type FaSortHeader } from '../src/utils/free-agents-sort-chips';
+import { buildFaSortChips, faChipTap, sortSlotPlan, type FaSortHeader } from '../src/utils/free-agents-sort-chips';
 import { renderSortChips } from '../src/utils/rosters/phone-sort';
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8');
@@ -64,6 +64,34 @@ describe('faChipTap — sort, reverse, then back to the default', () => {
   });
 });
 
+describe('sortSlotPlan — the sorted column is always on screen (user, 2026-10-21)', () => {
+  const base = { phone: true, activeKey: 'weight', inView: true, hiddenOnPhone: true, projShown: true };
+
+  it('a column the phone hides swaps into the Proj spot', () => {
+    expect(sortSlotPlan(base)).toBe('swap');
+  });
+
+  it('a view with no Proj on the phone reveals the column instead', () => {
+    expect(sortSlotPlan({ ...base, projShown: false })).toBe('reveal');
+  });
+
+  it('leaves the row alone when it already shows the sort, on desktop, or with no sort', () => {
+    expect(sortSlotPlan({ ...base, hiddenOnPhone: false })).toBe('none');
+    expect(sortSlotPlan({ ...base, phone: false })).toBe('none');
+    expect(sortSlotPlan({ ...base, activeKey: null })).toBe('none');
+    expect(sortSlotPlan({ ...base, activeKey: 'projected' })).toBe('none');
+    // A sort by a column of another view (My Rank in Stats) has nowhere to go.
+    expect(sortSlotPlan({ ...base, inView: false })).toBe('none');
+  });
+
+  it('the swapped header wears the sort label, on a phone only', () => {
+    const css = read('src/styles/free-agents-mobile.css');
+    const phone = css.slice(css.lastIndexOf('@media (max-width: 767px)'));
+    expect(phone).toMatch(/th\[data-fa-slot\] > \.th-content \{\s*display: none;/);
+    expect(phone).toMatch(/th\[data-fa-slot\]::after \{\s*content: attr\(data-fa-slot\);/);
+  });
+});
+
 describe('every league\'s Free Agents page carries the pills', () => {
   for (const [name, file] of Object.entries(PAGES)) {
     const src = read(file);
@@ -98,7 +126,11 @@ describe('every league\'s Free Agents page carries the pills', () => {
   it('the pills are hidden on desktop and scroll sideways on a phone', () => {
     const fa = read('src/styles/free-agents-mobile.css');
     expect(fa).toMatch(/^\.rr-chips\.fa-sort-chips \{\s*display: none;/m);
-    expect(read('src/styles/sort-chips.css')).toMatch(/\.rr-chips__row \{[^}]*overflow-x: auto;/);
+    const chips = read('src/styles/sort-chips.css');
+    expect(chips).toMatch(/\.rr-chips__row \{[^}]*overflow-x: auto;/);
+    // The absolute sr-only text must anchor to its chip, inside the scroller,
+    // or an active chip at the row's edge widens the page (user, 2026-10-21).
+    expect(chips).toMatch(/\.rr-chip \{\s*position: relative;/);
   });
 
   it('renders the roster page\'s chip markup', () => {

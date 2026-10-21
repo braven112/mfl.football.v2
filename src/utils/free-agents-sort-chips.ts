@@ -18,6 +18,13 @@
  * reverse, then back to the page's default order — that goes through the
  * page's `rankings:set-sort` bus with a null key, which both pages already
  * read as "restore my default".
+ *
+ * Sorting by a column a phone hides also SHOWS it (user, 2026-10-21: "the
+ * column that's being sorted by doesn't show up"). As on the roster card
+ * (sort-value-slot.ts), the right-hand Proj spot swaps to the sorted value
+ * and its header to the sorted label; Proj comes back on any sort the row
+ * already shows. A view with no Proj on the phone (Rankings, Value, Auction)
+ * reveals the sorted column in place instead.
  */
 import { renderSortChips, type SortChip, type SortState } from './rosters/phone-sort';
 
@@ -109,6 +116,28 @@ export function faChipTap(key: string, activeKey: string | null, prev: FaChipTap
 
 const PHONE = '(max-width: 767px)';
 
+export type SortSlotPlan = 'none' | 'swap' | 'reveal';
+
+/**
+ * Where the sorted value goes on a phone: nowhere when the row already shows
+ * it (or on desktop, where every column does), into the Proj spot when the
+ * row has one, else its own column, revealed.
+ */
+export function sortSlotPlan(o: {
+  phone: boolean;
+  activeKey: string | null;
+  /** The sorted column belongs to the view on screen. */
+  inView: boolean;
+  /** …but the phone CSS hides it. */
+  hiddenOnPhone: boolean;
+  /** The row shows a Proj column to swap into. */
+  projShown: boolean;
+}): SortSlotPlan {
+  if (!o.phone || !o.activeKey || !o.inView || !o.hiddenOnPhone) return 'none';
+  if (o.activeKey === 'projected') return 'none';
+  return o.projShown ? 'swap' : 'reveal';
+}
+
 function headerText(th: HTMLElement): string {
   const copy = th.cloneNode(true) as HTMLElement;
   copy.querySelectorAll('.sort-arrow, .th-season').forEach((n) => n.remove());
@@ -125,6 +154,80 @@ function headerText(th: HTMLElement): string {
 function inView(th: HTMLElement): boolean {
   if (th.style.display !== 'none') return true;
   return getComputedStyle(th).display !== 'none';
+}
+
+/** Put every cell this module changed back the way the page rendered it. */
+function clearSortSlot(table: HTMLTableElement): void {
+  table.querySelectorAll<HTMLElement>('td[data-fa-orig]').forEach((td) => {
+    td.innerHTML = td.dataset.faOrig ?? '';
+    delete td.dataset.faOrig;
+  });
+  table.querySelectorAll<HTMLElement>('th[data-fa-slot]').forEach((th) => {
+    delete th.dataset.faSlot;
+    th.style.removeProperty('--fa-slot-color');
+  });
+  table.querySelectorAll<HTMLElement>('[data-fa-reveal]').forEach((el) => {
+    el.style.removeProperty('display');
+    delete el.dataset.faReveal;
+  });
+  delete table.dataset.faSlotKey;
+}
+
+/**
+ * Show the sorted column on a phone (see the header note). Idempotent: it
+ * runs after every re-render and re-reads the table each time, because the
+ * page rebuilds its rows from data on every sort, filter and "load more".
+ */
+function applySortSlot(table: HTMLTableElement, active: SortState | null): void {
+  const headerRow = table.tHead?.rows[0];
+  if (!headerRow) return;
+  const ths = Array.from(headerRow.cells) as HTMLElement[];
+  const sortedTh = active
+    ? ths.find((th) => th.dataset.sort === active.key && inView(th)) ?? null
+    : null;
+  const projTh = ths.find((th) => th.dataset.sort === 'projected' && getComputedStyle(th).display !== 'none') ?? null;
+  // The reveal writes an inline display, so ask whether the PHONE CSS hides
+  // the column — the marker says this module is what is showing it.
+  const hiddenOnPhone = !!sortedTh && (sortedTh.dataset.faReveal != null || getComputedStyle(sortedTh).display === 'none');
+  const plan = sortSlotPlan({
+    phone: window.matchMedia(PHONE).matches,
+    activeKey: active?.key ?? null,
+    inView: !!sortedTh,
+    hiddenOnPhone,
+    projShown: !!projTh,
+  });
+  const want = plan === 'none' || !active ? '' : `${plan}:${active.key}:${active.dir}`;
+  if (table.dataset.faSlotKey !== want) clearSortSlot(table);
+  if (!want || !active || !sortedTh) return;
+  table.dataset.faSlotKey = want;
+
+  const from = ths.indexOf(sortedTh);
+  const rows = Array.from(table.tBodies[0]?.rows ?? []).filter((r) => r.cells.length === ths.length);
+
+  if (plan === 'reveal') {
+    for (const el of [sortedTh, ...rows.map((r) => r.cells[from] as HTMLElement)]) {
+      // Checked on the style itself: a view toggle re-render clears it.
+      if (el.style.getPropertyPriority('display') === 'important') continue;
+      el.dataset.faReveal = '';
+      el.style.setProperty('display', 'table-cell', 'important');
+    }
+    return;
+  }
+
+  const to = ths.indexOf(projTh!);
+  const label = FA_SORT_CHIP_LABELS[active.key] ?? headerText(sortedTh);
+  const slot = `${label} ${active.dir === 'asc' ? '▲' : '▼'}`;
+  if (projTh!.dataset.faSlot !== slot) projTh!.dataset.faSlot = slot;
+  // Wear the page's own "sorted" colour, which differs by league and style:
+  // the sorted header is hidden, but its computed colour still resolves.
+  const color = getComputedStyle(sortedTh).color;
+  if (projTh!.style.getPropertyValue('--fa-slot-color') !== color) projTh!.style.setProperty('--fa-slot-color', color);
+  for (const r of rows) {
+    const cell = r.cells[to] as HTMLElement;
+    if (cell.dataset.faOrig != null) continue;
+    cell.dataset.faOrig = cell.innerHTML;
+    cell.innerHTML = (r.cells[from] as HTMLElement).innerHTML;
+  }
 }
 
 function readActive(table: HTMLTableElement): SortState | null {
@@ -176,6 +279,7 @@ export function initFaSortChips(): void {
         }
       }
     }
+    applySortSlot(table, active);
   };
 
   // Every re-render rewrites the header classes, arrows and view styles, and
@@ -197,6 +301,9 @@ export function initFaSortChips(): void {
     queueSync();
   });
   observer.observe(table.tHead, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style'] });
+  // New rows (a re-render, "load more") need the sorted value swapped in.
+  const tbody = table.tBodies[0];
+  if (tbody) observer.observe(tbody, { childList: true });
   window.matchMedia(PHONE).addEventListener('change', queueSync);
 
   row.addEventListener('click', (e) => {

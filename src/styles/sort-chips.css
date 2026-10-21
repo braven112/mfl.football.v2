@@ -24,7 +24,11 @@
     display: none;
   }
 
+  /* Positioned so the visually-hidden direction text (.rr-chip__sr, which
+     is absolute) stays inside the scroll box. Without it the text anchors to
+     the page and an active chip scrolled to the edge widened the page. */
   .rr-chip {
+    position: relative;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
