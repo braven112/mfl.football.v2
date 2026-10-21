@@ -630,3 +630,27 @@ html[data-season='christmas'] .mll {
 html[data-season='christmas'] .mll-row[data-league='afl-fantasy'] {
   --league-accent-bg: #8f1219;
 }
+
+/* Playoffs: the game-status pills (live orange, final teal, scheduled indigo)
+   and the final card's navy edge. Final reads green, live and scheduled red. */
+html[data-season='christmas'] .status-final {
+  background: #e3f1e8;
+  color: #145a33;
+  border-color: rgba(31, 122, 70, 0.3);
+}
+html[data-season='christmas'] .status-scheduled {
+  background: #fdecee;
+  color: #8f1219;
+  border-color: rgba(181, 18, 27, 0.25);
+}
+html[data-season='christmas'] .status-live {
+  background: #b5121b;
+  color: #ffffff;
+  border-color: #b5121b;
+}
+html[data-season='christmas'] .matchup-card[data-status='final'] {
+  border-color: rgba(31, 122, 70, 0.35);
+}
+html[data-season='christmas'] .matchup-card[data-status='live'] {
+  border-color: #b5121b;
+}
