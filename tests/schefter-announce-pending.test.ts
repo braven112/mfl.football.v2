@@ -250,19 +250,11 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
    * week's column to everyone the message had just told to read this one.
    */
   let generator = '';
-  let REVEAL_POST = '';
   beforeEach(async () => {
     generator ||= await fs.readFile(
       path.join(REPO_ROOT, 'scripts/generate-pecking-order.mjs'),
       'utf8',
     );
-    if (!REVEAL_POST) {
-      const posts = await fs.readFile(
-        path.join(REPO_ROOT, 'scripts/lib/owners-poll-posts.mjs'),
-        'utf8',
-      );
-      REVEAL_POST = posts.slice(posts.indexOf('export function buildRevealFeedPost'));
-    }
   });
 
   it('the Tuesday column waits on its issue permalink, never the landing page', async () => {
@@ -278,15 +270,9 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
     const { issuePermalink } = await import('../scripts/generate-pecking-order.mjs');
     expect(issuePermalink({ slug: 'afl-fantasy' }, 2026, 6)).toBe('/afl-fantasy/pecking-order/2026/6');
 
-    // The reveal AMENDS Tuesday's issue, so a status code cannot tell it apart
-    // from the open ballot: it stays unprobed until it has a body marker.
-    // docs/claude/followups/2026-09-17-pecking-order-permalink-500.md
-    expect(generator).toMatch(/const REVEAL_VERIFY_PATH = null;/);
-    expect(generator.match(/verifyPath: REVEAL_VERIFY_PATH,/g) ?? []).toHaveLength(1);
-
     // Queueing is still the point: the announcement cannot go out ahead of the
     // commit step, and cannot go out at all if that step failed.
-    expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(2);
+    expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(1);
   });
 
   it('the probed permalink is server-rendered and 404s a week it does not have', async () => {
@@ -304,31 +290,10 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
     }
   });
 
-  it('the reveal could not have probed its own feed post', () => {
-    // buildRevealFeedPost emits type 'power-ranking', and news/[id].astro
-    // serves only `type === 'article'` with content or grades — so that
-    // permalink never resolves, however tempting it looks as a probe.
-    expect(REVEAL_POST).toMatch(/type: 'power-ranking'/);
-    expect(REVEAL_POST).not.toMatch(/type: 'article'/);
-    expect(generator).not.toMatch(/\/news\/\$\{revealPostId\}/);
-  });
-
-  it('carries the column push category and the ballot pushes with it', () => {
+  it('carries the column push category', () => {
     // 'column', not 'article' — owners subscribe per category, and a wrong one
     // is dropped server-side rather than delivered to someone who did not ask.
     expect(generator).toMatch(/pushCategory: 'column'/);
-    // The ballot-open pushes ride in the same queue entry, so they cannot land
-    // before the page carrying the ballot does.
-    expect(generator).toMatch(/voterPushes: pollBlock/);
-  });
-
-  it('leaves the push-only nag sending inline — it waits on nothing', () => {
-    const nag = generator.slice(
-      generator.indexOf('async function runNagPoll'),
-      generator.indexOf('/** Every earlier issue of this season'),
-    );
-    expect(nag).toMatch(/sendVoterPushes/);
-    expect(nag).not.toMatch(/enqueueAnnounce/);
   });
 });
 
@@ -437,7 +402,6 @@ describe('announceOne', () => {
       groupMeText: 'x',
       botEnv: 'GROUPME_BOT_ID_DELIBERATELY_UNSET',
       push: { franchiseIds: ['0001'], title: 'T', body: 'B', url: '/x', tag: 'po_skip' },
-      voterPushes: [{ franchiseId: '0001' }],
       skipIfNotLive: true,
     };
     const result = await announceOne(entry, {
@@ -450,7 +414,7 @@ describe('announceOne', () => {
 
     // Without the flag the default stays fail-open, as articles want.
     const order: string[] = [];
-    await announceOne({ ...entry, push: null, voterPushes: null, skipIfNotLive: undefined }, {
+    await announceOne({ ...entry, push: null, skipIfNotLive: undefined }, {
       wait: async () => ({ live: false, attempts: 36 }),
       log: { log: (m: string) => { if (String(m).includes('not set')) order.push('send'); }, warn: () => {} },
     });

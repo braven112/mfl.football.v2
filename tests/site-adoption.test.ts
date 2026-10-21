@@ -16,7 +16,6 @@ import type { NotificationLeague } from '../src/config/notification-categories';
 
 const LEAGUE: NotificationLeague = {
 	features: {} as NotificationLeague['features'],
-	ownersPoll: { enabled: false },
 };
 
 class FakeRedis {

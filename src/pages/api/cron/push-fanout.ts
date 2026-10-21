@@ -7,8 +7,8 @@
  * route delivers them — the same bridge shape as api/cron/roster-sync.ts, and
  * gated by the same CRON_SECRET.
  *
- * This is what the group-chat cap leans on. Transactions, rumors, the weekly
- * columns and the poll's reminder are all held out of the chat now, so this is
+ * This is what the group-chat cap leans on. Transactions, rumors and the weekly
+ * columns are all held out of the chat now, so this is
  * the road they take instead, and each carries the notification CATEGORY an
  * owner controls at /<league>/notifications.
  *
@@ -97,8 +97,8 @@ export const POST: APIRoute = async ({ request }) => {
     // One push per franchise; a franchise with no subscriptions is a no-op
     // inside the sender, which never throws.
     // The category travels with each notification rather than being fixed for
-    // the whole call: one close pass sends results to voters and a reminder to
-    // non-voters, and an owner can want one without the other.
+    // the whole call, so one pass can send two kinds of alert and an owner can
+    // want one without the other.
     const category = typeof n.category === 'string' ? n.category : '';
     if (!category) continue;
 
@@ -106,9 +106,9 @@ export const POST: APIRoute = async ({ request }) => {
       title,
       body,
       url: typeof n.url === 'string' ? n.url : undefined,
-      // Same tag collapses repeats on the device, so a re-run of the close
-      // pass cannot stack duplicate reveals in someone's notification tray.
-      tag: typeof n.tag === 'string' ? n.tag : 'owners-poll',
+      // Same tag collapses repeats on the device, so a re-run of a pass cannot
+      // stack duplicate alerts in someone's notification tray.
+      tag: typeof n.tag === 'string' ? n.tag : `fanout-${category}`,
       // Branded per league. This route resolved the league already but sent no
       // art at all, so every fan-out fell through to the service worker's
       // default — TheLeague's mark on an AFL owner's phone.

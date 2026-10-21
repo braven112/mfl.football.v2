@@ -113,7 +113,6 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     `    advertiseOnSharedHost: false,`,
     `    optInNav: true,`,
     `    pageKit: 'package',`,
-    `    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },`,
     ...(f.powerRankings ? [`    peckingOrder: { topN: 25 },`] : []),
     ...(spec.duplicatePlayers ? [`    duplicatePlayers: true,`] : []),
     `    officialClock: {`,

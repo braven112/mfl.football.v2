@@ -22,28 +22,6 @@ on:
     # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
     # would have shadowed a Wednesday mapping; no reason to churn it back.
     - cron: "0 16 * * 3"
-    # Thursday 9am PT (16:00 UTC) — owners-poll-nag. The count-only turnout
-    # reminder, on the morning the ballot closes and the same morning owners
-    # are thinking about lineups. Posts nothing at full turnout and nothing
-    # when no ballot is open, so it is safe year-round.
-    - cron: "0 16 * * 4"
-    # owners-poll-close — tallies and reveals. TWO entries, because one UTC
-    # cron cannot sit between the 4pm PT close and the ~5:15pm PT Thursday
-    # kickoff on both sides of the DST flip: 00:00 UTC Friday is 5pm PT in
-    # PDT but 4pm PT in PST, i.e. the stated hour of margin becomes ZERO in
-    # November, mid-season, and a ballot cast at the deadline races the pass
-    # that counts it.
-    #
-    # So both are scheduled and the pass — which refuses to tally a window
-    # that has not actually closed, and no-ops on one already tallied —
-    # decides which one is the real run:
-    #   23:30 UTC Thu = 4:30pm PDT (valid) / 3:30pm PST (window still open,
-    #                   refuses)
-    #   00:30 UTC Fri = 5:30pm PDT (already tallied, no-op) / 4:30pm PST
-    #                   (valid)
-    # Both land before kickoff in the half of the year where they do the work.
-    - cron: "30 23 * * 4"
-    - cron: "30 0 * * 5"
   workflow_dispatch:
     inputs:
       type:
@@ -60,8 +38,6 @@ on:
           - team-grades
           - schedule-strength
           - pecking-order
-          - owners-poll-nag
-          - owners-poll-close
           - schedule-release
       week:
         description: "Override week number (optional)"
@@ -119,10 +95,6 @@ jobs:
             case "$CRON_EXPR" in
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
-              "0 16 * * 4") TYPE="owners-poll-nag" ;;
-              # Both DST halves map to the same type — see the schedule note.
-              "30 23 * * 4") TYPE="owners-poll-close" ;;
-              "30 0 * * 5")  TYPE="owners-poll-close" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;
@@ -149,12 +121,12 @@ jobs:
           # cut-watch reads autocut:{fid} cutdown-plan status (counts only)
           # so Schefter can credit owners who already made their picks and
           # call out over-limit teams with no plan on file.
-          # owners-poll-close POSTs its per-voter reveal pushes back to the
-          # site (web push must be sent server-side, and a node script cannot
-          # import the TypeScript sender). The target origin comes from the
-          # league registry (leagueUrl), not a workflow variable — CLAUDE.md
-          # keeps configuration in code. An absent secret skips the push and
-          # never fails the job.
+          # Push fan-out POSTs back to the site (web push must be sent
+          # server-side, and a node script cannot import the TypeScript
+          # sender). The target origin comes from the league registry
+          # (leagueUrl), not a workflow variable — CLAUDE.md keeps
+          # configuration in code. An absent secret skips the push and never
+          # fails the job.
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
@@ -205,19 +177,6 @@ jobs:
             # writes up only its registry peckingOrder.topN (Archie's: 25);
             # a Slack league is announced by the drainer below.
             each_league pecking-order node scripts/generate-pecking-order.mjs --publish $WEEK_ARG
-          elif [ "$ARTICLE_TYPE" = "owners-poll-nag" ]; then
-            # Count-only turnout reminder. NO @-mentions and no names — that is
-            # a product decision (docs/plans/owners-poll.md), not chat styling.
-            # Writes nothing to disk, so the commit step is skipped below.
-            # Fails loudly on missing credentials rather than reporting a quiet
-            # week, so a broken deployment cannot hide for a season.
-            each_league owners-poll node scripts/generate-pecking-order.mjs --nag-poll --publish
-          elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
-            # Amends Tuesday's ALREADY-PUBLISHED issue with the tally. The AI is
-            # never called on this path: rewriting the headline and blurbs
-            # owners read on Tuesday would change the column underneath them.
-            # A league with no open ballot is a clean no-op.
-            each_league owners-poll node scripts/generate-pecking-order.mjs --close-poll --publish
           elif [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             # The Gauntlet runs for BOTH leagues: compute fresh derived data
             # first (the article reads the derived JSON, never raw feeds), then
@@ -255,11 +214,7 @@ jobs:
         run: node scripts/schefter-tag-players.mjs
 
       - name: Commit and push
-        # owners-poll-nag is push-only and touches no file — running the
-        # committer for it would be a no-op that still costs a checkout race
-        # against the other article crons. It also queues nothing, so it has
-        # nothing waiting on the announce step below.
-        if: steps.resolve.outputs.type != '' && steps.resolve.outputs.type != 'owners-poll-nag'
+        if: steps.resolve.outputs.type != ''
         env:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
@@ -284,10 +239,6 @@ jobs:
             FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             FILES="$(jobfiles pecking-order '{dataPath}/pecking-order')"
-          elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
-            # The close pass amends the issue AND writes the reveal into each
-            # league's Schefter feed, so both have to be committed.
-            FILES="$(jobfiles owners-poll '{dataPath}/pecking-order'),$(jobfiles owners-poll '{schefterFeedPath}')"
           else
             FILES="$(jobfiles article:weekly '{schefterFeedPath}')"
           fi

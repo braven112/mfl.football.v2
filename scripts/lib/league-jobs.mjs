@@ -69,8 +69,6 @@ export const LEAGUE_JOBS = {
   // ── Columns: on by checkbox ────────────────────────────────────────────
   /** The Pecking Order (the "Power rankings" box). */
   'pecking-order': (l) => syncs(l) && Boolean(l.features?.powerRankings),
-  /** The Owners' Poll riding on it (nag + close passes). */
-  'owners-poll': (l) => syncs(l) && Boolean(l.features?.powerRankings) && Boolean(l.ownersPoll?.enabled),
   /** The Gauntlet. */
   'article:schedule-strength': writes('schedule-strength'),
   /** Release-day column: only where this site draws the schedule. */

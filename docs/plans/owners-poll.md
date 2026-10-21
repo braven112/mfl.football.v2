@@ -1,5 +1,9 @@
 # The Owners' Poll — owner-voted team rankings inside The Pecking Order
 
+> **RETIRED (2026-10-21).** The feature was removed from the codebase. Kept as
+> the record of what was built; see the top entry of
+> `docs/claude/insights/features/owners-poll.md` for why.
+
 > **SUPERSEDED IN PART (2026-09-18).** This document describes the poll as
 > originally designed and built. Three of its decisions have since been
 > reversed, and the text below has NOT been rewritten — it is kept as the

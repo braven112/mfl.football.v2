@@ -11,8 +11,6 @@ import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
-import OwnersPollHomePopup from '../../components/shared/owners-poll/OwnersPollHomePopup.astro';
-import { newestIssueStandings } from '../../utils/owners-poll-ballot-teams';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES SeasonDailyHero rather than stacking
 // above it. Both halves gate on the same showTestDriveHero() call so the page
@@ -44,7 +42,6 @@ import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
-import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
 import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
@@ -202,36 +199,6 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 // window boundary — and since the page's ternary is exclusive, a request that
 // split them would render no hero at all (review finding, #569).
 const heroReferenceDate = effectiveDate ?? new Date();
-// ---------------------------------------------------------------------------
-// The Owners' Poll pop-up — the once-a-week quick-vote sheet. The permanent
-// homepage card that used to sit under the hero came off in Oct 2026 (unused);
-// the pop-up is what collects ballots. It needs only this season's newest
-// standings, for the stats on its ballot cards.
-//
-// A literal glob: Vite cannot take a runtime variable here, which is the same
-// reason the ballot page's data import lives in its route rather than in the
-// shared component.
-const ownersPollIssues = import.meta.glob<any>(
-  '../../../data/theleague/pecking-order/*.json',
-  { eager: true, import: 'default' },
-);
-
-// Stats for the pop-up's ballot cards: the newest issue of THIS season (last
-// season's standings would put a stale record on every card in Week 1).
-const ownersPollStandings = newestIssueStandings(
-  Object.entries(ownersPollIssues)
-    .map(([file, data]) => {
-      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-      return m ? { ...data, year: Number(m[1]), week: Number(m[2]) } : null;
-    })
-    .filter((x): x is any => !!x && x.year === getCurrentSeasonYear(heroReferenceDate)),
-);
-
-// Gated on the SEASON WINDOW, never on "the archive has a file".
-const showOwnersPollPopup =
-  THELEAGUE.ownersPoll?.enabled &&
-  isSeasonWindowOpen(getCurrentSeasonYear(heroReferenceDate), heroReferenceDate);
-
 // ── The waiver deadline the hero counts down to ─────────────────────────────
 // From MFL's own calendar, never computed here. TheLeague's `WAIVER_BBID` runs
 // **Wed 7:00 PM PT**, not the 8pm the hero used to build by hand out of
@@ -943,14 +910,6 @@ const labels = await getPersonaLabels('theleague');
     </aside>
 
     <div class="hp2__main">
-      {showOwnersPollPopup && (
-        <OwnersPollHomePopup
-          leagueSlug={THELEAGUE.slug}
-          ballotHref={r('/theleague/owners-poll')}
-          ballotStandings={ownersPollStandings}
-        />
-      )}
-
       {showAuctionsCard && activeAuctions.length > 0 && (
         <>
           <HpAuctionsCard

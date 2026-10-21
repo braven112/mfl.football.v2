@@ -1,6 +1,6 @@
 /**
  * The viewer's clock on LEAGUE surfaces — the draft hub, waiver windows, the
- * owners-poll deadline, the mock-draft lobby.
+ * (since-retired) Owners' Poll deadline, the mock-draft lobby.
  *
  * Sunday Ticket already had `kickoffZonesFor`; these are the second reader,
  * and each of the rules below is the reason a second one was needed rather

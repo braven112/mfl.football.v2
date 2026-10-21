@@ -248,12 +248,12 @@ export const FEATURES: Feature[] = [
 	},
 	{
 		id: 'power-rankings',
-		name: 'Power rankings and owners’ poll',
-		screenshot: shot('owners-poll.webp', 'The owners’ poll ballot: each owner ranks the league’s top teams.'),
-		summary: 'A weekly power-rankings column, with a ballot every owner votes on.',
+		name: 'Power rankings',
+		screenshot: shot('afl-pecking-order.webp', 'The weekly power-rankings column, every team ranked with a write-up.'),
+		summary: 'A weekly power-rankings column, written up in the league’s own voice.',
 		details: [
 			'A weekly power-rankings column.',
-			'An owners’ poll: every owner ranks the league, and the tally is revealed with the column.',
+			'Every team ranked on all-play record and recent scoring, with a blurb each.',
 		],
 	},
 	{
