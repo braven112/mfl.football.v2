@@ -597,3 +597,36 @@ html[data-season='christmas'] #league_logo .header-logo-img--dark { display: blo
 /* "The" and ".us" read the secondary name colour, which is navy on the
    red header; the themed palette has no slot for it, so it is set here. */
 html[data-season='christmas'] .theleague-header { --logo-name-secondary-color: #ffd9de; }
+
+/* ── Christmas: the blues that were not theme slots (owner's picks from the
+      Oct 2026 colour audit). Team colours are left alone; these are chrome. */
+
+/* Search box focus ring. */
+html[data-season='christmas'] .directory__search:focus {
+  border-color: var(--color-primary);
+}
+
+/* AFL homepage playoff preview: the seeds that are in. */
+html[data-season='christmas'] .afl-conf__seed-badge--in {
+  background: #1f7a46;
+  color: #ffffff;
+}
+
+/* AFL roster header conference rails wear the conference's mark colour (AL
+   red, NL blue); for the week the first rail is red and the second green. */
+html[data-season='christmas'] .rhdr-teams__conflabel {
+  background: #b5121b;
+}
+html[data-season='christmas'] .rhdr-teams__conf + .rhdr-teams__conf .rhdr-teams__conflabel {
+  background: #1f7a46;
+}
+
+/* MFL Live landing: the studio's navy line and second ground, and the AFL
+   row's navy wash, go to the season's red. TheLeague's row is already green. */
+html[data-season='christmas'] .mll {
+  --mll-studio-2: #1c1214;
+  --mll-studio-line: #3a1e22;
+}
+html[data-season='christmas'] .mll-row[data-league='afl-fantasy'] {
+  --league-accent-bg: #8f1219;
+}
