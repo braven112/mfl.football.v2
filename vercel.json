@@ -322,5 +322,11 @@
       ],
       "statusCode": 301
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/afl-fantasy.com/:path*",
+      "destination": "https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/afl-fantasy.com/:path*"
+    }
   ]
 }
