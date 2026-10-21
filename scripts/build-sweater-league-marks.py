@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Build the Christmas Week league marks: each league logo, division badge,
-conference, tier and award mark knit into an ugly-sweater patch, the same
-60x60-stitch patch scripts/build-sweater-marks.py knits for every team
-(owner, Oct 2026: "follow the sweater style we have").
+conference, tier and award mark knit in sweater stitches. Only the league
+logo is a full patch, the 60x60-stitch patch scripts/build-sweater-marks.py
+knits for every team; the other marks are knit in their own shape with no
+patch around them (owner, Oct 2026).
 
     python3 scripts/build-sweater-league-marks.py [--preview <dir>]
 
@@ -49,17 +50,17 @@ LOGO_COLORS = {'theleague': {'#1c497c': GREEN, '#13365d': DKGREEN, '#2e8743': RE
 
 AWARDS = ('al-north', 'al-south', 'nl-east', 'nl-west', 'afl-championship', 'premier-league',
           'dleague-champion', 'al-champion', 'nl-champion', 'afl-cup')
-# navSlug -> [(source asset, dest file, band motif)]
+# navSlug -> [(source asset, dest file, patch band motif, or None for a bare knit)]
 MARKS = {
     'theleague': [('/assets/logos/theleague-logo.svg', 'logo.png', 'tree')]
-                 + [(f'/assets/theleague/division-badges/{d}.svg', f'division-badges/{d}.png', 'flake')
+                 + [(f'/assets/theleague/division-badges/{d}.svg', f'division-badges/{d}.png', None)
                     for d in ('northwest', 'southwest', 'central', 'east')],
     'afl': [('/assets/logos/afl-logo.svg', 'logo.png', 'tree'),
-            ('/assets/afl/conferences/al.svg', 'conferences/al.png', 'tree'),
-            ('/assets/afl/conferences/nl.svg', 'conferences/nl.png', 'tree'),
-            ('/assets/afl/premier.svg', 'premier.png', 'flake'),
-            ('/assets/afl/dleague.svg', 'dleague.png', 'flake')]
-           + [(f'/assets/afl/awards/{a}.svg', f'awards/{a}.png', 'tree') for a in AWARDS],
+            ('/assets/afl/conferences/al.svg', 'conferences/al.png', None),
+            ('/assets/afl/conferences/nl.svg', 'conferences/nl.png', None),
+            ('/assets/afl/premier.svg', 'premier.png', None),
+            ('/assets/afl/dleague.svg', 'dleague.png', None)]
+           + [(f'/assets/afl/awards/{a}.svg', f'awards/{a}.png', None) for a in AWARDS],
 }
 # every served cut of a mark -> its patch (dark cuts swap to the same patch)
 SWAPS = {
@@ -112,8 +113,8 @@ def nearest(c):
 def knit(png, motif):
     src = Image.open(png).convert('RGBA')
     src = src.crop(src.getbbox())
-    band_h = len(BANDS[motif]) + 2
-    area = ROWS - 2 * (band_h + 2) - 4
+    band_h = len(BANDS[motif]) + 2 if motif else 0
+    area = ROWS - 2 * (band_h + 2) - 4 if motif else BARE
     w, h = src.size
     sc = area / max(w, h)
     mw, mh = max(1, round(w * sc)), max(1, round(h * sc))
@@ -139,6 +140,8 @@ def knit(png, motif):
                     top = max(set(nb), key=nb.count)
                     if nb.count(top) >= 3: nxt[r][c] = top
         cells = nxt
+    if not motif:
+        return bare(cells, mw, mh)
     count = {}
     for row in cells:
         for y in row:
@@ -195,6 +198,29 @@ def knit(png, motif):
     o = Image.new('RGBA', (768, 768)); o.paste(img, (0, 0), mask)
     out = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
     out.paste(o.resize((SIZE - 8, SIZE - 8), Image.LANCZOS), (4, 4))
+    return out
+
+# stitches across a bare mark: more than a patch's mark gets, since nothing
+# surrounds it
+BARE = 56
+
+def bare(cells, mw, mh):
+    # the mark's own stitches on a transparent ground, centred on a square
+    n = max(mw, mh)
+    img = Image.new('RGBA', (n * CELL, n * CELL), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r0, c0 = (n - mh) // 2, (n - mw) // 2
+    for r in range(mh):
+        for c in range(mw):
+            if cells[r][c]:
+                # the yarn's own shadow fills the gaps between its lobes, as
+                # the patch's dark ground does, or the page shows through and
+                # the mark goes pale on a light theme
+                x, y = (c0 + c) * CELL, (r0 + r) * CELL
+                d.rectangle((x, y, x + CELL - 1, y + CELL - 1), fill=shade(hexrgb(cells[r][c]), 0.6))
+                stitch(d, x, y, hexrgb(cells[r][c]))
+    out = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    out.paste(img.resize((SIZE, SIZE), Image.LANCZOS), (0, 0))
     return out
 
 def main():
