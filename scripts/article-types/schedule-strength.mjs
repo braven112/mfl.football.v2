@@ -17,7 +17,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
-import { primaryLink, linkList } from '../article-utils/article-links.mjs';
+import { primaryLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 function leagueMeta(league) {
   const reg = LEAGUES[league];
@@ -197,9 +197,10 @@ export function validate(aiOutput) {
  *
  * The column is the prose half of a rankings table that lives on its own page
  * (and is embedded above and below the copy by GauntletArticleSection). It
- * carries the primary link and no feature plugs: in a two-paragraph column
- * every plug costs a sentence, and the old five-paragraph edition spent one on
- * each of trade builder, free agents, playoffs and transactions.
+ * offers exactly ONE feature plug: in a two-paragraph column every plug costs
+ * a sentence, and the old five-paragraph edition spent one on each of trade
+ * builder, free agents, playoffs and transactions. The trade builder is the one
+ * kept — it answers "my road is brutal" and resolves in every league.
  *
  * The pipeline calls this on every run. `applyArticleLinks` injects the
  * PRIMARY link if the model drops it and strips any href the model invented;
@@ -214,6 +215,7 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
       label: 'the Gauntlet rankings',
       cta: 'The full remaining-schedule rankings are on the Gauntlet page.',
     }),
+    featureLink(league, 'trade-builder'),
   );
 }
 
