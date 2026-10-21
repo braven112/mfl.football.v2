@@ -16,7 +16,8 @@ jQuery(document).ready(function() {
             url: e,
             success: function(e) {
                 jQuery(e).find("#welcome td a").each(function() {
-                    jQuery("#slide-menu-login ul").append('<li><a class="no-sub" href="' + jQuery(this).attr("href") + '">' + $(this).text() + "</a></li>");
+                    var link = jQuery('<a class="no-sub"></a>').attr("href", jQuery(this).attr("href")).text(jQuery(this).text());
+                    jQuery("#slide-menu-login ul").append(jQuery("<li></li>").append(link));
                 });
             },
             async: !0
