@@ -163,6 +163,22 @@ INSTRUCTIONS:
 - Voice: high-energy beat reporter who built the model himself and trusts it.`;
 }
 
+/**
+ * Characters a reader sees: everything outside `<…>` tags. A length count only
+ * — the result is never rendered, so this is deliberately not a sanitizer (a
+ * regex tag-strip here is what CodeQL reads as one).
+ */
+function visibleLength(html) {
+  let n = 0;
+  let inTag = false;
+  for (const ch of html) {
+    if (ch === '<') inTag = true;
+    else if (ch === '>') inTag = false;
+    else if (!inTag) n++;
+  }
+  return n;
+}
+
 export function validate(aiOutput) {
   const errors = [];
   if (!aiOutput.headline || aiOutput.headline.length > 100) errors.push('Headline missing or too long');
@@ -170,8 +186,8 @@ export function validate(aiOutput) {
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   if (aiOutput.content?.length > MAX_PARAGRAPHS) errors.push(`More than ${MAX_PARAGRAPHS} paragraphs (extras are dropped)`);
   for (const [i, p] of (aiOutput.content ?? []).entries()) {
-    const text = String(p).replace(/<[^>]*>/g, '');
-    if (text.length > MAX_PARAGRAPH_CHARS) errors.push(`Paragraph ${i + 1} is ${text.length} chars (max ${MAX_PARAGRAPH_CHARS})`);
+    const chars = visibleLength(String(p));
+    if (chars > MAX_PARAGRAPH_CHARS) errors.push(`Paragraph ${i + 1} is ${chars} chars (max ${MAX_PARAGRAPH_CHARS})`);
   }
   return errors;
 }
