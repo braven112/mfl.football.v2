@@ -278,10 +278,14 @@ describe('the phone sort chips (idea B)', () => {
   });
 
   it('the chip row scrolls within itself and cannot widen the page', () => {
+    // The pill itself is shared with the Free Agents page (sort-chips.css);
+    // where the row sits on a roster stays in rosters-mobile.css.
+    const CHIPS = fs.readFileSync(path.join(process.cwd(), 'src/styles/sort-chips.css'), 'utf8');
     const rule = (sel: string) => {
-      const at = CSS.indexOf(`${sel} {`);
+      const sheet = CSS.includes(`${sel} {`) ? CSS : CHIPS;
+      const at = sheet.indexOf(`${sel} {`);
       expect(at, `${sel} has no rule`).toBeGreaterThan(-1);
-      return CSS.slice(at, CSS.indexOf('}', at));
+      return sheet.slice(at, sheet.indexOf('}', at));
     };
     expect(rule('.rr-chips__row')).toMatch(/overflow-x:\s*auto;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/min-width:\s*0;/);

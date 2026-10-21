@@ -71,3 +71,17 @@
     white-space: nowrap;
   }
 }
+
+/* The sort pills (sort-chips.css; free-agents-sort-chips.ts) stand in for
+   the headers a phone hides; on desktop the headers are the control. */
+.rr-chips.fa-sort-chips {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .rr-chips.fa-sort-chips {
+    display: block;
+    min-width: 0;
+    margin: 0 0 0.75rem;
+  }
+}

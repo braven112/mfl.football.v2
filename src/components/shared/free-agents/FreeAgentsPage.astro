@@ -38,6 +38,7 @@ import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorde
 import '../../../styles/player-cell.css';
 import '../../../styles/ranking-columns.css';
 import '../../../styles/snap-columns.css';
+import '../../../styles/sort-chips.css';
 import '../../../styles/free-agents-mobile.css';
 import nflByeWeeksFile from '../../../../data/nfl/bye-weeks.json';
 import { byeWeeksByTeam } from '../../../utils/nfl-bye-lookup';
@@ -835,6 +836,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
     </div>
 
     <WaiverClaimsPanel config={claimsPanelConfig} />
+
+    {/* The phone's sort pills (free-agents-sort-chips.ts): every sortable
+        header in the view on screen, including the ones a phone hides. */}
+    <div class="rr-chips fa-sort-chips">
+      <div class="rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips></div>
+    </div>
 
     <!-- Table -->
     <div class="table-wrapper">
@@ -2058,6 +2065,18 @@ const spriteUrl = spriteUrlFor(Astro.url);
     tableSelector: '.players-table',
     anchorSelector: '[data-sort="weight"]',
   });
+</script>
+
+<!-- Phone sort pills — they click the headers, so the page's own sort runs. -->
+<script>
+  import { initFaSortChips } from '../../../utils/free-agents-sort-chips';
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFaSortChips);
+  } else {
+    initFaSortChips();
+  }
+  document.addEventListener('astro:page-load', initFaSortChips);
 </script>
 
 <!-- Player modal trigger (delegated, survives re-renders) -->
