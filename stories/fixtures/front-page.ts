@@ -5,8 +5,8 @@
  */
 import type { FrontPageModel, FrontTeamArt } from '../../src/components/shared/front-page/types';
 
-// Crest paths are written out whole: tests/chromatic-path-filter.test.ts reads
-// them literally to know which assets re-trigger a snapshot.
+// Crest paths are written out whole so a text scan can see which assets a
+// story renders.
 const team = (id: string, name: string, icon: string, a: string, b: string, record: string): FrontTeamArt => ({
   franchiseId: id,
   name,

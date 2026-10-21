@@ -32,7 +32,7 @@ three features re-implemented — which no per-PR review can see by construction
 | Cron/roster/Schefter data commits | **Unchanged — keep committing to `main`** [DECIDED] |
 | Release day | **Tuesday** [DECIDED] |
 | Staging infra | **Same Vercel project, staging subdomains** [DECIDED — built in #1047] |
-| Chromatic | **Runs on the promotion to prod, not on feature builds** [DECIDED] |
+| Visual tests | **Chromatic removed (Oct 2026)** — it kept running out of included snapshots. Replaced by Playwright screenshots on every feature PR into `staging`, baselines on the `visual-baselines` branch [DECIDED] |
 | Weekly review | **A code-efficiency and reuse pass over the whole week's diff** [DECIDED] |
 | Staging database | **Shared with production — no separate Upstash DB** [DECIDED] |
 | Staging's standard | **Production-level. Full CI, full review, full quality pass on every PR into it** [DECIDED] |
@@ -185,7 +185,13 @@ the workflow actually triggers on the branch — a check required but never
 reported leaves the PR blocked forever rather than protected. Wire the required
 checks for `staging` only now that these triggers exist.
 
-### Chromatic moves to the promotion — **done**
+### Chromatic moves to the promotion — **done**, then removed
+
+> **Superseded (Oct 2026):** Chromatic was removed entirely — it kept running
+> out of included snapshots and blocking work. Nothing below runs any more; it
+> is kept as the record of why the visual review sat at the promotion. Its
+> Playwright replacement runs on feature PRs into `staging` instead: captures
+> are free, and a diff is easiest to attribute while its PR is open.
 
 Its `pull_request` trigger had no `branches` filter, so it would have fired on
 feature PRs into `staging`. Now `branches: [main]`, which means the only PR it
@@ -323,7 +329,7 @@ plan:
 | Lens | What it looks for | Tooling |
 |---|---|---|
 | **Stored-shape compatibility** | A key shape staging writes that current production cannot read — the shared-database consequence, and the one lens that reliably blocks | `git diff` grep over storage calls; expand/contract is the test |
-| **Release readiness** | Does the whole thing build — the `PREBUILD_FULL=1` rehearsal that closes the slim-preview hole, plus the week's Chromatic batch | `pnpm prebuild`, the three ratchet baselines |
+| **Release readiness** | Does the whole thing build — the `PREBUILD_FULL=1` rehearsal that closes the slim-preview hole, plus a check that the visual baselines updated cleanly | `pnpm prebuild`, the three ratchet baselines |
 
 **Output:** a **GO or NO-GO**, then a written report to
 `docs/claude/releases/YYYY-MM-DD-release-review.md`. Findings split into *blocks

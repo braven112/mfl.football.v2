@@ -2,8 +2,7 @@
  * Sunday Ticket — league selection and the board's league shape.
  *
  * PURE and dependency-free on purpose: the board components import from
- * here, and Chromatic's dependency guard (tests/chromatic-path-filter.test.ts)
- * treats everything a story can reach as a rendering file. Keeping the
+ * here, and everything a story can reach is a rendering file. Keeping the
  * page's fs / ESPN / registry graph in `sunday-ticket-page.ts` means a
  * change there does not wake every board snapshot.
  *

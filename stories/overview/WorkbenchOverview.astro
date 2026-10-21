@@ -1,0 +1,34 @@
+---
+/**
+ * Storybook homepage: what this workbench is and how to use it.
+ */
+---
+
+<section class="cr">
+  <header class="cr__head">
+    <h1 class="cr__title">MFL Component Workbench</h1>
+    <p class="cr__sub">
+      Astro components and React islands, rendered in isolation across the
+      theme &times; league matrix.
+      Use the <strong>Theme</strong> and <strong>League</strong> toolbar controls above to re-skin any story.
+    </p>
+  </header>
+</section>
+
+<style>
+  .cr {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    color: var(--page-text, #0f172a);
+    font-family: var(--font-vend-sans, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  }
+  .cr__head { margin-bottom: 2rem; }
+  .cr__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.6rem, 4vw, 2.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .cr__sub { margin: 0; max-width: 46rem; line-height: 1.6; color: var(--content-text-muted, #64748b); }
+</style>

@@ -70,26 +70,9 @@ describe('Storybook layout-globals wiring', () => {
     }
   });
 
-  it('declares the font directory to Chromatic as a visual input', () => {
-    // TurboSnap does not trace staticDirs through the module graph — the built
-    // CSS keeps the literal url() and the woff2 is only copied. Without this
-    // glob, swapping or re-subsetting the font is treated as affecting
-    // NOTHING and every snapshot is inherited, so the regression ships green.
-    //
-    // Externals moved from a --externals flag in package.json into
-    // chromatic.config.json when the list was narrowed to stop it disabling
-    // TurboSnap outright; the invariant is unchanged, only its home.
-    const config = JSON.parse(readFileSync(join(ROOT, 'chromatic.config.json'), 'utf8'));
-    expect(config.externals).toContain('.storybook/static/**');
-
-    // The app's own faces live under public/assets/fonts and are referenced
-    // from the story stylesheets, so they need the same protection.
-    expect(config.externals).toContain('public/assets/fonts/**');
-  });
-
-  it('self-hosts every face — a third-party font URL is a Chromatic flake', () => {
-    // Chromatic waits for network idle before capturing: a slow response is a
-    // timeout and an intermittent one is a false diff. Same reasoning that
+  it('self-hosts every face — a third-party font URL is a snapshot flake', () => {
+    // A screenshot waits for network idle before capturing: a slow response is
+    // a timeout and an intermittent one is a false diff. Same reasoning that
     // stubbed the playoff-hero headshots to data URIs.
     expect(css).not.toMatch(/url\(['"]?https?:/);
   });

@@ -1,0 +1,184 @@
+name: Visual tests
+
+# Screenshot every Storybook story in each of its theme × league modes and
+# compare against the baselines on the `visual-baselines` branch. The free
+# replacement for Chromatic (removed Oct 2026 — it kept running out of
+# snapshots). Advisory, not required: a visual change is often the point of a
+# PR, so a red run means "look at the report", not "this is broken".
+#
+#   - PR into staging/main: compare. A diff fails the job and uploads the
+#     Playwright report (expected / actual / diff side by side) as an artifact.
+#     A story with no baseline yet passes and attaches its first screenshot.
+#   - Push to staging: whatever merged was reviewed on its PR, so its renders
+#     become the new baselines (written to `visual-baselines`, never to
+#     staging's own history — ~460 PNGs would bloat every clone).
+#   - Run workflow (workflow_dispatch) with `update` ticked: rebuild the
+#     baselines from that ref, e.g. after a Playwright/Chromium bump.
+#
+# Baselines are only comparable to renders from the same runner image and
+# browser build, which is why they are written HERE and never from a laptop.
+on:
+  pull_request:
+    branches: [staging, main]
+    types: [opened, ready_for_review, synchronize, reopened]
+    # Everything a story can render (the import closure of stories/ plus the
+    # asset trees), minus the bot-written feeds that churn daily and render
+    # nowhere. Over-matching costs CI minutes; under-matching ships a
+    # regression unseen, so when unsure, include. GitHub has no anchors for
+    # this, so the list is repeated under push: keep the two identical.
+    paths:
+      - 'stories/**'
+      - '.storybook/**'
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'src/utils/**'
+      - 'src/config/**'
+      - 'src/types/**'
+      - 'src/constants/**'
+      - 'src/themes/**'
+      - 'src/data/**'
+      - '!src/data/nfl/live-odds.json'
+      - '!src/data/theleague/mfl-player-salaries-*'
+      - '!src/data/weekly-changelog-staging.json'
+      - '!src/data/**/schefter-*'
+      - '!src/data/**/resolved-events.json'
+      - '!src/data/whats-new*'
+      - 'public/assets/**'
+      - 'data/*/*.config.json'
+      - 'data/afl-fantasy/tier-history.json'
+      - 'data/theleague/broadcast-mappings.json'
+      - 'data/nfl/bye-weeks.json'
+      - 'data/playoff-bracket-leagues.json'
+      - 'scripts/lib/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'playwright.visual.config.ts'
+      - 'tests/visual/**'
+      - 'scripts/visual/**'
+      - '.github/workflows/visual-tests.yml'
+  push:
+    branches: [staging]
+    paths:
+      - 'stories/**'
+      - '.storybook/**'
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'src/utils/**'
+      - 'src/config/**'
+      - 'src/types/**'
+      - 'src/constants/**'
+      - 'src/themes/**'
+      - 'src/data/**'
+      - '!src/data/nfl/live-odds.json'
+      - '!src/data/theleague/mfl-player-salaries-*'
+      - '!src/data/weekly-changelog-staging.json'
+      - '!src/data/**/schefter-*'
+      - '!src/data/**/resolved-events.json'
+      - '!src/data/whats-new*'
+      - 'public/assets/**'
+      - 'data/*/*.config.json'
+      - 'data/afl-fantasy/tier-history.json'
+      - 'data/theleague/broadcast-mappings.json'
+      - 'data/nfl/bye-weeks.json'
+      - 'data/playoff-bracket-leagues.json'
+      - 'scripts/lib/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'playwright.visual.config.ts'
+      - 'tests/visual/**'
+      - 'scripts/visual/**'
+      - '.github/workflows/visual-tests.yml'
+  workflow_dispatch:
+    inputs:
+      update:
+        description: 'Rewrite the baselines from this ref'
+        type: boolean
+        default: false
+
+concurrency:
+  group: visual-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Visual tests
+    runs-on: ubuntu-latest
+    # Drafts are still iterating; run once they are marked ready.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    timeout-minutes: 30
+    env:
+      UPDATE: ${{ github.event_name == 'push' || inputs.update == true }}
+    steps:
+      # Deploy key: the update path pushes the baselines branch from this
+      # checkout (see "Push baselines").
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build Storybook
+        run: pnpm build:storybook
+
+      # The baselines branch is checked out INTO the screenshot directory. It
+      # is an orphan branch (no shared history with staging), so a clone of
+      # staging never pulls a screenshot. It does not exist until the first
+      # update run creates it; until then every story compares as "new".
+      - name: Check out baselines
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: visual-baselines
+          path: tests/visual/__screenshots__
+
+      - name: Compare
+        if: env.UPDATE != 'true'
+        run: pnpm test:visual
+
+      - name: Update baselines
+        if: env.UPDATE == 'true'
+        run: |
+          pnpm test:visual:update
+          node scripts/visual/prune-baselines.mjs
+
+      # Commit in the baselines checkout (or a fresh orphan repo on the first
+      # run), then push that commit from the main checkout, which holds the
+      # deploy key.
+      - name: Push baselines
+        if: env.UPDATE == 'true'
+        run: |
+          cd tests/visual/__screenshots__
+          [ -d .git ] || git init -q -b visual-baselines
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Baselines unchanged."
+            exit 0
+          fi
+          git commit -q -m "visual baselines from ${GITHUB_SHA::7}"
+          cd "$GITHUB_WORKSPACE"
+          git fetch -q ./tests/visual/__screenshots__ HEAD
+          git push origin FETCH_HEAD:refs/heads/visual-baselines
+
+      - name: Upload report
+        if: failure() && env.UPDATE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
+          path: visual-report/
+          retention-days: 14
+
+      - name: Summary
+        if: failure() && env.UPDATE != 'true'
+        run: |
+          {
+            echo "### Visual changes found"
+            echo "Download **visual-report** from this run's Artifacts and open index.html to see expected / actual / diff."
+            echo "If the changes are intended, merge — the baselines update when this lands on staging."
+          } >> "$GITHUB_STEP_SUMMARY"

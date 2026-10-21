@@ -1,5 +1,9 @@
 # Chromatic visual testing — cost and diagnosis
 
+> **Retired (Oct 2026):** Chromatic was removed from CI — the free plan ran out
+> of snapshots within days and the check started blocking work. This journal is
+> kept as the record of what was learned; nothing in it runs any more.
+
 Operational rules live in `docs/claude/rules/storybook.md` (trigger model,
 generated `paths:` / `externals`, TurboSnap). This file is the reasoning that
 does not belong in a rules doc: how the cost bug hid for 117 builds, and the two
