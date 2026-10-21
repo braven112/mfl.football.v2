@@ -45,7 +45,7 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
 ---
 
 <TheLeagueLayout title={`Rule Proposals | ${league.name}`}>
-  <main class="rule-proposals">
+  <div class="rule-proposals">
     <header class="rule-proposals__header">
       <h1>Rule Proposals</h1>
       <p>Ideas for next season's rulebook. Read each one before the league votes. <a class="cta-link" href={rulesPath}>Current rules</a></p>
@@ -73,7 +73,7 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
         ))}
       </ol>
     )}
-  </main>
+  </div>
 </TheLeagueLayout>
 
 <style>
@@ -89,10 +89,10 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
   }
   .rule-proposals__header p {
     margin: 0;
-    color: var(--color-gray-500, #6b7280);
+    color: var(--color-gray-600, #4b5563);
   }
   .rule-proposals__empty {
-    color: var(--color-gray-500, #6b7280);
+    color: var(--color-gray-600, #4b5563);
   }
   .rule-proposals__list {
     list-style: none;
@@ -115,7 +115,7 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     font-size: var(--font-size-xs);
-    color: var(--color-gray-500, #6b7280);
+    color: var(--color-gray-600, #4b5563);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 600;
@@ -144,6 +144,6 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
   .proposal__replaces {
     margin: 0;
     font-size: var(--font-size-sm);
-    color: var(--color-gray-500, #6b7280);
+    color: var(--color-gray-600, #4b5563);
   }
 </style>
