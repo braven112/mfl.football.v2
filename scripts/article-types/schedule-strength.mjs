@@ -17,7 +17,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
-import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { primaryLink, linkList } from '../article-utils/article-links.mjs';
 
 function leagueMeta(league) {
   const reg = LEAGUES[league];
@@ -38,6 +38,12 @@ function leagueMeta(league) {
 
 const gauntletWeek = (week) => week + 1;
 
+/** How many of the hardest schedules the column names. */
+const HARDEST_COVERED = 3;
+/** Two paragraphs, three at most — and each one short (owner's call, Oct 2026). */
+const MAX_PARAGRAPHS = 3;
+const MAX_PARAGRAPH_CHARS = 320;
+
 export const config = {
   // League token comes from the registry's navSlug so ids stay unique if a
   // third league ever appears (a hardcoded binary suffix would collide).
@@ -46,7 +52,7 @@ export const config = {
   requiredData: [],
   postType: 'article',
   tier: 'analysis',
-  maxTokens: 3000,
+  maxTokens: 1200,
 };
 
 export function guardSeason(week, year, now, { completedWeek }) {
@@ -81,56 +87,36 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
     return null;
   }
 
+  // The column is two short paragraphs about the top of the table and its
+  // bottom, sitting under the rankings chart (owner's call, Oct 2026: the old
+  // five-paragraph rundown of luck, trap weeks and movers went unread). So the
+  // fact sheet carries ONLY what the copy may cover — handing the model the
+  // full table is how every team ended up named. The chart shows the rest.
+  const hardest = derived.runIn[0];
+  const easiest = derived.runIn[derived.runIn.length - 1];
+  const top = derived.runIn.slice(0, HARDEST_COVERED);
+  const trendNote = (r) => r.trendDeltaRanks == null || r.trendDeltaRanks === 0
+    ? ''
+    : r.trendDeltaRanks > 0
+      ? ` (up ${r.trendDeltaRanks} — got harder)`
+      : ` (down ${Math.abs(r.trendDeltaRanks)} — got easier)`;
+  const row = (r) => `  ${r.rank}. ${r.name} — difficulty ${r.difficulty}, remaining opp PPG ${r.remainingOppPpg ?? 'n/a'}${trendNote(r)}`;
+
   const lines = [];
   lines.push(`THE GAUNTLET — Week ${derived.week} Schedule Strength — ${meta.displayName} (${year} Season)`);
   lines.push('');
-  lines.push('Difficulty is 0-100: the average strength of a team\'s remaining opponents');
-  lines.push('(50% opponent season scoring, 25% all-play record, 25% recent form).');
-  lines.push('Higher = harder road ahead.');
+  lines.push('Difficulty is 0-100: how strong a team\'s remaining opponents are. Higher = harder road ahead.');
+  lines.push(`${derived.runIn.length} teams ranked; the full table is shown above the column.`);
   lines.push('');
-
-  lines.push('=== REMAINING-SCHEDULE RANKINGS (hardest first) ===');
-  for (const r of derived.runIn) {
-    const trend = r.trendDeltaRanks == null
-      ? ''
-      : r.trendDeltaRanks > 0
-        ? ` (up ${r.trendDeltaRanks} — got harder)`
-        : r.trendDeltaRanks < 0
-          ? ` (down ${Math.abs(r.trendDeltaRanks)} — got easier)`
-          : ' (unchanged)';
-    lines.push(`  ${r.rank}. ${r.name} — difficulty ${r.difficulty}, remaining opp PPG ${r.remainingOppPpg ?? 'n/a'}${trend}`);
-  }
+  lines.push('=== HARDEST REMAINING SCHEDULES ===');
+  for (const r of top) lines.push(row(r));
   lines.push('');
-
-  lines.push('=== SCHEDULE LUCK (record vs schedule played) ===');
-  for (const l of derived.scheduleLuck) {
-    lines.push(l.direction === 'unlucky'
-      ? `  ${l.name}: ${l.record} against a brutal slate (past difficulty ${l.pastDifficulty}) — better than the record`
-      : `  ${l.name}: ${l.record} against a soft slate (past difficulty ${l.pastDifficulty}) — record flatters them`);
-  }
-  lines.push('');
-
-  const traps = derived.trapWeeks.filter(t => t.avgDifficulty != null);
-  if (traps.length > 0) {
-    const worst = traps.reduce((a, b) => (b.avgDifficulty > a.avgDifficulty ? b : a));
-    lines.push('=== TRAP WEEK ===');
-    lines.push(`  Week ${worst.week} is the league-wide wall: average opponent difficulty ${worst.avgDifficulty}.`);
+  if (!top.includes(easiest)) {
+    lines.push('=== EASIEST REMAINING SCHEDULE ===');
+    lines.push(row(easiest));
     lines.push('');
   }
 
-  const withTrend = derived.runIn.filter(r => r.trendDeltaRanks != null);
-  let riser = null, faller = null;
-  if (withTrend.length > 0) {
-    riser = withTrend.reduce((a, b) => (b.trendDeltaRanks > a.trendDeltaRanks ? b : a));
-    faller = withTrend.reduce((a, b) => (b.trendDeltaRanks < a.trendDeltaRanks ? b : a));
-    lines.push('=== MOVERS ===');
-    if (riser.trendDeltaRanks > 0) lines.push(`  Biggest riser (schedule got harder): ${riser.name}, up ${riser.trendDeltaRanks} spots`);
-    if (faller.trendDeltaRanks < 0) lines.push(`  Biggest faller (schedule got easier): ${faller.name}, down ${Math.abs(faller.trendDeltaRanks)} spots`);
-    lines.push('');
-  }
-
-  const hardest = derived.runIn[0];
-  const easiest = derived.runIn[derived.runIn.length - 1];
   const luckiest = derived.scheduleLuck.find(l => l.direction === 'lucky') ?? null;
 
   return {
@@ -149,13 +135,12 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
 
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: The Gauntlet (Weekly Schedule-Strength Column)
-This is YOUR named weekly analytics column — own it. Lead with the single
-spiciest finding (a contender walking into a buzz saw, a record built on a
-soft schedule, a trap week). Frame difficulty numbers as roads ahead:
-gauntlets, breathers, buzz saws, cupcake runs. Reference specific teams and
-numbers from the fact sheet only. Close by pointing readers at the full
-dashboard (heat map + week-by-week grid). Do NOT invent matchups, records,
-or numbers not in the fact sheet.`, { league, persona });
+This is YOUR named weekly analytics column — own it, and keep it SHORT.
+The rankings chart sits directly above your copy, so readers already see
+every team: your job is two quick paragraphs, not a rundown. Name the 2-3
+hardest roads ahead and, briefly, the easiest one. Frame difficulty as roads
+ahead: gauntlets, buzz saws, cupcake runs. Use only teams and numbers from
+the fact sheet. Do NOT invent matchups, records, or numbers.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
@@ -166,12 +151,14 @@ ${factSheet}
 OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars) that leads with the week's spiciest schedule-strength finding",
-  "excerpt": "2-3 sentence teaser for the feed card. Hook the reader.",
-  "content": ["<p>Lead paragraph — the biggest story in the rankings.</p>", "<p>Who has the hardest road and what it means.</p>", "<p>Schedule luck — whose record is lying.</p>", "<p>Trap week / movers.</p>", "<p>Closer — point to the full dashboard.</p>"]
+  "excerpt": "One sentence teaser for the feed card.",
+  "content": ["<p>The 2-3 hardest remaining schedules, with their difficulty numbers.</p>", "<p>The easiest road, and a pointer to the full rankings.</p>"]
 }
 
 INSTRUCTIONS:
-- 4-5 content paragraphs.
+- EXACTLY 2 content paragraphs (3 only if truly needed). Never more.
+- Each paragraph is 2 short sentences, under 50 words. No lists of every team.
+- Do not cover schedule luck, trap weeks or movers — the page shows those.
 - Every team name and number must come from the fact sheet.
 - Voice: high-energy beat reporter who built the model himself and trusts it.`;
 }
@@ -181,6 +168,11 @@ export function validate(aiOutput) {
   if (!aiOutput.headline || aiOutput.headline.length > 100) errors.push('Headline missing or too long');
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
+  if (aiOutput.content?.length > MAX_PARAGRAPHS) errors.push(`More than ${MAX_PARAGRAPHS} paragraphs (extras are dropped)`);
+  for (const [i, p] of (aiOutput.content ?? []).entries()) {
+    const text = String(p).replace(/<[^>]*>/g, '');
+    if (text.length > MAX_PARAGRAPH_CHARS) errors.push(`Paragraph ${i + 1} is ${text.length} chars (max ${MAX_PARAGRAPH_CHARS})`);
+  }
   return errors;
 }
 
@@ -188,8 +180,10 @@ export function validate(aiOutput) {
  * Where this article points, and which parts of the site it plugs.
  *
  * The column is the prose half of a rankings table that lives on its own page
- * (and is embedded below the article by GauntletArticleSection). The plugs are
- * what a team does about a schedule it does not like.
+ * (and is embedded above and below the copy by GauntletArticleSection). It
+ * carries the primary link and no feature plugs: in a two-paragraph column
+ * every plug costs a sentence, and the old five-paragraph edition spent one on
+ * each of trade builder, free agents, playoffs and transactions.
  *
  * The pipeline calls this on every run. `applyArticleLinks` injects the
  * PRIMARY link if the model drops it and strips any href the model invented;
@@ -204,12 +198,6 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
       label: 'the Gauntlet rankings',
       cta: 'The full remaining-schedule rankings are on the Gauntlet page.',
     }),
-    articleLink(league, 'standings', { label: 'the standings' }),
-    featureLink(league, 'trade-builder'),
-    featureLink(league, 'players'),
-    featureLink(league, 'playoffs'),
-    // The one plug a package league (archies) has at launch.
-    featureLink(league, 'transactions'),
   );
 }
 
@@ -228,7 +216,9 @@ export function buildPost(aiOutput, enrichment, articleId, { league = 'theleague
     linkLabel: 'Read The Gauntlet',
     league,
     authorId: 'claude',
-    content: aiOutput.content,
+    // Hard cap: validate() only warns, and a sixth paragraph is exactly the
+    // column the owner asked to stop publishing.
+    content: (aiOutput.content ?? []).slice(0, MAX_PARAGRAPHS),
     // Pointer the article page uses to render the rankings table, luck
     // callout, and trap-weeks strip from the same derived JSON.
     scheduleStrength: { year: enrichment.year, week: enrichment.week },
