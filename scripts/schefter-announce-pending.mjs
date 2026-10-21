@@ -29,7 +29,6 @@ import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { chatConfigFor, slackSenderFor } from './lib/chat.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
-import { sendVoterPushes } from './lib/owners-poll-posts.mjs';
 import { awaitPublished } from './lib/await-published.mjs';
 import { readAnnounceQueue, clearAnnounceQueue, queuePath } from './lib/announce-queue.mjs';
 
@@ -168,20 +167,7 @@ export async function announceOne(entry, {
     pushed = result.sent ?? 0;
   }
 
-  // Per-recipient pushes (the Owners' Poll open and reveal). Not a broadcast:
-  // each owner gets different copy and only voters get the reveal at all, so
-  // these arrive pre-built and go out through the poll's own sender.
-  let voterPushed = 0;
-  if (entry.voterPushes?.length) {
-    if (isDry) {
-      log.log?.(`  [dry-run] Would send ${entry.voterPushes.length} per-voter push(es).`);
-    } else {
-      const result = await sendVoterPushes({ league, notifications: entry.voterPushes, log });
-      voterPushed = result.sent ?? 0;
-    }
-  }
-
-  return { announced: true, live: published.live, posted, pushed, voterPushed };
+  return { announced: true, live: published.live, posted, pushed };
 }
 
 async function main() {

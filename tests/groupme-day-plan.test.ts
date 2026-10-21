@@ -50,12 +50,9 @@ describe('the weekday calendar', () => {
     }
   });
 
-  it('puts the column on Tuesday and the poll result on Thursday', () => {
+  it('puts the column on Tuesday only', () => {
     expect(isPlannedToday('pecking-order', TUE)).toBe(true);
-    expect(isPlannedToday('owners-poll-close', THU)).toBe(true);
-    // …and not on each other's day.
     expect(isPlannedToday('pecking-order', THU)).toBe(false);
-    expect(isPlannedToday('owners-poll-close', TUE)).toBe(false);
   });
 
   it('holds a kind that has no day at all', () => {

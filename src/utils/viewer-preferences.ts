@@ -423,8 +423,8 @@ export { COUNTRY_CODES };
  * Exported for `waiver-window.ts`, which expands MFL's weekly recurrences on
  * WALL CLOCK rather than on epoch time and needs the same primitive. It is
  * exported rather than copied because there were already two implementations
- * of this in the repo (here and `owners-poll-window.mjs`) and a third would be
- * the copy that eventually disagrees. Pure, and adds no dependency — this
+ * of this in the repo (here and the since-retired Owners' Poll window) and a
+ * third would be the copy that eventually disagrees. Pure, and adds no dependency — this
  * module is in Storybook's rendering graph and stays dependency-light.
  */
 export function zoneOffsetMs(instant: number, zone: string): number {

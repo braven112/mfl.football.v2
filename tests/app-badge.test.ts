@@ -125,7 +125,7 @@ describe('isLineupBadgeWindow', () => {
 
 describe('resolveBadgeCount', () => {
   it('sums the three parts', () => {
-    expect(resolveBadgeCount({ trades: 2, lineup: 1, poll: 1 })).toBe(4);
+    expect(resolveBadgeCount({ trades: 2, lineup: 1 })).toBe(3);
   });
 
   it('is zero for an empty set', () => {
@@ -136,9 +136,9 @@ describe('resolveBadgeCount', () => {
   it('clamps junk rather than passing it to setAppBadge', () => {
     // A negative or fractional value throws on some engines and no-ops on
     // others, and neither is distinguishable from "no badge" on a phone.
-    expect(resolveBadgeCount({ trades: -3, lineup: 1, poll: 0 })).toBe(1);
-    expect(resolveBadgeCount({ trades: 1.7, lineup: 0, poll: 0 })).toBe(1);
-    expect(resolveBadgeCount({ trades: NaN as unknown as number, lineup: 1, poll: 0 })).toBe(1);
+    expect(resolveBadgeCount({ trades: -3, lineup: 1 })).toBe(1);
+    expect(resolveBadgeCount({ trades: 1.7, lineup: 0 })).toBe(1);
+    expect(resolveBadgeCount({ trades: NaN as unknown as number, lineup: 1 })).toBe(1);
     expect(resolveBadgeCount({ trades: 'lots' as unknown as number })).toBe(0);
   });
 });

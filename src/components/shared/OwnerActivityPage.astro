@@ -68,7 +68,7 @@ const commissionerAccess = canManage ? await getCommissionerAccess(leagueDef.slu
 
 // The shape notification-categories.ts gates on: which alerts this league can
 // even offer. Registry-derived, never a second copy of the flags.
-const notificationLeague = { features: leagueDef.features, ownersPoll: leagueDef.ownersPoll };
+const notificationLeague = { features: leagueDef.features };
 
 const teamConfigs: any[] = getLeagueTeamConfigs(leagueDef.slug);
 const franchiseIds: string[] = teamConfigs.map((t) => t.franchiseId);

@@ -25,7 +25,6 @@ import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../utils/pecking-order-lede.mjs';
 import { spellOutShorthand } from '../../utils/pecking-order-wording.mjs';
-import type { OwnersPollBlock } from './owners-poll/OwnersPollResults.astro';
 
 export interface RankingRow {
   rank: number;
@@ -79,13 +78,6 @@ export interface PeckingOrderData {
   headline: string;
   lede: string;
   rankings: RankingRow[];
-  /**
-   * The Owners' Poll for this week. ABSENT on every issue written before the
-   * poll existed and on any league that doesn't run it, which is why the
-   * section renders nothing at all rather than an empty state — the archive
-   * must not sprout a "no poll" notice on 40 old issues.
-   */
-  ownersPoll?: OwnersPollBlock | null;
   awards: {
     statOfWeek: AwardCard | null;
     benchBlunder: AwardCard | null;
@@ -283,15 +275,6 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
   )}
 
   <footer class="pr-footnote">
-    {/*
-      The Owners' Poll is its own feature (/owners-poll); the column keeps a
-      single link to it and nothing else — the owner rankings sit behind a vote.
-    */}
-    {issue.ownersPoll && (
-      <a class="pr-footnote__link" href={resolveLeaguePath(`${getLeaguePrefix(league)}/owners-poll`, hideLeaguePrefix)}>
-        The Owners’ Poll: how the owners rank it ›
-      </a>
-    )}
     <details class="pr-footnote__how">
       <summary>How the order is calculated</summary>
       <p>
@@ -492,7 +475,6 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
   font-size: var(--font-size-sm);
   color: var(--content-text-muted, #6b7280);
 }
-.pr-footnote__link { color: var(--page-text, #111827); font-weight: 600; }
 .pr-footnote__how summary { cursor: pointer; }
 .pr-footnote__how p { margin: var(--spacing-sm) 0 0; line-height: 1.5; }
 

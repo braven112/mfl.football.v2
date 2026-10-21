@@ -59,8 +59,8 @@ describe('Schefter league objects satisfy the shared-helper contract', () => {
  * The workflow maps `github.event.schedule` — the literal cron STRING — to a
  * type through a `case`. Adding a schedule entry without adding its arm gives
  * a run with `TYPE=""`, which is not an error anywhere: the job proceeds and
- * generates nothing. Splitting the owners-poll close into two DST-safe entries
- * is exactly the edit that trips this, and it tripped it.
+ * generates nothing. Splitting the (since-retired) Owners' Poll close into two
+ * DST-safe entries is exactly the edit that trips this, and it tripped it.
  */
 describe('schefter-articles.yml cron → article type', () => {
   const file = path.resolve(__dirname, '../.github/workflows/schefter-articles.yml');

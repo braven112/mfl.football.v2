@@ -6,17 +6,17 @@
  * browser tab cannot, and it is the only surface that reaches an owner who
  * never opens the app at all.
  *
- * Three things count, and the choice of three is the whole design: a badge is
+ * Two things count, and keeping it that short is the whole design: a badge is
  * a promise that something is waiting for YOU, so it may only ever count
  * things the owner can act on and clear.
  *
  *   trades  pending trade offers awaiting THIS owner's answer
  *   lineup  a broken or unsubmitted lineup, inside the pre-kickoff window
- *   poll    an open Owners' Poll ballot this owner has not cast
  *
  * Unread Schefter posts are deliberately NOT counted: it is the highest-volume
  * source in the league and a badge that is permanently lit is a badge people
- * stop seeing, which costs the other three their meaning.
+ * stop seeing, which costs the other two their meaning. (A third part, an
+ * uncast Owners' Poll ballot, went when the poll was retired in Oct 2026.)
  *
  * The pure half lives here so tests/app-badge.test.ts can pin the window
  * arithmetic and the fail-quiet rules without a network or a session.
@@ -24,17 +24,15 @@
 
 import { scheduleGames, mainSlate } from '../../scripts/lib/gameday-alerts.mjs';
 
-/** The three things a badge may count, each already reduced to a number. */
+/** The things a badge may count, each already reduced to a number. */
 export interface BadgeParts {
   /** Trade offers awaiting this owner's answer. */
   trades: number;
   /** 1 when this owner's lineup needs attention, else 0. */
   lineup: number;
-  /** 1 when an open ballot has not been cast, else 0. */
-  poll: number;
 }
 
-export const EMPTY_PARTS: BadgeParts = { trades: 0, lineup: 0, poll: 0 };
+export const EMPTY_PARTS: BadgeParts = { trades: 0, lineup: 0 };
 
 /**
  * How long before the week's first kickoff the lineup badge lights up.
@@ -107,7 +105,7 @@ export function resolveBadgeCount(parts: Partial<BadgeParts>): number {
     const v = Math.floor(Number(n));
     return Number.isFinite(v) && v > 0 ? v : 0;
   };
-  return safe(parts.trades) + safe(parts.lineup) + safe(parts.poll);
+  return safe(parts.trades) + safe(parts.lineup);
 }
 
 /**

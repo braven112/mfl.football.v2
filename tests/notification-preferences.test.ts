@@ -43,16 +43,10 @@ import {
 } from '../src/utils/push-preferences';
 import { LEAGUES } from '../src/config/leagues';
 
-// The gates take the LEAGUE, not its feature block: poll enablement lives in
-// the registry's `ownersPoll` entry, outside `features`, and passing features
-// alone made it unreachable — which is how the AFL came to be offered three
-// Owners' Poll toggles (one ON by default) for a poll it does not run.
+// The gates take the LEAGUE, not its feature block, so a capability that
+// lives outside `features` can still be honored.
 const FEATURES = LEAGUES.theleague;
 const AFL_FEATURES = LEAGUES['afl-fantasy'];
-// A league that genuinely runs no poll. Best Ball, not the AFL: the AFL was
-// the original example here and started running the poll in Sep 2026, at which
-// point using it as the negative case would have tested nothing.
-const NO_POLL_FEATURES = LEAGUES['best-ball-1'];
 
 beforeEach(() => {
   store.clear();
@@ -117,30 +111,17 @@ describe('the category registry', () => {
   });
 
   /**
-   * A league that runs no Owners' Poll (`ownersPoll.enabled: false`) must not
-   * be offered its toggles — that is a switch that can never fire, and
-   * `poll-result` is defaultOn, so it would be ON for every owner of it. The
-   * AFL was the case that shipped this bug; Best Ball is the case that keeps
-   * testing it now that the AFL runs the poll.
+   * The Owners' Poll was retired in Oct 2026. An owner who had its toggles on
+   * still has the ids stored, and an UNKNOWN category must be refused at the
+   * send door rather than defaulting through.
    */
-  it('hides the Owners\' Poll categories from a league that does not run it', () => {
-    const shown = new Set(visibleCategoriesForLeague(NO_POLL_FEATURES).map((c) => c.id));
-    for (const id of ['poll-result', 'poll-open', 'poll-reminder']) {
-      expect(shown.has(id), `${id} offered to a league with no poll`).toBe(false);
-      // And refused at the SEND door, not merely hidden from the page.
-      expect(isCategoryEnabled(id, { [id]: true }, NO_POLL_FEATURES)).toBe(false);
-    }
-  });
-
-  it('offers them to EVERY league that runs it, the AFL included', () => {
-    // The poll gate is `ownersPoll.enabled`, deliberately not a `features`
-    // flag — so the AFL gets all three despite having liveLineups off.
+  it('offers no Owners\' Poll toggles, and refuses a stored one', () => {
     for (const league of [FEATURES, AFL_FEATURES]) {
       const shown = new Set(visibleCategoriesForLeague(league).map((c) => c.id));
       for (const id of ['poll-result', 'poll-open', 'poll-reminder']) {
-        expect(shown.has(id), `${id} missing from ${league.slug}`).toBe(true);
+        expect(shown.has(id), `${id} still offered in ${league.slug}`).toBe(false);
+        expect(isCategoryEnabled(id, { [id]: true }, league)).toBe(false);
       }
-      expect(isCategoryEnabled('poll-result', {}, league)).toBe(true);
     }
   });
 });
@@ -257,7 +238,7 @@ describe('preference storage', () => {
     await writePreferences('13522', '0001', { 'trade-offer': true });
     const stored = await readPreferences('13522', '0001');
     expect(Object.keys(stored)).toEqual(['trade-offer']);
-    expect(isCategoryEnabled('poll-result', stored, FEATURES)).toBe(true); // still the default
+    expect(isCategoryEnabled('roster-deadline', stored, FEATURES)).toBe(true); // still the default
   });
 
   it('drops unknown keys and non-booleans', () => {

@@ -54,10 +54,6 @@ export function queuePath(projectRoot) {
  *   Order sends 'column'. Owners subscribe per category, so a wrong one is
  *   silently dropped by the server rather than delivered to someone who did
  *   not ask for it.
- * @property {Array<object>|null} [voterPushes] Pre-built PER-RECIPIENT
- *   notifications (the Owners' Poll open and reveal), sent through
- *   `sendVoterPushes`. Separate from `push` because it is not a broadcast:
- *   each owner gets different copy, and only voters get it at all.
  * @property {boolean} [skipIfNotLive] Drop the whole announcement (chat and
  *   pushes) when `verifyPath` is still not live after the full wait, instead
  *   of the default fail-open send. For a lane whose link shows stale content
