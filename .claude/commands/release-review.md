@@ -262,14 +262,15 @@ If the range touches nothing under `scripts/` or `src/**/*.mjs`, the pipeline
 cannot have changed — say so in one line and skip the run rather than spending
 the network fetches.
 
-## Step 6c: Visual changes need a human look
+## Step 6c: Visual changes were reviewed per PR
 
-No automated visual-regression check runs right now (Chromatic was removed in
-Oct 2026; its replacement is not built yet). So:
+`Visual tests` (Playwright) runs on each feature PR into `staging` and is
+advisory, so a PR can merge with its visual diffs unlooked-at. Two
+consequences for this pass:
 
-- **Help with attribution.** If the range touched components, stylesheets or
-  assets that render, name those commits in the report so the promotion's
-  visual look (`/promote` step 5b) knows which surfaces to open.
+- **Check the range's PRs.** For any PR in the range whose `Visual tests` run
+  was red at merge, name it in the report: its changes are now the baseline,
+  and nobody may have opened the report.
 - **A visual regression has been live on staging all week.** Real owners use
   those hosts. If anything in the range looks like it could have changed
   rendering and nobody mentioned it, that is worth a direct look now.

@@ -179,15 +179,18 @@ feature off `staging` and promote the rest. Never promote past a NO-GO.
 
 Filing a follow-up is a GO, not a deferred NO-GO — the review's own rule.
 
-## Step 5b: Look at the visual changes BEFORE the fast-forward
+## Step 5b: Confirm the visual baselines are current
 
-There is no automated visual-regression check right now (Chromatic was removed
-in Oct 2026 and its replacement is not built yet). If the range touches
-anything a Storybook story or a page renders, the week's visual review is a
-human one: open the staging hosts for the changed surfaces, in light and dark,
-before promoting. `/launch-check` covers a whole league in both themes.
+Visual review happens per feature PR into `staging` (`Visual tests`,
+Playwright, `.github/workflows/visual-tests.yml`), and each merge rewrites the
+baselines on the `visual-baselines` branch. Before promoting, check that the
+latest `Visual tests` run on `staging`'s tip — the baseline update — is green.
+A red one means a baseline update failed (usually a story that threw while
+rendering), and the next week's PRs would compare against stale baselines.
 
-Skip this only when the range renders nothing (data syncs, tests, docs).
+Stories cover components, not whole pages. If the range changed a page layout
+no story renders, open it on the staging host in light and dark;
+`/launch-check` covers a whole league in both themes.
 
 ## Step 6: Promote
 
@@ -280,5 +283,5 @@ answerable in a minute.
 - Never resolve a merge-down conflict inside this command — fix the job.
 - Never skip step 7. A release nobody looked at is a release nobody knows
   failed.
-- Never skip step 5b on a diff that renders. With no automated visual check,
-  that look is the only visual review the week gets.
+- Never skip step 5b on a diff that renders. A failed baseline update leaves
+  every later visual comparison wrong.

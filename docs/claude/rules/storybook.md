@@ -580,26 +580,47 @@ next runs the script.
 equivalent here — the directive is per-script, so it governs this bundle only
 and does not leak to MFL's other scripts.)
 
-## Visual regression — Chromatic was removed (Oct 2026)
+## Visual regression — Playwright screenshots (since Oct 2026)
 
-Chromatic ran the stories as visual-regression snapshots from Aug to Oct 2026.
-It was removed because the free plan's snapshots ran out within days and the
-check started blocking work. A free replacement is being chosen; until it
-lands, no CI job captures the stories, and visual review is a human look at
-`/promote` step 5b.
+Chromatic ran the stories from Aug to Oct 2026 and was removed because the
+free plan's snapshots ran out within days. Its replacement is free and has no
+quota: `.github/workflows/visual-tests.yml` screenshots every story in each of
+its modes with Playwright and compares against baselines.
 
-What was learned running it (budget arithmetic, TurboSnap's path filter and
-`externals`, the per-file crest trigger list) is kept in
-`docs/claude/insights/features/chromatic-visual-testing.md` and in the git
-history of `scripts/chromatic-story-deps.mjs` and
-`tests/chromatic-path-filter.test.ts`. Read those before building the
-replacement's trigger: a path filter that misses a file that renders is the
-failure that lets a regression ship green.
-
-The stories still carry `parameters.chromatic` (`modes`, `delay`,
-`disableSnapshot`). Storybook ignores them; they are kept because the
-theme × league matrix in `.storybook/modes.ts` is exactly what a replacement
-needs to know which combinations to capture.
+- **What is captured** comes from each story's `parameters.chromatic`
+  (`modes`, `disableSnapshot`, `delay`, `viewports`) — the key kept its old
+  name so the theme × league matrix in `.storybook/modes.ts` carried over.
+  `scripts/visual/manifest.mjs` reads those from the BUILT preview (so
+  Storybook's own project → component → story merge applies) and writes
+  `tests/visual/stories.manifest.json`; `tests/visual/stories.spec.ts` turns
+  each story × mode into one test. ~185 stories, ~460 captures, ~6 min.
+- **Baselines live on the orphan `visual-baselines` branch**, never in
+  staging or main history (~460 PNGs, ~47 MB, rewritten on every accepted
+  change). CI checks it out into `tests/visual/__screenshots__/` (gitignored).
+- **PR into staging/main (non-draft):** compare. A diff fails the job and
+  uploads the `visual-report` artifact — open its `index.html` for expected /
+  actual / diff. A story with no baseline yet passes and attaches its first
+  screenshot. The check is advisory, not required: a visual change is often
+  the point of the PR.
+- **Push to staging:** the merged renders become the new baselines
+  (`--update-snapshots=changed`, then `scripts/visual/prune-baselines.mjs`
+  drops files for removed stories). Merging IS accepting, so look at the
+  report before you merge.
+- **Run workflow with `update` ticked** rebuilds the baselines from any ref —
+  needed after a Playwright or Chromium bump, which re-renders every font.
+- **Never generate baselines on a laptop.** They are only comparable to
+  renders from the same runner image and browser build; a Mac reports every
+  story as changed. Locally, `pnpm build:storybook && pnpm test:visual:update`
+  then `pnpm test:visual` is fine for checking a story is STABLE (two runs, no
+  diff), not for producing baselines.
+- **Off-box requests are aborted** during capture. A story that needs the
+  network renders broken rather than flaky; stub it into public/ (see Trap 7).
+- **Trigger paths are deliberately broad** (everything under src/components,
+  src/styles, src/utils, src/config, src/data minus the bot-written feeds,
+  public/assets, the league configs). Over-matching costs CI minutes;
+  under-matching lets a regression through unseen and then into the
+  baselines on merge — the lesson of the Chromatic path filter
+  (`docs/claude/insights/features/chromatic-visual-testing.md`).
 
 ## Choosing modes
 

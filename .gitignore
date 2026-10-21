@@ -85,3 +85,10 @@ roster-parity.json
 
 # /launch-check reports and screenshots (scripts/launch-check.mjs)
 .launch-check/
+
+# Visual regression (playwright.visual.config.ts). Baselines live on the
+# `visual-baselines` branch, never here; the rest is per-run output.
+tests/visual/__screenshots__/
+tests/visual/stories.manifest.json
+visual-report/
+test-results/
