@@ -30,6 +30,7 @@ import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
 import '../../styles/snap-columns.css';
+import '../../styles/sort-chips.css';
 import '../../styles/free-agents-mobile.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
@@ -1157,6 +1158,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
       don't merge them.
     -->
     <WaiverClaimsPanel config={claimsPanelConfig} />
+
+    {/* The phone's sort pills (free-agents-sort-chips.ts): every sortable
+        header in the view on screen, including the ones a phone hides. */}
+    <div class="rr-chips fa-sort-chips">
+      <div class="rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips></div>
+    </div>
 
     <!-- Table -->
     <div class="table-wrapper">
@@ -3288,6 +3295,18 @@ const spriteUrl = spriteUrlFor(Astro.url);
     // My Rank doubles as the Value view's ranking column.
     compositeThClasses: ['col-my-rank', 'col-group--value'],
   });
+</script>
+
+<!-- Phone sort pills — they click the headers, so the page's own sort runs. -->
+<script>
+  import { initFaSortChips } from '../../utils/free-agents-sort-chips';
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFaSortChips);
+  } else {
+    initFaSortChips();
+  }
+  document.addEventListener('astro:page-load', initFaSortChips);
 </script>
 
 <!-- Player modal trigger (delegated, works across re-renders).

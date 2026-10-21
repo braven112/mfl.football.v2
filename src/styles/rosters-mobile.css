@@ -908,62 +908,6 @@
     min-width: 0;
   }
 
-  /* Scrolls within itself — `min-width: 0` up the chain and `overflow-x`
-     here are what keep a long chip set from widening the page. The 3px
-     padding keeps the focus ring inside the scroll box, which clips. */
-  .rr-chips__row {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    padding: 3px;
-    margin: -3px;
-  }
-
-  .rr-chips__row::-webkit-scrollbar {
-    display: none;
-  }
-
-  .rr-chip {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    min-height: var(--touch-target-min);
-    padding: 0 0.875rem;
-    font: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    white-space: nowrap;
-    color: var(--color-gray-700, #374151);
-    background: var(--content-bg, #ffffff);
-    border: 1px solid var(--content-border, #d1d5db);
-    border-radius: var(--radius-full, 9999px);
-    cursor: pointer;
-  }
-
-  .rr-chip--on {
-    color: var(--color-primary, #1c497c);
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, #ffffff));
-    border-color: var(--color-primary, #1c497c);
-  }
-
-  /* Dark: the same lifted accent the active GM | Coach button uses. */
-  html.dark .rr-chip--on {
-    color: var(--color-primary-light, #60a5fa);
-  }
-
-  .rr-chip:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 1px;
-  }
-
-  .rr-chip__dir {
-    font-size: 1rem;
-    line-height: 1;
-  }
-
   /* The nameplate's cap-space stat repeats the cap card right below it
      (user, 2026-10-05), so on a phone the card alone carries the number —
      with the "/" separator that led into it. The value is still written on
