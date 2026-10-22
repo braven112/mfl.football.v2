@@ -323,7 +323,12 @@
 .lbc__cells {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0 0.6vw;
+  /* The doubleheader divider sits at Game 2's left edge, so Game 1's room to
+     it is this gap and Game 2's is the padding below. Keep the two EQUAL
+     (--lbc-dh-gutter): at 0.6vw Game 2's crest sat ~4px off the line on a TV
+     whose WebView lays out at half its pixel width. */
+  --lbc-dh-gutter: 1vw;
+  gap: 0 var(--lbc-dh-gutter);
   flex: 1;
   min-height: 0;
 }
@@ -350,7 +355,8 @@
    * the next gradient someone puts on this box.
    */
   box-shadow: inset 1px 0 0 var(--lbc-hairline);
-  padding-left: 0.6vw;
+  /* + 1px: the hairline itself is drawn inside this padding. */
+  padding-left: calc(var(--lbc-dh-gutter) + 1px);
 }
 
 .lbc__cell {
