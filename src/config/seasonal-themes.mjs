@@ -24,6 +24,8 @@ const SEASON_ZONE = 'America/Los_Angeles';
  *   theme: string,
  *   lock: 'dark' | 'light' | null,
  *   marks: string | null,
+ *   name?: string,
+ *   welcome?: boolean,
  *   window: (year: number) => { start: CivilDate, end: CivilDate },
  * }} SeasonalTheme
  */
@@ -75,6 +77,14 @@ export const SEASONAL_THEMES = {
     lock: 'light',
     /** Franchise marks: each team knit into an ugly-sweater patch in its own colours. */
     marks: 'christmas-marks',
+    /** What the welcome popup calls it. */
+    name: 'Christmas Week',
+    /**
+     * A signed-in owner gets a once-per-device popup showing their team's
+     * Christmas mark when the window opens (owner, Oct 2026: "so teams know
+     * what their new logo will look like"). src/utils/season-welcome.ts.
+     */
+    welcome: true,
     /**
      * The NFL game week holding Christmas Day, Tuesday through its Monday
      * night game (owner's rule, Oct 2026: Week 16 in 2026, Dec 22–28). Taken
