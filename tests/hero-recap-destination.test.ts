@@ -180,7 +180,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
     // yet — and `wordmark` is a treatment the /showcase gallery enumerates, so
     // a second value needs a gallery card for no reader benefit. What must not
     // survive is the CLAIM, asserted above.
-    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.view.pill).toBe('WEEKLY RECAP');
     expect(state.view.composite.wordmark).toBe('RECAP');
   });
 
@@ -191,7 +191,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(`${state.view.headline} ${state.view.accentWord}`).toBe('THE WEEK IN REVIEW.');
     expect(state.view.summary).toContain('Week 3 is in the books');
     expect(state.view.summary).toContain('top scorers');
-    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.view.pill).toBe('WEEKLY RECAP');
     expect(state.content.kicker).toBe('Weekly Recap');
   });
 
@@ -237,8 +237,11 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     expect(HERO).not.toMatch(/resolveSeasonYearWithData|seasonYear:\s*seasonYear\b/);
     // The call's own arguments only: the page goes on to use the walk-back
     // legitimately right after it (the in-season My Team card).
-    const start = PAGE.indexOf('resolveLeagueHomeHero({');
-    const call = PAGE.slice(start, PAGE.indexOf('\n});', start));
+    // The page builds the input once (`heroInput`) because a quiet Monday night
+    // resolves it a second time; every call spreads that one object.
+    const start = PAGE.indexOf('const heroInput = {');
+    const call = PAGE.slice(start, PAGE.indexOf('\n};', start));
+    expect(start).toBeGreaterThan(-1);
     expect(call).toMatch(/castFranchiseId/);
     expect(call).not.toMatch(/\bseasonYear\b/);
   });
@@ -249,12 +252,16 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // Top Players rather than an article whose id had to be minted from a year
     // — so the week is the ONE place the live clock can still be swapped for
     // the walked-back one. The negative assertions are the real protection.
+    // The week now comes from `getRecapWeek` — the week in the books, or on a
+    // Monday morning the week whose Sunday is scored — read on the live year.
     const call = HERO.slice(
-      HERO.indexOf('resolveRecapDestination({'),
+      HERO.indexOf('getRecapWeek('),
       HERO.indexOf('resolveRecapDestination({') + 400,
     );
-    expect(call).toContain('getWeekInTheBooks(liveSeasonYear');
+    expect(call).toContain('getRecapWeek(liveSeasonYear');
+    expect(call).toContain('completedWeek: recapWeek.week');
     expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
+    expect(call).not.toMatch(/getRecapWeek\(seasonYear\b/);
     expect(call).not.toMatch(/seasonYear:\s*seasonYear\b/);
   });
 

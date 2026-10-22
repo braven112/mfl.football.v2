@@ -1,0 +1,124 @@
+---
+/**
+ * MondayNightHero — Monday from 10am PT, both leagues: the closest game Monday
+ * night can still swing, worn by the player still to play in it with the most
+ * projected points left. The viewer's own game leads when it is close.
+ *
+ * Which game and which face is decided in `monday-spotlight.ts` (close by
+ * PROJECTION, never a blowout); this only draws it. The page builds the props
+ * with `buildMondaySpotlightProps` and keeps its ordinary live hero when that
+ * returns nothing.
+ */
+import CompositeHero from './CompositeHero.astro';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import type { MondaySpotlightHeroProps, SpotlightGame } from '../../utils/monday-spotlight';
+
+export interface Props {
+  spotlight: MondaySpotlightHeroProps;
+  liveScoringHref: string;
+  viewerFranchiseId?: string;
+}
+
+const { spotlight, liveScoringHref, viewerFranchiseId } = Astro.props;
+const { league, week, game, others, teams, model, player } = spotlight;
+
+const fmt = (n: number) => n.toFixed(2);
+const short = (id: string) => teams[id]?.shortName ?? teams[id]?.name ?? '';
+const full = (id: string) => teams[id]?.name ?? '';
+
+// Title: the viewer's own game names the viewer's side and where it stands
+// on the scoreboard right now; anyone else's names the two clubs.
+const mine = viewerFranchiseId && game.isViewer
+  ? (game.home.franchiseId === viewerFranchiseId ? game.home : game.away)
+  : null;
+const theirs = mine ? (mine === game.home ? game.away : game.home) : null;
+let title: string;
+let titleAccent: string;
+if (mine && theirs) {
+  const diff = mine.live - theirs.live;
+  title = short(mine.franchiseId);
+  titleAccent = Math.abs(diff) < 0.005 ? 'all square.' : diff > 0 ? `up ${fmt(diff)}.` : `down ${fmt(-diff)}.`;
+} else {
+  title = `${short(game.home.franchiseId)} vs ${short(game.away.franchiseId)}`;
+  titleAccent = 'comes down to Monday.';
+}
+
+const projected = player.remainingProjection.toFixed(1);
+const summary =
+  `${player.name} still has ${projected} projected points to play for ${full(player.franchiseId)}. ` +
+  `Projected final: ${short(game.home.franchiseId)} ${game.home.projectedFinal.toFixed(1)}, ` +
+  `${short(game.away.franchiseId)} ${game.away.projectedFinal.toFixed(1)}.`;
+
+const teamColor = teams[player.franchiseId]?.color || '#1c497c';
+const crest = resolveHeroCrest({ franchiseId: player.franchiseId, league, nflTeam: model?.nflTeam });
+const franchise = resolveHeroFranchiseSkin(player.franchiseId, league);
+const captionMeta = model ? `${model.position} · ${normalizeTeamCode(model.nflTeam)}` : undefined;
+
+const scoreLine = (g: SpotlightGame) =>
+  `${short(g.home.franchiseId)} ${fmt(g.home.live)}, ${short(g.away.franchiseId)} ${fmt(g.away.live)}`;
+---
+
+<CompositeHero
+  ariaLabel={`Week ${week} Monday night — closest game`}
+  accent="navy"
+  wordmark="MONDAY"
+  crest={crest}
+  franchise={franchise}
+  model={model}
+  captionMeta={captionMeta}
+  glowColor={teamColor}
+  glowAlphaDark={0.42}
+  glowAlphaLight={0.24}
+  pill={`Monday Night · Week ${week}`}
+  title={title}
+  titleAccent={titleAccent}
+  summary={summary}
+  styleVars="--cmh-min-h: clamp(260px, 26vw, 320px); --cmh-min-h-mobile: 300px; --cmh-model-w: clamp(275px, 35vw, 412px); --cmh-model-right: calc(clamp(0.25rem, 2vw, 1.75rem) - 50px); --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-count-size: 1.5rem; --cmh-model-w-mobile: 170px; --cmh-divider: var(--cmh-pill-border);"
+>
+  <div class="cmh__footer">
+    <div class="cmh__stat" role="group" aria-label={`${scoreLine(game)}`}>
+      <span class="cmh__stat-num" aria-hidden="true">{fmt(game.home.live)}–{fmt(game.away.live)}</span>
+      <span class="cmh__stat-label" aria-hidden="true">{short(game.home.franchiseId)} – {short(game.away.franchiseId)}</span>
+    </div>
+    <span class="cmh__divider" aria-hidden="true"></span>
+    <a class="cta cta--primary cmh__cta" href={liveScoringHref}>
+      Live scoring
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+  {others.length > 0 && (
+    <div class="mnh__others">
+      <p class="mnh__others-label">Also close</p>
+      <ul class="mnh__others-list">
+        {others.map((g) => <li>{scoreLine(g)}</li>)}
+      </ul>
+    </div>
+  )}
+</CompositeHero>
+
+<style>
+  .mnh__others {
+    border-top: 1px solid var(--cmh-divider);
+    padding-top: 0.5rem;
+  }
+  .mnh__others-label {
+    margin: 0 0 0.25rem;
+    font-size: var(--font-size-3xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cmh-body);
+  }
+  .mnh__others-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: var(--font-size-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--cmh-body);
+  }
+</style>

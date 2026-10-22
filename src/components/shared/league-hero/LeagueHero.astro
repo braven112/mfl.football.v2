@@ -52,6 +52,8 @@ import type { LeagueHeroState } from '../../../utils/league-hero/types';
 import { getLeagueHeroProfile } from '../../../utils/league-hero/profiles';
 import type { HeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
 import type { BuiltLiveScoringProps } from '../../../utils/live-scoring-hero-props';
+import type { MondaySpotlightHeroProps } from '../../../utils/monday-spotlight-props';
+import MondayNightHero from '../MondayNightHero.astro';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
 const REGION_LABEL: Record<string, string> = {
@@ -84,9 +86,11 @@ interface Props {
    * scores is worse than the card it replaced.
    */
   liveScoring?: BuiltLiveScoringProps;
+  /** Monday's closest-game spotlight; replaces the scoreboard when present. */
+  mondaySpotlight?: MondaySpotlightHeroProps;
 }
 
-const { league, state, config, standings, userFranchiseId, backdrop = null, liveScoring} = Astro.props;
+const { league, state, config, standings, userFranchiseId, backdrop = null, liveScoring, mondaySpotlight } = Astro.props;
 
 const profile = getLeagueHeroProfile(league);
 // Built from the registry, never written as a literal — the path belongs to
@@ -115,7 +119,13 @@ const clampsSummary = state.kind === 'feature' || slot === 'article' || slot ===
     being played the hero's job is a SCOREBOARD, not a portrait. Same call
     TheLeague's SeasonDailyHero makes, and the reason `slot:live-scoring`
     deliberately carries no composite treatment. */}
-{slot === 'live-scoring' && liveScoring && 'gameWindow' in state ? (
+{slot === 'live-scoring' && liveScoring && mondaySpotlight ? (
+  <MondayNightHero
+    spotlight={mondaySpotlight}
+    liveScoringHref={ensureLeaguePrefix(getLeagueBySlug(league)!, '/live-scoring')}
+    viewerFranchiseId={liveScoring.userFranchiseId}
+  />
+) : slot === 'live-scoring' && liveScoring && 'gameWindow' in state ? (
   <LiveScoringHero
     client:load
     {...liveScoring}

@@ -22,7 +22,7 @@ import { isSaturdayEveningPT } from '../sunday-ticket-window';
 import { hasSubmittedLineup } from '../lineup-submitted';
 import { getCurrentNFLWeek } from '../current-week';
 import { getCurrentSeasonYear } from '../league-year';
-import { getWeekInTheBooks, getOwnersByPlayer } from '../offseason-hero-data';
+import { getRecapWeek, getOwnersByPlayer } from '../offseason-hero-data';
 import { resolveRecapDestination } from '../hero-recap-destination';
 import { resolveWaiverWindow } from '../waiver-window';
 import { waiverDeadlineCopy } from '../waiver-deadline-copy';
@@ -74,6 +74,8 @@ export interface LeagueHomeHeroInput {
   /** The franchise leading the standings, for the Monday card's face. */
   standingsLeaderId?: string;
   /** THIS week's power-rankings issue, when the league runs one and it is out. */
+  /** See `LeagueHeroResolverInput.mondayNightQuiet`. */
+  mondayNightQuiet?: boolean;
   peckingOrder?: PeckingOrderHeroIssue;
   /**
    * Which feed posts are the league's weekly column. Absent, the league has no
@@ -123,11 +125,15 @@ export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise
   // Where Tuesday's recap hero points — `getWeekInTheBooks`, NOT
   // `getCurrentNFLWeek`, which rolls to the UPCOMING week on the very morning
   // this slot runs (see hero-recap-destination.ts).
+  // On a Monday morning `getRecapWeek` names the week still being played once
+  // its Sunday is scored (`sundayOnly`) — the same rule TheLeague's recap card
+  // follows, so both leagues recap the same Sunday.
   const liveSeasonYear = getCurrentSeasonYear(effectiveDate);
-  const resolvedRecap = resolveRecapDestination({
-    league: league.slug,
-    completedWeek: getWeekInTheBooks(liveSeasonYear, league.slug, effectiveDate),
-  });
+  const recapWeek = getRecapWeek(liveSeasonYear, league.slug, effectiveDate);
+  const resolvedRecap = {
+    ...resolveRecapDestination({ league: league.slug, completedWeek: recapWeek.week }),
+    ...(recapWeek.sundayOnly ? { sundayOnly: true } : {}),
+  };
   // A league without the default destination (Top Players) names its own.
   const recapPage = profile.facts.recapPage;
   const recap =
@@ -170,6 +176,7 @@ export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise
     waiver,
     article,
     peckingOrder: input.peckingOrder,
+    mondayNightQuiet: input.mondayNightQuiet,
     column,
   });
 

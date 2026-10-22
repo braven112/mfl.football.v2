@@ -814,7 +814,7 @@ export function isDraftCountdown(referenceDate: Date): boolean {
  * Determine which daily hero slot to show based on day-of-week and time-of-day (PT).
  *
  * Schedule:
- * Monday:    <5:15pm → standings, 5:15pm-11pm → live-scoring (MNF), 11pm+ → live-scoring
+ * Monday:    <10am → standings (the Sunday recap where the profile asks), 10am+ → live-scoring (MNF)
  * Tuesday:   <2pm → recap, 2pm+ → waiver-wire
  * Wednesday: <8pm → waiver-wire, 8pm+ → article
  * Thursday:  <5:15pm → article, 5:15pm-11pm → live-scoring (TNF), 11pm+ → article
@@ -833,9 +833,11 @@ export function getDailySlot(referenceDate: Date): { slot: DailySlot; gameWindow
       return { slot: 'live-scoring', gameWindow: 'snf' };                              // 8:30pm+
 
     case 1: // Monday
-      if (mins < 1035) return { slot: 'standings', gameWindow: null };                 // before 5:15pm
-      if (mins < 1380) return { slot: 'live-scoring', gameWindow: 'mnf' };             // 5:15pm-11pm
-      return { slot: 'live-scoring', gameWindow: 'mnf' };                              // 11pm+ (post-game)
+      // Brandon (Oct 2026): Sunday's recap until 10am, then Monday night's
+      // spotlight for the rest of the day, kickoff or not. Whether a game is
+      // actually LIVE is a separate question — isGameLive keeps 5:15pm-11pm.
+      if (mins < 600) return { slot: 'standings', gameWindow: null };                  // before 10am
+      return { slot: 'live-scoring', gameWindow: 'mnf' };                              // 10am+
 
     case 2: // Tuesday
       if (mins < 840) return { slot: 'recap', gameWindow: null };                      // before 2pm

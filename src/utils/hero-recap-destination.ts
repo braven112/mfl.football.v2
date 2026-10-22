@@ -51,6 +51,11 @@ export interface RecapDestination {
   href: string;
   /** Sentence case; surfaces that shout their CTAs upper-case it themselves. */
   label: string;
+  /**
+   * Monday morning: `week` is still being played and only its Sunday is in the
+   * books (`getRecapWeek`). The card says "Sunday" and "so far", never "final".
+   */
+  sundayOnly?: boolean;
 }
 
 /** The subset of a Schefter post `findWeeklyRecapPost` needs. */

@@ -47,6 +47,7 @@ import {
   buildLiveScoringHeroProps,
   type BuiltLiveScoringProps,
 } from '../../utils/live-scoring-hero-props';
+import { buildMondaySpotlightProps, type MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
@@ -290,7 +291,7 @@ const aflLeagueYearForHero = getAflLeagueYear(effectiveDate);
 const aflWaiverCalendar =
   (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflLeagueYearForHero}/`))?.[1] as any)?.default ?? [];
 
-const heroState = await resolveLeagueHomeHero({
+const heroInput = {
   league: AFL,
   effectiveDate,
   testMode,
@@ -309,7 +310,8 @@ const heroState = await resolveLeagueHomeHero({
   timeline,
   whatsNewEntries: aflWhatsNew,
   standingsLeaderId,
-});
+};
+let heroState = await resolveLeagueHomeHero(heroInput);
 
 const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
 
@@ -392,6 +394,26 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
   });
 }
 
+// Monday from 10am PT: the closest game Monday night can still swing, scoped
+// like the scoreboard above. Undefined keeps the scoreboard (monday-spotlight.ts).
+let aflMondaySpotlight: MondaySpotlightHeroProps | undefined;
+if (aflLiveScoring && heroState.kind === 'regular-season' && 'gameWindow' in heroState && heroState.gameWindow === 'mnf' && heroState.week) {
+  aflMondaySpotlight = await buildMondaySpotlightProps({
+    league: AFL.slug,
+    week: heroState.week,
+    teams: aflConfig.teams,
+    userFranchiseId: aflLiveScoring.userFranchiseId,
+    scopeFranchiseIds: aflLiveScoring.scopeFranchiseIds,
+  });
+}
+
+// Monday night with no close game left (or no scores to read): the Sunday
+// recap again, never the bare scoreboard — same as TheLeague.
+if (!aflMondaySpotlight && heroState.kind === 'regular-season' && heroState.gameWindow === 'mnf') {
+  heroState = await resolveLeagueHomeHero({ ...heroInput, mondayNightQuiet: true });
+  aflLiveScoring = undefined;
+}
+
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels('afl-fantasy');
 ---
@@ -406,6 +428,7 @@ const labels = await getPersonaLabels('afl-fantasy');
   hero={{
     state: heroState,
     liveScoring: aflLiveScoring,
+    mondaySpotlight: aflMondaySpotlight,
     config: aflConfig,
     standings: standingsFranchises,
     userFranchiseId,

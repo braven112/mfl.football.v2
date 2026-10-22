@@ -71,6 +71,7 @@ import {
   buildLiveScoringHeroProps,
   type BuiltLiveScoringProps,
 } from '../../utils/live-scoring-hero-props';
+import { buildMondaySpotlightProps, type MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
 import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
 import { getSchefterFeed } from '../../utils/schefter-league-data';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
@@ -773,6 +774,19 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
   });
 }
 
+// Monday from 10am PT: the closest game Monday night can still swing, and the
+// player who swings it. Undefined (no close game, or a failed read) keeps the
+// scoreboard above — see monday-spotlight.ts.
+let mondaySpotlight: MondaySpotlightHeroProps | undefined;
+if (liveScoring && heroState.metadata.gameWindow === 'mnf' && heroState.metadata.week) {
+  mondaySpotlight = await buildMondaySpotlightProps({
+    league: THELEAGUE.slug,
+    week: heroState.metadata.week,
+    teams: allTeams,
+    userFranchiseId: heroFranchiseId,
+  });
+}
+
 // Fetch playoff bracket data when slot is 'standings' during the playoff rounds
 // (Weeks 15-16) or championship week (Week 17). The round hero picks the live
 // round from bracket completion; the legacy bracket list is the fallback.
@@ -874,6 +888,7 @@ const labels = await getPersonaLabels('theleague');
         resolveLeaguePath={r}
         spriteUrl={spriteUrl}
         liveScoring={liveScoring}
+        mondaySpotlight={mondaySpotlight}
         userFranchiseId={heroFranchiseId}
         lineupSubmitted={lineupSubmitted}
         country={viewerCountry}
