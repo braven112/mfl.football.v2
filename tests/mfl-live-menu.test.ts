@@ -190,15 +190,15 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(page).toContain('pairedTvOwner={pairedTv ? (viewer?.user.name ?? null) : null}');
   });
 
-  it('opens a paired TV straight onto the bare board, with the landing still reachable', () => {
-    // Owner's call (Oct 2026): a TV is there to show scores, not the pitch.
+  it('gives a paired TV the landing, and a bare board if it falls back to one', () => {
+    // Owner's call (Oct 2026): a TV opens the landing, preview focused for OK.
     const page = read('src/pages/live/broadcast/index.astro');
-    expect(page).toMatch(/if \(pairedTv && viewParam === null\)[\s\S]{0,200}searchParams\.set\('view', 'board'\)[\s\S]{0,120}Astro\.redirect\(/);
-    expect(page).toContain("bare={pairedTv && boardOnly && Boolean(pageData)}");
-    // The redirect fires on a bare `/live/broadcast`, so the TV's way back to
-    // its leagues and "Unpair" must name the landing explicitly.
-    expect(page).toContain("href={pairedTv ? '/live/broadcast?view=landing' : '/live/broadcast'}");
+    expect(page).not.toMatch(/Astro\.redirect\(/);
+    expect(page).toContain('bare={pairedTv && boardOnly && Boolean(pageData)}');
     expect(read(LAYOUT)).toMatch(/\{!bare && \(\s*<header class="mfl-bar">/);
+    expect(read('src/components/shared/live-broadcast/BroadcastLanding.astro')).toMatch(
+      /function initBroadcastLanding\(\)[\s\S]{0,200}focusPreview\(\);/,
+    );
   });
 
   it('keeps the sign-out hook and its handler in agreement across the two files', () => {
