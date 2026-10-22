@@ -340,9 +340,13 @@ def main():
         teams = json.load(open(os.path.join(ROOT, cfg)))['teams']
         out_dir = os.path.join(ROOT, 'public/assets', league, MARKS)
         os.makedirs(out_dir, exist_ok=True)
+        mpath = os.path.join(ROOT, 'src/data/seasonal-marks', f'{league}-{SEASON}.json')
+        # the league's own marks are build-sweater-league-marks.py's: keep them
+        old = json.load(open(mpath)) if os.path.exists(mpath) else {}
         manifest = {
-            '_source': 'Ugly-sweater patches knit from each team\'s Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py',
-            '_logo': None,
+            '_source': 'Ugly-sweater patches knit from each team\'s Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py; league marks: python3 scripts/build-sweater-league-marks.py',
+            '_logo': old.get('_logo'),
+            **{k: old[k] for k in ('_swaps', '_icons', '_menuIcons') if k in old},
         }
         versions, tiles, trims = {}, [], {}
         for i, t in enumerate(teams):
@@ -369,7 +373,7 @@ def main():
             versions[fid] = hashlib.sha256(open(dest, 'rb').read()).hexdigest()[:8]
         manifest['_v'] = versions
         manifest['_trim'] = trims
-        with open(os.path.join(ROOT, 'src/data/seasonal-marks', f'{league}-{SEASON}.json'), 'w') as f:
+        with open(mpath, 'w') as f:
             f.write(json.dumps(manifest, indent=2) + '\n')
         print(f'{league}: {len(versions)} marks')
         if sheet_dir:

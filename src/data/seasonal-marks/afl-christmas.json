@@ -1,6 +1,6 @@
 {
-  "_source": "Ugly-sweater patches knit from each team's Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py",
-  "_logo": null,
+  "_source": "Ugly-sweater patches knit from each team's Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py; league marks: python3 scripts/build-sweater-league-marks.py",
+  "_logo": "logo.png",
   "0001": "sweater:#398b6a,#ffffff",
   "0002": "sweater:#f3eee3,#314d78",
   "0003": "sweater:#429b3f,#eeeeee",
@@ -148,5 +148,34 @@
       "top": "5b2c834f",
       "bottom": "7717f097"
     }
+  },
+  "_swaps": {
+    "/assets/afl/conferences/al.svg": "conferences/al.png",
+    "/assets/afl/conferences/al-dark.svg": "conferences/al.png",
+    "/assets/afl/conferences/nl.svg": "conferences/nl.png",
+    "/assets/afl/conferences/nl-dark.svg": "conferences/nl.png",
+    "/assets/afl/premier.svg": "premier.png",
+    "/assets/afl/premier-dark.svg": "premier.png",
+    "/assets/afl/dleague.svg": "dleague.png",
+    "/assets/afl/dleague-dark.svg": "dleague.png",
+    "/assets/afl/awards/al-north.svg": "awards/al-north.png",
+    "/assets/afl/awards/al-south.svg": "awards/al-south.png",
+    "/assets/afl/awards/nl-east.svg": "awards/nl-east.png",
+    "/assets/afl/awards/nl-west.svg": "awards/nl-west.png",
+    "/assets/afl/awards/afl-championship.svg": "awards/afl-championship.png",
+    "/assets/afl/awards/premier-league.svg": "awards/premier-league.png",
+    "/assets/afl/awards/dleague-champion.svg": "awards/dleague-champion.png",
+    "/assets/afl/awards/al-champion.svg": "awards/al-champion.png",
+    "/assets/afl/awards/nl-champion.svg": "awards/nl-champion.png",
+    "/assets/afl/awards/afl-cup.svg": "awards/afl-cup.png"
+  },
+  "_icons": {
+    "premier-league": "premier.png"
+  },
+  "_menuIcons": {
+    "/assets/afl/premier.svg": "premier.png",
+    "/assets/afl/premier-dark.svg": "premier.png",
+    "/assets/afl/dleague.svg": "dleague.png",
+    "/assets/afl/dleague-dark.svg": "dleague.png"
   }
 }

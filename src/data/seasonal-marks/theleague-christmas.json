@@ -1,6 +1,6 @@
 {
-  "_source": "Ugly-sweater patches knit from each team's Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py",
-  "_logo": null,
+  "_source": "Ugly-sweater patches knit from each team's Halloween silhouette in its own colours (Oct 2026). Rebuild: python3 scripts/build-sweater-marks.py; league marks: python3 scripts/build-sweater-league-marks.py",
+  "_logo": "logo.png",
   "0001": "sweater:#bd1f2b,#ffffff",
   "0002": "sweater:#1b435f,#ffffff",
   "0003": "sweater:#181818,#ebd0a1",
@@ -100,5 +100,11 @@
       "top": "cb118c16",
       "bottom": "b1a66bfa"
     }
+  },
+  "_swaps": {
+    "/assets/theleague/division-badges/northwest.svg": "division-badges/northwest.png",
+    "/assets/theleague/division-badges/southwest.svg": "division-badges/southwest.png",
+    "/assets/theleague/division-badges/central.svg": "division-badges/central.png",
+    "/assets/theleague/division-badges/east.svg": "division-badges/east.png"
   }
 }

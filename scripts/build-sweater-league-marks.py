@@ -22,7 +22,8 @@ takes the nearest Christmas yarn. The body is green behind a mostly-red mark
 and red behind a green one, with a cream stitch outline wherever the mark's
 edge would otherwise vanish into the body.
 
-Output: public/assets/<navSlug>/christmas-marks/<dest>.png at 200x200, wired
+Output: public/assets/<navSlug>/christmas-marks/<dest>.png, at the source
+art's own aspect (320px on its long side), wired
 into src/data/seasonal-marks/<navSlug>-christmas.json (`_logo`, `_swaps`,
 `_icons`, `_menuIcons`) the way Halloween's league marks are. --preview writes
 the PNGs to <dir> only and leaves the repo alone.
@@ -154,11 +155,18 @@ def nearest(c):
 def knit(png, motif, label=None, stitches=None, vb=None):
     src = Image.open(png).convert('RGBA')
     box = src.getbbox()
-    src = src.crop(box)
     band_h = len(BANDS[motif]) + 2 if motif else 0
     area = ROWS - 2 * (band_h + 2) - 4 if motif else (stitches or BARE)
+    # the stitch size comes from the drawn mark itself
+    sc = area / max(box[2] - box[0], box[3] - box[1])
+    px = 480 / max(vb[2], vb[3])
+    ox, oy = (480 - vb[2] * px) / 2, (480 - vb[3] * px) / 2
+    if not motif:
+        # a bare mark is knit over its whole viewBox, so the file keeps the
+        # box (and aspect) of the art it replaces in the page
+        box = (round(ox), round(oy), round(ox + vb[2] * px), round(oy + vb[3] * px))
+    src = src.crop(box)
     w, h = src.size
-    sc = area / max(w, h)
     mw, mh = max(1, round(w * sc)), max(1, round(h * sc))
     small = src.resize((mw, mh), Image.BOX)
     cells = [[None] * mw for _ in range(mh)]
@@ -185,8 +193,6 @@ def knit(png, motif, label=None, stitches=None, vb=None):
     if label:
         # SVG units -> drawn pixel (480px, contain) -> stitch
         word, lx, ly, yarn = label
-        px = 480 / max(vb[2], vb[3])
-        ox, oy = (480 - vb[2] * px) / 2, (480 - vb[3] * px) / 2
         cx = (ox + (lx - vb[0]) * px - box[0]) * mw / w
         cy = (oy + (ly - vb[1]) * px - box[1]) * mh / h
         glyphs = [FONT[ch] for ch in word]
@@ -261,25 +267,24 @@ def knit(png, motif, label=None, stitches=None, vb=None):
 # stitches across a bare mark: more than a patch's mark gets, since nothing
 # surrounds it
 BARE = 56
+LONG = 320
 
 def bare(cells, mw, mh):
-    # the mark's own stitches on a transparent ground, centred on a square
-    n = max(mw, mh)
-    img = Image.new('RGBA', (n * CELL, n * CELL), (0, 0, 0, 0))
+    # the mark's own stitches on a transparent ground, at the art's aspect
+    img = Image.new('RGBA', (mw * CELL, mh * CELL), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    r0, c0 = (n - mh) // 2, (n - mw) // 2
     for r in range(mh):
         for c in range(mw):
             if cells[r][c]:
                 # the yarn's own shadow fills the gaps between its lobes, as
                 # the patch's dark ground does, or the page shows through and
                 # the mark goes pale on a light theme
-                x, y = (c0 + c) * CELL, (r0 + r) * CELL
+                x, y = c * CELL, r * CELL
                 d.rectangle((x, y, x + CELL - 1, y + CELL - 1), fill=shade(hexrgb(cells[r][c]), 0.6))
                 stitch(d, x, y, hexrgb(cells[r][c]))
-    out = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-    out.paste(img.resize((SIZE, SIZE), Image.LANCZOS), (0, 0))
-    return out
+    # long side LONG px: the header logo is drawn larger than a team crest
+    k = LONG / max(mw, mh)
+    return img.resize((round(mw * k), round(mh * k)), Image.LANCZOS)
 
 def main():
     preview = sys.argv[sys.argv.index('--preview') + 1] if '--preview' in sys.argv else None
