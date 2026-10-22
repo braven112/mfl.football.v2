@@ -1,0 +1,696 @@
+---
+/**
+ * Forum Archive — TheLeague's old phpBB message board (2007–2026), read-only.
+ *
+ * Search it (?q=), browse it by section (?f=) or year (?y=), ask Schefter
+ * about it, or download it for your own AI. Members only: old posts can be
+ * personal, and the repo is public, so the archive lives in Redis and every
+ * route that touches it gates on a TheLeague session (archive-access.ts).
+ */
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../components/shared/Breadcrumbs.astro';
+import EmptyState from '../../../../components/shared/states/EmptyState.astro';
+import ErrorState from '../../../../components/shared/states/ErrorState.astro';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../../utils/login-redirect';
+import { forumArchiveAccess } from '../../../../utils/forum-archive/archive-access';
+import { loadForumArchive } from '../../../../utils/forum-archive/forum-archive-store';
+import { searchTopics, snippet } from '../../../../utils/forum-archive/search';
+import { formatArchiveDate, orderedForums } from '../../../../utils/forum-archive/archive-download';
+import { escapeHtml } from '../../../../utils/forum-archive/archive-markdown';
+import {
+  FORUM_ARCHIVE_PATH,
+  forumArchiveTopicPath,
+} from '../../../../utils/forum-archive/archive-paths';
+import { resolveLeaguePath } from '../../../../utils/nav-utils';
+import { leagueClock } from '../../../../config/leagues';
+import type { ArchiveForum, ArchiveTopic } from '../../../../utils/forum-archive/types';
+
+const access = forumArchiveAccess(Astro.request);
+if (!access.user) return Astro.redirect(loginUrlForRequest(Astro, access.league));
+if (!access.member) return Astro.rewrite(forbiddenPathFor(access.league, 'league'));
+
+const hidePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const href = (path: string) => resolveLeaguePath(path, hidePrefix);
+const zone = leagueClock(access.league.slug).zone;
+const date = (t: number) => formatArchiveDate(t, zone);
+
+const params = Astro.url.searchParams;
+const q = (params.get('q') ?? '').trim().slice(0, 200);
+const forumId = Number(params.get('f')) || undefined;
+const year = Number(params.get('y')) || undefined;
+const page = Math.max(1, Number(params.get('page')) || 1);
+const PAGE_SIZE = 20;
+
+const load = await loadForumArchive();
+const archive = load.status === 'ok' ? load.archive : null;
+
+const forumLabel = (f: ArchiveForum | undefined) => (f ? f.path.slice(1).join(' › ') || f.name : 'Board');
+const yearOfForum = (f: ArchiveForum) => {
+  const y = f.path.map((p) => /\b(20\d\d)\b/.exec(p)?.[1]).find(Boolean);
+  return y ? Number(y) : null;
+};
+
+let mode: 'browse' | 'search' | 'section' = 'browse';
+let rows: Array<{ topic: ArchiveTopic; snippetHtml?: string; anchorPost?: number; matchCount?: number }> = [];
+let total = 0;
+let sections: ArchiveForum[] = [];
+let years: Array<{ year: number; forums: ArchiveForum[] }> = [];
+let years2: number[] = [];
+const selectedForum = archive && forumId ? archive.forumById.get(forumId) : undefined;
+
+if (archive) {
+  const ordered = orderedForums(archive.forums).filter((f) => f.topicCount > 0);
+  sections = ordered.filter((f) => yearOfForum(f) === null);
+  const byYear = new Map<number, ArchiveForum[]>();
+  for (const f of ordered) {
+    const y = yearOfForum(f);
+    if (y === null) continue;
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y)!.push(f);
+  }
+  years = [...byYear.entries()].sort((a, b) => b[0] - a[0]).map(([y, forums]) => ({ year: y, forums }));
+  years2 = [...new Set(archive.posts.map((p) => new Date(p.time * 1000).getUTCFullYear()))].sort((a, b) => b - a);
+
+  if (q) {
+    mode = 'search';
+    const hits = searchTopics(archive, q, { forumId, year });
+    total = hits.length;
+    rows = hits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((h) => ({
+      topic: h.topic,
+      anchorPost: h.hits[0]?.post.id,
+      matchCount: h.matchCount,
+      snippetHtml: snippet(h.hits[0]?.post.body ?? '', q)
+        .map((part) => (part.hit ? `<mark>${escapeHtml(part.text)}</mark>` : escapeHtml(part.text)))
+        .join(''),
+    }));
+  } else if (forumId || year) {
+    mode = 'section';
+    let scope: Set<number> | null = null;
+    if (forumId) {
+      scope = new Set([forumId]);
+      for (let grew = true; grew; ) {
+        grew = false;
+        for (const f of archive.forums) if (!scope.has(f.id) && scope.has(f.parentId)) { scope.add(f.id); grew = true; }
+      }
+    }
+    const list = archive.topics.filter(
+      (t) =>
+        (!scope || scope.has(t.forumId)) &&
+        (!year || new Date(t.startedAt * 1000).getUTCFullYear() === year),
+    );
+    total = list.length;
+    rows = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((topic) => ({ topic }));
+  }
+}
+
+const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const pageHref = (p: number) => {
+  const sp = new URLSearchParams();
+  if (q) sp.set('q', q);
+  if (forumId) sp.set('f', String(forumId));
+  if (year) sp.set('y', String(year));
+  if (p > 1) sp.set('page', String(p));
+  const s = sp.toString();
+  return href(`${FORUM_ARCHIVE_PATH}${s ? `?${s}` : ''}`);
+};
+const yearSpan = archive && years2.length ? `${years2[years2.length - 1]}–${years2[0]}` : '';
+const heading =
+  mode === 'search'
+    ? `${total.toLocaleString('en-US')} thread${total === 1 ? '' : 's'} match “${q}”`
+    : mode === 'section'
+      ? [selectedForum ? forumLabel(selectedForum) : null, year ? String(year) : null].filter(Boolean).join(' · ')
+      : '';
+---
+
+<TheLeagueLayout title="Forum Archive | The League">
+  <div class="fa-page" data-forum-archive data-league={access.league.slug}>
+    <header class="fa-header">
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Manage Contracts', href: '/theleague/front-office/contracts' },
+        { label: 'Forum Archive' },
+      ]} />
+      <h1 class="fa-title">Forum Archive</h1>
+      <p class="fa-sub">
+        The old message board, read-only.
+        {archive && <>{yearSpan} · {archive.pointer.topicCount.toLocaleString('en-US')} threads · {archive.pointer.postCount.toLocaleString('en-US')} posts</>}
+      </p>
+      <p class="fa-related">Every franchise, transition and RFA tag ever posted here is listed on <a class="cta-link" href={href('/theleague/contracts/tag-history')}>Tag History</a>.</p>
+    </header>
+
+    {load.status === 'unavailable' && (
+      <ErrorState
+        title="The archive could not be read"
+        body="The posts are still there; the storage that holds them did not answer. Reload in a minute."
+        actions={[{ label: 'Reload the archive', href: href(FORUM_ARCHIVE_PATH) }]}
+      />
+    )}
+
+    {load.status === 'empty' && (
+      <EmptyState
+        title="The archive has not been loaded yet"
+        body={access.commissioner
+          ? 'Load the forum database export below and the old posts appear here.'
+          : 'The commissioner is loading the old message board. Check back soon.'}
+      />
+    )}
+
+    {archive && (
+      <>
+        <section class="ui-card fa-card fa-ask" aria-labelledby="fa-ask-title">
+          <div class="fa-ask__head">
+            <img src="/assets/claude-schefter-avatar.webp" alt="" width="40" height="40" class="fa-ask__avatar" />
+            <div>
+              <h2 id="fa-ask-title" class="fa-ask__title">Ask Schefter</h2>
+              <p class="fa-ask__hint">“Have we ever talked about…?” He digs through the old board and reports exactly what's there.</p>
+            </div>
+          </div>
+          <form class="fa-ask__form" data-fa-ask>
+            <label class="sr-only" for="fa-ask-input">Your question</label>
+            <textarea id="fa-ask-input" name="question" rows="2" maxlength="500"
+              placeholder="Have we ever talked about a taxi squad?" required></textarea>
+            <button type="submit" class="cta cta--primary">Ask Schefter</button>
+          </form>
+          <div class="fa-ask__answer" data-fa-answer aria-live="polite" hidden></div>
+          <p class="fa-ask__note">Every quote is word for word from the old board and links to the exact post. The board shows what owners discussed, not necessarily what passed — for today's rules, <a href={href('/theleague/rules')}>check the Constitution</a>.</p>
+        </section>
+
+        <section class="ui-card fa-card" aria-label="Search the archive">
+          <form class="fa-search" method="get" action={href(FORUM_ARCHIVE_PATH)}>
+            <label class="sr-only" for="fa-q">Search old posts</label>
+            <input id="fa-q" type="search" name="q" value={q} placeholder="Search old posts, e.g. rookie extension" autocomplete="off" />
+            <div class="fa-search__row">
+              <label class="sr-only" for="fa-f">Section</label>
+              <select id="fa-f" name="f">
+                <option value="">All sections</option>
+                {orderedForums(archive.forums).filter((f) => f.topicCount > 0).map((f) => (
+                  <option value={f.id} selected={f.id === forumId}>{f.path.slice(1).join(' › ') || f.name}</option>
+                ))}
+              </select>
+              <label class="sr-only" for="fa-y">Year</label>
+              <select id="fa-y" name="y">
+                <option value="">Any year</option>
+                {years2.map((y) => <option value={y} selected={y === year}>{y}</option>)}
+              </select>
+              <button type="submit" class="cta cta--primary">Search</button>
+            </div>
+          </form>
+        </section>
+
+        {mode !== 'browse' && (
+          <section class="fa-results" aria-live="polite">
+            <div class="fa-results__head">
+              <h2 class="fa-results__title">{heading}</h2>
+              <a class="cta-link" href={href(FORUM_ARCHIVE_PATH)}>Back to all sections</a>
+            </div>
+            {rows.length === 0 ? (
+              <EmptyState
+                compact
+                title={mode === 'search' ? 'No posts match that search' : 'No threads here'}
+                body={mode === 'search' ? 'Try fewer or different words — or ask Schefter, who tries synonyms for you.' : 'Pick another section or year.'}
+              />
+            ) : (
+              <ol class="fa-list">
+                {rows.map(({ topic, snippetHtml, anchorPost, matchCount }) => (
+                  <li class="fa-item">
+                    <a class="fa-item__title" href={href(forumArchiveTopicPath(topic.id, anchorPost))}>{topic.title}</a>
+                    <p class="fa-item__meta">
+                      {forumLabel(archive.forumById.get(topic.forumId))} · {topic.author} · {date(topic.startedAt)} · {topic.postCount} post{topic.postCount === 1 ? '' : 's'}
+                      {matchCount && matchCount > 1 ? ` · ${matchCount} matches` : ''}
+                    </p>
+                    {snippetHtml && <p class="fa-item__snippet" set:html={snippetHtml} />}
+                  </li>
+                ))}
+              </ol>
+            )}
+            {pages > 1 && (
+              <nav class="fa-pager" aria-label="Pages">
+                {page > 1 ? <a class="cta cta--ghost" href={pageHref(page - 1)}>Newer</a> : <span />}
+                <span class="fa-pager__label">Page {page} of {pages}</span>
+                {page < pages ? <a class="cta cta--ghost" href={pageHref(page + 1)}>More</a> : <span />}
+              </nav>
+            )}
+          </section>
+        )}
+
+        {mode === 'browse' && (
+          <>
+            <section class="fa-browse" aria-labelledby="fa-sections-title">
+              <h2 id="fa-sections-title" class="fa-browse__title">Sections</h2>
+              <ul class="fa-sections">
+                {sections.map((f) => (
+                  <li>
+                    <a class="fa-section" href={href(`${FORUM_ARCHIVE_PATH}?f=${f.id}`)}>
+                      <span class="fa-section__name">{f.path.slice(1).join(' › ') || f.name}</span>
+                      <span class="fa-section__count">{f.topicCount} threads · {f.postCount} posts</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section class="fa-browse" aria-labelledby="fa-years-title">
+              <h2 id="fa-years-title" class="fa-browse__title">By year</h2>
+              <ul class="fa-years">
+                {years.map(({ year: y, forums }) => (
+                  <li class="fa-year">
+                    <span class="fa-year__label">{y}</span>
+                    <span class="fa-year__links">
+                      {forums.map((f) => (
+                        <a class="ui-pill fa-chip" href={href(`${FORUM_ARCHIVE_PATH}?f=${f.id}`)}>
+                          {f.name.replace(new RegExp(`^${y}\\s*`), '') || 'General'} <span class="fa-chip__count">{f.topicCount}</span>
+                        </a>
+                      ))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        )}
+
+        <section class="ui-card fa-card fa-download" aria-labelledby="fa-dl-title">
+          <h2 id="fa-dl-title" class="fa-download__title">Use it with your own AI</h2>
+          <p class="fa-download__body">Download the whole archive as one file and upload it to Claude, ChatGPT or any assistant to ask your own questions. It is for owners only — please don't post it publicly.</p>
+          <div class="fa-download__actions">
+            <a class="cta cta--primary" href="/api/forum-archive/download" download>Download archive (.md)</a>
+            <a class="cta-link" href="/api/forum-archive/download?format=json" download>Raw data (.json)</a>
+          </div>
+        </section>
+      </>
+    )}
+
+    {access.commissioner && (
+      <details class="ui-card fa-card fa-import" open={load.status === 'empty'}>
+        <summary class="fa-import__summary">Load the archive (commissioner)</summary>
+        <p class="fa-import__body">
+          Pick the forum database export (<code>.sql</code> from phpMyAdmin) or an archive <code>.json</code>.
+          Your browser reads it, keeps only the public posts — no emails, passwords, IP addresses or private messages — and uploads them.
+          Loading again replaces the current copy.
+        </p>
+        <input type="file" accept=".sql,.json,application/sql,application/json,text/plain" data-fa-import-file />
+        <p class="fa-import__status" data-fa-import-status aria-live="polite"></p>
+      </details>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<script>
+  import { escapeHtml } from '../../../../utils/forum-archive/archive-markdown';
+
+  const SHOWN = 5;
+
+  interface Card {
+    postId: number; title: string; section: string; author: string; date: string; href: string;
+    excerpt: Array<{ text: string; hit: boolean }>; morePosts: number;
+  }
+  interface Report {
+    cards: Card[]; postCount: number; threadCount: number; yearFrom: number | null; yearTo: number | null;
+    searched: string[]; take: string | null; keywordOnly: boolean;
+  }
+
+  /**
+   * Everything quoted here comes from the database verbatim (the excerpt
+   * parts); the only text the model wrote is `take`, and it is boxed and
+   * labelled as opinion.
+   */
+  function renderReport(r: Report): string {
+    const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const span = r.yearFrom && r.yearTo ? (r.yearFrom === r.yearTo ? `, ${r.yearFrom}` : `, ${r.yearFrom}–${r.yearTo}`) : '';
+    const lede = r.cards.length
+      ? `I went through the archives. Found ${plural(r.postCount, 'post')} in ${plural(r.threadCount, 'thread')}${span}.`
+      : 'Nothing in the archives on that.';
+    const searched = r.searched.length
+      ? `<p class="fa-report__searched">I checked: ${r.searched.map((s) => escapeHtml(s)).join(' · ')}</p>`
+      : '';
+    const cards = r.cards
+      .map((c, i) => {
+        const quote = c.excerpt.map((p) => (p.hit ? `<mark>${escapeHtml(p.text)}</mark>` : escapeHtml(p.text))).join('');
+        const more = c.morePosts ? ` <span class="fa-receipt__more">· ${plural(c.morePosts, 'more post')} in this thread</span>` : '';
+        return `<li class="fa-receipt"${i >= SHOWN ? ' hidden' : ''}>
+          <p class="fa-receipt__meta">${escapeHtml(c.section)} · ${escapeHtml(c.date)}</p>
+          <a class="fa-receipt__title" href="${escapeHtml(c.href)}">${escapeHtml(c.title)}</a>
+          <p class="fa-receipt__author">${escapeHtml(c.author)}</p>
+          <blockquote class="fa-receipt__quote">${quote}</blockquote>
+          <p class="fa-receipt__link"><a class="cta-link" href="${escapeHtml(c.href)}">Read the full post</a>${more}</p>
+        </li>`;
+      })
+      .join('');
+    const moreButton = r.cards.length > SHOWN
+      ? `<button type="button" class="cta cta--ghost fa-report__more" data-fa-more>Show ${r.cards.length - SHOWN} more</button>`
+      : '';
+    const take = r.take
+      ? `<aside class="fa-take"><p class="fa-take__label">Schefter's take · Opinion, not from the archive</p><p class="fa-take__text">${escapeHtml(r.take)}</p></aside>`
+      : '';
+    const keywordNote = r.keywordOnly
+      ? '<p class="fa-report__searched">Plain keyword search — the AI search helper was unavailable.</p>'
+      : '';
+    return `<p class="fa-report__lede"><strong>Schefter:</strong> ${lede}</p>${searched}${keywordNote}${
+      cards ? `<ol class="fa-report__cards">${cards}</ol>` : ''
+    }${moreButton}${take}`;
+  }
+
+  function init() {
+    const root = document.querySelector<HTMLElement>('[data-forum-archive][data-league="theleague"]');
+    if (!root || root.dataset.faInit) return;
+    root.dataset.faInit = '1';
+    initAsk(root);
+    initImport(root);
+  }
+
+  function initAsk(root: HTMLElement) {
+    const form = root.querySelector<HTMLFormElement>('[data-fa-ask]');
+    const out = root.querySelector<HTMLElement>('[data-fa-answer]');
+    if (!form || !out) return;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const input = form.querySelector<HTMLTextAreaElement>('textarea')!;
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const question = input.value.trim();
+      if (!question) return;
+      button.disabled = true;
+      button.textContent = 'Digging…';
+      out.hidden = false;
+      out.innerHTML = '<p class="fa-ask__working">Schefter is working the archives…</p>';
+      try {
+        const res = await fetch('/api/forum-archive/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Schefter could not file that one.');
+        out.innerHTML = renderReport(data);
+        const more = out.querySelector<HTMLButtonElement>('[data-fa-more]');
+        more?.addEventListener('click', () => {
+          out.querySelectorAll<HTMLElement>('.fa-receipt[hidden]').forEach((el) => { el.hidden = false; });
+          more.remove();
+        });
+      } catch (err) {
+        out.innerHTML = `<p class="fa-ask__error">${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Ask Schefter';
+      }
+    });
+  }
+
+  function initImport(root: HTMLElement) {
+    const fileInput = root.querySelector<HTMLInputElement>('[data-fa-import-file]');
+    const status = root.querySelector<HTMLElement>('[data-fa-import-status]');
+    if (!fileInput || !status) return;
+    const say = (msg: string) => { status.textContent = msg; };
+
+    async function post(body: unknown) {
+      const res = await fetch('/api/forum-archive/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+      return data;
+    }
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      fileInput.disabled = true;
+      try {
+        say(`Reading ${file.name}…`);
+        const text = await file.text();
+        const { buildForumArchive, chunkForumArchive } = await import('../../../../utils/forum-archive/build-archive.mjs');
+        const archive = /\.json$/i.test(file.name) ? JSON.parse(text) : buildForumArchive(text);
+        if (!Array.isArray(archive?.posts) || !Array.isArray(archive?.topics) || !Array.isArray(archive?.forums)) {
+          throw new Error('That file is not a forum export or archive.');
+        }
+        const { index, chunks } = chunkForumArchive(archive);
+        say(`Found ${archive.posts.length.toLocaleString()} posts in ${index.topics.length.toLocaleString()} threads. Uploading…`);
+        const { version } = await post({ step: 'begin' });
+        for (let i = 0; i < chunks.length; i++) {
+          say(`Uploading part ${i + 1} of ${chunks.length}…`);
+          await post({ step: 'chunk', version, index: i, posts: chunks[i] });
+        }
+        say('Finishing…');
+        const { pointer } = await post({ step: 'commit', version, chunkCount: chunks.length, index });
+        say(`Loaded ${pointer.postCount.toLocaleString()} posts in ${pointer.topicCount.toLocaleString()} threads. Reloading…`);
+        window.location.reload();
+      } catch (err) {
+        say(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        fileInput.disabled = false;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .fa-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1rem 1rem 3rem;
+    color: var(--page-text);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .fa-title {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1.1;
+  }
+  .fa-sub {
+    margin: 0.25rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+  .fa-related { margin: 0.25rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+
+  .fa-card { padding: 1rem; }
+
+  /* Ask Schefter */
+  .fa-ask__head { display: flex; gap: 0.75rem; align-items: center; }
+  .fa-ask__avatar { border-radius: 50%; flex: none; }
+  .fa-ask__title { margin: 0; font-size: var(--font-size-lg); }
+  .fa-ask__hint { margin: 0.125rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .fa-ask__form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+  .fa-ask__form textarea,
+  .fa-search input,
+  .fa-search select {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--touch-target-min);
+    padding: 0.625rem 0.75rem;
+    font: inherit;
+    font-size: var(--font-size-base);
+    color: var(--page-text);
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+  }
+  .fa-ask__form textarea { resize: vertical; }
+  .fa-ask__form .cta { align-self: flex-start; }
+  .fa-ask__answer {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--content-bg-muted);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+  }
+  .fa-ask__answer :global(.fa-report__lede) { margin: 0; }
+  .fa-ask__answer :global(.fa-report__searched) {
+    margin: 0.25rem 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted);
+  }
+  .fa-ask__answer :global(.fa-report__cards) {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .fa-ask__answer :global(.fa-receipt) {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    min-width: 0;
+  }
+  .fa-ask__answer :global(.fa-receipt__meta),
+  .fa-ask__answer :global(.fa-receipt__author) {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted);
+  }
+  .fa-ask__answer :global(.fa-receipt__title) {
+    display: block;
+    margin: 0.125rem 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .fa-ask__answer :global(.fa-receipt__quote) {
+    margin: 0.5rem 0;
+    padding: 0.125rem 0 0.125rem 0.75rem;
+    border-left: 3px solid var(--content-border);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .fa-ask__answer :global(.fa-receipt__quote mark) {
+    background: var(--badge-info-bg);
+    color: var(--badge-info-text);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .fa-ask__answer :global(.fa-receipt__link) { margin: 0; font-size: var(--font-size-sm); }
+  .fa-ask__answer :global(.fa-receipt__more) { color: var(--content-text-muted); font-size: var(--font-size-xs); }
+  .fa-ask__answer :global(.fa-report__more) { margin-top: 0.5rem; }
+  .fa-ask__answer :global(.fa-take) {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--content-border);
+    border-radius: var(--radius-md);
+  }
+  .fa-ask__answer :global(.fa-take__label) {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .fa-ask__answer :global(.fa-take__text) { margin: 0.25rem 0 0; font-style: italic; }
+  .fa-ask__answer :global(.fa-ask__working),
+  .fa-ask__answer :global(.fa-ask__error) { margin: 0; color: var(--content-text-muted); }
+  .fa-ask__note { margin: 0.75rem 0 0; font-size: var(--font-size-xs); color: var(--content-text-muted); }
+
+  /* Search */
+  .fa-search { display: flex; flex-direction: column; gap: 0.5rem; }
+  .fa-search__row { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+  @media (min-width: 640px) {
+    .fa-search__row { grid-template-columns: 2fr 1fr auto; }
+  }
+
+  /* Results */
+  .fa-results__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .fa-results__title { margin: 0; font-size: var(--font-size-lg); }
+  .fa-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .fa-item {
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.875rem;
+    min-width: 0;
+  }
+  .fa-item__title {
+    font-weight: 600;
+    font-size: var(--font-size-base);
+    overflow-wrap: anywhere;
+  }
+  .fa-item__meta { margin: 0.25rem 0 0; font-size: var(--font-size-xs); color: var(--content-text-muted); }
+  .fa-item__snippet {
+    margin: 0.375rem 0 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .fa-item__snippet :global(mark) {
+    background: var(--badge-info-bg);
+    color: var(--badge-info-text);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .fa-pager {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+  }
+  .fa-pager__label { font-size: var(--font-size-sm); color: var(--content-text-muted); }
+
+  /* Browse */
+  .fa-browse__title {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .fa-sections { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+  @media (min-width: 640px) {
+    .fa-sections { grid-template-columns: 1fr 1fr; }
+  }
+  .fa-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-height: var(--touch-target-min);
+    padding: 0.75rem 0.875rem;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--page-text);
+  }
+  .fa-section:hover { border-color: var(--color-primary); }
+  .fa-section__name { font-weight: 600; }
+  .fa-section__count { font-size: var(--font-size-xs); color: var(--content-text-muted); }
+  .fa-years { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .fa-year {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .fa-year__label { font-weight: 700; width: 3rem; flex: none; }
+  .fa-year__links { display: flex; flex-wrap: wrap; gap: 0.375rem; min-width: 0; }
+  .fa-chip { gap: 0.375rem; }
+  .fa-chip__count { font-size: var(--font-size-xs); color: var(--content-text-muted); }
+
+  /* Download + import */
+  .fa-download__title { margin: 0; font-size: var(--font-size-lg); }
+  .fa-download__body { margin: 0.375rem 0 0.75rem; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .fa-download__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; }
+  .fa-import__summary { cursor: pointer; font-weight: 600; min-height: var(--touch-target-min); display: flex; align-items: center; }
+  .fa-import__body { font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .fa-import__status { font-size: var(--font-size-sm); margin: 0.5rem 0 0; }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

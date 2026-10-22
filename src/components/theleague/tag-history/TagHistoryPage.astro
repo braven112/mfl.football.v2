@@ -11,13 +11,9 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../shared/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { forumArchiveTopicPath } from '../../../utils/forum-archive/archive-paths';
 import data from '../../../data/theleague/tag-history.json';
 
-/**
- * Flip on once the members-only forum archive ships: each row then links to
- * its original thread there. Until then the link would 404.
- */
-const FORUM_ARCHIVE_READY = false;
 
 type TagRow = (typeof data.tags)[number];
 
@@ -129,11 +125,7 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
                   data-q={`${displayName(r)} ${r.title}`.toLowerCase()}
                 >
                   <td class="th-player">
-                    {FORUM_ARCHIVE_READY ? (
-                      <a href={href(`/contracts/forum-archive/t/${r.topicId}`)}>{displayName(r)}</a>
-                    ) : (
-                      <span>{displayName(r)}</span>
-                    )}
+                    <a href={resolveLeaguePath(forumArchiveTopicPath(r.topicId), hide)}>{displayName(r)}</a>
                     {(r.position || r.nflTeam) && (
                       <span class="th-player__meta">{[r.position, r.nflTeam].filter(Boolean).join(' · ')}</span>
                     )}
