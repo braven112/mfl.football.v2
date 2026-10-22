@@ -15,7 +15,15 @@ import '../../../styles/brand-book.css';
 
 /** A real crest at the sizes the site paints it — the case for keeping it simple. */
 const SHRINK_SRC = '/assets/theleague/group-me/0001.png';
-const SHRINK_SIZES = [160, 100, 40, 16];
+const SHRINK_SIZES = [100, 40, 16];
+/**
+ * Good next to bad at the same sizes. The busy crest is a made-up mark drawn
+ * for this page, so no real club is held up as the bad example.
+ */
+const SHRINK_EXAMPLES = [
+  { src: SHRINK_SRC, verdict: 'good', title: 'Bold and simple: stays crisp' },
+  { src: '/assets/brand-specs/example-busy-crest.svg', verdict: 'bad', title: 'Busy and detailed: turns to mud' },
+] as const;
 
 const groups: Array<{ title: string; note: string; specs: AssetSpec[] }> = [
   {
@@ -63,18 +71,23 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
         thick outlines and two or three colours stay sharp at that size. Fine detail, thin lines, shading and small
         text turn to mud.
       </p>
-      <ul class="specs__shrink" aria-label="One crest at the sizes the site shows it">
-        {
-          SHRINK_SIZES.map((px) => (
-            <li>
-              <span class="specs__shrink-box">
-                <img src={SHRINK_SRC} alt="" width={px} height={px} loading="lazy" />
-              </span>
-              <span class="specs__shrink-label">{px} px</span>
-            </li>
-          ))
-        }
-      </ul>
+      {
+        SHRINK_EXAMPLES.map((ex) => (
+          <figure class:list={['specs__example', `is-${ex.verdict}`]}>
+            <figcaption>{ex.title}</figcaption>
+            <ul class="specs__shrink">
+              {SHRINK_SIZES.map((px) => (
+                <li>
+                  <span class="specs__shrink-box">
+                    <img src={ex.src} alt="" width={px} height={px} loading="lazy" />
+                  </span>
+                  <span class="specs__shrink-label">{px} px</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        ))
+      }
       <ul class="specs__rules">
         <li><strong>Do:</strong> one strong idea, big shapes, a thick outline, 2&ndash;3 colours.</li>
         <li><strong>Avoid:</strong> gradients, photos, thin lines, drop shadows, and words smaller than the crest's main shape.</li>
@@ -217,9 +230,23 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     font-size: var(--font-size-base, 1rem);
     color: var(--page-text, #111827);
   }
+  .specs__example {
+    margin: 0 0 1rem;
+  }
+  .specs__example figcaption {
+    margin-bottom: 0.4rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 700;
+  }
+  .specs__example.is-good figcaption {
+    color: var(--color-success, #10b981);
+  }
+  .specs__example.is-bad figcaption {
+    color: var(--color-error, #dc2626);
+  }
   .specs__shrink {
     list-style: none;
-    margin: 0 0 1rem;
+    margin: 0;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
