@@ -38,6 +38,7 @@ import espnCollegeIds from '../../data/theleague/espn-college-ids.json';
 import { getPlayerMap } from './player-map';
 import { getPlayerHeadshot, divisionOrder } from '../constants/roster-constants';
 import { getCachedRosters } from './mfl-roster-cache';
+import { getCachedRecentTransactions, mergeTransactionRows } from './mfl-transactions-cache';
 import { getLeagueBySlug } from '../config/leagues';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
 import { analyzeFreeAgentNeeds, type PositionNeed } from './free-agent-needs';
@@ -522,7 +523,16 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   const standingsData = loadFeedJson(draftSeasonYear, 'standings.json');
   const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
   const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
-  const transactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+  // In season that is the league year, whose committed feed is a once-a-day
+  // snapshot (scripts/lib/held-sync-files.mjs): the last 3 days come live, so a
+  // pick traded today shows up in the draft assets.
+  const committedTransactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+  const transactionsData = committedTransactionsData && draftSeasonYear === leagueYear
+    ? { transactions: { transaction: mergeTransactionRows(
+        [committedTransactionsData.transactions?.transaction ?? []].flat(),
+        await getCachedRecentTransactions(String(draftSeasonYear), THELEAGUE_ID),
+      ) } }
+    : committedTransactionsData;
 
   let draftPredictions: any[] = [];
   let actualDraftPicks: any[] = [];

@@ -2890,7 +2890,40 @@ async function loadPlayers(year) {
 }
 
 /**
- * Who currently rosters each player, from the league's own rosters feed.
+ * One MFL export for this league, fetched live, or null on ANY failure — an
+ * HTTP error, the HTML login page, or MFL's HTTP-200 error body. Null means
+ * "use the committed file", never "nothing there".
+ *
+ * The roster sync now holds the current year's rosters.json and
+ * transactions.json out of its commit and lets them through once a day
+ * (scripts/lib/held-sync-files.mjs), so the copy in this job's checkout can be
+ * a day old. The two readers below ask MFL first for that reason.
+ */
+async function fetchLiveLeagueExport(year, type, extra = '') {
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=${type}&L=${LEAGUE_ID}${extra}&JSON=1`;
+  try {
+    // mflFetch for the same cross-origin-redirect reason as the pendingTrades read.
+    const res = await mflFetch({
+      url,
+      cookies: { MFL_USER_ID: process.env.MFL_USER_ID },
+      userAgent: 'schefter-rumor-scan/1.0',
+      timeoutMs: 15_000,
+    });
+    if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
+    const text = await res.text();
+    if (text.trim().startsWith('<')) throw new Error('MFL returned HTML');
+    const data = JSON.parse(text);
+    if (data?.error) throw new Error(`MFL error body: ${data.error?.$t ?? data.error}`);
+    return data;
+  } catch (err) {
+    warn(`  [offer-scan] live ${type} unavailable: ${err.message} — reading the committed file`);
+    return null;
+  }
+}
+
+/**
+ * Who currently rosters each player — live from MFL, else the league's own
+ * committed rosters feed (up to a day old; see fetchLiveLeagueExport).
  *
  * This is the ground truth under every ownership claim the trade-offer lane
  * makes. A PENDING proposal has not executed, so a player being given up in it
@@ -2904,35 +2937,41 @@ async function loadPlayers(year) {
  * — `tests/league-literal-guard.test.ts` forbids the literal and the registry
  * is the only thing that knows where a league's feeds live.
  *
- * A missing or unreadable file returns an EMPTY map, which the redactor treats
- * as "no evidence" and falls back to taking the row at its word. That is the
- * pre-2026-09-10 behaviour: a stale feed degrades the check, it does not
- * silence the lane.
+ * A live answer with no franchises is no answer. A missing or unreadable file
+ * returns an EMPTY map, which the redactor treats as "no evidence" and falls
+ * back to taking the row at its word. That is the pre-2026-09-10 behaviour: a
+ * stale feed degrades the check, it does not silence the lane.
  */
-async function loadRosterOwners(year) {
+function rosterOwnersFrom(raw) {
   const map = new Map();
-  try {
-    const raw = JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'rosters.json'), 'utf8'));
-    const list = raw?.rosters?.franchise ?? [];
-    for (const franchise of Array.isArray(list) ? list : [list]) {
-      // Validate BEFORE padding. `''.padStart(4, '0')` is `'0000'` — truthy,
-      // and a real franchise id — so the emptiness check below never fired and
-      // a malformed row's players were attributed to a franchise that does not
-      // exist. That is not inert: `attributeSides` scores orientations off this
-      // map, so a phantom `0000` owner is false evidence in the one check the
-      // whole binding now rests on.
-      const rawFid = String(franchise?.id ?? '').trim();
-      if (!rawFid) continue;
-      const fid = rawFid.padStart(4, '0');
-      const players = franchise?.player ?? [];
-      for (const player of Array.isArray(players) ? players : [players]) {
-        if (player?.id) map.set(String(player.id), fid);
-      }
+  const list = raw?.rosters?.franchise ?? [];
+  for (const franchise of Array.isArray(list) ? list : [list]) {
+    // Validate BEFORE padding. `''.padStart(4, '0')` is `'0000'` — truthy,
+    // and a real franchise id — so the emptiness check below never fired and
+    // a malformed row's players were attributed to a franchise that does not
+    // exist. That is not inert: `attributeSides` scores orientations off this
+    // map, so a phantom `0000` owner is false evidence in the one check the
+    // whole binding now rests on.
+    const rawFid = String(franchise?.id ?? '').trim();
+    if (!rawFid) continue;
+    const fid = rawFid.padStart(4, '0');
+    const players = franchise?.player ?? [];
+    for (const player of Array.isArray(players) ? players : [players]) {
+      if (player?.id) map.set(String(player.id), fid);
     }
-  } catch (err) {
-    warn(`  [offer-scan] rosters file unreadable: ${err.message} — ownership checks degraded`);
   }
   return map;
+}
+
+async function loadRosterOwners(year) {
+  const live = rosterOwnersFrom(await fetchLiveLeagueExport(year, 'rosters'));
+  if (live.size > 0) return live;
+  try {
+    return rosterOwnersFrom(JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'rosters.json'), 'utf8')));
+  } catch (err) {
+    warn(`  [offer-scan] rosters file unreadable: ${err.message} — ownership checks degraded`);
+    return new Map();
+  }
 }
 
 /**
@@ -2966,8 +3005,11 @@ async function loadAdpDynastyRanks(year) {
 }
 
 /**
- * Signatures of trades that actually happened, read from the committed
- * transactions feed.
+ * Signatures of trades that actually happened: the committed transactions
+ * feed UNIONED with MFL's live list of this season's trades. The file alone is
+ * up to a day old (see fetchLiveLeagueExport), and a trade it has not caught
+ * up with yet reads as a proposal still open — re-posted as a rumor after it
+ * was accepted. Either source alone still works.
  *
  * Deliberately the SAME signature `schefter-scan.mjs#buildTradeSignature`
  * builds — sorted franchise pair + sorted asset ids — so a proposal and the
@@ -2975,23 +3017,30 @@ async function loadAdpDynastyRanks(year) {
  * "franchise1". Rebuilt rather than imported because that module is a scan
  * entry point with its own MFL fetches at import time.
  */
+function tradeSignaturesFrom(raw, signatures) {
+  const list = raw?.transactions?.transaction ?? [];
+  for (const txn of Array.isArray(list) ? list : [list]) {
+    if (txn?.type !== 'TRADE') continue;
+    const signature = tradeSignatureOf(txn);
+    if (signature) signatures.add(signature);
+  }
+  return signatures;
+}
+
 async function loadCompletedTradeSignatures(year) {
+  const signatures = new Set();
+  const live = await fetchLiveLeagueExport(year, 'transactions', '&TRANS_TYPE=TRADE');
+  if (live) tradeSignaturesFrom(live, signatures);
   const txnPath = SCHEFTER_LEAGUE.feedFilePath(year, 'transactions.json');
   try {
-    const raw = JSON.parse(await fs.readFile(txnPath, 'utf8'));
-    const list = raw?.transactions?.transaction ?? [];
-    const arr = Array.isArray(list) ? list : [list];
-    const signatures = new Set();
-    for (const txn of arr) {
-      if (txn?.type !== 'TRADE') continue;
-      const signature = tradeSignatureOf(txn);
-      if (signature) signatures.add(signature);
-    }
-    return signatures;
+    tradeSignaturesFrom(JSON.parse(await fs.readFile(txnPath, 'utf8')), signatures);
   } catch (err) {
-    warn(`  [offer-scan] transactions feed unreadable: ${err.message} — accepted-closure detection off`);
-    return new Set();
+    warn(
+      `  [offer-scan] transactions feed unreadable: ${err.message}` +
+        (live ? ' — live trades only' : ' — accepted-closure detection off'),
+    );
   }
+  return signatures;
 }
 
 /**

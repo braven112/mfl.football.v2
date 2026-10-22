@@ -44,6 +44,7 @@ import {
   hasDraftSlots,
   loadConferenceKeepers,
   loadFranchiseHoldings,
+  loadRostersFeed,
   trimToDraftable,
 } from '../../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
@@ -221,11 +222,17 @@ const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
 const allFranchiseIds = new Set<string>(
   (leagueConfigData.teams ?? []).map((t: any) => t.franchiseId)
 );
+// Live tonight, committed for a rehearsal — see loadRostersFeed.
+const rostersFeed = await loadRostersFeed(league.dataPath, leagueYear, {
+  liveYear: defaultYear,
+  leagueId: league.id,
+});
 const rosteredIds = loadConferenceKeepers(
   league.dataPath,
   leagueYear,
   allFranchiseIds,
-  boardPlayerIds
+  boardPlayerIds,
+  rostersFeed
 );
 const offBoardIds = new Set<string>(rosteredIds);
 for (const p of enriched) {
@@ -244,7 +251,8 @@ const holdings = loadFranchiseHoldings(
   leagueYear,
   allFranchiseIds,
   boardPlayerIds,
-  ranked
+  ranked,
+  rostersFeed
 );
 
 // Which season the "Rehearse" link points at. Resolved from the feeds (see

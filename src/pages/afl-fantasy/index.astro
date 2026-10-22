@@ -71,6 +71,7 @@ import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import aflTopPlayers from '../../../data/afl-fantasy/derived/top-players.json';
 import type { TopPlayersFile } from '../../types/top-players';
+import { liveRostersFeed } from '../../utils/rosters/live-rosters-feed';
 
 // ── Team preference resolution ──────────────────────────────────────────────
 const myTeamParam = Astro.url.searchParams.get('myteam');
@@ -221,8 +222,12 @@ function pickFeed(feeds: Record<string, unknown>, suffix: string, year = seasonY
 const standingsFeed = pickFeed(standingsFeeds, 'standings.json') as { leagueStandings?: { franchise: any[] } } | undefined;
 const standingsFranchises: any[] = standingsFeed?.leagueStandings?.franchise ?? [];
 
-// Roster count for the user's team, from the current league year.
-const rostersFeed = pickFeed(rosterFeeds, 'rosters.json', rosterYear) as { rosters?: { franchise: any | any[] } } | undefined;
+// Roster count for the user's team, from the current league year — live, since
+// the committed copy is a once-a-day snapshot (scripts/lib/held-sync-files.mjs).
+const committedRostersFeed = pickFeed(rosterFeeds, 'rosters.json', rosterYear) as { rosters?: { franchise: any | any[] } } | undefined;
+const rostersFeed = userFranchiseId && rosterYear === aflLeagueYear
+  ? await liveRostersFeed(committedRostersFeed, rosterYear, AFL.id)
+  : committedRostersFeed;
 const rosterFranchises = rostersFeed?.rosters?.franchise
   ? Array.isArray(rostersFeed.rosters.franchise) ? rostersFeed.rosters.franchise : [rostersFeed.rosters.franchise]
   : [];

@@ -408,7 +408,7 @@ request, and the committed file is the backup and the fallback.
 
 ## Roster sync holds live-read files out of its commit
 
-Since Oct 2026 the roster sync commits only real league changes. Three outputs
+Since Oct 2026 the roster sync commits only real league changes. The outputs
 that moved on most runs, but that no page reads from the bundle when it can
 help it, no longer ride every commit (every commit to `main` is a production
 build):
@@ -435,9 +435,28 @@ build):
   commits a report newer than the one Redis still holds. `loadInjuryMap` or a
   raw `injuries.json` read alone now shows a report up to a day old. The salary copy has no page reader; its one reader,
   `schefter-trade-speculation.mjs`, reads the daily snapshot from disk.
+- **The current league year's rosters and transactions are held** (the
+  `rosters` group, with `derived/top-players.json`, which the sync recomputes
+  from them; one group so the committed leaderboard always matches the
+  committed rosters). "Current" is each league's own registry rollover, so an
+  archive year — and the AFL's new year before its June 1 — commits as before.
+  They get no Redis copy: the roster cache (`getCachedRosterFranchises` /
+  `getCachedRosters`) fetches MFL itself, and the recent-transactions cache
+  overlays the last 3 days on the file, which a day-old snapshot stays inside.
+  **So a page that shows who holds whom must read live**: `liveRostersFeed`
+  (`src/utils/rosters/live-rosters-feed.ts`) for a rosters feed, and
+  `mergeTransactionRows` over `getCachedRecentTransactions` (or
+  `loadTransactionsSeason`) for transactions, falling back to the committed
+  file on any error. A raw `rosters.json` / `transactions.json` read alone
+  now shows a copy up to a day old. Scripts that must be current
+  (`schefter-rumor-scan.mjs`) ask MFL first. The list of readers, live and
+  day's-lag-is-fine, is in the plan's Phase 4a.
 - **Nothing may run between the hold step and the commit**, or it could
   rewrite a file the hold just restored. `tests/sync-noise-commit-guard.test.ts`
-  pins the order, the Redis env, the in-season odds skip and every injury reader.
+  pins the order, the Redis env, the in-season odds skip, every injury reader,
+  and every reader of the held rosters and transactions — it classifies each
+  `src/` file that reads one, so a new page reading the committed copy alone
+  fails.
 
 Two other lanes hold the same way (Oct 2026):
 

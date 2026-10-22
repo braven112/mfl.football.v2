@@ -34,7 +34,7 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
 import { getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
-import { getCachedRecentTransactions } from '../../utils/mfl-transactions-cache';
+import { getCachedRecentTransactions, mergeTransactionRows } from '../../utils/mfl-transactions-cache';
 import { buildRookiePriorityFromFeeds } from '../../utils/august-cut-selection-core.mjs';
 import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
@@ -1019,8 +1019,16 @@ const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
 // Load draft results from next year to show actual picks with trades
 const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
 
-// Load transactions from season year to extract trade information
-const transactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+// Load transactions from season year to extract trade information. In season
+// that is the league year, whose committed feed is a once-a-day snapshot
+// (scripts/lib/held-sync-files.mjs), so a pick traded today comes live.
+const committedTransactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+const transactionsData = committedTransactionsData && draftSeasonYear === currentLeagueYear
+  ? { transactions: { transaction: mergeTransactionRows(
+      [committedTransactionsData.transactions?.transaction ?? []].flat(),
+      await getCachedRecentTransactions(currentLeagueYearStr, THELEAGUE_ID),
+    ) } }
+  : committedTransactionsData;
 
 // --- League Planner: Phase + Free Agent Needs ---
 // Resolved BEFORE the draft assets because the phase decides whether the
@@ -1523,10 +1531,15 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
 
   // Acquisition events for the last-added fallback ordering. parseTransactions
   // already excludes trades (ACQUISITION_TYPES only) — plan decision #9.
+  // The committed feed is a once-a-day snapshot (scripts/lib/held-sync-files.mjs),
+  // so the last 3 days come live from MFL on top of it.
   const rawTxFeed = loadFeedJson(currentLeagueYear, 'transactions.json');
   const rawTxList = rawTxFeed?.transactions?.transaction ?? [];
   const autocutAcquisitions = parseTransactions(
-    Array.isArray(rawTxList) ? rawTxList : [rawTxList],
+    mergeTransactionRows(
+      Array.isArray(rawTxList) ? rawTxList : [rawTxList],
+      await getCachedRecentTransactions(currentLeagueYearStr, THELEAGUE_ID),
+    ),
   )
     .filter((t) => t.franchise === authUser.franchiseId)
     .map((t) => ({
@@ -1539,15 +1552,23 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
   // Rookie taxi priority (July 2026 rule: rookies fill open practice-squad
   // spots before anyone is cut) — the same shared builder the deadline job
   // uses, filtered to this owner's roster so the page payload stays small.
+  // Live roster first (cachedRosterPlayers, above; an empty map is no answer),
+  // then the committed once-a-day snapshot.
   const ownRosterIds = new Set<string>();
-  for (const fr of (() => {
-    const feed = loadFeedJson(currentLeagueYear, 'rosters.json');
-    const list = feed?.rosters?.franchise;
-    return Array.isArray(list) ? list : list ? [list] : [];
-  })()) {
-    if (`${fr?.id ?? ''}`.padStart(4, '0') !== authUser.franchiseId) continue;
-    const players = Array.isArray(fr?.player) ? fr.player : fr?.player ? [fr.player] : [];
-    for (const p of players) ownRosterIds.add(`${p.id}`);
+  if (cachedRosterPlayers && Object.keys(cachedRosterPlayers).length > 0) {
+    for (const [pid, entry] of Object.entries(cachedRosterPlayers)) {
+      if (entry.franchiseId === authUser.franchiseId) ownRosterIds.add(pid);
+    }
+  } else {
+    for (const fr of (() => {
+      const feed = loadFeedJson(currentLeagueYear, 'rosters.json');
+      const list = feed?.rosters?.franchise;
+      return Array.isArray(list) ? list : list ? [list] : [];
+    })()) {
+      if (`${fr?.id ?? ''}`.padStart(4, '0') !== authUser.franchiseId) continue;
+      const players = Array.isArray(fr?.player) ? fr.player : fr?.player ? [fr.player] : [];
+      for (const p of players) ownRosterIds.add(`${p.id}`);
+    }
   }
   const autocutRookieIds = buildRookiePriorityFromFeeds({
     playersFeed: loadFeedJson(currentLeagueYear, 'players.json'),

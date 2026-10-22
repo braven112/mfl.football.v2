@@ -27,6 +27,8 @@ import PlayerCell from '../../../components/shared/PlayerCell.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getRedis } from '../../../utils/redis-client';
+import { getCachedRecentTransactions, mergeTransactionRows } from '../../../utils/mfl-transactions-cache';
+import { liveRostersFeed } from '../../../utils/rosters/live-rosters-feed';
 import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getAugustCutdownDate, parseTransactions } from '../../../utils/contract-eligibility';
@@ -116,12 +118,16 @@ if (redis) {
   }
 }
 
-// Active-roster counts from the synced feed (same source the rosters page reads).
-// We also keep each franchise's full {id,status} player list so we can compute
-// a live cut slate for over-limit franchises the deadline job hasn't snapshotted
-// yet (pure roster math — no owner credential needed).
-const rosterData = readJsonFile(
-  path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'rosters.json'),
+// Active-roster counts from the live roster (same source the rosters page
+// reads), falling back to the synced feed — a once-a-day snapshot since the
+// roster sync holds it (scripts/lib/held-sync-files.mjs). We also keep each
+// franchise's full {id,status} player list so we can compute a live cut slate
+// for over-limit franchises the deadline job hasn't snapshotted yet (pure
+// roster math — no owner credential needed).
+const rosterData = await liveRostersFeed(
+  readJsonFile(path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'rosters.json')),
+  year,
+  DEFAULT_LEAGUE.id,
 );
 const activeCounts = new Map<string, number>();
 const rosterByFranchise = new Map<string, Array<{ id: string; status: string }>>();
@@ -142,13 +148,20 @@ for (const fr of toArray(rosterData?.rosters?.franchise)) {
 // ordering in the live slate). parseTransactions already drops trades. A
 // missing/unreadable feed leaves this null → live slates degrade to
 // "not computed" rather than computing an unordered guess or 500-ing.
+// The committed feed is a once-a-day snapshot, so the last 3 days come live
+// from MFL on top of it (null without Redis — the snapshot alone).
 const transactionsData = readJsonFile(
   path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'transactions.json'),
 );
+const recentTransactions = transactionsData
+  ? await getCachedRecentTransactions(String(year), DEFAULT_LEAGUE.id)
+  : null;
 let parsedTransactions: ReturnType<typeof parseTransactions> | null = null;
 try {
   parsedTransactions = transactionsData
-    ? parseTransactions(toArray(transactionsData?.transactions?.transaction))
+    ? parseTransactions(
+        mergeTransactionRows(toArray(transactionsData?.transactions?.transaction), recentTransactions),
+      )
     : null;
 } catch {
   parsedTransactions = null;

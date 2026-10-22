@@ -54,6 +54,7 @@ import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { readInstallState } from '../../../utils/app-install-state';
 import { showTestDriveHero } from '../../../utils/live-scoring-test-drive';
 import type { SchefterPost } from '../../../types/schefter';
+import { liveRostersFeed } from '../../../utils/rosters/live-rosters-feed';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -139,7 +140,12 @@ const scheduleFeed = scheduleYear ? await loadSeasonFeed(scheduleFeeds, schedule
 // ── Management-shaped data: the LEAGUE year ─────────────────────────────────
 const leagueYear = getLeagueYearForSlug(league.slug, now);
 const rosterYear = resolveSeason(null, seasonsFromGlob(rosterFeeds), leagueYear);
-const rostersFeed = rosterYear ? await loadSeasonFeed(rosterFeeds, rosterYear) : null;
+const committedRostersFeed = rosterYear ? await loadSeasonFeed(rosterFeeds, rosterYear) : null;
+// Live for the league year: the committed copy is a once-a-day snapshot
+// (scripts/lib/held-sync-files.mjs).
+const rostersFeed = rosterYear === leagueYear
+  ? await liveRostersFeed(committedRostersFeed, leagueYear, league.id)
+  : committedRostersFeed;
 const leagueFeed = (rosterYear ? await loadSeasonFeed(leagueFeeds, rosterYear) : null) as
   | { league?: { rosterSize?: string; playerLimitUnit?: string } }
   | null;

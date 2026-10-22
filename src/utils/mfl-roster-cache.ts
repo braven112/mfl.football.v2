@@ -146,7 +146,7 @@ export async function invalidateRosterCache(season: string, leagueId: string): P
 
 export interface CachedFranchiseRoster {
   id: string;
-  player: Array<{ id: string; status: string; salary?: string; contractYear?: string }>;
+  player: Array<{ id: string; status: string; salary?: string; contractYear?: string; contractInfo?: string }>;
 }
 
 interface CachedFranchisePayload {
@@ -293,6 +293,10 @@ async function fetchAndCacheFranchiseRosters(
           status: p.status,
           salary: p.salary,
           contractYear: p.contractYear,
+          // Rookie / franchise-tag markers. Absent on a payload cached before
+          // this field was added; liveRostersFeed carries the committed value
+          // forward until it next refreshes (src/utils/rosters/live-rosters-feed.ts).
+          contractInfo: p.contractInfo,
         })),
     });
   }

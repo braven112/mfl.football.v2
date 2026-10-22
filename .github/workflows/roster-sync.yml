@@ -242,10 +242,13 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         run: node ./scripts/push-gameday-alerts.mjs
 
-      # Injuries and TheLeague's salary copy change on most runs but are read
-      # live (or barely read), so they go to Redis and stay out of this commit
-      # except for one snapshot a day. Every commit to main is a production
-      # build. See scripts/lib/held-sync-files.mjs.
+      # Injuries, TheLeague's salary copy, and the current league year's
+      # rosters.json / transactions.json (with the top-players.json derived
+      # from them above) change on most runs but are read live (or barely
+      # read), so they stay out of this commit except for one snapshot a day —
+      # injuries via Redis, rosters and transactions via the site's own live
+      # MFL caches. Every commit to main is a production build. See
+      # scripts/lib/held-sync-files.mjs.
       - name: Hold live files out of the commit
         env:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
