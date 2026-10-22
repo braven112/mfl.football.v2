@@ -597,10 +597,24 @@ const fmtDate = (ms: number) =>
     };
   }
 
+  /**
+   * Start the remote's focus ON the preview, so OK is the one press that goes
+   * full screen (owner's call, Oct 2026). A TV's first focus otherwise lands
+   * on the bar's brand link, which leaves the page. Not on a touch device,
+   * which has no focus to steer, and never over a focus someone already moved.
+   */
+  function focusPreview() {
+    if (navigator.maxTouchPoints > 0) return;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    document.querySelector<HTMLElement>('.bcl-screen__hit')?.focus({ preventScroll: true });
+  }
+
   function initBroadcastLanding() {
     if (!document.querySelector('.bcl')) return;
     sizePreview();
     initFullscreen();
+    focusPreview();
     initSound();
     initUnpair();
     initLeagueToggles();
@@ -863,7 +877,8 @@ const fmtDate = (ms: number) =>
     transition: transform var(--transition-fast);
   }
 
-  .bcl-screen__hit:hover .bcl-screen__expand {
+  .bcl-screen__hit:hover .bcl-screen__expand,
+  .bcl-screen__hit:focus-visible .bcl-screen__expand {
     transform: scale(1.08);
   }
 
