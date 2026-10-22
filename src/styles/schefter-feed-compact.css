@@ -803,8 +803,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
    overriding it ships near-black text on a near-black card. */
 
 .sfc-tabs {
-  /* Kit: ui-chips owns the row (one swiping line on a phone). */
-  gap: 0.25rem;
+  /* Kit: ui-pills owns the row (one swiping line on a phone). */
   margin: 0;
   /* Breathing room on BOTH sides of the row: the tabs sit directly under the
      section header and directly above the first card, so with only bottom
@@ -816,12 +815,6 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 /* The first card should not butt against the tab rule. */
 .sfc-tabs + .sfc-feed__list > .sfc-feed__item:first-child {
   padding-top: 0.25rem;
-}
-
-.sfc-tab {
-  /* Kit: ui-chip owns the look; this keeps the chip's size and icon gap. */
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
 }
 
 .sfc-tab__icon {

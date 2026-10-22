@@ -96,7 +96,7 @@ describe('every league\'s Free Agents page carries the pills', () => {
   for (const [name, file] of Object.entries(PAGES)) {
     const src = read(file);
     it(`${name}: renders the row above the table and wires it`, () => {
-      expect(src).toMatch(/<div class="rr-chips fa-sort-chips">\s*<div class="rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips><\/div>/);
+      expect(src).toMatch(/<div class="rr-chips fa-sort-chips">\s*<div class="ui-pills rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips><\/div>/);
       expect(src.indexOf('data-fa-sort-chips')).toBeLessThan(src.indexOf('<table class="ui-table players-table"'));
       expect(src).toMatch(/import \{ initFaSortChips \} from '[./]+\/utils\/free-agents-sort-chips';/);
       expect(src).toContain("document.addEventListener('astro:page-load', initFaSortChips);");
@@ -127,7 +127,8 @@ describe('every league\'s Free Agents page carries the pills', () => {
     const fa = read('src/styles/free-agents-mobile.css');
     expect(fa).toMatch(/^\.rr-chips\.fa-sort-chips \{\s*display: none;/m);
     const chips = read('src/styles/sort-chips.css');
-    expect(chips).toMatch(/\.rr-chips__row \{[^}]*overflow-x: auto;/);
+    // The row is the pill kit's (pill.css): one swiping line on a phone.
+    expect(read('src/styles/pill.css')).toMatch(/@media \(max-width: 767px\) \{\s*:where\(\.ui-pills\) \{[^}]*overflow-x: auto;/);
     // The absolute sr-only text must anchor to its chip, inside the scroller,
     // or an active chip at the row's edge widens the page (user, 2026-10-21).
     expect(chips).toMatch(/\.rr-chip \{\s*position: relative;/);
@@ -135,6 +136,6 @@ describe('every league\'s Free Agents page carries the pills', () => {
 
   it('renders the roster page\'s chip markup', () => {
     const html = renderSortChips(buildFaSortChips([h('projected', 'Proj')]), { key: 'projected', dir: 'desc' });
-    expect(html).toContain('class="rr-chip rr-chip--on" data-rr-chip="projected" aria-pressed="true"');
+    expect(html).toContain('class="ui-pill rr-chip rr-chip--on" data-rr-chip="projected" aria-pressed="true"');
   });
 });

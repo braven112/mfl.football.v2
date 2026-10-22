@@ -78,12 +78,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
   </div>
 
   {personalized && (
-    <div class="ui-chips sfc-tabs" role="tablist" aria-label="Filter the feed">
-      <button class="ui-chip sfc-tab sfc-tab--active" role="tab" aria-selected="true" data-sfc-tab="foryou">
+    <div class="ui-pills sfc-tabs" role="tablist" aria-label="Filter the feed">
+      <button class="ui-pill sfc-tab sfc-tab--active" role="tab" aria-selected="true" data-sfc-tab="foryou">
         <svg class="sfc-tab__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
         My News
       </button>
-      <button class="ui-chip sfc-tab" role="tab" aria-selected="false" data-sfc-tab="all">All</button>
+      <button class="ui-pill sfc-tab" role="tab" aria-selected="false" data-sfc-tab="all">All</button>
     </div>
   )}
 

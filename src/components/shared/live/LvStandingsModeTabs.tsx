@@ -30,14 +30,14 @@ export default function LvStandingsModeTabs({
 }: LvStandingsModeTabsProps): JSX.Element {
   return (
     <>
-      <div className="ui-segmented lv-tabs lv-tabs--mode" role="group" aria-label={ariaLabel}>
+      <div className="ui-pills lv-modes" role="group" aria-label={ariaLabel}>
         {STANDINGS_MODES.map((m) => {
           const locked = isStandingsModeLocked(m, proLocked);
           return (
             <button
               key={m}
               type="button"
-              className={`ui-segment lv-tabs__btn${mode === m ? ' lv-tabs__btn--on' : ''}${locked ? ' lv-tabs__btn--locked' : ''}`}
+              className={`ui-pill lv-modes__btn${locked ? ' lv-modes__btn--locked' : ''}`}
               aria-pressed={mode === m}
               disabled={locked}
               onClick={() => onChange(m)}

@@ -25,7 +25,7 @@ export default function LvGroupPicker({ groups, viewerGroupId, value, onChange }
     <button
       key={id}
       type="button"
-      className={`ui-chip lv-groups__chip${value === id ? ' lv-groups__chip--on' : ''}`}
+      className={`ui-pill lv-groups__chip${value === id ? ' lv-groups__chip--on' : ''}`}
       aria-pressed={value === id}
       onClick={() => onChange(id)}
     >
@@ -34,7 +34,7 @@ export default function LvGroupPicker({ groups, viewerGroupId, value, onChange }
   );
 
   return (
-    <div className="ui-chips lv-groups" role="group" aria-label="Show games by division">
+    <div className="ui-pills lv-groups" role="group" aria-label="Show games by division">
       {viewerGroupId && chip(viewerGroupId, 'My division')}
       {chip(ALL_GROUPS, 'All')}
       {groups

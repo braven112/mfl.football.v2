@@ -550,19 +550,9 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 /* ── Source Filter Tabs ── */
 .sf-source-tabs {
-  display: flex;
-  gap: 0;
+  /* Kit: ui-pills owns the row (one swiping line on a phone). */
   padding: 0 1rem;
-}
-
-.sf-source-tab {
-  padding: 0.625rem 1rem;
-}
-
-.sf-source-tab--watching {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+  margin: 0;
 }
 
 .sf-source-tab__icon {
@@ -723,10 +713,6 @@ html.dark[data-league='afl'] .sf-post__link--external {
   .sf-source-tabs {
     padding: 0 0.75rem;
   }
-
-  .sf-source-tab {
-    padding: 0.5rem 0.75rem;
-  }
 }
 
 /* ── Focus Visible ── */
@@ -735,7 +721,6 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sf-reaction-add:focus-visible,
 .sf-reaction-picker__btn:focus-visible,
 .sf-load-more__btn:focus-visible,
-.sf-source-tab:focus-visible,
 .sf-post__link:focus-visible,
 .sf-post__image-link:focus-visible {
   outline: 2px solid var(--sf-accent);

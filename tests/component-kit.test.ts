@@ -42,7 +42,7 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table' | 'segmented' | 'segment' | 'chip';
+  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table' | 'pill';
   stylesheet: string;
   cls: string;
   /** Kit classes besides `cls` the stylesheet may define (the modal's scrim, the tab bar's tab). */
@@ -114,27 +114,12 @@ const KITS: Kit[] = [
     isInstance: () => true,
   },
   {
-    name: 'segmented',
-    stylesheet: 'src/styles/segmented.css',
-    cls: 'ui-segmented',
-    extra: ['ui-segment'],
-    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)segmented$/,
-    tags: new Set(['div', 'nav', 'ul', 'fieldset']),
-  },
-  {
-    name: 'segment',
-    stylesheet: 'src/styles/segmented.css',
-    cls: 'ui-segment',
-    extra: ['ui-segmented'],
-    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)segment$/,
-    tags: new Set(['button', 'a', 'label']),
-  },
-  {
-    name: 'chip',
-    stylesheet: 'src/styles/chip.css',
-    cls: 'ui-chip',
-    extra: ['ui-chips'],
-    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)chip$/,
+    name: 'pill',
+    stylesheet: 'src/styles/pill.css',
+    cls: 'ui-pill',
+    extra: ['ui-pills'],
+    // A pill filters or sorts one view (a tab switches between unrelated ones).
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:chip|pill)$/,
     tags: new Set(['button', 'a']),
   },
 ];
@@ -222,7 +207,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
     const names = new Set([kit.cls, ...(kit.extra ?? [])]);
     for (const s of selectors) {
       // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
-      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|segment)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
+      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|pill)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
       const m = s.match(/^:where\(([^{}]+)\)(::backdrop|::-webkit-scrollbar)?$/);
       expect(m, s).not.toBeNull();
       for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);

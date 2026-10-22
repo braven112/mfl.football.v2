@@ -102,11 +102,11 @@ function formatCurrency(val: number | null): string {
 
     {seasons.length ? (
       <>
-        <div class="ui-segmented chart-controls" role="tablist" aria-label="Salary average view">
+        <div class="ui-pills chart-controls" role="tablist" aria-label="Salary average view">
           <button
             type="button"
             role="tab"
-            class="ui-segment chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="true"
             data-chart="franchise"
             id="tab-franchise"
@@ -118,7 +118,7 @@ function formatCurrency(val: number | null): string {
           <button
             type="button"
             role="tab"
-            class="ui-segment chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="false"
             data-chart="extension"
             id="tab-extension"
@@ -130,7 +130,7 @@ function formatCurrency(val: number | null): string {
           <button
             type="button"
             role="tab"
-            class="ui-segment chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="false"
             data-chart="team-option"
             id="tab-team-option"
@@ -235,18 +235,6 @@ function formatCurrency(val: number | null): string {
     color: var(--color-gray-600, #4b5563);
     max-width: 64ch;
     margin: 0;
-  }
-
-  .chart-controls {
-    padding: 3px;
-    gap: 2px;
-  }
-
-  .chart-tab {
-    /* Kit: ui-segment owns the look; this keeps the option's size. */
-    padding: 0.4375rem 1rem;
-    font-size: 0.8125rem;
-    line-height: 1.2;
   }
 
   .chart-card {
@@ -529,17 +517,6 @@ function formatCurrency(val: number | null): string {
       padding: 0.875rem;
     }
 
-    .chart-controls {
-      width: 100%;
-    }
-
-    .chart-tab {
-      flex: 1;
-      text-align: center;
-      padding: 0.5rem 0.5rem;
-      font-size: var(--font-size-xs);
-    }
-
     .chart-legend {
       gap: 0.125rem 0.625rem;
     }
@@ -550,7 +527,6 @@ function formatCurrency(val: number | null): string {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .chart-tab,
     :global(.chart-legend__item),
     :global(.chart-tooltip) {
       transition: none;

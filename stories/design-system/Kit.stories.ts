@@ -40,12 +40,7 @@ export const Table = {
   parameters: { chromatic: { modes: allModes } },
 };
 
-export const Segmented = {
-  args: { part: 'segmented' },
-  parameters: { chromatic: { modes: allModes } },
-};
-
-export const Chip = {
-  args: { part: 'chip' },
+export const Pill = {
+  args: { part: 'pill' },
   parameters: { chromatic: { modes: allModes } },
 };

@@ -1433,15 +1433,11 @@ button.lv-card:focus-visible {
 }
 
 /* ── Scores / Standings ───────────────────────────────────────────────────
-   Toggle buttons, not a tablist — see the component for why. */
-.lv-tabs {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  align-self: flex-start;
-}
+   Two unrelated views, so the tab kit (ui-tabs / ui-tab); toggle buttons, not
+   a tablist — see the component for why. The standings MODES below them
+   filter one table, so they are pills (ui-pills / ui-pill, .lv-modes). */
 .lv-tabs__btn {
-  /* Kit: ui-segment owns the look; this keeps the touch floor and padding.
+  /* Kit: ui-tab owns the look; this keeps the touch floor and padding.
      The 44px touch floor, stated rather than hoped for: padding alone
      measured 36px at this type size. */
   min-height: 2.75rem;
@@ -1453,19 +1449,10 @@ button.lv-card:focus-visible {
    rows of chips would push the games they filter below the fold on a phone.
    The scroller owns its own overflow, so the PAGE never scrolls sideways. */
 .lv-groups {
-  /* Kit: ui-chips owns the swiping row; this keeps the gap and its padding. */
-  gap: 0.4rem;
+  /* Kit: ui-pills owns the swiping row. */
   padding-block: 0.15rem;
   margin: 0;
 }
-.lv-groups__chip {
-  /* Kit: ui-chip owns the look; this keeps the touch floor, padding and size. */
-  flex: 0 0 auto;
-  min-height: 2.75rem;
-  padding: 0.35rem 0.95rem;
-  font-size: var(--font-size-sm);
-}
-
 /* ── Standings ────────────────────────────────────────────────────────── */
 .lv-standings-wrap {
   display: flex;
@@ -1949,7 +1936,7 @@ button.lv-card:focus-visible {
 
 .lv-sheet__line { font-size: var(--font-size-xs); }
 /* ── Pro-locked standings views (MFL Live free tier) ──────────────────── */
-.lv-tabs__btn--locked {
+.lv-modes__btn--locked {
   cursor: not-allowed;
   opacity: 0.7;
 }

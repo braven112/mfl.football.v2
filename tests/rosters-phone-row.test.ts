@@ -225,7 +225,7 @@ describe('the phone sort chips (idea B)', () => {
     // The markup ships an empty group; only the renderer writes chips. The
     // one fixed control ahead of it is the pinned Grouped | All players
     // toggle chip (position-groups.ts), outside the scrolling group.
-    expect(PAGE).toMatch(/<div class="rr-chips" data-rr-sort>[\s\S]*?data-rr-grouping-toggle[\s\S]*?<div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips><\/div>/);
+    expect(PAGE).toMatch(/<div class="rr-chips" data-rr-sort>[\s\S]*?data-rr-grouping-toggle[\s\S]*?<div class="ui-pills rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips><\/div>/);
   });
 
   it('a chip tap IS a header click, and the header uses the shared nextSort rule', () => {
@@ -287,13 +287,16 @@ describe('the phone sort chips (idea B)', () => {
       expect(at, `${sel} has no rule`).toBeGreaterThan(-1);
       return sheet.slice(at, sheet.indexOf('}', at));
     };
-    expect(rule('.rr-chips__row')).toMatch(/overflow-x:\s*auto;/);
+    // The row and the pill are the pill kit's (pill.css), which was taken
+    // from this very pill (owner's call, 2026-10-22).
+    const PILL = fs.readFileSync(path.join(process.cwd(), 'src/styles/pill.css'), 'utf8');
+    expect(PILL).toMatch(/:where\(\.ui-pills\) \{\s*flex-wrap: nowrap;\s*overflow-x: auto;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/min-width:\s*0;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/flex:\s*1 1 100%;/);
-    expect(rule('.rr-chip')).toMatch(/flex:\s*0 0 auto;/);
+    expect(PILL).toMatch(/:where\(\.ui-pills > \.ui-pill\) \{\s*flex: 0 0 auto;/);
     // A thumb-sized tap target: --touch-target-min is 44px (tokens.css), and
     // tests/design-polish.test.ts forbids the bare literal.
-    expect(rule('.rr-chip')).toMatch(/min-height:\s*var\(--touch-target-min\);/);
+    expect(PILL).toMatch(/:where\(\.ui-pill\) \{[^}]*min-height:\s*var\(--touch-target-min\);/);
     // Hidden on desktop: the headers are the control there.
     expect(CSS).toMatch(/^\.rsim-bar,\s*\.rr-chips,\s*\.rr-ph \{\s*display: none;/m);
   });

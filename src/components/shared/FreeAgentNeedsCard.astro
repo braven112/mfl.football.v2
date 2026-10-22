@@ -39,10 +39,10 @@ const hasNeeds = needs.length > 0;
 
   {hasNeeds ? (
     <div class="fa-needs" id={cardId}>
-      <div class="ui-tabs fa-needs__tabs" role="tablist">
+      <div class="ui-pills fa-needs__tabs" role="tablist">
         {needs.map((need, i) => (
           <button
-            class:list={['ui-tab', 'fa-needs__tab', { 'fa-needs__tab--active': i === 0 }]}
+            class:list={['ui-pill', 'fa-needs__tab', { 'fa-needs__tab--active': i === 0 }]}
             role="tab"
             aria-selected={i === 0 ? 'true' : 'false'}
             aria-controls={`${cardId}-panel-${need.position}`}
@@ -142,14 +142,8 @@ const hasNeeds = needs.length > 0;
   }
 
   .fa-needs__tabs {
-    display: flex;
-    gap: 0.25rem;
-    padding-bottom: 0;
+    /* Kit: ui-pills owns the row (one swiping line on a phone). */
     margin-bottom: 0.75rem;
-  }
-
-  .fa-needs__tab {
-    padding: 0.5rem 1rem;
   }
 
   .fa-needs__panel {
@@ -249,9 +243,5 @@ const hasNeeds = needs.length > 0;
   }
 
   @media (max-width: 640px) {
-    .fa-needs__tab {
-      padding: 0.375rem 0.625rem;
-    }
-
   }
 </style>

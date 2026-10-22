@@ -173,17 +173,17 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       </div>
 
       <!-- Conference Tabs -->
-      <div class="ui-segmented conference-tabs">
+      <div class="ui-pills conference-tabs">
         <a
           href="?conference=AL"
-          class="ui-segment conference-tab"
+          class="ui-pill conference-tab"
           data-conference="AL"
         >
           American League
         </a>
         <a
           href="?conference=NL"
-          class="ui-segment conference-tab"
+          class="ui-pill conference-tab"
           data-conference="NL"
         >
           National League
@@ -328,18 +328,6 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     font-size: 1rem;
   }
 
-  .conference-tabs {
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.5rem;
-  }
-
-  .conference-tab {
-    /* Kit: ui-segment owns the look; this keeps the option's size. */
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
-  }
-
   .draft-predictor-content {
     min-height: 400px;
   }
@@ -417,17 +405,6 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       grid-template-columns: 1fr;
     }
 
-    .conference-tabs {
-      width: 100%;
-    }
-
-    .conference-tab {
-      flex: 1;
-      text-align: center;
-      padding: 0.75rem 1rem;
-      font-size: var(--font-size-sm);
-    }
-
     .draft-predictor-info {
       grid-template-columns: 1fr;
     }
@@ -450,7 +427,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       // Update tabs
       tabs.forEach(tab => {
         const tabConference = tab.getAttribute('data-conference');
-        tab.classList.toggle('ui-segment--active', tabConference === conference);
+        tab.classList.toggle('ui-pill--active', tabConference === conference);
       });
 
       // Update conference orders
