@@ -83,19 +83,19 @@ export const ASSET_SPECS: AssetSpec[] = [
   },
   {
     id: 'colors',
-    name: 'Team colours',
+    name: 'Team colors',
     owner: 'team',
     required: true,
-    size: '2 to 4 colours',
+    size: '2 to 4 colors',
     ratio: '—',
     format: 'Hex codes, e.g. #BD1F2B',
     background: '—',
     shownAt: 'Headers, scoreboards, the broadcast and your Brand Book page',
-    notes: ['List your main colour first. We check every colour for contrast in light and dark mode.'],
+    notes: ['List your main color first. We check every color for contrast in light and dark mode.'],
   },
   {
     id: 'mono',
-    name: 'One-colour mark',
+    name: 'One-color mark',
     owner: 'team',
     required: false,
     size: '1024 × 1024',
@@ -103,7 +103,7 @@ export const ASSET_SPECS: AssetSpec[] = [
     format: 'SVG best, else transparent PNG',
     background: 'Transparent',
     shownAt: 'Seasonal weeks such as Halloween, at the same sizes as the crest',
-    notes: ['Your crest drawn in a single solid colour, with no shading. We recolour it for each event.'],
+    notes: ['Your crest drawn in a single solid color, with no shading. We recolor it for each event.'],
   },
   {
     id: 'league-logo',
@@ -125,7 +125,7 @@ export const ASSET_SPECS: AssetSpec[] = [
     size: '1024 × 1024',
     ratio: '1:1 square',
     format: 'SVG or PNG',
-    background: 'Solid colour to every edge',
+    background: 'Solid color to every edge',
     shownAt: '16 px browser tab, 180 px iPhone home screen, 512 px Android app icon',
     notes: [
       'We cut the favicon, home-screen and notification icons from this one file.',
@@ -143,7 +143,7 @@ export const ASSET_SPECS: AssetSpec[] = [
     format: 'PNG or JPG',
     background: 'Solid (no transparency)',
     shownAt: 'The preview card when a link is shared in GroupMe, iMessage, X or Facebook',
-    notes: ['Keep the logo in the centre square. Some apps crop the sides.'],
+    notes: ['Keep the logo in the center square. Some apps crop the sides.'],
     template: template('Social image template', 'social-image'),
   },
   {
@@ -175,7 +175,7 @@ export const STORED_SIZES: ReadonlyArray<readonly [string, number, number]> = [
 /** Copy-paste starting point for an AI image tool. `[brackets]` are the owner's to fill. */
 export const AI_PROMPT =
   'Design a sports team logo for a fantasy football team called "[team name]". ' +
-  'Flat vector style, bold simple shapes, thick clean outlines, 2–3 colours: [colours]. ' +
+  'Flat vector style, bold simple shapes, thick clean outlines, 2–3 colors: [colors]. ' +
   'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
   'square 1024 × 1024, with some empty space around the edges. ' +
   'It must stay recognizable when shrunk to 40 pixels.';
