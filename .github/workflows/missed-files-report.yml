@@ -1,0 +1,36 @@
+name: Missed Files Report
+
+# Prints the files mfl.football was asked for after it moved off InMotion and
+# did not have, and the pages that asked (src/utils/missed-file-log.ts). Run
+# by hand; it reads Redis and changes nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      top:
+        description: "How many rows of each list to print"
+        required: false
+        default: "50"
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Print missed files
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          TOP: ${{ inputs.top }}
+        run: node scripts/report-missed-files.mjs --top "$TOP"

@@ -21,8 +21,13 @@
 export const prerender = false;
 
 import NotFound from './404.astro';
+import { recordMissedFile } from '../utils/missed-file-log';
 
 Astro.response.status = 404;
+
+// On the old InMotion host, a miss is a file someone still links to that the
+// migration did not copy. Count it, with the page that asked.
+await recordMissedFile(Astro.url, Astro.request.headers.get('referer'));
 ---
 
 <NotFound />
