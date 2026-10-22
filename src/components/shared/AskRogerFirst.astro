@@ -47,7 +47,7 @@ const homeHref = r(`/${league.slug}`);
 ---
 
 <section class="roger-403" aria-labelledby="roger-403-headline">
-  <article class="roger-403__card">
+  <article class="ui-card roger-403__card">
     <header class="roger-403__strip">
       <span class="roger-403__badge">
         <span class="roger-403__badge-dot" aria-hidden="true"></span>
@@ -98,10 +98,10 @@ const homeHref = r(`/${league.slug}`);
   }
 
   .roger-403__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     width: 100%;
     max-width: 34rem;
     background: var(--content-bg);
-    border: var(--style-card-border, 1px solid var(--content-border));
     border-radius: var(--radius-lg, 12px);
     box-shadow: var(--box-shadow-lg);
     overflow: hidden;

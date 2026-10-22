@@ -114,7 +114,7 @@ if (session) {
         <img class="bb-draft-setup__logo" src="/assets/logos/bestball-logo.svg" alt="" aria-hidden="true" />
         <h1>The Draft</h1>
         {isCommissioner ? (
-          <div class="bb-draft-setup__card">
+          <div class="ui-card bb-draft-setup__card">
             <p>
               No official draft session exists for {leagueYear} yet. Configure and
               create it — the room opens in lobby mode, and you start the clock
@@ -139,7 +139,7 @@ if (session) {
             </form>
           </div>
         ) : (
-          <div class="bb-draft-setup__card">
+          <div class="ui-card bb-draft-setup__card">
             <p>
               The official {leagueYear} startup draft hasn't been scheduled yet.
               When the commissioner opens the room, this page becomes the live
@@ -212,9 +212,9 @@ if (session) {
   }
 
   .bb-draft-setup__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--card-bg, var(--content-bg, #ffffff));
     border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg, 10px);
     padding: 1.5rem;
     text-align: left;

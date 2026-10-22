@@ -77,9 +77,9 @@ const weekLabel = `Week ${previewWeek}`;
                 ) : (
                   <>
                     {row.hasPick ? (
-                      <span class="tbw-cg__badge tbw-cg__badge--picked">picked</span>
+                      <span class="ui-badge tbw-cg__badge tbw-cg__badge--picked">picked</span>
                     ) : (
-                      <span class="tbw-cg__badge">default</span>
+                      <span class="ui-badge tbw-cg__badge">default</span>
                     )}
                     wears {row.wearsName} ({row.wearsYear})
                   </>
@@ -199,14 +199,13 @@ const weekLabel = `Week ${previewWeek}`;
   }
 
   .tbw-cg__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     margin-right: 0.4rem;
     padding: 0.1rem 0.45rem;
-    border-radius: 999px;
     background: var(--content-text-muted);
     color: #fff;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }

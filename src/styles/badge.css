@@ -1,0 +1,84 @@
+/* ==========================================================================
+   Badge — the one small-label look, site-wide (component kit, part 1).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, exactly like cta.css. A badge is a short,
+   static label: a status, a seed, a position, "You", "New". A control the
+   viewer taps (a filter or sort chip) is not a badge.
+
+     <span class="ui-badge">Clinched</span>
+     <span class="ui-badge ui-badge--success">Paid</span>
+     <span class="ui-badge ui-badge--caps ui-badge--neutral">IR</span>
+
+   The classes work in .astro, .tsx (className) and in markup a script
+   builds, which is why the kit is CSS and not a scoped component: Astro's
+   scoped CSS never reaches an element JS created.
+
+   CUSTOMISING. The base rules sit inside :where(), so they carry ZERO
+   specificity: a component's own class (`.seed-badge { padding: … }`) wins
+   regardless of stylesheet order. That is what lets a page keep its exact
+   look (props for every league, forks for one — docs/plans/component-kit.md).
+   Colours are custom properties: set `--ui-badge-bg` / `--ui-badge-ink` on
+   the component's class rather than `background` / `color`, so a tone
+   modifier and a component override never fight.
+
+   TONES read the shared badge pairs in tokens.css / tokens-dark.css, so dark
+   mode is solved here once. `--info` is themed per league.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-badge) {
+  --ui-badge-bg: transparent;
+  --ui-badge-ink: currentColor;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ui-badge-bg);
+  color: var(--ui-badge-ink);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+
+/* Eyebrow caps — the most common badge voice on the site. */
+:where(.ui-badge--caps) {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* A badge that sits inside a run of text: its padding paints but does not
+   push the line apart. */
+:where(.ui-badge--inline) {
+  display: inline;
+}
+
+/* ── Tones ──────────────────────────────────────────────────────────────── */
+:where(.ui-badge--neutral) {
+  --ui-badge-bg: var(--content-bg-muted);
+  --ui-badge-ink: var(--content-text-muted);
+}
+:where(.ui-badge--success) {
+  --ui-badge-bg: var(--badge-success-bg);
+  --ui-badge-ink: var(--badge-success-text);
+}
+:where(.ui-badge--warning) {
+  --ui-badge-bg: var(--badge-warning-bg);
+  --ui-badge-ink: var(--badge-warning-text);
+}
+:where(.ui-badge--error) {
+  --ui-badge-bg: var(--badge-error-bg);
+  --ui-badge-ink: var(--badge-error-text);
+}
+:where(.ui-badge--info) {
+  --ui-badge-bg: var(--badge-info-bg);
+  --ui-badge-ink: var(--badge-info-text);
+}
+/* The league's own colour, carrying the theme's ink (never a literal white). */
+:where(.ui-badge--accent) {
+  --ui-badge-bg: var(--color-accent);
+  --ui-badge-ink: var(--on-color-accent);
+}

@@ -73,7 +73,7 @@ import '../../styles/player-modal-band.css';
 
     <div class="cdm-body">
       <!-- Declaration Type Badge -->
-      <div class="cdm-type-badge" id="cdm-type-badge">
+      <div class="ui-badge cdm-type-badge" id="cdm-type-badge">
         <span class="cdm-type-badge__dot"></span>
         <span class="cdm-type-badge__label" id="cdm-type-label">New Acquisition</span>
       </div>
@@ -588,16 +588,13 @@ import '../../styles/player-modal-band.css';
      Type Badge — editorial accent chip
      ================================================================ */
   .cdm-type-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.375rem;
     padding: 0.3rem 0.625rem;
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-primary, #1c497c);
     border-radius: var(--radius-sm, 0.25rem);
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
     color: var(--color-primary, #1c497c);
     text-transform: uppercase;
     letter-spacing: 0.06em;

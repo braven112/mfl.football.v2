@@ -650,7 +650,7 @@ const pausedMetaLine = pausedState.paused
       <div class="cdr-cards">
         {cards.map((card) => (
           <section
-            class:list={['cdr-card', card.status.code === 'attention' && 'cdr-card--attention']}
+            class:list={['ui-card cdr-card', card.status.code === 'attention' && 'cdr-card--attention']}
             data-franchise-id={card.franchiseId}
             aria-labelledby={`cdr-card-${card.franchiseId}-title`}
           >
@@ -1080,9 +1080,8 @@ const pausedMetaLine = pausedState.paused
   /* --- Franchise cards --------------------------------------------------- */
   .cdr-cards { display: grid; gap: 1rem; }
   .cdr-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--content-bg, #fff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 12px; padding: 1rem 1.1rem;
   }
   /* Negative-state pattern: subtle left border, never a red-flooded card. */

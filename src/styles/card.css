@@ -1,0 +1,27 @@
+/* ==========================================================================
+   Card — the one card surface, site-wide (component kit, part 2).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like cta.css and badge.css. The kit owns the
+   SURFACE — ground, outline, corner, lift — because that is what the site
+   style changes: Editorial outlines a card, Primetime drops the outline and
+   lifts the card with a shadow (`--style-card-*`, site-styles.generated.css).
+   Layout inside a card (padding, gap, grid) stays the card's own.
+
+     <article class="ui-card standings-card">…</article>
+
+   CUSTOMISING. The base rule sits inside :where(), so it carries ZERO
+   specificity: a component's own class wins regardless of stylesheet order.
+   That is what lets a page keep its exact look (docs/plans/component-kit.md).
+   A card that wants a different ground sets it on its own class.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-card) {
+  background: var(--card-bg);
+  border: var(--style-card-border, 1px solid var(--content-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--style-card-shadow, none);
+}

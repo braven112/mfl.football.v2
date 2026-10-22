@@ -88,7 +88,7 @@ const nflLogo = team ? getNflLogo(team) : null;
 const HeadingTag = `h${headingLevel}` as 'h3' | 'h4';
 ---
 
-<article class="dm-card" data-year={season} data-position={position}>
+<article class="ui-card dm-card" data-year={season} data-position={position}>
   <header
     class:list={['dmpc__band', { 'dmpc__band--no-cutout': !cutoutUrl }]}
     style={`--dmpc-g1: ${g1}; --dmpc-g2: ${g2}; --dmpc-glow: ${glow};`}
@@ -97,7 +97,7 @@ const HeadingTag = `h${headingLevel}` as 'h3' | 'h4';
     <div class="dmpc__band-top">
       <div class="season-badge-row">
         <p class="dm-season">{season}</p>
-        {isOverallWorst && <span class="dead-money-badge">Brock Osweiler Award</span>}
+        {isOverallWorst && <span class="ui-badge ui-badge--caps dead-money-badge">Brock Osweiler Award</span>}
       </div>
       {franchiseIcon && (
         <img
@@ -136,9 +136,8 @@ const HeadingTag = `h${headingLevel}` as 'h3' | 'h4';
 
 <style>
   .dm-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--content-bg, #fff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
@@ -192,14 +191,12 @@ const HeadingTag = `h${headingLevel}` as 'h3' | 'h4';
   }
 
   .dead-money-badge {
+    /* Kit: ui-badge ui-badge--caps supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: 0.15rem 0.4rem;
     background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
     color: var(--color-white, #fff);
     font-size: var(--font-size-3xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     border-radius: var(--radius-sm, 0.25rem);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }

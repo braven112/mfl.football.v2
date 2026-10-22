@@ -138,7 +138,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-arch__layer about-arch__layer--det">
             <div class="about-arch__layer-header">
               <span class="about-arch__layer-title">The Math Layer</span>
-              <span class="about-arch__layer-badge">TypeScript · Fully Tested</span>
+              <span class="ui-badge ui-badge--inline about-arch__layer-badge">TypeScript · Fully Tested</span>
             </div>
             <div class="about-arch__modules">
               <div class="about-arch__module">
@@ -170,7 +170,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-arch__layer about-arch__layer--prob">
             <div class="about-arch__layer-header">
               <span class="about-arch__layer-title">The AI Layer</span>
-              <span class="about-arch__layer-badge">Claude API · Guided · Checked</span>
+              <span class="ui-badge ui-badge--inline about-arch__layer-badge">Claude API · Guided · Checked</span>
             </div>
             <div class="about-arch__modules">
               <div class="about-arch__module">
@@ -362,7 +362,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         </div>
 
         <div class="about-reliability-grid">
-          <div class="about-reliability-card">
+          <div class="ui-card about-reliability-card">
             <div class="about-reliability-card__eyebrow">Pattern 01</div>
             <div class="about-reliability-card__title">Narrow Questions Beat Wide-Open Ones</div>
             <div class="about-reliability-card__body">
@@ -376,7 +376,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
               </p>
             </div>
           </div>
-          <div class="about-reliability-card">
+          <div class="ui-card about-reliability-card">
             <div class="about-reliability-card__eyebrow">Pattern 02</div>
             <div class="about-reliability-card__title">Bad Data Is Usually the Problem, Not Bad AI</div>
             <div class="about-reliability-card__body">
@@ -550,7 +550,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         </div>
 
         <div class="about-crossstack-grid">
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Design System Tokens</div>
             <div class="about-cs-card__evidence">
               A full visual style system built from scratch — font sizes, colors, spacing, shadows —
@@ -560,7 +560,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">tokens.css · design-system.astro</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Content Modeling</div>
             <div class="about-cs-card__evidence">
               The What's New section isn't just a blog — it's a structured data format with required
@@ -570,7 +570,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">whats-new.json · weekly-changelog-rollup.mjs</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Front-End Architecture</div>
             <div class="about-cs-card__evidence">
               The site is built with Astro and TypeScript. The same codebase powers two separate
@@ -581,7 +581,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">TheLeagueLayout · league-context.ts</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Performance Engineering</div>
             <div class="about-cs-card__evidence">
               Data from the MFL API gets downloaded and saved at build time, so most pages don't
@@ -591,7 +591,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">prerender = true · pnpm sync:all</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Analytics</div>
             <div class="about-cs-card__evidence">
               Dead Money Awards, Salary-Adjusted MVP, League Summary — these aren't just fun pages.
@@ -602,7 +602,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">salary-calculations.ts · dead-money.astro</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Building With Purpose</div>
             <div class="about-cs-card__evidence">
               Every feature gets built because it helps someone win: better cap decisions, smarter
@@ -613,7 +613,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">CLAUDE.md · Team Strategy section</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Finding Your Voice</div>
             <div class="about-cs-card__evidence">
               The What's New entries aren't just patch notes — they have a personality. Funny,
@@ -624,7 +624,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <div class="about-cs-card__artifact">whats-new.json · CLAUDE.md writing style guide</div>
           </div>
 
-          <div class="about-cs-card">
+          <div class="ui-card about-cs-card">
             <div class="about-cs-card__discipline">Shipping Consistently</div>
             <div class="about-cs-card__evidence">
               Every release shows up on the homepage for a week. Bug fixes get grouped and posted
@@ -1007,10 +1007,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__layer-badge {
-    font-size: var(--font-size-2xs);
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-weight: 600;
     padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
     background: var(--color-gray-200, #e5e7eb);
     color: var(--color-gray-600, #4b5563);
   }
@@ -1238,10 +1237,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-reliability-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--color-gray-50, #f9fafb);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: var(--radius-md, 0.5rem);
     padding: 1.25rem;
   }
 
@@ -1414,11 +1411,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-cs-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--color-gray-50, #f9fafb);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
     border-top: 3px solid var(--color-primary, #1c497c);
-    border-radius: var(--radius-md, 0.5rem);
     padding: 1rem 1rem 0.875rem;
     display: flex;
     flex-direction: column;

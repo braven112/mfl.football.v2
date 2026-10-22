@@ -2140,7 +2140,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                           onerror={NFL_LOGO_ONERROR}
                           onload={NFL_LOGO_ONLOAD}
                         />
-                        <span class={`spread-badge ${!player.gameOdds.spreadAmount ? 'spread-neutral' : player.gameOdds.favoredTeam === player.gameOdds.opponent ? 'spread-underdog' : 'spread-favorite'}`}>
+                        <span class={`ui-badge ui-badge--inline spread-badge ${!player.gameOdds.spreadAmount ? 'spread-neutral' : player.gameOdds.favoredTeam === player.gameOdds.opponent ? 'spread-underdog' : 'spread-favorite'}`}>
                         {!player.gameOdds.spreadAmount ? '-' : (player.gameOdds.favoredTeam === player.gameOdds.opponent ? '-' : '+') + player.gameOdds.spreadAmount}
                       </span>
                       </div>
@@ -4295,10 +4295,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   }
 
   :global(.spread-badge) {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-size: var(--font-size-xs);
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
-    font-weight: 700;
   }
 
   :global(.spread-favorite) {
@@ -6876,7 +6876,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                       style="width: 20px; height: 20px; object-fit: contain;"
                       onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}"
                     />
-                    <span class="spread-badge ${spreadClass}">
+                    <span class="ui-badge ui-badge--inline spread-badge ${spreadClass}">
                     ${spreadDisplay}
                   </span>
                   </div>

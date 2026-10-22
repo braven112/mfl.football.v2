@@ -122,7 +122,7 @@ const HOW_IT_WORKS = [
 
     <ul class="po-how">
       {HOW_IT_WORKS.map(item => (
-        <li class="po-how__card">
+        <li class="ui-card po-how__card">
           <h2 class="po-how__title">{item.title}</h2>
           <p class="po-how__body">{item.body}</p>
         </li>
@@ -220,11 +220,8 @@ const HOW_IT_WORKS = [
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
 }
 .po-how__card {
-  background: var(--card-bg, #fff);
-  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
-  box-shadow: var(--style-card-shadow, none);
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   border-left: 3px solid var(--color-primary, #2563eb);
-  border-radius: 0.5rem;
   padding: 0.85rem 1rem;
 }
 .po-how__title {

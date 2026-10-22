@@ -225,7 +225,7 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
       const delta = moved(row);
       const wl = record(row.franchiseId);
       return (
-        <li class="pr-card" style={accentStyle(row.franchiseId)}>
+        <li class="ui-card pr-card" style={accentStyle(row.franchiseId)}>
           <div class="pr-card__head">
             <span class="pr-card__rank">{row.rank}</span>
             {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="36" height="36" />}
@@ -332,9 +332,7 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
   gap: var(--spacing-md);
 }
 .pr-card {
-  background: var(--card-bg, #fff);
-  border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
-  box-shadow: var(--style-card-shadow, none);
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   border-top: 4px solid var(--pr-accent);
   border-radius: 12px;
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-md);

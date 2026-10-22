@@ -125,7 +125,7 @@ const hasBrackets = brackets.length > 0;
                   Starts week {bracket.startWeek || '?'} · {bracket.teamsInvolved ?? '?'} teams
                 </p>
               </div>
-              <div class="bracket-pill">
+              <div class="ui-badge bracket-pill">
                 {bracket.emphasis ? 'Primary' : 'Side bracket'}
               </div>
             </div>
@@ -154,10 +154,10 @@ const hasBrackets = brackets.length > 0;
                         rel="noopener noreferrer"
                         class="matchup-card-link"
                       >
-                        <div class="matchup-card" data-status={game.status}>
+                        <div class="ui-card matchup-card" data-status={game.status}>
                         <div class="team-row">
                           <div class="team-info">
-                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            <span class="ui-badge seed-badge">{game.home.seedLabel || '—'}</span>
                             {game.home.icon ? (
                               <img
                                 src={game.home.icon}
@@ -184,7 +184,7 @@ const hasBrackets = brackets.length > 0;
 
                         <div class="team-row">
                           <div class="team-info">
-                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            <span class="ui-badge seed-badge">{game.away.seedLabel || '—'}</span>
                             {game.away.icon ? (
                               <img
                                 src={game.away.icon}
@@ -276,10 +276,10 @@ const hasBrackets = brackets.length > 0;
                         rel="noopener noreferrer"
                         class="matchup-card-link"
                       >
-                        <div class="matchup-card" data-status={game.status}>
+                        <div class="ui-card matchup-card" data-status={game.status}>
                           <div class="team-row">
                           <div class="team-info">
-                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            <span class="ui-badge seed-badge">{game.home.seedLabel || '—'}</span>
                             {game.home.icon ? (
                               <img
                                 src={game.home.icon}
@@ -306,7 +306,7 @@ const hasBrackets = brackets.length > 0;
 
                         <div class="team-row">
                           <div class="team-info">
-                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            <span class="ui-badge seed-badge">{game.away.seedLabel || '—'}</span>
                             {game.away.icon ? (
                               <img
                                 src={game.away.icon}
@@ -564,13 +564,13 @@ const hasBrackets = brackets.length > 0;
   }
 
   .bracket-pill {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.45rem 0.75rem;
     background: var(--content-bg-muted, #eef2ff);
     color: var(--page-text, #312e81);
-    border-radius: 999px;
-    font-weight: 700;
     font-size: 0.85rem;
     white-space: nowrap;
+    display: block;
   }
 
   /* Championship highlight section */
@@ -666,9 +666,8 @@ const hasBrackets = brackets.length > 0;
   }
 
   .matchup-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--content-bg-muted, #f8fafc);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 12px;
     padding: 0.75rem;
     position: relative;
@@ -742,14 +741,11 @@ const hasBrackets = brackets.length > 0;
   }
 
   .seed-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     justify-content: center;
     padding: 0.2rem 0.55rem;
-    border-radius: 999px;
     background: var(--content-bg-accent, #e2e8f0);
     color: var(--page-text, #0f172a);
-    font-weight: 700;
     font-size: 0.65rem;
     min-width: 1rem;
   }

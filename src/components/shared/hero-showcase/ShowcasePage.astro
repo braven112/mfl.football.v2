@@ -249,7 +249,7 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
             {is(b, 'cards') && (
               <div class="hc-brand-grid">
                 {b.cards.map((c) => (
-                  <div class="hc-brand-card">
+                  <div class="ui-card hc-brand-card">
                     <div class="hc-brand-card__head">{c.head}</div>
                     <p class="hc-brand-card__body" set:html={c.html} />
                     <div class="hc-brand-card__tag">{c.tag}</div>

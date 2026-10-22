@@ -46,7 +46,7 @@ const KIND_LABELS = {
 		<ol class="prd__cards">
 			{PRODUCTS.map((product) => (
 				<li>
-					<a class="prd__card" href={productHref(product.slug)}>
+					<a class="ui-card prd__card" href={productHref(product.slug)}>
 						{product.screenshot && <ProductShot shot={product.screenshot} variant="card" />}
 						<span class="prd__card-kind">{KIND_LABELS[product.kind]}</span>
 						<span class="prd__card-top">

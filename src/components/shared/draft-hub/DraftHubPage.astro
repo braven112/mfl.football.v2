@@ -136,7 +136,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
           <>
             <ul class="dh__capital-list">
               {myCapital.map((c) => (
-                <li class="dh__capital-pill">
+                <li class="ui-badge dh__capital-pill">
                   <span class="dh__capital-round">Rd {c.round}</span>
                   <span class="dh__capital-count">×{c.count}</span>
                 </li>
@@ -311,14 +311,14 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
   }
 
   .dh__capital-pill {
-    display: inline-flex;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     align-items: baseline;
     gap: 0.3rem;
     padding: 0.25rem 0.6rem;
-    border-radius: 999px;
     border: 1px solid var(--dhub-border);
     background: var(--dhub-surface-muted);
     font-size: 0.8rem;
+    font-weight: inherit;
   }
 
   .dh__capital-round { font-weight: 700; color: var(--dhub-ink); }

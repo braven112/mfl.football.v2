@@ -170,7 +170,7 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
               <a href={link.href} class="admin-hub__link">
                 <div class="admin-hub__link-head">
                   <span class="admin-hub__link-title">{link.title}</span>
-                  <span class={`admin-hub__pill admin-hub__pill--${link.gate}`}>{link.gate}</span>
+                  <span class={`ui-badge ui-badge--caps ui-badge--inline admin-hub__pill admin-hub__pill--${link.gate}`}>{link.gate}</span>
                 </div>
                 <p class="admin-hub__link-blurb">{link.blurb}</p>
                 <code class="admin-hub__link-href">{link.href}</code>
@@ -214,8 +214,9 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
   .admin-hub__link-href { font-size: 0.72rem; color: var(--content-text-muted, #64748b); }
 
   .admin-hub__pill {
-    font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-    padding: 0.12rem 0.45rem; border-radius: 999px;
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
+    font-size: 0.65rem;
+    padding: 0.12rem 0.45rem;
   }
   /* Light mode keeps hand-picked pill colors: the badge tokens' light values
      (#d97706 on #fef3c7 = 2.9:1) fail WCAG AA for this tiny uppercase text. */

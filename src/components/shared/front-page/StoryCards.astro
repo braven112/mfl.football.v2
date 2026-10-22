@@ -26,7 +26,7 @@ const { title, stories, teams, leagueMark, overlays = {} } = Astro.props;
     <h2 id="fp-cards-title" class="fp-section-title">{title}</h2>
     <ul class="fp-cards__grid">
       {stories.map((s) => (
-        <li class="fp-cards__card">
+        <li class="ui-card fp-cards__card">
           <a class="fp-cards__link" href={s.href ?? '#'}>
             <StoryArt
               teams={s.franchiseIds.map((id) => teams[id]).filter(Boolean)}
@@ -56,9 +56,7 @@ const { title, stories, teams, leagueMark, overlays = {} } = Astro.props;
     gap: 1rem;
   }
   .fp-cards__card {
-    background: var(--card-bg);
-    border: var(--style-card-border, 1px solid var(--content-border));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: var(--radius-lg);
     overflow: hidden;
     min-width: 0;

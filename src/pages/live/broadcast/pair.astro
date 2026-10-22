@@ -76,7 +76,7 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
     <a class="pair__back" href="/live/broadcast">&larr; Broadcast</a>
 
     {state === 'confirm' && pairing && code && (
-      <div class="pair__card" data-pair-confirm data-code={code}>
+      <div class="ui-card pair__card" data-pair-confirm data-code={code}>
         <p class="pair__eyebrow">Pair a TV</p>
         <h1 id="pair-title" class="pair__title">Send your broadcast to this {pairing.device}?</h1>
         <p class="pair__code">{formatUserCode(code)}</p>
@@ -105,7 +105,7 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
     )}
 
     {(state === 'enter' || state === 'expired' || state === 'used' || state === 'down') && (
-      <div class="pair__card">
+      <div class="ui-card pair__card">
         <p class="pair__eyebrow">Pair a TV</p>
         <h1 id="pair-title" class="pair__title">
           {state === 'enter' && 'Enter the code on your TV'}
@@ -203,10 +203,11 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
   }
 
   .pair__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     padding: clamp(1.25rem, 5vw, 2rem);
     border-radius: 1rem;
-    background: var(--card-bg);
     border: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+    box-shadow: none;
   }
 
   .pair__eyebrow {

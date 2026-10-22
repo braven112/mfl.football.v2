@@ -119,7 +119,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 				<div><b>Live</b>win probability and projections</div>
 			</div>
 		</div>
-		<div class="mll-card">
+		<div class="ui-card mll-card">
 			<div class="mll-card__head"><span class="mll-card__title">Week 6 · Your board</span><span class="mll-dot">Example</span></div>
 			<table class="mll-table">
 				<thead><tr><th>League</th><th>Matchup</th><th class="num">Score</th></tr></thead>
@@ -159,7 +159,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 				<div><b>Every play</b>Movement as it happens</div>
 			</div>
 		</div>
-		<div class="mll-card">
+		<div class="ui-card mll-card">
 			<div class="mll-card__head">
 				<span class="mll-card__title">Example league</span>
 				<span class="mll-seg" aria-hidden="true"><span class="on">Live</span><span>Projected</span><span>Final</span></span>
@@ -396,9 +396,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	}
 
 	.mll-card {
-		background: var(--card-bg);
-		border: var(--style-card-border, 1px solid var(--content-border));
-		box-shadow: var(--style-card-shadow, none);
+		/* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
 		border-radius: 1rem;
 		overflow: hidden;
 		font-size: var(--font-size-sm);

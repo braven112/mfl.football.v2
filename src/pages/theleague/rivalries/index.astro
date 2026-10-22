@@ -125,7 +125,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
         <ul class="hot-list">
           {top.map(({ a, b, record }) => (
             <li>
-              <a class="hot-card" href={resolveLeaguePath(`/theleague/rivalries/${canonicalPair(a.franchiseId, b.franchiseId)}`, hideLeaguePrefix)}>
+              <a class="ui-card hot-card" href={resolveLeaguePath(`/theleague/rivalries/${canonicalPair(a.franchiseId, b.franchiseId)}`, hideLeaguePrefix)}>
                 <div class="hot-teams">
                   {a.currentIcon && <img src={a.currentIcon} alt="" loading="lazy" />}
                   <span class="hot-vs">vs</span>
@@ -261,13 +261,11 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     gap: 0.625rem;
   }
   .hot-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.75rem 0.875rem;
-    background: var(--card-bg, #fff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e5e5e5));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 0.625rem;
     text-decoration: none;
     color: inherit;

@@ -740,7 +740,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
           </svg>
           Filters
-          <span class="filter-badge" id="filter-badge" style="display: none;">0</span>
+          <span class="ui-badge filter-badge" id="filter-badge" style="display: none;">0</span>
         </button>
       </div>
     </div>
@@ -2607,8 +2607,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     background: color-mix(in srgb, var(--league-accent, #c41e3a) 10%, var(--content-bg, white));
   }
   .filter-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     justify-content: center;
     min-width: 18px;
     height: 18px;
@@ -2616,8 +2615,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     border-radius: 9px;
     background: var(--league-accent, #c41e3a);
     color: var(--on-league-accent, white);
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
     line-height: 1;
   }
 

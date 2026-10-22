@@ -51,7 +51,7 @@ const askHref = league.features?.rulesQa ? `/${league.slug}/rules-chat` : null;
 
     {
       Constitution && (
-        <section class="rules__card" id={RULES_PAGE_ANCHORS.rulebook} aria-labelledby="rules-book">
+        <section class="ui-card rules__card" id={RULES_PAGE_ANCHORS.rulebook} aria-labelledby="rules-book">
           <h2 id="rules-book">League rulebook</h2>
           <div class="rules__prose">
             <Constitution />
@@ -60,7 +60,7 @@ const askHref = league.features?.rulesQa ? `/${league.slug}/rules-chat` : null;
       )
     }
 
-    <section class="rules__card" id={RULES_PAGE_ANCHORS.mflSettings} aria-labelledby="rules-mfl">
+    <section class="ui-card rules__card" id={RULES_PAGE_ANCHORS.mflSettings} aria-labelledby="rules-mfl">
       <h2 id="rules-mfl">League settings on MFL</h2>
       {
         Settings ? (
@@ -97,10 +97,8 @@ const askHref = league.features?.rulesQa ? `/${league.slug}/rules-chat` : null;
     margin: 0;
   }
   .rules__card {
-    border: var(--style-card-border, 1px solid var(--content-border));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: 10px;
-    background: var(--card-bg);
     padding: 1rem 1.25rem 1.25rem;
     margin: 1rem 0;
     scroll-margin-top: 5rem;

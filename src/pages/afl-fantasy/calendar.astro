@@ -61,7 +61,7 @@ function countdownLabel(daysUntil: number): string {
             const daysUntil = daysFromNow(event.startDate);
             return (
               <article class:list={[
-                'event-card',
+                'ui-card event-card',
                 event.isActive && 'event-card--active',
                 event.isUrgent && 'event-card--urgent',
               ]}>
@@ -105,7 +105,7 @@ function countdownLabel(daysUntil: number): string {
         <h2>Already happened — {leagueYear}</h2>
         <div class="afl-calendar__grid">
           {pastThisYear.map((event: ResolvedLeagueEvent) => (
-            <article class="event-card event-card--past">
+            <article class="ui-card event-card event-card--past">
               <div class="event-card__head">
                 {event.definition.icon && (
                   <svg class="event-card__icon" width="18" height="18" aria-hidden="true">
@@ -127,7 +127,7 @@ function countdownLabel(daysUntil: number): string {
       <h2>Next year — {leagueYear + 1}</h2>
       <div class="afl-calendar__grid">
         {nextYearEvents.map((event: ResolvedLeagueEvent) => (
-          <article class="event-card event-card--future">
+          <article class="ui-card event-card event-card--future">
             <div class="event-card__head">
               {event.definition.icon && (
                 <svg class="event-card__icon" width="18" height="18" aria-hidden="true">
@@ -197,9 +197,7 @@ function countdownLabel(daysUntil: number): string {
   }
 
   .event-card {
-    background: var(--card-bg, #ffffff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: 10px;
     padding: var(--spacing-md, 16px);
     display: flex;

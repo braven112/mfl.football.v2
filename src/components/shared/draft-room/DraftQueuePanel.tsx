@@ -107,7 +107,7 @@ export function DraftQueuePanel({
           <div className="dr-queue__title-group">
             <span className="dr-queue__title">My Queue</span>
             {queue.length > 0 && (
-              <span className="dr-queue__count-badge">{queue.length}</span>
+              <span className="ui-badge dr-queue__count-badge">{queue.length}</span>
             )}
           </div>
 

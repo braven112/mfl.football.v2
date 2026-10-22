@@ -57,7 +57,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
 <div class="sf-news-page sf-news-page--with-rail">
   <slot name="breadcrumbs" />
-  <div class="sf-news-card">
+  <div class="ui-card sf-news-card">
     {/* Profile header — every tab has a persona */}
     {isGroupMeTab ? (
       <div class="sf-page-header sf-page-header--feed">
@@ -153,7 +153,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
         <ul class="sf-rail-articles">
           {schefterArticles.map((article: any) => (
             <li class="sf-rail-articles__item">
-              <a href={article.link ?? `${articleBasePath}/${article.id}`} class="sf-rail-article-card">
+              <a href={article.link ?? `${articleBasePath}/${article.id}`} class="ui-card sf-rail-article-card">
                 {article.image && (
                   <img
                     src={`/assets/schefter/${article.image}`}
@@ -278,12 +278,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
     gap: 0.5rem;
   }
   .sf-rail-article-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-lg, 0.5rem);
-    background: var(--card-bg, #ffffff);
     border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
-    box-shadow: var(--style-card-shadow, none);
     text-decoration: none;
     color: inherit;
     overflow: hidden;

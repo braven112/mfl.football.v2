@@ -402,7 +402,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
                 />
               );
               return (
-                <li class="tx-card" data-kind={row.kind} data-story={r.story ? '' : undefined} style={`--tx-team: ${r.accent};`}>
+                <li class="ui-card tx-card" data-kind={row.kind} data-story={r.story ? '' : undefined} style={`--tx-team: ${r.accent};`}>
                   <div class="tx-card__top">
                     {r.story && byline ? (
                       <span class="tx-card__by">
@@ -674,10 +674,10 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
 
   .tx__cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
   .tx-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     padding: 0.8rem 0.95rem;
     background: var(--tx-surface);
     border: var(--style-card-border, 1px solid var(--tx-border));
-    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--tx-team, var(--tx-accent));
     border-radius: var(--radius-md, 8px);
     min-width: 0;

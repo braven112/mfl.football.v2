@@ -389,7 +389,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
   <WhatsNext slot="whats-next" timeline={timeline} maxCards={2} calendarHref={hasPage('/calendar') ? r(`${base}/calendar`) : null} />
 
   {madSeeding ? (
-    <section slot="standings" class="pkg-home__card" aria-labelledby="pkg-home-standings">
+    <section slot="standings" class="ui-card pkg-home__card" aria-labelledby="pkg-home-standings">
       <div class="pkg-home__section-head">
         <h2 id="pkg-home-standings">MAD Power 99</h2>
         <a class="pkg-home__more" href={r(`${base}/standings?view=league`)}>Full standings →</a>
@@ -407,7 +407,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
       )}
     </section>
   ) : (
-    <section slot="standings" class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
+    <section slot="standings" class:list={['ui-card pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
       <div class="pkg-home__section-head">
         <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
         <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
@@ -426,7 +426,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     </section>
   )}
 
-  <section slot="extras" class="pkg-home__card" aria-labelledby="pkg-home-tx">
+  <section slot="extras" class="ui-card pkg-home__card" aria-labelledby="pkg-home-tx">
     <div class="pkg-home__section-head">
       <h2 id="pkg-home-tx">Recent transactions</h2>
       {hasPage('/transactions') && <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>}
@@ -458,9 +458,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
 
 <style>
   .pkg-home__card {
-    background: var(--card-bg);
-    border: var(--style-card-border, 1px solid var(--content-border));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: var(--radius-lg);
     padding: 1rem 1.25rem;
     min-width: 0;

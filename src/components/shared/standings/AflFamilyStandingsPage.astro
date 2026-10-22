@@ -444,14 +444,15 @@ const boardTiers = hasTierRecord
   }
 
   .card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: center;
     gap: var(--padding-md);
     padding: var(--padding-lg);
     border-radius: 1rem;
-    background: var(--card-bg, #fff);
     box-shadow: var(--box-shadow-lg);
     position: relative;
+    border: none;
 }
 
   :global(html.dark) .card {

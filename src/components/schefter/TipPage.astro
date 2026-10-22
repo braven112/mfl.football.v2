@@ -203,7 +203,7 @@ const preselectTeam = (() => {
         </aside>
       )}
 
-      <form class="tip-card tip-form" id="tip-form" novalidate>
+      <form class="ui-card tip-card tip-form" id="tip-form" novalidate>
       <div class="section-header">
         <h2 class="section-header__title">Your tip</h2>
         <p class="section-header__sub">500 characters. Make it count.</p>
@@ -305,7 +305,7 @@ const preselectTeam = (() => {
       </div>
     </form>
 
-      <section class="tip-rail-card tip-rail-leaderboard" aria-labelledby="leaderboard-title" data-tipster-leaderboard>
+      <section class="ui-card tip-rail-card tip-rail-leaderboard" aria-labelledby="leaderboard-title" data-tipster-leaderboard>
         <div class="section-header">
           <h2 class="section-header__title" id="leaderboard-title">Top tipsters this season</h2>
           <p class="section-header__sub" data-tipster-leaderboard-sub>By rumors seeded.</p>
@@ -327,7 +327,7 @@ const preselectTeam = (() => {
         </ol>
       </section>
 
-      <details class="tip-rail-card tip-rail-examples">
+      <details class="ui-card tip-rail-card tip-rail-examples">
         <summary class="tip-rail-examples__summary">
           <span class="tip-rail-examples__label">Good tip vs. what {labels.surname} prints</span>
           <svg class="tip-rail-examples__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -407,7 +407,7 @@ const preselectTeam = (() => {
         </div>
       </details>
 
-      <section class="tip-rail-card" aria-labelledby="how-it-works-title">
+      <section class="ui-card tip-rail-card" aria-labelledby="how-it-works-title">
         <div class="section-header">
           <h2 class="section-header__title" id="how-it-works-title">How this works</h2>
           <p class="section-header__sub">Anonymity is the whole point. So is the filter.</p>
@@ -453,7 +453,7 @@ const preselectTeam = (() => {
 
     <aside class="tip-rail" aria-label="How tips work and recent reports">
       {lastRumor && lastRumorSnippet && (
-        <section class="tip-rail-card tip-rail-last-rumor" aria-labelledby="last-rumor-title">
+        <section class="ui-card tip-rail-card tip-rail-last-rumor" aria-labelledby="last-rumor-title">
           <div class="section-header">
             <h2 class="section-header__title" id="last-rumor-title">Last rumor dropped</h2>
             <p class="section-header__sub" data-relative-time={lastRumor.timestamp}>
@@ -472,7 +472,7 @@ const preselectTeam = (() => {
         </section>
       )}
 
-      <section class="tip-rail-card tip-rail-cooker" aria-labelledby="cooker-title" data-cooker-status>
+      <section class="ui-card tip-rail-card tip-rail-cooker" aria-labelledby="cooker-title" data-cooker-status>
         <div class="section-header">
           <h2 class="section-header__title" id="cooker-title">{labels.surname}'s kitchen</h2>
           <p class="section-header__sub" data-cooker-sub>Checking on the pot…</p>
@@ -488,7 +488,7 @@ const preselectTeam = (() => {
         </p>
       </section>
 
-      <section class="tip-rail-card tip-rail-hot" aria-labelledby="hot-title" data-hot-topics>
+      <section class="ui-card tip-rail-card tip-rail-hot" aria-labelledby="hot-title" data-hot-topics>
         <div class="section-header">
           <h2 class="section-header__title" id="hot-title">Hot topics this week</h2>
           <p class="section-header__sub">Last 7 days · all tipsters.</p>
@@ -498,7 +498,7 @@ const preselectTeam = (() => {
         </div>
       </section>
 
-      <section class="tip-rail-card tip-rail-record" aria-labelledby="record-title" data-tipster-record>
+      <section class="ui-card tip-rail-card tip-rail-record" aria-labelledby="record-title" data-tipster-record>
         <div class="section-header">
           <h2 class="section-header__title" id="record-title">Your record</h2>
           <p class="section-header__sub">Every tip is anonymous — this is between you and the hash.</p>
@@ -524,7 +524,7 @@ const preselectTeam = (() => {
           <ul class="tip-rail-articles">
             {schefterArticles.map((article: any) => (
               <li class="tip-rail-articles__item">
-                <a href={article.link ?? `${base}/news/${article.id}`} class="tip-rail-article-card">
+                <a href={article.link ?? `${base}/news/${article.id}`} class="ui-card tip-rail-article-card">
                   {article.image && (
                     <img
                       src={`/assets/schefter/${article.image}`}
@@ -631,7 +631,7 @@ const preselectTeam = (() => {
   }
 
   .tip-card {
-    background: var(--card-bg, #ffffff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
     border-radius: 0.75rem;
     padding: 1.25rem;
@@ -986,7 +986,7 @@ const preselectTeam = (() => {
 
   /* Right rail: How this works card */
   .tip-rail-card {
-    background: var(--card-bg, #ffffff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
     border-radius: 0.75rem;
     padding: 1rem;
@@ -1476,12 +1476,11 @@ const preselectTeam = (() => {
     gap: 0.5rem;
   }
   .tip-rail-article-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-lg, 0.5rem);
-    background: var(--card-bg, #ffffff);
     border: var(--style-card-border, 1px solid var(--color-gray-100, #f3f4f6));
-    box-shadow: var(--style-card-shadow, none);
     text-decoration: none;
     color: inherit;
     overflow: hidden;

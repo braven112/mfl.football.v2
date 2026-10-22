@@ -347,7 +347,7 @@ const heroSkin =
       <div class="sch-hero__inner">
         <div class="sch-hero__main">
           <div class="sch-hero__eyebrow">
-            <span class="sch-pill">{view === 'my' ? 'My Schedule' : 'League Schedule'}</span>
+            <span class="ui-badge ui-badge--inline sch-pill">{view === 'my' ? 'My Schedule' : 'League Schedule'}</span>
             <span class="sch-hero__meta">{year} season · weeks {firstWeek}–{lastWeek}</span>
           </div>
 
@@ -503,7 +503,7 @@ const heroSkin =
             : `No schedule has been published for ${year} yet.`}
         </p>
       ) : (
-        <div class="sch-card">
+        <div class="ui-card sch-card">
           {myMonths.map((group) => (
             <div>
               <div class="sch-month">
@@ -575,7 +575,7 @@ const heroSkin =
         <p class="sch-empty">No schedule has been published for {year} yet.</p>
       ) : (
         <>
-          <div class="sch-card sch-scroller">
+          <div class="ui-card sch-card sch-scroller">
             <table class="sch-grid">
               <thead>
                 <tr>
@@ -821,13 +821,12 @@ const heroSkin =
     flex-wrap: wrap;
   }
   .sch-pill {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-weight: var(--font-weight-bold, 700);
     font-size: 0.8125rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 0.375rem 0.875rem;
-    border-radius: var(--radius-full, 999px);
     background: var(--sch-accent);
     color: var(--sch-on-accent);
   }
@@ -1023,9 +1022,8 @@ const heroSkin =
 
   /* ── Cards, rows ── */
   .sch-card {
-    background: var(--card-bg, #fff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-md);
     overflow: hidden;
   }

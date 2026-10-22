@@ -427,7 +427,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
               {rankings.map((team, idx) => {
                 const isWinner = idx === 0;
                 return (
-                  <article class={`team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
+                  <article class={`ui-card team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
                     <div class="rank-number">{idx + 1}</div>
                     <div class="team-rank-header">
                       <div class="team-rank-identity">
@@ -435,7 +435,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                         <div>
                           <h3 class="team-rank-name">
                             {team.name}
-                            {isWinner && <span class="dead-money-badge">Jerry Jones Award</span>}
+                            {isWinner && <span class="ui-badge ui-badge--caps dead-money-badge">Jerry Jones Award</span>}
                           </h3>
                           <div class="team-rank-stats">
                             <span class="stat">Salary: <strong>{formatCurrency(team.totalSalary)}</strong></span>
@@ -502,7 +502,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
               {rankings.map((team, idx) => {
                 const isWinner = idx === 0;
                 return (
-                  <article class={`team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
+                  <article class={`ui-card team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
                     <div class="rank-number">{idx + 1}</div>
                     <div class="team-rank-header">
                       <div class="team-rank-identity">
@@ -510,7 +510,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                         <div>
                           <h3 class="team-rank-name">
                             {team.name}
-                            {isWinner && <span class="dead-money-badge">Jerry Jones Award</span>}
+                            {isWinner && <span class="ui-badge ui-badge--caps dead-money-badge">Jerry Jones Award</span>}
                           </h3>
                           <div class="team-rank-stats">
                             <span class="stat">Roster: <strong>{team.rosterSize} players</strong></span>
@@ -651,7 +651,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                 // Fantasy franchise accent (the owner's shame), NFL color fallback
                 const accent = franchise?.colorPrimary ?? getNflTeamColors(player.team ?? '').primary;
                 return (
-                  <div class="shame-card" style={`--shame-accent: ${accent};`}>
+                  <div class="ui-card shame-card" style={`--shame-accent: ${accent};`}>
                     <div class="shame-player-info">
                       <img
                         src={espnShot ?? resolveHeadshotSrc(player.headshot, player.team)}
@@ -835,14 +835,12 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   /* ──── Dead Money Badge ──── */
   .dead-money-badge {
+    /* Kit: ui-badge ui-badge--caps supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: 0.15rem 0.4rem;
     background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
     color: var(--color-white, #fff);
     font-size: var(--font-size-3xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     border-radius: var(--radius-sm, 0.25rem);
     box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
   }
@@ -855,9 +853,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .team-rank-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--content-bg, #fff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    border-radius: var(--radius-md, 0.5rem);
     padding: 0.875rem 1rem;
     display: flex;
     gap: 0.75rem;
@@ -1119,14 +1116,12 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .shame-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: var(--color-gray-50, #f9fafb);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--shame-accent, var(--color-error, #dc2626));
-    border-radius: var(--radius-md, 0.5rem);
     padding: 0.5rem 0.75rem;
     gap: 0.5rem;
   }

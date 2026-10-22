@@ -263,7 +263,7 @@ const selectedTeamId = resolveTeamSelection({
       <div>
         <h1 class="draft-predictor-title">
           {nextYear} Draft Order
-          {draftPhase === 'official' && <span class="official-badge">Official</span>}
+          {draftPhase === 'official' && <span class="ui-badge official-badge">Official</span>}
         </h1>
         <p class="draft-predictor-subtitle">
           {view === 'projected' && (
@@ -382,11 +382,10 @@ const selectedTeamId = resolveTeamSelection({
   }
 
   .official-badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
-    border-radius: var(--radius-full, 9999px);
     font-size: var(--font-size-xs);
-    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;

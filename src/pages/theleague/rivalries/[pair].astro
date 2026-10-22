@@ -435,37 +435,37 @@ const titleB = frB.currentNameMedium || frB.currentName;
           <h3>{frA.currentNameMedium || frA.currentName}</h3>
           <ul class="badges-bar">
             {frA.championships.length > 0 && (
-              <li class="badge badge--championship">
+              <li class="ui-badge badge badge--championship">
                 <span aria-hidden="true">🏆</span>
                 {frA.championships.length}x League Title{frA.championships.length > 1 ? 's' : ''}
               </li>
             )}
             {frA.runnerUps?.length > 0 && (
-              <li class="badge badge--runnerup">
+              <li class="ui-badge badge badge--runnerup">
                 <span aria-hidden="true">🥈</span>
                 {frA.runnerUps.length}x Runner-up
               </li>
             )}
             {frA.divisionTitles?.length > 0 && (
-              <li class="badge badge--division">
+              <li class="ui-badge badge badge--division">
                 <span aria-hidden="true">🛡</span>
                 {frA.divisionTitles.length}x Division
               </li>
             )}
             {frA.mvpAwards?.length > 0 && (
-              <li class="badge badge--mvp">
+              <li class="ui-badge badge badge--mvp">
                 <span aria-hidden="true">⭐</span>
                 {frA.mvpAwards.length}x MVP
               </li>
             )}
             {frA.jerryJonesAwards?.length > 0 && (
-              <li class="badge badge--jerry">
+              <li class="ui-badge badge badge--jerry">
                 <span aria-hidden="true">💸</span>
                 {frA.jerryJonesAwards.length}x Jerry Jones
               </li>
             )}
             {frA.brockOsweilerAwards?.length > 0 && (
-              <li class="badge badge--osweiler">
+              <li class="ui-badge badge badge--osweiler">
                 <span aria-hidden="true">📉</span>
                 {frA.brockOsweilerAwards.length}x Brock Osweiler
               </li>
@@ -476,37 +476,37 @@ const titleB = frB.currentNameMedium || frB.currentName;
           <h3>{frB.currentNameMedium || frB.currentName}</h3>
           <ul class="badges-bar">
             {frB.championships.length > 0 && (
-              <li class="badge badge--championship">
+              <li class="ui-badge badge badge--championship">
                 <span aria-hidden="true">🏆</span>
                 {frB.championships.length}x League Title{frB.championships.length > 1 ? 's' : ''}
               </li>
             )}
             {frB.runnerUps?.length > 0 && (
-              <li class="badge badge--runnerup">
+              <li class="ui-badge badge badge--runnerup">
                 <span aria-hidden="true">🥈</span>
                 {frB.runnerUps.length}x Runner-up
               </li>
             )}
             {frB.divisionTitles?.length > 0 && (
-              <li class="badge badge--division">
+              <li class="ui-badge badge badge--division">
                 <span aria-hidden="true">🛡</span>
                 {frB.divisionTitles.length}x Division
               </li>
             )}
             {frB.mvpAwards?.length > 0 && (
-              <li class="badge badge--mvp">
+              <li class="ui-badge badge badge--mvp">
                 <span aria-hidden="true">⭐</span>
                 {frB.mvpAwards.length}x MVP
               </li>
             )}
             {frB.jerryJonesAwards?.length > 0 && (
-              <li class="badge badge--jerry">
+              <li class="ui-badge badge badge--jerry">
                 <span aria-hidden="true">💸</span>
                 {frB.jerryJonesAwards.length}x Jerry Jones
               </li>
             )}
             {frB.brockOsweilerAwards?.length > 0 && (
-              <li class="badge badge--osweiler">
+              <li class="ui-badge badge badge--osweiler">
                 <span aria-hidden="true">📉</span>
                 {frB.brockOsweilerAwards.length}x Brock Osweiler
               </li>
@@ -897,11 +897,8 @@ const titleB = frB.currentNameMedium || frB.currentName;
     gap: 0.375rem;
   }
   .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.25rem 0.5rem;
-    border-radius: 999px;
     background: var(--card-bg, #fff);
     font-size: var(--font-size-xs);
     font-weight: 600;

@@ -121,7 +121,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
           <div class="wn-detail__header">
             <!-- Category + date + share row -->
             <div class="wn-detail__meta">
-              <span class={`wn-detail__badge wn-detail__badge--${entry.category}`}>
+              <span class={`ui-badge wn-detail__badge wn-detail__badge--${entry.category}`}>
                 {WHATS_NEW_CATEGORY_LABELS[entry.category]}
               </span>
               <span class="wn-detail__meta-dot" aria-hidden="true"></span>
@@ -238,7 +238,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
               <div class="wn-detail__detail-row">
                 <span class="wn-detail__detail-label">Type</span>
                 <span class="wn-detail__detail-value">
-                  <span class={`wn-detail__badge wn-detail__badge--${entry.category}`}>
+                  <span class={`ui-badge wn-detail__badge wn-detail__badge--${entry.category}`}>
                     {WHATS_NEW_CATEGORY_LABELS[entry.category]}
                   </span>
                 </span>
@@ -525,9 +525,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   }
 
   .wn-detail__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 0.175rem 0.5rem;

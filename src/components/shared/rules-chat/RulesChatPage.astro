@@ -75,7 +75,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     <aside class="rqa-sidebar">
       <div class="rqa-sidebar__inner">
         <!-- Roger's personality card -->
-        <div class="rqa-roger-card">
+        <div class="ui-card rqa-roger-card">
           <img
             src="/assets/commissioner-avatar.webp?v=5"
             alt="Roger — AI Rules Expert"
@@ -217,11 +217,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   /* Roger personality card */
   .rqa-roger-card {
-    background: var(--card-bg, #fff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: var(--radius-lg, 1rem);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     padding: 1.5rem 1.25rem;
     text-align: center;
+    border: none;
   }
   :global(html.dark) .rqa-roger-card {
     box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #555)), var(--shadow-lg);

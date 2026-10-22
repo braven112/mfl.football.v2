@@ -171,31 +171,31 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
             </dl>
             <ul class="badges" aria-label="Awards">
               {f.championships.length > 0 && (
-                <li class="badge badge--championship" title={`Champion: ${f.championships.join(', ')}`}>
+                <li class="ui-badge badge badge--championship" title={`Champion: ${f.championships.join(', ')}`}>
                   <span class="icon" aria-hidden="true">🏆</span>
                   <span>{f.championships.length}</span>
                 </li>
               )}
               {f.divisionTitles.length > 0 && (
-                <li class="badge badge--division" title={`Division titles: ${f.divisionTitles.length}`}>
+                <li class="ui-badge badge badge--division" title={`Division titles: ${f.divisionTitles.length}`}>
                   <span class="icon" aria-hidden="true">🛡</span>
                   <span>{f.divisionTitles.length}</span>
                 </li>
               )}
               {f.mvpAwards.length > 0 && (
-                <li class="badge badge--mvp" title={`MVPs: ${f.mvpAwards.length}`}>
+                <li class="ui-badge badge badge--mvp" title={`MVPs: ${f.mvpAwards.length}`}>
                   <span class="icon" aria-hidden="true">⭐</span>
                   <span>{f.mvpAwards.length}</span>
                 </li>
               )}
               {f.jerryJonesAwards.length > 0 && (
-                <li class="badge badge--jerry" title={`Jerry Jones Awards: ${f.jerryJonesAwards.length}`}>
+                <li class="ui-badge badge badge--jerry" title={`Jerry Jones Awards: ${f.jerryJonesAwards.length}`}>
                   <span class="icon" aria-hidden="true">💸</span>
                   <span>{f.jerryJonesAwards.length}</span>
                 </li>
               )}
               {f.brockOsweilerAwards.length > 0 && (
-                <li class="badge badge--osweiler" title={`Brock Osweiler Awards: ${f.brockOsweilerAwards.length}`}>
+                <li class="ui-badge badge badge--osweiler" title={`Brock Osweiler Awards: ${f.brockOsweilerAwards.length}`}>
                   <span class="icon" aria-hidden="true">📉</span>
                   <span>{f.brockOsweilerAwards.length}</span>
                 </li>
@@ -354,11 +354,8 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     margin-top: auto;
   }
   .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.25rem 0.5rem;
-    border-radius: 999px;
     font-size: var(--font-size-xs);
     font-weight: 600;
     background: var(--content-bg-muted, #f5f5f5);

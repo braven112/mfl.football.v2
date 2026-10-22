@@ -224,7 +224,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
         they need their own column rather than being siblings of it. */}
     <div class="rhdr__identity-col">
     <div class="rhdr__eyebrow">
-      <span class="rhdr__pill">{label}</span>
+      <span class="ui-badge ui-badge--inline rhdr__pill">{label}</span>
       <span class="rhdr__meta">{season} season · {teamMeta}</span>
       {/* The owner-presence chip that used to live on the old team card.
           Per CLUB, so it rides in the swap templates and follows an in-place
@@ -386,10 +386,9 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
     margin-bottom: 0.7rem;
   }
   .rhdr__pill {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.15rem 0.6rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.13em;
     text-transform: uppercase;

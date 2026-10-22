@@ -87,11 +87,11 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague',
 
       <div className="wn-card__content">
         <div className="wn-card__meta">
-          <span className={`wn-card__badge wn-card__badge--${entry.category}`}>
+          <span className={`ui-badge wn-card__badge wn-card__badge--${entry.category}`}>
             {WHATS_NEW_CATEGORY_LABELS[entry.category]}
           </span>
           {entry.isNew && (
-            <span className="wn-card__new-badge" title="Published since your last visit">
+            <span className="ui-badge wn-card__new-badge" title="Published since your last visit">
               <span className="wn-card__new-dot" aria-hidden="true" />
               JUST IN
             </span>

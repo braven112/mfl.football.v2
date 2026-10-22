@@ -43,7 +43,7 @@ export default function LvStandingsModeTabs({
               onClick={() => onChange(m)}
             >
               {STANDINGS_MODE_LABEL[m]}
-              {locked && <span className="lv-pro-badge">Pro</span>}
+              {locked && <span className="ui-badge ui-badge--inline lv-pro-badge">Pro</span>}
             </button>
           );
         })}

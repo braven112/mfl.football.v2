@@ -57,7 +57,7 @@ const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
     <div class="stats-grid">
       {
         sortedMetrics.map((metric) => (
-          <div class="team-stat-card">
+          <div class="ui-card team-stat-card">
             <div class="team-name">{metric.name}</div>
             <div class="total-points">{Math.round(metric.totalPoints)}</div>
             <div class="points-bar">
@@ -107,9 +107,9 @@ const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
   }
 
   .team-stat-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: #f8fafc;
     border: var(--style-card-border, 1px solid #e2e8f0);
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     padding: 1rem;
     display: flex;

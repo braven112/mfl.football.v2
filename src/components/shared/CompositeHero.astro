@@ -241,7 +241,7 @@ const loading = eager ? 'eager' : 'lazy';
   <div class="cmh__content">
     {(pill || pillDate) && (
       <p class:list={['cmh__eyebrow', { 'cmh__eyebrow--row': !!pillDate }]}>
-        {pill && <span class="cmh__pill">{pill}</span>}
+        {pill && <span class="ui-badge ui-badge--inline cmh__pill">{pill}</span>}
         {pillDate && <span class="cmh__date">{pillDate}</span>}
       </p>
     )}

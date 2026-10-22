@@ -67,7 +67,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
       <div class="afl-keepers__grid">
         {teams.map((team) => (
           <a
-            class="keeper-card"
+            class="ui-card keeper-card"
             href={`${prefix}/rosters?franchise=${team.franchiseId}&${PLANNER_VIEW}`}
           >
             <div class="keeper-card__icon-wrap">
@@ -195,13 +195,11 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
   }
 
   .keeper-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: center;
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-md, 16px);
-    background: var(--card-bg, #ffffff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     text-decoration: none;
     color: var(--page-text, #1a1a1a);

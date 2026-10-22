@@ -104,7 +104,7 @@ const titleLead = titleWords.join(' ');
   )}
 
   <div class="dmc__content">
-    <p class="dmc__eyebrow"><span class="dmc__pill">{eyebrow}</span></p>
+    <p class="dmc__eyebrow"><span class="ui-badge dmc__pill">{eyebrow}</span></p>
     <h3 class="dmc__title">
       {titleLead} <span class="dmc__title-accent">{titleAccent}</span>
     </h3>
@@ -223,15 +223,14 @@ const titleLead = titleWords.join(' ');
   }
 
   .dmc__pill {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: 0.2rem 0.55rem;
     background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
     color: var(--color-white, #fff);
     font-size: var(--font-size-3xs);
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-radius: var(--radius-full, 9999px);
   }
 
   .dmc__title {

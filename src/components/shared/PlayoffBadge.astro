@@ -9,21 +9,21 @@ const { status, seed } = Astro.props;
 ---
 
 {status === 'division_winner' && (
-  <div class="badge badge-division-winner" title="Division Winner">
+  <div class="ui-badge badge badge-division-winner" title="Division Winner">
     <span class="badge-label">DIV</span>
     {seed && <span class="badge-seed">#{seed}</span>}
   </div>
 )}
 
 {status === 'runner_up' && (
-  <div class="badge badge-runner-up" title="Division Runner-Up">
+  <div class="ui-badge badge badge-runner-up" title="Division Runner-Up">
     <span class="badge-label">2ND</span>
     {seed && <span class="badge-seed">#{seed}</span>}
   </div>
 )}
 
 {status === 'wild_card' && (
-  <div class="badge badge-wild-card" title="Wild Card">
+  <div class="ui-badge badge badge-wild-card" title="Wild Card">
     <span class="badge-label">WC</span>
     {seed && <span class="badge-seed">#{seed}</span>}
   </div>
@@ -31,9 +31,7 @@ const { status, seed } = Astro.props;
 
 <style>
   .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: var(--font-size-xs);

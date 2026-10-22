@@ -195,7 +195,7 @@ const serializedConfig = JSON.stringify({
       {positionLabels.map(({ key, label }) => {
         const data = summary[key];
         return (
-          <article class="position-card" data-position={key} aria-labelledby={`position-${key}`}>
+          <article class="ui-card position-card" data-position={key} aria-labelledby={`position-${key}`}>
             <div class="position-card__header">
               <h3 class="section-title" id={`position-${key}`}>{label}</h3>
               <span class="position-card__badge" data-total={key}>
@@ -424,9 +424,8 @@ const serializedConfig = JSON.stringify({
   }
 
   .position-card {
-    background: var(--card-bg, #ffffff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm);
     padding: 1.25rem;
     display: flex;

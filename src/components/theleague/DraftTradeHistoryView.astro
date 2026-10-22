@@ -50,7 +50,7 @@ const totalTrades = tradedPicks.length;
                   </div>
 
                   <div class="trade-item__from">
-                    <div class="team-badge team-badge--original">
+                    <div class="ui-badge team-badge team-badge--original">
                       {pick.originalTeamIcon && (
                         <img
                           src={pick.originalTeamIcon}
@@ -69,7 +69,7 @@ const totalTrades = tradedPicks.length;
                   </div>
 
                   <div class="trade-item__to">
-                    <div class="team-badge team-badge--current">
+                    <div class="ui-badge team-badge team-badge--current">
                       {pick.teamIcon && (
                         <img
                           src={pick.teamIcon}
@@ -206,8 +206,8 @@ const totalTrades = tradedPicks.length;
   }
 
   .team-badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: flex;
-    align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: 6px;

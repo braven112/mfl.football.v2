@@ -310,7 +310,7 @@ const prizeSummary = Array.from(prizeTotalsByTeam.values()).sort((a, b) => b.tot
 const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 ---
 
-  <div class="prizes-card">
+  <div class="ui-card prizes-card">
     <div class="prizes-header">
       <div>
         <h2>Prizes</h2>
@@ -449,8 +449,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
 <style>
   .prizes-card {
-    background: var(--card-bg, #ffffff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: 16px;
     padding: 1.25rem;
     box-shadow: var(--box-shadow-lg);

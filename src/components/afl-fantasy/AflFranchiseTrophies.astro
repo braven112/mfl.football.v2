@@ -128,7 +128,7 @@ function lockedLabel(t: TrophyCaseItem): string {
 {part === 'pill' && (
 <span
   class:list={[
-    'franchise-hero__tier-pill',
+    'ui-badge ui-badge--inline franchise-hero__tier-pill',
     team.tier === 'Premier League'
       ? 'franchise-hero__tier-pill--premier'
       : 'franchise-hero__tier-pill--dleague',
@@ -253,10 +253,9 @@ function lockedLabel(t: TrophyCaseItem): string {
   }
 
   .franchise-hero__tier-pill {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     padding: 2px 10px;
-    border-radius: 9999px;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }

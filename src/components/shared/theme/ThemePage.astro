@@ -143,7 +143,7 @@ const fonts = [
 
     <section class="theme-review__section">
       <h2 class="theme-review__section-title">Buttons and links</h2>
-      <div class="theme-review__card">
+      <div class="ui-card theme-review__card">
         <div class="theme-review__row">
           <a class="cta cta--primary" href="#">Change your vote</a>
           <a class="cta cta--ghost" href="#">Maybe later</a>
@@ -163,17 +163,17 @@ const fonts = [
 
     <section class="theme-review__section">
       <h2 class="theme-review__section-title">Cards, tables and badges</h2>
-      <div class="theme-review__card">
+      <div class="ui-card theme-review__card">
         <h3 class="theme-review__card-title">Standings</h3>
         <table class="theme-review__table">
           <thead>
             <tr><th>Team</th><th class="theme-review__num">W-L</th><th class="theme-review__num">PF</th><th>Status</th></tr>
           </thead>
           <tbody>
-            <tr><td>Pacific Pigskins</td><td class="theme-review__num">5-1</td><td class="theme-review__num">812.4</td><td><span class="theme-review__badge theme-review__badge--success">Clinched</span></td></tr>
-            <tr><td>Midwest Marauders</td><td class="theme-review__num">4-2</td><td class="theme-review__num">776.9</td><td><span class="theme-review__badge theme-review__badge--info">In the hunt</span></td></tr>
-            <tr><td>Bayside Brawlers</td><td class="theme-review__num">3-3</td><td class="theme-review__num">701.2</td><td><span class="theme-review__badge theme-review__badge--warning">Bubble</span></td></tr>
-            <tr><td>Northern Lights</td><td class="theme-review__num">1-5</td><td class="theme-review__num">598.0</td><td><span class="theme-review__badge theme-review__badge--error">Eliminated</span></td></tr>
+            <tr><td>Pacific Pigskins</td><td class="theme-review__num">5-1</td><td class="theme-review__num">812.4</td><td><span class="ui-badge theme-review__badge theme-review__badge--success">Clinched</span></td></tr>
+            <tr><td>Midwest Marauders</td><td class="theme-review__num">4-2</td><td class="theme-review__num">776.9</td><td><span class="ui-badge theme-review__badge theme-review__badge--info">In the hunt</span></td></tr>
+            <tr><td>Bayside Brawlers</td><td class="theme-review__num">3-3</td><td class="theme-review__num">701.2</td><td><span class="ui-badge theme-review__badge theme-review__badge--warning">Bubble</span></td></tr>
+            <tr><td>Northern Lights</td><td class="theme-review__num">1-5</td><td class="theme-review__num">598.0</td><td><span class="ui-badge theme-review__badge theme-review__badge--error">Eliminated</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -287,12 +287,11 @@ const fonts = [
   }
 
   .theme-review__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: grid;
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
-    background: var(--card-bg);
     border: var(--style-card-border, 1px solid var(--card-border));
-    border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
 
@@ -397,11 +396,8 @@ const fonts = [
   }
 
   .theme-review__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-2xs);
-    font-weight: var(--font-weight-bold);
   }
 
   .theme-review__badge--success {

@@ -92,7 +92,7 @@ const getLuckLabel = (luck: number) => {
             </td>
             <td class="luck-cell">
               <div
-                class="luck-badge"
+                class="ui-badge luck-badge"
                 style={{
                   backgroundColor: getLuckColor(stat.luckScore),
                 }}
@@ -245,8 +245,7 @@ const getLuckLabel = (luck: number) => {
   }
 
   .luck-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     border-radius: 6px;

@@ -222,7 +222,7 @@ export default function NotificationCommandCenter() {
                       <span className="ncc__text">
                         <span className="ncc__name">
                           {c.label}
-                          {c.defaultOn && <span className="ncc__badge">On by default</span>}
+                          {c.defaultOn && <span className="ui-badge ui-badge--inline ncc__badge">On by default</span>}
                         </span>
                         <span className="ncc__desc">{c.description}</span>
                         <span className="ncc__cadence">{c.cadence}</span>

@@ -1,0 +1,202 @@
+---
+/**
+ * Story-only gallery for the component kit (src/styles/badge.css,
+ * src/styles/card.css — docs/plans/component-kit.md).
+ *
+ * Renders the REAL classes — nothing here restyles a kit component, so what
+ * the canvas shows is what every page ships. The kit stylesheets reach the
+ * canvas through .storybook/preview.ts (Trap 2 in docs/claude/rules/storybook.md).
+ *
+ * Keep every inline element on one source line with its neighbours (Trap 4:
+ * Storybook does not load astro.config's compressHTML).
+ */
+
+export interface Props {
+  /** Which part of the kit to show. */
+  part?: 'badge' | 'card';
+}
+
+const { part = 'badge' } = Astro.props;
+
+const TONES = [
+  { cls: '', name: 'Default', use: 'No ground: inherits the text colour around it.' },
+  { cls: 'ui-badge--neutral', name: 'Neutral', use: 'A quiet fact: Bye, IR, Rookie.' },
+  { cls: 'ui-badge--success', name: 'Success', use: 'Done and good: Paid, Clinched, Kept.' },
+  { cls: 'ui-badge--warning', name: 'Warning', use: 'Needs attention: Questionable, Due soon.' },
+  { cls: 'ui-badge--error', name: 'Error', use: 'Wrong or gone: Out, Eliminated, Overdue.' },
+  { cls: 'ui-badge--info', name: 'Info', use: 'Themed per league: New, Live.' },
+  { cls: 'ui-badge--accent', name: 'Accent', use: "The league's own colour, carrying the theme's ink." },
+];
+---
+
+{part === 'badge' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Badge</h2>
+      <p class="kitg__lede">One small-label shape for every status, seed and tag. Source: <code>src/styles/badge.css</code>. A control the viewer taps (a filter or sort chip) is not a badge.</p>
+    </header>
+
+    <div class="kitg__grid" role="table" aria-label="Badge tones">
+      <div class="kitg__row kitg__row--head" role="row">
+        <span role="columnheader">Tone</span>
+        <span role="columnheader">Default</span>
+        <span role="columnheader">Caps</span>
+        <span role="columnheader">In a sentence</span>
+      </div>
+      {TONES.map((t) => (
+        <div class="kitg__row" role="row">
+          <span class="kitg__name" role="cell"><strong>{t.name}</strong><code>{`class="ui-badge${t.cls ? ' ' + t.cls : ''}"`}</code><small>{t.use}</small></span>
+          <span role="cell"><span class:list={['ui-badge', t.cls]}>Clinched</span></span>
+          <span role="cell"><span class:list={['ui-badge', 'ui-badge--caps', t.cls]}>Clinched</span></span>
+          <span role="cell" class="kitg__prose">Pacific Pigskins <span class:list={['ui-badge', 'ui-badge--inline', t.cls]}>x</span> clinched a bye.</span>
+        </div>
+      ))}
+    </div>
+
+    <h3 class="kitg__sub">A page's own badge: keep only what differs</h3>
+    <p class="kitg__row-demo"><span class="ui-badge ui-badge--caps kitg__seed">Seed 3</span></p>
+    <pre class="kitg__code"><code>{`<span class="ui-badge ui-badge--caps seed-badge">Seed 3</span>
+
+.seed-badge {
+  /* Kit: ui-badge ui-badge--caps supplies the shared badge shape; what follows is this badge's own look. */
+  --ui-badge-bg: var(--league-accent);
+  --ui-badge-ink: var(--on-league-accent);
+  padding: 0.2rem 0.55rem;
+}`}</code></pre>
+  </section>
+) : (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Card</h2>
+      <p class="kitg__lede">One card surface: ground, outline, corner and lift. Source: <code>src/styles/card.css</code>. Editorial outlines a card; Primetime drops the outline and lifts it with a shadow. Layout inside the card is the card's own.</p>
+    </header>
+    <div class="kitg__cards">
+      <article class="ui-card kitg__card">
+        <p class="kitg__card-eyebrow">Week 8</p>
+        <p class="kitg__card-title">Pacific Pigskins 124.6 – 98.2 Smokane FC</p>
+        <p class="kitg__card-body">The kit card, unmodified. Switch the toolbar's site style to see Primetime's lift.</p>
+      </article>
+      <article class="ui-card kitg__card kitg__card--muted">
+        <p class="kitg__card-eyebrow">A page's own ground</p>
+        <p class="kitg__card-title">Muted tile</p>
+        <p class="kitg__card-body">Same surface, its own background set on its own class.</p>
+      </article>
+    </div>
+  </section>
+)}
+
+<style>
+  .kitg {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    max-width: 60rem;
+    color: var(--page-text);
+  }
+  .kitg__title {
+    margin: 0;
+  }
+  .kitg__lede {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+  }
+  .kitg__grid {
+    display: grid;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--card-bg);
+  }
+  .kitg__row {
+    display: grid;
+    grid-template-columns: minmax(14rem, 2fr) repeat(3, minmax(8rem, 1fr));
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-top: 1px solid var(--content-border);
+  }
+  .kitg__row--head {
+    border-top: 0;
+    padding-block: 0.6rem;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+  }
+  .kitg__name {
+    display: grid;
+    gap: 0.2rem;
+  }
+  .kitg__name code,
+  .kitg__name small {
+    font-size: var(--font-size-xs);
+  }
+  .kitg__name small {
+    color: var(--content-text-muted);
+  }
+  .kitg__prose {
+    font-size: var(--font-size-sm);
+  }
+  .kitg__sub {
+    margin: 0.5rem 0 0;
+    font-size: var(--font-size-base);
+  }
+  .kitg__row-demo {
+    margin: 0;
+  }
+  .kitg__seed {
+    --ui-badge-bg: var(--league-accent);
+    --ui-badge-ink: var(--on-league-accent);
+    padding: 0.2rem 0.55rem;
+  }
+  .kitg__code {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--content-bg-muted);
+    font-size: var(--font-size-xs);
+    overflow-x: auto;
+  }
+  .kitg__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+  }
+  .kitg__card {
+    padding: 1rem 1.25rem;
+  }
+  .kitg__card--muted {
+    background: var(--content-bg-muted);
+  }
+  .kitg__card-eyebrow {
+    margin: 0;
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+  }
+  .kitg__card-title {
+    margin: 0.25rem 0;
+    font-weight: var(--font-weight-bold);
+  }
+  .kitg__card-body {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  @media (max-width: 760px) {
+    .kitg__row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .kitg__row--head {
+      display: none;
+    }
+    .kitg__name {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

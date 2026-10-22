@@ -267,12 +267,11 @@
 }
 
 .prd__card {
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   display: grid;
   gap: 0.3rem;
   padding: 1rem 1.1rem;
   border: var(--style-card-border, 1px solid var(--color-border-subtle));
-  box-shadow: var(--style-card-shadow, none);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
   color: var(--page-text);
   text-decoration: none;
