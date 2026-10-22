@@ -258,10 +258,10 @@ const spriteUrl = spriteUrlFor(Astro.url);
            opener leaves this hidden and the panels below stack exactly as they
            always have. WAI-ARIA tabs with a roving tabindex; the panels are
            plain wrappers until the script gives them their roles. -->
-      <div class="pdm-tabs" id="pdm-tabs" role="tablist" aria-label="Player sheet sections" hidden={previewTabs.length === 0}>
-        <button type="button" class="pdm-tab" id="pdm-tab-summary" role="tab" data-tab="summary" aria-controls="pdm-panel-summary" {...tabAttrs('summary')}>Summary</button>
-        <button type="button" class="pdm-tab" id="pdm-tab-salary" role="tab" data-tab="salary" aria-controls="pdm-panel-salary" {...tabAttrs('salary')}>Salary</button>
-        <button type="button" class="pdm-tab" id="pdm-tab-gamelog" role="tab" data-tab="gamelog" aria-controls="pdm-panel-gamelog" {...tabAttrs('gamelog')}>Game log</button>
+      <div class="ui-tabs pdm-tabs" id="pdm-tabs" role="tablist" aria-label="Player sheet sections" hidden={previewTabs.length === 0}>
+        <button type="button" class="ui-tab pdm-tab" id="pdm-tab-summary" role="tab" data-tab="summary" aria-controls="pdm-panel-summary" {...tabAttrs('summary')}>Summary</button>
+        <button type="button" class="ui-tab pdm-tab" id="pdm-tab-salary" role="tab" data-tab="salary" aria-controls="pdm-panel-salary" {...tabAttrs('salary')}>Salary</button>
+        <button type="button" class="ui-tab pdm-tab" id="pdm-tab-gamelog" role="tab" data-tab="gamelog" aria-controls="pdm-panel-gamelog" {...tabAttrs('gamelog')}>Game log</button>
       </div>
 
       <div class="pdm-panel" id="pdm-panel-summary" data-panel="summary" {...panelAttrs('summary')}>
@@ -1314,34 +1314,14 @@ const spriteUrl = spriteUrlFor(Astro.url);
     margin: 0 -1.75rem 1.25rem;
     padding: 0 1.75rem;
     background: var(--card-bg, #fff);
-    border-bottom: 1px solid var(--content-border, #e5e7eb);
   }
   .pdm-tabs[hidden] { display: none; }
   .pdm-tab {
     flex: 1 1 0;
     min-height: var(--touch-target-min);
     padding: 0.5rem 0.5rem;
-    background: none;
-    border: 0;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;
-    color: var(--color-gray-600, #4b5563);
-    font: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    cursor: pointer;
   }
   .pdm-tab[hidden] { display: none; }
-  .pdm-tab:hover { color: var(--color-gray-900, #111827); }
-  .pdm-tab[aria-selected='true'] {
-    color: var(--color-gray-900, #111827);
-    font-weight: 700;
-    border-bottom-color: var(--league-accent, var(--color-primary, #1c497c));
-  }
-  .pdm-tab:focus-visible {
-    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
-    outline-offset: -2px;
-  }
   .pdm-panel[hidden] { display: none; }
   .pdm-panel[role='tabpanel']:focus-visible {
     outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));

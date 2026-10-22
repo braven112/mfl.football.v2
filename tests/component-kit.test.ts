@@ -42,17 +42,16 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card' | 'modal';
+  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab';
   stylesheet: string;
   cls: string;
-  /** Kit classes besides `cls` the stylesheet may define (the modal's scrim). */
+  /** Kit classes besides `cls` the stylesheet may define (the modal's scrim, the tab bar's tab). */
   extra?: string[];
   /** A class name that IS this component (block, or block__element). */
   pattern: RegExp;
   /**
-   * The modal is found by what the element IS, not what it is named: a
-   * <dialog>, or anything announcing itself as a modal dialog. Its first class
-   * names it in the fork registry.
+   * Found by what the element IS as well as what it is named: a <dialog>, a
+   * role="tab". Its own first class names it in the fork registry.
    */
   isInstance?: (name: string, tag: string) => boolean;
   /**
@@ -83,10 +82,28 @@ const KITS: Kit[] = [
     stylesheet: 'src/styles/modal.css',
     cls: 'ui-modal',
     extra: ['ui-scrim'],
-    pattern: /^[a-z]/,
+    pattern: /(?!)/,
     tags: new Set(['dialog', 'div', 'section', 'aside', 'form']),
     isInstance: (name, tag) =>
       name === 'dialog' || /\brole=["'{]+(?:alert)?dialog\b/.test(tag) || /\baria-modal=["'{]+true\b/.test(tag),
+  },
+  {
+    name: 'tabs',
+    stylesheet: 'src/styles/tabs.css',
+    cls: 'ui-tabs',
+    extra: ['ui-tab'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:tabs|tab-bar|tabbar)$/,
+    tags: new Set(['div', 'nav', 'ul', 'section', 'header']),
+    isInstance: (_name, tag) => /\brole=["'{]+tablist\b/.test(tag),
+  },
+  {
+    name: 'tab',
+    stylesheet: 'src/styles/tabs.css',
+    cls: 'ui-tab',
+    extra: ['ui-tabs'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:tab|tab-btn)$/,
+    tags: new Set(['button', 'a', 'li', 'div', 'span']),
+    isInstance: (_name, tag) => /\brole=["'{]+tab["'}\s]/.test(tag),
   },
 ];
 
@@ -165,8 +182,14 @@ describe.each(KITS)('component kit: $name', (kit) => {
     const css = read(kit.stylesheet).replace(/\/\*[\s\S]*?\*\//g, '');
     const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim());
     expect(selectors.length).toBeGreaterThan(0);
-    const names = [kit.cls, ...(kit.extra ?? [])].join('|');
-    for (const s of selectors) expect(s, s).toMatch(new RegExp(`^:where\\(\\.(?:${names})(--[a-z]+)?\\)(::backdrop)?$`));
+    // Everything inside :where() — a state such as :hover or [aria-selected]
+    // outside it would add specificity back. Only a pseudo-ELEMENT may follow.
+    const names = new Set([kit.cls, ...(kit.extra ?? [])]);
+    for (const s of selectors) {
+      const m = s.match(/^:where\(([^{}]+)\)(::backdrop)?$/);
+      expect(m, s).not.toBeNull();
+      for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);
+    }
   });
 
   it('colours come from tokens, never literals', () => {
@@ -182,9 +205,9 @@ describe.each(KITS)('component kit: $name', (kit) => {
       if (!kit.tags.has(name)) continue;
       const tokens = classTokens(tag);
       // A classless match is prose (`<dialog>` in a comment), never markup.
-      const hit = kit.isInstance
-        ? kit.isInstance(name, tag) && tokens.find((t) => kit.pattern.test(t))
-        : tokens.find((t) => kit.pattern.test(t));
+      const hit =
+        tokens.find((t) => kit.pattern.test(t)) ??
+        (kit.isInstance?.(name, tag) ? tokens.find((t) => !t.startsWith('ui-')) : undefined);
       if (!hit) continue;
       // The scrim may carry the dialog role when the panel inside wears the kit.
       if (tokens.includes(kit.cls) || kit.extra?.some((t) => tokens.includes(t))) continue;

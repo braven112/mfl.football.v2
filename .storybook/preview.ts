@@ -19,6 +19,7 @@ import '../src/styles/cta.css';
 import '../src/styles/badge.css';
 import '../src/styles/card.css';
 import '../src/styles/modal.css';
+import '../src/styles/tabs.css';
 
 /**
  * The global rules TheLeagueLayout owns, which a story never gets: the fonts

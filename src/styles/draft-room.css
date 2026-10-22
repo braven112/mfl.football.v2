@@ -118,9 +118,6 @@
   --dr-modal-width: min(720px, calc(100vw - 2rem));
 
   /* ── Mobile Tabs ── */
-  --dr-tab-active-border: var(--color-primary, #1c497c);
-  --dr-tab-inactive-text: var(--color-gray-400, #9ca3af);
-  --dr-tab-active-text: var(--color-primary, #1c497c);
 
   /* ── Motion ── */
   --dr-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1664,7 +1661,6 @@ html.dark .dr-side-panel {
 /* ── Mobile tab bar ── */
 .dr-tabbar {
   display: flex;
-  border-bottom: 1px solid var(--content-border, #e2e8f0);
   background: var(--content-bg, #ffffff);
   position: sticky;
   top: 0;
@@ -1673,28 +1669,11 @@ html.dark .dr-side-panel {
 .dr-tab-btn {
   flex: 1;
   padding: 0.625rem 0;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--dr-tab-inactive-text, #9ca3af);
-  font-size: var(--font-size-3xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: color 0.15s var(--dr-easing-ease), border-color 0.15s var(--dr-easing-ease);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
   position: relative;
-}
-.dr-tab-btn[aria-selected="true"] {
-  border-bottom-color: var(--dr-tab-active-border, #1c497c);
-  color: var(--dr-tab-active-text, #1c497c);
-}
-.dr-tab-btn:hover:not([aria-selected="true"]) {
-  color: var(--color-gray-700, #374151);
 }
 .dr-tab-btn__badge {
   /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
@@ -2029,30 +2008,12 @@ html.dark .dr-side-panel {
 }
 .dr-side-tab-bar {
   display: flex;
-  border-bottom: 1px solid var(--content-border, #e2e8f0);
   background: var(--color-gray-50, #f9fafb);
   flex-shrink: 0;
 }
 .dr-side-tab-btn {
   flex: 1;
   padding: 0.5rem 0.25rem;
-  font-size: var(--font-size-2xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--color-gray-400, #9ca3af);
-  cursor: pointer;
-  transition: color 0.15s var(--dr-easing-ease), border-color 0.15s var(--dr-easing-ease);
-}
-.dr-side-tab-btn[aria-selected="true"] {
-  border-bottom-color: var(--color-primary, #1c497c);
-  color: var(--color-primary, #1c497c);
-}
-.dr-side-tab-btn:hover:not([aria-selected="true"]) {
-  color: var(--color-gray-700, #374151);
 }
 
 /* Side-panel bodies: hide all, show the one matching [data-side-tab] */

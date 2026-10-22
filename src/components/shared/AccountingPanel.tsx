@@ -193,7 +193,7 @@ export default function AccountingPanel({
         </div>
       )}
 
-      <nav className="acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
+      <nav className="ui-tabs acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
         {/* One horizontal row you swipe through — see .acct__tabs. Order is
             by how often a commissioner reaches for each: the ledger first,
             then the two things they come here to DO, then the once-a-year
@@ -211,7 +211,7 @@ export default function AccountingPanel({
             key={id}
             role="tab"
             aria-selected={tab === id}
-            className={`acct__tab${tab === id ? ' is-active' : ''}`}
+            className={`ui-tab acct__tab${tab === id ? ' is-active' : ''}`}
             onClick={() => setTab(id)}
             type="button"
           >

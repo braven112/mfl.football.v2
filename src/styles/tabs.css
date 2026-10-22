@@ -1,0 +1,63 @@
+/* ==========================================================================
+   Tabs — the one underline tab bar, site-wide (component kit, part 4).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like the other kit sheets. The kit owns the
+   LOOK of a tab bar: the hairline under the bar, the tab's type and ink, and
+   the accent underline on the current tab. Layout (padding, height, whether
+   tabs stretch, sticky positioning, scrolling) stays the component's own.
+
+     <div class="ui-tabs my-tabs" role="tablist">
+       <button class="ui-tab my-tab" role="tab" aria-selected="true">…</button>
+     </div>
+
+     <nav class="ui-tabs my-tabs">
+       <a class="ui-tab my-tab" href="…" aria-current="page">…</a>
+     </nav>
+
+   The current tab is whichever carries aria-selected="true" (a tablist),
+   aria-current="page" (a row of links), or ui-tab--active (anything else).
+
+   Every rule sits inside :where(), so it carries ZERO specificity and a
+   component's own class wins. Like the modal, this was a deliberate
+   unification (owner's call, 2026-10-22), not a pixel-identical move.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-tabs) {
+  display: flex;
+  border-bottom: 1px solid var(--content-border);
+}
+
+:where(.ui-tab) {
+  margin-bottom: -1px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--content-text-muted);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+:where(.ui-tab:hover) {
+  color: var(--color-text-primary);
+}
+
+:where(.ui-tab[aria-selected='true'], .ui-tab[aria-current='page'], .ui-tab--active) {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--league-accent);
+}
+
+:where(.ui-tab:focus-visible) {
+  outline: 2px solid var(--league-accent);
+  outline-offset: -2px;
+}

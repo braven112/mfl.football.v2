@@ -136,5 +136,27 @@
     "src/components/theleague/trade-builder/PendingTradesPanel.tsx::ptp-panel": "Not a modal panel: a side drawer; its scrim wears ui-scrim",
     "src/components/theleague/ContractDemoOverlay.astro::cdemo-glossary": "Backlog: component is not rendered by any page; migrate if it returns",
     "src/components/theleague/PlayerNewsModal.astro::player-news-modal__content": "Backlog: component is not rendered by any page; migrate if it returns"
+  },
+  "tabs": {
+    "src/components/shared/SchefterFeedCompact.astro::sfc-tabs": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/draft-room/DraftRoom.tsx::dr-mobile-tabs": "Not a tab bar: the responsive wrapper around MobileTabBar, whose bar wears ui-tabs",
+    "src/components/shared/live/LiveBoard.tsx::lv-tabs": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/live/LvStandingsModeTabs.tsx::lv-tabs": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/whats-new/WhatsNewFilters.tsx::wn-filters": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/theleague/hp-sections/HpContractIntel.astro::hp-intel__tabs": "Backlog: component is not rendered by any page; migrate if it returns",
+    "src/pages/afl-fantasy/draft/order.astro::conference-tabs": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/pages/theleague/front-office/salary-history.astro::chart-controls": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)"
+  },
+  "tab": {
+    "src/components/shared/SchefterFeedCompact.astro::sfc-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/SchefterFeedCompact.astro::sfc-empty--tab": "Not a tab: the empty-state message inside a tab panel",
+    "src/components/shared/StandingsViewSelector.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/playoffs/PlayoffsPage.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/whats-new/WhatsNewFilters.tsx::wn-filters__tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/theleague/DraftViewSelector.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/theleague/hp-sections/HpContractIntel.astro::hp-intel__tab": "Backlog: component is not rendered by any page; migrate if it returns",
+    "src/pages/afl-fantasy/draft/order.astro::conference-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/pages/theleague/front-office/salary-history.astro::chart-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/pages/theleague/playoffs.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)"
   }
 }
