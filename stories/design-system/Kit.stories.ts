@@ -2,8 +2,8 @@ import KitGallery from './KitGallery.astro';
 import { allModes } from '../../.storybook/modes';
 
 /**
- * The component kit — `ui-badge` (src/styles/badge.css) and `ui-card`
- * (src/styles/card.css). Plan and rules: docs/plans/component-kit.md,
+ * The component kit — `ui-badge` (src/styles/badge.css), `ui-card`
+ * (src/styles/card.css) and `ui-modal` / `ui-scrim` (src/styles/modal.css). Plan and rules: docs/plans/component-kit.md,
  * docs/claude/rules/theming-and-assets.md § "Component kit".
  *
  * Snapshotted across leagues: the info and accent tones read league-themed
@@ -22,5 +22,25 @@ export const Badge = {
 
 export const Card = {
   args: { part: 'card' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Modal = {
+  args: { part: 'modal' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Tabs = {
+  args: { part: 'tabs' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Table = {
+  args: { part: 'table' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Pill = {
+  args: { part: 'pill' },
   parameters: { chromatic: { modes: allModes } },
 };

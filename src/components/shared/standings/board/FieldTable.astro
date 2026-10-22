@@ -32,7 +32,7 @@ const Wrap = summary ? 'details' : 'div';
 <Wrap class:list={['stb-card', { 'stb-details': summary }]}>
   {summary && <summary>{summary}</summary>}
   <div class="stb-tbl-wrap">
-    <table class:list={['stb-table', { 'stb-table--seeded': theme === 'editorial' }]}>
+    <table class:list={['ui-table', 'stb-table', { 'stb-table--seeded': theme === 'editorial' }]}>
       <thead>
         <tr>
           <th>Seed</th>

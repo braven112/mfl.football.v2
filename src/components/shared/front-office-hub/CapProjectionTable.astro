@@ -87,7 +87,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
   </header>
 
   <div class="fo-proj__scroll">
-    <table class="fo-proj__table">
+    <table class="ui-table fo-proj__table">
     <thead>
       <tr>
         <th scope="col">Season</th>
@@ -226,13 +226,6 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
   .fo-proj__table td {
     padding: 0.35rem 0.5rem;
     border-bottom: 1px solid var(--content-border, #e5e7eb);
-  }
-
-  .fo-proj__table thead th {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--content-text-muted, #6b7280);
   }
 
   .fo-proj__table tbody th {

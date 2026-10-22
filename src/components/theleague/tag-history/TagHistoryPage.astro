@@ -110,7 +110,7 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
       <section class="th-season" data-season={season}>
         <h2 class="th-season__title">{season}</h2>
         <div class="th-table-wrap">
-          <table class="th-table">
+          <table class="ui-table th-table">
             <thead>
               <tr>
                 <th>Player</th>
@@ -320,11 +320,6 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
 
   .th-table th {
     text-align: left;
-    font-size: var(--font-size-2xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--content-text-muted);
-    background: var(--table-header-bg);
     padding: var(--spacing-xs) var(--spacing-sm);
   }
 

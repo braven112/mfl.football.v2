@@ -286,11 +286,12 @@ apply to it (the splash page's `<span class="cta">` and the CSS-customization
 page's `.cta-link` pills both inherited a border, an arrow and a hover before
 they were renamed).
 
-## Component kit — `ui-badge`, `ui-card`; a page's own look is a fork
+## Component kit — `ui-badge`, `ui-card`, `ui-modal`, `ui-tabs`, `ui-table`, `ui-pill`; a page's own look is a fork
 
-Badges and cards are kit components now, the same shape as CTAs: a global
-stylesheet of zero-specificity `:where()` rules (`src/styles/badge.css`,
-`src/styles/card.css`), imported by all four base layouts and Storybook, worn
+Badges, cards, modals, tab bars, data tables and pills are kit components now, the same shape as CTAs: a
+global stylesheet of zero-specificity `:where()` rules (`src/styles/badge.css`,
+`src/styles/card.css`, `src/styles/modal.css`, `src/styles/tabs.css`,
+`src/styles/table.css`, `src/styles/pill.css`), imported by all four base layouts and Storybook, worn
 as a class next to the component's own BEM class. Plan, owner's decisions and
 order (Badge → Card → Modal → Tabs → Table): `docs/plans/component-kit.md`.
 Gallery: Storybook › Design System › Component kit.
@@ -299,6 +300,17 @@ Gallery: Storybook › Design System › Component kit.
 |---|---|---|
 | Badge | `ui-badge` + `--caps`, `--inline`, a tone (`--neutral` `--success` `--warning` `--error` `--info` `--accent`) | inline-flex pill shape, 2xs bold type, colours via `--ui-badge-bg` / `--ui-badge-ink` |
 | Card | `ui-card` | the SURFACE only: `--card-bg`, the site style's `--style-card-border` / `--style-card-shadow`, `--radius-md` |
+| Modal | `ui-modal` on the panel or `<dialog>`, `ui-scrim` on a hand-built overlay | ground, ink, `--radius-lg`, `--modal-shadow` (dark adds the card ring), and `--modal-scrim` with the mandated 2px blur (also on `::backdrop`) — never layout, the phone sheet or the animation |
+| Tabs | `ui-tabs` on the bar, `ui-tab` on each tab; selected by `aria-selected="true"`, `aria-current="page"` or `ui-tab--active` | the underline look: hairline under the bar, muted sm semibold label, 2px `--league-accent` underline on the selected tab, focus ring — never padding, gap or scrolling |
+| Table | `ui-table` on the `<table>` | tabular numerals and the HEADER ROW only: muted 2xs semibold uppercase label, `--table-border` rule under it — never cell padding, widths, zebra rows or a sticky header's ground |
+| Pill | `ui-pills` on the row, `ui-pill` on each pill; selected by `aria-pressed` / `aria-selected` / `aria-current="page"` / `ui-pill--active` | the Rosters / Free Agents sort-pill look (owner's pick for every pill): rounded, edged, 44px, sm semibold; the selected one TINTED with `--ui-pill-tone` (12% wash + border) and `--ui-pill-ink` (`--pill-on-ink`, lifted in dark). The row is ONE swiping line on a phone, wrapping from 768px |
+
+**Pill or tab (owner's rule, 2026-10-22).** A PILL filters or sorts: every tap
+leaves the same UI below and changes only its content (What's New categories,
+a chart's series, AL vs NL, the phone sort pills, Live's standings modes). A
+TAB switches to an unrelated view (Summary / Salary / Game log, Live's Scores /
+Standings). Pick by that, never by which looks nicer in the spot. The
+Standings / Playoffs / Draft icon tiles are their own component, neither.
 
 **Two owner's rules (Oct 2026), both load-bearing:**
 
@@ -307,7 +319,10 @@ Gallery: Storybook › Design System › Component kit.
   `tests/fixtures/component-kit-forks.json` with the reason. A fork can be a
   whole league's or one page's. It is theirs to change, and it gives up kit
   fixes — the registry is how anyone finds who to tell.
-- **Moving a page onto the kit is pixel-identical.** A migrated component's
+- **Moving a page onto the Badge or Card kit is pixel-identical** (Modal,
+  Tabs and Table were unified to one look instead, approved from before/after
+  screenshots, so a modal's own class carries NO surface: no background,
+  corner, shadow, border or scrim tint). A migrated component's
   own rule keeps exactly what differs from the kit (it opens with a `Kit:`
   comment saying so), including explicit resets such as `font-weight:
   inherit` where the kit would otherwise have changed it. Do not "tidy" those
@@ -321,9 +336,19 @@ a badge; an `<img>` named `…__badge` is a crest. The guard ignores both.
 
 Guard: `tests/component-kit.test.ts` fails on a label element whose class ends
 in `badge` / `pill` without `ui-badge`, and an element whose class ends in
-`card` without `ui-card`, unless the pair is a registered fork; on a stale
+`card` without `ui-card`, and a `<dialog>` or `role="dialog"` /
+`aria-modal` element without `ui-modal` (or `ui-scrim`, when the role sits on
+the overlay), a tab bar (`…tabs` / `…tab-bar`, or `role="tablist"`) without
+`ui-tabs`, a tab (`…tab`, or `role="tab"`) without `ui-tab`, and any classed
+`<table>` without `ui-table`, unless the pair is a registered fork; on a stale
 fork entry; on a layout that stops importing a kit stylesheet; and on a kit
-rule that gains specificity. Like the CTA guard it cannot see a class name
+rule that gains specificity. Heat maps, week grids, the draft board and the
+Constitution's ruled tables are registered table forks; the Standings /
+Playoffs / Draft icon-tile view pickers are their own component (owner's call),
+neither tab nor pill; and an `<a>` tab or pill gets its colour from the one
+`.ui-tab:is(a)` / `.ui-pill:is(a)` exception, because the layouts' global `a`
+rule out-ranks `:where()`. The table forks: their header row is
+part of the grid, not a data-table header. Like the CTA guard it cannot see a class name
 assembled at runtime, or one set through `el.className =` in a script.
 
 ## Nothing body-only in a layout's `<head>` — it unstyles every page

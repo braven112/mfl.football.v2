@@ -173,17 +173,17 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       </div>
 
       <!-- Conference Tabs -->
-      <div class="conference-tabs">
+      <div class="ui-pills conference-tabs">
         <a
           href="?conference=AL"
-          class="conference-tab"
+          class="ui-pill conference-tab"
           data-conference="AL"
         >
           American League
         </a>
         <a
           href="?conference=NL"
-          class="conference-tab"
+          class="ui-pill conference-tab"
           data-conference="NL"
         >
           National League
@@ -328,37 +328,6 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     font-size: 1rem;
   }
 
-  .conference-tabs {
-    display: flex;
-    gap: 0.5rem;
-    background: var(--table-header-bg, #f8fafc);
-    padding: 0.5rem;
-    border-radius: 0.75rem;
-  }
-
-  .conference-tab {
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    text-decoration: none;
-    color: var(--content-text-muted, #64748b);
-    background: transparent;
-    transition: all var(--transition-base);
-    white-space: nowrap;
-  }
-
-  .conference-tab:hover {
-    background: var(--color-gray-100, #e2e8f0);
-    color: var(--color-gray-700, #334155);
-  }
-
-  .conference-tab.active {
-    background: var(--league-accent, #c41e3a);
-    color: var(--on-league-accent, #fff);
-    box-shadow: 0 2px 4px rgba(196, 30, 58, 0.2);
-  }
-
   .draft-predictor-content {
     min-height: 400px;
   }
@@ -436,17 +405,6 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       grid-template-columns: 1fr;
     }
 
-    .conference-tabs {
-      width: 100%;
-    }
-
-    .conference-tab {
-      flex: 1;
-      text-align: center;
-      padding: 0.75rem 1rem;
-      font-size: var(--font-size-sm);
-    }
-
     .draft-predictor-info {
       grid-template-columns: 1fr;
     }
@@ -469,11 +427,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       // Update tabs
       tabs.forEach(tab => {
         const tabConference = tab.getAttribute('data-conference');
-        if (tabConference === conference) {
-          tab.classList.add('active');
-        } else {
-          tab.classList.remove('active');
-        }
+        tab.classList.toggle('ui-pill--active', tabConference === conference);
       });
 
       // Update conference orders

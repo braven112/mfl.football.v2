@@ -42,11 +42,18 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card';
+  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table' | 'pill';
   stylesheet: string;
   cls: string;
+  /** Kit classes besides `cls` the stylesheet may define (the modal's scrim, the tab bar's tab). */
+  extra?: string[];
   /** A class name that IS this component (block, or block__element). */
   pattern: RegExp;
+  /**
+   * Found by what the element IS as well as what it is named: a <dialog>, a
+   * role="tab". Its own first class names it in the fork registry.
+   */
+  isInstance?: (name: string, tag: string) => boolean;
   /**
    * Elements that can be this component. A <button> or <a> named `…-pill` is
    * a control (a filter chip), an <img> named `…__badge` is a crest, a table
@@ -70,7 +77,55 @@ const KITS: Kit[] = [
     pattern: /^(?:[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-))?card$/,
     tags: new Set(['div', 'article', 'section', 'aside', 'li', 'a', 'figure', 'details']),
   },
+  {
+    name: 'modal',
+    stylesheet: 'src/styles/modal.css',
+    cls: 'ui-modal',
+    extra: ['ui-scrim'],
+    pattern: /(?!)/,
+    tags: new Set(['dialog', 'div', 'section', 'aside', 'form']),
+    isInstance: (name, tag) =>
+      name === 'dialog' || /\brole=["'{]+(?:alert)?dialog\b/.test(tag) || /\baria-modal=["'{]+true\b/.test(tag),
+  },
+  {
+    name: 'tabs',
+    stylesheet: 'src/styles/tabs.css',
+    cls: 'ui-tabs',
+    extra: ['ui-tab'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:tabs|tab-bar|tabbar)$/,
+    tags: new Set(['div', 'nav', 'ul', 'section', 'header']),
+    isInstance: (_name, tag) => /\brole=["'{]+tablist\b/.test(tag),
+  },
+  {
+    name: 'tab',
+    stylesheet: 'src/styles/tabs.css',
+    cls: 'ui-tab',
+    extra: ['ui-tabs'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:tab|tab-btn)$/,
+    tags: new Set(['button', 'a', 'li', 'div', 'span']),
+    isInstance: (_name, tag) => /\brole=["'{]+tab["'}\s]/.test(tag),
+  },
+  {
+    name: 'table',
+    stylesheet: 'src/styles/table.css',
+    cls: 'ui-table',
+    pattern: /(?!)/,
+    tags: new Set(['table']),
+    isInstance: () => true,
+  },
+  {
+    name: 'pill',
+    stylesheet: 'src/styles/pill.css',
+    cls: 'ui-pill',
+    extra: ['ui-pills'],
+    // A pill filters or sorts one view (a tab switches between unrelated ones).
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:chip|pill)$/,
+    tags: new Set(['button', 'a']),
+  },
 ];
+
+/** An element wearing ANY kit's class is that kit's instance (a segmented control named `…-tabs`). */
+const KIT_CLASSES = new Set(KITS.flatMap((k) => [k.cls, ...(k.extra ?? [])]));
 
 /** Every opening tag in a file, brace/quote aware (same walk as cta-pattern). */
 function openingTags(src: string): { name: string; tag: string; line: number }[] {
@@ -145,9 +200,18 @@ describe.each(KITS)('component kit: $name', (kit) => {
 
   it('every rule sits inside :where(), so a component class always wins', () => {
     const css = read(kit.stylesheet).replace(/\/\*[\s\S]*?\*\//g, '');
-    const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim());
+    const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim()).filter((sel) => !sel.startsWith('@'));
     expect(selectors.length).toBeGreaterThan(0);
-    for (const s of selectors) expect(s, s).toMatch(new RegExp(`^:where\\(\\.${kit.cls}(--[a-z]+)?\\)$`));
+    // Everything inside :where() — a state such as :hover or [aria-selected]
+    // outside it would add specificity back. Only a pseudo-ELEMENT may follow.
+    const names = new Set([kit.cls, ...(kit.extra ?? [])]);
+    for (const s of selectors) {
+      // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
+      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|pill)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
+      const m = s.match(/^:where\(([^{}]+)\)(::backdrop|::-webkit-scrollbar)?$/);
+      expect(m, s).not.toBeNull();
+      for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);
+    }
   });
 
   it('colours come from tokens, never literals', () => {
@@ -162,9 +226,13 @@ describe.each(KITS)('component kit: $name', (kit) => {
     for (const { name, tag, line } of tags) {
       if (!kit.tags.has(name)) continue;
       const tokens = classTokens(tag);
-      const hit = tokens.find((t) => kit.pattern.test(t));
+      // A classless match is prose (`<dialog>` in a comment), never markup.
+      const hit =
+        tokens.find((t) => kit.pattern.test(t)) ??
+        (kit.isInstance?.(name, tag) ? tokens.find((t) => !t.startsWith('ui-')) : undefined);
       if (!hit) continue;
-      if (tokens.includes(kit.cls)) continue;
+      // The scrim may carry the dialog role when the panel inside wears the kit.
+      if (tokens.some((t) => KIT_CLASSES.has(t))) continue;
       const key = `${rel}::${hit}`;
       if (registry[key]) {
         seen.add(key);

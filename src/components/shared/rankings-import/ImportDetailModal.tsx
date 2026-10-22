@@ -27,7 +27,7 @@ export default function ImportDetailModal({ importData, onClose }: Props) {
   const unmatched = importData.rankings.filter((r) => !r.matched);
 
   return (
-    <dialog ref={dialogRef} className="ri-modal" onClick={(e) => {
+    <dialog ref={dialogRef} className="ui-modal ri-modal" onClick={(e) => {
       if (e.target === dialogRef.current) onClose();
     }}>
       <div className="ri-modal__content">
@@ -48,7 +48,7 @@ export default function ImportDetailModal({ importData, onClose }: Props) {
           <div className="ri-modal__section">
             <h4>Unmatched Players ({unmatched.length})</h4>
             <div className="ri-modal__table-wrap">
-              <table className="ri-modal__table">
+              <table className="ui-table ri-modal__table">
                 <thead>
                   <tr>
                     <th>Rank</th>
@@ -75,7 +75,7 @@ export default function ImportDetailModal({ importData, onClose }: Props) {
         <div className="ri-modal__section">
           <h4>Matched Players ({matched.length})</h4>
           <div className="ri-modal__table-wrap">
-            <table className="ri-modal__table">
+            <table className="ui-table ri-modal__table">
               <thead>
                 <tr>
                   <th>Rank</th>

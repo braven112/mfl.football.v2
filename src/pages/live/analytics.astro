@@ -267,7 +267,7 @@ const sectionChips = [
 					</div>
 					<details class="ins__table-toggle">
 						<summary>Show as table</summary>
-						<table class="ins__table">
+						<table class="ui-table ins__table">
 							<thead><tr><th>Day</th><th class="num">Views</th><th class="num">Signed out</th><th class="num">Owners</th><th class="num">Sign-ins</th></tr></thead>
 							<tbody>
 								{[...report.days].reverse().map((d) => (
@@ -285,7 +285,7 @@ const sectionChips = [
 						tap a row for that owner's top pages.
 					</p>
 					<div class="ins__scroll">
-						<table class="ins__table ins__table--people">
+						<table class="ui-table ins__table ins__table--people">
 							<thead>
 								<tr>
 									<th>Owner</th>
@@ -343,7 +343,7 @@ const sectionChips = [
 						<p class="ins__muted">No pages recorded yet.</p>
 					) : (
 						<div class="ins__scroll">
-							<table class="ins__table">
+							<table class="ui-table ins__table">
 								<thead><tr><th>Page</th><th>Section</th><th class="num">Views</th><th class="num">Owners</th></tr></thead>
 								<tbody>
 									{topPages.map((p) => (
@@ -452,7 +452,7 @@ const sectionChips = [
 						Owners counts distinct signed-in owners. Started Oct 2026; links typed or bookmarked are not counted.
 					</p>
 					<div class="ins__scroll">
-					<table class="ins__table">
+					<table class="ui-table ins__table">
 						<thead><tr><th>Clicked from</th><th class="num">Clicks</th><th class="num">Owners</th><th>Top destinations</th></tr></thead>
 						<tbody>
 							{report.links.map((l) => (
@@ -476,7 +476,7 @@ const sectionChips = [
 					<h2 class="ins__h2" id="ins-actions">Actions</h2>
 					<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>
 					<div class="ins__scroll">
-					<table class="ins__table">
+					<table class="ui-table ins__table">
 						<thead><tr><th>Action</th><th class="num">Times</th><th class="num">Owners</th></tr></thead>
 						<tbody>
 							{report.actions.map((a) => (
@@ -500,7 +500,7 @@ const sectionChips = [
 						<p class="ins__note">Not available right now.</p>
 					) : (
 						<div class="ins__scroll">
-						<table class="ins__table">
+						<table class="ui-table ins__table">
 							<thead><tr><th>Product</th><th class="num">People</th><th class="num">Clicks</th><th class="num">Emails</th><th>Emails left</th></tr></thead>
 							<tbody>
 								{interest.map((r) => (
@@ -696,12 +696,6 @@ const sectionChips = [
 		padding: 0.45rem 0.5rem;
 		border-bottom: 1px solid var(--color-border-subtle);
 		vertical-align: top;
-	}
-	.ins__table th {
-		font-size: 0.72rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--color-text-secondary);
 	}
 	.num {
 		text-align: right !important;

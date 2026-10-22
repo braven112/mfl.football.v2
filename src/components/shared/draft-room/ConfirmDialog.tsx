@@ -47,14 +47,14 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="dr-confirm-overlay"
+      className="ui-scrim dr-confirm-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dr-confirm-title"
       onClick={onCancel}
     >
       <div
-        className="dr-confirm-dialog"
+        className="ui-modal dr-confirm-dialog"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="dr-confirm-title" className="dr-confirm-dialog__title">{title}</h2>

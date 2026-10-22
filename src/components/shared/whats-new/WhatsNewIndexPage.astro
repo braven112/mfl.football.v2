@@ -175,71 +175,35 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   /* ── Filter tabs ── */
-  .wn-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs, 0.25rem);
+  /* Kit: ui-pills / ui-pill own the row and the pill. A selected category
+     pill is tinted in its category colour (border + wash) with neutral ink,
+     so a light category colour never carries the text. */
+  .wn-filters__tab--active:not(.wn-filters__tab--all) {
+    --ui-pill-ink: var(--color-text-primary);
   }
 
-  .wn-filters__tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-    font-weight: var(--font-weight-semibold, 600);
-    color: var(--muted-text-color, #6b7280);
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
-    border-radius: 9999px;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-  }
-
-  .wn-filters__tab:hover:not(.wn-filters__tab--active) {
-    background: var(--color-gray-200, #e5e7eb);
-    border-color: var(--color-gray-300, #d1d5db);
-    color: var(--color-gray-700, #374151);
-  }
-
-  .wn-filters__tab--active {
-    /* Covers the --all tab too: its fill is --color-primary, which is itself a
-       bright blue in dark mode, so the dark ink is the readable pairing there
-       as well (white on #3b82f6 only reaches 3.7:1). */
-    color: var(--cat-badge-ink, #fff);
-    border-color: transparent;
-  }
-
-  .wn-filters__tab--active:hover {
-    filter: brightness(0.85);
-  }
-
-  .wn-filters__tab--active.wn-filters__tab--all {
-    background: var(--color-primary, #1c497c);
-  }
-
-  .wn-filters__tab--active.wn-filters__tab--new-page {
-    background: var(--cat-new-page);
+    .wn-filters__tab--active.wn-filters__tab--new-page {
+    --ui-pill-tone: var(--cat-new-page);
   }
 
   .wn-filters__tab--active.wn-filters__tab--new-feature {
-    background: var(--cat-new-feature);
+    --ui-pill-tone: var(--cat-new-feature);
   }
 
   .wn-filters__tab--active.wn-filters__tab--enhancement {
-    background: var(--cat-enhancement);
+    --ui-pill-tone: var(--cat-enhancement);
   }
 
   .wn-filters__tab--active.wn-filters__tab--bug-fix {
-    background: var(--cat-bug-fix);
+    --ui-pill-tone: var(--cat-bug-fix);
   }
 
   .wn-filters__tab--active.wn-filters__tab--league-event {
-    background: var(--cat-league-event);
+    --ui-pill-tone: var(--cat-league-event);
   }
 
   .wn-filters__tab--active.wn-filters__tab--weekly {
-    background: var(--cat-weekly);
+    --ui-pill-tone: var(--cat-weekly);
   }
 
   .wn-filters__count {

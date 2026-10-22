@@ -179,7 +179,7 @@ export function renderSortChips(chips: readonly SortChip[], active: SortState): 
       const directional = on && c.key !== DEFAULT_SORT_KEY;
       const arrow = directional ? `<span class="rr-chip__dir" aria-hidden="true">${active.dir === 'desc' ? '↓' : '↑'}</span>` : '';
       const said = directional ? `<span class="rr-chip__sr">, sorted ${DIR_WORD[active.dir]}</span>` : '';
-      return `<button type="button" class="rr-chip${on ? ' rr-chip--on' : ''}" data-rr-chip="${escapeHtml(c.key)}" aria-pressed="${on ? 'true' : 'false'}">`
+      return `<button type="button" class="ui-pill rr-chip${on ? ' rr-chip--on' : ''}" data-rr-chip="${escapeHtml(c.key)}" aria-pressed="${on ? 'true' : 'false'}">`
         + `<span class="rr-chip__label">${escapeHtml(c.label)}</span>${arrow}${said}</button>`;
     })
     .join('');

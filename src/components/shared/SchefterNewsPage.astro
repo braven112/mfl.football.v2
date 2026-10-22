@@ -79,11 +79,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
       </div>
     )}
 
-    <nav class="sf-source-tabs" aria-label="Filter news by source">
+    <nav class="ui-pills sf-source-tabs" aria-label="Filter news by source">
       {view.tabs.map(tab => (
         <a
           href={tab.href}
-          class={`sf-source-tab${tab.active ? ' sf-source-tab--active' : ''}${tab.watching ? ' sf-source-tab--watching' : ''}`}
+          class={`ui-pill sf-source-tab${tab.active ? ' sf-source-tab--active' : ''}${tab.watching ? ' sf-source-tab--watching' : ''}`}
           {...(tab.active ? { 'aria-current': 'page' } : {})}
         >
           {tab.watching && (

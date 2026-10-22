@@ -193,7 +193,7 @@ export default function AccountingPanel({
         </div>
       )}
 
-      <nav className="acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
+      <nav className="ui-tabs acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
         {/* One horizontal row you swipe through — see .acct__tabs. Order is
             by how often a commissioner reaches for each: the ledger first,
             then the two things they come here to DO, then the once-a-year
@@ -211,7 +211,7 @@ export default function AccountingPanel({
             key={id}
             role="tab"
             aria-selected={tab === id}
-            className={`acct__tab${tab === id ? ' is-active' : ''}`}
+            className={`ui-tab acct__tab${tab === id ? ' is-active' : ''}`}
             onClick={() => setTab(id)}
             type="button"
           >
@@ -341,7 +341,7 @@ function LedgerView({
       </p>
 
       <div className="acct__tablewrap">
-        <table className="acct__table">
+        <table className="ui-table acct__table">
           <thead>
             <tr>
               <th scope="col">Franchise</th>
@@ -364,7 +364,7 @@ function LedgerView({
       <h2>Transactions</h2>
       {records && records.length > 0 ? (
         <div className="acct__tablewrap">
-          <table className="acct__table">
+          <table className="ui-table acct__table">
             <thead>
               <tr>
                 <th scope="col">Franchise</th>
@@ -616,7 +616,7 @@ function ImportCsv({
             {preview.invalidCount > 0 && ' Fix the flagged rows — nothing writes until every row is clean.'}
           </p>
           <div className="acct__tablewrap">
-            <table className="acct__table">
+            <table className="ui-table acct__table">
               <thead>
                 <tr>
                   <th scope="col">Line</th>
@@ -877,7 +877,7 @@ function PayoutTable({
     <>
       <h3 className={muted ? 'acct__h3 is-muted' : 'acct__h3'}>{title}</h3>
       <div className="acct__tablewrap">
-        <table className={`acct__table${muted ? ' is-muted' : ''}`}>
+        <table className={`ui-table acct__table${muted ? ' is-muted' : ''}`}>
           <thead>
             <tr>
               <th scope="col">Prize</th>
@@ -1301,7 +1301,7 @@ function MigrationTable({
     <>
       <h3 className={muted ? 'acct__h3 is-muted' : 'acct__h3'}>{title}</h3>
       <div className="acct__tablewrap">
-        <table className={`acct__table${muted ? ' is-muted' : ''}`}>
+        <table className={`ui-table acct__table${muted ? ' is-muted' : ''}`}>
           <thead>
             <tr>
               <th scope="col">Franchise</th>

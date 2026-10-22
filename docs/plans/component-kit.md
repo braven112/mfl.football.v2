@@ -49,6 +49,11 @@ the mechanism behind the owner's two rules below.
 2. **Migration is pixel-identical.** Moving a page onto the kit may not move
    a pixel. Where a page differs from the kit default, its own class keeps the
    difference (a prop if every league benefits, otherwise a fork).
+3. **Modal, Tabs and Table unify instead (2026-10-22).** Their instances share
+   too little for a pixel-identical kit, so the owner chose one look per
+   component — the most common existing one — and every changed page goes in
+   front of him as before/after phone screenshots, light and dark, before the
+   PR merges. Rule 2 governs Badge and Card only.
 
 A migrated badge's own rule therefore reads as a list of what differs:
 
@@ -76,8 +81,74 @@ Badge → Card → Modal → Tabs → Table, one component per PR. Migrations ar
 staged in the weekly changelog as internal polish (Fixes & polish), not as
 features.
 
-## What a fork gives up
+## Modal (shipped as the first unified kit)
+
+`src/styles/modal.css`: `ui-modal` on the panel (or the `<dialog>`, whose
+`::backdrop` is the scrim) and `ui-scrim` on a hand-built overlay. The kit
+owns ground (`--card-bg`), ink, corner (`--radius-lg`), lift
+(`--modal-shadow`: `--shadow-xl`, plus a hairline `--style-card-ring` in dark)
+and the scrim (`--modal-scrim` with the mandated 2px blur). Width, padding,
+position, the phone bottom sheet and the entrance animation stay each
+component's own; a sheet squares its lower corners with
+`var(--radius-lg) var(--radius-lg) 0 0`. What moved: corners from 8-12px and
+24px to 16px, six different scrim tints became one (with the blur that four
+of them lacked), outlines on the draft-room dialogs dropped, and the
+trade-builder dialogs gained the dark-mode scrim they never had. The panel
+lays `--card-bg` over the solid `--card-surface`, because some dark themes'
+card gradient is translucent and the page showed through a `<dialog>`.
+
+## Tabs
+
+`src/styles/tabs.css`: `ui-tabs` on the bar, `ui-tab` on each tab. The most
+common look won: a hairline under the bar and a 2px `--league-accent`
+underline on the selected tab, muted sm semibold labels in sentence case.
+Selection is read from `aria-selected="true"` (real tablists),
+`aria-current="page"` (link tabs) or `ui-tab--active` (script-toggled bars),
+so no page needs new JS. Padding, gap and horizontal scroll stay each bar's
+own. The rounded pill view-switchers (standings/playoffs/draft views, Live,
+What's New filters, conference toggles, chart controls) are registered forks
+now pills (below), except the icon-tile view pickers, which the
+owner ruled are their own component, not pills.
+
+## Table
+
+`src/styles/table.css`: `ui-table` on the `<table>`. It owns tabular numerals
+and the header row only — muted 2xs semibold uppercase labels over a
+`--table-border` rule, the most common of the ~55 styled data tables. Cell
+padding, widths, zebra rows, row hover and a sticky header's ground stay each
+table's own (a sticky `th` keeps its background, or rows scroll through it).
+Forks, by kind: heat maps and matrices (the header is part of the colour
+scale), week-by-week schedule grids, the draft board, the Constitution's ruled
+tables, design-reference specimen tables, and the rosters page (migrates with
+the rosters split).
+
+2. **Migration is pixel-identical.** Moving a page onto the kit may not move
+   a pixel. Where a page differs from the kit default, its own class keeps the
+   difference (a prop if every league benefits, otherwise a fork).
+3. **Modal, Tabs and Table unify instead (2026-10-22).** Their instances share
+   too little for a pixel-identical kit, so the owner chose one look per
+   component — the most common existing one — and every changed page goes in
+   front of him as before/after phone screenshots, light and dark, before the
+   PR merges. Rule 2 governs Badge and Card only.
+
 
 Fixes to the kit (a contrast fix in a tone, a Primetime surface change) do not
 reach a fork. The registry is how that is managed: when the kit changes, the
 registry lists who might want the change, and that league decides.
+
+## Pill (2026-10-22)
+
+`src/styles/pill.css` (`ui-pills` / `ui-pill`). The owner's rule decides pill
+vs tab: a pill filters or sorts one view (same UI, different content), a tab
+switches between unrelated views. A first cut had two kits (a segmented
+control and a filter chip); the rule folded both into one pill, and the
+owner chose the Rosters / Free Agents sort pill as its look for every use —
+tinted selected state, 44px, one swiping row on a phone. Those sort pills
+were moved onto the kit pixel-identically (roster parity check clean).
+Re-sorted by the rule: the salary-history chart, AFL draft-order conferences,
+Schefter news sources, Free Agents needs and Live's standings modes became
+pills; Live's Scores / Standings became tabs. What's New keeps its category
+colours as the pill tone with neutral ink. About thirty other `…chip` /
+`…pill` buttons (position filters, mock-draft lobby, transactions, calendar…)
+are a registered backlog for the next pill batch; reaction buttons are forks.
+

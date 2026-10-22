@@ -490,7 +490,7 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
       <article class="ops-card ops-card--wide" aria-labelledby="card-authors">
         <h3 id="card-authors" class="ops-card__title">Posts by Author</h3>
         <p class="ops-card__hint">Every byline that has ever published into the feed.</p>
-        <table class="ops-table">
+        <table class="ui-table ops-table">
           <thead><tr><th>Author</th><th class="ops-table__num">Count</th></tr></thead>
           <tbody id="ops-authors-body"><tr><td colspan="2">Loading…</td></tr></tbody>
         </table>
@@ -499,7 +499,7 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
       <article class="ops-card" aria-labelledby="card-subtypes">
         <h3 id="card-subtypes" class="ops-card__title">Transaction Subtypes</h3>
         <p class="ops-card__hint">Distribution across the feed (rumor_mill / TRADE / TRADE_PENDING / …).</p>
-        <table class="ops-table">
+        <table class="ui-table ops-table">
           <thead><tr><th>Subtype</th><th class="ops-table__num">Count</th></tr></thead>
           <tbody id="ops-subtypes-body"><tr><td colspan="2">Loading…</td></tr></tbody>
         </table>
@@ -1047,7 +1047,7 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
             </div>
           </div>
           <h5 class="ops-env__subtitle">Latest workflow runs</h5>
-          <table class="ops-table">
+          <table class="ui-table ops-table">
             <thead><tr><th>Workflow</th><th>Status</th><th>Ran</th><th></th></tr></thead>
             <tbody>${wfRows || '<tr><td colspan="4">No workflows found.</td></tr>'}</tbody>
           </table>

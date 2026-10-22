@@ -399,14 +399,14 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     </div>
 
     <!-- ─── Tab bar ───────────────────────────────────────────────── -->
-    <div class="rsp-tabs" role="tablist" aria-label="Rookie rankings sections">
+    <div class="ui-tabs rsp-tabs" role="tablist" aria-label="Rookie rankings sections">
       <button
         role="tab"
         id="tab-rankings"
         aria-selected="true"
         aria-controls="panel-rankings"
         tabindex="0"
-        class="rsp-tab"
+        class="ui-tab rsp-tab"
       >Top 50 Rankings</button>
       <button
         role="tab"
@@ -414,7 +414,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         aria-selected="false"
         aria-controls="panel-sleepers"
         tabindex="-1"
-        class="rsp-tab"
+        class="ui-tab rsp-tab"
       >Sleeper Watchlist <span class="ui-badge ui-badge--caps ui-badge--inline rsp-tab__badge">{highPrioritySleepers} HIGH</span></button>
       <button
         role="tab"
@@ -422,7 +422,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         aria-selected="false"
         aria-controls="panel-overview"
         tabindex="-1"
-        class="rsp-tab"
+        class="ui-tab rsp-tab"
       >Waldman's Take</button>
       <button
         role="tab"
@@ -430,7 +430,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         aria-selected="false"
         aria-controls="panel-compare"
         tabindex="-1"
-        class="rsp-tab"
+        class="ui-tab rsp-tab"
       >3-Year RSP <span class="ui-badge ui-badge--caps ui-badge--inline rsp-tab__badge">{totalRspOwned} Owned</span></button>
     </div>
 
@@ -487,7 +487,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         ))}
       </div>
       <div class="rsp-table-scroll" id="top50-table-scroll" hidden>
-        <table class="rsp-table" id="top50-table">
+        <table class="ui-table rsp-table" id="top50-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
@@ -635,7 +635,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         <button class="sort-btn" id="rsp-sort-fbg" data-table="rsp" data-sort="fbg">FBG Dynasty Rank</button>
       </div>
       <div class="rsp-table-scroll">
-        <table class="rsp-table compare-table" id="rsp-table">
+        <table class="ui-table rsp-table compare-table" id="rsp-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
@@ -1019,7 +1019,6 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   /* ─── Tab bar ─────────────────────────────────────────────────── */
   .rsp-tabs {
     display: flex;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 1.25rem;
@@ -1029,30 +1028,10 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   .rsp-tab {
     padding: 0.75rem 1.25rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-gray-500, #6b7280);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    white-space: nowrap;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    transition: color 0.15s;
-  }
-  .rsp-tab:hover {
-    color: var(--color-gray-700, #374151);
-  }
-  .rsp-tab[aria-selected="true"] {
-    color: var(--color-primary, #1c497c);
-    border-bottom-color: var(--color-primary, #1c497c);
-  }
-  .rsp-tab:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: -2px;
   }
   .rsp-tab__badge {
     /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
@@ -1117,13 +1096,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     position: sticky;
     top: 0;
     background: var(--color-gray-50, #f9fafb);
-    font-size: var(--font-size-3xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-gray-400, #9ca3af);
     padding: 0.625rem 0.75rem;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
     text-align: left;
     white-space: nowrap;
   }

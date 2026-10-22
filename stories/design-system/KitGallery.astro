@@ -1,7 +1,7 @@
 ---
 /**
  * Story-only gallery for the component kit (src/styles/badge.css,
- * src/styles/card.css — docs/plans/component-kit.md).
+ * src/styles/card.css, src/styles/modal.css — docs/plans/component-kit.md).
  *
  * Renders the REAL classes — nothing here restyles a kit component, so what
  * the canvas shows is what every page ships. The kit stylesheets reach the
@@ -13,7 +13,7 @@
 
 export interface Props {
   /** Which part of the kit to show. */
-  part?: 'badge' | 'card';
+  part?: 'badge' | 'card' | 'modal' | 'tabs' | 'table' | 'pill';
 }
 
 const { part = 'badge' } = Astro.props;
@@ -64,7 +64,7 @@ const TONES = [
   padding: 0.2rem 0.55rem;
 }`}</code></pre>
   </section>
-) : (
+) : part === 'card' ? (
   <section class="kitg">
     <header>
       <h2 class="kitg__title">Card</h2>
@@ -83,6 +83,73 @@ const TONES = [
       </article>
     </div>
   </section>
+) : part === 'tabs' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Tabs</h2>
+      <p class="kitg__lede">One underline tab bar. Source: <code>src/styles/tabs.css</code>. <code>ui-tabs</code> on the bar, <code>ui-tab</code> on each tab; the selected tab is the one with <code>aria-selected="true"</code>, <code>aria-current="page"</code> or <code>ui-tab--active</code>. Padding, gap and scrolling are the bar's own.</p>
+    </header>
+    <div class="ui-tabs kitg__tabs" role="tablist" aria-label="Player sheet">
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="true">Overview</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">Contract</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">Game log</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">News</button>
+    </div>
+  </section>
+) : part === 'pill' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Pill</h2>
+      <p class="kitg__lede">Filters or sorts one view: the same UI below, different content. A switch to an unrelated view is a tab. Source: <code>src/styles/pill.css</code>. <code>ui-pills</code> on the row (one swiping line on a phone), <code>ui-pill</code> on each pill; the selected one carries <code>aria-pressed="true"</code>, <code>aria-selected="true"</code>, <code>aria-current="page"</code> or <code>ui-pill--active</code> and is tinted with <code>--ui-pill-tone</code>.</p>
+    </header>
+    <div class="ui-pills" role="group" aria-label="Filter the feed">
+      <button type="button" class="ui-pill" aria-pressed="true">All</button>
+      <button type="button" class="ui-pill" aria-pressed="false">Trades</button>
+      <button type="button" class="ui-pill" aria-pressed="false">Waivers</button>
+      <button type="button" class="ui-pill" aria-pressed="false">Injuries</button>
+      <button type="button" class="ui-pill" aria-pressed="false">Rumors</button>
+    </div>
+  </section>
+) : part === 'table' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Table</h2>
+      <p class="kitg__lede">One data-table header row and tabular numerals. Source: <code>src/styles/table.css</code>. <code>ui-table</code> on the <code>&lt;table&gt;</code>. Cell padding, widths, zebra rows and a sticky header's ground are the table's own; heat maps and week grids are forks.</p>
+    </header>
+    <table class="ui-table kitg__table">
+      <thead><tr><th>Team</th><th>W-L</th><th>PF</th><th>PA</th></tr></thead>
+      <tbody>
+        <tr><td>Pacific Pigskins</td><td>6-2</td><td>1,021.4</td><td>902.8</td></tr>
+        <tr><td>Smokane FC</td><td>5-3</td><td>987.0</td><td>951.6</td></tr>
+        <tr><td>Da Dangsters</td><td>2-6</td><td>842.2</td><td>1,004.9</td></tr>
+      </tbody>
+    </table>
+  </section>
+) : (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Modal</h2>
+      <p class="kitg__lede">One dialog surface: ground, ink, corner, lift and the frosted scrim behind it. Source: <code>src/styles/modal.css</code>. <code>ui-modal</code> goes on the panel (or the <code>&lt;dialog&gt;</code>, whose backdrop is the scrim); <code>ui-scrim</code> on a hand-built overlay. Width, padding, the phone sheet and the animation are the dialog's own.</p>
+    </header>
+    <div class="kitg__stages">
+      <div class="kitg__stage">
+        <div class="kitg__behind"><p>Pacific Pigskins</p><p>Smokane FC</p><p>Da Dangsters</p></div>
+        <div class="ui-scrim kitg__scrim"></div>
+        <div class="ui-modal kitg__panel">
+          <p class="kitg__card-title">Confirm your MFL login</p>
+          <p class="kitg__card-body">A centered dialog: the kit panel, unmodified.</p>
+        </div>
+      </div>
+      <div class="kitg__stage kitg__stage--sheet">
+        <div class="kitg__behind"><p>Pacific Pigskins</p><p>Smokane FC</p><p>Da Dangsters</p></div>
+        <div class="ui-scrim kitg__scrim"></div>
+        <div class="ui-modal kitg__panel kitg__panel--sheet">
+          <p class="kitg__card-title">Cap by year</p>
+          <p class="kitg__card-body">A phone bottom sheet squares its own lower corners.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 )}
 
 <style>
@@ -95,6 +162,25 @@ const TONES = [
   }
   .kitg__title {
     margin: 0;
+  }
+  .kitg__tabs {
+    gap: 0.25rem;
+  }
+  .kitg__tab {
+    padding: 0.6rem 0.75rem;
+  }
+  .kitg__table {
+    width: 100%;
+    max-width: 32rem;
+    border-collapse: collapse;
+  }
+  .kitg__table th,
+  .kitg__table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+  }
+  .kitg__table td {
+    border-bottom: 1px solid var(--content-border);
   }
   .kitg__lede {
     margin: 0.25rem 0 0;
@@ -186,6 +272,47 @@ const TONES = [
     margin: 0;
     font-size: var(--font-size-sm);
     color: var(--content-text-muted);
+  }
+
+  .kitg__stages {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+  }
+  .kitg__stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 16rem;
+    padding: 1rem;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--page-bg);
+  }
+  .kitg__stage--sheet {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .kitg__behind {
+    position: absolute;
+    inset: 0;
+    padding: 1rem;
+    font-weight: var(--font-weight-bold);
+  }
+  .kitg__scrim {
+    position: absolute;
+    inset: 0;
+  }
+  .kitg__panel {
+    position: relative;
+    width: 100%;
+    max-width: 18rem;
+    padding: 1.25rem;
+  }
+  .kitg__panel--sheet {
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   @media (max-width: 760px) {

@@ -222,7 +222,7 @@ const archiveStart = league.playerArchiveStartYear ?? null;
               : "the league's player archive does not reach back to them, so they have no record to match."}
           </p>
         )}
-        <table class="dr__table">
+        <table class="ui-table dr__table">
           <caption class="dr__caption">
             {view.picks.length === view.totalPicks
               ? `All ${view.totalPicks} picks`
@@ -422,11 +422,6 @@ const archiveStart = league.playerArchiveStartYear ?? null;
   .dr__table th {
     text-align: left;
     padding: 0.5rem 0.75rem;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--dres-ink-muted);
-    border-bottom: 1px solid var(--dres-border);
     white-space: nowrap;
   }
 

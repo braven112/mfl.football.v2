@@ -52,7 +52,7 @@ export default function WhatsNewFilters({ categoryCounts, activeCategory, onChan
   };
 
   return (
-    <div className="wn-filters" role="tablist" aria-label="Filter by category">
+    <div className="ui-pills wn-filters" role="tablist" aria-label="Filter by category">
       {CATEGORY_ORDER.map((cat) => {
         const count = categoryCounts[cat] ?? 0;
         if (cat !== 'all' && count === 0) return null;
@@ -63,7 +63,7 @@ export default function WhatsNewFilters({ categoryCounts, activeCategory, onChan
             key={cat}
             role="tab"
             aria-selected={isActive}
-            className={`wn-filters__tab wn-filters__tab--${cat}${isActive ? ' wn-filters__tab--active' : ''}`}
+            className={`ui-pill wn-filters__tab wn-filters__tab--${cat}${isActive ? ' wn-filters__tab--active' : ''}`}
             onClick={() => handleClick(cat)}
           >
             {CATEGORY_LABELS[cat]}

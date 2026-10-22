@@ -153,7 +153,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
     </div>
   ) : (
     <div class="table-wrapper">
-      <table class="eligibility-table">
+      <table class="ui-table eligibility-table">
         <thead>
           <tr>
             <th scope="col">Player</th>
@@ -368,7 +368,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
       // Build table HTML
       let tableHtml = `
         <div class="table-wrapper">
-          <table class="eligibility-table">
+          <table class="ui-table eligibility-table">
             <thead>
               <tr>
                 <th scope="col">Player</th>
@@ -485,8 +485,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   .eligibility-table th {
     padding: 0.75rem;
     text-align: left;
-    font-weight: 600;
-    color: var(--table-header-text, #333);
   }
 
   .eligibility-table th.align-right {

@@ -65,8 +65,8 @@ const { deadlineLabel, username } = Astro.props;
 </section>
 
 <!-- Step-up auth: inline MFL re-login (opened when a save returns requiresReauth) -->
-<div class="cdp-reauth-overlay" id="cdp-reauth-overlay" hidden>
-  <div class="cdp-reauth-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-reauth-title">
+<div class="ui-scrim cdp-reauth-overlay" id="cdp-reauth-overlay" hidden>
+  <div class="ui-modal cdp-reauth-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-reauth-title">
     <h2 class="cdp-modal-title" id="cdp-reauth-title">Confirm your MFL login</h2>
     <p class="cdp-reauth-copy">
       Saving your cut list authorizes the site to execute these cuts as you at
@@ -99,8 +99,8 @@ const { deadlineLabel, username } = Astro.props;
 </div>
 
 <!-- "Cut marked players now" confirmation (ported KeeperPlanner finalize pattern) -->
-<div class="cdp-cutnow-overlay" id="cdp-cutnow-overlay" hidden>
-  <div class="cdp-cutnow-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-cutnow-title">
+<div class="ui-scrim cdp-cutnow-overlay" id="cdp-cutnow-overlay" hidden>
+  <div class="ui-modal cdp-cutnow-modal" role="dialog" aria-modal="true" aria-labelledby="cdp-cutnow-title">
     <h2 class="cdp-modal-title" id="cdp-cutnow-title">Cut marked players now</h2>
     <p class="cdp-cutnow-copy" id="cdp-cutnow-copy"></p>
     <ol class="cdp-slate cdp-slate--modal" id="cdp-cutnow-list" aria-label="Players to cut"></ol>
@@ -605,9 +605,6 @@ const { deadlineLabel, username } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--color-gray-900, #0f172a) 45%, transparent);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
     padding: 1rem;
   }
   .cdp-reauth-overlay[hidden],
@@ -617,11 +614,8 @@ const { deadlineLabel, username } = Astro.props;
 
   .cdp-reauth-modal,
   .cdp-cutnow-modal {
-    background: var(--content-bg, #fff);
-    border-radius: var(--radius-lg, 12px);
     padding: 1.25rem;
     width: 100%;
-    box-shadow: 0 20px 50px color-mix(in srgb, var(--color-gray-900, #0f172a) 25%, transparent);
     max-height: 85vh;
     overflow-y: auto;
   }
@@ -768,7 +762,7 @@ const { deadlineLabel, username } = Astro.props;
     .cdp-reauth-modal,
     .cdp-cutnow-modal {
       max-width: none;
-      border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
   }
 
@@ -776,17 +770,6 @@ const { deadlineLabel, username } = Astro.props;
      Surfaces/text above ride the theme-flipping tokens (--content-bg,
      inverted gray scale); these are the spots where a token flips the
      wrong way or a literal was picked for light-surface contrast. */
-
-  /* --color-gray-900 flips to near-white in dark, turning the modal
-     scrim/shadow into a light haze — scrims stay dark in both themes. */
-  html.dark .cdp-reauth-overlay,
-  html.dark .cdp-cutnow-overlay {
-    background: color-mix(in srgb, #000 60%, transparent);
-  }
-  html.dark .cdp-reauth-modal,
-  html.dark .cdp-cutnow-modal {
-    box-shadow: 0 20px 50px color-mix(in srgb, #000 45%, transparent);
-  }
 
   /* Savings green: #1f6b34 was chosen for 4.5:1 on white/amber-tinted
      light rows, but it's ~2.6:1 on the dark card — brighten to the dark

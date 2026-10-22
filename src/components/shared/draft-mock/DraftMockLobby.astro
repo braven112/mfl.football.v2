@@ -344,12 +344,12 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   function confirmDialog({ title, message, confirmLabel, cancelLabel, destructive }) {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'mock-lobby__confirm-overlay';
+      overlay.className = 'ui-scrim mock-lobby__confirm-overlay';
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-modal', 'true');
 
       const dialog = document.createElement('div');
-      dialog.className = 'mock-lobby__confirm-dialog';
+      dialog.className = 'ui-modal mock-lobby__confirm-dialog';
 
       const h = document.createElement('h2');
       h.className = 'mock-lobby__confirm-title';
@@ -1425,9 +1425,6 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   .mock-lobby__confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1436,10 +1433,6 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     animation: mock-lobby-confirm-fade 0.12s ease-out;
   }
   .mock-lobby__confirm-dialog {
-    background: var(--card-bg, #fff);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: 0.75rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
     padding: 1.25rem 1.375rem 1.125rem;
     width: min(26rem, calc(100vw - 2rem));
     animation: mock-lobby-confirm-slide 0.16s cubic-bezier(0.4, 0, 0.2, 1);

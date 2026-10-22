@@ -175,14 +175,14 @@ export default function LvStatSheet({
 
   return createPortal(
     <div
-      className="lv-sheet"
+      className="ui-scrim lv-sheet"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >
       <div
-        className="lv-sheet__panel"
+        className="ui-modal lv-sheet__panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -211,7 +211,7 @@ export default function LvStatSheet({
           {empty ? (
             <p className="lv-sheet__empty">{empty}</p>
           ) : (
-            <table className="lv-sheet__table">
+            <table className="ui-table lv-sheet__table">
               <thead>
                 <tr>
                   <th scope="col">Stat</th>

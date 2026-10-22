@@ -509,7 +509,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     <!-- Table -->
     <div class="pfa-table-wrapper">
-      <table class="pfa-table" id="pfa-table">
+      <table class="ui-table pfa-table" id="pfa-table">
         <thead>
           <tr>
             <th class="sortable col-rank" data-sort="rank">
@@ -1310,15 +1310,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     top: 0;
     z-index: 2;
     background: var(--color-gray-50, #f9fafb);
-    font-size: var(--font-size-3xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-gray-400, #9ca3af);
     padding: 0.5rem 0.5rem;
     text-align: left;
     white-space: nowrap;
-    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
     cursor: pointer;
     user-select: none;
   }

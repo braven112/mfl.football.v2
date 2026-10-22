@@ -192,12 +192,12 @@ export default function TradeConfirmationModal({
 
   return (
     <div
-      className="tcm-overlay"
+      className="ui-scrim tcm-overlay"
       ref={overlayRef}
       onClick={isSubmitting ? undefined : onClose}
     >
       <div
-        className="tcm-content"
+        className="ui-modal tcm-content"
         ref={contentRef}
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -349,8 +349,6 @@ export default function TradeConfirmationModal({
           position: fixed;
           inset: 0;
           z-index: 1001;
-          background: rgba(15, 23, 42, 0.45);
-          backdrop-filter: blur(2px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -361,9 +359,6 @@ export default function TradeConfirmationModal({
           max-width: 480px;
           width: 100%;
           max-height: 88vh;
-          border-radius: var(--radius-lg, 1rem);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          background: var(--card-bg, #fff);
           display: flex;
           flex-direction: column;
           animation: tcm-enter 0.22s ease-out;
@@ -677,7 +672,7 @@ export default function TradeConfirmationModal({
             padding: 0;
           }
           .tcm-content {
-            border-radius: 1rem 1rem 0 0;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
             max-height: 92vh;
             animation: tcm-slide-up 0.26s ease-out;
           }

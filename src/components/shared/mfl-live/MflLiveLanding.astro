@@ -121,7 +121,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		</div>
 		<div class="ui-card mll-card">
 			<div class="mll-card__head"><span class="mll-card__title">Week 6 · Your board</span><span class="mll-dot">Example</span></div>
-			<table class="mll-table">
+			<table class="ui-table mll-table">
 				<thead><tr><th>League</th><th>Matchup</th><th class="num">Score</th></tr></thead>
 				<tbody>
 					{examples.map((ex) => (
@@ -164,7 +164,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 				<span class="mll-card__title">Example league</span>
 				<span class="mll-seg" aria-hidden="true"><span class="on">Live</span><span>Projected</span><span>Final</span></span>
 			</div>
-			<table class="mll-table">
+			<table class="ui-table mll-table">
 				<thead><tr><th></th><th>Team</th><th class="num">W-L</th><th class="num">PF</th></tr></thead>
 				<tbody>
 					<tr><td class="rk">1</td><td>Gridiron Geeks</td><td class="num">5-1</td><td class="num">712.4</td></tr>
@@ -430,11 +430,6 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 	.mll-table th {
 		text-align: left;
 		padding: 0.6rem 1.1rem 0.35rem;
-		font-size: var(--font-size-2xs);
-		font-weight: 600;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--color-text-secondary);
 	}
 	.mll-table td { padding: 0.55rem 1.1rem; border-top: 1px solid var(--content-border); }
 	.mll-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

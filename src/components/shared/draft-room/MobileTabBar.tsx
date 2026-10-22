@@ -18,7 +18,7 @@ const TABS: Array<{ id: DraftTabId; label: string }> = [
 
 export function MobileTabBar({ activeTab, onTabChange, chatUnread = 0, queueCount = 0 }: MobileTabBarProps) {
   return (
-    <div role="tablist" aria-label="Draft room views" className="dr-tabbar">
+    <div role="tablist" aria-label="Draft room views" className="ui-tabs dr-tabbar">
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id;
         const badgeCount = tab.id === 'chat' ? chatUnread : tab.id === 'queue' ? queueCount : 0;
@@ -33,7 +33,7 @@ export function MobileTabBar({ activeTab, onTabChange, chatUnread = 0, queueCoun
             aria-selected={isActive}
             aria-controls={`dr-panel-${tab.id}`}
             onClick={() => onTabChange(tab.id)}
-            className="dr-tab-btn"
+            className="ui-tab dr-tab-btn"
           >
             {tab.label}
             {showBadge && (

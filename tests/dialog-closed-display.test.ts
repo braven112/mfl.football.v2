@@ -33,7 +33,8 @@ function nativeDialogs(): { file: string; cls: string }[] {
     const file = `${componentDir}/${name}`;
     const src = read(file);
     for (const m of src.matchAll(/<dialog\b[^>]*\bclass="([^"]+)"/g)) {
-      const cls = m[1].split(/\s+/)[0];
+      // The component's own class, not a kit class (ui-modal) worn beside it.
+      const cls = m[1].split(/\s+/).find((c) => !c.startsWith('ui-'));
       if (cls) out.push({ file, cls });
     }
   }

@@ -293,7 +293,7 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
 
             {is(b, 'table') && (
               <div class="hc-table-wrap">
-                <table class="hc-table">
+                <table class="ui-table hc-table">
                   <thead><tr>{b.headers.map((h) => <th>{h}</th>)}</tr></thead>
                   <tbody>
                     {b.rows.map(([a, c, d]) => (

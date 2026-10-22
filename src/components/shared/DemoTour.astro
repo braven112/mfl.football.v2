@@ -48,7 +48,7 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
 {
   show && (
     <dialog
-      class="dtm"
+      class="ui-modal dtm"
       id="demo-tour-modal"
       data-home={isHome ? '1' : undefined}
       aria-labelledby="dtm-title"
@@ -160,31 +160,11 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
 <style>
   .dtm {
     padding: 0;
-    border: none;
-    background: var(--card-bg, #fff);
-    color: var(--color-text-primary);
-    border-radius: var(--radius-lg, 1rem);
-    box-shadow: var(--shadow-xl);
     width: calc(100% - 2rem);
     max-width: 560px;
     max-height: 92vh;
     overflow: hidden auto;
     animation: dtm-enter 0.22s ease-out;
-  }
-
-  .dtm::backdrop {
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(2px);
-  }
-
-  :global(html.dark) .dtm {
-    box-shadow:
-      var(--shadow-xl),
-      0 0 0 1px var(--style-card-ring, var(--content-border, #3a3a3a));
-  }
-
-  :global(html.dark) .dtm::backdrop {
-    background: rgba(0, 0, 0, 0.6);
   }
 
   .dtm:focus {
@@ -329,7 +309,7 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
       max-width: 100%;
       max-height: 92vh;
       margin: auto 0 0;
-      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       animation-name: dtm-sheet-enter;
     }
 

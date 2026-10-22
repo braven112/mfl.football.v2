@@ -89,7 +89,7 @@ const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/
       </p>
 
       <div class="pp__scroll">
-        <table class="pp__table">
+        <table class="ui-table pp__table">
           <thead>
             <tr>
               <th scope="col">Year</th>
@@ -206,13 +206,6 @@ const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/
     text-align: left;
     border-bottom: 1px solid var(--pp-border);
     white-space: nowrap;
-  }
-  .pp__table thead th {
-    background: var(--pp-surface-muted);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--pp-ink-muted);
   }
   .pp__table tbody tr:last-child th,
   .pp__table tbody tr:last-child td { border-bottom: 0; }

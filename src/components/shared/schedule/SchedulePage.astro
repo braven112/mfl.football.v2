@@ -473,9 +473,9 @@ const heroSkin =
     {(canSeeMine || seasonYears.length > 1) && (
     <div class="sch-controls">
       {canSeeMine && (
-        <nav class="sch-tabs" aria-label="Schedule views">
-          <a href={hrefFor(year, 'my')} class:list={['sch-tab', { 'is-active': view === 'my' }]} aria-current={view === 'my' ? 'page' : undefined}>My schedule</a>
-          <a href={hrefFor(year, 'league')} class:list={['sch-tab', { 'is-active': view === 'league' }]} aria-current={view === 'league' ? 'page' : undefined}>League grid</a>
+        <nav class="ui-tabs sch-tabs" aria-label="Schedule views">
+          <a href={hrefFor(year, 'my')} class:list={['ui-tab', 'sch-tab', { 'is-active': view === 'my' }]} aria-current={view === 'my' ? 'page' : undefined}>My schedule</a>
+          <a href={hrefFor(year, 'league')} class:list={['ui-tab', 'sch-tab', { 'is-active': view === 'league' }]} aria-current={view === 'league' ? 'page' : undefined}>League grid</a>
         </nav>
       )}
       {seasonYears.length > 1 && (
@@ -998,7 +998,6 @@ const heroSkin =
   .sch-tabs {
     display: flex;
     gap: 0;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
   .sch-tab {
     flex: 0 0 auto;
@@ -1008,16 +1007,6 @@ const heroSkin =
     justify-content: center;
     height: 44px;
     padding: 0 1.25rem;
-    font-size: var(--font-size-sm, 0.875rem);
-    font-weight: var(--font-weight-semibold, 600);
-    color: var(--content-text-muted, #6b7280);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-  }
-  .sch-tab.is-active {
-    color: var(--sch-accent-text);
-    border-bottom-color: var(--sch-accent);
-    font-weight: var(--font-weight-bold, 700);
   }
 
   /* ── Cards, rows ── */

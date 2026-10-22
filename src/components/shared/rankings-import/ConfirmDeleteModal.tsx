@@ -31,7 +31,7 @@ export default function ConfirmDeleteModal({ itemName, onConfirm, onCancel }: Pr
   return (
     <dialog
       ref={dialogRef}
-      className="ri-modal ri-modal--confirm"
+      className="ui-modal ri-modal ri-modal--confirm"
       onClick={(e) => {
         if (e.target === dialogRef.current) onCancel();
       }}

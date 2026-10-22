@@ -102,11 +102,11 @@ function formatCurrency(val: number | null): string {
 
     {seasons.length ? (
       <>
-        <div class="chart-controls" role="tablist" aria-label="Salary average view">
+        <div class="ui-pills chart-controls" role="tablist" aria-label="Salary average view">
           <button
             type="button"
             role="tab"
-            class="chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="true"
             data-chart="franchise"
             id="tab-franchise"
@@ -118,7 +118,7 @@ function formatCurrency(val: number | null): string {
           <button
             type="button"
             role="tab"
-            class="chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="false"
             data-chart="extension"
             id="tab-extension"
@@ -130,7 +130,7 @@ function formatCurrency(val: number | null): string {
           <button
             type="button"
             role="tab"
-            class="chart-tab"
+            class="ui-pill chart-tab"
             aria-selected="false"
             data-chart="team-option"
             id="tab-team-option"
@@ -235,44 +235,6 @@ function formatCurrency(val: number | null): string {
     color: var(--color-gray-600, #4b5563);
     max-width: 64ch;
     margin: 0;
-  }
-
-  .chart-controls {
-    display: inline-flex;
-    background: var(--color-gray-100, #f3f4f6);
-    border-radius: var(--radius-md, 0.5rem);
-    padding: 3px;
-    gap: 2px;
-  }
-
-  .chart-tab {
-    padding: 0.4375rem 1rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-gray-600, #4b5563);
-    background: transparent;
-    border: none;
-    border-radius: calc(var(--radius-md, 0.5rem) - 2px);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    white-space: nowrap;
-    line-height: 1.2;
-  }
-
-  .chart-tab:hover {
-    color: var(--color-gray-900, #111827);
-    background: color-mix(in srgb, var(--content-bg, white) 50%, transparent);
-  }
-
-  .chart-tab[aria-selected="true"] {
-    background: var(--card-bg, #ffffff);
-    color: var(--color-gray-900, #111827);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .chart-tab:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
   }
 
   .chart-card {
@@ -555,17 +517,6 @@ function formatCurrency(val: number | null): string {
       padding: 0.875rem;
     }
 
-    .chart-controls {
-      width: 100%;
-    }
-
-    .chart-tab {
-      flex: 1;
-      text-align: center;
-      padding: 0.5rem 0.5rem;
-      font-size: var(--font-size-xs);
-    }
-
     .chart-legend {
       gap: 0.125rem 0.625rem;
     }
@@ -576,7 +527,6 @@ function formatCurrency(val: number | null): string {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .chart-tab,
     :global(.chart-legend__item),
     :global(.chart-tooltip) {
       transition: none;

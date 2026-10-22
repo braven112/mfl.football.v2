@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Pill — one rounded pill for filtering or sorting a view (component kit).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like the other kit sheets.
+
+   PILL OR TAB (owner's rule, 2026-10-22). A pill FILTERS or SORTS: every tap
+   leaves the same UI below it and changes only its content (What's New
+   categories, a chart's series, AL vs NL, the phone sort pills). A TAB
+   (tabs.css) switches to an unrelated view (Summary / Salary / Game log).
+   The look is the Rosters / Free Agents sort pill, which the owner chose for
+   every pill going forward. The Standings / Playoffs / Draft icon tiles are
+   their own component, neither.
+
+     <div class="ui-pills my-filters" role="group">
+       <button class="ui-pill my-pill" aria-pressed="true">All</button>
+       <button class="ui-pill my-pill" aria-pressed="false">Trades</button>
+     </div>
+
+   The selected pill is whichever carries aria-pressed="true",
+   aria-selected="true", aria-current="page" or ui-pill--active. It is tinted,
+   not filled: a 12% wash of `--ui-pill-tone` with that tone's border and ink
+   (`--ui-pill-ink`, lifted in dark). Both default to the site primary; a pill
+   coloured by category sets them on its own modifier, never `background` /
+   `color`.
+
+   `ui-pills` on the ROW: on a phone every pill row is ONE line that swipes
+   sideways, never a stack of wrapped rows. The row owns its overflow so the
+   PAGE never scrolls sideways; the 3px padding keeps the focus ring inside
+   the scroll box, which clips (a row with its own padding sets `margin: 0`).
+   From 768px up the row wraps.
+
+   Every rule sits inside :where(), so a component's own class wins — except
+   the link-state rules at the end, which must out-rank the layouts' global
+   `a` / `a:hover` (same reason as cta.css and tabs.css).
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: var(--touch-target-min);
+  padding: 0 0.875rem;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-full);
+  color: var(--color-gray-700);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+:where(.ui-pill[aria-pressed='true'], .ui-pill[aria-selected='true'], .ui-pill[aria-current='page'], .ui-pill--active) {
+  background: color-mix(in srgb, var(--ui-pill-tone, var(--color-primary)) 12%, var(--content-bg));
+  border-color: var(--ui-pill-tone, var(--color-primary));
+  color: var(--ui-pill-ink, var(--pill-on-ink));
+}
+
+:where(.ui-pill:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+:where(.ui-pills) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  :where(.ui-pills) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    max-width: 100%;
+    padding: 3px;
+    margin: -3px;
+  }
+
+  :where(.ui-pills)::-webkit-scrollbar {
+    display: none;
+  }
+
+  :where(.ui-pills > .ui-pill) {
+    flex: 0 0 auto;
+  }
+}
+
+/* ── Link pills ────────────────────────────────────────────────────────── */
+.ui-pill:is(a) {
+  color: var(--color-gray-700);
+  text-decoration: none;
+}
+.ui-pill:is(a)[aria-current='page'],
+.ui-pill--active:is(a) {
+  color: var(--ui-pill-ink, var(--pill-on-ink));
+  text-decoration: none;
+}

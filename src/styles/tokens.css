@@ -207,6 +207,13 @@
     0 8px 8px hsl(var(--shadow-color) / 0.03),
     0 12px 16px hsl(var(--shadow-color) / 0.025);
 
+  /* Modal surface (src/styles/modal.css): the lift and the dimmed page
+     behind it. Dark mode adds a hairline ring so the panel's edge reads. */
+  --modal-shadow: var(--shadow-xl);
+  --modal-scrim: rgba(15, 23, 42, 0.45);
+  /* Pill: the selected pill's ink (tone is --color-primary). */
+  --pill-on-ink: var(--color-primary);
+
   /* Inset shadows - for sunken/pressed elements */
   --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.12);
   --shadow-inset-md:

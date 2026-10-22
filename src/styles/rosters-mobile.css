@@ -1165,16 +1165,9 @@
   max-height: 88dvh;
   margin: auto auto 0;
   padding: 0;
-  color: var(--page-text, #111827);
-  background: var(--card-surface, #ffffff);
-  border: 1px solid var(--content-border, #e2e8f0);
-  border-radius: var(--radius-lg, 0.75rem) var(--radius-lg, 0.75rem) 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   overflow: auto;
   overscroll-behavior: contain;
-}
-
-.rsim-sheet::backdrop {
-  background: rgba(15, 23, 42, 0.55);
 }
 
 .rsim-sheet__panel {
@@ -1297,12 +1290,6 @@
 
 .rsim-years th:first-child {
   text-align: left;
-}
-
-.rsim-years thead th {
-  font-size: var(--font-size-2xs);
-  font-weight: 700;
-  color: var(--content-text-muted, #64748b);
 }
 
 .rsim-years__change {

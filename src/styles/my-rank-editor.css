@@ -16,11 +16,6 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.55);
-  /* Every overlay in this codebase blurs its backdrop — see
-     docs/claude/rules/theming-and-assets.md. */
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   animation: mre-fade 160ms ease;
 }
 
@@ -45,14 +40,7 @@
   max-height: 88dvh;
   display: flex;
   flex-direction: column;
-  background: var(--content-bg, #fff);
-  /* --color-gray-900, not --content-text: the latter is not a token here, and
-     an undefined var renders its light fallback in dark mode too. */
-  color: var(--color-gray-900, #111827);
-  border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
-  border: 1px solid var(--content-border, #e2e8f0);
-  border-bottom: 0;
-  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.25);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   outline: none;
   animation: mre-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -287,9 +275,7 @@ html.dark .mre__link {
     width: min(520px, calc(100vw - 2rem));
     max-height: 80vh;
     max-height: 80dvh;
-    border-radius: var(--radius-lg, 1rem);
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    border-radius: var(--radius-lg);
   }
 
   .mre__footer { padding-bottom: 0.75rem; }

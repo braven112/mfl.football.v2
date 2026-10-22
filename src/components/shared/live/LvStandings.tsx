@@ -140,7 +140,7 @@ export default function LvStandings({
         />
       )}
       <div className="lv-standings">
-        <table className="lv-standings__table">
+        <table className="ui-table lv-standings__table">
           <caption className="lv-standings__caption">
             {caption(mode, leagueName, view.some((r) => r.includesWeek))}
           </caption>

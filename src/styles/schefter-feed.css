@@ -550,43 +550,15 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 /* ── Source Filter Tabs ── */
 .sf-source-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--sf-border);
+  /* Kit: ui-pills owns the row (one swiping line on a phone). */
   padding: 0 1rem;
-}
-
-.sf-source-tab {
-  padding: 0.625rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--sf-text-secondary);
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-}
-
-.sf-source-tab:hover {
-  color: var(--sf-text-primary);
-}
-
-.sf-source-tab--watching {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+  margin: 0;
 }
 
 .sf-source-tab__icon {
   width: 12px;
   height: 12px;
   fill: currentColor;
-}
-
-.sf-source-tab--active {
-  color: var(--sf-text-primary);
-  font-weight: 600;
-  border-bottom-color: var(--sf-accent);
 }
 
 /* ── Widget (Compact) ── */
@@ -741,11 +713,6 @@ html.dark[data-league='afl'] .sf-post__link--external {
   .sf-source-tabs {
     padding: 0 0.75rem;
   }
-
-  .sf-source-tab {
-    padding: 0.5rem 0.75rem;
-    font-size: var(--font-size-xs);
-  }
 }
 
 /* ── Focus Visible ── */
@@ -754,7 +721,6 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sf-reaction-add:focus-visible,
 .sf-reaction-picker__btn:focus-visible,
 .sf-load-more__btn:focus-visible,
-.sf-source-tab:focus-visible,
 .sf-post__link:focus-visible,
 .sf-post__image-link:focus-visible {
   outline: 2px solid var(--sf-accent);

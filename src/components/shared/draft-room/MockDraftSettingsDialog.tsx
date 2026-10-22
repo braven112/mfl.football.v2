@@ -72,14 +72,14 @@ export function MockDraftSettingsDialog({
 
   return (
     <div
-      className="dr-confirm-overlay"
+      className="ui-scrim dr-confirm-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dr-settings-title"
       onClick={onClose}
     >
       <div
-        className="dr-confirm-dialog dr-settings-dialog"
+        className="ui-modal dr-confirm-dialog dr-settings-dialog"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="dr-settings-dialog__header">

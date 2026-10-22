@@ -36,13 +36,9 @@
 
 .wpm {
   padding: 0;
-  border: none;
-  border-radius: var(--radius-md, 0.5rem);
   max-width: 24rem;
   width: calc(100% - 2rem);
   overflow: hidden;
-  background: var(--content-bg, #ffffff);
-  color: var(--color-gray-900, #111827);
   /* A 12-team list is taller than a short laptop viewport, and a <dialog>
      that overflows is simply clipped — the bottom of the order, which is
      where the owner asking this question usually sits, would be unreachable.
@@ -57,10 +53,6 @@
 .wpm[open] {
   display: flex;
   flex-direction: column;
-}
-.wpm::backdrop {
-  background: rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(2px);
 }
 
 .wpm-head {

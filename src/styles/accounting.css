@@ -55,9 +55,6 @@
   flex-wrap: nowrap;
   gap: 0.5rem;
   overflow-x: auto;
-  /* The row is the scroll container, so the underline has to sit on it or it
-     would only span the scrolled content and stop short of the viewport. */
-  border-bottom: 1px solid var(--color-border-default, #cbd5e1);
   -webkit-overflow-scrolling: touch;
   /* `proximity`, not `mandatory`: a half-swipe should be allowed to settle
      where the finger left it instead of being yanked to the next tab. */
@@ -76,31 +73,10 @@
 .acct__tab {
   min-height: 2.75rem;
   padding: 0 1rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-text-secondary, #475569);
-  cursor: pointer;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
   /* Never shrink and never wrap: a squeezed "Season payouts" breaking onto two
      lines inside a 2.75rem tab is how this row stops looking like one line. */
   flex: 0 0 auto;
-  white-space: nowrap;
   scroll-snap-align: start;
-}
-
-.acct__tab.is-active {
-  color: var(--color-text-primary, #0f172a);
-  border-bottom-color: var(--btn-primary-bg, #1c497c);
-}
-
-/* Keep the focus ring visible against the scroll container's clipping — an
-   outline drawn outside the box gets cut off by `overflow-x: auto`. */
-.acct__tab:focus-visible {
-  outline: 2px solid var(--btn-primary-bg, #1c497c);
-  outline-offset: -2px;
-  border-radius: 6px 6px 0 0;
 }
 
 /* -------------------------------------------------------------- sections */
@@ -261,13 +237,6 @@
   padding: 0.6rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
-}
-
-.acct__table th {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary, #475569);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .acct__table td {

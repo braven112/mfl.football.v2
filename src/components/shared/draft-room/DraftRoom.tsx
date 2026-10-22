@@ -748,14 +748,14 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
         </div>
 
         <div className="dr-side-panel" data-side-tab={sideTab}>
-          <div role="tablist" aria-label="Side panel tabs" className="dr-side-tab-bar">
+          <div role="tablist" aria-label="Side panel tabs" className="ui-tabs dr-side-tab-bar">
             <button
               type="button"
               role="tab"
               aria-selected={sideTab === 'players'}
               aria-controls="dr-panel-players"
               onClick={() => setSideTab('players')}
-              className="dr-side-tab-btn"
+              className="ui-tab dr-side-tab-btn"
             >
               Players
             </button>
@@ -765,7 +765,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               aria-selected={sideTab === 'queue'}
               aria-controls="dr-panel-queue"
               onClick={() => setSideTab('queue')}
-              className="dr-side-tab-btn"
+              className="ui-tab dr-side-tab-btn"
             >
               Queue{state.queue.length > 0 ? ` (${state.queue.length})` : ''}
             </button>
@@ -775,7 +775,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               aria-selected={sideTab === 'chat'}
               aria-controls="dr-panel-chat"
               onClick={() => setSideTab('chat')}
-              className="dr-side-tab-btn"
+              className="ui-tab dr-side-tab-btn"
             >
               Chat{state.chatUnread > 0 ? ` (${state.chatUnread})` : ''}
             </button>

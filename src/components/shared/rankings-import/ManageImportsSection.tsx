@@ -204,7 +204,7 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>
           {compositeActive && <CompositeInfoBar memberCount={compositeMembers.size} />}
           <div className="ri-manage__table-wrap">
-            <table className="ri-manage__table">
+            <table className="ui-table ri-manage__table">
               <thead>
                 <tr>
                   <th className="ri-manage__drag-col" aria-label="Reorder"></th>

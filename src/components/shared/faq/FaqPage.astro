@@ -285,7 +285,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
         Not a competition — just where each job is done best today.
       </p>
       <div class="faq__table-wrap">
-        <table class="faq__table">
+        <table class="ui-table faq__table">
           <thead>
             <tr>
               <th scope="col">Job</th>
@@ -534,14 +534,6 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--content-border, #e2e8f0);
-  }
-  .faq__table thead th {
-    font-size: var(--font-size-3xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--content-text-muted, #6b7280);
-    background: var(--content-bg-muted, #eeeeee);
   }
   .faq__table tbody tr:last-child th,
   .faq__table tbody tr:last-child td { border-bottom: none; }

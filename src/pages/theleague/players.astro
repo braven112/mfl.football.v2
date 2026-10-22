@@ -1162,7 +1162,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     {/* The phone's sort pills (free-agents-sort-chips.ts): every sortable
         header in the view on screen, including the ones a phone hides. */}
     <div class="rr-chips fa-sort-chips">
-      <div class="rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips></div>
+      <div class="ui-pills rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips></div>
     </div>
 
     <!-- Table -->
@@ -1192,7 +1192,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
       </div>
       )}
 
-      <table class="players-table" id="players-table" data-league={theLeagueDef.slug}>
+      <table class="ui-table players-table" id="players-table" data-league={theLeagueDef.slug}>
         <thead>
           <tr>
             <th class="sortable col-rank" data-sort="rank">
@@ -4089,14 +4089,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
     border-left: 3px solid var(--color-gray-100, #f3f4f6);
   }
   .players-table th {
+    /* Kit: ui-table owns the header look; this dense phone table keeps a 3xs label so the player column does not wrap. */
+    font-size: var(--font-size-3xs);
     padding: 0.5rem 0.375rem;
     text-align: left;
-    font-weight: 600;
     white-space: nowrap;
-    font-size: var(--font-size-3xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-gray-400, #9ca3af);
   }
   .players-table th:first-child {
     padding-left: 0.75rem;
