@@ -150,14 +150,14 @@
   "tab": {
     "src/components/shared/SchefterFeedCompact.astro::sfc-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
     "src/components/shared/SchefterFeedCompact.astro::sfc-empty--tab": "Not a tab: the empty-state message inside a tab panel",
-    "src/components/shared/StandingsViewSelector.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
-    "src/components/shared/playoffs/PlayoffsPage.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/shared/StandingsViewSelector.astro::view-tab": "An icon-tile view picker (Standings, Playoffs, Draft), its own component by the owner's call (2026-10-22): not a tab and not a pill.",
+    "src/components/shared/playoffs/PlayoffsPage.astro::view-tab": "An icon-tile view picker (Standings, Playoffs, Draft), its own component by the owner's call (2026-10-22): not a tab and not a pill.",
     "src/components/shared/whats-new/WhatsNewFilters.tsx::wn-filters__tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
-    "src/components/theleague/DraftViewSelector.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
+    "src/components/theleague/DraftViewSelector.astro::view-tab": "An icon-tile view picker (Standings, Playoffs, Draft), its own component by the owner's call (2026-10-22): not a tab and not a pill.",
     "src/components/theleague/hp-sections/HpContractIntel.astro::hp-intel__tab": "Backlog: component is not rendered by any page; migrate if it returns",
     "src/pages/afl-fantasy/draft/order.astro::conference-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
     "src/pages/theleague/front-office/salary-history.astro::chart-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
-    "src/pages/theleague/playoffs.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)"
+    "src/pages/theleague/playoffs.astro::view-tab": "An icon-tile view picker (Standings, Playoffs, Draft), its own component by the owner's call (2026-10-22): not a tab and not a pill."
   },
   "table": {
     "src/components/shared/SchedulePlanner.tsx::sched__compare": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
