@@ -1,0 +1,14 @@
+---
+/**
+ * Logo and asset specs — the shared host's onboarding page for a new league or
+ * team owner. Shared-host ONLY, like ../brand.astro: it belongs to no league,
+ * so it can be handed to an owner whose league has no site yet. A static route
+ * beats the sibling `[team].astro`, so `specs` never resolves as a club slug.
+ */
+import BrandSpecsPage from '../../components/shared/brand/BrandSpecsPage.astro';
+
+// SSR: MflAppLayout reads the viewer's theme cookie, which a baked page cannot.
+export const prerender = false;
+---
+
+<BrandSpecsPage />
