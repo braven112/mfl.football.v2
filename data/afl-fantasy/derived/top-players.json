@@ -192,11 +192,6 @@
       "espnId": "14880",
       "owners": [
         {
-          "id": "0001",
-          "name": "Smokane FC",
-          "icon": "/assets/afl/icons/smokane.png"
-        },
-        {
           "id": "0014",
           "name": "A Bruin Pegs Me",
           "icon": "/assets/afl/icons/bruin.png"
@@ -5418,7 +5413,13 @@
       "position": "DEF",
       "team": "CIN",
       "espnId": null,
-      "owners": [],
+      "owners": [
+        {
+          "id": "0001",
+          "name": "Smokane FC",
+          "icon": "/assets/afl/icons/smokane.png"
+        }
+      ],
       "weeks": {
         "1": 19,
         "2": 14,
