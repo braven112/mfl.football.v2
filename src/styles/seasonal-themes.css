@@ -214,6 +214,10 @@ html[data-season='halloween'] .lv-head > :not(.lv-haunt-scene) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+/* Before kickoff: the same card, quieter, until the week has an answer. */
+.lv-haunt__card--waiting .lv-haunt__main {
+  color: var(--content-text-muted, #bdb4a8);
+}
 .lv-haunt__label {
   font-size: var(--font-size-2xs);
   font-weight: 600;
