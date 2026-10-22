@@ -105,9 +105,14 @@ export interface Props {
 	 * than `/live`, and the menu offers no sign-in.
 	 */
 	pairedTvOwner?: string | null;
+	/**
+	 * No bar and no padding: the page owns the whole screen. For a paired TV's
+	 * board, which is the only thing a TV opens and has nowhere to go from.
+	 */
+	bare?: boolean;
 }
 
-const { title, description, pairedTvOwner = null } = Astro.props as Props;
+const { title, description, pairedTvOwner = null, bare = false } = Astro.props as Props;
 
 // 'auto' renders no class — the pre-paint ThemeScript resolves it against
 // prefers-color-scheme before first paint.
@@ -196,6 +201,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	<body>
 		<a class="mfl-skip" href="#mfl-main">Skip to content</a>
 
+		{!bare && (
 		<header class="mfl-bar">
 			<a class="mfl-bar__brand" href={pairedTvOwner && !authUser ? '/live/broadcast' : '/live'} aria-label="MFL Live — home">
 				{/* The MFL.football mark (public/assets/logos/mfl-football-mark.svg),
@@ -231,6 +237,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 				/>
 			</div>
 		</header>
+		)}
 
 		{/* Sign-out is a POST, so it cannot be a link. Same shape as
 		    NavFooter's: fetch + reload, bound on astro:page-load rather than
@@ -286,7 +293,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		{/* Visit beacon — the same one the league sites send; feeds /live/analytics. */}
 		<script src="../scripts/visit-beacon.ts"></script>
 
-		<main id="mfl-main" class="mfl-main">
+		<main id="mfl-main" class:list={['mfl-main', { 'mfl-main--bare': bare }]}>
 			<slot />
 		</main>
 		{/* Body, never <head>: it renders a custom element, which ends <head> early and
@@ -388,5 +395,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	.mfl-main {
 		padding: clamp(1rem, 4vw, 2rem) clamp(0.75rem, 3vw, 1.25rem);
 		padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	.mfl-main--bare {
+		padding: 0;
 	}
 </style>
