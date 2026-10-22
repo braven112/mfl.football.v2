@@ -983,38 +983,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
     font-weight: 600;
   }
 
-  /* ── Category Filter Pills ── */
+  /* ── Category Filter Pills: a ui-pills row of ui-pill radios (src/styles/pill.css) ── */
   .sb-filter {
-    display: flex;
-    gap: 0.375rem;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
-    flex-wrap: wrap;
-  }
-  .sb-filter__pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.625rem;
-    font-size: var(--font-size-2xs);
-    font-weight: 500;
-    font-family: inherit;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: var(--radius-full, 9999px);
-    cursor: pointer;
-    color: var(--color-gray-500, #6b7280);
-    transition: border-color var(--transition-fast), background var(--transition-fast);
-  }
-  .sb-filter__pill:hover {
-    border-color: var(--color-gray-300, #d1d5db);
-  }
-  .sb-filter__pill--active {
-    border-color: var(--color-primary, #1c497c);
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
-    color: var(--color-primary, #1c497c);
-    font-weight: 600;
   }
   .sb-filter__icon {
     width: 12px;
@@ -1032,10 +1005,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     min-width: 1rem;
     text-align: center;
   }
-  .sb-filter__pill--active .sb-filter__count {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, transparent);
-  }
-
   /* ── Website Fields in Detail View ── */
   .sb-detail__badges-row {
     display: flex;

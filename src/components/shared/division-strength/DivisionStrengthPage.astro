@@ -605,13 +605,13 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     <nav class="season-rail" aria-label="Report scope">
       <div class="season-rail__track">
         <a
-          class="season-chip season-chip--alltime"
+          class="ui-pill season-chip season-chip--alltime"
           href={r(BASE)}
           aria-current={!isSeason ? 'page' : undefined}
         >All-time</a>
         {railYears.map((year) => (
           <a
-            class:list={['season-chip', {
+            class:list={['ui-pill', 'season-chip', {
               'season-chip--nolog': noLog.has(year),
               'season-chip--upcoming': notPlayedYears.has(year),
             }]}
@@ -1531,19 +1531,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
        Reserve its width so a tabbed-to chip lands clear of it. */
     scroll-padding-left: 7rem;
   }
+  /* The chip's look is the pill kit (ui-pill); this keeps only its place in
+     the rail. The rail stays one scrolling line at every width (24 seasons),
+     so the track is NOT a ui-pills row, which wraps from 768px up. */
   .season-chip {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--touch-target-min);
-    padding: 0 0.75rem;
-    border: 1px solid var(--ds-border);
-    border-radius: var(--radius-full, 999px);
-    background: var(--ds-surface);
-    color: var(--ds-ink);
-    text-decoration: none;
-    font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
     scroll-snap-align: start;
     flex: 0 0 auto;
     /* Containing block for the "(standings only)" visually-hidden span — an
@@ -1554,22 +1546,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
      * documented at length in DivisionMatrix.astro's .dsm-cell. */
     position: relative;
   }
-  .season-chip:hover { border-color: var(--ds-accent); }
-  .season-chip[aria-current='page'] {
-    background: var(--ds-accent);
-    border-color: var(--ds-accent);
-    color: #fff;
-    font-weight: 700;
-  }
-  /* --league-accent is a LIGHT blue/red in dark mode (#3b82f6 / #ef5350), so
-     white-on-accent measures 3.68:1 and 3.49:1 — under the 4.5:1 floor, and
-     14px/700 does not qualify as large text (that floor is 18.66px bold). This
-     is the current-page marker on the page's primary control, so it is the one
-     chip that must be legible. Dark ink on the same accent measures 5.09:1 and
-     5.37:1. Note this also protects best-ball, whose dark accent (#34d399) is
-     1.92:1 against white — the page is not on bb1 today, but the moment it is,
-     white ink here would be unreadable. */
-  :global(html.dark) .season-chip[aria-current='page'] { color: #0b1220; }
   /* Sticky so the way back to all-time is one click from anywhere in the rail,
      even scrolled 24 years to the right. */
   .season-chip--alltime {

@@ -157,12 +157,12 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     {conferences.length > 1 && (
       <nav class="mock-lobby__conf" aria-label="Conference">
         <span class="mock-lobby__conf-label" id="mock-conf-label">Conference</span>
-        <ul class="mock-lobby__conf-list" aria-labelledby="mock-conf-label">
+        <ul class="ui-pills mock-lobby__conf-list" aria-labelledby="mock-conf-label">
           {conferences.map((c) => (
             <li>
               <a
                 href={`${base}?conference=${c.code}`}
-                class:list={['mock-lobby__conf-chip', { 'mock-lobby__conf-chip--on': c.code === conference }]}
+                class="ui-pill mock-lobby__conf-chip"
                 aria-current={c.code === conference ? 'page' : undefined}
               >{c.label}</a>
             </li>
@@ -1515,32 +1515,6 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-gray-500, #6b7280);
-  }
-
-  .mock-lobby__conf-list {
-    display: flex;
-    gap: 0.375rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .mock-lobby__conf-chip {
-    display: inline-block;
-    padding: 0.3125rem 0.75rem;
-    border: 1px solid var(--color-gray-300, #d1d5db);
-    border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--color-gray-700, #374151);
-    background: var(--card-bg, #fff);
-  }
-
-  .mock-lobby__conf-chip--on {
-    background: var(--color-primary, #1c497c);
-    border-color: var(--color-primary, #1c497c);
-    color: var(--btn-primary-text, #fff);
   }
 
   /* ── The gate ──

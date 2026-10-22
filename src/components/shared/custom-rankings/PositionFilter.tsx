@@ -14,11 +14,12 @@ interface PositionFilterProps {
 
 export default function PositionFilter({ active, counts, onChange }: PositionFilterProps) {
   return (
-    <div className="cr-filters">
+    <div className="ui-pills cr-filters" role="group" aria-label="Filter by position">
       {POSITIONS.map((pos) => (
         <button
           key={pos}
-          className={`cr-filters__chip${active === pos ? ' cr-filters__chip--active' : ''}`}
+          className="ui-pill cr-filters__chip"
+          aria-pressed={active === pos}
           onClick={() => onChange(pos)}
           type="button"
         >

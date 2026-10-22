@@ -305,13 +305,13 @@ for (const { id } of uniqueIconEntries) {
       </div>
     </header>
 
-    <nav class="category-filters" aria-label="Filter by category">
+    <nav class="ui-pills category-filters" aria-label="Filter by category">
       {allCategories.map(cat => (
-        <button class="category-chip" data-category={cat} type="button">
+        <button class="ui-pill category-chip" data-category={cat} type="button" aria-pressed="false">
           {cat}
         </button>
       ))}
-      <button class="category-chip clear-chip" type="button" style="display:none;">
+      <button class="ui-pill category-chip clear-chip" type="button" style="display:none;">
         &times; Clear
       </button>
     </nav>
@@ -401,45 +401,14 @@ for (const { id } of uniqueIconEntries) {
     white-space: nowrap;
   }
 
-  .category-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
+  /* A ui-pills row of ui-pill toggles (src/styles/pill.css). */
   .category-chip {
-    padding: 0.35rem 0.85rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 20px;
-    background: #fff;
-    color: #475569;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
     text-transform: capitalize;
   }
 
-  .category-chip:hover {
-    border-color: #94a3b8;
-    color: #0f172a;
-  }
-
-  .category-chip.active {
-    background: #0f172a;
-    border-color: #0f172a;
-    color: #fff;
-  }
-
   .clear-chip {
-    border-color: #ef4444;
-    color: #ef4444;
-  }
-
-  .clear-chip:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-    color: #fff;
+    border-color: var(--color-error);
+    color: var(--color-error);
   }
 
   .icon-grid {
@@ -786,13 +755,13 @@ for (const { id } of uniqueIconEntries) {
       noResults.style.display = visible === 0 ? 'block' : 'none';
     }
     if (clearBtn) {
-      clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+      clearBtn.style.display = hasFilter ? 'inline-flex' : 'none';
     }
   }
 
   function clearAll() {
     activeCategory = null;
-    chips.forEach(c => c.classList.remove('active'));
+    chips.forEach(c => c.setAttribute('aria-pressed', 'false'));
     if (searchInput) searchInput.value = '';
     filterIcons();
   }
@@ -805,11 +774,11 @@ for (const { id } of uniqueIconEntries) {
       const cat = chip.dataset.category || '';
       if (activeCategory === cat) {
         activeCategory = null;
-        chip.classList.remove('active');
+        chip.setAttribute('aria-pressed', 'false');
       } else {
-        chips.forEach(c => c.classList.remove('active'));
+        chips.forEach(c => c.setAttribute('aria-pressed', 'false'));
         activeCategory = cat;
-        chip.classList.add('active');
+        chip.setAttribute('aria-pressed', 'true');
       }
       filterIcons();
     });

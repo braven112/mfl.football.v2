@@ -558,25 +558,10 @@ html.dark .dr-side-panel {
   line-height: 1.8;
 }
 
-/* Round pill — primary when active, neutral otherwise */
-.dr-round-pill {
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full, 9999px);
-  border: none;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--color-gray-100, #f3f4f6);
-  color: var(--color-gray-600, #4b5563);
-  transition: background 0.15s var(--dr-easing-ease), color 0.15s var(--dr-easing-ease);
-}
-.dr-round-pill:hover:not([aria-pressed="true"]) {
-  background: var(--color-gray-200, #e5e7eb);
-  color: var(--color-gray-900, #111827);
-}
-.dr-round-pill[aria-pressed="true"] {
-  background: var(--color-primary-fill, var(--color-primary, #1c497c));
-  color: var(--on-color-primary, #ffffff);
+/* Round pills: a ui-pills row of ui-pill toggles (src/styles/pill.css). The
+   row shrinks beside the title and swipes on a phone. */
+.dr-board-toolbar__rounds {
+  min-width: 0;
 }
 
 /* ── Board Column Header (team lockup) ── */
@@ -1725,7 +1710,6 @@ html.dark .dr-side-panel {
   .dr-submit-pick-btn,
   .dr-send-btn,
   .dr-gif-btn,
-  .dr-round-pill,
   .dr-tab-btn,
   .dr-side-tab-btn,
   .dr-auto-submit-switch,
@@ -1839,15 +1823,6 @@ html.dark .dr-side-panel {
   /* ── MobileTabBar tab buttons ── */
   .draft-room [role="tablist"] > button[role="tab"] {
     min-height: var(--touch-target-min);
-  }
-
-  /* ── DraftBoardPanel: round selector pills ── */
-  .draft-room .dr-round-pill {
-    min-height: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
   /* ── DraftBoardPanel: mobile list rows ── */

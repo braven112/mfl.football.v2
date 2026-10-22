@@ -152,3 +152,20 @@ colours as the pill tone with neutral ink. About thirty other `…chip` /
 `…pill` buttons (position filters, mock-draft lobby, transactions, calendar…)
 are a registered backlog for the next pill batch; reaction buttons are forks.
 
+Second batch (2026-10-22): 18 filter rows moved onto the pill (transactions,
+top players, calendar, position filters on Players / Free Agents / Projected
+FAs / My Draft List, search and icon categories, tag-history totals, the
+draft results / room / mock / board rails, division strength's season rail,
+Sunday Ticket's league and country rails, Live analytics, the Board's
+category filter). The kit gained `aria-checked` (radiogroups) and
+`aria-current="true"` as selected states, and drops list chrome on a `ul`
+row. Rails that scroll as one line at EVERY width (division strength, draft
+results, Sunday Ticket) take `ui-pill` on the chip but not `ui-pills` on the
+track, because the row wraps from 768px up. A component rule that sets
+`flex-wrap: wrap` or `justify-content: center` on a `ui-pills` row breaks the
+phone swipe (it out-ranks the kit's `:where()`), so migrations delete those.
+Not pills, registered as their own: status labels, link chips, heat-map
+cells, CTA links, contract-year chips, the team-logo picker and the TV
+broadcast controls. Form option pickers (mock timer, mock settings, new-idea
+category) await the owner's call.
+

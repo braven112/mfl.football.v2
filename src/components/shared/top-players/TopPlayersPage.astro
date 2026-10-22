@@ -136,16 +136,16 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
         <nav class="tp-controls" aria-label="Choose a view">
           <div class="tp-controls__group">
             <span class="tp-controls__label" id="tp-week-label">Week</span>
-            <div class="tp-chips" role="group" aria-labelledby="tp-week-label">
+            <div class="ui-pills tp-chips" role="group" aria-labelledby="tp-week-label">
               <a
                 href={viewHref(basePath, view, { week: 0 })}
-                class:list={['tp-chip', { 'is-active': !isWeek }]}
+                class="ui-pill tp-chip"
                 aria-current={!isWeek ? 'true' : undefined}
               >Season</a>
               {scoringWeeks.map((w) => (
                 <a
                   href={viewHref(basePath, view, { week: w })}
-                  class:list={['tp-chip', { 'is-active': view.week === w, 'tp-chip--po': isPlayoffWeek(w) }]}
+                  class:list={['ui-pill', 'tp-chip', { 'tp-chip--po': isPlayoffWeek(w) }]}
                   aria-current={view.week === w ? 'true' : undefined}
                   title={isPlayoffWeek(w) ? `Week ${w} — fantasy playoffs` : `Week ${w}`}
                 >{w}</a>
@@ -155,21 +155,21 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
 
           <div class="tp-controls__group">
             <span class="tp-controls__label" id="tp-view-label">Position</span>
-            <div class="tp-chips" role="group" aria-labelledby="tp-view-label">
+            <div class="ui-pills tp-chips" role="group" aria-labelledby="tp-view-label">
               <a
                 href={viewHref(basePath, view, { mode: 'leaders', position: null })}
-                class:list={['tp-chip', { 'is-active': view.mode === 'leaders' }]}
+                class="ui-pill tp-chip"
                 aria-current={view.mode === 'leaders' ? 'true' : undefined}
               >Leaders</a>
               <a
                 href={viewHref(basePath, view, { mode: 'overall', position: null })}
-                class:list={['tp-chip', { 'is-active': view.mode === 'overall' }]}
+                class="ui-pill tp-chip"
                 aria-current={view.mode === 'overall' ? 'true' : undefined}
               >Overall</a>
               {positions.map((pos) => (
                 <a
                   href={viewHref(basePath, view, { mode: 'position', position: pos })}
-                  class:list={['tp-chip', { 'is-active': view.position === pos }]}
+                  class="ui-pill tp-chip"
                   aria-current={view.position === pos ? 'true' : undefined}
                 >{pos}</a>
               ))}
@@ -376,7 +376,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
   }
   .tp-controls__group {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
     flex-wrap: wrap;
   }
@@ -387,31 +387,9 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     color: var(--content-text-muted);
     min-width: 58px;
   }
+  /* The chips are the pill kit (ui-pills / ui-pill, src/styles/pill.css). */
   .tp-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .tp-chip {
-    display: inline-block;
-    padding: 4px 10px;
-    border: 1px solid var(--content-border);
-    border-radius: var(--radius-md);
-    background: var(--card-bg);
-    color: var(--page-text);
-    text-decoration: none;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    transition: var(--transition-base);
-  }
-  .tp-chip:hover {
-    background: var(--table-row-bg-hover);
-  }
-  .tp-chip.is-active {
-    background: var(--league-accent);
-    border-color: var(--league-accent);
-    color: var(--on-league-accent, #fff);
-    font-weight: 600;
+    min-width: 0;
   }
   .tp-chip--po::after {
     content: '*';

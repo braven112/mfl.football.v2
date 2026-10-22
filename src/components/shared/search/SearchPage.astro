@@ -81,13 +81,13 @@ const categories = [
     </div>
   </header>
 
-  <nav class="directory__filters" aria-label="Filter by category">
+  <nav class="ui-pills directory__filters" aria-label="Filter by category">
     {categories.map(cat => (
-      <button class="directory__chip" data-category={cat.id} type="button">
+      <button class="ui-pill directory__chip" data-category={cat.id} type="button" aria-pressed="false">
         {cat.label}
       </button>
     ))}
-    <button class="directory__chip directory__chip--clear" type="button" style="display:none;">
+    <button class="ui-pill directory__chip directory__chip--clear" type="button" style="display:none;">
       &times; Clear
     </button>
   </nav>
@@ -212,45 +212,11 @@ const categories = [
     color: var(--color-gray-400, #94a3b8);
   }
 
-  /* Category filter chips */
-  .directory__filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .directory__chip {
-    padding: 0.35rem 0.85rem;
-    border: 2px solid var(--color-gray-100, #e2e8f0);
-    border-radius: 20px;
-    background: var(--card-bg, #fff);
-    color: var(--color-gray-600, #475569);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .directory__chip:hover {
-    border-color: var(--color-gray-400, #94a3b8);
-    color: var(--color-gray-900, #0f172a);
-  }
-
-  .directory__chip.active {
-    background: var(--color-gray-900, #0f172a);
-    border-color: var(--color-gray-900, #0f172a);
-    color: var(--page-bg, #fff);
-  }
+  /* Category filter chips: a ui-pills row of ui-pill toggles (src/styles/pill.css). */
 
   .directory__chip--clear {
     border-color: var(--color-error, #ef4444);
     color: var(--color-error, #ef4444);
-  }
-
-  .directory__chip--clear:hover {
-    background: var(--color-error, #ef4444);
-    border-color: var(--color-error, #ef4444);
-    color: var(--btn-primary-text, #fff);
   }
 
   /* Card grid */
@@ -595,13 +561,13 @@ const categories = [
       }
       visiblePages = visible;
       updateNoResults();
-      if (clearBtn) clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+      if (clearBtn) clearBtn.style.display = hasFilter ? 'inline-flex' : 'none';
       void renderPlayers();
     }
 
     function clearAll() {
       activeCategory = null;
-      chips.forEach((c) => c.classList.remove('active'));
+      chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       searchInput!.value = '';
       filterAndSort();
     }
@@ -614,11 +580,11 @@ const categories = [
         const cat = chip.dataset.category || '';
         if (activeCategory === cat) {
           activeCategory = null;
-          chip.classList.remove('active');
+          chip.setAttribute('aria-pressed', 'false');
         } else {
-          chips.forEach((c) => c.classList.remove('active'));
+          chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
           activeCategory = cat;
-          chip.classList.add('active');
+          chip.setAttribute('aria-pressed', 'true');
         }
         filterAndSort();
       });

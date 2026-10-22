@@ -42,10 +42,10 @@ const nextYearGroups = groupByCategory(nextYearEvents);
       <div class="calendar-hero__controls">
         <div class="calendar-hero__control-group">
           <label class="calendar-hero__label">Show</label>
-          <div class="calendar-filter" role="radiogroup" aria-label="Filter events by status">
-            <button class="calendar-filter__chip calendar-filter__chip--active" data-filter="all" role="radio" aria-checked="true">All</button>
-            <button class="calendar-filter__chip" data-filter="upcoming" role="radio" aria-checked="false">Upcoming</button>
-            <button class="calendar-filter__chip" data-filter="past" role="radio" aria-checked="false">Past</button>
+          <div class="ui-pills calendar-filter" role="radiogroup" aria-label="Filter events by status">
+            <button class="ui-pill calendar-filter__chip" data-filter="all" role="radio" aria-checked="true">All</button>
+            <button class="ui-pill calendar-filter__chip" data-filter="upcoming" role="radio" aria-checked="false">Upcoming</button>
+            <button class="ui-pill calendar-filter__chip" data-filter="past" role="radio" aria-checked="false">Past</button>
           </div>
         </div>
         <div class="calendar-hero__control-group">
@@ -173,7 +173,6 @@ const nextYearGroups = groupByCategory(nextYearEvents);
       // Update button states
       buttons.forEach((btn) => {
         const isSelected = btn.dataset.filter === filter;
-        btn.classList.toggle('calendar-filter__chip--active', isSelected);
         btn.setAttribute('aria-checked', String(isSelected));
       });
 
@@ -257,36 +256,10 @@ const nextYearGroups = groupByCategory(nextYearEvents);
     gap: 0.5rem;
   }
 
-  /* Filter chips — matches cr-filters__chip pattern */
+  /* Filter pills — the chip itself is the pill kit (ui-pill). */
   .calendar-filter {
     display: flex;
     gap: 0.35rem;
-  }
-
-  .calendar-filter__chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35rem 0.65rem;
-    border-radius: var(--radius-full, 9999px);
-    border: 1px solid var(--primary-content-border-color, #e2e8f0);
-    background: var(--primary-content-bg-color, #fff);
-    font-size: 0.78rem;
-    font-weight: var(--font-weight-semibold, 600);
-    color: var(--content-text-muted, #64748b);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-  }
-
-  .calendar-filter__chip:hover {
-    border-color: var(--color-primary, #1c497c);
-    color: var(--color-primary, #1c497c);
-  }
-
-  .calendar-filter__chip--active,
-  .calendar-filter__chip--active:hover {
-    background: var(--color-primary, #1c497c);
-    border-color: var(--color-primary, #1c497c);
-    color: var(--btn-primary-text, #fff);
   }
 
   .calendar-hero__label {

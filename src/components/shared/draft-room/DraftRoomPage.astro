@@ -84,12 +84,12 @@ const current = conferences.find((c) => c.code === conference) ?? null;
     <div class="droom-conf">
       <nav class="droom-conf__rail" aria-label="Conference">
         <span class="droom-conf__label" id="droom-conf-label">Conference</span>
-        <ul class="droom-conf__list" aria-labelledby="droom-conf-label">
+        <ul class="ui-pills droom-conf__list" aria-labelledby="droom-conf-label">
           {conferences.map((c) => (
             <li>
               <a
                 href={`${base}?conference=${c.code}`}
-                class:list={['droom-conf__chip', { 'droom-conf__chip--on': c.code === conference }]}
+                class="ui-pill droom-conf__chip"
                 aria-current={c.code === conference ? 'page' : undefined}
               >
                 {c.label}
@@ -154,39 +154,12 @@ const current = conferences.find((c) => c.code === conference) ?? null;
     color: var(--droom-ink-muted);
   }
 
-  .droom-conf__list {
-    display: flex;
-    gap: 0.4rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    flex-wrap: wrap;
-  }
-
+  /* Two lines (the conference, then how it drafts) inside the pill. */
   .droom-conf__chip {
-    display: inline-flex;
     flex-direction: column;
-    box-sizing: border-box;
-    padding: 0.35rem 0.8rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--droom-border);
-    background: var(--droom-surface-muted);
-    color: var(--droom-ink-muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-decoration: none;
+    justify-content: center;
+    gap: 0;
     line-height: 1.25;
-  }
-
-  .droom-conf__chip:hover {
-    border-color: var(--droom-accent);
-    color: var(--droom-ink);
-  }
-
-  .droom-conf__chip--on {
-    background: var(--droom-accent);
-    border-color: var(--droom-accent);
-    color: var(--droom-on-accent);
   }
 
   .droom-conf__kind {

@@ -45,17 +45,19 @@ export function DraftBoardPanel({
     <div className="dr-board">
       <div className="dr-board-toolbar">
         <span className="dr-board-toolbar__title">Draft Board</span>
-        {roundNumbers.map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => onRoundChange(r)}
-            className="dr-round-pill"
-            aria-pressed={activeRound === r}
-          >
-            Rd {r}
-          </button>
-        ))}
+        <div className="ui-pills dr-board-toolbar__rounds" role="group" aria-label="Round">
+          {roundNumbers.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => onRoundChange(r)}
+              className="ui-pill dr-round-pill"
+              aria-pressed={activeRound === r}
+            >
+              Rd {r}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="dr-board__scroll" role="region" aria-label="Draft board">

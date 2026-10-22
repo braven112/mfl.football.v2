@@ -134,7 +134,7 @@ const archiveStart = league.playerArchiveStartYear ?? null;
           <li>
             <a
               href={hrefWith({ year: String(y), conference: null })}
-              class:list={['dr__chip', { 'dr__chip--on': y === view.year }]}
+              class="ui-pill dr__chip"
               aria-current={y === view.year ? 'page' : undefined}
             >{y}</a>
           </li>
@@ -151,7 +151,7 @@ const archiveStart = league.playerArchiveStartYear ?? null;
             <li>
               <a
                 href={hrefWith({ conference: u.code })}
-                class:list={['dr__chip', { 'dr__chip--on': u.code === view.unit }]}
+                class="ui-pill dr__chip"
                 aria-current={u.code === view.unit ? 'page' : undefined}
               >{u.label}</a>
             </li>
@@ -167,7 +167,7 @@ const archiveStart = league.playerArchiveStartYear ?? null;
         <li>
           <a
             href={hrefWith({ team: null })}
-            class:list={['dr__chip', { 'dr__chip--on': view.team === 'all' }]}
+            class="ui-pill dr__chip"
             aria-current={view.team === 'all' ? 'page' : undefined}
           >All teams</a>
         </li>
@@ -175,7 +175,7 @@ const archiveStart = league.playerArchiveStartYear ?? null;
           <li>
             <a
               href={hrefWith({ team: t.id })}
-              class:list={['dr__chip', { 'dr__chip--on': t.id === view.team }]}
+              class="ui-pill dr__chip"
               aria-current={t.id === view.team ? 'page' : undefined}
               title={t.name}
             >{t.name}</a>
@@ -365,35 +365,15 @@ const archiveStart = league.playerArchiveStartYear ?? null;
     display: flex;
     gap: 0.35rem;
     margin: 0;
-    padding: 0.15rem 0;
+    padding: 3px;
     list-style: none;
     overflow-x: auto;
     scrollbar-width: thin;
   }
 
-  .dr__chip {
-    display: inline-block;
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid var(--dres-border);
-    background: var(--dres-surface-muted);
-    color: var(--dres-ink-muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .dr__chip:hover {
-    border-color: var(--dres-accent);
-    color: var(--dres-ink);
-  }
-
-  .dr__chip--on {
-    background: var(--dres-accent);
-    border-color: var(--dres-accent);
-    color: var(--dres-on-accent);
-  }
+  /* The chip is the pill kit (ui-pill, src/styles/pill.css). A rail stays one
+     scrolling line at every width (a league's 16+ team names), so the list is
+     not a ui-pills row, which wraps from 768px up. */
 
   /* ── Table ───────────────────────────────────────────────────────────── */
 

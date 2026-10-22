@@ -291,16 +291,16 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
       </p>
     )}
 
-    <nav class="tx__chips" aria-label="Filter moves">
-      <a class="tx__chip" href={chipHref(null, { mine: null })} aria-current={kindChip === 'all' && !filters.mine ? 'page' : undefined}>All</a>
+    <nav class="ui-pills tx__chips" aria-label="Filter moves">
+      <a class="ui-pill tx__chip" href={chipHref(null, { mine: null })} aria-current={kindChip === 'all' && !filters.mine ? 'page' : undefined}>All</a>
       {myFranchiseId && (
-        <a class="tx__chip" href={chipHref(null, { mine: '1', team: null })} aria-current={filters.mine && kindChip === 'all' ? 'page' : undefined}>My team</a>
+        <a class="ui-pill tx__chip" href={chipHref(null, { mine: '1', team: null })} aria-current={filters.mine && kindChip === 'all' ? 'page' : undefined}>My team</a>
       )}
       {showPickupChip && showTradeChip && (
-        <a class="tx__chip" href={chipHref(PICKUP_KINDS.filter((k) => offeredKinds.includes(k)).join(','))} aria-current={kindChip === 'pickups' ? 'page' : undefined}>Pickups</a>
+        <a class="ui-pill tx__chip" href={chipHref(PICKUP_KINDS.filter((k) => offeredKinds.includes(k)).join(','))} aria-current={kindChip === 'pickups' ? 'page' : undefined}>Pickups</a>
       )}
       {showTradeChip && (
-        <a class="tx__chip" href={chipHref('trade')} aria-current={kindChip === 'trades' ? 'page' : undefined}>Trades</a>
+        <a class="ui-pill tx__chip" href={chipHref('trade')} aria-current={kindChip === 'trades' ? 'page' : undefined}>Trades</a>
       )}
     </nav>
 
@@ -588,21 +588,8 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
     font-size: var(--font-size-sm, 0.875rem);
   }
 
-  .tx__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-  .tx__chip {
-    padding: 0.3rem 0.85rem;
-    border: 1px solid var(--tx-border);
-    border-radius: var(--radius-full, 999px);
-    font-size: var(--font-size-sm, 0.875rem);
-    color: var(--tx-ink);
-    text-decoration: none;
-  }
-  .tx__chip:hover { border-color: var(--tx-accent); color: var(--tx-ink); text-decoration: none; }
-  .tx__chip[aria-current='page'] {
-    background: var(--tx-accent);
-    border-color: var(--tx-accent);
-    color: var(--btn-primary-text, #fff);
-  }
+  /* A ui-pills row of ui-pill links (src/styles/pill.css). */
+  .tx__chips { margin-bottom: 0.5rem; }
 
   .tx__more { margin-bottom: 0.25rem; }
   .tx__more > summary {
