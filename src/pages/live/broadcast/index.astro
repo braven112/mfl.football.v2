@@ -23,12 +23,9 @@
  * with no Fullscreen API — an iPhone above all — where "Go full screen" has
  * nothing to call and becomes a link here instead.
  *
- * A paired TV skips the landing (owner's call, Oct 2026): it opens straight
- * onto the board, edge to edge with no app bar, because a TV is there to show
- * the scores and the landing's pitch is for the person deciding to pair one.
- * Fullscreen cannot be requested without a click, so the bare page IS the
- * full screen. `?view=landing` still reaches the landing, where a TV changes
- * its leagues or unpairs itself; the board's hidden back link goes there.
+ * A paired TV lands HERE like everyone else (owner's call, Oct 2026): the big
+ * preview takes the remote's first focus, so OK goes full screen. If it falls
+ * back to `?view=board`, a TV gets that board edge to edge with no app bar.
  */
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import BroadcastLanding from '../../../components/shared/live-broadcast/BroadcastLanding.astro';
@@ -56,12 +53,6 @@ rememberBroadcastChoices(Astro.url, Astro.cookies);
 const viewer = await getBroadcastViewer(Astro.request);
 const pairedTv = viewer?.via === 'tv';
 const viewParam = Astro.url.searchParams.get('view');
-
-if (pairedTv && viewParam === null) {
-  const boardUrl = new URL(Astro.url);
-  boardUrl.searchParams.set('view', 'board');
-  return Astro.redirect(`${boardUrl.pathname}${boardUrl.search}`, 302);
-}
 
 // A pass that no longer resolves — revoked, or past its thirty days — is
 // cleared here, so `/tv` (which sends any pass-holder straight to this page)
@@ -130,7 +121,7 @@ const title = boardOnly ? `Broadcast — Week ${week} — MFL Live` : 'Broadcast
 >
   {boardOnly && pageData ? (
     <div class:list={['bcl-board-only', { 'bcl-board-only--tv': pairedTv }]}>
-      <a class="bcl-board-only__back" href={pairedTv ? '/live/broadcast?view=landing' : '/live/broadcast'}>&larr; Broadcast</a>
+      <a class="bcl-board-only__back" href="/live/broadcast">&larr; Broadcast</a>
       <HandheldPrepaint />
       <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
     </div>
