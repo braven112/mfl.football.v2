@@ -45,6 +45,11 @@
  * nav icon slot only, is tinted the nav's icon colour the same way; the same
  * image elsewhere keeps the plain `_swaps` drawing.
  *
+ * The Brand Book (`<main data-brand-book>`) is exempt from the logo, `_swaps`
+ * and franchise-mark swaps: it always shows the standard marks, and draws each
+ * seasonal set beside them from the set's own files (owner, Oct 2026). Only
+ * its page content is exempt; the header and nav around it still swap.
+ *
  * A set's `_trim` lists franchises with a knitted trim strip
  * (<marks>/trim/<id>-top.png and -bottom.png, content hashes as values). The
  * rule only names the strips as custom properties on that club's roster
@@ -157,6 +162,9 @@ function seasonalMenuIcons(navSlug: string, seasonId: string): Array<[string, st
 
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
+/** Appended to every swapped <img>: the Brand Book's own content keeps the standard marks. */
+const NOT_BRAND_BOOK = ':not([data-brand-book] img)';
+
 export function buildSeasonalMarkCss(
   navSlug: string,
   seasonalThemes: readonly string[] | undefined,
@@ -182,13 +190,13 @@ export function buildSeasonalMarkCss(
     const logoSrcs = [logo?.light, logo?.dark].filter((s): s is string => Boolean(s));
     if (logoFile && logoSrcs.length) {
       const selectors = scopes.flatMap((scope) =>
-        [...new Set(logoSrcs)].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
+        [...new Set(logoSrcs)].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]${NOT_BRAND_BOOK}`),
       );
       rules.push(`${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${logoFile}"); filter: none; }`);
     }
     for (const [from, file] of seasonalSwaps(navSlug, id)) {
       rules.push(
-        `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"] { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
+        `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"]${NOT_BRAND_BOOK} { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
       );
     }
     for (const [icon, file] of seasonalIcons(navSlug, id)) {
@@ -225,11 +233,11 @@ export function buildSeasonalMarkCss(
         if (src) iconSrcVariants(src).forEach((s) => srcs.add(s));
       }
       const selectors = scopes.flatMap((scope) => [
-        ...[...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
+        ...[...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]${NOT_BRAND_BOOK}`),
         // An era crest naming a club that still plays (a defending champion
         // under last season's identity) asks for the season's mark by id.
         // League pages only: both leagues have a franchise 0013.
-        ...(scope === navSlug ? [`html[data-league="${scope}"][data-season="${id}"] img[data-seasonal-franchise="${team.franchiseId}"]`] : []),
+        ...(scope === navSlug ? [`html[data-league="${scope}"][data-season="${id}"] img[data-seasonal-franchise="${team.franchiseId}"]${NOT_BRAND_BOOK}`] : []),
       ]);
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(

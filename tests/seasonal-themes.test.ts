@@ -175,7 +175,19 @@ describe('opted-in leagues', () => {
           const drawn = seasonalSwapPath(league.navSlug, id, from);
           expect(drawn, `${from} → ${file} was rejected`).toBe(`/assets/${league.navSlug}/${season.marks}/${file}`);
           expect(fs.existsSync(path.join(ROOT, 'public', drawn!)), `${drawn} not drawn`).toBe(true);
-          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"] { content: url("${drawn}")`);
+          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"]:not([data-brand-book] img) { content: url("${drawn}")`);
+        }
+      });
+      it(`${league.slug}: the Brand Book keeps its standard marks while ${id} is open`, () => {
+        // The Brand Book always shows the standard marks, with each seasonal
+        // set drawn beside them (owner, Oct 2026): every swapped <img> rule
+        // exempts its content.
+        const teams = getLeagueTeams(league.navSlug);
+        const css = buildSeasonalMarkCss(league.navSlug, [id], teams, league.logo);
+        const selectors = css.split('\n').flatMap((line) => line.split(/,\s*/)).filter((s) => /\] img\[(src|data-seasonal-franchise)=/.test(s) && !s.includes(':has('));
+        expect(selectors.length).toBeGreaterThan(0);
+        for (const sel of selectors) {
+          expect(sel, sel).toContain(':not([data-brand-book] img)');
         }
       });
       it(`${league.slug}: every listed ${id} mark is a real franchise with a built file`, () => {
