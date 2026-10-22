@@ -72,7 +72,8 @@ import { getThemePreference } from '../utils/theme-preference';
 import { getMflLiveUser } from '../utils/auth';
 import { canViewSiteInsights } from '../utils/site-insights';
 import { canViewProductPages } from '../utils/product-pages-access';
-import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
+import { getLeagueById, isSharedAppHost, leagueUrl } from '../config/leagues';
+import { getLeagueYearForMflId } from '../utils/league-year';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
 import '../styles/utilities.css';
@@ -116,24 +117,31 @@ const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
 const authUser = getMflLiveUser(Astro.request);
 
-// Links out to the league sites this project runs. Absolute, via leagueUrl —
-// never an origin concatenated with a path (docs/claude/rules/league-urls.md),
-// and never a bare path, because these leave the shared host for a league's
-// own apex where the session cookie is a different one.
+// The menu's "League sites" section names ONLY the signed-in owner's own
+// league (owner's call, Oct 2026, as MFL Live opened to Archie's members): a
+// list of every league this project runs showed each league's owners the
+// others' sites. Signed out, there is no league to name and the section is
+// gone. The session names one league, so an owner in two sees the one they
+// signed in under; the board itself still reads every league they are in.
 //
-// Draft-only leagues are FILTERED OUT, from the registry's own `bestBall`
-// flag rather than a slug literal (same derivation as `BOTH_LEAGUES` in
-// scripts/lib/weekly-changelog-format.mjs, so a new best-ball league drops
-// out here automatically). This app is a live-scoring board, and
-// docs/claude/rules/best-ball.md is explicit that a best-ball league has
-// "no live MFL syncing by design" and that its nav is OPT-IN — an untagged
-// link into it is management UI the league does not have. Listing one here
-// sends an owner to a site that cannot answer the only question this app
-// exists to answer.
-const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league) => ({
-	name: league.name,
-	href: leagueUrl(league, '/'),
-}));
+// Where the link goes: a league with its own front door here gets its site,
+// absolute via leagueUrl (docs/claude/rules/league-urls.md). A league NOT
+// advertised on the shared host (Archie's) gets its MyFantasyLeague home page
+// instead — the site its owners already use — until the owner decides to
+// point them at its pages here. A best-ball session is never an MFL Live
+// session (getMflLiveUser), so no draft-only league can reach this list.
+const sessionLeague = authUser ? getLeagueById(authUser.leagueId) : null;
+const leagueLinks: { name: string; href: string }[] = sessionLeague
+	? [
+			{
+				name: sessionLeague.name,
+				href:
+					sessionLeague.advertiseOnSharedHost === false
+						? `https://${sessionLeague.mflHost}/${getLeagueYearForMflId(sessionLeague.id)}/home/${sessionLeague.id}`
+						: leagueUrl(sessionLeague, '/'),
+			},
+		]
+	: [];
 import { spriteUrlFor } from '../utils/sprite-url';
 /** The league's icon set, for client scripts and React islands (src/utils/sprite-url-client.ts). */
 const pageSpriteUrl = spriteUrlFor(Astro.url);
@@ -239,6 +247,28 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 					});
 				}
 				document.addEventListener('astro:page-load', initSignOut);
+			})();
+		</script>
+
+		{/* Install prompt capture — the same block TheLeagueLayout carries, and
+		    for the same reason: Chrome fires `beforeinstallprompt` ONCE, before
+		    any component script runs, so the layout stashes it on `window` for
+		    the board's InstallAppPrompt banner to read. The `window` flag keeps
+		    the ClientRouter from stacking a listener per navigation. It only
+		    ever fires where the manifest is linked (the shared host). */}
+		<script is:inline>
+			(function () {
+				if (window.__mflInstallPromptBound) return;
+				window.__mflInstallPromptBound = true;
+				window.addEventListener('beforeinstallprompt', function (e) {
+					e.preventDefault();
+					window.__mflInstallPrompt = e;
+					window.dispatchEvent(new Event('mfl:installpromptready'));
+				});
+				window.addEventListener('appinstalled', function () {
+					window.__mflInstallPrompt = null;
+					window.dispatchEvent(new Event('mfl:installpromptready'));
+				});
 			})();
 		</script>
 
