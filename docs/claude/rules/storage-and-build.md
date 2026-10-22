@@ -293,7 +293,11 @@ syncs every league and their waiver runs are an hour apart.
   cannot pile up in exchange.
 - **Absence is watched separately, and NOT from Vercel.**
   `scripts/check-sync-freshness.mjs` alerts (`ops-job-failure`, admin-only) when
-  `main`'s newest sync commit ages past two hours. It runs from
+  the newest SUCCESSFUL `roster-sync.yml` run on `main` ages past two hours.
+  It measures RUNS, never commits: a run that found nothing commits nothing,
+  so a quiet night (00:00-04:00 PT on 2026-10-21, every run green) aged the
+  newest sync commit past the threshold and paged an admin for a healthy
+  chain. It runs from
   `job-failure-watch.yml` on GitHub deliberately: a watchdog sharing a substrate
   with its subject goes dark in the one outage it exists to report. GitHub's
   delivery is unreliable, so detection may be hours late — late still beats
@@ -401,6 +405,44 @@ request, and the committed file is the backup and the fallback.
 - **Lanes that still commit a feed to git** (`backfill-historical-feeds.yml`
   through the commit-push action) are folded into Redis by the next job's
   pull, because the pull merges file and Redis rather than overwriting.
+
+## Roster sync holds live-read files out of its commit
+
+Since Oct 2026 the roster sync commits only real league changes. Three outputs
+that moved on most runs, but that no page reads from the bundle when it can
+help it, no longer ride every commit (every commit to `main` is a production
+build):
+
+- **`live-odds.json` is not written in season.** The site fetches odds from
+  ESPN per request (`loadLiveOdds`, `coach-data.ts`) and reads this file only
+  off-season (Feb 14 → Labor Day), so `fetch-live-odds.mjs` returns early in
+  season unless given `--week`.
+- **Injuries and TheLeague's salary copy are held.**
+  `scripts/hold-sync-files.mjs` runs as the step right before the commit: it
+  publishes each league's CURRENT `injuries.json` to `mfl:injuries:<slug>` on
+  every run, changed or not (publishing only git-modified files left Redis
+  stale when a report reverted to the committed copy), and puts the committed
+  copies back, letting each group through once a day so git keeps a
+  snapshot (the timer lives in Redis, because the job's checkout is shallow).
+  No credentials, or any Redis error, and the files commit exactly as before.
+  The groups live in `HELD_GROUPS` (`scripts/lib/held-sync-files.mjs`).
+- **Every injury reader goes through `src/utils/mfl-injuries-live.ts`**
+  (server-only): pages via `loadLiveInjuryMap` (`mfl-injuries-live-map.ts`,
+  split off so the story graph never imports the globbed feeds), the disk readers (lineup
+  warnings in `my-team-week.ts`, `/api/app-badge`) via `loadLiveInjuryFeed`.
+  Redis wins only when it is at least as FRESH as the copy on disk — same
+  year AND a `generatedAt` no older — because a run whose publish failed
+  commits a report newer than the one Redis still holds. `loadInjuryMap` or a
+  raw `injuries.json` read alone now shows a report up to a day old. The salary copy has no page reader; its one reader,
+  `schefter-trade-speculation.mjs`, reads the daily snapshot from disk.
+- **Nothing may run between the hold step and the commit**, or it could
+  rewrite a file the hold just restored. `tests/sync-noise-commit-guard.test.ts`
+  pins the order, the Redis env, the in-season odds skip and every injury reader.
+
+Holding a file is right only when every reader can take a day-old copy or reads
+it live. Scores, weekly results and standings feed the derived chain and about
+30 pages from disk, so they are not held; they belong to
+`docs/plans/league-data-out-of-deploy.md`.
 
 ## A job's league list comes from the registry, never the workflow
 

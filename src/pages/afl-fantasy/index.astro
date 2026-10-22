@@ -50,9 +50,6 @@ import {
 import { buildMondaySpotlightProps, type MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
-import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
-import { ensureLeaguePrefix } from '../../config/leagues';
-import { newestIssueStandings } from '../../utils/owners-poll-ballot-teams';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
@@ -161,28 +158,6 @@ const effectiveDate = parseTestDate(testDateParam) ?? new Date();
 // already correct; the shared const keeps it that way.
 const testDriveHero = showTestDriveHero(AFL.slug, effectiveDate);
 
-// ---------------------------------------------------------------------------
-// The Owners' Poll pop-up. Same shape as TheLeague's — one shared component,
-// each route bringing its own league's data — because a static glob specifier
-// cannot be a runtime variable.
-const ownersPollIssues = import.meta.glob<any>(
-  '../../../data/afl-fantasy/pecking-order/*.json',
-  { eager: true, import: 'default' },
-);
-
-// Stats for the pop-up's ballot cards — newest issue of THIS season, as TheLeague.
-const ownersPollStandings = newestIssueStandings(
-  Object.entries(ownersPollIssues)
-    .map(([file, data]) => {
-      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-      return m ? { ...data, year: Number(m[1]), week: Number(m[2]) } : null;
-    })
-    .filter((x): x is any => !!x && x.year === getCurrentSeasonYear(effectiveDate)),
-);
-
-const showOwnersPollPopup =
-  AFL.ownersPoll?.enabled &&
-  isSeasonWindowOpen(getCurrentSeasonYear(effectiveDate), effectiveDate);
 const testMode = !!testDateParam;
 
 const timeline = getAflWhatsNextTimeline(effectiveDate);
@@ -459,12 +434,6 @@ const labels = await getPersonaLabels('afl-fantasy');
     userFranchiseId,
     backdrop: heroBackdrop,
   }}
-  ownersPoll={showOwnersPollPopup
-    ? {
-        ballotHref: ensureLeaguePrefix(AFL, '/owners-poll'),
-        ballotStandings: ownersPollStandings,
-      }
-    : null}
   whatsNew={{
     entries: aflWhatsNew,
     basePath: '/afl-fantasy',

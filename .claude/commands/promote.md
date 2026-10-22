@@ -179,31 +179,18 @@ feature off `staging` and promote the rest. Never promote past a NO-GO.
 
 Filing a follow-up is a GO, not a deferred NO-GO — the review's own rule.
 
-## Step 5b: Capture the visual diffs BEFORE the fast-forward
+## Step 5b: Confirm the visual baselines are current
 
-Chromatic's PR trigger is scoped to `branches: [main]`, and this command
-fast-forwards with a direct push — so **no pull request into `main` is ever
-created, and nothing here would trigger a capture.** The `push` to `main` that
-follows runs with `--auto-accept-changes`, which would then bless the week's
-visual changes as the new baseline with nobody having looked: the exact
-"visual test that certifies the bug" failure `chromatic.yml`'s own comments
-exist to prevent.
+Visual review happens per feature PR into `staging` (`Visual tests`,
+Playwright, `.github/workflows/visual-tests.yml`), and each merge rewrites the
+baselines on the `visual-baselines` branch. Before promoting, check that the
+latest `Visual tests` run on `staging`'s tip — the baseline update — is green.
+A red one means a baseline update failed (usually a story that threw while
+rendering), and the next week's PRs would compare against stale baselines.
 
-So capture on `staging`'s tip, explicitly, before promoting:
-
-```bash
-gh workflow run chromatic.yml --ref staging
-```
-
-Dispatched on `staging` rather than `main`, the workflow runs plain
-`chromatic` — diffs land **pending** for a human to accept or reject in the
-Chromatic UI, which is the review this whole placement is for. Wait for it,
-review the diffs, and only promote once they are accepted. The subsequent
-`--auto-accept-changes` on `main` is then blessing snapshots that were already
-reviewed, which is what makes it safe.
-
-Skip this only when the range touches nothing in the story import closure
-(`chromatic.yml` lists it) — then there is nothing to capture.
+Stories cover components, not whole pages. If the range changed a page layout
+no story renders, open it on the staging host in light and dark;
+`/launch-check` covers a whole league in both themes.
 
 ## Step 6: Promote
 
@@ -296,5 +283,5 @@ answerable in a minute.
 - Never resolve a merge-down conflict inside this command — fix the job.
 - Never skip step 7. A release nobody looked at is a release nobody knows
   failed.
-- Never skip step 5b on a diff that renders. A direct push to `main` is the one
-  path where `--auto-accept-changes` can bless an unreviewed visual change.
+- Never skip step 5b on a diff that renders. A failed baseline update leaves
+  every later visual comparison wrong.

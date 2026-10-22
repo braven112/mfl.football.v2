@@ -250,62 +250,50 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
    * week's column to everyone the message had just told to read this one.
    */
   let generator = '';
-  let REVEAL_POST = '';
   beforeEach(async () => {
     generator ||= await fs.readFile(
       path.join(REPO_ROOT, 'scripts/generate-pecking-order.mjs'),
       'utf8',
     );
-    if (!REVEAL_POST) {
-      const posts = await fs.readFile(
-        path.join(REPO_ROOT, 'scripts/lib/owners-poll-posts.mjs'),
-        'utf8',
-      );
-      REVEAL_POST = posts.slice(posts.indexOf('export function buildRevealFeedPost'));
-    }
   });
 
-  it('queues without a probe — neither candidate URL can answer honestly', () => {
+  it('the Tuesday column waits on its issue permalink, never the landing page', async () => {
     // `/pecking-order` answers 200 every week of the season, so waiting on it
-    // is waiting on nothing. The per-issue permalink WOULD be honest (it is
-    // prerendered, so an undeployed week has no path) except that route 500s
-    // in production today, in both leagues — a probe against it could only
-    // burn its full timeout and push the reveal into the kickoff margin.
-    // docs/claude/followups/2026-09-17-pecking-order-permalink-500.md
-    expect(generator).toMatch(/const VERIFY_PATH = null;/);
-    expect(generator.match(/verifyPath: VERIFY_PATH,/g) ?? []).toHaveLength(2);
+    // is waiting on nothing — and announcing with NO wait is what showed
+    // owners Week 5 under the Week 6 post on 2026-10-20 (the deploy carrying
+    // Week 6 started building the minute the chat message went out).
+    expect(generator).toMatch(/verifyPath: issuePermalink\(league, year, week\),/);
+    // And it does NOT fail open: an early post names the wrong week, so on a
+    // timeout the column says nothing (Brandon, 2026-10-20).
+    expect(generator).toMatch(/skipIfNotLive: true,/);
     expect(generator).not.toMatch(/verifyPath: '\/pecking-order'/);
+    const { issuePermalink } = await import('../scripts/generate-pecking-order.mjs');
+    expect(issuePermalink({ slug: 'afl-fantasy' }, 2026, 6)).toBe('/afl-fantasy/pecking-order/2026/6');
 
     // Queueing is still the point: the announcement cannot go out ahead of the
     // commit step, and cannot go out at all if that step failed.
-    expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(2);
+    expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(1);
   });
 
-  it('the reveal could not have probed its own feed post', () => {
-    // buildRevealFeedPost emits type 'power-ranking', and news/[id].astro
-    // serves only `type === 'article'` with content or grades — so that
-    // permalink never resolves, however tempting it looks as a probe.
-    expect(REVEAL_POST).toMatch(/type: 'power-ranking'/);
-    expect(REVEAL_POST).not.toMatch(/type: 'article'/);
-    expect(generator).not.toMatch(/\/news\/\$\{revealPostId\}/);
+  it('the probed permalink is server-rendered and 404s a week it does not have', async () => {
+    // Prerendered, the route was a static file the apex-host middleware rewrite
+    // never reached, so it 500'd on every league domain and could not be a
+    // probe. And it must 404 an undeployed week, or the probe passes early.
+    for (const league of ['theleague', 'afl-fantasy', 'archies']) {
+      const src = await fs.readFile(
+        path.join(REPO_ROOT, `src/pages/${league}/pecking-order/[year]/[week].astro`),
+        'utf8',
+      );
+      expect(src, league).toMatch(/export const prerender = false;/);
+      expect(src, league).not.toMatch(/getStaticPaths/);
+      expect(src, league).toMatch(/if \(!issue\) Astro\.response\.status = 404;/);
+    }
   });
 
-  it('carries the column push category and the ballot pushes with it', () => {
+  it('carries the column push category', () => {
     // 'column', not 'article' — owners subscribe per category, and a wrong one
     // is dropped server-side rather than delivered to someone who did not ask.
     expect(generator).toMatch(/pushCategory: 'column'/);
-    // The ballot-open pushes ride in the same queue entry, so they cannot land
-    // before the page carrying the ballot does.
-    expect(generator).toMatch(/voterPushes: pollBlock/);
-  });
-
-  it('leaves the push-only nag sending inline — it waits on nothing', () => {
-    const nag = generator.slice(
-      generator.indexOf('async function runNagPoll'),
-      generator.indexOf('/** Every earlier issue of this season'),
-    );
-    expect(nag).toMatch(/sendVoterPushes/);
-    expect(nag).not.toMatch(/enqueueAnnounce/);
   });
 });
 
@@ -400,5 +388,36 @@ describe('announceOne', () => {
       { dryRun: true, log: silent },
     );
     expect(bad.announced).toBe(false);
+  });
+  it('skipIfNotLive drops every channel when the page never went live', async () => {
+    // The Pecking Order's link shows LAST week's column until the deploy
+    // lands, so a timed-out wait must announce nothing — not chat, not push.
+    const { announceOne } = await import('../scripts/schefter-announce-pending.mjs');
+    const lines: string[] = [];
+    const entry = {
+      league: 'theleague',
+      kind: 'roger-reply',
+      postId: 'po_skip',
+      verifyPath: '/theleague/pecking-order/2026/6',
+      groupMeText: 'x',
+      botEnv: 'GROUPME_BOT_ID_DELIBERATELY_UNSET',
+      push: { franchiseIds: ['0001'], title: 'T', body: 'B', url: '/x', tag: 'po_skip' },
+      skipIfNotLive: true,
+    };
+    const result = await announceOne(entry, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (...a: unknown[]) => lines.push(a.join(' ')), warn: (...a: unknown[]) => lines.push(a.join(' ')) },
+    });
+    expect(result).toMatchObject({ announced: false, reason: 'not live' });
+    expect(lines.join('\n')).toContain('NOT announcing');
+    expect(lines.join('\n')).not.toContain('not set'); // never reached the chat send
+
+    // Without the flag the default stays fail-open, as articles want.
+    const order: string[] = [];
+    await announceOne({ ...entry, push: null, skipIfNotLive: undefined }, {
+      wait: async () => ({ live: false, attempts: 36 }),
+      log: { log: (m: string) => { if (String(m).includes('not set')) order.push('send'); }, warn: () => {} },
+    });
+    expect(order).toEqual(['send']);
   });
 });

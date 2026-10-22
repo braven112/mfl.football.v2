@@ -148,37 +148,6 @@ export const LEAGUES = {
     configPath: 'src/data/theleague.config.json',
     schefterFeedPath: 'src/data/theleague/schefter-feed.json',
     /**
-     * The Owners' Poll — the weekly owner vote that publishes inside The
-     * Pecking Order. See docs/plans/owners-poll.md.
-     *
-     * `slots` is the ballot depth (rank your top N), NOT the field size, and
-     * the two are deliberately independent: a 7-slot ballot in a 16-team
-     * league leaves a tail the poll does not order, which is a stated design
-     * trade rather than an oversight. It lives here rather than as a constant
-     * because the AFL's 24-team field would want a different depth, and
-     * because tests/league-literal-guard.test.ts is the thing that keeps a
-     * number like this from being retyped into three modules.
-     *
-     * There is NO ballot minimum. Whatever ballots come in are the result —
-     * a quorum used to gate the consensus, and all it achieved was suppressing
-     * the poll on light weeks and spending the chat's one daily post saying so.
-     *
-     * `closeWeekday` / `closeHourPT` are when the ballot shuts (0=Sun).
-     * THURSDAY, not Wednesday, and that is a turnout decision: setting a
-     * lineup before the first kickoff is the one obligatory weekly action in
-     * this league and it mostly happens Wed-Sun, so a Wednesday deadline
-     * closed before the highest-traffic weekly action even began. The close is
-     * additionally clamped to just before the real first kickoff, so a
-     * Thanksgiving week (games at ~10:00 PT) cannot take votes after two games
-     * have been played.
-     */
-    ownersPoll: {
-      enabled: true,
-      slots: 7,
-      closeWeekday: 4,
-      closeHourPT: 16,
-    },
-    /**
      * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
      * in. Lineup locks, auction windows, waiver deadlines and the 8:45
      * rollover are all quoted in it, so it is the shared reference printed
@@ -397,31 +366,6 @@ export const LEAGUES = {
      */
     duplicatePlayers: true,
     /**
-     * The Owners' Poll. See docs/plans/owners-poll.md; the shared machinery is
-     * the same as TheLeague's and only these numbers differ.
-     *
-     * ONE 24-team ballot, not two conference-scoped ones. That fork was left
-     * open when the poll shipped, and it is settled the way the column it
-     * publishes inside already is: the AFL Pecking Order ranks all 24
-     * franchises in a single list, so a conference-scoped poll would print a
-     * consensus that disagrees with the machine ranking beside it on which
-     * teams are even comparable. Duplicate players make cross-conference
-     * comparison awkward to argue about, which is the entertainment, not a
-     * defect.
-     *
-     * `slots` is 10, proportional to TheLeague's 7-of-16 rather than copied
-     * from it — 7 of 24 would rank under a third of the field and leave most
-     * of the league tied at zero. It stays well under the field size (the
-     * unranked block is the design; see the plan's "One tension worth
-     * naming").
-     */
-    ownersPoll: {
-      enabled: true,
-      slots: 10,
-      closeWeekday: 4,
-      closeHourPT: 16,
-    },
-    /**
      * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
      * in. Lineup locks, auction windows, waiver deadlines and the 8:45
      * rollover are all quoted in it, so it is the shared reference printed
@@ -584,14 +528,6 @@ export const LEAGUES = {
      */
     bestBall: true,
     /**
-     * No Owners' Poll here, and not because nobody got to it: the poll ranks
-     * TEAMS week to week, and a best-ball league has no weekly team story to
-     * rank — no lineups, no in-season management, and it is draft-only
-     * (docs/claude/rules/best-ball.md). The entry exists disabled so the shape
-     * is present everywhere and shared components never branch on undefined.
-     */
-    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
-    /**
      * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
      * in. Lineup locks, auction windows, waiver deadlines and the 8:45
      * rollover are all quoted in it, so it is the shared reference printed
@@ -752,8 +688,6 @@ export const LEAGUES = {
      * by team NAME across ids in owner-tenures rather than per id.
      */
     renumbersFranchises: true,
-    /** No poll at launch; the shape is present so shared code never branches on undefined. */
-    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
     /**
      * The Pecking Order at 99 teams: every team is ranked, but the column
      * writes up only the top 25; the rest show in their division lists
@@ -903,7 +837,6 @@ if (isDemoEnv()) {
     configPath: 'data/keeper/keeper.config.json',
     schefterFeedPath: 'data/keeper/schefter-feed.json',
     leagueYearRollover: LEAGUES['afl-fantasy'].leagueYearRollover,
-    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
     officialClock: LEAGUES['afl-fantasy'].officialClock,
     tradeDeadline: LEAGUES['afl-fantasy'].tradeDeadline,
     features: {
@@ -935,7 +868,6 @@ if (isDemoEnv()) {
     accounting: false,
     pushNotifications: false,
   };
-  afl.ownersPoll = { ...afl.ownersPoll, enabled: false };
 }
 
 export const DEFAULT_LEAGUE_SLUG = 'theleague';

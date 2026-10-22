@@ -1,6 +1,6 @@
 ---
 slug: pecking-order-permalink-500
-status: open
+status: partially-resolved
 severity: P1
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1144
@@ -85,3 +85,21 @@ to the news index.
    if they are wanted back rather than rewritten.
 4. While in there: the reveal feed post's own `link` is one of the 500ing URLs,
    so it has been a dead "read more" for every reveal so far.
+
+## Update 2026-10-20 — steps 1, 2 and 4 done
+
+The no-wait announcement bit for real: the AFL Week 6 post went out at 11:29
+PT in the same minute the deploy carrying Week 6 started building, so the
+GroupMe unfurl (and anyone who tapped) got Week 5. Verified that day that the
+permalink still 500'd on the apex host
+(`www.afl-fantasy.com/pecking-order/2026/6`) while the prefixed path on the
+deployment URL answered 200 — confirming the middleware/prerender cause above.
+
+- All three permalink routes (and the package-league template) are now
+  `prerender = false`, look the issue up from `Astro.params`, and answer a
+  real 404 for a week not on disk.
+- The Tuesday column probes `issuePermalink(league, year, week)` again.
+- The reveal feed post's `link` resolves now that the route serves.
+
+**Still open: step 3**, the Thursday reveal's body marker. It still sends with
+`REVEAL_VERIFY_PATH = null`.

@@ -37,12 +37,11 @@ describe('SKIP_REWRITE_PREFIXES', () => {
     }
   });
 
-  it('contains api, astro, image, server-islands, forum, 404, favicon, assets, manifest', () => {
+  it('contains api, astro, image, server-islands, 404, favicon, assets, manifest', () => {
     expect(SKIP_REWRITE_PREFIXES).toContain('/api/');
     expect(SKIP_REWRITE_PREFIXES).toContain('/_astro/');
     expect(SKIP_REWRITE_PREFIXES).toContain('/_image');
     expect(SKIP_REWRITE_PREFIXES).toContain('/_server-islands/');
-    expect(SKIP_REWRITE_PREFIXES).toContain('/forum/');
     expect(SKIP_REWRITE_PREFIXES).toContain('/404');
     expect(SKIP_REWRITE_PREFIXES).toContain('/favicon.ico');
     expect(SKIP_REWRITE_PREFIXES).toContain('/assets/');

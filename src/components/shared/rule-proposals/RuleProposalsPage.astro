@@ -1,0 +1,149 @@
+---
+/**
+ * Rule Proposals — shared render for every league that has the route.
+ *
+ * Thin route wrappers under src/pages/<league>/rule-proposals.astro own the
+ * auth gate and the league's proposal list; this component owns the markup.
+ * Keep it that way: Astro.redirect() only works from a page, and a static
+ * import specifier cannot be a runtime variable.
+ *
+ * A proposal is a summary card that links OUT to its full write-up (today a
+ * Claude artifact): the long-form replay and scenario tools live there.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+
+export interface RuleProposal {
+  id: string;
+  title: string;
+  /** Season the change would take effect, e.g. "2027 season". */
+  season: string;
+  status: string;
+  summary: string;
+  /** One line per change, plain text. */
+  changes: string[];
+  /** The rulebook sections this would replace. */
+  replaces: string;
+  href: string;
+  linkLabel: string;
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  proposals: RuleProposal[];
+}
+
+const { leagueSlug, proposals } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`RuleProposalsPage: unknown league ${leagueSlug}`);
+
+// Every internal href on this page goes through resolveLeaguePath so apex
+// hosts (theleague.us) do not get a doubled league prefix.
+const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLeaguePrefix ?? false);
+---
+
+<TheLeagueLayout title={`Rule Proposals | ${league.name}`}>
+  <div class="rule-proposals">
+    <header class="rule-proposals__header">
+      <h1>Rule Proposals</h1>
+      <p>Ideas for next season's rulebook. Read each one before the league votes. <a class="cta-link" href={rulesPath}>Current rules</a></p>
+    </header>
+
+    {proposals.length === 0 ? (
+      <p class="rule-proposals__empty">No proposals are open right now.</p>
+    ) : (
+      <ol class="rule-proposals__list">
+        {proposals.map((p, i) => (
+          <li class="proposal" id={p.id}>
+            <div class="proposal__meta">
+              <span class="proposal__num">Proposal {i + 1}</span>
+              <span class="proposal__status">{p.status}</span>
+              <span>{p.season}</span>
+            </div>
+            <h2 class="proposal__title">{p.title}</h2>
+            <p class="proposal__summary">{p.summary}</p>
+            <ul class="proposal__changes">
+              {p.changes.map((c) => <li>{c}</li>)}
+            </ul>
+            <p class="proposal__replaces">Replaces: {p.replaces}</p>
+            <a class="cta cta--primary" href={p.href} target="_blank" rel="noopener noreferrer">{p.linkLabel}</a>
+          </li>
+        ))}
+      </ol>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rule-proposals {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
+    display: grid;
+    gap: 1.5rem;
+  }
+  .rule-proposals__header h1 {
+    margin: 0 0 0.25rem;
+  }
+  .rule-proposals__header p {
+    margin: 0;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .rule-proposals__empty {
+    color: var(--color-gray-600, #4b5563);
+  }
+  .rule-proposals__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+  }
+  .proposal {
+    background: var(--card-bg, #fff);
+    border-radius: var(--radius-lg, 1rem);
+    border: 1px solid var(--style-card-ring, var(--content-border, #e5e7eb));
+    padding: 1.5rem;
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+  }
+  .proposal__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-600, #4b5563);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .proposal__status {
+    color: var(--color-info-dark, #2563eb);
+  }
+  .proposal__title {
+    margin: 0;
+    font-size: var(--style-section-size, 1.375rem);
+    padding-left: var(--style-section-rule-gap, 0.625rem);
+    border-left: var(--style-section-rule, 3px solid var(--color-primary));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
+    font-family: var(--style-section-font, inherit);
+  }
+  .proposal__summary {
+    margin: 0;
+  }
+  .proposal__changes {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .proposal__replaces {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600, #4b5563);
+  }
+</style>

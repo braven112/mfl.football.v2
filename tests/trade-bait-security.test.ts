@@ -95,7 +95,9 @@ describe('write endpoint security', () => {
   it('move-to-ir endpoint validates roster ownership', () => {
     const moveToIr = apiFiles.find(({ file }) => file.includes('move-to-ir'));
     expect(moveToIr).toBeDefined();
-    expect(moveToIr!.content).toContain('getRosters');
+    // getRosterEntries, not getRosters: the endpoint needs each player's
+    // IR status to answer a repeat move honestly.
+    expect(moveToIr!.content).toContain('getRosterEntries');
     expect(moveToIr!.content).toContain('userRoster');
     expect(moveToIr!.content).toContain('You can only move players from your own roster');
   });

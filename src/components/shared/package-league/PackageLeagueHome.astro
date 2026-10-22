@@ -49,8 +49,6 @@ import { crestLeagueKey } from '../../../utils/dark-surface-crest';
 import { buildPackageLeagueEvents, packageWhatsNext, type MflCalendarEvent } from '../../../utils/package-league-events';
 import { resolveSchefterRail } from '../../../utils/schefter-rail-view';
 import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
-import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
-import { newestIssueStandings } from '../../../utils/owners-poll-ballot-teams';
 import { getPersonaLabels } from '../../../utils/persona-server';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { readInstallState } from '../../../utils/app-install-state';
@@ -70,7 +68,7 @@ interface Props {
   playoffFeeds: LazyFeedGlob;
   /**
    * Eager glob of data/<league>/pecking-order/*.json (may be empty): feeds the
-   * Pecking Order card and, when the registry turns it on, the Owners' Poll.
+   * Pecking Order card.
    */
   peckingOrderIssues?: Record<string, any>;
   posts: SchefterPost[];
@@ -179,9 +177,6 @@ const seasonIssues = Object.entries(peckingOrderIssues)
   .filter((x): x is { year: number; week: number; data: any } => !!x && x.year === seasonYear)
   .sort((a, b) => b.week - a.week);
 const latestIssue = (seasonIssues[0]?.data as PeckingOrderData | undefined) ?? null;
-
-// ── Owners' Poll: only when the registry turns it on ─────────────────────────
-const showOwnersPoll = !!league.ownersPoll?.enabled && isSeasonWindowOpen(seasonYear, now);
 
 // ── Transactions (site only) ────────────────────────────────────────────────
 const txYear = resolveSeason(null, seasonsFromGlob(transactionFeeds), leagueYear);
@@ -347,12 +342,6 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     userFranchiseId: mine ?? undefined,
     backdrop: heroBackdrop,
   }}
-  ownersPoll={showOwnersPoll
-    ? {
-        ballotHref: r(`${base}/owners-poll`),
-        ballotStandings: newestIssueStandings(seasonIssues.map((x) => ({ ...x.data, year: x.year, week: x.week }))),
-      }
-    : null}
   quickLinksAuthenticated={!!authUser}
   quickLinks={quickLinks}
   whatsNew={hasPage('/whats-new') ? {

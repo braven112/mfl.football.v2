@@ -155,9 +155,8 @@ component color of its own was rendering on the **UA default blue**, measured
 it *yet*, which is the only reason it cost nothing).
 
 That one is worse in consequence than the fonts, and the reason is worth
-holding onto: **main runs `chromatic --auto-accept-changes`**
-(`.github/workflows/chromatic.yml`), so a wrong render on main does not merely
-look wrong once — it becomes the accepted baseline, and the suite goes blind to
+holding onto: **a visual-regression run that auto-accepts on main** (Chromatic did, until
+Oct 2026) turns a wrong render into the accepted baseline, and the suite goes blind to
 the very regressions it exists to catch.
 
 So when porting from the layout, **enumerate the whole `<style>` block** rather
@@ -507,44 +506,20 @@ the data, and the data moves: the custom-stroke slot was The Show, then No Soup
 For You, and is now Suh girls, each time because the previous holder gained an
 `iconDark` and left the branch. Expect to move it again.
 
-This is not tidiness. Every crest a story renders is a file
-`STORY_ASSET_GLOBS` has to name one by one, so each extra franchise is another
-path in two workflow blocks and `chromatic.config.json` — and another team
-whose logo swap wakes CI. Five teams cover every branch the suite tests except
-one (below).
-
-Adding a franchise to a story is therefore a real change, not set dressing:
-check `crest-dark-stroke-manifest.json` for which branch it lands on, and add
-its crest — and its `_dark` file if it has one — to the trigger. Five teams
+Adding a franchise to a story is a real change, not set dressing: check
+`crest-dark-stroke-manifest.json` for which branch it lands on. Five teams
 cover every branch but one, and the sixth exists solely to cover that one.
 
-**The reverse direction bites during an asset batch, when no story changes at
-all.** Give a franchise a `_dark` cut and, if a story already renders its light
-crest, that new file is named by the story's dark swap and
-`tests/chromatic-path-filter.test.ts` fails until it is in the trigger — the
-build breaks in a pure logo drop that never opened a `stories/` file.
-
-**The failing build is the lucky half.** The same act silently guts what the
-story TESTS: an `iconDark` removes a franchise from the stroke set by
+**An asset batch can gut a story without opening `stories/`.** Giving a
+franchise dark art silently changes what the story TESTS: an `iconDark` removes a franchise from the stroke set by
 construction, so a story pinned to it as a stroke example quietly becomes a
-second swap example and keeps passing. Nothing in the suite catches that —
-`chromatic-path-filter` checks trigger coverage, not which branch a fixture
-still lands on. It has now happened twice to the same story, `StrokeCustomColor`
-(The Show in #685, then No Soup For You right after), and the second time the
-fix was to repoint it at Suh girls and drop BOTH no-soup paths from the trigger
-— not to add the dark file to the trigger, which would have preserved a story
-testing the wrong thing.
+second swap example and keeps passing. Nothing in the suite catches that. It has now happened twice to the same story,
+`StrokeCustomColor` (The Show in #685, then No Soup For You right after), and
+the second time the fix was to repoint it at Suh girls.
 
 So before shipping dark art: grep `stories/` for that franchise's light file.
 If it is named there, decide what the story was pinning before you change the
 data under it.
-
-**And the glob and the PNG must land in the SAME commit.** The same test also
-asserts every non-wildcard `STORY_ASSET_GLOBS` entry exists on disk, so neither
-half can go first: a glob for an unwritten file fails that check, and the file
-without its glob fails the coverage check. Splitting them across two PRs breaks
-`main` in whichever order you pick — which also means such a batch can NOT go
-through `/publish-assets`, whose allowlist stops at assets and registries.
 
 ## Deleted: the Pecking Order stories
 
@@ -605,385 +580,47 @@ next runs the script.
 equivalent here — the directive is per-script, so it governs this bundle only
 and does not leak to MFL's other scripts.)
 
-## Chromatic (visual regression)
-
-Set up Aug 2026. Runs from CI only — `.github/workflows/chromatic.yml`,
-path-filtered so it doesn't add an install to every data-sync PR. The
-project token lives in the `CHROMATIC_PROJECT_TOKEN` repo secret and must
-never be committed.
-
-```bash
-pnpm chromatic   # needs CHROMATIC_PROJECT_TOKEN in env; runs TurboSnap
-```
-
-**Modes multiply your bill.** The free plan is 5,000 snapshots/month and
-testing pauses (rather than bills) at the cap. `.storybook/modes.ts` splits
-them deliberately: every story gets light + dark, and only genuinely
-cross-league components (the shared/loading tier) also get the two AFL modes.
-The playoff heroes are TheLeague-only surfaces — snapshotting them under the
-AFL skin would spend budget on a combination that never ships.
-
-Measured on build 1: **68 snapshots** for 22 stories across 7 components,
-captured in 2m06s. The arithmetic is (8 playoff x 2 modes) + (13 loading x 4
-modes) = 68 — note 13, not 14: `BrandedLoader/CyclingNarration` carries
-`disableSnapshot` and contributes zero. That is ~73 full builds a month before
-TurboSnap.
-
-**Snapshots are billed at CAPTURE time, not at approval time.** Every build
-captures the stories in scope whether or not you have accepted anything, and
-each capture counts against the quota. Approving is a review action; it never
-retroactively adds or frees snapshots. The one discount: *rerunning* an
-existing build only charges for its denied and unreviewed tests.
-
-**A "turbosnap" is 0.2 of a billed snapshot, not free.** When TurboSnap copies
-an unchanged story's snapshot from the baseline it still bills a fifth. So a
-narrow PR here costs roughly `(changed stories x modes) + (0.2 x everything
-else)` — for a 4-story change that's about 20 billed, against 68 for a full
-build. Real savings, but not an order of magnitude.
-
-**The first build is auto-accepted and has no baseline**, so it always captures
-everything and reports "Build 1 auto-accepted". There is no review queue to
-work through on day one.
-
-**TurboSnap needs three things**, and all of them fail quietly:
-- `storybook build --stats-json` (the `build:storybook:stats` script), which
-  emits `storybook-static/preview-stats.json`.
-- `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
-  degrades both TurboSnap and Chromatic's baseline detection without erroring.
-- An `externals` list in `chromatic.config.json` covering every untraceable
-  visual input. **This one is the dangerous default — in BOTH directions.**
-  Without it, a change to a visual input Chromatic cannot connect to a story
-  is treated as affecting NOTHING and skips the very stories it broke. Given
-  that this repo's most expensive recurring bug class is exactly
-  undefined/mismatched theme tokens, that failure mode would make Chromatic
-  quietly useless for the thing it was bought to catch. Any one match
-  disables TurboSnap for the whole build, so the list is derived rather than
-  hand-written — see § "TurboSnap: `--externals` was disabling it on EVERY
-  build".
-
-  **This bullet used to say "TurboSnap does not trace CSS ... through the
-  module graph". That is not true of this repo's builder** — see § "CSS IS in
-  the module graph" below. The conclusion (keep the stylesheets in
-  `externals`) survives; the reason is different, and reasoning from the old
-  one lands you somewhere wrong in both directions.
-
-  `.storybook/static/**` is there for the same reason and is easy to miss: a
-  `staticDirs` mount is a visual input that lives entirely OUTSIDE the module
-  graph — the built CSS keeps the literal `url('/storybook-fonts/...')` and the
-  woff2 is only copied next to it. Swap or re-subset the font without this
-  glob and TurboSnap inherits every snapshot, so the regression ships green.
-  `public/assets/**` was already listed for exactly this reason; any future
-  `staticDirs` entry needs the same treatment.
-
-A full rebuild is also forced automatically when Storybook's own config
-changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
-`package.json` move — those can change how any story renders. Since
-`preview.ts` imports the global stylesheets, expect touching theming to cost a
-full 68-snapshot build.
-
-**Iterating on a PR is free — that is the whole budget model.** The workflow
-originally fired on `push` to ANY branch, one build per commit. Measured over
-Aug 28-31 2026 that was **60 builds x 160 snapshots = ~9,600 snapshots, about
-2x the entire 5,000/month free plan in four days**, and 49 of the 60 were
-feature-branch pushes. A single branch (`draft-broadcast-image-loading`) spent
-**16 builds — half a month's plan — iterating on one PR**.
-
-It now fires on:
-
-- `push` to **main only** (the baseline run, the one that auto-accepts)
-- `pull_request` with `types: [opened, ready_for_review, labeled, synchronize]`
-- the `visual-check` label on demand — remove and re-add it to re-run. **On a
-  PR into `main` only**: the `pull_request` trigger is filtered to
-  `branches: [main]`, so on a feature PR into `staging` the workflow never
-  starts and the label does nothing. For an early look at a feature branch,
-  run the workflow by hand (`workflow_dispatch`, any ref).
-
-**The cost control is the `paths:` list, NOT the trigger type.** A revision of
-this change dropped `synchronize` to make PR iteration free, and that was a
-coverage hole: a commit pushed after the PR opens would get its FIRST capture
-from the merge build on main, which runs `--auto-accept-changes` — so it would
-be blessed as the baseline having never been reviewed. Exactly the failure this
-page keeps warning about.
-
-Checked against the real burn rather than assumed: the 16-build
-`draft-broadcast-image-loading` branch touches only draft-broadcast components,
-styles, pages and types, none of which are in the closure, so it triggers
-**zero** builds under the narrowed paths. Build #117 still triggers, correctly,
-because it edited `src/config/leagues-data.mjs`. Narrow paths buy the savings;
-restricting the trigger type bought nothing but the hole.
-
-An earlier version of this section argued against `pull_request` because
-push+PR would double-bill. That was true only while `push` was unrestricted.
-With push scoped to main, a change is built once on its PR and once on merge.
-
-Drafts are skipped until marked ready (a draft PR is still iterating), and the
-`labeled` trigger is gated to the one label in the job's `if:` — `labeled`
-fires for *every* label otherwise.
-
-**The `paths:` filter is GENERATED, not hand-written.** It used to trigger on
-`src/utils/**` — 247 files, of which **45 actually reach a story**. So most
-builds re-snapshotted the whole suite for code no snapshot renders.
-
-`scripts/chromatic-story-deps.mjs` walks the real import graph from every
-story *and* from `preview.ts` (which imports utils of its own to build the
-accent and dark-logo CSS) and prints the closure ready to paste. Run it and
-paste into **both** `paths:` lists.
-
-Narrowing this is safe in exactly one direction, and
-`tests/chromatic-path-filter.test.ts` is what enforces it: a file that renders
-but is NOT matched means the regression never triggers a build, ships, and is
-then blessed by `--auto-accept-changes` on main — a visual test that certifies
-the bug. Extra patterns are always safe; missing ones fail the suite.
-
-**Filter by what a glob already covers, never by a path prefix.** The generator
-briefly ended in `.filter(f => f.startsWith('src/'))`, which silently dropped
-three files the walk had correctly found — `data/afl-fantasy/afl.config.json`
-(AFL brand colors, reached through `franchise-band-brand`),
-`data/afl-fantasy/tier-history.json` and
-`data/best-ball-1/bb1.config.json`. They render, matched no `paths:` entry, and
-the coverage assertions could not see it: a filtered-out file is not
-"uncovered", it is invisible. `tests/chromatic-path-filter.test.ts` now pins
-them by name for that reason.
-
-Generating the closure also exposed a **real hole in the old filter**:
-`src/config/**`, `src/constants/**`, `src/data/**` and `src/types/**` all
-reach stories (the league registry, `throwback-config.ts`, `roster-constants.ts`,
-`league-events.ts`) and none of them were listed. A change to any of those
-altered rendering and never triggered a build. They are covered now — but only
-the ~14 hand-maintained `src/data` files that are genuinely in the closure. The
-cron-written feeds (`schefter-feed.json`, `mfl-feeds/**`) are NOT in it and must
-stay out, which the guard test also asserts: if one ever enters, a snapshot has
-started reading live data.
-
-**A story that can't be deterministic should opt out, not flake.**
-`BrandedLoader/CyclingNarration` cycles narration on a 2.5s timer, so it
-carries `chromatic: { disableSnapshot: true }`. A test that fails at random
-teaches you to ignore failures. Covering it properly needs the component to
-accept an injectable clock — a component change, not a story change.
-
-The playoff-hero fixtures are fully offline: headshots are inline data URIs
-and crests resolve from `public/` via `staticDirs`. They started as live
-`a.espncdn.com` URLs and were stubbed precisely because Chromatic waits for
-network idle before capturing — a slow CDN response is a timeout and an
-intermittent one is a false diff. `delay: 300` now only covers font
-application and layout settle. **Never reintroduce a third-party URL into a
-fixture.**
-
-## Timing, measured
-
-Build 1 (first authenticated run, no baseline, full capture):
-
-| Step | Time |
-|---|---|
-| Checkout (`fetch-depth: 0` + `filter: blob:none`) | 15s |
-| pnpm install | 10s |
-| Chromatic: build, upload, capture 68 snapshots | 3m 07s |
-| **Total job** | **3m 40s** |
-
-Without `filter: blob:none` the checkout alone was **4m 40s** — full history
-across this repo's several hundred branches took longer than everything else
-combined.
-
-A cautionary note for whoever debugs this next: GitHub does not serve a job's
-step logs until the job **finishes**, so a Chromatic run in progress is opaque.
-Resist reading that as a hang. Build 1 was diagnosed mid-flight as "stuck for
-40 minutes" when it had in fact already passed in 3m40s — the diagnosis came
-from polling on a mistaken sense of elapsed time, not from evidence. Wait for
-the job to end, then read the log; `timeout-minutes: 25` is there so a genuine
-hang ends itself and becomes readable.
-
-## Tracking snapshot usage
-
-Two places, one authoritative:
-
-- **Per build** — `scripts/chromatic-usage-summary.mjs` parses
-  `chromatic-diagnostics.json` and writes a cost table into the GitHub Actions
-  job summary. **`--diagnostics-file` must be passed explicitly** or there is
-  nothing to parse: the CLI logs "Wrote Chromatic diagnostics report to
-  chromatic-diagnostics.json" whenever it uploads metadata, but only
-  *persists* the file to disk when the flag is given as a string
-  (`persistDiagnosticsFile = typeof diagnosticsFile == 'string' || debug`).
-  The log line without the flag is about the upload, not a file you can read. It runs with `if: always()` because Chromatic exits 1 on visual
-  changes (the normal "a human should look" path) and that build's cost still
-  needs reporting. It never fails the job.
-- **This build, on the Storybook itself** — the `Overview` story fetches
-  `/.chromatic/chromatic-diagnostics.json` at runtime. Chromatic uploads that
-  file next to the published Storybook on every build, same origin, so the
-  homepage reports the build you are looking at with no token and no API call.
-  Locally the file is absent and the panel says so instead of showing zeros.
-  It carries `disableSnapshot` — it renders live data, so snapshotting it would
-  diff on every build and train everyone to rubber-stamp changes. It still
-  counts as a story (build 3 reported "23 stories across 8 components,
-  captured 68 snapshots") — the story count rises, the snapshot count does
-  not.
-- **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
-  see the account total; they report one build each.
-
-## TurboSnap: `--externals` was disabling it on EVERY build
-
-The note here used to read "withheld until 10 builds are created from CI".
-**That was wrong twice over** — it was stale, and it sent the next reader
-looking at the account tier and the Vite builder, neither of which was the
-problem. Two hypotheses died before the log gave it up:
-
-- *"the free plan withholds it"* — build #117 still reported it off.
-- *"builder-vite emits no stats file"* — it does. `pnpm build:storybook:stats`
-  writes `storybook-static/preview-stats.json` with 119 modules in the right
-  `{id, name, reasons}` shape.
-
-The actual line is in the Chromatic step log, above the summary:
-
-```
-⚠ TurboSnap disabled due to matching --externals
-Found 2 files with changes:
-→ src/styles/accounting.css
-→ src/styles/draft-broadcast.css
-```
-
-**Neither file renders into a single story.** TurboSnap was available,
-configured and working — and switched off on almost every build by our own
-flag. From the CLI source (`node-src-*.cjs`):
-
-```js
-for (const e of externals) {
-  const n = changedFiles.filter(f => picomatch(e, f));
-  if (n.length > 0) { changedFiles = undefined; break; }  // TurboSnap dead
-}
-```
-
-One match anywhere disables it for the WHOLE build. The old list was
-`src/styles/**/*.css` (26 stylesheets, 9 render) plus `public/assets/**`
-(which holds the What's New screenshots this repo adds constantly). Between
-them, virtually every build tripped it.
-
-`externals` now comes from `scripts/chromatic-story-deps.mjs --externals` and
-lives in `chromatic.config.json`. **It is tight in one direction and complete
-in the other**, and gets both wrong if hand-edited:
-
-- too broad -> TurboSnap disabled, every story at full price (the old bug)
-- too narrow -> TurboSnap inherits a snapshot for a file it cannot trace, and
-  the regression ships GREEN
-
-### CSS IS in the module graph — the reason `externals` is needed is different
-
-Measured 2026-09-18, because the bullet above used to assert the opposite and
-that assertion is load-bearing.
-
-```
-pnpm run build:storybook:stats
-# then read storybook-static/preview-stats.json
-total modules in stats: 156
-CSS modules present: 16      # every stylesheet preview.ts imports, live.css among them
-./src/styles/live.css <- imported by: ['./.storybook/preview.ts']
-```
-
-So under `@storybook/builder-vite` the stylesheets ARE traceable — the old
-claim was probably true of the webpack builder and was never re-checked here.
-`externals` is still right, for a reason that has nothing to do with tracing:
-
-**Every stylesheet's only importer is `.storybook/preview.ts`**, which is an
-ancestor of every story. Tracing one perfectly therefore reaches all 96
-stories anyway, and Chromatic independently forces a full rebuild when
-`preview.ts` changes. A stylesheet edit costs a full build by two separate
-routes; the `externals` entry is the one that reports itself in the log.
-
-The practical consequence, and the trap for anyone trying to optimise this:
-**dropping a stylesheet from `externals` saves nothing.** It changes the log
-line from `TurboSnap disabled due to matching --externals` to a full rebuild
-for a different reason, while removing the only guard that holds if the trace
-ever breaks.
-
-### Narrowing a stylesheet's blast radius — deliberately NOT done
-
-There IS a lever, recorded here so it is a decision rather than an oversight.
-Import the sheet **from the story file** instead of `preview.ts`, and it
-traces to one story file rather than all 96. For `live.css` that is ~102
-billed snapshots on a live-CSS push instead of 452.
-
-It is also *correct* for that sheet, not merely cheap — `live.css` is 148
-selector groups, every one `.lv`-anchored, both keyframes `lv-` prefixed,
-**zero `:root` blocks**, and its single `html.*` rule is `html.dark
-.lv-matchup` defining only `--t0`/`--t1`. It cannot change a non-Live story's
-pixels.
-
-Not done anyway, and these are the preconditions for revisiting it:
-
-- `externals` is GENERATED (`computeStoryStylesheets()` = every `.css`
-  reachable from a story *or* `preview.ts`), so moving the import does not
-  remove the entry. The generator would have to learn "traceable AND provably
-  scoped" as a third category, and `tests/chromatic-path-filter.test.ts` pins
-  it.
-- The failure mode is the worst one here: if the trace silently breaks (a
-  builder upgrade dropping CSS from stats), TurboSnap inherits, the CSS
-  regression ships green, and `--auto-accept-changes` on main blesses it as
-  the baseline. It would need its own guard asserting the sheet appears in
-  `preview-stats.json` with the STORY file as its importer.
-- The payoff only lands on a push touching that sheet and nothing else in
-  `externals` — a handful of pushes per CSS project. The 90% saving is already
-  banked by the `visual-check` label making every full build deliberate.
-
-### The franchise crests are listed FILE BY FILE
-
-`public/assets/afl/**` and `public/assets/theleague/**` covered ~700 files —
-every franchise's icon, banner, group-me avatar and history art. Seven of them
-render. So every owner logo swap, and every sync-bot commit that touched one,
-started a Chromatic build (and disabled TurboSnap for it) over a file no
-snapshot could show.
-
-Both knobs now name the exact files. **This is the narrowing direction that
-ships bugs**, so it comes with a guard the other entries don't need:
-`computeStoryAssetLiterals()` text-scans `stories/**` for `/assets/...`
-literals — assets are runtime URL strings, invisible to the import graph, so a
-text scan is the only thing that can see them — and
-`tests/chromatic-path-filter.test.ts` fails if `STORY_ASSET_GLOBS` misses one.
-A second test fails if a listed path has left the repo, since a glob matching
-nothing fails exactly like a missing entry and looks like a working one.
-
-Two things the plain scan misses, both of which shipped before being caught:
-
-**A swap crest pulls in a file no story names.** `TeamIconDarkStyles` keys its
-rule on the light `src`, so rendering `pigskins.png` also fetches
-`pigskins_dark.png`. The scanner derives those from the league configs (via the
-registry's `configPath`), so a crest that GAINS an `iconDark` later brings its
-dark file into the trigger automatically.
-
-**An interpolated path has no literal to find.** The playoff fixtures built
-twelve crest paths as `/assets/theleague/icons/${seed.slug}.png`. The moment
-the league trees were replaced by individual files, those twelve rendered into
-snapshots with nothing in the trigger matching them — and the literal scan had
-nothing to complain about. Two fixes, both needed:
-
-- the scan reads `stories/**/*.{ts,tsx,astro,json}`, not just `*.stories.ts`.
-  Fixtures are where the asset-heavy data lives; scanning only story modules is
-  what let this through, and `.astro` (`stories/overview/ChromaticReport.astro`)
-  and `.json` are story sources too.
-- `computeStoryAssetPrefixes()` collects every `/assets/...` string that stops
-  at a `/` instead of a filename, and the test fails unless a `**` entry covers
-  it. **A dynamically-built asset path REQUIRES a wildcard tree over its
-  directory** — that is the rule. The `nfl-logos` / `college-logos` /
-  `hero-players` trees stay broad for exactly this reason. Want a narrow
-  trigger? Write the paths out, as `stories/fixtures/playoff-round.ts` now does.
-
-  It keys on the **directory literal**, deliberately not on a following `${`.
-  Template interpolation is one way to splice a path and
-  `'/assets/x/' + slug + '.png'` is another; a guard that knows only the first
-  is one syntax away from the same miss. And because `[]` is the correct result
-  today, that test would keep passing if the detector stopped detecting — so a
-  second test exercises the detector against both syntaxes plus a plain
-  filename that must NOT match.
-
-`public/assets/fonts/**` is the entry that looks droppable and is not: the
-story stylesheets `@font-face` against it, and a re-subset font reflows every
-snapshot. `.storybook/static/**` stays for the same reason (Trap 4b).
-
-Verified by replaying build #117's real changed-file list through picomatch:
-old externals bail on `src/styles/**/*.css`; new externals do not match, so
-TurboSnap stays on.
-
-**Config moved to `chromatic.config.json`.** `package.json`'s script is now
-just `chromatic`. The file is strict-schema validated — an unknown key fails
-the run outright — and `--externals` requires `onlyChanged`, so both live
-there together. The workflow still appends `--auto-accept-changes` on main.
+## Visual regression — Playwright screenshots (since Oct 2026)
+
+Chromatic ran the stories from Aug to Oct 2026 and was removed because the
+free plan's snapshots ran out within days. Its replacement is free and has no
+quota: `.github/workflows/visual-tests.yml` screenshots every story in each of
+its modes with Playwright and compares against baselines.
+
+- **What is captured** comes from each story's `parameters.chromatic`
+  (`modes`, `disableSnapshot`, `delay`, `viewports`) — the key kept its old
+  name so the theme × league matrix in `.storybook/modes.ts` carried over.
+  `scripts/visual/manifest.mjs` reads those from the BUILT preview (so
+  Storybook's own project → component → story merge applies) and writes
+  `tests/visual/stories.manifest.json`; `tests/visual/stories.spec.ts` turns
+  each story × mode into one test. ~185 stories, ~460 captures, ~6 min.
+- **Baselines live on the orphan `visual-baselines` branch**, never in
+  staging or main history (~460 PNGs, ~47 MB, rewritten on every accepted
+  change). CI checks it out into `tests/visual/__screenshots__/` (gitignored).
+- **PR into staging/main (non-draft):** compare. A diff fails the job and
+  uploads the `visual-report` artifact — open its `index.html` for expected /
+  actual / diff. A story with no baseline yet passes and attaches its first
+  screenshot. The check is advisory, not required: a visual change is often
+  the point of the PR.
+- **Push to staging:** the merged renders become the new baselines
+  (`--update-snapshots=changed`, then `scripts/visual/prune-baselines.mjs`
+  drops files for removed stories). Merging IS accepting, so look at the
+  report before you merge.
+- **Run workflow with `update` ticked** rebuilds the baselines from any ref —
+  needed after a Playwright or Chromium bump, which re-renders every font.
+- **Never generate baselines on a laptop.** They are only comparable to
+  renders from the same runner image and browser build; a Mac reports every
+  story as changed. Locally, `pnpm build:storybook && pnpm test:visual:update`
+  then `pnpm test:visual` is fine for checking a story is STABLE (two runs, no
+  diff), not for producing baselines.
+- **Off-box requests are aborted** during capture. A story that needs the
+  network renders broken rather than flaky; stub it into public/ (see Trap 7).
+- **Trigger paths are deliberately broad** (everything under src/components,
+  src/styles, src/utils, src/config, src/data minus the bot-written feeds,
+  public/assets, the league configs). Over-matching costs CI minutes;
+  under-matching lets a regression through unseen and then into the
+  baselines on merge — the lesson of the Chromatic path filter
+  (`docs/claude/insights/features/chromatic-visual-testing.md`).
 
 ## Choosing modes
 
@@ -1170,10 +807,6 @@ config before you do: `iconDark` = swap, `iconStrokeDark: "#hex"` = custom,
 `iconStrokeDark: false` = opt-out, in the manifest with neither = default
 white. A replacement on the wrong branch silently doubles up one state and
 leaves another untested.
-
-And the crest paths are now in the Chromatic trigger by name (see "The
-franchise crests are listed FILE BY FILE"), so a swap is a two-file change.
-`tests/chromatic-path-filter.test.ts` fails if you forget the second one.
 
 ## `ThemeImage` — the one component whose light and dark captures MUST differ
 

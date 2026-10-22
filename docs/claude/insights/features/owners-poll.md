@@ -4,6 +4,33 @@ Weekly owner vote. Published inside The Pecking Order until 2026-10-02; now its
 own feature at `/<league>/owners-poll` (vote, then see the owners' rankings).
 Plan: `docs/plans/owners-poll.md`, "Its own page".
 
+## 2026-10-21 — Retired: the ask was never the problem
+
+Five closed weeks, both leagues, and every ballot came from the same two
+franchises (0001 and 0011): 2 of 16 in TheLeague, 2 of 24 in the AFL. By then
+every turnout lever in this file had shipped: results locked behind a vote,
+standing ballots, the homepage pop-up, the "still good?" push and a weekly
+results post that linked the ballot. None of them moved the count. Brandon
+chose to scrap it rather than try a lighter GroupMe-reply vote.
+
+What it taught, for whoever proposes an owner vote next:
+
+- **Count the distinct people, not the ballots.** A standing ballot inflates
+  "ballots in" week over week, and the same two owners in two leagues read as
+  four voters. The honest figure was two people out of the whole platform.
+- **A results post that prints its own turnout is the quorum trap again.**
+  "(2/16 ballots)" in the chat every Thursday was the same self-advertised
+  failure the 2026-09-18 entry removed the quorum to stop.
+- **Ranking a league is a chore, not a game.** Owners act when something is
+  at stake for their own team (lineups, trades, waivers). A vote with no
+  stake and a seven-slot ballot lost to doing nothing, every week.
+
+What was removed: the ballot/results/voters pages and their API, the Redis
+store, the nag and close crons, the pop-up, the app-badge part, the three
+`poll-*` notification categories and the registry `ownersPoll` block. Old
+routes 301 to `/pecking-order`; archived issues keep their `ownersPoll`
+blocks as data.
+
 ## 2026-10-11 — The homepage pop-up asks only the owners the poll needs
 
 Brandon asked for a more natural turnout nudge. Under standing votes "go vote"

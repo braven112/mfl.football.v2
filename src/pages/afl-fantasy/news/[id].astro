@@ -111,19 +111,30 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         </div>
       </div>
 
-      <div class="sf-article__body">
-        {post.content?.map(paragraph => (
-          <p set:html={paragraph} />
-        ))}
-      </div>
-
-      <!-- The Gauntlet: rankings from the shared derived data -->
+      <!-- The Gauntlet: the Run-In chart leads; the column reads under it -->
       <GauntletArticleSection
         gauntletRef={post.scheduleStrength}
         files={gauntletFiles}
         teams={aflConfig.teams}
         baseUrl="/afl-fantasy"
         dashboardHref={r('/afl-fantasy/schedule-strength')}
+        part="chart"
+      />
+
+      <div class="sf-article__body">
+        {post.content?.map(paragraph => (
+          <p set:html={paragraph} />
+        ))}
+      </div>
+
+      <!-- The Gauntlet: luck, trap weeks + dashboard CTA (the chart sits above the copy) -->
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={aflConfig.teams}
+        baseUrl="/afl-fantasy"
+        dashboardHref={r('/afl-fantasy/schedule-strength')}
+        part="details"
       />
 
       <div class="sf-article__reactions">

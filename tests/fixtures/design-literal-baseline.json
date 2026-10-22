@@ -1,10 +1,10 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-18",
+  "recordedAt": "2026-10-19",
   "totals": {
     "transition": 202,
-    "fontSize": 2020,
-    "shadow": 232
+    "fontSize": 1962,
+    "shadow": 231
   },
   "files": {
     "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
@@ -306,11 +306,8 @@
     "src/components/shared/package-league/PackageTeamSnapshot.astro": {
       "fontSize": 2
     },
-    "src/components/shared/PeckingOrderIssue.astro": {
-      "fontSize": 15
-    },
     "src/components/shared/PeckingOrderLanding.astro": {
-      "fontSize": 8
+      "fontSize": 7
     },
     "src/components/shared/PeckingOrderPermalink.astro": {
       "fontSize": 3
@@ -958,16 +955,6 @@
     "src/styles/notification-command-center.css": {
       "transition": 2,
       "fontSize": 11
-    },
-    "src/styles/owners-poll-section.css": {
-      "fontSize": 9
-    },
-    "src/styles/owners-poll-voters.css": {
-      "fontSize": 10
-    },
-    "src/styles/owners-poll.css": {
-      "fontSize": 23,
-      "shadow": 1
     },
     "src/styles/player-action-button.css": {
       "transition": 1

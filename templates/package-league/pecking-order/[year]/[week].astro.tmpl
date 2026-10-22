@@ -3,16 +3,24 @@
  * The Pecking Order (__LEAGUE_SHORT__) — historical permalink:
  * /__LEAGUE_SLUG__/pecking-order/[year]/[week].
  *
- * Pre-rendered via getStaticPaths for every issue we have on disk. Thin
- * wrapper over the shared permalink component (archive note, issue, sibling
- * nav) — only the glob and the breadcrumbs are league-specific.
+ * Server-rendered, NOT prerendered: on a league's apex host the canonical path
+ * is the bare `/pecking-order/<year>/<week>`, which only `src/middleware.ts`
+ * maps onto this route — and a prerendered page is a static file the
+ * middleware never sees, so every apex permalink answered 500 (Sep–Oct 2026).
+ * Same reason `news/[id].astro` is server-rendered.
+ *
+ * An issue that is not on disk answers a real 404. That is load-bearing: the
+ * Tuesday announcement waits for THIS url to answer 200 before it posts
+ * (`issuePermalink` in scripts/generate-pecking-order.mjs), so a week that has
+ * not deployed yet must not look live.
  */
-export const prerender = true;
+export const prerender = false;
 
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../../components/shared/Breadcrumbs.astro';
 import PeckingOrderPermalink from '../../../../components/shared/PeckingOrderPermalink.astro';
 import { type PeckingOrderData } from '../../../../components/shared/PeckingOrderIssue.astro';
+import NotFound from '../../../404.astro';
 
 interface Entry { year: number; week: number; data: PeckingOrderData }
 
@@ -32,26 +40,13 @@ const allIssues: Entry[] = parseIssues(
   )
 );
 
-export async function getStaticPaths() {
-  const files = import.meta.glob<PeckingOrderData>(
-    '../../../../../data/__LEAGUE_SLUG__/pecking-order/*.json',
-    { eager: true, import: 'default' }
-  );
-  return Object.entries(files)
-    .map(([file, data]) => {
-      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-      if (!m) return null;
-      return {
-        params: { year: m[1], week: String(parseInt(m[2], 10)) },
-        props: { issue: data as PeckingOrderData },
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
-}
-
-const { issue } = Astro.props as { issue: PeckingOrderData };
+const year = Number(Astro.params.year);
+const week = Number(Astro.params.week);
+const issue = allIssues.find((i) => i.year === year && i.week === week)?.data ?? null;
+if (!issue) Astro.response.status = 404;
 ---
 
+{issue ? (
 <TheLeagueLayout title={`${issue.headline} · The Pecking Order · Week ${issue.week}`}>
   <div class="pr-page">
     <Breadcrumbs items={[
@@ -68,6 +63,9 @@ const { issue } = Astro.props as { issue: PeckingOrderData };
     />
   </div>
 </TheLeagueLayout>
+) : (
+<NotFound />
+)}
 
 <style>
 .pr-page { min-height: 60vh; }

@@ -70,11 +70,6 @@ tests/eval/cut-watch-report-latest.json
 # Storybook build output (dev-only, never shipped)
 storybook-static/
 
-# Chromatic CLI artifacts. --diagnostics-file makes the CLI PERSIST this at the
-# repo root, so a local `pnpm chromatic` leaves it behind and committable.
-chromatic-diagnostics.json
-chromatic.log
-chromatic-build-*.xml
 build-storybook.log
 
 # Diagnostic output from scripts/roster-parity-check.mjs (written to cwd).
@@ -90,3 +85,10 @@ roster-parity.json
 
 # /launch-check reports and screenshots (scripts/launch-check.mjs)
 .launch-check/
+
+# Visual regression (playwright.visual.config.ts). Baselines live on the
+# `visual-baselines` branch, never here; the rest is per-run output.
+tests/visual/__screenshots__/
+tests/visual/stories.manifest.json
+visual-report/
+test-results/

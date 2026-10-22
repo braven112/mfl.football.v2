@@ -89,7 +89,7 @@ Also RAW_MFL-shaped but orphaned: `src/data/mfl-feeds/theleague/2025/standings.j
 | src/data/theleague.config.json (34 KB) | S — 63 importers: layouts/TheLeagueLayout.astro:47, nav/NavFooter.astro:19, utils/franchise-brand.ts:21, league-team-brands.ts:20, owner-trade-reports.ts:22, franchise-band-brand.ts:53 …; F offseason-hero-data.ts:1218; also scripts input (registry `configPath`) | BREAK | yes — THE identity root: `teams[16]{franchiseId,name,nameMedium,nameShort,abbrev,aliases,division,colors*,icon,iconDark,banner,groupMe*,history[] eras,ownerHistory,loaderQuips}`, `divisions`, `divisionAliases`, `loaderLines`, `assetDomain`,`blobDomain` |
 | data/theleague/championship-history.json | F api/schedule-release.ts:50; input of compute-franchise-history & playoff-performance | degrade | yes (`championName`) |
 | src/data/owners-registry.json | not read by src; input of compute-owner-tenures (both leagues, 124 people / 38 TheLeague) | n/a (chain) | yes (owner real names) |
-| src/data/theleague/league-events.ts | S utils/league-event-resolver.ts:16, planner-phase.ts:23 | BREAK | mild (16 league deadlines, theleague.us forum URLs) |
+| src/data/theleague/league-events.ts | S utils/league-event-resolver.ts:16, planner-phase.ts:23 | BREAK | mild (16 league deadlines, roster links) |
 | src/data/theleague/league-year-config.ts | S league-event-resolver.ts:17 | BREAK | no (NFL draft dates) |
 | src/data/theleague/throwback-config.ts / throwback-weeks.mjs | S api/schedule-release.ts:26, lineup.astro:32, utils/throwback-scope.ts:28 | BREAK | yes (reads config `history[]`; 20 name lines) |
 | src/data/hero-showcase/theleague.ts | S theleague/showcase.astro:20 | BREAK | yes (franchiseIds + copy) |
@@ -164,7 +164,7 @@ MFL_*), `generate-pecking-order.mjs` (ANTHROPIC_API_KEY), `sync-owner-last-visit
 | data/theleague/championship-history.json | champion/runner-up names per year |
 | src/data/league-constitution.ts, src/pages/theleague/rules.astro | commissioner name, dues, history; rules.astro is inline copy |
 | src/data/rules-qa-system-prompt.ts, rules-qa-seeds.json | "The League, est. 2007", seeded Q&A |
-| src/data/theleague/league-events.ts | deadlines + theleague.us forum links |
+| src/data/theleague/league-events.ts | deadlines + roster links |
 | src/data/hero-showcase/theleague.ts | franchise cards/copy |
 | src/data/whats-new.json, whats-new-archive/*.json, weekly-changelog-staging.json | team + owner names in prose, screenshots in public/assets/whats-new (351 files, 31 MB) |
 | src/data/theleague/schefter-feed.json, schefter-archive/2026.json, data/schefter/theleague/* | all posts (names, owner quotes, GroupMe lore, personality/lore md) |

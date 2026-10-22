@@ -21,7 +21,7 @@
 
 import type { LeagueFeatures } from './leagues';
 
-export type NotificationGroupId = 'your-team' | 'owners-poll' | 'league-news' | 'live' | 'ops';
+export type NotificationGroupId = 'your-team' | 'league-news' | 'live' | 'ops';
 
 export interface NotificationGroup {
   id: NotificationGroupId;
@@ -44,17 +44,6 @@ export interface NotificationCategory {
   cadence: string;
   /** Only offered where the league has this feature. */
   requiresFeature?: keyof LeagueFeatures;
-  /**
-   * Only offered where the league actually runs the Owners' Poll.
-   *
-   * A separate gate from `requiresFeature` because poll enablement lives in
-   * the registry's `ownersPoll` block, NOT in `features` — and mirroring it
-   * into `features` would create a second source of truth for the same fact,
-   * which is how the ownership-boundary rule ended up with four copies that
-   * disagree. The AFL was being offered all three poll toggles, one of them
-   * ON by default, for a poll it does not run.
-   */
-  requiresOwnersPoll?: true;
   /**
    * Only offered to — and only deliverable to — an admin/commissioner
    * franchise (`adminFranchiseIds` in nav-config.json).
@@ -90,11 +79,6 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
     id: 'your-team',
     label: 'Your team',
     description: 'Things waiting on you, and deadlines that cost you if missed.',
-  },
-  {
-    id: 'owners-poll',
-    label: "The Owners' Poll",
-    description: 'The weekly vote — when it opens, when it closes, and where the room put you.',
   },
   {
     id: 'league-news',
@@ -174,37 +158,6 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
 
-  // ── The Owners' Poll ─────────────────────────────────────────────
-  {
-    id: 'poll-result',
-    requiresOwnersPoll: true,
-    group: 'owners-poll',
-    label: 'Your poll result',
-    description: 'Where the room ranked your team, and how your ballot scored. Voters only.',
-    cadence: 'Weekly in season',
-    defaultOn: true,
-    live: true,
-  },
-  {
-    id: 'poll-open',
-    requiresOwnersPoll: true,
-    group: 'owners-poll',
-    label: 'Ballot opens',
-    description: "Tuesday, when the column publishes and the week's ballot opens.",
-    cadence: 'Weekly in season',
-    defaultOn: false,
-    live: true,
-  },
-  {
-    id: 'poll-reminder',
-    requiresOwnersPoll: true,
-    group: 'owners-poll',
-    label: 'Ballot closing reminder',
-    description: 'Thursday morning, only if you have not voted yet.',
-    cadence: 'Weekly in season',
-    defaultOn: false,
-    live: true,
-  },
 
   // ── League news ──────────────────────────────────────────────────
   {
@@ -340,12 +293,10 @@ export function notificationCategoryIds(): string[] {
  *
  * The registry entry satisfies this structurally, so callers pass the league
  * itself rather than picking fields off it — which is the point. These gates
- * used to take `features` alone, and a capability that lives OUTSIDE that
- * block (poll enablement) therefore could not be honored at all.
+ * used to take `features` alone.
  */
 export interface NotificationLeague {
   features: LeagueFeatures;
-  ownersPoll?: { enabled?: boolean } | null;
 }
 
 /**
@@ -378,12 +329,10 @@ export function categoriesForLeague(
   league: NotificationLeague,
   recipient?: NotificationRecipient,
 ): NotificationCategory[] {
-  const pollEnabled = Boolean(league.ownersPoll?.enabled);
   return NOTIFICATION_CATEGORIES.filter(
     (c) =>
       c.live
       && (!c.requiresFeature || league.features[c.requiresFeature])
-      && (!c.requiresOwnersPoll || pollEnabled)
       && allowedForRecipient(c, recipient),
   );
 }
@@ -432,10 +381,6 @@ export function isCategoryEnabled(
   // undoes the whole point of moving these off the group chat, so it is
   // refused here even if a preference for it is somehow stored.
   if (!allowedForRecipient(category, recipient)) return false;
-  // Same gate as the settings page, applied at the SEND door too — otherwise a
-  // preference stored while a league still offered the toggle keeps delivering
-  // after the capability is switched off.
-  if (category.requiresOwnersPoll && !league.ownersPoll?.enabled) return false;
   const explicit = stored?.[categoryId];
   return typeof explicit === 'boolean' ? explicit : category.defaultOn;
 }

@@ -216,8 +216,6 @@ the two halves cannot be split**:
   retires any fixture pinned to it. That happened five times in one session.
   A fixture change is code: it goes through `/live`, or lands as its own small
   PR first if it passes against unchanged `main` (a synthetic fixture does).
-- **The change needs a Chromatic trigger entry.** See step 8 — that one CANNOT
-  be split, so the whole batch goes through `/live`.
 - **Ask whether the fixture should be repointed at all.** Repointing at the next
   real franchise defers the problem by about a day; prefer a synthetic fixture,
   or delete the case if the branch has genuinely run out of subjects. Say which
@@ -290,53 +288,25 @@ EOF
 State plainly in the PR body that review was skipped and why. A reviewer landing
 on this later should not have to guess whether it was an oversight.
 
-### 8. Expect Chromatic to fail, and treat it as the review
+### 8. Expect `Visual tests` to fail, and treat it as the review
 
-**An assets-only PR trips `Visual tests` essentially every time.** Swapping a
-crest changes the pixels of every Storybook story that renders it, so Chromatic
-reports "N visual changes" and exits 1. The first run of this command produced
-6 changes across 320 snapshots. Nothing is broken — Chromatic is asking a human
-to accept the new baselines.
+**An assets-only PR trips `Visual tests` whenever a story renders the art.**
+Swapping a crest changes the pixels of every story that renders it, so the
+run reports diffs and fails. Nothing is broken — it is asking a human to look.
 
-**Do not treat this as noise, and never `--admin` past it.** The entire safety
-argument for this command is "the change is purely visual, so the code reviewers
-have nothing to look at." That argument makes the *visual* check the primary
-gate rather than an optional one. Skipping code review AND the visual check
-means shipping with nothing having reviewed the change at all.
+The entire safety argument for this command is "the change is purely visual, so
+the code reviewers have nothing to look at." That makes the *visual* check the
+primary gate. **Merging accepts the new baselines**, so skipping the look means
+nothing reviewed the change at all.
 
-So when `Visual tests` fails:
+When it fails, give the user the run URL (the `visual-report` artifact holds
+expected / actual / diff) and stop. **You cannot make this call for them** —
+"the logo changed because I changed the logo" is precisely the assumption that
+would hide a swapped light/dark pair or a crest that vanishes on a dark card.
+Proceed only once they have looked and said to go ahead.
 
-```bash
-gh run view --job <JOB_ID> --log-failed | grep -E 'visual changes|chromatic.com/build'
-```
-
-Give the user the build URL and stop. **You cannot make this call for them** —
-deciding a new baseline is correct means looking at the rendered diff, and "the
-logo changed because I changed the logo" is precisely the assumption that would
-hide a swapped light/dark pair or a crest that vanishes on a dark card.
-
-The one case where you may proceed without waiting: the user has already looked
-at the build and told you to go ahead.
-
-**Every re-run starts a NEW Chromatic build; it does not re-judge the old one.**
-This matters because the obvious loop is wrong. Re-running against build 171's
-19 unaccepted changes produced build 172 with 16 — the acceptances that had
-landed carried over as inherited baselines, the rest did not, and the user was
-now looking at a stale URL. The sequence that works:
-
-1. Give them the URL from the build that just ran.
-2. Wait for them to accept **on that build**.
-3. Only then re-run — and check first, because accepting often turns the commit
-   status green by itself and the re-run gets refused as unnecessary.
-
-Always hand over the URL from the LATEST build. And note that a rebase or any
-new commit also produces a fresh build, which inherits accepted baselines and
-passes clean — that is why a rebased branch can go green with no new review.
-
-**A batch that touches no story asset never triggers Chromatic at all.** The
-trigger list is per-file by design, so refreshing a crest no story renders
-(Bring The Pain, Sept 2026) ships with six checks and no visual build. That is
-the design working, not a check being skipped.
+A batch whose art no story renders passes or never triggers; for those, give
+the user preview links to the surfaces that show it, in light and dark.
 
 ### 9. Merge
 

@@ -31,9 +31,22 @@ interface Props {
    * without the check their click would file the other league's record.
    */
   leagueSlug: string;
+  /**
+   * The banner's own words, for an app whose reason to install is not push
+   * alerts (MFL Live sells live scoring). Each falls back to the league-site
+   * copy, so the existing callers render exactly what they did.
+   */
+  bannerCopy?: { title?: string; prompt?: string; ios?: string; lastStep?: string };
+  /**
+   * Whether "I have the app" is recorded against the session's league
+   * (`/api/app-install`). Off for MFL Live: it is a different app from the
+   * league's own, and recording it would retire the league site's banner for
+   * an owner who never installed that one.
+   */
+  report?: boolean;
 }
 
-const { variant = 'banner', leagueName, leagueSlug } = Astro.props;
+const { variant = 'banner', leagueName, leagueSlug, bannerCopy = {}, report = true } = Astro.props;
 const isBanner = variant === 'banner';
 ---
 
@@ -43,6 +56,7 @@ const isBanner = variant === 'banner';
   data-variant={variant}
   data-league={leagueSlug}
   data-dismiss-key={INSTALL_DISMISS_KEY}
+  data-report={report ? undefined : 'off'}
   aria-labelledby={`install-prompt-title-${variant}`}
   hidden
 >
@@ -56,25 +70,25 @@ const isBanner = variant === 'banner';
 
   <div class="install-prompt__body">
     <h2 class="install-prompt__title" id={`install-prompt-title-${variant}`}>
-      {isBanner ? `Put ${leagueName} on your Home Screen` : 'Install the app first'}
+      {isBanner ? (bannerCopy.title ?? `Put ${leagueName} on your Home Screen`) : 'Install the app first'}
     </h2>
 
     <p class="install-prompt__copy" data-install-copy-prompt hidden>
       {isBanner
-        ? 'Install the app and alerts reach your phone the moment a trade lands or your lineup breaks — no tab required.'
+        ? (bannerCopy.prompt ?? 'Install the app and alerts reach your phone the moment a trade lands or your lineup breaks — no tab required.')
         : `Install ${leagueName} as an app and it can buzz your phone directly, with a badge on the icon when something needs you.`}
     </p>
 
     <p class="install-prompt__copy" data-install-copy-ios hidden>
       {isBanner
-        ? 'On iPhone, notifications only work once the app is on your Home Screen. Tap Share, then Add to Home Screen — takes about five seconds.'
+        ? (bannerCopy.ios ?? 'On iPhone, notifications only work once the app is on your Home Screen. Tap Share, then Add to Home Screen — takes about five seconds.')
         : 'On iPhone and iPad, Apple only allows notifications for apps on the Home Screen. Until you add it, the Enable button below cannot do anything.'}
     </p>
 
     <ol class="install-prompt__steps" data-install-steps hidden>
       <li>Tap the <strong>Share</strong> button in Safari's toolbar.</li>
       <li>Scroll and choose <strong>Add to Home Screen</strong>.</li>
-      <li>Open {leagueName} from your Home Screen, then turn notifications on.</li>
+      <li>{bannerCopy.lastStep ?? `Open ${leagueName} from your Home Screen, then turn notifications on.`}</li>
     </ol>
   </div>
 
@@ -168,7 +182,7 @@ const isBanner = variant === 'banner';
    * never block the click that triggered it or surface an error.
    */
   function reportInstalled(root: HTMLElement, source: 'standalone' | 'appinstalled' | 'declared') {
-    if (alreadyReported(root)) return;
+    if (root.dataset.report === 'off' || alreadyReported(root)) return;
     void fetch('/api/app-install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

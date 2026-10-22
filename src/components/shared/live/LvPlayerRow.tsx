@@ -60,9 +60,7 @@ import {
   getPlayerAvatarRingDark,
 } from '../../../utils/nfl-team-colors';
 import { isUnresolvedPlayerId } from '../../../utils/sleeper/ids';
-
-/** One decimal, always — a score that gains a digit must not shift the column. */
-const fmt = (n: number) => n.toFixed(1);
+import { useScoreFormat } from './score-format';
 
 export interface LvPlayerRowProps {
   row: LivePlayerRow;
@@ -111,6 +109,8 @@ export default function LvPlayerRow({
   onOpen,
   hideProjection = false,
 }: LvPlayerRowProps): JSX.Element {
+  // The league's own MFL setting, so every number matches MFL's.
+  const fmt = useScoreFormat();
   const position = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
   const isDef = position === 'DEF';

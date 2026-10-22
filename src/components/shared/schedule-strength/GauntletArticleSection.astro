@@ -8,6 +8,10 @@
  * post's scheduleStrength pointer is imported (plain articles pay nothing,
  * and retained weekly archives never enter the server bundle). Renders
  * nothing when the pointer or its file is absent.
+ *
+ * Rendered twice per article: `part="chart"` above the copy (the Run-In table
+ * is what readers come for, so it leads) and `part="details"` below it
+ * (schedule luck, trap weeks, dashboard CTA). Owner's call, Oct 2026.
  */
 import StrengthTable from './StrengthTable.astro';
 import ScheduleLuckCallout from './ScheduleLuckCallout.astro';
@@ -32,9 +36,11 @@ export interface Props {
   baseUrl: string;
   /** Resolved href for the dashboard CTA (league path already localized). */
   dashboardHref: string;
+  /** Which half to render: the Run-In chart (above the copy) or the rest (below). */
+  part: 'chart' | 'details';
 }
 
-const { gauntletRef, files, teams, baseUrl, dashboardHref } = Astro.props;
+const { gauntletRef, files, teams, baseUrl, dashboardHref, part } = Astro.props;
 
 let view = null;
 if (gauntletRef) {
@@ -54,18 +60,21 @@ if (gauntletRef) {
 }
 ---
 
-{view?.data && (
+{view?.data && part === 'chart' && view.runIn.length > 0 && (
+  <div class="sf-gauntlet sf-gauntlet--chart gauntlet-theme">
+    <section class="sf-gauntlet__section">
+      <h2 class="sf-gauntlet__title">The Run-In</h2>
+      <StrengthTable
+        variant="run-in"
+        rows={view.runIn}
+        caption={`Remaining schedule difficulty, hardest first — Week ${view.data.week}`}
+      />
+    </section>
+  </div>
+)}
+
+{view?.data && part === 'details' && (
   <div class="sf-gauntlet gauntlet-theme">
-    {view.runIn.length > 0 && (
-      <section class="sf-gauntlet__section">
-        <h2 class="sf-gauntlet__title">The Run-In</h2>
-        <StrengthTable
-          variant="run-in"
-          rows={view.runIn}
-          caption={`Remaining schedule difficulty, hardest first — Week ${view.data.week}`}
-        />
-      </section>
-    )}
     {view.scheduleLuck.length > 0 && (
       <section class="sf-gauntlet__section">
         <h2 class="sf-gauntlet__title">Schedule Luck</h2>
@@ -90,6 +99,10 @@ if (gauntletRef) {
     flex-direction: column;
     gap: 1.5rem;
     padding: 0 1.25rem 1.25rem;
+  }
+
+  .sf-gauntlet--chart {
+    padding-bottom: 0.5rem;
   }
 
   .sf-gauntlet__section {

@@ -212,8 +212,7 @@ describe('the league’s own verb, everywhere', () => {
   it('the shape module stays free of the server chain', () => {
     // player-claim-client ships to the browser inside PlayerDetailsModal. A
     // plain `import type` from claim-context.ts still drags auth, mfl-fetch
-    // and the MFL client into the module graph as far as the Storybook
-    // dependency scan is concerned (tests/chromatic-path-filter.test.ts).
+    // and the MFL client into the module graph a Storybook story reaches.
     const shape = read('src/utils/claim-context-shape.ts');
     for (const forbidden of ['./auth', './mfl-fetch', './mfl-matchup-api', './claim-context']) {
       expect(shape, `claim-context-shape must not import ${forbidden}`)

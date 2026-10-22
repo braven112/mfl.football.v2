@@ -30,8 +30,8 @@
  *   - one thin route per page the ticked features entitle, generated from
  *     Archie's routes (the package-league template) with the slug swapped;
  *   - page-directory entries and a nav section for those routes;
- *   - its config in chromatic.yml (the scheduled jobs read the registry —
- *     scripts/lib/league-jobs.mjs — so no workflow lists the league);
+ *   - no workflow edit: the scheduled jobs read the registry
+ *     (scripts/lib/league-jobs.mjs), so no workflow lists the league;
  *   - the regenerated theme stylesheet (it selects every league).
  * Then, unless `--offline`: fetches the league's MFL feeds, suggests its
  * branding, and computes its free-agent board.
@@ -113,7 +113,6 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     `    advertiseOnSharedHost: false,`,
     `    optInNav: true,`,
     `    pageKit: 'package',`,
-    `    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },`,
     ...(f.powerRankings ? [`    peckingOrder: { topN: 25 },`] : []),
     ...(spec.duplicatePlayers ? [`    duplicatePlayers: true,`] : []),
     `    officialClock: {`,
@@ -244,17 +243,6 @@ export function planLaunch(spec) {
   const added = JSON.parse(changes.find((c) => c.path === 'src/data/page-directory.json').content).filter(
     (e) => e.path === `/${spec.slug}` || e.path.startsWith(`/${spec.slug}/`),
   );
-
-  // Chromatic: every league's config renders into a story (the shared
-  // league-config loader globs them all), so each one is a trigger path.
-  const chromaticPath = '.github/workflows/chromatic.yml';
-  const chromatic = read(chromaticPath);
-  const configLine = /^(\s+)- 'data\/archies\/archies\.config\.json'\n/gm;
-  if (!configLine.test(chromatic)) throw new Error('chromatic.yml config path anchor not found');
-  files.push({
-    path: chromaticPath,
-    content: chromatic.replace(configLine, (line, indent) => `${line}${indent}- 'data/${spec.slug}/${spec.slug}.config.json'\n`),
-  });
 
   return { files, routes, directoryEntries: added.length };
 }

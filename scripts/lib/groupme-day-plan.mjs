@@ -57,7 +57,7 @@ export const GROUPME_DAY_PLAN = {
   1: ['schedule-release'],
   2: ['schedule-release', 'pecking-order'],
   3: ['schedule-release', 'schedule-strength'],
-  4: ['schedule-release', 'owners-poll-close'],
+  4: ['schedule-release'],
   5: ['schedule-release', 'weekend-preview'],
   6: ['schedule-release', 'matchup-preview'],
 };

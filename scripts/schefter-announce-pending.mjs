@@ -29,7 +29,6 @@ import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { chatConfigFor, slackSenderFor } from './lib/chat.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
-import { sendVoterPushes } from './lib/owners-poll-posts.mjs';
 import { awaitPublished } from './lib/await-published.mjs';
 import { readAnnounceQueue, clearAnnounceQueue, queuePath } from './lib/announce-queue.mjs';
 
@@ -83,6 +82,21 @@ export async function announceOne(entry, {
   const published = entry.verifyPath && !isDry
     ? await wait({ league, path: entry.verifyPath, log })
     : { live: true, attempts: 0 };
+
+  // Failing open is right for an article, whose promo still points somewhere
+  // useful once the deploy lands. It is wrong for a lane whose link would
+  // show LAST week's content until then (the Pecking Order): there, a late
+  // post is worth nothing and an early one tells the league the wrong week.
+  // Such an entry opts out with `skipIfNotLive`, and every channel in it —
+  // chat and both pushes — is dropped together so they cannot disagree.
+  if (!published.live && entry.skipIfNotLive) {
+    log.warn?.(
+      `  [announce] ${entry.postId} is not live after the full wait — NOT announcing ` +
+        '(skipIfNotLive). The page itself still publishes when the deploy lands.',
+    );
+    return { announced: false, reason: 'not live', live: false };
+  }
+
   let posted = false;
 
   // A Slack league posts the same copy to its channel, as its persona, under
@@ -153,20 +167,7 @@ export async function announceOne(entry, {
     pushed = result.sent ?? 0;
   }
 
-  // Per-recipient pushes (the Owners' Poll open and reveal). Not a broadcast:
-  // each owner gets different copy and only voters get the reveal at all, so
-  // these arrive pre-built and go out through the poll's own sender.
-  let voterPushed = 0;
-  if (entry.voterPushes?.length) {
-    if (isDry) {
-      log.log?.(`  [dry-run] Would send ${entry.voterPushes.length} per-voter push(es).`);
-    } else {
-      const result = await sendVoterPushes({ league, notifications: entry.voterPushes, log });
-      voterPushed = result.sent ?? 0;
-    }
-  }
-
-  return { announced: true, live: published.live, posted, pushed, voterPushed };
+  return { announced: true, live: published.live, posted, pushed };
 }
 
 async function main() {

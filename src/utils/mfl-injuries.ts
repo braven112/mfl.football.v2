@@ -60,11 +60,20 @@ const INJURY_FEEDS: Record<string, Record<string, unknown>> = {
  * @param slug Registry league slug ('theleague' | 'afl-fantasy' | …).
  */
 export function loadInjuryMap(slug: string): InjuryMap {
+  return newestBundledInjuries(slug).injuries;
+}
+
+/**
+ * The bundled feed's newest year, its map and when the sync wrote it
+ * ({ year: -1, injuries: {} } when there is none).
+ */
+export function newestBundledInjuries(slug: string): { year: number; generatedAt?: string; injuries: InjuryMap } {
   const feeds = INJURY_FEEDS[slug];
-  if (!feeds) return {};
+  if (!feeds) return { year: -1, injuries: {} };
 
   let newestYear = -1;
   let newest: InjuryMap = {};
+  let generatedAt: string | undefined;
 
   for (const [path, mod] of Object.entries(feeds)) {
     const matched = path.match(/mfl-feeds\/(\d{4})\//);
@@ -77,10 +86,13 @@ export function loadInjuryMap(slug: string): InjuryMap {
 
     newestYear = year;
     newest = injuries as InjuryMap;
+    const stamp = (data as { generatedAt?: unknown }).generatedAt;
+    generatedAt = typeof stamp === 'string' ? stamp : undefined;
   }
 
-  return newest;
+  return { year: newestYear, generatedAt, injuries: newest };
 }
+
 
 /**
  * The badge's visible text — the designation's first letter, in parentheses.

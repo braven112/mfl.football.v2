@@ -538,9 +538,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
       return { ok: res.ok && (data?.success ?? true), data };
     }
 
-    function refreshRowAfterIR(playerId: string, newStatus: string) {
+    /** Returns true when the row sits in the wrong roster section now and the
+        page must re-render to move it (see executeAction). */
+    function refreshRowAfterIR(playerId: string, newStatus: string): boolean {
       const row = document.querySelector<HTMLTableRowElement>(`tr[data-player-id="${playerId}"]`);
-      if (!row) return;
+      if (!row) return false;
       row.dataset.playerStatus = newStatus;
       const badge = row.querySelector('.status-badge');
       if (badge) {
@@ -549,6 +551,14 @@ const spriteUrl = spriteUrlFor(Astro.url);
         badge.classList.toggle('status-badge--ir', onIR);
         badge.classList.toggle('status-badge--active', !onIR);
       }
+      // The roster page renders Active and Injured Reserve as separate
+      // sections; relabelling the row leaves an IR'd player listed under
+      // Active (the phone layout has no badge at all), which reads as a move
+      // that never happened. The sections are grouped and banded server-side,
+      // so re-render rather than transplant the row.
+      const section = row.closest<HTMLElement>('[data-roster-section]')?.dataset.rosterSection;
+      const wanted = newStatus === 'INJURED_RESERVE' ? 'ir' : 'active';
+      return section !== undefined && section !== wanted;
     }
 
     function removeRowAfterCut(playerId: string) {
@@ -629,8 +639,9 @@ const spriteUrl = spriteUrlFor(Astro.url);
         }
 
         // Optimistic UI updates so the user sees the result without reload
-        if (action === 'ir-to') refreshRowAfterIR(playerId, 'INJURED_RESERVE');
-        if (action === 'ir-from') refreshRowAfterIR(playerId, 'ROSTER');
+        let reloadAfter = false;
+        if (action === 'ir-to') reloadAfter = refreshRowAfterIR(playerId, 'INJURED_RESERVE');
+        if (action === 'ir-from') reloadAfter = refreshRowAfterIR(playerId, 'ROSTER');
         if (action === 'cut') removeRowAfterCut(playerId);
         if (action === 'trade-bait-add') refreshRowAfterTradeBait(playerId, true);
         if (action === 'trade-bait-remove') refreshRowAfterTradeBait(playerId, false);
@@ -644,10 +655,17 @@ const spriteUrl = spriteUrlFor(Astro.url);
           new CustomEvent('afl-action:done', { detail: { action, playerId } }),
         );
 
-        successEl.textContent = `${playerName} — done.`;
+        successEl.textContent = result.data?.alreadyDone
+          ? `${playerName} ${String(result.data.message || 'was already moved').replace(/^Player /, '')}.`
+          : `${playerName} — done.`;
         successEl.hidden = false;
         confirmBtn.textContent = origLabel;
-        setTimeout(() => closeModal(), 1200);
+        setTimeout(() => {
+          closeModal();
+          // The server busted the roster cache before answering, so a reload
+          // renders the player in the section MFL now has him in.
+          if (reloadAfter) window.location.reload();
+        }, 1200);
       } catch (err: any) {
         errorEl.textContent = err?.message || 'Something went wrong. Please try again.';
         errorEl.hidden = false;

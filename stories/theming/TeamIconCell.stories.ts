@@ -28,14 +28,6 @@ import { themeModes } from '../../.storybook/modes';
  *
  * Crests come from public/ via staticDirs. No network.
  *
- * THE CREST LIST IS NOT COSMETIC. `STORY_ASSET_GLOBS` names these files
- * individually rather than globbing the two league trees, because those trees
- * hold ~700 files and any team's logo swap was starting a Chromatic build that
- * could not change a pixel. So swapping a crest here is a two-file change —
- * the new path has to enter the trigger too, or its regressions ship and get
- * auto-accepted as the baseline on main. `tests/chromatic-path-filter.test.ts`
- * text-scans this file and fails if you forget.
- *
  * Each crest is here for the BRANCH it covers, not for the team. Pick a
  * replacement by checking `src/data/crest-dark-stroke-manifest.json` against
  * the league config: `iconDark` = swap, `iconStrokeDark: "#hex"` = custom,

@@ -1,0 +1,81 @@
+/*
+ * The phone sort chips — a row of pills that scrolls sideways and stands in
+ * for the sortable table headers a phone hides. One look for every table that
+ * offers them: TheLeague and AFL-family Rosters (phone-sort.ts), and every
+ * league's Free Agents page (free-agents-sort-chips.ts). The markup comes from
+ * `renderSortChips`; each page owns where its `.rr-chips` wrapper sits and
+ * when it shows (rosters-mobile.css, free-agents-mobile.css).
+ */
+@media (max-width: 767px) {
+  /* Scrolls within itself — `min-width: 0` up the chain and `overflow-x`
+     here are what keep a long chip set from widening the page. The 3px
+     padding keeps the focus ring inside the scroll box, which clips. */
+  .rr-chips__row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 3px;
+    margin: -3px;
+  }
+
+  .rr-chips__row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Positioned so the visually-hidden direction text (.rr-chip__sr, which
+     is absolute) stays inside the scroll box. Without it the text anchors to
+     the page and an active chip scrolled to the edge widened the page. */
+  .rr-chip {
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: var(--touch-target-min);
+    padding: 0 0.875rem;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-700, #374151);
+    background: var(--content-bg, #ffffff);
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 9999px);
+    cursor: pointer;
+  }
+
+  .rr-chip--on {
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, #ffffff));
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  /* Dark: the same lifted accent the active GM | Coach button uses. */
+  html.dark .rr-chip--on {
+    color: var(--color-primary-light, #60a5fa);
+  }
+
+  .rr-chip:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .rr-chip__dir {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+
+  /* The direction is said in words for a screen reader; visually only the
+     arrow shows. */
+  .rr-chip__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

@@ -283,8 +283,8 @@ can reach is a Chromatic rendering file — importing the resolver from
 `viewer-preferences.ts` would drag the catalog, the seeds and the registry into
 that graph and wake every board snapshot on a seed edit. A second copy would
 drift the first time a country with an `auto` zone is added. (`waiver-window.ts`
-DOES now pull `viewer-clock.ts` in, which is why the three new files are listed
-in both `chromatic.yml` trigger blocks — they really can change a snapshot.)
+DOES now pull `viewer-clock.ts` in, so those files really can change a story's
+render.)
 
 **READ anywhere, RESOLVE only in a route.** The hazard is `Astro.cookies.set()`
 after the headers are committed, and only `resolveViewerPreferences` calls it —

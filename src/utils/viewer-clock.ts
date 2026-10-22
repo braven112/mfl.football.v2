@@ -183,7 +183,7 @@ export function formatDateForViewer(
 // ── The device fallback ──────────────────────────────────────────────────
 //
 // Some surfaces printed the DEVICE's own clock before preferences existed —
-// the owners-poll deadline, the mock-draft lobby — because a deadline you are
+// the (since-retired) Owners' Poll deadline, the mock-draft lobby — because a deadline you are
 // about to act on is most useful in the clock on the wall in front of you.
 // That is a different floor from `eventZonesFor`'s PT, and the rule is the
 // same in both cases: adopting the preference must not change what a viewer

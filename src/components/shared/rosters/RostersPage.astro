@@ -69,6 +69,7 @@ import { sortSlotSpansHtml } from '../../../utils/rosters/sort-value-slot';
 // The phone layout, shared with TheLeague (docs/plans/rosters-mobile-layout.md
 // § 8). Imported here, in the frontmatter: the rules reach rows a scoped
 // <style> would not.
+import '../../../styles/sort-chips.css';
 import '../../../styles/rosters-mobile.css';
 import '../../../styles/roster-position-groups.css';
 import '../../../styles/rosters-primetime.css';
@@ -80,7 +81,8 @@ import { resolveRosterHeaderSkin } from '../../../utils/roster-header-skin';
 import { getTestDateFromSearchParams, getLeagueYearForSlug } from '../../../utils/league-year';
 import { getCachedRosterFranchises } from '../../../utils/mfl-roster-cache';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
-import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../../utils/mfl-injuries';
+import { injuryBadgeLabel, injuryBadgeTitle } from '../../../utils/mfl-injuries';
+import { loadLiveInjuryMap } from '../../../utils/mfl-injuries-live-map';
 import '../../../styles/injury-indicator.css';
 import { loginUrlFor } from '../../../utils/login-redirect';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../../utils/trade-bait';
@@ -208,7 +210,7 @@ const futurePicksData = feedForYear(feeds.futurePicks, selectedYear, 'futureDraf
 // him on IR with a torn ACL. Deliberately NOT keyed to `selectedYear` — see
 // src/utils/mfl-injuries.ts: the injuries feed exists only for the newest
 // year, so a year-keyed lookup on an archive season finds nothing.
-const leagueInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
+const leagueInjuries = await loadLiveInjuryMap(PAGE_LEAGUE_SLUG);
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
 const liveLeagueYear = getLeagueYearForSlug(PAGE_LEAGUE_SLUG, testDate ?? undefined);
 if (selectedYear === liveLeagueYear) {

@@ -1,7 +1,7 @@
 /**
  * Standings board story data: a frozen, invented 6-week season for TheLeague's
  * 16 clubs and the AFL's 24, built inline so a story never depends on a
- * cron-written feed (tests/chromatic-path-filter.test.ts). Identities (names,
+ * cron-written feed. Identities (names,
  * crests) come from each league's hand-kept config.
  */
 import theleagueConfig from '../../src/data/theleague.config.json';

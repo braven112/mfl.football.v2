@@ -37,24 +37,9 @@ import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
-import {
-  openPoll,
-  closePoll,
-  SYNTHETIC_POLL_SOURCE,
-  readTurnout,
-  describeTurnoutFailure,
-  buildRevealMessage,
-  normalizeFranchiseIds,
-} from './lib/owners-poll-pass.mjs';
-import {
-  buildVoterPushes,
-  sendVoterPushes,
-  buildRevealFeedPost,
-  buildCallback,
-  upsertFeedPost,
-  buildOpenPushes,
-  buildNagPushes,
-} from './lib/owners-poll-posts.mjs';
+import { capSentences, LEDE_MAX_SENTENCES } from '../src/utils/pecking-order-lede.mjs';
+import { spellOutShorthand } from '../src/utils/pecking-order-wording.mjs';
+import { normalizeFranchiseId } from '../src/utils/franchise-id.mjs';
 import {
   buildFactSheet,
   getSystemPrompt,
@@ -106,11 +91,6 @@ function parseArgs() {
   const opts = {
     league: 'theleague', year: null, week: null, dryRun: false, regenerate: false,
     ai: null, publish: false,
-    // Owners' Poll passes. Each is a MODE, not a flag on the normal run: the
-    // column is generated Tuesday, the ballot is nagged Wednesday morning and
-    // tallied Wednesday evening, and conflating them would mean regenerating
-    // the column three times a week.
-    closePoll: false, nagPoll: false,
   };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -120,8 +100,6 @@ function parseArgs() {
       case '--dry-run': opts.dryRun = true; break;
       case '--regenerate': opts.regenerate = true; break;
       case '--publish': opts.publish = true; break;
-      case '--close-poll': opts.closePoll = true; break;
-      case '--nag-poll': opts.nagPoll = true; break;
       case '--ai': opts.ai = true; break;
       case '--no-ai': opts.ai = false; break;
       case '-h':
@@ -142,8 +120,6 @@ function printUsage() {
   console.log(`  --league   ${VALID_LEAGUES.join(' | ')} (default theleague)`);
   console.log(`  default    year = current season (Labor Day clock), week = last completed week`);
   console.log(`  --publish     Post the GroupMe announcement when a new issue is written`);
-  console.log(`  --close-poll  Tally the Owners' Poll into an existing issue and reveal it`);
-  console.log(`  --nag-poll    Post the count-only turnout reminder while the ballot is open`);
   console.log(`  --ai       Force Schefter voice (requires ANTHROPIC_API_KEY)`);
   console.log(`  --no-ai    Force templated voice (no API call)`);
 }
@@ -413,7 +389,7 @@ function rankingBlurb(row, standingsByFid) {
   })();
   const streak = parseStreak(standing?.strk);
   const streakStr = streak.length >= 2
-    ? (streak.type === 'W' ? `${streak.length}-game win streak` : `${streak.length}-game skid`)
+    ? `${streak.length}-game ${streak.type === 'W' ? 'winning' : 'losing'} streak`
     : null;
 
   const parts = [];
@@ -422,7 +398,7 @@ function rankingBlurb(row, standingsByFid) {
   if (streakStr) parts.push(`Riding a ${streakStr}.`);
   if (trendStr) parts.push(`Pecking order: ${trendStr}.`);
   if (parts.length === 0) parts.push(`Reset week — limited data.`);
-  return parts.join(' ');
+  return spellOutShorthand(parts.join(' '));
 }
 
 // ─── Standings snapshot ─────────────────────────────────────────────
@@ -501,7 +477,7 @@ function buildHeadlineAndLede({ teams, rankings, awards, week }) {
     ledeParts.push(`${team?.nameMedium ?? moverDown.franchiseId} slide ${moverDown.rank - moverDown.previousRank} to #${moverDown.rank}.`);
   }
 
-  return { headline, lede: ledeParts.join(' ') };
+  return { headline, lede: capSentences(ledeParts.join(' '), LEDE_MAX_SENTENCES) };
 }
 
 // ─── Main ──────────────────────────────────────────────────────────
@@ -703,54 +679,53 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
   // own apex host and adds one on the shared host, so the link never burns a
   // redirect hop or 404s. The URL ends the message — GroupMe autolinks a
   // trailing period into the href.
-  //
-  // No Owners' Poll line. The poll's chat presence is Claude's results post
-  // later in the week, which carries the vote link (buildRevealMessage).
   return `🐔 Week ${issue.week} Pecking Order: ${hook} ▸ ${leagueUrl(league, '/pecking-order')}`;
 }
 
 /**
- * WHY THIS LANE QUEUES BUT DOES NOT WAIT.
+ * The Tuesday column waits for its own issue permalink before announcing.
  *
- * The announcement still moves behind the workflow's commit step (so it cannot
- * go out at all if that step failed, and never before the push) — but unlike
- * the Schefter columns it does not probe a URL first, because neither
- * candidate can answer honestly today:
+ * The landing page `/pecking-order` cannot be the probe: it answers 200 in
+ * every week of the season, and while the deploy is in flight it is the page
+ * that shows LAST week's column. That is exactly what owners saw on
+ * 2026-10-20, when this lane announced with no wait at all: the Week 6 post
+ * went out at 11:29, the deploy carrying Week 6 had only just started
+ * building, and GroupMe's unfurl (and every owner who tapped within those
+ * minutes) got Week 5.
  *
- *  - `/pecking-order` answers 200 in every week of the season. It is the page
- *    that shows LAST week's column while the deploy is in flight, so waiting
- *    on it is waiting on nothing.
- *  - `/<league>/pecking-order/<year>/<week>` would be the honest probe — it is
- *    prerendered per issue, so an undeployed week has no path — except that
- *    route returns **500 in production today**, on every issue, in both
- *    leagues. A probe against it could only ever burn its full timeout and
- *    push the announcement 12 minutes late. The Thursday reveal, which lands
- *    against a kickoff margin, is the worst possible place for that.
- *
- * Both halves — the 500, and the marker the reveal needs on top of a status
- * code because it AMENDS a page rather than creating one — are written up in
+ * `/<league>/pecking-order/<year>/<week>` is honest: it is server-rendered off
+ * the deployed bundle's own glob of issue files and answers 404 for a week it
+ * does not have, so it turns 200 in the same deploy that updates the landing
+ * page. It used to be prerendered, which made it 500 on every apex host and
+ * forced this lane to skip the wait — see
  * docs/claude/followups/2026-09-17-pecking-order-permalink-500.md.
+ *
+ * League-PREFIXED, like every verifyPath: `awaitPublished` runs it through
+ * `leagueUrl`, which strips the prefix on the league's apex host.
  */
-const VERIFY_PATH = null;
+export function issuePermalink(league, year, week) {
+  return `/${league.slug}/pecking-order/${year}/${week}`;
+}
 
 /**
  * Queue Tuesday's announcement. It is SENT by
  * scripts/schefter-announce-pending.mjs, after the workflow's commit step and
  * once the issue is actually live — see scripts/lib/await-published.mjs for
- * the bug that split these apart. The ballot invite rides along inside this
- * one message rather than being a second post.
+ * the bug that split these apart.
  */
-async function queueAnnouncement(issue, teams, league, { year, week, push, voterPushes, dryRun }) {
+async function queueAnnouncement(issue, teams, league, { year, week, push, dryRun }) {
   const { file, size } = await enqueueAnnounce(projectRoot, {
     league: league.slug,
     kind: 'pecking-order',
     postId: `pecking-order-${year}-${week}`,
-    verifyPath: VERIFY_PATH,
+    verifyPath: issuePermalink(league, year, week),
+    // A post that beats the deploy sends owners to last week's column, so on
+    // a timeout say nothing rather than say the wrong thing.
+    skipIfNotLive: true,
     groupMeText: buildGroupMeAnnouncement(issue, teams, league),
     botEnv: GROUPME_BOT_ENV[league.slug],
     push,
     pushCategory: 'column',
-    voterPushes,
     dryRun,
   });
   console.log(`  [announce] Queued for after the deploy (${size} pending → ${file}).`);
@@ -779,271 +754,14 @@ export function resolveSeasonGate({ optsYear, now = new Date() }) {
   return { skip: false, year };
 }
 
-/**
- * Wednesday evening: tally the ballot into Tuesday's issue and reveal it.
- *
- * Amends the EXISTING issue file in place rather than regenerating: the
- * headline, lede and blurbs owners read on Tuesday must not change under them,
- * and the AI is not called at all on this path.
- */
-async function runClosePoll(opts, league) {
-  if (!league.ownersPoll?.enabled) {
-    console.log(`  [skip] ${league.name} does not run the Owners' Poll.`);
-    return;
-  }
-
-  const redisWindowYear = opts.year ?? currentSeasonYear();
-  const week = opts.week ?? (await resolveLatestIssueWeek(league, redisWindowYear));
-  if (!week) {
-    console.log(`  [skip] No ${league.name} issue found for ${redisWindowYear}.`);
-    return;
-  }
-
-  const outPath = issueFilePath(league, redisWindowYear, week);
-  const issue = await tryLoadJSON(outPath);
-  if (!issue) {
-    console.log(`  [skip] ${path.relative(projectRoot, outPath)} does not exist.`);
-    return;
-  }
-  // A seeded example is not a closed week — it is a placeholder standing in
-  // until a real poll runs, so a real tally is allowed to replace it. Skipping
-  // on it would discard the ballots owners actually cast, suppress the reveal,
-  // and leave the window pointer uncleared.
-  if (issue.ownersPoll?.status === 'closed' && issue.ownersPoll.source !== SYNTHETIC_POLL_SOURCE) {
-    console.log(`  [skip] Week ${week}'s poll is already closed.`);
-    return;
-  }
-  if (issue.ownersPoll?.source === SYNTHETIC_POLL_SOURCE) {
-    console.log(`  [poll] Replacing the seeded example on Week ${week} with the real tally.`);
-  }
-
-  // The composite is the tiebreaker AND the ordering of the unranked block, so
-  // it comes from the issue itself — the same numbers owners saw, not a fresh
-  // computation that could have drifted.
-  const compositeRankByFid = Object.fromEntries(
-    (issue.rankings ?? []).map((r) => [r.franchiseId, r.rank]),
-  );
-
-  const result = await closePoll({ league, issue, compositeRankByFid });
-  if (!result) return;
-
-  issue.ownersPoll = result.block;
-
-  if (opts.dryRun) {
-    console.log('--- DRY RUN ---');
-    console.log(JSON.stringify(issue.ownersPoll, null, 2));
-    return;
-  }
-
-  await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
-  console.log(`  ✓ Amended ${path.relative(projectRoot, outPath)}`);
-
-  const teamsConfig = await loadTeamsConfig(league);
-
-  // Earlier weeks of this season, for the callback — the line that resurfaces
-  // what the room got wrong. Read once and shared by the feed post and the
-  // chat post so they cannot disagree about which week they are quoting.
-  const priorIssues = await loadSeasonIssues(league, redisWindowYear, week);
-
-  // The feed post is written even without --publish: it is a durable record on
-  // the site, not an announcement, and a dry operator run that skips chat
-  // still wants the archive correct. Replace-by-id, so a re-run cannot leave
-  // two Owners' Poll posts for the same week.
-  await writeRevealFeedPost({ league, issue, teams: teamsConfig.teams, priorIssues });
-
-  if (opts.publish) {
-    const callback = buildCallback({ issue, priorIssues, teams: teamsConfig.teams });
-    const text = buildRevealMessage({ league, issue, teams: teamsConfig.teams, callback });
-
-    // Personal, per voter, and only to voters. The chat post is a broadcast;
-    // this is the payoff that makes voting worth doing.
-    const previousIssue = await tryLoadJSON(
-      issueFilePath(league, redisWindowYear, week - 1),
-    );
-    const voterPushes = buildVoterPushes({
-      league,
-      issue,
-      teams: teamsConfig.teams,
-      previousIssue,
-    });
-
-    if (!text && voterPushes.length === 0) return;
-
-    // QUEUED, not sent — same reason as the Tuesday column. The reveal names
-    // a tally that only exists in the amended issue file, so announcing
-    // before the deploy sends every owner to a page still showing an open
-    // ballot and inviting them to vote in a poll that has closed.
-    //
-    // No probe — see VERIFY_PATH. Note the reveal's own feed post could not
-    // have served as one either: buildRevealFeedPost emits
-    // type 'power-ranking', and news/[id].astro only ever serves an article.
-    const { file, size } = await enqueueAnnounce(projectRoot, {
-      league: league.slug,
-      kind: 'owners-poll-close',
-      postId: `owners-poll-close-${redisWindowYear}-${week}`,
-      verifyPath: VERIFY_PATH,
-      groupMeText: text || null,
-      botEnv: GROUPME_BOT_ENV[league.slug],
-      push: null,
-      voterPushes,
-      dryRun: opts.dryRun,
-    });
-    console.log(`  [announce] Reveal queued for after the deploy (${size} pending → ${file}).`);
-    console.log('  [announce] Send with: node scripts/schefter-announce-pending.mjs');
-  }
-}
-
-/**
- * Write (or replace) the Owners' Poll reveal post in the league's feed.
- *
- * Note it is NOT the close pass's readiness probe, tempting as that looks: the
- * post is `type: 'power-ranking'`, and `news/[id].astro` serves only
- * `type === 'article'` with content or grades. A probe on its permalink could
- * never do anything but time out. The probe is the issue permalink plus a
- * marker — see runClosePoll.
- */
-async function writeRevealFeedPost({ league, issue, teams, priorIssues = [] }) {
-  const post = buildRevealFeedPost({ league, issue, teams, priorIssues });
-  if (!post) return;
-
-  const feedPath = path.join(projectRoot, league.schefterFeedPath);
-  const feed = await tryLoadJSON(feedPath);
-  if (!feed) {
-    console.warn(`  [poll] No feed at ${league.schefterFeedPath} — skipping the reveal post.`);
-    return;
-  }
-  await fs.writeFile(feedPath, JSON.stringify(upsertFeedPost(feed, post), null, 2) + '\n', 'utf8');
-  console.log(`  ✓ Feed post ${post.id}`);
-}
-
-/**
- * Wednesday morning: the count-only turnout reminder.
- *
- * Silent at full turnout, and silent when no ballot is open — a cron that
- * posts "0 of 16" in the offseason is worse than no cron.
- */
-async function runNagPoll(opts, league) {
-  if (!league.ownersPoll?.enabled) {
-    console.log(`  [skip] ${league.name} does not run the Owners' Poll.`);
-    return;
-  }
-
-  const turnout = await readTurnout({ league });
-  if (!turnout.ok) {
-    const why = describeTurnoutFailure(turnout.reason, turnout.error);
-    // A credential or read failure is NOT a clean skip: exiting 0 on it would
-    // let a broken deployment look like a quiet week for the whole season.
-    if (turnout.reason === 'no-credentials' || turnout.reason === 'read-failed') {
-      throw new Error(why);
-    }
-    console.log(`  [skip] ${why}`);
-    return;
-  }
-
-  // PUSH ONLY. The chat gets one poll post per day and the reveal earns it.
-  // In a personal channel this can also do what it never could publicly: reach
-  // the owners who still need to act without naming them to everyone else.
-  //
-  // Under standing votes the audience is no longer "people who have not voted"
-  // — that set empties out by about Week 5 — but owners whose ballot has sat
-  // untouched while the league moved, plus anyone with nothing on file at all.
-  const notifications = buildNagPushes({
-    week: turnout.week,
-    closesAt: turnout.closesAt,
-    standing: turnout.standing,
-  });
-  if (notifications.length === 0) {
-    console.log(`  [skip] Every ballot is current (${turnout.ballotsIn}/${turnout.eligibleVoters} on file).`);
-    return;
-  }
-
-  if (opts.dryRun || !opts.publish) {
-    console.log('--- STILL GOOD? PREVIEW (push) ---');
-    console.log(`  ${notifications.length} owners have a stale ballot or none:`);
-    console.log(`  "${notifications[0].title}" / "${notifications[0].body}"`);
-    return;
-  }
-  await sendVoterPushes({ league, notifications });
-}
-
-/**
- * First kickoff of the week AFTER the one just ranked, or null.
- *
- * MFL's nflSchedule feed carries ONE week and `fetch-mfl-feeds` re-syncs it to
- * the current NFL week daily, so the week it holds is not guaranteed to be the
- * one we want. The week number is therefore CHECKED, not assumed: a feed
- * describing any other week returns null and the window falls back to its
- * scheduled hour. Trusting a mismatched feed could close the ballot before it
- * opened.
- */
-async function resolveUpcomingKickoff(league, year, completedWeek) {
-  const feed = await tryLoadJSON(path.join(feedDir(league, year), 'nflSchedule.json'));
-  const schedule = feed?.nflSchedule;
-  if (!schedule) return null;
-
-  if (Number(schedule.week) !== completedWeek + 1) {
-    console.log(
-      `  [poll] nflSchedule holds week ${schedule.week}, not ${completedWeek + 1} — using the scheduled close.`,
-    );
-    return null;
-  }
-
-  const matchups = Array.isArray(schedule.matchup) ? schedule.matchup : [schedule.matchup];
-  const kickoffs = matchups
-    .map((m) => Number(m?.kickoff) * 1000)
-    .filter((ms) => Number.isFinite(ms) && ms > 0);
-  if (kickoffs.length === 0) return null;
-
-  return new Date(Math.min(...kickoffs));
-}
-
-/** Every earlier issue of this season, oldest first. */
-async function loadSeasonIssues(league, year, beforeWeek) {
-  let entries;
-  try {
-    entries = await fs.readdir(peckingOrderDir(league));
-  } catch {
-    return [];
-  }
-  const weeks = entries
-    .map((f) => f.match(new RegExp(`^${year}-(\\d{1,2})\\.json$`)))
-    .filter(Boolean)
-    .map((m) => Number(m[1]))
-    .filter((w) => w < beforeWeek)
-    .sort((a, b) => a - b);
-
-  const issues = [];
-  for (const w of weeks) {
-    const data = await tryLoadJSON(issueFilePath(league, year, w));
-    if (data) issues.push(data);
-  }
-  return issues;
-}
-
-/** Newest issue week on disk for a season, so the poll passes need no --week. */
-async function resolveLatestIssueWeek(league, year) {
-  let entries;
-  try {
-    entries = await fs.readdir(peckingOrderDir(league));
-  } catch {
-    return null;
-  }
-  const weeks = entries
-    .map((f) => f.match(new RegExp(`^${year}-(\\d{1,2})\\.json$`)))
-    .filter(Boolean)
-    .map((m) => Number(m[1]));
-  return weeks.length ? Math.max(...weeks) : null;
+/** Normalize a franchise list once, for the push recipients. */
+function normalizeFranchiseIds(ids) {
+  return Array.from(new Set(Array.from(ids ?? [], (id) => normalizeFranchiseId(id)))).filter(Boolean);
 }
 
 async function main() {
   const opts = parseArgs();
   const league = LEAGUES[opts.league];
-
-  // The poll passes operate on an issue that ALREADY EXISTS. They never
-  // generate or re-voice one — re-running the AI on Wednesday would rewrite
-  // Tuesday's published prose underneath the owners who already read it.
-  if (opts.closePoll) return runClosePoll(opts, league);
-  if (opts.nagPoll) return runNagPoll(opts, league);
 
   const gate = resolveSeasonGate({ optsYear: opts.year });
   if (gate.skip) {
@@ -1094,25 +812,6 @@ async function main() {
     return;
   }
 
-  // The ballot must not still be open once games have started, so the close is
-  // clamped to the real first kickoff of the UPCOMING week when the schedule
-  // feed can supply it. Returns null when it can't, and the window then falls
-  // back to the scheduled hour — which is right on a normal week and only
-  // matters on the odd one (Thanksgiving) where kickoff is much earlier.
-  const firstKickoff = await resolveUpcomingKickoff(league, year, week);
-
-  // Open the ballot BEFORE writing, so the issue carries the window it
-  // advertises. A poll that fails to open returns null and the column simply
-  // publishes without the section — additive, never fatal.
-  const pollBlock = await openPoll({
-    league,
-    year,
-    week,
-    eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
-    firstKickoff,
-  });
-  if (pollBlock) issue.ownersPoll = pollBlock;
-
   await fs.mkdir(peckingOrderDir(league), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
   console.log(`  ✓ Wrote ${path.relative(projectRoot, outPath)}`);
@@ -1134,9 +833,7 @@ async function main() {
     await queueAnnouncement(issue, teams, league, {
       year,
       week,
-      // The column itself, to owners who asked for it. Separate from the
-      // ballot push below: an owner can want the rankings without the weekly
-      // ask, or the ask without the rankings.
+      // The column itself, to owners who asked for it.
       push: {
         franchiseIds: normalizeFranchiseIds(teams.keys()),
         title: `The Pecking Order — Week ${week}`,
@@ -1144,17 +841,6 @@ async function main() {
         url: '/pecking-order',
         tag: `pecking-order-${year}-${week}`,
       },
-      // Everyone gets the open on their phone. At open there are no voters
-      // yet, and a push that lands with the column is the one most likely to
-      // be acted on straight away — but only once the ballot it links to is
-      // actually on the page, which is the same deploy.
-      voterPushes: pollBlock
-        ? buildOpenPushes({
-            issue,
-            teams,
-            eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
-          })
-        : null,
       dryRun: opts.dryRun,
     });
   }

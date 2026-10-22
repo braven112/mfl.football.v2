@@ -28,7 +28,9 @@
 
 import type { CanonicalLeagueSlug } from '../../config/leagues';
 import { getLeagueBySlug } from '../../config/leagues';
-import { getCurrentSeasonYear } from '../league-year';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from '../league-year';
+import { readLeagueFeed } from '../sunday-ticket-sources';
+import { parseScorePrecision } from './score-precision';
 import { loadLiveScoringPayload } from '../live-scoring-source';
 import { hasLiveSignal, type LiveSnapshot } from '../live-scoring-snapshot';
 import { computeTeamTotals } from '../live-scoring-view';
@@ -223,6 +225,32 @@ export async function readLeagueLive(input: ReadLeagueLiveInput): Promise<LiveBo
 }
 
 /* ── snapshot → board ────────────────────────────────────────────────────── */
+
+/**
+ * A registry league's decimal places, from MFL's own `precision` setting in
+ * its committed `league.json` — so the board prints exactly what MFL prints.
+ *
+ * The LEAGUE year's directory, never the season year's: feed directories are
+ * keyed by the year MFL created the league in. Undefined when unreadable; the
+ * board then uses its default.
+ */
+const precisionCache = new Map<string, number | undefined>();
+
+export function registryScorePrecision(slug: CanonicalLeagueSlug): number | undefined {
+  const league = getLeagueBySlug(slug);
+  if (!league) return undefined;
+  const leagueYear = getLeagueYearForSlug(slug);
+  // Cached per league-year: the poll rebuilds this board every 25 seconds, and
+  // the committed file only changes with a deploy.
+  const key = `${slug}:${leagueYear}`;
+  if (!precisionCache.has(key)) {
+    precisionCache.set(
+      key,
+      parseScorePrecision(readLeagueFeed(league, leagueYear, 'league.json')?.league?.precision),
+    );
+  }
+  return precisionCache.get(key);
+}
 
 /**
  * Which league a board is OF, as much as the builder needs to know.
@@ -468,6 +496,8 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
     status: 'ok',
     matchups,
   };
+  const scorePrecision = slug ? registryScorePrecision(slug) : undefined;
+  if (scorePrecision !== undefined) panel.scorePrecision = scorePrecision;
 
   return {
     ok,

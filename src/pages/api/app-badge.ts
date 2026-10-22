@@ -1,11 +1,11 @@
 /**
  * GET /api/app-badge → the number for the installed app's icon badge.
  *
- *   { count, parts: { trades, lineup, poll } }
+ *   { count, parts: { trades, lineup } }
  *
  * Called by the installed app on launch and after a push arrives — never by
  * the website, which has no icon to badge. See src/utils/app-badge.ts for what
- * the three parts mean and why nothing else is counted.
+ * the parts mean and why nothing else is counted.
  *
  * Three rules govern this route:
  *
@@ -20,8 +20,8 @@
  *    stuck on the icon with no way to clear it.
  *
  * 3. **Answers are cached briefly per franchise.** Under the ClientRouter a
- *    keen owner can produce a page-load every few seconds, and two of the
- *    three parts read MFL. The client throttles too (see TheLeagueLayout), but
+ *    keen owner can produce a page-load every few seconds, and both parts
+ *    read MFL. The client throttles too (see TheLeagueLayout), but
  *    a server-side cache is what actually bounds MFL traffic, because the
  *    client's throttle lives in sessionStorage and every new tab starts fresh.
  */
@@ -36,11 +36,8 @@ import { getLeagueYearForMflId } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 import { getRedis } from '../../utils/redis-client';
+import { loadLiveInjuryFeed, type InjuryFeed } from '../../utils/mfl-injuries-live';
 import { appBadgeCacheKey } from '../../utils/app-badge-cache';
-import {
-  readBallot,
-  activePollWindow,
-} from '../../utils/owners-poll-store';
 import {
   EMPTY_PARTS,
   isLineupBadgeWindow,
@@ -173,7 +170,8 @@ async function countLineup(
 
   const players = readFeed(league, year, 'players.json');
   const leagueJson = readFeed(league, year, 'league.json');
-  const injuries = readFeed(league, year, 'injuries.json');
+  // Live: the sync holds injuries.json out of most commits (held-sync-files.mjs).
+  const injuries = await loadLiveInjuryFeed(league.slug, year, readFeed(league, year, 'injuries.json') as InjuryFeed | null);
   if (!players || !leagueJson) return 0;
 
   // Byes are NFL-wide and are NOT among the committed feeds, so this is the
@@ -198,37 +196,6 @@ async function countLineup(
     dropLockedProblems(warnings, parseKickoffsByTeam(nflSchedule)),
     franchiseId,
   );
-}
-
-/** How close to the result a missing ballot starts badging. */
-const POLL_BADGE_LEAD_HOURS = 48;
-
-/**
- * No ballot on file at all, with an announce close enough to matter.
- *
- * Both halves are load-bearing under standing votes. Voting is now ALWAYS
- * open, so "the ballot is open and you haven't cast it" would badge every
- * never-voted owner permanently — a number on their app icon that nothing
- * they do that week can clear, which is how people learn to ignore a badge.
- *
- * So: only when they have nothing on file (not merely nothing NEW — a standing
- * ballot is already counted), and only inside the last stretch before the
- * result, when acting on it is actually urgent.
- *
- * (Two blocks stacked above one declaration would have thrown the prose away —
- * TypeScript reads only the last one — which is why the const takes its own.)
- */
-async function countPoll(league: LeagueDefinition, franchiseId: string): Promise<number> {
-  if (!league.ownersPoll?.enabled) return 0;
-  const scope = league.navSlug;
-  const window = await activePollWindow(league, scope);
-  if (!window) return 0;
-
-  const msToClose = Date.parse(window.closesAt) - Date.now();
-  if (!Number.isFinite(msToClose) || msToClose > POLL_BADGE_LEAD_HOURS * 3600_000) return 0;
-
-  const ballot = await readBallot(scope, window, franchiseId);
-  return ballot ? 0 : 1;
 }
 
 /** Run a part, swallowing any failure into a 0. */
@@ -282,13 +249,12 @@ export const GET: APIRoute = async ({ request }) => {
   // Per-league rollover clock: roster-shaped for trades and lineups alike.
   const year = getLeagueYearForMflId(league.id);
 
-  const [trades, lineup, poll] = await Promise.all([
+  const [trades, lineup] = await Promise.all([
     part('trades', () => countTrades(league, year, franchiseId, user.id)),
     part('lineup', () => countLineup(league, year, franchiseId)),
-    part('poll', () => countPoll(league, franchiseId)),
   ]);
 
-  const parts: BadgeParts = { trades, lineup, poll };
+  const parts: BadgeParts = { trades, lineup };
   const payload = { count: resolveBadgeCount(parts), parts };
 
   if (redis) {
