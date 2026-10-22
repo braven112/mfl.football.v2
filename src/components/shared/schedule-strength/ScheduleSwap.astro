@@ -1,0 +1,293 @@
+---
+/**
+ * The Gauntlet — Schedule Swap: one team's record had it played each other
+ * team's exact schedule (same weekly scores, their opponents). Records come
+ * pre-computed in the derived file (computeScheduleSwap in
+ * scripts/compute-schedule-strength.mjs).
+ *
+ * Phone: pick a team, read a best-to-worst list. Desktop (>= 900px) also
+ * gets the full team × schedule grid, one per pool (AFL: per conference).
+ * Every team's list is server-rendered; the picker only toggles `hidden`.
+ */
+export interface SwapRow {
+  /** Whose schedule */
+  franchiseId: string;
+  displayName: string;
+  icon?: string;
+  record: string;
+  /** Wins (ties = ½) vs the team's actual record; positive = better. */
+  delta: number;
+}
+
+export interface SwapTeam {
+  franchiseId: string;
+  displayName: string;
+  abbrev: string;
+  icon?: string;
+  /** Swap pool (AFL conference id); '' when the league is one pool. */
+  pool: string;
+  /** e.g. 'American League' — labels that pool's grid. */
+  poolName?: string;
+  actual: string;
+  /** Best schedule first */
+  rows: SwapRow[];
+}
+
+export interface Props {
+  teams: SwapTeam[];
+  /** The viewer's team, when known — opens its list. */
+  myTeamId?: string;
+}
+
+const { teams, myTeamId } = Astro.props;
+const selected = teams.some(t => t.franchiseId === myTeamId) ? myTeamId : undefined;
+
+function formatDelta(delta: number): string {
+  if (delta === 0) return '—';
+  const n = Number.isInteger(delta) ? String(Math.abs(delta)) : Math.abs(delta).toFixed(1);
+  return delta > 0 ? `+${n}` : `−${n}`;
+}
+const possessive = (name: string) => (name.endsWith('s') ? `${name}'` : `${name}'s`);
+const deltaClass = (delta: number) => (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat');
+const deltaLabel = (delta: number) =>
+  delta === 0 ? 'Same as actual' : `${formatDelta(delta)} ${Math.abs(delta) === 1 ? 'win' : 'wins'} vs actual`;
+
+const pools = [...new Set(teams.map(t => t.pool))];
+const grids = pools.map(pool => {
+  const members = teams.filter(t => t.pool === pool);
+  return {
+    pool,
+    name: members[0]?.poolName,
+    members,
+    cells: members.map(team => {
+      const byOwner = new Map(team.rows.map(r => [r.franchiseId, r]));
+      return members.map(col =>
+        col.franchiseId === team.franchiseId
+          ? { record: team.actual, delta: 0, self: true }
+          : { record: byOwner.get(col.franchiseId)?.record ?? '—', delta: byOwner.get(col.franchiseId)?.delta ?? 0, self: false });
+    }),
+  };
+});
+---
+
+<div class="swap gauntlet-theme" data-schedule-swap>
+  <label class="swap__pick">
+    <span class="swap__pick-label">Team</span>
+    <select class="swap__select" data-swap-select>
+      {!selected && <option value="" selected>Pick a team</option>}
+      {teams.map(t => (
+        <option value={t.franchiseId} selected={t.franchiseId === selected}>{t.displayName}</option>
+      ))}
+    </select>
+  </label>
+
+  <p class="swap__prompt" data-swap-panel="" hidden={!!selected}>
+    Pick a team to see its record on every other schedule.
+  </p>
+
+  {teams.map(team => (
+    <div class="swap__panel" data-swap-panel={team.franchiseId} hidden={team.franchiseId !== selected}>
+      <p class="swap__actual">
+        {team.icon && <img class="swap__icon" src={team.icon} alt="" loading="lazy" width="20" height="20" />}
+        <span>{possessive(team.displayName)} actual record</span>
+        <strong class="swap__rec">{team.actual}</strong>
+      </p>
+      <ol class="swap__list" aria-label={`${possessive(team.displayName)} record on each schedule, best first`}>
+        <li class="swap__row swap__row--head" aria-hidden="true">
+          <span class="swap__name">With this schedule</span>
+          <span class="swap__rec">Record</span>
+          <span class="swap__delta">+/−</span>
+        </li>
+        {team.rows.map(row => (
+          <li class="swap__row">
+            <span class="swap__name">
+              {row.icon && <img class="swap__icon" src={row.icon} alt="" loading="lazy" width="20" height="20" />}
+              <span class="swap__name-text">{row.displayName}</span>
+            </span>
+            <span class="swap__rec">{row.record}</span>
+            <span class={`swap__delta swap__delta--${deltaClass(row.delta)}`} aria-label={deltaLabel(row.delta)}>
+              {formatDelta(row.delta)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  ))}
+
+  {grids.map(grid => (
+    <div class="swap__grid-wrap">
+      <table class="swap__grid">
+        <caption>
+          {grid.name ? `${grid.name}: every` : 'Every'} team's record on every schedule.
+          Rows are teams, columns are whose schedule they played.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="swap__grid-corner">Team ↓ · Schedule →</th>
+            {grid.members.map(col => (
+              <th scope="col" class="swap__grid-col" title={col.displayName}>{col.abbrev}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {grid.members.map((team, i) => (
+            <tr data-swap-row={team.franchiseId} class={team.franchiseId === selected ? 'is-selected' : undefined}>
+              <th scope="row" class="swap__grid-team">{team.displayName}</th>
+              {grid.cells[i].map(cell => (
+                <td class={`swap__cell swap__cell--${cell.self ? 'self' : deltaClass(cell.delta)}`}>{cell.record}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ))}
+</div>
+
+<script>
+  // ClientRouter: `document` survives every swap, so this runs on each
+  // page-load and binds whatever Schedule Swap the NEW page rendered (the
+  // node is replaced per navigation, so the bound flag resets with it).
+  function initScheduleSwap() {
+    document.querySelectorAll('[data-schedule-swap]').forEach((node) => {
+      const root = node as HTMLElement;
+      if (root.dataset.bound) return;
+      root.dataset.bound = '1';
+      const select = root.querySelector('[data-swap-select]') as HTMLSelectElement | null;
+      if (!select) return;
+      select.addEventListener('change', () => {
+        const id = select.value;
+        root.querySelectorAll('[data-swap-panel]').forEach((panel) => {
+          (panel as HTMLElement).hidden = (panel as HTMLElement).dataset.swapPanel !== id;
+        });
+        root.querySelectorAll('[data-swap-row]').forEach((row) => {
+          row.classList.toggle('is-selected', (row as HTMLElement).dataset.swapRow === id);
+        });
+      });
+    });
+  }
+  document.addEventListener('astro:page-load', initScheduleSwap);
+</script>
+
+<style>
+  .swap { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .swap__pick { display: flex; align-items: center; gap: 0.6rem; }
+  .swap__pick-label {
+    font-size: var(--font-size-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 700;
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+  }
+  .swap__select {
+    flex: 1 1 auto;
+    max-width: 22rem;
+    min-width: 0;
+    font: inherit;
+    font-weight: 600;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--gnt-border, var(--content-border, #e2e8f0));
+    border-radius: 0.5rem;
+    background: var(--gnt-page-bg, #ffffff);
+    color: inherit;
+  }
+  .swap__select:focus-visible { outline: 2px solid var(--gnt-focus); outline-offset: 2px; }
+
+  .swap__panel { max-width: 40rem; }
+  .swap__prompt { margin: 0; color: var(--gnt-ink-soft, var(--color-gray-600, #4b5563)); }
+  .swap__prompt[hidden], .swap__panel[hidden] { display: none; }
+
+  .swap__actual {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0 0 0.5rem;
+    padding: 0.7rem 0.9rem;
+    border: var(--style-card-border, 1px solid var(--gnt-border, var(--content-border, #e2e8f0)));
+    box-shadow: var(--style-card-shadow, none);
+    background: var(--gnt-callout-bg, var(--color-gray-50, #f8fafc));
+    border-radius: 0.5rem;
+    font-weight: 600;
+  }
+  .swap__actual .swap__rec { margin-left: auto; font-size: var(--font-size-base); }
+
+  .swap__list { list-style: none; margin: 0; padding: 0; }
+  .swap__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3.5rem 3rem;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.25rem;
+    border-bottom: 1px solid var(--gnt-border, var(--content-border, #e2e8f0));
+    font-size: var(--font-size-sm);
+  }
+  .swap__row--head {
+    font-size: var(--font-size-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 700;
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+    padding-block: 0.35rem;
+  }
+  .swap__name { display: flex; align-items: center; gap: 0.55rem; min-width: 0; font-weight: 600; }
+  .swap__row--head .swap__name { font-weight: 700; }
+  .swap__name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .swap__icon { width: 1.25rem; height: 1.25rem; object-fit: contain; flex: none; }
+  .swap__rec, .swap__delta { text-align: right; font-variant-numeric: tabular-nums; }
+  .swap__rec { font-weight: 700; }
+  .swap__delta { font-weight: 700; }
+  .swap__delta--up { color: var(--gnt-trend-down, #15803d); }
+  .swap__delta--down { color: var(--gnt-trend-up, #b91c1c); }
+  .swap__delta--flat { color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280)); }
+
+  /* The grid needs a column per team — desktop only. */
+  .swap__grid-wrap { display: none; }
+  @media (min-width: 900px) {
+    .swap__grid-wrap { display: block; overflow-x: auto; margin-top: 0.75rem; }
+  }
+  .swap__grid {
+    border-collapse: separate;
+    border-spacing: 2px;
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .swap__grid caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 0.4rem;
+    font-size: var(--font-size-sm);
+    color: var(--gnt-ink-soft, var(--color-gray-600, #4b5563));
+  }
+  .swap__grid th { font-weight: 700; white-space: nowrap; }
+  .swap__grid-corner, .swap__grid-col {
+    font-size: var(--font-size-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gnt-ink-faint, var(--color-gray-500, #6b7280));
+  }
+  .swap__grid-corner { text-align: left; }
+  .swap__grid-team {
+    text-align: left;
+    padding: 0.3rem 0.6rem 0.3rem 0.25rem;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .swap__cell {
+    padding: 0.3rem 0.4rem;
+    text-align: center;
+    border-radius: 0.25rem;
+    min-width: 2.6rem;
+  }
+  .swap__cell--up { background: var(--gnt-cell-1); color: var(--gnt-cell-1-ink); }
+  .swap__cell--down { background: var(--gnt-cell-5); color: var(--gnt-cell-5-ink); }
+  .swap__cell--flat { background: var(--gnt-cell-0); color: var(--gnt-cell-0-ink); }
+  .swap__cell--self {
+    font-weight: 800;
+    outline: 2px solid var(--gnt-focus);
+    outline-offset: -2px;
+  }
+  .swap__grid tr.is-selected .swap__grid-team { color: var(--link-color, var(--color-primary, #1c497c)); }
+  .swap__grid tr.is-selected .swap__cell { font-weight: 800; }
+</style>

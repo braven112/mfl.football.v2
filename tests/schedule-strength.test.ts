@@ -9,6 +9,7 @@ import {
 import {
   computeScheduleStrength,
   attachTrends,
+  computeScheduleSwap,
 } from '../scripts/compute-schedule-strength.mjs';
 
 // ── Fixtures: 4 teams, 6-week round-robin-ish schedule, 3 completed weeks ──
@@ -263,5 +264,85 @@ describe('attachTrends', () => {
     const current = compute();
     attachTrends(current, null);
     expect(current.runIn.every(r => r.prevRank === null && r.trendDeltaRanks === null)).toBe(true);
+  });
+});
+
+describe('computeScheduleSwap', () => {
+  const swapFor = (result: any, fid: string, scheduleOf: string) =>
+    result.franchises.find((f: any) => f.franchiseId === fid).swaps.find((s: any) => s.scheduleOf === scheduleOf);
+
+  it('scores a team against another team\'s opponents, completed weeks only', () => {
+    const result: any = computeScheduleSwap({
+      teams: TEAMS, grid: buildOpponentGrid(SCHEDULE), weeklyResults: WEEKLY, throughWeek: 3,
+    });
+    expect(result.throughWeek).toBe(3);
+    const bravo = result.franchises.find((f: any) => f.franchiseId === '0002');
+    expect(bravo.actual).toEqual({ wins: 2, losses: 1, ties: 0 });
+    expect(bravo.swaps).toHaveLength(3);
+    // Alpha's schedule: w1 Bravo (itself → plays Alpha) L, w2 Charlie L, w3 Delta W.
+    expect(swapFor(result, '0002', '0001')).toMatchObject({ wins: 1, losses: 2, ties: 0 });
+  });
+
+  it('plays the schedule owner where the borrowed schedule meets the borrower', () => {
+    const result: any = computeScheduleSwap({
+      teams: TEAMS, grid: buildOpponentGrid(SCHEDULE), weeklyResults: WEEKLY, throughWeek: 3,
+    });
+    // Alpha's w3 opponent is Delta itself, so Delta plays Alpha (90 v 145).
+    expect(swapFor(result, '0004', '0001')).toMatchObject({ wins: 0, losses: 3 });
+  });
+
+  it('counts both games of a doubleheader week', () => {
+    const schedule = {
+      schedule: {
+        weeklySchedule: [
+          { week: '1', matchup: [matchup('0001', '0002'), matchup('0003', '0004'), matchup('0001', '0003'), matchup('0002', '0004')] },
+        ],
+      },
+    };
+    const weekly = { weeks: [{ week: 1, scores: { '0001': 140, '0002': 100, '0003': 110, '0004': 80 } }] };
+    const result: any = computeScheduleSwap({ teams: TEAMS, grid: buildOpponentGrid(schedule), weeklyResults: weekly, throughWeek: 1 });
+    const delta = result.franchises.find((f: any) => f.franchiseId === '0004');
+    expect(delta.actual).toEqual({ wins: 0, losses: 2, ties: 0 });
+    // Bravo's two games: Alpha L, Delta (itself → Bravo, 80 v 100) L.
+    expect(swapFor(result, '0004', '0002')).toMatchObject({ wins: 0, losses: 2 });
+  });
+
+  it('swaps only within a conference, but keeps a cross-conference game on the schedule', () => {
+    const teams = TEAMS.map((t, i) => ({ ...t, conference: i < 2 ? '00' : '01' }));
+    const schedule = {
+      schedule: {
+        weeklySchedule: [
+          // Week 1: cross-conference opener. Week 2: in-conference.
+          { week: '1', matchup: [matchup('0001', '0003'), matchup('0002', '0004')] },
+          { week: '2', matchup: [matchup('0001', '0002'), matchup('0003', '0004')] },
+        ],
+      },
+    };
+    const weekly = {
+      weeks: [
+        { week: 1, scores: { '0001': 100, '0002': 120, '0003': 110, '0004': 90 } },
+        { week: 2, scores: { '0001': 130, '0002': 100, '0003': 95, '0004': 105 } },
+      ],
+    };
+    const result: any = computeScheduleSwap({ teams, grid: buildOpponentGrid(schedule), weeklyResults: weekly, throughWeek: 2 });
+    const alpha = result.franchises.find((f: any) => f.franchiseId === '0001');
+    expect(alpha.swaps.map((s: any) => s.scheduleOf)).toEqual(['0002']);
+    // Bravo's schedule: w1 Delta (100 v 90) W, w2 Alpha (itself → Bravo, 130 v 100) W.
+    expect(alpha.swaps[0]).toMatchObject({ wins: 2, losses: 0 });
+  });
+
+  it('returns null before any week is complete, and for a pool too big to list', () => {
+    const grid = buildOpponentGrid(SCHEDULE);
+    expect(computeScheduleSwap({ teams: TEAMS, grid, weeklyResults: WEEKLY, throughWeek: 0 })).toBeNull();
+    const many = Array.from({ length: 25 }, (_, i) => ({ franchiseId: String(i + 1).padStart(4, '0'), name: `T${i}` }));
+    expect(computeScheduleSwap({ teams: many, grid, weeklyResults: WEEKLY, throughWeek: 3 })).toBeNull();
+  });
+
+  it('is part of the derived output', () => {
+    const result = computeScheduleStrength({
+      leagueSlug: 'theleague', teams: TEAMS, schedule: SCHEDULE, standings: STANDINGS,
+      weeklyResults: WEEKLY, week: 4, year: 2026,
+    });
+    expect(result.scheduleSwap?.throughWeek).toBe(3);
   });
 });

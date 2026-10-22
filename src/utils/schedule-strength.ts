@@ -4,12 +4,19 @@
  * league config; this util turns the globbed derived files + config into
  * display-ready props for GauntletDashboard.
  */
+import type { AstroCookies } from 'astro';
 import { chooseTeamName } from './team-names';
+import { getAuthUser, franchiseIdForLeague } from './auth';
+import { getLeaguePreference, resolveFranchiseSelection } from './team-preferences';
+import { getLeagueBySlug } from '../config/leagues';
 import type { StrengthRow } from '../components/shared/schedule-strength/StrengthTable.astro';
 import type { LuckRow } from '../components/shared/schedule-strength/ScheduleLuckCallout.astro';
 import type { HeatFranchise } from '../components/shared/schedule-strength/GauntletHeatMap.astro';
 import type { TrapWeek } from '../components/shared/schedule-strength/TrapWeeksStrip.astro';
 import type { YearOption } from '../components/shared/schedule-strength/GauntletDashboard.astro';
+import type { SwapTeam } from '../components/shared/schedule-strength/ScheduleSwap.astro';
+
+interface SwapRecord { wins: number; losses: number; ties: number }
 
 export interface GauntletDerived {
   league: 'theleague' | 'afl-fantasy' | 'archies';
@@ -44,6 +51,15 @@ export interface GauntletDerived {
     }>;
   };
   trapWeeks: Array<{ week: number; avgDifficulty: number | null; step: number }>;
+  /** Absent from issues written before the Schedule Swap shipped; null when not computed. */
+  scheduleSwap?: {
+    throughWeek: number;
+    franchises: Array<{
+      franchiseId: string;
+      actual: SwapRecord;
+      swaps: Array<SwapRecord & { scheduleOf: string }>;
+    }>;
+  } | null;
 }
 
 interface TeamConfigEntry {
@@ -53,6 +69,7 @@ interface TeamConfigEntry {
   nameShort?: string;
   abbrev?: string;
   icon?: string;
+  conference?: string;
 }
 
 export interface GauntletView {
@@ -66,7 +83,17 @@ export interface GauntletView {
   heatMapFranchises: HeatFranchise[];
   heatMapWeeks: number[];
   trapWeeks: TrapWeek[];
+  scheduleSwap: SwapTeam[];
+  /** Last completed week the swap records cover. */
+  scheduleSwapThroughWeek: number | null;
 }
+
+const formatRecord = (r: SwapRecord) => `${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ''}`;
+const winValue = (r: SwapRecord) => r.wins + r.ties / 2;
+const winPct = (r: SwapRecord) => {
+  const games = r.wins + r.losses + r.ties;
+  return games ? winValue(r) / games : 0;
+};
 
 /** Parse the derived-file glob into per-year latest issues. */
 export function indexDerivedFiles(
@@ -93,6 +120,8 @@ interface ResolveOptions {
   requestedYear: string | null;
   /** Skip building the heat map (article pages never render it). */
   includeHeatMap?: boolean;
+  /** League conferences (AFL) — names the Schedule Swap's per-conference grids. */
+  conferences?: Array<{ code: string; name: string }>;
 }
 
 /**
@@ -143,6 +172,7 @@ export function resolveGauntletView({
   pagePath,
   requestedYear,
   includeHeatMap = true,
+  conferences = [],
 }: ResolveOptions): GauntletView {
   const latestByYear = indexDerivedFiles(files);
   const years = [...latestByYear.keys()].sort((a, b) => b - a);
@@ -174,6 +204,7 @@ export function resolveGauntletView({
       data: null, year, yearOptions, seasonComplete: false,
       runIn: [], played: [], scheduleLuck: [],
       heatMapFranchises: [], heatMapWeeks: [], trapWeeks: [],
+      scheduleSwap: [], scheduleSwapThroughWeek: null,
     };
   }
 
@@ -230,6 +261,29 @@ export function resolveGauntletView({
     })),
   }));
 
+  // Best schedule first; ties break on name so the order is stable.
+  const scheduleSwap: SwapTeam[] = (data.scheduleSwap?.franchises ?? []).map(f => ({
+    franchiseId: f.franchiseId,
+    displayName: displayName(f.franchiseId, f.franchiseId),
+    abbrev: teamById.get(f.franchiseId)?.abbrev ?? f.franchiseId,
+    icon: icon(f.franchiseId),
+    pool: teamById.get(f.franchiseId)?.conference ?? '',
+    poolName: conferences.find(c => c.code === teamById.get(f.franchiseId)?.conference)?.name,
+    actual: formatRecord(f.actual),
+    rows: f.swaps
+      .map(s => ({
+        franchiseId: s.scheduleOf,
+        displayName: displayName(s.scheduleOf, s.scheduleOf),
+        icon: icon(s.scheduleOf),
+        record: formatRecord(s),
+        pct: winPct(s),
+        delta: winValue(s) - winValue(f.actual),
+      }))
+      .sort((a, b) => b.pct - a.pct || a.displayName.localeCompare(b.displayName))
+      .map(({ pct: _pct, ...row }) => row),
+  }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
   return {
     data,
     year,
@@ -241,5 +295,26 @@ export function resolveGauntletView({
     heatMapFranchises,
     heatMapWeeks: data.heatMap.weeks,
     trapWeeks: data.trapWeeks,
+    scheduleSwap,
+    scheduleSwapThroughWeek: data.scheduleSwap?.throughWeek ?? null,
   };
+}
+
+/**
+ * The viewer's team, which opens its Schedule Swap list: their saved team
+ * choice, else their own franchise in this league. No defaultTeam — a
+ * stranger picks one rather than being shown franchise 0001 as their own.
+ * Call from the ROUTE: reading a corrupt preference cookie deletes it.
+ */
+export function resolveGauntletViewerTeam(
+  slug: string,
+  cookies: AstroCookies,
+  request: Request,
+): string | undefined {
+  const league = getLeagueBySlug(slug);
+  if (!league) return undefined;
+  return resolveFranchiseSelection(league.navSlug, {
+    cookiePreference: getLeaguePreference(cookies, league.navSlug)?.franchiseId,
+    authUserFranchise: franchiseIdForLeague(getAuthUser(request), league.id),
+  });
 }

@@ -74,6 +74,10 @@ import '../src/styles/free-agents-primetime.css';
 // The broadcast's handheld board. Every selector is under `.lbh`, so it
 // restyles nothing else (tests/broadcast-handheld-isolation.test.ts).
 import '../src/styles/live-broadcast-handheld.css';
+// The Gauntlet's --gnt-* hooks (Schedule Swap story). Its components import it
+// in frontmatter, which never reaches the canvas; every rule is under
+// `.gauntlet-theme`, so it restyles nothing else.
+import '../src/styles/schedule-strength.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:

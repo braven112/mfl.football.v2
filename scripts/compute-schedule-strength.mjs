@@ -103,6 +103,57 @@ function computeRecord(grid, weeklyResults, fid, throughWeek) {
   return { wins, losses, ties };
 }
 
+/** Largest pool the schedule swap covers (see computeScheduleSwap). */
+const MAX_SWAP_POOL = 24;
+
+/**
+ * Schedule swap — each franchise's record had it played every other
+ * franchise's exact schedule. Every game counts, doubleheader weeks and the
+ * AFL's cross-conference opener included. Where the borrowed schedule meets
+ * the borrower itself, the borrower plays that schedule's owner instead.
+ * Teams carrying a `conference` (the AFL) only swap within it — the rest of
+ * that schedule is built for the conference. A pool larger than
+ * MAX_SWAP_POOL (Archie's: 99 teams in one pool) is skipped — a 98-row list
+ * is no use on a phone, and how to scope such a league is still undecided.
+ */
+export function computeScheduleSwap({ teams, grid, weeklyResults, throughWeek }) {
+  if (throughWeek < 1) return null;
+  const scoresByWeek = new Map();
+  for (const w of (weeklyResults?.weeks || [])) scoresByWeek.set(int(w.week), w.scores || {});
+
+  const recordFor = (me, scheduleOf) => {
+    let wins = 0, losses = 0, ties = 0;
+    for (const [wk, oppIds] of grid.get(scheduleOf) ?? []) {
+      if (wk > throughWeek) continue;
+      const scores = scoresByWeek.get(wk);
+      const mine = num(scores?.[me], NaN);
+      if (!Number.isFinite(mine)) continue;
+      for (const oppId of oppIds) {
+        const theirs = num(scores?.[oppId === me ? scheduleOf : oppId], NaN);
+        if (!Number.isFinite(theirs)) continue;
+        if (mine > theirs) wins++;
+        else if (mine < theirs) losses++;
+        else ties++;
+      }
+    }
+    return { wins, losses, ties };
+  };
+
+  const pool = t => teams.filter(o => (o.conference ?? null) === (t.conference ?? null));
+  if (teams.some(t => pool(t).length > MAX_SWAP_POOL)) return null;
+  const franchises = teams
+    .filter(t => grid.has(t.franchiseId))
+    .map(t => ({
+      franchiseId: t.franchiseId,
+      actual: recordFor(t.franchiseId, t.franchiseId),
+      swaps: pool(t)
+        .filter(o => o.franchiseId !== t.franchiseId && grid.has(o.franchiseId))
+        .map(o => ({ scheduleOf: o.franchiseId, ...recordFor(t.franchiseId, o.franchiseId) })),
+    }));
+  if (!franchises.some(f => f.actual.wins + f.actual.losses + f.actual.ties > 0)) return null;
+  return { throughWeek, franchises };
+}
+
 export function computeScheduleStrength({ leagueSlug, teams, schedule, standings, weeklyResults, week, year }) {
   const completedWeek = week - 1;
   const franchiseIds = teams.map(t => t.franchiseId);
@@ -256,6 +307,7 @@ export function computeScheduleStrength({ leagueSlug, teams, schedule, standings
       })),
     },
     trapWeeks,
+    scheduleSwap: computeScheduleSwap({ teams, grid, weeklyResults, throughWeek: completedWeek }),
   };
 }
 
