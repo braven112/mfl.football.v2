@@ -162,6 +162,31 @@ Each phase ships on its own, leaves the site working, and is measured with
 - **Already done ahead of this phase (Oct 2026):** the Schefter feed moved to Redis with a daily git snapshot (#1369); roster sync stopped writing `live-odds.json` in season and holds `injuries.json` and TheLeague's salary copy out of its commit, publishing injuries to Redis (`docs/claude/rules/storage-and-build.md` § "Roster sync holds live-read files out of its commit").
 - **What still makes roster syncs commit, and belongs here:** the score feeds (`playerScores*`, `player-scores-weekly`, `projectedScores`), `weekly-results(-raw)` and `standings`, plus real roster and transaction changes. These can't simply be held: about 30 pages and 20 scripts read them from disk, they feed the derived chain (`compute-franchise-history` → owner tenures → division strength) and prebuild steps (top players, roster payloads, free agents), and their writer merges into its own previous output (`player-scores-weekly` is incremental, `-by-week` keeps the committed week when MFL returns empty), so moving them needs a pull-before-write step like the Schefter feed's. Moving only the current season is enough; history can stay in git until Phase 3.
 
+### Phase 4a: hold current-season rosters and transactions (next step, Oct 2026)
+
+Roster sync committed 117 times over Oct 16–22; 44 of those changed only
+`rosters.json` / `transactions.json`, and 46 were Archie's roster moves alone.
+The Rosters, Free Agents, Players, planner and TheLeague home pages already read
+both through the live caches (`getCachedRosterFranchises` / `getCachedRosters`,
+recent transactions merged), so the build those commits buy reaches only the
+readers below. Make each one live (or accept a day's lag where noted), then add
+both files to `HELD_GROUPS` with the daily snapshot. Transactions need no Redis
+copy: the live cache already overlays the last 3 days on the file, so a day-old
+snapshot stays inside its window.
+
+**Must read live first** (would show owners outdated rosters):
+- Trade builder: `TradeBuilderPage.astro` and `theleague/front-office/trade-builder.astro`. Same overlay as `RostersPage.astro`'s.
+- Draft and keeper season: `CustomRankingsPage.astro` (draft availability), `afl-fantasy/keeper-analysis.astro`, `draft-broadcast-server.ts` (keepers and holdings).
+- Cut-down week: the auto-cut block in `theleague/rosters.astro` and `theleague/admin/cutdown-report.astro` (both also need the recent transactions merged).
+- `WaiverWireHero.astro`, or it suggests players already claimed.
+- `schefter-rumor-scan.mjs` (`loadRosterOwners`, `loadCompletedTradeSignatures`): read the live cache or MFL, or a day-old file re-posts a completed trade as a rumor.
+
+**A day's lag is fine:** activity's move fallback, hero casting and "owned by" labels, the matchup preview, the player-search owner badges (already frozen at build), the NFL club roster badges, the Schefter scan and the weekly articles. The roster-count tiles on the AFL and package-league homes are minor; overlay them while in the file.
+
+**`top-players.json` moves with them.** Both roster sync and prebuild compute it from rosters, so holding the feeds alone just moves the hourly commit to this file. Hold it in the same group, or compute it only in prebuild and the daily snapshot.
+
+Guard it like the injuries group: `tests/sync-noise-commit-guard.test.ts` pins every reader above to its live overlay, so a new page that reads the committed copy alone fails.
+
 ### Phase 5: new-league onboarding
 - `scripts/onboard-league.mjs <slug>`: backfills feeds into Blob, runs derivations and verifies the manifest.
 - Write a runbook in `docs/claude/rules/storage-and-build.md`.
