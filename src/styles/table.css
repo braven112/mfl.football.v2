@@ -1,0 +1,35 @@
+/* ==========================================================================
+   Table — the one data-table header, site-wide (component kit, part 5).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like the other kit sheets. The kit owns the
+   HEADER ROW of a data table (small uppercase muted labels over a hairline)
+   and lines its numbers up. Cells, row dividers, striping, widths, padding,
+   alignment and sticky columns stay the table's own: they differ by what
+   each table holds, and the header is what made the tables read as one set.
+
+     <table class="ui-table my-table">
+       <thead><tr><th>Player</th><th>Salary</th></tr></thead>
+       …
+     </table>
+
+   Every rule sits inside :where(), so it carries ZERO specificity and a
+   table's own class wins. Like the modal and tabs, this was a deliberate
+   unification (owner's call, 2026-10-22), not a pixel-identical move.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-table) {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.ui-table thead th) {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--table-border);
+}

@@ -89,7 +89,7 @@ const PAIRS: Record<string, GuardedPage[]> = {
       slug: 'theleague',
       gate: `const table = document.querySelector('#players-table[data-league="theleague"]');`,
       forbidden: `const table = document.getElementById('players-table');`,
-      marker: '<table class="players-table" id="players-table" data-league={theLeagueDef.slug}>',
+      marker: '<table class="ui-table players-table" id="players-table" data-league={theLeagueDef.slug}>',
       markerBinding: `const theLeagueDef = getLeagueBySlug('theleague');`,
     },
     // The AFL and every custom league render ONE shared page, so its gate is
@@ -106,7 +106,7 @@ const PAIRS: Record<string, GuardedPage[]> = {
       slug,
       gate: 'const table = document.querySelector(`#players-table[data-league="${leagueSlugForGate}"]`);',
       forbidden: `const table = document.getElementById('players-table');`,
-      marker: '<table class="players-table" id="players-table" data-league={league.slug}>',
+      marker: '<table class="ui-table players-table" id="players-table" data-league={league.slug}>',
       markerBinding: 'const league = getLeagueBySlug(leagueSlug)!;',
       route: {
         file: routeFile,

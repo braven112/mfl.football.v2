@@ -487,7 +487,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         ))}
       </div>
       <div class="rsp-table-scroll" id="top50-table-scroll" hidden>
-        <table class="rsp-table" id="top50-table">
+        <table class="ui-table rsp-table" id="top50-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
@@ -635,7 +635,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         <button class="sort-btn" id="rsp-sort-fbg" data-table="rsp" data-sort="fbg">FBG Dynasty Rank</button>
       </div>
       <div class="rsp-table-scroll">
-        <table class="rsp-table compare-table" id="rsp-table">
+        <table class="ui-table rsp-table compare-table" id="rsp-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
@@ -1096,13 +1096,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     position: sticky;
     top: 0;
     background: var(--color-gray-50, #f9fafb);
-    font-size: var(--font-size-3xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-gray-400, #9ca3af);
     padding: 0.625rem 0.75rem;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
     text-align: left;
     white-space: nowrap;
   }

@@ -293,7 +293,7 @@ export function renderSalarySheet(s: SalarySheetData | null | undefined): string
     })
     .join('');
   const table = s.years.length
-    ? '<div class="pdm-salyears__wrap"><table class="pdm-salyears">'
+    ? '<div class="pdm-salyears__wrap"><table class="ui-table pdm-salyears">'
       + '<caption class="visually-hidden">Salary by year</caption>'
       + '<thead><tr><th scope="col">Year</th><th scope="col">Salary</th>'
       + (showIfCut ? `<th scope="col">${escapeHtml(s.ifCutLabel)}</th>` : '')

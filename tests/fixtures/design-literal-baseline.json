@@ -2,8 +2,8 @@
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
   "recordedAt": "2026-10-22",
   "totals": {
-    "transition": 202,
-    "fontSize": 1962,
+    "transition": 197,
+    "fontSize": 1949,
     "shadow": 215
   },
   "files": {
@@ -17,7 +17,7 @@
       "fontSize": 9
     },
     "src/components/afl-fantasy/KeeperAnalysisCard.astro": {
-      "fontSize": 8
+      "fontSize": 7
     },
     "src/components/afl/hp-sections/AflConferencePlayoffPreview.astro": {
       "transition": 1,
@@ -141,7 +141,7 @@
       "fontSize": 1
     },
     "src/components/shared/draft-results/DraftResultsPage.astro": {
-      "fontSize": 10
+      "fontSize": 9
     },
     "src/components/shared/draft-room/DraftRoomPage.astro": {
       "fontSize": 4
@@ -183,11 +183,10 @@
       "shadow": 4
     },
     "src/components/shared/FreeAgentNeedsCard.astro": {
-      "transition": 1,
-      "fontSize": 3
+      "fontSize": 2
     },
     "src/components/shared/front-office-hub/CapProjectionTable.astro": {
-      "fontSize": 8,
+      "fontSize": 7,
       "shadow": 1
     },
     "src/components/shared/front-office-hub/CutCandidatesCard.astro": {
@@ -374,7 +373,7 @@
       "fontSize": 3
     },
     "src/components/shared/schedule-strength/StrengthTable.astro": {
-      "fontSize": 3
+      "fontSize": 2
     },
     "src/components/shared/schedule-strength/TrapWeeksStrip.astro": {
       "fontSize": 3
@@ -427,7 +426,7 @@
       "shadow": 1
     },
     "src/components/shared/top-players/TopPlayersPage.astro": {
-      "fontSize": 9
+      "fontSize": 8
     },
     "src/components/shared/trade-builder/TradeBuilderPage.astro": {
       "fontSize": 16
@@ -705,7 +704,7 @@
       "fontSize": 10
     },
     "src/pages/afl-fantasy/rivalries/[pair].astro": {
-      "fontSize": 16
+      "fontSize": 15
     },
     "src/pages/afl-fantasy/rivalries/index.astro": {
       "fontSize": 9
@@ -739,7 +738,7 @@
       "fontSize": 5
     },
     "src/pages/live/analytics.astro": {
-      "fontSize": 15
+      "fontSize": 14
     },
     "src/pages/login.astro": {
       "fontSize": 1
@@ -811,7 +810,7 @@
       "fontSize": 4
     },
     "src/pages/theleague/front-office/salary-archive.astro": {
-      "fontSize": 3
+      "fontSize": 2
     },
     "src/pages/theleague/front-office/salary-history.astro": {
       "fontSize": 4
@@ -841,7 +840,7 @@
       "shadow": 6
     },
     "src/pages/theleague/playoff-performance.astro": {
-      "fontSize": 6
+      "fontSize": 5
     },
     "src/pages/theleague/playoffs.astro": {
       "transition": 1,
@@ -858,8 +857,8 @@
       "shadow": 1
     },
     "src/pages/theleague/rookies-2026.astro": {
-      "transition": 3,
-      "fontSize": 19
+      "transition": 2,
+      "fontSize": 18
     },
     "src/pages/theleague/rosters.astro": {
       "transition": 3,
@@ -875,7 +874,7 @@
       "shadow": 2
     },
     "src/styles/accounting.css": {
-      "fontSize": 11
+      "fontSize": 10
     },
     "src/styles/brand-book.css": {
       "fontSize": 37
@@ -895,7 +894,7 @@
       "fontSize": 1
     },
     "src/styles/draft-room.css": {
-      "transition": 22,
+      "transition": 20,
       "fontSize": 41,
       "shadow": 5
     },
@@ -992,8 +991,8 @@
       "shadow": 2
     },
     "src/styles/schefter-feed.css": {
-      "transition": 8,
-      "fontSize": 25
+      "transition": 7,
+      "fontSize": 24
     },
     "src/styles/snap-columns.css": {
       "fontSize": 1

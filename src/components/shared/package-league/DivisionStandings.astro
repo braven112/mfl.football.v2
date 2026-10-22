@@ -45,7 +45,7 @@ const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
     return (
       <section class="pkg-standings__division" aria-label={g.division.name}>
         <h3 class="pkg-standings__title">{g.division.name}</h3>
-        <table class="pkg-standings__table">
+        <table class="ui-table pkg-standings__table">
           <thead>
             <tr>
               <th scope="col" class="pkg-standings__num">#</th>
@@ -109,12 +109,7 @@ const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
   }
   .pkg-standings__table th {
     text-align: left;
-    font-size: var(--font-size-2xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--content-text-muted);
     padding: 0.25rem 0.35rem;
-    border-bottom: 1px solid var(--content-border);
   }
   .pkg-standings__table td {
     padding: 0.35rem;

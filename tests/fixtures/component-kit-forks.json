@@ -158,5 +158,29 @@
     "src/pages/afl-fantasy/draft/order.astro::conference-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
     "src/pages/theleague/front-office/salary-history.astro::chart-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)",
     "src/pages/theleague/playoffs.astro::view-tab": "Pending: a rounded pill switcher, not an underline tab; the owner is deciding whether pills get their own kit (2026-10-22)"
+  },
+  "table": {
+    "src/components/shared/SchedulePlanner.tsx::sched__compare": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
+    "src/components/shared/SchedulePlanner.tsx::sched__weeks": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
+    "src/components/shared/ScheduleRelease.tsx::rel__grid": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
+    "src/components/shared/division-strength/DivisionMatrix.astro::dsm": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/components/shared/draft-room/DraftBoardPanel.tsx::dr-board__grid": "The draft board: one column per franchise, headers are team crests in the draft room's own dark-in-both-themes chrome.",
+    "src/components/shared/rosters/RostersPage.astro::roster-table": "Rosters backlog: rosters.astro is parity-checked as a whole (docs/plans/rosters-page-split.md); it moves with the rosters split.",
+    "src/components/shared/schedule-strength/GauntletHeatMap.astro::hm": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/components/shared/schedule-strength/ScheduleSwap.astro::swap__grid": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
+    "src/components/shared/schedule/SchedulePage.astro::sch-grid": "A schedule grid, one column per week: headers are week numbers styled as cells, not a data-table header.",
+    "src/components/shared/theme/ThemePage.astro::theme-review__table": "A specimen table on a design/reference page: it documents tokens, its header look is part of the exhibit.",
+    "src/components/theleague/DeadMoneyTable.astro::roster-table": "Rosters backlog: rosters.astro is parity-checked as a whole (docs/plans/rosters-page-split.md); it moves with the rosters split.",
+    "src/components/theleague/DraftCapitalTable.astro::draft-table": "A light-only front-office table (white card in both themes); the kit's dark-theme muted header would sit grey-on-white.",
+    "src/components/theleague/PointsBreakdownTable.astro::points-table": "A light-only front-office table (white card in both themes); the kit's dark-theme muted header would sit grey-on-white.",
+    "src/components/theleague/PositionalRankingHeatmap.astro::heatmap-table": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/components/theleague/hp-sections/HpContractIntel.astro::hp-intel__table": "Backlog: HpContractIntel is not rendered by any page (dead component); migrate or delete it with the hp-intel tabs.",
+    "src/pages/afl-fantasy/rivalries/index.astro::matrix": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/pages/live/analytics.astro::ins__heat": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/pages/theleague/css-customization.astro::var-table": "A specimen table on a design/reference page: it documents tokens, its header look is part of the exhibit.",
+    "src/pages/theleague/design-system.astro::ds-table": "A specimen table on a design/reference page: it documents tokens, its header look is part of the exhibit.",
+    "src/pages/theleague/rivalries/index.astro::matrix": "A heat-map / matrix grid: its header row is part of the colour scale, not a data-table header.",
+    "src/pages/theleague/rosters.astro::roster-table": "Rosters backlog: rosters.astro is parity-checked as a whole (docs/plans/rosters-page-split.md); it moves with the rosters split.",
+    "src/pages/theleague/rules.astro::tableformat": "A fully ruled grid (every cell bordered, header shaded) for the Constitution's tables; the kit's header underline does not fit a ruled table."
   }
 }

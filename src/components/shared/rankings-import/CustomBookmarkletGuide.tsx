@@ -63,7 +63,7 @@ export default function CustomBookmarkletGuide() {
           <pre className="ri-guide__code">{SCHEMA_EXAMPLE}</pre>
 
           <h3>Required Fields</h3>
-          <table className="ri-guide__fields-table">
+          <table className="ui-table ri-guide__fields-table">
             <thead>
               <tr><th>Field</th><th>Type</th><th>Description</th></tr>
             </thead>
@@ -76,7 +76,7 @@ export default function CustomBookmarkletGuide() {
           </table>
 
           <h3>Player Object</h3>
-          <table className="ri-guide__fields-table">
+          <table className="ui-table ri-guide__fields-table">
             <thead>
               <tr><th>Field</th><th>Required</th><th>Description</th></tr>
             </thead>

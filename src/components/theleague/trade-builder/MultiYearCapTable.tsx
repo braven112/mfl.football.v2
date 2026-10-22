@@ -32,7 +32,7 @@ export default function MultiYearCapTable({
     <div className="multiyear-cap">
       <h3 className="multiyear-cap__title">Multi-Year Cap Impact</h3>
       <div className="multiyear-cap__table-wrap">
-        <table className="multiyear-cap__table">
+        <table className="ui-table multiyear-cap__table">
           <thead>
             <tr>
               <th className="multiyear-cap__th">Team</th>

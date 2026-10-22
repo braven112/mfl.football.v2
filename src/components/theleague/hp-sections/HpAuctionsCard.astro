@@ -48,7 +48,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
   </div>
 
   <div class="hp-auc__table-wrap">
-    <table class="hp-auc__table">
+    <table class="ui-table hp-auc__table">
       <thead>
         <tr>
           <th scope="col" class="hp-auc__col-player">Player</th>
@@ -345,13 +345,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   .hp-auc__table th {
     text-align: left;
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-500, #6b7280);
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
     white-space: nowrap;
   }
 

@@ -17,7 +17,7 @@ const PAGES = {
 
 /** Every `data-sort` key in a page's players thead. */
 function theadKeys(src: string): string[] {
-  const thead = src.slice(src.indexOf('<table class="players-table"'), src.indexOf('</thead>'));
+  const thead = src.slice(src.indexOf('<table class="ui-table players-table"'), src.indexOf('</thead>'));
   return Array.from(thead.matchAll(/data-sort="([^"]+)"/g), (m) => m[1]!);
 }
 
@@ -97,7 +97,7 @@ describe('every league\'s Free Agents page carries the pills', () => {
     const src = read(file);
     it(`${name}: renders the row above the table and wires it`, () => {
       expect(src).toMatch(/<div class="rr-chips fa-sort-chips">\s*<div class="rr-chips__row" role="group" aria-label="Sort players by" data-fa-sort-chips><\/div>/);
-      expect(src.indexOf('data-fa-sort-chips')).toBeLessThan(src.indexOf('<table class="players-table"'));
+      expect(src.indexOf('data-fa-sort-chips')).toBeLessThan(src.indexOf('<table class="ui-table players-table"'));
       expect(src).toMatch(/import \{ initFaSortChips \} from '[./]+\/utils\/free-agents-sort-chips';/);
       expect(src).toContain("document.addEventListener('astro:page-load', initFaSortChips);");
       expect(src).toMatch(/import '[./]+\/styles\/sort-chips\.css';/);

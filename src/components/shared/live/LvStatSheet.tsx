@@ -211,7 +211,7 @@ export default function LvStatSheet({
           {empty ? (
             <p className="lv-sheet__empty">{empty}</p>
           ) : (
-            <table className="lv-sheet__table">
+            <table className="ui-table lv-sheet__table">
               <thead>
                 <tr>
                   <th scope="col">Stat</th>

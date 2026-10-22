@@ -386,7 +386,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
       <div class="pdm-section" id="section-weekly-results" style="display: none;">
         <h4 class="pdm-section__title" id="weekly-results-title">Season Results</h4>
         <div class="weekly-results-table-wrapper">
-          <table class="weekly-results-table" id="weekly-results-table">
+          <table class="ui-table weekly-results-table" id="weekly-results-table">
             <thead>
               <tr>
                 <th class="wr-wk">Wk</th>
@@ -894,14 +894,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
   .weekly-results-table thead th {
     background: var(--color-gray-50, #f9fafb);
-    color: var(--content-text-muted, #6b7280);
-    font-weight: 600;
-    font-size: var(--font-size-3xs);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     padding: 0.4rem 0.5rem;
     text-align: left;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
     white-space: nowrap;
     position: sticky;
     top: 0;

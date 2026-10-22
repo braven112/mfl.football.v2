@@ -283,7 +283,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 /* ---------- tables (full field, all-play) ---------- */
 .stb-tbl-wrap { overflow-x: auto; }
 .stb-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); color: var(--stb-text); }
-.stb-table th { text-align: right; font-size: var(--font-size-3xs); color: var(--stb-muted); font-weight: 600; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--stb-line); white-space: nowrap; }
+.stb-table th { text-align: right; padding: 0.55rem 0.6rem; white-space: nowrap; }
 .stb-table th:first-child { text-align: center; }
 .stb-table td { text-align: right; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--stb-line); white-space: nowrap; }
 .stb-table .stb-l { text-align: left; }

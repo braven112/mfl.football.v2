@@ -215,7 +215,7 @@ import '../../styles/player-modal-band.css';
         <div class="cdm-section" id="cdm-projection-section" style="display: none;">
           <h4 class="cdm-section__title">Salary Projection</h4>
           <div class="cdm-projection-wrapper">
-            <table class="cdm-projection-table">
+            <table class="ui-table cdm-projection-table">
               <thead>
                 <tr id="cdm-projection-head">
                   <th>Season</th>
@@ -234,7 +234,7 @@ import '../../styles/player-modal-band.css';
         <div class="cdm-section" id="cdm-cap-impact-section" style="display: none;">
           <h4 class="cdm-section__title">Team Cap Impact</h4>
           <div class="cdm-projection-wrapper">
-            <table class="cdm-cap-impact-table">
+            <table class="ui-table cdm-cap-impact-table">
               <thead>
                 <tr>
                   <th>Season</th>
@@ -1395,15 +1395,8 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-projection-table th {
-    background: var(--color-gray-50, #f9fafb);
-    color: var(--color-gray-400, #9ca3af);
-    font-weight: 600;
-    font-size: var(--font-size-3xs);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     padding: 0.4rem 0.75rem;
     text-align: left;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
 
   .cdm-projection-th--right {
@@ -1457,15 +1450,8 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-cap-impact-table th {
-    background: var(--color-gray-50, #f9fafb);
-    color: var(--color-gray-400, #9ca3af);
-    font-weight: 600;
-    font-size: var(--font-size-3xs);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     padding: 0.4rem 0.75rem;
     text-align: left;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
 
   .cdm-cap-impact-table :global(td) {

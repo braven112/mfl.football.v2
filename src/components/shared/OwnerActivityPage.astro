@@ -332,7 +332,7 @@ const pageInsights = buildPageInsights({
 				<section class="oa-accounts" aria-labelledby="oa-accounts-title">
 					<h2 id="oa-accounts-title" class="oa-accounts__title">Commissioner accounts</h2>
 					{commissionerAccounts.length > 0 ? (
-						<table class="oa-accounts__table">
+						<table class="ui-table oa-accounts__table">
 							<thead>
 								<tr><th scope="col">MFL account</th><th scope="col">Last signed in</th><th scope="col">Last seen</th><th scope="col">Pages</th></tr>
 							</thead>
@@ -447,10 +447,6 @@ const pageInsights = buildPageInsights({
 		padding: 0.25rem 0.5rem 0.25rem 0;
 		text-align: left;
 		white-space: nowrap;
-	}
-	.oa-accounts__table thead th {
-		font-weight: 600;
-		color: var(--color-gray-600);
 	}
 	.oa-accounts__table tbody th {
 		font-weight: 600;

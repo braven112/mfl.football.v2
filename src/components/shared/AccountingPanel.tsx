@@ -341,7 +341,7 @@ function LedgerView({
       </p>
 
       <div className="acct__tablewrap">
-        <table className="acct__table">
+        <table className="ui-table acct__table">
           <thead>
             <tr>
               <th scope="col">Franchise</th>
@@ -364,7 +364,7 @@ function LedgerView({
       <h2>Transactions</h2>
       {records && records.length > 0 ? (
         <div className="acct__tablewrap">
-          <table className="acct__table">
+          <table className="ui-table acct__table">
             <thead>
               <tr>
                 <th scope="col">Franchise</th>
@@ -616,7 +616,7 @@ function ImportCsv({
             {preview.invalidCount > 0 && ' Fix the flagged rows — nothing writes until every row is clean.'}
           </p>
           <div className="acct__tablewrap">
-            <table className="acct__table">
+            <table className="ui-table acct__table">
               <thead>
                 <tr>
                   <th scope="col">Line</th>
@@ -877,7 +877,7 @@ function PayoutTable({
     <>
       <h3 className={muted ? 'acct__h3 is-muted' : 'acct__h3'}>{title}</h3>
       <div className="acct__tablewrap">
-        <table className={`acct__table${muted ? ' is-muted' : ''}`}>
+        <table className={`ui-table acct__table${muted ? ' is-muted' : ''}`}>
           <thead>
             <tr>
               <th scope="col">Prize</th>
@@ -1301,7 +1301,7 @@ function MigrationTable({
     <>
       <h3 className={muted ? 'acct__h3 is-muted' : 'acct__h3'}>{title}</h3>
       <div className="acct__tablewrap">
-        <table className={`acct__table${muted ? ' is-muted' : ''}`}>
+        <table className={`ui-table acct__table${muted ? ' is-muted' : ''}`}>
           <thead>
             <tr>
               <th scope="col">Franchise</th>

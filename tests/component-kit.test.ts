@@ -42,7 +42,7 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab';
+  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table';
   stylesheet: string;
   cls: string;
   /** Kit classes besides `cls` the stylesheet may define (the modal's scrim, the tab bar's tab). */
@@ -104,6 +104,14 @@ const KITS: Kit[] = [
     pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)(?:tab|tab-btn)$/,
     tags: new Set(['button', 'a', 'li', 'div', 'span']),
     isInstance: (_name, tag) => /\brole=["'{]+tab["'}\s]/.test(tag),
+  },
+  {
+    name: 'table',
+    stylesheet: 'src/styles/table.css',
+    cls: 'ui-table',
+    pattern: /(?!)/,
+    tags: new Set(['table']),
+    isInstance: () => true,
   },
 ];
 

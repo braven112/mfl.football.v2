@@ -724,7 +724,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 )}
 
                 <div class="table-scroll">
-                  <table class="strength-table lineup-table">
+                  <table class="ui-table strength-table lineup-table">
                     <caption class="visually-hidden">
                       Current division lineups, longest-standing first, with the year each division
                       was founded and its record over the span that exact set of owners has been
@@ -930,7 +930,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
               </div>
 
               <div class="table-scroll">
-                <table class="strength-table" id="strength-table">
+                <table class="ui-table strength-table" id="strength-table">
                   <caption class="visually-hidden">
                     Every division all-time, sorted by {SORT_LABELS[view.sort]},
                     {view.dir === 'desc' ? ' highest first' : ' lowest first'}.
@@ -1179,7 +1179,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             </p>
                           )}
                           <div class="owner-eras__scroll">
-                            <table class="owner-era-table" aria-describedby={d.owners.some((o) => o.sharedSeasons > 0) ? `oe-note-${d.slug}` : undefined}>
+                            <table class="ui-table owner-era-table" aria-describedby={d.owners.some((o) => o.sharedSeasons > 0) ? `oe-note-${d.slug}` : undefined}>
                               <caption class="visually-hidden">
                                 Owners who have held a team in the {d.name}, most seasons first.
                               </caption>
@@ -1398,7 +1398,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 </dl>
 
                 <div class="table-scroll">
-                  <table class="season-team-table"
+                  <table class="ui-table season-team-table"
                     aria-describedby={seasonStandingsOnly ? `nolog-${season.year}` : seasonNotPlayed ? `notplayed-${season.year}` : undefined}>
                     <caption class="visually-hidden">{d.name} teams in {season.year}</caption>
                     <thead>
@@ -2248,8 +2248,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
      so a table inside a panel inside the page is three identical surfaces.
      --color-surface-3 is dark-only by design — safe only in here. */
   :global(html.dark) .owner-eras__scroll { background: var(--color-surface-3); }
-  .owner-era-table thead th { background: var(--ds-surface-muted); }
-  :global(html.dark) .owner-era-table thead th { background: var(--color-surface-3); }
   .table-note {
     margin: 0.625rem 0 0.5rem;
     font-size: var(--font-size-xs);

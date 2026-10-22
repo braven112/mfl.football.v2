@@ -29,3 +29,13 @@ export const Modal = {
   args: { part: 'modal' },
   parameters: { chromatic: { modes: allModes } },
 };
+
+export const Tabs = {
+  args: { part: 'tabs' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Table = {
+  args: { part: 'table' },
+  parameters: { chromatic: { modes: allModes } },
+};

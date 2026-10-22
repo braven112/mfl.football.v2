@@ -97,6 +97,30 @@ trade-builder dialogs gained the dark-mode scrim they never had. The panel
 lays `--card-bg` over the solid `--card-surface`, because some dark themes'
 card gradient is translucent and the page showed through a `<dialog>`.
 
+## Tabs
+
+`src/styles/tabs.css`: `ui-tabs` on the bar, `ui-tab` on each tab. The most
+common look won: a hairline under the bar and a 2px `--league-accent`
+underline on the selected tab, muted sm semibold labels in sentence case.
+Selection is read from `aria-selected="true"` (real tablists),
+`aria-current="page"` (link tabs) or `ui-tab--active` (script-toggled bars),
+so no page needs new JS. Padding, gap and horizontal scroll stay each bar's
+own. The rounded pill view-switchers (standings/playoffs/draft views, Live,
+What's New filters, conference toggles, chart controls) are registered forks
+pending the owner's call on a separate pill-switcher kit.
+
+## Table
+
+`src/styles/table.css`: `ui-table` on the `<table>`. It owns tabular numerals
+and the header row only — muted 2xs semibold uppercase labels over a
+`--table-border` rule, the most common of the ~55 styled data tables. Cell
+padding, widths, zebra rows, row hover and a sticky header's ground stay each
+table's own (a sticky `th` keeps its background, or rows scroll through it).
+Forks, by kind: heat maps and matrices (the header is part of the colour
+scale), week-by-week schedule grids, the draft board, the Constitution's ruled
+tables, design-reference specimen tables, and the rosters page (migrates with
+the rosters split).
+
 2. **Migration is pixel-identical.** Moving a page onto the kit may not move
    a pixel. Where a page differs from the kit default, its own class keeps the
    difference (a prop if every league benefits, otherwise a fork).

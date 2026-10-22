@@ -13,7 +13,7 @@
 
 export interface Props {
   /** Which part of the kit to show. */
-  part?: 'badge' | 'card' | 'modal';
+  part?: 'badge' | 'card' | 'modal' | 'tabs' | 'table';
 }
 
 const { part = 'badge' } = Astro.props;
@@ -83,6 +83,34 @@ const TONES = [
       </article>
     </div>
   </section>
+) : part === 'tabs' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Tabs</h2>
+      <p class="kitg__lede">One underline tab bar. Source: <code>src/styles/tabs.css</code>. <code>ui-tabs</code> on the bar, <code>ui-tab</code> on each tab; the selected tab is the one with <code>aria-selected="true"</code>, <code>aria-current="page"</code> or <code>ui-tab--active</code>. Padding, gap and scrolling are the bar's own.</p>
+    </header>
+    <div class="ui-tabs kitg__tabs" role="tablist" aria-label="Player sheet">
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="true">Overview</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">Contract</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">Game log</button>
+      <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">News</button>
+    </div>
+  </section>
+) : part === 'table' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Table</h2>
+      <p class="kitg__lede">One data-table header row and tabular numerals. Source: <code>src/styles/table.css</code>. <code>ui-table</code> on the <code>&lt;table&gt;</code>. Cell padding, widths, zebra rows and a sticky header's ground are the table's own; heat maps and week grids are forks.</p>
+    </header>
+    <table class="ui-table kitg__table">
+      <thead><tr><th>Team</th><th>W-L</th><th>PF</th><th>PA</th></tr></thead>
+      <tbody>
+        <tr><td>Pacific Pigskins</td><td>6-2</td><td>1,021.4</td><td>902.8</td></tr>
+        <tr><td>Smokane FC</td><td>5-3</td><td>987.0</td><td>951.6</td></tr>
+        <tr><td>Da Dangsters</td><td>2-6</td><td>842.2</td><td>1,004.9</td></tr>
+      </tbody>
+    </table>
+  </section>
 ) : (
   <section class="kitg">
     <header>
@@ -120,6 +148,25 @@ const TONES = [
   }
   .kitg__title {
     margin: 0;
+  }
+  .kitg__tabs {
+    gap: 0.25rem;
+  }
+  .kitg__tab {
+    padding: 0.6rem 0.75rem;
+  }
+  .kitg__table {
+    width: 100%;
+    max-width: 32rem;
+    border-collapse: collapse;
+  }
+  .kitg__table th,
+  .kitg__table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+  }
+  .kitg__table td {
+    border-bottom: 1px solid var(--content-border);
   }
   .kitg__lede {
     margin: 0.25rem 0 0;
