@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """
 Build the Christmas Week league marks: each league logo, division badge,
-conference, tier and award mark knit in sweater stitches. Only the league
-logo is a full patch, the 60x60-stitch patch scripts/build-sweater-marks.py
-knits for every team; the other marks are knit in their own shape with no
-patch around them (owner, Oct 2026).
+conference, tier and award mark knit in sweater stitches, in its own shape
+with no patch around it (owner, Oct 2026: "I want the logo only to be
+knitted"). The stitch is the one scripts/build-sweater-marks.py knits the
+team patches with.
+
+Lettering cannot be knit from the drawing: a banner word at 60 stitches comes
+out as noise. So every <text> but the big AL/NL is stripped before drawing,
+and the words that carry meaning (a division's NORTH, a shield's CHAMPION)
+are knit back in a stitch font (FONT) sized to whole stitches. The ring
+lettering and years on the round medals are left off.
 
     python3 scripts/build-sweater-league-marks.py [--preview <dir>]
 
@@ -52,10 +58,10 @@ AWARDS = ('al-north', 'al-south', 'nl-east', 'nl-west', 'afl-championship', 'pre
           'dleague-champion', 'al-champion', 'nl-champion', 'afl-cup')
 # navSlug -> [(source asset, dest file, patch band motif, or None for a bare knit)]
 MARKS = {
-    'theleague': [('/assets/logos/theleague-logo.svg', 'logo.png', 'tree')]
+    'theleague': [('/assets/logos/theleague-logo.svg', 'logo.png', None)]
                  + [(f'/assets/theleague/division-badges/{d}.svg', f'division-badges/{d}.png', None)
                     for d in ('northwest', 'southwest', 'central', 'east')],
-    'afl': [('/assets/logos/afl-logo.svg', 'logo.png', 'tree'),
+    'afl': [('/assets/logos/afl-logo.svg', 'logo.png', None),
             ('/assets/afl/conferences/al.svg', 'conferences/al.png', None),
             ('/assets/afl/conferences/nl.svg', 'conferences/nl.png', None),
             ('/assets/afl/premier.svg', 'premier.png', None),
@@ -74,6 +80,41 @@ SWAPS = {
 }
 ICONS = {'afl': {'premier-league': 'premier.png'}}
 MENU_ICONS = {'afl': {f'/assets/afl/{p}{cut}.svg': f'{p}.png' for p in ('premier', 'dleague') for cut in ('', '-dark')}}
+
+# A stitch font: one stitch per pixel, 7 rows, so a banner word is knit in
+# whole stitches rather than resampled into noise.
+FONT = {
+    'A': ['.XX.', 'X..X', 'X..X', 'XXXX', 'X..X', 'X..X', 'X..X'],
+    'C': ['.XXX', 'X...', 'X...', 'X...', 'X...', 'X...', '.XXX'],
+    'E': ['XXXX', 'X...', 'X...', 'XXX.', 'X...', 'X...', 'XXXX'],
+    'H': ['X..X', 'X..X', 'X..X', 'XXXX', 'X..X', 'X..X', 'X..X'],
+    'I': ['XXX', '.X.', '.X.', '.X.', '.X.', '.X.', 'XXX'],
+    'M': ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
+    'N': ['X..X', 'XX.X', 'XX.X', 'X.XX', 'X.XX', 'X..X', 'X..X'],
+    'O': ['.XX.', 'X..X', 'X..X', 'X..X', 'X..X', 'X..X', '.XX.'],
+    'P': ['XXX.', 'X..X', 'X..X', 'XXX.', 'X...', 'X...', 'X...'],
+    'R': ['XXX.', 'X..X', 'X..X', 'XXX.', 'X.X.', 'X..X', 'X..X'],
+    'S': ['.XXX', 'X...', 'X...', '.XX.', '...X', '...X', 'XXX.'],
+    'T': ['XXXXX', '..X..', '..X..', '..X..', '..X..', '..X..', '..X..'],
+    'U': ['X..X', 'X..X', 'X..X', 'X..X', 'X..X', 'X..X', '.XX.'],
+    'W': ['X...X', 'X...X', 'X...X', 'X.X.X', 'X.X.X', 'XX.XX', 'X...X'],
+}
+# award -> (word, its centre in the SVG's own units, yarn)
+LABELS = {
+    'al-north': ('NORTH', 130, 219, CREAM), 'al-south': ('SOUTH', 130, 219, CREAM),
+    'nl-east': ('EAST', 130, 219, CREAM), 'nl-west': ('WEST', 130, 219, CREAM),
+    'al-champion': ('CHAMPION', 130, 219, DKGREEN), 'nl-champion': ('CHAMPION', 130, 219, DKGREEN),
+}
+# stitches down the longer side; the shields get more so their word fits
+STITCHES = {a: 64 for a in LABELS}
+KEEP_TEXT = re.compile(r'<text\b[^>]*>\s*(AL|NL)\s*</text>')
+TEXT = re.compile(r'<text\b.*?</text>', re.S)
+
+def strip_text(svg):
+    return TEXT.sub(lambda m: m.group(0) if KEEP_TEXT.fullmatch(m.group(0)) else '', svg)
+
+def viewbox(svg):
+    return [float(v) for v in re.search(r'viewBox="([^"]+)"', svg).group(1).replace(',', ' ').split()]
 
 ORNAMENT = ["..G..", ".XXX.", "XXXXX", "XXWXX", "XXXXX", ".XXX."]
 BANDS = {'tree': sweater.TREE, 'flake': sweater.FLAKE, 'ornament': ORNAMENT}
@@ -110,11 +151,12 @@ def rasterize(jobs, tmp):
 def nearest(c):
     return min(YARNS, key=lambda y: sum((a - b) ** 2 for a, b in zip(hexrgb(y), c)))
 
-def knit(png, motif):
+def knit(png, motif, label=None, stitches=None, vb=None):
     src = Image.open(png).convert('RGBA')
-    src = src.crop(src.getbbox())
+    box = src.getbbox()
+    src = src.crop(box)
     band_h = len(BANDS[motif]) + 2 if motif else 0
-    area = ROWS - 2 * (band_h + 2) - 4 if motif else BARE
+    area = ROWS - 2 * (band_h + 2) - 4 if motif else (stitches or BARE)
     w, h = src.size
     sc = area / max(w, h)
     mw, mh = max(1, round(w * sc)), max(1, round(h * sc))
@@ -140,6 +182,22 @@ def knit(png, motif):
                     top = max(set(nb), key=nb.count)
                     if nb.count(top) >= 3: nxt[r][c] = top
         cells = nxt
+    if label:
+        # SVG units -> drawn pixel (480px, contain) -> stitch
+        word, lx, ly, yarn = label
+        px = 480 / max(vb[2], vb[3])
+        ox, oy = (480 - vb[2] * px) / 2, (480 - vb[3] * px) / 2
+        cx = (ox + (lx - vb[0]) * px - box[0]) * mw / w
+        cy = (oy + (ly - vb[1]) * px - box[1]) * mh / h
+        glyphs = [FONT[ch] for ch in word]
+        width = sum(len(g[0]) for g in glyphs) + len(glyphs) - 1
+        c0, r0 = round(cx - width / 2), round(cy - 3.5)
+        for g in glyphs:
+            for r, row in enumerate(g):
+                for c, bit in enumerate(row):
+                    if bit == 'X':
+                        cells[r0 + r][c0 + c] = yarn
+            c0 += len(g[0]) + 1
     if not motif:
         return bare(cells, mw, mh)
     count = {}
@@ -231,15 +289,17 @@ def main():
             for i, (src, dest, motif) in enumerate(marks):
                 colors = {**COLORS[nav], **(LOGO_COLORS.get(nav, {}) if dest == 'logo.png' else {})}
                 svg = os.path.join(tmp, f'{nav}-{i}.svg')
-                open(svg, 'w').write(recolour(open(os.path.join(ROOT, 'public', src.lstrip('/'))).read(), colors))
+                text = strip_text(recolour(open(os.path.join(ROOT, 'public', src.lstrip('/'))).read(), colors))
+                open(svg, 'w').write(text)
                 jobs.append([svg, svg[:-4] + '.png'])
-                plan.append((nav, dest, motif, svg[:-4] + '.png'))
+                key = os.path.splitext(os.path.basename(dest))[0]
+                plan.append((nav, dest, motif, svg[:-4] + '.png', LABELS.get(key), STITCHES.get(key), viewbox(text)))
         rasterize(jobs, tmp)
-        for nav, dest, motif, png in plan:
+        for nav, dest, motif, png, label, stitches, vb in plan:
             base = preview and os.path.join(preview, nav) or os.path.join(ROOT, 'public/assets', nav, sweater.MARKS)
             path = os.path.join(base, dest)
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            knit(png, motif).save(path, optimize=True)
+            knit(png, motif, label, stitches, vb).save(path, optimize=True)
             print('knit', os.path.relpath(path, ROOT if not preview else preview))
     if preview:
         return
