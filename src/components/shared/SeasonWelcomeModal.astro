@@ -35,11 +35,10 @@ const { welcome, leagueSlug, previewOpen = false } = Astro.props;
   <p class="twm__eyebrow">{welcome.seasonName}</p>
   <h2 class="twm__title" id="season-welcome-modal-title">
     <span class="twm__lead">This week your logo is</span>
-    <span class="twm__name">{welcome.name}&rsquo;s {welcome.seasonName} look</span>
+    <span class="twm__name">{welcome.name}{/s$/i.test(welcome.name) ? '’' : '’s'} {welcome.seasonName} look</span>
   </h2>
   <p class="twm__note">
-    Every team&rsquo;s logo gets the {welcome.seasonName} treatment across the site. Your normal logo is back
-    {welcome.returns}.
+    Every team&rsquo;s logo gets the {welcome.seasonName} treatment across the site. Your normal logo is back {welcome.returns}.
   </p>
   <div class="twm__actions">
     <button type="button" class="cta cta--primary twm__btn" data-twm-close>Love it</button>
