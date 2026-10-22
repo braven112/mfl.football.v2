@@ -48,6 +48,7 @@ import ThrowbackWeekModal from '../components/shared/ThrowbackWeekModal.astro';
 import { buildThrowbackWelcome, type ThrowbackWelcome } from '../utils/throwback-welcome';
 import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
 import RosterLoader from '../components/shared/RosterLoader.astro';
+import NavProgress from '../components/shared/NavProgress.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../utils/league-year';
 import { activeSeasonalTheme } from '../config/seasonal-themes.mjs';
@@ -501,7 +502,7 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 		<DemoBanner />
 		<DemoTour base={`/${leagueContext.slug}`} />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
-		<div id="nav-progress" aria-hidden="true"></div>
+		<NavProgress />
 
 		<!-- Branded loader (league logo + pulse) for the slow roster page -->
 		<RosterLoader league={league} />
@@ -718,86 +719,6 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 		)}
 		<script src="../scripts/transaction-hub.ts"></script>
 
-		<!-- Navigation progress bar trigger -->
-		<script is:inline>
-			(function() {
-				var STORAGE_KEY = 'nav-progress-start';
-				var MIN_VISIBLE_MS = 420;
-
-				function getBar() {
-					return document.getElementById('nav-progress');
-				}
-
-				function readStartTime() {
-					try {
-						return Number(sessionStorage.getItem(STORAGE_KEY) || '0');
-					} catch (_) {
-						return 0;
-					}
-				}
-
-				function writeStartTime(value) {
-					try {
-						sessionStorage.setItem(STORAGE_KEY, String(value));
-					} catch (_) {}
-				}
-
-				function clearStartTime() {
-					try {
-						sessionStorage.removeItem(STORAGE_KEY);
-					} catch (_) {}
-				}
-
-				function startProgress() {
-					var bar = getBar();
-					if (!bar) return;
-					writeStartTime(Date.now());
-					bar.classList.remove('active');
-					// Force reflow so re-adding the class restarts the animation
-					void bar.offsetWidth;
-					bar.classList.add('active');
-				}
-
-				function stopProgress() {
-					var bar = getBar();
-					if (bar) {
-						bar.classList.remove('active');
-					}
-					clearStartTime();
-				}
-
-				function settleProgress() {
-					var startedAt = readStartTime();
-					if (!startedAt) {
-						stopProgress();
-						return;
-					}
-
-					var bar = getBar();
-					if (bar && !bar.classList.contains('active')) {
-						bar.classList.add('active');
-					}
-
-					var remaining = Math.max(MIN_VISIBLE_MS - (Date.now() - startedAt), 0);
-					window.setTimeout(stopProgress, remaining);
-				}
-
-				document.addEventListener('click', function(e) {
-					var link = e.target.closest('a[href]');
-					if (!link) return;
-					// Skip external links, new-tab links, hash-only, and modified clicks
-					if (link.target === '_blank') return;
-					if (link.origin !== location.origin) return;
-					if (link.pathname === location.pathname && link.search === location.search) return;
-					if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-					startProgress();
-				});
-
-				document.addEventListener('astro:before-preparation', startProgress);
-				document.addEventListener('astro:page-load', settleProgress);
-				window.addEventListener('load', settleProgress);
-			})();
-		</script>
 		{/* Body, never <head>: it renders a custom element, which ends <head> early and
 		    pushes every stylesheet into <body> (unstyled flash). tests/head-custom-element-guard.test.ts */}
 		<SpeedInsights />
@@ -812,30 +733,6 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 	@import '../styles/league-themes.generated.css';
 	/* Site style tokens — Editorial / Primetime (generated from src/styles/site-styles/*.json) */
 	@import '../styles/site-styles.generated.css';
-
-	/* Navigation progress bar */
-	#nav-progress {
-		position: fixed;
-		top: 0;
-		left: 0;
-		height: 3px;
-		width: 0;
-		background: var(--color-primary-light);
-		z-index: 9999;
-		pointer-events: none;
-		opacity: 0;
-	}
-	#nav-progress.active {
-		opacity: 1;
-		animation: nav-progress-grow 8s cubic-bezier(0.1, 0.4, 0.2, 1) forwards;
-	}
-	@keyframes nav-progress-grow {
-		0%   { width: 0; }
-		10%  { width: 30%; }
-		50%  { width: 60%; }
-		80%  { width: 80%; }
-		100% { width: 95%; }
-	}
 
 	html {
 		font-family: var(--font-family-base);

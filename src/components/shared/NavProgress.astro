@@ -1,0 +1,153 @@
+---
+/**
+ * NavProgress — the thin bar across the top of the viewport that starts the
+ * instant an internal link is tapped and settles when the next page swaps in.
+ *
+ * Shared by TheLeagueLayout and MflAppLayout. MFL Live had no copy, so a tap on
+ * a slow SSR page (`/live/standings` assembles every watched league's board
+ * before it can answer) left the old page sitting there for 2-3 s with no sign
+ * the tap had registered.
+ *
+ * While a navigation is pending the script also sets `nav-pending` on <html>,
+ * which the ClientRouter never replaces, so a layout can add its own extra
+ * feedback (MflAppLayout dims the board it is leaving). The class is cleared on
+ * every settle, so it cannot outlive the navigation that set it.
+ *
+ * The bar's colour is `--nav-progress-color` where a layout sets one, else
+ * `--color-primary-light` (TheLeague's original colour).
+ *
+ * The inline script must carry NO Astro interpolation: ClientRouter dedups
+ * inline scripts by their exact text, which is what stops the `document`
+ * listeners stacking one set per navigation
+ * (docs/claude/insights/domains/frontend.md).
+ */
+---
+
+<div id="nav-progress" aria-hidden="true"></div>
+
+<script is:inline>
+	(function() {
+		var STORAGE_KEY = 'nav-progress-start';
+		var MIN_VISIBLE_MS = 420;
+
+		function getBar() {
+			return document.getElementById('nav-progress');
+		}
+
+		function readStartTime() {
+			try {
+				return Number(sessionStorage.getItem(STORAGE_KEY) || '0');
+			} catch (_) {
+				return 0;
+			}
+		}
+
+		function writeStartTime(value) {
+			try {
+				sessionStorage.setItem(STORAGE_KEY, String(value));
+			} catch (_) {}
+		}
+
+		function clearStartTime() {
+			try {
+				sessionStorage.removeItem(STORAGE_KEY);
+			} catch (_) {}
+		}
+
+		function startProgress() {
+			var bar = getBar();
+			if (!bar) return;
+			writeStartTime(Date.now());
+			bar.classList.remove('active');
+			// Force reflow so re-adding the class restarts the animation
+			void bar.offsetWidth;
+			bar.classList.add('active');
+		}
+
+		function stopProgress() {
+			var bar = getBar();
+			if (bar) {
+				bar.classList.remove('active');
+			}
+			clearStartTime();
+		}
+
+		function settleProgress() {
+			document.documentElement.classList.remove('nav-pending');
+			var startedAt = readStartTime();
+			if (!startedAt) {
+				stopProgress();
+				return;
+			}
+
+			var bar = getBar();
+			if (bar && !bar.classList.contains('active')) {
+				bar.classList.add('active');
+			}
+
+			var remaining = Math.max(MIN_VISIBLE_MS - (Date.now() - startedAt), 0);
+			window.setTimeout(stopProgress, remaining);
+		}
+
+		document.addEventListener('click', function(e) {
+			var link = e.target.closest('a[href]');
+			if (!link) return;
+			// Skip external links, new-tab links, hash-only, and modified clicks
+			if (link.target === '_blank') return;
+			if (link.origin !== location.origin) return;
+			if (link.pathname === location.pathname && link.search === location.search) return;
+			if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+			startProgress();
+		});
+
+		// Only a navigation the router has actually started marks the page
+		// pending — a click it ignores would otherwise leave it marked forever.
+		document.addEventListener('astro:before-preparation', function() {
+			document.documentElement.classList.add('nav-pending');
+			startProgress();
+		});
+		// Before the new page paints, so it never arrives wearing the pending look.
+		document.addEventListener('astro:after-swap', function() {
+			document.documentElement.classList.remove('nav-pending');
+		});
+		document.addEventListener('astro:page-load', settleProgress);
+		window.addEventListener('load', settleProgress);
+		// A page restored from the back/forward cache fires neither load nor
+		// page-load, and would come back still marked pending.
+		window.addEventListener('pageshow', function(e) {
+			if (e.persisted) settleProgress();
+		});
+	})();
+</script>
+
+<style is:global>
+	#nav-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 3px;
+		width: 0;
+		background: var(--nav-progress-color, var(--color-primary-light));
+		z-index: 9999;
+		pointer-events: none;
+		opacity: 0;
+	}
+	#nav-progress.active {
+		opacity: 1;
+		animation: nav-progress-grow 8s cubic-bezier(0.1, 0.4, 0.2, 1) forwards;
+	}
+	@keyframes nav-progress-grow {
+		0%   { width: 0; }
+		10%  { width: 30%; }
+		50%  { width: 60%; }
+		80%  { width: 80%; }
+		100% { width: 95%; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		/* Still present, just not moving. */
+		#nav-progress.active {
+			animation: none;
+			width: 60%;
+		}
+	}
+</style>
