@@ -372,7 +372,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
                       <span class="nav-links__label">{label}</span>
                       {isLinkNew(link) && <span class="visually-hidden">New</span>}
                       {link.badge && link.badge > 0 && (
-                        <span class="nav-links__badge" aria-label={`${link.badge} notifications`}>
+                        <span class="ui-badge nav-links__badge" aria-label={`${link.badge} notifications`}>
                           {link.badge > 99 ? '99+' : link.badge}
                         </span>
                       )}
@@ -639,8 +639,8 @@ const sectionRenderInfo = visibleSections.map((section) => {
   }
 
   .nav-links__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: flex;
-    align-items: center;
     justify-content: center;
     min-width: var(--nav-badge-size);
     height: var(--nav-badge-size);

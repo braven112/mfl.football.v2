@@ -163,7 +163,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
       <div class="hero-banner__body">
         <div class="hero-banner__text">
           {isEvent && (
-            <span class={`hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
+            <span class={`ui-badge hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
               {isActive ? 'Happening Now' : isUrgent ? 'Coming Up' : 'League Event'}
             </span>
           )}
@@ -201,7 +201,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
       <Fragment>
         <div class="hero-banner__text">
           {isEvent && (
-            <span class={`hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
+            <span class={`ui-badge hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
               {isActive ? 'Happening Now' : isUrgent ? 'Coming Up' : 'League Event'}
             </span>
           )}
@@ -321,13 +321,12 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
   }
 
   .hero-banner__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.7rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.2rem 0.6rem;
-    border-radius: 9999px;
     width: fit-content;
     color: var(--content-text-muted, #64748b);
     background: var(--color-gray-100, #f3f4f6);

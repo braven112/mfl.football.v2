@@ -184,7 +184,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
                   </div>
                   <div class="hp-fa__details">
                     <div class="hp-fa__meta-top">
-                      <span class:list={['hp-fa__status-pill', `hp-fa__status-pill--${alert.declarationStatus}`]}>
+                      <span class:list={['ui-badge hp-fa__status-pill', `hp-fa__status-pill--${alert.declarationStatus}`]}>
                         {alert.declarationStatus === 'approved' ? 'Approved' : 'Pending review'}
                       </span>
                       <span class="hp-fa__amount">{alert.declaredYears} yr{alert.declaredYears === 1 ? '' : 's'}</span>
@@ -452,14 +452,11 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__status-pill {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.125rem 0.4rem;
-    border-radius: 999px;
     background: var(--color-gray-100, #f3f4f6);
     color: var(--color-gray-500, #6b7280);
     font-size: var(--font-size-3xs);
-    font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }

@@ -298,7 +298,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
               <tr>
                 <th scope="row">{row.job}</th>
                 <td>
-                  <span class={`faq__pill faq__pill--${row.where}`}>{whereLabel[row.where]}</span>
+                  <span class={`ui-badge faq__pill faq__pill--${row.where}`}>{whereLabel[row.where]}</span>
                 </td>
                 <td class="faq__note">{row.note}</td>
               </tr>
@@ -556,12 +556,11 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     min-width: 18rem;
   }
   .faq__pill {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: 0.15rem 0.5rem;
-    font-size: var(--font-size-2xs);
     font-weight: 600;
     white-space: nowrap;
-    border-radius: 999px;
     border: 1px solid var(--content-border, #e2e8f0);
     color: var(--content-text-muted, #6b7280);
   }

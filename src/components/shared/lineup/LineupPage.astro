@@ -1682,7 +1682,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           });
           cdmCurrent.innerHTML = `
             <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-            <div class="lineup-cdm__current-card">
+            <div class="ui-card lineup-cdm__current-card">
               ${cell}
               <div class="lineup-cdm__current-stats">
                 ${rankings.available && rankings.rank(currentPlayer.id) != null ? `<span class="lineup-cdm__stat lineup-cdm__stat--rank" title="${esc(rankings.fullName)}">#${rankings.rank(currentPlayer.id)} ${esc(rankings.label)}</span>` : ''}
@@ -1695,7 +1695,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         } else {
           cdmCurrent.innerHTML = `
             <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-            <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
+            <div class="ui-card lineup-cdm__current-card lineup-cdm__current-card--empty">
               <span>No player assigned</span>
             </div>
           `;
@@ -2947,14 +2947,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   }
 
   .lineup-cdm__current-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem;
     background: var(--color-gray-50, #f9fafb);
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: inset 3px 0 0 var(--color-primary, #1c497c);
     margin-bottom: 1rem;
+    border: none;
   }
 
   .lineup-cdm__current-card--empty {

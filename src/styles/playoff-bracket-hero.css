@@ -105,14 +105,11 @@ html.dark {
 }
 
 .plhero__eliminated-badge {
+  /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
   font-size: var(--font-size-3xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--plhero-ink-faint);
   background: var(--plhero-badge-bg);
   padding: 0.1875rem 0.5rem;
-  border-radius: var(--radius-full, 9999px);
   line-height: 1;
 }
 
@@ -211,10 +208,8 @@ html.dark {
 }
 
 .plhero__you-badge {
+  /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
   font-size: 0.5625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--plhero-you-badge-ink);
   background: var(--plhero-user-accent);
   padding: 0.0625rem 0.375rem;

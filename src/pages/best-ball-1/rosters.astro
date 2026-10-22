@@ -104,7 +104,7 @@ const hasAnyPicks = madePicks.length > 0;
     <div class="bb-rosters__grid">
       {
         rosters.map((team) => (
-          <section class="bb-rosters__card">
+          <section class="ui-card bb-rosters__card">
             <h2 style={`border-color: ${team.accent}`}>
               <BestBallCrest icon={team.icon} size={28} class="bb-rosters__crest" />
               <span class="bb-rosters__name">{team.name}</span>
@@ -166,9 +166,8 @@ const hasAnyPicks = madePicks.length > 0;
   }
 
   .bb-rosters__card {
-    background: var(--card-bg, #ffffff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 1rem 1.1rem;
   }

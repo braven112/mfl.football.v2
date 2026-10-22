@@ -157,12 +157,11 @@
   gap: 0.4rem;
 }
 .ncc__badge {
+  /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-weight: 700;
   padding: 0.1rem 0.35rem;
-  border-radius: 999px;
   background: var(--content-bg-muted);
   border: 1px solid var(--content-border);
   color: var(--content-text-muted);

@@ -76,7 +76,7 @@ const hero = HERO_COPY[phase];
   <div class="bb-home">
     <section class="bb-home__hero">
       <img class="bb-home__logo" src="/assets/logos/bestball-logo-dark.svg" alt="" aria-hidden="true" />
-      <p class="bb-home__badge">{hero.badge}</p>
+      <p class="ui-badge bb-home__badge">{hero.badge}</p>
       <h1>{hero.title}</h1>
       <p class="bb-home__body">{hero.body}</p>
       <div class="bb-home__actions">
@@ -86,15 +86,15 @@ const hero = HERO_COPY[phase];
     </section>
 
     <section class="bb-home__cards" aria-label="League pages">
-      <a class="bb-home__card" href="/best-ball-1/draft-room">
+      <a class="ui-card bb-home__card" href="/best-ball-1/draft-room">
         <h2>Draft Room</h2>
         <p>The live draft floor — board, player pool, queue, chat, and the on-the-clock timer.</p>
       </a>
-      <a class="bb-home__card" href="/best-ball-1/draft-board">
+      <a class="ui-card bb-home__card" href="/best-ball-1/draft-board">
         <h2>Draft Board</h2>
         <p>Every pick, round by round{madeCount > 0 ? ` — ${madeCount}/${totalCount} in the books` : ''}.</p>
       </a>
-      <a class="bb-home__card" href="/best-ball-1/rosters">
+      <a class="ui-card bb-home__card" href="/best-ball-1/rosters">
         <h2>Rosters</h2>
         <p>All 12 teams, grouped by position. In best ball, the draft IS the roster.</p>
       </a>
@@ -139,13 +139,12 @@ const hero = HERO_COPY[phase];
   }
 
   .bb-home__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.7rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     background: rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
     padding: 0.25rem 0.75rem;
     margin: 0 0 0.75rem;
   }
@@ -195,9 +194,8 @@ const hero = HERO_COPY[phase];
   }
 
   .bb-home__card {
-    background: var(--card-bg, #ffffff);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 1.1rem 1.2rem;
     text-decoration: none;

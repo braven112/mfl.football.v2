@@ -142,7 +142,7 @@ const coverageNote = describeCoverageGap(coverage);
         <ul class="hot-list">
           {hottest.map(({ a, b, rec }) => (
             <li>
-              <a class="hot-card" href={`/afl-fantasy/rivalries/${canonicalRivalryPair(a.franchiseId, b.franchiseId)}`}>
+              <a class="ui-card hot-card" href={`/afl-fantasy/rivalries/${canonicalRivalryPair(a.franchiseId, b.franchiseId)}`}>
                 <div class="hot-card__teams">
                   {a.currentIcon ? <img src={a.currentIcon} alt="" loading="lazy" /> : null}
                   <span class="hot-card__vs">vs</span>
@@ -275,11 +275,9 @@ const coverageNote = describeCoverageGap(coverage);
   }
 
   .hot-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: block;
     padding: 0.75rem 0.85rem;
-    background: var(--card-bg);
-    border: var(--style-card-border, 1px solid var(--content-border));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 10px;
     text-decoration: none;
     color: inherit;

@@ -144,7 +144,7 @@ export function PlayerPoolPanel({
       <>
         {player.rspTier && (
           <span
-            className="dr-tier-badge"
+            className="ui-badge dr-tier-badge"
             data-tier={player.rspTier}
             aria-label={`RSP Tier ${player.rspTier}`}
             style={{ marginLeft: '0.25rem' }}

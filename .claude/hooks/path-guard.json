@@ -1085,6 +1085,7 @@
       "rules": "docs/claude/rules/theming-and-assets.md",
       "paths": [
         "src/styles/**",
+        "tests/fixtures/component-kit-forks.json",
         "src/themes/**",
         "src/config/theme-tokens.mjs",
         "scripts/generate-league-themes.mjs",
@@ -1118,6 +1119,7 @@
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
+        "tests/component-kit.test.ts",
         "tests/page-icons.test.ts",
         "tests/league-themes.test.ts",
         "tests/dialog-closed-display.test.ts",

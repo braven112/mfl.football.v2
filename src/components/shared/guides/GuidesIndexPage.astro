@@ -63,7 +63,7 @@ const formatUpdated = (date: string) =>
       <ul class="guides__grid">
         {guides.map((guide) => (
           <li class="guides__item">
-            <a class="guide-card" href={r(`/guides/${guide.slug}`)}>
+            <a class="ui-card guide-card" href={r(`/guides/${guide.slug}`)}>
               <span class="guide-card__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20">
                   <use href={`${spriteUrl}#icon-${guide.icon ?? 'file-text'}`} />
@@ -128,14 +128,13 @@ const formatUpdated = (date: string) =>
   }
 
   .guide-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     gap: 0.75rem;
     height: 100%;
     padding: var(--spacing-md, 1rem);
     border: var(--style-card-border, 1px solid var(--card-border));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--card-radius);
-    background: var(--card-bg);
     text-decoration: none;
     transition:
       border-color var(--transition-fast),

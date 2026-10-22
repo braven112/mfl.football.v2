@@ -204,7 +204,7 @@ export function PlayerDetailModal({
               {player.college && <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500, #6b7280)' }}>· {player.college}</span>}
               {player.age !== undefined && <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500, #6b7280)' }}>· Age {player.age}</span>}
               {player.rspTier && (
-                <span className="dr-tier-badge" data-tier={player.rspTier} aria-label={`RSP Tier ${player.rspTier}`}>
+                <span className="ui-badge dr-tier-badge" data-tier={player.rspTier} aria-label={`RSP Tier ${player.rspTier}`}>
                   Tier {player.rspTier}
                 </span>
               )}

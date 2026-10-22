@@ -100,7 +100,7 @@ const league_ = (l: DemoLead) =>
                   Wants: {DEMO_NAMES[l.wanted] ?? l.wanted}
                   {l.wanted !== l.path && <em> (shown {DEMO_NAMES[l.path] ?? l.path})</em>}
                 </span>
-                <span class:list={['leads__badge', `leads__badge--${status(l).toLowerCase()}`]}>{status(l)}</span>
+                <span class:list={['ui-badge ui-badge--inline leads__badge', `leads__badge--${status(l).toLowerCase()}`]}>{status(l)}</span>
                 <span class="leads__meta">Until {date(l.expiresAt)}</span>
                 <a href={l.link} target="_blank" rel="noopener">Open their demo</a>
                 <div class="leads__actions">
@@ -242,11 +242,10 @@ const league_ = (l: DemoLead) =>
     white-space: pre-wrap;
   }
   .leads__badge {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     justify-self: start;
     padding: 0.1rem 0.5rem;
-    border-radius: 999px;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     border: 1px solid currentColor;
   }
   .leads__badge--live {

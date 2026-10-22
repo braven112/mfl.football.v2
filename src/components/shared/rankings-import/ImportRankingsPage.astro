@@ -388,13 +388,14 @@ const siteConfigs = [
   }
 
   .bm-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--primary-content-border-color, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: 8px;
     padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    background: none;
   }
 
   .bm-card__header {

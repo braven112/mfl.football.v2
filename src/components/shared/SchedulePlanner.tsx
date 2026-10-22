@@ -219,7 +219,7 @@ export default function SchedulePlanner({
           />
 
           <div className="sched__grid">
-            <section className="sched__card">
+            <section className="ui-card sched__card">
               <h4>What changes</h4>
               <dl>
                 <dt>Doubleheaders</dt>
@@ -246,7 +246,7 @@ export default function SchedulePlanner({
               </dl>
             </section>
 
-            <section className="sched__card">
+            <section className="ui-card sched__card">
               <h4>Fairness</h4>
               <table className="sched__compare">
                 <thead>
@@ -309,7 +309,7 @@ export default function SchedulePlanner({
             </section>
           </div>
 
-          <section className="sched__card">
+          <section className="ui-card sched__card">
             <h4>Week by week</h4>
             <div className="sched__scroll">
               <table className="sched__weeks">
@@ -338,7 +338,7 @@ export default function SchedulePlanner({
           </section>
 
           {plan.crossConference && (
-            <section className="sched__card">
+            <section className="ui-card sched__card">
               <h4>Week 1 cross-conference</h4>
               <p className="sched__note">
                 Paired on last season&rsquo;s division finishes ·{' '}

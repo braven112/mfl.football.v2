@@ -37,9 +37,9 @@
 }
 
 .sf-news-card {
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   background: var(--sf-bg);
   border: var(--style-card-border, 1px solid var(--sf-border));
-  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
 }
@@ -814,12 +814,13 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 /* Embed cards (X, Instagram, generic links) */
 .sf-post__embed-card {
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   margin-top: 0.5rem;
   border: var(--style-card-border, 1px solid var(--sf-border));
-  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
   transition: background var(--transition-fast);
+  background: none;
 }
 
 .sf-post__embed-card:hover {
@@ -875,16 +876,17 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 /* Rich Open Graph preview card (for generic links with og:image) */
 .sf-post__og-card {
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
   border: var(--style-card-border, 1px solid var(--sf-border));
-  box-shadow: var(--style-card-shadow, none);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
   transition: background var(--transition-fast), border-color var(--transition-fast);
+  background: none;
 }
 
 .sf-post__og-card:hover {

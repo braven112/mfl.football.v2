@@ -26,7 +26,7 @@ const { kind, kindLabel, added, dropped, tradeSides, amount, dashTitle, byCommis
 
 <div class="txr">
   <div class="txr__meta">
-    <span class="txr__badge" data-kind={kind}>{kindLabel}</span>
+    <span class="ui-badge ui-badge--inline txr__badge" data-kind={kind}>{kindLabel}</span>
     {amount !== undefined && (
       <span class="txr__amount">{amount ?? <span class="txr__dash" title={dashTitle}>—</span>}</span>
     )}
@@ -109,12 +109,13 @@ const { kind, kindLabel, added, dropped, tradeSides, amount, dashTitle, byCommis
   .txr { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
   .txr__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
   .txr__badge {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.1rem 0.5rem;
     border: 1px solid var(--content-border, #e5e5e5);
-    border-radius: var(--radius-full, 999px);
     font-size: var(--font-size-xs, 0.75rem);
     color: var(--content-text-muted, #666);
     white-space: nowrap;
+    font-weight: inherit;
   }
   .txr__badge[data-kind='blind-bid'],
   .txr__badge[data-kind='auction'],

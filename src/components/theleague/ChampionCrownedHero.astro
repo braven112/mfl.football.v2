@@ -40,7 +40,7 @@ const summary = isUserChampion
   <div class="champ-hero__content">
     <div class="champ-hero__eyebrow">
       <img src={winnerIcon} alt={`${winnerName} team icon`} class="champ-hero__badge" />
-      <span class="champ-hero__pill">Champion Crowned</span>
+      <span class="ui-badge ui-badge--inline champ-hero__pill">Champion Crowned</span>
     </div>
 
     <h2 class="champ-hero__title">
@@ -167,13 +167,12 @@ const summary = isUserChampion
   }
 
   .champ-hero__pill {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-weight: 700;
     font-size: 0.8125rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 0.375rem 0.875rem;
-    border-radius: 999px;
     background: var(--color-warning, #f59e0b);
     color: var(--color-white, #fff);
   }

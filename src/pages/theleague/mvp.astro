@@ -312,13 +312,13 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                         const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                         const slotLabel = player.slotLabel ?? label;
                         return (
-                          <article class="mvp-card team-of-year-card">
+                          <article class="ui-card mvp-card team-of-year-card">
                             <div class="slot-label">{slotLabel}</div>
                             <header>
                               <div class="card-header-top">
                                 <div class="season-badge-row">
                                   <p class="mvp-season">{player.season}</p>
-                                  {isLeagueMvp && <span class="league-mvp-badge">MVP</span>}
+                                  {isLeagueMvp && <span class="ui-badge league-mvp-badge">MVP</span>}
                                 </div>
                                 {franchise?.icon && (
                                   <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
@@ -383,13 +383,13 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                       const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                       const slotLabel = player.slotLabel ?? label;
                       return (
-                        <article class="mvp-card team-of-year-card">
+                        <article class="ui-card mvp-card team-of-year-card">
                           <div class="slot-label">{slotLabel}</div>
                           <header>
                             <div class="card-header-top">
                               <div class="season-badge-row">
                                 <p class="mvp-season">{player.season}</p>
-                                {isLeagueMvp && <span class="league-mvp-badge">MVP</span>}
+                                {isLeagueMvp && <span class="ui-badge league-mvp-badge">MVP</span>}
                               </div>
                               {franchise?.icon && (
                                 <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
@@ -439,7 +439,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
             : null;
           const nflLogo = player.team ? getNflLogo(player.team) : null;
           return (
-            <article class="mvp-card" data-year={player.season} data-position={player.position}>
+            <article class="ui-card mvp-card" data-year={player.season} data-position={player.position}>
               <header>
                 <div class="card-header-top">
                   <p class="mvp-season">{player.season}</p>
@@ -515,13 +515,13 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                   const nflLogo = player.team ? getNflLogo(player.team) : null;
                   const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                   return (
-                    <article class="mvp-card" data-year={player.season} data-position={player.position}>
+                    <article class="ui-card mvp-card" data-year={player.season} data-position={player.position}>
                       <header>
                         <div class="card-header-top">
                           <div class="season-badge-row">
                             <p class="mvp-season">{player.season}</p>
                             {isLeagueMvp && (
-                              <span class="league-mvp-badge">MVP</span>
+                              <span class="ui-badge league-mvp-badge">MVP</span>
                             )}
                           </div>
                           {franchise?.icon && (
@@ -739,12 +739,12 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
   }
 
   .league-mvp-badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     padding: 0.25rem 0.5rem;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     color: #fff;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.025em;
     border-radius: 0.375rem;
@@ -758,8 +758,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
   }
 
   .mvp-card {
-    background: var(--card-bg, #fff);
-    border: var(--style-card-border, 1px solid var(--content-border, #d7dce3));
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: 1rem;
     padding: 1.25rem;
     box-shadow: var(--shadow-lg);

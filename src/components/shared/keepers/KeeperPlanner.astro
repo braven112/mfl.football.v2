@@ -294,7 +294,7 @@ try {
     <ul class="kp-cards" data-cards>
       {cardsData.map(({ player, trend }) => (
         <li
-          class="kp-card"
+          class="ui-card kp-card"
           data-card
           data-player-id={player.id}
           data-age={player.age}
@@ -1594,6 +1594,7 @@ try {
   }
 
   .kp-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     /* Same fix as .kp-slot above: this is a grid item of .kp-cards, and its
        automatic min-width defaults to its own min-content — the stat-line/
        trend badge next to the name is flex-shrink: 0 by design, so without
@@ -1606,8 +1607,6 @@ try {
     padding: 0.5rem 0.625rem;
     background: #fff;
     border: var(--style-card-border, 1px solid #e5e7eb);
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: 0.5rem;
     cursor: grab;
     transition: border-color 120ms ease, box-shadow 120ms ease;
   }

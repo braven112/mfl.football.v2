@@ -102,7 +102,7 @@ const categories = [
     {pages.map(page => (
       <a
         href={page.href}
-        class="directory__card"
+        class="ui-card directory__card"
         data-search={page.search}
         data-category={page.category}
         data-rank={page.rank}
@@ -116,7 +116,7 @@ const categories = [
           <div class="directory__card-title-row">
             <h2 class="directory__card-title">{page.title}</h2>
             {page.admin && (
-              <span class="directory__admin-badge">Admin</span>
+              <span class="ui-badge ui-badge--caps ui-badge--inline directory__admin-badge">Admin</span>
             )}
           </div>
           <p class="directory__card-desc">{page.description}</p>
@@ -261,13 +261,13 @@ const categories = [
   }
 
   .directory__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.875rem;
     border: var(--style-card-border, 1px solid var(--color-gray-100, #e2e8f0));
     border-radius: 12px;
-    background: var(--card-bg, #fff);
     text-decoration: none;
     color: inherit;
     transition: box-shadow 0.15s, border-color 0.15s;
@@ -331,15 +331,13 @@ const categories = [
   }
 
   .directory__admin-badge {
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     flex-shrink: 0;
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
     background: var(--badge-warning-bg, #fef3c7);
     color: var(--badge-warning-text, #92400e);
     font-size: var(--font-size-3xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     line-height: 1.4;
   }
 

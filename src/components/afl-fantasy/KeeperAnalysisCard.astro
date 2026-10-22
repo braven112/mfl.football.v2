@@ -43,7 +43,7 @@ const fmtPts = (n: number) =>
 const efficiencyPct = Math.round(analysis.efficiency * 100);
 ---
 
-<article class="ka-card" id={`franchise-${analysis.franchiseId}`}>
+<article class="ui-card ka-card" id={`franchise-${analysis.franchiseId}`}>
   <header class="ka-card__header">
     <div class="ka-card__header-row">
       {teamIcon && <img class="ka-card__icon" src={teamIcon} alt={`${teamName} icon`} loading="lazy" />}
@@ -95,18 +95,18 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           </td>
           <td class="ka-table__pts">{previewMode ? '' : fmtPts(p.points)}</td>
           <td class="ka-table__badge">
-            {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
+            {p.kept && <span class="ui-badge ka-pill ka-pill--kept">Kept</span>}
             {!previewMode && p.badge === 'hit' && (
-              <span class="ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster had — full points for a keep who wins a starting slot, a fixed share (7/10 flex, 1/10 QB/K/Def) for a backup">
+              <span class="ui-badge ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster had — full points for a keep who wins a starting slot, a fixed share (7/10 flex, 1/10 QB/K/Def) for a backup">
                 Hit
               </span>
             )}
-            {!previewMode && p.badge === 'miss' && <span class="ka-pill ka-pill--miss">Miss</span>}
+            {!previewMode && p.badge === 'miss' && <span class="ui-badge ka-pill ka-pill--miss">Miss</span>}
             {!previewMode && p.badge === 'got-away' && (
-              <span class="ka-pill ka-pill--gotaway">Got away</span>
+              <span class="ui-badge ka-pill ka-pill--gotaway">Got away</span>
             )}
             {!previewMode && p.role === 'bench' && (
-              <span class="ka-pill ka-pill--kdef" title="Valued as a backup, not a starter. A seventh skill player counts 7/10 of his points (he rotates in for byes and matchups across six flex starters); a second QB, kicker, or defense counts 1/10 (he only plays the starter's bye and the odd matchup call).">
+              <span class="ui-badge ka-pill ka-pill--kdef" title="Valued as a backup, not a starter. A seventh skill player counts 7/10 of his points (he rotates in for byes and matchups across six flex starters); a second QB, kicker, or defense counts 1/10 (he only plays the starter's bye and the odd matchup call).">
                 Bench
               </span>
             )}
@@ -146,9 +146,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
 
 <style>
   .ka-card {
-    background: var(--card-bg, #ffffff);
-    border: var(--style-card-border, 1px solid var(--content-border, #e5e7eb));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-radius: 12px;
     padding: 1rem 1.25rem;
     display: flex;
@@ -275,13 +273,12 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
   }
 
   .ka-pill {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.62rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     padding: 0.14rem 0.4rem;
-    border-radius: 999px;
     margin: 0.1rem 0 0.1rem 0.2rem;
     white-space: nowrap;
   }

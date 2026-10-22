@@ -174,7 +174,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
     <div class="ww-hero__header">
       <div class="ww-hero__title-row">
         <h3 class="ww-hero__section-title">Waiver Wire</h3>
-        <span class="ww-hero__week-badge">Week {week}</span>
+        <span class="ui-badge ui-badge--caps ui-badge--inline ww-hero__week-badge">Week {week}</span>
       </div>
       {lockIso && waiversOpen && (
         <div class="ww-hero__countdown-row">
@@ -286,14 +286,11 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__week-badge {
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-size: var(--font-size-3xs);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     color: var(--dh-accent);
     background: color-mix(in srgb, var(--dh-accent) 10%, transparent);
-    padding: 0.125rem 0.5rem;
-    border-radius: var(--radius-full, 9999px);
   }
 
   .ww-hero__countdown-row {

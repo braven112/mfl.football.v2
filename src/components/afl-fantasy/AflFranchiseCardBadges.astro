@@ -106,7 +106,7 @@ const titleYears = (t: TitleTypeProgress): string =>
 <ul class="badges" aria-label="Titles">
   {titles.map((t) => (
     <li
-      class="badge"
+      class="ui-badge badge"
       title={`${TITLE_TOOLTIP[t.key]}: ${titleYears(t)}`}
     >
       <span class="icon" aria-hidden="true">
@@ -141,13 +141,10 @@ const titleYears = (t: TitleTypeProgress): string =>
   }
 
   .badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.3125rem;
     padding: 0.125rem 0.5rem 0.125rem 0.1875rem;
-    border-radius: 999px;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
   }

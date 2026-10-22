@@ -141,7 +141,7 @@ const tools = [
       </section>
 
       <aside class="blh__side">
-        <section class="blh__card" aria-label="Tier leaders">
+        <section class="ui-card blh__card" aria-label="Tier leaders">
           <h2 class="blh__h2">Tier leaders <span class="blh__side-comp">Side competition</span></h2>
           {tierLeaders.map((t, i) => (
             <div class="blh__tier-block">
@@ -160,7 +160,7 @@ const tools = [
           <a class="cta-link blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables</a>
         </section>
 
-        <section class="blh__card" aria-label="How the league works">
+        <section class="ui-card blh__card" aria-label="How the league works">
           <h2 class="blh__h2">How it works</h2>
           <ul class="blh__rules">
             <li><strong>Redraft.</strong> Every conference holds its own snake draft each season, from its own player pool.</li>
@@ -269,12 +269,11 @@ const tools = [
     gap: 1rem;
   }
   .blh__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: grid;
     gap: 0.6rem;
     padding: 1rem;
     background: var(--card-surface);
-    border: var(--style-card-border, 1px solid var(--content-border));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-lg);
   }
   .blh__h2 {

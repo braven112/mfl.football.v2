@@ -148,7 +148,7 @@ function StatusBadge({ isLive, remaining, gameWindow }: {
 
   if (isLive && !allDone) {
     return (
-      <span className="lsh__badge lsh__badge--live">
+      <span className="ui-badge ui-badge--caps lsh__badge lsh__badge--live">
         <span className="lsh__pulse" aria-hidden="true" />
         LIVE
       </span>
@@ -156,11 +156,11 @@ function StatusBadge({ isLive, remaining, gameWindow }: {
   }
 
   if (isLive && allDone) {
-    return <span className="lsh__badge lsh__badge--final">FINAL</span>;
+    return <span className="ui-badge ui-badge--caps lsh__badge lsh__badge--final">FINAL</span>;
   }
 
   return (
-    <span className="lsh__badge lsh__badge--next">
+    <span className="ui-badge ui-badge--caps lsh__badge lsh__badge--next">
       {getNextGameText(gameWindow)}
     </span>
   );

@@ -81,7 +81,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
         return (
           <a
             href={`${basePath}/whats-new/${entry.id}`}
-            class={`wnr-card wnr-card--${entry.category}`}
+            class={`ui-card wnr-card wnr-card--${entry.category}`}
           >
             {imagePath && (
               <div class="wnr-card__thumbnail">
@@ -104,11 +104,11 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
             <div class="wnr-card__content">
               <div class="wnr-card__meta">
-                <span class={`wnr-card__badge wnr-card__badge--${entry.category}`}>
+                <span class={`ui-badge wnr-card__badge wnr-card__badge--${entry.category}`}>
                   {WHATS_NEW_CATEGORY_LABELS[entry.category]}
                 </span>
                 {entry.isNew && (
-                  <span class="wnr-card__new-badge" title="Published since your last visit">
+                  <span class="ui-badge wnr-card__new-badge" title="Published since your last visit">
                     <span class="wnr-card__new-dot" aria-hidden="true" />
                     JUST IN
                   </span>
@@ -196,13 +196,13 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
   /* ── Card ── */
   .wnr-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     flex-direction: column;
     /* Match the site's raised-card recipe: --card-bg is white in light mode
        and a subtle slate gradient in dark, --card-border gives the ring so the
        card separates from the page in both themes. The 4px category stripe
        overrides just the left edge. */
-    background: var(--card-bg, #fff);
     border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
     border-left: 4px solid var(--wnr-category-color, var(--cat-new-feature));
     border-radius: 0.75rem;
@@ -329,13 +329,12 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   }
 
   .wnr-card__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.65rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
     color: var(--cat-badge-ink, #fff);
   }
 
@@ -351,15 +350,12 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
      whatever color the screenshot happens to be. Matches the card badge's
      shape and its light/dark ink flip. */
   .wnr-card__new-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.3rem;
     font-size: 0.65rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
     background: var(--wn-fresh-bg);
     color: var(--wn-fresh-ink);
   }

@@ -462,7 +462,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
       if (isYou) {
         label.append(document.createTextNode(`${t.name} `));
         const youBadge = document.createElement('span');
-        youBadge.className = 'mock-lobby__you-badge';
+        youBadge.className = 'ui-badge mock-lobby__you-badge';
         youBadge.textContent = 'You';
         label.appendChild(youBadge);
       } else {
@@ -1112,14 +1112,13 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 
   /* Inline pill after the team name for the user's own row. */
   .mock-lobby__you-badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.5625rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 0.125rem 0.375rem;
     margin-left: 0.25rem;
-    border-radius: 999px;
     background: var(--color-primary-fill, var(--color-primary, #1c497c));
     color: var(--on-color-primary, #fff);
     vertical-align: middle;

@@ -512,6 +512,7 @@ html.dark .cmh--red {
 }
 
 .cmh__pill {
+  /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -520,7 +521,6 @@ html.dark .cmh--red {
   background: var(--cmh-pill-bg);
   border: 1px solid var(--cmh-pill-border);
   padding: 0.3rem 0.65rem;
-  border-radius: 999px;
 }
 
 .cmh__date {

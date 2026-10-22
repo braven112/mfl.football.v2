@@ -39,7 +39,7 @@ export default function BookmarkletCard({ site }: Props) {
   }, [bookmarkletHref]);
 
   return (
-    <div className="bm-card">
+    <div className="ui-card bm-card">
       <div className="bm-card__header">
         <span className="bm-card__name">{site.name}</span>
         <div className="bm-card__badges">

@@ -107,7 +107,7 @@ const STATUS_LABELS: Record<string, string> = {
           <ul>
             {sessions.map((s) => (
               <li>
-                <a class="bb-mock__card" href={`/best-ball-1/mock-draft/${s.id}`}>
+                <a class="ui-card bb-mock__card" href={`/best-ball-1/mock-draft/${s.id}`}>
                   <span class={`bb-mock__status bb-mock__status--${s.status}`}>
                     {STATUS_LABELS[s.status] ?? s.status}
                   </span>
@@ -270,12 +270,11 @@ const STATUS_LABELS: Record<string, string> = {
   }
 
   .bb-mock__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: center;
     gap: 0.9rem;
-    background: var(--card-bg, #ffffff);
     border: var(--style-card-border, 1px solid var(--card-border, #dddddd));
-    box-shadow: var(--style-card-shadow, none);
     border-radius: var(--radius-md, 8px);
     padding: 0.8rem 1rem;
     text-decoration: none;

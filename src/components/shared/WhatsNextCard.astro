@@ -68,7 +68,7 @@ const cardClasses = [
           </svg>
         </span>
       )}
-      <span class="whats-next-card__pill">{label}</span>
+      <span class="ui-badge ui-badge--inline whats-next-card__pill">{label}</span>
     </div>
 
     <h3 class="whats-next-card__title">{event.definition.name}</h3>
@@ -266,13 +266,12 @@ const cardClasses = [
   }
 
   .whats-next-card__pill {
+    /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-weight: 700;
     font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 0.3rem 0.7rem;
-    border-radius: 999px;
     background: var(--card-accent);
     color: var(--card-pill-ink, #fff);
   }

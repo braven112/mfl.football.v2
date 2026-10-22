@@ -38,7 +38,7 @@ export function MobileTabBar({ activeTab, onTabChange, chatUnread = 0, queueCoun
             {tab.label}
             {showBadge && (
               <span
-                className="dr-tab-btn__badge"
+                className="ui-badge dr-tab-btn__badge"
                 data-variant={isUnread ? 'unread' : undefined}
                 aria-label={isUnread
                   ? `${badgeCount} unread message${badgeCount !== 1 ? 's' : ''}`

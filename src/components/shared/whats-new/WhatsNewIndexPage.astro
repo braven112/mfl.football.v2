@@ -466,13 +466,12 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-card__badge {
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     display: inline-block;
     font-size: 0.65rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
     color: var(--cat-badge-ink, #fff);
   }
 
@@ -489,15 +488,12 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
      happens to be — dark green on a violet hero image, Aug 2026. A solid pill
      carries its own contrast over any thumbnail, in either theme. */
   .wn-card__new-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.3rem;
     font-size: 0.65rem;
-    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
     background: var(--wn-fresh-bg);
     color: var(--wn-fresh-ink);
   }

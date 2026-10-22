@@ -2022,13 +2022,12 @@ button.lv-card:focus-visible {
   opacity: 0.7;
 }
 .lv-pro-badge {
+  /* Kit: ui-badge ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
   margin-left: 0.4rem;
   padding: 0.05rem 0.4rem;
-  border-radius: var(--radius-full);
   border: 1px solid currentColor;
   color: var(--league-accent);
   font-size: var(--font-size-3xs);
-  font-weight: var(--font-weight-bold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   vertical-align: middle;

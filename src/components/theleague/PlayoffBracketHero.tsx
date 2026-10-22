@@ -30,7 +30,7 @@ function TeamSlotRow({ team, isUser, isWinner }: {
         )}
         <span className="plhero__seed">{team.seed ?? '?'}</span>
         <span className="plhero__team-name">{team.displayName}</span>
-        {isUser && <span className="plhero__you-badge" aria-label="Your team">&#9733; You</span>}
+        {isUser && <span className="ui-badge ui-badge--caps ui-badge--inline plhero__you-badge" aria-label="Your team">&#9733; You</span>}
       </div>
       {team.points != null && (
         <span className={`plhero__score${isWinner ? ' plhero__score--winner' : ''}`}>
@@ -90,7 +90,7 @@ export default function PlayoffBracketHero({
       <div className="plhero__header">
         <h3 className="plhero__title">Playoff Bracket</h3>
         {userIsEliminated && userFranchiseId && (
-          <span className="plhero__eliminated-badge">Eliminated</span>
+          <span className="ui-badge ui-badge--caps ui-badge--inline plhero__eliminated-badge">Eliminated</span>
         )}
       </div>
 

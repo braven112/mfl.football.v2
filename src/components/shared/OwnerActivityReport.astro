@@ -140,24 +140,24 @@ const busiestDayLabel = traffic.busiest
 			</div>
 
 			<div class="surface-split__cards">
-				<div class="surface-card" data-surface="pwa">
+				<div class="ui-card surface-card" data-surface="pwa">
 					<span class="surface-card__label">Page Views</span>
 					<span class="surface-card__value">{traffic.totalViews.toLocaleString()}</span>
 					<span class="surface-card__sub">{traffic.avgPerDay.toLocaleString()} a day</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Signed Out</span>
 					<span class="surface-card__value">{traffic.anonymousShare}%</span>
 					<span class="surface-card__sub">
 						{traffic.anonymousViews.toLocaleString()} of those views
 					</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Owners a Day</span>
 					<span class="surface-card__value">{traffic.avgActiveOwners}</span>
 					<span class="surface-card__sub">{traffic.ownersSeen} of {teams.length} in the window</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Busiest Day</span>
 					<span class="surface-card__value">{traffic.busiest?.total.toLocaleString() ?? '—'}</span>
 					<span class="surface-card__sub">{busiestDayLabel}</span>
@@ -452,28 +452,28 @@ const busiestDayLabel = traffic.busiest
 			</div>
 
 			<div class="surface-split__cards">
-				<div class="surface-card" data-surface="pwa">
+				<div class="ui-card surface-card" data-surface="pwa">
 					<span class="surface-card__label">Installed App</span>
 					<span class="surface-card__value">{surfaces.all.pwaShare}%</span>
 					<span class="surface-card__sub">{surfaces.all.pwa.toLocaleString()} visits</span>
 				</div>
-				<div class="surface-card" data-surface="browser">
+				<div class="ui-card surface-card" data-surface="browser">
 					<span class="surface-card__label">Browser</span>
 					<span class="surface-card__value">{100 - surfaces.all.pwaShare}%</span>
 					<span class="surface-card__sub">{surfaces.all.browser.toLocaleString()} visits</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Signed In</span>
 					<span class="surface-card__value">{surfaces.signedIn.total.toLocaleString()}</span>
 					<span class="surface-card__sub">{surfaces.signedIn.pwaShare}% from the app</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Signed Out</span>
 					<span class="surface-card__value">{surfaces.anonymous.total.toLocaleString()}</span>
 					<span class="surface-card__sub">{surfaces.anonymous.pwaShare}% from the app</span>
 				</div>
 				{adoption && adoption.install.total > 0 && (
-					<div class="surface-card" data-surface="pwa">
+					<div class="ui-card surface-card" data-surface="pwa">
 						<span class="surface-card__label">Owners Installed</span>
 						<span class="surface-card__value">
 							{adoption.install.installed}<span class="surface-card__of">/{adoption.install.total}</span>
@@ -534,14 +534,14 @@ const busiestDayLabel = traffic.busiest
 			</div>
 
 			<div class="surface-split__cards">
-				<div class="surface-card" data-surface="pwa">
+				<div class="ui-card surface-card" data-surface="pwa">
 					<span class="surface-card__label">Reachable</span>
 					<span class="surface-card__value">
 						{adoption.push.reachable}<span class="surface-card__of">/{adoption.push.total}</span>
 					</span>
 					<span class="surface-card__sub">{adoption.push.share}% of the league</span>
 				</div>
-				<div class="surface-card">
+				<div class="ui-card surface-card">
 					<span class="surface-card__label">Devices</span>
 					<span class="surface-card__value">{adoption.push.devices}</span>
 					<span class="surface-card__sub">browsers subscribed</span>
@@ -1372,13 +1372,14 @@ const busiestDayLabel = traffic.busiest
 	}
 
 	.surface-card {
+		/* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
 		display: flex;
 		flex-direction: column;
 		gap: 0.125rem;
 		padding: 0.75rem 0.875rem;
 		border-radius: var(--radius-md, 0.375rem);
-		background: var(--card-bg, #fff);
 		box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, var(--color-gray-200, #e5e7eb)));
+		border: none;
 	}
 
 	.surface-card__label {

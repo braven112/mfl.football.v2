@@ -520,10 +520,10 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
         </h3>
         <p class="ops-card__hint">
           The chat stream {personaName} is watching. Each message is tagged with one of four states:
-          <span class="ops-pill ops-pill--info">posted</span> became a published post,
-          <span class="ops-pill ops-pill--ok">pending</span> is in the live tips queue,
-          <span class="ops-pill ops-pill--warn">expired</span> matched the regex but aged out (24h TTL),
-          <span class="ops-pill ops-pill--mute">no match</span> didn't address {personaName} so was never queued.
+          <span class="ui-badge ops-pill ops-pill--info">posted</span> became a published post,
+          <span class="ui-badge ops-pill ops-pill--ok">pending</span> is in the live tips queue,
+          <span class="ui-badge ops-pill ops-pill--warn">expired</span> matched the regex but aged out (24h TTL),
+          <span class="ui-badge ops-pill ops-pill--mute">no match</span> didn't address {personaName} so was never queued.
         </p>
         <div id="ops-recent-groupme-body" class="ops-gm">Loading…</div>
       </article>
@@ -1624,8 +1624,9 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
   .ops-env__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   @media (max-width: 720px) { .ops-env__cols { grid-template-columns: 1fr; } }
   .ops-pill {
-    display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    padding: 0.15rem 0.45rem; border-radius: 999px; letter-spacing: 0.03em;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
+    display: inline-block; font-size: 0.7rem; text-transform: uppercase;
+    padding: 0.15rem 0.45rem; letter-spacing: 0.03em;
   }
   .ops-pill--ok { background: #dcfce7; color: #166534; }
   .ops-pill--bad { background: #fee2e2; color: #991b1b; }

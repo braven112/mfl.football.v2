@@ -149,10 +149,9 @@
 }
 
 .sched__card {
+  /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
   padding: 1rem;
-  background: var(--card-bg, #fff);
   border: var(--style-card-border, 1px solid var(--card-border, #e2e8f0));
-  box-shadow: var(--style-card-shadow, none);
   border-radius: 10px;
 }
 

@@ -24,7 +24,7 @@ const show = isDemoDeploy();
 {
   show && (
     <aside class:list={['demo-side-comp', { 'demo-side-comp--compact': compact }]} aria-label="About this side competition">
-      <span class="demo-side-comp__badge">Custom side competition</span>
+      <span class="ui-badge ui-badge--caps ui-badge--inline demo-side-comp__badge">Custom side competition</span>
       <p class="demo-side-comp__text">
         {summary} It runs alongside the real standings, changes nothing in them, and updates itself every
         week: no spreadsheet, no commissioner math.
@@ -57,15 +57,13 @@ const show = isDemoDeploy();
     padding: 0.7rem 0.9rem;
   }
   .demo-side-comp__badge {
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     justify-self: start;
     padding: 0.1rem 0.55rem;
-    border-radius: 999px;
     background: #fca311;
     color: #14213d;
     font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
   .demo-side-comp__text,
   .demo-side-comp__pitch {

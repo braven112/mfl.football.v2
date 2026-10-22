@@ -75,7 +75,7 @@ export function QueueRow({ item, rank, player, isDrafted, onRemove }: QueueRowPr
       </div>
 
       {isDrafted && (
-        <span className="dr-queue-row__drafted-badge">Drafted</span>
+        <span className="ui-badge ui-badge--inline dr-queue-row__drafted-badge">Drafted</span>
       )}
 
       <button

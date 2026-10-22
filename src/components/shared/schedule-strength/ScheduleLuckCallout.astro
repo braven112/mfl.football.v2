@@ -28,7 +28,7 @@ function blurb(row: LuckRow): string {
 
 <div class="luck">
   {rows.map(row => (
-    <article class={`luck__card luck__card--${row.direction}`}>
+    <article class={`ui-card luck__card luck__card--${row.direction}`}>
       <span class="luck__tag">
         <span aria-hidden="true">{row.direction === 'unlucky' ? '▼' : '▲'}</span>
         {row.direction === 'unlucky' ? 'Schedule victim' : 'Soft landing'}
@@ -46,10 +46,9 @@ function blurb(row: LuckRow): string {
     gap: 0.9rem;
   }
   .luck__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border: var(--style-card-border, 1px solid var(--gnt-border, var(--content-border, #e2e8f0)));
-    box-shadow: var(--style-card-shadow, none);
     background: var(--gnt-callout-bg, var(--color-gray-50, #f8fafc));
-    border-radius: 0.5rem;
     padding: 0.9rem 1rem;
   }
   .luck__tag {

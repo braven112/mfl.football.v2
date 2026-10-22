@@ -94,7 +94,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
       <h2>Current owners <span class="count">{currentSorted.length}</span></h2>
       <div class="owner-grid">
         {currentSorted.map((owner) => (
-          <a href={ownerHref(owner)} class="franchise-card">
+          <a href={ownerHref(owner)} class="ui-card franchise-card">
             <div class="card-body">
               <div class="lockup">
                 <img class="lockup-icon" src={owner.icon} alt="" loading="lazy" width="64" height="64" />
@@ -123,25 +123,25 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
               </dl>
               <ul class="badges" aria-label="Awards">
                 {owner.totals.championships.length > 0 && (
-                  <li class="badge badge--championship" title={`Champion: ${owner.totals.championships.join(', ')}`}>
+                  <li class="ui-badge badge badge--championship" title={`Champion: ${owner.totals.championships.join(', ')}`}>
                     <span class="icon" aria-hidden="true">🏆</span>
                     <span>{owner.totals.championships.length}</span>
                   </li>
                 )}
                 {owner.totals.divisionTitles.length > 0 && (
-                  <li class="badge badge--division" title={`Division titles: ${owner.totals.divisionTitles.length}`}>
+                  <li class="ui-badge badge badge--division" title={`Division titles: ${owner.totals.divisionTitles.length}`}>
                     <span class="icon" aria-hidden="true">🛡</span>
                     <span>{owner.totals.divisionTitles.length}</span>
                   </li>
                 )}
                 {owner.totals.mvpAwards.length > 0 && (
-                  <li class="badge badge--mvp" title={`MVPs: ${owner.totals.mvpAwards.length}`}>
+                  <li class="ui-badge badge badge--mvp" title={`MVPs: ${owner.totals.mvpAwards.length}`}>
                     <span class="icon" aria-hidden="true">⭐</span>
                     <span>{owner.totals.mvpAwards.length}</span>
                   </li>
                 )}
                 {owner.totals.jerryJonesAwards.length > 0 && (
-                  <li class="badge badge--jerry" title={`Jerry Jones Awards: ${owner.totals.jerryJonesAwards.length}`}>
+                  <li class="ui-badge badge badge--jerry" title={`Jerry Jones Awards: ${owner.totals.jerryJonesAwards.length}`}>
                     <span class="icon" aria-hidden="true">💸</span>
                     <span>{owner.totals.jerryJonesAwards.length}</span>
                   </li>
@@ -411,14 +411,12 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
     gap: 0.875rem;
   }
   .franchise-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: block;
     text-decoration: none;
     color: inherit;
-    border: var(--style-card-border, 1px solid var(--content-border, #e5e5e5));
-    box-shadow: var(--style-card-shadow, none);
     border-left: 3px solid var(--accent);
     border-radius: 0.625rem;
-    background: var(--card-bg, #fff);
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
   .franchise-card:hover {
@@ -486,14 +484,11 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
     min-height: 1.25rem;
   }
   .badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     gap: 0.2rem;
     padding: 0.1rem 0.45rem;
-    border-radius: 999px;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
-    font-size: var(--font-size-2xs);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }

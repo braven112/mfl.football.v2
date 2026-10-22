@@ -384,15 +384,15 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
     <!-- ─── Metrics strip ─────────────────────────────────────────── -->
     <div class="rsp-metrics">
-      <div class="rsp-metrics__card">
+      <div class="ui-card rsp-metrics__card">
         <span class="rsp-metrics__value">{totalProspects}</span>
         <span class="rsp-metrics__label">Prospects Graded</span>
       </div>
-      <div class="rsp-metrics__card">
+      <div class="ui-card rsp-metrics__card">
         <span class="rsp-metrics__value">{topDotScore}</span>
         <span class="rsp-metrics__label">Top DoT Score</span>
       </div>
-      <div class="rsp-metrics__card">
+      <div class="ui-card rsp-metrics__card">
         <span class="rsp-metrics__value">{sleeperCount}</span>
         <span class="rsp-metrics__label">Sleeper Targets</span>
       </div>
@@ -415,7 +415,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         aria-controls="panel-sleepers"
         tabindex="-1"
         class="rsp-tab"
-      >Sleeper Watchlist <span class="rsp-tab__badge">{highPrioritySleepers} HIGH</span></button>
+      >Sleeper Watchlist <span class="ui-badge ui-badge--caps ui-badge--inline rsp-tab__badge">{highPrioritySleepers} HIGH</span></button>
       <button
         role="tab"
         id="tab-overview"
@@ -431,7 +431,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         aria-controls="panel-compare"
         tabindex="-1"
         class="rsp-tab"
-      >3-Year RSP <span class="rsp-tab__badge">{totalRspOwned} Owned</span></button>
+      >3-Year RSP <span class="ui-badge ui-badge--caps ui-badge--inline rsp-tab__badge">{totalRspOwned} Owned</span></button>
     </div>
 
     <!-- ─── Panel 1: Top 50 Table ─────────────────────────────────── -->
@@ -474,7 +474,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
               </span>
             </div>
             <div class="rcc__strip">
-              <span class={`tier-badge tier-badge--${card.tier.toLowerCase()}`} title={card.grade}>{card.tier}</span>
+              <span class={`ui-badge tier-badge tier-badge--${card.tier.toLowerCase()}`} title={card.grade}>{card.tier}</span>
               {card.fbgRank && <span class="rcc__fbg">FBG {card.fbgRank}</span>}
               {card.rosteredBy ? (
                 <span class="rcc__owner" title={`Rostered by ${card.rosteredBy.name}`}>
@@ -532,15 +532,15 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
       </div>
       <div class="sleeper-grid">
         {sleeperData.sleepers.map(s => (
-          <article class={`sleeper-card sleeper-card--${s.priority.toLowerCase()}`}>
+          <article class={`ui-card sleeper-card sleeper-card--${s.priority.toLowerCase()}`}>
             <div class="sleeper-card__header">
               <div class="sleeper-card__name-block">
                 <h3 class="sleeper-card__name">{s.name}</h3>
                 <span class="sleeper-card__school">{s.school}</span>
               </div>
               <div class="sleeper-card__badges">
-                <span class={`pos-badge pos-badge--${s.position.toLowerCase()}`}>{s.position}</span>
-                <span class={`priority-badge priority-badge--${s.priority.toLowerCase()}`}>{s.priority}</span>
+                <span class={`ui-badge ui-badge--caps pos-badge pos-badge--${s.position.toLowerCase()}`}>{s.position}</span>
+                <span class={`ui-badge ui-badge--caps ui-badge--inline priority-badge priority-badge--${s.priority.toLowerCase()}`}>{s.priority}</span>
               </div>
             </div>
 
@@ -592,30 +592,30 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
         <p class="rsp-section-sub">Macro picture by position — where the value is and how to approach each group in the draft.</p>
       </div>
       <div class="overview-grid">
-        <div class="overview-card">
+        <div class="ui-card overview-card">
           <div class="overview-card__header">
-            <span class="pos-badge pos-badge--qb">QB</span>
+            <span class="ui-badge ui-badge--caps pos-badge pos-badge--qb">QB</span>
             <span class="overview-card__pos-label">Quarterback</span>
           </div>
           <p class="overview-card__body">{qb}</p>
         </div>
-        <div class="overview-card">
+        <div class="ui-card overview-card">
           <div class="overview-card__header">
-            <span class="pos-badge pos-badge--rb">RB</span>
+            <span class="ui-badge ui-badge--caps pos-badge pos-badge--rb">RB</span>
             <span class="overview-card__pos-label">Running Back</span>
           </div>
           <p class="overview-card__body">{rb}</p>
         </div>
-        <div class="overview-card">
+        <div class="ui-card overview-card">
           <div class="overview-card__header">
-            <span class="pos-badge pos-badge--wr">WR</span>
+            <span class="ui-badge ui-badge--caps pos-badge pos-badge--wr">WR</span>
             <span class="overview-card__pos-label">Wide Receiver</span>
           </div>
           <p class="overview-card__body">{wr}</p>
         </div>
-        <div class="overview-card">
+        <div class="ui-card overview-card">
           <div class="overview-card__header">
-            <span class="pos-badge pos-badge--te">TE</span>
+            <span class="ui-badge ui-badge--caps pos-badge pos-badge--te">TE</span>
             <span class="overview-card__pos-label">Tight End</span>
           </div>
           <p class="overview-card__body">{te}</p>
@@ -652,7 +652,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
             {combinedRows.map(row => row.type === 'tier' ? (
               <tr class="tier-row" data-tier-order={row.tierOrder}>
                 <td colspan={8} class="tier-label">
-                  <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`}>{row.tier}</span>
+                  <span class={`ui-badge tier-badge tier-badge--${row.tier.toLowerCase()}`}>{row.tier}</span>
                   {row.label}
                   <span class="tier-count">· {row.total} players{row.ownedCount > 0 ? ` · ${row.ownedCount} owned` : ''}</span>
                 </td>
@@ -678,13 +678,13 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
                   />
                 </td>
                 <td class="col-class" data-label="Class">
-                  <span class={`class-badge class-badge--${row.classYear}`}>{row.classYear}</span>
+                  <span class={`ui-badge class-badge class-badge--${row.classYear}`}>{row.classYear}</span>
                 </td>
                 <td class="col-team" data-label="NFL / School">
                   {row.nflTeam ?? row.school ?? '—'}
                 </td>
                 <td class="col-tier" data-label="Tier">
-                  <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`} title={row.rawGrade !== row.tier ? row.rawGrade : undefined}>{row.tier}</span>
+                  <span class={`ui-badge tier-badge tier-badge--${row.tier.toLowerCase()}`} title={row.rawGrade !== row.tier ? row.rawGrade : undefined}>{row.tier}</span>
                 </td>
                 <td class="col-fbg" data-label="FBG Dyn">
                   {row.dynastyRank
@@ -719,7 +719,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
       </div>
       <div class="affinity-panel__grid">
         {affinitySorted.map(([fid, info]) => (
-          <div class:list={['affinity-card', `affinity-card--${info.affinity}`]}>
+          <div class:list={['ui-card affinity-card', `affinity-card--${info.affinity}`]}>
             <img src={info.iconPath} alt={info.name} class="affinity-card__icon" loading="lazy" decoding="async" />
             <div class="affinity-card__body">
               <span class="affinity-card__name">{info.name}</span>
@@ -993,10 +993,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     margin-bottom: 1.5rem;
   }
   .rsp-metrics__card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--color-gray-50, #f9fafb);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: 0.5rem;
     padding: 0.875rem 1rem;
     display: flex;
     flex-direction: column;
@@ -1057,12 +1055,9 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     outline-offset: -2px;
   }
   .rsp-tab__badge {
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     font-size: var(--font-size-3xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     padding: 0.1875rem 0.375rem;
-    border-radius: 999px;
     background: #fee2e2;
     color: #dc2626;
   }
@@ -1094,15 +1089,9 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   /* ─── Position badges ─────────────────────────────────────────── */
   .pos-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge ui-badge--caps supplies the shared badge shape; what follows is this badge's own look. */
     justify-content: center;
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     padding: 0.125rem 0.4375rem;
-    border-radius: 999px;
     white-space: nowrap;
   }
   .pos-badge--qb { color: #1d4ed8; background: #eff6ff; }
@@ -1259,10 +1248,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     gap: 1rem;
   }
   .sleeper-card {
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     border-left: 2px solid var(--content-border, #e2e8f0);
-    border-radius: 0.5rem;
     overflow: hidden;
     background: var(--content-bg, #fff);
   }
@@ -1302,12 +1289,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   /* Priority badges */
   .priority-badge {
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    /* Kit: ui-badge ui-badge--caps ui-badge--inline supplies the shared badge shape; what follows is this badge's own look. */
     padding: 0.1875rem 0.5rem;
-    border-radius: 999px;
   }
   .priority-badge--high { background: #fee2e2; color: #dc2626; }
   .priority-badge--medium { background: #fef3c7; color: #b45309; }
@@ -1405,10 +1388,8 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     gap: 1rem;
   }
   .overview-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     background: var(--color-gray-50, #f9fafb);
-    border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: 0.5rem;
     padding: 1.25rem;
   }
   .overview-card__header {
@@ -1492,14 +1473,11 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   /* Class year badges */
   .class-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     justify-content: center;
     font-size: var(--font-size-3xs);
-    font-weight: 700;
     letter-spacing: 0.04em;
     padding: 0.1875rem 0.5rem;
-    border-radius: 999px;
     flex-shrink: 0;
   }
   .class-badge--2026 { background: #dbeafe; color: #1d4ed8; }
@@ -1508,14 +1486,13 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
 
   /* RSP tier badges (A/B/C) */
   .tier-badge {
-    display: inline-flex;
-    align-items: center;
+    /* Kit: ui-badge supplies the shared badge shape; what follows is this badge's own look. */
     justify-content: center;
     font-size: var(--font-size-xs);
-    font-weight: 700;
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 0.25rem;
+    padding: 0;
   }
   .tier-badge--a { background: #dcfce7; color: #15803d; }
   .tier-badge--b { background: #dbeafe; color: #1d4ed8; }
@@ -1621,14 +1598,13 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
     gap: 0.5rem;
   }
   .affinity-card {
+    /* Kit: ui-card supplies the shared card surface; what follows is this card's own look. */
     display: flex;
     align-items: center;
     gap: 0.625rem;
     padding: 0.5rem 0.75rem;
     background: var(--content-bg, #fff);
     border: var(--style-card-border, 1px solid var(--color-gray-200, #e5e7eb));
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: 0.5rem;
   }
   .affinity-card--high { border-left: 3px solid var(--color-success-dark, #16a34a); }
   .affinity-card--medium { border-left: 3px solid var(--color-warning-dark, #d97706); }
