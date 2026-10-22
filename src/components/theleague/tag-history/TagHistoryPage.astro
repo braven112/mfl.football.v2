@@ -1,0 +1,397 @@
+---
+/**
+ * Tag History — every franchise, transition and RFA tag TheLeague's owners
+ * posted on the old message board, 2008 to today.
+ *
+ * The route wrapper (src/pages/theleague/contracts/tag-history.astro) owns
+ * the members-only gate; this component owns the markup. The rows come from
+ * src/data/theleague/tag-history.json, which holds no post text: the forum
+ * archive itself lives in Redis, never in git (the repo is public).
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../shared/Breadcrumbs.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import data from '../../../data/theleague/tag-history.json';
+
+/**
+ * Flip on once the members-only forum archive ships: each row then links to
+ * its original thread there. Until then the link would 404.
+ */
+const FORUM_ARCHIVE_READY = false;
+
+type TagRow = (typeof data.tags)[number];
+
+const TAG_ORDER = ['Franchise', 'Transition', 'RFA #1', 'RFA #2', 'RFA'];
+const TAG_HINT: Record<string, string> = {
+  RFA: 'Restricted free agent (before RFA #1 and #2 were split)',
+};
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const href = (path: string) => resolveLeaguePath(`/theleague${path}`, hide);
+
+/** "Jones, Julio" → "Julio Jones"; defenses ("Bills, Buffalo") read as "Buffalo Bills". */
+function displayName(row: TagRow): string {
+  if (!row.player) return row.title;
+  const [last, first] = row.player.split(',').map((s) => s.trim());
+  return first ? `${first} ${last}` : last;
+}
+
+function money(n: number | undefined | null): string {
+  if (!n) return '—';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+}
+
+function shortDate(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+const rows = data.tags as TagRow[];
+const seasons = [...new Set(rows.map((r) => r.season))].sort((a, b) => b - a);
+const bySeason = new Map(seasons.map((s) => [s, rows.filter((r) => r.season === s)]));
+
+// Team filter: one entry per franchise, under the name it last tagged with.
+const teamNames = new Map<string, string>();
+for (const r of [...rows].sort((a, b) => a.season - b.season)) {
+  if (r.franchiseId && r.franchiseName) teamNames.set(r.franchiseId, r.franchiseName);
+}
+const teams = [...teamNames].sort((a, b) => a[1].localeCompare(b[1]));
+const tagTypes = TAG_ORDER.filter((t) => rows.some((r) => r.tag === t));
+const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.tag === t).length]));
+---
+
+<TheLeagueLayout title="Tag History | The League">
+  <div class="th">
+    <header class="th__header">
+      <Breadcrumbs items={[
+        { label: 'The League', href: href('') || '/' },
+        { label: 'Contracts', href: href('/front-office/contracts') },
+        { label: 'Tag History' },
+      ]} />
+      <h1 class="th__title">Tag History</h1>
+      <p class="th__sub">
+        Every franchise, transition and RFA tag posted on the old message board, {seasons.at(-1)} to {seasons[0]}.
+        {rows.length} tags in all.
+      </p>
+      <ul class="th__totals">
+        {tagTypes.map((t) => (
+          <li>
+            <button type="button" class="th__pill" data-tag-pill={t} aria-pressed="false">
+              <span class={`th-tag th-tag--${t.replace(/\W+/g, '').toLowerCase()}`}>{t}</span> {totals[t]}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </header>
+
+    <form class="th__filters" data-tag-history-filters onsubmit="return false">
+      <label class="th__field">
+        <span>Player</span>
+        <input type="search" name="q" placeholder="Search a player" autocomplete="off" />
+      </label>
+      <label class="th__field">
+        <span>Team</span>
+        <select name="team">
+          <option value="">All teams</option>
+          {teams.map(([id, name]) => <option value={id}>{name}</option>)}
+        </select>
+      </label>
+      <label class="th__field">
+        <span>Tag</span>
+        <select name="tag">
+          <option value="">All tags</option>
+          {tagTypes.map((t) => <option value={t}>{t}</option>)}
+        </select>
+      </label>
+    </form>
+
+    <p class="th__empty" data-tag-history-empty hidden>No tags match those filters.</p>
+
+    {seasons.map((season) => (
+      <section class="th-season" data-season={season}>
+        <h2 class="th-season__title">{season}</h2>
+        <div class="th-table-wrap">
+          <table class="th-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Tag</th>
+                <th>Team</th>
+                <th class="th-num">Tagged salary</th>
+                <th class="th-date">Posted</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bySeason.get(season)!.map((r) => (
+                <tr
+                  data-row
+                  data-team={r.franchiseId ?? ''}
+                  data-tag={r.tag}
+                  data-q={`${displayName(r)} ${r.title}`.toLowerCase()}
+                >
+                  <td class="th-player">
+                    {FORUM_ARCHIVE_READY ? (
+                      <a href={href(`/contracts/forum-archive/t/${r.topicId}`)}>{displayName(r)}</a>
+                    ) : (
+                      <span>{displayName(r)}</span>
+                    )}
+                    {(r.position || r.nflTeam) && (
+                      <span class="th-player__meta">{[r.position, r.nflTeam].filter(Boolean).join(' · ')}</span>
+                    )}
+                    {r.replies > 0 && (
+                      <span class="th-player__meta">{r.replies} {r.replies === 1 ? 'reply' : 'replies'}</span>
+                    )}
+                  </td>
+                  <td>
+                    <span class={`th-tag th-tag--${r.tag.replace(/\W+/g, '').toLowerCase()}`} title={TAG_HINT[r.tag]}>{r.tag}</span>
+                  </td>
+                  <td class="th-team">{r.franchiseName ?? '—'}</td>
+                  <td class="th-num">{money(r.taggedSalary)}</td>
+                  <td class="th-date">{shortDate(r.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ))}
+  </div>
+</TheLeagueLayout>
+
+<script>
+  function initTagHistory() {
+    const form = document.querySelector<HTMLFormElement>('[data-tag-history-filters]');
+    if (!form || form.dataset.init) return;
+    form.dataset.init = '1';
+    const empty = document.querySelector<HTMLElement>('[data-tag-history-empty]');
+
+    const apply = () => {
+      const q = (form.elements.namedItem('q') as HTMLInputElement).value.trim().toLowerCase();
+      const team = (form.elements.namedItem('team') as HTMLSelectElement).value;
+      const tag = (form.elements.namedItem('tag') as HTMLSelectElement).value;
+      let shown = 0;
+      document.querySelectorAll<HTMLElement>('.th-season').forEach((section) => {
+        let inSeason = 0;
+        section.querySelectorAll<HTMLElement>('[data-row]').forEach((row) => {
+          const match =
+            (!q || (row.dataset.q ?? '').includes(q)) &&
+            (!team || row.dataset.team === team) &&
+            (!tag || row.dataset.tag === tag);
+          row.hidden = !match;
+          if (match) inSeason += 1;
+        });
+        section.hidden = inSeason === 0;
+        shown += inSeason;
+      });
+      if (empty) empty.hidden = shown > 0;
+      document.querySelectorAll<HTMLButtonElement>('[data-tag-pill]').forEach((pill) => {
+        pill.setAttribute('aria-pressed', String(pill.dataset.tagPill === tag));
+      });
+    };
+
+    // The totals double as quick filters: tap a tag to show only it, tap again to clear.
+    document.querySelectorAll<HTMLButtonElement>('[data-tag-pill]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const select = form.elements.namedItem('tag') as HTMLSelectElement;
+        select.value = select.value === pill.dataset.tagPill ? '' : (pill.dataset.tagPill ?? '');
+        apply();
+      });
+    });
+
+    form.addEventListener('input', apply);
+    form.addEventListener('change', apply);
+  }
+
+  document.addEventListener('astro:page-load', initTagHistory);
+</script>
+
+<style>
+  .th {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+
+  .th__title {
+    font-size: var(--font-size-2xl);
+    margin: var(--spacing-xs) 0;
+    color: var(--page-text);
+  }
+
+  .th__sub {
+    margin: 0 0 var(--spacing-sm);
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .th__totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-md);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .th__filters {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-lg) 0;
+  }
+
+  .th__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs);
+    min-height: 2.25rem;
+    cursor: pointer;
+  }
+
+  .th__pill[aria-pressed='true'] {
+    border-color: var(--color-primary);
+    background: var(--table-header-bg);
+  }
+
+  .th__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--content-text-muted);
+    min-width: 0;
+  }
+
+  .th__field input,
+  .th__field select {
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--input-text);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    min-height: 2.5rem;
+    width: 100%;
+  }
+
+  .th__empty {
+    color: var(--content-text-muted);
+  }
+
+  .th-season {
+    margin-top: var(--spacing-xl);
+  }
+
+  .th-season__title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--page-text);
+    border-left: var(--style-section-rule, 3px solid var(--color-primary));
+    padding-left: var(--spacing-sm);
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
+    margin: 0 0 var(--spacing-sm);
+  }
+
+  .th-table-wrap {
+    border: 1px solid var(--table-border);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+  }
+
+  .th-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+
+  .th-table th {
+    text-align: left;
+    font-size: var(--font-size-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+    background: var(--table-header-bg);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .th-table td {
+    padding: var(--spacing-sm);
+    border-top: 1px solid var(--table-border);
+    color: var(--page-text);
+    vertical-align: top;
+  }
+
+  .th-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .th-table th.th-num {
+    text-align: right;
+  }
+
+  .th-date {
+    white-space: nowrap;
+    color: var(--content-text-muted);
+  }
+
+  .th-player a,
+  .th-player > span:first-child {
+    font-weight: 600;
+  }
+
+  .th-player__meta {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted);
+  }
+
+  .th-tag {
+    display: inline-block;
+    white-space: nowrap;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    padding: 0.125rem var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--input-border);
+    color: var(--page-text);
+  }
+
+  .th-tag--franchise {
+    border-color: var(--color-franchise-tag);
+    color: var(--color-franchise-tag);
+  }
+
+  /* Phones: drop the posted date, keep the row on one screen width. */
+  @media (max-width: 600px) {
+    .th__filters {
+      grid-template-columns: 1fr 1fr;
+    }
+    .th__filters .th__field:first-child {
+      grid-column: 1 / -1;
+    }
+    .th-date {
+      display: none;
+    }
+    .th-table td,
+    .th-table th {
+      padding-left: var(--spacing-xs);
+      padding-right: var(--spacing-xs);
+    }
+  }
+</style>

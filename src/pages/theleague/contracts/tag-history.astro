@@ -1,0 +1,24 @@
+---
+/**
+ * Tag History (theleague) — thin route wrapper.
+ *
+ * The page lives in components/theleague/tag-history/TagHistoryPage. The
+ * members-only gate lives HERE, not in the component: Astro.redirect() only
+ * redirects from a PAGE.
+ */
+import TagHistoryPage from '../../../components/theleague/tag-history/TagHistoryPage.astro';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+const LEAGUE = getLeagueBySlug('theleague')!;
+
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, LEAGUE));
+if (!isAuthorizedForLeague(user, LEAGUE.id)) {
+  return Astro.rewrite(forbiddenPathFor(LEAGUE, 'league'));
+}
+---
+
+<TagHistoryPage />
