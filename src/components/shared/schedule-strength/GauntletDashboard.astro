@@ -17,6 +17,7 @@ import '../../../styles/schedule-strength.css';
 import ScheduleLuckCallout, { type LuckRow } from './ScheduleLuckCallout.astro';
 import GauntletHeatMap, { type HeatFranchise } from './GauntletHeatMap.astro';
 import TrapWeeksStrip, { type TrapWeek } from './TrapWeeksStrip.astro';
+import ScheduleSwap, { type SwapTeam } from './ScheduleSwap.astro';
 
 export interface YearOption {
   year: number;
@@ -39,11 +40,16 @@ export interface Props {
   yearOptions: YearOption[];
   /** true when viewing a completed season (no remaining weeks) */
   seasonComplete: boolean;
+  scheduleSwap?: SwapTeam[];
+  scheduleSwapThroughWeek?: number | null;
+  /** The viewer's franchise in this league, when known — opens its Schedule Swap list. */
+  myTeamId?: string;
 }
 
 const {
   columnName, byline = 'A Claude Schefter Weekly Column', week, year, runIn, played, scheduleLuck,
   heatMapFranchises, heatMapWeeks, trapWeeks, yearOptions, seasonComplete,
+  scheduleSwap = [], scheduleSwapThroughWeek = null, myTeamId,
 } = Astro.props;
 ---
 
@@ -95,6 +101,19 @@ const {
           ? `Past schedule difficulty, hardest first — full ${year} season`
           : `Past schedule difficulty, hardest first — through Week ${week - 1}`}
       />
+    </section>
+  )}
+
+  {scheduleSwap.length > 0 && (
+    <section class="gauntlet__section">
+      <div class="gauntlet__stitle">
+        <h2>Schedule Swap</h2>
+        <p>
+          What your record would be with another team's schedule: your scores, their opponents.
+          Every game counts, doubleheaders included{scheduleSwapThroughWeek ? `, through Week ${scheduleSwapThroughWeek}` : ''}.
+        </p>
+      </div>
+      <ScheduleSwap teams={scheduleSwap} myTeamId={myTeamId} />
     </section>
   )}
 

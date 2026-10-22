@@ -7,7 +7,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
 import GauntletDashboard from '../../components/shared/schedule-strength/GauntletDashboard.astro';
-import { resolveGauntletViewLazy, type GauntletDerived } from '../../utils/schedule-strength';
+import { resolveGauntletViewLazy, resolveGauntletViewerTeam, type GauntletDerived } from '../../utils/schedule-strength';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeaguePersona } from '../../utils/persona-server';
 import { personaLabels } from '../../utils/persona.mjs';
@@ -28,6 +28,8 @@ const view = await resolveGauntletViewLazy({
   pagePath: '/theleague/schedule-strength',
   requestedYear: Astro.url.searchParams.get('year'),
 });
+
+const myTeamId = resolveGauntletViewerTeam('theleague', Astro.cookies, Astro.request);
 
 const byline = personaLabels(await getLeaguePersona('theleague')).column;
 
@@ -55,6 +57,9 @@ const title = view.data
       trapWeeks={view.trapWeeks}
       yearOptions={view.yearOptions}
       seasonComplete={view.seasonComplete}
+      scheduleSwap={view.scheduleSwap}
+      scheduleSwapThroughWeek={view.scheduleSwapThroughWeek}
+      myTeamId={myTeamId}
     />
   </div>
 </TheLeagueLayout>
