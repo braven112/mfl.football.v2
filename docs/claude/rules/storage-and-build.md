@@ -439,6 +439,21 @@ build):
   rewrite a file the hold just restored. `tests/sync-noise-commit-guard.test.ts`
   pins the order, the Redis env, the in-season odds skip and every injury reader.
 
+Two other lanes hold the same way (Oct 2026):
+
+- **Owner last-visit.** `scripts/hold-owner-last-visit.mjs` runs right before
+  `sync-owner-last-visit.yml`'s commit, publishing each league's
+  `owner-last-visit.json` to `mfl:owner-last-visit:<slug>` (`LAST_VISIT_GROUPS`)
+  with the same daily snapshot. The Activity pages read it through
+  `loadLiveLastVisit` (`src/utils/owner-last-visit-live.ts`), freshest
+  `generatedAt` wins. It was 3-4 production builds a day for "last seen" times.
+- **The Schefter event calendar.** `scripts/restore-countdown-only-events.mjs`
+  runs right before schefter-scan's commit and puts `resolved-events.json`
+  back when only `computedAt` / `daysUntil` / `isPast` moved. The working copy
+  stays fresh for the scan that just read it; the site reads only
+  `startDate`, so a reader that wants the countdown must recompute the file in
+  its own job, never trust the committed one. `tests/league-events-countdown.test.ts`.
+
 Holding a file is right only when every reader can take a day-old copy or reads
 it live. Scores, weekly results and standings feed the derived chain and about
 30 pages from disk, so they are not held; they belong to
