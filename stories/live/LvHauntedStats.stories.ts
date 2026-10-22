@@ -61,3 +61,11 @@ export const ScariestOnlyFinal = {
     },
   },
 };
+
+/** The night before kickoff: neither card has an answer yet, so both wait. */
+export const BeforeKickoff = {
+  args: {
+    stats: { monster: null, scariest: null },
+    onOpenScariest: () => {},
+  },
+};

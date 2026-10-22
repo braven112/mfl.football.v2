@@ -3,8 +3,10 @@
  *
  * Rendered only while the Halloween season is open (`LiveBoard`'s `season`
  * prop), and from `hauntedStats`, which derives both from the panels the board
- * already shows. Renders nothing when neither has an answer, so a week that
- * has not kicked off gets the scene alone rather than two empty cards.
+ * already shows. A card with no answer yet (a week that has not kicked off)
+ * still renders, saying when it will have one: the header's scene is sized to
+ * hold these cards, and with neither drawn it read as a big blank spot
+ * (reported on a phone the night before Week 7, Oct 2026).
  */
 import type { JSX } from 'react';
 import type { HauntedGame, HauntedStats } from '../../../utils/live/haunted-stats';
@@ -19,12 +21,25 @@ function fmt(points: number): string {
   return points.toFixed(1);
 }
 
-export default function LvHauntedStats({ stats, onOpenScariest }: LvHauntedStatsProps): JSX.Element | null {
+export default function LvHauntedStats({ stats, onOpenScariest }: LvHauntedStatsProps): JSX.Element {
   const { monster, scariest } = stats;
-  if (!monster && !scariest) return null;
 
   return (
     <div className="lv-haunt">
+      {!monster && (
+        <div className="lv-haunt__card lv-haunt__card--waiting">
+          <span className="lv-haunt__label">Monster of the Week</span>
+          <span className="lv-haunt__main">Rises at kickoff</span>
+          <span className="lv-haunt__sub">The week's top scorer</span>
+        </div>
+      )}
+      {!scariest && (
+        <div className="lv-haunt__card lv-haunt__card--waiting">
+          <span className="lv-haunt__label">Scariest Game</span>
+          <span className="lv-haunt__main">Picked once scores move</span>
+          <span className="lv-haunt__sub">The closest matchup</span>
+        </div>
+      )}
       {monster && (
         <div className="lv-haunt__card">
           <span className="lv-haunt__label">Monster of the Week</span>
