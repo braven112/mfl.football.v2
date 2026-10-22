@@ -1453,16 +1453,10 @@ button.lv-card:focus-visible {
    rows of chips would push the games they filter below the fold on a phone.
    The scroller owns its own overflow, so the PAGE never scrolls sideways. */
 .lv-groups {
-  display: flex;
+  /* Kit: ui-chips owns the swiping row; this keeps the gap and its padding. */
   gap: 0.4rem;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
   padding-block: 0.15rem;
-  max-width: 100%;
-}
-.lv-groups::-webkit-scrollbar {
-  display: none;
+  margin: 0;
 }
 .lv-groups__chip {
   /* Kit: ui-chip owns the look; this keeps the touch floor, padding and size. */

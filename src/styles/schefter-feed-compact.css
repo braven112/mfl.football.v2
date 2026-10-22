@@ -803,8 +803,9 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
    overriding it ships near-black text on a near-black card. */
 
 .sfc-tabs {
-  display: flex;
+  /* Kit: ui-chips owns the row (one swiping line on a phone). */
   gap: 0.25rem;
+  margin: 0;
   /* Breathing room on BOTH sides of the row: the tabs sit directly under the
      section header and directly above the first card, so with only bottom
      padding the row reads as crowded against both. */

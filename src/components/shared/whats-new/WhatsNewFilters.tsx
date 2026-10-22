@@ -52,7 +52,7 @@ export default function WhatsNewFilters({ categoryCounts, activeCategory, onChan
   };
 
   return (
-    <div className="wn-filters" role="tablist" aria-label="Filter by category">
+    <div className="ui-chips wn-filters" role="tablist" aria-label="Filter by category">
       {CATEGORY_ORDER.map((cat) => {
         const count = categoryCounts[cat] ?? 0;
         if (cat !== 'all' && count === 0) return null;

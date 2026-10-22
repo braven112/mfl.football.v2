@@ -8,7 +8,7 @@
    call, 2026-10-22. The phone SORT pills (sort-chips.css) are a sort
    control with their own look and are a registered fork.
 
-     <div class="my-filters">
+     <div class="ui-chips my-filters">
        <button class="ui-chip my-chip" aria-pressed="true">All</button>
        <button class="ui-chip my-chip" aria-pressed="false">Trades</button>
      </div>
@@ -19,6 +19,13 @@
    chip that is coloured by category sets those two on its own modifier,
    never `background` / `color`. The kit owns the LOOK (shape, edge, ground,
    type and ink); size, padding and the touch floor stay the component's own.
+
+   `ui-chips` on the ROW is the owner's rule (2026-10-22): on a phone every
+   chip row is ONE line that swipes sideways, never a stack of wrapped rows.
+   The row owns its overflow so the PAGE never scrolls sideways; the 3px
+   block padding keeps the focus ring inside the scroll box, which clips (a
+   row with its own padding sets `margin: 0`). From
+   768px up the row wraps.
 
    Every rule sits inside :where(), so a component's own class wins.
 
@@ -55,3 +62,29 @@
   outline: 2px solid var(--league-accent);
   outline-offset: 2px;
 }
+
+:where(.ui-chips) {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  :where(.ui-chips) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    max-width: 100%;
+    padding-block: 3px;
+    margin-block: -3px;
+  }
+
+  :where(.ui-chips)::-webkit-scrollbar {
+    display: none;
+  }
+
+  :where(.ui-chips > .ui-chip) {
+    flex: 0 0 auto;
+  }
+}
+

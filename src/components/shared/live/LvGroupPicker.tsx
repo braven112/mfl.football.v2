@@ -34,7 +34,7 @@ export default function LvGroupPicker({ groups, viewerGroupId, value, onChange }
   );
 
   return (
-    <div className="lv-groups" role="group" aria-label="Show games by division">
+    <div className="ui-chips lv-groups" role="group" aria-label="Show games by division">
       {viewerGroupId && chip(viewerGroupId, 'My division')}
       {chip(ALL_GROUPS, 'All')}
       {groups

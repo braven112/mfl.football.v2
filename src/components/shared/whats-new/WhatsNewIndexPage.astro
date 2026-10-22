@@ -176,8 +176,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 
   /* ── Filter tabs ── */
   .wn-filters {
-    display: flex;
-    flex-wrap: wrap;
+    /* Kit: ui-chips owns the row (one swiping line on a phone). */
     gap: var(--spacing-xs, 0.25rem);
   }
 

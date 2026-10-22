@@ -133,6 +133,7 @@ const KITS: Kit[] = [
     name: 'chip',
     stylesheet: 'src/styles/chip.css',
     cls: 'ui-chip',
+    extra: ['ui-chips'],
     pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)chip$/,
     tags: new Set(['button', 'a']),
   },
@@ -214,7 +215,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
 
   it('every rule sits inside :where(), so a component class always wins', () => {
     const css = read(kit.stylesheet).replace(/\/\*[\s\S]*?\*\//g, '');
-    const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim());
+    const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim()).filter((sel) => !sel.startsWith('@'));
     expect(selectors.length).toBeGreaterThan(0);
     // Everything inside :where() — a state such as :hover or [aria-selected]
     // outside it would add specificity back. Only a pseudo-ELEMENT may follow.
@@ -222,7 +223,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
     for (const s of selectors) {
       // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
       if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|segment)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
-      const m = s.match(/^:where\(([^{}]+)\)(::backdrop)?$/);
+      const m = s.match(/^:where\(([^{}]+)\)(::backdrop|::-webkit-scrollbar)?$/);
       expect(m, s).not.toBeNull();
       for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);
     }
