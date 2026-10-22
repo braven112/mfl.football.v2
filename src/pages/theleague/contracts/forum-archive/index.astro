@@ -135,6 +135,7 @@ const heading =
         The old message board, read-only.
         {archive && <>{yearSpan} · {archive.pointer.topicCount.toLocaleString('en-US')} threads · {archive.pointer.postCount.toLocaleString('en-US')} posts</>}
       </p>
+      <p class="fa-related">Every franchise, transition and RFA tag ever posted here is listed on <a class="cta-link" href={href('/theleague/contracts/tag-history')}>Tag History</a>.</p>
     </header>
 
     {load.status === 'unavailable' && (
@@ -479,6 +480,8 @@ const heading =
     font-size: var(--font-size-sm);
     color: var(--content-text-muted);
   }
+  .fa-related { margin: 0.25rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+
   .fa-card {
     background: var(--card-bg);
     border: var(--style-card-border, 1px solid var(--content-border));
