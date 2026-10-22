@@ -21,13 +21,20 @@
 export const prerender = false;
 
 import NotFound from './404.astro';
-import { recordMissedFile } from '../utils/missed-file-log';
-
-Astro.response.status = 404;
+import {
+  inMotionFallbackResponse,
+  inMotionFallbackUrl,
+  recordMissedFile,
+} from '../utils/missed-file-log';
 
 // On the old InMotion host, a miss is a file someone still links to that the
-// migration did not copy. Count it, with the page that asked.
+// migration did not copy. Count it, with the page that asked, then send it on
+// to the InMotion backup so the linking page keeps working.
 await recordMissedFile(Astro.url, Astro.request.headers.get('referer'));
+const fallback = inMotionFallbackUrl(Astro.url);
+if (fallback) return inMotionFallbackResponse(fallback);
+
+Astro.response.status = 404;
 ---
 
 <NotFound />

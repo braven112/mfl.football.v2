@@ -12,7 +12,12 @@
  * Only the old InMotion hostnames are counted. A 404 on a league's own domain
  * or on v2/staging was never an InMotion file and would only bury the signal.
  *
- * Never throws and never waits long: a 404 must not get slower or fail
+ * While the old host is measured, a counted miss is not a 404: it is sent on
+ * to the same path on old.mfl.football (still InMotion), so a page linking an
+ * old file keeps working while we learn who it is. Turn
+ * `FALL_BACK_TO_INMOTION` off once the report says nobody depends on it.
+ *
+ * Never throws and never waits long: a miss must not get slower or fail
  * because Redis is.
  */
 
@@ -26,6 +31,10 @@ const TRACKED_HOSTS = new Set(['mfl.football', 'www.mfl.football']);
 
 /** Internal rewrite target for deliberate 404s (docs/claude/rules/error-pages.md). */
 const NOT_FOUND_SENTINEL = '/_not-found';
+
+/** Send counted misses on to InMotion instead of 404ing them. */
+export const FALL_BACK_TO_INMOTION = true;
+const INMOTION_FALLBACK_ORIGIN = 'https://old.mfl.football';
 
 const MAX_LENGTH = 200;
 /** Keep the top N members of each set; bots probing random paths stay bounded. */
@@ -74,4 +83,25 @@ export async function recordMissedFile(url: URL, referer: string | null): Promis
     console.warn('[missed-file] could not record', entry.path, error);
   });
   await Promise.race([write, new Promise((resolve) => setTimeout(resolve, WRITE_TIMEOUT_MS))]);
+}
+
+/**
+ * The same file on the InMotion backup host, or null when this miss should be
+ * an ordinary 404 (an untracked host, or the fallback switched off).
+ */
+export function inMotionFallbackUrl(url: URL): string | null {
+  if (!FALL_BACK_TO_INMOTION) return null;
+  if (!missedFileEntry(url, null)) return null;
+  return `${INMOTION_FALLBACK_ORIGIN}${url.pathname}${url.search}`;
+}
+
+/**
+ * A temporary redirect to the InMotion copy. Never cached, so every request
+ * is counted and switching the fallback off takes effect at once.
+ */
+export function inMotionFallbackResponse(location: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: location, 'Cache-Control': 'no-store' },
+  });
 }

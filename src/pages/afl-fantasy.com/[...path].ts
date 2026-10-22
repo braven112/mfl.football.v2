@@ -9,12 +9,17 @@
  * A copied file redirects to its Blob URL, and the redirect is CDN-cached, so
  * this function runs about once per file per region. Anything else is a file
  * the migration never saw: it is counted (src/utils/missed-file-log.ts) and
- * gets the real 404. A blanket rewrite to Blob would answer those with Blob's
- * own 404, which nothing can count.
+ * sent on to InMotion's copy, or gets the real 404 once that fallback is off.
+ * A blanket rewrite to Blob would answer those with Blob's own 404, which
+ * nothing can count.
  */
 import type { APIRoute } from 'astro';
 import report from '../../../scripts/inmotion-migration/report.json';
-import { recordMissedFile } from '../../utils/missed-file-log';
+import {
+  inMotionFallbackResponse,
+  inMotionFallbackUrl,
+  recordMissedFile,
+} from '../../utils/missed-file-log';
 
 export const prerender = false;
 
@@ -41,5 +46,7 @@ export const GET: APIRoute = async ({ url, request, rewrite }) => {
     });
   }
   await recordMissedFile(url, request.headers.get('referer'));
+  const fallback = inMotionFallbackUrl(url);
+  if (fallback) return inMotionFallbackResponse(fallback);
   return rewrite(new URL('/_not-found', url));
 };
