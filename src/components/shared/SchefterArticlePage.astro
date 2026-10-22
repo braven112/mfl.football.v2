@@ -69,6 +69,15 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         </div>
       </div>
 
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={teams}
+        baseUrl={base}
+        dashboardHref={r(`${base}/schedule-strength`)}
+        part="chart"
+      />
+
       <div class="sf-article__body">
         {post.content?.map((paragraph) => <p set:html={paragraph} />)}
       </div>
@@ -79,6 +88,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         teams={teams}
         baseUrl={base}
         dashboardHref={r(`${base}/schedule-strength`)}
+        part="details"
       />
 
       <div class="sf-article__reactions">

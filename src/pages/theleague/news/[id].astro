@@ -128,6 +128,16 @@ function gradeColor(grade: string): string {
         </div>
       </div>
 
+      <!-- The Gauntlet: the Run-In chart leads; the column reads under it -->
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={leagueConfig.teams}
+        baseUrl="/theleague"
+        dashboardHref={r('/theleague/schedule-strength')}
+        part="chart"
+      />
+
       <!-- Article body -->
       {isGradeArticle ? (
         <Fragment>
@@ -203,13 +213,14 @@ function gradeColor(grade: string): string {
         </div>
       )}
 
-      <!-- The Gauntlet: rankings from the shared derived data -->
+      <!-- The Gauntlet: luck, trap weeks + dashboard CTA (the chart sits above the copy) -->
       <GauntletArticleSection
         gauntletRef={post.scheduleStrength}
         files={gauntletFiles}
         teams={leagueConfig.teams}
         baseUrl="/theleague"
         dashboardHref={r('/theleague/schedule-strength')}
+        part="details"
       />
 
       <!-- Reactions -->
