@@ -15,7 +15,9 @@ name: Sync Owner Last Visit
 #
 # CADENCE: every 6 hours. The activity report buckets at 24h (Active) and 7d
 # (Idle), so finer resolution buys nothing, and writeJsonIfChanged skips the
-# commit entirely on a run where nobody's lastVisit moved.
+# commit entirely on a run where nobody's lastVisit moved. A run that did move
+# one publishes to Redis instead (hold-owner-last-visit.mjs); git gets one
+# snapshot a day.
 on:
   schedule:
     - cron: '17 */6 * * *'
@@ -81,6 +83,19 @@ jobs:
       - name: Verify the written data
         if: inputs.dry_run != true
         run: pnpm vitest run tests/owner-last-visit-data.test.ts
+
+      # The Activity pages read the live copy from Redis, so a run where an
+      # owner logged in no longer needs a commit (a production build). The
+      # files go to Redis every run and to git once a day, as the fallback.
+      # Nothing may run between this and the commit.
+      - name: Hold last-visit files out of the commit
+        if: inputs.dry_run != true
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node ./scripts/hold-owner-last-visit.mjs
 
       - name: Commit and push
         if: inputs.dry_run != true

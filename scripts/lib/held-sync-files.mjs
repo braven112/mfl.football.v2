@@ -41,6 +41,31 @@ export const HELD_GROUPS = [
   },
 ];
 
+/** Redis key the Activity page reads a league's live MFL last-visit map from. */
+export const lastVisitKey = (slug) => `mfl:owner-last-visit:${slug}`;
+
+/**
+ * Owner-activity sync (scripts/hold-owner-last-visit.mjs): each franchise's MFL
+ * `lastVisit`, read per request by the Activity pages through
+ * src/utils/owner-last-visit-live.ts. A run where any owner logged in used to
+ * be a commit, and so a production build, three or four times a day.
+ */
+export const LAST_VISIT_GROUPS = [
+  {
+    group: 'owner-last-visit',
+    match: /^data\/([^/]+)\/owner-last-visit\.json$/,
+    redisKey: (m) => lastVisitKey(m[1]),
+  },
+];
+
+/** Every league's last-visit file on disk, changed or not — see currentInjuryFiles. */
+export function currentLastVisitFiles(paths) {
+  return paths
+    .map((p) => p.match(LAST_VISIT_GROUPS[0].match))
+    .filter(Boolean)
+    .map((m) => ({ path: m[0], key: lastVisitKey(m[1]) }));
+}
+
 const snapshotKey = (group) => `mfl:held-sync:snapshot-at:${group}`;
 
 /** Tracked files the run modified (`git status --porcelain` lines); new files are never held. */

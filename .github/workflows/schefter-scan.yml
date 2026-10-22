@@ -137,6 +137,13 @@ jobs:
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: node scripts/push-watch-list-news.mjs
 
+      # The recompute above moves every event's countdown each day. The site
+      # reads only startDate, and every reader of the countdown recomputes it
+      # in its own job, so a countdown-only change is put back rather than
+      # committed (a production build that changed nothing).
+      - name: Leave countdown-only event changes out of the commit
+        run: node scripts/restore-countdown-only-events.mjs
+
       - name: Commit and push feed updates
         env:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}

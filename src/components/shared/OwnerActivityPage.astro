@@ -44,6 +44,7 @@ import {
 import { recordedPageTitle } from '../../utils/recorded-page-title';
 import { getAdoptionSection, mockAdoptionSection, type AdoptionSection } from '../../utils/site-adoption';
 import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
+import { loadLiveLastVisit } from '../../utils/owner-last-visit-live';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { seasonOf, unwrapFeedModule, type LazyFeedGlob } from '../../utils/mfl-feed-glob';
 import { getCommissionerAccess } from '../../utils/owner-activity-access';
@@ -233,19 +234,23 @@ if (useMock) {
 
 	// MFL's own `lastVisit`: the real last-login per franchise, synced by
 	// .github/workflows/sync-owner-last-visit.yml. Stored as epoch SECONDS.
+	// The committed file is a daily snapshot; each sync publishes to Redis, and
+	// loadLiveLastVisit picks whichever copy is fresher.
 	const lastVisitKey = Object.keys(lastVisitFiles)[0];
+	let diskVisits: any = null;
 	if (lastVisitKey) {
 		try {
-			const data: any = unwrapFeedModule(await lastVisitFiles[lastVisitKey]());
-			const raw = data?.lastVisit;
-			if (raw && typeof raw === 'object') {
-				for (const [franchiseId, seconds] of Object.entries(raw)) {
-					const n = Number(seconds);
-					if (Number.isFinite(n) && n > 0) mflVisitMap[franchiseId] = n * 1000;
-				}
-			}
+			diskVisits = unwrapFeedModule(await lastVisitFiles[lastVisitKey]());
 		} catch {
-			/* No file yet: fall back to move recency. */
+			/* No file yet: the live copy, else move recency. */
+		}
+	}
+	const visits: any = await loadLiveLastVisit(leagueSlug, diskVisits);
+	const raw = visits?.lastVisit;
+	if (raw && typeof raw === 'object') {
+		for (const [franchiseId, seconds] of Object.entries(raw)) {
+			const n = Number(seconds);
+			if (Number.isFinite(n) && n > 0) mflVisitMap[franchiseId] = n * 1000;
 		}
 	}
 }
