@@ -94,7 +94,7 @@ for (const story of stories) {
               })
           ).catch(() => null);
         const swapped = new Set<string>();
-        for (const img of document.images) {
+        for (const img of Array.from(document.images)) {
           const url = /^url\("?(.*?)"?\)$/.exec(getComputedStyle(img).content)?.[1];
           if (url) swapped.add(url);
         }
