@@ -157,7 +157,7 @@ const heading =
 
     {archive && (
       <>
-        <section class="fa-card fa-ask" aria-labelledby="fa-ask-title">
+        <section class="ui-card fa-card fa-ask" aria-labelledby="fa-ask-title">
           <div class="fa-ask__head">
             <img src="/assets/claude-schefter-avatar.webp" alt="" width="40" height="40" class="fa-ask__avatar" />
             <div>
@@ -175,7 +175,7 @@ const heading =
           <p class="fa-ask__note">Every quote is word for word from the old board and links to the exact post. The board shows what owners discussed, not necessarily what passed — for today's rules, <a href={href('/theleague/rules')}>check the Constitution</a>.</p>
         </section>
 
-        <section class="fa-card" aria-label="Search the archive">
+        <section class="ui-card fa-card" aria-label="Search the archive">
           <form class="fa-search" method="get" action={href(FORUM_ARCHIVE_PATH)}>
             <label class="sr-only" for="fa-q">Search old posts</label>
             <input id="fa-q" type="search" name="q" value={q} placeholder="Search old posts, e.g. rookie extension" autocomplete="off" />
@@ -257,7 +257,7 @@ const heading =
                     <span class="fa-year__label">{y}</span>
                     <span class="fa-year__links">
                       {forums.map((f) => (
-                        <a class="fa-chip" href={href(`${FORUM_ARCHIVE_PATH}?f=${f.id}`)}>
+                        <a class="ui-pill fa-chip" href={href(`${FORUM_ARCHIVE_PATH}?f=${f.id}`)}>
                           {f.name.replace(new RegExp(`^${y}\\s*`), '') || 'General'} <span class="fa-chip__count">{f.topicCount}</span>
                         </a>
                       ))}
@@ -269,7 +269,7 @@ const heading =
           </>
         )}
 
-        <section class="fa-card fa-download" aria-labelledby="fa-dl-title">
+        <section class="ui-card fa-card fa-download" aria-labelledby="fa-dl-title">
           <h2 id="fa-dl-title" class="fa-download__title">Use it with your own AI</h2>
           <p class="fa-download__body">Download the whole archive as one file and upload it to Claude, ChatGPT or any assistant to ask your own questions. It is for owners only — please don't post it publicly.</p>
           <div class="fa-download__actions">
@@ -281,7 +281,7 @@ const heading =
     )}
 
     {access.commissioner && (
-      <details class="fa-card fa-import" open={load.status === 'empty'}>
+      <details class="ui-card fa-card fa-import" open={load.status === 'empty'}>
         <summary class="fa-import__summary">Load the archive (commissioner)</summary>
         <p class="fa-import__body">
           Pick the forum database export (<code>.sql</code> from phpMyAdmin) or an archive <code>.json</code>.
@@ -482,13 +482,7 @@ const heading =
   }
   .fa-related { margin: 0.25rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
 
-  .fa-card {
-    background: var(--card-bg);
-    border: var(--style-card-border, 1px solid var(--content-border));
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    box-shadow: var(--style-card-shadow, var(--shadow-sm));
-  }
+  .fa-card { padding: 1rem; }
 
   /* Ask Schefter */
   .fa-ask__head { display: flex; gap: 0.75rem; align-items: center; }
@@ -677,20 +671,7 @@ const heading =
   }
   .fa-year__label { font-weight: 700; width: 3rem; flex: none; }
   .fa-year__links { display: flex; flex-wrap: wrap; gap: 0.375rem; min-width: 0; }
-  .fa-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    min-height: 36px;
-    padding: 0.25rem 0.75rem;
-    border: 1px solid var(--content-border);
-    border-radius: 999px;
-    background: var(--card-bg);
-    color: var(--page-text);
-    font-size: var(--font-size-sm);
-    text-decoration: none;
-  }
-  .fa-chip:hover { border-color: var(--color-primary); }
+  .fa-chip { gap: 0.375rem; }
   .fa-chip__count { font-size: var(--font-size-xs); color: var(--content-text-muted); }
 
   /* Download + import */
