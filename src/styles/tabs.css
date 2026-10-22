@@ -61,3 +61,21 @@
   outline: 2px solid var(--league-accent);
   outline-offset: -2px;
 }
+
+/* ── Link tabs ───────────────────────────────────────────────────────────
+   Every base layout styles a bare `a` (link colour) and `a:hover` / `a:focus`
+   (hover colour + underline) at (0,0,1)–(0,1,1), which beats a zero-specificity
+   :where() rule — a row of link tabs rendered every tab in link blue. Like
+   cta.css, these state rules are written ONCE at (0,1,1)–(0,2,1) so an <a> tab
+   keeps the tab look; the guard allows exactly this `.ui-tab:is(a)` shape. */
+.ui-tab:is(a) {
+  color: var(--content-text-muted);
+  text-decoration: none;
+}
+.ui-tab:is(a):hover,
+.ui-tab:is(a):focus,
+.ui-tab:is(a)[aria-current='page'],
+.ui-tab--active:is(a) {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}

@@ -194,6 +194,8 @@ describe.each(KITS)('component kit: $name', (kit) => {
     // outside it would add specificity back. Only a pseudo-ELEMENT may follow.
     const names = new Set([kit.cls, ...(kit.extra ?? [])]);
     for (const s of selectors) {
+      // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
+      if (kit.stylesheet.endsWith('tabs.css') && s.split(/,\s*/).every((one) => /^\.ui-tab(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
       const m = s.match(/^:where\(([^{}]+)\)(::backdrop)?$/);
       expect(m, s).not.toBeNull();
       for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);
