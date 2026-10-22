@@ -169,8 +169,36 @@ describe('the shell is shared by three pages, not just the board', () => {
     // MflAppLayout renders /live, /live/settings AND /login. On /login the CTA
     // pointed at /login — a control that visibly does nothing. Paths are
     // compared, not hrefs: signInHref carries a ?redirect= the route does not.
-    expect(menu).toMatch(/const showSignIn = !signedIn && !isCurrent\(signInHref\.split\('\?'\)\[0\]\)/);
+    expect(menu).toMatch(/const showSignIn = !signedIn && !pairedTv && !isCurrent\(signInHref\.split\('\?'\)\[0\]\)/);
     expect(menu).toMatch(/showSignIn \? \(/);
+  });
+
+  it('offers a paired TV the Broadcast alone, and no sign-in', () => {
+    // A TV holds a watch-only pass, not a session. Every other destination is
+    // session-gated, so a TV that wandered there (the brand link is the first
+    // thing a remote's focus lands on) was asked to type an MFL password with
+    // the remote: the exact thing QR pairing exists to avoid.
+    const menu = read(MENU);
+    expect(menu).toMatch(/const pairedTv = !signedIn && Boolean\(pairedTvOwner\)/);
+    expect(menu).toMatch(/pairedTv\s*\?\s*BOARD_LINKS\.filter\(\(link\) => link\.href === '\/live\/broadcast'\)/);
+    expect(menu).toMatch(/showSignIn = !signedIn && !pairedTv/);
+    const layout = read(LAYOUT);
+    expect(layout).toContain("pairedTvOwner && !authUser ? '/live/broadcast' : '/live'");
+    expect(layout).toContain('pairedTvOwner={pairedTvOwner}');
+    const page = read('src/pages/live/broadcast/index.astro');
+    expect(page).toContain("const pairedTv = viewer?.via === 'tv';");
+    expect(page).toContain('pairedTvOwner={pairedTv ? (viewer?.user.name ?? null) : null}');
+  });
+
+  it('gives a paired TV the landing, and a bare board if it falls back to one', () => {
+    // Owner's call (Oct 2026): a TV opens the landing, preview focused for OK.
+    const page = read('src/pages/live/broadcast/index.astro');
+    expect(page).not.toMatch(/Astro\.redirect\(/);
+    expect(page).toContain('bare={pairedTv && boardOnly && Boolean(pageData)}');
+    expect(read(LAYOUT)).toMatch(/\{!bare && \(\s*<header class="mfl-bar">/);
+    expect(read('src/components/shared/live-broadcast/BroadcastLanding.astro')).toMatch(
+      /function initBroadcastLanding\(\)[\s\S]{0,200}focusPreview\(\);/,
+    );
   });
 
   it('keeps the sign-out hook and its handler in agreement across the two files', () => {

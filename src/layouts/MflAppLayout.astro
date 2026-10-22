@@ -96,9 +96,22 @@ export interface Props {
 	title: string;
 	/** Meta description. Optional — the board itself is behind auth. */
 	description?: string;
+	/**
+	 * The owner a TV's watch-only pass belongs to, when the viewer is a paired
+	 * TV. Only `/live/broadcast` can know it (the pass reader is scoped there,
+	 * tests/broadcast-tv-pass-scope.test.ts), so the page passes it down. It
+	 * keeps the chrome on the board: the brand goes to the Broadcast rather
+	 * than `/live`, and the menu offers no sign-in.
+	 */
+	pairedTvOwner?: string | null;
+	/**
+	 * No bar and no padding: the page owns the whole screen. For a paired TV's
+	 * board, which is the only thing a TV opens and has nowhere to go from.
+	 */
+	bare?: boolean;
 }
 
-const { title, description } = Astro.props as Props;
+const { title, description, pairedTvOwner = null, bare = false } = Astro.props as Props;
 
 // 'auto' renders no class — the pre-paint ThemeScript resolves it against
 // prefers-color-scheme before first paint.
@@ -192,8 +205,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		    wait passes the 300 ms "no indicator" floor. */}
 		<NavProgress />
 
+		{!bare && (
 		<header class="mfl-bar">
-			<a class="mfl-bar__brand" href="/live" aria-label="MFL Live — home">
+			<a class="mfl-bar__brand" href={pairedTvOwner && !authUser ? '/live/broadcast' : '/live'} aria-label="MFL Live — home">
 				{/* The MFL.football mark (public/assets/logos/mfl-football-mark.svg),
 				    inlined so the bars take the bar's fixed ink and the football the
 				    accent. viewBox is cropped to the glyph's own bounds. */}
@@ -223,9 +237,11 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 					currentPath={Astro.url.pathname}
 					showAnalytics={canViewSiteInsights(authUser)}
 					showProducts={canViewProductPages(authUser)}
+					pairedTvOwner={pairedTvOwner}
 				/>
 			</div>
 		</header>
+		)}
 
 		{/* Sign-out is a POST, so it cannot be a link. Same shape as
 		    NavFooter's: fetch + reload, bound on astro:page-load rather than
@@ -281,7 +297,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		{/* Visit beacon — the same one the league sites send; feeds /live/analytics. */}
 		<script src="../scripts/visit-beacon.ts"></script>
 
-		<main id="mfl-main" class="mfl-main">
+		<main id="mfl-main" class:list={['mfl-main', { 'mfl-main--bare': bare }]}>
 			<slot />
 		</main>
 		{/* Body, never <head>: it renders a custom element, which ends <head> early and
@@ -403,5 +419,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		:global(html.nav-pending) .mfl-main {
 			transition: none;
 		}
+	}
+
+	.mfl-main--bare {
+		padding: 0;
 	}
 </style>

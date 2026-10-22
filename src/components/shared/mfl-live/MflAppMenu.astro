@@ -53,6 +53,14 @@ export interface Props {
 	showAnalytics?: boolean;
 	/** Product pages link — gated by `canViewProductPages` (one seat until launch). */
 	showProducts?: boolean;
+	/**
+	 * Set when the viewer is a TV holding a watch-only pass (`/tv`), named for
+	 * the owner who paired it. A TV has no session, and must not be offered
+	 * one: every other destination is session-gated and would greet it with a
+	 * sign-in form to be typed with a remote, which is the thing pairing exists
+	 * to avoid. So the menu offers the Broadcast alone and says whose it is.
+	 */
+	pairedTvOwner?: string | null;
 }
 
 const {
@@ -63,7 +71,9 @@ const {
 	currentPath,
 	showAnalytics = false,
 	showProducts = false,
+	pairedTvOwner = null,
 } = Astro.props as Props;
+const pairedTv = !signedIn && Boolean(pairedTvOwner);
 
 /**
  * The app's own destinations. Settings is signed-in only — it lists the
@@ -77,11 +87,13 @@ const BOARD_LINKS = [
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
-const boardLinks: { href: string; label: string; icon: string }[] = [
-	...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
-	...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
-	...(showProducts ? [{ href: '/products', label: 'Products', icon: 'tag' }] : []),
-];
+const boardLinks: { href: string; label: string; icon: string }[] = pairedTv
+	? BOARD_LINKS.filter((link) => link.href === '/live/broadcast')
+	: [
+			...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
+			...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
+			...(showProducts ? [{ href: '/products', label: 'Products', icon: 'tag' }] : []),
+		];
 
 /** Exact match only: `/live` must not light up while you are on `/live/settings`. */
 const isCurrent = (href: string) => currentPath === href || currentPath === `${href}/`;
@@ -93,7 +105,7 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
  * PATHS, not the whole href: `signInHref` carries a `?redirect=` that differs
  * from the bare route.
  */
-const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
+const showSignIn = !signedIn && !pairedTv && !isCurrent(signInHref.split('?')[0]);
 ---
 
 <button
@@ -215,6 +227,10 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 				{/* Sign-out is a POST, so it cannot be a link. The layout owns the
 				    handler; this is the same `data-mfl-signout` hook it binds. */}
 				<button type="button" class="mfl-menu__signout" data-mfl-signout>Sign out</button>
+			</div>
+		) : pairedTv ? (
+			<div class="mfl-menu__account">
+				<span class="mfl-menu__owner">Paired TV · {pairedTvOwner}&rsquo;s broadcast</span>
 			</div>
 		) : showSignIn ? (
 			<a class="mfl-menu__signin" href={signInHref}>Sign in with MyFantasyLeague</a>
