@@ -2,16 +2,17 @@ plugins {
     id("com.android.application")
 }
 
-// The page the TV opens. Staging while the board is being iterated on, so a
-// push to `staging` reaches the TV without a new app release. Override per
-// build with `-PstartUrl=https://...` (the GitHub workflow exposes it).
+// The page the TV opens: production. The app is only a shell, so a site
+// release reaches the TV without a new app release. Override per build with
+// `-PstartUrl=https://...` (the GitHub workflow exposes it), e.g. to point a
+// test build at staging.
 //
 // `/tv` on the SHARED host, not a league's board: the shared host 404s every
 // `/theleague/*` path by design (the league lives at its own apex), and `/tv`
 // signs the TV in by QR code from a phone instead of a password typed with the
 // remote, then hands off to `/live/broadcast` on its own.
 val startUrl: String = (findProperty("startUrl") as String?)
-    ?: "https://staging.mfl.football/tv"
+    ?: "https://mfl.football/tv"
 
 // Upload-key signing comes from the environment (GitHub secrets in CI) so the
 // keystore never lives in the repo. Without it, release builds are unsigned
