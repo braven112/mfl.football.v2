@@ -73,7 +73,13 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
         {rows.length} tags in all.
       </p>
       <ul class="th__totals">
-        {tagTypes.map((t) => <li><span class={`th-tag th-tag--${t.replace(/\W+/g, '').toLowerCase()}`}>{t}</span> {totals[t]}</li>)}
+        {tagTypes.map((t) => (
+          <li>
+            <button type="button" class="th__pill" data-tag-pill={t} aria-pressed="false">
+              <span class={`th-tag th-tag--${t.replace(/\W+/g, '').toLowerCase()}`}>{t}</span> {totals[t]}
+            </button>
+          </li>
+        ))}
       </ul>
     </header>
 
@@ -177,7 +183,19 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
         shown += inSeason;
       });
       if (empty) empty.hidden = shown > 0;
+      document.querySelectorAll<HTMLButtonElement>('[data-tag-pill]').forEach((pill) => {
+        pill.setAttribute('aria-pressed', String(pill.dataset.tagPill === tag));
+      });
     };
+
+    // The totals double as quick filters: tap a tag to show only it, tap again to clear.
+    document.querySelectorAll<HTMLButtonElement>('[data-tag-pill]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const select = form.elements.namedItem('tag') as HTMLSelectElement;
+        select.value = select.value === pill.dataset.tagPill ? '' : (pill.dataset.tagPill ?? '');
+        apply();
+      });
+    });
 
     form.addEventListener('input', apply);
     form.addEventListener('change', apply);
@@ -222,6 +240,25 @@ const totals = Object.fromEntries(tagTypes.map((t) => [t, rows.filter((r) => r.t
     grid-template-columns: 2fr 1.5fr 1fr;
     gap: var(--spacing-sm);
     margin: var(--spacing-lg) 0;
+  }
+
+  .th__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs);
+    min-height: 2.25rem;
+    cursor: pointer;
+  }
+
+  .th__pill[aria-pressed='true'] {
+    border-color: var(--color-primary);
+    background: var(--table-header-bg);
   }
 
   .th__field {
