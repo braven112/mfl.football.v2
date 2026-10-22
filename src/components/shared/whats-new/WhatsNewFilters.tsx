@@ -63,7 +63,7 @@ export default function WhatsNewFilters({ categoryCounts, activeCategory, onChan
             key={cat}
             role="tab"
             aria-selected={isActive}
-            className={`wn-filters__tab wn-filters__tab--${cat}${isActive ? ' wn-filters__tab--active' : ''}`}
+            className={`ui-chip wn-filters__tab wn-filters__tab--${cat}${isActive ? ' wn-filters__tab--active' : ''}`}
             onClick={() => handleClick(cat)}
           >
             {CATEGORY_LABELS[cat]}

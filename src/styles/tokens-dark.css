@@ -233,6 +233,8 @@ html.dark {
 
   --modal-shadow: var(--shadow-xl), 0 0 0 1px var(--style-card-ring, var(--content-border));
   --modal-scrim: rgba(0, 0, 0, 0.6);
+  /* In dark the card surface sits too close to the tray; lift it toward the ink. */
+  --segment-on-bg: color-mix(in srgb, var(--color-text-primary) 14%, var(--card-surface));
 
   --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.25);
   --shadow-inset-md:

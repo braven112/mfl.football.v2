@@ -818,30 +818,9 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .sfc-tab {
-  display: inline-flex;
-  align-items: center;
+  /* Kit: ui-chip owns the look; this keeps the chip's size and icon gap. */
   gap: 0.3rem;
   padding: 0.3rem 0.6rem;
-  border: 0;
-  border-radius: var(--radius-full, 9999px);
-  background: transparent;
-  font: inherit;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--sf-text-secondary, #6b7280);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.sfc-tab:hover {
-  color: var(--sf-text-primary);
-  background: var(--sf-hover-bg, rgba(0, 0, 0, 0.04));
-}
-
-.sfc-tab--active,
-.sfc-tab--active:hover {
-  color: var(--on-league-accent, #fff);
-  background: var(--league-accent, var(--color-primary, #1c497c));
 }
 
 .sfc-tab__icon {
@@ -849,11 +828,6 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   height: 12px;
   fill: currentColor;
   flex-shrink: 0;
-}
-
-.sfc-tab:focus-visible {
-  outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
-  outline-offset: 2px;
 }
 
 /* Toggled with the `hidden` attribute, which LOSES to any author `display` —

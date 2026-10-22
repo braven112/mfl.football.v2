@@ -39,3 +39,13 @@ export const Table = {
   args: { part: 'table' },
   parameters: { chromatic: { modes: allModes } },
 };
+
+export const Segmented = {
+  args: { part: 'segmented' },
+  parameters: { chromatic: { modes: allModes } },
+};
+
+export const Chip = {
+  args: { part: 'chip' },
+  parameters: { chromatic: { modes: allModes } },
+};

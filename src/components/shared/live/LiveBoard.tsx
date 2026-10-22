@@ -706,10 +706,10 @@ export default function LiveBoard({
           is open: the detail screen replaces the board, and a Standings tab
           there would leave the matchup with no way back. */}
       {!open && hasStandings && (
-        <div className="lv-tabs" role="group" aria-label="Board view">
+        <div className="ui-segmented lv-tabs" role="group" aria-label="Board view">
           <button
             type="button"
-            className={`lv-tabs__btn${activeTab === 'scores' ? ' lv-tabs__btn--on' : ''}`}
+            className={`ui-segment lv-tabs__btn${activeTab === 'scores' ? ' lv-tabs__btn--on' : ''}`}
             aria-pressed={activeTab === 'scores'}
             onClick={() => setTab('scores')}
           >
@@ -717,7 +717,7 @@ export default function LiveBoard({
           </button>
           <button
             type="button"
-            className={`lv-tabs__btn${activeTab === 'standings' ? ' lv-tabs__btn--on' : ''}`}
+            className={`ui-segment lv-tabs__btn${activeTab === 'standings' ? ' lv-tabs__btn--on' : ''}`}
             aria-pressed={activeTab === 'standings'}
             onClick={() => setTab('standings')}
           >

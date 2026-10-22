@@ -25,7 +25,7 @@ export default function LvGroupPicker({ groups, viewerGroupId, value, onChange }
     <button
       key={id}
       type="button"
-      className={`lv-groups__chip${value === id ? ' lv-groups__chip--on' : ''}`}
+      className={`ui-chip lv-groups__chip${value === id ? ' lv-groups__chip--on' : ''}`}
       aria-pressed={value === id}
       onClick={() => onChange(id)}
     >

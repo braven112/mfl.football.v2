@@ -107,7 +107,8 @@ Selection is read from `aria-selected="true"` (real tablists),
 so no page needs new JS. Padding, gap and horizontal scroll stay each bar's
 own. The rounded pill view-switchers (standings/playoffs/draft views, Live,
 What's New filters, conference toggles, chart controls) are registered forks
-pending the owner's call on a separate pill-switcher kit.
+now kits of their own (below), except the icon-tile view pickers, which the
+owner ruled are their own component, not pills.
 
 ## Table
 
@@ -134,3 +135,16 @@ the rosters split).
 Fixes to the kit (a contrast fix in a tone, a Primetime surface change) do not
 reach a fork. The registry is how that is managed: when the kit changes, the
 registry lists who might want the change, and that league decides.
+
+## Segmented control and filter chip (2026-10-22)
+
+The owner chose two kits, one per job. `src/styles/segmented.css`
+(`ui-segmented` / `ui-segment`) switches what a panel shows: a muted, edged
+tray with the selected option raised (the salary-history chart, the AFL
+conference toggle, Live's Scores/Standings and standings mode). The AFL toggle
+gave up its red fill for the raised option. `src/styles/chip.css` (`ui-chip`)
+filters a list: rounded, edged, muted chips with the selected one filled
+(What's New, the Schefter feed, Live's division picker); What's New keeps its
+category colours through `--ui-chip-on-bg`. About twenty other `…chip` classes
+are registered as a backlog for the next chip batch, and the phone sort pills
+are a fork (a sort control, not a filter).

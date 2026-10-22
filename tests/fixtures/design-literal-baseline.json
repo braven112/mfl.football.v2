@@ -2,9 +2,9 @@
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
   "recordedAt": "2026-10-22",
   "totals": {
-    "transition": 197,
+    "transition": 196,
     "fontSize": 1949,
-    "shadow": 215
+    "shadow": 214
   },
   "files": {
     "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
@@ -690,8 +690,7 @@
       "shadow": 2
     },
     "src/pages/afl-fantasy/draft/order.astro": {
-      "fontSize": 8,
-      "shadow": 1
+      "fontSize": 8
     },
     "src/pages/afl-fantasy/icons.astro": {
       "transition": 4,
@@ -986,7 +985,7 @@
       "fontSize": 14
     },
     "src/styles/schefter-feed-compact.css": {
-      "transition": 5,
+      "transition": 4,
       "fontSize": 8,
       "shadow": 2
     },

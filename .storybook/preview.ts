@@ -21,6 +21,8 @@ import '../src/styles/card.css';
 import '../src/styles/modal.css';
 import '../src/styles/tabs.css';
 import '../src/styles/table.css';
+import '../src/styles/segmented.css';
+import '../src/styles/chip.css';
 
 /**
  * The global rules TheLeagueLayout owns, which a story never gets: the fonts

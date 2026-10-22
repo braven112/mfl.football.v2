@@ -1,0 +1,57 @@
+/* ==========================================================================
+   Filter chip — one rounded chip for narrowing a list (component kit).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like the other kit sheets. A chip FILTERS a
+   list (What's New categories, the Schefter feed, Live's division picker);
+   a switch between panels is a segmented control (segmented.css). Owner's
+   call, 2026-10-22. The phone SORT pills (sort-chips.css) are a sort
+   control with their own look and are a registered fork.
+
+     <div class="my-filters">
+       <button class="ui-chip my-chip" aria-pressed="true">All</button>
+       <button class="ui-chip my-chip" aria-pressed="false">Trades</button>
+     </div>
+
+   The selected chip is whichever carries aria-pressed="true",
+   aria-selected="true", aria-current="page" or ui-chip--active. It is filled:
+   `--ui-chip-on-bg` / `--ui-chip-on-ink`, the league accent by default — a
+   chip that is coloured by category sets those two on its own modifier,
+   never `background` / `color`. The kit owns the LOOK (shape, edge, ground,
+   type and ink); size, padding and the touch floor stay the component's own.
+
+   Every rule sits inside :where(), so a component's own class wins.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+:where(.ui-chip) {
+  display: inline-flex;
+  align-items: center;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-full);
+  color: var(--content-text-muted);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+:where(.ui-chip:hover) {
+  color: var(--color-text-primary);
+}
+
+:where(.ui-chip[aria-pressed='true'], .ui-chip[aria-selected='true'], .ui-chip[aria-current='page'], .ui-chip--active) {
+  background: var(--ui-chip-on-bg, var(--league-accent));
+  border-color: transparent;
+  color: var(--ui-chip-on-ink, var(--on-league-accent));
+}
+
+:where(.ui-chip:focus-visible) {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 2px;
+}

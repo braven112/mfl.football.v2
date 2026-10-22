@@ -13,7 +13,7 @@
 
 export interface Props {
   /** Which part of the kit to show. */
-  part?: 'badge' | 'card' | 'modal' | 'tabs' | 'table';
+  part?: 'badge' | 'card' | 'modal' | 'tabs' | 'table' | 'segmented' | 'chip';
 }
 
 const { part = 'badge' } = Astro.props;
@@ -96,6 +96,31 @@ const TONES = [
       <button type="button" class="ui-tab kitg__tab" role="tab" aria-selected="false">News</button>
     </div>
   </section>
+) : part === 'segmented' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Segmented control</h2>
+      <p class="kitg__lede">Switches what a panel shows. Source: <code>src/styles/segmented.css</code>. <code>ui-segmented</code> on the tray, <code>ui-segment</code> on each option; the selected option carries <code>aria-pressed="true"</code>, <code>aria-selected="true"</code>, <code>aria-current="page"</code> or <code>ui-segment--active</code>. Padding and width are the control's own.</p>
+    </header>
+    <div class="ui-segmented kitg__seg" role="group" aria-label="Salary view">
+      <button type="button" class="ui-segment kitg__seg-btn" aria-pressed="true">Franchise Tag</button>
+      <button type="button" class="ui-segment kitg__seg-btn" aria-pressed="false">Extension</button>
+      <button type="button" class="ui-segment kitg__seg-btn" aria-pressed="false">Team Option</button>
+    </div>
+  </section>
+) : part === 'chip' ? (
+  <section class="kitg">
+    <header>
+      <h2 class="kitg__title">Filter chip</h2>
+      <p class="kitg__lede">Filters a list. Source: <code>src/styles/chip.css</code>. <code>ui-chip</code> on each chip; the selected one is filled with <code>--ui-chip-on-bg</code> / <code>--ui-chip-on-ink</code>, the league accent unless the chip sets its own.</p>
+    </header>
+    <div class="kitg__chips">
+      <button type="button" class="ui-chip kitg__chip" aria-pressed="true">All</button>
+      <button type="button" class="ui-chip kitg__chip" aria-pressed="false">Trades</button>
+      <button type="button" class="ui-chip kitg__chip" aria-pressed="false">Waivers</button>
+      <button type="button" class="ui-chip kitg__chip" aria-pressed="false">Injuries</button>
+    </div>
+  </section>
 ) : part === 'table' ? (
   <section class="kitg">
     <header>
@@ -154,6 +179,21 @@ const TONES = [
   }
   .kitg__tab {
     padding: 0.6rem 0.75rem;
+  }
+  .kitg__seg {
+    padding: 3px;
+    gap: 2px;
+  }
+  .kitg__seg-btn {
+    padding: 0.45rem 1rem;
+  }
+  .kitg__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .kitg__chip {
+    padding: 0.4rem 0.75rem;
   }
   .kitg__table {
     width: 100%;

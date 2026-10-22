@@ -1438,36 +1438,14 @@ button.lv-card:focus-visible {
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;
-  border: 1px solid var(--content-border);
-  border-radius: var(--radius-md);
-  background: var(--content-bg-muted);
   align-self: flex-start;
 }
 .lv-tabs__btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  /* The 44px touch floor, stated rather than hoped for: padding alone
+  /* Kit: ui-segment owns the look; this keeps the touch floor and padding.
+     The 44px touch floor, stated rather than hoped for: padding alone
      measured 36px at this type size. */
   min-height: 2.75rem;
   padding: 0.35rem 1.1rem;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-display);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: var(--content-text-muted);
-  cursor: pointer;
-}
-.lv-tabs__btn:focus-visible {
-  outline: 2px solid var(--league-accent);
-  outline-offset: 1px;
-}
-/* The selected tab is not carried by colour alone — it takes the raised card
-   surface and the full-strength ink, which survives a monochrome render. */
-.lv-tabs__btn--on {
-  background: var(--card-surface);
-  color: var(--page-text);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 12%));
 }
 
 /* ── Division picker (a league board too long for one scroll) ────────────
@@ -1487,31 +1465,11 @@ button.lv-card:focus-visible {
   display: none;
 }
 .lv-groups__chip {
-  appearance: none;
+  /* Kit: ui-chip owns the look; this keeps the touch floor, padding and size. */
   flex: 0 0 auto;
   min-height: 2.75rem;
   padding: 0.35rem 0.95rem;
-  border: 1px solid var(--content-border);
-  border-radius: 999px;
-  background: var(--content-bg-muted);
-  color: var(--content-text-muted);
-  font-family: var(--font-display);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.lv-groups__chip:focus-visible {
-  outline: 2px solid var(--league-accent);
-  outline-offset: 1px;
-}
-/* Selected is not carried by colour alone: raised surface, full-strength ink
-   and the accent border, the same recipe as .lv-tabs__btn--on. */
-.lv-groups__chip--on {
-  background: var(--card-surface);
-  color: var(--page-text);
-  border-color: var(--league-accent);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 12%));
 }
 
 /* ── Standings ────────────────────────────────────────────────────────── */

@@ -42,7 +42,7 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table';
+  name: 'badge' | 'card' | 'modal' | 'tabs' | 'tab' | 'table' | 'segmented' | 'segment' | 'chip';
   stylesheet: string;
   cls: string;
   /** Kit classes besides `cls` the stylesheet may define (the modal's scrim, the tab bar's tab). */
@@ -113,7 +113,33 @@ const KITS: Kit[] = [
     tags: new Set(['table']),
     isInstance: () => true,
   },
+  {
+    name: 'segmented',
+    stylesheet: 'src/styles/segmented.css',
+    cls: 'ui-segmented',
+    extra: ['ui-segment'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)segmented$/,
+    tags: new Set(['div', 'nav', 'ul', 'fieldset']),
+  },
+  {
+    name: 'segment',
+    stylesheet: 'src/styles/segmented.css',
+    cls: 'ui-segment',
+    extra: ['ui-segmented'],
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)segment$/,
+    tags: new Set(['button', 'a', 'label']),
+  },
+  {
+    name: 'chip',
+    stylesheet: 'src/styles/chip.css',
+    cls: 'ui-chip',
+    pattern: /^[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-)chip$/,
+    tags: new Set(['button', 'a']),
+  },
 ];
+
+/** An element wearing ANY kit's class is that kit's instance (a segmented control named `…-tabs`). */
+const KIT_CLASSES = new Set(KITS.flatMap((k) => [k.cls, ...(k.extra ?? [])]));
 
 /** Every opening tag in a file, brace/quote aware (same walk as cta-pattern). */
 function openingTags(src: string): { name: string; tag: string; line: number }[] {
@@ -195,7 +221,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
     const names = new Set([kit.cls, ...(kit.extra ?? [])]);
     for (const s of selectors) {
       // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
-      if (kit.stylesheet.endsWith('tabs.css') && s.split(/,\s*/).every((one) => /^\.ui-tab(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
+      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|segment)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
       const m = s.match(/^:where\(([^{}]+)\)(::backdrop)?$/);
       expect(m, s).not.toBeNull();
       for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);
@@ -220,7 +246,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
         (kit.isInstance?.(name, tag) ? tokens.find((t) => !t.startsWith('ui-')) : undefined);
       if (!hit) continue;
       // The scrim may carry the dialog role when the panel inside wears the kit.
-      if (tokens.includes(kit.cls) || kit.extra?.some((t) => tokens.includes(t))) continue;
+      if (tokens.some((t) => KIT_CLASSES.has(t))) continue;
       const key = `${rel}::${hit}`;
       if (registry[key]) {
         seen.add(key);

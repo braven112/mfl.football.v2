@@ -211,6 +211,8 @@
      behind it. Dark mode adds a hairline ring so the panel's edge reads. */
   --modal-shadow: var(--shadow-xl);
   --modal-scrim: rgba(15, 23, 42, 0.45);
+  /* Segmented control: the selected option is raised on the card surface. */
+  --segment-on-bg: var(--card-surface);
 
   /* Inset shadows - for sunken/pressed elements */
   --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.12);
