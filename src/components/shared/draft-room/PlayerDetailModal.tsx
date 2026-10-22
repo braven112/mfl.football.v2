@@ -147,14 +147,14 @@ export function PlayerDetailModal({
   const salaryCurve = y1Salary ? computeSalaryCurve(y1Salary) : null;
 
   return (
-    <div className="dr-modal-overlay" onClick={onBackdrop} role="presentation">
+    <div className="ui-scrim dr-modal-overlay" onClick={onBackdrop} role="presentation">
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dr-modal-title"
         tabIndex={-1}
-        className="dr-modal"
+        className="ui-modal dr-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: hero strip */}

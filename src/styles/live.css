@@ -1827,10 +1827,6 @@ button.lv-card:focus-visible {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.55);
-  /* Every overlay in this codebase blurs its backdrop. */
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   animation: lv-sheet-fade 160ms ease;
 }
 
@@ -1841,12 +1837,7 @@ button.lv-card:focus-visible {
   max-height: 88dvh;
   display: flex;
   flex-direction: column;
-  background: var(--card-surface);
-  color: var(--page-text);
-  border: 1px solid var(--card-border);
-  border-bottom: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: var(--shadow-xl);
   outline: none;
   padding-bottom: env(safe-area-inset-bottom, 0);
   animation: lv-sheet-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1875,9 +1866,7 @@ button.lv-card:focus-visible {
     max-width: 440px;
     max-height: 80vh;
     max-height: 80dvh;
-    border-bottom: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
     animation: lv-sheet-fade 160ms ease;
   }
 }

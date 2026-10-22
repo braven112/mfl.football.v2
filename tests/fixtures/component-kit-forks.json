@@ -118,5 +118,23 @@
     "src/pages/theleague/rosters.astro::roster-table-card": "Fork: shares no property with the kit. Its own look for this page; adopt the kit only if the owner wants it to change.",
     "src/pages/theleague/stats.astro::stats-card": "Fork: would need 2 resets to keep 1 shared. Its own look for this page; adopt the kit only if the owner wants it to change.",
     "src/pages/tv.astro::tvp__card": "Fork: shares no property with the kit. Its own look for this page; adopt the kit only if the owner wants it to change."
+  },
+  "modal": {
+    "src/components/nav/NavDrawer.astro::nav-drawer": "Not a modal panel: the site nav drawer slides in from the edge with its own nav tokens",
+    "src/components/shared/AFLActionModal.astro::afl-action-modal": "Not a panel: role=dialog sits on the positioning wrapper; the panel inside wears ui-modal",
+    "src/components/shared/PlayerActionModal.astro::pam": "Not a panel: role=dialog sits on the positioning wrapper; the panel inside wears ui-modal",
+    "src/components/shared/TransactionHubModal.astro::transaction-hub-modal": "Not a panel: role=dialog sits on the positioning wrapper; the panel inside wears ui-modal",
+    "src/components/shared/keepers/KeeperPlanner.astro::kp-finalize": "Not a panel: role=dialog sits on the positioning wrapper; the panel inside wears ui-modal",
+    "src/components/shared/lineup/LineupPage.astro::lineup-cdm": "Not a panel: role=dialog sits on the positioning wrapper; the panel inside wears ui-modal",
+    "src/components/shared/ProductInterest.astro::pi": "Fork: the marketing interest panel is a dark branded surface in both themes",
+    "src/components/shared/draft-room/DraftChatPanel.tsx::dr-gif-picker": "Not a modal panel: an anchored popover inside the draft chat",
+    "src/components/shared/suggestions/EmojiPicker.tsx::sb-emoji-picker": "Not a modal panel: an anchored popover on the suggestion board",
+    "src/components/shared/suggestions/ImageGallery.tsx::sb-lightbox": "Fork: a full-bleed photo lightbox on black, not a panel",
+    "src/components/shared/live-broadcast/BroadcastRemote.tsx::lbh__sheet": "Fork: the broadcast handheld is dark in both themes (TV chrome)",
+    "src/components/shared/live-broadcast/HandheldBoard.tsx::lbh__sheet": "Fork: the broadcast handheld is dark in both themes (TV chrome)",
+    "src/components/shared/search/HeaderSearch.astro::header-search": "Not a modal panel: the header search takeover uses the header chrome",
+    "src/components/theleague/trade-builder/PendingTradesPanel.tsx::ptp-panel": "Not a modal panel: a side drawer; its scrim wears ui-scrim",
+    "src/components/theleague/ContractDemoOverlay.astro::cdemo-glossary": "Backlog: component is not rendered by any page; migrate if it returns",
+    "src/components/theleague/PlayerNewsModal.astro::player-news-modal__content": "Backlog: component is not rendered by any page; migrate if it returns"
   }
 }

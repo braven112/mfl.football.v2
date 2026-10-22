@@ -41,9 +41,9 @@ export default function RookieExtensionModal({
     positionAverages[player.position]?.top5Average ?? 0;
 
   return (
-    <div className="rookie-modal__overlay" onClick={onClose}>
+    <div className="ui-scrim rookie-modal__overlay" onClick={onClose}>
       <div
-        className="rookie-modal"
+        className="ui-modal rookie-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -154,8 +154,6 @@ export default function RookieExtensionModal({
           .rookie-modal__overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(2px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -163,8 +161,6 @@ export default function RookieExtensionModal({
             padding: 1rem;
           }
           .rookie-modal {
-            background: var(--primary-content-bg-color, #fff);
-            border-radius: 0.75rem;
             padding: 1.5rem;
             max-width: 480px;
             width: 100%;
@@ -173,7 +169,6 @@ export default function RookieExtensionModal({
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           }
           .rookie-modal__header {
             display: flex;

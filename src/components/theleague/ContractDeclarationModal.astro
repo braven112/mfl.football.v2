@@ -21,7 +21,7 @@ import '../../styles/player-modal-band.css';
 ---
 
 <div class="contract-declaration-modal" id="contract-declaration-modal">
-  <div class="cdm-overlay"></div>
+  <div class="ui-scrim cdm-overlay"></div>
   <div
     id="cdm-announcer"
     role="status"
@@ -29,7 +29,7 @@ import '../../styles/player-modal-band.css';
     aria-atomic="true"
     style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"
   ></div>
-  <div class="cdm-content">
+  <div class="ui-modal cdm-content">
     <button class="cdm-close" aria-label="Close" title="Close (ESC)">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -297,28 +297,11 @@ import '../../styles/player-modal-band.css';
   .cdm-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(2px);
     cursor: pointer;
-  }
-
-  /* Dark: page is already dark, so the mandated frosted scrim goes a touch
-     deeper (pure black, higher alpha) to separate the modal from the page.
-     Blur is preserved per the modal-backdrop standard. Matches
-     PlayerDetailsModal's .player-details-modal__overlay recipe. */
-  :global(html.dark) .cdm-overlay {
-    background: rgba(0, 0, 0, 0.6);
   }
 
   .cdm-content {
     position: relative;
-    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
-       becomes the dark radial-gradient card surface in dark. background is
-       SHORTHAND here (never color-mix) because the dark token is a gradient,
-       not a flat color. */
-    background: var(--card-bg, #fff);
-    border-radius: var(--radius-lg, 1rem);
-    box-shadow: var(--shadow-xl);
     width: 100%;
     max-width: 440px;
     /* Use dvh (dynamic viewport height) so the mobile URL/nav bars don't clip
@@ -329,16 +312,6 @@ import '../../styles/player-modal-band.css';
     flex-direction: column;
     overflow: hidden;
     animation: cdm-enter 0.22s ease-out;
-  }
-
-  /* Border is dark-only (added via box-shadow spread so it costs no layout
-     box — panel stays pixel-identical in light). Paired with --shadow-xl it
-     lifts the panel off the #121212 page as the top elevation layer —
-     matches PlayerDetailsModal's .player-details-modal__content recipe. */
-  :global(html.dark) .cdm-content {
-    box-shadow:
-      var(--shadow-xl),
-      0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885));
   }
 
   @keyframes cdm-enter {
@@ -1631,7 +1604,7 @@ import '../../styles/player-modal-band.css';
 
     .cdm-content {
       max-height: 92vh;
-      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       max-width: 100%;
       animation: cdm-slide-up 0.25s ease-out;
     }

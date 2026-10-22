@@ -98,9 +98,9 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
   };
 
   return (
-    <div className="lm-overlay" onClick={onClose}>
+    <div className="ui-scrim lm-overlay" onClick={onClose}>
       <div
-        className="lm-content"
+        className="ui-modal lm-content"
         ref={contentRef}
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -210,8 +210,6 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           position: fixed;
           inset: 0;
           z-index: 1001;
-          background: rgba(15, 23, 42, 0.45);
-          backdrop-filter: blur(2px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -219,9 +217,6 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
         }
         .lm-content {
           position: relative;
-          background: var(--card-bg, #fff);
-          border-radius: var(--radius-lg, 1rem);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
           width: 100%;
           max-width: 440px;
           max-height: 88vh;
@@ -444,7 +439,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           .lm-content {
             max-height: 92vh;
             max-width: 100%;
-            border-radius: 1rem 1rem 0 0;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
             animation: lm-slide-up 0.25s ease-out;
           }
           @keyframes lm-slide-up {

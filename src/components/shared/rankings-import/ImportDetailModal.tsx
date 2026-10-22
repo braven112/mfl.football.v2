@@ -27,7 +27,7 @@ export default function ImportDetailModal({ importData, onClose }: Props) {
   const unmatched = importData.rankings.filter((r) => !r.matched);
 
   return (
-    <dialog ref={dialogRef} className="ri-modal" onClick={(e) => {
+    <dialog ref={dialogRef} className="ui-modal ri-modal" onClick={(e) => {
       if (e.target === dialogRef.current) onClose();
     }}>
       <div className="ri-modal__content">

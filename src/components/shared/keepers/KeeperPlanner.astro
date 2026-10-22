@@ -403,8 +403,8 @@ try {
 
 <!-- Finalize confirmation modal -->
 <div class="kp-finalize" id="kp-finalize" role="dialog" aria-modal="true" aria-labelledby="kp-finalize-title" hidden>
-  <div class="kp-finalize__overlay" data-finalize-close></div>
-  <div class="kp-finalize__content">
+  <div class="ui-scrim kp-finalize__overlay" data-finalize-close></div>
+  <div class="ui-modal kp-finalize__content">
     <button type="button" class="kp-finalize__close" data-finalize-close aria-label="Close">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -1832,8 +1832,6 @@ try {
   .kp-finalize__overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(2px);
   }
 
   .kp-finalize__content {
@@ -1842,9 +1840,6 @@ try {
     max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
-    background: #fff;
-    border-radius: 0.75rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
     padding: 1.5rem;
   }
 
@@ -2149,12 +2144,6 @@ try {
 
   html.dark .kp-picks__via {
     color: var(--content-text-muted, #8a8a8a);
-  }
-
-  /* Finalize modal */
-  html.dark .kp-finalize__content {
-    background: var(--card-surface, #16283c);
-    box-shadow: 0 0 0 1px var(--style-card-ring, var(--content-border, #5f6885)), 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
   html.dark .kp-finalize__title {

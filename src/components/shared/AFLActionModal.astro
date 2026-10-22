@@ -52,8 +52,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
   data-trade-builder={tradeBuilder ? 'true' : 'false'}
   hidden
 >
-  <div class="afl-action-modal__overlay" data-aam-close></div>
-  <div class="afl-action-modal__content">
+  <div class="ui-scrim afl-action-modal__overlay" data-aam-close></div>
+  <div class="ui-modal afl-action-modal__content">
     <!-- Circular close button — same shape as TheLeague's ContractDeclarationModal (cdm-close) -->
     <button class="aam-close" data-aam-close aria-label="Close (ESC)" title="Close (ESC)">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -728,17 +728,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   .afl-action-modal__overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(2px);
     cursor: pointer;
-  }
-
-  /* Dark: the page is already dark, so the mandated frosted scrim goes
-     deeper (pure black, higher alpha) to separate the panel from the page.
-     Blur is preserved per the modal-backdrop standard — same recipe as
-     TheLeague's ContractDeclarationModal overlay. */
-  :global(html.dark) .afl-action-modal__overlay {
-    background: rgba(0, 0, 0, 0.6);
   }
 
   .afl-action-modal__content {
@@ -747,23 +737,9 @@ const spriteUrl = spriteUrlFor(Astro.url);
     max-width: 460px;
     max-height: 90vh;
     overflow-y: auto;
-    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
-       becomes the themed card surface in dark (AFL navy #16283c, or
-       TheLeague's radial gradient). background is SHORTHAND because the
-       generic dark token is a gradient, not a flat color. */
-    background: var(--card-bg, #fff);
-    border-radius: 0.75rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    /* Surface (ground, corner, lift) is the ui-modal kit's. */
     padding: 1.25rem;
     animation: aam-pop 140ms ease-out;
-  }
-
-  /* Hairline border is dark-only (via box-shadow spread so it costs no
-     layout box) — lifts the panel off the navy page. */
-  :global(html.dark) .afl-action-modal__content {
-    box-shadow:
-      0 25px 50px -12px rgba(0, 0, 0, 0.6),
-      0 0 0 1px var(--style-card-ring, var(--content-border, #2e4560));
   }
 
   @keyframes aam-pop {

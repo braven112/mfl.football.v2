@@ -50,7 +50,7 @@ interface Props {
 const { config } = Astro.props;
 ---
 
-<dialog id="signin-modal" class="sim" aria-label="Sign in">
+<dialog id="signin-modal" class="ui-modal sim" aria-label="Sign in">
   <button type="button" class="sim-close" id="sim-close" aria-label="Close">
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
       <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -146,16 +146,8 @@ const { config } = Astro.props;
   .sim {
     position: relative;
     padding: 0;
-    border: none;
-    border-radius: var(--radius-md, 0.5rem);
     max-width: 24rem;
     width: calc(100% - 2rem);
-    background: var(--content-bg, #ffffff);
-    color: var(--color-gray-900, #111827);
-  }
-  .sim::backdrop {
-    background: rgb(0 0 0 / 0.55);
-    backdrop-filter: blur(2px);
   }
   .sim-body { padding: 1.25rem 1.25rem 1.4rem; }
   .sim-close {

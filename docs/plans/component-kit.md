@@ -49,6 +49,11 @@ the mechanism behind the owner's two rules below.
 2. **Migration is pixel-identical.** Moving a page onto the kit may not move
    a pixel. Where a page differs from the kit default, its own class keeps the
    difference (a prop if every league benefits, otherwise a fork).
+3. **Modal, Tabs and Table unify instead (2026-10-22).** Their instances share
+   too little for a pixel-identical kit, so the owner chose one look per
+   component — the most common existing one — and every changed page goes in
+   front of him as before/after phone screenshots, light and dark, before the
+   PR merges. Rule 2 governs Badge and Card only.
 
 A migrated badge's own rule therefore reads as a list of what differs:
 
@@ -76,7 +81,31 @@ Badge → Card → Modal → Tabs → Table, one component per PR. Migrations ar
 staged in the weekly changelog as internal polish (Fixes & polish), not as
 features.
 
-## What a fork gives up
+## Modal (shipped as the first unified kit)
+
+`src/styles/modal.css`: `ui-modal` on the panel (or the `<dialog>`, whose
+`::backdrop` is the scrim) and `ui-scrim` on a hand-built overlay. The kit
+owns ground (`--card-bg`), ink, corner (`--radius-lg`), lift
+(`--modal-shadow`: `--shadow-xl`, plus a hairline `--style-card-ring` in dark)
+and the scrim (`--modal-scrim` with the mandated 2px blur). Width, padding,
+position, the phone bottom sheet and the entrance animation stay each
+component's own; a sheet squares its lower corners with
+`var(--radius-lg) var(--radius-lg) 0 0`. What moved: corners from 8-12px and
+24px to 16px, six different scrim tints became one (with the blur that four
+of them lacked), outlines on the draft-room dialogs dropped, and the
+trade-builder dialogs gained the dark-mode scrim they never had. The panel
+lays `--card-bg` over the solid `--card-surface`, because some dark themes'
+card gradient is translucent and the page showed through a `<dialog>`.
+
+2. **Migration is pixel-identical.** Moving a page onto the kit may not move
+   a pixel. Where a page differs from the kit default, its own class keeps the
+   difference (a prop if every league benefits, otherwise a fork).
+3. **Modal, Tabs and Table unify instead (2026-10-22).** Their instances share
+   too little for a pixel-identical kit, so the owner chose one look per
+   component — the most common existing one — and every changed page goes in
+   front of him as before/after phone screenshots, light and dark, before the
+   PR merges. Rule 2 governs Badge and Card only.
+
 
 Fixes to the kit (a contrast fix in a tone, a Primetime surface change) do not
 reach a fork. The registry is how that is managed: when the kit changes, the

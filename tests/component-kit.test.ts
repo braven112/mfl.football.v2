@@ -42,11 +42,19 @@ const LAYOUTS = [
 
 interface Kit {
   /** Key in component-kit-forks.json. */
-  name: 'badge' | 'card';
+  name: 'badge' | 'card' | 'modal';
   stylesheet: string;
   cls: string;
+  /** Kit classes besides `cls` the stylesheet may define (the modal's scrim). */
+  extra?: string[];
   /** A class name that IS this component (block, or block__element). */
   pattern: RegExp;
+  /**
+   * The modal is found by what the element IS, not what it is named: a
+   * <dialog>, or anything announcing itself as a modal dialog. Its first class
+   * names it in the fork registry.
+   */
+  isInstance?: (name: string, tag: string) => boolean;
   /**
    * Elements that can be this component. A <button> or <a> named `…-pill` is
    * a control (a filter chip), an <img> named `…__badge` is a crest, a table
@@ -69,6 +77,16 @@ const KITS: Kit[] = [
     cls: 'ui-card',
     pattern: /^(?:[a-z0-9-]+(?:__[a-z0-9-]+)?(?:__|-))?card$/,
     tags: new Set(['div', 'article', 'section', 'aside', 'li', 'a', 'figure', 'details']),
+  },
+  {
+    name: 'modal',
+    stylesheet: 'src/styles/modal.css',
+    cls: 'ui-modal',
+    extra: ['ui-scrim'],
+    pattern: /^[a-z]/,
+    tags: new Set(['dialog', 'div', 'section', 'aside', 'form']),
+    isInstance: (name, tag) =>
+      name === 'dialog' || /\brole=["'{]+(?:alert)?dialog\b/.test(tag) || /\baria-modal=["'{]+true\b/.test(tag),
   },
 ];
 
@@ -147,7 +165,8 @@ describe.each(KITS)('component kit: $name', (kit) => {
     const css = read(kit.stylesheet).replace(/\/\*[\s\S]*?\*\//g, '');
     const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim());
     expect(selectors.length).toBeGreaterThan(0);
-    for (const s of selectors) expect(s, s).toMatch(new RegExp(`^:where\\(\\.${kit.cls}(--[a-z]+)?\\)$`));
+    const names = [kit.cls, ...(kit.extra ?? [])].join('|');
+    for (const s of selectors) expect(s, s).toMatch(new RegExp(`^:where\\(\\.(?:${names})(--[a-z]+)?\\)(::backdrop)?$`));
   });
 
   it('colours come from tokens, never literals', () => {
@@ -162,9 +181,13 @@ describe.each(KITS)('component kit: $name', (kit) => {
     for (const { name, tag, line } of tags) {
       if (!kit.tags.has(name)) continue;
       const tokens = classTokens(tag);
-      const hit = tokens.find((t) => kit.pattern.test(t));
+      // A classless match is prose (`<dialog>` in a comment), never markup.
+      const hit = kit.isInstance
+        ? kit.isInstance(name, tag) && tokens.find((t) => kit.pattern.test(t))
+        : tokens.find((t) => kit.pattern.test(t));
       if (!hit) continue;
-      if (tokens.includes(kit.cls)) continue;
+      // The scrim may carry the dialog role when the panel inside wears the kit.
+      if (tokens.includes(kit.cls) || kit.extra?.some((t) => tokens.includes(t))) continue;
       const key = `${rel}::${hit}`;
       if (registry[key]) {
         seen.add(key);

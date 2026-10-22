@@ -1,10 +1,10 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-19",
+  "recordedAt": "2026-10-22",
   "totals": {
     "transition": 202,
     "fontSize": 1962,
-    "shadow": 231
+    "shadow": 215
   },
   "files": {
     "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
@@ -78,8 +78,7 @@
     },
     "src/components/shared/AFLActionModal.astro": {
       "transition": 1,
-      "fontSize": 6,
-      "shadow": 1
+      "fontSize": 6
     },
     "src/components/shared/AflChampionshipHero.astro": {
       "fontSize": 3
@@ -130,7 +129,7 @@
     "src/components/shared/draft-mock/DraftMockLobby.astro": {
       "transition": 1,
       "fontSize": 18,
-      "shadow": 2
+      "shadow": 1
     },
     "src/components/shared/draft-mock/DraftMockResultsPage.astro": {
       "fontSize": 7
@@ -244,7 +243,7 @@
     "src/components/shared/keepers/KeeperPlanner.astro": {
       "transition": 4,
       "fontSize": 11,
-      "shadow": 3
+      "shadow": 1
     },
     "src/components/shared/keepers/KeepersPage.astro": {
       "fontSize": 6,
@@ -314,15 +313,13 @@
     },
     "src/components/shared/PlayerActionModal.astro": {
       "transition": 1,
-      "fontSize": 4,
-      "shadow": 2
+      "fontSize": 4
     },
     "src/components/shared/PlayerDetailsModal.astro": {
       "fontSize": 11
     },
     "src/components/shared/PlayerInjuryModal.astro": {
-      "fontSize": 4,
-      "shadow": 1
+      "fontSize": 4
     },
     "src/components/shared/PlayoffBadge.astro": {
       "fontSize": 1,
@@ -437,7 +434,7 @@
     },
     "src/components/shared/TransactionHubModal.astro": {
       "fontSize": 18,
-      "shadow": 2
+      "shadow": 1
     },
     "src/components/shared/VeteranExtensionCandidates.astro": {
       "fontSize": 5
@@ -468,8 +465,7 @@
     },
     "src/components/theleague/AnchorNav.astro": {
       "transition": 6,
-      "fontSize": 3,
-      "shadow": 1
+      "fontSize": 3
     },
     "src/components/theleague/AuctionStrip.astro": {
       "fontSize": 1
@@ -502,8 +498,7 @@
       "shadow": 2
     },
     "src/components/theleague/CutdownPlanPanel.astro": {
-      "fontSize": 10,
-      "shadow": 2
+      "fontSize": 10
     },
     "src/components/theleague/DeadMoneyComposite.astro": {
       "fontSize": 2
@@ -624,7 +619,7 @@
     "src/components/theleague/trade-builder/LoginModal.tsx": {
       "transition": 1,
       "fontSize": 4,
-      "shadow": 2
+      "shadow": 1
     },
     "src/components/theleague/trade-builder/MultiYearCapTable.tsx": {
       "fontSize": 1
@@ -647,8 +642,7 @@
       "shadow": 1
     },
     "src/components/theleague/trade-builder/RookieExtensionModal.tsx": {
-      "fontSize": 7,
-      "shadow": 1
+      "fontSize": 7
     },
     "src/components/theleague/trade-builder/TeamPanel.tsx": {
       "fontSize": 1,
@@ -669,7 +663,7 @@
     },
     "src/components/theleague/trade-builder/TradeConfirmationModal.tsx": {
       "fontSize": 8,
-      "shadow": 2
+      "shadow": 1
     },
     "src/components/theleague/trade-builder/TradeValueAnalysis.tsx": {
       "fontSize": 5
@@ -942,8 +936,7 @@
     },
     "src/styles/my-rank-editor.css": {
       "transition": 1,
-      "fontSize": 6,
-      "shadow": 2
+      "fontSize": 6
     },
     "src/styles/network-badge.css": {
       "fontSize": 1
@@ -984,7 +977,7 @@
       "fontSize": 1
     },
     "src/styles/rosters-mobile.css": {
-      "fontSize": 10,
+      "fontSize": 9,
       "shadow": 1
     },
     "src/styles/schedule-planner.css": {
@@ -1003,6 +996,9 @@
       "fontSize": 25
     },
     "src/styles/snap-columns.css": {
+      "fontSize": 1
+    },
+    "src/styles/sort-chips.css": {
       "fontSize": 1
     },
     "src/styles/sunday-ticket.css": {

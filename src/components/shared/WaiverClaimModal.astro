@@ -67,7 +67,7 @@ const windowLabel = config?.windowLabel ?? '';
 
 <script type="application/json" id="waiver-claim-config" set:html={configJson}></script>
 
-<dialog id="waiver-claim-modal" class="wcm" aria-labelledby="wcm-player-name">
+<dialog id="waiver-claim-modal" class="ui-modal wcm" aria-labelledby="wcm-player-name">
   <!-- Hero identity band — same composite as the player modals. -->
   <div class="wcm-band pmb" id="wcm-band">
     <span class="pmb__ghost" aria-hidden="true"></span>
@@ -603,15 +603,10 @@ const windowLabel = config?.windowLabel ?? '';
      the gradient, ghost wordmark, glow, crest and cutout. */
   .wcm {
     padding: 0;
-    border: none;
-    border-radius: var(--radius-md, 0.5rem);
     max-width: 26rem;
     width: calc(100% - 2rem);
     overflow: hidden;
-    background: var(--content-bg, #ffffff);
-    color: var(--color-gray-900, #111827);
   }
-  .wcm::backdrop { background: rgb(0 0 0 / 0.55); }
 
   .wcm-band {
     display: flex;

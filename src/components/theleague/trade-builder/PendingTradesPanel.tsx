@@ -225,7 +225,7 @@ export default function PendingTradesPanel({
   const sent = trades.filter(t => t.offeredBy === authUser.franchiseId);
 
   return (
-    <div className="ptp-overlay" onClick={onClose}>
+    <div className="ui-scrim ptp-overlay" onClick={onClose}>
       <aside
         ref={panelRef}
         className="ptp-panel"
@@ -446,8 +446,6 @@ export default function PendingTradesPanel({
           position: fixed;
           inset: 0;
           z-index: 1001;
-          background: rgba(15, 23, 42, 0.45);
-          backdrop-filter: blur(2px);
         }
         .ptp-panel {
           position: absolute;

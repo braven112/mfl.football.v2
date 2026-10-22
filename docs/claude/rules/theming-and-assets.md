@@ -286,11 +286,11 @@ apply to it (the splash page's `<span class="cta">` and the CSS-customization
 page's `.cta-link` pills both inherited a border, an arrow and a hover before
 they were renamed).
 
-## Component kit — `ui-badge`, `ui-card`; a page's own look is a fork
+## Component kit — `ui-badge`, `ui-card`, `ui-modal`; a page's own look is a fork
 
-Badges and cards are kit components now, the same shape as CTAs: a global
-stylesheet of zero-specificity `:where()` rules (`src/styles/badge.css`,
-`src/styles/card.css`), imported by all four base layouts and Storybook, worn
+Badges, cards and modals are kit components now, the same shape as CTAs: a
+global stylesheet of zero-specificity `:where()` rules (`src/styles/badge.css`,
+`src/styles/card.css`, `src/styles/modal.css`), imported by all four base layouts and Storybook, worn
 as a class next to the component's own BEM class. Plan, owner's decisions and
 order (Badge → Card → Modal → Tabs → Table): `docs/plans/component-kit.md`.
 Gallery: Storybook › Design System › Component kit.
@@ -299,6 +299,7 @@ Gallery: Storybook › Design System › Component kit.
 |---|---|---|
 | Badge | `ui-badge` + `--caps`, `--inline`, a tone (`--neutral` `--success` `--warning` `--error` `--info` `--accent`) | inline-flex pill shape, 2xs bold type, colours via `--ui-badge-bg` / `--ui-badge-ink` |
 | Card | `ui-card` | the SURFACE only: `--card-bg`, the site style's `--style-card-border` / `--style-card-shadow`, `--radius-md` |
+| Modal | `ui-modal` on the panel or `<dialog>`, `ui-scrim` on a hand-built overlay | ground, ink, `--radius-lg`, `--modal-shadow` (dark adds the card ring), and `--modal-scrim` with the mandated 2px blur (also on `::backdrop`) — never layout, the phone sheet or the animation |
 
 **Two owner's rules (Oct 2026), both load-bearing:**
 
@@ -307,7 +308,10 @@ Gallery: Storybook › Design System › Component kit.
   `tests/fixtures/component-kit-forks.json` with the reason. A fork can be a
   whole league's or one page's. It is theirs to change, and it gives up kit
   fixes — the registry is how anyone finds who to tell.
-- **Moving a page onto the kit is pixel-identical.** A migrated component's
+- **Moving a page onto the Badge or Card kit is pixel-identical** (Modal,
+  Tabs and Table were unified to one look instead, approved from before/after
+  screenshots, so a modal's own class carries NO surface: no background,
+  corner, shadow, border or scrim tint). A migrated component's
   own rule keeps exactly what differs from the kit (it opens with a `Kit:`
   comment saying so), including explicit resets such as `font-weight:
   inherit` where the kit would otherwise have changed it. Do not "tidy" those
@@ -321,7 +325,9 @@ a badge; an `<img>` named `…__badge` is a crest. The guard ignores both.
 
 Guard: `tests/component-kit.test.ts` fails on a label element whose class ends
 in `badge` / `pill` without `ui-badge`, and an element whose class ends in
-`card` without `ui-card`, unless the pair is a registered fork; on a stale
+`card` without `ui-card`, and a `<dialog>` or `role="dialog"` /
+`aria-modal` element without `ui-modal` (or `ui-scrim`, when the role sits on
+the overlay), unless the pair is a registered fork; on a stale
 fork entry; on a layout that stops importing a kit stylesheet; and on a kit
 rule that gains specificity. Like the CTA guard it cannot see a class name
 assembled at runtime, or one set through `el.className =` in a script.

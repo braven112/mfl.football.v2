@@ -126,9 +126,9 @@ export default function MyRankEditor({ importPath }: Props) {
   const compositeLive = activeCount >= 2;
 
   return (
-    <div className="mre" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+    <div className="ui-scrim mre" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <div
-        className="mre__sheet"
+        className="ui-modal mre__sheet"
         role="dialog"
         aria-modal="true"
         aria-labelledby="mre-title"

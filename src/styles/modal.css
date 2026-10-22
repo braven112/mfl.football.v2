@@ -1,0 +1,50 @@
+/* ==========================================================================
+   Modal — the one dialog surface, site-wide (component kit, part 3).
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview, like cta.css, badge.css and card.css. The kit
+   owns the SURFACE of a dialog and the dimmed page behind it: ground, ink,
+   corner, lift, and the scrim. Layout (width, padding, where it sits, the
+   phone bottom sheet, the entrance animation) stays the component's own.
+
+     <div class="ui-scrim my-modal__overlay"></div>
+     <div class="ui-modal my-modal__content" role="dialog">…</div>
+
+     <dialog class="ui-modal my-dialog">…</dialog>   (::backdrop is the scrim)
+
+   A panel that becomes a bottom sheet on a phone squares its own lower
+   corners: border-radius: var(--radius-lg) var(--radius-lg) 0 0.
+
+   Every rule sits inside :where(), so it carries ZERO specificity and a
+   component's own class wins. Unlike badge and card, the modal migration
+   was a deliberate unification (owner's call, 2026-10-22): the dialogs that
+   wore their own corner, shadow or scrim now wear this one.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "Component kit". Guard: tests/component-kit.test.ts.
+   ========================================================================== */
+
+/* --card-bg is a translucent gradient in some dark themes; the solid
+   --card-surface under it keeps the page from showing through the panel. */
+:where(.ui-modal) {
+  background: var(--card-bg);
+  background-color: var(--card-surface);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--modal-shadow);
+}
+
+:where(.ui-modal)::backdrop {
+  background: var(--modal-scrim);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* The frosted blur is the house overlay, not decoration
+   (docs/claude/loading-standards.md). */
+:where(.ui-scrim) {
+  background: var(--modal-scrim);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}

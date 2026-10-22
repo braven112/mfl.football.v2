@@ -115,11 +115,6 @@
   --dr-adp-value-par: var(--color-gray-400, #9ca3af);
 
   /* ── Modal (reuse global modal tokens; local overrides for draft context) ── */
-  --dr-modal-bg: var(--content-bg, #ffffff);
-  --dr-modal-overlay: rgba(17, 24, 39, 0.55);
-  --dr-modal-border: var(--content-border, #e2e8f0);
-  --dr-modal-radius: var(--radius-lg, 0.75rem);
-  --dr-modal-shadow: var(--shadow-xl, 0 20px 40px rgba(0, 0, 0, 0.18));
   --dr-modal-width: min(720px, calc(100vw - 2rem));
 
   /* ── Mobile Tabs ── */
@@ -1817,7 +1812,6 @@ html.dark .dr-side-panel {
 .dr-modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--dr-modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1828,9 +1822,6 @@ html.dark .dr-side-panel {
 .dr-modal {
   width: var(--dr-modal-width);
   max-height: calc(100vh - 2rem);
-  background: var(--dr-modal-bg);
-  border-radius: var(--dr-modal-radius);
-  box-shadow: var(--dr-modal-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2119,7 +2110,6 @@ html.dark .dr-side-panel {
 .dr-confirm-overlay {
   position: fixed;
   inset: 0;
-  background: var(--dr-modal-overlay, rgba(17, 24, 39, 0.55));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2128,10 +2118,6 @@ html.dark .dr-side-panel {
   animation: dr-confirm-fade-in 0.12s ease-out;
 }
 .dr-confirm-dialog {
-  background: var(--dr-modal-bg, var(--card-bg, #fff));
-  border: 1px solid var(--dr-modal-border, var(--content-border, #e2e8f0));
-  border-radius: var(--dr-modal-radius, 0.75rem);
-  box-shadow: var(--dr-modal-shadow, 0 20px 40px rgba(0, 0, 0, 0.18));
   padding: 1.25rem 1.375rem 1.125rem;
   width: min(26rem, calc(100vw - 2rem));
   animation: dr-confirm-slide-in 0.16s var(--dr-easing-ease);

@@ -175,14 +175,14 @@ export default function LvStatSheet({
 
   return createPortal(
     <div
-      className="lv-sheet"
+      className="ui-scrim lv-sheet"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >
       <div
-        className="lv-sheet__panel"
+        className="ui-modal lv-sheet__panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
