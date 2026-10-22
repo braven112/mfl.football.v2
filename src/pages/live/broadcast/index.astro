@@ -110,6 +110,7 @@ const title = boardOnly ? `Broadcast — Week ${week} — MFL Live` : 'Broadcast
 <MflAppLayout
   title={title}
   description="Every score from every league you play in, built for the TV across the room."
+  pairedTvOwner={viewer?.via === 'tv' ? viewer.user.name : null}
 >
   {boardOnly && pageData ? (
     <div class="bcl-board-only">
