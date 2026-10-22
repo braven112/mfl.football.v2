@@ -1,6 +1,6 @@
 import MflLiveLeagueSignIn from '../../src/components/shared/mfl-live/MflLiveLeagueSignIn.astro';
 import { getLeagueBySlug } from '../../src/config/leagues';
-import { themeModes } from '../../.storybook/modes';
+import { mflModes } from '../../.storybook/modes';
 
 /**
  * MFL Live's branded sign-in — what `/live?from=<slug>` shows a signed-out
@@ -11,15 +11,15 @@ import { themeModes } from '../../.storybook/modes';
  * built for (a mark plus a wordmark); `TheLeague` has no wordmark and shows
  * the text-name arm instead.
  *
- * Light + dark, because the page wears the MFL Live theme (and its season
- * theme) around a league's own art.
+ * Light + dark under `mflModes` (`data-league="mfl"`), the palette the page
+ * really renders in — the league brings only its art, never its colours.
  */
 export default {
   title: 'Shared/MFL Live/League sign-in',
   component: MflLiveLeagueSignIn,
   parameters: {
     layout: 'fullscreen',
-    chromatic: { modes: themeModes },
+    chromatic: { modes: mflModes },
   },
   args: {
     league: getLeagueBySlug('archies'),

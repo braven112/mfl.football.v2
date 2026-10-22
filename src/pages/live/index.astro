@@ -39,7 +39,7 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import MflLiveLanding from '../../components/shared/mfl-live/MflLiveLanding.astro';
 import MflLiveLeagueSignIn from '../../components/shared/mfl-live/MflLiveLeagueSignIn.astro';
-import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { getCurrentSeasonYear, getLeagueYearForMflId, getTestDateFromSearchParams } from '../../utils/league-year';
 import { MFL_LIVE_ENTRY_PARAM, resolveMflLiveEntryLeague } from '../../utils/mfl-live-entry';
 import LiveBoard from '../../components/shared/live/LiveBoard';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
@@ -109,6 +109,17 @@ const entryLeague = authUser
   ? null
   : resolveMflLiveEntryLeague(Astro.url.searchParams.get(MFL_LIVE_ENTRY_PARAM));
 
+// The year the branded form signs in against is the ENTRY league's own: Archie's
+// and the AFL roll on June 1, so between Feb 14 and June 1 TheLeague's clock
+// names a year their MFL league does not exist in yet, and `myleagues` for it
+// finds nothing.
+const entryLeagueYear = entryLeague
+  ? getLeagueYearForMflId(
+      entryLeague.id,
+      getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined,
+    )
+  : null;
+
 let board: Board | null = null;
 let assemblyFailed = false;
 
@@ -134,7 +145,7 @@ if (authUser && week) {
 	description="Live scoring for every one of your MyFantasyLeague teams, in one place."
 >
 	{!authUser && entryLeague ? (
-		<MflLiveLeagueSignIn league={entryLeague} seasonYear={getCurrentLeagueYear()} />
+		<MflLiveLeagueSignIn league={entryLeague} seasonYear={entryLeagueYear!} />
 	) : !authUser ? (
 		<MflLiveLanding seasonYear={seasonYear} hostname={Astro.url.hostname} />
 	) : !week ? (

@@ -12,12 +12,13 @@
  * board is the board.
  */
 import LoginForm from '../LoginForm.astro';
+import ThemeImage from '../ThemeImage.astro';
 import { MFL_LOGIN_DEFAULT_REDIRECT } from '../../../utils/mfl-login-redirect';
 import type { LeagueDefinition } from '../../../config/leagues';
 
 interface Props {
 	league: LeagueDefinition;
-	/** The year MFL signs in against (the league-year clock, as on /login). */
+	/** The year MFL signs in against — THIS league's own league-year clock. */
 	seasonYear: number;
 }
 
@@ -27,8 +28,18 @@ const shortName = league.shortName ?? league.name;
 
 <section class="mlsi" data-league-entry={league.slug}>
 	<div class="mlsi__brand">
-		{league.logo?.dark && (
-			<img class="mlsi__mark" src={league.logo.dark} alt="" width="96" height="96" />
+		{/* Both cuts, CSS picks: the page has a light theme too, and a mark
+		    drawn for a dark ground (TheLeague's white shield) vanishes on it. */}
+		{league.logo && (
+			<ThemeImage
+				src={league.logo.light}
+				darkSrc={league.logo.dark}
+				alt=""
+				width={96}
+				height={96}
+				loading="eager"
+				class="mlsi__mark"
+			/>
 		)}
 		{league.wordmark ? (
 			<img class="mlsi__wordmark" src={league.wordmark} alt={shortName} />
@@ -76,7 +87,8 @@ const shortName = league.shortName ?? league.name;
 		max-width: 100%;
 	}
 
-	.mlsi__mark {
+	/* :global — the class lands on ThemeImage's own <img> elements. */
+	.mlsi :global(.mlsi__mark) {
 		width: clamp(4rem, 18vw, 6rem);
 		height: auto;
 		flex: none;

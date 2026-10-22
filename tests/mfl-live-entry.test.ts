@@ -55,3 +55,16 @@ describe('/live wiring', () => {
     expect(page).toMatch(/<InstallAppPrompt[\s\S]*?report=\{false\}/);
   });
 });
+
+describe('the branded sign-in year', () => {
+  it("follows the entry league's own rollover, not TheLeague's", async () => {
+    const { getLeagueYearForMflId, getCurrentLeagueYear } = await import('../src/utils/league-year');
+    const archies = resolveMflLiveEntryLeague('archies')!;
+    // Between TheLeague's Feb 14 rollover and Archie's June 1: the two clocks
+    // disagree, and Archie's MFL league for the new year does not exist yet.
+    const midMarch = new Date('2027-03-15T12:00:00-07:00');
+    expect(getCurrentLeagueYear(midMarch)).toBe(2027);
+    expect(getLeagueYearForMflId(archies.id, midMarch)).toBe(2026);
+    expect(read('src/pages/live/index.astro')).toMatch(/getLeagueYearForMflId\(\s*entryLeague\.id/);
+  });
+});
