@@ -148,7 +148,10 @@ jobs:
 
       # Commit in the baselines checkout (or a fresh orphan repo on the first
       # run), then push that commit from the main checkout, which holds the
-      # deploy key.
+      # deploy key. The baselines checkout is shallow, and git refuses to fetch
+      # from a shallow repo without --update-shallow ("shallow roots are not
+      # allowed to be updated"), which left FETCH_HEAD empty and the push
+      # failing on every staging run, so the baselines never advanced.
       - name: Push baselines
         if: env.UPDATE == 'true'
         run: |
@@ -163,7 +166,7 @@ jobs:
           fi
           git commit -q -m "visual baselines from ${GITHUB_SHA::7}"
           cd "$GITHUB_WORKSPACE"
-          git fetch -q ./tests/visual/__screenshots__ HEAD
+          git fetch -q --update-shallow ./tests/visual/__screenshots__ HEAD
           git push origin FETCH_HEAD:refs/heads/visual-baselines
 
       - name: Upload report
