@@ -214,7 +214,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
 <style>
   .specs h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--font-size-base, 1rem);
     color: var(--page-text, #111827);
   }
   .specs__shrink {
@@ -238,7 +238,8 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     padding: 0.5rem;
     border-radius: var(--radius-sm, 4px);
     background: #ffffff;
-    border: 1px solid var(--color-gray-300, #d1d5db);
+    border: var(--style-card-border, 1px solid var(--color-gray-300, #d1d5db));
+    box-shadow: var(--style-card-shadow, none);
   }
   .specs__shrink img {
     display: block;
@@ -252,7 +253,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     padding-left: 1.1rem;
     max-width: 70ch;
     color: var(--color-gray-600, #4b5563);
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.5;
   }
   .specs__formats li + li {
@@ -286,7 +287,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
   }
   .specs__tag {
     flex: none;
-    font-size: 0.68rem;
+    font-size: var(--font-size-2xs, 0.6875rem);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -306,7 +307,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     grid-template-columns: max-content 1fr;
     gap: 0.25rem 0.75rem;
     margin: 0 0 0.6rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm, 0.875rem);
   }
   .specs__dl dt {
     color: var(--color-gray-500, #6b7280);
@@ -318,7 +319,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
   }
   .specs__card-note {
     margin: 0 0 0.4rem;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm, 0.875rem);
     color: var(--color-gray-600, #4b5563);
   }
   .specs__card-dl {
@@ -380,7 +381,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm, 0.875rem);
   }
   .specs__templates li span {
     flex: 1;
@@ -392,7 +393,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
     border-radius: var(--radius-md, 8px);
     background: var(--content-bg-muted, #eeeeee);
     color: var(--page-text, #111827);
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
