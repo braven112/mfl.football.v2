@@ -30,6 +30,10 @@
  *
  *   pnpm mirror:storybook-dark-logos
  *
+ * ESPN serves a few `500-dark` cuts (GB, LV, NYJ) at 4096x4096. Downscale any
+ * such file to 500x500 before committing: the big ones decode too late for a
+ * visual capture, and the mirror test fails on them.
+ *
  * `tests/storybook-dark-logo-mirror.test.ts` fails if the mirrored set ever
  * drifts from the 32 canonical codes.
  */
