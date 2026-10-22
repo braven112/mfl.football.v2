@@ -1,0 +1,133 @@
+---
+/**
+ * Privacy policy — the shared host's copy, at the ROOT.
+ *
+ * It covers the league sites and the MFL Live apps (the Google TV app is a
+ * full-screen shell around the broadcast board), so it belongs to no league
+ * and lives at the root of the shared host like /instructions. Google Play
+ * requires a public privacy policy URL for every listed app; this is it.
+ *
+ * Keep it true to what the code does: if a new feature stores something about
+ * an owner, it belongs in the list below.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+
+// SSR: the layout reads the theme cookie and the session.
+export const prerender = false;
+
+const updated = 'October 22, 2026';
+---
+
+<MflAppLayout title="Privacy policy — MFL" description="What mfl.football and the MFL Live apps collect, why, and how to have it removed.">
+	<article class="policy">
+		<h1 class="policy__title">Privacy policy</h1>
+		<p class="policy__lede">
+			This covers mfl.football, the league sites built on it, and the MFL Live apps, including the Google TV
+			app. Last updated {updated}.
+		</p>
+
+		<section class="policy__section">
+			<h2>The short version</h2>
+			<p>
+				We keep only what the site needs to show your league and remember that you signed in. We don't sell
+				anything, we don't run ads, and we don't share your information with advertisers.
+			</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>What we collect</h2>
+			<ul>
+				<li>
+					<strong>Your sign-in.</strong> When you sign in, your MyFantasyLeague username and password are sent
+					to MyFantasyLeague to start a session. We don't store your password. We keep the session MFL
+					returns, plus your league and franchise, in a signed cookie on your device.
+				</li>
+				<li>
+					<strong>Page visits.</strong> Each page view records the page, the time and, if you are signed in,
+					your franchise. We use this to see which pages are used and to show "last seen" in your league.
+				</li>
+				<li>
+					<strong>Settings you choose.</strong> Things like theme, preferred team, time zone, rankings and
+					your watch list are saved on your device, and some are saved to your account so they follow you
+					between devices.
+				</li>
+				<li>
+					<strong>Notifications, if you turn them on.</strong> We store the push address your browser or
+					device gives us so we can send the alerts you picked. Turning notifications off deletes it.
+				</li>
+				<li>
+					<strong>Performance data.</strong> Anonymous page-speed measurements through our host, Vercel.
+				</li>
+			</ul>
+		</section>
+
+		<section class="policy__section">
+			<h2>The Google TV app</h2>
+			<p>
+				The app shows the league broadcast board from this website. It collects nothing beyond what the
+				website itself collects (above). It keeps your sign-in cookie on the TV so you don't have to sign in
+				again, and it asks for no other permissions besides network access.
+			</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>Who we share it with</h2>
+			<p>
+				Only the services that run the site: MyFantasyLeague (your league data and sign-in), Vercel (hosting
+				and performance data) and Upstash (where saved settings live). League information, such as rosters
+				and transactions, is visible to the other owners in your league, the same as on MFL.
+			</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>Removing your data</h2>
+			<p>
+				Signing out deletes the session cookie. To have everything stored about your franchise removed, ask
+				your league commissioner, who can pass the request to us, and we'll delete it.
+			</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>Children</h2>
+			<p>These sites and apps are for adult league members and are not directed at children under 13.</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>Changes</h2>
+			<p>If this policy changes, we'll update it here and change the date at the top.</p>
+		</section>
+	</article>
+</MflAppLayout>
+
+<style>
+	.policy {
+		max-width: 46rem;
+		margin: 0 auto;
+		color: var(--page-text);
+	}
+	.policy__title {
+		margin: 0 0 0.35rem;
+		font-size: var(--font-size-2xl);
+	}
+	.policy__lede {
+		margin: 0 0 1.25rem;
+		color: var(--color-text-secondary);
+	}
+	.policy__section {
+		padding: 1.1rem 0;
+		border-top: 1px solid var(--color-border-subtle);
+	}
+	.policy__section h2 {
+		margin: 0 0 0.6rem;
+		font-size: var(--font-size-lg);
+	}
+	.policy__section p,
+	.policy__section li {
+		margin: 0 0 0.6rem;
+		line-height: 1.55;
+	}
+	.policy__section ul {
+		margin: 0;
+		padding-left: 1.25rem;
+	}
+</style>

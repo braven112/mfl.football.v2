@@ -1,0 +1,92 @@
+name: Android TV app
+
+# Builds the MFL Live Google TV app (android-tv/): a debug APK to sideload and,
+# when the upload key is configured, a signed release bundle (.aab) to upload
+# to Play Console. The app is a full-screen shell around the web broadcast
+# board, so most changes to what the TV shows ship with the SITE, not here —
+# this only needs to run when android-tv/ itself changes.
+#
+# Signing: the upload keystore lives only in repository secrets, never in the
+# repo. Without MFL_TV_KEYSTORE_BASE64 the job still builds the debug APK and
+# skips the bundle.
+
+on:
+  pull_request:
+    paths:
+      - 'android-tv/**'
+      - '.github/workflows/android-tv.yml'
+  push:
+    branches: [main, staging]
+    paths:
+      - 'android-tv/**'
+      - '.github/workflows/android-tv.yml'
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: 'Page the TV opens (blank = the app default)'
+        required: false
+        default: ''
+
+concurrency:
+  group: android-tv-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-tv
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Restore upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MFL_TV_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "MFL_TV_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "HAS_UPLOAD_KEY=true" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No upload key secret; building the debug APK only."
+          fi
+
+      - name: Build
+        env:
+          MFL_TV_KEYSTORE_PASSWORD: ${{ secrets.MFL_TV_KEYSTORE_PASSWORD }}
+          MFL_TV_KEY_ALIAS: ${{ secrets.MFL_TV_KEY_ALIAS }}
+          MFL_TV_KEY_PASSWORD: ${{ secrets.MFL_TV_KEY_PASSWORD }}
+          START_URL: ${{ inputs.start_url }}
+        run: |
+          chmod +x gradlew
+          # Play rejects a repeated versionCode, so every run gets a new one.
+          ARGS="-PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}"
+          if [ -n "$START_URL" ]; then ARGS="$ARGS -PstartUrl=$START_URL"; fi
+          TASKS="assembleDebug"
+          if [ "$HAS_UPLOAD_KEY" = "true" ]; then TASKS="$TASKS bundleRelease"; fi
+          ./gradlew --no-daemon $ARGS $TASKS
+
+      - name: Upload debug APK (sideload)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl-live-tv-debug-apk
+          path: android-tv/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload release bundle (Play Console)
+        if: env.HAS_UPLOAD_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl-live-tv-release-aab
+          path: android-tv/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
