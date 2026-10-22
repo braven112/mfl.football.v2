@@ -1,0 +1,121 @@
+---
+/**
+ * MflLiveLeagueSignIn — the signed-out `/live?from=<slug>` page.
+ *
+ * The sign-in form under the sending league's own mark, so an owner who
+ * clicked through from their league's site lands somewhere that looks like
+ * home. See `src/utils/mfl-live-entry.ts` for who may be named here.
+ *
+ * After sign-in the owner gets the standard MFL Live board, whatever season
+ * theme it is wearing. The league is only the welcome, not a different app:
+ * the redirect is plain `/live`, without the `from`, so a bookmark of the
+ * board is the board.
+ */
+import LoginForm from '../LoginForm.astro';
+import { MFL_LOGIN_DEFAULT_REDIRECT } from '../../../utils/mfl-login-redirect';
+import type { LeagueDefinition } from '../../../config/leagues';
+
+interface Props {
+	league: LeagueDefinition;
+	/** The year MFL signs in against (the league-year clock, as on /login). */
+	seasonYear: number;
+}
+
+const { league, seasonYear } = Astro.props;
+const shortName = league.shortName ?? league.name;
+---
+
+<section class="mlsi" data-league-entry={league.slug}>
+	<div class="mlsi__brand">
+		{league.logo?.dark && (
+			<img class="mlsi__mark" src={league.logo.dark} alt="" width="96" height="96" />
+		)}
+		{league.wordmark ? (
+			<img class="mlsi__wordmark" src={league.wordmark} alt={shortName} />
+		) : (
+			<span class="mlsi__name">{shortName}</span>
+		)}
+	</div>
+
+	<p class="mlsi__eyebrow">Live scoring</p>
+	<h1 class="mlsi__title">{league.name}</h1>
+
+	<LoginForm
+		scope="mfl-live"
+		redirectUrl={MFL_LOGIN_DEFAULT_REDIRECT}
+		fallbackRedirect={MFL_LOGIN_DEFAULT_REDIRECT}
+		formLabel={`Sign in to ${shortName} live scoring`}
+		showLogo={false}
+		seasonYear={seasonYear}
+		subtitle="Use your MyFantasyLeague username and password"
+	/>
+
+	<p class="mlsi__note">
+		The same sign-in you use on MyFantasyLeague. Once you&rsquo;re in, every league your
+		account plays in scores live on one board.
+	</p>
+</section>
+
+<style>
+	.mlsi {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		/* Not vertically centred: on a phone the keyboard opening would shove
+		   the form up past the top of the viewport (same as /login). */
+		padding: clamp(1.5rem, 6vh, 3.5rem) 1rem 3rem;
+		text-align: center;
+	}
+
+	.mlsi__brand {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		max-width: 100%;
+	}
+
+	.mlsi__mark {
+		width: clamp(4rem, 18vw, 6rem);
+		height: auto;
+		flex: none;
+	}
+
+	.mlsi__wordmark {
+		width: auto;
+		max-width: min(14rem, 55vw);
+		max-height: 5rem;
+		min-width: 0;
+	}
+
+	.mlsi__name {
+		font-size: clamp(1.75rem, 7vw, 2.5rem);
+		font-weight: 800;
+		color: var(--page-text);
+	}
+
+	.mlsi__eyebrow {
+		margin: 0.75rem 0 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--league-accent);
+	}
+
+	.mlsi__title {
+		margin: 0 0 0.5rem;
+		font-size: clamp(1.25rem, 5vw, 1.75rem);
+		line-height: 1.2;
+		color: var(--page-text);
+	}
+
+	.mlsi__note {
+		max-width: 400px;
+		margin: 1rem 0 0;
+		font-size: var(--font-size-sm);
+		line-height: 1.55;
+		color: var(--color-text-secondary, var(--color-gray-500));
+	}
+</style>

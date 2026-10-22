@@ -28,6 +28,9 @@
  * so there is a real page to show, and a board you can look at before signing
  * in explains itself better than a login form does.
  *
+ * A league's own link, `/live?from=<slug>`, shows that league's branded
+ * sign-in in place of the sales page (`src/utils/mfl-live-entry.ts`).
+ *
  * Sign-in goes to the app's OWN `/login`, which defaults back here. It used to
  * point at `/theleague/login`, whose `?redirect=` is validated against
  * `startsWith('/theleague')` — so the trip back to this page was silently
@@ -35,8 +38,12 @@
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import MflLiveLanding from '../../components/shared/mfl-live/MflLiveLanding.astro';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import MflLiveLeagueSignIn from '../../components/shared/mfl-live/MflLiveLeagueSignIn.astro';
+import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { MFL_LIVE_ENTRY_PARAM, resolveMflLiveEntryLeague } from '../../utils/mfl-live-entry';
 import LiveBoard from '../../components/shared/live/LiveBoard';
+import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
+import { getLeagueById } from '../../config/leagues';
 import { mflLiveSeason } from '../../utils/mfl-live-season';
 import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
 import { getMflLiveUser } from '../../utils/auth';
@@ -96,6 +103,12 @@ const isLive = getDailySlot(now).slot === 'live-scoring';
 // so the season-year clock.
 const seasonYear = getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined);
 
+// A league's own link (`/live?from=archies`) swaps the signed-out sales page
+// for its branded sign-in. Signed in, it is ignored: one board for everyone.
+const entryLeague = authUser
+  ? null
+  : resolveMflLiveEntryLeague(Astro.url.searchParams.get(MFL_LIVE_ENTRY_PARAM));
+
 let board: Board | null = null;
 let assemblyFailed = false;
 
@@ -120,7 +133,9 @@ if (authUser && week) {
 	title="MFL Live — all your fantasy teams, one board"
 	description="Live scoring for every one of your MyFantasyLeague teams, in one place."
 >
-	{!authUser ? (
+	{!authUser && entryLeague ? (
+		<MflLiveLeagueSignIn league={entryLeague} seasonYear={getCurrentLeagueYear()} />
+	) : !authUser ? (
 		<MflLiveLanding seasonYear={seasonYear} hostname={Astro.url.hostname} />
 	) : !week ? (
 		<section class="mfl-live-intro">
@@ -141,6 +156,22 @@ if (authUser && week) {
 		</section>
 	) : (
 		<div class="mfl-live-board">
+			{/* The install pitch, for signed-in owners only: a dismissible banner
+			    that retires itself once the app is installed. Never reported to
+			    `/api/app-install` — that record is the LEAGUE site's app, and
+			    MFL Live is a different one. */}
+			<InstallAppPrompt
+				variant="banner"
+				leagueName="MFL Live"
+				leagueSlug={getLeagueById(authUser.leagueId)?.slug ?? 'mfl-live'}
+				report={false}
+				bannerCopy={{
+					title: 'Put MFL Live on your Home Screen',
+					prompt: 'Install the app and your live scores are one tap away all game day, full screen, no browser tab.',
+					ios: 'On iPhone, tap Share, then Add to Home Screen, and live scoring opens like an app. Takes about five seconds.',
+					lastStep: 'Open MFL Live from your Home Screen.',
+				}}
+			/>
 			<LiveBoard
 				client:load
 				board={fromMflLiveBoard(board)}
