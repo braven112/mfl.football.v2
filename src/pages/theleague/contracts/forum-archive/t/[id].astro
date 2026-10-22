@@ -1,0 +1,166 @@
+---
+/**
+ * One thread of the forum archive, every post in order. Each post is anchored
+ * `#p<post id>` so a search hit, an Ask Schefter receipt or the Tag History
+ * page can link to the exact post. Members only, like the rest of the archive.
+ */
+import TheLeagueLayout from '../../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../../components/shared/Breadcrumbs.astro';
+import ErrorState from '../../../../../components/shared/states/ErrorState.astro';
+import EmptyState from '../../../../../components/shared/states/EmptyState.astro';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../../../utils/login-redirect';
+import { forumArchiveAccess } from '../../../../../utils/forum-archive/archive-access';
+import { loadForumArchive } from '../../../../../utils/forum-archive/forum-archive-store';
+import { renderArchiveMarkdown } from '../../../../../utils/forum-archive/archive-markdown';
+import { formatArchiveDate } from '../../../../../utils/forum-archive/archive-download';
+import {
+  FORUM_ARCHIVE_PATH,
+  forumArchiveSectionPath,
+} from '../../../../../utils/forum-archive/archive-paths';
+import { leagueClock } from '../../../../../config/leagues';
+
+const access = forumArchiveAccess(Astro.request);
+if (!access.user) return Astro.redirect(loginUrlForRequest(Astro, access.league));
+if (!access.member) return Astro.rewrite(forbiddenPathFor(access.league, 'league'));
+
+const zone = leagueClock(access.league.slug).zone;
+const date = (t: number) => formatArchiveDate(t, zone);
+const time = (t: number) =>
+  new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(t * 1000));
+
+const topicId = Number(Astro.params.id);
+const load = await loadForumArchive();
+const archive = load.status === 'ok' ? load.archive : null;
+const topic = archive && Number.isInteger(topicId) ? archive.topicById.get(topicId) : undefined;
+const forum = topic ? archive!.forumById.get(topic.forumId) : undefined;
+const posts = topic ? archive!.postsByTopic.get(topic.id) ?? [] : [];
+if (archive && !topic) Astro.response.status = 404;
+const sectionLabel = forum ? forum.path.slice(1).join(' › ') || forum.name : 'Board';
+---
+
+<TheLeagueLayout title={`${topic?.title ?? 'Thread'} | Forum Archive | The League`}>
+  <div class="fat-page" data-forum-archive-thread data-league={access.league.slug}>
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'Forum Archive', href: FORUM_ARCHIVE_PATH },
+      ...(forum ? [{ label: sectionLabel, href: forumArchiveSectionPath(forum.id) }] : []),
+      { label: topic ? 'Thread' : 'Not found' },
+    ]} />
+
+    {load.status === 'unavailable' && (
+      <ErrorState
+        title="The archive could not be read"
+        body="The posts are still there; the storage that holds them did not answer. Reload in a minute."
+        actions={[{ label: 'Back to the archive', href: FORUM_ARCHIVE_PATH }]}
+      />
+    )}
+    {load.status === 'empty' && (
+      <EmptyState title="The archive has not been loaded yet" actions={[{ label: 'Back to the archive', href: FORUM_ARCHIVE_PATH }]} />
+    )}
+    {archive && !topic && (
+      <EmptyState
+        title="No thread with that number"
+        body="It may have been removed from the old board before the export."
+        actions={[{ label: 'Search the archive', href: FORUM_ARCHIVE_PATH }]}
+      />
+    )}
+
+    {topic && (
+      <>
+        <header class="fat-header">
+          <p class="fat-kicker">From the archives · {sectionLabel}</p>
+          <h1 class="fat-title">{topic.title}</h1>
+          <p class="fat-sub">Started by {topic.author} · {date(topic.startedAt)} · {topic.postCount} post{topic.postCount === 1 ? '' : 's'}</p>
+        </header>
+
+        <ol class="fat-posts">
+          {posts.map((post, i) => (
+            <li class="fat-post" id={`p${post.id}`}>
+              <div class="fat-post__head">
+                <span class="fat-post__author">{post.author}</span>
+                <a class="fat-post__when" href={`#p${post.id}`} title={`Post ${post.id}`}>
+                  {date(post.time)} · {time(post.time)}
+                </a>
+              </div>
+              {i > 0 && post.subject && !/^re:/i.test(post.subject) && post.subject !== topic.title && (
+                <p class="fat-post__subject">{post.subject}</p>
+              )}
+              <div class="fat-post__body" set:html={renderArchiveMarkdown(post.body) || '<p><em>(empty post)</em></p>'} />
+            </li>
+          ))}
+        </ol>
+
+        <p class="fat-foot">
+          <a class="cta cta--ghost" href={FORUM_ARCHIVE_PATH}>Back to the archive</a>
+        </p>
+      </>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .fat-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1rem 1rem 3rem;
+    color: var(--page-text);
+  }
+  .fat-header { margin: 0.5rem 0 1rem; }
+  .fat-kicker {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .fat-title {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .fat-sub { margin: 0.25rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .fat-posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+  .fat-post {
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--radius-lg);
+    padding: 0.875rem 1rem;
+    min-width: 0;
+    scroll-margin-top: 5rem;
+  }
+  .fat-post:target {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+  .fat-post__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.125rem 0.75rem;
+    font-size: var(--font-size-sm);
+  }
+  .fat-post__author { font-weight: 700; }
+  .fat-post__when { color: var(--content-text-muted); text-decoration: none; font-size: var(--font-size-xs); }
+  .fat-post__subject { margin: 0.25rem 0 0; font-weight: 600; font-size: var(--font-size-sm); }
+  .fat-post__body {
+    margin-top: 0.5rem;
+    font-size: var(--font-size-base);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .fat-post__body :global(p) { margin: 0 0 0.625rem; }
+  .fat-post__body :global(p:last-child) { margin-bottom: 0; }
+  .fat-post__body :global(blockquote) {
+    margin: 0 0 0.625rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--content-bg-muted);
+    border-left: 3px solid var(--content-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: var(--font-size-sm);
+  }
+  .fat-post__body :global(ul) { margin: 0 0 0.625rem; padding-left: 1.25rem; }
+  .fat-foot { margin-top: 1.5rem; }
+</style>
