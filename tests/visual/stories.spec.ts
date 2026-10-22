@@ -77,6 +77,38 @@ for (const story of stories) {
       );
       expect(error, `${story.id} threw while rendering`).toBeNull();
       await page.evaluate(() => document.fonts.ready);
+      // A `loading="lazy"` image below the fold starts loading only when the
+      // full-page capture grows the viewport, so it lands between the two
+      // screenshots toHaveScreenshot needs to match (Free Agents' position
+      // leaders: the second crest down failed "two consecutive stable
+      // screenshots"). The dark theme also swaps a club's mark through CSS
+      // `content: url(...)`, which fetches its own file. Load and decode both
+      // now; one that fails or is aborted counts as settled.
+      await page.evaluate(() => {
+        const settle = (img: HTMLImageElement) =>
+          (img.complete
+            ? img.decode()
+            : new Promise((done) => {
+                img.addEventListener('load', done, { once: true });
+                img.addEventListener('error', done, { once: true });
+              })
+          ).catch(() => null);
+        const swapped = new Set<string>();
+        for (const img of Array.from(document.images)) {
+          const url = /^url\("?(.*?)"?\)$/.exec(getComputedStyle(img).content)?.[1];
+          if (url) swapped.add(url);
+        }
+        const loads = Array.from(document.images, (img) => {
+          img.loading = 'eager';
+          return settle(img);
+        });
+        for (const src of swapped) {
+          const img = new Image();
+          img.src = src;
+          loads.push(settle(img));
+        }
+        return Promise.all(loads);
+      });
       if (story.delay) await page.waitForTimeout(story.delay);
 
       // A story added in this PR has no baseline yet. That is not a failure:

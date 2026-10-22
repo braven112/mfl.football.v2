@@ -91,6 +91,20 @@ describe('Storybook NFL dark-logo mirror', () => {
       .sort();
     expect(onDisk).toEqual([...STORYBOOK_NFL_DARK_CODES].sort());
   });
+
+  it('keeps every mark at 500px — a 4096px cut paints too late to capture', () => {
+    // ESPN's `500-dark` path serves GB, LV and NYJ at 4096x4096. A `content:`
+    // swap decodes off the main thread, and that decode outlasted the visual
+    // test's capture: Free Agents' position leaders baselined the Packers mark
+    // once and captured an empty card on the next run. A re-mirror brings the
+    // big files back, so downscale them before committing.
+    for (const code of STORYBOOK_NFL_DARK_CODES) {
+      const buf = fs.readFileSync(path.join(MIRROR_DIR, `${code}.png`));
+      // IHDR: width and height are the big-endian words at bytes 16 and 20.
+      const size = [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+      expect(size, `${code}.png is ${size.join('x')}; downscale it to 500x500`).toEqual([500, 500]);
+    }
+  });
 });
 
 /**
