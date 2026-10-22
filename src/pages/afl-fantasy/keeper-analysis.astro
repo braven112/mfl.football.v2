@@ -16,7 +16,8 @@ import YearSelector from '../../components/shared/YearSelector.astro';
 import KeeperAnalysisCard from '../../components/afl-fantasy/KeeperAnalysisCard.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
+import { liveRostersFeed } from '../../utils/rosters/live-rosters-feed';
 import { getConferenceShort, isValidConferenceId } from '../../utils/afl-conference';
 import { getTierForYear } from '../../utils/afl-tier';
 import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
@@ -137,6 +138,16 @@ const teamsById = new Map<string, AflTeamEntry>(
   (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
 );
 
+// The points season's own rosters, live while it is the current league year:
+// the committed rosters.json is a once-a-day snapshot
+// (scripts/lib/held-sync-files.mjs), and through keeper season a day-old copy
+// grades a class that has since changed. Earlier seasons are final on disk.
+const committedCurRosters = feed<MflRostersFeed>(selectedYear, 'rosters.json');
+const curRosters =
+  selectedYear === getLeagueYearForSlug(league.slug)
+    ? await liveRostersFeed(committedCurRosters, selectedYear, league.leagueId)
+    : committedCurRosters;
+
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
     rosters: { franchise: [] },
@@ -144,7 +155,7 @@ const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevPlayers: feed<MflPlayersFeed>(prevYear, 'players.json'),
   curPlayers: feed<MflPlayersFeed>(selectedYear, 'players.json'),
   curWeeklyRaw: feed<WeeklyResultsRaw>(selectedYear, 'weekly-results-raw.json'),
-  curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
+  curRosters,
   curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
   keeperSnapshots,
 });

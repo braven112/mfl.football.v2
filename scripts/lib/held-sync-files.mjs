@@ -16,6 +16,8 @@
  * Dependency-free (raw REST via ./redis.mjs), like the commit step it feeds.
  */
 import { redisCommand } from './redis.mjs';
+import { leagueYearFor } from './schefter-league-year.mjs';
+import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
 
 export const SNAPSHOT_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -28,6 +30,17 @@ export const injuriesKey = (slug) => `mfl:injuries:${slug}`;
  * - `theleague-salaries`: the enriched salary feed. No page reads it (they
  *   read the root src/data copy); only schefter-trade-speculation does, from
  *   disk, so a once-a-day snapshot is all it needs.
+ * - `rosters`: the CURRENT league year's `rosters.json` and `transactions.json`,
+ *   plus `derived/top-players.json`, which the sync recomputes from them. Every
+ *   page that shows who holds whom reads them live — the roster cache
+ *   (`getCachedRosterFranchises` / `getCachedRosters`, which fetches MFL
+ *   itself) and the recent-transactions cache, which overlays the last 3 days
+ *   on the file — so neither needs a Redis copy from this job: a copy would sit
+ *   in the same Redis whose outage is the only time the fallback renders. An
+ *   archive year is never held (it no longer moves, and nothing overlays it).
+ *   One group, so the three always snapshot together and the committed
+ *   leaderboard agrees with the committed rosters (tests/top-players-data).
+ *   The live readers are pinned by tests/sync-noise-commit-guard.test.ts.
  */
 export const HELD_GROUPS = [
   {
@@ -38,6 +51,12 @@ export const HELD_GROUPS = [
   {
     group: 'theleague-salaries',
     match: /^src\/data\/theleague\/mfl-player-salaries-\d{4}\.json$/,
+  },
+  {
+    group: 'rosters',
+    // m[1] the league's data dir, m[2] the feed year (absent for top-players).
+    match: /^data\/([^/]+)\/(?:mfl-feeds\/(\d{4})\/(?:rosters|transactions)\.json|derived\/top-players\.json)$/,
+    currentYearOnly: true,
   },
 ];
 
@@ -66,6 +85,18 @@ export function currentLastVisitFiles(paths) {
     .map((m) => ({ path: m[0], key: lastVisitKey(m[1]) }));
 }
 
+/**
+ * Is `year` the league year MFL is live in for the league whose data lives in
+ * `data/<dir>`? Each league's own rollover (registry `leagueYearRollover`: the
+ * AFL's is June 1), so from Feb 14 to June 1 the AFL's new-year files — which
+ * nothing overlays yet — commit as before. An unknown directory is never
+ * current, so it commits as before too.
+ */
+export function isCurrentLeagueYear(dir, year, now = new Date()) {
+  const league = ALL_LEAGUES.find((l) => l.dataPath === `data/${dir}`);
+  return !!league && year === leagueYearFor(league, now);
+}
+
 const snapshotKey = (group) => `mfl:held-sync:snapshot-at:${group}`;
 
 /** Tracked files the run modified (`git status --porcelain` lines); new files are never held. */
@@ -76,13 +107,18 @@ export function modifiedPaths(porcelain) {
     .map((line) => line.slice(3).trim());
 }
 
-/** Group the modified paths by held group, keeping each path's regex match. */
-export function heldChanges(paths, groups = HELD_GROUPS) {
+/**
+ * Group the modified paths by held group, keeping each path's regex match. A
+ * `currentYearOnly` group takes a year-keyed path only when `isCurrent` says
+ * that year is live; anything else is left for the commit.
+ */
+export function heldChanges(paths, groups = HELD_GROUPS, { isCurrent = isCurrentLeagueYear } = {}) {
   const out = new Map();
   for (const p of paths) {
     for (const g of groups) {
       const m = p.match(g.match);
       if (!m) continue;
+      if (g.currentYearOnly && m[2] && !isCurrent(m[1], Number(m[2]))) continue;
       if (!out.has(g.group)) out.set(g.group, { def: g, files: [] });
       out.get(g.group).files.push({ path: p, match: m });
       break;

@@ -23,6 +23,7 @@ import { getLeagueContext } from '../../../utils/league-context';
 import { getLeagueBySlug, ensureLeaguePrefix } from '../../../config/leagues';
 import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import { resolveDraftAvailability } from '../../../utils/draft-availability';
+import { liveRostersFeed } from '../../../utils/rosters/live-rosters-feed';
 import '../../../styles/player-cell.css';
 import '../../../styles/custom-rankings.css';
 import '../../../styles/player-action-button.css';
@@ -150,6 +151,11 @@ for (const [fp, mod] of Object.entries(projScoreFeeds)) {
 for (const [fp, mod] of Object.entries(rostersFeeds)) {
   if (extractFeedSeason(fp) === leagueYearStr) { rostersData = getModuleData(mod); break; }
 }
+// Live, because "Available only" is a claim about who is on a roster RIGHT
+// NOW: the committed rosters.json is a once-a-day snapshot
+// (scripts/lib/held-sync-files.mjs), and on draft night a day-old copy offers
+// players already taken. Falls back to the committed copy.
+rostersData = await liveRostersFeed(rostersData, leagueYear, league.id);
 
 // Build maps for VORP
 const projectedScores = new Map<string, number>();

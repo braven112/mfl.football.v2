@@ -26,6 +26,7 @@ import { resolveCollegeDarkLogoUrl } from './college-logo-dark-css';
 import { usesCollegeOrigin } from './pick-reveal';
 import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
 import collegeLogos from '../data/college-logos.json';
+import { liveRostersFeed } from './rosters/live-rosters-feed';
 
 function readJson(relPath: string): any {
   try {
@@ -306,6 +307,24 @@ function isPlausiblyDraftable(p: BroadcastPlayer): boolean {
 }
 
 /**
+ * The rosters feed the keeper and holdings readers below work from.
+ *
+ * Live for the current league year: the committed rosters.json is a
+ * once-a-day snapshot (scripts/lib/held-sync-files.mjs), so on draft night it
+ * can miss a keeper cut or a trade made that afternoon. Any other year — a
+ * rehearsal replays a finished draft — reads the committed file, which is
+ * final, and so does any live failure.
+ */
+export async function loadRostersFeed(
+  dataPath: string,
+  year: number,
+  { liveYear, leagueId }: { liveYear: number; leagueId: string }
+): Promise<any> {
+  const committed = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  return year === liveYear ? liveRostersFeed(committed, year, leagueId) : committed;
+}
+
+/**
  * Players a conference's franchises are KEEPING, and therefore never draft.
  *
  * Derived as "rostered by this conference, minus anyone already on the board"
@@ -324,9 +343,11 @@ export function loadConferenceKeepers(
   dataPath: string,
   year: number,
   franchiseIds: ReadonlySet<string>,
-  draftedIds: ReadonlySet<string>
+  draftedIds: ReadonlySet<string>,
+  /** From {@link loadRostersFeed}; omitted, the committed file is read. */
+  rostersFeed?: unknown
 ): Set<string> {
-  const raw = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  const raw: any = rostersFeed ?? readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
   const kept = new Set<string>();
   for (const f of toArray<any>(raw?.rosters?.franchise)) {
     if (!f?.id || !franchiseIds.has(f.id)) continue;
@@ -367,9 +388,11 @@ export function loadFranchiseHoldings(
   year: number,
   franchiseIds: ReadonlySet<string>,
   draftedIds: ReadonlySet<string>,
-  players: BroadcastPlayer[]
+  players: BroadcastPlayer[],
+  /** From {@link loadRostersFeed}; omitted, the committed file is read. */
+  rostersFeed?: unknown
 ): Record<string, RosterHolding[]> {
-  const raw = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  const raw: any = rostersFeed ?? readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
   // The UNTRIMMED pool, so a holding can be resolved even when he is nobody's
   // draft pick — which is most of them.
   const byId = new Map(players.map((p) => [p.id, p]));

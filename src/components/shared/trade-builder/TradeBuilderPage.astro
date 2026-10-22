@@ -21,6 +21,7 @@ import { getCachedTradeBait } from '../../../utils/mfl-trade-bait-cache';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { feedForYear, rosterYears, type EagerFeedGlob } from '../../../utils/rosters/roster-page-feeds';
 import { rosterPools, type PoolConference, type PoolDivision } from '../../../utils/rosters/roster-pools';
+import { liveRostersFeed } from '../../../utils/rosters/live-rosters-feed';
 
 /** One club, as the builder needs it. AFL teams and a package league's config teams both fit. */
 export interface TradeBuilderTeam {
@@ -80,7 +81,7 @@ const poolLabel = (code: string | null | undefined) => (code ? poolShort[code] ?
 const availableYears = rosterYears(feeds.rosters);
 const selectedYear = availableYears[0] ?? fallbackYear;
 
-const rostersData = feedForYear(feeds.rosters, selectedYear, 'rosters.json') as any;
+const committedRostersData = feedForYear(feeds.rosters, selectedYear, 'rosters.json') as any;
 const playersData = feedForYear(feeds.players, selectedYear, 'players.json') as any;
 const adpData = feedForYear(feeds.adp, selectedYear, feeds.adpFile) as any;
 const picksData = feedForYear(feeds.picks, selectedYear, 'futureDraftPicks.json') as any;
@@ -115,8 +116,18 @@ const isAflOwner = !!authUser && authUser.leagueId === league.id && !!authUser.f
 // committed feeds year) lags getAflLeagueYear() and this gate goes false —
 // flags written to the new year won't render until that sync lands.
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+const isLiveYear = selectedYear === getLeagueYearForSlug(PAGE_LEAGUE_SLUG, testDate ?? undefined);
+
+// Who holds whom, live for the current league year: the committed rosters.json
+// is a once-a-day snapshot now (scripts/lib/held-sync-files.mjs), and a trade
+// built off it can offer a player his owner already dropped. Same gate as the
+// trade bait below — only an owner ever sees the marketplace.
+const rostersData = isAflOwner && isLiveYear
+  ? await liveRostersFeed(committedRostersData, selectedYear, league.id)
+  : committedRostersData;
+
 const liveTradeBait =
-  isAflOwner && selectedYear === getLeagueYearForSlug(PAGE_LEAGUE_SLUG, testDate ?? undefined)
+  isAflOwner && isLiveYear
     ? await getCachedTradeBait(String(selectedYear), league.id, authUser!.id)
     : null;
 const tradeBlockByFranchise = liveTradeBait

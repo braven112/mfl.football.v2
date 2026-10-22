@@ -36,6 +36,7 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import { calculateAllSurplusValues } from '../../../utils/surplus-value';
 import { buildPickValueMap } from '../../../utils/draft-pick-value';
 import type { PlayerSurplusData, DraftPickValueData } from '../../../types/trade-builder';
+import { liveRostersFeed } from '../../../utils/rosters/live-rosters-feed';
 
 export const prerender = false;
 
@@ -106,7 +107,14 @@ const findFeed = (feeds: Record<string, unknown>, year: string, extractFn: (fp: 
   return null;
 };
 
-const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
+// Live for the league year: the committed rosters.json is a once-a-day
+// snapshot (scripts/lib/held-sync-files.mjs), and the cap math below is only
+// as right as the roster it adds up. Falls back to the committed copy.
+const rostersData = await liveRostersFeed(
+  findFeed(rostersFeeds, leagueYearStr, extractFeedSeason),
+  leagueYear,
+  THELEAGUE_ID,
+);
 const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);

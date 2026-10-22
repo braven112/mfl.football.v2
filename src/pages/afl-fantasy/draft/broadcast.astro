@@ -49,6 +49,7 @@ import {
   hasDraftSlots,
   loadConferenceKeepers,
   loadFranchiseHoldings,
+  loadRostersFeed,
   trimToDraftable,
 } from '../../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
@@ -207,11 +208,17 @@ const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
 // Keepers are conference-scoped because `duplicatePlayers` lets the National
 // League keep a man the American League can still draft.
 const conferenceFranchiseIds = new Set(conferenceTeams.map((t: any) => t.franchiseId));
+// Live tonight, committed for a rehearsal — see loadRostersFeed.
+const rostersFeed = await loadRostersFeed(league.dataPath, leagueYear, {
+  liveYear: defaultYear,
+  leagueId: league.id,
+});
 const keptIds = loadConferenceKeepers(
   league.dataPath,
   leagueYear,
   conferenceFranchiseIds,
-  boardPlayerIds
+  boardPlayerIds,
+  rostersFeed
 );
 const ranked = assignBoardRanks(enriched, keptIds);
 
@@ -226,7 +233,8 @@ const holdings = loadFranchiseHoldings(
   leagueYear,
   conferenceFranchiseIds,
   boardPlayerIds,
-  ranked
+  ranked,
+  rostersFeed
 );
 
 // A team defense has no headshot of its own, so the reveal card stands two of

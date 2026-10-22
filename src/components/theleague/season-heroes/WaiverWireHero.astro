@@ -41,6 +41,8 @@ import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
 import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
 import PlayerCell from '../../shared/PlayerCell.astro';
 import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { liveRostersFeed, rosteredIdsOf } from '../../../utils/rosters/live-rosters-feed';
 
 export interface Props {
   state: HeroState;
@@ -62,7 +64,15 @@ const referenceDate = state.metadata.referenceDate;
 // order — the same cast as the AFL's waiver card. An empty roster set means the
 // feed is unreadable, so nobody is claimed to be available.
 const castYear = getCurrentLeagueYear(referenceDate);
-const rosteredForCast = getRosteredPlayerIds(castYear, 'theleague');
+// Who is rostered RIGHT NOW, or the hero pitches a player claimed this
+// morning: the committed rosters.json is a once-a-day snapshot
+// (scripts/lib/held-sync-files.mjs). Live only for the real league year (a
+// ?testDate= in another year reads that year's file); an empty live answer
+// falls back to the committed copy.
+const liveRostered = castYear === getCurrentLeagueYear()
+  ? rosteredIdsOf(await liveRostersFeed(null, castYear, getLeagueBySlug('theleague')!.id))
+  : new Set<string>();
+const rosteredForCast = liveRostered.size > 0 ? liveRostered : getRosteredPlayerIds(castYear, 'theleague');
 const castModel = rosteredForCast.size > 0
   ? castTopFreeAgentModel(getUnifiedPlayerMap(castYear), referenceDate, rosteredForCast, getAdpRankedIds(castYear, 'theleague'))
   : null;
@@ -104,8 +114,12 @@ for (const p of allPlayers) {
   playerMap.set(p.id, p);
 }
 
-const ownedIds = new Set<string>();
-const allFranchises = rostersData?.rosters?.franchise ?? rostersData?.default?.rosters?.franchise ?? [];
+// The live roster set when it answers for this year, else the committed feed.
+const useLiveOwned = year === castYear && liveRostered.size > 0;
+const ownedIds = new Set<string>(useLiveOwned ? liveRostered : []);
+const allFranchises = useLiveOwned
+  ? []
+  : rostersData?.rosters?.franchise ?? rostersData?.default?.rosters?.franchise ?? [];
 for (const f of allFranchises) {
   const players = Array.isArray(f.player) ? f.player : f.player ? [f.player] : [];
   for (const p of players) {

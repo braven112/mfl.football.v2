@@ -9,6 +9,7 @@ import {
   currentInjuryFiles,
   heldChanges,
   injuriesKey,
+  isCurrentLeagueYear,
   modifiedPaths,
   planHeldFiles,
   publishLiveFiles,
@@ -20,6 +21,11 @@ const INJ = 'data/theleague/mfl-feeds/2026/injuries.json';
 const AFL_INJ = 'data/afl-fantasy/mfl-feeds/2026/injuries.json';
 const SAL = 'src/data/theleague/mfl-player-salaries-2026.json';
 const ROSTERS = 'data/theleague/mfl-feeds/2026/rosters.json';
+const TXNS = 'data/theleague/mfl-feeds/2026/transactions.json';
+const AFL_ROSTERS = 'data/afl-fantasy/mfl-feeds/2026/rosters.json';
+const ARCHIES_TXNS = 'data/archies/mfl-feeds/2026/transactions.json';
+const TOP = 'data/afl-fantasy/derived/top-players.json';
+const STANDINGS = 'data/theleague/mfl-feeds/2026/standings.json';
 
 const fakeRedis = (store: Record<string, string> = {}, { failOn }: { failOn?: string } = {}) => {
   const calls: string[][] = [];
@@ -49,10 +55,60 @@ describe('which files are held', () => {
     expect(modifiedPaths(porcelain)).toEqual([INJ, SAL, ROSTERS]);
   });
 
-  it('groups injuries and the salary copy, and leaves league data alone', () => {
-    const changes = heldChanges([INJ, AFL_INJ, SAL, ROSTERS, 'src/data/mfl-player-salaries-2026.json']);
+  it('groups injuries and the salary copy, and leaves other league data alone', () => {
+    const changes = heldChanges([INJ, AFL_INJ, SAL, STANDINGS, 'src/data/mfl-player-salaries-2026.json']);
     expect([...changes.keys()]).toEqual(['injuries', 'theleague-salaries']);
     expect(changes.get('injuries')!.files.map((f: { path: string }) => f.path)).toEqual([INJ, AFL_INJ]);
+  });
+});
+
+describe('the rosters group', () => {
+  const paths = (changes: Map<string, { files: Array<{ path: string }> }>, group: string) =>
+    changes.get(group)?.files.map((f) => f.path) ?? [];
+
+  it("holds the current league year's rosters, transactions and the top-players derived from them", () => {
+    const changes = heldChanges([ROSTERS, TXNS, AFL_ROSTERS, ARCHIES_TXNS, TOP], undefined, { isCurrent: () => true });
+    expect([...changes.keys()]).toEqual(['rosters']);
+    expect(paths(changes, 'rosters')).toEqual([ROSTERS, TXNS, AFL_ROSTERS, ARCHIES_TXNS, TOP]);
+  });
+
+  it('never holds an archive year, which no page overlays', () => {
+    const OLD = 'data/theleague/mfl-feeds/2025/rosters.json';
+    const changes = heldChanges([OLD, ROSTERS], undefined, { isCurrent: (_dir: string, year: number) => year === 2026 });
+    expect(paths(changes, 'rosters')).toEqual([ROSTERS]);
+  });
+
+  it('holds nothing else under mfl-feeds, nor roster-history snapshots', () => {
+    const changes = heldChanges(
+      [STANDINGS, 'data/theleague/mfl-feeds/2026/roster-history/rosters-2026-10-22.json', 'data/theleague/mfl-feeds/2026/futureDraftPicks.json'],
+      undefined,
+      { isCurrent: () => true },
+    );
+    expect(changes.size).toBe(0);
+  });
+
+  it("reads 'current' off each league's own registry rollover", () => {
+    // TheLeague rolls Feb 14; the AFL June 1. In April the AFL is still in 2026's league year.
+    const april = new Date('2027-04-01T19:00:00Z');
+    expect(isCurrentLeagueYear('theleague', 2027, april)).toBe(true);
+    expect(isCurrentLeagueYear('afl-fantasy', 2027, april)).toBe(false);
+    expect(isCurrentLeagueYear('afl-fantasy', 2026, april)).toBe(true);
+    // A directory the registry does not know is never held.
+    expect(isCurrentLeagueYear('nope', 2026, new Date(NOW))).toBe(false);
+  });
+
+  it('snapshots the whole group together, so the leaderboard matches the rosters it was built from', async () => {
+    const r = fakeRedis({ 'mfl:held-sync:snapshot-at:rosters': String(NOW - 60_000) });
+    const held = await planHeldFiles(heldChanges([ROSTERS, TOP], undefined, { isCurrent: () => true }), {
+      redis: {}, published: false, command: r.command, nowMs: NOW,
+    });
+    // No Redis copy to wait on: `published` is irrelevant to a group with no redisKey.
+    expect(held).toEqual({ restore: [ROSTERS, TOP], commit: [] });
+    const due = fakeRedis({ 'mfl:held-sync:snapshot-at:rosters': String(NOW - SNAPSHOT_EVERY_MS) });
+    const snap = await planHeldFiles(heldChanges([ROSTERS, TOP], undefined, { isCurrent: () => true }), {
+      redis: {}, published: true, command: due.command, nowMs: NOW,
+    });
+    expect(snap).toEqual({ restore: [], commit: [ROSTERS, TOP] });
   });
 });
 
