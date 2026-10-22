@@ -108,7 +108,7 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
           <p class="cb__note">{g.note}</p>
           <ul class="specs__grid">
             {g.specs.map((s) => (
-              <li class="specs__card" id={s.id}>
+              <li class="ui-card specs__card" id={s.id}>
                 <div class="specs__card-head">
                   <h3>{s.name}</h3>
                   <span class:list={['specs__tag', s.required ? 'is-required' : 'is-optional']}>
@@ -273,10 +273,6 @@ const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
   .specs__card {
     min-width: 0;
     padding: 0.9rem 1rem;
-    border-radius: var(--radius-md, 8px);
-    background: var(--card-bg, #ffffff);
-    border: var(--style-card-border, 1px solid var(--color-gray-300, #d1d5db));
-    box-shadow: var(--style-card-shadow, none);
   }
   .specs__card-head {
     display: flex;
