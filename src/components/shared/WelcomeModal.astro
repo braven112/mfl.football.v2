@@ -119,7 +119,7 @@ const bandStyle = `--pmb-g1:${bandStart};--pmb-g2:${bandEnd};--pmb-glow:${bandGl
 
   function init() {
     // Every welcome on the page is bound once; only the first unseen one opens.
-    const dlg = [...document.querySelectorAll<HTMLDialogElement>('dialog[data-welcome-modal][data-league]')].find(
+    const dlg = Array.from(document.querySelectorAll<HTMLDialogElement>('dialog[data-welcome-modal][data-league]')).find(
       (d) => d.dataset.bound !== '1' && !d.open && d.dataset.storageKey && !readSeen(d.dataset.storageKey),
     );
     document.querySelectorAll<HTMLDialogElement>('dialog[data-welcome-modal]').forEach((d) => (d.dataset.bound = '1'));
