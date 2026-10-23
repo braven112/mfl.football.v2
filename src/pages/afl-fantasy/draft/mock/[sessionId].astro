@@ -32,7 +32,7 @@ if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-
 // The session's own picks, so a board reopened after the window closed still
 // renders the players it drafted. Best-effort: a failed read just means the
 // pool is the plain current one.
-const existing = await fetchMockSession(import.meta.env.PUBLIC_PARTYKIT_HOST, sessionId);
+const existing = await fetchMockSession(sessionId);
 const pickedIds: string[] = Array.isArray(existing?.picks)
   ? existing.picks.map((p: { playerId?: string }) => p?.playerId).filter((id: unknown): id is string => !!id)
   : [];

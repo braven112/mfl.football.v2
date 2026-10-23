@@ -13,7 +13,8 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getAuthUser } from '../../../utils/auth';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
-import { partyKitHost } from '../../../utils/best-ball-draft';
+import { listMockDrafts } from '../../../utils/mock-draft-store';
+import { mockRegistryRoom } from '../../../utils/mock-draft-scope';
 import type { MockDraftSessionSummary } from '../../../types/draft-room';
 
 export const prerender = false;
@@ -29,25 +30,16 @@ if (user.leagueId !== BB1.id) {
   return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('best-ball-1')!));
 }
 
-// ── Load this league's sessions from its PartyKit registry (server-side) ──
+// ── Load this league's sessions from its registry (server-side) ──
 let sessions: MockDraftSessionSummary[] = [];
-const host = partyKitHost();
-if (host) {
-  try {
-    const res = await fetch(`${host}/party/${BB1.id}-registry`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      sessions = ((data?.sessions ?? []) as MockDraftSessionSummary[])
-        // The official draft registers in the same registry — keep it out
-        // of the practice lobby; it has its own room at /draft-room.
-        .filter((s) => !s.id.includes('-official-'))
-        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-    }
-  } catch {
-    // Registry unreachable — render the lobby with an empty list.
-  }
+try {
+  sessions = (await listMockDrafts(mockRegistryRoom(BB1.id)))
+    // The official draft registers in the same registry — keep it out
+    // of the practice lobby; it has its own room at /draft-room.
+    .filter((s) => !s.id.includes('-official-'))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+} catch {
+  // Registry unreachable — render the lobby with an empty list.
 }
 
 const STATUS_LABELS: Record<string, string> = {
