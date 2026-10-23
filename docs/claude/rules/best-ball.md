@@ -15,11 +15,12 @@ leagues. Rules that keep them cheap to add and impossible to break:
   `leagueOnly: <navSlug>` render (`linkMatchesLeague` in nav-utils) — the
   untagged default link set is management UI they don't have. Adding a page
   to a best-ball league = page file + tagged nav link.
-- **Official draft = promoted mock engine.** One deterministic PartyKit
-  session per league-year (`mock-{navSlug}-official-{year}`), created
-  commissioner-only via `/api/best-ball-draft/create` with `official: true`,
-  full veteran player pool, 25 rounds, human pick clocks. Zero party-server
-  changes — don't fork `party/draft-room.ts` for it.
+- **Official draft = promoted mock engine.** One deterministic stored
+  session per league-year (`{navSlug}-official-{year}`, Redis via
+  `src/utils/mock-draft-store.ts`), created commissioner-only via
+  `/api/best-ball-draft/create` with `official: true`, full veteran player
+  pool, 25 rounds, human pick clocks, and no TTL. Zero engine changes —
+  don't fork `src/utils/mock-draft-engine.ts` for it.
 - **Redraft ADP, not dynasty.** Best-ball leagues re-form every season, so
   every ADP surface (player-pool sort/badges via `adpSource: 'redraft'`,
   auto-pick lists via the `mfl-redraft` ranking source) uses

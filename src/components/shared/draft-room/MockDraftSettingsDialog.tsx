@@ -1,6 +1,6 @@
 /**
  * MockDraftSettingsDialog — creator-only mid-draft controls for a mock
- * draft session. Two knobs, both applied instantly via the PartyKit socket:
+ * draft session. Two knobs, both applied instantly via /api/mock-draft/action:
  *
  *   - Pick clock: changes session.timerSeconds mid-draft (a running clock
  *     restarts at the new duration), so a slow mock can be sped up without

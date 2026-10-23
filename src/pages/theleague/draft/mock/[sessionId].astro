@@ -42,7 +42,7 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
   };
 });
 
-// Picks start empty — PartyKit session sync populates them.
+// Picks start empty — the session poll (useMockDraftPoll) populates them.
 const pageData: DraftRoomPageData = {
   leagueYear,
   draftKind: 'live',
@@ -53,7 +53,6 @@ const pageData: DraftRoomPageData = {
   teams,
   picks: [],
   players: buildDraftPlayers(leagueYear, { rookieOnly: true, viewerFranchiseId: user.franchiseId }),
-  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
   leagueId: user.leagueId || DEFAULT_LEAGUE_ID,
 };
 ---
