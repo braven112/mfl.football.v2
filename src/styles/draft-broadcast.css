@@ -220,7 +220,7 @@
 /* ══ PRE-FLIGHT: WARM-UP + SOURCE FLAG ════════════════════════════════════
 
    Two overlays that both belong to the hour BEFORE the room shows up, stacked
-   top-centre. Every edge of this board is already spoken for — the idle header
+   top-center. Every edge of this board is already spoken for — the idle header
    owns both top corners, the fullscreen button is pinned top-right, the
    reveal's ghost pick number owns the bottom-left, and `.dbc__status`
    (reconnecting) owns the bottom-right, which is the one that must never be
@@ -230,7 +230,7 @@
    total, and removes itself; the source flag stays for as long as the board is
    watching a feed that is not its own, which is the point of it. */
 
-/* The stack itself. Centred rather than cornered, and clear of the idle
+/* The stack itself. Centered rather than cornered, and clear of the idle
    header's own line, so nothing here sits on the league label, the round
    counter, or the fullscreen button. `pointer-events: none` on the stack (the
    children re-enable nothing) keeps it from eating a click meant for the board
@@ -325,7 +325,7 @@
   /* `--dbc-gradient` is the franchise's own `broadcastGradient` from league
      config, painted verbatim. The fallback is the derived pair — the exact
      gradient this card painted before the config field existed — so a franchise
-     with no entry, or the NFL-colour path when there is no team at all, is
+     with no entry, or the NFL-color path when there is no team at all, is
      unchanged. */
   background: var(
     --dbc-gradient,
@@ -336,11 +336,11 @@
 
 /* Replay marker on the reveal itself. Top-LEFT: the fullscreen button is
    pinned top-right at z-index 6, the ghost pick number owns the bottom-left,
-   and the copy sits centre-right — this is the corner that is actually free.
+   and the copy sits center-right — this is the corner that is actually free.
    Amber so it never reads as live. */
 /* The rewind flag shares the rehearsal flag's box because it IS the same box —
    one absolute slot at the top left, one chip in it at a time (see the card).
-   Its own rule below only changes the colour, so a room can tell a replay from
+   Its own rule below only changes the color, so a room can tell a replay from
    a dry run at a glance without either one moving. */
 .dbc-reveal__rehearsal-flag,
 .dbc-reveal__rewind-flag {
@@ -377,8 +377,8 @@
    It got there in three cuts (Brandon, 2026-08-28), and the order matters if
    any of it is ever proposed again. First the shared-element morph: the
    franchise crest was measured on both screens and flown from the idle board's
-   lockup to the centre of this card, and this keyframe was CANCELLED on most
-   reveals to get out of its way. A logo travelling the width of a 65" TV is a
+   lockup to the center of this card, and this keyframe was CANCELED on most
+   reveals to get out of its way. A logo traveling the width of a 65" TV is a
    lot of movement to spend on the frame where the room is trying to read a
    name. Then the copy and the cutout, which slid in from the left and right
    edges to close on the crest — choreography that existed to partner the
@@ -427,7 +427,7 @@
  * The board is dark in BOTH themes, so the site's measured white stroke
  * (`crest-dark-stroke-css.ts`) never reaches it: that rule is `html.dark`-
  * scoped, and a light-theme owner driving the TV would get no outline at all
- * on a crest that needs one. WHICH crests need one, and in what colour, is
+ * on a crest that needs one. WHICH crests need one, and in what color, is
  * decided server-side by `resolveBroadcastCrest` and arrives as
  * `--dbc-crest-stroke` on the element itself.
  *
@@ -471,15 +471,15 @@
    so it carries more weight than the site-standard 0.16 watermark — it has to
    answer "who drafted him" on its own, from across a room.
 
-   Tucked behind the player (right of centre, low) it spent most of its area
+   Tucked behind the player (right of center, low) it spent most of its area
    under the cutout, and the part that cleared him was cropped by the card's
-   own edge — from ten feet it read as texture rather than as a crest. Centred
+   own edge — from ten feet it read as texture rather than as a crest. Centered
    and brighter (Brandon, 2026-08-28), the whole shield is on screen: the copy
    crosses its left edge, the player its right, and both halves of the card sit
    on the same mark. Legibility of the type is bought back by the shadow on
    `.dbc-reveal__text`, so if this ever wants to go brighter still, deepen that
-   shadow — do NOT move the crest back off centre. Portrait keeps its own
-   anchoring: there the card is one column, so a crest centred on the short axis
+   shadow — do NOT move the crest back off center. Portrait keeps its own
+   anchoring: there the card is one column, so a crest centered on the short axis
    crosses the copy instead of sitting behind the player. */
 .dbc-reveal__crest {
   position: absolute;
@@ -535,8 +535,8 @@
   height: 100%;
   display: flex;
   align-items: flex-end;
-  /* Anchored to the OUTER edge, not centred: the cutout is wider than this
-     column now, and centring would grow it equally in both directions. Pinned
+  /* Anchored to the OUTER edge, not centered: the cutout is wider than this
+     column now, and centering would grow it equally in both directions. Pinned
      right, the extra width all goes leftward — over the crest, which is the
      overlap that makes the two read as one composite instead of two objects
      sharing a card. Bottom-anchored, so the extra height grows upward. */
@@ -585,7 +585,7 @@
    would snap back to full width on a phone.
 
    The geometry, since the numbers look arbitrary and are not: an ESPN headshot
-   is ~600x436 with the head about 30% of the frame, centred. Each man is a
+   is ~600x436 with the head about 30% of the frame, centered. Each man is a
    FULL column wide — the same scale a lone cutout gets, because two defenders
    shrunk to fit read as a smaller moment than one player, and the whole point
    of the pair is that it is not a lesser card (Brandon, 2026-08-28).
@@ -652,10 +652,10 @@
   left: -10.5%;
 }
 
-/* A 404 can leave one man standing. Seat him at the PAIR's centre — midway
+/* A 404 can leave one man standing. Seat him at the PAIR's center — midway
    between the two seats above — rather than leaving him in the first one,
    which would park him well left of where the pair reads. Note this is the
-   pair's centre, not the position a single non-DEF cutout takes; those are
+   pair's center, not the position a single non-DEF cutout takes; those are
    different points and the rest of this block is why. */
 .dbc-reveal__model--def:only-of-type {
   left: -35%;
@@ -682,15 +682,15 @@
      Seated under the heads, the pairing is read rather than inferred.
 
      The seat arithmetic, which is why this box has these numbers: an ESPN
-     headshot is centred in its frame, so a man's HEAD sits at his cutout's
+     headshot is centered in its frame, so a man's HEAD sits at his cutout's
      `left` + half his width — with the base seats (-59.5%/-10.5%, each 120%
      of the column) that is 0.5% and 49.5% of the column, 49% apart. Two equal
-     seats 49% wide centred on those points span -24% → 74%, which is this
+     seats 49% wide centered on those points span -24% → 74%, which is this
      box. Every term is a column percentage, like the seats themselves, so the
      caption tracks the cutouts at any card width.
 
      Note what this box does NOT need: the old single pill was pinned `left: 0`
-     because centring it in the figure rode the column's `translateX(29%)` out
+     because centering it in the figure rode the column's `translateX(29%)` out
      past the card's overflow clip. Each seat is capped at 49% of the column
      instead of the full width, which puts the right chip's outer edge at 103%
      of the column — inside the body's 4vw padding, and the failure does not
@@ -709,8 +709,8 @@
      the card is one object now, and this rides in with it. */
 }
 
-/* The SEAT, not the pill: equal-width and centred on one cutout's head. A 404
-   leaves one man and one seat, which then takes the whole box and centres on
+/* The SEAT, not the pill: equal-width and centered on one cutout's head. A 404
+   leaves one man and one seat, which then takes the whole box and centers on
    its midpoint — 25% of the column, exactly where `--def:only-of-type` seats
    the survivor. That correspondence is free, and it is the reason the seats
    are `flex: 1 1 0` rather than a fixed 49%. */
@@ -728,9 +728,9 @@
   gap: 0.5em;
   /* The air between the two plates, and it has to be bought HERE rather than
      with `column-gap` on the seats. A gap between two `flex: 1 1 0` seats
-     narrows both and walks their centres apart by half of it — which is the
+     narrows both and walks their centers apart by half of it — which is the
      one property this whole layout exists to hold. Capping the chip inside a
-     seat that still spans the full 49% leaves the centres untouched, and two
+     seat that still spans the full 49% leaves the centers untouched, and two
      chips at their cap end up exactly this far apart. Without it they meet at
      0.0px on every phone-sized card and the two 55%-black pills paint as one
      continuous plate — the single-caption read this replaced.
@@ -739,7 +739,7 @@
      (TheLeagueLayout scopes it to `main`, and this card is outside it), so the
      cap landed on the CONTENT box and the chip's own 16px of padding sat
      outside it — the plates still met at 0.0px with the cap dutifully
-     honoured. Cap the box the eye actually sees. */
+     honored. Cap the box the eye actually sees. */
   box-sizing: border-box;
   max-width: calc(100% - 0.6em);
   /* Load-bearing, and `max-width` alone does NOT cover it: a flex item's
@@ -889,7 +889,7 @@
   height: 1.55em;
   object-fit: contain;
   /* Enough separation for a mark whose own dark cut still runs close to the
-     franchise colour behind it — Jets green on a green gradient, say. The
+     franchise color behind it — Jets green on a green gradient, say. The
      `--nfl-logo-ring` term composes the site-wide white ring for dark-bodied
      NFL marks (the Panthers — see NFL_DARK_STROKE_CODES); `filter` does not
      compose across rules, so without it this shadow would silently discard
@@ -907,7 +907,7 @@
 }
 
 /* The board-position line. Neutral by default: it states a fact rather than
-   passing a verdict, so only the genuine top of the board gets colour. */
+   passing a verdict, so only the genuine top of the board gets color. */
 .dbc-reveal__value {
   display: inline-block;
   margin: 0.6em 0 0;
@@ -1046,7 +1046,7 @@
 /* Left-aligned ONLY next to a crest — it hangs off the logo's edge so the two
    blocks read as one lockup. With no crest the copy sits alone in the middle
    of the board, where left-aligning leaves the kicker and the pick line ragged
-   under a centred name; it re-centres instead.
+   under a centered name; it re-centers instead.
 
    Two ways to have no crest, and they need different selectors: a franchise
    with no icon never renders the <img> at all (the sibling combinator simply
@@ -1143,7 +1143,7 @@
    from reading as the copy stack twitching.
 
    `inline-flex`, so it hugs its digits and inherits the copy block's alignment
-   — the lockup left-aligns beside a crest and re-centres without one (see
+   — the lockup left-aligns beside a crest and re-centers without one (see
    `.dbc-idle__crest + .dbc-idle__clock-copy`), and a block-level chip would
    have to be told about both cases separately. */
 .dbc-idle__elapsed {
@@ -1496,7 +1496,7 @@
     max-height: 100%;
   }
 
-  /* Centred, same as the TV — pinned right it would ride under the cutout and
+  /* Centered, same as the TV — pinned right it would ride under the cutout and
      this breakpoint would disagree with every other one. Held a step below the
      TV's alpha because the crest is 91vh here against a 400px-tall screen: it
      covers proportionally far more of the card, copy included. */
@@ -1591,7 +1591,7 @@
     /* The usual grid guard: clear the item's automatic minimum so the track
        function above is what decides this row. It must NOT become a positive
        floor — an earlier revision reserved 64vw here so the absolutely
-       positioned defence pair (`--def`, `bottom: 0`) would have a box in a
+       positioned defense pair (`--def`, `bottom: 0`) would have a box in a
        content-sized row, and that floor then applied to the two cases with
        nothing to show as well: the crest-only reveal for an unmapped defense
        (`tests/draft-broadcast.test.ts`) and a cutout that 404'd both render an
@@ -1616,7 +1616,7 @@
   /* The pair's half-a-player LEFT shift exists to clear the copy column, and
      in this layout there is no copy column — the copy is a full-width row of
      its own, stacked ABOVE the figure. Left in, the shift walks the first
-     man's head to x=-88 on a 390px phone, off the card entirely. Re-centred on
+     man's head to x=-88 on a 390px phone, off the card entirely. Re-centered on
      the figure instead: same 0.43-column spacing, no offset. Same specificity
      as the base seats and later in the file, which is what lets these win. */
   /* Portrait is the one place a solo cutout is NOT 120% — it is column-clamped.
@@ -1641,11 +1641,11 @@
     left: 0;
   }
 
-  /* The seats move here (re-centred, and each man is column-width rather than
+  /* The seats move here (re-centered, and each man is column-width rather than
      120%), so the caption has to move with them or the names stop sitting
      under the faces they name. Same arithmetic as the base rule: a head is at
      `left` + half a width, so 28.5% and 71.5% of the column, 43% apart — two
-     43% seats centred on those points span 7% → 93%. A lone survivor lands on
+     43% seats centered on those points span 7% → 93%. A lone survivor lands on
      50%, which is where `--def:only-of-type` puts him. */
   .dbc-reveal__face {
     left: 7%;
@@ -1709,11 +1709,11 @@
     height: 41vh;
     --dbc-crest-ring-w: 0.2vh;
     /* `left`, `top` AND `transform` re-pinned, not just `right`: the base layer
-       centres the crest (left: 50%/top: 50%, translate(-50%, -50%)) for the TV,
+       centers the crest (left: 50%/top: 50%, translate(-50%, -50%)) for the TV,
        and with a width set `left` wins over `right` outright — leave any of the
        three in and the phone crest sits squarely on the copy. Anchored to the
        BOTTOM-right instead, so it stays scenery behind the player: the copy now
-       leads the stack, and a crest centred on the short axis would cross it. */
+       leads the stack, and a crest centered on the short axis would cross it. */
     left: auto;
     right: -8vw;
     top: auto;
@@ -1733,7 +1733,7 @@
 
   /* A phone held upright has no width to give a side-by-side lockup: the crest
      and the name would each get ~45vw and the name would break into a column
-     of single words. Back to the stack, centred — this is the only viewport
+     of single words. Back to the stack, centered — this is the only viewport
      where the pre-doubling layout was the right one. */
   .dbc-idle__clock {
     flex-direction: column;
@@ -1775,7 +1775,7 @@
 
   /* The board's own gradient cross-fade is part of that same cut, and it is
      easy to miss because it lives 500 lines away from the layer rules: the
-     idle screen re-paints in the next franchise's colours whenever the clock
+     idle screen re-paints in the next franchise's colors whenever the clock
      moves. Cutting the layers but leaving this one means a reduced-motion
      viewer still gets a slow wash through a whole gradient every pick. */
   .dbc-idle {
@@ -2042,7 +2042,7 @@
 }
 
 /* Tonight's picks, marked. The pick label is the proof — a ring alone would be
-   a colour nobody in the room has been told the meaning of. */
+   a color nobody in the room has been told the meaning of. */
 .dbc-panel__face-tag {
   padding: 0.1em 0.5em;
   border-radius: 999px;

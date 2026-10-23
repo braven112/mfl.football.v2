@@ -239,7 +239,7 @@ const feedYears = [...new Set([currentLeagueYearStr, currentSeasonYearStr])];
 
 const tradeBaitBySeason = {};
 const projectedScoresBySeason = {};
-// Typed, unlike its neighbours: every read of it is a string index, and on a
+// Typed, unlike its neighbors: every read of it is a string index, and on a
 // bare `{}` that is an implicit-any ts(7053) per access. This PR added a
 // second read, which is a type error the baseline ratchet counts — so the
 // index signature it always wanted goes on here instead.
@@ -4419,7 +4419,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   /* Third literal in this table that did not invert (see .avg-points and
      .trend-cell). 3.7:1 on the dark table — legible, but under AA, and the
-     odd one out once its neighbours moved onto tokens. */
+     odd one out once its neighbors moved onto tokens. */
   :global(.vs-at) {
     font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
@@ -5798,7 +5798,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     /**
      * A mode switch swaps the chip set. On a phone a sort by the other mode's
      * column cannot be seen or re-tapped, so it falls back to the default;
-     * desktop keeps today's behaviour (its headers are all still reachable
+     * desktop keeps today's behavior (its headers are all still reachable
      * after a switch back).
      */
     function syncPhoneSortChipsForMode(mode: string) {
@@ -6698,7 +6698,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const groupHeaderColspan = () =>
       document.querySelectorAll('.roster-page[data-league="theleague"] .roster-table thead tr:first-child > th').length || 1;
 
-    /** A salary_N band figure is labelled with its column's year. */
+    /** A salary_N band figure is labeled with its column's year. */
     const salaryColumnLabel = (key: string) => {
       const th = document.querySelector<HTMLElement>(
         `.roster-page[data-league="theleague"] .roster-table thead th[data-sort-key="${CSS.escape(key)}"]`,
@@ -8645,13 +8645,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }, 0);
     };
 
-    const closeCdpReauthModal = (cancelled) => {
+    const closeCdpReauthModal = (canceled) => {
       const overlay = document.getElementById('cdp-reauth-overlay');
       if (!overlay || overlay.hidden) return;
       overlay.hidden = true;
       const ctx = cdpReauthCtx;
       cdpReauthCtx = null;
-      if (cancelled) {
+      if (canceled) {
         // Cancel is a resting state for EVERY modal origin (panel auto-save
         // AND the CDM toggle): kill any deferred auto-save here centrally,
         // or it would fire, bounce off the still-dead cookie, and reopen
@@ -8660,7 +8660,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         cdpAutoSaveTimer = null;
       }
       if (ctx?.returnFocusTo?.isConnected) ctx.returnFocusTo.focus();
-      if (cancelled && ctx?.onCancel) ctx.onCancel();
+      if (canceled && ctx?.onCancel) ctx.onCancel();
     };
 
     // ---- CDM action-option toggle ----------------------------------
@@ -8765,8 +8765,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           onCancel: () =>
             restore(
               isMarked
-                ? 'Re-login cancelled — player is still marked.'
-                : 'Re-login cancelled — player was not marked.',
+                ? 'Re-login canceled — player is still marked.'
+                : 'Re-login canceled — player was not marked.',
             ),
           onSuccess: async () => {
             autocutState.saving = true;
@@ -8788,7 +8788,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (!isAutocutOwnView()) return;
       const el = document.getElementById('cdp-status-countdown');
       if (!el || !autocutCfg) return;
-      // Honour ?testDate= as the server's window check does (autocutRefDate),
+      // Honor ?testDate= as the server's window check does (autocutRefDate),
       // or a preview inside the June-August window reads "deadline passed".
       const testDateStr = new URLSearchParams(window.location.search).get('testDate');
       const testNow = testDateStr ? new Date(testDateStr).getTime() : NaN;
@@ -9296,7 +9296,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             // this just surfaces the resting-state copy + Retry action.
             renderCdpSaveState({
               error:
-                'Re-login cancelled — your changes are kept on this page but not saved yet.',
+                'Re-login canceled — your changes are kept on this page but not saved yet.',
             }),
           onSuccess: async () => {
             autocutState.saving = true;
@@ -9325,7 +9325,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     /** Persist NOW if anything is unsaved (page hide/leave) — best effort.
      *  Keys off dirtiness, not just a pending timer: after a failed save or
-     *  cancelled re-login the list is dirty with NO timer scheduled, and
+     *  canceled re-login the list is dirty with NO timer scheduled, and
      *  those edits must not be silently dropped on exit. */
     const flushAutocutAutoSave = () => {
       const dirty =

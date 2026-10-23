@@ -277,22 +277,22 @@ export function resolveTeamColorPair(
 }
 
 /**
- * A brand colour lifted until it reads as a FIELD on a dark surface — without
+ * A brand color lifted until it reads as a FIELD on a dark surface — without
  * lifting it so far that white text on top of it stops being legible.
  *
  * `toBroadcastPair` and `darkenForWhiteText` only ever DARKEN: they guarantee
- * white ink on a franchise's colour, and a colour that already clears that bar
+ * white ink on a franchise's color, and a color that already clears that bar
  * comes back untouched. That is correct for a fill you write on, and it leaves
  * a hole for a fill you have to SEE. Seven of TheLeague's sixteen franchises
  * carry a near-black `colorPrimary` (`#181818`), which measures 1.14:1 against
  * the broadcast board's `#05070b` ground — so a "full-screen field of the
- * club's colour", the whole mine-vs-theirs signal on that board, rendered as a
+ * club's color", the whole mine-vs-theirs signal on that board, rendered as a
  * black rectangle indistinguishable from the idle screen.
  *
  * There is a wide safe band between the two constraints: a field only needs
  * ~2:1 to separate from near-black, while white text survives down to roughly
  * 4.5:1, which a field does not reach until it is far lighter. This walks up
- * from the brand colour and stops at the first shade satisfying both, so a
+ * from the brand color and stops at the first shade satisfying both, so a
  * franchise that needs no help is returned EXACTLY as it was.
  *
  * @param background the surface the field sits on (the board's ground).

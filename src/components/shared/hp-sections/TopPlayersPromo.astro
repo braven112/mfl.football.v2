@@ -5,7 +5,7 @@
  * Replaced the homepage's related-pages card (Oct 2026, owner's call): one
  * page sold properly beats three listed. A slim banner (150px max, the owner's
  * call): one of the season's No. 1 QB/RB/WR/TE, at random per view, as an
- * ESPN cut-out on their team colours,
+ * ESPN cut-out on their team colors,
  * one line of pitch to the left, and the whole banner is the link. Casting is `pickTopPlayersPromo` (pure, tested); the data is
  * the Top Players page's own derived file, so the poster can't disagree with
  * the page it links to.
@@ -73,7 +73,7 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
 )}
 
 <style>
-  /* Dark in both themes on purpose (see header), so its colours are literals
+  /* Dark in both themes on purpose (see header), so its colors are literals
      rather than theme tokens. */
   .tpp {
     position: relative;
@@ -87,7 +87,7 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
     color: #f8fafc;
     text-decoration: none;
     --tpp-cut: 15rem;
-    /* Two team colours: a primary slab behind the player, cut on the diagonal
+    /* Two team colors: a primary slab behind the player, cut on the diagonal
        and edged in the secondary, with a faint secondary glow on the copy. */
     background:
       linear-gradient(
@@ -115,7 +115,7 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
   }
 
   .tpp::after {
-    /* team-colour stripe along the base */
+    /* team-color stripe along the base */
     content: '';
     position: absolute;
     inset: auto 0 0;

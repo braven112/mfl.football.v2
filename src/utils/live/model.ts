@@ -183,9 +183,9 @@ export function selectMatchupMoments(
   return out;
 }
 
-/* ── colours ─────────────────────────────────────────────────────────────── */
+/* ── colors ─────────────────────────────────────────────────────────────── */
 
-/** A colour claim with its hand-picked dark variants swapped in. */
+/** A color claim with its hand-picked dark variants swapped in. */
 function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
   // A franchise that declared a dark variant gets it; everyone else keeps
   // their light value and relies on the legibility nudge inside
@@ -198,7 +198,7 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
 }
 
 /**
- * Both franchises' colours for one matchup, as CSS custom properties, resolved
+ * Both franchises' colors for one matchup, as CSS custom properties, resolved
  * once per theme against THIS SURFACE's card.
  *
  * Keyed by SIDE INDEX (`--t0-*`, `--t1-*`), not by mine/theirs or home/away —
@@ -207,14 +207,14 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
  *
  * `forceAdjust` + `homeVisibilityFallback` match what the live-scoring board
  * and MFL Live already pass: two franchises in one cell must be separable even
- * when their brand colours are neighbours, and a colour that cannot be made
+ * when their brand colors are neighbors, and a color that cannot be made
  * visible has to fall back rather than be drawn invisible.
  */
 /**
  * ── AND A SECOND PAIR, FOR TEXT ───────────────────────────────────────────
  * `resolveTeamColorPair` guarantees ΔE — PERCEPTUAL DISTANCE from the ground.
  * That is the right metric for a filled bar segment or a border: it says the
- * colour is tellable apart from what it sits on. It says nothing about
+ * color is tellable apart from what it sits on. It says nothing about
  * READING small text, which needs luminance contrast.
  *
  * The two come apart badly. Measured on the AFL's `Drunk Indians` (#314d78)
@@ -224,21 +224,21 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
  * enforces had already been cleared. An owner reported it as simply
  * unreadable, which it was.
  *
- * So the ink pair runs the SAME resolved colours through `ensureContrastOn` —
+ * So the ink pair runs the SAME resolved colors through `ensureContrastOn` —
  * the app's existing a11y helper, already used by `franchise-band-brand`,
  * `broadcast-board` and `hero-franchise-backdrop` — at `AA_BODY_TEXT_RATIO`.
  * Body, not large: `.lv-side__score` is 1.05rem bold = 16.8px, under the
  * 18.66px-bold threshold that would let 3:1 apply, and the win-probability
  * labels are 0.72rem. `ensureContrastOn` steps in small increments and stops
- * at the first passing shade, so a colour that already reads stays exactly
+ * at the first passing shade, so a color that already reads stays exactly
  * on-brand — only the ones that genuinely fail move.
  */
 /**
- * ── WHO KEEPS THEIR COLOUR ────────────────────────────────────────────────
- * `resolveTeamColorPair` is asymmetric: its first team keeps its colour and
+ * ── WHO KEEPS THEIR COLOR ────────────────────────────────────────────────
+ * `resolveTeamColorPair` is asymmetric: its first team keeps its color and
  * the second is moved off it when the two clash. `prioritySide` names which
  * side goes first — the viewer's own franchise when there is one, because an
- * owner reads their own colour as "me". Defaulting to side 0 put the Pigskins
+ * owner reads their own color as "me". Defaulting to side 0 put the Pigskins
  * (side 1, the viewer) in grey against an opponent wearing the same red.
  * The vars stay keyed by side index either way.
  */
@@ -263,7 +263,7 @@ export function resolveMatchupColorVars(
     '--t0-dark': dark.home,
     '--t1-dark': dark.away,
     // TEXT variants. See the header — ΔE is not a reading metric, and these
-    // four are the only values a kit component may colour text with.
+    // four are the only values a kit component may color text with.
     '--t0-ink-light': ensureContrastOn(light.home, grounds.light, AA_BODY_TEXT_RATIO),
     '--t1-ink-light': ensureContrastOn(light.away, grounds.light, AA_BODY_TEXT_RATIO),
     '--t0-ink-dark': ensureContrastOn(dark.home, grounds.dark, AA_BODY_TEXT_RATIO),

@@ -13,7 +13,7 @@
  *   overall title.
  * - Tiers, an all-play side competition across the whole league: Premier
  *   League (20), A League (20), D-League (56). Four teams move up and four
- *   down between neighbouring tiers each season.
+ *   down between neighboring tiers each season.
  *
  * Nothing here may resemble a real franchise or owner — the post-build leak
  * scan fails the demo build if one does.
@@ -33,7 +33,7 @@ export const TIERS = ['Premier League', 'A League', 'D-League'];
 export const TIER_SIZES = [20, 20, 56];
 export const TIER_MOVEMENT = 4;
 
-/** code, name, short, colour, [division names] — division names are unique league-wide. */
+/** code, name, short, color, [division names] — division names are unique league-wide. */
 const CONFERENCES = [
   ['00', 'Atlantic Conference', 'ATL', '#1f4e79', ['Atlantic North', 'Atlantic South']],
   ['01', 'Pacific Conference', 'PAC', '#0e7c7b', ['Pacific North', 'Pacific South']],
@@ -141,7 +141,7 @@ function assetPaths(f) {
 const confLogo = (c) => `${ASSET_ROOT}/conferences/${c.short.toLowerCase()}.svg`;
 const confLogoDark = (c) => `${ASSET_ROOT}/conferences/${c.short.toLowerCase()}-dark.svg`;
 
-/** A conference or tier mark: a coloured disc with its short label. */
+/** A conference or tier mark: a colored disc with its short label. */
 function badgeSvg(label, color, { dark = false } = {}) {
   const ink = dark ? '#f5f5f5' : '#ffffff';
   const safe = String(label).replace(/[&<>"']/g, '');
@@ -480,7 +480,7 @@ export function simulateBigLeague({ years, facts, currentYear, currentWeek, rng,
 
     // --- Tiers -----------------------------------------------------------
     // This season's makeup: the first season is seeded at random; every later
-    // one moves TIER_MOVEMENT up and down between neighbours off last season's
+    // one moves TIER_MOVEMENT up and down between neighbors off last season's
     // tier all-play table.
     if (!membership) {
       const order = srng.shuffle(BIGLEAGUE_FRANCHISES.map((f) => f.id));

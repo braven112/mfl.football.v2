@@ -3,7 +3,7 @@
  * Ask Roger — the rules chatbot page, shared by every league that has one
  * (TheLeague, the AFL, and package leagues with the "Ask Roger" box ticked).
  *
- * The route owns the league's data imports and auth; this renders. Colours
+ * The route owns the league's data imports and auth; this renders. Colors
  * come from the league theme's tokens, so a league needs no CSS of its own.
  */
 import RulesChatIsland from './RulesChat';
@@ -130,7 +130,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 <style>
   /* ── 2-Column Blog Layout ── */
   .rqa-page {
-    /* The page's colours come from the league theme (league-themes.generated.css):
+    /* The page's colors come from the league theme (league-themes.generated.css):
        the accent for text and rules, the CTA fill under white text. TheLeague's
        accent IS its primary, so both leagues read the same tokens. */
     --rqa-accent: var(--league-accent, var(--color-primary, #1c497c));
@@ -307,7 +307,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     display: flex;
     gap: 0.375rem;
   }
-  /* Low-emphasis grey chips — the ghost CTA re-coloured, not link-blue. */
+  /* Low-emphasis grey chips — the ghost CTA re-colored, not link-blue. */
   .rqa-donate-btn {
     --cta-bg: var(--color-gray-50, #f9fafb);
     --cta-bg-hover: var(--color-gray-50, #f9fafb);

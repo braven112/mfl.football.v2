@@ -19,7 +19,7 @@
  *    when `?demo=1` is on the URL, and the page badges itself while it does.
  *    A demo that could be mistaken for live scores is worse than no demo.
  *  - **Real identities, invented events.** Your own franchises, your own
- *    players, your own crests and colours — so what you are judging is the
+ *    players, your own crests and colors — so what you are judging is the
  *    board you will actually watch, not a mock of it. Only the plays and the
  *    numbers are fabricated.
  */
@@ -65,7 +65,7 @@ export interface DemoEvent {
  *
  * Built to exercise every screen in one loop rather than to be realistic:
  * both sides score, each position takes a turn, the queue gets two plays
- * eight seconds apart so the backlog behaviour is visible, and the last
+ * eight seconds apart so the backlog behavior is visible, and the last
  * ninety seconds are deliberately quiet so the board settles.
  */
 export const DEMO_SCRIPT: readonly DemoEvent[] = [

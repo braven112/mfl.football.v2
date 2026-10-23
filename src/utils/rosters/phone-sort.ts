@@ -168,7 +168,7 @@ export function keepValidSort(current: SortState, chips: readonly SortChip[]): S
 const DIR_WORD: Record<SortDir, string> = { desc: 'descending', asc: 'ascending' };
 
 /**
- * The chips' markup: toggle buttons (aria-pressed) in a labelled group. The
+ * The chips' markup: toggle buttons (aria-pressed) in a labeled group. The
  * active chip shows ↑/↓ and says the direction in its accessible name; the
  * default Pos sort has no direction to flip, so it shows none.
  */

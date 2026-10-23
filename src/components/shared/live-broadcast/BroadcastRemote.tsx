@@ -41,13 +41,13 @@ export default function BroadcastRemote({ panels }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const res = await fetch('/api/broadcast-tv/remote', { headers: { accept: 'application/json' } });
         if (!res.ok) return;
         const body = (await res.json()) as { tvs?: PairedTv[] };
-        if (cancelled || !Array.isArray(body.tvs)) return;
+        if (canceled || !Array.isArray(body.tvs)) return;
         setTvs(body.tvs);
         setTvId((prev) => prev ?? body.tvs?.[0]?.id ?? null);
       } catch (_err) {
@@ -55,7 +55,7 @@ export default function BroadcastRemote({ panels }: Props) {
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

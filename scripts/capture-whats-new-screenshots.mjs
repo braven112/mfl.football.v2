@@ -475,7 +475,7 @@ async function main() {
     // The latch flips only when curl SUCCEEDS on a URL route.fetch() threw on,
     // because that is the only evidence that the browser path — rather than the
     // URL — is what is broken. `route.fetch()` also throws for a request the
-    // page cancelled mid-flight, which every capture produces a few of; latching
+    // page canceled mid-flight, which every capture produces a few of; latching
     // on the throw alone downgraded the whole run to curl on the first navigation
     // away, and did it silently.
     if (threw && fetched && !announcedFallback) {
@@ -486,7 +486,7 @@ async function main() {
       );
     }
 
-    // Guarded: if route.fetch() threw because the request was already cancelled,
+    // Guarded: if route.fetch() threw because the request was already canceled,
     // settling it throws again — an unhandled rejection inside a route handler,
     // which Playwright reports as a broken run rather than a skipped asset.
     try {

@@ -9,7 +9,7 @@
  *   3. the strip's page rotation,
  *   4. the burn-in drift.
  *
- * Everything it renders is a props-only component, and every colour, crest and
+ * Everything it renders is a props-only component, and every color, crest and
  * name it passes down was resolved server-side. This file is timing.
  */
 
@@ -179,7 +179,7 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   /**
    * A phone on the coffee table must not go dark between scores. Handheld
-   * only: the television's behaviour does not change. Best-effort, and
+   * only: the television's behavior does not change. Best-effort, and
    * re-taken when the tab comes back, because the OS drops the lock on hide.
    */
   useEffect(() => {
@@ -385,10 +385,10 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   useEffect(() => {
     if (data.demo) return;
-    let cancelled = false;
+    let canceled = false;
 
     const schedule = (ms: number) => {
-      if (cancelled) return;
+      if (canceled) return;
       pollRef.current.timer = window.setTimeout(tick, ms);
     };
 
@@ -404,7 +404,7 @@ export default function LiveBroadcast({ pageData }: Props) {
 
     const tick = async () => {
       await runPoll();
-      if (cancelled) return;
+      if (canceled) return;
       schedule(nextDelay());
     };
 
@@ -429,7 +429,7 @@ export default function LiveBroadcast({ pageData }: Props) {
     }, POLL_WATCHDOG_MS / 2);
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (pollRef.current.timer) window.clearTimeout(pollRef.current.timer);
       window.clearInterval(watchdog);
     };
@@ -513,7 +513,7 @@ export default function LiveBroadcast({ pageData }: Props) {
    * Expanded is still a SPLIT, not "every panel in the grid".
    *
    * `splitPanels` lifts the four-cell legibility cap here but keeps
-   * `MAX_GRID_PANELS`, because that one is not a judgement — the stylesheet
+   * `MAX_GRID_PANELS`, because that one is not a judgment — the stylesheet
    * declares columns and rows for eight panels and a ninth lands in an
    * implicit row inside a fixed-height, `overflow: hidden` header, where it is
    * not drawn at all. So an owner in nine leagues expands to eight panels and

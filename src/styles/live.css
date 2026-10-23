@@ -16,7 +16,7 @@
  *
  * Exactly two things are abstracted, and both have a bug behind them:
  *
- *  1. **The franchise colour pair.** It needs a GROUND, the ground differs per
+ *  1. **The franchise color pair.** It needs a GROUND, the ground differs per
  *     surface AND per theme, and naming one inside a component is what shipped
  *     the AFL bug (see `live/surface.ts`). It arrives already resolved as
  *     `--t0-light/-dark` and `--t1-light/-dark` — server-side, twice, against
@@ -45,7 +45,7 @@
    The franchise pair, resolved per theme ONCE.
    Every rule below reads --t0/--t1 and nothing knows a theme exists. The
    fallbacks are the neutral grey the identity ladder's text rung uses, NOT a
-   card colour — a franchise with no colour claim gets a neutral, never a hue
+   card color — a franchise with no color claim gets a neutral, never a hue
    invented from its name.
    ────────────────────────────────────────────────────────────────────────── */
 .lv-matchup {
@@ -61,11 +61,11 @@ html.dark .lv-matchup {
   --t1-ink: var(--t1-ink-dark, #cbd5e1);
 }
 
-/* --t0/--t1 FILL a bar segment or a border; --t0-ink/--t1-ink COLOUR TEXT.
+/* --t0/--t1 FILL a bar segment or a border; --t0-ink/--t1-ink COLOR TEXT.
    Same franchise, two guarantees: the fill pair clears ΔE against the card
-   (perceptual distance — the right metric for a block of colour), the ink pair
+   (perceptual distance — the right metric for a block of color), the ink pair
    clears WCAG AA body contrast (luminance — the only metric for reading). They
-   are equal for a franchise whose colour already reads, and diverge only where
+   are equal for a franchise whose color already reads, and diverge only where
    it does not: the AFL's #314d78 is ΔE 31 from MFL Live's card and 1.89:1
    against it, so it passed the fill gate and was unreadable as a score.
    `tests/live-ink-contrast.test.ts` pins that every text use takes the ink
@@ -86,14 +86,14 @@ html.dark .lv-matchup {
   background: var(--content-bg-muted);
 }
 
-/* Fills and labels are keyed to the matchup's colour, not to left/right: the
+/* Fills and labels are keyed to the matchup's color, not to left/right: the
    component places them, so a reordered pair keeps each team in its own. */
 .lv-wp__fill0 { background: var(--t0); }
 .lv-wp__fill1 { background: var(--t1); }
 
 /**
  * The seam sits at the SPLIT, not at a fixed 50%, so the two fills still read
- * as two when the colours land close to each other.
+ * as two when the colors land close to each other.
  */
 .lv-wp__seam {
   position: absolute;
@@ -219,7 +219,7 @@ html.dark .lv-matchup {
  *
  * It reads the same `--color-warning*` trio as `.lv-sample`, which makes the
  * same kind of statement one level up ("these numbers are not live"), so the
- * two caveats on this page speak in one colour.
+ * two caveats on this page speak in one color.
  */
 .lv-stale {
   display: flex;
@@ -345,7 +345,7 @@ html.dark .lv-matchup {
  * other card — `min(…, 100%)` for the same reason the grid above uses it.
  *
  * `--lv-cards-lead-floor` is a variable rather than a literal so the phone
- * breakpoint can collapse the two grids into one behaviour without repeating
+ * breakpoint can collapse the two grids into one behavior without repeating
  * the track expression.
  */
 .lv-cards--lead {
@@ -421,7 +421,7 @@ button.lv-card:focus-visible {
 .lv-badge--final { color: var(--lv-final); }
 
 /* ── the split "to play" count ────────────────────────────────────
-   Two numbers, each behind a dot in its own side's colour, then ONE shared
+   Two numbers, each behind a dot in its own side's color, then ONE shared
    label. The label is shared deliberately: "3 to play 5 to play" reads as two
    separate facts, while "●3 ●5 to play" reads as one split number.
 
@@ -750,7 +750,7 @@ button.lv-card:focus-visible {
    * `stretch`, not `start`, and never `center`.
    *
    * A box-score line only exists for a player who has touched the ball, so one
-   * side of a row is routinely taller than the other. Centred, the quiet
+   * side of a row is routinely taller than the other. Centered, the quiet
    * side's name floats half a line below its opponent's — the two players
    * stopped lining up the moment real stats arrived (owner, 2026-08-21).
    * `start` fixes that much but sizes each side to its own content, so the two
@@ -766,7 +766,7 @@ button.lv-card:focus-visible {
  * Each side's wrapper is REMOVED from the layout so the row below becomes a
  * direct grid item of the pair — which is what lets it adopt the pair's tracks.
  *
- * No exception for a CENTRE position column, because this kit does not render
+ * No exception for a CENTER position column, because this kit does not render
  * one at any width. The board this replaces had a third column carrying the
  * shared slot label and hid it on a phone, for the reason that makes it wrong
  * everywhere: it can only show ONE of the two paired positions, and mislabels
@@ -817,7 +817,7 @@ button.lv-card:focus-visible {
   grid-column: 1;
   grid-row: 1 / -1;
 
-  /* A single flex line in a stretched cell would otherwise be centred in it. */
+  /* A single flex line in a stretched cell would otherwise be centered in it. */
   align-content: flex-start;
   /* BOTH declarations, and `subgrid` LAST. The first is the fallback for a
      browser without subgrid support; if the order flips, source order quietly
@@ -878,9 +878,9 @@ button.lv-card:focus-visible {
 
 .lv-ppos {
   /* PLAIN TEXT, not a filled pill (owner direction, Aug 2026): nine filled
-     chips per side turned the lineup into a column of coloured blocks that
+     chips per side turned the lineup into a column of colored blocks that
      outweighed the players' own names. As text, the name leads. It stays at
-     the meta line's muted colour for the same reason — this row is metadata,
+     the meta line's muted color for the same reason — this row is metadata,
      and the only thing on it allowed to shout is the red-zone flag. */
   font-family: var(--font-display);
   font-weight: var(--font-weight-bold);
@@ -889,8 +889,8 @@ button.lv-card:focus-visible {
 }
 
 /* `.lv-pteam` carries NO rule on purpose — it inherits the meta line's size and
-   colour exactly, which is the design: the position leads by WEIGHT (the bold
-   display face above), not by being a different colour from the club beside it.
+   color exactly, which is the design: the position leads by WEIGHT (the bold
+   display face above), not by being a different color from the club beside it.
    The class stays as a markup hook. A `color` here would be a copy of
    `.lv-pmeta`'s own, which is how two declarations of one value start to
    disagree. */
@@ -912,8 +912,8 @@ button.lv-card:focus-visible {
 .lv-headshot img { width: 100%; height: 100%; object-fit: cover; }
 
 /* DEF takes the same lockup as the roster and lineup pages: a bare, full-bleed
-   club logo — no circle, no team-colour chip. Inside the headshot chip it was
-   the only place on the site where a defence looked different. */
+   club logo — no circle, no team-color chip. Inside the headshot chip it was
+   the only place on the site where a defense looked different. */
 .lv-headshot--def {
   border: 0;
   border-radius: 0;
@@ -925,7 +925,7 @@ button.lv-card:focus-visible {
  * Two lines' worth of name, ALWAYS.
  *
  * This is what makes a one-line name and a two-line name produce the same
- * first track, and so the same score offset. The text is centred inside the
+ * first track, and so the same score offset. The text is centered inside the
  * box so a one-line name sits level with the middle of its headshot rather
  * than riding at the top of it.
  *
@@ -1079,8 +1079,8 @@ button.lv-card:focus-visible {
 
 /**
  * The disclosure is the only CONTROL in a screen of read-only rows, so it is
- * chromed like one: a centred pill, not a left-aligned 0.7rem line in the body
- * colour (which an owner read as leftover markup, Sep 2026).
+ * chromed like one: a centered pill, not a left-aligned 0.7rem line in the body
+ * color (which an owner read as leftover markup, Sep 2026).
  *
  * NO border-top here, deliberately. The separating hairline is the last
  * starter row's own `.lv-mx-row::after`, which is inset to the gutter — a
@@ -1396,7 +1396,7 @@ button.lv-card:focus-visible {
    not need. The card still reads as a card because it has a surface and a
    header, not because it is inset from an edge it cannot use.
 
-   Cancel the two gutters BY NAME, never with the `100vw` centring trick. That
+   Cancel the two gutters BY NAME, never with the `100vw` centering trick. That
    trick needs no knowledge of the ancestors, which is why it is tempting — but
    `100vw` resolves against the initial containing block, which INCLUDES a
    classic space-consuming scrollbar, so it overflows by the scrollbar's width
@@ -1414,7 +1414,7 @@ button.lv-card:focus-visible {
    * names and scores were clipped off either side on a phone.
    *
    * A negative margin that cancels a named gutter must name the ancestor it is
-   * cancelling for, or it lands on a surface with different ones.
+   * canceling for, or it lands on a surface with different ones.
    */
   .lv-page .lv-detail {
     margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
@@ -1510,7 +1510,7 @@ button.lv-card:focus-visible {
   line-height: 1;
   white-space: nowrap;
 }
-/* Arrow AND colour, so the direction survives a monochrome render. */
+/* Arrow AND color, so the direction survives a monochrome render. */
 .lv-standings__move--up {
   color: var(--color-success);
 }
@@ -1792,7 +1792,7 @@ button.lv-card:focus-visible {
 
 /* ══════════════════════════════════════════════════════════════════════════
    THE STAT SHEET — one player's scoring, stat by stat (`LvStatSheet.tsx`).
-   Bottom sheet on a phone, centred dialog from 640px up: the same shape as
+   Bottom sheet on a phone, centered dialog from 640px up: the same shape as
    the My Rank editor (`my-rank-editor.css`), and capped against `dvh` for the
    same reason — see docs/claude/rules/theming-and-assets.md § "Overlays on a
    phone". Portaled to <body>, so nothing here may depend on `.lv` ancestry.
@@ -1866,7 +1866,7 @@ button.lv-card:focus-visible {
 
 .lv-sheet__title {
   margin: 0;
-  /* Stated, not inherited: the site's global heading rule colours an <h2>
+  /* Stated, not inherited: the site's global heading rule colors an <h2>
      with the league accent, which read as a link in dark mode. */
   color: var(--page-text);
   font-family: var(--font-display);

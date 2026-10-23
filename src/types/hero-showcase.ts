@@ -42,14 +42,14 @@ export interface ShowcasePalette {
  * These are not reproductions any more. Each card renders the REAL
  * `CompositeHero` / `CompositePanelBoard` with fixture props, because a
  * lookalike drifted three separate times in one week — it showed the auction
- * hero as a pale blue card when the shipped one is amber, it kept the centred
+ * hero as a pale blue card when the shipped one is amber, it kept the centered
  * ghost wordmark after the live heroes moved to a right-anchored one, and it
  * never grew the crest watermark at all, which is one of the treatment's
  * defining layers. A page whose entire claim is "this is what it looks like"
  * has to be showing the thing itself.
  *
  * What stays showcase-owned is the ANNOTATION above each hero: which component
- * this is, and which half of the colour rule it is on. That sits outside the
+ * this is, and which half of the color rule it is on. That sits outside the
  * card, so nothing the showcase says about a hero can change how the hero
  * renders.
  *
@@ -64,10 +64,10 @@ export interface ShowcaseGalleryCard {
   /** Urgency overlay, passed straight through. A tone, never a second accent. */
   tone?: 'red';
   /**
-   * Which half of the colour rule this state is on, printed in the annotation.
+   * Which half of the color rule this state is on, printed in the annotation.
    * `league` — a draft, the auction, kickoff, a site announcement: league
-   * colours, and the glow comes from the player's NFL club.
-   * `team` — a hero ABOUT a franchise: that club's colours and crest.
+   * colors, and the glow comes from the player's NFL club.
+   * `team` — a hero ABOUT a franchise: that club's colors and crest.
    *
    * It also DRIVES the render: a `team` card passes its franchise to the shell
    * (skin + crest), a `league` card passes none. So the badge cannot disagree
@@ -80,7 +80,7 @@ export interface ShowcaseGalleryCard {
   wordmark: string;
   pill: string;
   title: string;
-  /** Accent-coloured tail of the title, as the live heroes split it. */
+  /** Accent-colored tail of the title, as the live heroes split it. */
   titleAccent?: string;
   summary: string;
   ctaLabel: string;
@@ -106,10 +106,10 @@ export interface ShowcaseGalleryCard {
     espnId: string;
     badge: string;
     flag?: string;
-    /** Franchise whose crest watermarks this panel — the tag board's behaviour. */
+    /** Franchise whose crest watermarks this panel — the tag board's behavior. */
     watermarkFranchiseId?: string;
   }>;
-  /** The player modelling the card. Omit for a board, or for a card with no face. */
+  /** The player modeling the card. Omit for a board, or for a card with no face. */
   model?: {
     name: string;
     descriptor: string;
@@ -132,7 +132,7 @@ export type ShowcaseBlock =
   | { kind: 'layers'; layers: Array<{ z: string; name: string; html: string }> }
   /** Two-up explanatory cards. */
   | { kind: 'cards'; cards: Array<{ head: string; html: string; tag: string }> }
-  /** Colour swatch row. */
+  /** Color swatch row. */
   | { kind: 'swatches'; label: string; swatches: Array<{ label: string; hex: string }> }
   /** Signed-in vs guest columns. */
   | { kind: 'persona'; columns: Array<{ who: string; tone: 'owner' | 'guest'; lines: string[] }> }

@@ -119,7 +119,7 @@ export const doubleheaderWeeks = (gamesByWeek) => {
  * Split one week into rounds (perfect matchings).
  *
  * A single-game week is already a round. A doubleheader week is a 2-regular
- * multigraph: a disjoint union of cycles, and an EVEN cycle 2-colours into two
+ * multigraph: a disjoint union of cycles, and an EVEN cycle 2-colors into two
  * perfect matchings by alternating around it. An odd cycle does not, and there
  * is no repair for it here — it means the week is not two clean rounds, so we
  * throw rather than emit a round in which some franchise plays twice.
@@ -145,11 +145,11 @@ export const splitWeekIntoRounds = (games, week) => {
     }
   });
 
-  const colour = new Array(games.length).fill(-1);
+  const color = new Array(games.length).fill(-1);
   const other = (i, id) => (games[i].away === id ? games[i].home : games[i].away);
 
   for (let start = 0; start < games.length; start += 1) {
-    if (colour[start] !== -1) continue;
+    if (color[start] !== -1) continue;
     // Walk the cycle this edge belongs to, collecting it in traversal order.
     const cycle = [];
     let edge = start;
@@ -165,10 +165,10 @@ export const splitWeekIntoRounds = (games, week) => {
       throw new Error(`week ${week}: odd cycle of ${cycle.length} games cannot split into two rounds`);
     }
     cycle.forEach((e, i) => {
-      colour[e] = i % 2;
+      color[e] = i % 2;
     });
   }
-  return [games.filter((_, i) => colour[i] === 0), games.filter((_, i) => colour[i] === 1)];
+  return [games.filter((_, i) => color[i] === 0), games.filter((_, i) => color[i] === 1)];
 };
 
 /**

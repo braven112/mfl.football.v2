@@ -178,7 +178,7 @@ let unknownIds = 0;
 for (const [id, byWeek] of scoresByPlayer) {
   const info = playerInfo.get(id);
   if (!info?.name) {
-    // A scoring id with no row in players.json — cannot be labelled, so it
+    // A scoring id with no row in players.json — cannot be labeled, so it
     // cannot be shown. Counted and reported rather than dropped in silence.
     unknownIds += 1;
     continue;

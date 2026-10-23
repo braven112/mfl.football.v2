@@ -61,7 +61,7 @@ const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1'
     the Leagues button.
 
     Unlike the board, this is an ordinary PAGE surface in normal flow, so it
-    takes the site's colour tokens and follows light and dark like everything
+    takes the site's color tokens and follows light and dark like everything
     else around it. A hardcoded near-black slab under a light-mode nav read as
     a piece of the board that had escaped onto the page.
   */
@@ -343,7 +343,7 @@ const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1'
   // looks the button up per event: under the ClientRouter the element is
   // replaced on every page load. All three spellings, matching the three the
   // request and the state property handle — a set-top browser may emit only
-  // the prefixed one, and `MSFullscreenChange` is genuinely capitalised that
+  // the prefixed one, and `MSFullscreenChange` is genuinely capitalized that
   // way rather than lowercased like the others.
   for (const ev of ['fullscreenchange', 'webkitfullscreenchange', 'MSFullscreenChange']) {
     document.addEventListener(ev, () => {

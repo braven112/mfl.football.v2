@@ -7,7 +7,7 @@
  * (Southwest) "division rivals", and the buyer "desperate for QB stability",
  * because nothing told it otherwise. The prompt now carries the shared
  * division (or null), and this check rejects copy that states a division fact
- * the input does not support, or characterises a team's situation at all, so
+ * the input does not support, or characterizes a team's situation at all, so
  * the caller falls back to the template instead of publishing the claim.
  */
 

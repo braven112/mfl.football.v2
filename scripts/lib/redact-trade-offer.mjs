@@ -30,7 +30,7 @@
  *                     giving him up — which makes this an exact check on the
  *                     row's side/franchise binding rather than a heuristic.
  *                     Optional; absent, the row is taken at its word (the
- *                     pre-2026-09-10 behaviour).
+ *                     pre-2026-09-10 behavior).
  *   blockByFid      — Map<franchiseId, Set<playerId>> of each franchise's
  *                     PUBLIC trade block. Optional; a MISSING franchise and an
  *                     EMPTY block mean different things, which is why it is a
@@ -233,7 +233,7 @@ export function attributeSides({ fid1, fid2, side1, side2, rosterOwnerByPlayerId
   ).length, 0);
 
   // No roster evidence at all (no roster file, or only unknown players): take
-  // the row at its word. This is the pre-roster behaviour, kept so a missing
+  // the row at its word. This is the pre-roster behavior, kept so a missing
   // feed degrades to "as good as we were" rather than to silence.
   if (known === 0) {
     return {

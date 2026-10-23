@@ -127,9 +127,9 @@ describe('the rule', () => {
 
   it('steers the model off the bare word without spelling the other name into the prompt', () => {
     const text = (slug: string) => buildCachedSystem('X', { league: slug }).at(-1)!.text;
-    expect(text(ACRONYM_LEAGUE)).toContain('never capitalise the word "league"');
+    expect(text(ACRONYM_LEAGUE)).toContain('never capitalize the word "league"');
     expect(text(ACRONYM_LEAGUE)).not.toContain(PHRASE);
-    expect(text(PHRASE_LEAGUE)).not.toContain('never capitalise the word "league"');
+    expect(text(PHRASE_LEAGUE)).not.toContain('never capitalize the word "league"');
   });
 });
 

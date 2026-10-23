@@ -124,10 +124,10 @@ export interface LiveMatchup {
    */
   noProjections?: boolean;
   /**
-   * The two franchise colours as CSS custom properties, resolved SERVER-SIDE
+   * The two franchise colors as CSS custom properties, resolved SERVER-SIDE
    * and once PER THEME.
    *
-   * Two of each, always. A single resolved colour bakes in one theme's ground
+   * Two of each, always. A single resolved color bakes in one theme's ground
    * and this renders on a light card and a dark one: seven TheLeague
    * franchises are `#181818` and several NFL primaries are near-black, all
    * invisible on a dark card and perfectly fine on a light one. It cannot be
@@ -280,7 +280,7 @@ export interface LiveMoment {
 /**
  * One row of MFL's `leagueStandings` export, in MFL's OWN order.
  *
- * ── `rank` IS A POSITION, NOT A JUDGEMENT ────────────────────────────────
+ * ── `rank` IS A POSITION, NOT A JUDGMENT ────────────────────────────────
  * It is the row's index in the feed, 1-based, and nothing here computes it.
  * MFL returns standings in the league's official final order with that
  * league's constitution tiebreaker chain already applied — Power Rank,

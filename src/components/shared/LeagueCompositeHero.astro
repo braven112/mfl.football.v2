@@ -84,12 +84,12 @@ const shotFrameUrl = heroFrameUrl(league, view.link);
 const artMode: 'model' | 'shot' | 'logo' = model ? 'model' : shotSrc ? 'shot' : 'logo';
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
-// `modelAccent` is the viewer's own franchise colour when their conference
+// `modelAccent` is the viewer's own franchise color when their conference
 // rosters this player (see hero-franchise-accent.ts); otherwise his NFL team's.
 const glowColor = view.modelAccent || (model ? getNflTeamColors(teamCode).primary : undefined);
 
 // The watermark: the viewer's own club when their conference rosters this
-// player (the same franchise `modelAccent` took its colour from, so the glow
+// player (the same franchise `modelAccent` took its color from, so the glow
 // and the mark cannot disagree), otherwise his NFL team's.
 const crest = resolveHeroCrest({
   franchiseId: view.modelFranchiseId,
@@ -97,7 +97,7 @@ const crest = resolveHeroCrest({
   nflTeam: model?.nflTeam ?? null,
 });
 
-// A TEAM event wears the owning club's colours; a league event (both conference
+// A TEAM event wears the owning club's colors; a league event (both conference
 // drafts) keeps the AFL's own navy. See CompositeHeroTreatment.scope.
 const franchise =
   treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, league) : null;

@@ -6,7 +6,7 @@
  * build if a real name survives anywhere in the output, and
  * tests/demo-generator.test.ts checks this list against the real configs.
  *
- * Colours are chosen to be distinct at a glance in a 16-row table and to read
+ * Colors are chosen to be distinct at a glance in a 16-row table and to read
  * on both white and a dark card; `toBroadcastPair`-style consumers derive
  * their own pairs from `colorPrimary`/`colorSecondary`.
  */
@@ -38,7 +38,7 @@ const RAW = [
   ['0016', 'Arroyo Outlaws', 'Outlaws', 'ARO', 'Felix Moreau', 3, '#262626', '#c9a227'],
 ];
 
-/** Lighten a #rrggbb colour toward white by `amount` (0..1), for dark-theme variants. */
+/** Lighten a #rrggbb color toward white by `amount` (0..1), for dark-theme variants. */
 export function lighten(hex, amount) {
   const n = parseInt(hex.slice(1), 16);
   const ch = (shift) => {

@@ -116,11 +116,11 @@ export function keeperDeadlineView(event: ResolvedLeagueEvent, env: ViewEnv): Ev
           : `${days} days until the keeper deadline. Lock in your ${k.count} protected players before ${k.deadline}.`,
     link: p(k.path),
     linkLabel: 'Manage Keepers',
-    // Trophy gold is the keeper window's own colour — the AFL's answer to
+    // Trophy gold is the keeper window's own color — the AFL's answer to
     // TheLeague's tag/auction window — and it flips to the urgency red on
     // the day itself, the same tier flip the cut watch makes.
     // A TEAM event — it is YOUR keeper class — so a signed-in owner's card is
-    // painted in their club's colours; gold is the fallback for everyone else.
+    // painted in their club's colors; gold is the fallback for everyone else.
     composite: { wordmark: 'KEEPERS', accent: 'gold', tone: days === 0 ? 'red' : null, scope: 'team' },
     accent: ACCENT_GOLD,
     glow: GLOW_RED,
@@ -357,8 +357,8 @@ export function championCrownedView(env: ViewEnv): EventHeroView {
     icon: 'trophy',
     // Deliberately LEAGUE, not team. The cast model here is a league-wide
     // headliner rather than the champion's own player, so painting the card in
-    // a club's colours would dress it in whoever happened to be cast — the
-    // exact stranger's-colours trap the pool scoping exists to avoid.
+    // a club's colors would dress it in whoever happened to be cast — the
+    // exact stranger's-colors trap the pool scoping exists to avoid.
     composite: { wordmark: 'CHAMPION', accent: 'gold', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_GOLD_SOFT,
@@ -435,7 +435,7 @@ export function gameDayPreviewSlotView({ env, week, lineupSubmitted }: SlotConte
       linkLabel: 'BUILD YOUR SUNDAY',
       icon: 'nfl',
       // YOUR starters on YOUR multiview — a team story, so a signed-in owner's
-      // card takes their club's colours and crest.
+      // card takes their club's colors and crest.
       composite: { wordmark: 'SUNDAY\u00a0TICKET', accent: 'navy', tone: null, scope: 'team' },
       accent: ACCENT_GREEN,
       glow: GLOW_GREEN,

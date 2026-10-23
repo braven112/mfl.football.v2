@@ -104,9 +104,9 @@ export function resolveHeroCrest({ franchiseId, league, nflTeam }: HeroCrestInpu
 }
 
 /**
- * The franchise's COLOURS for a hero that is about a team rather than about the
+ * The franchise's COLORS for a hero that is about a team rather than about the
  * league — the rule being: a league event (a draft, the auction, kickoff, a
- * site announcement) wears the league's phase colours; a team event (your cuts,
+ * site announcement) wears the league's phase colors; a team event (your cuts,
  * your keeper class, the club that rostered the week's top scorer) wears that
  * club's.
  *
@@ -116,7 +116,7 @@ export function resolveHeroCrest({ franchiseId, league, nflTeam }: HeroCrestInpu
  * same homepage. That drift is what this exists to fix.
  *
  * Null whenever the club cannot be painted (unknown franchise, a config with no
- * colours at all), and the hero then keeps its phase gradient, which is the
+ * colors at all), and the hero then keeps its phase gradient, which is the
  * correct fallback and the reason no caller branches on auth itself.
  */
 export function resolveHeroFranchiseSkin(

@@ -1,5 +1,5 @@
 /**
- * Per-franchise BRAND (short name, colours, crest) for any league in the
+ * Per-franchise BRAND (short name, colors, crest) for any league in the
  * registry — the small slice of a league config that matchup UI needs.
  *
  * Why this exists rather than another caller-side lookup: the two lineup pages
@@ -76,7 +76,7 @@ const brandOf = (t: any): TeamBrand => ({
  * and the crest fields that `TeamBrand` deliberately drops, and the alternative
  * was a third call site re-importing both league configs by hand. Returns
  * undefined for an unknown league or franchise rather than throwing: every
- * caller is a hero deciding whether it can paint itself in a club's colours,
+ * caller is a hero deciding whether it can paint itself in a club's colors,
  * and "no" is a normal answer there.
  */
 export function getLeagueTeamConfig(slug: string, franchiseId: string): any | undefined {

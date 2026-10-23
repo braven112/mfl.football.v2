@@ -36,7 +36,7 @@ import {
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 
 /**
- * The name/art a pick row is labelled with.
+ * The name/art a pick row is labeled with.
  *
  * `icon` and `banner` are REQUIRED here, which is stricter than
  * `draft-utils`' own `TeamConfig` and exactly as strict as

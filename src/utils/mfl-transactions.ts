@@ -106,7 +106,7 @@ export interface TransactionRow {
   /** Epoch MILLISECONDS. MFL sends epoch seconds in a string. */
   at: number;
   kind: TransactionKind;
-  /** The original MFL type, kept so the UI can label a waiver flavour exactly. */
+  /** The original MFL type, kept so the UI can label a waiver flavor exactly. */
   rawType: string;
   franchiseId: string;
   /** MFL player ids joining the roster. */

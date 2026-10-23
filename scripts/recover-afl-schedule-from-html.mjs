@@ -453,7 +453,7 @@ for (const f of toArray(standings?.leagueStandings?.franchise)) {
 // partial loss. Four different NFL seasons do not share a game-count shape by
 // chance. Every score in those rows is correct; the OPPONENTS are invented.
 //
-// So a plain "MFL wins" veto would reject the real schedule in favour of a
+// So a plain "MFL wins" veto would reject the real schedule in favor of a
 // fabricated one. Instead the official standings arbitrate, because MFL
 // computed them from the true schedule: the paste is already required to
 // reproduce every franchise's W-L-T and games-played exactly, so if swapping a

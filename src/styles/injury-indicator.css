@@ -13,7 +13,7 @@
  *    a runtime-built node never has. Scoped, the rules silently miss exactly the
  *    rows that re-render after hydration.
  *
- * The colour is `--color-error`, not a literal. The badge shipped hardcoded
+ * The color is `--color-error`, not a literal. The badge shipped hardcoded
  * `#ef4444`, which measures 3.44:1 on the AFL's navy row hover (#1d3349) and
  * 3.98:1 on its resting row — under the 4.5:1 floor for 14px/600 text, so the
  * one datum on the row that means "this player might not play" was the hardest
@@ -36,7 +36,7 @@
 }
 
 /**
- * The lineup pages' variant. Same colour and weight, but it is a <span>: a
+ * The lineup pages' variant. Same color and weight, but it is a <span>: a
  * lineup slot is itself a tap target that opens the player picker, so a button
  * inside one competes for the tap. Nothing here is clickable, so nothing should
  * look clickable.

@@ -554,7 +554,7 @@ const fonts = [
       const value = html.getPropertyValue(token).trim();
       const out = el.querySelector<HTMLElement>('[data-value]');
       if (out) out.textContent = value;
-      // A shadow is not a colour: draw it as a shadow on a plain chip.
+      // A shadow is not a color: draw it as a shadow on a plain chip.
       if (/\dpx/.test(value) && !/gradient/.test(value)) {
         const chip = el.querySelector<HTMLElement>('.theme-review__chip');
         if (chip) {

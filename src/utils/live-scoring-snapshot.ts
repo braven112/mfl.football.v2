@@ -7,7 +7,7 @@
  * shape, and this repo's forked-sibling history says how that ends — so the
  * route and the page both call this now, and it is fixture-tested directly.
  *
- * Three feed behaviours are encoded here, each one a bug that shipped:
+ * Three feed behaviors are encoded here, each one a bug that shipped:
  *
  *  - **MFL collapses a one-element list to a bare object.** `liveScoring`
  *    nests franchises under `.franchise[]` OR under `.matchup[].franchise[]`

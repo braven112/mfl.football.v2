@@ -22,7 +22,7 @@
  * server cannot know, because the fetch happens in the viewer's browser and the
  * host may be reachable from ours and not theirs.
  *
- * The CSS containment stays as a second line of defence (the alt text is still
+ * The CSS containment stays as a second line of defense (the alt text is still
  * hidden while the image is in flight, and `onError` does not fire for every
  * failure mode in every browser).
  */

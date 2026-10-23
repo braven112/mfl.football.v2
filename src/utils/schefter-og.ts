@@ -166,10 +166,10 @@ function tierBadge(post: SchefterPost): TierBadge {
   return { label: 'LEAGUE WIRE', ghost: 'SCHEFTER', color: '#2563eb' };
 }
 
-/** Card navy when a league names no colour of its own. */
+/** Card navy when a league names no color of its own. */
 const DEFAULT_CARD_PRIMARY = '#1c497c';
 
-/** The card's league name, printed address and colour — the registry's `shareCard`, else derived. */
+/** The card's league name, printed address and color — the registry's `shareCard`, else derived. */
 function leagueBrand(league: OgLeague): { name: string; domain: string; primary: string } {
   const def = getLeagueBySlug(league);
   if (def?.shareCard) return def.shareCard;

@@ -860,7 +860,7 @@ export function getWeeklyTopScorerCandidates(
   const data = readJsonFile(feedPath(league, leagueYear, 'playerScores.json'));
   const list = data?.playerScores?.playerScore;
   if (!list) return [];
-  // Pass `week` when the caller is also LABELLING the result with a week.
+  // Pass `week` when the caller is also LABELING the result with a week.
   // The feed holds whichever week MFL considers live (see getWeekInTheBooks),
   // which is not necessarily the week a capped label names — and a card
   // reading "Week 4 top scorer" over week 5's numbers is worse than no card.

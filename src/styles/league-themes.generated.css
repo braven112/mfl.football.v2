@@ -746,7 +746,7 @@ html[data-league="mfl"] {
   --table-row-bg-alt: #ececec;
   --table-row-bg-hover: var(--color-gray-50);
   --accent-content-text-color: var(--color-white);
-  --color-text-primary: #111827; /* Defined in light too (the theleague theme leaves it unset there): mfl-live.css reads it with no fallback, and undefined, colour inherits and the board loses its text hierarchy. */
+  --color-text-primary: #111827; /* Defined in light too (the theleague theme leaves it unset there): mfl-live.css reads it with no fallback, and undefined, color inherits and the board loses its text hierarchy. */
   --color-text-secondary: #646b76;
   --content-text-muted: var(--color-gray-500);
   --input-placeholder: var(--color-gray-400);

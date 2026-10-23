@@ -2,10 +2,10 @@
  * Live Scoring Broadcast — the shapes that cross the boundaries.
  *
  * Three boundaries, and they are not the same:
- *  - SERVER → ISLAND, once, as `pageData` (identity, colours, crests, names).
+ *  - SERVER → ISLAND, once, as `pageData` (identity, colors, crests, names).
  *    Everything expensive and everything that cannot change during a Sunday.
  *  - SERVER → ISLAND, every poll, as `BroadcastPollResponse`. Only numbers and
- *    events. No colour, no crest, no name — those never change mid-afternoon
+ *    events. No color, no crest, no name — those never change mid-afternoon
  *    and re-sending them would multiply the payload by the number of leagues.
  *  - NEVER: an ESPN athlete id. `PlayerMeta.espnId` can hold a COLLEGE athlete
  *    id and college/NFL ids are both plain digits, so every join happens
@@ -60,25 +60,25 @@ export interface BroadcastTeam {
   icon: string;
   /** Small crest for a player row — `resolveBroadcastCrest`'s theme-first order. */
   iconSmall: string;
-  /** Outline colour for `icon`, set only when that art is a LIGHT cut. */
+  /** Outline color for `icon`, set only when that art is a LIGHT cut. */
   iconStroke?: string;
-  /** Outline colour for `iconSmall`, set only when that art is a LIGHT cut. */
+  /** Outline color for `iconSmall`, set only when that art is a LIGHT cut. */
   iconSmallStroke?: string;
   /**
    * The takeover's field, lifted until it separates from the board's GROUND
    * while keeping white ink legible (`ensureFieldOn`).
    *
-   * Not the raw brand colour, and not `toBroadcastPair`'s output alone: that
+   * Not the raw brand color, and not `toBroadcastPair`'s output alone: that
    * helper only ever darkens, so the seven TheLeague franchises whose
    * `colorPrimary` is `#181818` came back untouched at 1.14:1 against the
-   * board's `#05070b` — a full-screen "field of the club's colour" rendered
+   * board's `#05070b` — a full-screen "field of the club's color" rendered
    * as a black rectangle indistinguishable from the idle screen.
    */
   primary: string;
   /** The field's second stop — the franchise's real secondary, same treatment. */
   secondary: string;
   /**
-   * The MARK colour: this franchise on the `--lbc-panel` header, for the
+   * The MARK color: this franchise on the `--lbc-panel` header, for the
    * win-probability bar and the lower third's rule. A different question from
    * `primary` (which is a field you write on) and it needs its own answer —
    * a brand that reads fine as a full-screen field can still vanish as a

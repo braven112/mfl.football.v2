@@ -99,7 +99,7 @@ const throwbackBrands = (slug: string, _leagueId: string, release: any) => {
     const b = getThrowbackFranchiseBrand(id, true);
     // No dark variant: `getThrowbackFranchiseBrand` deliberately clears the
     // *Dark colors when it swaps in an era palette, because those belong to the
-    // CURRENT brand and eras have none. The one colour is used in both themes.
+    // CURRENT brand and eras have none. The one color is used in both themes.
     return {
       name: b.name,
       icon: b.icon ?? '',
@@ -136,7 +136,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       releaseDate: releaseDate?.toISOString() ?? null,
       canPaste: isCommissionerOrAdmin(user),
       release: existing,
-      // Crests + brand colours for the marquee cards. Sent alongside the
+      // Crests + brand colors for the marquee cards. Sent alongside the
       // archived reveal rather than baked into it: the reveal is a COMMITTED
       // record of a season's games and must not go stale the day a franchise
       // rebrands. Names in `release.marquee` are the ones the draw was made

@@ -1,6 +1,6 @@
 /*
  * The Free Agents page under the Primetime site theme (layout B, "Position
- * leaders"): a big italic headline, one team-colour card per position, and
+ * leaders"): a big italic headline, one team-color card per position, and
  * the table beside a rail of the league's market.
  *
  * The page overrides key off `.players-page[data-site-theme='primetime']`, so
@@ -95,7 +95,7 @@
 }
 .players-page[data-site-theme='primetime'] .fa-leaders__row[hidden] { display: none; }
 
-/* A broadcast fill: the club's colour into near-black, dark in BOTH themes,
+/* A broadcast fill: the club's color into near-black, dark in BOTH themes,
    so the text on it is always white and the crest is the dark-ground cut. */
 .fa-lead {
   position: relative;

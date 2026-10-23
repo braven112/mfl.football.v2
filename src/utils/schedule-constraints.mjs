@@ -18,7 +18,7 @@
  *   hard        `validateSeason` (or a guard test) rejects a season that
  *               breaks it — the CLI exits non-zero and the admin page
  *               disables its copy button.
- *   maximise    optimised as far as the format allows, and reported against
+ *   maximize    optimized as far as the format allows, and reported against
  *               that allowance rather than against a perfect score.
  *   preference  real, stated, and the first thing to yield.
  *   cosmetic    settled by a post-pass once everything above is fixed.
@@ -150,7 +150,7 @@ const allConstraints = () => {
         'Both ends carry extra games, so neither half of the season decides more than its share — and the back half ' +
         'is the half that decides seeding, so a franchise whose extra games all landed in September has had its ' +
         'season front-loaded. The after-Week-8 clause is what makes that concrete, and it is the clause the ' +
-        'staggered-doubleheader last resort has to keep honouring franchise by franchise.',
+        'staggered-doubleheader last resort has to keep honoring franchise by franchise.',
       enforcedBy: 'chooseDoubleheaderWeeks + tests/schedule-optimization.test.ts',
     },
     {
@@ -167,9 +167,9 @@ const allConstraints = () => {
       tier: 'maximise',
       rule: 'Every franchise plays its division games across the whole season — roughly half of them after the midpoint — rather than having its division race settled in September.',
       why:
-        'The structured builder gave this away for free by putting the two halves of the rivalry schedule in separate blocks, so it was never written down. Removing that structure removed the guarantee, and the goal list had no replacement: told only to keep division games off bye weeks, the optimiser stacked all 48 of The League\u2019s into Weeks 1-4 and 12 and left Weeks 5-11, 13 and 14 without a single one. Perfect on the goal above, and a season whose division race is over by Week 4. Ranked directly below that goal because the two genuinely trade against each other \u2014 bye-free weeks cluster early, and a schedule can be clean or spread but rarely both.',
+        'The structured builder gave this away for free by putting the two halves of the rivalry schedule in separate blocks, so it was never written down. Removing that structure removed the guarantee, and the goal list had no replacement: told only to keep division games off bye weeks, the optimizer stacked all 48 of The League\u2019s into Weeks 1-4 and 12 and left Weeks 5-11, 13 and 14 without a single one. Perfect on the goal above, and a season whose division race is over by Week 4. Ranked directly below that goal because the two genuinely trade against each other \u2014 bye-free weeks cluster early, and a schedule can be clean or spread but rarely both.',
       enforcedBy: 'scoreColoring + tests/schedule-coloring.test.ts',
-      // Adopted Aug 2026 with the colouring builder, which is what exposed the
+      // Adopted Aug 2026 with the coloring builder, which is what exposed the
       // gap. Seasons drawn before it were spread by construction.
       since: 2027,
     },
@@ -182,7 +182,7 @@ const allConstraints = () => {
         'Which division games land on a bye week is settled by the goal above; WHICH bye week is still a free ' +
         'choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the ' +
         'league. The second half of the rivalry schedule is widened backwards until the light weeks are reachable. ' +
-        'The second clause is the sharper one and the optimiser now scores it directly: exposure is counted over ' +
+        'The second clause is the sharper one and the optimizer now scores it directly: exposure is counted over ' +
         'each roster\u2019s PROJECTED STARTING NINE, so a rivalry week costs nothing if neither side is actually ' +
         'missing anyone. It matters far more in The League, and not for the reason you would guess \u2014 the AFL ' +
         'reveals BEFORE its draft, so its rosters are keepers only, which are by definition the important players ' +
@@ -255,7 +255,7 @@ const allConstraints = () => {
       why:
         'Last on purpose: there is no home-field advantage in fantasy, so this decides nothing about who wins. It ' +
         'is worth doing because a lopsided home count looks like a mistake, and it is free — which side is home ' +
-        'constrains nothing else, so a post-pass fixes it exactly rather than the optimiser spending effort on it.',
+        'constrains nothing else, so a post-pass fixes it exactly rather than the optimizer spending effort on it.',
       enforcedBy: 'balanceHomeAway',
     },
   ];
@@ -264,7 +264,7 @@ const allConstraints = () => {
 
 /**
  * A goal's tradeable weight, by key. Throws on an unknown key so a typo in the
- * optimiser cannot silently weight a term at zero.
+ * optimizer cannot silently weight a term at zero.
  */
 export const goalWeight = (key) => {
   const c = allConstraints().find((x) => x.key === key);

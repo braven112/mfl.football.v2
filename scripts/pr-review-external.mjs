@@ -152,7 +152,7 @@ function renderSection(result) {
   // findings by severity heading, so prose with no heading tallies as zero —
   // exactly what a reviewer with nothing to say produces. The raw text is kept
   // (PR #761's unusable prose held a real TDZ bug no one else caught) but it is
-  // fenced inside <details> and labelled, so it can only be read by a human.
+  // fenced inside <details> and labeled, so it can only be read by a human.
   if (result.malformed) {
     return `${header}
 

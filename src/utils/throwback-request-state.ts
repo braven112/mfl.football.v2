@@ -63,7 +63,7 @@ async function cachedThrowbackOverrides(scope: string): Promise<Record<string, T
  * that week this costs a config walk and nothing else, which matters because
  * callers include a layout that renders on every page.
  *
- * `?week=` and `?testDate=` are honoured so a throwback week can be previewed
+ * `?week=` and `?testDate=` are honored so a throwback week can be previewed
  * the same way it is everywhere else.
  */
 export async function resolveThrowbackRequestState(

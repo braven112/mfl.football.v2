@@ -1,5 +1,5 @@
 /**
- * Sleeper row ids the BROWSER needs to recognise. Pure and dependency-free so
+ * Sleeper row ids the BROWSER needs to recognize. Pure and dependency-free so
  * the board island can import it without dragging `players.ts` (node:fs, Redis)
  * into the client bundle.
  */

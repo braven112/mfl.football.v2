@@ -248,7 +248,7 @@ const allPlayThrough = (weekly, maxWeek) => {
 };
 
 /**
- * The licence for the line above. Over ALL weeks this aggregation must
+ * The license for the line above. Over ALL weeks this aggregation must
  * reproduce MFL's published all_play_pct; if it ever stops doing so, the
  * regular-season cut is no longer MFL's definition and the build should fail
  * rather than quietly publish a different statistic.

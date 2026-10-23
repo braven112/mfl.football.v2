@@ -39,7 +39,7 @@
  *
  * Note the hero and the page can name DIFFERENT leaders, on purpose.
  * `getWeeklyTopScorerCandidates` casts ROSTERED players only, because the card
- * renders its subject's franchise colours and crest and a free agent has no
+ * renders its subject's franchise colors and crest and a free agent has no
  * franchise to key those off. The hero answers "whose player went off this
  * week"; the page answers "who went off this week". Do not "fix" the filter.
  */

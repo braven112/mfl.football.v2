@@ -1,5 +1,5 @@
 /**
- * Simulated roster moves, summarised for the phone surfaces
+ * Simulated roster moves, summarized for the phone surfaces
  * (docs/plans/rosters-mobile-layout.md § 6): the cap card under the header,
  * the sticky sim bar, and the Cap by year review sheet.
  *

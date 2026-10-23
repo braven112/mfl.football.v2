@@ -128,12 +128,12 @@ const userConferenceName = userConferenceId
   ? aflConfig.conferences.find(c => c.code === userConferenceId)?.name
   : undefined;
 
-// The owner's own colours + crest behind the promo hero.
+// The owner's own colors + crest behind the promo hero.
 //
 // Deliberately the SESSION's franchise, not `userTeam` — so this reads
 // `authAflFranchiseId` rather than the `?myteam=` / cookie preference that the
 // My Team card, the standings highlight and the spotlight tile all follow.
-// Those cards say "here is a team"; the hero, painted in someone's colours,
+// Those cards say "here is a team"; the hero, painted in someone's colors,
 // says "this site is yours", and that claim should rest on having actually
 // signed in rather than on a query param anyone can set. It also keeps the two
 // leagues' homepages answering the question the same way — TheLeague has no
@@ -304,7 +304,7 @@ const heroInput = {
   authUser,
   authFranchiseId: authAflFranchiseId,
   // The browsed team casts (the My Team card follows it too); the SIGNED-IN
-  // franchise alone decides whose colours the card wears.
+  // franchise alone decides whose colors the card wears.
   castFranchiseId: userFranchiseId,
   userPoolId: userConferenceId,
   userTier: userTeam?.tier,
@@ -376,7 +376,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
 //
 // Scoping needs a conference, and a conference needs a signed-in franchise —
 // so `authAflFranchiseId`, deliberately not the `?myteam=` preference (a hero
-// scoped to someone's colours should rest on having signed in, the same rule
+// scoped to someone's colors should rest on having signed in, the same rule
 // the franchise backdrop and the composite accent already follow). A viewer
 // with no conference gets the league-wide cast rather than an arbitrary half.
 let aflLiveScoring: BuiltLiveScoringProps | undefined;

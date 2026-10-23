@@ -308,7 +308,7 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
   // game above. The AFL passes its viewer's conference: 24 teams across two
   // conferences means "the three closest games in the league" is mostly games
   // against people you will never play. TheLeague passes nothing, so the whole
-  // league stays in scope and its behaviour is unchanged.
+  // league stays in scope and its behavior is unchanged.
   //
   // Scoping needs a conference, and a conference needs a signed-in franchise —
   // so a signed-out viewer is deliberately league-wide rather than scoped to

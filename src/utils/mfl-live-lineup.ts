@@ -34,7 +34,7 @@ import { normalizePosition as sharedNormalizePosition } from './normalize-positi
 
 /**
  * Reading order. MFL's own vocabulary — `PK` for the kicker and `DEF` for a
- * team defence — because that is what the player feed says; `normalizePosition`
+ * team defense — because that is what the player feed says; `normalizePosition`
  * maps the spellings that reach us from elsewhere onto it.
  */
 export const MFL_LIVE_POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
@@ -48,14 +48,14 @@ const POSITION_LABELS: Record<string, string> = { PK: 'K' };
  * A THIN ADAPTER over the shared `normalizePosition`, not a second copy of the
  * mapping — that table already folds `K`/`KICKER` to `PK` and
  * `DST`/`D/ST`/`DEFENSE` to `DEF`, which is exactly what this board needs
- * (MFL is not self-consistent: `league.starters` spells a team defence `Def`
+ * (MFL is not self-consistent: `league.starters` spells a team defense `Def`
  * while the player feed spells it `DEF`). The repo carries eight
  * `normalizePosition` functions already; this is deliberately not a ninth.
  *
  * All this adds is the NULLABLE input the shared one does not take, because a
  * position here comes from `meta[id]?.position` and is routinely undefined.
  *
- * An unrecognised position passes through unchanged and sorts last rather than
+ * An unrecognized position passes through unchanged and sorts last rather than
  * being forced into a bucket it is not in — a rookie the player map has not
  * caught up with is the least trustworthy row on the board, and filing him
  * under TE because that is where a fallback landed would be a quiet lie about

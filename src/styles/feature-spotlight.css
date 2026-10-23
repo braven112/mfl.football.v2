@@ -7,9 +7,9 @@
  *
  * The animation is a halo expanding out of the control, not the control itself
  * moving — a button that changes size shifts the layout around it and reads as
- * a glitch rather than an invitation. The control only warms in colour.
+ * a glitch rather than an invitation. The control only warms in color.
  *
- * Both colours derive from `--color-primary`, which tokens.css and
+ * Both colors derive from `--color-primary`, which tokens.css and
  * tokens-dark.css both define (#1c497c / #3b82f6), so the pulse follows the
  * theme with no `html.dark` override and no literal that could render in the
  * wrong one.

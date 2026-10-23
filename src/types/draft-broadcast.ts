@@ -64,7 +64,7 @@ export interface BroadcastPlayerExtras {
    * — rookies with a school), which is what keeps this affordable: the lookup
    * needs the 80 KB `college-logos.json`, so it cannot happen on the client, and
    * a pool of several hundred players would spend real bytes shipping a URL to
-   * everyone who will be labelled with his NFL team instead. That NFL half is
+   * everyone who will be labeled with his NFL team instead. That NFL half is
    * derived on the client from `nflTeam` in `resolveOrigin`, which is also the
    * only place this field is read.
    */

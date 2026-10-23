@@ -1,5 +1,5 @@
 /**
- * The bench, behind a disclosure, labelled and dimmed AS A GROUP.
+ * The bench, behind a disclosure, labeled and dimmed AS A GROUP.
  *
  * Two lists rather than one list with a flag, all the way down: bench rows
  * never enter `players`, so nothing can sum them by accident. A bench row
@@ -15,7 +15,7 @@
  *
  * The disclosure itself is a CENTERED PILL, not a left-aligned line of muted
  * text: the bench is the only control in a screen of read-only rows, and at
- * 0.7rem in the body colour, flush with the gutter, it read as leftover markup
+ * 0.7rem in the body color, flush with the gutter, it read as leftover markup
  * rather than something to tap (owner report, Sep 2026). The chevron is a
  * rotated CSS glyph rather than two characters swapped on state, so the open
  * and closed labels stay the same width and the row does not shift under the

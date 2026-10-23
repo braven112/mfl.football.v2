@@ -80,7 +80,7 @@ function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Prop
           // EVERY matchup, not `matchups[0]`. A doubleheader is two real games
           // against two different opponents, and this is the screen that shows
           // where the day ended — taking only the first hid half the results
-          // of the week the board most needed to summarise.
+          // of the week the board most needed to summarize.
           if (panel.matchups.length === 0) {
             return (
               <p className="lbc-saver__row" key={panel.leagueId}>
@@ -121,6 +121,6 @@ function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Prop
  * times over an eight-hour Sunday — on set-top hardware, and concurrently
  * with the reveal transitions that are the one thing on this screen allowed
  * to cost a frame budget. Props here are already memoised upstream, so the
- * bailout is free and changes no behaviour.
+ * bailout is free and changes no behavior.
  */
 export default memo(BroadcastScreensaver);

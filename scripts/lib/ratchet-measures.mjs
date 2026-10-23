@@ -80,7 +80,7 @@ export function inBandRoutes(siblings, { largestThinRoute, smallestForkedRoute }
 // ---------------------------------------------------------------------------
 
 /**
- * Files whose client code initialises on `DOMContentLoaded` and never on
+ * Files whose client code initializes on `DOMContentLoaded` and never on
  * `astro:page-load`.
  *
  * Under the ClientRouter a bundled `<script>` is evaluated ONCE per session
@@ -228,7 +228,7 @@ export function runAstroCheck({ cwd = process.cwd(), timeoutMs = CHECK_TIMEOUT_M
   }
 }
 
-/** Strip ANSI colour codes so the output can be matched line by line. */
+/** Strip ANSI color codes so the output can be matched line by line. */
 export function decolour(output) {
   return output.replace(/\u001b\[[0-9;]*m/g, '');
 }

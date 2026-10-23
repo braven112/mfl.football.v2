@@ -56,9 +56,9 @@
  * If the comparison cannot be made — no token, an API error, a rate limit —
  * this publishes anyway and says so loudly. Same reasoning as
  * `scripts/vercel-ignore-build.mjs`, which is pinned to fail open by test: a
- * scheduling optimisation that can silently suppress the week's announcement
- * forever is worse than the thing it optimises. The cost of failing open is
- * that one release's article defers a week — which is exactly the behaviour
+ * scheduling optimization that can silently suppress the week's announcement
+ * forever is worse than the thing it optimizes. The cost of failing open is
+ * that one release's article defers a week — which is exactly the behavior
  * this replaces, so the floor is the status quo rather than silence.
  */
 

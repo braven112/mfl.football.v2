@@ -84,14 +84,14 @@ export default function SocialEmbed({ type, url, tweetId, username }: Props) {
   const [state, setState] = useState<'loading' | 'loaded' | 'failed'>('loading');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const el = containerRef.current;
     if (!el) return;
 
     if (type === 'x' && tweetId) {
       loadTwitterWidgets()
         .then(async () => {
-          if (cancelled) return;
+          if (canceled) return;
           const twttr = (window as unknown as { twttr?: TwttrWidgets }).twttr;
           if (!twttr) {
             setState('failed');
@@ -105,17 +105,17 @@ export default function SocialEmbed({ type, url, tweetId, username }: Props) {
             dnt: true,
             theme: 'light',
           });
-          if (!cancelled) {
+          if (!canceled) {
             setState(result ? 'loaded' : 'failed');
           }
         })
         .catch(() => {
-          if (!cancelled) setState('failed');
+          if (!canceled) setState('failed');
         });
     } else if (type === 'instagram') {
       loadInstagramEmbed()
         .then(() => {
-          if (cancelled) return;
+          if (canceled) return;
           const instgrm = (window as unknown as { instgrm?: InstagramEmbeds }).instgrm;
           if (!instgrm) {
             setState('failed');
@@ -125,11 +125,11 @@ export default function SocialEmbed({ type, url, tweetId, username }: Props) {
           setState('loaded');
         })
         .catch(() => {
-          if (!cancelled) setState('failed');
+          if (!canceled) setState('failed');
         });
     }
 
-    return () => { cancelled = true; };
+    return () => { canceled = true; };
   }, [type, tweetId]);
 
   // Twitter/X: container is replaced with iframe when widget loads.

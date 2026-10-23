@@ -206,7 +206,7 @@ export async function buildDraftHubProps(input: {
     startsAt: nextDraftStart(calendar ?? [], now),
   });
 
-  // The recap is labelled with the season it came from, which outside of
+  // The recap is labeled with the season it came from, which outside of
   // draft week is NOT the season the countdown is about.
   const recapYear = lastDrafted?.year ?? null;
   const identities = getGlobalPlayerMap(input.unionSlug);

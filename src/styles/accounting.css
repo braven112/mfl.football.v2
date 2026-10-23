@@ -1,7 +1,7 @@
 /**
  * Commissioner accounting console.
  *
- * Every colour is a token WITH a light-mode fallback. A bare hex renders
+ * Every color is a token WITH a light-mode fallback. A bare hex renders
  * correctly in light and ships white-on-white in dark, and a `var(--x)` whose
  * token is never defined silently renders its fallback in BOTH themes — see
  * docs/claude/rules/theming-and-assets.md. Tokens used here are the same set
@@ -47,7 +47,7 @@
 /* ----------------------------------------------------------------- tabs */
 
 /* ONE ROW, always — you swipe it rather than it wrapping to a second line.
-   Wrapping was the old behaviour and it reflowed the whole panel below as
+   Wrapping was the old behavior and it reflowed the whole panel below as
    tabs moved between rows, which on a phone meant the content jumped every
    time the active tab changed rows. */
 .acct__tabs {
@@ -252,7 +252,7 @@
   text-align: right;
 }
 
-/* Negative is a CHARGE. Colour is a reinforcement, never the only signal —
+/* Negative is a CHARGE. Color is a reinforcement, never the only signal —
    the minus sign carries the meaning for anyone who can't see the hue.
    --color-error and --color-error-light are both redefined in tokens-dark.css,
    which is what makes them safe here; --color-danger* were not defined at all
@@ -297,7 +297,7 @@
   display: block;
 }
 
-/* The mark carries state as a glyph AND a colour, so neither is load-bearing
+/* The mark carries state as a glyph AND a color, so neither is load-bearing
    alone — the step text states it too, for anyone getting neither. */
 .acct__step-mark {
   display: flex;
@@ -322,14 +322,14 @@
 }
 
 /* Unknown is grey on purpose: it is neither progress nor a problem, and
-   colouring it either way would overstate what we know. */
+   coloring it either way would overstate what we know. */
 .acct__step.is-unknown .acct__step-mark {
   color: var(--color-text-secondary, #475569);
   background: var(--color-surface-1, #fff);
   border: 1px solid var(--color-border-default, #cbd5e1);
 }
 
-/* Visible to assistive tech only — the state word that the coloured mark
+/* Visible to assistive tech only — the state word that the colored mark
    conveys visually. */
 .acct__sr {
   position: absolute;

@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ url, request }) => {
   // ── `?mfl=` — MFL Live's own league boards ──────────────────────────────
   // Any league the SIGNED-IN account is in, including the ones this site does
   // not run. It is a separate parameter rather than an overload of `?league=`
-  // because the two authorise differently and must not be confusable: a slug
+  // because the two authorize differently and must not be confusable: a slug
   // names a league this site runs and is public, while an MFL id is checked
   // against the owner's own league list and the read carries their cookie.
   const mflId = (url.searchParams.get('mfl') ?? '').trim();
@@ -85,7 +85,7 @@ export const GET: APIRoute = async ({ url, request }) => {
       authUser: getAuthUser(request),
       searchParams: url.searchParams,
       // STRICT: the lenient resolver falls back to TheLeague for anything it
-      // does not recognise, which would hand a best-ball board TheLeague's era
+      // does not recognize, which would hand a best-ball board TheLeague's era
       // rules. `undefined` is the right answer for a league with no throwback.
       throwbackScope: strictThrowbackScopeForLeagueSlug(slug) ?? undefined,
       sample: leagueHasFeature(slug, 'liveScoringSample'),

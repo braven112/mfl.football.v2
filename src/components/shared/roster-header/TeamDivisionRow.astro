@@ -217,7 +217,7 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-white, #fff);
-    /* The CONFERENCE's own colour, sampled from its mark (`getConferenceColor`)
+    /* The CONFERENCE's own color, sampled from its mark (`getConferenceColor`)
        — AL red, NL blue. Grey read as chrome and left the vertical label as
        the only way to tell which half of the row you were looking at, which is
        a lot to ask of two rotated letters. Dimmed while collapsed so the open
@@ -234,14 +234,14 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
   }
   /* The OPEN conference is at full strength; the collapsed one is dimmed.
      That, plus which side the crests are on, is what says which is which —
-     the colour says WHICH conference, the opacity says which is showing. */
+     the color says WHICH conference, the opacity says which is showing. */
   .rhdr-teams__radio:checked + .rhdr-teams__conflabel {
     opacity: 1;
   }
   .rhdr-teams__conflabel:hover { opacity: 0.85; }
 
   /* The viewer's own conference is marked on the rail itself, since it is no
-     longer the only one wearing a colour. */
+     longer the only one wearing a color. */
   .rhdr-teams__conflabel.is-mine {
     box-shadow: inset 3px 0 0 var(--page-text);
   }
@@ -282,8 +282,8 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
     color: var(--content-text-muted);
   }
   /* Asked of the DOM, not of a render-time class — see the markup note. The
-     active division's label is full ink rather than a colour: the coloured
-     mark in this row is the club's own, and a second colour up here made the
+     active division's label is full ink rather than a color: the colored
+     mark in this row is the club's own, and a second color up here made the
      row look like it was reporting two different things. */
   .rhdr-teams__division:has(.rhdr-teams__crest[aria-current='page']) .rhdr-teams__divlabel {
     color: var(--page-text);
@@ -292,7 +292,7 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
   .rhdr-teams__crests {
     display: flex;
     justify-content: center;
-    /* Wide enough that the active club's ring never touches its neighbour,
+    /* Wide enough that the active club's ring never touches its neighbor,
        and that a thumb can land on one crest on a phone. The row scrolls
        sideways, so the gap costs nothing but scroll length. */
     gap: 0.7rem;
@@ -336,7 +336,7 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
 
   .rhdr-teams__crest:hover { transform: translateY(-2px); }
 
-  /* The club being VIEWED is ringed in ITS OWN colour, set per crest from the
+  /* The club being VIEWED is ringed in ITS OWN color, set per crest from the
      brand value held to 3:1 against this row in each theme (see
      `ringLight`/`ringDark` in roster-header-data.ts). It was `--color-accent`,
      which is #2e8743 in TheLeague — the same green as a win on the rail above,

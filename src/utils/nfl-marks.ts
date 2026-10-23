@@ -91,17 +91,17 @@ export const luminance = relativeLuminance;
 export { inkOn };
 
 /**
- * Which assignment slot a club-colour band draws from.
+ * Which assignment slot a club-color band draws from.
  *
- * A band is neither a light nor a dark surface: it is the club's own colour,
- * so it follows whichever slot suits that colour's luminance — the dark one
+ * A band is neither a light nor a dark surface: it is the club's own color,
+ * so it follows whichever slot suits that color's luminance — the dark one
  * for most clubs, since most club primaries are dark. DERIVED, never stored:
  * one rule for 32 clubs instead of 32 hand-set values.
  */
 export function bandSlot(code: string): 'light' | 'dark' {
   const team = TEAMS[code];
-  const colour = team?.colors?.[0] ?? '#000000';
-  return luminance(colour) > LIGHT_GROUND_LUMINANCE ? 'light' : 'dark';
+  const color = team?.colors?.[0] ?? '#000000';
+  return luminance(color) > LIGHT_GROUND_LUMINANCE ? 'light' : 'dark';
 }
 
 /** The mark id a club draws on one ground. */
@@ -157,9 +157,9 @@ export function markUrl(code: string, id: string): string | null {
 }
 
 /**
- * The brand kit lists a club's colours as the sources spell them, so the same
+ * The brand kit lists a club's colors as the sources spell them, so the same
  * hex arrives twice in different case (`#0B162A` and `#0b162a`) and the page
- * printed four swatches for a two-colour club. Case-fold to compare, keep the
+ * printed four swatches for a two-color club. Case-fold to compare, keep the
  * FIRST spelling — order is the brand kit's primary-first order, which
  * `bandSlot` and every hero read as `colors[0]`.
  */

@@ -8,7 +8,7 @@
  *
  *   - It thinks by default, and thinking spends `max_tokens`. These calls
  *     write short copy under tight caps, so they send HAIKU_THINKING to keep
- *     4.5's no-thinking behaviour (and its cost per call).
+ *     4.5's no-thinking behavior (and its cost per call).
  *   - `temperature`, `top_p` and `top_k` are rejected with a 400. Steer tone
  *     from the prompt.
  *   - A response can carry non-text blocks, so read the answer with

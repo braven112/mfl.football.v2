@@ -10,7 +10,7 @@
  *
  * Pure, so the cadence and the eligibility are pinned without a DOM.
  *
- *  - **Mine only.** The full field of colour is the board's "this is yours"
+ *  - **Mine only.** The full field of color is the board's "this is yours"
  *    signal; spending it on an opponent's man between plays would teach the
  *    room the wrong thing. Opponents' scores still interrupt as lower thirds.
  *  - **In-progress games only.** A player whose game has not kicked off has
@@ -56,7 +56,7 @@ export function spotlightText(points: number, statLine: string): string {
  * A strip row dressed as a moment, so the takeover can draw it unchanged.
  *
  * `franchiseId` is the owner's franchise in the row's league — a strip row
- * does not carry it, and the takeover needs it to find the club's colours.
+ * does not carry it, and the takeover needs it to find the club's colors.
  * `wallclock` stays empty, so this can never be mistaken for a fresh play by
  * anything that asks `isMomentFresh`.
  */

@@ -3,7 +3,7 @@
  *
  * An archetype only decides which boxes start ticked. The registry entry stores
  * the archetype together with the league's final `features`, and code reads the
- * features, never the archetype. Each preset is modelled on a real league
+ * features, never the archetype. Each preset is modeled on a real league
  * (`example`). `tests/league-feature-catalog.test.ts` pins every example
  * league's features to its preset, so a preset cannot drift away from the
  * league it claims to copy without the test saying so.

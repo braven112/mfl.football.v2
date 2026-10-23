@@ -25,11 +25,11 @@
 
 import { escapeHtml } from '../player-cell-html';
 
-/** The position keys the pill has a colour for. Anything else gets the neutral pill. */
+/** The position keys the pill has a color for. Anything else gets the neutral pill. */
 export type PhonePosKey = 'QB' | 'RB' | 'WR' | 'TE' | 'PK' | 'DEF' | '';
 
 /**
- * Normalise a roster position to its pill colour key. MFL says `Def` in some
+ * Normalize a roster position to its pill color key. MFL says `Def` in some
  * feeds and `DEF` in others, and a kicker can arrive as `K`.
  */
 export function phonePosKey(position: string | null | undefined): PhonePosKey {
@@ -131,7 +131,7 @@ export interface PhoneLineInput {
 
 /**
  * A game's spread from ONE team's side, signed the way TheLeague's Coach
- * spread badge signs it: "+3.5" (green) when this team is favoured, "-3.5"
+ * spread badge signs it: "+3.5" (green) when this team is favored, "-3.5"
  * (red) when the opponent is. That is the reverse of betting notation, and
  * it is kept deliberately so a card reads the same in both leagues.
  */
@@ -152,12 +152,12 @@ export function teamSpread(
 ): TeamSpread | null {
   const parts = String(spread ?? '').trim().split(/\s+/);
   if (parts.length < 2) return null;
-  const favoured = normalize(parts[0].toUpperCase());
+  const favored = normalize(parts[0].toUpperCase());
   const amount = Number.parseFloat(parts[1].replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(amount) || amount === 0) return null;
   const own = normalize(String(team ?? '').trim().toUpperCase());
   if (!own) return null;
-  const isFav = favoured === own;
+  const isFav = favored === own;
   return { text: `${isFav ? '+' : '-'}${amount}`, tone: isFav ? 'fav' : 'dog' };
 }
 

@@ -10,7 +10,7 @@
  * Named `SundayTicket*` rather than the obvious `MatchupCard`, because
  * `lineup-matchup-cards.ts` already owns that name for a DIFFERENT card: the
  * Set Lineup game strip, which is faceoff composite art, name chips and
- * projection totals off fourteen inputs. There is no behaviour to share — that
+ * projection totals off fourteen inputs. There is no behavior to share — that
  * one is about casting player art for a pre-game strip, this one is crests,
  * live scores and who is still to play — so the two stay separate and the
  * names say which is which.

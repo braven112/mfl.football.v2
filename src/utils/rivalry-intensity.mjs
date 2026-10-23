@@ -95,7 +95,7 @@ export const rivalryPairKey = (a, b) => [a, b].sort().join('-');
  *
  * Built from `derived/franchise-history.json#franchises[].matchupHistory`,
  * which stores each meeting TWICE (once from each side). The record is
- * normalised to the alphabetically-first franchise's perspective so a pairing
+ * normalized to the alphabetically-first franchise's perspective so a pairing
  * reads the same whichever side is asked, and `games` counts each meeting once.
  *
  * @param {Record<string, {matchupHistory?: Record<string, any[]>}>} franchises

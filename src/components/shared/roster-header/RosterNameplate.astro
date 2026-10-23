@@ -16,7 +16,7 @@
  * apart from which crest carries `aria-current`, so putting it in the template
  * would mean 15 copies of a 24-crest row to move one attribute.
  *
- * The plate is ONE FLAT CLUB COLOUR, from `resolveRosterHeaderSkin` and never
+ * The plate is ONE FLAT CLUB COLOR, from `resolveRosterHeaderSkin` and never
  * from `colorPrimary` directly: seven of TheLeague's sixteen clubs carry
  * `#181818` there, so the naive solid paints seven identical near-black
  * rectangles. That resolver reads the player-modal band's already-settled
@@ -146,7 +146,7 @@ const {
 const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug, throwback);
 
 /* The plate must never be a PARTIAL overlay. During a Throwback Week the skin
-   carries the era's name and crest together with its colours, so the name is
+   carries the era's name and crest together with its colors, so the name is
    taken from there and only falls back to the page's when there is no skin at
    all. Taking the page's name beside era art is the Aug 2026 bug pointing the
    other way — and worst for a franchise whose era keeps its name, where
@@ -155,8 +155,8 @@ const plateName = skin?.name || teamName;
 
 /* The featured player's NFL club mark, behind his headshot — the Free Agents
    hero's spotlight. The WHITE KNOCKOUT, asked for directly: the plate is a
-   dark club colour in BOTH themes, so the html.dark swap never fires for a
-   light-theme viewer, and a full-colour cut puts the NFL club's palette in a
+   dark club color in BOTH themes, so the html.dark swap never fires for a
+   light-theme viewer, and a full-color cut puts the NFL club's palette in a
    fight with the franchise's band. One white ink reads on every band. */
 const featureLogo = featuredPlayer?.nflTeam ? nflWhiteLogoUrl(featuredPlayer.nflTeam) : '';
 /* The Free Agents hero's headshot fallback: an ESPN NFL 404 tries the same
@@ -202,7 +202,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
 >
   {skin?.crest && (
     /* Resolved SERVER-SIDE as the dark cut with its measured outline inline:
-       the plate is a dark club colour in BOTH themes, while the site's
+       the plate is a dark club color in BOTH themes, while the site's
        html.dark crest machinery fires only for a viewer whose SITE theme is
        dark. Without this a light-theme owner gets the wrong cut. */
     <img
@@ -217,7 +217,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
   )}
   {/* No wash. It existed to hold copy legible across a GRADIENT's light end;
       a flat fill floored for the plate's ink has no light end, and the wash
-      would only darken the club's colour for nothing. */}
+      would only darken the club's color for nothing. */}
 
   <div class="rhdr__inner">
     {/* The eyebrow and identity stack; the featured card sits beside them, so
@@ -350,12 +350,12 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
     pointer-events: none;
     z-index: 1;
   }
-  /* CENTRED below 900px, not pushed to the right edge.
+  /* CENTERED below 900px, not pushed to the right edge.
      The right-hand anchor exists so the mark sits behind the FEATURED PLAYER
      card and clear of the name; that card is hidden at this width (see the
      `.rhdr__feature` rule below), so the same offset just parked a half-
-     cropped crest against the right edge with dead colour on the left. With
-     nothing to sit behind, the band's own centre is where it belongs.
+     cropped crest against the right edge with dead color on the left. With
+     nothing to sit behind, the band's own center is where it belongs.
      `right: auto` is required, not tidiness — the desktop rule sets `right`,
      and both offsets together would stretch nothing and place nothing. */
   @media (max-width: 900px) {
@@ -440,7 +440,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
   .rhdr__names { min-width: 0; flex: 1; }
 
   .rhdr__plate .rhdr__name {
-    /* Explicit, and specific enough to beat the layout's global `h1` colour:
+    /* Explicit, and specific enough to beat the layout's global `h1` color:
        the plate is a dark franchise gradient in BOTH themes, so inheriting the
        theme's heading ink shipped dark navy on dark red in light mode. */
     color: var(--color-white, #fff);
@@ -568,7 +568,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
   }
   /* Desktop only, like the panel itself: the identity column must not run
      under it, and the club crest moves left of it rather than showing
-     through. Scoped by width so neither outranks the centred-crest rule
+     through. Scoped by width so neither outranks the centered-crest rule
      below 900px. */
   @media (min-width: 901px) {
     .rhdr__plate:has(.rhdr__feature) .rhdr__inner {
@@ -579,7 +579,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
     }
   }
   /* No franchise accent here any more. `accent-panel` existed because a
-     gradient has two ends and "a colour readable on one is invisible on the
+     gradient has two ends and "a color readable on one is invisible on the
      other by construction" — a flat fill has one, and this card sits on its
      own `rgba(0,0,0,0.3)` panel over it, so the plate's ink already clears.
      One surface, one ink.

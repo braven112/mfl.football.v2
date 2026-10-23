@@ -168,7 +168,7 @@ export const POST: APIRoute = async ({ request }) => {
     // ADP is the one feed that must come from the DRAFTING league's own
     // directory: MFL's ADP export is filtered by that league's scoring, roster
     // and keeper settings, so TheLeague's copy is the wrong board for the AFL.
-    // The player CATALOGUE below stays TheLeague's — MFL player ids are global
+    // The player CATALOG below stays TheLeague's — MFL player ids are global
     // and one archive serves every league.
     const adpLeague = isAfl ? getLeagueBySlug('afl-fantasy')! : getLeagueBySlug('theleague')!;
     const adpDataPath = adpLeague.dataPath;
@@ -298,7 +298,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Normalized "first last" → MFL id for fuzzy matching, over whatever the
     // pool above turned out to be. Built from the POOL rather than the whole
-    // catalogue so a third-party board can never auto-pick someone this mock
+    // catalog so a third-party board can never auto-pick someone this mock
     // cannot draft — a rookie board's veteran, or a player already kept.
     const rookieNameLookup = buildMflNameLookup(
       rookiePool.map((p: any) => ({
@@ -487,7 +487,7 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     const requestedDefault = sanitizeSource(body.defaultRankingSource);
-    // Only honour the caller's default if we actually built that list.
+    // Only honor the caller's default if we actually built that list.
     const defaultRankingSource: MockRankingSource =
       requestedDefault && rankedLists[requestedDefault] ? requestedDefault : fallbackDefault;
 

@@ -4,7 +4,7 @@
  * A theme value may be a var() of one of the theme's own tokens or of a shared
  * default (tokens.css `:root`, plus tokens-dark.css `html.dark` in dark), so
  * the file says `var(--league-palette-accent)` where the page renders
- * `#44aaff`. Anything that needs the colour itself — a contrast check, a test
+ * `#44aaff`. Anything that needs the color itself — a contrast check, a test
  * pinning a value, the theme review page — reads it through here.
  */
 import fs from 'node:fs';

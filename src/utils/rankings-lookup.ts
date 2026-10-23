@@ -289,7 +289,7 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
     const averageMap = new Map<string, number>();
 
     // Build parallel arrays of player maps and max ranks for each real import.
-    // When a player is unranked in an import, we penalise them with maxRank + 1
+    // When a player is unranked in an import, we penalize them with maxRank + 1
     // (one spot below the worst ranked player in that import).
     const realImportMaps: Map<string, number>[] = [];
     const realImportMaxRanks: number[] = [];

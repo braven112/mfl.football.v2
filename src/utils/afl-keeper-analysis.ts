@@ -162,7 +162,7 @@ export interface AnalyzedPlayer extends PlayerInfo {
   /** 1-based rank on this franchise's prev roster by raw points. */
   rank: number;
   kept: boolean;
-  /** In the value-maximising keeper set this roster could have picked. */
+  /** In the value-maximizing keeper set this roster could have picked. */
   optimal: boolean;
   /** Whether he fills a starting slot or backs one up; null if unplaced. */
   role: KeeperRole | null;

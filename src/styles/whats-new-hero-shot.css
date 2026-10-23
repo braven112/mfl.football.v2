@@ -141,7 +141,7 @@ html.dark .fch .fch__shot--no-dark .fch__shot-img--dark {
      `calc()` the browser cannot resolve is invalid at COMPUTED-VALUE time, and
      `max-width` then falls back to its initial value — `none`, an unbounded
      column, which is worse than the bug being fixed. A browser that drops the
-     second line keeps exactly today's behaviour instead. */
+     second line keeps exactly today's behavior instead. */
   max-width: var(--cmh-content-max);
   /* `min()`, not a bare calc: the reservation is a CEILING the frame imposes,
      not a replacement for the adopter's own column cap. On a card wide enough

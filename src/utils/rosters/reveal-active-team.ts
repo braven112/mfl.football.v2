@@ -27,7 +27,7 @@ interface Span {
 }
 
 /**
- * How far to move `scrollLeft` so `crest` sits centred in `scroller`, or 0
+ * How far to move `scrollLeft` so `crest` sits centered in `scroller`, or 0
  * when it is already fully visible (with `EDGE_PAD` to spare).
  */
 export function revealScrollDelta(crest: Span, scroller: Span): number {

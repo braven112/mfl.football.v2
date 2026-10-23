@@ -11,13 +11,13 @@
  * inline — cheaper, and defensible on the grounds that a portfolio page should
  * not be coupled to a hero's runtime. It drifted three times in one week: the
  * auction card was pale blue when the shipped hero is amber, the ghost wordmark
- * stayed centred after the live heroes moved to right-anchored, and the crest
+ * stayed centered after the live heroes moved to right-anchored, and the crest
  * watermark — one of the treatment's defining layers — never appeared at all.
  * Coupling to `CompositeHero` costs a fixture per card and makes every one of
  * those bugs impossible to write.
  *
  * What the showcase still owns is the ANNOTATION: the component name and the
- * colour-rule badge, rendered ABOVE each hero rather than inside it. Nothing
+ * color-rule badge, rendered ABOVE each hero rather than inside it. Nothing
  * the page says about a hero can change how that hero draws.
  */
 import CompositeHero from '../CompositeHero.astro';
@@ -65,7 +65,7 @@ const brands = getLeagueTeamBrands(league);
  * Everything the live shell needs for one card, resolved the way the live
  * heroes resolve it. `scope` is the switch: a team card hands the shell its
  * franchise (skin, crest, glow), a league card hands it none and the glow
- * falls to the cast player's NFL club. That is the colour rule, expressed
+ * falls to the cast player's NFL club. That is the color rule, expressed
  * once, so the badge the card prints and the pixels it renders cannot
  * disagree.
  */
@@ -142,7 +142,7 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
               real component; nothing here can reach into it. */}
           <figcaption class="hc-shot__meta">
             <span class:list={['hc-shot__scope', `hc-shot__scope--${g.scope}`]}>
-              {g.scope === 'team' ? 'Team colours' : 'League colours'}
+              {g.scope === 'team' ? 'Team colors' : 'League colors'}
             </span>
             <code class="hc-shot__component">{g.component}</code>
             {franchiseName && <span class="hc-shot__club">{franchiseName}</span>}

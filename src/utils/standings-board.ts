@@ -31,16 +31,16 @@ export interface BoardTeam {
   nameShort: string;
   icon: string;
   href?: string;
-  /** Team-coloured fill for surfaces that are dark in both themes (Primetime paint). */
+  /** Team-colored fill for surfaces that are dark in both themes (Primetime paint). */
   gradient: string;
   /** Crest drawn on that fill — the dark-surface cut. */
   crest: string;
   crestFilter?: string;
   /** The league's crests are circle crops (Archie's), so frames clip them round; otherwise shown whole. */
   round: boolean;
-  /** The franchise accent token, for a team colour used as a stripe or numeral. */
+  /** The franchise accent token, for a team color used as a stripe or numeral. */
   accent: string;
-  /** The stripe over a team-colour fill: the accent, unless the fill already wears it. */
+  /** The stripe over a team-color fill: the accent, unless the fill already wears it. */
   paintStripe: string;
   division: string;
   record: string;
@@ -108,10 +108,10 @@ const near = (a: string, b: string) => {
 };
 
 /**
- * The stripe across a team-colour fill. The accent normally, but a team whose
+ * The stripe across a team-color fill. The accent normally, but a team whose
  * accent IS its fill (Smokane's green on Smokane's green) gets its next team
- * colour the fill does not wear (Smokane's smoke). The fill is dark in both
- * themes, so a raw config colour is safe there.
+ * color the fill does not wear (Smokane's smoke). The fill is dark in both
+ * themes, so a raw config color is safe there.
  */
 function paintStripe(id: string, gradient: string, cfg: BoardTeamConfig | undefined): string {
   const fill = gradientStops(gradient).map((s) => s.hex);

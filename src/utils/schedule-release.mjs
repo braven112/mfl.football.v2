@@ -7,7 +7,7 @@
  * A cron locks the generated schedule at the release moment; from then on every
  * owner who opens the page sees the SAME schedule and the same marquee games,
  * and the commissioner pastes that exact one into MFL. The lock is what makes
- * it an event rather than a slot machine: the optimiser is simulated
+ * it an event rather than a slot machine: the optimizer is simulated
  * annealing, so two owners hitting "generate" would otherwise get two
  * different valid schedules, and fifteen of sixteen owners would be looking at
  * a season that never happens.
@@ -190,7 +190,7 @@ export const marqueeMatchups = (
     /**
      * Career head-to-head per pairing, keyed by `pairKey` — see
      * `rivalrySeriesByPair`. Absent for a league with no ingested history, and
-     * everything below degrades to the old behaviour rather than throwing.
+     * everything below degrades to the old behavior rather than throwing.
      */
     rivalry = {},
     /**

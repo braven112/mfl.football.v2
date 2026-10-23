@@ -5,7 +5,7 @@
   "notes": {
     "--color-primary": "Dark uses TWO reds. FILL #d81b41 carries white at 5.06:1 and stands 3.19:1 off the #1e2126 card; TEXT #ef5350 (--league-accent) is 4.63:1 on the card but carries white at only 3.49:1, so it is never the button.",
     "--color-primary-light": "Light value is deliberately DARKER than --color-primary despite the name: it feeds --link-color-accent, text on a white card, and the lighter step (#e04a60) is 3.95:1.",
-    "--color-text-primary": "Defined in light too (the theleague theme leaves it unset there): mfl-live.css reads it with no fallback, and undefined, colour inherits and the board loses its text hierarchy.",
+    "--color-text-primary": "Defined in light too (the theleague theme leaves it unset there): mfl-live.css reads it with no fallback, and undefined, color inherits and the board loses its text hierarchy.",
     "--on-league-accent": "Text ON a --league-accent fill: white where white clears AA on the accent, near-black where it does not (a bright dark-mode accent carries white at under 4.5:1)."
   },
   "light": {

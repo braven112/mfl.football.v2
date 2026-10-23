@@ -102,7 +102,7 @@ export interface LiveBoardProps {
   /**
    * There is no NFL week yet — the pre-Week-1 window.
    *
-   * Its own state, not a flavour of `not-played`. MFL serves no live scoring
+   * Its own state, not a flavor of `not-played`. MFL serves no live scoring
    * before the Week 1 Thursday and `getCurrentNFLWeek` answers `null` until
    * then, so "this week hasn't kicked off" is the wrong sentence: the SEASON
    * has not started. `/live` has said so since it shipped; the league boards
@@ -324,7 +324,7 @@ export default function LiveBoard({
 
   useEffect(() => {
     if (!pollUrl) return;
-    let cancelled = false;
+    let canceled = false;
     let timer: ReturnType<typeof setTimeout>;
 
     const tick = async () => {
@@ -334,7 +334,7 @@ export default function LiveBoard({
           headers: { Accept: 'application/json' },
         });
         const data = await res.json();
-        if (cancelled) return;
+        if (canceled) return;
         // `res.ok` is NOT "the data is good" and `{}` is truthy, so neither is
         // a guard. Gate on the FLAG: a failed poll keeps the last good board
         // rather than wiping a live screen, so "the feed says nothing" and "we
@@ -350,9 +350,9 @@ export default function LiveBoard({
       } catch {
         // Keep the last good board. A dropped poll must degrade to "numbers
         // from a minute ago", never to a blank screen.
-        if (!cancelled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
+        if (!canceled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
       } finally {
-        if (!cancelled) {
+        if (!canceled) {
           const live = shouldPollLive(slateRef.current, isLive);
           timer = setTimeout(tick, live ? POLL_LIVE_MS : POLL_IDLE_MS);
         }
@@ -363,7 +363,7 @@ export default function LiveBoard({
     // stop the board asking for a score; it only sets how often.
     timer = setTimeout(tick, shouldPollLive(slateRef.current, isLive) ? POLL_LIVE_MS : POLL_IDLE_MS);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearTimeout(timer);
     };
   }, [pollUrl, pollShape, board.week, isLive]);

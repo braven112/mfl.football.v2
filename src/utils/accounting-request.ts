@@ -2,7 +2,7 @@
  * Shared gate and context for every /api/accounting route.
  *
  * All four routes need the same five things resolved the same way, and getting
- * any of them wrong writes money into the wrong league. Centralised so the
+ * any of them wrong writes money into the wrong league. Centralized so the
  * rules are stated once rather than re-derived per route (schedule-plan.ts
  * learned the same lesson: a page gate protects the page, not its API).
  *
@@ -48,7 +48,7 @@ const parseYear = (raw: string | null, fallback: number): number => {
   return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : fallback;
 };
 
-/** The MFL league year for this league, honouring its own rollover date. */
+/** The MFL league year for this league, honoring its own rollover date. */
 export function leagueYearFor(league: LeagueDefinition): number {
   return league.leagueYearRollover
     ? getRolloverLeagueYear(league.leagueYearRollover)

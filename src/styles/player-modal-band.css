@@ -54,7 +54,7 @@
    player entirely fixed that and broke the composition — it stopped being a
    watermark and started being a second subject competing with the face. The
    `right` below splits the difference: the crest's right edge sits on the
-   player's horizontal centre, so his head and shoulder cover that side of the
+   player's horizontal center, so his head and shoulder cover that side of the
    mark and the rest of it reads.
 
    That offset is tuned against .pmb__cutout's `right` + `max-width`, so the
@@ -70,9 +70,9 @@
    white type instead of lightening it. */
 .pmb__crest {
   position: absolute;
-  /* The right edge of the ARTWORK, parked on the player's horizontal centre —
+  /* The right edge of the ARTWORK, parked on the player's horizontal center —
      which is why the box below has to be square (see the note). The cutout is
-     `right: 1rem` and caps at 38% wide (34% on a phone), so its centre lands
+     `right: 1rem` and caps at 38% wide (34% on a phone), so its center lands
      ~19-21% from the right edge on every band this renders on. */
   right: var(--pmb-crest-right, 20%);
   top: 50%;

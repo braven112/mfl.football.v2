@@ -83,7 +83,7 @@ const ELAPSED_TICK_MS = 250;
  * never remounts — flips once, after its own mount. Before it flips, this
  * component is on the SSR/hydration pass and must render nothing. After it,
  * every subsequent mount is a client-side remount where reading `Date.now()`
- * in the initialiser is both safe and correct, so a remounted chip is painted
+ * in the initializer is both safe and correct, so a remounted chip is painted
  * with its number already in it.
  *
  * **It ticks four times a second, not once.** A one-second interval drifts —
@@ -110,7 +110,7 @@ const ELAPSED_TICK_MS = 250;
  * `polite` later.
  */
 function ClockElapsed({ sinceMs, hydrated }: { sinceMs: number; hydrated: boolean }) {
-  // Lazy initialiser, so `Date.now()` is read only on the mounts where it is
+  // Lazy initializer, so `Date.now()` is read only on the mounts where it is
   // allowed to be — see `hydrated` in the header. On the first pass this is
   // `null` and the effect below fills it a frame later; on a remount it is
   // already the answer.
@@ -299,7 +299,7 @@ export function OnTheClock({
   // its pair exactly this way. Hand-rolling the fallbacks here instead left the
   // two screens able to disagree: this one fell back to navy for a missing
   // secondary while the reveal falls back to the franchise's own primary, so a
-  // franchise defining only one colour would have flipped between them. No AFL
+  // franchise defining only one color would have flipped between them. No AFL
   // franchise does today; going through the shared resolver makes that
   // unreachable by construction rather than by luck.
   const brand = resolveSplashColors(team);
@@ -308,7 +308,7 @@ export function OnTheClock({
   // And when the franchise declares its own `broadcastGradient`, this screen
   // paints THAT — the same string, on the same franchise, as the reveal card it
   // hands off to (Brandon, 2026-08-28). Same reasoning as the treatment above,
-  // carried to its conclusion: matching the COLOURS but composing them
+  // carried to its conclusion: matching the COLORS but composing them
   // differently still let the two screens disagree, and Midwestside proved it —
   // a gold-dominant idle board handing off to a near-black reveal, twice a
   // minute, for the same team. The pair above stays as the fallback for a
@@ -366,7 +366,7 @@ export function OnTheClock({
              Keyed by franchise so React remounts the whole row when the clock
              moves to another team. Without it the same DOM nodes are reused and
              one 404 sticks: the img keeps its inline `display: none` and the row
-             keeps its `is-crestless` flag, hiding the crest and centring the copy
+             keeps its `is-crestless` flag, hiding the crest and centering the copy
              for every team that follows. */
           <div className="dbc-idle__clock" key={team?.franchiseId ?? 'no-team'}>
             {/* ~34vh — the second-biggest crest on the board, so it takes the

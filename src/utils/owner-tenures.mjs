@@ -1004,7 +1004,7 @@ export const buildOwnerTenures = ({
       }
     }
     holdings.forEach((holding, index) => {
-      // A neighbouring shared holding contributes its first co-owner as the
+      // A neighboring shared holding contributes its first co-owner as the
       // link target; the page names the rest via that owner's own coOwners.
       const previous = index > 0 ? holdings[index - 1].slugs[0] : null;
       const next = index < holdings.length - 1 ? holdings[index + 1].slugs[0] : null;

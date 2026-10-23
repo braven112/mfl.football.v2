@@ -31,7 +31,7 @@ export interface PickSplashItem {
  * the draft room's splash and the broadcast card — and the two must never
  * disagree about the same pick. It is also what the broadcast's server gates a
  * school-logo lookup on, so a second copy would keep resolving marks for
- * players the card had started labelling with their pro team.
+ * players the card had started labeling with their pro team.
  */
 export function usesCollegeOrigin(player?: {
   isRookie?: boolean;

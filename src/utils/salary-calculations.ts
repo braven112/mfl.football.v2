@@ -77,7 +77,7 @@ export const getCapPercent = (
 
 /**
  * Collapse the many spellings of a roster status into the three buckets the
- * cap rules recognise. Substring matching on purpose — `status` arrives as
+ * cap rules recognize. Substring matching on purpose — `status` arrives as
  * "IR", "Injured Reserve", "PRACTICE SQUAD" and more.
  *
  * Distinct from `normalizeStatus` above, which reads only `status`; this reads

@@ -15,7 +15,7 @@
  *
  * So: copy the league in MFL, turn on the draft in the copy, and load the real
  * board with `?mflLeague=<copy id>`. The page renders as its own league —
- * franchise names, colours, crests, board ranks, keepers — and takes its PICKS
+ * franchise names, colors, crests, board ranks, keepers — and takes its PICKS
  * from the copy. Everything downstream of the poll is the code that runs on
  * draft night, unmodified.
  *
@@ -165,7 +165,7 @@ export function resolveMflLeagueId(raw: string | null | undefined): string | nul
 /**
  * Resolve the feed the board should watch from the page's query string.
  *
- * Recognised parameters:
+ * Recognized parameters:
  *   `mflLeague` — MFL league id to follow instead of this league's own.
  *   `mflHost`   — MFL host serving it. Defaults to the export host, which
  *                 serves every league, so nobody has to know the copy's `www##`.

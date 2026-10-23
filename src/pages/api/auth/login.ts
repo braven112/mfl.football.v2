@@ -79,9 +79,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     //
     // FAILS OPEN (checkRateLimit returns allowed on a Redis error), and an
     // absent identifier means no key to count against, so both degrade to the
-    // previous behaviour rather than locking every owner out of the site when
+    // previous behavior rather than locking every owner out of the site when
     // Upstash hiccups. The dependency-free layer is the Cloudflare
-    // rate-limiting rule at the edge; this is defence in depth behind it, and
+    // rate-limiting rule at the edge; this is defense in depth behind it, and
     // covers the *.vercel.app URLs that never pass through that edge at all.
     const identity = getClientIdentity(request);
     const tooManyAttempts = () =>

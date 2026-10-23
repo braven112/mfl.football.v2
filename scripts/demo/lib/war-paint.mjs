@@ -1,10 +1,10 @@
 /**
  * The demo leagues' shared mark: the war-paint pig (owner-supplied art,
- * 2026-09-27), recoloured per league so it matches the league it sits in.
+ * 2026-09-27), recolored per league so it matches the league it sits in.
  *
- * Three colours are the league's; the pig itself (pinks, white, the grey
+ * Three colors are the league's; the pig itself (pinks, white, the grey
  * facemask) never changes:
- *   - `ink`    — the disc and every outline (the league's deep colour)
+ *   - `ink`    — the disc and every outline (the league's deep color)
  *   - `helmet` — the helmet shell (the league's accent), shaded from it
  *   - `rim`    — dark cut only: a light ring, so a dark disc still reads on a
  *                dark card. The light cut has none (the disc is its own edge).

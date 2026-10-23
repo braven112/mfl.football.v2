@@ -58,13 +58,13 @@ export function useMockDraftSocket({
   useEffect(() => {
     if (!enabled || !partyHost || !sessionId || !franchiseId) return;
 
-    let cancelled = false;
+    let canceled = false;
     let socket: PartySocket | null = null;
 
     // Dynamic import keeps partysocket (~12 KB) out of the initial bundle.
     // It only loads when a user actually opens a mock-draft session.
     import('partysocket').then((mod) => {
-      if (cancelled) return;
+      if (canceled) return;
       const PartySocketCtor = mod.default;
       socket = new PartySocketCtor({
         host: partyHost,
@@ -129,7 +129,7 @@ export function useMockDraftSocket({
     });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (socket) {
         socket.close();
       }

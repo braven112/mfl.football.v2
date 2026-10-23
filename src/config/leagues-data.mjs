@@ -469,7 +469,7 @@ export const LEAGUES = {
      *
      * It was Week 8 until Oct 2026, but Week 8 falls inside the Halloween
      * window (`seasonal-themes.mjs`) EVERY year, and the drawn Halloween marks
-     * swap only a team's current logo, so era art rendered in full colour on
+     * swap only a team's current logo, so era art rendered in full color on
      * the Midnight pages. Week 11 never meets Halloween or Thanksgiving; it
      * opens the day after the AFL trade deadline (the Wednesday between weeks
      * 10 and 11), which the owner accepted. Weeks 6 and 10 were also clear of
@@ -672,7 +672,7 @@ export const LEAGUES = {
      * of the text short name.
      */
     wordmark: '/assets/logos/archies-wordmark.webp',
-    /** Browser chrome colour (the mark's navy). */
+    /** Browser chrome color (the mark's navy). */
     themeColor: '#1d3a6e',
     /** Empty for the same reason as Best Ball #1's — see that entry. */
     stagingDomains: [],
@@ -768,7 +768,7 @@ export const LEAGUES = {
       viewerPreferences: false,
       pushNotifications: false,
       /**
-       * Commissioner branding editor (/archies/admin/branding): names, colours
+       * Commissioner branding editor (/archies/admin/branding): names, colors
        * and uploaded marks, published through .github/workflows/branding-edit.yml.
        */
       brandingEditor: true,
@@ -994,7 +994,7 @@ export const SHARED_APP_ORIGIN = 'https://v2.mfl.football';
  * other league's paths under whichever slug they mapped to.
  *
  * A list rather than a comparison against SHARED_APP_ORIGIN alone: an exact
- * compare recognises production and silently misses staging.mfl.football,
+ * compare recognizes production and silently misses staging.mfl.football,
  * which then behaves like a league's own host on the one site whose whole job
  * is to reproduce production. v2.mfl.football is the third case and the one
  * that proves the point — it is where the app actually serves today, it is
@@ -1078,7 +1078,7 @@ const SHARED_APP_STAGING_HOST = 'staging.mfl.football';
  * plus the shared host's staging twin.
  *
  * Derived, never a second hand-maintained list — a staging host that exists in
- * Vercel but not here is a host the write guard does not recognise, which is
+ * Vercel but not here is a host the write guard does not recognize, which is
  * the failure this whole mechanism exists to prevent.
  *
  * @returns {string[]}

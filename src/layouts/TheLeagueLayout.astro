@@ -88,7 +88,7 @@ export interface Props {
 		url?: string;
 	};
 	/** Pin the page to one mode whatever the viewer's preference — the theme
-	    review pages (/<league>/theme/light|dark). ThemeScript honours the
+	    review pages (/<league>/theme/light|dark). ThemeScript honors the
 	    `data-theme-lock` attribute this writes, so neither the theme toggle nor
 	    a prefers-color-scheme change can flip it. */
 	themeLock?: 'light' | 'dark';
@@ -347,7 +347,7 @@ const ownLeagueSlug = getLeagueByNavSlug(league).slug;
 // so no single league's PWA identity belongs on it either — it is foreign to
 // all three, not merely unknown.
 // Registry-owned so the staging twin counts too — an exact compare against
-// SHARED_APP_ORIGIN recognised production and missed staging.mfl.football.
+// SHARED_APP_ORIGIN recognized production and missed staging.mfl.football.
 const onSharedMultiLeagueHost = isSharedAppHost(Astro.url.hostname);
 const onForeignLeagueHost =
 	onSharedMultiLeagueHost || (hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug);

@@ -34,7 +34,7 @@ export function waiverClaimsHeroView(
    * `composite` is the caller's, as a literal: /showcase's guard reads the
    * AFL's treatments out of the resolver source, and each league wears its own
    * palette. Use the `WAIVERS` wordmark and `scope: 'league'` — the face is a
-   * FREE AGENT, so there is no club whose colours the card could honestly wear.
+   * FREE AGENT, so there is no club whose colors the card could honestly wear.
    */
   opts: { link: string; composite: CompositeHeroTreatment },
 ): WaiverClaimsHeroView {

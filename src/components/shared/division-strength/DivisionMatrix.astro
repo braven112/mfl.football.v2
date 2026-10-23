@@ -50,7 +50,7 @@ interface Props {
 const { rows, panelIdPrefix = null, caption, idPrefix } = Astro.props as Props;
 
 /**
- * 0..1, driving the cell tint. `.500` is colourless and a sweep produces the
+ * 0..1, driving the cell tint. `.500` is colorless and a sweep produces the
  * strongest tint at roughly .700 / .300 rather than only at the theoretical
  * extremes, which no division-vs-division sample ever reaches.
  */
@@ -134,7 +134,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
 <style>
   /* Defined locally, not inherited from the page's `.ds-page` block: this
      component should render correctly wherever it is used, and a focus ring
-     that silently changes colour when the cascade shifts is exactly the kind
+     that silently changes color when the cascade shifts is exactly the kind
      of half-defined token the design-system rules warn about.
      --league-accent, never --color-primary — the latter is blue on AFL light. */
   .dsm-scroll,

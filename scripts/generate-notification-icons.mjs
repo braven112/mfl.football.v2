@@ -86,7 +86,7 @@ function alphaBounds(alpha, width, height, threshold = 8) {
 
 /**
  * Area-average resample of a sub-rectangle of `src` into `dstW x dstH`.
- * Alpha is premultiplied across the average so a transparent neighbour never
+ * Alpha is premultiplied across the average so a transparent neighbor never
  * bleeds its RGB into an edge pixel (the classic dark-halo artifact).
  */
 function resampleArea(src, box, dstW, dstH) {

@@ -47,7 +47,7 @@ const phoneLine = (line: string, division: string) =>
             {g.teams.map(({ team, line }) => {
               const Tag = team.href ? 'a' : 'div';
               const alt = phoneLine(line, team.division);
-              // Division winners are painted in team colour in Editorial too,
+              // Division winners are painted in team color in Editorial too,
               // keeping the accent stripe; Primetime paints every tile.
               const painted = primetime || g.band === 'division-winners';
               return (

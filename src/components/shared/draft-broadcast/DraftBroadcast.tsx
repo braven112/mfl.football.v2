@@ -456,7 +456,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // the replay with the real (empty) board.
     if (rehearsing) return;
 
-    let cancelled = false;
+    let canceled = false;
     let timer: ReturnType<typeof setTimeout>;
 
     // `feedUnit` rather than `conference.unit`: a `?mflLeague=` override may be
@@ -483,7 +483,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     };
 
     const tick = async () => {
-      if (cancelled || inFlight) return;
+      if (canceled || inFlight) return;
       inFlight = true;
       try {
         const res = await fetch(`/api/draft/status?${params}`, {
@@ -494,7 +494,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
         });
         const body = (await res.json()) as DraftStatusResponse & { error?: string };
-        if (cancelled) return;
+        if (canceled) return;
 
         if (!res.ok || body.error) {
           errorCountRef.current += 1;
@@ -506,14 +506,14 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       } catch {
         // A timeout lands here like any other failure: count it, back off if it
         // keeps happening, and — the point — schedule the next one regardless.
-        if (cancelled) return;
+        if (canceled) return;
         errorCountRef.current += 1;
       } finally {
         inFlight = false;
         lastCompleted = Date.now();
       }
 
-      if (cancelled) return;
+      if (canceled) return;
       const failing = errorCountRef.current >= ERRORS_BEFORE_BACKOFF;
       setConnectionLost(failing);
       schedule(failing ? POLL_BACKOFF_MS : POLL_MS);
@@ -523,7 +523,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // while the tab was in the background, or one the machine slept through.
     // It only ever RE-ARMS the loop — it never polls in parallel (`inFlight`).
     const watchdog = setInterval(() => {
-      if (cancelled || inFlight) return;
+      if (canceled || inFlight) return;
       if (Date.now() - lastCompleted > POLL_WATCHDOG_MS) schedule(0);
     }, 1_000);
 
@@ -531,7 +531,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // board is most out of date, so ask immediately rather than waiting out the
     // current interval.
     const wake = () => {
-      if (cancelled || document.visibilityState !== 'visible') return;
+      if (canceled || document.visibilityState !== 'visible') return;
       schedule(0);
     };
     document.addEventListener('visibilitychange', wake);
@@ -539,7 +539,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
     schedule(POLL_MS);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearTimeout(timer);
       clearInterval(watchdog);
       document.removeEventListener('visibilitychange', wake);
@@ -629,7 +629,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       setQuietSince(Date.now());
       return;
     }
-    // Each scene decides its own hold: a replayed pick is recognised in a
+    // Each scene decides its own hold: a replayed pick is recognized in a
     // second, a panel has to be read. See `screensaverSceneMs`.
     const id = setTimeout(() => setSceneIndex((i) => i + 1), screensaverSceneMs(scene));
     return () => clearTimeout(id);
@@ -898,7 +898,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       ) : null}
 
       {/* Pre-flight, in one stack above BOTH layers.
-          Top-centre because every other edge of this board is spoken for: the
+          Top-center because every other edge of this board is spoken for: the
           idle header owns the top-left and top-right, the fullscreen button is
           pinned top-right, the reveal's ghost pick number owns the bottom-left,
           and `.dbc__status` owns the bottom-right. Above the layers, not inside

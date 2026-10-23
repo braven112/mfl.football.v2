@@ -139,7 +139,7 @@ const tierCutoffWeek = resolveTierCutoffWeek(
   selectedYear
 );
 // A league may declare its own tiers and how many teams move between
-// neighbours each season (tierCompetition.tiers / .movement — the custom-site
+// neighbors each season (tierCompetition.tiers / .movement — the custom-site
 // demo's three-tier big league). The AFL declares no movement, so its two
 // tiers keep their fixed bands and the promotion/relegation playoff below.
 const tierCompetitionConfig = (aflConfig as {
@@ -245,7 +245,7 @@ const combinedTierName = isInauguralAllPlaySeason ? AFL_CUP : 'All-Play';
 const conferenceStandings = conferenceLadders.map(({ standings }) => standings);
 // Resolve the division's conference off the SAME list getConferenceStandings
 // filtered on, rather than the divisionToConference map, so the lookup cannot
-// disagree with the standings it is labelling. Division winners are counted
+// disagree with the standings it is labeling. Division winners are counted
 // from the groups that actually have teams, not from the declared division
 // list — an era whose conference declares a division with no franchises would
 // otherwise band a wild card as a winner. An unresolvable division gets NO

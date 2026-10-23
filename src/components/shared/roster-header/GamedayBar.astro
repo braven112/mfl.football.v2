@@ -3,9 +3,9 @@
  * The scoreboard strip under the roster nameplate: last result, next game, and
  * the season rail — the three things a roster page cannot answer on its own.
  *
- * Deliberately on the site's OWN surface rather than on the club's colour: the
+ * Deliberately on the site's OWN surface rather than on the club's color: the
  * two tiles each carry an opponent's crest, and a franchise gradient behind
- * two foreign crests and two scores is where legibility goes. The colour stops
+ * two foreign crests and two scores is where legibility goes. The color stops
  * at the nameplate above.
  *
  * Every element here is a link into `/schedule`. The tiles open their own
@@ -69,8 +69,8 @@ interface Props {
    * season is not the one being played).
    *
    * "Lock", not "kickoff", because the instant is the week's FIRST game, which
-   * is usually a Thursday while this club may not play until Sunday. Labelling
-   * it as their kickoff would be wrong for most clubs most weeks; labelling it
+   * is usually a Thursday while this club may not play until Sunday. Labeling
+   * it as their kickoff would be wrong for most clubs most weeks; labeling it
    * as the lock is exactly what it is, and it is the actionable one — it is
    * the deadline an owner can still do something about.
    */
@@ -540,13 +540,13 @@ const railMarks = rail.flatMap((entry) =>
     transition: transform 0.13s ease;
   }
 
-  /* PLAYED weeks are the only FILLED marks, and the only coloured ones. An
+  /* PLAYED weeks are the only FILLED marks, and the only colored ones. An
      unplayed week is an outline. That split is what makes the rail readable
      at a glance, and it is not cosmetic — the current week shipped filled
      with `--color-accent`, which is #2e8743 in TheLeague: green, from the
      same family as `--color-success`. A 1-1 club therefore drew two green
      marks and one red, and read as 2-1. Nothing here may use the accent as a
-     mark colour for that reason; the accent is green in this league and can
+     mark color for that reason; the accent is green in this league and can
      only ever be confused with a win. */
   .rhdr-rail__dot.is-win .rhdr-rail__mark { background: var(--color-success, #1c7a4c); }
   .rhdr-rail__dot.is-loss .rhdr-rail__mark { background: var(--color-error); }
@@ -555,14 +555,14 @@ const railMarks = rail.flatMap((entry) =>
   /* The current week is an OPEN ring in the page's own ink: unplayed, so not
      filled; solid and full-contrast, so it is obviously not one of the faint
      future weeks behind it. The distinction from a result survives a
-     greyscale print and every form of colour blindness, because it is a
+     greyscale print and every form of color blindness, because it is a
      difference in fill rather than in hue. */
   .rhdr-rail__dot.is-now .rhdr-rail__mark {
     background: transparent;
     border: 2px solid var(--page-text);
   }
   /* A week not yet played is an outline, never a fill — a filled neutral
-     reads as a result whose colour simply failed to load. */
+     reads as a result whose color simply failed to load. */
   .rhdr-rail__dot.is-future .rhdr-rail__mark {
     background: transparent;
     border: 1px dashed var(--content-border-color);

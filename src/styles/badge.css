@@ -14,11 +14,11 @@
    builds, which is why the kit is CSS and not a scoped component: Astro's
    scoped CSS never reaches an element JS created.
 
-   CUSTOMISING. The base rules sit inside :where(), so they carry ZERO
+   CUSTOMIZING. The base rules sit inside :where(), so they carry ZERO
    specificity: a component's own class (`.seed-badge { padding: … }`) wins
    regardless of stylesheet order. That is what lets a page keep its exact
    look (props for every league, forks for one — docs/plans/component-kit.md).
-   Colours are custom properties: set `--ui-badge-bg` / `--ui-badge-ink` on
+   Colors are custom properties: set `--ui-badge-bg` / `--ui-badge-ink` on
    the component's class rather than `background` / `color`, so a tone
    modifier and a component override never fight.
 
@@ -77,7 +77,7 @@
   --ui-badge-bg: var(--badge-info-bg);
   --ui-badge-ink: var(--badge-info-text);
 }
-/* The league's own colour, carrying the theme's ink (never a literal white). */
+/* The league's own color, carrying the theme's ink (never a literal white). */
 :where(.ui-badge--accent) {
   --ui-badge-bg: var(--color-accent);
   --ui-badge-ink: var(--on-color-accent);

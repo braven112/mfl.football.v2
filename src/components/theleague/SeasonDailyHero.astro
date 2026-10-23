@@ -103,13 +103,13 @@ export interface Props {
   breakingModel?: HeroModel | null;
   breakingStory?: BreakingStory | null;
   /**
-   * The signed-in owner's franchise colours + crest (page-resolved), for the
+   * The signed-in owner's franchise colors + crest (page-resolved), for the
    * promo heroes built on `EventHeroShell`.
    *
    * Deliberately NOT forwarded to the heroes that are ABOUT a specific
    * franchise or matchup — champion-crowned, the playoff bracket, live scoring,
-   * the matchup split, the recap composite. Those already wear the colours of
-   * whoever is IN them, and repainting one in the viewer's colours would claim
+   * the matchup split, the recap composite. Those already wear the colors of
+   * whoever is IN them, and repainting one in the viewer's colors would claim
    * a card that belongs to somebody else. Same rule as AflHero.
    */
   heroBackdrop?: HeroFranchiseBackdrop | null;

@@ -217,7 +217,7 @@ for (const row of visible) {
     teamName: nameForFranchise(row.franchiseId),
     division: divisionById.get(divisionOf(row.franchiseId) ?? '')?.abbrev,
     crest: brands[row.franchiseId]?.icon,
-    // `teamAccentVar`, NOT the raw brand colour. The token layer
+    // `teamAccentVar`, NOT the raw brand color. The token layer
     // (TeamAccentStyles, already in this layout) does three things a raw
     // `colorPrimary` cannot: it carries an `html.dark` override — 15 of
     // TheLeague's 16 franchises have a distinct dark accent, and the
@@ -457,7 +457,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
   /**
    * Convenience only — the form works without any of this.
    *
-   * MUST initialise on `astro:page-load`, not `DOMContentLoaded`: with the
+   * MUST initialize on `astro:page-load`, not `DOMContentLoaded`: with the
    * ClientRouter, a navigation into this page swaps the DOM without firing
    * DOMContentLoaded, so a DOMContentLoaded-only handler leaves the page
    * inert after the first visit (tests/clientrouter-init-ratchet.test.ts).
@@ -473,7 +473,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
     // OUT of the querystring — otherwise every filter change accretes `q=` and
     // `team=` into the URL, and the link an owner copies to share a filtered
     // view is mostly noise. Re-enabled immediately so the form still works if
-    // the navigation is cancelled.
+    // the navigation is canceled.
     const submit = () => {
       const emptied = Array.from(
         form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')

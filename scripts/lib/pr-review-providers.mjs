@@ -121,7 +121,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Call a provider with retries on transient failures.
  *
- * Retries the TRANSPORT, never the judgement: a provider that answers with an
+ * Retries the TRANSPORT, never the judgment: a provider that answers with an
  * empty candidate gets one more go (it is a content-filter or truncation blip
  * on Google's side, not a considered "no findings"), but a provider that
  * returns real text is done — re-rolling until we like the review would be
@@ -297,7 +297,7 @@ const FENCED_BLOCK = /```[\s\S]*?```/g;
 const NO_FINDINGS = /^[*_`\s]*NO[ \t]+FINDINGS[*_`.\s]*$/i;
 
 /**
- * Decide whether a reviewer's reply honours the output contract.
+ * Decide whether a reviewer's reply honors the output contract.
  *
  * This is the guard that stops PR #761 from happening again. That review came
  * back as a raw reasoning trace — "wait, why did the author name the

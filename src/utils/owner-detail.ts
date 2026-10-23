@@ -1,13 +1,13 @@
 /**
  * Shared frontmatter logic for the per-league owner detail routes.
  *
- * Astro only honours `return Astro.redirect(...)` from a PAGE's frontmatter.
+ * Astro only honors `return Astro.redirect(...)` from a PAGE's frontmatter.
  * Returning it from a nested component just stops rendering that component —
  * the response is still a 200, now with a blank body. That exact mistake
  * shipped when TheLeague's /cr page was extracted into a shared component and
  * unauthorized visitors got an empty page instead of a bounce.
  *
- * So this helper resolves the owner (and their slot neighbours) and hands back
+ * So this helper resolves the owner (and their slot neighbors) and hands back
  * either a redirect target or the render props. The thin route wrappers call
  * it, return the redirect if present, then render OwnerDetailPage.
  */
@@ -20,7 +20,7 @@ import type { CanonicalLeagueSlug } from '../config/leagues';
 export type OwnerDetailResult =
   /** Unknown or renamed slug — the wrapper must `return Astro.redirect(redirectTo)`. */
   | { redirectTo: string; owner?: undefined }
-  /** Resolved owner plus the neighbours the succession footer needs. */
+  /** Resolved owner plus the neighbors the succession footer needs. */
   | {
       redirectTo?: undefined;
       owner: Owner;
@@ -29,7 +29,7 @@ export type OwnerDetailResult =
     };
 
 /**
- * Resolve an owner by slug, honouring `previousSlugs` with a redirect so an
+ * Resolve an owner by slug, honoring `previousSlugs` with a redirect so an
  * old URL keeps working after a rename.
  */
 export function resolveOwnerDetail(
@@ -47,13 +47,13 @@ export function resolveOwnerDetail(
   const owner = data.owners.find((o) => o.slug === slug);
   if (owner) {
     // Only the owners actually referenced by this page — succession
-    // neighbours — so the render props stay small.
+    // neighbors — so the render props stay small.
     const related: Record<string, Owner> = {};
     for (const succession of Object.values(owner.slotSuccession ?? {})) {
-      for (const neighbour of [succession.previous, succession.next]) {
-        if (!neighbour || related[neighbour]) continue;
-        const found = data.owners.find((o) => o.slug === neighbour);
-        if (found) related[neighbour] = found;
+      for (const neighbor of [succession.previous, succession.next]) {
+        if (!neighbor || related[neighbor]) continue;
+        const found = data.owners.find((o) => o.slug === neighbor);
+        if (found) related[neighbor] = found;
       }
     }
     return { owner, related };

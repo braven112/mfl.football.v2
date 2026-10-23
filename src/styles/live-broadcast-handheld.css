@@ -253,7 +253,7 @@
   border-radius: 0.6rem;
   background: var(--lbh-panel);
   border: 1px solid var(--lbh-hairline);
-  /* The owner's colour as a rule down the leading edge: the card reads as
+  /* The owner's color as a rule down the leading edge: the card reads as
      "mine" at a glance without spending a row on it. */
   border-left: 0.3rem solid var(--lbh-mine);
 }
@@ -634,7 +634,7 @@
   background: var(--lbh-scrim);
 }
 
-/* Portrait: a bottom sheet. Landscape (below): a centred panel, full height. */
+/* Portrait: a bottom sheet. Landscape (below): a centered panel, full height. */
 .lbh .lbh__sheet {
   position: fixed;
   left: 0;
@@ -929,14 +929,14 @@
   animation: lbh-slide-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Mine: a field of my colour, the same "big colour = mine" signal as the
+/* Mine: a field of my color, the same "big color = mine" signal as the
    TV's takeover. White ink — the primary was resolved for it server-side. */
 .lbh .lbh__banner.is-mine {
   background: var(--lbh-banner);
   color: #fff;
 }
 
-/* Theirs: dark, their colour only as the rule — bad news gets less paint. */
+/* Theirs: dark, their color only as the rule — bad news gets less paint. */
 .lbh .lbh__banner.is-theirs {
   background: var(--lbh-panel-2);
   color: var(--lbh-text);

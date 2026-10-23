@@ -408,11 +408,11 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
   // Measured on 2026: the whole-roster count says only 10% of The League's
   // (team, bye-week) slots are usable and that Weeks 8, 11 and 13 have zero
   // clean teams — a 24-man roster nearly always has SOMEBODY out, so the signal
-  // saturates and the optimiser has nothing to steer by. Counting the projected
+  // saturates and the optimizer has nothing to steer by. Counting the projected
   // starting nine instead takes that to 41%. The AFL is unaffected (46% either
   // way) because its rosters are keepers only at reveal time and cannot even
   // fill nine slots, so every player is already a starter — the model degrades
-  // to the old behaviour there rather than needing a special case.
+  // to the old behavior there rather than needing a special case.
   //
   // Falls back to the roster count when the ranking sources are unavailable, so
   // a missing data file degrades the objective instead of failing the draw.
@@ -495,15 +495,15 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
     weeks = best.weeks;
     fairness = best.score;
 
-    // Refine the structured season by EDGE COLOURING.
+    // Refine the structured season by EDGE COLORING.
     //
     // The structured builder can only emit pure rounds, so every franchise
     // plays its division games in the same weeks as everyone else. Kempe swaps
     // reach the mixed rounds it cannot, and because they preserve properness
     // and the search keeps the best state ever seen, the result is never worse
     // than the season handed in. Seeded rather than started cold because a
-    // Δ-regular multigraph is not always Δ-edge-colourable — the seed is the
-    // proof that a legal colouring exists for this format.
+    // Δ-regular multigraph is not always Δ-edge-colorable — the seed is the
+    // proof that a legal coloring exists for this format.
     if (policy.coloring !== false) {
       const slots = buildSlots(shape.lastWeek, doubleheaders);
       // Built once and reused: it also feeds `frozenSlots` below, which used
@@ -524,7 +524,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
         // Slots holding a round the constitution pins to a week — the AFL's
         // Week 1 cross-conference round. Frozen out of the search entirely,
         // because it is also the only clean slot with non-division games in it
-        // and the optimiser would otherwise spend it on a rivalry game and
+        // and the optimizer would otherwise spend it on a rivalry game and
         // emit an illegal season that scores beautifully.
         frozenSlots: new Set(
           policy.crossConference?.week

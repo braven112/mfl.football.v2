@@ -53,7 +53,7 @@ export interface DraftRoomTeam {
    */
   iconSmall?: string;
   /**
-   * Draft broadcast only — outline colour for `icon`, set when that art is a
+   * Draft broadcast only — outline color for `icon`, set when that art is a
    * LIGHT cut on a board that is dark in both themes. Absent means no outline.
    */
   iconStroke?: string;
@@ -66,7 +66,7 @@ export interface DraftRoomTeam {
   /**
    * Hand-authored CSS `background` for the broadcast reveal card, straight from
    * the league config's `broadcastGradient`. Painted VERBATIM — it is a design
-   * decision, not a derived colour, so it deliberately skips the saturation +
+   * decision, not a derived color, so it deliberately skips the saturation +
    * 4.5:1 flooring `toBroadcastPair` applies to `colorPrimary`/`colorSecondary`.
    * Absent (or malformed) falls back to that derived pair, so a franchise added
    * without one still gets a card.

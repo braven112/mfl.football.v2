@@ -61,7 +61,7 @@ export interface MflLiveMatchup {
    */
   noProjections?: boolean;
   /**
-   * Split-bar colours, both themes, as CSS custom properties. Two of each
+   * Split-bar colors, both themes, as CSS custom properties. Two of each
    * because this board has a light card and a dark one and the legible answer
    * differs — resolved server-side by `resolveTeamColorPair` against each
    * ground, exactly as the live-scoring island already does.

@@ -13,9 +13,9 @@ import '../../styles/player-modal-band.css';
  * visit — the owner's call (Oct 2026) was a popup like Throwback Week's.
  *
  * Same shell as ThrowbackWeekModal: a native <dialog> (focus trap and Esc from
- * the platform), a band over a card body, centred on desktop and a bottom
+ * the platform), a band over a card body, centered on desktop and a bottom
  * sheet at ≤640px. The band is the league's own: its dark logo on a gradient
- * into its primary colour, with a ghost "Demo" word — the band is dark in
+ * into its primary color, with a ghost "Demo" word — the band is dark in
  * both themes, like every `.pmb`.
  *
  * Links name the route SLOT (`/theleague/...`); the demo's HTML pass rewrites
@@ -207,7 +207,7 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
     color: #fff;
   }
 
-  /* The league's own band: ink into its primary colour. Dark in both themes,
+  /* The league's own band: ink into its primary color. Dark in both themes,
      so the logo is always the league's DARK-ground cut. */
   .dtm__band {
     --pmb-g1: #0b1220;
@@ -249,7 +249,7 @@ const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
     font-weight: 800;
     line-height: 1.15;
     text-align: center;
-    /* Pinned: some league skins colour headings, and this card is neutral. */
+    /* Pinned: some league skins color headings, and this card is neutral. */
     color: var(--color-text-primary);
   }
 

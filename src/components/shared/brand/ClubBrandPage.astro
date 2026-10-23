@@ -2,18 +2,18 @@
 /**
  * One NFL club's brand page — the "club showcase" layout.
  *
- * Full-bleed club colour, the mark at scale, every cut on file as a filmstrip,
+ * Full-bleed club color, the mark at scale, every cut on file as a filmstrip,
  * then what the site actually does with it: which cut each ground draws, the
  * real components that render it, and who in this league rosters its players.
  *
  * ── Why the hero uses the DARK mark ───────────────────────────────────────
- * The hero band is the club's own colour, which for almost every club is a
+ * The hero band is the club's own color, which for almost every club is a
  * dark ground. It is therefore neither a light nor a dark SURFACE — it is a
- * third ground, and it resolves to whichever assignment suits that colour's
+ * third ground, and it resolves to whichever assignment suits that color's
  * luminance (`bandSlot`). Same rule `franchise-band-brand.ts` already applies
  * to fantasy-team crests. See docs/plans/nfl-mark-assignments.md.
  *
- * ── Why the previews carry their own colours ──────────────────────────────
+ * ── Why the previews carry their own colors ──────────────────────────────
  * Each preview below stands in for a real app surface, so it paints its OWN
  * light or dark ground and inherits nothing from the page theme. A "light"
  * preview that went dark for a dark-mode viewer would make the two previews
@@ -161,7 +161,7 @@ const heroModel: HeroModel | null = heroCast
 const GROUND_COPY: Record<string, string> = {
   light: 'Player cells, bench rows, the games strip — anything on a white card.',
   dark: 'The same surfaces in dark mode, swapped in by CSS.',
-  band: 'The club-colour band, dark in both themes — so it follows the ' + (band?.slot ?? 'dark') + ' assignment.',
+  band: 'The club-color band, dark in both themes — so it follows the ' + (band?.slot ?? 'dark') + ' assignment.',
 };
 ---
 
@@ -187,8 +187,8 @@ const GROUND_COPY: Record<string, string> = {
     </header>
 
     <section class="cb__section">
-      <h2 class="cb__h2">Club colours</h2>
-      <p class="cb__note">The club's official colours, in order: primary first, then secondary.</p>
+      <h2 class="cb__h2">Club colors</h2>
+      <p class="cb__note">The club's official colors, in order: primary first, then secondary.</p>
       <ul class="cb__swatches">
         {
           club.colors.map((c) => (
@@ -218,7 +218,7 @@ const GROUND_COPY: Record<string, string> = {
           <p class="cb__derived">
             <strong>The reversed cut is ours.</strong> No public source publishes one &mdash; ESPN,
             NFL.com, Fox's web CDN, nflverse and Sleeper all serve the standard mark &mdash; so we
-            derive it from our own artwork with a hand-reviewed colour map, checked on a dark
+            derive it from our own artwork with a hand-reviewed color map, checked on a dark
             render. {club.reversalNote}
           </p>
         )
@@ -243,14 +243,14 @@ const GROUND_COPY: Record<string, string> = {
       <h2 class="cb__h2">What each ground draws</h2>
       <p class="cb__note">
         Use the light cut on a white cell, and the dark cut on a dark card <em>and</em> on the
-        club's own colour.
+        club's own color.
       </p>
       <ul class="cb__grounds">
         {
           club.grounds.map((g) => (
             <li class={`cb__ground ${g.slot === 'dark' || g.ground === 'band' ? 'is-dark' : 'is-light'}`}>
               <span class="cb__ground-head">
-                {g.ground === 'band' ? 'Club colour' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
+                {g.ground === 'band' ? 'Club color' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
               </span>
               <span
                 class="cb__ground-art"
@@ -269,7 +269,7 @@ const GROUND_COPY: Record<string, string> = {
     <section class="cb__section">
       <h2 class="cb__h2">In the app</h2>
       <p class="cb__note">
-        The real components, on their real grounds. The club-colour band is a ground, not a
+        The real components, on their real grounds. The club-color band is a ground, not a
         surface the app paints today.
       </p>
       <ul class="cb__situ">
@@ -361,7 +361,7 @@ const GROUND_COPY: Record<string, string> = {
         </li>
 
         <li class="cb__demo">
-          <span class="cb__demo-cap">Club colour <em>the third ground</em></span>
+          <span class="cb__demo-cap">Club color <em>the third ground</em></span>
           <span class="cb__pane" style={`background:${bg};color:${ink}`}>
             <span class="cb__bcast">
               {band && <img src={band.url} alt="" loading="lazy" />}

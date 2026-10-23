@@ -48,7 +48,7 @@ export interface LeagueHomeHeroInput {
   /**
    * The SIGNED-IN owner's franchise in this league (`franchiseIdForLeague`).
    * Drives the lineup read and the franchise accent: a hero painted in
-   * someone's colours rests on having signed in, never on a query param.
+   * someone's colors rests on having signed in, never on a query param.
    */
   authFranchiseId?: string | null;
   /**

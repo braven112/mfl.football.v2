@@ -637,7 +637,7 @@ async function thmLoadOrder(): Promise<void> {
 
 // ---- Screen navigation ----
 
-/** Open the hub home, and kick off the two live reads it summarises. */
+/** Open the hub home, and kick off the two live reads it summarizes. */
 function thmShowHubView() {
   thmShowView('hub', 'back');
   thmRenderHubView();

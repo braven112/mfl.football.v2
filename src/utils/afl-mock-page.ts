@@ -123,12 +123,12 @@ export async function resolveAflMock(input: {
   });
 
   // The pool is built ONLY when it will be used. Building it means loading
-  // MFL's whole player catalogue (~1.4 MB, uncached) and joining ADP onto
+  // MFL's whole player catalog (~1.4 MB, uncached) and joining ADP onto
   // ~2,500 rows, and the lobby is shut for most of the year — so on its
   // commonest state that work was all thrown away. The session page always
   // needs it, since a session created inside the window stays playable.
   //
-  // The catalogue is TheLeague's players.json — MFL's player universe as this
+  // The catalog is TheLeague's players.json — MFL's player universe as this
   // app archives it — on the DEFAULT league's clock, the same arrangement the
   // AFL draft room and best-ball use. Redraft ADP because the AFL redrafts
   // every season.

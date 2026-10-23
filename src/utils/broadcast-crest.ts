@@ -72,14 +72,14 @@ export interface BroadcastCrest {
    * ~40-150px a 100px source is not upscaled enough to show.
    */
   iconSmall: string;
-  /** Outline colour for `icon`, set only when that art is a LIGHT cut. */
+  /** Outline color for `icon`, set only when that art is a LIGHT cut. */
   iconStroke?: string;
-  /** Outline colour for `iconSmall`, set only when that art is a LIGHT cut. */
+  /** Outline color for `iconSmall`, set only when that art is a LIGHT cut. */
   iconSmallStroke?: string;
 }
 
 /**
- * Build the `franchiseId -> stroke colour` lookup for one league, once per
+ * Build the `franchiseId -> stroke color` lookup for one league, once per
  * page. The board's index is the site-wide one — kept under this name so the
  * two broadcast pages read as one unit.
  */

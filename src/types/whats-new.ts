@@ -16,7 +16,7 @@ import type { LeagueSlug } from './nav';
  * staged change for a league. Since Sept 2026 it is the default publishing
  * path for all user-facing work; `new-page` / `new-feature` / `enhancement`
  * survive for the marquee exception (a launch big enough to announce the day
- * it ships) and for the whole back catalogue, which still renders.
+ * it ships) and for the whole back catalog, which still renders.
  */
 export type WhatsNewCategory =
   | 'new-page'
@@ -142,13 +142,13 @@ export interface WhatsNewEntry {
   heroPlayerDescriptor?: string;
   /**
    * Homepage-hero display headline. The AFL hero renders a two-part display
-   * line — a plain phrase plus a colour-accented closing word — so an entry
+   * line — a plain phrase plus a color-accented closing word — so an entry
    * can carry copy written for that shape instead of reusing its (usually
    * much longer) article `title`. Written as authored: the hero's own CSS
    * uppercases it.
    *
    * Omit both fields and the hero derives the pair from `title` (last word
-   * accented). Set `heroHeadline` alone for a single-colour line.
+   * accented). Set `heroHeadline` alone for a single-color line.
    */
   heroHeadline?: string;
   /**

@@ -25,7 +25,7 @@
  *     same lesson applies to two "Mike Williams": a bad join resolves a
  *     different person instead of failing (docs/claude/rules/live-scoring.md).
  *
- * Team defences are keyed by NFL code on Sleeper ('KC') and map by club.
+ * Team defenses are keyed by NFL code on Sleeper ('KC') and map by club.
  *
  * A player none of the rungs resolves is NOT dropped: the board shows him
  * under a `sleeper:<id>` row id with Sleeper's own name, position and team.
@@ -153,7 +153,7 @@ export function buildSleeperPlayerMap(
     if (DEFENSIVE.has(position) && !team) continue;
 
     if (position === 'Def') {
-      // Sleeper keys a defence by its club code, so the id IS the team.
+      // Sleeper keys a defense by its club code, so the id IS the team.
       const club = team || canonicalNflCode(sid);
       out[sid] = {
         mfl: defByTeam.get(club) ?? '',

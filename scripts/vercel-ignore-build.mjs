@@ -142,7 +142,7 @@ export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
 // pathToFileURL, NOT `file://` + argv[1]: import.meta.url is percent-encoded, so
 // a repo path containing a space (or any character needing escaping) makes the
 // naive comparison false. That would skip the CLI block and exit 0 — which
-// Vercel reads as IGNORE, silently cancelling every deployment including
+// Vercel reads as IGNORE, silently canceling every deployment including
 // production. The one fail-CLOSED path in a fail-open script.
 //
 // realpathSync, because Node resolves symlinks before it sets import.meta.url

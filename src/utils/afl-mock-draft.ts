@@ -353,7 +353,7 @@ export function resolveMockWindow(input: ResolveMockWindowInput): MockWindow {
  * True when a mock may be created — the one check every caller shares.
  *
  * Deliberately says nothing about the POOL. Sizing the pool means loading the
- * whole player catalogue, and for most of the year the answer here is "no",
+ * whole player catalog, and for most of the year the answer here is "no",
  * where that work is thrown away — so the caller builds the pool only after
  * this returns true. See `resolveAflMock`.
  */

@@ -305,7 +305,7 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // per-warm-instance, and `rosters.astro` already populates the very same key —
 // so on a warm cache this page usually costs zero extra MFL calls.
 //
-// That sharing bounds MFL traffic but does not serialise it: the in-flight
+// That sharing bounds MFL traffic but does not serialize it: the in-flight
 // dedup inside mfl-roster-cache is a process-local Map, so several cold
 // instances can each miss and fetch before any of them writes Redis. The herd
 // is bounded by concurrent instances rather than by viewers, which is the
@@ -4865,11 +4865,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
        on the AFL hero — a mismatched shape there is a visible regression. */
     border-radius: var(--radius-full, 999px);
     border: 1px solid currentColor;
-    /* Colour carries the meaning: green = you can add right now. */
+    /* Color carries the meaning: green = you can add right now. */
     color: var(--color-primary, #1c497c);
   }
   /* Semantic green, NOT TheLeague's brand green: #2e8743 is the brand literal
-     and the AFL theme never overrides it, so it would paint TheLeague's colour
+     and the AFL theme never overrides it, so it would paint TheLeague's color
      on AFL pages (tests/afl-brand-green-guard.test.ts). */
   .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
   .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }

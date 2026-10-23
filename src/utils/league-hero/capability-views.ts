@@ -87,7 +87,7 @@ export function auctionWindowView(event: ResolvedLeagueEvent, env: ViewEnv): Eve
 
 /**
  * Tuesday's power-rankings column. Names the #1 team when the issue has one
- * — the card is ABOUT that team, so it takes that club's colours (`team`).
+ * — the card is ABOUT that team, so it takes that club's colors (`team`).
  */
 export function peckingOrderSlotView(env: ViewEnv, issue: PeckingOrderHeroIssue): EventHeroView {
   const { now } = env;

@@ -313,13 +313,13 @@ try {
   }
 } catch { /* fallback gracefully */ }
 
-// The owner's own colours + crest behind the promo hero. Read off the raw
+// The owner's own colors + crest behind the promo hero. Read off the raw
 // config entry rather than `getFranchiseBrand`, for two reasons: the brand
 // record carries no `broadcastGradient` (the franchise's authored gradient,
 // which is the whole point of the backdrop), and it answers for an UNKNOWN
 // franchise id with a league-neutral fallback — so an owner signed in to the
 // AFL, whose franchise 0001 is Smokane FC, would have been handed TheLeague's
-// 0001 and shown the Pigskins' colours here. Hence the leagueId check.
+// 0001 and shown the Pigskins' colors here. Hence the leagueId check.
 const heroBackdropTeam =
   authUser?.leagueId === THELEAGUE.id && userFranchiseId
     ? allTeams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId)

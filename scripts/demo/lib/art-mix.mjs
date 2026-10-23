@@ -54,7 +54,7 @@ const LEAGUE_ART = {
   browns_dog: ['repo:scripts/demo/art/browns-dog.png', null],
 };
 
-/** Art that is white and needs its own ground in BOTH themes: key → disc colour. */
+/** Art that is white and needs its own ground in BOTH themes: key → disc color. */
 export const ART_BACKDROP = { white_cardinal: '#97233f' };
 
 /** NFL clubs with a reversed (dark-ground) cut committed. */
@@ -217,7 +217,7 @@ export function artDataUri(art, { dark = false } = {}) {
 
 /**
  * Apply a demo's assignments to its franchise list: the assigned teams take
- * the art, a name fitted to it, and its colours. Everything else about the
+ * the art, a name fitted to it, and its colors. Everything else about the
  * franchise (id, owner, division) is untouched.
  */
 /**
@@ -234,7 +234,7 @@ export function withArt(demo, franchises, { slugOf } = {}) {
     if (!a) return f;
     const [art, name, nameShort, abbrev, colorPrimary, colorSecondary] = a;
     const next = { ...f, art, name, nameShort, abbrev, colorPrimary, colorSecondary };
-    // The dark-theme variants were derived from the old colours.
+    // The dark-theme variants were derived from the old colors.
     if ('colorPrimaryDark' in f) next.colorPrimaryDark = lighten(colorPrimary, 0.25);
     if ('colorSecondaryDark' in f) next.colorSecondaryDark = lighten(colorSecondary, 0.6);
     if (slugOf && 'slug' in f) next.slug = slugOf(name);

@@ -42,7 +42,7 @@ export interface LeagueEventDefinition {
   /**
    * What this event is to the homepage hero (src/utils/league-hero/types.ts
    * `HeroEventRole`). Set by a calendar that is BUILT rather than authored —
-   * a package league's MFL export — so the shared hero can recognise its
+   * a package league's MFL export — so the shared hero can recognize its
    * draft or trade deadline without matching on an id. Authored calendars
    * (TheLeague, the AFL) map their ids in their hero profile instead.
    */

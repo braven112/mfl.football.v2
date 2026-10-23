@@ -6,8 +6,8 @@
  * so a scoped rule would never reach them (theming-and-assets.md, "Astro
  * scoped CSS never reaches an element JS created").
  *
- * The position colours match the draft room's (draft-room.css --dr-pos-*), so
- * a position reads the same colour across the site.
+ * The position colors match the draft room's (draft-room.css --dr-pos-*), so
+ * a position reads the same color across the site.
  */
 .roster-page {
   --rpg-pos-qb: #c41e3a;
@@ -203,7 +203,7 @@ html.dark .roster-grouping__btn[aria-pressed='true'] {
   outline-offset: 1px;
 }
 
-/* The page turns .roster-controls into a column at 640px; centre it there. */
+/* The page turns .roster-controls into a column at 640px; center it there. */
 @media (max-width: 640px) {
   .roster-page .roster-grouping {
     order: 2;
@@ -377,7 +377,7 @@ html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-
 }
 
 /* Sorted by a future salary year: the card's right-hand salary is THAT year's
-   column (escalated), labelled with its year, so it matches the band total
+   column (escalated), labeled with its year, so it matches the band total
    that sums the same year. The page sets data-salary-year on the tbody. */
 @media (max-width: 767px) {
   .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='2'] td[data-column='year1'] {
@@ -440,7 +440,7 @@ html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-
 }
 
 /* Coach (and the AFL table): the card's corner — the projection — swaps to
-   the stat the table is sorted by, labelled (sort-value-slot.ts). The spans
+   the stat the table is sorted by, labeled (sort-value-slot.ts). The spans
    ride inside the projection cell and stay hidden everywhere else. */
 .rr-sortval {
   display: none;

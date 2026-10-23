@@ -50,7 +50,7 @@ export interface WeekInTheBooks {
 
 type ParsedWeek = ReturnType<typeof parseWeeklySchedule>[number];
 
-/** League-wide: the latest week with at least one played game, summarised. */
+/** League-wide: the latest week with at least one played game, summarized. */
 export function weekInTheBooks(weeks: ParsedWeek[]): WeekInTheBooks | null {
   for (let i = weeks.length - 1; i >= 0; i -= 1) {
     const { week, matchups } = weeks[i];

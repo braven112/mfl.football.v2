@@ -549,7 +549,7 @@ const windowLabel = config?.windowLabel ?? '';
 
   function init() {
     // ALREADY WIRED TO THIS EXACT DOM → nothing here is stale, so leave it
-    // alone. Not a micro-optimisation: init also runs when the form was
+    // alone. Not a micro-optimization: init also runs when the form was
     // configured BEFORE this listener fired (the /api/claim-context path), and
     // tearing that wiring down and rebuilding it would leave two submit
     // listeners on one button — two POSTs, two claims. A ClientRouter

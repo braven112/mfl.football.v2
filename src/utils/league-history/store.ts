@@ -44,7 +44,7 @@ export interface StoredLeagueHistory {
 }
 
 export interface ChampionOverride {
-	/** null = "no champion that season" (e.g. a cancelled year). */
+	/** null = "no champion that season" (e.g. a canceled year). */
 	championId: string | null;
 	runnerUpId: string | null;
 	setAt: string;

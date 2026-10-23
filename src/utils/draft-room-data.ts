@@ -161,7 +161,7 @@ export function mflBaseUrlFor(leagueFeeds: EagerFeedGlob, year: string | number,
  * draft day the room they want is overwhelmingly the one they pick in —
  * landing an NL owner on the AL board is the failure this ordering avoids.
  *
- * An unrecognised param falls back rather than erroring: the two conference
+ * An unrecognized param falls back rather than erroring: the two conference
  * ids are the only valid values and a bad one is a typo, not an attack.
  */
 export function resolveRoomConference(

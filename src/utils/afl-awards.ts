@@ -47,7 +47,7 @@ export type AwardCategory =
   | 'tier';
 
 /**
- * Display tier for the trophy room. Awards are grouped into four labelled
+ * Display tier for the trophy room. Awards are grouped into four labeled
  * sections in this order: Gold (AFL Championship / Cup / Premier League),
  * Conference Titles (AL/NL), Division Titles (the four), and Silver Titles
  * (D-League / NIT).

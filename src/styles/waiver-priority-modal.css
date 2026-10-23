@@ -66,7 +66,7 @@
 }
 .wpm-head__text { flex: 1; min-width: 0; }
 /* Explicit #fff, not inherited from .wpm-head: the global heading rules set a
-   colour on h1-h6 and out-specify a parent's `color`, so the title rendered
+   color on h1-h6 and out-specify a parent's `color`, so the title rendered
    near-black on the accent band while the subtitle beside it was white. */
 .wpm-title {
   margin: 0;

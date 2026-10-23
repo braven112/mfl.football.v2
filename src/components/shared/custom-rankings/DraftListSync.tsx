@@ -101,18 +101,18 @@ export default function DraftListSync({
   // Surface an existing snapshot on mount so "Undo last push" is available
   // across a reload — the undo buffer lives in KV, not in this component.
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const res = await fetch(apiUrl());
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data?.snapshot) setSnapshot(data.snapshot);
+        if (!canceled && data?.snapshot) setSnapshot(data.snapshot);
       } catch {
         /* a missing snapshot is not worth reporting on load */
       }
     })();
-    return () => { cancelled = true; };
+    return () => { canceled = true; };
   }, []);
 
   const handlePull = useCallback(async () => {
@@ -265,7 +265,7 @@ export default function DraftListSync({
 
   const cancelPending = useCallback(() => {
     setPending(null);
-    say('Cancelled — nothing was sent to MFL.');
+    say('Canceled — nothing was sent to MFL.');
   }, [say]);
 
   return (

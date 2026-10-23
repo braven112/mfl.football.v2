@@ -75,14 +75,14 @@ const {
 //
 // The old client-side chain ended in a hardcoded `'/theleague'`, which is the
 // wrong league on two of the three login pages: an AFL owner whose redirect
-// failed validation was dropped into TheLeague. And its sanitiser checked
+// failed validation was dropped into TheLeague. And its sanitizer checked
 // same-ORIGIN only, so a stale parked path could survive a sign-in to a
 // DIFFERENT league. Both are decided here now, per league.
 const formLeague = getLeagueById(leagueId) ?? getLeagueById(DEFAULT_LEAGUE_ID)!;
 // Server-validate the prop, but LEAGUE-AGNOSTICALLY. Every caller already
 // resolved it with the validator that fits its own context — the three league
 // login pages use resolveLoginDestination, the MFL app uses
-// resolveMflLoginRedirect — so this is defence in depth, not the decision.
+// resolveMflLoginRedirect — so this is defense in depth, not the decision.
 //
 // It must NOT be safeReturnPath: that rewrites a path into THIS form's league
 // prefix, and this form is shared with the league-less MFL app, whose board is

@@ -213,7 +213,7 @@ export function getSearchPath(league: CanonicalLeagueSlug): string | null {
  * Directory paths are inconsistent about prefixes by design: shared pages are
  * stored unprefixed (`/rosters`), while league-specific ones carry their own
  * (`/afl-fantasy/rosters`, `/theleague/lineup`). Anything reading the
- * directory therefore has to normalise before prefixing, or it emits
+ * directory therefore has to normalize before prefixing, or it emits
  * `/theleague/theleague/lineup`.
  *
  * Strips whichever known league prefix is present, then re-prefixes with the

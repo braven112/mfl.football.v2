@@ -17,7 +17,7 @@
  * Live (the default) adds this week's matchups as they stand right now;
  * Projected adds them as each side's projected final; Final is MFL's table
  * untouched. Live and Projected RE-RANK — the one sanctioned exception to the
- * rule above, allowed only because they are labelled as a what-if and every
+ * rule above, allowed only because they are labeled as a what-if and every
  * row that moved says where it officially sits. The maths, and why a finished
  * week is never counted twice, live in `utils/live/standings-projection.ts`.
  */
@@ -171,7 +171,7 @@ export default function LvStandings({
                     classes={{ wrap: 'lv-standings__crest', crop: 'lv-standings__crest--crop', text: 'lv-standings__initials' }}
                   />
                   <span className="lv-standings__name">{row.nameShort || row.name}</span>
-                  {/* Not colour alone: the row tints AND says so, because a tint
+                  {/* Not color alone: the row tints AND says so, because a tint
                       is invisible to a screen reader and to anyone who cannot
                       separate it from the stripe above it. */}
                   {row.isViewer && <span className="lv-standings__you">You</span>}

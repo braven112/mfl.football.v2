@@ -16,7 +16,7 @@ export const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
 
 /**
  * Position color palette for charts and visualizations — the ONE site
- * palette (tokens.css § Position colours; the same hexes as
+ * palette (tokens.css § Position colors; the same hexes as
  * roster-analytics' POSITION_COLORS and the draft room's --dr-pos-*).
  * tests/position-pill-tokens.test.ts pins every copy to it.
  */

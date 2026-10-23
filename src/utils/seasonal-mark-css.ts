@@ -36,13 +36,13 @@
  * Sprite icons swap too: `_icons` maps a sprite icon id (the Premier League
  * page's icon) to a drawn file. A `<use>` cannot take `content:`, so the
  * referencing <svg> is masked by the drawing and filled with `currentColor`
- * (so the mark takes the icon colour of wherever it sits, like the rest of the
+ * (so the mark takes the icon color of wherever it sits, like the rest of the
  * sprite) and the `<use>` is hidden; every sprite call site (menu, search,
  * related-page cards) follows.
  *
  * The side nav draws the AFL's tier link with the tier logo <img> instead of a
  * sprite icon. `_menuIcons` maps such an image path to a drawing that, inside a
- * nav icon slot only, is tinted the nav's icon colour the same way; the same
+ * nav icon slot only, is tinted the nav's icon color the same way; the same
  * image elsewhere keeps the plain `_swaps` drawing.
  */
 import { SEASONAL_THEMES, SURFACE_SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
@@ -181,7 +181,7 @@ export function buildSeasonalMarkCss(
     for (const [from, file] of seasonalMenuIcons(navSlug, id)) {
       const img = `html[data-league="${navSlug}"][data-season="${id}"] .nav-links__icon img[src="${esc(from)}"]`;
       // object-position pushes the image itself out of its box; the box then
-      // shows the icon colour through the drawing's silhouette.
+      // shows the icon color through the drawing's silhouette.
       rules.push(
         `${img} { content: normal; object-position: -9999px 0; --seasonal-icon: url("/assets/${navSlug}/${marks}/${file}"); background-color: var(--color-primary, #1c497c); -webkit-mask: var(--seasonal-icon) center / contain no-repeat; mask: var(--seasonal-icon) center / contain no-repeat; }`,
         `html[data-league="${navSlug}"][data-season="${id}"] .nav-links__link--active .nav-links__icon img[src="${esc(from)}"] { background-color: #ffffff; }`,
@@ -205,7 +205,7 @@ export function buildSeasonalMarkCss(
       // border-radius: 0 because many crest slots round the <img> itself to a
       // circle, which suits the regular round crests but cuts the corners off
       // a square mark (Dark Magicians' card frame on the home scoring card).
-      // `scale`, not `transform`: a watermark centres itself with
+      // `scale`, not `transform`: a watermark centers itself with
       // transform: translate(-50%, -50%), which a transform here would replace.
       // A scaled mark overhangs its box, and crest frames clip (live scoring's
       // `.lv-side__crest` is overflow:hidden), so its direct parent lets it show

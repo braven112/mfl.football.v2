@@ -177,7 +177,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
     );
   }
   lines.push(
-    `  - Bye-week luck is nearly even: the gap between the most and least favoured franchise is ${release.summary.netByeSpread}.`,
+    `  - Bye-week luck is nearly even: the gap between the most and least favored franchise is ${release.summary.netByeSpread}.`,
   );
   lines.push(`  - Home games run ${release.summary.homeGames.min} to ${release.summary.homeGames.max} per franchise.`);
   if (release.summary.minRematchGap != null) {
@@ -362,7 +362,7 @@ export function buildPost(aiOutput, enrichment, articleId, { league = 'theleague
 /**
  * GroupMe promo — the chat's version of the tease.
  *
- * Names the four games rather than summarising them, because the chat is where
+ * Names the four games rather than summarizing them, because the chat is where
  * owners argue about the draw and a game with two names in it is the thing
  * that starts that. The link goes LAST and carries no trailing punctuation:
  * GroupMe autolinks a sentence-ending period into the href and 404s it for

@@ -660,7 +660,7 @@ function isSafetyPlay(item: any): boolean {
  * The fallback is deliberate and narrow: if not one participant carries a
  * `type`, we cannot tell roles apart at all, and silently crediting nobody
  * would delete every reveal for that play. Falling back to all participants
- * restores the old behaviour for exactly that case and no other.
+ * restores the old behavior for exactly that case and no other.
  */
 function creditedAthleteIds(item: any): string[] {
   // A SAFETY credits nobody individually. Both recorded safeties show why:
@@ -776,7 +776,7 @@ export function parseBroadcast(competition: any): string {
  *
  * ## Why a type allowlist and not just a yardage threshold
  *
- * `statYardage` is a distance, not a judgement, and plenty of long plays are
+ * `statYardage` is a distance, not a judgment, and plenty of long plays are
  * the opposite of a highlight. Measured against one real game's 193 plays
  * (WAS@GB, 2026-09-12), the plays clearing 40 yards were: a 57-yard completion
  * and a 37-yard completion (real), two made field goals of 51 and 56 (already

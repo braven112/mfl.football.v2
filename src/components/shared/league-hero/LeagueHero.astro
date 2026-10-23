@@ -35,7 +35,7 @@
  * short — clamping those would cut an instruction rather than trim a paragraph.
  *
  * The composite deliberately does NOT take `backdrop`. The franchise backdrop
- * paints the viewer's colours behind the whole card; a composite already says
+ * paints the viewer's colors behind the whole card; a composite already says
  * whose story it is through its glow (see hero-franchise-accent.ts), and
  * stacking both leaves the cast player floating on a second team's gradient.
  */
@@ -73,10 +73,10 @@ interface Props {
   /** User's franchise id, for highlighting in playoff brackets. */
   userFranchiseId?: string;
   /**
-   * The signed-in owner's colours + crest for the promo hero's card. Only
+   * The signed-in owner's colors + crest for the promo hero's card. Only
    * AflEventHero takes it — the trade-deadline, playoff and championship heroes
    * are ABOUT specific franchises (a countdown, a bracket, a matchup), so
-   * painting the viewer's own colours behind them would claim a card that
+   * painting the viewer's own colors behind them would claim a card that
    * belongs to whoever is in it.
    */
   backdrop?: HeroFranchiseBackdrop | null;

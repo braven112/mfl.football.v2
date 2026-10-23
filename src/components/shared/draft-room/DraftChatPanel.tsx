@@ -334,11 +334,11 @@ export function DraftChatPanel({
   useEffect(() => {
     if (!partyHost || !roomId) return;
 
-    let cancelled = false;
+    let canceled = false;
     let socket: PartySocket | null = null;
 
     import('partysocket').then((mod) => {
-      if (cancelled) return;
+      if (canceled) return;
       const PartySocketCtor = mod.default;
 
       const params = new URLSearchParams({
@@ -377,7 +377,7 @@ export function DraftChatPanel({
     });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       if (socket) socket.close();
       socketRef.current = null;
     };

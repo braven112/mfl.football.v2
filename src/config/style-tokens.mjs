@@ -2,8 +2,8 @@
  * The site-style contract: every token a site STYLE (src/styles/site-styles/
  * <id>.json) owns. A style is the visual language a league's whole site speaks
  * (Editorial, Primetime); a league picks one with `siteTheme` in the registry.
- * It sits beside, and never overlaps, the league's colour THEME
- * (src/config/theme-tokens.mjs): the theme decides colours, the style decides
+ * It sits beside, and never overlaps, the league's color THEME
+ * (src/config/theme-tokens.mjs): the theme decides colors, the style decides
  * type, shape and the house furniture (the editorial stripe on a section
  * title, italic broadcast caps on a heading). Type goes with the style.
  *
@@ -47,8 +47,8 @@ export const STYLE_TOKEN_GROUPS = [
     label: 'Cards',
     tokens: [
       { name: '--style-card-border', use: 'A card or panel’s edge (Editorial: its 1px neutral border). A border value.' },
-      { name: '--style-card-border-color', use: 'A card’s border colour where a dark-mode rule restates only the colour (Editorial: null). A colour.' },
-      { name: '--style-card-ring', use: 'The colour of a dark-mode 0 0 0 1px ring that stands in for a card’s border (Editorial: null). A colour.' },
+      { name: '--style-card-border-color', use: 'A card’s border color where a dark-mode rule restates only the color (Editorial: null). A color.' },
+      { name: '--style-card-ring', use: 'The color of a dark-mode 0 0 0 1px ring that stands in for a card’s border (Editorial: null). A color.' },
       { name: '--style-card-shadow', use: 'The shadow of a card whose border was its only edge (Editorial: none). A box-shadow value.' },
     ],
   },

@@ -145,6 +145,6 @@ function BroadcastPlayerStrip({ page, outgoing, rowsPerPage, hidden, dimTail }: 
  * times over an eight-hour Sunday — on set-top hardware, and concurrently
  * with the reveal transitions that are the one thing on this screen allowed
  * to cost a frame budget. Props here are already memoised upstream, so the
- * bailout is free and changes no behaviour.
+ * bailout is free and changes no behavior.
  */
 export default memo(BroadcastPlayerStrip);

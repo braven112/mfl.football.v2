@@ -47,7 +47,7 @@ export async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs =
   for (let hop = 0; hop <= 3; hop++) {
     // `userAgent` is optional and re-sent on every hop, same as the cookie.
     // Several scripts tag their MFL traffic this way so a request pattern can
-    // be attributed when diagnosing MFL-side behaviour; converting a caller to
+    // be attributed when diagnosing MFL-side behavior; converting a caller to
     // mflFetch should not quietly cost it that.
     const headers = { Cookie: cookieHeader };
     if (userAgent) headers['User-Agent'] = userAgent;

@@ -37,7 +37,7 @@
    * shade that clears 4.5:1 against white in BOTH themes — the banner carries
    * small text (the eyebrow, the team name), not just the big clock. They
    * used to read the semantic tokens (--color-warning, --color-success,
-   * --color-gray-700…), which are TEXT colours: tokens-dark.css lightens
+   * --color-gray-700…), which are TEXT colors: tokens-dark.css lightens
    * them so they read on a dark page, which turned the dark-mode banner into
    * white on pastel (warning 1.7:1, idle 1.8:1, complete 1.9:1), and the
    * light-mode success green was already 2.5:1. Don't point these back at a
@@ -74,7 +74,7 @@
   --dr-pick-flash-duration: 1.2s;
 
   /* ── Position Colors ── */
-  /* The site position palette (tokens.css § Position colours). */
+  /* The site position palette (tokens.css § Position colors). */
   --dr-pos-qb: #c41e3a;
   --dr-pos-rb: #2563eb;
   --dr-pos-wr: #16a34a;
@@ -167,7 +167,7 @@
 html.dark .draft-room {
   /* Dark mode's --color-primary is brightened to read as TEXT on a dark page
      (#3b82f6, 3.7:1 under white), so the "other team" fill is pulled back
-     toward black. A mix, not a literal, so it stays the LEAGUE's colour. */
+     toward black. A mix, not a literal, so it stays the LEAGUE's color. */
   --dr-timer-bg-other: color-mix(in srgb, var(--color-primary, #3b82f6) 70%, #000000);
 
   --dr-cell-bg-user: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, var(--content-bg, #1e1e1e));
@@ -2326,7 +2326,7 @@ html.dark .dr-side-panel {
   white-space: nowrap;
   transition: background 0.15s var(--dr-easing-ease);
 }
-/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+/* An <a>: restate color and decoration on hover/focus, or the layouts'
    global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
 .dr-mfl-pick-link:is(:hover, :focus) {
   color: var(--color-primary, #1c497c);

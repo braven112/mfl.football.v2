@@ -49,7 +49,7 @@ export interface FrontOfficeMetric {
   /** Neutral line under the value (a player's name, a count). */
   subtitle?: string | null;
   subtitleId?: string;
-  /** COLOURED line under the value — reserved for something the owner has
+  /** COLORED line under the value — reserved for something the owner has
    *  to act on, like "Must cut 3 players". A plain fact rendered here comes
    *  out red and reads as an error. */
   hint?: string | null;

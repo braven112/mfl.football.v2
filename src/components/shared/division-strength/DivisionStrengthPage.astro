@@ -102,7 +102,7 @@ const railYears = [...data.yearsCovered].sort((a, b) => b - a);
  * `yearsWithoutGameLog` holds two different things: a season that was played
  * but whose game log was lost (the AFL's 2003 — standings survived), and a
  * season that has not happened at all (2026 — nothing to have a log of).
- * Labelling both "standings only" told a screen-reader user that 2026 had
+ * Labeling both "standings only" told a screen-reader user that 2026 had
  * standings, which is the one distinction this page exists to draw.
  */
 const notPlayedYears = new Set(
@@ -230,7 +230,7 @@ const sortHref = (key: AllTimeSortKey) => {
 /**
  * The screen-reader half of a sort header.
  *
- * Centralised while the markup stays inline: the `<th>` cannot move into its
+ * Centralized while the markup stays inline: the `<th>` cannot move into its
  * own component, because Astro scoped CSS does not apply to markup a child
  * component emits (the child's tags carry a different `data-astro-cid`), so
  * extracting it silently killed the sticky-header and sort-link styling. This
@@ -357,7 +357,7 @@ const upcoming = data.upcoming;
 const upcomingFor = (name: string) => upcoming?.divisions.find((d) => d.name === name) ?? null;
 
 /**
- * How an owner is LABELLED in this report: by team, not by person.
+ * How an owner is LABELED in this report: by team, not by person.
  *
  * Owners are the grouping key — a mid-tenure rename must not split one stint
  * into two entities — but `title` concatenates every name that owner has worn
@@ -1331,7 +1331,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     {d.members.map((m) => (
                       <li class:list={['preview-member', { 'preview-member--new': m.newOwner }]}>
                         {m.icon && <img src={m.icon} alt="" loading="lazy" width="26" height="26" />}
-                        {/* One label, not two. Now that an owner is labelled by
+                        {/* One label, not two. Now that an owner is labeled by
                             team, a separate owner column repeated the team name
                             on 38 of these 41 rows — so the name IS the link.
                             The one co-owned holding keeps the name unlinked
@@ -1649,7 +1649,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .verdict-list .member-icons img,
   .verdict-list .member-initials { width: 20px; height: 20px; }
   /* A franchise that has left the division still earned part of the record,
-     so it stays in the row and reads as history. Never colour alone — the
+     so it stays in the row and reads as history. Never color alone — the
      title attribute says "no longer in the …" too. */
   .member-slot--past { opacity: 0.4; filter: grayscale(1); }
 
@@ -1872,7 +1872,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
   /* A slot whose holder changed for the coming season gets a ring in the
      league accent — plus the "new owner" pill and the What's Changed list, so
-     the signal is never colour alone. */
+     the signal is never color alone. */
   .member-slot { display: inline-flex; border-radius: 999px; }
   .member-slot--new {
     box-shadow: 0 0 0 2px var(--ds-accent);
@@ -1936,7 +1936,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
 
   /* Direction is carried by the glyph as well as the hue, so this survives
-     grayscale and colour-blind viewing. */
+     grayscale and color-blind viewing. */
   .delta { margin-left: 0.3125rem; font-weight: 700; }
   .delta--up { color: #1f5d2d; }
   .delta--down { color: #8b2a1f; }
@@ -2106,7 +2106,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
 
   /* Active and retired differ in SHAPE, not saturation — the active bar fades
      out at its right edge (ongoing), the retired one ends on a hard tick
-     (a tombstone). Survives grayscale and colour-blind viewing. */
+     (a tombstone). Survives grayscale and color-blind viewing. */
   .span-bar {
     position: relative;
     display: block;
@@ -2240,7 +2240,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     text-decoration: none;
     font-weight: 600;
   }
-  /* Labelling by latest team name removed the 68-character rebrand-joined
+  /* Labeling by latest team name removed the 68-character rebrand-joined
    * titles that dragged a row to three lines, but a team name can still be
    * long ("Broke Back Mountaineers"). Keep the fallback: one line, ellipsis,
    * full text on the owner page the link points at. */

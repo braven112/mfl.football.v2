@@ -51,7 +51,7 @@ function workflowSource(a) {
 #
 # To disable this job, comment out the \`cron:\` line below and commit — never
 # gate it on a GitHub Actions variable (CLAUDE.md "Feature flags — code, not
-# GitHub Actions variables"). To switch the behaviour off while leaving the
+# GitHub Actions variables"). To switch the behavior off while leaving the
 # schedule, flip ENABLED in scripts/${a.name}.mjs.
 
 on:
@@ -124,7 +124,7 @@ import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { fetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 ${seasonImports}
-/** Behaviour switch. Flip here, not in a GitHub Actions variable. */
+/** Behavior switch. Flip here, not in a GitHub Actions variable. */
 const ENABLED = true;
 
 async function main() {

@@ -81,7 +81,7 @@ export function pathBelongsToLeague(
   slug: CanonicalLeagueSlug
 ): boolean {
   // Every non-default league's entries carry its own prefix; derived from the
-  // registry so a new league is recognised without editing this function.
+  // registry so a new league is recognized without editing this function.
   for (const league of ALL_LEAGUES) {
     if (league.slug === DEFAULT_LEAGUE_SLUG) continue;
     if (path === `/${league.slug}` || path.startsWith(`/${league.slug}/`)) return slug === league.slug;

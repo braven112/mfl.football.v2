@@ -250,7 +250,7 @@ export function leagueIdForYear(league, year, root = ROOT) {
   // versions of this key were too narrow: slug+year alone let a league without
   // a dataPath serve its answer to a real one, and adding dataPath/root still
   // left the fallback keyed on something it does not fully determine. A cache
-  // narrower than its inputs is a correctness bug, not an optimisation detail.
+  // narrower than its inputs is a correctness bug, not an optimization detail.
   const key = `${league.slug}|${league.id}|${league.dataPath ?? ''}|${root}|${year}`;
   if (leagueIdCache.has(key)) return leagueIdCache.get(key);
   let id = league.id;
@@ -281,7 +281,7 @@ export function leagueIdForYear(league, year, root = ROOT) {
  *   `leagueId` is the per-year id actually queried, which the caller prints so
  *   a wrong-league answer does not read as an auth failure.
  * @throws on a non-OK response, or a body that is not JSON. Both are read
- *   failures rather than authorisation ones, and the caller reports them as
+ *   failures rather than authorization ones, and the caller reports them as
  *   errors — the first version returned null for all three cases and spent 44
  *   league-years blaming the credentials for a parser bug.
  *
@@ -414,7 +414,7 @@ async function main() {
       }
       if (!result) {
         // Already reported by the catch above — a read failure, not an
-        // authorisation one. Do not print a second, misleading line.
+        // authorization one. Do not print a second, misleading line.
         failedYears += 1;
       } else if (result.byFranchise.size === 0) {
         anonymousYears += 1;
@@ -433,13 +433,13 @@ async function main() {
     }
     console.log(`  [${slug}] collected ${named} franchise-year owner names across ${years.length} years`);
     // The diagnosis, printed once per league rather than 20 times. Field NAMES
-    // only. If this list is the public set, the cookie was not honoured —
-    // almost always an expired MFL session, since MFL answers an unauthorised
+    // only. If this list is the public set, the cookie was not honored —
+    // almost always an expired MFL session, since MFL answers an unauthorized
     // read with the PUBLIC payload rather than an error.
     if (named === 0 && anonymousYears > 0 && lastFieldsSeen) {
       console.log('');
       // Say what actually happened. Claiming "every year parsed" while some
-      // years threw would point the reader at authorisation when the real
+      // years threw would point the reader at authorization when the real
       // problem is that those years never came back at all.
       console.log(
         failedYears === 0

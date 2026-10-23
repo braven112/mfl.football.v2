@@ -36,7 +36,7 @@ import { loginUrlFor } from './login-redirect';
 /**
  * Park a small payload across the sign-in reload.
  *
- * sessionStorage, not the URL: `safeReturnPath` sanitises the redirect to a
+ * sessionStorage, not the URL: `safeReturnPath` sanitizes the redirect to a
  * same-origin path and would strip a query param, and a URL that outlived the
  * reload would re-fire on every back-navigation.
  *

@@ -1,10 +1,10 @@
 /**
  * The full-screen reveal: one of the owner's OWN players just did something.
  *
- * A FIELD OF COLOUR is what makes this readable from ten feet with the real
+ * A FIELD OF COLOR is what makes this readable from ten feet with the real
  * game on the other television. It is the primary mine-vs-theirs channel and
- * it is spent here — nothing else on the board gets a colour fill. An owner
- * who learns nothing else about this page learns "big colour = mine" in one
+ * it is spent here — nothing else on the board gets a color fill. An owner
+ * who learns nothing else about this page learns "big color = mine" in one
  * Sunday.
  *
  * It deliberately does NOT cover the fixed header: the header is what makes
@@ -13,7 +13,7 @@
  * ── The figure ────────────────────────────────────────────────────────────
  *
  * The scorer is a LARGE CUTOUT on the right, outside any cell, with the
- * franchise crest centred behind him — the draft board's treatment, on the same
+ * franchise crest centered behind him — the draft board's treatment, on the same
  * hardware. He was an 18vh circular chip inside the copy until Sep 2026, which
  * read as a row of the player strip blown up rather than as a moment.
  *
@@ -32,7 +32,7 @@
  *    admits its `order` swap is a bug; the defenders' names are real text and a
  *    screen reader should reach the play before them. Paint order is held by
  *    `z-index` instead, so a defender's shoulder can never cover the play text.
- *  - **No shuffle.** The draft board randomises which defenders show because
+ *  - **No shuffle.** The draft board randomizes which defenders show because
  *    the AFL can draft the same defense twice in one night. Here, seeing the
  *    same man every time the Chiefs defense scores is a feature.
  *  - **ONE defender, not the draft board's pair.** Tried on the real
@@ -140,7 +140,7 @@ function MomentTakeover({
   /**
    * Cutouts that 404'd this reveal.
    *
-   * Both initialisers only run on mount, which is exactly right and not an
+   * Both initializers only run on mount, which is exactly right and not an
    * accident: `LiveBroadcast` keys the stage on the moment, so every reveal
    * remounts this subtree.
    */
@@ -198,7 +198,7 @@ function MomentTakeover({
           over the 100x100 hand cut) and buys dark-board legibility back with a
           ring. Both crest fields were the same 100px icon until Sep 2026, which
           is what made this one visibly pixelated.
-          CENTRED on the layer, with the scorer seated to its right — it used to
+          CENTERED on the layer, with the scorer seated to its right — it used to
           be anchored bottom-right, which put it entirely underneath the figure
           once the cutout moved there and wasted the club's own mark. */}
       {team?.icon && (
@@ -313,6 +313,6 @@ function MomentTakeover({
  * times over an eight-hour Sunday — on set-top hardware, and concurrently
  * with the reveal transitions that are the one thing on this screen allowed
  * to cost a frame budget. Props here are already memoised upstream, so the
- * bailout is free and changes no behaviour.
+ * bailout is free and changes no behavior.
  */
 export default memo(MomentTakeover);

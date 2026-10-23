@@ -8,8 +8,8 @@
  *
  *  - **`.cb__nick { color: inherit }`.** The layout sets a global
  *    `:global(h1),:global(h2) { color: var(--primary-link-default-text-color) }`
- *    that BEATS an inherited colour, so a hero heading renders in the site's
- *    accent blue on top of the club's own colour. The franchise copy shipped
+ *    that BEATS an inherited color, so a hero heading renders in the site's
+ *    accent blue on top of the club's own color. The franchise copy shipped
  *    exactly that, on a red hero, which is what sent this file back here.
  *  - **`.cb__h2` is a small uppercase eyebrow**, not a big themed heading, so
  *    it never has that fight in the first place.
@@ -62,7 +62,7 @@
      `buildCrestDarkStrokeCss` emits an `html.dark` ring for a franchise crest
      measured illegible on ink. On a surface that declares its own ground that
      rule fires for the wrong one — a LIGHT pane would get a ring meant for a
-     dark card — so the light grounds neutralise it.
+     dark card — so the light grounds neutralize it.
 
      ONLY the light grounds. A blanket `filter: none` over every surface here
      also killed `--nfl-logo-ring`, and that rule is emitted TWICE by
@@ -143,7 +143,7 @@
   }
   .cb__nick {
     /* The hero paints its own ground, so its ink is computed from the CLUB
-       COLOUR and must beat the site's themed h1 rule — which rendered the
+       COLOR and must beat the site's themed h1 rule — which rendered the
        nickname near-black on navy in light mode and accent blue in dark. */
     color: inherit;
     margin: 0;
@@ -384,7 +384,7 @@
      from player-cell.css. Nothing here restyles it: a pane sets the GROUND and
      the real cell renders on it exactly as it does on a roster page, which is
      the only way this section stays true as that component changes. The two
-     colour rules below are the one exception, and they are about the ground —
+     color rules below are the one exception, and they are about the ground —
      the cell's own tokens follow the page theme, which would make the light
      pane go dark for a dark-mode reader and collapse the comparison. */
   .cb__pane .player-cell__name,
@@ -480,7 +480,7 @@
 /* ══ Franchise-half additions ═══════════════════════════════════════════════
    Everything above is the club page's template, unchanged. What follows are
    the pieces only a FRANCHISE page has — the file actions the old Asset
-   Library existed for, the derived-colour rows, the era art and the usage
+   Library existed for, the derived-color rows, the era art and the usage
    table — written in the same idiom so the two halves read as one page. */
 
 /* ── Copy / download, per cut and per hex ───────────────────────────────── */
@@ -508,7 +508,7 @@
   text-decoration: none;
   cursor: pointer;
 }
-/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+/* An <a>: restate color and decoration on hover/focus, or the layouts'
    global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
 .cb__dl:is(:hover, :focus) {
   color: var(--page-text, #111827);
@@ -531,7 +531,7 @@
   display: inline;
 }
 
-/* "Retired" borrows `.cb__made`'s geometry but not its colour. That badge is an
+/* "Retired" borrows `.cb__made`'s geometry but not its color. That badge is an
    accent fill because "made here" is a claim worth noticing; a retired cut is
    the opposite — it is context, and an accent on four of nine tiles pulls the
    eye to the cuts that no longer ship. Neutral, and legible on the white cut
@@ -591,7 +591,7 @@
   color: var(--page-text, #111827);
 }
 
-/* ── Derived colours: one row per family, both themes side by side ───────── */
+/* ── Derived colors: one row per family, both themes side by side ───────── */
 .cb__derived-list {
   list-style: none;
   margin: 0;
@@ -654,7 +654,7 @@
   border-radius: 999px;
   background: var(--chip, #000);
 }
-/* A cell that DECLARES its ground must neutralise anything that follows the
+/* A cell that DECLARES its ground must neutralize anything that follows the
    theme instead — the same fight `.cb__nick` has with the global h1 rule. The
    layout ships `:global(code) { background: var(--color-gray-100) }`, and that
    token is a DARK grey under html.dark, so the hex pill inside a light cell
@@ -769,7 +769,7 @@
 }
 
 /* ── Standings-row demo (the franchise half's "in the app" pane) ─────────── */
-/* The band pane paints the franchise's own colour inline, so it needs no
+/* The band pane paints the franchise's own color inline, so it needs no
    background here — only the ground class, so the opt-out above can see it. */
 .cb__pane.is-band {
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1011,7 +1011,7 @@ html.dark .brand__art img {
 .brand__hit a {
   font-weight: 600;
 }
-/* A subject tile stands on white or the dark card, not a club colour, so it
+/* A subject tile stands on white or the dark card, not a club color, so it
    needs an edge to read as a tile on a page of the same ground. */
 .brand__tile--plain {
   border: var(--style-card-border, 1px solid var(--content-border, #e2e8f0));

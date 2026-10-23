@@ -35,7 +35,7 @@ export function densityTier(cellCount: number): DensityTier {
  * The drop ladder, in order. Each rung removes one element entirely rather
  * than shrinking it.
  *
- * The ordering is an editorial judgement about what an owner is actually
+ * The ordering is an editorial judgment about what an owner is actually
  * asking the screen: the win-probability NUMBER goes before its bar (a split
  * bar reads at ten feet; two digits do not), the word "Proj" goes before the
  * number it labels, and the projected final is last to go because it is the
@@ -153,7 +153,7 @@ export interface PanelSplit {
  *
  * Pass `Number.POSITIVE_INFINITY` for the expanded view: the same home-first
  * ordering with nothing demoted for its SIZE — but `MAX_GRID_PANELS` still
- * holds, because that one is not a judgement about legibility, it is what the
+ * holds, because that one is not a judgment about legibility, it is what the
  * grid can place at all.
  */
 export function splitPanels(
@@ -202,7 +202,7 @@ export interface StripRow {
   /** The owner's franchise crest in this league — which team he is on. */
   crest: string;
   /**
-   * Outline colour for `crest`, set only when that art is a LIGHT cut.
+   * Outline color for `crest`, set only when that art is a LIGHT cut.
    *
    * Easy to leave off, and the most expensive place to: the strip is the
    * crest surface VISIBLE MOST OF THE AFTERNOON, so a light franchise cut

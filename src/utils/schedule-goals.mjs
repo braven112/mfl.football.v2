@@ -19,7 +19,7 @@
  *   partial    achieved as far as the calendar allowed, with the shortfall
  *              named — this is the honest outcome for most bye-related goals
  *   blocked    not attainable at all this year; says what blocked it
- *   optimised  a soft objective the annealer minimises with no pass mark;
+ *   optimized  a soft objective the annealer minimizes with no pass mark;
  *              reports the number rather than inventing a verdict
  *   n/a        the goal was not yet adopted when this season was drawn
  *
@@ -207,7 +207,7 @@ const SCORERS = {
     return {
       status: 'blocked',
       // Always fixable: division games are allowed on bye weeks (that goal is a
-      // maximise, not a rule), so there is always somewhere later to put one.
+      // maximize, not a rule), so there is always somewhere later to put one.
       avoidable: true,
       detail:
         `${label}. ${worst?.franchise ?? 'A franchise'} is the worst. A division race this front-loaded is ` +
@@ -238,12 +238,12 @@ const SCORERS = {
 
   'bye-luck': (f) => ({
     status: 'optimised',
-    detail: `most- to least-favoured franchise differ by ${f.netByeSpread} across the season`,
+    detail: `most- to least-favored franchise differ by ${f.netByeSpread} across the season`,
   }),
 
   'opponent-strength': () => ({
     status: 'optimised',
-    detail: 'balanced by the optimiser; no pass mark — see the doubleheader and late-season spreads',
+    detail: 'balanced by the optimizer; no pass mark — see the doubleheader and late-season spreads',
   }),
 
   'worst-week-and-finale': (f) => {
