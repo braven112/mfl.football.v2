@@ -166,6 +166,7 @@ track, because the row wraps from 768px up. A component rule that sets
 phone swipe (it out-ranks the kit's `:where()`), so migrations delete those.
 Not pills, registered as their own: status labels, link chips, heat-map
 cells, CTA links, contract-year chips, the team-logo picker and the TV
-broadcast controls. Form option pickers (mock timer, mock settings, new-idea
-category) await the owner's call.
+broadcast controls. Form option pickers (mock timer / rounds / order /
+presets, the mock settings dialog, the new-idea category) take the pill too:
+the owner's call, 2026-10-23.
 

@@ -100,12 +100,12 @@ export function MockDraftSettingsDialog({
           <p className="dr-settings-section__hint">
             Applies immediately — a running clock restarts at the new time.
           </p>
-          <div className="dr-settings-timer-chips" role="group" aria-label="Seconds per pick">
+          <div className="ui-pills dr-settings-timer-chips" role="group" aria-label="Seconds per pick">
             {TIMER_OPTIONS.map((opt) => (
               <button
                 key={opt.seconds}
                 type="button"
-                className="dr-settings-chip"
+                className="ui-pill dr-settings-chip"
                 aria-pressed={session.timerSeconds === opt.seconds}
                 onClick={() => onSetTimer(opt.seconds)}
               >
