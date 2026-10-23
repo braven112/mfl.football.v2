@@ -770,19 +770,21 @@ export default function LiveBoard({
         />
       ) : (
         <>
-          {panelViews.map(({ panel, heldSince: panelHeld }) => (
+          {panelViews.map(({ panel, heldSince: panelHeld }) => {
+            // No league board exists for a Sleeper league, so it gets neither
+            // a linked heading nor the "See all games" button.
+            const panelHref =
+              panelHrefBase && panel.leagueId && panel.provider !== 'sleeper'
+                ? `${panelHrefBase}${encodeURIComponent(panel.leagueId)}`
+                : null;
+            return (
             <section key={panel.leagueId} className="lv-panel">
               {showPanelName && (
                 <h2 className="lv-panel__name">
-                  {/* No league board exists for a Sleeper league, so its
-                      heading is plain text rather than a dead link. */}
-                  {panelHrefBase && panel.leagueId && panel.provider !== 'sleeper' ? (
+                  {panelHref ? (
                     // The heading IS the link — the whole line, so it is a
                     // thumb target rather than a word.
-                    <a
-                      className="lv-panel__link"
-                      href={`${panelHrefBase}${encodeURIComponent(panel.leagueId)}`}
-                    >
+                    <a className="lv-panel__link" href={panelHref}>
                       {panel.leagueName}
                       <span className="lv-panel__chev" aria-hidden="true">→</span>
                     </a>
@@ -828,8 +830,25 @@ export default function LiveBoard({
                   leagueName={multiLeague ? panel.leagueName : undefined}
                 />
               )}
+
+              {/* The heading link alone was too quiet: owners did not know a
+                  small arrow beside a league's name opened every game in it.
+                  Under the cards, where a reader finishing their own matchup
+                  looks next. Visible text stays short so it never crowds a
+                  phone; the league name goes to the accessible name, since a
+                  board stacks several of these. */}
+              {panelHref && (
+                <a
+                  className="cta cta--ghost lv-panel__all"
+                  href={panelHref}
+                  aria-label={`See all ${panel.leagueName} games`}
+                >
+                  See all games
+                </a>
+              )}
             </section>
-          ))}
+            );
+          })}
 
           {/* Under the cards, on the Scores tab. Derived from the same panel
               those cards render, so it cannot disagree with them, and it

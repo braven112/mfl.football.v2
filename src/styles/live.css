@@ -1432,6 +1432,16 @@ button.lv-card:focus-visible {
   transition: transform var(--transition-fast, 120ms) ease;
 }
 
+/* "See all games" under a panel's cards, on MFL Live only (same condition as
+   the linked heading). Full width so it reads as the panel's way onward and
+   is an easy thumb target; the kit owns colours and states. */
+.lv-panel__all {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding-block: 0.5rem;
+}
+
 /* ── Scores / Standings ───────────────────────────────────────────────────
    Two unrelated views, so the tab kit (ui-tabs / ui-tab); toggle buttons, not
    a tablist — see the component for why. The standings MODES below them
