@@ -12,8 +12,14 @@
  * `days`, `section`, `owner` (a visitor key — the report becomes that owner's
  * profile), `page` (`<section>|<path>` — the report becomes "who opened this
  * page"), and `admins=show` (admins are left out by default; the commissioner
- * seat was about half of TheLeague's signed-in views). Every table sorts by
- * any column, and each sort is kept in the URL too (`s.<table>=<col>-<dir>`).
+ * seat was about half of TheLeague's signed-in views). `stage` and `persona`
+ * narrow the owners table to one lifecycle stage or usage style. Every table
+ * sorts by any column, and each sort is kept in the URL too
+ * (`s.<table>=<col>-<dir>`).
+ *
+ * Trends (lifecycle, depth curve, cohorts, personas, paths, month by month,
+ * and the change from the previous window) come from
+ * `site-insights-trends.ts`, under the same filters.
  *
  * Every number is derived by `buildInsightsReport` (pure, tested); this page
  * only reads and renders. Not in the page directory: search would show it to
@@ -28,9 +34,31 @@ import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import {
 	canViewSiteInsights,
 	readInsightDays,
+	readInsightMonths,
 	readInsightPeople,
 	seedInsightFirstSeen,
+	seedInsightMonths,
 } from '../../utils/site-insights';
+import {
+	LIFECYCLE_STAGES,
+	PERSONAS,
+	TREND_WEEKS,
+	buildDepthAndCohorts,
+	buildMonthRows,
+	buildPaths,
+	daysToRead,
+	insightMonths,
+	lifecycleStage,
+	mockInsightMonths,
+	parseLifecycleStage,
+	parsePersona,
+	percentChange,
+	personaOf,
+	splitWindows,
+	type InsightMonthRaw,
+	type LifecycleStage,
+	type Persona,
+} from '../../utils/site-insights-trends';
 import {
 	INSIGHTS_RANGES,
 	INSIGHTS_TTL_DAYS,
@@ -43,6 +71,7 @@ import {
 	parseOwnerRef,
 	parsePageRef,
 	sectionLabel,
+	sectionOfVisitor,
 	visitorKey,
 	type InsightPageRef,
 } from '../../utils/site-insights-model';
@@ -77,7 +106,11 @@ const section = sectionParam && sections.includes(sectionParam) ? sectionParam :
 const owner = parseOwnerRef(params.get('owner'));
 const pageRef = parsePageRef(params.get('page'), sections);
 const showAdmins = params.get('admins') === 'show';
+const stageParam = parseLifecycleStage(params.get('stage'));
+const personaParam = parsePersona(params.get('persona'));
 const useMock = params.has('mock');
+const MONTHS_SHOWN = 12;
+const zone = leagueClock(DEFAULT_LEAGUE_SLUG).zone;
 
 // Every registry league's admin seats. Their own visits are most of a small
 // league's traffic, so the report leaves them out unless asked.
@@ -88,18 +121,30 @@ const adminKeys = new Set(
 let unavailable = false;
 let raw: Awaited<ReturnType<typeof readInsightDays>> = [];
 let people: Awaited<ReturnType<typeof readInsightPeople>> = [];
+let months: InsightMonthRaw[] = [];
+
+// Twice the window when the daily hashes still hold it, so every headline
+// number can say how it moved since the window before.
+const readDays = daysToRead(range, INSIGHTS_TTL_DAYS);
 
 if (useMock) {
-	const clock = leagueClock(DEFAULT_LEAGUE_SLUG).zone;
-	const dates = insightDates(insightClock(new Date(), clock).date, range);
+	const today = insightClock(new Date(), zone).date;
+	const dates = insightDates(today, readDays);
 	const owners = ALL_LEAGUES.flatMap((l) =>
 		getLeagueTeamConfigs(l.slug).map((t: any) => ({ key: visitorKey(l.id, t.franchiseId), section: l.slug })),
 	);
 	({ days: raw, people } = mockInsights(dates, owners));
+	months = mockInsightMonths(insightMonths(today, MONTHS_SHOWN), owners);
 } else {
 	try {
-		await seedInsightFirstSeen();
-		[raw, people] = await Promise.all([readInsightDays(range), readInsightPeople()]);
+		await Promise.all([seedInsightFirstSeen(), seedInsightMonths()]);
+		let monthRaw: InsightMonthRaw[] | null;
+		[raw, people, monthRaw] = await Promise.all([
+			readInsightDays(readDays),
+			readInsightPeople(),
+			readInsightMonths(MONTHS_SHOWN),
+		]);
+		months = monthRaw ?? [];
 		if (raw === null) unavailable = true;
 	} catch (err) {
 		console.warn('[live/analytics] read failed:', err);
@@ -107,14 +152,60 @@ if (useMock) {
 	}
 }
 
-const report = buildInsightsReport({
-	days: raw ?? [],
-	people,
+const windows = splitWindows(raw ?? [], range);
+const filters = {
 	section,
 	owner,
 	page: pageRef,
-	excludeOwners: showAdmins ? new Set() : adminKeys,
-});
+	excludeOwners: showAdmins ? new Set<string>() : adminKeys,
+};
+const report = buildInsightsReport({ days: windows.current, people, ...filters });
+const previous = windows.previous ? buildInsightsReport({ days: windows.previous, people, ...filters }) : null;
+
+const nowMs = Date.now();
+const { depth, cohorts } = buildDepthAndCohorts({ days: windows.current, people, ...filters, zone });
+const paths = buildPaths({ days: windows.current, ...filters });
+const monthRows = buildMonthRows({ months, people, ...filters, zone })
+	.filter((m) => m.views > 0 || m.owners > 0)
+	.reverse();
+
+// Lifecycle and persona per owner. Lifecycle counts every owner the section
+// covers (by their league), not just this window's visitors — the lapsed and
+// the never-seen are the point of it.
+const recentByKey = new Map(report.people.map((p) => [p.key, p.recentDays]));
+const stageOf = (p: { key: string; lastSeen: number | null; firstSeen?: number | null }): LifecycleStage =>
+	lifecycleStage({ ...p, recentDays: recentByKey.get(p.key) ?? 0 }, nowMs);
+const lifecyclePool = people.filter(
+	(p) =>
+		(showAdmins || !adminKeys.has(p.key)) &&
+		(section === null || sectionOfVisitor(p.key) === section || recentByKey.has(p.key)),
+);
+const lifecycleCounts = new Map<LifecycleStage, number>();
+for (const p of lifecyclePool) {
+	const stage = stageOf(p);
+	lifecycleCounts.set(stage, (lifecycleCounts.get(stage) ?? 0) + 1);
+}
+const lifecycleRows = (Object.keys(LIFECYCLE_STAGES) as LifecycleStage[]).map((stage) => ({
+	stage,
+	...LIFECYCLE_STAGES[stage],
+	count: lifecycleCounts.get(stage) ?? 0,
+}));
+const lifecycleTotal = lifecyclePool.length;
+
+const personaByKey = new Map(report.people.map((p) => [p.key, personaOf(p.pages)]));
+const personaCounts = new Map<Persona, number>();
+for (const persona of personaByKey.values()) if (persona) personaCounts.set(persona, (personaCounts.get(persona) ?? 0) + 1);
+const personaRows = (Object.keys(PERSONAS) as Persona[])
+	.map((persona) => ({ persona, ...PERSONAS[persona], count: personaCounts.get(persona) ?? 0 }))
+	.filter((r) => r.count > 0)
+	.sort((a, b) => b.count - a.count);
+const personaTotal = personaRows.reduce((s, r) => s + r.count, 0);
+
+const tablePeople = report.people.filter(
+	(p) => (!stageParam || stageOf(p) === stageParam) && (!personaParam || personaByKey.get(p.key) === personaParam),
+);
+
+const prevPageViews = new Map((previous?.pages ?? []).map((p) => [`${p.section}|${p.page}`, p.views]));
 
 // The homepage's "coming soon" product buttons. All-time, whatever the range.
 let interest: Awaited<ReturnType<typeof readProductInterest>> = null;
@@ -212,8 +303,34 @@ const pct = (v: number, total: number) => (total ? Math.round((v / total) * 100)
 const stickyTotal = report.stickiness.reduce((s, v) => s + v, 0);
 
 const STALE_MS = 7 * 86_400_000;
-const nowMs = Date.now();
 const activeCount = report.people.filter((p) => p.lastSeen && nowMs - p.lastSeen < STALE_MS).length;
+
+/** "▲ 12%" against the previous window, or null when there is none to compare. */
+function delta(current: number, prev: number | undefined): { text: string; dir: 'up' | 'down' | 'flat' } | null {
+	if (!previous || prev === undefined) return null;
+	const change = percentChange(current, prev);
+	if (change === null) return current > 0 ? { text: 'new', dir: 'up' } : null;
+	if (change === 0) return { text: 'no change', dir: 'flat' };
+	return { text: `${change > 0 ? '▲' : '▼'} ${Math.abs(change)}%`, dir: change > 0 ? 'up' : 'down' };
+}
+const comparedTo = `vs the ${range} days before`;
+
+function monthLabel(month: string): string {
+	const [y, m] = month.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+const maxMonthViews = Math.max(1, ...monthRows.map((m) => m.views));
+const maxDepthPages = Math.max(1, ...depth.map((w) => w.avgPages));
+const cohortWeeks = Math.min(
+	TREND_WEEKS,
+	Math.max(0, ...cohorts.map((c) => c.retention.reduce<number>((last, v, i) => (v === null ? last : i + 1), 0))),
+);
+const pageFrom = pageRef
+	? paths.filter((p) => p.to === pageRef.page && p.from !== pageRef.page).slice(0, 8)
+	: [];
+const pageNext = pageRef
+	? paths.filter((p) => p.from === pageRef.page && p.to !== pageRef.page).slice(0, 8)
+	: [];
 
 interface FilterState {
 	days?: number;
@@ -221,6 +338,9 @@ interface FilterState {
 	owner?: string | null;
 	page?: InsightPageRef | null;
 	admins?: boolean;
+	stage?: LifecycleStage | null;
+	persona?: Persona | null;
+	hash?: string;
 }
 const href = (next: FilterState) => {
 	const q = new URLSearchParams();
@@ -229,14 +349,18 @@ const href = (next: FilterState) => {
 	const own = next.owner === undefined ? owner : next.owner;
 	const pg = next.page === undefined ? pageRef : next.page;
 	const admins = next.admins ?? showAdmins;
+	const stage = next.stage === undefined ? stageParam : next.stage;
+	const persona = next.persona === undefined ? personaParam : next.persona;
 	if (days !== 30) q.set('days', String(days));
 	if (sec) q.set('section', sec);
 	if (own) q.set('owner', own);
 	if (pg) q.set('page', `${pg.section}|${pg.page}`);
 	if (admins) q.set('admins', 'show');
+	if (stage) q.set('stage', stage);
+	if (persona) q.set('persona', persona);
 	if (useMock) q.set('mock', '');
 	const s = q.toString();
-	return `/live/analytics${s ? `?${s}` : ''}`;
+	return `/live/analytics${s ? `?${s}` : ''}${next.hash ? `#${next.hash}` : ''}`;
 };
 
 const sectionChips = [
@@ -289,7 +413,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 					</a>
 				))}
 			</div>
-			{(owner || pageRef) && (
+			{(owner || pageRef || stageParam || personaParam) && (
 				<div class="ui-pills ins__chips" role="group" aria-label="Focus">
 					{owner && ownerWho && (
 						<a class="ui-pill ui-pill--active ins__chip" href={href({ owner: null })} aria-label={`Clear owner ${ownerWho.team}`}>
@@ -299,6 +423,16 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 					{pageRef && (
 						<a class="ui-pill ui-pill--active ins__chip" href={href({ page: null })} aria-label={`Clear page ${pageTitle}`}>
 							Page: {pageTitle} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+					{stageParam && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ stage: null })} aria-label={`Clear stage ${LIFECYCLE_STAGES[stageParam].label}`}>
+							Stage: {LIFECYCLE_STAGES[stageParam].label} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+					{personaParam && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ persona: null })} aria-label={`Clear style ${PERSONAS[personaParam].label}`}>
+							Style: {PERSONAS[personaParam].label} <span aria-hidden="true">✕</span>
 						</a>
 					)}
 				</div>
@@ -323,6 +457,8 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 							<div><dt>Active days</dt><dd>{ownerPerson?.activeDays ?? 0} of {range}</dd></div>
 							<div><dt>Last 7 days</dt><dd>{ownerPerson?.recentDays ?? 0} of 7</dd></div>
 							<div><dt>Pages opened</dt><dd>{report.pages.length}</dd></div>
+							<div><dt>Stage</dt><dd>{LIFECYCLE_STAGES[stageOf({ key: owner, lastSeen: ownerPerson?.lastSeen ?? null, firstSeen: ownerPerson?.firstSeen ?? null })].label}</dd></div>
+							<div><dt>Style</dt><dd>{(() => { const pz = personaOf(ownerPerson?.pages ?? []); return pz ? PERSONAS[pz].label : '—'; })()}</dd></div>
 						</dl>
 					</section>
 				)}
@@ -344,47 +480,59 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 				)}
 
 				<div class="ins__tiles">
-					<div class="ins__tile">
-						<span class="ins__tile-value">{n(report.totals.views)}</span>
-						<span class="ins__tile-label">{viewsLabel}</span>
-					</div>
-					{!owner && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{n(report.totals.owners)}</span>
-							<span class="ins__tile-label">Owners who visited</span>
-						</div>
-					)}
-					{!owner && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{n(report.totals.weeklyOwners)}</span>
-							<span class="ins__tile-label">Active in last 7 days</span>
-						</div>
-					)}
-					{!owner && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{report.totals.avgDailyOwners}</span>
-							<span class="ins__tile-label">Avg owners / day</span>
-						</div>
-					)}
-					{section === null && !pageRef && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{n(report.totals.logins)}</span>
-							<span class="ins__tile-label">Sign-ins</span>
-						</div>
-					)}
-					{!pageRef && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{n(report.totals.actions)}</span>
-							<span class="ins__tile-label">Actions taken</span>
-						</div>
-					)}
-					{!owner && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{pct(report.totals.anonymousViews, report.totals.views)}%</span>
-							<span class="ins__tile-label">Views while signed out</span>
-						</div>
-					)}
+					{[
+						{ show: true, value: n(report.totals.views), label: viewsLabel, d: delta(report.totals.views, previous?.totals.views) },
+						{ show: !owner, value: n(report.totals.owners), label: 'Owners who visited', d: delta(report.totals.owners, previous?.totals.owners) },
+						{ show: !owner, value: n(report.totals.weeklyOwners), label: 'Active in last 7 days', d: delta(report.totals.weeklyOwners, previous?.totals.weeklyOwners) },
+						{ show: !owner, value: String(report.totals.avgDailyOwners), label: 'Avg owners / day', d: delta(report.totals.avgDailyOwners, previous?.totals.avgDailyOwners) },
+						{ show: section === null && !pageRef, value: n(report.totals.logins), label: 'Sign-ins', d: delta(report.totals.logins, previous?.totals.logins) },
+						{ show: !pageRef, value: n(report.totals.actions), label: 'Actions taken', d: delta(report.totals.actions, previous?.totals.actions) },
+						{ show: !owner, value: `${pct(report.totals.anonymousViews, report.totals.views)}%`, label: 'Views while signed out', d: null },
+					]
+						.filter((t) => t.show)
+						.map((t) => (
+							<div class="ins__tile">
+								<span class="ins__tile-value">{t.value}</span>
+								<span class="ins__tile-label">{t.label}</span>
+								{t.d && (
+									<span class:list={['ins__delta', `is-${t.d.dir}`]} title={comparedTo}>
+										{t.d.text}<span class="visually-hidden"> {comparedTo}</span>
+									</span>
+								)}
+							</div>
+						))}
 				</div>
+
+				{previous && <p class="ins__note ins__tiles-note">Arrows compare with the {range} days before.</p>}
+
+				{!report.focused && lifecycleTotal > 0 && (
+					<section class="ins__card" aria-labelledby="ins-life">
+						<h2 class="ins__h2" id="ins-life">Where owners are</h2>
+						<p class="ins__note">
+							Every owner{section ? ` in ${sectionLabel(section)}` : ''}, by where they are in their life on the site. Tap a stage to list those owners.
+						</p>
+						<div class="ins__stack-bar" role="img" aria-label={lifecycleRows.filter((r) => r.count).map((r) => `${r.label} ${r.count}`).join(', ')}>
+							{lifecycleRows.filter((r) => r.count > 0).map((r) => (
+								<span class={`ins__seg ins__seg--${r.stage}`} style={`flex-grow:${r.count}`} title={`${r.label}: ${r.count}`}></span>
+							))}
+						</div>
+						<ul class="ins__list ins__legend ins__legend--pct">
+							{lifecycleRows.map((r) => (
+								<li>
+									<a href={href({ stage: r.stage, owner: null, page: null, hash: 'ins-people' })} class:list={{ 'is-current': r.stage === stageParam }}>
+										<span class={`ins__swatch ins__seg--${r.stage}`} aria-hidden="true"></span>
+										<span>
+											<span class="ins__legend-label">{r.label}</span>
+											<span class="ins__legend-note">{r.note}</span>
+										</span>
+									</a>
+									<span class="num">{pct(r.count, lifecycleTotal)}%</span>
+									<span class="num">{r.count}</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
 
 				{report.totals.views === 0 && (
 					<p class="ins__empty">
@@ -464,13 +612,83 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 					</section>
 				)}
 
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-depth">
+						<h2 class="ins__h2" id="ins-depth">{owner ? 'How their use has grown' : 'Do owners go deeper over time?'}</h2>
+						<p class="ins__note">
+							{owner
+								? 'Each week since their first visit: how many different pages they opened, and on how many days.'
+								: 'Each week since an owner\'s first visit: the average number of different pages opened, by the owners who came back that week.'}
+							{' '}Only full weeks inside the last {range} days count{range < 90 ? '; pick 90 days to see more of the curve' : ''}.
+						</p>
+						{depth.length === 0 ? (
+							<p class="ins__muted">No full week to show yet.</p>
+						) : (
+							<ul class="ins__list ins__depth">
+								{depth.map((w) => (
+									<li>
+										<span>Week {w.week + 1}</span>
+										<span class="ins__meter" aria-hidden="true"><span style={`width:${(w.avgPages / maxDepthPages) * 100}%`}></span></span>
+										<span class="num">
+											{w.active === 0
+												? 'away'
+												: `${w.avgPages} ${w.avgPages === 1 ? 'page' : 'pages'} · ${w.avgDays} ${w.avgDays === 1 ? 'day' : 'days'}`}
+											{!owner && <span class="ins__depth-sub">{w.active} of {w.eligible} came back</span>}
+										</span>
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+				)}
+
+				{!report.focused && cohorts.length > 0 && (
+					<section class="ins__card" aria-labelledby="ins-cohorts">
+						<h2 class="ins__h2" id="ins-cohorts">Do new owners stick?</h2>
+						<p class="ins__note">
+							Owners grouped by the week they first visited. Each square is the share who came back that many weeks later. Darker is more.
+						</p>
+						{cohortWeeks === 0 ? (
+							<p class="ins__muted">The newest owners haven't had a full week yet.</p>
+						) : (
+							<ul class="ins__cohorts">
+								{cohorts.map((c) => (
+									<li>
+										<span class="ins__cohort-head">
+											Week of {dateLabel(c.start)} <span class="ins__muted">· {c.size} {c.size === 1 ? 'owner' : 'owners'}</span>
+										</span>
+										{c.retention.slice(0, cohortWeeks).every((v) => v === null) ? (
+											<span class="ins__muted">Too new to tell: no full week since.</span>
+										) : (
+										<span class="ins__cohort-cells">
+											{c.retention.slice(0, cohortWeeks).map((v, i) => (
+												<span
+													class:list={['ins__cohort-cell', { 'is-empty': v === null }]}
+													style={v === null ? undefined : `--heat:${Math.round(v * 70)}%`}
+													title={v === null ? `Week ${i + 1}: not yet` : `Week ${i + 1}: ${Math.round(v * 100)}% came back`}
+												>
+													<span class="ins__cohort-week">W{i + 1}</span>
+													<span class="ins__cohort-value">{v === null ? '·' : `${Math.round(v * 100)}%`}</span>
+												</span>
+											))}
+										</span>
+										)}
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+				)}
+
 				{!owner && (
 					<section class="ins__card" aria-labelledby="ins-people">
 						<h2 class="ins__h2" id="ins-people">{pageRef ? 'Who opened this page' : 'Owners'}</h2>
 						<p class="ins__note">
 							{pageRef
 								? `${report.people.length} owners opened it in the last ${range} days. Tap an owner for their profile.`
-								: `${activeCount} of ${report.people.length} seen in the last week. Tap an owner for their profile.`}
+								: stageParam || personaParam
+									? `${tablePeople.length} of ${report.people.length} owners match. Tap an owner for their profile.`
+									: `${activeCount} of ${report.people.length} seen in the last week. Tap an owner for their profile.`}
 						</p>
 						<div class="ins__scroll">
 							<table class="ui-table ins__table ins__table--stack" data-sortable="people">
@@ -486,11 +704,15 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Pages</button></th>}
 										{!pageRef && section === null && <th class="num" data-sort="num"><button type="button" class="ins__sort">Sign-ins</button></th>}
 										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Actions</button></th>}
+										{!pageRef && <th data-sort="text"><button type="button" class="ins__sort">Stage</button></th>}
+										{!pageRef && <th data-sort="text"><button type="button" class="ins__sort">Style</button></th>}
 									</tr>
 								</thead>
 								<tbody>
-									{(pageRef ? [...report.people].sort((a, b) => b.views - a.views) : report.people).map((p) => {
+									{(pageRef ? [...tablePeople].sort((a, b) => b.views - a.views) : tablePeople).map((p) => {
 										const who = ownerLabel(p.key);
+										const stage = stageOf(p);
+										const persona = personaByKey.get(p.key) ?? null;
 										const stale = !p.lastSeen || nowMs - p.lastSeen > STALE_MS;
 										return (
 											<tr class:list={['ins__person', { 'is-stale': stale }]}>
@@ -517,12 +739,37 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 												{!pageRef && <td class="num" data-label="Pages">{p.pages.length}</td>}
 												{!pageRef && section === null && <td class="num" data-label="Sign-ins">{p.logins}</td>}
 												{!pageRef && <td class="num" data-label="Actions">{p.actions}</td>}
+												{!pageRef && <td class="ins__nowrap" data-label="Stage">{LIFECYCLE_STAGES[stage].label}</td>}
+												{!pageRef && <td class="ins__nowrap" data-label="Style" data-v={persona ? PERSONAS[persona].label : 'zz'}>{persona ? PERSONAS[persona].label : '—'}</td>}
 											</tr>
 										);
 									})}
 								</tbody>
 							</table>
 						</div>
+					</section>
+				)}
+
+				{!report.focused && personaTotal > 0 && (
+					<section class="ins__card" aria-labelledby="ins-personas">
+						<h2 class="ins__h2" id="ins-personas">How owners use the site</h2>
+						<p class="ins__note">
+							Each owner's style, from the kinds of pages most of their views go to in the last {range} days. Tap a style to list those owners.
+						</p>
+						<ul class="ins__list ins__legend">
+							{personaRows.map((r) => (
+								<li>
+									<a href={href({ persona: r.persona, owner: null, page: null, hash: 'ins-people' })} class:list={{ 'is-current': r.persona === personaParam }}>
+										<span>
+											<span class="ins__legend-label">{r.label}</span>
+											<span class="ins__legend-note">{r.note}</span>
+										</span>
+									</a>
+									<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, personaTotal)}%`}></span></span>
+									<span class="num">{r.count}</span>
+								</li>
+							))}
+						</ul>
 					</section>
 				)}
 
@@ -546,6 +793,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 											<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Views</button></th>
 											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
 											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Signed out</button></th>}
+											{previous && <th class="num" data-sort="num"><button type="button" class="ins__sort">Change</button></th>}
 										</tr>
 									</thead>
 									<tbody>
@@ -568,6 +816,13 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 													<td class="num" data-label="Views" data-v={p.views}>{n(p.views)}</td>
 													{!owner && <td class="num" data-label="Owners">{p.visitors}</td>}
 													{!owner && <td class="num" data-label="Signed out">{n(p.anonymousViews ?? 0)}</td>}
+													{previous && (() => {
+														const d = delta(p.views, prevPageViews.get(`${p.section}|${p.page}`) ?? 0);
+														const change = percentChange(p.views, prevPageViews.get(`${p.section}|${p.page}`) ?? 0);
+														return (
+															<td class="num" data-label="Change" data-v={change ?? 100000} title={comparedTo}>{d?.text ?? '—'}</td>
+														);
+													})()}
 												</tr>
 											);
 										})}
@@ -577,6 +832,116 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 						)}
 					</section>
 				)}
+
+				{pageRef && (
+					<div class="ins__split">
+						{[
+							{ id: 'ins-from', title: 'Where they came from', rows: pageFrom, other: (r: (typeof paths)[number]) => r.from },
+							{ id: 'ins-next', title: 'Where they went next', rows: pageNext, other: (r: (typeof paths)[number]) => r.to },
+						].map((col) => (
+							<section class="ins__card" aria-labelledby={col.id}>
+								<h2 class="ins__h2" id={col.id}>{col.title}</h2>
+								{col.rows.length === 0 ? (
+									<p class="ins__muted">No steps recorded yet.</p>
+								) : (
+									<ul class="ins__list">
+										{col.rows.map((r) => (
+											<li>
+												<a href={href({ page: { section: r.section, page: col.other(r) } })}>{pageLabel(r.section, col.other(r))}</a>
+												<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.steps, col.rows[0].steps)}%`}></span></span>
+												<span class="num">{n(r.steps)}</span>
+											</li>
+										))}
+									</ul>
+								)}
+							</section>
+						))}
+					</div>
+				)}
+
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-paths">
+						<h2 class="ins__h2" id="ins-paths">{owner ? 'Their usual paths' : 'Common paths'}</h2>
+						<p class="ins__note">
+							The 15 most common steps from one page straight to the next in the same tab, signed-in owners only. Started Oct 2026. Tap a page to focus on it.
+						</p>
+						{paths.length === 0 ? (
+							<p class="ins__muted">No steps recorded yet.</p>
+						) : (
+							<div class="ins__scroll">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="paths">
+									<thead>
+										<tr>
+											<th data-sort="text"><button type="button" class="ins__sort">Path</button></th>
+											<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Times</button></th>
+											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+										</tr>
+									</thead>
+									<tbody>
+										{paths.slice(0, 15).map((r) => {
+											const fromLabel = pageLabel(r.section, r.from);
+											const toLabel = pageLabel(r.section, r.to);
+											return (
+												<tr>
+													<td data-v={`${fromLabel} ${toLabel}`}>
+														<span class="ins__path">
+															<a class="ins__page-name" href={href({ page: { section: r.section, page: r.from }, owner: null })}>{fromLabel}</a>
+															<span class="ins__path-arrow" aria-label="then">→</span>
+															<a class="ins__page-name" href={href({ page: { section: r.section, page: r.to }, owner: null })}>{toLabel}</a>
+														</span>
+														{section === null && <span class="ins__person-sub">{sectionLabel(r.section)}</span>}
+													</td>
+													<td class="num" data-label="Times">{n(r.steps)}</td>
+													{!owner && <td class="num" data-label="Owners">{r.owners}</td>}
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</section>
+				)}
+
+				<section class="ins__card" aria-labelledby="ins-months">
+					<h2 class="ins__h2" id="ins-months">Month by month</h2>
+					<p class="ins__note">
+						Kept for good, unlike the daily detail (90 days). Signed-in owners only. Started Oct 2026 and filled back from the days still on hand.
+					</p>
+					{monthRows.length === 0 ? (
+						<p class="ins__muted">Nothing recorded yet.</p>
+					) : (
+						<div class="ins__scroll">
+							<table class="ui-table ins__table ins__table--stack" data-sortable="months">
+								<thead>
+									<tr>
+										<th data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Month</button></th>
+										<th class="num" data-sort="num"><button type="button" class="ins__sort">Views</button></th>
+										{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+										{!owner && section === null && !pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">New</button></th>}
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">{owner ? 'Days' : 'Avg days'}</button></th>}
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Pages</button></th>}
+									</tr>
+								</thead>
+								<tbody>
+									{monthRows.map((m) => (
+										<tr>
+											<td data-v={m.month.replace('-', '')}>
+												<span class="ins__page-name">{monthLabel(m.month)}</span>
+												<span class="ins__meter" aria-hidden="true"><span style={`width:${(m.views / maxMonthViews) * 100}%`}></span></span>
+											</td>
+											<td class="num" data-label="Views">{n(m.views)}</td>
+											{!owner && <td class="num" data-label="Owners">{m.owners}</td>}
+											{!owner && section === null && !pageRef && <td class="num" data-label="New">{m.newOwners}</td>}
+											{!pageRef && <td class="num" data-label={owner ? 'Days' : 'Avg days'}>{m.avgDays ?? '—'}</td>}
+											{!pageRef && <td class="num" data-label="Pages">{m.pages}</td>}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</section>
 
 				{!report.focused && (
 					<section class="ins__card" aria-labelledby="ins-heat">
@@ -1246,6 +1611,152 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 		font-size: var(--font-size-xs);
 		color: var(--color-text-secondary);
 	}
+	/* Change from the previous window. Neutral ink: the arrow carries the
+	   direction, so it reads the same without color. */
+	.ins__delta {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+	.ins__delta.is-up {
+		color: var(--color-text-primary);
+	}
+	.ins__tiles-note {
+		margin-top: -0.5rem;
+	}
+
+	/* Lifecycle — ordinal stages, so one hue stepped from strong (hooked) to
+	   faint (lapsed); the legend names every one, so identity is never color
+	   alone. 2px surface gaps between segments. */
+	.ins__stack-bar {
+		display: flex;
+		gap: 2px;
+		height: 1.25rem;
+		margin: 0.75rem 0;
+		border-radius: 4px;
+		overflow: hidden;
+	}
+	.ins__stack-bar > span {
+		flex-basis: 0;
+		min-width: 3px;
+	}
+	.ins__seg--hooked { background: var(--color-primary); }
+	.ins__seg--active { background: color-mix(in srgb, var(--color-primary) 72%, var(--color-surface-3)); }
+	.ins__seg--new {
+		background: repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-primary) 60%, var(--color-surface-3)) 0 3px,
+			color-mix(in srgb, var(--color-primary) 30%, var(--color-surface-3)) 3px 6px
+		);
+	}
+	.ins__seg--cooling { background: color-mix(in srgb, var(--color-primary) 38%, var(--color-surface-3)); }
+	.ins__seg--lapsed { background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-3)); }
+	.ins__seg--never {
+		background: var(--color-surface-3);
+		outline: 1px solid var(--color-border-subtle);
+		outline-offset: -1px;
+	}
+	.ins__swatch {
+		flex: none;
+		width: 0.85rem;
+		height: 0.85rem;
+		border-radius: 3px;
+		margin-top: 0.15rem;
+	}
+	.ins__legend a {
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+		text-decoration: none;
+		min-width: 0;
+	}
+	.ins__legend a:hover .ins__legend-label,
+	.ins__legend a.is-current .ins__legend-label {
+		text-decoration: underline;
+	}
+	.ins__legend li {
+		grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) auto;
+	}
+	.ins__legend--pct li {
+		grid-template-columns: minmax(0, 1fr) auto 2.5rem;
+	}
+	.ins__legend-label {
+		display: block;
+		font-weight: 600;
+	}
+	.ins__legend-note {
+		display: block;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+	}
+
+	/* Depth curve: one row per week, the value spelled out beside the bar. */
+	.ins__depth li {
+		grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+	}
+	.ins__depth-sub {
+		display: block;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+		font-weight: 400;
+	}
+
+	/* Cohorts: one row per first-seen week; its squares wrap on a phone
+	   rather than scroll sideways. */
+	.ins__cohorts {
+		list-style: none;
+		margin: 0.75rem 0 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.ins__cohort-head {
+		display: block;
+		font-size: var(--font-size-sm);
+		font-weight: 600;
+		margin-bottom: 0.3rem;
+	}
+	.ins__cohort-cells {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
+		gap: 2px;
+	}
+	.ins__cohort-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 0.2rem 0;
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--color-primary) var(--heat, 0%), var(--color-border-subtle));
+		font-variant-numeric: tabular-nums;
+	}
+	.ins__cohort-cell.is-empty {
+		background: transparent;
+		outline: 1px solid var(--color-border-subtle);
+		outline-offset: -1px;
+		color: var(--color-text-secondary);
+	}
+	.ins__cohort-week {
+		font-size: var(--font-size-2xs);
+		color: var(--color-text-secondary);
+	}
+	.ins__cohort-value {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+	}
+
+	.ins__path {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.4rem;
+	}
+	.ins__path-arrow {
+		color: var(--color-text-secondary);
+	}
+
 	.ins__facts dd {
 		margin: 0;
 		font-weight: 600;

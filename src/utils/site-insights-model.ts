@@ -316,6 +316,8 @@ export interface InsightDayRaw {
 	links: Record<string, number>;
 	/** `<visitorKey>|<section>|<area>` → arrivals */
 	userLinks: Record<string, number>;
+	/** `<visitorKey>|<section>|<from>|<to>` → page-to-page steps (Oct 2026 on) */
+	paths?: Record<string, number>;
 }
 
 export interface InsightPerson {
@@ -489,15 +491,29 @@ export function parseOwnerRef(raw: string | null | undefined): string | null {
  * each signed-in owner, so a page's signed-out share is the difference, and
  * an excluded owner's views come off a page by subtracting theirs.
  */
-export function buildInsightsReport(input: InsightsInput): InsightsReport {
-	const { section } = input;
+/**
+ * The three filters every derivation shares, so the trend cards
+ * (`site-insights-trends.ts`) narrow exactly as the report does.
+ */
+export function insightFilters(input: Pick<InsightsInput, 'section' | 'owner' | 'page' | 'excludeOwners'>) {
+	const section = input.section;
 	const owner = input.owner ?? null;
 	const pageRef = input.page ?? null;
 	const excluded = owner ? new Set<string>() : (input.excludeOwners ?? new Set<string>());
-	const focused = owner !== null || pageRef !== null;
 	const inSection = (s: string) => (section === null || s === section) && (!pageRef || s === pageRef.section);
-	const pageOk = (s: string, p: string) => inSection(s) && (!pageRef || p === pageRef.page);
-	const ownerOk = (key: string) => (owner ? key === owner : !excluded.has(key));
+	return {
+		section,
+		owner,
+		pageRef,
+		inSection,
+		pageOk: (s: string, p: string) => inSection(s) && (!pageRef || p === pageRef.page),
+		ownerOk: (key: string) => (owner ? key === owner : !excluded.has(key)),
+	};
+}
+
+export function buildInsightsReport(input: InsightsInput): InsightsReport {
+	const { section, owner, pageRef, inSection, pageOk, ownerOk } = insightFilters(input);
+	const focused = owner !== null || pageRef !== null;
 
 	const pageViews = new Map<string, number>();
 	const pageAllSignedIn = new Map<string, number>();
@@ -839,6 +855,8 @@ export function mockInsights(
 	const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 	let linkSeed = 7;
 	const linkRand = () => ((linkSeed = (linkSeed * 16807) % 2147483647) - 1) / 2147483646;
+	let pathSeed = 11;
+	const pathRand = () => ((pathSeed = (pathSeed * 16807) % 2147483647) - 1) / 2147483646;
 	const pages = ['/', '/rosters', '/standings', '/lineup', '/players', '/trade-builder', '/schefter'];
 	const now = Date.now();
 	const days: InsightDayRaw[] = dates.map((date) => {
@@ -856,6 +874,7 @@ export function mockInsights(
 			userSections: {},
 			links: {},
 			userLinks: {},
+			paths: {},
 		};
 		const bump = (map: Record<string, number>, k: string, n = 1) => (map[k] = (map[k] ?? 0) + n);
 		const sunday = weekdayOf(date) === 0;
@@ -891,6 +910,18 @@ export function mockInsights(
 			const page = pages[1 + Math.floor(linkRand() * (pages.length - 1))];
 			bump(day.links, `${o.section}|${area}|${page}`);
 			bump(day.userLinks, `${o.key}|${o.section}|${area}`);
+		});
+		// Paths, likewise, from their own generator.
+		owners.forEach((o) => {
+			if (pathRand() > 0.4) return;
+			let from = pages[Math.floor(pathRand() ** 2 * pages.length)];
+			const steps = 1 + Math.floor(pathRand() * 4);
+			for (let i = 0; i < steps; i++) {
+				const to = pages[Math.floor(pathRand() * pages.length)];
+				if (to === from) continue;
+				bump(day.paths!, `${o.key}|${o.section}|${from}|${to}`);
+				from = to;
+			}
 		});
 		return day;
 	});

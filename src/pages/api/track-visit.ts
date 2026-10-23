@@ -179,8 +179,13 @@ export const POST: APIRoute = async ({ request, url }) => {
 	const account = league ? trackedAccountName(user, league.id) : null;
 	if (league && account) await recordCommissionerVisit(league.id, account);
 	const signedInPage = league && rawPage ? canonicalPath(rawPage, league.slug) : rawPage || '/';
+	// The page before this one in the tab (the beacon sends it only when it
+	// was on the same league's pages), canonicalized exactly like `page`.
+	const rawFrom = url.searchParams.get('from');
+	const from = rawFrom ? normalizeInsightPath(league ? canonicalPath(rawFrom, league.slug) : rawFrom) : null;
 	await recordInsightVisit({
 		...describeInsightVisit(url, league, signedInPage, surface),
+		from,
 		user: { leagueId: user.leagueId, franchiseId: user.franchiseId, username: user.name ?? '' },
 	});
 	return new Response(null, { status: 204 });

@@ -25,6 +25,12 @@ const LANDED_KEY = 'mfl:insightsLanded';
 const VIA_KEY = 'mfl:insightsVia';
 /** A click older than this is not what brought the visitor to this page. */
 const VIA_MAX_AGE_MS = 30_000;
+/**
+ * The previous beacon's page is sent as `from` (for the report's page-to-page
+ * paths) only when it was this recent and on the same league's pages: an
+ * owner coming back to a tab an hour later did not walk from one to the other.
+ */
+const FROM_MAX_AGE_MS = 30 * 60_000;
 
 const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 
@@ -161,11 +167,16 @@ function trackVisit() {
 		const via = takeLinkArea();
 		const last = JSON.parse(sessionStorage.getItem(DEBOUNCE_KEY) || 'null');
 		if (last && last.p === page && Date.now() - Number(last.t) < DEBOUNCE_MS) return;
-		sessionStorage.setItem(DEBOUNCE_KEY, JSON.stringify({ p: page, t: Date.now() }));
 		// `league` names the league whose pages these are (TheLeagueLayout sets
 		// it); the server validates it against the registry, and MFL Live's
 		// `mfl` matches none, which is what files it under MFL Live.
 		const league = document.documentElement.dataset.league || '';
+		const from =
+			last && typeof last.p === 'string' && last.p !== page && (last.l ?? '') === league &&
+			Date.now() - Number(last.t) < FROM_MAX_AGE_MS
+				? last.p
+				: '';
+		sessionStorage.setItem(DEBOUNCE_KEY, JSON.stringify({ p: page, t: Date.now(), l: league }));
 		const params = new URLSearchParams({
 			page,
 			surface: detectSurface(),
@@ -173,6 +184,7 @@ function trackVisit() {
 			device: detectDevice(),
 			league,
 			...(via ? { via } : {}),
+			...(from ? { from } : {}),
 			...(landingParams() ?? {}),
 		});
 		// The JSON body is load-bearing, not payload (the endpoint reads only

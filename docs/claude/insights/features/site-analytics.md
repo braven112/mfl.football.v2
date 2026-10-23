@@ -19,6 +19,38 @@ adoption.
 
 ---
 
+## 2026-10-23 — Trends: a monthly rollup that never expires, paths from the beacon, and weeks that only count when whole
+
+**Context:** Phase 2 and 3 of Brandon's analytics plan: lifecycle stages,
+a depth curve (distinct pages per week since first seen), first-seen
+cohorts, personas, page-to-page paths, month-by-month history and the
+change from the previous window. Derivations live in
+`src/utils/site-insights-trends.ts` (pure, `tests/site-insights-trends.test.ts`)
+and narrow through the same `insightFilters` as the report.
+
+**Insight:** three choices that are easy to undo by accident.
+
+- **The monthly hashes (`insights:m:<YYYY-MM>:*`) have NO TTL** and are
+  written in the same visit EVAL as the daily ones. A month's active days
+  are counted once via `insights:lastday` (visitor → last date counted).
+  They were seeded once from the 90 days still kept (`seedInsightMonths`,
+  marker `insights:m:seeded`) with KEEP-THE-HIGHER semantics: the daily
+  hashes already hold every view the live counter saw between deploy and
+  the seed, so adding would double them.
+- **Paths are signed-in only and per owner**
+  (`insights:d:<date>:paths`, `<visitor>|<section>|<from>|<to>`), so admin
+  exclusion and owner focus work the same as everywhere else. The beacon
+  sends `from` (its previous page from the debounce record) only when that
+  page was under 30 minutes old AND on the same league's pages.
+- **A depth or cohort week counts only when all seven days are inside the
+  loaded window.** A partial week would read as owners drifting away; a
+  short window therefore shows fewer weeks, not lower ones.
+
+Every headline tile reads twice the window (when 90 days allow it) so it
+can show the change from the window before (`daysToRead`, `splitWindows`).
+
+---
+
 ## 2026-10-23 — `/live/analytics` filters by owner and page by SUBTRACTING, and only some hashes can follow
 
 **Context:** Brandon asked for sortable tables, page rows that open the real
