@@ -2533,6 +2533,27 @@ html.dark .dr-side-panel {
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.75);
 }
+/* Phones: a bottom SHEET pinned to the screen (owner's call, 2026-10-23).
+ * Absolute over the board panel, the card centred in the panel's full
+ * height, which on a phone is the whole pick list: where it landed depended
+ * on the scroll position, often below the fold or half off it. Fixed to the
+ * viewport bottom it is in the same place for every pick. */
+@media (max-width: 767px) {
+  .dr-splash-overlay {
+    position: fixed;
+    align-items: flex-end;
+  }
+  .dr-splash {
+    height: clamp(220px, 38vh, 320px);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: var(--shadow-xl);
+    animation-name: dr-splash-sheet-in;
+  }
+}
+@keyframes dr-splash-sheet-in {
+  from { transform: translateY(100%); }
+}
 @keyframes dr-splash-fade-in {
   from { opacity: 0; }
 }
