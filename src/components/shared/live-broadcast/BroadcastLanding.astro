@@ -193,9 +193,13 @@ const fmtDate = (ms: number) =>
                 fullscreen, which is the only thing a click on a TV picture
                 could mean — and it keeps the board's own pointer handling
                 from waking the board inside a frame. */}
-            <a class="bcl-screen__hit" href={boardHref} data-bcl-fullscreen aria-label="Go full screen">
+            {/* A labeled button, not a bare icon: the little preview is only
+                worth anything once it is opened, and an unlabeled corner
+                glyph did not read as "this opens". */}
+            <a class="bcl-screen__hit" href={boardHref} data-bcl-fullscreen aria-label="Open full broadcast">
               <span class="bcl-screen__expand" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span>Open full broadcast</span>
               </span>
             </a>
           </div>
@@ -864,22 +868,26 @@ const fmtDate = (ms: number) =>
 
   .bcl-screen__expand {
     position: absolute;
-    right: 0.9rem;
-    bottom: 0.9rem;
-    width: 3.25rem;
-    height: 3.25rem;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.92);
+    left: 50%;
+    bottom: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.7rem 1.25rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
     color: #0b0c0f;
+    font-weight: 700;
+    font-size: var(--font-size-base);
+    white-space: nowrap;
     box-shadow: var(--shadow-lg);
+    transform: translateX(-50%);
     transition: transform var(--transition-fast);
   }
 
   .bcl-screen__hit:hover .bcl-screen__expand,
   .bcl-screen__hit:focus-visible .bcl-screen__expand {
-    transform: scale(1.08);
+    transform: translateX(-50%) scale(1.06);
   }
 
   .bcl-screen__expand svg {
@@ -1284,8 +1292,9 @@ const fmtDate = (ms: number) =>
       grid-template-columns: minmax(0, 1fr);
     }
     .bcl-screen__expand {
-      width: 2.5rem;
-      height: 2.5rem;
+      bottom: 0.6rem;
+      padding: 0.5rem 0.95rem;
+      font-size: var(--font-size-sm);
     }
   }
 </style>
