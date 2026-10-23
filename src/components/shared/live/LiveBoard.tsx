@@ -783,10 +783,13 @@ export default function LiveBoard({
                 <h2 className="lv-panel__name">
                   {panelHref ? (
                     // The heading IS the link — the whole line, so it is a
-                    // thumb target rather than a word.
+                    // thumb target rather than a word. A bare arrow beside the
+                    // name was too quiet (owners did not know it opened every
+                    // game), so the line now says so at its right end, on the
+                    // same line so it pushes nothing down.
                     <a className="lv-panel__link" href={panelHref}>
-                      {panel.leagueName}
-                      <span className="lv-panel__chev" aria-hidden="true">→</span>
+                      <span className="lv-panel__label">{panel.leagueName}</span>
+                      <span className="lv-panel__all">See all games</span>
                     </a>
                   ) : (
                     panel.leagueName
@@ -829,22 +832,6 @@ export default function LiveBoard({
                   reason={preSeason ? 'pre-season' : panel.status}
                   leagueName={multiLeague ? panel.leagueName : undefined}
                 />
-              )}
-
-              {/* The heading link alone was too quiet: owners did not know a
-                  small arrow beside a league's name opened every game in it.
-                  Under the cards, where a reader finishing their own matchup
-                  looks next. Visible text stays short so it never crowds a
-                  phone; the league name goes to the accessible name, since a
-                  board stacks several of these. */}
-              {panelHref && (
-                <a
-                  className="cta cta--ghost lv-panel__all"
-                  href={panelHref}
-                  aria-label={`See all ${panel.leagueName} games`}
-                >
-                  See all games
-                </a>
               )}
             </section>
             );
