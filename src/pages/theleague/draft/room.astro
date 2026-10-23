@@ -55,7 +55,6 @@ const pageData = buildDraftRoomData({
   // for a viewer who owns it.
   players: buildDraftPlayers(leagueYear, { viewerFranchiseId: user?.franchiseId }),
   leagueId: league.id,
-  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
   mflPickUrl: `${mflBaseUrlFor(leagueFeeds, leagueYear, league.mflHost)}/${leagueYear}/options?L=${league.id}&O=17`,
 });
 ---

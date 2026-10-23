@@ -93,10 +93,8 @@ it does not: `/api/trades/submit` re-derives the franchise from the session
 and the real draft room submits no picks at all — it links out to MFL's own
 pick page. So a wrong preferred team is a display defect.
 
-The one place the id is an actor identity is the mock draft, where
-`userTeamId` becomes `franchiseId` on the PartyKit messages in
-`src/components/shared/draft-room/DraftRoom.tsx`. `party/draft-room.ts`
-trusts that field with no authentication — but that is a property of an
-unauthenticated websocket, not of this resolver: any client can send any id
-regardless of what the page rendered, and the mock routes are behind a
-sign-in gate. Do not read the resolver as the boundary there.
+The mock draft used to be the one place the id was an actor identity:
+`userTeamId` became `franchiseId` on PartyKit messages that the party server
+trusted unauthenticated. Since the move to `/api/mock-draft/action` (Oct
+2026) the acting franchise comes from the signed session and must belong to
+the draft's league; any `franchiseId` the client still sends is ignored.

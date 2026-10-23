@@ -3,8 +3,8 @@
  * Mock Draft Results — shared by both leagues.
  *
  * A static, shareable view of a finished mock: the full board plus each
- * franchise's haul. The session is read back out of PartyKit storage over
- * HTTP rather than a socket, because nothing here is live.
+ * franchise's haul. The session is read once from the mock-draft store
+ * (Redis) at render, because nothing here is live.
  *
  * The PLAYER catalogue is TheLeague's `players.json` — MFL's player universe
  * as this app archives it, on the default league's clock. That is the same

@@ -3,7 +3,7 @@
  * Best Ball League #1 — Official Draft Room (/best-ball-1/draft-room)
  *
  * THE main event for this league: the startup draft runs entirely on-site
- * through the shared DraftRoom island + PartyKit engine (the same machinery
+ * through the shared DraftRoom island + mock-draft engine on Redis (the same machinery
  * as TheLeague's mock drafts, promoted to a draft of record — see
  * /api/best-ball-draft/create). No MFL deep-links, no live syncing: picks
  * are made here and exported to MFL once the draft completes
@@ -92,7 +92,6 @@ if (session) {
     teams,
     picks: [],
     players,
-    partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
     leagueId: BB1.id,
   };
 }

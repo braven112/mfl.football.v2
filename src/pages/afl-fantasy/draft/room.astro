@@ -51,7 +51,6 @@ const pageData = buildAflRoomPageData({
   myFranchiseId,
   draftResultsFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', { eager: true }),
   leagueFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/league.json', { eager: true }),
-  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
 });
 ---
 

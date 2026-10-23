@@ -1,7 +1,7 @@
 /**
  * POST /api/mock-draft/create
  *
- * Creates a new mock draft session in the PartyKit mock-draft party.
+ * Creates a new mock draft session in the mock-draft store (Redis).
  * Seeds the session with draft order (from draftResults or randomized)
  * and a ranked player list (by dynasty ADP) for auto-pick fallback.
  *
@@ -28,7 +28,8 @@ import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
 import { buildAflMockContext } from '../../../utils/afl-mock-draft-data';
 import { AFL_MOCK_ROUNDS, isMockWindowOpen } from '../../../utils/afl-mock-draft';
 import { getConferenceTeams, getFranchiseConference } from '../../../utils/afl-conference';
-import { mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
+import { parseConference } from '../../../utils/mock-draft-scope';
+import { createMockDraft } from '../../../utils/mock-draft-store';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -547,74 +548,16 @@ export const POST: APIRoute = async ({ request }) => {
       ...(aflContext ? { unit: aflContext.unit, conference } : {}),
     };
 
-    // ── Write session to PartyKit storage via HTTP ──
-    const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-    if (!rawPartyHost) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'PartyKit host not configured.' }),
-        { status: 500, headers: JSON_HEADERS },
-      );
-    }
-    // Ensure protocol prefix for server-side fetch (env var may be bare hostname)
-    const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
-
-    // POST to main party with mock- prefixed room ID
-    const partyUrl = `${partyHost}/party/mock-${sessionId}`;
-
-    // Use PartyKit's storage API — POST the session as the room's initial state
-    const partyRes = await fetch(partyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session,
-        // Legacy single-list field (kept so older party code still works)
-        rankedPlayerIds,
-        // Tracks which source produced `rankedPlayerIds`
-        rankingSource: defaultRankingSource,
-        // Phase 2: per-source lists + per-team assignments
-        rankedLists,
-        rankingAssignments,
-        defaultRankingSource,
-      }),
+    // ── Store the session and list it in its lobby ──
+    // The pool (every source's ranked list) is stored apart from the session:
+    // the board is read on every poll, the pool only when the AI picks.
+    await createMockDraft(session, {
+      rankedLists,
+      rankingAssignments,
+      defaultRankingSource,
+      // Legacy single list, the last fallback before "any list at all".
+      rankedPlayerIds,
     });
-
-    if (!partyRes.ok) {
-      console.error('[mock-draft/create] PartyKit init failed:', partyRes.status);
-      return new Response(
-        JSON.stringify({ success: false, message: 'Failed to initialize draft session.' }),
-        { status: 502, headers: JSON_HEADERS },
-      );
-    }
-
-    // ── Track active session ──
-    // Store in a lightweight KV so the list endpoint can find active sessions
-    // We'll use a second PartyKit room keyed by leagueId as a session registry
-    const registryUrl = `${partyHost}/party/${mockRegistryRoom(leagueId, aflContext?.unit)}`;
-    try {
-      await fetch(registryUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'register',
-          sessionId,
-          summary: {
-            id: sessionId,
-            createdBy: user.franchiseId,
-            createdAt: session.createdAt,
-            status: 'lobby',
-            participantCount: 0,
-            totalTeams: picksPerRound,
-            currentRound: 1,
-            currentPickInRound: 1,
-            timerSeconds,
-            totalRounds,
-          },
-        }),
-      });
-    } catch {
-      // Non-fatal — list might not work but the session is created
-      console.warn('[mock-draft/create] Could not register session in registry');
-    }
 
     return new Response(
       JSON.stringify({ success: true, sessionId }),

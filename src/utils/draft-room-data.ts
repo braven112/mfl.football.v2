@@ -91,7 +91,6 @@ export interface BuildDraftRoomDataInput {
   teams: DraftRoomTeam[];
   players: DraftRoomPlayer[];
   leagueId: string;
-  partyHost: string;
   /**
    * MFL draft unit to read and to poll. Omit for a single-draft league; pass
    * `CONFERENCE00` / `CONFERENCE01` for a league that drafts by conference.
@@ -135,7 +134,6 @@ export function buildDraftRoomData(input: BuildDraftRoomDataInput): DraftRoomPag
     teams: input.teams,
     picks,
     players: input.players,
-    partyHost: input.partyHost,
     leagueId: input.leagueId,
     mflPickUrl: input.mflPickUrl,
     pollUnit: input.unit,

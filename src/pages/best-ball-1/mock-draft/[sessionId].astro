@@ -4,7 +4,7 @@
  *
  * Same DraftRoom island as the official draft room, in `mode: 'mock'` —
  * these are full-pool 25-round practice runs of the real thing. Picks,
- * timer, and state come from the PartyKit session; player/team data is
+ * timer, and state come from the stored session; player/team data is
  * built here exactly like the official room builds it.
  */
 
@@ -60,7 +60,7 @@ const players = buildDraftPlayers(getCurrentLeagueYear(), {
   adpSource: 'redraft',
 });
 
-// ── Serialize page data — picks populate from the PartyKit session sync ──
+// ── Serialize page data — picks populate from the session poll ──
 const pageData: DraftRoomPageData = {
   leagueYear: getLeagueYearForSlug(BB1.slug),
   draftKind: 'live',
@@ -71,7 +71,6 @@ const pageData: DraftRoomPageData = {
   teams,
   picks: [],
   players,
-  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
   leagueId: BB1.id,
 };
 ---

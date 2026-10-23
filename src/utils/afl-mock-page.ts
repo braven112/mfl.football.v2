@@ -243,7 +243,6 @@ function otherConference(id: ConferenceId): ConferenceId {
 export function buildAflMockSessionData(input: {
   resolution: AflMockResolution;
   leagueId: string;
-  partyHost: string;
 }): DraftRoomPageData {
   const { resolution } = input;
   return {
@@ -256,10 +255,9 @@ export function buildAflMockSessionData(input: {
     totalRounds: resolution.context.rounds,
     picksPerRound: resolution.room.teams.length,
     teams: resolution.room.teams,
-    // Picks start empty — PartyKit session sync populates them.
+    // Picks start empty — the session poll (useMockDraftPoll) populates them.
     picks: [],
     players: resolution.players,
-    partyHost: input.partyHost,
     leagueId: input.leagueId,
     // Scopes the queue and the mock's chat channel to THIS conference.
     pollUnit: resolution.context.unit,
