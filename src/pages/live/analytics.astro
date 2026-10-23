@@ -473,7 +473,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 								: `${activeCount} of ${report.people.length} seen in the last week. Tap an owner for their profile.`}
 						</p>
 						<div class="ins__scroll">
-							<table class="ui-table ins__table ins__table--people" data-sortable="people">
+							<table class="ui-table ins__table ins__table--stack" data-sortable="people">
 								<thead>
 									<tr>
 										<th data-sort="text"><button type="button" class="ins__sort">Owner</button></th>
@@ -503,20 +503,20 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 													</a>
 												</td>
 												{!pageRef && (
-													<td class="ins__spark-cell">
+													<td class="ins__spark-cell" data-label="Trend">
 														<svg class="ins__spark" viewBox={`0 0 ${Math.max(1, p.dailyViews.length) * 3} 16`} preserveAspectRatio="none" aria-hidden="true">
 															{sparkBars(p.dailyViews).map((b) => b.h > 0 && <rect x={b.x * 3} y={16 - b.h} width="2" height={b.h} rx="0.5" />)}
 														</svg>
 													</td>
 												)}
-												<td class="num" data-v={p.lastSeen ?? 0}>{formatLastSeen(p.lastSeen)}</td>
-												{!pageRef && <td class="num" data-v={p.firstSeen ?? 0}>{shortDate(p.firstSeen)}</td>}
-												<td class="num" data-v={p.views}>{n(p.views)}</td>
-												<td class="num">{p.activeDays}</td>
-												<td class="num">{p.recentDays}</td>
-												{!pageRef && <td class="num">{p.pages.length}</td>}
-												{!pageRef && section === null && <td class="num">{p.logins}</td>}
-												{!pageRef && <td class="num">{p.actions}</td>}
+												<td class="num" data-label="Last seen" data-v={p.lastSeen ?? 0}>{formatLastSeen(p.lastSeen)}</td>
+												{!pageRef && <td class="num" data-label="First seen" data-v={p.firstSeen ?? 0}>{shortDate(p.firstSeen)}</td>}
+												<td class="num" data-label="Views" data-v={p.views}>{n(p.views)}</td>
+												<td class="num" data-label="Days">{p.activeDays}</td>
+												<td class="num" data-label="Last 7">{p.recentDays}</td>
+												{!pageRef && <td class="num" data-label="Pages">{p.pages.length}</td>}
+												{!pageRef && section === null && <td class="num" data-label="Sign-ins">{p.logins}</td>}
+												{!pageRef && <td class="num" data-label="Actions">{p.actions}</td>}
 											</tr>
 										);
 									})}
@@ -538,7 +538,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 							<p class="ins__muted">No pages recorded yet.</p>
 						) : (
 							<div class="ins__scroll">
-								<table class="ui-table ins__table ins__table--pages" data-sortable="pages">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="pages">
 									<thead>
 										<tr>
 											<th data-sort="text"><button type="button" class="ins__sort">Page</button></th>
@@ -561,12 +561,13 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 																<a class="ins__open-icon" href={real} target="_blank" rel="noopener" aria-label={`Open ${label}`} title={real}>↗</a>
 															)}
 														</span>
+														<span class="ins__stack-sub">{sectionLabel(p.section)}</span>
 														<span class="ins__meter" aria-hidden="true"><span style={`width:${(p.views / maxPage) * 100}%`}></span></span>
 													</td>
-													<td class="ins__muted ins__nowrap">{sectionLabel(p.section)}</td>
-													<td class="num" data-v={p.views}>{n(p.views)}</td>
-													{!owner && <td class="num">{p.visitors}</td>}
-													{!owner && <td class="num">{n(p.anonymousViews ?? 0)}</td>}
+													<td class="ins__muted ins__nowrap ins__stack-hide" data-label="Section">{sectionLabel(p.section)}</td>
+													<td class="num" data-label="Views" data-v={p.views}>{n(p.views)}</td>
+													{!owner && <td class="num" data-label="Owners">{p.visitors}</td>}
+													{!owner && <td class="num" data-label="Signed out">{n(p.anonymousViews ?? 0)}</td>}
 												</tr>
 											);
 										})}
@@ -674,7 +675,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 							Owners counts distinct signed-in owners. Started Oct 2026; links typed or bookmarked are not counted.
 						</p>
 						<div class="ins__scroll">
-							<table class="ui-table ins__table" data-sortable="links">
+							<table class="ui-table ins__table ins__table--stack" data-sortable="links">
 								<thead>
 									<tr>
 										<th data-sort="text"><button type="button" class="ins__sort">Clicked from</button></th>
@@ -687,9 +688,9 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 									{report.links.map((l) => (
 										<tr>
 											<td>{l.label}</td>
-											<td class="num">{n(l.clicks)}</td>
-											<td class="num">{l.owners}</td>
-											<td class="ins__muted">
+											<td class="num" data-label="Clicks">{n(l.clicks)}</td>
+											<td class="num" data-label="Owners">{l.owners}</td>
+											<td class="ins__muted ins__wide" data-label="Top destinations">
 												{l.destinations.length === 0
 													? '—'
 													: l.destinations.slice(0, 4).map((d) => `${pageLabel(d.section, d.page)} (${n(d.clicks)})`).join(' · ')}
@@ -739,7 +740,7 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 							<p class="ins__note">Not available right now.</p>
 						) : (
 							<div class="ins__scroll">
-								<table class="ui-table ins__table" data-sortable="interest">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="interest">
 									<thead>
 										<tr>
 											<th data-sort="text"><button type="button" class="ins__sort">Product</button></th>
@@ -753,10 +754,10 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 										{interest.map((r) => (
 											<tr>
 												<td>{r.name}</td>
-												<td class="num">{n(r.people)}</td>
-												<td class="num">{n(r.clicks)}</td>
-												<td class="num">{n(r.emails.length)}</td>
-												<td class="ins__muted">{r.emails.length === 0 ? '—' : r.emails.map((e) => e.email).join(', ')}</td>
+												<td class="num" data-label="People">{n(r.people)}</td>
+												<td class="num" data-label="Clicks">{n(r.clicks)}</td>
+												<td class="num" data-label="Emails">{n(r.emails.length)}</td>
+												<td class="ins__muted ins__wide" data-label="Emails left">{r.emails.length === 0 ? '—' : r.emails.map((e) => e.email).join(', ')}</td>
 											</tr>
 										))}
 									</tbody>
@@ -1054,17 +1055,105 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 		content: '↑';
 	}
 
-	/* The name column stays put while a wide table scrolls on a phone. */
-	.ins__table--people td:first-child,
-	.ins__table--people th:first-child,
-	.ins__table--pages td:first-child,
-	.ins__table--pages th:first-child {
-		position: sticky;
-		left: 0;
-		z-index: 1;
-		background: var(--color-surface-3);
-		min-width: 9rem;
-		max-width: 14rem;
+	/* Phones: a wide table becomes one card per row — the name across the
+	   top, every value under its own small label — so nothing hides behind a
+	   sideways scroll. The header row turns into a swipeable row of sort
+	   pills (the same buttons, so sorting and the URL state are unchanged).
+	   Columns with no sort (Trend, Top destinations) drop out of that row
+	   and keep their label on the card. */
+	@media (max-width: 639px) {
+		.ins__table--stack,
+		.ins__table--stack tbody {
+			display: block;
+		}
+		.ins__table--stack thead {
+			display: block;
+			margin-bottom: 0.25rem;
+		}
+		.ins__table--stack thead tr {
+			display: flex;
+			gap: 0.375rem;
+			overflow-x: auto;
+			padding: 3px 0 0.5rem;
+			overscroll-behavior-x: contain;
+		}
+		.ins__table--stack thead th {
+			display: block;
+			flex: none;
+			border: 0;
+			padding: 0;
+		}
+		.ins__table--stack thead th:not([data-sort]) {
+			display: none;
+		}
+		.ins__table--stack .ins__sort {
+			width: auto;
+			min-height: 2.25rem;
+			padding: 0 0.75rem;
+			border: 1px solid var(--color-border-subtle);
+			border-radius: 999px;
+		}
+		.ins__table--stack th[aria-sort] .ins__sort {
+			background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+			border-color: var(--color-primary);
+		}
+		.ins__table--stack tbody tr {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(3.9rem, 1fr));
+			gap: 0.35rem 0.5rem;
+			padding: 0.65rem 0;
+			border-bottom: 1px solid var(--color-border-subtle);
+		}
+		.ins__table--stack tbody td {
+			border: 0;
+			padding: 0;
+			min-width: 0;
+			text-align: left !important;
+		}
+		.ins__table--stack tbody td:first-child,
+		.ins__table--stack tbody td.ins__wide {
+			grid-column: 1 / -1;
+		}
+		.ins__table--stack td[data-label]::before {
+			content: attr(data-label);
+			display: block;
+			font-size: var(--font-size-2xs);
+			font-weight: 600;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--color-text-secondary);
+		}
+		/* The section moves under the page name, so the values below it
+		   get the width. */
+		.ins__table--stack .ins__stack-hide {
+			display: none;
+		}
+		.ins__table--stack .ins__stack-sub {
+			display: block;
+		}
+		.ins__table--stack .ins__person-sub {
+			white-space: normal;
+		}
+	}
+
+	.ins__stack-sub {
+		display: none;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+	}
+
+	/* Wider screens keep the table, with the name column pinned while it
+	   scrolls sideways. */
+	@media (min-width: 640px) {
+		.ins__table--stack td:first-child,
+		.ins__table--stack th:first-child {
+			position: sticky;
+			left: 0;
+			z-index: 1;
+			background: var(--color-surface-3);
+			min-width: 9rem;
+			max-width: 16rem;
+		}
 	}
 
 	.ins__person-link,
