@@ -248,3 +248,44 @@ describe('the archive never lands in the repo', () => {
     expect(gitignore).toContain('*forum-archive*.json');
   });
 });
+
+describe('the download is admin-only unless shared by name', () => {
+  const sessionRequest = async (franchiseId: string, role: 'owner' | 'commissioner' | 'admin', leagueSlug = 'theleague') => {
+    const { createSessionToken: sign } = await import('../src/utils/session');
+    const { getLeagueBySlug } = await import('../src/config/leagues');
+    return new Request('https://example.test/', {
+      headers: {
+        cookie: `session_token=${sign({ userId: 'u', username: 'o', franchiseId, leagueId: getLeagueBySlug(leagueSlug)!.id, role })}`,
+      },
+    });
+  };
+
+  it('lets an admin download and keeps a plain owner to reading', async () => {
+    const { forumArchiveAccess } = await import('../src/utils/forum-archive/archive-access');
+    const admin = forumArchiveAccess(await sessionRequest('0001', 'admin'));
+    expect(admin.download).toBe(true);
+    const owner = forumArchiveAccess(await sessionRequest('0002', 'owner'));
+    expect(owner.member).toBe(true);
+    expect(owner.download).toBe(false);
+  });
+
+  it('lets a named franchise download, and only in TheLeague', async () => {
+    const access = await import('../src/utils/forum-archive/archive-access');
+    const list = access.FORUM_ARCHIVE_DOWNLOAD_FRANCHISES as string[];
+    list.push('0011');
+    try {
+      expect(access.forumArchiveAccess(await sessionRequest('0011', 'owner')).download).toBe(true);
+      // Both leagues have a franchise 0011: the AFL's is not the one named.
+      expect(access.forumArchiveAccess(await sessionRequest('0011', 'owner', 'afl-fantasy')).download).toBe(false);
+    } finally {
+      list.splice(list.indexOf('0011'), 1);
+    }
+  });
+
+  it('gates the endpoint and the page section on the download flag', () => {
+    const endpoint = readFileSync(join(__dirname, '../src/pages/api/forum-archive/download.ts'), 'utf8');
+    expect(endpoint).toMatch(/if \(!access\.download\)/);
+    const page = readFileSync(join(__dirname, '../src/pages/theleague/contracts/forum-archive/index.astro'), 'utf8');
+    expect(page).toMatch(/\{access\.download && \(\s*<section class="ui-card fa-card fa-download"/);
+  });
+});

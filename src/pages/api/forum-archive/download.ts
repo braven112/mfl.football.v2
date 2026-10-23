@@ -4,7 +4,8 @@
  * GET /api/forum-archive/download            → Markdown (best for uploading to an AI)
  * GET /api/forum-archive/download?format=json → the raw archive JSON
  *
- * Signed-in TheLeague owners only.
+ * Admins, plus the owners named in FORUM_ARCHIVE_DOWNLOAD_FRANCHISES
+ * (archive-access.ts). Every other owner reads the archive on the site.
  */
 import type { APIRoute } from 'astro';
 import { forumArchiveAccess } from '../../../utils/forum-archive/archive-access';
@@ -16,6 +17,9 @@ export const GET: APIRoute = async ({ request, url }) => {
   const access = forumArchiveAccess(request);
   if (!access.member) {
     return new Response('Sign in as a TheLeague owner to download the archive.', { status: access.user ? 403 : 401 });
+  }
+  if (!access.download) {
+    return new Response('The archive download is limited to the commissioner and the owners it has been shared with.', { status: 403 });
   }
   const load = await loadForumArchive();
   if (load.status === 'empty') return new Response('The archive has not been loaded yet.', { status: 404 });

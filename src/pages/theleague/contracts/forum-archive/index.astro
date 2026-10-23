@@ -3,8 +3,8 @@
  * Forum Archive — TheLeague's old phpBB message board (2007–2026), read-only.
  *
  * Search it (?q=), browse it by section (?f=) or year (?y=), ask Schefter
- * about it, or download it for your own AI. Members only: old posts can be
- * personal, and the repo is public, so the archive lives in Redis and every
+ * about it, or (admins and named owners only) download it for your own AI.
+ * Members only: old posts can be personal, and the repo is public, so the archive lives in Redis and every
  * route that touches it gates on a TheLeague session (archive-access.ts).
  */
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
@@ -269,14 +269,16 @@ const heading =
           </>
         )}
 
+        {access.download && (
         <section class="ui-card fa-card fa-download" aria-labelledby="fa-dl-title">
           <h2 id="fa-dl-title" class="fa-download__title">Use it with your own AI</h2>
-          <p class="fa-download__body">Download the whole archive as one file and upload it to Claude, ChatGPT or any assistant to ask your own questions. It is for owners only — please don't post it publicly.</p>
+          <p class="fa-download__body">Download the whole archive as one file and upload it to Claude, ChatGPT or any assistant to ask your own questions. It has been shared with you personally — please don't pass it on or post it publicly.</p>
           <div class="fa-download__actions">
             <a class="cta cta--primary" href="/api/forum-archive/download" download>Download archive (.md)</a>
             <a class="cta-link" href="/api/forum-archive/download?format=json" download>Raw data (.json)</a>
           </div>
         </section>
+        )}
       </>
     )}
 
