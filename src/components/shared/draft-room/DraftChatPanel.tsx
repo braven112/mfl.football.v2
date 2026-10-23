@@ -1,6 +1,7 @@
 /**
  * DraftChatPanel
- * Real-time chat for the draft room powered by PartyKit WebSockets.
+ * Chat for the draft room, stored in Redis and polled every couple of
+ * seconds through /api/draft-chat (PartyKit's socket until Oct 2026).
  *
  * Features:
  *   - Chat messages with franchise identity
@@ -8,7 +9,7 @@
  *   - GIF search via Giphy (proxied through /api/suggestions/gif-search)
  *   - Emoji reactions on messages
  *   - Pick announcements auto-posted by DraftRoom
- *   - Message history on connect (PartyKit room storage)
+ *   - Message history on load (the room's last 200 messages)
  */
 
 import React, {
@@ -17,7 +18,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type PartySocket from 'partysocket';
 import type {
   ChatMessage,
   DraftRoomTeam,
@@ -26,7 +26,6 @@ import type {
 import { REACTION_EMOJIS } from '../../../types/draft-room';
 
 interface DraftChatPanelProps {
-  partyHost: string;
   roomId: string;
   /** The signed-in owner's franchise ID */
   franchiseId: string;
@@ -308,7 +307,6 @@ function ReactionRow({ reactions, messageId, onReact, franchiseId }: ReactionRow
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export function DraftChatPanel({
-  partyHost,
   roomId,
   franchiseId,
   franchiseName,
@@ -326,63 +324,95 @@ export function DraftChatPanel({
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<DraftRoomTeam[]>([]);
-  const socketRef = useRef<PartySocket | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottomRef = useRef(true);
 
+  const pollNowRef = useRef<(() => void) | null>(null);
+
+  /** Post one message to the room; the next poll brings it back to everyone. */
+  const post = useCallback(
+    async (message: ChatMessage) => {
+      try {
+        await fetch('/api/draft-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ room: roomId, message }),
+        });
+        pollNowRef.current?.();
+      } catch {
+        onDisconnected();
+      }
+    },
+    [roomId, onDisconnected],
+  );
   useEffect(() => {
-    if (!partyHost || !roomId) return;
+    if (!roomId) return;
 
-    let cancelled = false;
-    let socket: PartySocket | null = null;
+    let active = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let version: number | undefined;
+    /** What each message looked like last poll, to spot new ones and changed reactions. */
+    let seen: Map<string, string> | null = null;
 
-    import('partysocket').then((mod) => {
-      if (cancelled) return;
-      const PartySocketCtor = mod.default;
-
-      const params = new URLSearchParams({
-        franchiseId,
-        name: franchiseName,
-        icon: franchiseIcon,
-      });
-
-      socket = new PartySocketCtor({
-        host: partyHost,
-        room: roomId,
-        query: Object.fromEntries(params),
-      });
-
-      socket.addEventListener('open', () => onConnected());
-      socket.addEventListener('close', () => onDisconnected());
-
-      socket.addEventListener('message', (evt: MessageEvent) => {
-        try {
-          const data = JSON.parse(evt.data as string);
-          if (data.type === '__history') {
-            onHistory(data.messages || []);
-            return;
+    const poll = async () => {
+      clearTimeout(timeoutId);
+      try {
+        const params = new URLSearchParams({ room: roomId });
+        if (version !== undefined) params.set('v', String(version));
+        const res = await fetch(`/api/draft-chat?${params}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { version: number; messages?: ChatMessage[] };
+        if (!active) return;
+        version = data.version;
+        if (data.messages) {
+          const next = new Map(data.messages.map((m) => [m.id, JSON.stringify(m.reactions ?? {})]));
+          if (!seen) {
+            onHistory(data.messages);
+            onConnected();
+          } else {
+            for (const m of data.messages) {
+              const before = seen.get(m.id);
+              if (before === undefined) onMessage(m);
+              else if (before !== next.get(m.id)) {
+                // The reducer replaces a message's whole reaction map, so one
+                // call per changed message carries every emoji on it.
+                const emoji = Object.keys(m.reactions ?? {})[0] ?? '';
+                onReaction(m.id, emoji, m.reactions ?? {});
+              }
+            }
           }
-          if (data.type === 'reaction') {
-            onReaction(data.targetId, data.emoji, data.reactions || {});
-            return;
-          }
-          onMessage(data as ChatMessage);
-        } catch {
-          // ignore malformed messages
+          seen = next;
+        } else if (!seen) {
+          onConnected();
+          seen = new Map();
         }
-      });
+      } catch {
+        if (active) onDisconnected();
+      }
+      if (active) timeoutId = setTimeout(poll, document.hidden ? 10000 : 2000);
+    };
+    pollNowRef.current = () => void poll();
 
-      socketRef.current = socket;
+    // Announce the arrival, as the socket did on connect.
+    void post({
+      id: makeId(),
+      type: 'system',
+      senderId: franchiseId,
+      senderName: franchiseName,
+      senderIcon: franchiseIcon,
+      text: `${franchiseName} joined the draft room`,
+      timestamp: Date.now(),
     });
+    void poll();
 
     return () => {
-      cancelled = true;
-      if (socket) socket.close();
-      socketRef.current = null;
+      active = false;
+      clearTimeout(timeoutId);
+      pollNowRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partyHost, roomId, franchiseId]);
+  }, [roomId, franchiseId]);
 
   const handleScroll = useCallback(() => {
     const el = listRef.current;
@@ -439,7 +469,6 @@ export function DraftChatPanel({
   const sendMessage = useCallback((gifUrl?: string) => {
     const trimmed = text.trim();
     if (!trimmed && !gifUrl) return;
-    if (!socketRef.current) return;
 
     const msg: ChatMessage = {
       id: makeId(),
@@ -452,10 +481,10 @@ export function DraftChatPanel({
       gifUrl,
     };
 
-    socketRef.current.send(JSON.stringify(msg));
+    void post(msg);
     setText('');
     setShowGifPicker(false);
-  }, [text, franchiseId, franchiseName, franchiseIcon]);
+  }, [text, franchiseId, franchiseName, franchiseIcon, post]);
 
   const handleGifSelect = useCallback((gif: DraftGif) => {
     sendMessage(gif.fullUrl);
@@ -477,8 +506,6 @@ export function DraftChatPanel({
   }, [sendMessage, mentionSuggestions, handleMentionSelect]);
 
   const handleReact = useCallback((messageId: string, emoji: string) => {
-    if (!socketRef.current) return;
-
     const msg: ChatMessage = {
       id: makeId(),
       type: 'reaction',
@@ -491,13 +518,11 @@ export function DraftChatPanel({
       targetId: messageId,
     };
 
-    socketRef.current.send(JSON.stringify(msg));
-  }, [franchiseId, franchiseName, franchiseIcon]);
+    void post(msg);
+  }, [franchiseId, franchiseName, franchiseIcon, post]);
 
   const sendPickRef = useRef<((text: string) => void) | null>(null);
-  sendPickRef.current = useCallback((pickText: string) => {
-    if (!socketRef.current) return;
-    const msg: ChatMessage = {
+  sendPickRef.current = useCallback((pickText: string) => {    const msg: ChatMessage = {
       id: makeId(),
       type: 'pick',
       senderId: 'system',
@@ -506,8 +531,8 @@ export function DraftChatPanel({
       text: pickText,
       timestamp: Date.now(),
     };
-    socketRef.current.send(JSON.stringify(msg));
-  }, []);
+    void post(msg);
+  }, [post]);
 
   useEffect(() => {
     (window as any).__draftChatSendPick = (text: string) => sendPickRef.current?.(text);

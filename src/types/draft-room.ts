@@ -123,14 +123,12 @@ export interface DraftRoomPageData {
   teams: DraftRoomTeam[];
   picks: DraftRoomPick[];
   players: DraftRoomPlayer[];
-  /** PartyKit host for chat WebSocket */
-  partyHost: string;
   /** MFL league ID — used when polling /api/draft/status */
   leagueId: string;
   /**
    * MFL "Make Pick" URL (host/options?L={leagueId}&O=17). Present in live mode
    * so submit-pick UI can deep-link out to MFL where the pick is actually
-   * made. Undefined in mock mode (mock picks go through PartyKit).
+   * made. Undefined in mock mode (mock picks go through /api/mock-draft/action).
    */
   mflPickUrl?: string;
   /**
@@ -180,7 +178,7 @@ export type ReactionEmoji = '👍' | '🔥' | '😂' | '💀';
 
 export const REACTION_EMOJIS: ReactionEmoji[] = ['👍', '🔥', '😂', '💀'];
 
-/** A single chat message relayed through PartyKit */
+/** A single draft-room chat message (stored by src/utils/draft-chat-store.ts) */
 export interface ChatMessage {
   id: string;
   type: 'chat' | 'pick' | 'system' | 'reaction';
@@ -212,7 +210,7 @@ export interface DraftGif {
 /** Draft context — determines default filter behavior in the player pool */
 export type DraftContext = 'rookie' | 'general';
 
-/** Operating mode for DraftRoom — 'live' polls MFL, 'mock' uses PartyKit session */
+/** Operating mode for DraftRoom — 'live' polls MFL, 'mock' polls its stored session */
 export type DraftRoomMode = 'live' | 'mock';
 
 /** React useReducer state */

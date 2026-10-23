@@ -568,15 +568,13 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   // and mock chatter landed in the real draft room — which on the AFL is the
   // one channel that matters on draft day, since a mock now carries a
   // `pollUnit` too and would have collided with its conference's live room.
-  // NOTE the shape: the party routes a room to its MOCK-DRAFT handler when the
-  // id starts with `mock-` (or ends with `-registry`), so a `mock-<id>-chat`
-  // room would be handled as a draft session and chat would not work at all.
-  const partyRoomId = isMock
+  // The chat API reads the room's LEAGUE off this id (`league-{id}-…`) and
+  // only lets that league's owners in (src/utils/draft-chat-store.ts).
+  const chatRoomId = isMock
     ? `league-${state.leagueId}-mockchat-${mockSessionId}`
     : `league-${state.leagueId}-draft-${state.leagueYear}${
         data.pollUnit ? `-${data.pollUnit.toLowerCase()}` : ''
       }`;
-  const partyHost = data.partyHost || '';
 
   // Side panel tab — shared between desktop (tab bar under board) and mobile (MobileTabBar).
   // On mobile the full activeMobileTab governs which top-level panel is visible (including 'board');
@@ -856,10 +854,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
             aria-labelledby="dr-tab-chat"
             className="dr-panel-chat"
           >
-            {chatVisited && partyHost ? (
+            {chatVisited ? (
               <DraftChatPanel
-                partyHost={partyHost}
-                roomId={partyRoomId}
+                roomId={chatRoomId}
                 franchiseId={userTeamId}
                 franchiseName={userTeam?.nameShort || userTeam?.name || 'Owner'}
                 franchiseIcon={userTeam?.icon || ''}
@@ -872,13 +869,6 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
                 onDisconnected={handleChatDisconnected}
                 onHistory={handleChatHistory}
               />
-            ) : chatVisited ? (
-              <div className="dr-chat-missing">
-                <div>
-                  <span className="dr-chat-missing__icon" aria-hidden="true">💬</span>
-                  Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
-                </div>
-              </div>
             ) : null}
           </div>
         </div>

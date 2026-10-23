@@ -160,7 +160,6 @@ export function buildAflRoomPageData(input: {
   myFranchiseId: string | undefined | null;
   draftResultsFeeds: EagerFeedGlob;
   leagueFeeds: EagerFeedGlob;
-  partyHost: string;
 }): DraftRoomPageData {
   return buildDraftRoomData({
     leagueYear: input.leagueYear,
@@ -182,7 +181,6 @@ export function buildAflRoomPageData(input: {
     // never legitimately unlock it.
     players: buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' }),
     leagueId: input.leagueId,
-    partyHost: input.partyHost,
     unit: input.room.unit,
     mflHost: input.mflHost,
     draftKind: input.room.selected.draftKind,

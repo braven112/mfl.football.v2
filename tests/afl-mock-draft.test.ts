@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { chatRoomLeague } from '../src/utils/draft-chat-store';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -445,39 +446,29 @@ describe('the gate explains itself', () => {
 
 describe('a mock’s chat channel', () => {
   /**
-   * Two rules, and breaking either is silent.
-   *
    * A mock used to chat in the LIVE draft room's channel — so two owners
    * running separate mocks talked over each other, and mock chatter landed in
    * the real room. On the AFL that is worse than untidy: a mock now carries a
    * `pollUnit`, so it would have collided with its own conference's live room
    * on the one day that channel matters.
    *
-   * And the replacement id must NOT start with `mock-`: the party routes any
-   * such room to its draft-session handler, so `mock-<id>-chat` would not be a
-   * chat room at all. Asserted against the party's own predicate.
+   * And the chat API reads a room's LEAGUE off its id and admits only that
+   * league's owners, so every id DraftRoom builds must parse to its league.
    */
-  const roomSrc = readFileSync(join(process.cwd(), 'party/draft-room.ts'), 'utf-8');
   const drSrc = readFileSync(
     join(process.cwd(), 'src/components/shared/draft-room/DraftRoom.tsx'),
     'utf-8'
   );
 
-  /** The party's own rule, read from the party rather than restated. */
-  const isMockRoom = (id: string) => id.startsWith('mock-') || id.endsWith('-registry');
-
-  it('the party still routes rooms the way this test assumes', () => {
-    expect(roomSrc).toContain("roomId.startsWith('mock-') || roomId.endsWith('-registry')");
-  });
-
   it('is per SESSION, not the league-wide live-draft channel', () => {
     expect(drSrc).toMatch(/isMock\s*\n?\s*\?\s*`league-\$\{state\.leagueId\}-mockchat-\$\{mockSessionId\}`/);
   });
 
-  it('does not land in the party’s draft-session handler', () => {
-    expect(isMockRoom('league-19621-mockchat-abc123')).toBe(false);
-    // The shape that would have: kept as a live example of the trap.
-    expect(isMockRoom('mock-abc123-chat')).toBe(true);
+  it('every room id DraftRoom builds names its league to the chat API', () => {
+    expect(chatRoomLeague('league-19621-mockchat-mvkl1u5569vg4u')).toBe('19621');
+    expect(chatRoomLeague('league-19621-draft-2026-conference00')).toBe('19621');
+    expect(chatRoomLeague('league-13522-draft-2026')).toBe('13522');
+    expect(chatRoomLeague('mock-abc123-chat')).toBeNull();
   });
 
   it('separates two concurrent mocks, and a mock from the live room', () => {

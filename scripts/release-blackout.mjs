@@ -211,7 +211,7 @@ export function resolveBlackout(now = new Date()) {
   // 4. The AFL's National League draft.
   //
   // Derived, not fixed — the Sunday eight days before Labor Day. The draft room,
-  // broadcast and PartyKit are all live that day for a whole conference.
+  // broadcast and draft chat are all live that day for a whole conference.
   //
   // TheLeague's draft is NOT covered here: its date lives in the league-events
   // registry rather than an .mjs this script can import. That gap is stated in
@@ -222,7 +222,7 @@ export function resolveBlackout(now = new Date()) {
     if (Math.abs(draftGap) <= 1) {
       reasons.push(
         `AFL National League draft is ${draftGap === 0 ? 'today' : draftGap > 0 ? 'tomorrow' : 'yesterday'} ` +
-          `(${aflDraft}) — draft room, broadcast and PartyKit are live`,
+          `(${aflDraft}) — draft room, broadcast and draft chat are live`,
       );
     }
   } catch (err) {
