@@ -19,9 +19,12 @@
  * - `insights:d:<date>:userlinks`    `<visitor>|<section>|<area>` → arrivals
  * - `insights:lastseen` / `insights:lastlogin`  `<visitor>` → epoch ms
  * - `insights:names`                 `<visitor>` → MFL username
+ * - `insights:firstseen`             `<visitor>` → epoch ms of their first
+ *                                    signed-in view (HSETNX; started Oct 2026,
+ *                                    seeded once from the daily hashes)
  *
- * The three un-dated hashes do not expire: they hold one field per owner who
- * has ever signed in, which is bounded by the leagues' size.
+ * The un-dated hashes do not expire: they hold one field per owner who has
+ * ever signed in, which is bounded by the leagues' size.
  *
  * `<visitor>` is `<leagueId>:<franchiseId>` (see `visitorKey`). The date and
  * hour are on the league's OFFICIAL clock, so "Sunday 10am" means what an
@@ -46,6 +49,7 @@ import {
 import {
 	ANONYMOUS_INSIGHT_ACTIONS,
 	INSIGHTS_OWNER,
+	INSIGHTS_TTL_DAYS,
 	INSIGHTS_TTL_SECONDS,
 	insightClock,
 	insightDates,
@@ -63,6 +67,9 @@ const dayKey = (date: string, name: string) => `${PREFIX}:d:${date}:${name}`;
 const LAST_SEEN = `${PREFIX}:lastseen`;
 const LAST_LOGIN = `${PREFIX}:lastlogin`;
 const NAMES = `${PREFIX}:names`;
+const FIRST_SEEN = `${PREFIX}:firstseen`;
+/** Set once the first-seen hash has been seeded from the daily hashes. */
+const FIRST_SEEN_SEEDED = `${PREFIX}:firstseen:seeded`;
 
 const DAY_HASHES = [
 	'pages',
@@ -118,6 +125,7 @@ function sectionForUser(user: InsightActor): string {
  * ARGV[7] hour     ARGV[8] device ('' = skip)   ARGV[9] source ('' = skip)
  * ARGV[10] rate max ('0' = no limit)  ARGV[11] rate window seconds
  * KEYS[11] links  KEYS[12] userlinks   ARGV[12] link area ('' = skip)
+ * KEYS[13] firstseen
  *
  * Returns 0 when rate-limited (nothing written), else 1.
  */
@@ -139,6 +147,7 @@ else
   bump(KEYS[3], ARGV[4] .. '|' .. s)
   if ARGV[3] ~= '' then bump(KEYS[4], ARGV[4] .. '|' .. s .. '|' .. ARGV[3]) end
   redis.call('HSET', KEYS[8], ARGV[4], ARGV[5])
+  redis.call('HSETNX', KEYS[13], ARGV[4], ARGV[5])
   if ARGV[6] ~= '' then redis.call('HSET', KEYS[9], ARGV[4], ARGV[6]) end
 end
 bump(KEYS[5], s .. '|' .. ARGV[7])
@@ -189,6 +198,7 @@ export async function recordInsightVisit(
 			`rate:insights-anon:${visit.rateLimit?.callerKey ?? 'none'}`,
 			dayKey(date, 'links'),
 			dayKey(date, 'userlinks'),
+			FIRST_SEEN,
 		];
 		const result = await redis.eval<number>(VISIT_SCRIPT, keys, [
 			INSIGHTS_TTL_SECONDS,
@@ -354,10 +364,12 @@ export async function readInsightPeople(): Promise<InsightPerson[]> {
 	pipe.hgetall(LAST_SEEN);
 	pipe.hgetall(LAST_LOGIN);
 	pipe.hgetall(NAMES);
+	pipe.hgetall(FIRST_SEEN);
 	const managed = ALL_LEAGUES;
 	for (const league of managed) pipe.hgetall(`activity:${league.id}`);
-	const [seen, login, names, ...legacy] = await pipe.exec<(Record<string, unknown> | null)[]>();
+	const [seen, login, names, first, ...legacy] = await pipe.exec<(Record<string, unknown> | null)[]>();
 
+	const firstSeen = toCounts(first);
 	const lastSeen = toCounts(seen);
 	const lastLogin = toCounts(login);
 	const usernames = (names ?? {}) as Record<string, unknown>;
@@ -385,6 +397,53 @@ export async function readInsightPeople(): Promise<InsightPerson[]> {
 			username: typeof name === 'string' && name ? name : null,
 			lastSeen: lastSeen[key] ?? null,
 			lastLogin: lastLogin[key] ?? null,
+			firstSeen: firstSeen[key] ?? null,
 		};
 	});
+}
+
+/**
+ * KEYS[1] firstseen   KEYS[2] seeded marker
+ * ARGV pairs: visitor, epoch ms — kept only where earlier than what is stored,
+ * so a visit recorded (HSETNX) before the seed ran is corrected, not kept.
+ */
+const SEED_FIRST_SEEN_SCRIPT = `
+for i = 1, #ARGV, 2 do
+  local cur = redis.call('HGET', KEYS[1], ARGV[i])
+  if not cur or tonumber(cur) > tonumber(ARGV[i + 1]) then
+    redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+  end
+end
+redis.call('SET', KEYS[2], '1')
+return 1
+`;
+
+/**
+ * Seed `insights:firstseen` ONCE from every daily hash still kept, so owners
+ * who started before the counter existed get the earliest day the report can
+ * prove (noon on that day, league clock). Runs on the report's first load
+ * after deploy; afterwards it is one GET. Never throws.
+ */
+export async function seedInsightFirstSeen(now = new Date()): Promise<void> {
+	try {
+		const redis = await getRedis();
+		if (!redis) return;
+		if (await redis.get(FIRST_SEEN_SEEDED)) return;
+		const dates = insightDates(clockNow(now).date, INSIGHTS_TTL_DAYS);
+		const pipe = redis.pipeline();
+		for (const date of dates) pipe.hgetall(dayKey(date, 'usersections'));
+		const results = await pipe.exec<(Record<string, unknown> | null)[]>();
+		const earliest = new Map<string, number>();
+		dates.forEach((date, i) => {
+			for (const field of Object.keys(results[i] ?? {})) {
+				const key = field.split('|')[0];
+				if (!key || earliest.has(key)) continue;
+				earliest.set(key, Date.parse(`${date}T12:00:00Z`));
+			}
+		});
+		const args = [...earliest.entries()].flatMap(([k, ms]) => [k, String(ms)]);
+		await redis.eval(SEED_FIRST_SEEN_SCRIPT, [FIRST_SEEN, FIRST_SEEN_SEEDED], args);
+	} catch (err) {
+		console.warn('[site-insights] first-seen seed failed:', err);
+	}
 }

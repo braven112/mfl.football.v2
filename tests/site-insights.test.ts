@@ -16,6 +16,8 @@ import {
 	resolveSection,
 	isKnownAppPath,
 	parseInsightLinkArea,
+	parseOwnerRef,
+	parsePageRef,
 	type InsightDayRaw,
 } from '../src/utils/site-insights-model';
 import { getLeagueBySlug } from '../src/config/leagues';
@@ -146,7 +148,7 @@ describe('buildInsightsReport', () => {
 
 	it('ranks pages with distinct-owner reach', () => {
 		const r = buildInsightsReport({ days, people: [], section: null });
-		expect(r.pages[0]).toEqual({ section: 'theleague', page: '/rosters', views: 5, visitors: 1 });
+		expect(r.pages[0]).toEqual({ section: 'theleague', page: '/rosters', views: 5, visitors: 1, anonymousViews: 2 });
 	});
 
 	it('a section filter narrows every figure', () => {
@@ -177,6 +179,91 @@ describe('buildInsightsReport', () => {
 		const r = buildInsightsReport({ days, people: [ghost], section: null });
 		expect(r.people.map((p) => p.key)).toContain(ghost.key);
 		expect(r.people.find((p) => p.key === a)!.topPages[0]).toEqual({ section: 'theleague', page: '/rosters', views: 3 });
+	});
+});
+
+describe('buildInsightsReport — owner, page and admin filters', () => {
+	const a = `${THELEAGUE.id}:0001`; // the admin
+	const c = `${THELEAGUE.id}:0005`;
+	const d = `${THELEAGUE.id}:0007`;
+	const days = [
+		day('2026-10-01', {
+			userSections: { [`${a}|theleague`]: 10, [`${c}|theleague`]: 3 },
+			visitors: { 'anon|theleague': 2 },
+			pages: { 'theleague|/rosters': 9, 'theleague|/standings': 6 },
+			userPages: {
+				[`${a}|theleague|/rosters`]: 6,
+				[`${a}|theleague|/standings`]: 4,
+				[`${c}|theleague|/rosters`]: 2,
+				[`${c}|theleague|/standings`]: 1,
+			},
+			hours: { 'theleague|9': 15 },
+			logins: { [a]: 1, [c]: 1 },
+			actions: { 'theleague|lineup_submit': 3 },
+			userActions: { [`${a}|lineup_submit`]: 2, [`${c}|lineup_submit`]: 1 },
+			userLinks: { [`${a}|theleague|nav`]: 4, [`${c}|theleague|nav`]: 1 },
+			links: { 'theleague|nav|/rosters': 5 },
+		}),
+		day('2026-10-02', {
+			userSections: { [`${d}|theleague`]: 4 },
+			pages: { 'theleague|/rosters': 4 },
+			userPages: { [`${d}|theleague|/rosters`]: 4 },
+		}),
+	];
+	const admins = new Set([a]);
+
+	it('hiding admins takes their views off every figure that can name them', () => {
+		const r = buildInsightsReport({ days, people: [], section: null, excludeOwners: admins });
+		expect(r.totals.views).toBe(3 + 2 + 4);
+		expect(r.totals.owners).toBe(2);
+		expect(r.pages.find((p) => p.page === '/rosters')).toMatchObject({ views: 1 + 2 + 4, visitors: 2, anonymousViews: 1 });
+		expect(r.pages.find((p) => p.page === '/standings')).toMatchObject({ views: 2, visitors: 1, anonymousViews: 1 });
+		expect(r.people.map((p) => p.key)).not.toContain(a);
+		expect(r.totals.logins).toBe(1);
+		expect(r.actions.find((x) => x.action === 'lineup_submit')).toMatchObject({ count: 1, owners: 1 });
+		expect(r.links.find((l) => l.area === 'nav')).toMatchObject({ clicks: 1, owners: 1 });
+	});
+
+	it('an owner filter makes the report that owner\'s, and an admin may still be picked', () => {
+		const r = buildInsightsReport({ days, people: [], section: null, owner: a, excludeOwners: admins });
+		expect(r.focused).toBe(true);
+		expect(r.totals.views).toBe(10);
+		expect(r.totals.anonymousViews).toBe(0);
+		expect(r.pages.map((p) => [p.page, p.views, p.anonymousViews])).toEqual([
+			['/rosters', 6, null],
+			['/standings', 4, null],
+		]);
+		expect(r.people.map((p) => p.key)).toEqual([a]);
+		expect(r.people[0].dailyViews).toEqual([10, 0]);
+		expect(r.actions.find((x) => x.action === 'lineup_submit')).toMatchObject({ count: 2, owners: 1 });
+	});
+
+	it('a page filter lists who opened it, with the signed-out remainder', () => {
+		const r = buildInsightsReport({
+			days,
+			people: [],
+			section: null,
+			page: { section: 'theleague', page: '/rosters' },
+			excludeOwners: admins,
+		});
+		expect(r.days.map((x) => x.views)).toEqual([2 + 1, 4]);
+		expect(r.days.map((x) => x.anonymousViews)).toEqual([1, 0]);
+		expect(r.people.map((p) => [p.key, p.views]).sort()).toEqual([[c, 2], [d, 4]].sort());
+		expect(r.pages).toHaveLength(1);
+	});
+
+	it('stickiness counts owners by days active in the last 7 days', () => {
+		const r = buildInsightsReport({ days, people: [], section: null });
+		expect(r.stickiness).toEqual([0, 3, 0, 0, 0, 0, 0, 0]);
+	});
+
+	it('parses filter params strictly', () => {
+		const sections = ['theleague', 'live'];
+		expect(parsePageRef('theleague|/rosters', sections)).toEqual({ section: 'theleague', page: '/rosters' });
+		expect(parsePageRef('nope|/rosters', sections)).toBeNull();
+		expect(parsePageRef('theleague|rosters', sections)).toBeNull();
+		expect(parseOwnerRef(`${THELEAGUE.id}:0005`)).toBe(`${THELEAGUE.id}:0005`);
+		expect(parseOwnerRef('x:0005')).toBeNull();
 	});
 });
 

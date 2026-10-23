@@ -19,6 +19,36 @@ adoption.
 
 ---
 
+## 2026-10-23 — `/live/analytics` filters by owner and page by SUBTRACTING, and only some hashes can follow
+
+**Context:** Brandon asked for sortable tables, page rows that open the real
+page, a per-owner profile, "who opened this page", and admins hidden by
+default (Archie's brought 99 owners into the report).
+
+**Insight:** the daily hashes split into two kinds, and a filter can only be
+honest on one of them. `userpages` / `usersections` / `useractions` /
+`userlinks` name the owner, so an owner filter reads them directly and an
+admin exclusion SUBTRACTS the admin's fields from the global `pages`,
+`actions` and `links` counts (and a page's signed-out views are `pages`
+minus every owner's `userpages` for it). `hours`, `devices` and `sources`
+name nobody, so under an owner or page filter the report sets `focused` and
+the page HIDES those cards rather than print the whole site's numbers under
+one owner's name; with admins hidden, the heatmap says it still includes
+them. `useractions` has no section, but an owner's actions are filed under
+their session's league (`sectionOfVisitor`), so a section filter now applies
+to them too.
+
+`insights:firstseen` is written with HSETNX on every signed-in view, and
+seeded once (`seedInsightFirstSeen`, marker `insights:firstseen:seeded`)
+from the earliest daily hash still kept, with "keep the earlier value"
+semantics so a visit recorded before the seed ran does not win. A first-seen
+date older than the 90-day window is therefore "no later than", not exact.
+
+Every table there sorts via `src/utils/sortable-table.ts` (header buttons,
+`data-v` for the real sort value, sort kept in the URL as `s.<table>`).
+
+---
+
 ## 2026-10-10 — The counters are all-time, so a page that MOVES is reported twice: popular under its old address, "never opened" under its new one
 
 **Context:** TheLeague's `/activity` listed Draft Room (82 views) and Mock
