@@ -2550,6 +2550,12 @@ html.dark .dr-side-panel {
     box-shadow: var(--shadow-xl);
     animation-name: dr-splash-sheet-in;
   }
+  /* The crest watermark sits in the middle of the sheet (owner's call). */
+  .dr-splash__crest {
+    right: auto;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 @keyframes dr-splash-sheet-in {
   from { transform: translateY(100%); }
