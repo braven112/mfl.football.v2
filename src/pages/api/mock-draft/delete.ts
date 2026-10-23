@@ -5,9 +5,9 @@
  * from the lobby list. Authorization: the session creator can always
  * delete; commissioners / admins can delete anyone's session.
  *
- * We intentionally don't wipe the underlying session room — PartyKit
- * garbage-collects rooms with no traffic, and leaving stale storage for
- * anyone who happens to have a direct link open is harmless.
+ * We intentionally don't wipe the underlying session — it expires on its
+ * own TTL, and leaving it for anyone who happens to have a direct link open
+ * is harmless.
  */
 
 import type { APIRoute } from 'astro';
@@ -15,6 +15,7 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { DEFAULT_LEAGUE_ID, getLeagueById } from '../../../config/leagues';
 import { conferenceUnit, mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
+import { getMockDraftSummary, unlistMockDraft } from '../../../utils/mock-draft-store';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -52,61 +53,28 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 400, headers: JSON_HEADERS },
     );
   }
-  const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-  if (!rawPartyHost) {
-    return new Response(
-      JSON.stringify({ success: false, message: 'PartyKit not configured.' }),
-      { status: 500, headers: JSON_HEADERS },
-    );
-  }
-  const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
-  const registryUrl = `${partyHost}/party/${mockRegistryRoom(
-    leagueId,
-    conference ? conferenceUnit(conference) : null,
-  )}`;
+  const registryRoom = mockRegistryRoom(leagueId, conference ? conferenceUnit(conference) : null);
 
-  // Fetch the registry so we can verify ownership before unregistering.
-  let createdBy: string | null = null;
   try {
-    const listRes = await fetch(registryUrl, { method: 'GET' });
-    if (listRes.ok) {
-      const data = (await listRes.json()) as { sessions?: Array<{ id: string; createdBy: string }> };
-      const entry = data.sessions?.find((s) => s.id === sessionId);
-      createdBy = entry?.createdBy ?? null;
+    // Read the lobby entry so we can verify ownership before unlisting.
+    const entry = await getMockDraftSummary(registryRoom, sessionId);
+    if (!entry) {
+      // Not in the lobby: already deleted, or never listed. Idempotent.
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: JSON_HEADERS });
     }
-  } catch (err) {
-    console.warn('[mock-draft/delete] Registry fetch failed:', (err as Error).message);
-  }
 
-  if (!createdBy) {
-    // Session isn't in the registry. Either it was already deleted or
-    // never registered. Treat idempotent: report success.
-    return new Response(JSON.stringify({ success: true }), { status: 200, headers: JSON_HEADERS });
-  }
-
-  const isOwner = createdBy === user.franchiseId;
-  const isAdmin = isCommissionerOrAdmin(user);
-  if (!isOwner && !isAdmin) {
-    return new Response(
-      JSON.stringify({ success: false, message: 'You can only delete your own mock drafts.' }),
-      { status: 403, headers: JSON_HEADERS },
-    );
-  }
-
-  try {
-    const unregRes = await fetch(registryUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'unregister', sessionId }),
-    });
-    if (!unregRes.ok) {
+    const isOwner = entry.createdBy === user.franchiseId;
+    const isAdmin = isCommissionerOrAdmin(user);
+    if (!isOwner && !isAdmin) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Failed to unregister session.' }),
-        { status: 502, headers: JSON_HEADERS },
+        JSON.stringify({ success: false, message: 'You can only delete your own mock drafts.' }),
+        { status: 403, headers: JSON_HEADERS },
       );
     }
+
+    await unlistMockDraft(registryRoom, sessionId);
   } catch (err) {
-    console.error('[mock-draft/delete] Unregister failed:', err);
+    console.error('[mock-draft/delete] Unlist failed:', err);
     return new Response(
       JSON.stringify({ success: false, message: 'Internal server error' }),
       { status: 500, headers: JSON_HEADERS },

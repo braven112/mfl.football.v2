@@ -22,7 +22,7 @@ import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
 import { PickRevealSplash } from './PickRevealSplash';
 import { getQueue, queueScope, saveQueue } from '../../../utils/draft-queue-storage';
 import { collectFreshPicks, buildSplashItem, type PickSplashItem } from '../../../utils/pick-reveal';
-import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
+import { useMockDraftPoll } from '../../../hooks/useMockDraftPoll';
 import '../../../styles/draft-room.css';
 import '../../../styles/loading.css';
 
@@ -224,10 +224,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     () => initState(data, draftContext)
   );
 
-  // ── Mock draft WebSocket ──
+  // ── Mock draft (polled from /api/mock-draft/session) ──
   const isMock = mode === 'mock';
-  const { send: mockSend } = useMockDraftSocket({
-    partyHost: data.partyHost,
+  const { send: mockSend } = useMockDraftPoll({
     sessionId: mockSessionId || '',
     franchiseId: userTeamId,
     dispatch,
@@ -265,10 +264,13 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   const isMockCreator = !!(
     isMock && state.mockSession && state.mockSession.createdBy === userTeamId
   );
+  // Go Back onto an AI team holds that slot for the creator (`aiHold`), so
+  // the creator may pick it instead of the AI re-taking the same player.
   const controlsCurrentPick = !!(
     isMockCreator &&
     currentPick &&
-    !isFranchiseAutoDrafted(state.mockSession!, currentPick.franchiseId)
+    (state.mockSession!.aiHold ||
+      !isFranchiseAutoDrafted(state.mockSession!, currentPick.franchiseId))
   );
   const isOwnTurn = !!(
     currentPick &&
@@ -321,7 +323,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
   // ── Pick-reveal splash ──
   // Diffing state.picks catches every path a pick lands through: live polling,
-  // mock-socket pick-made events, AND the user's own submission (which also
+  // mock-draft polls, AND the user's own submission (which also
   // arrives back as a picks update). Queue so fast autopick runs never overlap.
   const [splashQueue, setSplashQueue] = useState<PickSplashItem[]>([]);
   const seenFilledRef = useRef<Set<number> | null>(null);
@@ -358,7 +360,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   }, [state.queueScope, state.leagueYear]);
 
   // Polling — adaptive interval via self-rescheduling setTimeout (reads ref fresh each tick)
-  // Disabled in mock mode — state comes from PartyKit WebSocket instead
+  // Disabled in mock mode — useMockDraftPoll keeps that board instead
   const hasRecentPickRef = useRef(false);
   useEffect(() => {
     if (isMock) return;
@@ -370,7 +372,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   }, [state.picks, isMock]);
 
   useEffect(() => {
-    if (isMock) return; // Mock mode uses WebSocket, not polling
+    if (isMock) return; // Mock mode polls its own session (useMockDraftPoll)
 
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout>;

@@ -336,7 +336,7 @@ export const MOCK_RANKING_LABELS: Record<MockRankingSource, string> = {
   random: 'Chaos (random)',
 };
 
-/** Full mock draft session state — stored in PartyKit Durable Object KV */
+/** Full mock draft session state — stored in Redis (src/utils/mock-draft-store.ts) */
 export interface MockDraftSession {
   id: string;
   leagueId: string;
@@ -367,7 +367,7 @@ export interface MockDraftSession {
   defaultRankingSource?: MockRankingSource;
   /**
    * Per-franchise auto-draft overrides, editable mid-draft by the creator
-   * via the `set-auto-draft` socket message. Missing entries fall back to
+   * via the `set-auto-draft` action. Missing entries fall back to
    * the legacy default: every team except the creator's is CPU-drafted.
    * A `false` entry makes that team creator-controlled — its picks run the
    * full clock and the creator may pick for it manually.
@@ -380,13 +380,24 @@ export interface MockDraftSession {
    * the only sessions the MFL export script will touch.
    */
   official?: boolean;
+  /** Epoch ms the on-clock pick auto-picks at. Null while nobody's clock runs. */
+  pickDeadline?: number | null;
+  /** Milliseconds left on the clock when the creator paused. */
+  pausedRemainingMs?: number | null;
+  /**
+   * Set by Go Back when it lands on an AI team: the slot waits for the
+   * creator instead of the AI instantly re-picking the same player, which
+   * made an undo look like a no-op. Any later action clears it.
+   */
+  aiHold?: boolean;
+  /** Bumped on every save so a client can drop a stale poll response. */
+  version?: number;
 }
 
 /**
- * Client mirror of the party server's auto-draft resolution: explicit
- * per-team overrides win; the legacy default is that every team except the
- * creator's is auto-drafted. Keep in sync with `isAutoDrafted` in
- * party/draft-room.ts (which can't import from src/).
+ * Auto-draft resolution, shared by the engine (mock-draft-engine.ts) and the
+ * room: explicit per-team overrides win; the legacy default is that every
+ * team except the creator's is auto-drafted.
  */
 export function isFranchiseAutoDrafted(
   session: Pick<MockDraftSession, 'createdBy' | 'autoDraft'>,

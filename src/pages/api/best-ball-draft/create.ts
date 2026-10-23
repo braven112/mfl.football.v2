@@ -2,7 +2,7 @@
  * POST /api/best-ball-draft/create
  *
  * Creates (or re-arms) THE official startup draft session for a best-ball
- * league. Reuses the PartyKit mock-draft engine — same Durable Object state
+ * league. Reuses the mock-draft engine (Redis, mock-draft-engine.ts) — same state
  * machine, same DraftRoom UI — but promoted to a draft of record:
  *
  *   - Commissioner-only (adminFranchiseIds for the league's navSlug).
@@ -34,6 +34,8 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-respon
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
 import type { MockRankingSource } from '../../../types/draft-room';
+import { createMockDraft } from '../../../utils/mock-draft-store';
+import { fetchMockSession } from '../../../utils/mock-draft-session';
 import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
 
 /** Pick clocks that make sense for a real draft (plus 30s for test runs). */
@@ -201,34 +203,16 @@ export const POST: APIRoute = async ({ request }) => {
     // ── Deterministic official session id ──
     const sessionId = `${league.navSlug}-official-${leagueYearStr}`;
 
-    const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-    if (!rawPartyHost) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'PartyKit host not configured.' }),
-        { status: 500, headers: JSON_HEADERS },
-      );
-    }
-    const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
-    const partyUrl = `${partyHost}/party/mock-${sessionId}`;
-
     // ── Don't clobber a live/finished draft ──
-    try {
-      const existingRes = await fetch(partyUrl, { signal: AbortSignal.timeout(5000) });
-      if (existingRes.ok) {
-        const existing = await existingRes.json();
-        const status = existing?.session?.status;
-        if (status && status !== 'lobby' && !body.force) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: `An official draft already exists (status: ${status}). Pass force to recreate it.`,
-            }),
-            { status: 409, headers: JSON_HEADERS },
-          );
-        }
-      }
-    } catch {
-      // Party room unreachable/absent — proceed with creation.
+    const existing = await fetchMockSession(sessionId);
+    if (existing?.status && existing.status !== 'lobby' && !body.force) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `An official draft already exists (status: ${existing.status}). Pass force to recreate it.`,
+        }),
+        { status: 409, headers: JSON_HEADERS },
+      );
     }
 
     const totalPicks = totalRounds * picksPerRound;
@@ -264,51 +248,13 @@ export const POST: APIRoute = async ({ request }) => {
       official: true,
     };
 
-    const partyRes = await fetch(partyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session,
-        rankedPlayerIds: rankedLists[defaultRankingSource] ?? [],
-        rankingSource: defaultRankingSource,
-        rankedLists,
-        rankingAssignments: {},
-        defaultRankingSource,
-      }),
+    // Stored and listed in the league's registry (used by admin tooling).
+    await createMockDraft(session, {
+      rankedLists,
+      rankingAssignments: {},
+      defaultRankingSource,
+      rankedPlayerIds: rankedLists[defaultRankingSource] ?? [],
     });
-    if (!partyRes.ok) {
-      console.error('[best-ball-draft/create] PartyKit init failed:', partyRes.status);
-      return new Response(
-        JSON.stringify({ success: false, message: 'Failed to initialize draft session.' }),
-        { status: 502, headers: JSON_HEADERS },
-      );
-    }
-
-    // Register in the league's session registry (used by admin tooling).
-    try {
-      await fetch(`${partyHost}/party/${league.id}-registry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'register',
-          sessionId,
-          summary: {
-            id: sessionId,
-            createdBy: user.franchiseId,
-            createdAt: session.createdAt,
-            status: 'lobby',
-            participantCount: 0,
-            totalTeams: picksPerRound,
-            currentRound: 1,
-            currentPickInRound: 1,
-            timerSeconds,
-            totalRounds,
-          },
-        }),
-      });
-    } catch {
-      console.warn('[best-ball-draft/create] Could not register session in registry');
-    }
 
     return new Response(JSON.stringify({ success: true, sessionId }), {
       status: 200,

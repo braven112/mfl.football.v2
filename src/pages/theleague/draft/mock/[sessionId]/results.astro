@@ -19,7 +19,7 @@ if (!getAuthUser(Astro.request)) {
 
 // Fetched HERE, not in the shared component: a missing session has to bounce,
 // and Astro.redirect() from a component only blanks the body. See CLAUDE.md.
-const session = await fetchMockSession(import.meta.env.PUBLIC_PARTYKIT_HOST, sessionId);
+const session = await fetchMockSession(sessionId);
 if (!session) return Astro.redirect('/theleague/draft/mock');
 ---
 
