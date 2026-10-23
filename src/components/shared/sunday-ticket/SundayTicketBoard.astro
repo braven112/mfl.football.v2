@@ -90,7 +90,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
           const { on, href } = chipFor(l);
           return (
             <a
-              class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
+              class:list={['ui-pill', 'st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
               aria-current={on ? 'true' : undefined}
               href={href}
               title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
@@ -102,7 +102,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
         })}
         {outsideLeagues.length > 0 && (
           <details class="st-others" open={outsideOn > 0}>
-            <summary class="st-chip st-chip--others">
+            <summary class="ui-pill st-chip st-chip--others">
               <span class="st-chip__dot" aria-hidden="true" />
               Other leagues
               <span class="st-others__count">{outsideOn > 0 ? `${outsideOn} of ${outsideLeagues.length} on` : `${outsideLeagues.length}`}</span>
@@ -112,7 +112,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
                 const { on, href } = chipFor(l);
                 return (
                   <a
-                    class:list={['st-chip', 'st-chip--outside', on && 'st-chip--on']}
+                    class:list={['ui-pill', 'st-chip', 'st-chip--outside', on && 'st-chip--on']}
                     aria-current={on ? 'true' : undefined}
                     href={href}
                     title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
@@ -130,7 +130,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
       {/* Outside the rail: an action you would never find by swiping past 24
           league chips is the same as an action that is not there. */}
       {!isDefault && (
-        <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>Reset to my leagues</a>
+        <a class="ui-pill st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>Reset to my leagues</a>
       )}
     </nav>
   )}
@@ -140,7 +140,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
       <span class="st-chips__label">Channels for</span>
       {countries.map((c) => (
         <a
-          class:list={['st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
+          class:list={['ui-pill', 'st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
           aria-current={c.code === country ? 'true' : undefined}
           href={countryHref(pathname, c.code, weekParam)}
         >
@@ -152,7 +152,7 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
     {/* Also outside the rail, and for the same reason — the clock is a link
         OUT to /preferences, not one of the countries being scrolled. */}
     {preferencesPath && clockLabel && (
-      <a class="st-chip st-chip--prefs" href={preferencesPath}>
+      <a class="ui-pill st-chip st-chip--prefs" href={preferencesPath}>
         Times in {clockLabel}
         <span class="st-chip__ext" aria-hidden="true">change</span>
       </a>

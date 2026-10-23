@@ -293,7 +293,7 @@ describe('the phone sort chips (idea B)', () => {
     expect(PILL).toMatch(/:where\(\.ui-pills\) \{\s*flex-wrap: nowrap;\s*overflow-x: auto;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/min-width:\s*0;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/flex:\s*1 1 100%;/);
-    expect(PILL).toMatch(/:where\(\.ui-pills > \.ui-pill\) \{\s*flex: 0 0 auto;/);
+    expect(PILL).toMatch(/:where\(\.ui-pills > \.ui-pill, \.ui-pills > li\) \{\s*flex: 0 0 auto;/);
     // A thumb-sized tap target: --touch-target-min is 44px (tokens.css), and
     // tests/design-polish.test.ts forbids the bare literal.
     expect(PILL).toMatch(/:where\(\.ui-pill\) \{[^}]*min-height:\s*var\(--touch-target-min\);/);

@@ -396,12 +396,12 @@ function SuggestionBoxInner({ isAuthenticated, isAdmin, teamIcons, userFranchise
 
       {/* Category filter pills */}
       {ideas.length > 0 && (
-        <div className="sb-filter" role="radiogroup" aria-label="Filter by category">
+        <div className="ui-pills sb-filter" role="radiogroup" aria-label="Filter by category">
           {([['all', 'All', ''], ['rule-change', 'Rules', 'icon-gavel'], ['website', 'Website', 'icon-wrench'], ['general', 'General', 'icon-beer']] as const).map(([value, label, spriteId]) => (
             <button
               key={value}
               type="button"
-              className={`sb-filter__pill${categoryFilter === value ? ' sb-filter__pill--active' : ''}`}
+              className="ui-pill sb-filter__pill"
               onClick={() => setCategoryFilter(value)}
               role="radio"
               aria-checked={categoryFilter === value}

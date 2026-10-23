@@ -180,17 +180,17 @@ const sectionChips = [
 		</header>
 
 		<nav class="ins__filters" aria-label="Filters">
-			<div class="ins__chips" role="group" aria-label="Date range">
+			<div class="ui-pills ins__chips" role="group" aria-label="Date range">
 				{INSIGHTS_RANGES.map((d) => (
-					<a class="ins__chip" href={href({ days: d })} aria-current={d === range ? 'true' : undefined}>
+					<a class="ui-pill ins__chip" href={href({ days: d })} aria-current={d === range ? 'true' : undefined}>
 						{d} days
 					</a>
 				))}
 			</div>
-			<div class="ins__chips" role="group" aria-label="Section">
+			<div class="ui-pills ins__chips" role="group" aria-label="Section">
 				{sectionChips.map((c) => (
 					<a
-						class="ins__chip"
+						class="ui-pill ins__chip"
 						href={href({ section: c.key })}
 						aria-current={c.key === section ? 'true' : undefined}
 					>
@@ -564,26 +564,6 @@ const sectionChips = [
 		flex-direction: column;
 		gap: 0.5rem;
 	}
-	.ins__chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-	}
-	.ins__chip {
-		padding: 0.3rem 0.75rem;
-		border: 1px solid var(--color-border-subtle);
-		border-radius: 999px;
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--color-text-secondary);
-		text-decoration: none;
-	}
-	.ins__chip[aria-current='true'] {
-		background: var(--color-primary-fill, var(--color-primary));
-		border-color: var(--color-primary);
-		color: var(--on-color-primary, #fff);
-	}
-
 	.ins__tiles {
 		display: grid;
 		/* min(…, 100%) so a phone with Android's larger-text setting (rem grows)

@@ -244,25 +244,15 @@
   background: linear-gradient(to right, var(--page-bg), transparent);
   pointer-events: none;
 }
+/* The chip's look is the pill kit (ui-pill, src/styles/pill.css); a selected
+   league or country carries aria-current="true". The rails stay as they are:
+   they already scroll as one line at every width, with the sticky label. */
 .st-chip {
-  display: inline-flex;
-  align-items: center;
   /* No chip shrinks to fit: a squeezed row reads as one line that fits, which
      is exactly the cue that there is nothing to scroll to. */
   flex: none;
-  white-space: nowrap;
   gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--card-border);
-  background: var(--card-surface);
-  color: var(--content-text-muted);
-  font-size: 0.82rem;
-  font-weight: var(--font-weight-bold);
-  text-decoration: none;
-  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
-.st-chip:hover { border-color: var(--league-accent); color: var(--page-text); }
 /* The site's focus ring is drawn 2px OUTSIDE the box, with a box-shadow beyond
    that — and a rail is a scrollport that clips both. This is not a corner case:
    tabbing to an off-screen chip scrolls it flush against that very edge, so the
@@ -275,8 +265,7 @@
   box-shadow: none;
 }
 .st-chip__dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--card-border); }
-.st-chip--on { color: var(--page-text); border-color: color-mix(in srgb, var(--league-accent) 55%, transparent); background: color-mix(in srgb, var(--league-accent) 10%, var(--card-surface)); }
-.st-chip--on .st-chip__dot { background: var(--league-accent); }
+.st-chip--on .st-chip__dot { background: currentColor; }
 .st-chip__ext { font-size: 0.7rem; opacity: 0.7; }
 .st-chip--all { border-style: dashed; }
 /* Outside leagues fold behind one chip; the disclosure opens when any is on. */

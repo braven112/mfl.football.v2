@@ -207,7 +207,7 @@ describe.each(KITS)('component kit: $name', (kit) => {
     const names = new Set([kit.cls, ...(kit.extra ?? [])]);
     for (const s of selectors) {
       // The one exception, as in cta.css: link tabs out-rank the layouts' global a / a:hover.
-      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|pill)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='page'\])?$/.test(one))) continue;
+      if (s.split(/,\s*/).every((one) => /^\.ui-(?:tab|pill)(?:--active)?:is\(a\)(?::hover|:focus|\[aria-current='(?:page|true)'\])?$/.test(one))) continue;
       const m = s.match(/^:where\(([^{}]+)\)(::backdrop|::-webkit-scrollbar)?$/);
       expect(m, s).not.toBeNull();
       for (const c of m![1].matchAll(/\.([a-z][a-z0-9-]*?)(?:--[a-z]+)?(?![a-z0-9-])/g)) expect(names.has(c[1]), `${s}: .${c[1]}`).toBe(true);

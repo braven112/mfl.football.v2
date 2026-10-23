@@ -18,7 +18,8 @@
      </div>
 
    The selected pill is whichever carries aria-pressed="true",
-   aria-selected="true", aria-current="page" or ui-pill--active. It is tinted,
+   aria-selected="true", aria-checked="true" (a radiogroup), aria-current
+   ("page" or "true") or ui-pill--active. It is tinted,
    not filled: a 12% wash of `--ui-pill-tone` with that tone's border and ink
    (`--ui-pill-ink`, lifted in dark). Both default to the site primary; a pill
    coloured by category sets them on its own modifier, never `background` /
@@ -56,7 +57,7 @@
   cursor: pointer;
 }
 
-:where(.ui-pill[aria-pressed='true'], .ui-pill[aria-selected='true'], .ui-pill[aria-current='page'], .ui-pill--active) {
+:where(.ui-pill[aria-pressed='true'], .ui-pill[aria-selected='true'], .ui-pill[aria-checked='true'], .ui-pill[aria-current='page'], .ui-pill[aria-current='true'], .ui-pill--active) {
   background: color-mix(in srgb, var(--ui-pill-tone, var(--color-primary)) 12%, var(--content-bg));
   border-color: var(--ui-pill-tone, var(--color-primary));
   color: var(--ui-pill-ink, var(--pill-on-ink));
@@ -71,6 +72,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* A row may be a list (one <li> per pill): drop the list chrome. */
+:where(ul.ui-pills, ol.ui-pills) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 @media (max-width: 767px) {
@@ -88,7 +96,7 @@
     display: none;
   }
 
-  :where(.ui-pills > .ui-pill) {
+  :where(.ui-pills > .ui-pill, .ui-pills > li) {
     flex: 0 0 auto;
   }
 }
@@ -99,6 +107,7 @@
   text-decoration: none;
 }
 .ui-pill:is(a)[aria-current='page'],
+.ui-pill:is(a)[aria-current='true'],
 .ui-pill--active:is(a) {
   color: var(--ui-pill-ink, var(--pill-on-ink));
   text-decoration: none;

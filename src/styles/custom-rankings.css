@@ -130,31 +130,7 @@
   padding: 0.5rem 0;
 }
 
-.cr-filters__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.65rem;
-  border-radius: 20px;
-  border: 1px solid var(--primary-content-border-color, #e2e8f0);
-  background: var(--primary-content-bg-color, #fff);
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--content-text-muted, #64748b);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.cr-filters__chip:hover {
-  border-color: var(--primary-color, #1c497c);
-  color: var(--primary-color, #1c497c);
-}
-
-.cr-filters__chip--active {
-  background: var(--primary-color, #1c497c);
-  border-color: var(--primary-color, #1c497c);
-  color: #fff;
-}
+/* The chip itself is the pill kit (ui-pill, src/styles/pill.css). */
 
 .cr-filters__count {
   font-size: 0.7rem;
