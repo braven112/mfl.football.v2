@@ -328,7 +328,7 @@ const heading =
       .map((c, i) => {
         const quote = c.excerpt.map((p) => (p.hit ? `<mark>${escapeHtml(p.text)}</mark>` : escapeHtml(p.text))).join('');
         const more = c.morePosts ? ` <span class="fa-receipt__more">· ${plural(c.morePosts, 'more post')} in this thread</span>` : '';
-        return `<li class="fa-receipt"${i >= SHOWN ? ' hidden' : ''}>
+        return `<li class="fa-receipt" data-post-id="${Number(c.postId)}"${i >= SHOWN ? ' hidden' : ''}>
           <p class="fa-receipt__meta">${escapeHtml(c.section)} · ${escapeHtml(c.date)}</p>
           <a class="fa-receipt__title" href="${escapeHtml(c.href)}">${escapeHtml(c.title)}</a>
           <p class="fa-receipt__author">${escapeHtml(c.author)}</p>
@@ -351,6 +351,22 @@ const heading =
     }${moreButton}${take}`;
   }
 
+  interface SavedAsk { question: string; report: Report; expanded: boolean; openedPostId: number | null }
+  const ASK_KEY = 'forum-archive.lastAsk';
+
+  function loadAsk(): SavedAsk | null {
+    try {
+      const v = JSON.parse(sessionStorage.getItem(ASK_KEY) || 'null');
+      return v && typeof v.question === 'string' && Array.isArray(v.report?.cards) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveAsk(v: SavedAsk) {
+    try { sessionStorage.setItem(ASK_KEY, JSON.stringify(v)); } catch { /* storage off: the answer just won't persist */ }
+  }
+
   function init() {
     const root = document.querySelector<HTMLElement>('[data-forum-archive][data-league="theleague"]');
     if (!root || root.dataset.faInit) return;
@@ -365,6 +381,39 @@ const heading =
     if (!form || !out) return;
     const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
     const input = form.querySelector<HTMLTextAreaElement>('textarea')!;
+
+    // The last answer survives a trip to a cited post and back: an owner
+    // reads the receipts one at a time. Per tab (sessionStorage), and only a
+    // convenience — storage that throws or is empty just means a fresh box.
+    const show = (saved: SavedAsk) => {
+      out.hidden = false;
+      out.innerHTML = renderReport(saved.report);
+      const more = out.querySelector<HTMLButtonElement>('[data-fa-more]');
+      const expand = () => {
+        out.querySelectorAll<HTMLElement>('.fa-receipt[hidden]').forEach((el) => { el.hidden = false; });
+        more?.remove();
+      };
+      if (saved.expanded) expand();
+      more?.addEventListener('click', () => {
+        expand();
+        saveAsk({ ...saved, expanded: true });
+      });
+      out.querySelectorAll<HTMLAnchorElement>('.fa-receipt a').forEach((a) => {
+        a.addEventListener('click', () => {
+          const current = loadAsk();
+          if (current) saveAsk({ ...current, openedPostId: Number(a.closest<HTMLElement>('.fa-receipt')?.dataset.postId) || null });
+        });
+      });
+    };
+
+    const saved = loadAsk();
+    if (saved) {
+      input.value = saved.question;
+      show(saved);
+      if (saved.openedPostId) {
+        out.querySelector(`.fa-receipt[data-post-id="${saved.openedPostId}"]`)?.scrollIntoView({ block: 'center' });
+      }
+    }
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -389,12 +438,9 @@ const heading =
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Schefter could not file that one.');
-        out.innerHTML = renderReport(data);
-        const more = out.querySelector<HTMLButtonElement>('[data-fa-more]');
-        more?.addEventListener('click', () => {
-          out.querySelectorAll<HTMLElement>('.fa-receipt[hidden]').forEach((el) => { el.hidden = false; });
-          more.remove();
-        });
+        const next: SavedAsk = { question, report: data, expanded: false, openedPostId: null };
+        saveAsk(next);
+        show(next);
       } catch (err) {
         out.innerHTML = `<p class="fa-ask__error">${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
       } finally {
