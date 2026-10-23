@@ -21,7 +21,9 @@ export const FORUM_ARCHIVE_LEAGUE_SLUG = 'theleague';
  * archive on the site is for every owner, but a copy of the whole thing leaves
  * the site, so it goes only to the owners named here.
  */
-export const FORUM_ARCHIVE_DOWNLOAD_FRANCHISES: readonly string[] = [];
+export const FORUM_ARCHIVE_DOWNLOAD_FRANCHISES: readonly string[] = [
+  '0011', // Midwestside Connection — asked for it (2026-10-22)
+];
 
 export interface ArchiveAccess {
   league: LeagueDefinition;
