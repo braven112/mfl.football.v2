@@ -288,7 +288,8 @@ const heading =
           Your browser reads it, keeps only the public posts — no emails, passwords, IP addresses or private messages — and uploads them.
           Loading again replaces the current copy.
         </p>
-        <input type="file" accept=".sql,.json,application/sql,application/json,text/plain" data-fa-import-file />
+        {/* No `accept` filter: Android has no MIME type for .sql, so a filtered picker greys the export out and it cannot be chosen. The handler checks the contents instead. */}
+        <input type="file" data-fa-import-file />
         <p class="fa-import__status" data-fa-import-status aria-live="polite"></p>
       </details>
     )}
@@ -429,7 +430,7 @@ const heading =
         const text = await file.text();
         const { buildForumArchive, chunkForumArchive } = await import('../../../../utils/forum-archive/build-archive.mjs');
         const archive = /\.json$/i.test(file.name) ? JSON.parse(text) : buildForumArchive(text);
-        if (!Array.isArray(archive?.posts) || !Array.isArray(archive?.topics) || !Array.isArray(archive?.forums)) {
+        if (!Array.isArray(archive?.posts) || !Array.isArray(archive?.topics) || !Array.isArray(archive?.forums) || archive.posts.length === 0) {
           throw new Error('That file is not a forum export or archive.');
         }
         const { index, chunks } = chunkForumArchive(archive);
