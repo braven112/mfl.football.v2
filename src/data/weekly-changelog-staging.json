@@ -303,6 +303,14 @@
       "impact": "user",
       "area": "schefter",
       "league": "both"
+    },
+    {
+      "date": "2026-10-23",
+      "type": "bug-fix",
+      "summary": "Mock drafts work again: the draft engine now runs on our own servers, so the pick clock and AI picks no longer depend on an outside service.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
     }
   ]
 }
