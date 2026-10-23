@@ -187,6 +187,11 @@ export interface BroadcastPollResponse {
   /** Per-player identity for anyone new since the first paint (a promoted starter). */
   playerMeta?: Record<string, PlayerMeta>;
   /**
+   * The owner's own starters' box-score lines, MFL-keyed ("6 rec (8 tgt),
+   * 84 yds, 1 TD"). Read by the idle spotlight; absent when ESPN had none.
+   */
+  statLines?: Record<string, string>;
+  /**
    * A paired TV only: the phone remote's latest command, and whether a phone
    * has the remote open (the TV then checks every second instead of waiting
    * for this poll). Absent for a signed-in viewer, so no screen but a paired

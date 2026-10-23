@@ -52,6 +52,8 @@ import { resolveNflDarkLogoUrl } from '../../../utils/nfl-logo-dark-css';
 
 interface Props {
   moment: BroadcastMoment;
+  /** Replaces the play-type kicker — the idle spotlight's "On the field". */
+  kicker?: string;
   team: BroadcastTeam | null;
   /** Where the matchup stands AFTER the play — the "what did it do to me" line. */
   scoreLine: string;
@@ -109,6 +111,7 @@ function kickerFor(moment: BroadcastMoment): string {
 
 function MomentTakeover({
   moment,
+  kicker,
   team,
   scoreLine,
   position,
@@ -214,7 +217,7 @@ function MomentTakeover({
       )}
 
       <div className="lbc-reveal__body">
-        <p className="lbc-reveal__kicker">{kickerFor(moment)}</p>
+        <p className="lbc-reveal__kicker">{kicker ?? kickerFor(moment)}</p>
         <p className="lbc-reveal__team">
           Your {position || 'starter'} · {moment.leagueName}
           {team ? ` · ${team.name}` : ''}

@@ -354,6 +354,8 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   };
 
   const panels: BroadcastLeaguePanel[] = [];
+  /** The owner's OWN starters, every league — the spotlight's population. */
+  const mineIds = new Set<string>();
   const leagueScores = [];
   const viewers = [];
 
@@ -390,6 +392,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     }
 
     for (const rows of Object.values(snapshot.players)) for (const r of rows) addMeta(r.id);
+    for (const r of snapshot.players[league.franchiseId] ?? []) mineIds.add(r.id);
 
     const pairs = findOwnerMatchups(snapshot.matchups, league.franchiseId);
 
@@ -440,6 +443,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     moments: buildBroadcastMoments(plays, viewers, playerMeta),
     redZone: selectRedZoneAlerts(games, viewers, playerMeta),
     games,
+    statLines: ownStatLines(mineIds, detail?.boxScore),
   };
 
   // Full mode only — same reasoning as `panels`. A poll carries numbers and
@@ -447,6 +451,27 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   const defenseFaces = mode === 'full' ? buildBroadcastDefenseFaces(playerMeta) : {};
 
   return { leagues, enabled, panels, playerMeta, defenseFaces, poll };
+}
+
+/**
+ * "6 rec (8 tgt), 84 yds, 1 TD" for the owner's own starters who have one.
+ *
+ * Already MFL-keyed — `loadNflGameDetail` joins ESPN athletes to MFL ids
+ * server-side — so no ESPN id crosses to the client. Mine only, because the
+ * spotlight that reads it is mine only, and a poll every few seconds should not
+ * carry an opponent's whole box score for nothing.
+ */
+export function ownStatLines(
+  mineIds: Set<string>,
+  boxScore: Record<string, { statLine: string }> | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!boxScore) return out;
+  for (const id of mineIds) {
+    const line = boxScore[id]?.statLine;
+    if (line) out[id] = line;
+  }
+  return out;
 }
 
 /** The island's one-time props. */
