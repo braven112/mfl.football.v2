@@ -42,19 +42,19 @@ export interface HeaderTeam {
   division: string;
   conference: string | null;
   /**
-   * The club's own colour, held to 3:1 against the crest row in each theme.
+   * The club's own color, held to 3:1 against the crest row in each theme.
    *
    * Per TEAM rather than one value for the row, because TheLeague switches
    * club in place: the switcher moves `aria-current` across crests without
-   * re-rendering, so a colour resolved for "the active club" at render time
+   * re-rendering, so a color resolved for "the active club" at render time
    * would be the previous club's the moment anyone clicked. Each crest
    * carries its own, and the active rule just reads it.
    *
-   * Two values because the brand colour cannot serve both surfaces: seven of
+   * Two values because the brand color cannot serve both surfaces: seven of
    * TheLeague's sixteen clubs are #181818, which is a ring you cannot see on
    * a dark row, and Midwestside's #ffcd00 is one you cannot see on a light
    * one. `colorPrimaryDark` is the config's own answer to the first and is
-   * preferred where it exists; `ensureContrastOn` only shifts a colour that
+   * preferred where it exists; `ensureContrastOn` only shifts a color that
    * misses the floor, so most clubs keep their exact brand value.
    */
   ringLight: string;
@@ -79,7 +79,7 @@ export interface HeaderGroup {
   conferenceShort: string | null;
   /**
    * The conference's own accent, for its rail. Null in a single-table league,
-   * which has no rail to colour. Grey read as chrome and gave the reader no
+   * which has no rail to color. Grey read as chrome and gave the reader no
    * way to tell which half of the row they were looking at without reading
    * the vertical label.
    */
@@ -288,7 +288,7 @@ export function buildSeasonRail(
  *    position is what makes a WR2 and a QB8 comparable.
  *
  * BOTH modes are restricted to QB / RB / WR / TE, for the same reason. A
- * kicker or defence can top its own tiny position on a quiet week, and on
+ * kicker or defense can top its own tiny position on a quiet week, and on
  * points-per-dollar they are nearly unbeatable: they cost the league minimum
  * and score steadily, so unfiltered they took 5 of TheLeague's 16 cards —
  * "Nick Folk is our best value player" is arithmetically true and not what

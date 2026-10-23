@@ -22,7 +22,7 @@
  * (`.lv-pwho`) so the meta line's `flex-wrap` can never separate a position
  * from its team, or strand the separator at the head of a wrapped line.
  *
- * What is deliberately NOT done: a shared centre column, or a position group
+ * What is deliberately NOT done: a shared center column, or a position group
  * header spanning the pair. Both can only name ONE of the two paired
  * positions and mislabel the other the moment the sides run different lineup
  * shapes — a WR opposite an RB is an ordinary row, not an edge case. See
@@ -133,7 +133,7 @@ export default function LvPlayerRow({
    */
   const projected = row.projected ?? meta?.projected ?? 0;
   /**
-   * The projection is scaled by the clock the ROW IS LABELLED WITH.
+   * The projection is scaled by the clock the ROW IS LABELED WITH.
    *
    * `state` already prefers ESPN over MFL, and the two disagree for a real
    * window: MFL zeroes `gameSecondsRemaining` on its own cadence, so a game
@@ -169,14 +169,14 @@ export default function LvPlayerRow({
 
   /**
    * DEF/ST gets no stat line, deliberately. ESPN's box score is athlete-keyed
-   * and MFL's 32 defences carry no ESPN athlete id, so there is no join key
+   * and MFL's 32 defenses carry no ESPN athlete id, so there is no join key
    * even in principle — and a plausible wrong number beside a real MFL score
    * is worse than a blank.
    */
   const statLine = detailStatus === 'error' || isDef ? '' : (box?.statLine ?? '');
 
   /**
-   * No club code beside a team defence. `DEF · SEA` sits next to a player
+   * No club code beside a team defense. `DEF · SEA` sits next to a player
    * literally named "Seattle Seahawks" — the position already says which of
    * the 32 he is, so the code is the same fact a third time in one row.
    */
@@ -214,7 +214,7 @@ export default function LvPlayerRow({
             : {
                 // All FOUR, together. The ring pair is theme-specific, so
                 // setting the backdrop without it gives the chip a team
-                // colour in one theme and a bare default in the other —
+                // color in one theme and a bare default in the other —
                 // pinned by tests/team-color-backdrop-guard.test.ts.
                 ['--player-avatar-bg' as string]: getPlayerAvatarBackground(team),
                 ['--player-avatar-border' as string]: getPlayerAvatarBorder(team),

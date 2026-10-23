@@ -147,7 +147,7 @@ function writeCache(key: string, state: PlayerNewsState): void {
 
 /**
  * Load news for one athlete, invoking `onState` with `loading` first and then a
- * terminal state. Safe to call repeatedly; the previous call is cancelled.
+ * terminal state. Safe to call repeatedly; the previous call is canceled.
  */
 export function loadPlayerNews(
   subject: PlayerNewsSubject,
@@ -214,7 +214,7 @@ export function loadPlayerNews(
       onState(state);
     })
     .catch((error: unknown) => {
-      // A cancelled request is not a network failure — the user simply moved on.
+      // A canceled request is not a network failure — the user simply moved on.
       // Reporting it as an error would flash "Couldn't reach ESPN" every time
       // someone clicks two players quickly.
       if ((error as { name?: string } | null)?.name === 'AbortError') return;

@@ -82,7 +82,7 @@ interface Props {
    * the filter is hidden rather than shown hiding the wrong players.
    */
   availableIdsJson?: string | null;
-  /** MFL's draftPlayerPool, for labelling the filter honestly. */
+  /** MFL's draftPlayerPool, for labeling the filter honestly. */
   draftPool?: string | null;
   /** True when availability was scoped per conference (the AFL). */
   availabilityPerConference?: boolean;

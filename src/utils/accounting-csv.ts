@@ -39,7 +39,7 @@ export interface ParsedCsv {
 }
 
 /**
- * Split one CSV line, honouring quoted fields and doubled quotes.
+ * Split one CSV line, honoring quoted fields and doubled quotes.
  *
  * Hand-rolled rather than pulled from a dependency because descriptions are
  * free text a commissioner types — they contain commas ("Week 3 high score,

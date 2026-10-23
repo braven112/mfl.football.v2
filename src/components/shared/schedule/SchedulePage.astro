@@ -150,7 +150,7 @@ const nameOf = (id: string) => {
  * The fallback is a derived tag, NOT the franchise id: a historical identity
  * may carry a name with no `abbrev` (ten AFL franchises' 2024 era entries do),
  * and printing `0006` in the cell tells a reader nothing. The full name is
- * always in the tile's label, so this only has to be recognisable.
+ * always in the tile's label, so this only has to be recognizable.
  */
 const abbrevOf = (id: string) => {
   const team = teamById.get(id);
@@ -298,11 +298,11 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
  * five identical near-black heroes.
  *
  * Null for the league view, a signed-out visitor, and a club whose config
- * carries no colours — each of which correctly falls back to league chrome.
+ * carries no colors — each of which correctly falls back to league chrome.
  */
 // Gated on the owner still holding the SAME slot that season, because the
 // resolver looks a franchise up in TODAY'S config: for a season where they
-// held a different id, that id's current colours belong to whoever holds it
+// held a different id, that id's current colors belong to whoever holds it
 // now — a rival's palette on your own page. Always true for the live season,
 // so the common case is unaffected and a reassigned season falls back to
 // league chrome rather than to the wrong club.
@@ -770,7 +770,7 @@ const heroSkin =
      franchise rather than assumed to be white.
 
      The league glow goes: it is a radial of --sch-glow, the league's own
-     colour, and leaving it on lights the franchise gradient's top-left
+     color, and leaving it on lights the franchise gradient's top-left
      corner with the wrong brand. */
   /* Literal fallback like both sibling heroes carry: an undefined custom
      property here would paint the card transparent in BOTH themes. */

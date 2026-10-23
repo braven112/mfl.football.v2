@@ -53,14 +53,14 @@ import type {
 } from '../types/mfl-live';
 
 /**
- * Which card a colour is judged against — a SURFACE name, not a pair of hexes.
+ * Which card a color is judged against — a SURFACE name, not a pair of hexes.
  *
  * `live/surface.ts` turns it into `--card-bg` in each theme, from the theme
  * files in src/themes/ (`mfl-live.json` for MFL Live), and
  * `tests/live-surface-grounds.test.ts` pins that lookup against the real
  * stylesheets, which two literals here could never be.
  *
- * Both themes, every time. A single resolved colour would bake in one theme's
+ * Both themes, every time. A single resolved color would bake in one theme's
  * ground, and this board renders in both: seven TheLeague franchises are
  * `#181818` and several NFL primaries are near-black (LV `#101820`, CHI
  * `#0b162a`), all of which are invisible on the dark card and perfectly fine
@@ -86,14 +86,14 @@ export interface AssembledMflLive {
 }
 
 /**
- * Split-bar colours for one matchup, resolved per theme.
+ * Split-bar colors for one matchup, resolved per theme.
  *
  * ONE RESOLVER, ONE SET OF NAMES. This function used to resolve the pair
  * itself against MFL Live's card, under viewer-relative names (`--tm-` mine,
  * `--to-` theirs) that `live/from-mfl-live.ts` then renamed to the kit's
  * side-indexed ones. Two names for one thing is what shipped the bug: when the
- * canonical resolver grew the INK variants — a franchise colour used as text
- * must clear WCAG, not ΔE — this copy did not, so MFL Live drew coloured
+ * canonical resolver grew the INK variants — a franchise color used as text
+ * must clear WCAG, not ΔE — this copy did not, so MFL Live drew colored
  * win-probability bars beside GREY scores. Nothing failed: the sheet's
  * `--t0-ink` fallback is a neutral, and the assembler's own test named the
  * four keys it expected, so the whole suite stayed green.
@@ -122,7 +122,7 @@ function matchupColorVars(mine: FranchiseColorClaim, theirs: FranchiseColorClaim
  * TWO SOURCES, in priority order, because the two kinds of league know
  * different amounts about themselves:
  *
- *  - A REGISTERED league has committed team brands, which carry colours and
+ *  - A REGISTERED league has committed team brands, which carry colors and
  *    crests as well as the name. Always preferred.
  *  - Any other league gets the names the cross-league read fetched from its
  *    own `TYPE=league` export. Without them the board printed "Franchise

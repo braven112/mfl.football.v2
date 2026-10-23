@@ -1,6 +1,6 @@
 /**
  * Where a live board is being drawn, expressed as the two GROUNDS a franchise
- * colour has to stay legible against.
+ * color has to stay legible against.
  *
  * ── WHY THIS IS A THING AND NOT A CONSTANT ────────────────────────────────
  * `resolveTeamColorPair` needs the background it is judging against, and the
@@ -12,9 +12,9 @@
  *     club primaries are near-black too (LV `#101820`, CHI `#0b162a`, NO
  *     `#101820`) — all fine on a white card, all invisible on a dark one.
  *     `toBroadcastPair` cannot help here: it only ever DARKENS, so it cannot
- *     make a colour visible. That is `ensureFieldOn`'s job, and it needs the
+ *     make a color visible. That is `ensureFieldOn`'s job, and it needs the
  *     ground.
- *  2. **League.** The dark card is a different colour per league, because
+ *  2. **League.** The dark card is a different color per league, because
  *     `--card-surface` is set per league by its theme (src/themes/<id>.json).
  *     TheLeague's is `#262626`, the AFL's `#16283c`, MFL Live's `#1e2126`.
  *

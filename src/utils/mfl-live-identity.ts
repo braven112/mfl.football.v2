@@ -5,7 +5,7 @@
  * leagues this site has never heard of. It has artwork for some franchises,
  * can infer artwork for others, and must be honest about the rest:
  *
- *   1. **A league we run** — its own crest and brand colours, from the league
+ *   1. **A league we run** — its own crest and brand colors, from the league
  *      config. ALWAYS WINS. A TheLeague franchise that renames itself
  *      "Cowboys" keeps its own mark; an owner's real identity outranks a
  *      lookup every time.
@@ -15,7 +15,7 @@
  *      identity, and an inferred one must never displace it. A league that
  *      called itself "Saints" AND drew its own crest gets its crest.
  *   3. **A franchise whose name IS an NFL club** — that club's mark and brand
- *      colour stand in (`nfl-name-match.ts`). Exact whole-name match only,
+ *      color stand in (`nfl-name-match.ts`). Exact whole-name match only,
  *      and ONLY in a league that uploaded no marks at all. In a league that
  *      did, a franchise without one drops to initials: one Chicago Bears logo
  *      among ninety-eight uploaded crests reads as a different league's team,
@@ -23,7 +23,7 @@
  *   4. **Everything else** — initials on a neutral field. Initials are a TEXT
  *      label, not invented artwork: no fabricated crest, and no invented brand
  *      hue. The two sides of a matchup are separated by a neutral step, which
- *      is a legibility decision rather than a claim about anybody's colours.
+ *      is a legibility decision rather than a claim about anybody's colors.
  *
  * ── AN UPLOADED MARK IS ANY SHAPE AND ANY SIZE ────────────────────────────
  * "Icon" is MFL's word, not a specification. Archie's Fantasy Football League
@@ -33,13 +33,13 @@
  * rungs 1 and 3 are crests and club marks, where a crop cuts off somebody's
  * logo. `rung` is what carries that distinction to the renderer.
  *
- * ── COLOURS ARE NOT RESOLVED HERE, ON PURPOSE ─────────────────────────────
- * This module answers "which colours does this franchise CLAIM" and stops.
+ * ── COLORS ARE NOT RESOLVED HERE, ON PURPOSE ─────────────────────────────
+ * This module answers "which colors does this franchise CLAIM" and stops.
  * Turning a claim into a paintable pair — separating home from away, keeping
  * both legible against a specific ground — is `resolveTeamColorPair`
  * (`team-color-contrast.ts`), which the live-scoring board already uses for
  * exactly this and which has to run TWICE, once per theme, because this board
- * has a light card and a dark one. Resolving a single colour here would bake
+ * has a light card and a dark one. Resolving a single color here would bake
  * in one theme's ground and reproduce the bug the AFL's near-black franchises
  * already caused on the broadcast board.
  */
@@ -53,7 +53,7 @@ import { getNFLTeamName } from './nfl-logo';
 /** Which rung answered. Shipped so the UI can render each honestly. */
 export type IdentityRung = 'league' | 'mfl' | 'nfl' | 'text';
 
-/** The colour CLAIM, in the shape `resolveTeamColorPair` consumes. */
+/** The color CLAIM, in the shape `resolveTeamColorPair` consumes. */
 export interface FranchiseColorClaim {
   color: string;
   colorPrimary?: string;
@@ -79,9 +79,9 @@ export interface FranchiseIdentity {
 /**
  * Neutral field for the text rung.
  *
- * Deliberately grey rather than a hue derived from the name. A colour picked
+ * Deliberately grey rather than a hue derived from the name. A color picked
  * by hashing a string LOOKS like a brand and is not one — an owner would
- * reasonably read it as their team's colour, and it would change the day they
+ * reasonably read it as their team's color, and it would change the day they
  * renamed. `resolveTeamColorPair` separates the two sides of a matchup from
  * here, which keeps the split bar readable without anyone inventing a claim.
  */
@@ -181,7 +181,7 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
       icon: optimizedRemoteImage(mflIcon),
       rung: 'mfl',
       nflCode: null,
-      // NO colour claim. An uploaded image is not a stated brand colour, and
+      // NO color claim. An uploaded image is not a stated brand color, and
       // sampling one out of the pixels would be inventing a claim on an
       // owner's behalf — the same reason the text rung stays neutral.
       colors: { color: NEUTRAL_FIELD },

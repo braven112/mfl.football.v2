@@ -124,7 +124,7 @@ const KICKOFF_TIME_RE = /\d{1,2}:\d{2}\s*(AM|PM)\b/i;
  * looking, which is how the live-scoring page printed ET to an owner who had
  * chosen Pacific. `date` is the real instant, so the time is rebuilt from it.
  * Only a detail that IS a kickoff time is replaced: "TBD", "Postponed" and
- * anything else unrecognised are ESPN's words and come back as null.
+ * anything else unrecognized are ESPN's words and come back as null.
  */
 export function kickoffInClock(
   game: NflGame | undefined,

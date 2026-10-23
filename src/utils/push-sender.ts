@@ -68,7 +68,7 @@ export async function sendPushToFranchise(
   /**
    * Which category this alert belongs to. REQUIRED, and checked here rather
    * than at each call site: this is the single door every push goes through,
-   * and a preference honoured in some senders but not others is worse than no
+   * and a preference honored in some senders but not others is worse than no
    * preference at all — an owner turns something off and it keeps arriving.
    *
    * An unknown category is refused, not allowed through. A typo must not

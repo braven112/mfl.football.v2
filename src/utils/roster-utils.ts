@@ -41,7 +41,7 @@ export function getPositionRank(
   if (!pos) return order.length;
   const rank = order.indexOf(String(pos).toUpperCase());
   // Unknown positions sort LAST. Returning -1 here would float every
-  // unrecognised position to the top of the roster.
+  // unrecognized position to the top of the roster.
   return rank === -1 ? order.length : rank;
 }
 

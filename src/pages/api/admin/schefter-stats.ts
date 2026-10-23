@@ -992,7 +992,7 @@ async function readGitHubStats() {
 
 export const GET: APIRoute = async ({ request, url }) => {
   // League scoping: a commissioner gets their SESSION's league and nothing
-  // else — a `?league=` naming another is refused, not honoured. Only a
+  // else — a `?league=` naming another is refused, not honored. Only a
   // platform admin (src/utils/league-admin.ts) may name any league, which is
   // what lets the site owner open a client league's News Ops.
   const resolved = resolveAdministeredLeague(getAuthUser(request), url.searchParams.get('league'));

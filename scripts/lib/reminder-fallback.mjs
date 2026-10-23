@@ -140,7 +140,7 @@ export function buildFallbackPost({
   // highlight the wrong words, or run off the end of the message.
   const located = locateMentions(text, tokens);
   // The attachment SHAPE has one implementation, in the post primitive itself
-  // — it also drops any malformed entry, which is the behaviour we want if a
+  // — it also drops any malformed entry, which is the behavior we want if a
   // locus ever comes back wrong rather than shipping GroupMe a bad payload.
   const attachment = buildMentionAttachment(located);
 

@@ -1,7 +1,7 @@
 /**
  * The demo league's identity files — the fictional replacements for
  * `src/data/theleague.config.json` (read by 63 modules: every franchise name,
- * colour and crest on the site comes from it), `src/data/theleague.assets.json`,
+ * color and crest on the site comes from it), `src/data/theleague.assets.json`,
  * the crest/banner art under `public/assets/theleague/`, and the owner and
  * championship records the franchise-history chain reads.
  */

@@ -80,7 +80,7 @@ export interface ReadLeagueLiveInput {
    */
   viewerFranchiseId?: string | null;
   /**
-   * Whose card the franchise colours are judged against. Defaults to this
+   * Whose card the franchise colors are judged against. Defaults to this
    * league's own surface, which is what its own page renders on.
    */
   surface?: LiveSurface;
@@ -92,7 +92,7 @@ export interface ReadLeagueLiveInput {
    * page's `configTeams`, and the board must show that rather than the club's
    * present-day mark — the whole feature is invisible otherwise.
    *
-   * Name, short name, icon — and COLOURS when the era defines its own
+   * Name, short name, icon — and COLORS when the era defines its own
    * palette. An era palette is safe to hand over: `resolveMatchupColorVars`
    * runs every claim through the ground check (ΔE, then AA ink) whatever its
    * source. Leaving it out was a bug, not a safeguard: Cowboy Up wearing the
@@ -260,7 +260,7 @@ export function registryScorePrecision(slug: CanonicalLeagueSlug): number | unde
  * brands and no surface of their own. Passing the identity in rather than
  * looking it up is what lets ONE builder serve both — and one builder is the
  * requirement, not a preference. Everything subtle about this function (the
- * bench split, the four statuses, the per-theme colour grounds) would have to
+ * bench split, the four statuses, the per-theme color grounds) would have to
  * be got right twice otherwise, and this repo's forked-sibling history says
  * how that ends.
  */
@@ -296,7 +296,7 @@ export interface BuildBoardInput {
    * `readCrossLeagueLive`'s `withFranchiseNames`, which caches them an hour.
    *
    * Ignored where the registry has brands: a real identity outranks a fetched
-   * one, and the brands carry colours and a crest that a name cannot.
+   * one, and the brands carry colors and a crest that a name cannot.
    */
   franchiseNames?: Record<string, string>;
   /**

@@ -72,7 +72,7 @@ interface Props {
   live: boolean;
   /** The moment the queue is showing, or null. Rendered as a banner. */
   moment: BroadcastMoment | null;
-  /** The franchise the moment belongs to, for its colours and crest. */
+  /** The franchise the moment belongs to, for its colors and crest. */
   momentTeam: BroadcastTeam | null;
   /** "84.2 – 79.8" — what the play did to the matchup. */
   momentScoreLine: string;
@@ -734,8 +734,8 @@ function HandheldBoard({
       })()}
 
       {/* Every moment is a banner here — the owner's own plays included. The
-          colour asymmetry carries over from the TV: a field of MY colour for
-          mine, a dark card with their colour as a rule for theirs. Keyed on
+          color asymmetry carries over from the TV: a field of MY color for
+          mine, a dark card with their color as a rule for theirs. Keyed on
           the moment so each one slides in fresh. While a sheet is open the
           banner moves inside it instead (above), so it never covers a lineup. */}
       {moment && !sheetOpen && (

@@ -531,7 +531,7 @@ const franchiseNamesCache = (): Map<string, { at: number; marks: Record<string, 
  * every league an owner is in can afford to show them at all.
  *
  * REGISTERED LEAGUES DO NOT COME HERE. They have committed team brands with
- * colours and crests (`getLeagueTeamBrands`), which is strictly more than this
+ * colors and crests (`getLeagueTeamBrands`), which is strictly more than this
  * returns; the caller prefers those and only falls back to this.
  *
  * Never throws. An unreadable league returns `{}` and the board degrades to

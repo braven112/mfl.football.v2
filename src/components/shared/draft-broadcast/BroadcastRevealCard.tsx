@@ -299,7 +299,7 @@ export function BroadcastRevealCard({
               not alt on decorative cutouts, so it is legible from ten feet.
               One chip per man, side by side on one line, each seated under the
               head it names — the three-level nesting is what buys that: the
-              <p> spans the pair, each row is an equal-width SEAT centred on a
+              <p> spans the pair, each row is an equal-width SEAT centered on a
               cutout, and the chip inside it is the pill that shrinks to the
               name. See the seat arithmetic in draft-broadcast.css. */}
           {shownFaces.length > 0 ? (
@@ -338,7 +338,7 @@ export function BroadcastRevealCard({
             {origin.label ? (
               <span className="dbc-reveal__origin">
                 {/* Ahead of the words, the way a broadcast lower-third does it:
-                    the room recognises a helmet at ten feet faster than it
+                    the room recognizes a helmet at ten feet faster than it
                     reads a three-letter code. Decorative — the school or team
                     is already spelled out beside it — so no alt text, and a
                     404 hides the img rather than leaving a broken frame in the

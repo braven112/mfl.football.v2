@@ -15,7 +15,7 @@
  * and skew dark; the network marks are whoever owns the broadcast rights, and
  * two of them are pale by brand — Channel 5's yellow 5 and Kayo's light green
  * are on a white card what a black crest is on #262626. There is no light-mode
- * artwork to swap to, so those take the same ring in the opposite colour under
+ * artwork to swap to, so those take the same ring in the opposite color under
  * `html:not(.dark)`. A mark can qualify on both surfaces and get both rules;
  * only one ever applies.
  *
@@ -35,7 +35,7 @@ import { crestStrokeFilter } from './crest-dark-stroke-css';
 export const TV_LOGO_DIR = '/assets/tv-logos';
 
 /**
- * The ring colour on the LIGHT card — the mirror of the crests'
+ * The ring color on the LIGHT card — the mirror of the crests'
  * `DEFAULT_CREST_STROKE_COLOR` white. Not opaque black: at the crest ring's
  * 0.5px this reads as the edge the mark is missing rather than an inked
  * outline drawn around it.

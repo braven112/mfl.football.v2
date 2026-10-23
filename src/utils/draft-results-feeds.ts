@@ -132,7 +132,7 @@ export async function buildDraftResultsView(input: {
     year,
     rawUnit: season.rawUnit,
     // Franchise names and slots move between seasons, so the board is
-    // labelled with the config as it stood THAT year, not as it stands now.
+    // labeled with the config as it stood THAT year, not as it stands now.
     teams: input.teamsForYear(year),
     params: input.params,
     labelForUnit: input.labelForUnit,

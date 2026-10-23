@@ -34,7 +34,7 @@
  *   node scripts/lock-schedule-release.mjs --from-live --relock   # ...over a wrong reveal
  *
  * --from-live exists because the plan on disk and the schedule the
- * commissioner actually pasted can be two DIFFERENT valid draws. The optimiser
+ * commissioner actually pasted can be two DIFFERENT valid draws. The optimizer
  * is simulated annealing, so a second run — the admin page, a re-run of the
  * CLI — produces another season that satisfies every rule and shares not one
  * week with the committed plan. When that has already happened, the reveal has
@@ -257,7 +257,7 @@ async function releaseFromPlan(slug, y) {
  * Build a reveal record from the schedule that is ALREADY LIVE in MFL.
  *
  * The committed plan and the pasted season can be two different valid draws —
- * the optimiser anneals, so the admin page and the CLI each produce a season
+ * the optimizer anneals, so the admin page and the CLI each produce a season
  * that satisfies every rule and shares not one week with the other. Once a
  * paste has landed, the reveal has to describe the season being played;
  * anything else shows owners a schedule nobody will play and leaves Schefter's

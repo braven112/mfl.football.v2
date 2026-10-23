@@ -147,7 +147,7 @@ function loadByeWeeks(year: number): Map<string, number> {
  * rather than a display budget. Five gives ten possible pairings — deep enough
  * that the same defense drafted in both conferences (`duplicatePlayers` allows
  * it) is unlikely to show the room the same two men, and shallow enough that
- * every name in it is one the room recognises. The pool's sixth is a
+ * every name in it is one the room recognizes. The pool's sixth is a
  * rotational safety nobody is looking up.
  */
 const DEFENSE_FACE_LIMIT = 5;
@@ -377,7 +377,7 @@ export function loadConferenceKeepers(
  *
  * Players drafted TONIGHT are excluded via `draftedIds` — the island merges
  * them back in from the live board, where their pick number is also known.
- * That is not merely an optimisation: `rosters.json` is a cron snapshot that
+ * That is not merely an optimization: `rosters.json` is a cron snapshot that
  * gains tonight's picks partway through the draft, so a panel that trusted it
  * alone would show a pick as a holding minutes before the board agreed. The
  * island dedupes by player id, so a player who appears in both is counted once

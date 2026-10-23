@@ -32,7 +32,7 @@ html[data-season='halloween'] .mfl-menu__theme {
 }
 
 /* Standings seed badges: gold and silver become the season's orange and bone.
-   Team-colour stripes and painted rows stay as they are (owner's call). */
+   Team-color stripes and painted rows stay as they are (owner's call). */
 html[data-season='halloween'] .stb-seedchip--division_winner {
   background: var(--color-primary);
   color: #111;
@@ -73,7 +73,7 @@ html[data-season='halloween'] .lv-page .lv-head__right {
 }
 /* Desktop: the scene runs the full width of the screen while the title,
    picker and cards stay on the page's own column. The scene moves to a
-   pseudo-element centred under the header and 100vw wide; `100vw` counts a
+   pseudo-element centered under the header and 100vw wide; `100vw` counts a
    classic scrollbar, so the page clips the overflow sideways (`clip`, not
    `hidden`, so no scroll container is made and sticky elements still work). */
 @media (min-width: 768px) {
@@ -265,7 +265,7 @@ html[data-season='halloween'] .mfl-live-board .lv-head__right {
 /* The landing: the scene sits behind the headline alone, so the copy and the
    sign-in buttons below it stay on the plain ground and never cross the house.
    The hero goes to one column for the season; the .mll column is capped at
-   76rem, so the scene is a 100vw pseudo-element centred under the headline
+   76rem, so the scene is a 100vw pseudo-element centered under the headline
    (which now spans that column), the way the league boards draw it on
    desktop. The page clips the sideways overflow (`clip`, so no scroll
    container is made). */

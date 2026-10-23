@@ -75,7 +75,7 @@ async function readLiveOrder(leagueId: string, year: number) {
     if (!res.ok) throw new Error(`MFL league HTTP ${res.status}`);
     const order = readWaiverSortOrder(await res.json());
     // An empty parse is not a valid order — it means MFL answered with an
-    // error body or a shape we don't recognise. Treat it as a failure so the
+    // error body or a shape we don't recognize. Treat it as a failure so the
     // last known-good order keeps serving, rather than caching "nobody has
     // priority" for a minute.
     if (order.length === 0) throw new Error('MFL league payload carried no waiverSortOrder');
@@ -133,7 +133,7 @@ export const GET: APIRoute = async ({ request }) => {
   // feature exists because both leagues have a franchise 0001, so guessing a
   // league for a session that does not name one would answer with the wrong
   // league's order and highlight a team that isn't the caller's. A session
-  // without a recognised league is broken; say so and let them sign in again.
+  // without a recognized league is broken; say so and let them sign in again.
   const league = user.leagueId ? getLeagueById(user.leagueId) : null;
   if (!league) return fail('Unrecognized league on session. Please sign in again.', 400);
 

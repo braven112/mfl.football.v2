@@ -289,7 +289,7 @@ export function applyAIVoice(issue, aiOutput, teams) {
   // paragraphs in <p> tags and it sometimes obeys that instead: TheLeague's
   // 2026 Week 5 issue shipped every blurb as `<p>…</p>`, printed literally on
   // the page and in the GroupMe post. Every field here renders as text, so
-  // normalise before validating rather than trusting the instruction.
+  // normalize before validating rather than trusting the instruction.
   const plain = (v) => (typeof v === 'string' ? spellOutShorthand(toChatPlainText(v)) : v);
   aiOutput = aiOutput && {
     ...aiOutput,

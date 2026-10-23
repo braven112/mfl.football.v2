@@ -152,7 +152,7 @@ export function hasDestination(league, key) {
  *
  * NULL RATHER THAN THROW, because the whole point of the feature-plug tier is
  * that an article type lists more features than any one league has. The AFL
- * has no salary cap, so a cap-flavoured plug simply drops out there instead
+ * has no salary cap, so a cap-flavored plug simply drops out there instead
  * of forcing every `relatedLinks` into a pile of per-league conditionals.
  * `primaryLink` is the exception — see below.
  *
@@ -373,7 +373,7 @@ function normalizeHref(raw) {
       // absolute URL means an external link whose path happens to collide with
       // a destination (`https://example.com/theleague/rosters`) is silently
       // rewritten into an internal one — a link that now points somewhere the
-      // author never wrote, with nothing logged. An unrecognised host returns
+      // author never wrote, with nothing logged. An unrecognized host returns
       // null instead, so it falls through to the strip-and-notice path.
       if (!isOwnHost(url.hostname)) return null;
       href = url.pathname;
@@ -415,7 +415,7 @@ function buildHrefIndex(links, league) {
 /**
  * Repair or strip every anchor in one HTML paragraph.
  *
- * An unrecognised href is UNWRAPPED, not deleted: the sentence the model wrote
+ * An unrecognized href is UNWRAPPED, not deleted: the sentence the model wrote
  * is still true and still reads, it just stops promising a page that does not
  * exist. Deleting the anchor's text instead would silently drop a clause out
  * of the middle of a paragraph.
@@ -467,7 +467,7 @@ function sanitizeParagraph(html, index, notices) {
 }
 
 /**
- * Last line of defence, and deliberately not dependent on the scanner above.
+ * Last line of defense, and deliberately not dependent on the scanner above.
  *
  * Sweeps for the substring `href=` wherever it appears and deletes any
  * attribute whose value is not on the allow-list. Two independent mechanisms
@@ -512,7 +512,7 @@ function ctaParagraph(link) {
  *
  * `content` is the flat-paragraph shape most types use; the grade-card types
  * (`draft-grades`, `team-grades`) put their prose in `intro` plus a `body`
- * string per grade. Sanitising only `content` would have left the grade cards
+ * string per grade. Sanitizing only `content` would have left the grade cards
  * as the one place a hallucinated href could still ship.
  */
 function bodyFields(post) {

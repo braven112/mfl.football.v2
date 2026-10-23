@@ -10,7 +10,7 @@
  * holds every draft round): src/data/seasonal-marks/<league>-<season>.json
  * names the locked pick per franchise id, and every id must be present in
  * <source-dir>. Output: public/assets/<league>/<marks>/<franchiseId>.png,
- * 200×200, the mark trimmed and centred like the 100×100 icons it replaces
+ * 200×200, the mark trimmed and centered like the 100×100 icons it replaces
  * (shown at 2×).
  */
 import crypto from 'node:crypto';

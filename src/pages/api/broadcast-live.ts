@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       leaguesCookie: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
       week,
       year: getCurrentSeasonYear(testDate),
-      // Only the numbers. Panel identity — colours, crests, name forms —
+      // Only the numbers. Panel identity — colors, crests, name forms —
       // cannot change during a Sunday and this route does not return it.
       mode: 'poll',
     });

@@ -124,7 +124,7 @@ export function validateBrandingEdit(input, { leagueSlug, current }) {
     if (!(key in input)) continue;
     const v = clean(input[key]).toLowerCase();
     if (v === '' && key !== 'colorPrimary' && key !== 'colorSecondary') patch[key] = null;
-    else if (!HEX.test(v)) errors.push(`${key} must be a 6-digit hex colour like #1d3a6e.`);
+    else if (!HEX.test(v)) errors.push(`${key} must be a 6-digit hex color like #1d3a6e.`);
     else patch[key] = v;
   }
   for (const key of IMAGE_FIELDS) {
@@ -153,7 +153,7 @@ export function validateBrandingEdit(input, { leagueSlug, current }) {
  * A rename keeps the old name as an alias: Schefter's redaction must cover
  * every name a team has had (docs/claude/rules/schefter.md), and the
  * commissioner should not have to remember that. `null` removes an optional
- * field. When the primary colour changes, the chart colour (`color`) follows
+ * field. When the primary color changes, the chart color (`color`) follows
  * it unless the team set a separate one.
  *
  * @param {{ teams: Array<Record<string, unknown>> }} config

@@ -26,7 +26,7 @@
  * It used to draw side 1 on the left, which mirrored every detail view: the
  * left team's score sat over the right team's share (Sep 2026).
  *
- * The COLOUR is a separate question, because a caller may reorder the pair
+ * The COLOR is a separate question, because a caller may reorder the pair
  * (`renderOrder` puts the viewer first on MFL Live) while `--t0`/`--t1` stay
  * keyed to the matchup's own sides. `side0Tone` names which of the two the
  * left team wears; it defaults to 0, and the right team always wears the other.
@@ -48,7 +48,7 @@ export interface LvWinProbBarProps {
    */
   side0YetToPlay?: number;
   side1YetToPlay?: number;
-  /** Which matchup colour (`--t0` / `--t1`) side 0 wears. Defaults to 0. */
+  /** Which matchup color (`--t0` / `--t1`) side 0 wears. Defaults to 0. */
   side0Tone?: 0 | 1;
 }
 

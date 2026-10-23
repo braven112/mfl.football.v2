@@ -23,7 +23,7 @@
  * interval one level up would re-render every starter row on the board once a
  * second. The board itself only re-renders on a poll, which at the idle
  * cadence is 90 seconds — a caption that said "1m ago" for a minute and a half
- * would be the second wrong number on a screen that is already apologising for
+ * would be the second wrong number on a screen that is already apologizing for
  * its first.
  */
 import { useEffect, useState, type JSX } from 'react';

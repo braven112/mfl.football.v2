@@ -48,7 +48,7 @@ function currentMonday() {
   const monday = new Date(now);
   monday.setDate(now.getDate() + diff);
   // Local parts, not toISOString(): the day above is chosen with local
-  // getters, so a UTC serialiser disagrees west of Greenwich and a Monday
+  // getters, so a UTC serializer disagrees west of Greenwich and a Monday
   // evening run in PT would look for Tuesday's article, find none, and report
   // "nothing to push" for a week that did publish.
   const pad = (n) => String(n).padStart(2, '0');

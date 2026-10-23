@@ -88,7 +88,7 @@
     border-color var(--transition-fast);
 }
 
-/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+/* An <a>: restate color and decoration on hover/focus, or the layouts'
    global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
 .ui-state__action:is(:hover, :focus) {
   color: var(--page-text);
@@ -101,7 +101,7 @@
 }
 
 /* Compact: inside a card or a table cell, where a dashed panel would be a
-   card within a card. Just the words, left-aligned with their neighbours. */
+   card within a card. Just the words, left-aligned with their neighbors. */
 .ui-state--compact {
   align-items: flex-start;
   max-width: none;

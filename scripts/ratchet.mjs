@@ -35,7 +35,7 @@ import {
   collectClientRouterOffenders,
   collectDesignLiterals,
   collectSiblings,
-  decolour,
+  decolor,
   describeRoute,
   forkedRoutes,
   inBandRoutes,

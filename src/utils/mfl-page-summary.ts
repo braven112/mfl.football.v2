@@ -47,7 +47,7 @@ export interface MflPageSummary {
  */
 const NAV_TAIL_MARKERS = ['Select Keepers', 'Future Draft Picks', 'My Draft List'];
 
-/** Strip MFL's league menu, if it is recognisable. Otherwise return as-is. */
+/** Strip MFL's league menu, if it is recognizable. Otherwise return as-is. */
 function dropNav(text: string): string {
   for (const marker of NAV_TAIL_MARKERS) {
     const at = text.lastIndexOf(marker);

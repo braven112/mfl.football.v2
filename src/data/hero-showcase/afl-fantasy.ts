@@ -5,7 +5,7 @@
  * systems answer different questions, and the interesting parts here are the
  * ones TheLeague does not have: two conferences that draft on different days
  * off different pages, keepers instead of contracts, and a league that rosters
- * the same NFL player twice — which is what makes "whose colours is this hero
+ * the same NFL player twice — which is what makes "whose colors is this hero
  * in?" a real question rather than a lookup.
  */
 import type { ShowcaseContent } from '../../types/hero-showcase';
@@ -36,19 +36,19 @@ const content: ShowcaseContent = {
       'The AFL homepage hero is not a banner on a rotation. A calendar decides which phase the ' +
       'league is in, a casting rule decides <em>which player’s</em> face belongs on it, and — because ' +
       'this league rosters the same NFL player in <em>both</em> conferences — a third rule decides ' +
-      '<em>whose colours</em> the card is painted in. That last one is the hard part, and it is the ' +
+      '<em>whose colors</em> the card is painted in. That last one is the hard part, and it is the ' +
       'reason this page exists.',
-    stack: ['Astro SSR', 'Conference-aware casting', 'Franchise-colour accents', 'Shared composite shell', 'Light + dark'],
+    stack: ['Astro SSR', 'Conference-aware casting', 'Franchise-color accents', 'Shared composite shell', 'Light + dark'],
   },
 
   // ── THE INVENTORY ───────────────────────────────────────────────────────
   // The AFL ships exactly three composite treatments, and each has a
   // live/urgent variant, so the honest inventory is six — plus the one case
   // that is the whole reason this page exists: a player both of your
-  // conferences roster, where the franchise-colour rule declines to pick.
+  // conferences roster, where the franchise-color rule declines to pick.
   //
   // Earlier drafts invented a "CUT DOWN" and a "GAME DAY" card to demonstrate
-  // the colour rule. Neither is an AFL hero. The rule is now demonstrated
+  // the color rule. Neither is an AFL hero. The rule is now demonstrated
   // inside the states that actually ship — and, since these render the live
   // shell, a card cannot show a treatment the components cannot produce.
   gallery: [
@@ -57,7 +57,7 @@ const content: ShowcaseContent = {
       component: 'LeagueCompositeHero · keeper window', wordmark: 'KEEPERS',
       pill: '2026 Keeper Deadline', title: 'Lock in', titleAccent: 'your core.',
       summary:
-        'Trophy gold is the keeper window’s colour, and the face is your keeper cornerstone. Keepers are ' +
+        'Trophy gold is the keeper window’s color, and the face is your keeper cornerstone. Keepers are ' +
         'a team story, so the crest behind him is your club’s and the glow is theirs — not Detroit’s.',
       ctaLabel: 'Set your keepers',
       franchiseId: '0011',
@@ -132,7 +132,7 @@ const content: ShowcaseContent = {
       component: 'LeagueCompositeHero \u00b7 game day', wordmark: 'GAME\u00a0DAY',
       pill: 'Game day', title: 'Lineups lock at', titleAccent: 'kickoff.',
       summary:
-        'Last call to set starters. Your lineup and your deadline, so the card wears your club\u2019s colours ' +
+        'Last call to set starters. Your lineup and your deadline, so the card wears your club\u2019s colors ' +
         'and crest rather than the league\u2019s.',
       ctaLabel: 'Set lineup',
       franchiseId: '0001',
@@ -144,7 +144,7 @@ const content: ShowcaseContent = {
       pill: 'Sunday Ticket', title: 'Build your', titleAccent: 'multiview.',
       summary:
         'Once your lineup is in, the same slot flips to the multiview board \u2014 four boxes a window, ranked ' +
-        'by how many of your starters are on the field. Still your team, still your colours.',
+        'by how many of your starters are on the field. Still your team, still your colors.',
       ctaLabel: 'Build your Sunday',
       franchiseId: '0014',
       model: { name: 'Emeka Egbuka', descriptor: 'Your Starter', pos: 'WR', code: 'TB', espnId: '4567750' },
@@ -186,7 +186,7 @@ const content: ShowcaseContent = {
       component: 'LeagueCompositeHero \u00b7 Monday standings', wordmark: 'STANDINGS',
       pill: 'Monday standings', title: 'The race', titleAccent: 'tightens.',
       summary:
-        'Cast from the leader\u2019s headliner \u2014 but league-coloured, because the leader may be in the ' +
+        'Cast from the leader\u2019s headliner \u2014 but league-colored, because the leader may be in the ' +
         'other conference and the franchise accent resolves within yours. Two different clubs.',
       ctaLabel: 'See the race',
       model: { name: 'Malik Nabers', descriptor: 'Leading the Race', pos: 'WR', code: 'NYG', espnId: '4595348' },
@@ -196,7 +196,7 @@ const content: ShowcaseContent = {
       component: 'LeagueCompositeHero \u00b7 waiver day', wordmark: 'WAIVERS',
       pill: 'Waiver day', title: 'Claims run', titleAccent: 'tonight.',
       summary:
-        'The face is a free agent \u2014 nobody rosters him, so there is no club whose colours this could ' +
+        'The face is a free agent \u2014 nobody rosters him, so there is no club whose colors this could ' +
         'honestly wear. League navy, and his NFL crest behind him.',
       ctaLabel: 'Set your claims',
       model: { name: 'Rome Odunze', descriptor: 'Top Target', pos: 'WR', code: 'CHI', espnId: '4431299' },
@@ -258,7 +258,7 @@ const content: ShowcaseContent = {
       pill: 'Champion crowned', title: 'A new', titleAccent: 'champion.',
       summary:
         'League scope on purpose: the face here is a league-wide headliner, not the winner\u2019s own ' +
-        'player, so club colours would dress it in whoever happened to be cast.',
+        'player, so club colors would dress it in whoever happened to be cast.',
       ctaLabel: 'View recap',
       model: { name: 'Travis Etienne', descriptor: 'Headliner', pos: 'RB', code: 'NO', espnId: '4239996' },
     },
@@ -308,15 +308,15 @@ const content: ShowcaseContent = {
       pill: 'Rostered twice', title: 'When the rule', titleAccent: 'refuses to guess.',
       summary:
         'The hard case, and the reason this page exists. Two clubs in your own conference roster him, so ' +
-        'there is no “your colours” to use — the card falls back to the league’s, and to his NFL crest.',
+        'there is no “your colors” to use — the card falls back to the league’s, and to his NFL crest.',
       ctaLabel: 'How casting works',
       model: { name: 'Trey McBride', descriptor: 'Rostered twice', pos: 'TE', code: 'ARI', espnId: '4361307' },
     },
   ],
   galleryNote:
-    'All six composite states the AFL ships, plus the case where the colour rule declines to pick ' +
-    '— real players, and real AFL franchise colours on the cards that are about a fantasy team ' +
-    'rather than an NFL one. The badge on each card says which half of the colour rule it is on. ' +
+    'All six composite states the AFL ships, plus the case where the color rule declines to pick ' +
+    '— real players, and real AFL franchise colors on the cards that are about a fantasy team ' +
+    'rather than an NFL one. The badge on each card says which half of the color rule it is on. ' +
     'Toggle your theme: the gradient, glow and tokens re-resolve for dark mode.',
   sections: [
     {
@@ -329,7 +329,7 @@ const content: ShowcaseContent = {
             'Identifiable NFL action photography is rights-managed — Getty, AP, Imagn. A fantasy site ' +
               'can’t ship it, and the usual fallback is a gradient with a headline on top.',
             'Every NFL player, though, has a <strong>free, transparent headshot on ESPN’s CDN</strong>. ' +
-              'Layer that cutout over a team-colour gradient with some typography and a glow and you get a ' +
+              'Layer that cutout over a team-color gradient with some typography and a glow and you get a ' +
               'branded, on-topic hero for any player, automatically, with zero licensing. The constraint ' +
               'became the design language — and the same one TheLeague uses, on the same components.',
             'What it unlocks is the rule the whole system exists to serve:',
@@ -346,7 +346,7 @@ const content: ShowcaseContent = {
     },
     {
       num: '02', title: 'The Duplicate-Player Problem',
-      sub: 'The AFL rosters the same NFL player twice, which makes “whose colours?” a real question',
+      sub: 'The AFL rosters the same NFL player twice, which makes “whose colors?” a real question',
       blocks: [
         {
           kind: 'prose-code',
@@ -363,7 +363,7 @@ const owners = ownersByPlayer.get(playerId);
 const mine = owners.filter(
   (id) => conferenceOf(id) === viewerConferenceId);
 
-// Anything but exactly one → his NFL team's colour,
+// Anything but exactly one → his NFL team's color,
 // which is what every hero did before this existed.
 if (mine.length !== 1) return fallback;`,
           },
@@ -372,14 +372,14 @@ if (mine.length !== 1) return fallback;`,
               'player can be rostered by a team in the American League <em>and</em> a team in the National ' +
               'League at the same time. Sixty of the AL’s eighty-four keepers are kept in the NL too. So ' +
               '“the franchise that rosters this player” is a <strong>list</strong>, and a hero that picks ' +
-              'one of them paints a stranger’s colours on your homepage.',
+              'one of them paints a stranger’s colors on your homepage.',
             'The rule that resolves it is to <strong>scope ownership to the viewer’s own ' +
               'conference</strong>. Inside a single conference a player has at most one owner, so the ' +
-              'ambiguity is removed rather than guessed at. An AL owner sees the AL club’s colours; the NL ' +
+              'ambiguity is removed rather than guessed at. An AL owner sees the AL club’s colors; the NL ' +
               'owner of the same player is not their story.',
-            'Everything that is not that falls back to the player’s NFL team colour — a signed-out ' +
-              'visitor, a free agent, a franchise with no usable brand colour. That fallback is the ' +
-              'behaviour every hero had before the accent existed, so the feature can only ever add.',
+            'Everything that is not that falls back to the player’s NFL team color — a signed-out ' +
+              'visitor, a free agent, a franchise with no usable brand color. That fallback is the ' +
+              'behavior every hero had before the accent existed, so the feature can only ever add.',
           ],
         },
         {
@@ -387,7 +387,7 @@ if (mine.length !== 1) return fallback;`,
           chips: [
             'ownership is a list, never a franchiseId ===',
             'scoped to the signed-in franchise, not ?myteam=',
-            'ambiguous → NFL colour',
+            'ambiguous → NFL color',
             'near-white brand → floored for contrast',
           ],
         },
@@ -401,9 +401,9 @@ if (mine.length !== 1) return fallback;`,
           kind: 'layers',
           layers: [
             { z: 'z-0', name: 'Navy or gold gradient + ghost wordmark', html: 'A diagonal gradient on the AFL’s navy, or trophy gold in the keeper window, with an oversized barely-there wordmark — <code>KEEPERS</code>, <code>AL&nbsp;DRAFT</code>, <code>NL&nbsp;DRAFT</code> — bled off the top edge.' },
-            { z: 'z-1', name: 'Radial glow, tinted by whoever owns the story', html: 'The cast player’s NFL team primary, or <strong>your franchise’s</strong> colour when your conference rosters him. <code>hexToRgba(tint, 0.42)</code> in dark, <code>0.22</code> in light.' },
+            { z: 'z-1', name: 'Radial glow, tinted by whoever owns the story', html: 'The cast player’s NFL team primary, or <strong>your franchise’s</strong> color when your conference rosters him. <code>hexToRgba(tint, 0.42)</code> in dark, <code>0.22</code> in light.' },
             { z: 'z-2', name: 'Transparent ESPN headshot cutout', html: 'Anchored bottom-right with a soft drop-shadow, <code>loading="eager"</code> above the fold, decorative <code>alt=""</code>. A 404 hides it and reveals the AFL crest silhouette instead of an empty flank.' },
-            { z: 'z-3', name: 'Frosted caption + editorial copy', html: 'His name on a blurred pill bottom-right — reading his <strong>NFL</strong> club, even when the glow is your fantasy one — and the phase’s copy bottom-left with explicit colours so global heading rules can’t restyle it.' },
+            { z: 'z-3', name: 'Frosted caption + editorial copy', html: 'His name on a blurred pill bottom-right — reading his <strong>NFL</strong> club, even when the glow is your fantasy one — and the phase’s copy bottom-left with explicit colors so global heading rules can’t restyle it.' },
           ],
         },
         {
@@ -558,8 +558,8 @@ if (mine.length !== 1) return fallback;`,
               '<strong>one spotlight shell and one panel board</strong>. Every dimension that genuinely ' +
               'differed between them became a custom property; every palette became a named accent. The AFL’s ' +
               'keeper and draft heroes are configurations of that shell, which is why they arrived with ' +
-              'light mode, dark mode, mobile behaviour and a 404 fallback already correct.',
-            'The accents are named per <em>hero</em> rather than per colour, and that is deliberate: three ' +
+              'light mode, dark mode, mobile behavior and a 404 fallback already correct.',
+            'The accents are named per <em>hero</em> rather than per color, and that is deliberate: three ' +
               'of TheLeague’s five were shades of blue that differ in accent, pill and dark surface, and ' +
               'folding them together on the way in restyled live heroes. The AFL adds two more — ' +
               '<code>navy</code> and <code>gold</code> — plus the shared <code>red</code> urgency tone that ' +
@@ -586,7 +586,7 @@ if (mine.length !== 1) return fallback;`,
       'A licensing constraint turned into a rule — every hero means something — and the rule turned into ' +
         'a handful of small deterministic pickers plugged into a calendar that already knew what day it was. ' +
         'The AFL’s twist is that identity here is genuinely ambiguous: two conferences, twenty-four teams, ' +
-        'and the same player on two rosters at once. Answering “whose colours?” honestly is one filter and ' +
+        'and the same player on two rosters at once. Answering “whose colors?” honestly is one filter and ' +
         'one fallback, and it is the difference between a hero that is about your team and one that is ' +
         'about somebody else’s.',
       'It renders on the server, stays stable for a Pacific-Time day, degrades to a card that always ' +

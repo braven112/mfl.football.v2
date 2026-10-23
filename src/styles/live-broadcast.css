@@ -5,15 +5,15 @@
  * legible across a room while the real games are on the other television. A
  * rem scale tuned for a laptop reads as fine print at ten feet.
  *
- * ## This file references NO colour token, deliberately
+ * ## This file references NO color token, deliberately
  *
- * Every colour token in the repo either inverts under `html.dark`
+ * Every color token in the repo either inverts under `html.dark`
  * (`--color-gray-900` resolves to near-WHITE, so a "dark broadcast panel"
  * painted with it turns white at night), or is floored against a surface this
  * page does not have (`--team-accent-<fid>` guarantees 3:1 against
  * `--card-surface` only, and that floor silently stops applying here), or
  * flips brightness with the theme (`--league-accent`). This surface is dark in
- * BOTH themes — franchise colours ARE the background — so ink is always white
+ * BOTH themes — franchise colors ARE the background — so ink is always white
  * and no `html.dark` override exists or is wanted. Same posture as
  * `draft-broadcast.css`. `tests/broadcast-theme-literals.test.ts` pins it.
  *
@@ -81,7 +81,7 @@
   --lbc-dim: 1;
   /* The two franchises in one header cell, via resolveTeamColorPair against
      --lbc-panel. Neutral slate until the island resolves the real pair — never
-     a franchise colour guessed in CSS. */
+     a franchise color guessed in CSS. */
   --lbc-mine: #64748b;
   --lbc-theirs: #334155;
   /* Win-probability split, as a percentage. 50% is an honest unknown. */
@@ -103,7 +103,7 @@
   --lbc-header-h: 36%;
 
   /*
-   * FULL-BLEED, out of the layout's centred column.
+   * FULL-BLEED, out of the layout's centered column.
    *
    * The league layout caps `main` at 1232px with a gutter, which is right for
    * every reading page on the site and wrong for this one: on a 1920-wide
@@ -142,7 +142,7 @@
   outline-offset: -0.5vw;
 }
 
-/* The headings MUST restate their colour. This surface is dark in both themes,
+/* The headings MUST restate their color. This surface is dark in both themes,
    but it renders inside the league layout, whose global h1/h2 rules set a dark
    ink that beats plain inheritance. Without this the player name renders
    near-black on the franchise gradient — fine on a laptop in light mode,
@@ -348,7 +348,7 @@
    * rendered NOTHING.
    *
    * Both halves of that shipped: uncapped, this divider painted the gradient's
-   * 0% stop, a saturated bar in the owner's own team colour hard against Game
+   * 0% stop, a saturated bar in the owner's own team color hard against Game
    * 1's score. Capped, it vanished entirely. The gradient is gone now, but the
    * shadow stays — it was never the compromise, it is simply the hairline that
    * always drew, and reinstating a border here would only re-arm the trap for
@@ -428,14 +428,14 @@
 .lbc__side {
   display: flex;
   /*
-   * CENTRE, not baseline.
+   * CENTER, not baseline.
    *
    * Under baseline alignment the line's cross-size is ascent + descent, driven
    * by an 83px numeral, so the shared text baseline sat ~75px down while the
-   * crest — `align-self: center` — centred at ~45px. The crest floated ~30px
+   * crest — `align-self: center` — centered at ~45px. The crest floated ~30px
    * above the name it belongs to, and got worse as the tier got roomier.
    *
-   * Centring also makes the line as tall as its tallest item rather than
+   * Centering also makes the line as tall as its tallest item rather than
    * ascent + descent, which gives ~16px of cell height back per side — margin
    * against the overflow-clipping failure `.lbc__cell` documents above.
    */
@@ -474,7 +474,7 @@
  * this same global stylesheet. Both were bare single-class rules, so the
  * LATER one won at equal specificity and this block's width floor shipped
  * inert the day it was written (Copilot, #1081): with `.lbc__tn`'s own floor
- * already given up in favour of it, the board went from a 25% floor to none
+ * already given up in favor of it, the board went from a 25% floor to none
  * at all. `tests/broadcast-shell-guards.test.ts` now fails on any class two
  * broadcast components both claim.
  *
@@ -482,7 +482,7 @@
  * where it was competing for width with two numerals and a crest — on a real
  * doubleheader cell it ellipsised to "1 to ..." and "0 t...", which is worse
  * than not printing it (owner, 2026-09-13). Stacked, it costs the row NO
- * height: `.lbc__side` is centred and its tallest item is the score numeral
+ * height: `.lbc__side` is centered and its tallest item is the score numeral
  * (~5.6vh at tier 3 against ~4.4vh for the two stacked lines), so this fits
  * inside height the row already had.
  *
@@ -537,7 +537,7 @@
   flex: none;
   /* The counter-drift used to live HERE, on the numeral alone — see
      `.lbc__cell`. It made the score the only moving thing in a row of static
-     neighbours, which is most of what "the scores are misaligned" was. */
+     neighbors, which is most of what "the scores are misaligned" was. */
 }
 
 /* The leading side is the one thing that is never dropped and never dimmed. */
@@ -630,8 +630,8 @@
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--lbc-mine, #64748b);
-  /* A hairline seam in the panel's own colour, so the split still reads when
-     the two franchise colours land close to each other. */
+  /* A hairline seam in the panel's own color, so the split still reads when
+     the two franchise colors land close to each other. */
   border-right: 1px solid var(--lbc-panel);
 }
 
@@ -678,7 +678,7 @@
 
 /* The same note beside cells that DO render, rather than in place of them.
    Amber, because this is the board saying it could not read something — the
-   one colour it reserves for that. */
+   one color it reserves for that. */
 .lbc__panel-note.is-inline {
   align-self: flex-start;
   margin: 0 0 0.3vh;
@@ -765,7 +765,7 @@
 
 /* The same lead indicator the full cell uses, and it is on NO drop rung: a
    score with no way of telling who is ahead is not a score. Weight AND
-   brightness, never colour alone — this row is 2.4vh and a hue difference at
+   brightness, never color alone — this row is 2.4vh and a hue difference at
    that size is the first thing a living room loses. */
 .lbc__extra-team.is-leading {
   color: var(--lbc-text);
@@ -1127,8 +1127,8 @@
 }
 
 /* ── Reveal: takeover (mine) ───────────────────────────────────────────────
-   A FIELD OF COLOUR means good news. That is the primary mine-vs-theirs
-   channel and it is spent once — no colour fills anywhere else on this page.
+   A FIELD OF COLOR means good news. That is the primary mine-vs-theirs
+   channel and it is spent once — no color fills anywhere else on this page.
 
    The gradient is split into background-color + background-image because
    `background: var(--x)` is all-or-nothing: a value rejected for the property
@@ -1139,10 +1139,10 @@
   /*
    * TWO COLUMNS: the copy, then the scorer.
    *
-   * Was a centred flex column with the player as a chip inside the copy. The
+   * Was a centered flex column with the player as a chip inside the copy. The
    * wash, crest and delta are all absolutely positioned with NO grid
    * placement, so they still resolve against this element's padding box —
-   * which is what lets the crest be centred on the LAYER independently of
+   * which is what lets the crest be centered on the LAYER independently of
    * these tracks, with the scorer seated to its right.
    *
    * The figure track is `auto`, not a `vw` constant: the stand is HEIGHT-
@@ -1178,7 +1178,7 @@
 }
 
 /* A LIGHT franchise cut needs a ring to survive a board that is dark in BOTH
-   themes; `resolveBroadcastCrest` decides which crests get one and the colour
+   themes; `resolveBroadcastCrest` decides which crests get one and the color
    rides on the team record. A class, not an inline filter — every crest rule
    below sets its own `filter` for the drop shadow, and an inline one would
    replace it wholesale. The ring WIDTH belongs to the surface, since the three
@@ -1197,15 +1197,15 @@
   --lbc-crest-ring-w: 2px;
   position: absolute;
   /*
-   * CENTRED on the layer. It sat bottom-right, bled off both edges, which put
+   * CENTERED on the layer. It sat bottom-right, bled off both edges, which put
    * it wholly underneath the figure column once the scorer moved there.
    *
-   * Anchored with `left`/`top` + a centring translate, and the old `right`/
+   * Anchored with `left`/`top` + a centering translate, and the old `right`/
    * `bottom` are GONE rather than left alongside: an absolutely positioned
    * element given both edges of an axis is pinned to both and stretches
    * instead of moving, so leaving either one in re-anchors it on that axis.
    * The draft board's crest has the mirror of this hazard written on it — it
-   * centres by default and has to unwind `left`, `top` AND `transform`
+   * centers by default and has to unwind `left`, `top` AND `transform`
    * together to move.
    */
   left: 50%;
@@ -1267,8 +1267,8 @@
      at half the distance it intended. */
   margin-block: -3vh;
   /*
-   * Further right than the layer's own padding, to clear the now-centred
-   * crest. An ESPN cutout is a transparent PNG with the player centred in the
+   * Further right than the layer's own padding, to clear the now-centered
+   * crest. An ESPN cutout is a transparent PNG with the player centered in the
    * frame, so the first few vw of this bleed spend the empty margin rather
    * than the man — measured, not assumed, before settling on the number.
    */
@@ -1308,7 +1308,7 @@
    * ONE seat, and every scorer takes it — a player, or the single defender who
    * stands in for a team defense. It is the seat the SECOND man of the old
    * defensive pair held (`right: -7.92%` of the stand), which is where Brandon
-   * wanted everyone once the crest moved to the centre.
+   * wanted everyone once the crest moved to the center.
    *
    * Positioned rather than laid out, so the seat is placed by construction and
    * cannot drift with the figure's width.
@@ -1334,7 +1334,7 @@
 .lbc-reveal__face {
   position: absolute;
   bottom: 3vh;
-  /* Centred under the one seat above, not spanning a pair. */
+  /* Centered under the one seat above, not spanning a pair. */
   right: -7.92%;
   width: 100%;
   z-index: 2;
@@ -1361,7 +1361,7 @@
      meet at 0px. */
   box-sizing: border-box;
   /* The air between the two chips, bought here rather than with a `gap` — a
-     gap between two `1fr` seats walks their centres away from the heads. */
+     gap between two `1fr` seats walks their centers away from the heads. */
   max-width: calc(100% - 0.6em);
   /* min beats max: without it the pill keeps its nowrap width and overflows. */
   min-width: 0;
@@ -1456,9 +1456,9 @@
 }
 
 /* ── Reveal: lower third (theirs) ──────────────────────────────────────────
-   House ink with a hairline of the opponent's colour. Their brand appears as
+   House ink with a hairline of the opponent's color. Their brand appears as
    the rule and the crest, NEVER as a full field — that is what keeps "big
-   colour = mine" learnable in one Sunday. */
+   color = mine" learnable in one Sunday. */
 .lbc-third {
   height: 100%;
   display: flex;
@@ -1785,8 +1785,8 @@
  *    picture at all.
  *
  * 2. THEMED, unlike everything else in this file. The rest of this stylesheet
- *    consumes no colour token deliberately: the BOARD is dark in both themes
- *    because franchise colours are its background, and every token here either
+ *    consumes no color token deliberately: the BOARD is dark in both themes
+ *    because franchise colors are its background, and every token here either
  *    inverts under `html.dark` or is floored against a surface the board does
  *    not have. This toolbar is not the board. It is an ordinary page surface
  *    sitting under the site nav, and hardcoding it near-black put a slab of
@@ -1835,7 +1835,7 @@
   white-space: nowrap;
 }
 
-/* The site's own link colour would make these read as navigation. They are
+/* The site's own link color would make these read as navigation. They are
    settings for the thing below them, so they stay muted until touched. */
 .lbc-bar__btn:hover,
 .lbc-bar__btn:focus {
@@ -1898,7 +1898,7 @@
   .lbc-reveal__body { align-self: center; }
   .lbc-reveal__stand { height: auto; width: 100%; }
   /* Reset the desktop seat. The model is absolutely positioned at
-     `right: -7.92%` up there to clear the centred crest; left unreset it
+     `right: -7.92%` up there to clear the centered crest; left unreset it
      pushes the backdrop ~8% of the layer off the right edge, where
      `.lbc-reveal { overflow: hidden }` clips it — and `justify-content:
      center` on the figure cannot pull back an absolutely positioned child. */
@@ -1984,7 +1984,7 @@
        free. */
     min-height: 0;
   }
-  /* Centred here: the column is the whole width rather than half of it, so the
+  /* Centered here: the column is the whole width rather than half of it, so the
      desktop seat's rightward offset would push him off the edge. */
   .lbc-reveal__model { right: 0; }
   .lbc-reveal__face { right: 0; width: 100%; }

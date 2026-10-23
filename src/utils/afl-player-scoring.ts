@@ -41,7 +41,7 @@
  * Coverage note: `data/` feeds older than the three most recent seasons are
  * deliberately kept out of the Vercel function (scripts/lib/archived-feed-files.mjs),
  * so an archive season reads back empty here and the caller renders an em dash —
- * the same behaviour the old playerScores reader had.
+ * the same behavior the old playerScores reader had.
  */
 
 import { getLeagueBySlug } from '../config/leagues';

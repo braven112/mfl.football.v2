@@ -77,7 +77,7 @@ const THIRD_DESK_FLOOR = 2;
 const POSITION_RUN_FLOOR = 3;
 /**
  * An expiry further out than this is not a clock anyone feels — and, more
- * concretely, the beat's furthest tier is labelled `this_week`, so a horizon
+ * concretely, the beat's furthest tier is labeled `this_week`, so a horizon
  * wider than a week hands the prompt a 13-day deadline under the word "week".
  */
 const EXPIRY_HORIZON_HOURS = 7 * 24;
@@ -130,7 +130,7 @@ function playerCountOf(assets) {
  *
  * Framing it from the named team is not cosmetic: the prose asserts what that
  * team is doing ("they want a back back"), and the named team is the only
- * franchise the post is allowed to characterise. Both sides' positions were
+ * franchise the post is allowed to characterize. Both sides' positions were
  * already merged into `positionTokens` before this existed, so which side a
  * position sat on was the one thing the LLM could never say.
  */
@@ -262,7 +262,7 @@ export function assetShapeOf(rawOffer) {
  * The ask moved since we last looked.
  *
  * `direction` is from the NAMED team's side — the only franchise the post may
- * characterise — so a sweetened offer reads as what that team did, not as an
+ * characterize — so a sweetened offer reads as what that team did, not as an
  * unattributed change. A pure reshuffle (same counts, different assets) is
  * still news and says so as `reworked`.
  */

@@ -40,10 +40,10 @@
 import { asArray, byeWeeksOf } from './schedule-rules.mjs';
 
 /**
- * Composite value rank per MFL player id: the mean of its normalised rank in
+ * Composite value rank per MFL player id: the mean of its normalized rank in
  * every source that lists it. Lower is better.
  *
- * Averaging normalised ranks rather than raw ones matters because the sources
+ * Averaging normalized ranks rather than raw ones matters because the sources
  * are different lengths — rank 200 in a 600-player dynasty list and rank 200 in
  * a 278-player redraft list are not the same statement.
  */
@@ -55,9 +55,9 @@ export const compositeValueRanks = (rankingSourcesJson) => {
     if (!players.length) continue;
     for (const p of players) {
       const id = String(p.id);
-      const normalised = Number(p.rank) / players.length;
-      if (!Number.isFinite(normalised)) continue;
-      sum[id] = (sum[id] ?? 0) + normalised;
+      const normalized = Number(p.rank) / players.length;
+      if (!Number.isFinite(normalized)) continue;
+      sum[id] = (sum[id] ?? 0) + normalized;
       seen[id] = (seen[id] ?? 0) + 1;
     }
   }
@@ -157,7 +157,7 @@ export const starterByeExposure = ({
   for (const f of asArray(rostersJson?.rosters?.franchise)) {
     const roster = asArray(f.player);
     // Salary breaks ties for players no source ranks. Ranked players always
-    // sort ahead of unranked ones (+1 clears the normalised-rank range of 0-1),
+    // sort ahead of unranked ones (+1 clears the normalized-rank range of 0-1),
     // and among the unranked a bigger contract sorts first.
     const salary = {};
     for (const p of roster) salary[p.id] = Number(p.salary) || 0;

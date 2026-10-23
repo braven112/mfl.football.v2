@@ -343,7 +343,7 @@ export async function fetchAthleteNews(
   try {
     response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   } catch (error) {
-    // AbortSignal.timeout rejects with TimeoutError; a caller-cancelled request
+    // AbortSignal.timeout rejects with TimeoutError; a caller-canceled request
     // rejects with AbortError. Neither is "ESPN is broken", but only the timeout
     // is ours to report — an AbortError means the caller moved on already.
     const name = (error as { name?: string } | null)?.name;

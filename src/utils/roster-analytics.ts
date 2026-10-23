@@ -309,7 +309,7 @@ export function groupByCollege<T extends { college?: string | null; position: st
 // rule 2 in this file's header.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** One labelled, coloured bar/segment with a value in dollars (or $/point). */
+/** One labeled, colored bar/segment with a value in dollars (or $/point). */
 export interface CapSlice {
   label: string;
   value: number;
@@ -333,8 +333,8 @@ export interface CapAnalytics {
   capFree: number;
 }
 
-/** Bucket colours for the allocation/composition donuts. Position charts
- *  reuse POSITION_COLORS so a position is the same colour in every chart. */
+/** Bucket colors for the allocation/composition donuts. Position charts
+ *  reuse POSITION_COLORS so a position is the same color in every chart. */
 const BUCKET_COLORS: Record<string, string> = {
   Active: '#2563eb',
   Practice: '#0891b2',

@@ -278,7 +278,7 @@ export const REVEAL_MAX_AGE_MS = 90_000;
 /**
  * Is this pick recent enough to be worth the screen?
  *
- * A pick with no usable stamp IS revealed: the stamp is an optimisation for
+ * A pick with no usable stamp IS revealed: the stamp is an optimization for
  * suppressing history, and a board that silently swallowed picks because MFL
  * omitted a field would be the worse failure by far.
  *
@@ -357,11 +357,11 @@ function toHex(rgb: [number, number, number]): string {
   return `#${rgb.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** Contrast ratio of white against this colour. */
+/** Contrast ratio of white against this color. */
 export function contrastWithWhite(hex: string): number {
   const rgb = parseHex(hex);
   // 0, not the floor value. Returning MIN_WHITE_CONTRAST here reads as "passes"
-  // to every caller, so an unparseable brand colour — `#e9e9e9ff`, an
+  // to every caller, so an unparseable brand color — `#e9e9e9ff`, an
   // `rgb(...)` string, a typo — sailed through the league-wide guard tests and
   // reached the card untouched. The runtime path still degrades gracefully
   // (darkenForWhiteText returns the input unchanged); this is what makes the
@@ -371,7 +371,7 @@ export function contrastWithWhite(hex: string): number {
 }
 
 /**
- * Darken a franchise colour just far enough that white copy stays legible on
+ * Darken a franchise color just far enough that white copy stays legible on
  * it, leaving anything already dark enough completely untouched.
  *
  * Nine of the AFL's 24 franchises have a gradient stop that fails even the 3.0
@@ -382,15 +382,15 @@ export function contrastWithWhite(hex: string): number {
  *
  * Scales RGB toward black rather than mixing in grey, which holds the hue and
  * saturation — a light pink becomes a deeper pink, never a muddy one. Returns
- * the input unchanged when it cannot be parsed, so a malformed brand colour
- * degrades to today's behaviour instead of throwing on draft night.
+ * the input unchanged when it cannot be parsed, so a malformed brand color
+ * degrades to today's behavior instead of throwing on draft night.
  */
 export function darkenForWhiteText(hex: string, minRatio = MIN_WHITE_CONTRAST): string {
   const rgb = parseHex(hex);
   if (!rgb) return hex;
   if (contrastWithWhite(hex) >= minRatio) return hex;
 
-  // Binary search the scale factor, evaluating the ROUNDED colour at each step.
+  // Binary search the scale factor, evaluating the ROUNDED color at each step.
   // Searching on the float and rounding once at the end lands just under the
   // target (4.47 against a 4.5 bar) because the 8-bit round can only lighten;
   // scoring what we will actually emit makes the floor a real guarantee.
@@ -407,7 +407,7 @@ export function darkenForWhiteText(hex: string, minRatio = MIN_WHITE_CONTRAST): 
 
 
 /** How much to push saturation before darkening. Dialled for a TV across a
- *  room, where a merely-correct colour reads as washed out. */
+ *  room, where a merely-correct color reads as washed out. */
 const TV_SATURATION_BOOST = 1.3;
 
 function rgbToHsl([r, g, b]: [number, number, number]): [number, number, number] {
@@ -442,12 +442,12 @@ function hslToRgb([h, s, l]: [number, number, number]): [number, number, number]
 }
 
 /**
- * The colour treatment the broadcast card paints franchise brands with.
+ * The color treatment the broadcast card paints franchise brands with.
  *
  * Saturate, then floor the contrast. Both halves are for the same reason: a TV
- * across a lit room eats subtlety, so a merely-accurate colour reads washed
+ * across a lit room eats subtlety, so a merely-accurate color reads washed
  * out, and a light one makes the copy unreadable outright. Saturating BEFORE
- * darkening matters — darkening a colour costs saturation, so boosting after
+ * darkening matters — darkening a color costs saturation, so boosting after
  * would be partly undone.
  *
  * A greyscale brand (saturation 0) is left un-saturated rather than being given
@@ -472,7 +472,7 @@ const GREY_SATURATION = 0.08;
  * hue at its native 0.91 lightness gives a pale wash whose channels sit within
  * a few points of each other, and the contrast floor then scales it back down
  * to something indistinguishable from the grey we were trying to escape. A
- * mid lightness is what actually reads as the colour on a TV.
+ * mid lightness is what actually reads as the color on a TV.
  */
 const TINT_SATURATION = 0.52;
 const TINT_LIGHTNESS = 0.45;
@@ -480,12 +480,12 @@ const TINT_LIGHTNESS = 0.45;
 /**
  * The gradient the reveal card actually paints, resolved as a PAIR.
  *
- * Six AFL franchises pair a real brand colour with the near-white #e9e9e9, and
+ * Six AFL franchises pair a real brand color with the near-white #e9e9e9, and
  * three more pair one with a mid grey. Treated stop-by-stop that grey has no hue to preserve,
  * so it can only ever darken to grey — Suh Girls' warm brown faded into a dead
  * slate halfway across the card. Resolving the pair together lets a greyscale
  * stop borrow the hue of whichever stop HAS one, so the gradient stays in the
- * franchise's colour from end to end.
+ * franchise's color from end to end.
  *
  * A franchise that is greyscale on BOTH stops has no hue to borrow and stays
  * grey, which is correct — that is genuinely its brand.
@@ -508,11 +508,11 @@ export function toBroadcastPair(
     if (!rgb) return hex;
     const [, sat] = rgbToHsl(rgb);
     if (sat >= GREY_SATURATION) return hex;
-    // Greyscale AND already legible means near-BLACK, which is a brand colour
-    // in its own right here — ten franchises pair a colour with #181818. The
+    // Greyscale AND already legible means near-BLACK, which is a brand color
+    // in its own right here — ten franchises pair a color with #181818. The
     // tint exists to rescue a LIGHT grey that would otherwise darken to slate;
     // applied to black it repainted Vitside Mafia's black half red and flattened
-    // the gradient to colour-on-colour.
+    // the gradient to color-on-color.
     if (contrastWithWhite(hex) >= MIN_WHITE_CONTRAST) return hex;
     return toHex(hslToRgb([hue, TINT_SATURATION, TINT_LIGHTNESS]));
   };
@@ -597,7 +597,7 @@ export function isSafeCssGradient(value: string | undefined | null): value is st
   // written to stop. A trailing comma slipped through the same way, since it
   // leaves an empty final layer. (Copilot caught this on PR #640.)
   //
-  // This also rejects a trailing plain colour (`linear-gradient(…), #000`),
+  // This also rejects a trailing plain color (`linear-gradient(…), #000`),
   // which is legal CSS. That is deliberate: this field paints franchise
   // gradients, and being stricter than CSS costs nothing here.
   const layers = splitLayers(trimmed);
@@ -630,7 +630,7 @@ export interface BroadcastOrigin {
 }
 
 /** The 32 canonical ESPN codes, as a set — `normalizeTeamCode` passes an
- *  unrecognised code through verbatim, so membership is the only proof that a
+ *  unrecognized code through verbatim, so membership is the only proof that a
  *  logo file exists for it. */
 const NFL_LOGO_CODES: ReadonlySet<string> = new Set(getAllNFLTeamCodes());
 
@@ -644,7 +644,7 @@ const NFL_LOGO_CODES: ReadonlySet<string> = new Set(getAllNFLTeamCodes());
  * light logo and lets `buildNflLogoDarkCss` / `buildCollegeLogoDarkCss` swap it
  * under `html.dark`, because with theme preference 'auto' the server cannot
  * know which the reader resolved. This card is the exception those helpers describe
- * and the Sunday Ticket multi-view already takes: it paints a franchise-colour
+ * and the Sunday Ticket multi-view already takes: it paints a franchise-color
  * gradient in BOTH themes, so the background is dark no matter what the viewer
  * picked, and the marks that vanish against it (Raiders, Steelers, Jets,
  * Bengals…) would vanish for the half of the room on the light theme. Shipping
@@ -660,7 +660,7 @@ const NFL_LOGO_CODES: ReadonlySet<string> = new Set(getAllNFLTeamCodes());
  * ~45-byte string per player for a pool of hundreds.
  *
  * Returns `logo: null` — never a substitute mark — for a free agent, a retiree
- * (both of which `normalizeTeamCode` folds to the NFL shield), an unrecognised
+ * (both of which `normalizeTeamCode` folds to the NFL shield), an unrecognized
  * team code, or a school the logo table does not carry. A wrong crest beside a
  * player's name is worse than no crest.
  */
@@ -809,7 +809,7 @@ export function resolveScreensaverIdleMs(raw: string | null | undefined): number
  * How long one PANEL owns the screen — the roster and position screens.
  *
  * Longer than a replayed pick (8s), because a panel is read rather than
- * recognised: a reveal is one name at 8vh that lands in a second, while a
+ * recognized: a reveal is one name at 8vh that lands in a second, while a
  * roster panel is a dozen faces and a count per position. Fifteen seconds is
  * about two unhurried passes across a TV from ten feet.
  */
@@ -1047,7 +1047,7 @@ export function screensaverSceneMs(scene: ScreensaverScene): number {
 /**
  * Class + custom property for a crest that needs an outline on the board.
  *
- * The colour is decided server-side (`resolveBroadcastCrest`) and travels on
+ * The color is decided server-side (`resolveBroadcastCrest`) and travels on
  * the team record; this is only the plumbing that hands it to CSS. The RING
  * WIDTH is deliberately NOT here — it belongs to the surface, and the four
  * crest surfaces are 68vh, ~34vh, ~14vh and ~4vh, so one width cannot serve

@@ -218,8 +218,8 @@ function applySortSlot(table: HTMLTableElement, active: SortState | null): void 
   const label = FA_SORT_CHIP_LABELS[active.key] ?? headerText(sortedTh);
   const slot = `${label} ${active.dir === 'asc' ? '▲' : '▼'}`;
   if (projTh!.dataset.faSlot !== slot) projTh!.dataset.faSlot = slot;
-  // Wear the page's own "sorted" colour, which differs by league and style:
-  // the sorted header is hidden, but its computed colour still resolves.
+  // Wear the page's own "sorted" color, which differs by league and style:
+  // the sorted header is hidden, but its computed color still resolves.
   const color = getComputedStyle(sortedTh).color;
   if (projTh!.style.getPropertyValue('--fa-slot-color') !== color) projTh!.style.setProperty('--fa-slot-color', color);
   for (const r of rows) {

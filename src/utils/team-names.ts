@@ -204,11 +204,11 @@ export interface FranchiseHistoryEntry {
   iconFreeform?: boolean;
   /**
    * Trace this era's crest in white, in DARK MODE ONLY — `true` for the
-   * default hairline, or a hex to override the colour.
+   * default hairline, or a hex to override the color.
    *
    * The third and last of the era-crest treatments, and the three answer
    * different questions. `iconStroke` rings the element BOX in the era's own
-   * colour in both themes, because a banner cut has no edge. `iconFreeform`
+   * color in both themes, because a banner cut has no edge. `iconFreeform`
    * removes the round slot, because a real mark is not a circle. This one
    * traces the ART's silhouette, because a mark can be perfectly shaped and
    * still sink into a near-black card — Smokane's green elephant reads fine

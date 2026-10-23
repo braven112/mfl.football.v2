@@ -176,7 +176,7 @@ export function buildAflRoomPageData(input: {
     // not an authenticated identity. `resolveAFLTeamSelection` also used to
     // fall back to '0001' with nothing set at all, which handed every
     // LOGGED-OUT visitor RSP data because that id collides with the one
-    // franchise the licence covers; that default is gone (it answers
+    // franchise the license covers; that default is gone (it answers
     // undefined now), but `?myteam=0001` still reaches here, so this stays.
     // RSP is licensed inside TheLeague besides, so an AFL franchise id could
     // never legitimately unlock it.

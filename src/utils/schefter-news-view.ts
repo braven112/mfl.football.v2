@@ -62,7 +62,7 @@ export const ALL_SOURCE = 'all';
  */
 const LEGACY_ALIASES: Record<string, SourceFilter> = {
   claude: 'theleague',
-  // The tab is labelled "For You" in season; the query value stays `watching`
+  // The tab is labeled "For You" in season; the query value stays `watching`
   // so links already shared in the group chat keep resolving.
   foryou: 'watching',
   events: 'theleague',
@@ -123,7 +123,7 @@ export interface ResolveNewsViewOptions {
   hasGroupChat?: boolean;
   /**
    * Clock override for tests. Callers normally omit it: `?testDate=` in the
-   * URL is honoured automatically, which is what /rollover-check drives.
+   * URL is honored automatically, which is what /rollover-check drives.
    */
   now?: Date;
   /**

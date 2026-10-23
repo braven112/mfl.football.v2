@@ -26,8 +26,8 @@
  *              matters: the guard pins it and lets it only shrink.
  *
  * The categories other than `exempt` are DERIVED from the source, never
- * hand-labelled — so a component cannot be waved through as "a page" by
- * editing a list. Hand judgement lives only in `exempt`, with a reason.
+ * hand-labeled — so a component cannot be waved through as "a page" by
+ * editing a list. Hand judgment lives only in `exempt`, with a reason.
  */
 import fs from 'node:fs';
 import path from 'node:path';

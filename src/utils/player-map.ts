@@ -285,7 +285,7 @@ export function getGlobalPlayerMap(
     }
   } catch {
     // Union artifact missing — return an empty map, matching the previous
-    // behaviour when the feeds directory was absent.
+    // behavior when the feeds directory was absent.
   }
 
   globalMapCache.set(leagueSlug, merged);

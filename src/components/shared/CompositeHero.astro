@@ -32,7 +32,7 @@ import '../../styles/hero-franchise-backdrop.css';
 
 
 export interface Props {
-  /** Landmark label — every hero is a labelled region. */
+  /** Landmark label — every hero is a labeled region. */
   ariaLabel: string;
   /** `section` for a standing league surface, `article` for a news item. */
   tag?: 'section' | 'article';
@@ -63,10 +63,10 @@ export interface Props {
    * space (U+00A0) to hold a two-word mark on one line.
    */
   wordmark?: string;
-  /** Centred crest watermark — resolve it with `resolveHeroCrest`. */
+  /** Centered crest watermark — resolve it with `resolveHeroCrest`. */
   crest?: { src: string; filter?: string; round?: boolean } | null;
   /**
-   * The club's colours, for a hero that is about a TEAM rather than about the
+   * The club's colors, for a hero that is about a TEAM rather than about the
    * league — your cuts, your keeper class, the franchise that rostered the
    * week's top scorer. A league event (a draft, the auction, kickoff, a site
    * announcement) passes nothing and keeps its phase gradient.
@@ -193,7 +193,7 @@ const loading = eager ? 'eager' : 'lazy';
   {/* The crest and the wordmark STACK — they are not alternatives. The crest
       says who the hero is about; the wordmark says what phase it is, and losing
       it would cost the thing that lets an owner tell an AL draft from an NL one
-      across the room. The crest is centred and faded far enough underneath that
+      across the room. The crest is centered and faded far enough underneath that
       both the wordmark and the copy read over it. */}
   {crest && (
     <img

@@ -19,7 +19,7 @@ const uniqueIconEntries = iconEntries.filter(entry => {
   return true;
 }).sort((a, b) => a.id.localeCompare(b.id));
 
-// Draw the catalogue from the league's own icon set. Every set carries the same
+// Draw the catalog from the league's own icon set. Every set carries the same
 // ids (tests/icon-set-parity.test.ts), so the list read above is the same list.
 const spriteUrl = spriteUrlFor(Astro.url);
 

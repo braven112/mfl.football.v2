@@ -8,7 +8,7 @@
  * exists so that paste is an informed one: what changes, what it fixes, and a
  * blocking check that refuses to hand over a schedule that breaks a rule.
  *
- * Colours are theme tokens throughout. A hard-coded hex here would look right
+ * Colors are theme tokens throughout. A hard-coded hex here would look right
  * in light mode and ship white-on-white in dark.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -54,7 +54,7 @@ type Plan = {
   divisionGameCeiling: { total: number; ceiling: number; forcedOntoByeWeeks: number };
   /**
    * Present when the plan came from the API, which cannot afford the full
-   * colouring search inside a request. Absent means a full draw.
+   * coloring search inside a request. Absent means a full draw.
    */
   preview?: { coloringIterations: number; full: boolean };
   plan: SeasonSummary;

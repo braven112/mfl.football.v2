@@ -204,7 +204,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
 
     /**
      * Competition ranking (1,1,1,4) — equal values MUST share a rank, because
-     * rank is what drives the cell colour. Ranking purely by sorted position
+     * rank is what drives the cell color. Ranking purely by sorted position
      * split ties across the quartile boundary: the out-year Roster Holes
      * column is mostly zeros, and four of those identical 0s went green while
      * the rest went red, which is the same value painted "best" and "worst" in
@@ -227,10 +227,10 @@ const serializedData = JSON.stringify({ teams, years, categories });
      * Rank 1 is ALWAYS the best team for the selected category —
      * `rankTeamsForColumn` has already folded `cat.direction` into the sort
      * (descending for 'asc' categories, ascending for 'desc' ones). So the
-     * colouring keys off rank alone.
+     * coloring keys off rank alone.
      *
      * Applying `direction` a second time here is what shipped the inversion:
-     * for every 'desc' category the two cancelled out and the green quartile
+     * for every 'desc' category the two canceled out and the green quartile
      * landed back on the highest RAW value, so Dead Money painted $6.0M green
      * and $213K red. Same for Average Age, Expiring Contracts, Committed
      * Salary %, Roster Holes and Salary-Weighted Age.
@@ -267,7 +267,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
       });
 
       // A column where every team shares one value has no best and no worst,
-      // so it gets no colour at all rather than a uniform wash of green.
+      // so it gets no color at all rather than a uniform wash of green.
       const flatColumn = years.map((_: any, yi: number) => {
         const values = sorted.map((t: any) => getTeamValue(t, yi));
         return values.every((v: number) => v === values[0]);

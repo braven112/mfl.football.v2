@@ -1,7 +1,7 @@
 /**
  * The fixed scoreboard header — the one thing on this board that never moves.
  *
- * Props-only, so it stories. Every colour, crest and name form was resolved
+ * Props-only, so it stories. Every color, crest and name form was resolved
  * server-side; this component decides nothing about identity, only about
  * layout at the density it is handed.
  */
@@ -369,6 +369,6 @@ function BroadcastScoreHeader({
  * times over an eight-hour Sunday — on set-top hardware, and concurrently
  * with the reveal transitions that are the one thing on this screen allowed
  * to cost a frame budget. Props here are already memoised upstream, so the
- * bailout is free and changes no behaviour.
+ * bailout is free and changes no behavior.
  */
 export default memo(BroadcastScoreHeader);

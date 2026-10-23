@@ -63,8 +63,8 @@
 }
 
 /* ── Link tabs ───────────────────────────────────────────────────────────
-   Every base layout styles a bare `a` (link colour) and `a:hover` / `a:focus`
-   (hover colour + underline) at (0,0,1)–(0,1,1), which beats a zero-specificity
+   Every base layout styles a bare `a` (link color) and `a:hover` / `a:focus`
+   (hover color + underline) at (0,0,1)–(0,1,1), which beats a zero-specificity
    :where() rule — a row of link tabs rendered every tab in link blue. Like
    cta.css, these state rules are written ONCE at (0,1,1)–(0,2,1) so an <a> tab
    keeps the tab look; the guard allows exactly this `.ui-tab:is(a)` shape. */

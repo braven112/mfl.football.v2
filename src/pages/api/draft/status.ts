@@ -114,7 +114,7 @@ const MFL_SAMPLES = 10;
  * Bounded so it can heal. A commissioner reverting the draft makes the
  * remembered board wrong, and 60s is long enough to smooth MFL's flapping while
  * short enough that a revert clears on its own. The board's own recency rule
- * (see `acceptedRef` in DraftBroadcast.tsx) is the second line of defence.
+ * (see `acceptedRef` in DraftBroadcast.tsx) is the second line of defense.
  */
 const FRESHEST_TTL_MS = 60_000;
 
@@ -214,7 +214,7 @@ async function fetchFreshest(
  *
  * The JSON export stays as the fallback. It is the documented API; this file is
  * an implementation detail of MFL's own UI, and if it ever moves the board
- * degrades to the old behaviour rather than to nothing.
+ * degrades to the old behavior rather than to nothing.
  */
 const staticUrlSeen = new Map<string, string>();
 
@@ -297,7 +297,7 @@ function atLeastAsFresh(a: BoardFreshness, b: BoardFreshness): boolean {
   return a.filled >= b.filled;
 }
 
-/** Fetch and parse the static file. Null on any failure — it is an optimisation. */
+/** Fetch and parse the static file. Null on any failure — it is an optimization. */
 async function fetchStaticBoard(staticUrl: string): Promise<RawDraftPick[] | null> {
   // Rebuilt here rather than trusting the caller: this is the function that
   // actually reaches the network with a URL derived from a response body.
@@ -323,7 +323,7 @@ export const GET: APIRoute = async ({ url }) => {
   // board's `?mflLeague=` override is one legitimate caller (see
   // draft-broadcast-source.ts) and anyone with a browser is another. A host
   // that is not MFL's is server-side request forgery with a URL bar for an
-  // interface, so an unrecognised value falls back to the default rather than
+  // interface, so an unrecognized value falls back to the default rather than
   // erroring: every real caller passes a valid one, and a 400 here would only
   // tell a prober it had found the right parameter.
   const leagueId =

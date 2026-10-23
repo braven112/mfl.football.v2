@@ -69,7 +69,7 @@ export interface BrandFileGroup {
 /** One seasonal set's files for one subject. `id` is the set's name in code. */
 export interface SeasonalMarks {
   id: string;
-  /** The display name — the id, capitalised. One name everywhere, by design. */
+  /** The display name — the id, capitalized. One name everywhere, by design. */
   name: string;
   /** The folder the set's files are served from, under /assets/<navSlug>/. */
   folder: string;

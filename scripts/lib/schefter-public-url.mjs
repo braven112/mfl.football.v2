@@ -26,7 +26,7 @@
  * already did for its `/news` deep link.
  *
  * `leagueUrl()` in the registry is the builder for everything that does NOT
- * need to honour a `SCHEFTER_PUBLIC_BASE_URL` override; it pins the canonical
+ * need to honor a `SCHEFTER_PUBLIC_BASE_URL` override; it pins the canonical
  * cookie-safe origin. These lanes DO need the override (preview deploys,
  * mfl.football), which is why they get a wrapper rather than calling it.
  *

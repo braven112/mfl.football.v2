@@ -112,7 +112,7 @@ export function madQualifierTiers(seeds: MadSeed[]): MadQualifierTier[] {
 
 /**
  * A division's short label for a crest tile: its namesake's last name.
- * "Barry Sanders Division" → "Sanders". Archie's nine divisions each honour a
+ * "Barry Sanders Division" → "Sanders". Archie's nine divisions each honor a
  * player with a distinct last name, so the last name alone identifies one —
  * the first name does not ("Payton" is both Walter Payton's last name and the
  * first name in "Payton Manning"). A name without a trailing "Division" just

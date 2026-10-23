@@ -1,5 +1,5 @@
 /**
- * One player's scoring, stat by stat — a bottom sheet on a phone, a centred
+ * One player's scoring, stat by stat — a bottom sheet on a phone, a centered
  * dialog from 640px up. Opened by tapping a row in the matchup detail.
  *
  * ── EVERY LEAGUE ON THE BOARD, NOT ONLY OURS ──────────────────────────────
@@ -69,14 +69,14 @@ export default function LvStatSheet({
   const [rules, setRules] = useState<RulesState>({ status: 'loading' });
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setRules({ status: 'loading' });
     loadRules(leagueId, year).then((data) => {
-      if (cancelled) return;
+      if (canceled) return;
       setRules(data.ok ? { status: 'ok', rules: data.rules } : { status: 'error' });
     });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [leagueId, year]);
 

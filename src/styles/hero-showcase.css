@@ -7,7 +7,7 @@
  * and would still miss any element the shell renders. The `hc-` prefix is the
  * namespace.
  *
- * Per-league colour is entirely in tokens set on `.hc-page` by the component
+ * Per-league color is entirely in tokens set on `.hc-page` by the component
  * from the content module's `palette`, so nothing here names a league.
  */
 /* ===========================
@@ -120,11 +120,11 @@ html.dark .hc-page {
 /* ── GALLERY SHOTS ────────────────────────────────────────────────────────
    Each entry is the REAL hero (CompositeHero / CompositePanelBoard) with an
    annotation line above it. This file therefore styles the annotation and the
-   frame ONLY — every colour, gradient, glow, wordmark and crest below the
+   frame ONLY — every color, gradient, glow, wordmark and crest below the
    caption belongs to composite-hero.css and must stay there.
 
    The ~250 lines that used to live here were a lookalike of that treatment,
-   and they drifted three times in one week (pale-blue auction card, centred
+   and they drifted three times in one week (pale-blue auction card, centered
    ghost wordmark, no crest at all). Do not reintroduce one: if a hero looks
    wrong on this page, it looks wrong on the homepage too. */
 .hc-shot {
@@ -145,9 +145,9 @@ html.dark .hc-page {
   padding: 0 0.15rem;
 }
 
-/* "League colours" / "Team colours". The rule is the one thing about this
-   system that is impossible to see in a still — a team-coloured hero and a
-   league-coloured one look equally deliberate — so each shot states which half
+/* "League colors" / "Team colors". The rule is the one thing about this
+   system that is impossible to see in a still — a team-colored hero and a
+   league-colored one look equally deliberate — so each shot states which half
    it is on. Outline vs. filled so the column is scannable without reading. */
 .hc-shot__scope {
   font-size: 0.575rem;
@@ -576,7 +576,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   font-weight: 600;
   border-radius: 8px;
 }
-/* The ghost wears the showcase's own accent, not the site link colour. */
+/* The ghost wears the showcase's own accent, not the site link color. */
 .hc-btn--ghost {
   --cta-ink: var(--hcp-accent);
   --cta-border: color-mix(in srgb, var(--hcp-accent) 35%, transparent);

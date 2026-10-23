@@ -14,7 +14,7 @@
  * The script sends a DESCRIPTION field anyway, on the chance MFL accepts an
  * undocumented one. MFL ignores unknown parameters silently, so this is free
  * to try and proves nothing on its own — which is exactly why the raw response
- * is printed rather than summarised.
+ * is printed rather than summarized.
  *
  * COMMISSIONER WRITES have two requirements that differ from reads
  * (docs/claude/insights/domains/mfl-api.md, 2026-03-13):
@@ -78,7 +78,7 @@ const params = new URLSearchParams({
   START_TIME: String(startUnix),
   END_TIME: String(startUnix),
   HAPPENS: 'ONCE',
-  // Undocumented. Sent on the chance MFL honours it; ignored silently if not.
+  // Undocumented. Sent on the chance MFL honors it; ignored silently if not.
   DESCRIPTION: `${league.name} Schedule Release`,
 });
 const url = `${host}/${year}/import?TYPE=calendarEvent&${params}`;

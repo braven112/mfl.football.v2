@@ -36,7 +36,7 @@ const readFeedFile = (dataPath: string, year: number, feed: string): any => {
 };
 
 /**
- * Colouring iterations this route can afford. The full search is ~150k and takes
+ * Coloring iterations this route can afford. The full search is ~150k and takes
  * about as long as the whole request budget, so a preview cannot run it.
  */
 const PREVIEW_COLORING_ITERATIONS = 8000;
@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       // league's mfl-feeds directory). Null degrades to whole-roster counts.
       rankingSources: readRankingSources(year),
       readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
-      // Bounded for the function's 30s ceiling. The colouring refinement needs
+      // Bounded for the function's 30s ceiling. The coloring refinement needs
       // ~150k iterations to clear the structured seed's local optimum and that
       // alone takes ~30s, so this preview gets a fraction of it and returns at
       // or near the structured seed. The CLI and the release cron run the full

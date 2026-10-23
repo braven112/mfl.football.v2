@@ -11,9 +11,9 @@
  *   - nameMedium (<= 15), nameShort (<= 10) and abbrev (<= 5) are derived by
  *     rule from the name, the same limits `chooseTeamName` enforces;
  *   - colorPrimary / colorSecondary are the two most prominent saturated
- *     colours in the franchise's MFL art;
+ *     colors in the franchise's MFL art;
  *   - banner is the MFL art itself (it is banner-shaped), and icon is a
- *     128px centre crop of it written to public/assets/<league>/icons/ —
+ *     128px center crop of it written to public/assets/<league>/icons/ —
  *     flagged `iconCroppedFromBanner`, so the homepage hero draws it as a
  *     circle (a square picture, not a drawn mark). The branding editor clears
  *     the flag when the commissioner uploads a real icon.
@@ -86,13 +86,13 @@ const hex = (r, g, b) => `#${[r, g, b].map((v) => Math.round(v).toString(16).pad
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
 /**
- * The two brand colours of an image, from its raw RGBA pixels.
+ * The two brand colors of an image, from its raw RGBA pixels.
  *
  * MFL franchise art in this package is busy illustration, not a flat logo, so
- * the most COMMON colour is usually the dark background. Colours are scored by
+ * the most COMMON color is usually the dark background. Colors are scored by
  * coverage x chroma instead: a teal that covers 6% of the art beats a
  * charcoal that covers 40%. Transparent pixels are ignored; near-neutral
- * colours only win when the art has nothing saturated at all.
+ * colors only win when the art has nothing saturated at all.
  *
  * @param {Uint8Array | Buffer} rgba
  * @returns {{ primary: string, secondary: string } | null}
@@ -103,7 +103,7 @@ export function dominantColors(rgba) {
   for (let i = 0; i + 3 < rgba.length; i += 4) {
     if (rgba[i + 3] < 128) continue;
     total += 1;
-    // 16 levels per channel: coarse enough to pool a colour's shading.
+    // 16 levels per channel: coarse enough to pool a color's shading.
     const key = ((rgba[i] >> 4) << 8) | ((rgba[i + 1] >> 4) << 4) | (rgba[i + 2] >> 4);
     const b = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
     b.n += 1;
@@ -118,13 +118,13 @@ export function dominantColors(rgba) {
     const rgb = [b.r / b.n, b.g / b.n, b.b / b.n];
     const max = Math.max(...rgb);
     const min = Math.min(...rgb);
-    // Chroma relative to brightness, so a deep navy still counts as a colour.
+    // Chroma relative to brightness, so a deep navy still counts as a color.
     const chroma = max === 0 ? 0 : (max - min) / max;
-    const lively = max > 60 ? 1 : max / 60; // near-black is never a brand colour
+    const lively = max > 60 ? 1 : max / 60; // near-black is never a brand color
     return { rgb, share: b.n / total, chroma, score: (b.n / total) * (chroma * lively) ** 2 };
   });
 
-  // Pool near-identical shades so one colour's gradient can't fill both slots.
+  // Pool near-identical shades so one color's gradient can't fill both slots.
   const pooled = [];
   for (const c of colors.sort((a, b) => b.score - a.score)) {
     const hit = pooled.find((m) => dist(m.rgb, c.rgb) < 48);
@@ -161,9 +161,9 @@ async function colorsFromImage(buf) {
 }
 
 /**
- * A suggested square icon: the centre square of the franchise art. This
+ * A suggested square icon: the center square of the franchise art. This
  * package's MFL art is a wide banner (1500x636), and the team's mascot and
- * wordmark sit in the middle of it, so the centre crop is the best
+ * wordmark sit in the middle of it, so the center crop is the best
  * no-human-involved guess. `attention` would chase busy background detail.
  */
 async function squareIcon(buf) {
@@ -227,7 +227,7 @@ async function main() {
         }
       }
     } catch (err) {
-      console.warn(`  ${f.id} ${names.name}: could not read the MFL art (${err.message}) — neutral colours, no icon.`);
+      console.warn(`  ${f.id} ${names.name}: could not read the MFL art (${err.message}) — neutral colors, no icon.`);
     }
     teams.push({
       franchiseId: f.id,
@@ -251,7 +251,7 @@ async function main() {
   const config = {
     $comment:
       `${league.name} (MFL ${league.id}). Branding SUGGESTED from MFL by scripts/suggest-league-branding.mjs ` +
-      '— names by rule, colours from each MFL icon. The commissioner edits it from here; do not regenerate over edits.',
+      '— names by rule, colors from each MFL icon. The commissioner edits it from here; do not regenerate over edits.',
     leagueId: league.id,
     name: league.name,
     structure: 'divisions',

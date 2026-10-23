@@ -4,7 +4,7 @@
  * Rung 2 of the identity ladder (docs/plans/mfl-live-app.md): a league this
  * site does not run has no config and therefore no crests, but plenty of
  * owners name their team after a real club. When the name IS an NFL team, that
- * club's mark and brand colour stand in. When it is not, the board falls back
+ * club's mark and brand color stand in. When it is not, the board falls back
  * to text — never to a guess.
  *
  * ── THE RULE, AND WHY IT IS THIS STRICT ───────────────────────────────────

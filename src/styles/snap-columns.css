@@ -25,10 +25,10 @@
 }
 
 .th-season {
-  /* The header colour is already muted; fading it further makes the one thing
+  /* The header color is already muted; fading it further makes the one thing
      these columns needed — which season this is — the least legible text on
      the page. 0.85 keeps it subordinate and still readable in both themes.
-     No colour of its own: it inherits the th's, so it tracks light/dark
+     No color of its own: it inherits the th's, so it tracks light/dark
      without a second declaration to keep in sync. */
   font-size: 0.6rem;
   font-weight: 600;

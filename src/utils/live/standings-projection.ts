@@ -14,7 +14,7 @@
  * order, because the real tiebreakers are not ours to reproduce. That re-rank
  * is the ONE place the "never re-sort MFL's rows" rule is set aside, on the
  * owner's explicit call (Sep 2026), and it is only allowed because the view is
- * labelled as a projection and every row carries its official position beside
+ * labeled as a projection and every row carries its official position beside
  * it. Nothing downstream may treat a projected rank as a standing.
  *
  * ── NEVER COUNT A WEEK TWICE ──────────────────────────────────────────────

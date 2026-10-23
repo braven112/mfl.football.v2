@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The demo's last line of defence: after `astro build`, search everything the
+ * The demo's last line of defense: after `astro build`, search everything the
  * deployment will ship — static pages, client bundles, server functions — for
  * any real franchise or owner name recorded before the demo build deleted the
  * real data (.demo-build/denylist.json, written by build-demo-data.mjs).

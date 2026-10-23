@@ -144,7 +144,7 @@ function avatarChain(player?: FacePlayer): string[] {
  * `BroadcastRevealCard`'s cutout cascade: the row is remounted per pick, so
  * state is the shorter-lived thing, and it can't race the synthetic handler.
  *
- * Ring colour is the DARK-mode one on every viewer, for the same reason the
+ * Ring color is the DARK-mode one on every viewer, for the same reason the
  * DEF logo is: the board is dark whatever the site theme says. Both halves of
  * player-cell.css's theme-split ring pair are set to it — the stylesheet reads
  * `--player-avatar-ring` for a light-theme viewer and `--player-avatar-ring-dark`
@@ -188,7 +188,7 @@ export function BroadcastFace({ player, className }: Props) {
   // Everything in the chain is remote — the ESPN cutouts, MFL's own photo and
   // the silhouette alike — so the end of the walk is a real state, not a
   // theoretical one, and an unhandled 404 there paints the browser's
-  // broken-image glyph inside a team-coloured circle. Hide it, for the reason
+  // broken-image glyph inside a team-colored circle. Hide it, for the reason
   // `hideOnError` gives above: a broken stub in an image slot reads as a broken
   // BOARD from ten feet, and the name beside it already identifies the row.
   const hideImg = useCallback((img: HTMLImageElement) => {

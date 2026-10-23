@@ -2,7 +2,7 @@
  * whats-new-hero-headline — the display headline a homepage hero shows for a
  * fresh What's New entry.
  *
- * The AFL hero's display line is a PAIR: a plain phrase plus a colour-accented
+ * The AFL hero's display line is a PAIR: a plain phrase plus a color-accented
  * closing word ("GAMES ARE" / "LIVE."). Every other slot writes that pair by
  * hand; the feature slot used to hardcode "FRESH ON THE" / "SITE." for every
  * entry, so the hero announced that something shipped without ever saying
@@ -102,10 +102,10 @@ function isBalanced(text: string): boolean {
  *
  *   1. A short closing SENTENCE becomes the accent — the author's own beat.
  *   2. Otherwise the last word, plus the word before it when the last one is
- *      too weak to carry the colour on its own ("Live In.", not "In.").
+ *      too weak to carry the color on its own ("Live In.", not "In.").
  *
  * A one-word title becomes the accent alone: an accent-less hero line drops
- * the only colour the card has.
+ * the only color the card has.
  */
 export function splitTitleHeadline(title: string): HeroHeadline {
   const trimmed = title.trim().replace(/\s+/g, ' ');

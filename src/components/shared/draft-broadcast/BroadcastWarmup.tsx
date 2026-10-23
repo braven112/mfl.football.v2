@@ -143,7 +143,7 @@ export function BroadcastWarmup({ urls, concurrency = DEFAULT_CONCURRENCY }: Pro
 
     const controller = new AbortController();
     const { signal } = controller;
-    let cancelled = false;
+    let canceled = false;
 
     // This run's counters start at zero. They are refs so the pill can publish
     // them on a timer, which also means they survive a re-run of this effect —
@@ -159,14 +159,14 @@ export function BroadcastWarmup({ urls, concurrency = DEFAULT_CONCURRENCY }: Pro
 
     const run = async () => {
       setDurable(await waitForController(signal));
-      if (cancelled) return;
+      if (canceled) return;
 
       // A shared cursor rather than N pre-sliced lists: the plan is in priority
       // order, so a worker that finishes early must take the next MOST wanted
       // image, not the next one in its own slice.
       let cursor = 0;
       const worker = async () => {
-        while (!cancelled) {
+        while (!canceled) {
           const index = cursor;
           cursor += 1;
           if (index >= urls.length) return;
@@ -188,14 +188,14 @@ export function BroadcastWarmup({ urls, concurrency = DEFAULT_CONCURRENCY }: Pro
               failedRef.current += 1;
             }
           } catch {
-            if (cancelled) return;
+            if (canceled) return;
             failedRef.current += 1;
           }
         }
       };
 
       await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
-      if (cancelled) return;
+      if (canceled) return;
       setReady(readyRef.current);
       setFailed(failedRef.current);
       setDone(true);
@@ -204,7 +204,7 @@ export function BroadcastWarmup({ urls, concurrency = DEFAULT_CONCURRENCY }: Pro
     void run();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       controller.abort();
       clearInterval(publish);
     };

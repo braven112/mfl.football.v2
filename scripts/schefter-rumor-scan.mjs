@@ -2144,7 +2144,7 @@ The drip (\`beats\` + \`leadKind\`) — this is what keeps consecutive posts abo
     closure — the proposal is OVER, and this post is the CALLBACK that closes a story you have already filed on. It always leads, and it reveals nothing new: no name appears here that earlier posts did not already print. \`reason\` is "expired" (MFL's own deadline passed with no answer — "that offer I mentioned? Deadline came and went. Nobody blinked.") or "accepted" (it got done). On "accepted" the trade itself is reported elsewhere in the feed as its own breaking item — do NOT re-break it. Your job is the callback: "the one I flagged twice last week is done." \`daysOpen\` and \`priorPosts\` are there for that ("open eleven days, three separate reports"). NEVER speculate about why it died or who said no.
     ask_changed — the proposal MOVED since the last look, from the named team's side. \`direction\`: "sweetened" (they added), "trimmed" (they took away), "reworked" (same weight, different pieces). "They've sweetened it since Tuesday" / "the ask got trimmed overnight". Say that it changed and which way; you do not know what was added, so never itemise it.
     re_offer — these two desks have talked \`priorProposals\` time(s) before inside \`windowDays\`. \`atLeast\` is ALWAYS true: "at least the second run at the same desk this month". NEVER name or hint at the other franchise — the count is the story, the partner is not.
-    deal_shape — the deal's shape from the NAMED team's side. \`direction\`: "selling" (they send players, get picks), "buying" (they send picks, want players), "swap" (players both ways), "picks_only". \`sends\` / \`gets\` carry counts, positions and pick labels. Say what they are after, not who is on the other end: "they're not selling — they want a back back" / "a two-for-one, and the picks are going out, not coming in". NEVER name or characterise the other franchise.
+    deal_shape — the deal's shape from the NAMED team's side. \`direction\`: "selling" (they send players, get picks), "buying" (they send picks, want players), "swap" (players both ways), "picks_only". \`sends\` / \`gets\` carry counts, positions and pick labels. Say what they are after, not who is on the other end: "they're not selling — they want a back back" / "a two-for-one, and the picks are going out, not coming in". NEVER name or characterize the other franchise.
     expiry — the proposal's clock. \`urgency\`: "today" (<24h), "soon" (<48h), "this_week". "Offer's on the clock — expires tonight" / "they've got about [daysRemaining] days to answer". Only ever the deadline; never predict the answer.
     in_talks_not_listed — \`subject\` is a player who is NOT on his own owner's public trade block, yet is in this proposal. This is the good one: "he isn't on anybody's block, and his name keeps coming up." If \`subject.name\` is present you may print it; if only \`subject.position\` is present, phrase it positionally ("one of the backs in the conversation isn't listed anywhere").
     block_stale — the named team still has \`notInThisDealCount\` other players sitting on its public block. "They've still got [n] more listed" / "the block hasn't moved". NEVER say nobody has called or nobody wants them — we do not know that, we know only what is listed.
@@ -2175,7 +2175,7 @@ Framing-hint phrasing (HARD — framingHint is authoritative, do not infer from 
               "Offer's been sitting on the table since the weekend. Phones aren't lighting up."
               "Still shopping the same guy. The rest of the league is letting it age."
               "One owner's made his pitch. Nobody's returning the call."
-              Do NOT claim the deal is dead, cancelled, or rescinded. The offer still exists — it's the silence on the other end that's the story.
+              Do NOT claim the deal is dead, canceled, or rescinded. The offer still exists — it's the silence on the other end that's the story.
 
 Trade-post discipline (HARD — overrides the general personality lore appended later):
   Trade-offer posts are STRAIGHT reporting on the trade rumor. No self-aware AI winks, no "the bot" / "Claude" references, no running-bits callbacks (Wabbit Index, office crew, ringless commish, founding father, etc.), no fourth-wall breaks of any kind. The tip data IS the post; the columnist voice IS the flavor. If a lore bit fits, it doesn't fit here — save it for non-trade posts.
@@ -2939,7 +2939,7 @@ async function fetchLiveLeagueExport(year, type, extra = '') {
  *
  * A live answer with no franchises is no answer. A missing or unreadable file
  * returns an EMPTY map, which the redactor treats as "no evidence" and falls
- * back to taking the row at its word. That is the pre-2026-09-10 behaviour: a
+ * back to taking the row at its word. That is the pre-2026-09-10 behavior: a
  * stale feed degrades the check, it does not silence the lane.
  */
 function rosterOwnersFrom(raw) {

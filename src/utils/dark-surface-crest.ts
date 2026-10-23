@@ -67,15 +67,15 @@ export interface DarkSurfaceCrestTeam {
   /** 400x400 hand-authored dark cut — the best of both, when it exists. */
   groupMeDark?: string;
   /**
-   * Outline colour override from the league config. A string opts the crest in
-   * (and picks the colour); `false` opts it out of the stroke entirely. See
+   * Outline color override from the league config. A string opts the crest in
+   * (and picks the color); `false` opts it out of the stroke entirely. See
    * `CrestStrokeEntry.strokeColor` for the reasoning on both directions.
    *
    * Typed `string | boolean` rather than `string | false` so the raw config
    * array assigns without a cast — TypeScript widens a JSON `false` to
    * `boolean`, and a page passing `config.teams` straight in is the common
    * call. That makes `true` type-legal, so it has to MEAN something: it opts
-   * the crest in at the default colour, which is what `withStrokeColors`
+   * the crest in at the default color, which is what `withStrokeColors`
    * already does with any truthy value. One config field must not mean two
    * different things to its two readers.
    */
@@ -92,7 +92,7 @@ export interface DarkSurfaceCrest {
    * franchise a human opted out.
    */
   filter?: string;
-  /** The ring colour behind `filter`, for callers composing their own filter. */
+  /** The ring color behind `filter`, for callers composing their own filter. */
   strokeColor?: string;
 }
 
@@ -102,12 +102,12 @@ export function isDarkCut(team: DarkSurfaceCrestTeam, src: string): boolean {
 }
 
 /**
- * Whether a LIGHT crest needs an outline on a dark surface, and in what colour.
+ * Whether a LIGHT crest needs an outline on a dark surface, and in what color.
  *
  * Three signals, most specific first:
  *
  * 1. `iconStrokeDark` in the config — a human's answer in either direction, so
- *    it outranks everything (`false` is an opt-out, not a falsy colour).
+ *    it outranks everything (`false` is an opt-out, not a falsy color).
  * 2. The franchise HAS an `iconDark`. That is already a human saying this
  *    franchise's light artwork does not survive on a dark surface — the exact
  *    question being asked here. The site-wide manifest never measures these
@@ -125,7 +125,7 @@ export function resolveCrestStroke(
   const configured = team.iconStrokeDark;
   if (configured === false) return undefined;
   if (typeof configured === 'string' && configured) return configured;
-  // `true` opts in at the default colour — the same reading `withStrokeColors`
+  // `true` opts in at the default color — the same reading `withStrokeColors`
   // gives any truthy value. Handled HERE rather than left to the index lookup
   // below so the config field's meaning does not depend on which team array the
   // caller happened to build the index from.
@@ -141,9 +141,9 @@ export function resolveCrestStroke(
   // franchise off its throwback identity). `false || DEFAULT` would then ring a
   // crest a human explicitly opted out of.
   if (entry === false) return undefined;
-  // Only a STRING is a colour. `withStrokeColors` copies `iconStrokeDark`
+  // Only a STRING is a color. `withStrokeColors` copies `iconStrokeDark`
   // through verbatim, so a `true` in the config arrives here as a boolean — and
-  // `entry || DEFAULT` would hand it straight out as the stroke colour. It then
+  // `entry || DEFAULT` would hand it straight out as the stroke color. It then
   // reaches CSS as an invalid `drop-shadow(… true)`, which makes the whole
   // composed `filter` invalid at computed-value time, so the crest loses its
   // drop shadow as well as its ring. Caught by Codex in review.
@@ -175,7 +175,7 @@ export function crestLeagueKey(slug: string): string {
 }
 
 /**
- * Build the `franchiseId -> stroke colour` lookup for one league, once per
+ * Build the `franchiseId -> stroke color` lookup for one league, once per
  * page. Split out so the per-team resolver stays cheap in a `.map()`.
  *
  * `league` is the manifest's league key (`theleague` | `afl`), matching

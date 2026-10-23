@@ -109,7 +109,7 @@ export interface BuildAflMockContextInput {
 /**
  * Everything the lobby and the create endpoint both need, resolved once.
  *
- * Deliberately does NOT touch the player catalogue. It answers "may a mock run
+ * Deliberately does NOT touch the player catalog. It answers "may a mock run
  * here, and against whose rosters" — and for most of the year the answer is
  * no, so loading 1.4 MB of players to size a pool nobody will see is work
  * thrown away on the page's commonest state. Callers build the pool from

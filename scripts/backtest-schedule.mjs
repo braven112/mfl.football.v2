@@ -7,7 +7,7 @@
  *
  * The league does not control the NFL's bye calendar and it is the single
  * input that decides whether a goal is easy, hard, or impossible in a given
- * year. Tuning the optimiser against one season proves nothing: 2026's byes run
+ * year. Tuning the optimizer against one season proves nothing: 2026's byes run
  * Weeks 5-14, but 2011-2020's mostly START in Week 4 and are DONE by Week 11-13
  * — an inverted calendar that puts the pressure on completely different weeks.
  * 2017 even carries a Week 1 bye.
@@ -48,7 +48,7 @@ const to = Number(arg('to', 9999));
 const iterations = Number(arg('iterations', 6000));
 const restarts = Number(arg('restarts', 3));
 const onlyLeague = arg('league', null);
-// The colouring refinement needs ~150k iterations to clear the structured
+// The coloring refinement needs ~150k iterations to clear the structured
 // seed's local optimum, which is ~30s per season. A 32-season sweep at that
 // budget is 16 minutes, so the sweep runs a token budget by default and
 // --coloring=N (or --coloring=full) turns it up for a spot check.
@@ -111,7 +111,7 @@ const auditInvariants = (weeks, shape, policy) => {
   }
 
   // 1. Home-and-home. The structured builder guaranteed it with `mirrorRound`;
-  //    a colouring only preserves it because Kempe swaps move whole games
+  //    a coloring only preserves it because Kempe swaps move whole games
   //    rather than flipping sides, and `balanceHomeAway` could still undo it.
   const sameVenue = Object.entries(met)
     .filter(([, ms]) => ms.length === 2 && ms[0].home === ms[1].home)
@@ -120,7 +120,7 @@ const auditInvariants = (weeks, shape, policy) => {
     problems.push(`${sameVenue.length} pair(s) play both meetings at the same venue: ${sameVenue.slice(0, 3).join(', ')}`);
   }
 
-  // 2. A constitutionally pinned round stays in its week. The colouring search
+  // 2. A constitutionally pinned round stays in its week. The coloring search
   //    traded the AFL's Week 1 cross-conference round away the first time it
   //    was let loose, and the illegal result scored better than anything legal.
   const pinned = policy?.crossConference?.week;
@@ -201,7 +201,7 @@ const runLeague = (slug) => {
     const byKey = new Map(r.goals.map((g) => [g.key, g]));
     const cells = keys.map((k) => (byKey.has(k) ? GLYPH[byKey.get(k).status] ?? '  ?   ' : '  --  ')).join('|');
     const gain = r.plan.coloring
-      ? ` colour ${(r.plan.coloring.improvedBy > 0 ? '-' : '')}${(Math.abs(r.plan.coloring.improvedBy) * 100).toFixed(1)}%pt`
+      ? ` color ${(r.plan.coloring.improvedBy > 0 ? '-' : '')}${(Math.abs(r.plan.coloring.improvedBy) * 100).toFixed(1)}%pt`
       : '';
     console.log(`${r.year} ${String(r.plan.doubleheaderWeeks.join(',')).padEnd(11)}|${cells}|${gain}`);
     for (const g of r.goals) {
@@ -209,7 +209,7 @@ const runLeague = (slug) => {
     }
   }
 
-  console.log('\n  goal                        met  partial  FAILED  optimised');
+  console.log('\n  goal                        met  partial  FAILED  optimized');
   for (const k of keys) {
     const t = tally[k];
     if (!t) continue;

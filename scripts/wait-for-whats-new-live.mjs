@@ -36,7 +36,7 @@
  * NEVER FATAL
  * -----------
  * On timeout this warns and exits 0, leaving the notification to go out anyway.
- * That restores the pre-existing behaviour as the floor — an early tap lands on
+ * That restores the pre-existing behavior as the floor — an early tap lands on
  * the listing — rather than trading a small cosmetic race for owners silently
  * never being told. A red job here would also read as a broken rollup, which it
  * is not.
@@ -170,7 +170,7 @@ if (invokedDirectly) {
   for (const [url] of pending) {
     console.log(
       `::warning::${url} did not resolve within ${timeoutSeconds}s. Notifying anyway — an early ` +
-        `tap lands on /whats-new, which is the behaviour this check exists to improve on, not a break.`,
+        `tap lands on /whats-new, which is the behavior this check exists to improve on, not a break.`,
     );
   }
   process.exit(0);

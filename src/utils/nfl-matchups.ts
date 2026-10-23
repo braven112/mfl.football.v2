@@ -3,7 +3,7 @@
  *
  * `fantasyPointsAllowed.json` (committed under data/theleague/mfl-feeds/
  * because the data is NFL-wide, not league-specific) gives each NFL team's
- * defensive rank by position, which colours the OPP # pill.
+ * defensive rank by position, which colors the OPP # pill.
  *
  * This file used to fetch the week's ESPN scoreboard too (`fetchNflMatchups`)
  * — a separate copy of the odds code whose weather was never backfilled, so

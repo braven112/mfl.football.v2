@@ -245,7 +245,7 @@ export function parseSalaryAdjustment(adj: RawSalaryAdjustment): DeadMoneyAdjust
   };
 }
 
-/** Normalise position string to standard codes */
+/** Normalize position string to standard codes */
 function normalizePosition(pos?: string): string {
   if (!pos) return 'FLEX';
   const upper = pos.toUpperCase();

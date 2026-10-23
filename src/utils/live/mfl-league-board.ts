@@ -16,7 +16,7 @@
  * re-implementing the single-league case would be a second copy of the part
  * that is hard to get right.
  *
- * ── AUTHORISATION IS THE CALLER'S JOB, AND IT IS A CHECK ──────────────────
+ * ── AUTHORIZATION IS THE CALLER'S JOB, AND IT IS A CHECK ──────────────────
  * This takes a `BoardLeague` the caller has already found in the owner's OWN
  * `discoverBoardLeagues` list. A league id from a URL is never passed straight
  * through: the request is about to carry the owner's `MFL_USER_ID` to a host
@@ -119,7 +119,7 @@ export async function assembleMflLeagueBoard(
     }).catch(() => []),
     // NOTE the absent `franchiseNames`: they are the OTHER half of this
     // `Promise.all` and do not exist yet. They are applied below, once both
-    // have landed, rather than serialising two independent MFL reads.
+    // have landed, rather than serializing two independent MFL reads.
     readLeagueStandings({
       league,
       year,
@@ -190,7 +190,7 @@ export async function assembleMflLeagueBoard(
     franchiseIcons: read.franchiseIcons,
     viewerFranchiseId,
     // ALWAYS MFL Live's ground, registered league or not: this renders on MFL
-    // Live's card, and a colour pair resolved against the wrong ground is a
+    // Live's card, and a color pair resolved against the wrong ground is a
     // confident wrong legibility answer. Seven TheLeague franchises are
     // `#181818`. See `./surface`.
     surface: 'mfl',

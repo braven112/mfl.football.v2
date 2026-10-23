@@ -68,7 +68,7 @@ const franchiseColor = brand?.color ?? '#1c497c';
 // picks the dark-surface artwork server-side and falls back to the player's NFL
 // mark if that club ships none — see hero-crest.ts.
 const crest = resolveHeroCrest({ franchiseId: winner?.franchiseId, league: 'theleague', nflTeam: model?.nflTeam });
-// A TEAM event — it is this franchise's week — so the card wears their colours.
+// A TEAM event — it is this franchise's week — so the card wears their colors.
 const franchise = resolveHeroFranchiseSkin(winner?.franchiseId, 'theleague');
 
 // Where the CTA goes. It used to be /theleague/standings — the race, not the

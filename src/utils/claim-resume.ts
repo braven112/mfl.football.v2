@@ -25,7 +25,7 @@
  * THE STORAGE ITSELF IS NOT HERE. Parking a payload across the sign-in reload
  * is a general need — an expiring session mid-action wants the same thing —
  * so it lives in src/utils/signin-resume.ts and this file is one caller of it.
- * (sessionStorage, not the URL: the redirect is sanitised to a same-origin
+ * (sessionStorage, not the URL: the redirect is sanitized to a same-origin
  * path and would strip a query param, and a URL that outlived the reload would
  * re-open the modal on every back-navigation.)
  */
@@ -56,7 +56,7 @@ export function rememberPendingClaim(player: string | PendingClaimPlayer | null)
 function takePending(): PendingClaimPlayer | null {
   // Pre-payload sessions parked a BARE ID string, which is not JSON, so the
   // shared reader returns null for it. Read the raw value first and keep
-  // honouring it: someone mid-sign-in across a deploy must not lose their
+  // honoring it: someone mid-sign-in across a deploy must not lose their
   // player. (JSON.parse('"12345"') would succeed, hence the string check.)
   let legacy: string | null = null;
   try {

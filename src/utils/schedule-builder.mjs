@@ -6,7 +6,7 @@
  * The planner's `simple` mode re-times an existing schedule by moving whole
  * rounds between weeks. That is safe and minimal, and it is also why its
  * output is bad: the rounds it inherits are whatever last year's schedule
- * happened to contain, so "maximise bye-free division games" just stacks every
+ * happened to contain, so "maximize bye-free division games" just stacks every
  * rivalry round into the opening weeks. Measured on The League 2026 that gives
  * 16 of 24 division pairs meeting within three weeks of each other (one pair a
  * week apart) against 0 of 24 today. A rematch seven days later is the same
@@ -39,7 +39,7 @@
  *     they go to the LIGHTEST ones (Weeks 10, 13, 14) and Week 11, where six
  *     NFL teams are out, is deliberately given an interdivision round.
  *
- * WHAT THE SEARCH ACTUALLY OPTIMISES
+ * WHAT THE SEARCH ACTUALLY OPTIMIZES
  *
  * Only the soft fairness terms, since the structure above already fixes the
  * drama ones. Fairness-first weighting: bye differential dominates, then
@@ -153,7 +153,7 @@ export const MIN_REMATCH_GAP = 4;
  * The gap that is never traded, however much a schedule gains by it. The league
  * demoted "no rematch inside three weeks" from a hard rule to a goal ranked
  * below getting division games off byes — which permits encroaching on it, not
- * abolishing it. Left unbounded, the colouring search promptly traded rivals
+ * abolishing it. Left unbounded, the coloring search promptly traded rivals
  * down to a two-week gap to buy bye-week improvements.
  */
 export const HARD_MIN_REMATCH_GAP = 3;
@@ -251,7 +251,7 @@ export const buildWeekPlan = ({
   // exactly, so nothing grows. The League's first leg is 3 rounds into a
   // 4-slot minimum prefix, and without the extension all three land in Weeks 1
   // and 2 — 16 of 48 division games in Week 1 alone, the same front-loading
-  // that makes the naive optimiser's output bad. Widening to every clean week
+  // that makes the naive optimizer's output bad. Widening to every clean week
   // lets `spread` below put one rivalry round in each of Weeks 1-3 instead.
   const earlyWeeks = [];
   for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + crossRounds; week += 1) {
@@ -435,7 +435,7 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
     byeDifferential: 1.0,
     netByeAdvantage: 0.6,
     // Scaled from the published goal weights rather than tuned by hand, so the
-    // optimiser cannot rank this differently than the page says it is ranked:
+    // optimizer cannot rank this differently than the page says it is ranked:
     // the light-bye-week goal outweighs bye luck 70 to 45, and byeDifferential
     // is bye luck's term at 1.0. The other four are legacy tuning, kept because
     // re-deriving them would change every existing draw for no stated reason;
@@ -537,7 +537,7 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
  *
  * This was latent rather than live, and the chain that hid it is worth
  * knowing: Kempe swaps move whole games between slots without touching sides,
- * so the colouring preserves the seed's per-franchise home counts exactly; the
+ * so the coloring preserves the seed's per-franchise home counts exactly; the
  * seed is already balanced; so this function finds nothing to improve and
  * returns without flipping anything. Thirty backtested seasons came out clean
  * for that reason alone. Change any link — a move that flips sides, an

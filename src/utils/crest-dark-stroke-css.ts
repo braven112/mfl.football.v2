@@ -11,7 +11,7 @@
  * cards it was built for. It was scoped to `img.team-icon-cell` at first, on
  * the theory that a crest shown NEXT TO a name has no legibility problem. That
  * was wrong twice over: a near-black logo on a dark card is still hard to make
- * out even when labelled, and — worse — the same franchise then wore a ring on
+ * out even when labeled, and — worse — the same franchise then wore a ring on
  * the homepage and none on the standings page, which reads as a rendering bug
  * rather than a deliberate treatment. Consistency is the point.
  *
@@ -165,10 +165,10 @@ export function withStrokeColors(
       // Normalize `true` away HERE rather than in each consumer. This map is
       // typed `string | false` and every reader trusts that — all three do
       // `strokeColor || DEFAULT`, which hands a boolean `true` straight out as
-      // the colour and emits `drop-shadow(… true)`. That is invalid at
+      // the color and emits `drop-shadow(… true)`. That is invalid at
       // computed-value time, so the rule (or, for the inline callers, the whole
       // `filter` including its drop shadow) is dropped. `true` means what any
-      // truthy value means to `optIns` below — opt in at the default colour —
+      // truthy value means to `optIns` below — opt in at the default color —
       // and `undefined` is exactly how this map spells that.
       .map((t) => [t.franchiseId, t.iconStrokeDark === true ? undefined : t.iconStrokeDark]),
   );

@@ -1376,7 +1376,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
       // players take a sentinel worse than any real rank, so ascending (the
       // default for these columns) puts the best board positions first and the
       // unranked last. Descending inverts that literally, unranked first —
-      // same as TheLeague's table, which is the behaviour to match here.
+      // same as TheLeague's table, which is the behavior to match here.
       if (currentSort.startsWith('ranking_')) {
         const map = rankingLookup.byImport.get(currentSort.slice(8));
         aVal = map?.get(a.id) ?? 99999;
@@ -3040,11 +3040,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
        regression. */
     border-radius: var(--radius-full, 999px);
     border: 1px solid currentColor;
-    /* Colour carries the meaning: green = you can add right now. */
+    /* Color carries the meaning: green = you can add right now. */
     color: var(--color-primary, #1c497c);
   }
   /* Semantic green, NOT TheLeague's brand green: #2e8743 is the brand literal
-     and the AFL theme never overrides it, so it would paint TheLeague's colour
+     and the AFL theme never overrides it, so it would paint TheLeague's color
      on AFL pages (tests/afl-brand-green-guard.test.ts). */
   .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
   .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }

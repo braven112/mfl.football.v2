@@ -51,7 +51,7 @@ export type IconSet = 'classic' | 'line';
  * A league's site theme — the visual language every themed component speaks.
  * `'editorial'` is the site's long-standing look (docs/claude/components.md
  * "Editorial Design Standard"); `'primetime'` is the broadcast look that
- * started with the front-page homepage (team-coloured paint, the condensed
+ * started with the front-page homepage (team-colored paint, the condensed
  * display face). Components render in BOTH, so a league can switch, and
  * `?theme=` previews the other one (src/utils/site-theme.ts).
  */
@@ -127,7 +127,7 @@ export interface LeagueFeatures {
    * Same reason: the account menu links it only where the page exists.
    */
   pushNotifications: boolean;
-  /** Commissioner branding editor (names, colours, uploaded marks). */
+  /** Commissioner branding editor (names, colors, uploaded marks). */
   brandingEditor: boolean;
 }
 
@@ -369,7 +369,7 @@ export interface LeagueDefinition {
   iconSet?: IconSet;
   /**
    * The league's site theme (see `SiteTheme`). Absent means `'editorial'`.
-   * Distinct from `theme`, which names the league's colour PALETTE.
+   * Distinct from `theme`, which names the league's color PALETTE.
    */
   siteTheme?: SiteTheme;
   /** Short display name for tight spaces (the site header). */

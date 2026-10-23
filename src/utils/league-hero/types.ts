@@ -106,7 +106,7 @@ export interface EventHeroView {
   modelAccent?: string | null;
   /**
    * The franchise whose crest belongs behind this hero, when one owns the
-   * story — the same club `modelAccent` took its colour from. See hero-crest.ts.
+   * story — the same club `modelAccent` took its color from. See hero-crest.ts.
    */
   modelFranchiseId?: string | null;
   /**

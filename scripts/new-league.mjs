@@ -292,7 +292,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
 
   console.log(`\nDone. Still by hand:
   - Replace the placeholder logo (registry \`logo\`, both cuts) with the league's art.
-  - Review data/${spec.slug}/${spec.slug}.config.json (team names, colours, divisions).${
+  - Review data/${spec.slug}/${spec.slug}.config.json (team names, colors, divisions).${
     spec.features.pushNotifications
       ? `
   - Push art: until the registry has \`pushArt\` (scripts/generate-notification-icons.mjs, from the

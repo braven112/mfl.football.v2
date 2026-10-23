@@ -83,12 +83,12 @@ export function parsePickToken(token) {
  * The `future` wording is unchanged from `schefter-scan.mjs`'s original
  * `parseDraftPick` — "Rebels' 2026 3rd" — so already-published posts and new
  * ones read the same. `current` picks had no wording at all before, because
- * they were never recognised as picks.
+ * they were never recognized as picks.
  *
  * @param {ReturnType<typeof parsePickToken>} pick
  * @param {(franchiseId: string) => string | undefined} [nameFor]
  *   Resolves a franchise id to a display name. Omitted or unresolved falls
- *   back to "Team 0005", matching the previous behaviour.
+ *   back to "Team 0005", matching the previous behavior.
  */
 export function formatPickLabel(pick, nameFor) {
   if (!pick) return '';

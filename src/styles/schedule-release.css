@@ -1,7 +1,7 @@
 /**
  * Schedule Release Day.
  *
- * Every colour is a token with a light-mode fallback — a bare hex renders fine
+ * Every color is a token with a light-mode fallback — a bare hex renders fine
  * in light and ships white-on-white in dark (docs/claude/rules/theming-and-assets.md).
  */
 
@@ -421,7 +421,7 @@
 
 /**
  * Throwback Week's game is shown in the identities it will actually be played
- * in — legacy crests, legacy names, legacy colours (`getThrowbackFranchiseBrand`).
+ * in — legacy crests, legacy names, legacy colors (`getThrowbackFranchiseBrand`).
  * The card marks itself so the old logos read as deliberate rather than as
  * stale artwork, which is exactly how an unexplained 2009 crest looks.
  */
@@ -567,8 +567,8 @@
   margin-top: 0.35rem;
 }
 
-/* Per-goal verdict. Colour is a reinforcement, never the message — the status
-   is spelled out in words on every row, so a monochrome or colour-blind read
+/* Per-goal verdict. Color is a reinforcement, never the message — the status
+   is spelled out in words on every row, so a monochrome or color-blind read
    loses nothing. */
 .rel__verdict {
   margin: 0.4rem 0 0;

@@ -1,7 +1,7 @@
 /**
  * The pill that proves the page is still working.
  *
- * Ported to the kit unchanged in behaviour, because every one of its choices
+ * Ported to the kit unchanged in behavior, because every one of its choices
  * is a bug report. It replaced a static "Live" badge that was true by
  * assertion — it lit from the game-day clock and then never changed, so a
  * board sitting at 0.0–0.0 (preseason, pre-kickoff, an MFL feed that has not

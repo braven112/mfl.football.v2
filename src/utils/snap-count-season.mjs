@@ -94,7 +94,7 @@ export function pickSnapCountSeason(available, now = new Date()) {
  *
  * @param {Record<string, any>} modules an eager `import.meta.glob` of
  *   `data/nfl/snap-counts-*.json`
- * @param {Date} now request-time instant (honour `?testDate=`)
+ * @param {Date} now request-time instant (honor `?testDate=`)
  * @returns {{
  *   season: number | null,
  *   weeks: number,

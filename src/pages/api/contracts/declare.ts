@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({
           success: true,
           cancelled: true,
-          message: 'Pending declaration cancelled',
+          message: 'Pending declaration canceled',
         }),
         { status: 200, headers: JSON_HEADERS },
       );

@@ -33,7 +33,7 @@ type MarqueeGame = {
   why: string[];
 };
 
-/** One franchise's crest + brand colour, from the league config (`/api/schedule-release`). */
+/** One franchise's crest + brand color, from the league config (`/api/schedule-release`). */
 type TeamBrand = {
   franchiseId: string;
   name: string;
@@ -119,7 +119,7 @@ const GOAL_STATUS: Record<string, string> = {
   met: 'Met',
   partial: 'As far as the calendar allowed',
   blocked: 'Not achievable this year',
-  optimised: 'Optimised',
+  optimised: 'Optimized',
 };
 /** The reason string that marks the Throwback Week pick — see schedule-release.mjs. */
 const THROWBACK_REASON = 'throwback week — old-school uniforms';
@@ -337,7 +337,7 @@ export default function ScheduleRelease({
         <ul className="rel__marquee">
           {release.marquee.map((g) => {
             // Throwback Week's game wears the era it will actually be played
-            // in — legacy crests, legacy names, legacy colours. Same treatment
+            // in — legacy crests, legacy names, legacy colors. Same treatment
             // live scoring gives that week, so the tease looks like the day.
             const isThrowback = throwback != null && g.why.includes(THROWBACK_REASON);
             // The era name replaces the modern one, with the modern one kept as
@@ -352,7 +352,7 @@ export default function ScheduleRelease({
               : side(g.home, g.homeName);
             const fallback = 'var(--accent-color, #1c497c)';
             // Era palettes carry no dark variant (the API says why), so the one
-            // colour serves both themes on a throwback card.
+            // color serves both themes on a throwback card.
             const awayColor = isThrowback ? throwback.away.colorPrimary : teams?.[g.away]?.colorPrimary;
             const homeColor = isThrowback ? throwback.home.colorPrimary : teams?.[g.home]?.colorPrimary;
             const brandVars = {
@@ -507,7 +507,7 @@ export default function ScheduleRelease({
               This season: <strong>{tally.met ?? 0} met</strong>
               {tally.partial ? `, ${tally.partial} as far as the calendar allowed` : ''}
               {tally.blocked ? `, ${tally.blocked} not achievable` : ''}
-              {tally.optimised ? `, ${tally.optimised} optimised without a pass mark` : ''}.
+              {tally.optimised ? `, ${tally.optimised} optimized without a pass mark` : ''}.
             </>
           ) : null}
         </p>

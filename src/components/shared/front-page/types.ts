@@ -12,7 +12,7 @@ export interface FrontTeamArt {
   name: string;
   /** The theme-following mark, for cards and lists (swapped in dark mode site-wide). */
   icon: string;
-  /** The franchise's own colours, for surfaces dark in both themes. */
+  /** The franchise's own colors, for surfaces dark in both themes. */
   gradient: string;
   /** The crest for those dark surfaces ('' when the team has no art). */
   crest: string;
@@ -26,7 +26,7 @@ export interface FrontTeamArt {
 
 export interface FrontPlayerArt {
   name: string;
-  /** ESPN's transparent cut-out, drawn straight on the franchise's colours. */
+  /** ESPN's transparent cut-out, drawn straight on the franchise's colors. */
   headshot: string;
 }
 

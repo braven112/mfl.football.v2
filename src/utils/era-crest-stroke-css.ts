@@ -158,7 +158,7 @@ export function buildEraCrestShapeCss(teams: EraStrokeTeam[]): string {
  *
  * A THIRD treatment, and the three do not overlap:
  *
- * - `iconStroke` rings the element box in the era's own colour, in BOTH
+ * - `iconStroke` rings the element box in the era's own color, in BOTH
  *   themes, because a circle punched out of a banner has no edge of its own.
  * - `iconFreeform` takes the round slot away entirely, for a mark whose shape
  *   is not a circle.
@@ -185,7 +185,7 @@ export function buildEraCrestDarkStrokeCss(teams: EraStrokeTeam[]): string {
       entries.push({
         icon: era.icon,
         // `true` is spelled `undefined` downstream — that is how the shared
-        // builder says "use the default colour".
+        // builder says "use the default color".
         strokeColor: typeof era.iconStrokeDark === 'string' ? era.iconStrokeDark : undefined,
       });
     }

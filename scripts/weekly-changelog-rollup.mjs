@@ -85,7 +85,7 @@ function getNextMonday(from) {
  */
 function formatDate(d) {
   // Local parts, NOT toISOString(): getCurrentMonday() picks the day with
-  // local getters, so pairing it with a UTC serialiser makes the two disagree
+  // local getters, so pairing it with a UTC serializer makes the two disagree
   // west of Greenwich — a Monday-evening run in PT would stamp Tuesday's date
   // and mint an id no other run can collide with, publishing the week twice.
   // That is the failure the `--week` Monday check refuses by hand; the default
@@ -174,7 +174,7 @@ const enforceWhatsNewCap = (entries) => {
   return { active, archived: overflow.length };
 };
 
-// This script PUBLISHES and then EMPTIES the staging queue, so an unrecognised
+// This script PUBLISHES and then EMPTIES the staging queue, so an unrecognized
 // flag must never be shrugged off. `--dry-run` looks like it should exist,
 // doesn't, and used to fall straight through to the real rollup — consuming
 // every staged change (including other people's) on what the caller believed
@@ -375,7 +375,7 @@ for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
   };
 
   // AFL-only copy, passed through from the featured change: the AFL homepage
-  // hero renders a two-part display line (a plain phrase plus a colour-accented
+  // hero renders a two-part display line (a plain phrase plus a color-accented
   // closing word) and derives it from `title` when unset. A rollup title runs
   // long for that condensed type, so a featured change may author the pair
   // itself. Half a pair is worse copy than the derived one, hence both or

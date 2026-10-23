@@ -86,7 +86,7 @@ async function fetchAsset(url, format) {
  *   none and is unaffected.
  * @param {(buf: Buffer, item: object) => Promise<Buffer>|Buffer} [opts.transform]
  *   applied to the fetched bytes before they are written. The NFL mirror uses
- *   it to run an SVG cut through the same optimise + ink-box trim its LIGHT
+ *   it to run an SVG cut through the same optimize + ink-box trim its LIGHT
  *   art goes through, so a theme swap does not change the mark's rendered
  *   size.
  * @param {string} opts.outDir absolute path under public/

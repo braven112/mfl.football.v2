@@ -24,7 +24,7 @@ export interface MFLApiConfig {
  *
  * `status` is `ROSTER`, `INJURED_RESERVE` or `TAXI_SQUAD`. Only `ROSTER`
  * consumes one of the league's `rosterSize` slots — IR and taxi have their own
- * limits (`injuredReserve`, `taxiSquad` on the league export). Normalised, so
+ * limits (`injuredReserve`, `taxiSquad` on the league export). Normalized, so
  * it is always present here even though the raw payload can omit it.
  */
 export interface RosterEntry {

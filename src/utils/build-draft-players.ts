@@ -48,7 +48,7 @@ interface BuildDraftPlayersOptions {
    * Which league `viewerFranchiseId` belongs to. Defaults to TheLeague, which
    * is what every pre-existing caller meant. A caller in another league MUST
    * pass its own slug: franchise ids are not unique across leagues, so the
-   * default would otherwise grant that league's `0001` someone else's licence.
+   * default would otherwise grant that league's `0001` someone else's license.
    */
   viewerLeagueSlug?: string;
   /**
@@ -122,7 +122,7 @@ export function buildDraftPlayers(
     adpSource,
   } = options;
   // Licensed content: the franchise must be authorized AND be in the league
-  // the licence is held in. Both leagues have an 0001 and they are not the
+  // the license is held in. Both leagues have an 0001 and they are not the
   // same person.
   const includeRsp =
     !!viewerFranchiseId &&

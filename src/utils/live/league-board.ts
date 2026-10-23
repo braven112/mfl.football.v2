@@ -132,12 +132,12 @@ async function assembleUngrouped(
    *
    * `readLeagueLive` resolves identity from the registry, so without this the
    * board keeps every club's present-day mark and Throwback Week is invisible.
-   * Colours ride along only when the era defines its own palette. Detected
+   * Colors ride along only when the era defines its own palette. Detected
    * over the WHOLE claim, not the primary alone: `applyThrowbackOverrides`
-   * clears the present-day `*Dark` variants whenever an era brings colours,
+   * clears the present-day `*Dark` variants whenever an era brings colors,
    * and Da Dangsters' 2015 era shares today's primary — a primary-only compare
-   * missed it and let the modern dark-mode colours back over the era. A
-   * franchise wearing today's colours keeps the registry's claim untouched.
+   * missed it and let the modern dark-mode colors back over the era. A
+   * franchise wearing today's colors keeps the registry's claim untouched.
    */
   const CLAIM_KEYS = [
     'color',

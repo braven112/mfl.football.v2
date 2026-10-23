@@ -45,7 +45,7 @@ export function nflLogoUrl(team: string, ground: NflMarkGround = 'light'): strin
   // Same-origin only, deliberately. `resolveNflDarkLogoUrl` falls back to the
   // ESPN CDN when a build has no mirror (dev, test, Storybook's empty
   // manifest), and shipping that as a `src` is the cross-origin fetch this
-  // module exists to avoid. The light mark on a dark ground is the behaviour
+  // module exists to avoid. The light mark on a dark ground is the behavior
   // these surfaces have today, so falling back to it is never a regression.
   return dark && dark.startsWith('/') ? dark : light;
 }
@@ -55,8 +55,8 @@ export function nflLogoUrl(team: string, ground: NflMarkGround = 'light'): strin
  * `primary_logo_white`), committed same-origin at 512px by
  * `scripts/download-nfl-white-logos.mjs`.
  *
- * For a watermark on a coloured band that is dark in both themes, where the
- * club's own colours would fight the band's: one ink, every club. No theme
+ * For a watermark on a colored band that is dark in both themes, where the
+ * club's own colors would fight the band's: one ink, every club. No theme
  * swap is keyed on this src, and none is wanted — white is the point.
  */
 export function nflWhiteLogoUrl(team: string): string {

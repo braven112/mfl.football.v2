@@ -1,6 +1,6 @@
 /**
  * The signed-in owner's franchise as a HERO BACKDROP — their gradient behind
- * the card, their crest centred under the copy.
+ * the card, their crest centered under the copy.
  *
  * This is the draft broadcast's reveal treatment (`BroadcastRevealCard` +
  * `.dbc-reveal` in draft-broadcast.css) brought back to the two league
@@ -26,7 +26,7 @@
  *     right artwork.
  *
  * Returns null for a signed-out visitor, or a franchise whose config carries
- * no colours at all — the caller then renders its own league chrome unchanged,
+ * no colors at all — the caller then renders its own league chrome unchanged,
  * which is the correct fallback and the reason every call site treats the
  * backdrop as optional rather than branching on auth itself.
  */
@@ -52,7 +52,7 @@ export interface HeroBackdropTeam extends DarkSurfaceCrestTeam {
   /** Raw CSS `background`, painted verbatim. See the theming rules doc. */
   broadcastGradient?: string;
   /**
-   * The team's `icon` is a centre CROP of its MFL
+   * The team's `icon` is a center CROP of its MFL
    * banner art, not a drawn mark — what scripts/suggest-league-branding.mjs
    * seeds a package league with. A square picture rather than a transparent
    * logo, so a hero shows it as a circle. Cleared by the branding editor the
@@ -88,10 +88,10 @@ export interface HeroFranchiseBackdrop {
    * Cleared for **3:1** — `AA_LARGE_TEXT_RATIO` — against the washed gradient
    * across that whole band, and for ΔE ≥ 18 against the white headline it sits
    * beside. 3:1 is the correct floor and not a relaxed one: every mark this
-   * colours is large display type or non-text UI, which is exactly what WCAG's
+   * colors is large display type or non-text UI, which is exactly what WCAG's
    * large-text bar covers. Do not "tighten" it to 4.5 — that was tried, and it
-   * drove every accent so far toward white that the brand colour stopped being
-   * recognisable, which fails a different part of the same standard.
+   * drove every accent so far toward white that the brand color stopped being
+   * recognizable, which fails a different part of the same standard.
    *
    * The pill's FILL is not this value: it is `--hero-fb-pill-bg`, nudged away
    * from `pillInk` to clear 4.5:1, because a 0.8125rem label is small text.
@@ -104,7 +104,7 @@ export interface HeroFranchiseBackdrop {
    * floor: the panel sits over the gradient's far end under the thinnest wash,
    * and its type is 0.75rem, so it is held to 4.5:1. One accent cannot serve
    * both bands on a high-contrast gradient — Midwestside runs gold at one end
-   * and black at the other, so a colour readable on one is invisible on the
+   * and black at the other, so a color readable on one is invisible on the
    * other by construction.
    */
   accentPanel: string;
@@ -140,7 +140,7 @@ export const SURFACE_BEHIND_LIGHT = '#e0e0e0';
 /**
  * The two horizontal bands a mark can occupy, as fractions of the card width.
  *
- * They are separate because a franchise gradient is not one colour — it is at
+ * They are separate because a franchise gradient is not one color — it is at
  * its first stop on the left and its last on the right, and the wash over it is
  * heaviest on the left and thinnest in the middle. A single accent cleared at
  * one point and then published to the whole `<section>` is exactly the bug this
@@ -184,7 +184,7 @@ const WASH_STOPS: ReadonlyArray<readonly [number, number]> = [
  */
 const MOBILE_WASH_MIN = 0.58;
 
-/** Channel spread below which a colour has no hue worth accenting with. */
+/** Channel spread below which a color has no hue worth accenting with. */
 const GREY_SPREAD = 20;
 
 /**
@@ -252,7 +252,7 @@ export function gradientStops(gradient: string): Array<{ hex: string; at: number
 }
 
 /**
- * The gradient's colour at horizontal fraction `x` of the CARD.
+ * The gradient's color at horizontal fraction `x` of the CARD.
  *
  * Which end of the stop list is on the left depends on the angle: CSS angles
  * increase clockwise from 0deg = up, so 0-180 runs left-to-right and 180-360
@@ -304,7 +304,7 @@ function gradientAngle(gradient: string): number | null {
  * nothing at build time.
  *
  * `fallbackStops` is used when the gradient carries no `#rrggbb` at all —
- * `isSafeCssGradient` also permits `rgb()`, 3-digit hex and named colours, so
+ * `isSafeCssGradient` also permits `rgb()`, 3-digit hex and named colors, so
  * this is reachable with a perfectly valid config. Handing it the franchise's
  * own derived pair keeps the answer team-accurate instead of inventing a
  * surface, which the earlier near-black fallback did in the wrong direction.
@@ -345,7 +345,7 @@ export function panelBackdrop(gradient: string, fallbackStops: string[] = []): s
 }
 
 /**
- * The franchise colour that carries an accent, made readable without being made
+ * The franchise color that carries an accent, made readable without being made
  * generic.
  *
  * Candidate order puts SECONDARY first: the primary is usually the gradient
@@ -354,15 +354,15 @@ export function panelBackdrop(gradient: string, fallbackStops: string[] = []): s
  *
  * Each candidate is lifted to `floor` against the surface it will sit on FIRST,
  * and only then tested for distinctness from white — that order matters,
- * because the lift is what moves a colour toward white and so is what can
- * destroy the distinctness. Testing before the lift passes colours that fail
+ * because the lift is what moves a color toward white and so is what can
+ * destroy the distinctness. Testing before the lift passes colors that fail
  * after it.
  *
  * `floor` is a parameter rather than a constant because the same function
  * serves two marks with genuinely different requirements: the headline accent
  * is large display type (3:1) and the panel accent is 0.75rem (4.5:1).
  *
- * Falling back to the best-scoring candidate rather than to a league colour is
+ * Falling back to the best-scoring candidate rather than to a league color is
  * deliberate (Brandon, Sep 2026): the accent stays the team's on every
  * franchise, nudged as far as it needs to go and no further.
  */
@@ -381,7 +381,7 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string, floor: number):
 
   // A franchise with no hue anywhere in its palette — three of the forty: TITS
   // and BADD in the AFL, Bring The Pain in TheLeague. (Wabs was the fourth
-  // until the four-colour pass gave them a carrot.) Grey IS their brand, so
+  // until the four-color pass gave them a carrot.) Grey IS their brand, so
   // the accent stays grey, but WHICH grey has to be constructed rather than
   // picked.
   //
@@ -418,7 +418,7 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string, floor: number):
   }
 
   // Nothing separated from white on its own. Deepen the closest one until it
-  // does, then re-clear it against the backdrop — a colour that has to satisfy
+  // does, then re-clear it against the backdrop — a color that has to satisfy
   // both bounds can end up between them, and the backdrop bound is the one a
   // reader cannot work around.
   let out = best;
@@ -429,7 +429,7 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string, floor: number):
   return ensureContrastOn(out, backdrop, floor);
 }
 
-/** Fallbacks matching the derived pair's own defaults, for a colourless entry. */
+/** Fallbacks matching the derived pair's own defaults, for a colorless entry. */
 const FALLBACK_PRIMARY = '#10161f';
 const FALLBACK_SECONDARY = '#1c497c';
 
@@ -456,7 +456,7 @@ export function resolveHeroFranchiseBackdrop(
 
   const art = resolveDarkSurfaceCrest(team, league);
 
-  // Everything below is measured against a colour that is actually rendered —
+  // Everything below is measured against a color that is actually rendered —
   // the gradient under its wash for the copy, the page surface for the border —
   // rather than against an assumed one. That is the difference between "this
   // clears 4.5:1" and "this clears 4.5:1 against something else".
@@ -465,13 +465,13 @@ export function resolveHeroFranchiseBackdrop(
   const fallbackStops = [pair.primary, pair.secondary];
   const backdrop = copyBackdrop(gradient, fallbackStops);
   // 3:1, not 4.5:1, and the size is what earns it: every element the accent
-  // colours is large text or non-text UI, which is exactly what WCAG's
+  // colors is large text or non-text UI, which is exactly what WCAG's
   // large-text floor is for. The headline word runs clamp(2.2rem, 4.4vw,
   // 3.25rem) at weight 700 and the countdown numeral clamp(2.6rem, 5vw,
   // 3.1rem) — both far past the 18.66px-bold threshold — and the star chip is
   // a background. Holding display type to the BODY floor is not "extra safe":
-  // it forced every accent so far toward white that the brand colour stopped
-  // being recognisable, which fails a different part of the same standard.
+  // it forced every accent so far toward white that the brand color stopped
+  // being recognizable, which fails a different part of the same standard.
   // The pill is the exception and is handled at 4.5 below, because its label is
   // 0.8125rem — genuinely small text.
   const accent = resolveAccent(team, backdrop, AA_LARGE_TEXT_RATIO);
@@ -496,7 +496,7 @@ export function resolveHeroFranchiseBackdrop(
       : PILL_DARK_INK;
   const pillBg = ensureContrastOn(accent, pillInk, AA_BODY_TEXT_RATIO);
 
-  // CTA is neutral white, so its ink is the team colour DARKENED onto white.
+  // CTA is neutral white, so its ink is the team color DARKENED onto white.
   const ctaInk = ensureContrastOn(accent, '#ffffff', AA_BODY_TEXT_RATIO);
 
   // Border is non-text UI → the 3:1 floor, and it is the one mark measured

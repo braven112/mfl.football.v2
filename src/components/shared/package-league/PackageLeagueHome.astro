@@ -14,7 +14,7 @@
  *
  * Every section reads data the route hands in (globs must be literal per
  * route), so a new package league is a thin route file and a registry entry.
- * Colours are semantic tokens only; the league's palette drives them.
+ * Colors are semantic tokens only; the league's palette drives them.
  *
  * No client script: nothing here needs to re-init under the ClientRouter.
  */
@@ -281,7 +281,7 @@ const heroState = await resolveLeagueHomeHero({
   // The Gauntlet: the weekly column carries its schedule-strength payload.
   isColumn: (post) => !!post.scheduleStrength,
 });
-// The signed-in owner's colours + crest behind the promo card — the SESSION's
+// The signed-in owner's colors + crest behind the promo card — the SESSION's
 // franchise, never a browsed one (the same rule as the other homepages).
 const heroBackdrop = resolveHeroFranchiseBackdrop(mine ? (teamsById[mine] as any) : undefined, crestLeagueKey(league.slug));
 

@@ -183,7 +183,7 @@ export async function postSpeculationToGroupMe({
 
   // This lane predates postToGroupMe and posts /v3/bots/post directly, so the
   // day-plan check has to be asked explicitly — a raw fetch is exactly how a
-  // sender ends up outside a cap nobody realises it is outside of.
+  // sender ends up outside a cap nobody realizes it is outside of.
   if (!allowPost()) {
     const why = describeRefusal('trade-speculation', null);
     log(`  [speculation] Held: ${why}`);

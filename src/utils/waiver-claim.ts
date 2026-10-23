@@ -71,7 +71,7 @@ export interface ClaimValidationContext {
    * every such owner their roster was full and refused a legal pickup
    * (2026-09-09, the AFL's FCFS window).
    *
-   * Omitted falls back to the full roster, which is the pre-fix behaviour —
+   * Omitted falls back to the full roster, which is the pre-fix behavior —
    * callers with real MFL statuses in hand must pass it.
    */
   activeRosterIds?: Set<string>;
@@ -91,7 +91,7 @@ const NON_ACTIVE_STATUSES = new Set(['INJURED_RESERVE', 'TAXI_SQUAD']);
 /**
  * Whether an MFL roster status occupies an active roster slot.
  *
- * An absent or unrecognised status reads as ACTIVE. MFL omits the field for
+ * An absent or unrecognized status reads as ACTIVE. MFL omits the field for
  * ordinary roster players in some exports, and a future bucket we have not
  * seen is far more likely to be a kind of roster than a kind of IR — guessing
  * the other way under-counts the roster and waves through an add that really
@@ -414,7 +414,7 @@ export function poolOfFranchise(
  *
  * A tolerant fallback still walks the subtree for id-shaped values under
  * `id`/`player`, so a future shape change degrades to "verified" rather than
- * to a hard failure — but an unrecognised, non-empty payload is null.
+ * to a hard failure — but an unrecognized, non-empty payload is null.
  */
 export function readPendingWaiverPlayerIds(body: any): string[] | null {
   if (!body || typeof body !== 'object') return null;
@@ -461,7 +461,7 @@ export function readPendingWaiverPlayerIds(body: any): string[] | null {
   walk(pending);
 
   // Zero ids out of a payload that HAD content is not "nothing pending" — it is
-  // a shape we do not recognise, and the two must not collapse. Reporting it as
+  // a shape we do not recognize, and the two must not collapse. Reporting it as
   // a verified empty list tells an owner their good claim did not go through;
   // `null` tells them we could not check, which is the truth.
   if (adds.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
@@ -542,7 +542,7 @@ export function readFiledWaiverClaims(body: any): FiledWaiverClaim[] | null {
   collect(pending);
   if (requests.length === 0) {
     // An empty container is a credible "nothing filed"; anything else is a
-    // shape we do not recognise and must not report as empty.
+    // shape we do not recognize and must not report as empty.
     return Object.keys(pending as Record<string, unknown>).length === 0 ? [] : null;
   }
 

@@ -2,8 +2,8 @@
  * The lower third: one of the owner's OPPONENTS just scored.
  *
  * Deliberately smaller and shorter than the takeover, and deliberately NOT a
- * field of the opponent's colour. Their brand appears as the top rule and the
- * crest only — that asymmetry is what keeps "big colour = mine" learnable.
+ * field of the opponent's color. Their brand appears as the top rule and the
+ * crest only — that asymmetry is what keeps "big color = mine" learnable.
  *
  * It occludes nothing: the scoreboard stays up and the strip stays visible
  * behind it, because bad news is not worth taking the board away for.
@@ -59,6 +59,6 @@ function MomentLowerThird({ moment, team, scoreLine, position }: Props) {
  * times over an eight-hour Sunday — on set-top hardware, and concurrently
  * with the reveal transitions that are the one thing on this screen allowed
  * to cost a frame budget. Props here are already memoised upstream, so the
- * bailout is free and changes no behaviour.
+ * bailout is free and changes no behavior.
  */
 export default memo(MomentLowerThird);

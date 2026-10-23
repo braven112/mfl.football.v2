@@ -91,7 +91,7 @@
     display: none;
   }
 
-  /* --fa-slot-color is the page's own sorted-header colour, read off the
+  /* --fa-slot-color is the page's own sorted-header color, read off the
      (hidden) sorted header, so each league and style keeps its accent. */
   .players-table th[data-fa-slot]::after {
     content: attr(data-fa-slot);

@@ -49,7 +49,7 @@ const content: ShowcaseContent = {
       pill: 'New this week', title: 'Dynamic top-player spotlight', titleAccent: 'on Free Agents',
       summary:
         'A player appears only if the entry names one: an ESPN cutout over league blue, his NFL club’s ' +
-        'crest behind him. An announcement belongs to nobody, so that glow is the only team colour here.',
+        'crest behind him. An announcement belongs to nobody, so that glow is the only team color here.',
       ctaLabel: 'Read the update',
       model: { name: 'Ashton Jeanty', descriptor: 'Featured', pos: 'RB', code: 'LV', espnId: '4890973' },
     },
@@ -140,7 +140,7 @@ const content: ShowcaseContent = {
       pill: 'Season opener', title: 'Football is back', titleAccent: 'Thursday night.',
       summary:
         'The best projected starter in the week’s earliest game — and if you roster a player in that ' +
-        'opener, you see your own. Kickoff belongs to the league, so the card stays league-coloured.',
+        'opener, you see your own. Kickoff belongs to the league, so the card stays league-colored.',
       ctaLabel: 'See the opener',
       model: { name: 'Lamar Jackson', descriptor: 'Your Kickoff Starter', pos: 'QB', code: 'BAL', espnId: '3916387' },
     },
@@ -178,9 +178,9 @@ const content: ShowcaseContent = {
   ],
   galleryNote:
     'Every composite state TheLeague ships, at true homepage scale — real players, real NFL team ' +
-    'colours on the league-scoped cards and real franchise colours on the team-scoped ones, and ' +
+    'colors on the league-scoped cards and real franchise colors on the team-scoped ones, and ' +
     'the exact gradient / radial glow / ghost-wordmark / frosted-caption CSS from the live ' +
-    'components. The badge on each card says which half of the colour rule it is on. Toggle your ' +
+    'components. The badge on each card says which half of the color rule it is on. Toggle your ' +
     'theme: the gradient, glow and tokens re-resolve for dark mode.',
   sections: [
     {

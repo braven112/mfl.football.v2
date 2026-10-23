@@ -964,7 +964,7 @@ function Rollover({
   /**
    * How the last carry actually went, kept separate from the message text so
    * the result can be STYLED as what it is. "0 balances carried" rendered in
-   * the success colour is how a run that moved no money reads as a good one.
+   * the success color is how a run that moved no money reads as a good one.
    */
   const [outcome, setOutcome] = useState<'ok' | 'partial' | 'none' | null>(null);
   /**
@@ -1338,7 +1338,7 @@ type StepState = 'done' | 'todo' | 'unknown';
  * Only three of them have a real signal. Step 3 — "settlement" — has none:
  * there is no MFL flag for "I have finished sending everyone their winnings",
  * and inventing one would be worse than admitting it. So it renders the same
- * quiescence PROXY the unattended job uses, labelled as a proxy, and never
+ * quiescence PROXY the unattended job uses, labeled as a proxy, and never
  * claims to be done. A checklist that ticks a box it cannot actually verify is
  * how a commissioner ends up trusting it past the point it earns.
  */
@@ -1416,7 +1416,7 @@ function SequenceChecklist({
           <span>
             <strong>{step.label}</strong>
             {/* The state is in the text too, not just the mark — the mark is a
-                glyph and a colour, neither of which a screen reader conveys. */}
+                glyph and a color, neither of which a screen reader conveys. */}
             <span className="acct__sr">
               {step.state === 'done' ? ' — done. ' : step.state === 'todo' ? ' — still to do. ' : ' — not verifiable. '}
             </span>

@@ -8,7 +8,7 @@
  *
  * Why this exists: an earlier probe sampled two seasons at one week each and
  * hit MFL rate limits on half its rows, so its "no data" answers were not
- * trustworthy for the years it flagged (it has since been deleted in favour of
+ * trustworthy for the years it flagged (it has since been deleted in favor of
  * this). This walks EVERY season and reports the per-week shape, which is the
  * only way to say "MFL has 42 games for 2010 and no more" rather than
  * inferring it from a sample.
@@ -158,7 +158,7 @@ const stripTags = (html) =>
  * filter menus happen to list every franchise name — so a "how many team names
  * appear" test scored 24/24 and reported the schedule as found. Twice now a
  * loose detector has produced a confident wrong answer, so this reads MFL's own
- * navigation and follows the labelled link.
+ * navigation and follows the labeled link.
  */
 function findNavLinks(html, baseHost, year) {
   const out = [];
@@ -246,7 +246,7 @@ for (const year of YEARS) {
     const navLinks = home.status === 200 ? findNavLinks(home.body, host, year) : [];
     await sleep(1200);
 
-    // Try each labelled candidate for a week the export has nothing for.
+    // Try each labeled candidate for a week the export has nothing for.
     const candidates = [];
     for (const link of navLinks.slice(0, 4)) {
       const url = link.href + (link.href.includes('?') ? '&' : '?') + `W=${emptyWeek}`;

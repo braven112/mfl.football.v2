@@ -119,7 +119,7 @@ export interface ReadCrossLeagueInput {
    * OPT-IN, and off by default, because this read is shared. `/broadcast`
    * calls it too and never looks at the names — so defaulting it on would
    * charge a live television surface a request per outside league for data it
-   * discards. A feature does not get to add network work to its neighbours.
+   * discards. A feature does not get to add network work to its neighbors.
    */
   withFranchiseNames?: boolean;
 }
@@ -178,7 +178,7 @@ export async function readCrossLeagueLive(
       loadLeagueProjections(league, week, user.id, year).catch(() => new Map<string, number>()),
       // Skipped unless the caller asked, and skipped for a registered league
       // either way: those have committed brands, which carry the name plus
-      // colours and a crest. For everyone else it is cached for an hour in
+      // colors and a crest. For everyone else it is cached for an hour in
       // process, so it is not a per-poll request.
       wantNames && !league.registered
         ? readLeagueFranchiseMarks(league, year, user.id).catch(

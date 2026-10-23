@@ -20,10 +20,10 @@
  *    emitted the same class names with nothing to match them. One stylesheet is
  *    what stops the next copy of that.
  *
- * Colour comes from `--league-accent`, which tokens.css defines as
+ * Color comes from `--league-accent`, which tokens.css defines as
  * `var(--color-primary)` for TheLeague (so this is a no-op there) and overrides
  * per league — AFL red, best-ball emerald — with dark-mode values in
- * tokens-dark.css. Never hardcode a league colour here.
+ * tokens-dark.css. Never hardcode a league color here.
  */
 
 .place-bid-link {
@@ -49,7 +49,7 @@
 }
 
 /* Only the properties a <button> does NOT inherit are reset — border, padding,
-   colour, radius and size all come from .place-bid-link above, so the button
+   color, radius and size all come from .place-bid-link above, so the button
    and the anchor can never drift apart. */
 button.place-bid-link {
   background: none;

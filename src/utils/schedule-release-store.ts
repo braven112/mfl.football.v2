@@ -4,7 +4,7 @@
  * ONE STORE: the committed archive at
  * data/<league>/schedule-release/<year>.json, written by the release cron.
  *
- * WHY A LOCK AT ALL. The optimiser is simulated annealing, so generating twice
+ * WHY A LOCK AT ALL. The optimizer is simulated annealing, so generating twice
  * yields two different — both valid — schedules. Without a lock, sixteen owners
  * opening the reveal page would see sixteen different seasons and the
  * commissioner would paste one of them. The archive is the lock: the cron

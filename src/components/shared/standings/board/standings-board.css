@@ -5,13 +5,13 @@
  * (StandingsPage / the AFL page set it from src/utils/site-theme.ts):
  *   editorial — the site's long-standing look: white cards, the 2px-stripe
  *               section title, grey column heads, zebra rows, DIV/2ND/WC pills.
- *   primetime — the broadcast look: team-coloured paint, the condensed display
+ *   primetime — the broadcast look: team-colored paint, the condensed display
  *               face in italic caps, the league accent on lines and badges.
  * The markup is identical in both; only these rules differ.
  *
- * Team colour as a FILL (Primetime paint) is the franchise's broadcast
+ * Team color as a FILL (Primetime paint) is the franchise's broadcast
  * gradient, dark in both themes, so its crest is the dark-surface cut. Team
- * colour as a STRIPE (Editorial) is the franchise accent token, which clears
+ * color as a STRIPE (Editorial) is the franchise accent token, which clears
  * 3:1 on the card in each theme — a raw #181818 primary vanished on dark cards.
  */
 
@@ -35,7 +35,7 @@
   --stb-money: #9a7400;
   --stb-radius: 0.75rem;
   /* Rings and stripes (not elevation, so not --shadow-*): a hairline ring, a
-     team-colour top stripe (declared on the striped element itself, where
+     team-color top stripe (declared on the striped element itself, where
      --stb-team is set), the viewer's own-row edge and an inset outline. */
   --stb-ring: 0 0 0 1px var(--stb-line);
   --stb-mine-edge: inset 4px 0 0 var(--stb-accent);
@@ -166,7 +166,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-team small { font-size: var(--font-size-2xs); color: var(--stb-muted); line-height: 1.2; }
 .stb-row--lead { padding-block: 0.6rem; }
 .stb-row--lead .stb-crest { width: 2.1rem; height: 2.1rem; }
-/* A division's leader is painted in its team colours, name in the display face. */
+/* A division's leader is painted in its team colors, name in the display face. */
 .stb-row--painted { color: #fff; border-top: 0; }
 .stb-row--painted b { font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; letter-spacing: 0.01em; }
 [data-site-theme='primetime'] .stb-row--painted b { text-transform: uppercase; font-style: italic; }
@@ -196,7 +196,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 
 /* Seed marks. Primetime: a dot plus "Seed n" under the name. Editorial: the DIV/2ND/WC pill (PlayoffBadge). */
 .stb-seedline { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; white-space: nowrap; }
-/* Editorial seed chip: the seed number on the band's colour (PlayoffBadge's
+/* Editorial seed chip: the seed number on the band's color (PlayoffBadge's
    gold / accent / silver), with the band named for screen readers. */
 .stb-seedchip { display: inline-grid; place-items: center; min-width: 1.6rem; height: 1.6rem; padding: 0 0.3rem; border-radius: 0.4rem; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-sm); line-height: 1; justify-self: center; }
 .stb-seedchip--division_winner { background: var(--stb-gold); color: #111; }
@@ -257,7 +257,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 [data-site-theme='editorial'] .stb-tile__tag { top: 0.9rem; right: 0.75rem; }
 [data-site-theme='editorial'] .stb-tile img { width: 56%; max-width: 6.5rem; margin: 1.6rem auto 0.6rem; }
 [data-site-theme='editorial'] .stb-tile__rec { color: var(--stb-muted); }
-/* A division winner's tile is painted in team colour, its accent stripe kept. */
+/* A division winner's tile is painted in team color, its accent stripe kept. */
 [data-site-theme='editorial'] .stb-tile--painted { color: #fff; --stb-link-color: #fff; }
 [data-site-theme='editorial'] .stb-tile--painted .stb-tile__rec { color: #fff; opacity: 0.92; }
 
@@ -378,9 +378,9 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-sec__logo { width: 2rem; height: 2rem; object-fit: contain; }
 .stb-groups--wide-last > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 
-/* Links: the layouts' global a:hover underlines and recolours every link
+/* Links: the layouts' global a:hover underlines and recolors every link
    (0,1,1). The board's links are whole cards and rows, so hover is shown on
-   the card or row instead, and the text keeps its own colour. */
+   the card or row instead, and the text keeps its own color. */
 .stb a:is(:hover, :focus) { text-decoration: none; color: var(--stb-link-color, inherit); }
 [data-site-theme='primetime'] :is(.stb-leader, .stb-tile) { --stb-link-color: #fff; }
 .stb :is(a.stb-leader, a.stb-tile, a.stb-chip) { transition: transform var(--transition-fast), outline-color var(--transition-fast); outline: 2px solid transparent; outline-offset: 2px; }

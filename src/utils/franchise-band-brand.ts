@@ -91,7 +91,7 @@ export interface FranchiseBandBrand {
    * Aug 2026 throwback bug was about: `getThrowbackFranchiseBrand` overlays a
    * hand-listed set of fields, `groupMe` was not on it, and the lineup
    * faceoff watermark therefore kept the CURRENT crest while the name and
-   * colours around it threw back — worst for a franchise whose era keeps its
+   * colors around it threw back — worst for a franchise whose era keeps its
    * name, where the crest is the only tell. A field a consumer reads and the
    * overlay does not map fails silently and plausibly.
    *
@@ -160,7 +160,7 @@ function resolveBandPair(
   // When the primary is a neutral the secondary carries the band — and the
   // NEUTRAL becomes the glow. Returning `secondary` for both would set
   // `--pmb-g2` and `--pmb-glow` to the same hex, and the band would render as
-  // one flat colour with an invisible glow; four franchises land here.
+  // one flat color with an invisible glow; four franchises land here.
   const anchor = pickBrandHue(primary, secondary);
   return anchor === primary
     ? { anchor: primary, glow: secondary }
@@ -172,8 +172,8 @@ function resolveBandPair(
  *
  * `anchorHue` reads the brand pair, which is right for thirteen of sixteen
  * franchises. These three want something the pair does not say, and no rule
- * gets there — it is which of a franchise's OWN colours the band should lead
- * with, which is a judgement, not a measurement:
+ * gets there — it is which of a franchise's OWN colors the band should lead
+ * with, which is a judgment, not a measurement:
  *
  * - **Midwestside** is gold-on-black, and its `colorPrimary` IS the gold, so
  *   nothing in the config says the black leads. It does; the gold is trim
@@ -191,17 +191,17 @@ function resolveBandPair(
  * `tests/franchise-band-brand.test.ts` exists to prevent.
  *
  * Applied to the CURRENT identity only. A Throwback Week overwrites both
- * colours from the era below, which is correct: this is art direction for the
+ * colors from the era below, which is correct: this is art direction for the
  * brand a franchise wears today, not for one it wore in 2013.
  */
 const MIDWESTSIDE_BAND = { primary: mixHex('#181818', '#ffcd00', 0.1), secondary: '#ffcd00' };
 const VITSIDE_BAND = { primary: mixHex('#181818', '#aa322b', 0.1), secondary: '#aa322b' };
 
 // `secondary` is OPTIONAL: an entry that only needs its anchor moved leaves the
-// derived glow alone rather than restating a colour the config already owns.
+// derived glow alone rather than restating a color the config already owns.
 const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: string; secondary?: string }>>> = {
   // Midwestside and Vitside are the SAME franchises in both leagues, with
-  // identical brand colours in both configs — so the call about which colour
+  // identical brand colors in both configs — so the call about which color
   // leads has to be made in both, or the same team wears two different bands
   // depending on which roster you opened it from. (Franchise ids differ per
   // league; there is no shared key.) Gridiron Geeks has no AFL entry.
@@ -220,7 +220,7 @@ const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: s
     // accents wash out against it — the orange glow barely registers and the
     // crest watermark loses its edges. Every other band in the league carries
     // its accent on a darker field; this brings the blue to the same footing
-    // without changing which colour it is.
+    // without changing which color it is.
     //
     // It used to hand-write `secondary: '#d45500'` too, because `colorSecondary`
     // was a muted #d78a46 that could not carry a glow. That was a workaround for
@@ -305,7 +305,7 @@ export function buildFranchiseBandBrands(
     let primary: string = pair.anchor;
     secondary = pair.glow;
     // Owner-directed override, where the automatic pick leads with the wrong
-    // one of the franchise's own colours (see BAND_ART_DIRECTION).
+    // one of the franchise's own colors (see BAND_ART_DIRECTION).
     const directed = BAND_ART_DIRECTION[league]?.[franchiseId];
     if (directed) {
       primary = directed.primary;

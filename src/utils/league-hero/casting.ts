@@ -19,7 +19,7 @@
  * Server-side only — reads the league's MFL feeds from disk via the
  * league-aware helpers in offseason-hero-data.ts. Ownership is a LIST
  * everywhere (a duplicate-player league rosters one player in several pools),
- * which those helpers and `castsFor` already honour. Returns null when no model resolves;
+ * which those helpers and `castsFor` already honor. Returns null when no model resolves;
  * the hero then falls back to its existing (non-composite) player art.
  *
  * Bespoke phases (trade-deadline day, and the playoffs / championship week

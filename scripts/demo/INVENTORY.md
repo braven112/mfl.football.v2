@@ -158,7 +158,7 @@ MFL_*), `generate-pecking-order.mjs` (ANTHROPIC_API_KEY), `sync-owner-last-visit
 
 | File | Real identity carried |
 |---|---|
-| src/data/theleague.config.json | 16 franchise names/eras (31 distinct names), abbrevs, aliases, colours, icon/banner/groupMe paths, ownerHistory, loader quips about owners, division names |
+| src/data/theleague.config.json | 16 franchise names/eras (31 distinct names), abbrevs, aliases, colors, icon/banner/groupMe paths, ownerHistory, loader quips about owners, division names |
 | src/data/theleague.assets.json + data/theleague/assets.json | every era name + alias + asset filename (regenerate via sync:theleague after replacing art) |
 | src/data/owners-registry.json | 38 TheLeague owners' real names + claims (AFL people share file) |
 | data/theleague/championship-history.json | champion/runner-up names per year |

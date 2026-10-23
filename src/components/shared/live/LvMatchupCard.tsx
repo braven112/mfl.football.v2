@@ -62,7 +62,7 @@ export default function LvMatchupCard({
    *
    * A single total answers "how much football is left" but never "left for
    * WHOM", which is the question a board showing 87.0 – 106.5 is actually
-   * being asked. Each number sits behind a dot in that side's own colour —
+   * being asked. Each number sits behind a dot in that side's own color —
    * the same `--t0`/`--t1` the win-probability bar is drawn from — so the
    * first dot is always the first row and the pair needs no legend.
    *
@@ -70,7 +70,7 @@ export default function LvMatchupCard({
    * depending on its value is harder to read at a glance than one that never
    * moves.
    *
-   * Colour alone does not carry it: position matches the rows below, each
+   * Color alone does not carry it: position matches the rows below, each
    * number carries a `title`, and the button's own `aria-label` spells both
    * out — that label is what a screen reader announces INSTEAD of this markup,
    * so a count left out of it is a count a screen reader never hears.

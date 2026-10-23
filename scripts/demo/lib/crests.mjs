@@ -34,7 +34,7 @@ export function crestSvg(franchise, { dark = false } = {}) {
 `;
 }
 
-/** 3:1 banner — crest at left, name at right, on the primary colour. */
+/** 3:1 banner — crest at left, name at right, on the primary color. */
 export function bannerSvg(franchise) {
   const crest = crestSvg(franchise, { dark: false })
     .replace(/^<svg[^>]*>/, '')

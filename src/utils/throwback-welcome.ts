@@ -13,7 +13,7 @@
  * the throwback-week insights doc is explicit that eras are only resolved at a
  * chokepoint.
  *
- * Deliberately keyed off the REAL current week (`?testDate=` honoured), never
+ * Deliberately keyed off the REAL current week (`?testDate=` honored), never
  * `?week=`: `/live-scoring?week=4` in December is someone reading history, not
  * the start of Throwback Week.
  */

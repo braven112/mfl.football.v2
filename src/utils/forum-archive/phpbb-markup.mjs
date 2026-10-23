@@ -14,7 +14,7 @@
  *   - `[text](url)` links (http/https only — the renderer drops the rest)
  *   - `• ` list items
  *
- * Everything else (colour, size, underline, smilies) collapses to its text.
+ * Everything else (color, size, underline, smilies) collapses to its text.
  */
 
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
@@ -143,7 +143,7 @@ function renderFrame({ tag, attrs, text }) {
   }
 }
 
-/** Normalise whitespace: trim lines' trailing space, at most one blank line. */
+/** Normalize whitespace: trim lines' trailing space, at most one blank line. */
 function tidy(text) {
   return text
     .replace(/\r\n?/g, '\n')

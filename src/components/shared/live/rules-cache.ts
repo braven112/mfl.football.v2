@@ -46,10 +46,10 @@ export function useLeagueRules(
 
   useEffect(() => {
     if (!key) return;
-    let cancelled = false;
+    let canceled = false;
     for (const leagueId of key.split(',')) {
       loadRules(leagueId, year).then((data) => {
-        if (cancelled || !data.ok || !data.rules) return;
+        if (canceled || !data.ok || !data.rules) return;
         const rules = data.rules;
         setByLeague((prev) => {
           if (prev.get(leagueId) === rules) return prev;
@@ -60,7 +60,7 @@ export function useLeagueRules(
       });
     }
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [key, year]);
 

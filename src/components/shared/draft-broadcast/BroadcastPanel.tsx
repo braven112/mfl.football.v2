@@ -19,7 +19,7 @@
  * house dark (positions), through the same `--dbc-gradient` custom property the
  * reveal card and the idle board both set — one painting path for all four
  * screens, which is what stopped the idle board and the reveal disagreeing
- * about a franchise's colours (see `toBroadcastPair`).
+ * about a franchise's colors (see `toBroadcastPair`).
  */
 
 import { useCallback } from 'react';
@@ -40,7 +40,7 @@ import { BroadcastFace } from './BroadcastFace';
  *
  * A row is read at a glance from ten feet, and the count beside the label is
  * already the precise answer — the faces are there to make it a thing you
- * recognise rather than a number you parse. Eight fills a 16:9 row at this chip
+ * recognize rather than a number you parse. Eight fills a 16:9 row at this chip
  * size without shrinking the chips to the point where nobody can tell who they
  * are, which would defeat the entire purpose of drawing them.
  */
@@ -67,7 +67,7 @@ export function faceLabel(name: string, position?: string, nflTeam?: string): st
   return parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
 }
 
-/** Franchise colours + gradient, resolved exactly as the reveal card does. */
+/** Franchise colors + gradient, resolved exactly as the reveal card does. */
 function brandStyle(team?: DraftRoomTeam): React.CSSProperties {
   const brand = resolveSplashColors(team);
   const { primary, secondary } = toBroadcastPair(brand.primary, brand.secondary);

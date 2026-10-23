@@ -16,10 +16,10 @@ import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claud
  * using the bare word as a name. src/utils/league-name-guard.mjs catches what slips.
  */
 function foreignNameRule(league) {
-  // A league whose own name ends in "League" capitalises it legitimately.
+  // A league whose own name ends in "League" capitalizes it legitimately.
   const phraseName = foreignLeagueNames(league).some((n) => /^The\s/.test(n));
   if (!phraseName || /\bLeague\b/.test(LEAGUES[league].name)) return '';
-  return ` Call this league ${ownLeagueLabel(league)}, and never capitalise the word "league" as if it were a name (a different league is named that), in a headline or anywhere else.`;
+  return ` Call this league ${ownLeagueLabel(league)}, and never capitalize the word "league" as if it were a name (a different league is named that), in a headline or anywhere else.`;
 }
 
 const MODEL = HAIKU_MODEL;

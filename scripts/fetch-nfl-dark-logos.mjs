@@ -87,7 +87,7 @@ async function main() {
     manifestPath: path.join(ROOT, 'src', 'data', 'nfl-dark-logos-manifest.json'),
     manifestField: 'codes',
     concurrency: 6,
-    // An SVG cut goes through the same optimise + ink-box trim the LIGHT art
+    // An SVG cut goes through the same optimize + ink-box trim the LIGHT art
     // does. Without it the dark mark keeps NFL.com's square padding while the
     // light one is tight-cropped, and the logo visibly changes size when the
     // theme flips.

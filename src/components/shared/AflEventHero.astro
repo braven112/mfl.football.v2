@@ -77,7 +77,7 @@ interface Props {
   /** Landmark label for the section element. Defaults to "AFL hero". */
   regionLabel?: string;
   /**
-   * The viewer's franchise colours + crest, resolved by the page
+   * The viewer's franchise colors + crest, resolved by the page
    * (`resolveHeroFranchiseBackdrop`). When set it REPLACES the navy surface and
    * the red corner glow; the gold accent word, the red pill and the red CTA are
    * untouched, so the AFL's own brand is still on the card.
@@ -86,7 +86,7 @@ interface Props {
    * homepages answer it the same way: the SIGNED-IN owner's franchise, or
    * nothing. On this page that deliberately diverges from `userTeam` — the
    * `?myteam=` / cookie preference the My Team card and standings highlight
-   * follow — because a card painted in someone's colours claims the site is
+   * follow — because a card painted in someone's colors claims the site is
    * theirs, and that should rest on having signed in rather than on a query
    * param. See the note at the resolution site in `afl-fantasy/index.astro`.
    *
@@ -387,12 +387,12 @@ const countAriaLabel = hasCount
      the base rule's `background: var(--ev-surface)` and later in source, which
      is what wins it; `--ev-surface` itself is deliberately NOT overridden,
      because under this modifier nothing reads it — its only consumers are the
-     two `__fade` overlays, and both are hidden below in favour of a mask.
+     two `__fade` overlays, and both are hidden below in favor of a mask.
      The AFL's red corner glow goes too: `.hero-fb__wash` is the wash now, and
-     two washes over franchise colour muddied every gradient that was not red. */
+     two washes over franchise color muddied every gradient that was not red. */
   .afl-event-hero--franchise {
     background: var(--hero-fb-gradient, var(--hero-surface, #002244));
-    /* Team-coloured edge so the card separates from the page. The LIGHT-theme
+    /* Team-colored edge so the card separates from the page. The LIGHT-theme
        tone is the base declaration and the dark one overrides below — never the
        other way round, or a light-theme reader gets the fallback (see
        docs/claude/rules/theming-and-assets.md). Both are held to 3:1 against
@@ -410,7 +410,7 @@ const countAriaLabel = hasCount
     background: var(--hero-fb-pill-bg, var(--hero-fb-accent, #c41e3a));
     color: var(--hero-fb-pill-ink, #fff);
   }
-  /* Neutral-white CTA. The label is the team colour DARKENED onto white rather
+  /* Neutral-white CTA. The label is the team color DARKENED onto white rather
      than the accent itself — the accent is tuned to be legible on a dark
      gradient, which is the opposite problem. */
   .afl-event-hero--franchise .afl-event-hero__cta:not(.afl-event-hero__cta--ghost) {
@@ -423,18 +423,18 @@ const countAriaLabel = hasCount
     display: none;
   }
   /* Same reason as the glow: the composite model's NFL-team tint is a SECOND
-     colour wash, and it fought the franchise's own on every cast player. */
+     color wash, and it fought the franchise's own on every cast player. */
   .afl-event-hero--franchise .afl-event-hero__model-glow {
     display: none;
   }
 
   /* The player photo is a RECTANGLE, and the shells blend its left edge in by
      painting a flat `--ev-surface` overlay on top of it. That works against a
-     flat card and cannot work against a gradient: the overlay is one colour and
-     the card behind it is a different colour at every x, so the photo panel
+     flat card and cannot work against a gradient: the overlay is one color and
+     the card behind it is a different color at every x, so the photo panel
      picked up a hard vertical seam the moment a franchise gradient went in.
 
-     A MASK has no colour to get wrong — it dissolves the photo into whatever is
+     A MASK has no color to get wrong — it dissolves the photo into whatever is
      actually behind it. The stops mirror `--ev-fade-left` inverted (that overlay
      is opaque where the photo should vanish; a mask is transparent there).
 
@@ -783,7 +783,7 @@ const countAriaLabel = hasCount
   }
   /* Long feature headlines: the type steps down rather than the card growing
      a third line into the summary. Kept as modifiers on the same element so
-     the accent, ink and wrap behaviour are shared. */
+     the accent, ink and wrap behavior are shared. */
   .afl-event-hero__title--long {
     font-size: clamp(1.85rem, 3.5vw, 2.6rem);
   }

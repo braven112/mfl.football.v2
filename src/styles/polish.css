@@ -2,10 +2,10 @@
    Global polish layer — imported by every base layout, after the tokens.
 
    The small, site-wide rules that make an interface feel finished rather than
-   merely correct: reduced motion, heading wrap, browser-surface colours, the
+   merely correct: reduced motion, heading wrap, browser-surface colors, the
    hit-area utility and dark-mode text compensation. Every rule here is a
    default that a component can still override; none of them sets a size,
-   colour or spacing a component already chose.
+   color or spacing a component already chose.
 
    Rules and reasoning: docs/claude/rules/theming-and-assets.md
    § "The polish layer". Guard: tests/design-polish.test.ts.
@@ -20,7 +20,7 @@
    `data-motion-essential` opts an element out: a transition that DISPLAYS
    elapsed time (Set Lineup's 1.3s hold-to-clear ring) is information, not
    decoration, and collapsing it makes the ring read "done" the instant the
-   press starts, so the owner lets go and the clear is cancelled. */
+   press starts, so the owner lets go and the clear is canceled. */
 @media (prefers-reduced-motion: reduce) {
   *:not([data-motion-essential]),
   *:not([data-motion-essential])::before,
@@ -143,9 +143,9 @@ html.dark body {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  /* A card-coloured halo fills the 2px offset gap, so the ring is two-tone:
-     on a navy hero band — the same colour as the light-mode primary — the
-     card-coloured gap still shows where a single navy outline would vanish. */
+  /* A card-colored halo fills the 2px offset gap, so the ring is two-tone:
+     on a navy hero band — the same color as the light-mode primary — the
+     card-colored gap still shows where a single navy outline would vanish. */
   box-shadow: 0 0 0 2px var(--card-surface, #fff);
 }
 
@@ -175,7 +175,7 @@ textarea:focus-visible,
    ======================================== */
 html.dark ::selection {
   /* Each league's highlight comes from its theme (--selection-bg / -text):
-     white on a strong tint of the league's colour. */
+     white on a strong tint of the league's color. */
   background: var(--selection-bg, rgba(59, 130, 246, 0.55));
   color: var(--selection-text, #ffffff);
 }
@@ -193,7 +193,7 @@ html[data-league="archies"] a {
 }
 
 /* ── Sprite portraits that swap their own cut ────────────────────────────
-   A one-colour portrait (the Schefter mark) cannot be right on both grounds:
+   A one-color portrait (the Schefter mark) cannot be right on both grounds:
    on a dark ground its line cut reads as a photo negative. So the symbol
    carries both cuts and shows one by these two custom properties, which
    inherit into a <use> clone even from the external sprite file — every

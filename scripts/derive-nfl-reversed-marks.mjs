@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Write the derived reversed cuts from the curated colour map.
+ * Write the derived reversed cuts from the curated color map.
  *
  * Run by hand alongside `download-nfl-logos.mjs`, not in prebuild: the output
  * is COMMITTED art derived from committed art, so it belongs in the diff where

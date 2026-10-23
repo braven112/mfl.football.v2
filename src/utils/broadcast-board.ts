@@ -36,7 +36,7 @@ import { getPlayerHeadshot } from '../constants/roster-constants';
 import { isEspnCdnUrl } from './espn-cdn';
 import { toBroadcastPair } from './draft-broadcast';
 
-/** The board's ground and its header panel — the two surfaces colour is judged against. */
+/** The board's ground and its header panel — the two surfaces color is judged against. */
 const LBC_INK = '#05070b';
 const LBC_PANEL = '#0b1220';
 import { chooseTeamName } from './team-names';
@@ -62,7 +62,7 @@ export interface AssembleBoardInput {
   soundCookie?: string | null;
   pathname?: string;
   /**
-   * `'full'` builds the panels — franchise colours, crests, every name form —
+   * `'full'` builds the panels — franchise colors, crests, every name form —
    * for the island's one-time props. `'poll'` skips all of it.
    *
    * Panel identity cannot change during a Sunday, and `/api/broadcast-live`
@@ -93,8 +93,8 @@ const NEUTRAL: Omit<BroadcastTeam, 'franchiseId' | 'name' | 'nameShort' | 'abbre
 /**
  * One franchise's identity for the board.
  *
- * Brand colours go through `toBroadcastPair` without exception. A raw config
- * colour is not safe to paint white text on — five TheLeague franchises carry
+ * Brand colors go through `toBroadcastPair` without exception. A raw config
+ * color is not safe to paint white text on — five TheLeague franchises carry
  * a near-black `colorPrimary`, and the separate `color` field is a CHART hue
  * chosen to sit apart from fifteen other lines, which is why one
  * black-and-red franchise's `color` is pink.
@@ -227,7 +227,7 @@ function teamFor(
   const brand = brands[franchiseId];
   // The RAW config row, for the fields `TeamBrand` deliberately drops:
   // `colorSecondary`, `broadcastGradient` and `abbrev`. Without it the
-  // takeover's gradient had the same colour at both stops — a flat field, not
+  // takeover's gradient had the same color at both stops — a flat field, not
   // a gradient — and a franchise that declares its own look never got it.
   const cfg = slug ? getLeagueTeamConfig(slug, franchiseId) : undefined;
 
@@ -246,8 +246,8 @@ function teamFor(
 
   // Two different jobs, two different answers.
   //
-  //  - `toBroadcastPair` makes a colour safe to paint WHITE TEXT on. It only
-  //    ever darkens, so it cannot make a colour visible.
+  //  - `toBroadcastPair` makes a color safe to paint WHITE TEXT on. It only
+  //    ever darkens, so it cannot make a color visible.
   //  - `ensureFieldOn` then makes that result visible against the surface it
   //    will sit on, without lifting it past the point where white ink fails.
   //

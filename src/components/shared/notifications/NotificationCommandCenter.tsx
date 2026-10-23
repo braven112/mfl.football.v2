@@ -42,24 +42,24 @@ export default function NotificationCommandCenter() {
   const confirmed = useRef<Prefs>({});
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       try {
         const res = await fetch('/api/push/preferences', { credentials: 'same-origin' });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        if (cancelled) return;
+        if (canceled) return;
         setGroups(data.groups ?? []);
         setCategories(data.categories ?? []);
         setPrefs(data.preferences ?? {});
         confirmed.current = data.preferences ?? {};
         setLoad('ready');
       } catch {
-        if (!cancelled) setLoad('error');
+        if (!canceled) setLoad('error');
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

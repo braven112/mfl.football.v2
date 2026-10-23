@@ -10,7 +10,7 @@
 
      <article class="ui-card standings-card">…</article>
 
-   CUSTOMISING. The base rule sits inside :where(), so it carries ZERO
+   CUSTOMIZING. The base rule sits inside :where(), so it carries ZERO
    specificity: a component's own class wins regardless of stylesheet order.
    That is what lets a page keep its exact look (docs/plans/component-kit.md).
    A card that wants a different ground sets it on its own class.

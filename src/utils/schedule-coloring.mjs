@@ -1,5 +1,5 @@
 /**
- * Edge-colouring schedule search — the mode that can put two teams' division
+ * Edge-coloring schedule search — the mode that can put two teams' division
  * games in different weeks.
  *
  * WHAT THE STRUCTURED BUILDER CANNOT DO
@@ -15,22 +15,22 @@
  * n5-s3, n6-s4}` is a legal round with two North internal games, two South
  * internal and two cross-division: some teams play a rival that week, others do
  * not. Reaching those rounds means giving up the constructions and searching
- * the colourings directly.
+ * the colorings directly.
  *
  * THE MODEL
  *
  * A season is a multigraph — franchises are vertices, required games are edges.
- * Assigning games to rounds is EDGE COLOURING: a proper colouring (no two edges
- * at a vertex sharing a colour) is exactly "nobody plays twice in a round".
- * Colours here are SLOTS, and each slot belongs to a week; a doubleheader week
+ * Assigning games to rounds is EDGE COLORING: a proper coloring (no two edges
+ * at a vertex sharing a color) is exactly "nobody plays twice in a round".
+ * Colors here are SLOTS, and each slot belongs to a week; a doubleheader week
  * owns two slots, which is how a franchise legitimately plays twice that week.
  *
  * WHY IT IS SEEDED FROM THE STRUCTURED BUILDER
  *
  * Not for a head start — for feasibility. A Δ-regular multigraph is not always
- * Δ-edge-colourable (the Petersen graph is the standard counterexample), so
+ * Δ-edge-colorable (the Petersen graph is the standard counterexample), so
  * there is no guarantee a random start can be repaired into a legal season. The
- * structured builder's output IS a proper colouring, which proves one exists,
+ * structured builder's output IS a proper coloring, which proves one exists,
  * and every move below preserves properness. The search therefore cannot fail;
  * the worst case is that it returns what it started with.
  *
@@ -38,15 +38,15 @@
  *
  * Kempe chains. Take two slots: every franchise has degree exactly 2 in the
  * union of their matchings, so the union is a disjoint set of even cycles. Swap
- * the colours along any one cycle and both slots are still perfect matchings.
- * That is the entire neighbourhood, and it is enough — any colouring is
+ * the colors along any one cycle and both slots are still perfect matchings.
+ * That is the entire neighborhood, and it is enough — any coloring is
  * reachable from any other by a sequence of them in practice.
  *
  * WHAT IT COSTS
  *
  * The structured builder guarantees the drama goals for free: legs in disjoint
  * blocks means a rematch gap, a late block means a stretch run. A free
- * colouring guarantees NONE of them, so every goal that was structural has to
+ * coloring guarantees NONE of them, so every goal that was structural has to
  * become a scored term. That is the trade, and it is why `scoreColoring` scores
  * the whole published goal list rather than the fairness subset `scoreSeason`
  * carries.
@@ -172,8 +172,8 @@ const variance = (xs) => {
 };
 
 /**
- * Weights come from the published goal list, normalised to sum to 1, so the
- * optimiser is literally chasing the scorecard. The structured builder's
+ * Weights come from the published goal list, normalized to sum to 1, so the
+ * optimizer is literally chasing the scorecard. The structured builder's
  * `scoreSeason` carries five hand-tuned fairness terms and leaves the rest to
  * structure; here nothing is structural, so every tradeable goal needs a term
  * and its published weight is the only defensible number to use.
@@ -197,7 +197,7 @@ export const COLORING_WEIGHTS = () => {
 };
 
 /**
- * Score a colouring. LOWER IS BETTER, and every term is scaled to roughly 0..1
+ * Score a coloring. LOWER IS BETTER, and every term is scaled to roughly 0..1
  * before weighting so the published weights mean what they say.
  *
  * @param {object[][]} bySlot
@@ -281,7 +281,7 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
 
   // Rivals meeting too close together. Charged QUADRATICALLY in the shortfall:
   // a flat or linear penalty leaves the search indifferent between a
-  // three-week gap and a one-week one, and the first run of this optimiser
+  // three-week gap and a one-week one, and the first run of this optimizer
   // duly traded the gap down to two weeks to buy bye-week gains. Squaring it
   // means a small encroachment is cheap and a big one is not.
   //
@@ -331,7 +331,7 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     byeLuck:
       (games ? Math.min(1, byeDiff / games / 3) : 0) * 0.6 +
       Math.min(1, (Math.max(...netValues, 0) - Math.min(...netValues, 0)) / 12) * 0.4,
-    // Normalised against what a RANDOM draw would produce, not an arbitrary
+    // Normalized against what a RANDOM draw would produce, not an arbitrary
     // divisor. A franchise's doubleheader strength is a sum of n opponent
     // ratings, so under random assignment its spread is about sd*sqrt(n) —
     // dividing by that puts a random schedule near 1 and a perfectly balanced
@@ -340,9 +340,9 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     // The arbitrary /4 it replaces was the bug that made this whole search
     // inert: with real prior-season ratings the term sat at 0.602 while every
     // other term was 0-0.3, and it is VOLATILE — every Kempe swap perturbs it.
-    // The seed comes from `scoreSeason`, which optimised that exact quantity,
+    // The seed comes from `scoreSeason`, which optimized that exact quantity,
     // so essentially every move away from the seed cost more here than it
-    // gained anywhere else and the optimiser never moved at all.
+    // gained anywhere else and the optimizer never moved at all.
     opponentStrength: (spread(dhStrength, dhGamesPerTeam) + spread(lateStrength, lateGamesPerTeam)) / 2,
     finale: finaleGames ? finaleNonDivision / finaleGames : 0,
   };
@@ -384,7 +384,7 @@ const pickSlotPair = (bySlot, slots, ctx, rng) => {
   // This is not a refinement. Without it the search WILL trade the AFL's Week 1
   // cross-conference round away — it is the only clean slot holding
   // non-division games, so it is the only place a rivalry game can move to, and
-  // the optimiser found it immediately. The resulting schedule looked like a
+  // the optimizer found it immediately. The resulting schedule looked like a
   // large improvement and was illegal.
   const frozen = ctx.frozenSlots ?? new Set();
   const open = [];
@@ -431,7 +431,7 @@ const pickCycle = (cycles, slotA, slots, ctx, rng) => {
 };
 
 /**
- * Anneal a colouring with Kempe swaps, starting from a known-good one.
+ * Anneal a coloring with Kempe swaps, starting from a known-good one.
  *
  * Returns the BEST state ever seen, not the last — annealing accepts uphill
  * moves and a season is a one-shot artefact, so ending on a worse draw than one
@@ -457,7 +457,7 @@ export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterat
       const candidate = applyKempe(current, a, b, cycle);
       const candidateScore = scoreColoring(candidate, slots, ctx, weights);
       // Absolute floor, never a price. Demoting the three-week rule to a goal
-      // lets the optimiser trade it; it does not license a one-week rematch.
+      // lets the optimizer trade it; it does not license a one-week rematch.
       if (candidateScore.minRematchGap < (ctx.hardMinRematchGap ?? 3)) continue;
       // RATCHET ON THE TOP GOAL, with one exemption. A plain weighted sum lets
       // the lower goals club together and buy a loss on the highest-weighted

@@ -5,7 +5,7 @@
  * chip, icon + title, date, and a 2-line-clamped summary. The entire card is a
  * link to the entry's detail page.
  *
- * The chip is deliberately NOT labelled "NEW" (the category badge already reads
+ * The chip is deliberately NOT labeled "NEW" (the category badge already reads
  * "New Page" / "New Feature", so the same word twice read as a duplicate) and
  * NOT "UNREAD" (nothing tracks reads — `isNew` only compares publish date to
  * the last-visit cookie). "Just in" claims exactly what the data supports.

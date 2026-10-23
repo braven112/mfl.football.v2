@@ -55,7 +55,7 @@
 
   /* ── Accent tokens. The `blue` family is the default; the modifiers below
         override only what actually differs. Every blue-family value reads a
-        --hero-* theme slot first, so a league with its own hero colours
+        --hero-* theme slot first, so a league with its own hero colors
         (src/themes/<id>.json) gets them; a theme that leaves the slot null
         keeps the blue ramp written here. ──────────────────────────────── */
   --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%));
@@ -251,7 +251,7 @@ html.dark .cmh--gold {
 }
 
 /* ── FRANCHISE SKIN ───────────────────────────────────────────────────────
-   A hero about a TEAM wears that club's colours instead of the phase's. A
+   A hero about a TEAM wears that club's colors instead of the phase's. A
    league event — a draft, the auction, kickoff, a site announcement — passes no
    franchise and keeps its accent gradient above.
 
@@ -269,9 +269,9 @@ html.dark .cmh--gold {
    as `.afl-event-hero--franchise`.
 
    The phase is still legible — it is the wordmark, the pill's TEXT and the
-   copy. Only the colours become the club's. */
+   copy. Only the colors become the club's. */
 .cmh--franchise {
-  /* A deep-ink literal rather than a phase colour: if the franchise gradient
+  /* A deep-ink literal rather than a phase color: if the franchise gradient
      fails to resolve, the white copy still has a ground dark enough to sit on.
      A var() cannot be relied on for that, which is the whole point. */
   background-color: #10161f;
@@ -321,7 +321,7 @@ html.dark .cmh--red {
   position: absolute;
   /* RIGHT-anchored so the word grows leftward and is never clipped. It used to
      be left-positioned and bled off the right edge, which read as a cut-off
-     word rather than a deliberate one — and once a centred crest arrived, the
+     word rather than a deliberate one — and once a centered crest arrived, the
      two fought over the middle of the card. The word is decoration; the pill
      carries the same fact in readable type. */
   right: var(--cmh-ghost-right);
@@ -340,7 +340,7 @@ html.dark .cmh--red {
 /* ── Crest watermark: the franchise's mark, or the cast player's NFL team.
       See hero-crest.ts for which applies.
 
-   The DRAFT BROADCAST's reveal treatment, at card scale — dead centre, large,
+   The DRAFT BROADCAST's reveal treatment, at card scale — dead center, large,
    faded far enough that the copy still reads over it. Geometry and alphas are
    taken from `hero-franchise-backdrop.css` rather than re-derived, because that
    file already solved this exact problem on a card this size and wrote down
@@ -447,7 +447,7 @@ html.dark .cmh--red {
 }
 
 /* ...but not when a crest is already filling the card. The silhouette exists to
-   stop a dead right-hand flank; a centred crest has already answered that, and
+   stop a dead right-hand flank; a centered crest has already answered that, and
    showing both puts two marks on one card. A crest that ALSO 404s brings the
    silhouette back, which is the whole point of keying this on `--no-crest`. */
 .cmh--has-crest:not(.cmh--no-crest) .cmh__logo-art {
@@ -728,7 +728,7 @@ html.dark .cmh--red {
   }
 
   /* The corner silhouette shrinks; the full-bleed backdrop does not — it is
-     centred art, and pinning it to the right edge crops it to a sliver. */
+     centered art, and pinning it to the right edge crops it to a sliver. */
   .cmh__logo-art {
     width: var(--cmh-logo-w-mobile);
     right: var(--cmh-logo-right-mobile);

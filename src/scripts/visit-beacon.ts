@@ -39,7 +39,7 @@ const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
  * `data-track-via` (the My Team card, the nav drawer, the quick links) is
  * remembered for the page it leads to; that page's beacon then reports
  * `via=<area>`. Nothing is sent on the click itself, so a link that never
- * arrives (a modifier-click into a new tab, a cancelled navigation) costs
+ * arrives (a modifier-click into a new tab, a canceled navigation) costs
  * nothing and counts nothing. The server accepts only its fixed list of
  * areas (`INSIGHT_LINK_AREAS`).
  *

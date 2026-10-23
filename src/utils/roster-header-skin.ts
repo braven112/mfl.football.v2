@@ -1,12 +1,12 @@
 /**
- * The roster header's SOLID band — one flat club colour, not a gradient.
+ * The roster header's SOLID band — one flat club color, not a gradient.
  *
  * ## Why this is not `resolveHeroFranchiseSkin`
  *
  * The hero resolver produces a two-stop gradient plus a wash, and everything
  * it measures is measured against that: `accent` clears 3:1 over the copy
  * band, `accentPanel` 4.5:1 over the far end, and the two genuinely differ
- * because "a colour readable on one end is invisible on the other by
+ * because "a color readable on one end is invisible on the other by
  * construction". A flat fill has one end, so all of that collapses — and the
  * header wanted the flat version.
  *
@@ -47,7 +47,7 @@
  *
  * So the plate's hierarchy is carried by SIZE, WEIGHT and letter-spacing, and
  * every mark on it is full-strength ink. Dimming any of them again means
- * darkening every club's colour to pay for it.
+ * darkening every club's color to pay for it.
  */
 
 import type { CanonicalLeagueSlug } from '../config/leagues';
@@ -64,7 +64,7 @@ import { ensureContrastOn, AA_BODY_TEXT_RATIO } from './team-color-contrast';
  *
  * Not `#ffffff`: flooring against pure white leaves the real ink — which is
  * this, slightly cool and slightly off — landing at about 4.3:1, under the
- * bar it was supposed to clear. Floor against the colour you actually paint.
+ * bar it was supposed to clear. Floor against the color you actually paint.
  */
 export const ROSTER_PLATE_INK = '#f2f5f8';
 
@@ -93,7 +93,7 @@ export interface RosterHeaderSkin {
    * 100px icon: exactly one of the forty-two history entries carries its own
    * 400px cut. Softer and right beats sharp and wrong — keeping the current
    * club's `groupMe` here is the Aug 2026 bug that left the lineup watermark
-   * modern while the name and colours around it threw back.
+   * modern while the name and colors around it threw back.
    */
   crest: string;
   /** Measured white stroke, for a light crest that would vanish on the fill. */
@@ -106,7 +106,7 @@ const BAND_SLUG: Partial<Record<CanonicalLeagueSlug, LeagueSlug>> = {
   'afl-fantasy': 'afl',
   // The custom-site demo's keeper slot — its franchises, from its own config.
   keeper: 'keeper',
-  // The shared rosters page's header, in the club's own colours.
+  // The shared rosters page's header, in the club's own colors.
   archies: 'archies',
 };
 

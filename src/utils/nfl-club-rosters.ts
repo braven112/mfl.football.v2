@@ -23,7 +23,7 @@ export interface ClubRosterEntry {
    * `espnId` and `headshot` ride along because the roster panel renders the
    * REAL PlayerCell, and that component's headshot fallback chain starts at
    * the ESPN id — without it every player falls straight through to the
-   * team-coloured placeholder silhouette.
+   * team-colored placeholder silhouette.
    */
   players: { id: string; name: string; position: string; espnId: string | null; headshot: string }[];
 }

@@ -113,7 +113,7 @@ const OWNER_LOCK_TRIES = 40;
 const OWNER_LOCK_WAIT_MS = 50;
 
 /**
- * Serialise every read-modify-write of one owner's TV index. Without it, two
+ * Serialize every read-modify-write of one owner's TV index. Without it, two
  * approvals (or an approval and a Remove) each write back their own snapshot
  * and one TV drops out of the list while its pass keeps working — a TV the
  * owner can no longer see or unpair. The lock expires on its own, so a crashed

@@ -97,7 +97,7 @@ const teamCode = normalizeTeamCode(model?.nflTeam ?? '');
 // cast player's NFL mark, same as everywhere else.
 const crestFranchiseId = userTeam?.franchiseId ?? orderedTeams[0]?.franchiseId ?? userFranchiseId;
 const crest = resolveHeroCrest({ franchiseId: crestFranchiseId, league: 'theleague', nflTeam: model?.nflTeam });
-// A TEAM event — these are somebody's cuts — so the card wears their colours.
+// A TEAM event — these are somebody's cuts — so the card wears their colors.
 const franchise = resolveHeroFranchiseSkin(crestFranchiseId, 'theleague');
 ---
 

@@ -155,7 +155,7 @@ export interface TradeOfferTip extends Omit<Tip, 'source' | 'text'> {
    * Lower-cased names of every player in the proposal, for substring matching
    * against tipster text. Internal only, and deliberately present even at
    * tiers where no name may be printed — the matcher needs the name to
-   * recognise a tip about the same player.
+   * recognize a tip about the same player.
    */
   playerNames?: string[];
   /**

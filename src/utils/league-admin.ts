@@ -7,7 +7,7 @@
  * package for other people's leagues and has to be able to set a client's
  * persona or fix a team's branding without holding a franchise in it.
  *
- * ── HOW A PLATFORM ADMIN IS RECOGNISED ────────────────────────────────────
+ * ── HOW A PLATFORM ADMIN IS RECOGNIZED ────────────────────────────────────
  * By the MFL account name in the signed session (`AuthUser.name`). That field
  * is only ever written by /api/auth/login, and only AFTER MFL has accepted the
  * password for it, so it is an authenticated identity — never a request

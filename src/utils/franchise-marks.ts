@@ -7,14 +7,14 @@
  * actually render it. An NFL club's answer comes from a fetched catalog
  * (`nfl-brand-kit.json` + an assignment file); a franchise's comes from the
  * league config, which is already the single source of truth for `icon`,
- * `iconDark`, `groupMe`, `groupMeDark`, `banner`, the colour quartet and the
+ * `iconDark`, `groupMe`, `groupMeDark`, `banner`, the color quartet and the
  * `history[]` eras. So this file INDEXES the config rather than introducing a
  * second catalog — the same relationship `franchise-brand.ts` has to it.
  *
  * Plan: docs/plans/brand-book-franchise-half.md.
  *
  * ── Why the grounds are the same three ───────────────────────────────────
- * A mark sits on a white cell, a dark card, or the team's own colour, and the
+ * A mark sits on a white cell, a dark card, or the team's own color, and the
  * third is not a variant of the first two. `bandSlot` below applies the same
  * luminance rule `nfl-marks.ts` does, against the franchise's BRAND primary —
  * which is the rule `franchise-band-brand.ts` has been applying to crests on
@@ -213,7 +213,7 @@ export const CURRENT_MARK_IDS: FranchiseMarkId[] = [
 
 export const FRANCHISE_MARK_IDS = Object.keys(MARK_META) as FranchiseMarkId[];
 
-/** The registry's short nav slug, which the colour helpers key on. */
+/** The registry's short nav slug, which the color helpers key on. */
 function navSlugOf(slug: CanonicalLeagueSlug): LeagueSlug {
   return (getLeagueBySlug(slug)?.navSlug ?? 'theleague') as LeagueSlug;
 }
@@ -260,7 +260,7 @@ export function franchiseSlug(team: { name?: string; nameShort?: string; franchi
  *
  * Deliberately conservative: case, punctuation and a leading article only. It
  * does NOT try to match "Smokane" to "Smokane FC" or "Swifty" to "Swiftie" —
- * those are judgement calls about whether a rename was a rebrand, and guessing
+ * those are judgment calls about whether a rename was a rebrand, and guessing
  * wrong in that direction silently hides a genuinely separate identity.
  */
 export function sameIdentity(a: string, b: string): boolean {
@@ -301,7 +301,7 @@ export interface FranchiseGround {
 }
 
 /**
- * A colour the site DERIVES from the brand pair rather than reading from the
+ * A color the site DERIVES from the brand pair rather than reading from the
  * config — and the theme it applies in.
  *
  * These are the values that actually paint, and none of them is in the config:
@@ -366,7 +366,7 @@ export interface FranchiseBrand {
   derived: DerivedColor[];
   /** The CSS custom property a foreground use must read, never the raw hex. */
   accentProperty: string;
-  /** The band ground's colour — the brand primary, or the chart hue if there is none. */
+  /** The band ground's color — the brand primary, or the chart hue if there is none. */
   bandColor: string;
   /** The raw CSS the draft broadcast paints verbatim. Null when unset. */
   broadcastGradient: string | null;
@@ -400,7 +400,7 @@ export interface FranchiseBrand {
 }
 
 /**
- * Which assignment slot a team-colour band draws from.
+ * Which assignment slot a team-color band draws from.
  *
  * Identical rule to `nfl-marks.ts#bandSlot`, against the franchise's brand
  * primary. Kept as its own function rather than shared because the SUBJECT
@@ -457,7 +457,7 @@ function ringFilters(slug: CanonicalLeagueSlug): Record<string, string> {
 
 function colorsOf(team: RawTeam): FranchiseColor[] {
   const rows: Array<[string, string, string | undefined, string]> = [
-    ['colorPrimary', 'Primary', team.colorPrimary, 'The lead colour: panel fills, band anchors, the first gradient stop.'],
+    ['colorPrimary', 'Primary', team.colorPrimary, 'The lead color: panel fills, band anchors, the first gradient stop.'],
     ['colorSecondary', 'Secondary', team.colorSecondary, 'The accent: trim, glows, the second gradient stop. Use it before any other accent.'],
     ['colorTertiary', 'Tertiary', team.colorTertiary, 'Use where the primary and secondary are both taken, or where an accent must sit apart from both.'],
     ['colorQuaternary', 'Quaternary', team.colorQuaternary, 'A fourth accent, for the same cases as the tertiary.'],
@@ -478,26 +478,26 @@ function colorsOf(team: RawTeam): FranchiseColor[] {
 /**
  * A deliberately NEUTRAL opponent for the live-bar resolution.
  *
- * The win-probability bar's colours are resolved per MATCHUP, not per
+ * The win-probability bar's colors are resolved per MATCHUP, not per
  * franchise: `resolveTeamColorPair` nudges the two sides apart so a matchup
  * between two navy teams still reads as two bars. There is therefore no single
- * "this franchise's bar colour" to print, and inventing one would be a claim
- * the site does not honour. Resolving against a mid grey gives the value this
+ * "this franchise's bar color" to print, and inventing one would be a claim
+ * the site does not honor. Resolving against a mid grey gives the value this
  * franchise takes when nothing is pulling it, which is what the page says it
  * is showing.
  */
 const NEUTRAL_OPPONENT = { color: '#808080', colorPrimary: '#808080', colorSecondary: '#808080' };
 
 /**
- * The colours the site DERIVES for one franchise, per theme.
+ * The colors the site DERIVES for one franchise, per theme.
  *
  * Read from the real resolvers rather than recomputed here — the whole point
  * of the page is that it cannot drift from what ships. `getTeamAccentPair`
  * floors the hue to 3:1 against each theme's card; `resolveMatchupColorVars`
  * produces the live board's two pairs, which are NOT the same number: the fill
  * clears ΔE against the card (perceptual distance, right for a block of
- * colour) and the ink clears WCAG AA (luminance, the only metric for reading).
- * They diverge exactly where a colour passes as a bar and fails as a score —
+ * color) and the ink clears WCAG AA (luminance, the only metric for reading).
+ * They diverge exactly where a color passes as a bar and fails as a score —
  * the AFL's #314d78 is ΔE 31 from the card and 1.89:1 against it.
  */
 function derivedColorsOf(slug: CanonicalLeagueSlug, team: RawTeam): DerivedColor[] {
@@ -516,19 +516,19 @@ function derivedColorsOf(slug: CanonicalLeagueSlug, team: RawTeam): DerivedColor
       label: 'Accent token',
       light: accent.light,
       dark: accent.dark,
-      note: 'What teamAccentVar(franchiseId) resolves to. EVERY foreground use of a team colour reads this — text, a rank numeral, a chart line, a legend swatch — because it is floored to 3:1 against each theme\u2019s card. Several franchises\u2019 raw hexes land near 1:1 there.',
+      note: 'What teamAccentVar(franchiseId) resolves to. EVERY foreground use of a team color reads this — text, a rank numeral, a chart line, a legend swatch — because it is floored to 3:1 against each theme\u2019s card. Several franchises\u2019 raw hexes land near 1:1 there.',
     },
     {
       label: 'Live bar fill',
       light: bar['--t0-light'] ?? accent.light,
       dark: bar['--t0-dark'] ?? accent.dark,
-      note: 'The win-probability bar on Live Scoring. Cleared for ΔE against the card \u2014 perceptual distance, the right metric for a block of colour. Resolved per MATCHUP, so an opponent in the same family shifts it; this is the value against a neutral.',
+      note: 'The win-probability bar on Live Scoring. Cleared for ΔE against the card \u2014 perceptual distance, the right metric for a block of color. Resolved per MATCHUP, so an opponent in the same family shifts it; this is the value against a neutral.',
     },
     {
       label: 'Live bar ink',
       light: bar['--t0-ink-light'] ?? accent.light,
       dark: bar['--t0-ink-dark'] ?? accent.dark,
-      note: 'The SCORE beside that bar. Cleared for WCAG AA body contrast instead, because ΔE is not a reading metric \u2014 a colour can pass as a fill and be unreadable as a number, which is how coloured bars once sat beside grey scores.',
+      note: 'The SCORE beside that bar. Cleared for WCAG AA body contrast instead, because ΔE is not a reading metric \u2014 a color can pass as a fill and be unreadable as a number, which is how colored bars once sat beside grey scores.',
     },
   ];
 }
@@ -721,7 +721,7 @@ export function franchiseIdFromSlug(
   segment: string
 ): string | null {
   // `slugify`, not a second copy of its body: the lookup and the slug it is
-  // matching against have to normalise identically, and two copies of the rule
+  // matching against have to normalize identically, and two copies of the rule
   // is how they stop doing that.
   const want = slugify(segment);
   if (!want) return null;

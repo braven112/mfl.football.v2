@@ -164,7 +164,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   };
 
   // Every early return below is a DEGRADED MFL read, and each one leaves
-  // `canClaim` false. That is the gate the client honours — not the empty
+  // `canClaim` false. That is the gate the client honors — not the empty
   // `rosteredIds`, which on its own would read as "the whole league is a free
   // agent" and light the button up on every player on the page, the viewer's
   // own roster included.
@@ -217,7 +217,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   // the AFL builder answers an out-of-conference `to` by silently substituting
   // a different same-conference team rather than erroring, so the owner lands
   // on a roster that has nothing to do with the player they clicked. So the
-  // trade map fails CLOSED here while the claim set keeps the behaviour it
+  // trade map fails CLOSED here while the claim set keeps the behavior it
   // shipped with.
   const canPlaceViewer = leagueWide || myConference !== null;
 

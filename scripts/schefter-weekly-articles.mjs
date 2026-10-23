@@ -182,7 +182,7 @@ async function main() {
   // one more thing to forget, and the id function already knows the answer.
   // tests/schefter-once-per-season-dedupe.test.ts pins the classification for
   // every type, so an id change that flips one is a test failure, not a
-  // behaviour change nobody noticed.
+  // behavior change nobody noticed.
   //
   // Probed THREE times, not two: cut-watch builds its id from `new Date()`, so
   // a run that crosses midnight between two calls would see two different ids

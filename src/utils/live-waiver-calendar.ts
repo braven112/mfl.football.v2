@@ -8,7 +8,7 @@
  * FCFS, or the reverse — while `POST /api/waiver-claim`, which reads live,
  * decided the claim correctly. Since the window also gates whether MFL's
  * `locked` flag means anything (`fetchDropLocks`), a stale window put lock
- * icons on the page that the route would never honour, or hid them when it
+ * icons on the page that the route would never honor, or hid them when it
  * would. So the pages ask MFL first and fall back to the committed feed.
  *
  * mflFetch, NOT fetch: the calendar export is owner-gated and undici drops the

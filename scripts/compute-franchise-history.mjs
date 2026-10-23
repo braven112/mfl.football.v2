@@ -415,7 +415,7 @@ function inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSi
 // TheLeague runs two brackets and their ids are stable, so a literal map is
 // honest there. The AFL is the opposite: MFL renumbered its brackets twice
 // (id 2 is the NIT in 2003, unused 2004-2017, then the AL CONFERENCE bracket
-// from 2018), so reading id 2 as "consolation" labelled AFL conference
+// from 2018), so reading id 2 as "consolation" labeled AFL conference
 // semifinals "Consolation R1" and their finals "3rd Place". The AFL therefore
 // classifies on the bracket NAME via the shared resolver that
 // /afl-fantasy/playoffs uses — one source of truth for what a bracket is.
@@ -969,7 +969,7 @@ for (const year of years) {
   // 2. Schedule walk. Tags any participant-vs-participant game from the
   //    championship bracket's startWeek onward, but can only call it
   //    "Playoffs" — it does not know the bracket chain. The
-  //    champion-vs-runner-up game gets re-labelled by the post-process loop.
+  //    champion-vs-runner-up game gets re-labeled by the post-process loop.
   if (playoffMatchupKeys.size === 0 && playoffParticipants.size >= 2) {
     for (const [k, v] of getPreFranchiseIdPlayoffMatchupKeys(
       playoffBrackets,
@@ -1007,7 +1007,7 @@ for (const year of years) {
     // that a config era names. A season claimed from another id (a renumbered
     // franchise: Archie's SeaBirds as 0100) belongs to the claimant, and an
     // unclaimed one to nobody here — so neither may fall back to whoever holds
-    // the slot today, which labelled the SeaBirds' 2023 "0100" and the
+    // the slot today, which labeled the SeaBirds' 2023 "0100" and the
     // Assassins' 2021 "Chickens". MFL's own name for that season is the truth.
     // A config era for the slot (TheLeague's and the AFL's `history`) is a
     // deliberate identity and always wins; this only replaces the CURRENT-name

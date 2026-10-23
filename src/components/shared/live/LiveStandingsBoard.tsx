@@ -79,7 +79,7 @@ export default function LiveStandingsBoard({
 
   useEffect(() => {
     if (!pollUrl) return;
-    let cancelled = false;
+    let canceled = false;
     let timer: ReturnType<typeof setTimeout>;
     const cadence = isLive ? POLL_LIVE_MS : POLL_IDLE_MS;
 
@@ -90,7 +90,7 @@ export default function LiveStandingsBoard({
           headers: { Accept: 'application/json' },
         });
         const data = await res.json();
-        if (cancelled) return;
+        if (canceled) return;
         // Gate on the FLAG — `res.ok` and a truthy `{}` are both worthless.
         if (data && data.ok === true && Array.isArray(data.leagues)) {
           setTables(holdLastGood(data as MflLiveStandings, memory.current, Date.now()));
@@ -99,15 +99,15 @@ export default function LiveStandingsBoard({
           setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
         }
       } catch {
-        if (!cancelled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
+        if (!canceled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
       } finally {
-        if (!cancelled) timer = setTimeout(tick, cadence);
+        if (!canceled) timer = setTimeout(tick, cadence);
       }
     };
 
     timer = setTimeout(tick, cadence);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearTimeout(timer);
     };
   }, [pollUrl, initial.week, isLive]);
