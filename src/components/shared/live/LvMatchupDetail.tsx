@@ -23,6 +23,7 @@ import LvLineup from './LvLineup';
 import LvBench from './LvBench';
 import LvMomentTicker from './LvMomentTicker';
 import LvStatSheet from './LvStatSheet';
+import LvMark from './LvMark';
 import { useScoreFormat } from './score-format';
 
 export interface LvMatchupDetailProps {
@@ -90,6 +91,20 @@ export default function LvMatchupDetail({
       )
     );
 
+  // Each club's mark on the outer edge of its side, the same identity ladder
+  // the board's cards use (crest, NFL club mark, uploaded art, initials). The
+  // name sits right beside it, so the mark is decorative.
+  const mark = (t: LiveTeam) => (
+    <LvMark
+      icon={t.icon}
+      alt={t.iconAlt}
+      initials={t.initials}
+      crop={t.rung === 'mfl'}
+      decorative
+      classes={{ wrap: 'lv-scorehead__crest', crop: 'lv-scorehead__crest--crop', text: 'lv-scorehead__initials' }}
+    />
+  );
+
   /**
    * The open stat sheet, as an IDENTITY — matchup side + player id — and the
    * row re-found in the current `matchup` every render, so the sheet moves
@@ -127,18 +142,24 @@ export default function LvMatchupDetail({
           franchises. See `resolveMatchupColorVars`. */}
       <div className="lv-scorehead">
         <div className="lv-scorehead__side">
-          <div className="lv-scorehead__name">{a.nameShort || a.name}</div>
-          {currentLine(a)}
-          <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
-            {fmt(a.live)}
+          {mark(a)}
+          <div className="lv-scorehead__text">
+            <div className="lv-scorehead__name">{a.nameShort || a.name}</div>
+            {currentLine(a)}
+            <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
+              {fmt(a.live)}
+            </div>
           </div>
         </div>
         <span className="lv-scorehead__at">@</span>
         <div className="lv-scorehead__side lv-scorehead__side--right">
-          <div className="lv-scorehead__name">{b.nameShort || b.name}</div>
-          {currentLine(b)}
-          <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
-            {fmt(b.live)}
+          {mark(b)}
+          <div className="lv-scorehead__text">
+            <div className="lv-scorehead__name">{b.nameShort || b.name}</div>
+            {currentLine(b)}
+            <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
+              {fmt(b.live)}
+            </div>
           </div>
         </div>
       </div>

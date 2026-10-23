@@ -632,8 +632,50 @@ button.lv-card:focus-visible {
   padding: 0 0.6rem 0.6rem;
 }
 
-.lv-scorehead__side { min-width: 0; }
-.lv-scorehead__side--right { text-align: right; }
+/* Mark on the OUTER edge, name and score beside it: the right side mirrors the
+   left, so the two marks frame the header and the scores meet in the middle. */
+.lv-scorehead__side {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.lv-scorehead__side--right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.lv-scorehead__text { min-width: 0; flex: 1 1 auto; }
+
+.lv-scorehead__crest {
+  --lv-scorehead-mark: 3rem;
+  width: var(--lv-scorehead-mark);
+  height: var(--lv-scorehead-mark);
+  display: grid;
+  place-items: center;
+  flex: none;
+  /* A failed mark must not paint its alt text — see `.lv-side__crest`. */
+  overflow: hidden;
+  font-size: 0;
+  color: transparent;
+}
+.lv-scorehead__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Uploaded-art rung only — see `.lv-side__crest--crop`. */
+.lv-scorehead__crest--crop img {
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+/* The text rung. Never a hue derived from the name. */
+.lv-scorehead__initials {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+}
 
 /* A shrink-wrapped name box on the flex-end side needs a cap or a long name
    grows to content width and overlaps the score. */
@@ -1396,6 +1438,8 @@ button.lv-card:focus-visible {
     align-items: start;
   }
   .lv-scorehead__name { overflow-wrap: anywhere; }
+  .lv-scorehead__side { gap: 0.45rem; }
+  .lv-scorehead__crest { --lv-scorehead-mark: 2.4rem; }
 }
 
 /* ── The league heading as a link ─────────────────────────────────────────
