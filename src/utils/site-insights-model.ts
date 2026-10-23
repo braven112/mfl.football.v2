@@ -316,6 +316,8 @@ export interface InsightDayRaw {
 	links: Record<string, number>;
 	/** `<visitorKey>|<section>|<area>` → arrivals */
 	userLinks: Record<string, number>;
+	/** `<visitorKey>|<section>|<from>|<to>` → page-to-page steps (Oct 2026 on) */
+	paths?: Record<string, number>;
 }
 
 export interface InsightPerson {
@@ -325,6 +327,14 @@ export interface InsightPerson {
 	username: string | null;
 	lastSeen: number | null;
 	lastLogin: number | null;
+	/** First signed-in page view the counters saw (see `insights:firstseen`). */
+	firstSeen?: number | null;
+}
+
+/** One page, as a filter: the section it was recorded under and its path. */
+export interface InsightPageRef {
+	section: string;
+	page: string;
 }
 
 export interface InsightsInput {
@@ -332,6 +342,16 @@ export interface InsightsInput {
 	people: InsightPerson[];
 	/** Restrict every figure to one section, or null for the whole site. */
 	section: string | null;
+	/** Restrict every figure to one owner (a `visitorKey`). */
+	owner?: string | null;
+	/** Restrict every figure to one page. */
+	page?: InsightPageRef | null;
+	/**
+	 * Owners left out of every figure — the admins, whose own visits would
+	 * otherwise be a large share of a small league's. An explicit `owner`
+	 * filter wins over this, so an admin's own profile still renders.
+	 */
+	excludeOwners?: ReadonlySet<string>;
 }
 
 export interface CountRow {
@@ -344,7 +364,10 @@ export interface PageInsightRow {
 	section: string;
 	page: string;
 	views: number;
+	/** Distinct signed-in owners who opened it. */
 	visitors: number;
+	/** Views while signed out; null under an owner filter, where it has no meaning. */
+	anonymousViews: number | null;
 }
 
 export interface DayInsightRow {
@@ -359,7 +382,13 @@ export interface PersonInsightRow extends InsightPerson {
 	views: number;
 	logins: number;
 	activeDays: number;
+	/** Days with a view in the last 7 days of the window (0-7). */
+	recentDays: number;
 	actions: number;
+	/** Views per day, aligned with `report.days`. */
+	dailyViews: number[];
+	/** Every page they opened in the window, most viewed first. */
+	pages: { section: string; page: string; views: number }[];
 	topPages: { section: string; page: string; views: number }[];
 	sections: string[];
 }
@@ -394,6 +423,13 @@ export interface InsightsReport {
 		/** Distinct owners active in the last 7 days of the window. */
 		weeklyOwners: number;
 	};
+	/**
+	 * True under an owner or page filter. The hour, device, source and link
+	 * hashes carry no owner or page, so those figures cannot follow the filter
+	 * and the page hides them rather than show the whole site's under a
+	 * heading that names one owner.
+	 */
+	focused: boolean;
 	days: DayInsightRow[];
 	pages: PageInsightRow[];
 	sections: CountRow[];
@@ -404,6 +440,12 @@ export interface InsightsReport {
 	actions: ActionInsightRow[];
 	links: LinkAreaInsightRow[];
 	people: PersonInsightRow[];
+	/**
+	 * Stickiness: index d (1-7) = owners with a view on d of the window's
+	 * last 7 days; index 0 = owners active earlier in the window but not in
+	 * those 7 days. The casual owner and the hooked one, side by side.
+	 */
+	stickiness: number[];
 }
 
 function splitField(field: string, parts: number): string[] | null {
@@ -415,16 +457,68 @@ const add = (map: Map<string, number>, key: string, n: number) =>
 	map.set(key, (map.get(key) ?? 0) + n);
 
 /**
+ * The section an owner's own actions are filed under: the league their
+ * session belongs to (mirrors `sectionForUser` in site-insights.ts), so an
+ * action can follow a section filter although its hash names no section.
+ */
+export function sectionOfVisitor(key: string): string {
+	const parsed = parseVisitorKey(key);
+	return ALL_LEAGUES.find((l) => l.id === parsed?.leagueId)?.slug ?? 'live';
+}
+
+/** Parse a `page` filter param, `<section>|<path>`; null when malformed. */
+export function parsePageRef(raw: string | null | undefined, sections: readonly string[]): InsightPageRef | null {
+	if (!raw) return null;
+	const i = raw.indexOf('|');
+	if (i <= 0) return null;
+	const section = raw.slice(0, i);
+	const page = normalizeInsightPath(raw.slice(i + 1));
+	return sections.includes(section) && page ? { section, page } : null;
+}
+
+/** Parse an `owner` filter param (a `visitorKey`); null when malformed. */
+export function parseOwnerRef(raw: string | null | undefined): string | null {
+	if (!raw || raw.length > 40 || !/^\d+:\d+$/.test(raw)) return null;
+	return raw;
+}
+
+/**
  * Derive the whole dashboard from the raw daily hashes. Pure — every number
  * the page prints comes from here.
+ *
+ * Filters compose: section, owner and page narrow together. The global
+ * `pages` hash counts everyone (signed out included), and `userpages` counts
+ * each signed-in owner, so a page's signed-out share is the difference, and
+ * an excluded owner's views come off a page by subtracting theirs.
  */
+/**
+ * The three filters every derivation shares, so the trend cards
+ * (`site-insights-trends.ts`) narrow exactly as the report does.
+ */
+export function insightFilters(input: Pick<InsightsInput, 'section' | 'owner' | 'page' | 'excludeOwners'>) {
+	const section = input.section;
+	const owner = input.owner ?? null;
+	const pageRef = input.page ?? null;
+	const excluded = owner ? new Set<string>() : (input.excludeOwners ?? new Set<string>());
+	const inSection = (s: string) => (section === null || s === section) && (!pageRef || s === pageRef.section);
+	return {
+		section,
+		owner,
+		pageRef,
+		inSection,
+		pageOk: (s: string, p: string) => inSection(s) && (!pageRef || p === pageRef.page),
+		ownerOk: (key: string) => (owner ? key === owner : !excluded.has(key)),
+	};
+}
+
 export function buildInsightsReport(input: InsightsInput): InsightsReport {
-	const { section } = input;
-	const inSection = (s: string) => section === null || s === section;
+	const { section, owner, pageRef, inSection, pageOk, ownerOk } = insightFilters(input);
+	const focused = owner !== null || pageRef !== null;
 
 	const pageViews = new Map<string, number>();
+	const pageAllSignedIn = new Map<string, number>();
+	const pageHashViews = new Map<string, number>();
 	const pageVisitors = new Map<string, Set<string>>();
-	const sectionViews = new Map<string, number>();
 	const deviceViews = new Map<string, number>();
 	const sourceViews = new Map<string, number>();
 	const actionCounts = new Map<string, number>();
@@ -435,8 +529,10 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 	const linkOwners = new Map<string, Set<string>>();
 
 	const personViews = new Map<string, number>();
+	const personDaily = new Map<string, number[]>();
 	const personLogins = new Map<string, number>();
 	const personDays = new Map<string, number>();
+	const personRecent = new Map<string, number>();
 	const personActions = new Map<string, number>();
 	const personPages = new Map<string, Map<string, number>>();
 	const personSections = new Map<string, Set<string>>();
@@ -445,6 +541,17 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 	const allOwners = new Set<string>();
 	const weekOwners = new Set<string>();
 	const weekStart = Math.max(0, input.days.length - 7);
+	const dayCount = input.days.length;
+
+	const countPersonView = (key: string, s: string, n: number, dayIndex: number) => {
+		add(personViews, key, n);
+		let set = personSections.get(key);
+		if (!set) personSections.set(key, (set = new Set()));
+		set.add(s);
+		let daily = personDaily.get(key);
+		if (!daily) personDaily.set(key, (daily = Array<number>(dayCount).fill(0)));
+		daily[dayIndex] += n;
+	};
 
 	input.days.forEach((day, dayIndex) => {
 		const dayOwners = new Set<string>();
@@ -452,103 +559,148 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 		let anonymousViews = 0;
 		let logins = 0;
 
-		// Per-owner views come from userSections so a section filter applies;
-		// anonymous views from the visitors hash's `anon|<section>` fields.
-		for (const [field, n] of Object.entries(day.userSections)) {
-			const parts = splitField(field, 2);
-			if (!parts || !inSection(parts[1])) continue;
-			const [key] = parts;
-			views += n;
-			dayOwners.add(key);
-			add(personViews, key, n);
-			let set = personSections.get(key);
-			if (!set) personSections.set(key, (set = new Set()));
-			set.add(parts[1]);
-		}
-		for (const [field, n] of Object.entries(day.visitors)) {
-			const parts = splitField(field, 2);
-			if (!parts || parts[0] !== 'anon' || !inSection(parts[1])) continue;
-			views += n;
-			anonymousViews += n;
-		}
-
-		for (const key of dayOwners) {
-			allOwners.add(key);
-			add(personDays, key, 1);
-			if (dayIndex >= weekStart) weekOwners.add(key);
-		}
-
-		// Logins are site-wide events with no section of their own.
-		if (section === null) {
-			for (const [key, n] of Object.entries(day.logins)) {
-				logins += n;
-				add(personLogins, key, n);
+		// Signed-in views. Without a page filter they come from
+		// userSections (which also counts views whose page could not be
+		// named); with one, from that page's userpages fields.
+		if (!pageRef) {
+			for (const [field, n] of Object.entries(day.userSections)) {
+				const parts = splitField(field, 2);
+				if (!parts || !inSection(parts[1]) || !ownerOk(parts[0])) continue;
+				views += n;
+				dayOwners.add(parts[0]);
+				countPersonView(parts[0], parts[1], n, dayIndex);
 			}
 		}
 
 		for (const [field, n] of Object.entries(day.pages)) {
 			const parts = splitField(field, 2);
-			if (!parts || !inSection(parts[0])) continue;
-			add(pageViews, field, n);
-			add(sectionViews, parts[0], n);
+			if (!parts || !pageOk(parts[0], parts[1])) continue;
+			add(pageHashViews, field, n);
+			if (!owner) add(pageViews, field, n);
 		}
+		let daySignedInOnPage = 0;
 		for (const [field, n] of Object.entries(day.userPages)) {
 			const parts = splitField(field, 3);
-			if (!parts || !inSection(parts[1])) continue;
+			if (!parts || !pageOk(parts[1], parts[2])) continue;
+			const [key] = parts;
 			const pageKey = `${parts[1]}|${parts[2]}`;
+			add(pageAllSignedIn, pageKey, n);
+			daySignedInOnPage += n;
+			if (!ownerOk(key)) {
+				if (!owner) add(pageViews, pageKey, -n);
+				continue;
+			}
+			if (owner) add(pageViews, pageKey, n);
 			let set = pageVisitors.get(pageKey);
 			if (!set) pageVisitors.set(pageKey, (set = new Set()));
-			set.add(parts[0]);
-			let mine = personPages.get(parts[0]);
-			if (!mine) personPages.set(parts[0], (mine = new Map()));
+			set.add(key);
+			let mine = personPages.get(key);
+			if (!mine) personPages.set(key, (mine = new Map()));
 			add(mine, pageKey, n);
+			if (pageRef) {
+				views += n;
+				dayOwners.add(key);
+				countPersonView(key, parts[1], n, dayIndex);
+			}
+		}
+
+		// Signed-out views have no owner, so an owner filter leaves them out.
+		if (!owner) {
+			if (!pageRef) {
+				for (const [field, n] of Object.entries(day.visitors)) {
+					const parts = splitField(field, 2);
+					if (!parts || parts[0] !== 'anon' || !inSection(parts[1])) continue;
+					views += n;
+					anonymousViews += n;
+				}
+			} else {
+				const dayPageTotal = day.pages[`${pageRef.section}|${pageRef.page}`] ?? 0;
+				const anon = Math.max(0, dayPageTotal - daySignedInOnPage);
+				views += anon;
+				anonymousViews += anon;
+			}
+		}
+
+		for (const key of dayOwners) {
+			allOwners.add(key);
+			add(personDays, key, 1);
+			if (dayIndex >= weekStart) {
+				weekOwners.add(key);
+				add(personRecent, key, 1);
+			}
+		}
+
+		// Logins are site-wide events with no section of their own.
+		if (section === null && !pageRef) {
+			for (const [key, n] of Object.entries(day.logins)) {
+				if (!ownerOk(key)) continue;
+				logins += n;
+				add(personLogins, key, n);
+			}
 		}
 
 		const weekday = weekdayOf(day.date);
-		for (const [field, n] of Object.entries(day.hours)) {
-			const parts = splitField(field, 2);
-			if (!parts || !inSection(parts[0])) continue;
-			const hour = Number(parts[1]);
-			if (Number.isInteger(hour) && hour >= 0 && hour < 24) heatmap[weekday][hour] += n;
-		}
-		for (const [field, n] of Object.entries(day.devices)) {
-			const parts = splitField(field, 2);
-			if (parts && inSection(parts[0])) add(deviceViews, parts[1], n);
-		}
-		for (const [field, n] of Object.entries(day.sources)) {
-			const parts = splitField(field, 2);
-			if (parts && inSection(parts[0])) add(sourceViews, parts[1], n);
-		}
-		for (const [field, n] of Object.entries(day.actions)) {
-			const parts = splitField(field, 2);
-			if (parts && inSection(parts[0])) add(actionCounts, parts[1], n);
-		}
-		for (const [field, n] of Object.entries(day.userActions)) {
-			const parts = splitField(field, 2);
-			if (!parts) continue;
-			// userActions carries no section; under a section filter only the
-			// owner set is shown, which is still the right "who" for that action.
-			let set = actionOwners.get(parts[1]);
-			if (!set) actionOwners.set(parts[1], (set = new Set()));
-			set.add(parts[0]);
-			if (section === null) add(personActions, parts[0], n);
+		if (!focused) {
+			for (const [field, n] of Object.entries(day.hours)) {
+				const parts = splitField(field, 2);
+				if (!parts || !inSection(parts[0])) continue;
+				const hour = Number(parts[1]);
+				if (Number.isInteger(hour) && hour >= 0 && hour < 24) heatmap[weekday][hour] += n;
+			}
+			for (const [field, n] of Object.entries(day.devices)) {
+				const parts = splitField(field, 2);
+				if (parts && inSection(parts[0])) add(deviceViews, parts[1], n);
+			}
+			for (const [field, n] of Object.entries(day.sources)) {
+				const parts = splitField(field, 2);
+				if (parts && inSection(parts[0])) add(sourceViews, parts[1], n);
+			}
 		}
 
-		for (const [field, n] of Object.entries(day.links ?? {})) {
-			const parts = splitField(field, 3);
-			if (!parts || !inSection(parts[0])) continue;
-			add(linkClicks, parts[1], n);
-			if (parts[2] === '-') continue;
-			let pagesFor = linkPages.get(parts[1]);
-			if (!pagesFor) linkPages.set(parts[1], (pagesFor = new Map()));
-			add(pagesFor, `${parts[0]}|${parts[2]}`, n);
+		if (!pageRef) {
+			if (!owner) {
+				for (const [field, n] of Object.entries(day.actions)) {
+					const parts = splitField(field, 2);
+					if (parts && inSection(parts[0])) add(actionCounts, parts[1], n);
+				}
+			}
+			for (const [field, n] of Object.entries(day.userActions)) {
+				const parts = splitField(field, 2);
+				if (!parts || !inSection(sectionOfVisitor(parts[0]))) continue;
+				const [key, action] = parts;
+				if (!ownerOk(key)) {
+					if (!owner) add(actionCounts, action, -n);
+					continue;
+				}
+				if (owner) add(actionCounts, action, n);
+				let set = actionOwners.get(action);
+				if (!set) actionOwners.set(action, (set = new Set()));
+				set.add(key);
+				add(personActions, key, n);
+			}
 		}
-		for (const field of Object.keys(day.userLinks ?? {})) {
-			const parts = splitField(field, 3);
-			if (!parts || !inSection(parts[1])) continue;
-			let set = linkOwners.get(parts[2]);
-			if (!set) linkOwners.set(parts[2], (set = new Set()));
-			set.add(parts[0]);
+
+		if (!focused) {
+			for (const [field, n] of Object.entries(day.links ?? {})) {
+				const parts = splitField(field, 3);
+				if (!parts || !inSection(parts[0])) continue;
+				add(linkClicks, parts[1], n);
+				if (parts[2] === '-') continue;
+				let pagesFor = linkPages.get(parts[1]);
+				if (!pagesFor) linkPages.set(parts[1], (pagesFor = new Map()));
+				add(pagesFor, `${parts[0]}|${parts[2]}`, n);
+			}
+			for (const [field, n] of Object.entries(day.userLinks ?? {})) {
+				const parts = splitField(field, 3);
+				if (!parts || !inSection(parts[1])) continue;
+				if (!ownerOk(parts[0])) {
+					add(linkClicks, parts[2], -n);
+					continue;
+				}
+				let set = linkOwners.get(parts[2]);
+				if (!set) linkOwners.set(parts[2], (set = new Set()));
+				set.add(parts[0]);
+			}
 		}
 
 		days.push({ date: day.date, views, anonymousViews, activeOwners: dayOwners.size, logins });
@@ -558,11 +710,23 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 	const anonymousViews = days.reduce((s, d) => s + d.anonymousViews, 0);
 
 	const pages: PageInsightRow[] = [...pageViews.entries()]
+		.filter(([, views]) => views > 0)
 		.map(([field, views]) => {
 			const [s, page] = field.split('|');
-			return { section: s, page, views, visitors: pageVisitors.get(field)?.size ?? 0 };
+			return {
+				section: s,
+				page,
+				views,
+				visitors: pageVisitors.get(field)?.size ?? 0,
+				anonymousViews: owner
+					? null
+					: Math.max(0, (pageHashViews.get(field) ?? 0) - (pageAllSignedIn.get(field) ?? 0)),
+			};
 		})
 		.sort((a, b) => b.views - a.views || a.page.localeCompare(b.page));
+
+	const sectionViews = new Map<string, number>();
+	for (const p of pages) add(sectionViews, p.section, p.views);
 
 	const toRows = (map: Map<string, number>, label: (k: string) => string): CountRow[] =>
 		[...map.entries()]
@@ -574,7 +738,7 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 		.map((action) => ({
 			action,
 			label: INSIGHT_ACTIONS[action],
-			count: actionCounts.get(action) ?? 0,
+			count: Math.max(0, actionCounts.get(action) ?? 0),
 			owners: ANONYMOUS_INSIGHT_ACTIONS.has(action) ? null : (actionOwners.get(action)?.size ?? 0),
 		}))
 		.sort((a, b) => b.count - a.count);
@@ -585,7 +749,7 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 		.map((area) => ({
 			area,
 			label: INSIGHT_LINK_AREAS[area],
-			clicks: linkClicks.get(area) ?? 0,
+			clicks: Math.max(0, linkClicks.get(area) ?? 0),
 			owners: linkOwners.get(area)?.size ?? 0,
 			destinations: [...(linkPages.get(area) ?? new Map<string, number>()).entries()]
 				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -607,13 +771,14 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 	}
 
 	const people: PersonInsightRow[] = [...byKey.values()]
-		.filter((p) => section === null || personSections.get(p.key)?.has(section))
+		.filter((p) => ownerOk(p.key))
+		.filter((p) => !pageRef || (personViews.get(p.key) ?? 0) > 0)
+		.filter((p) => section === null || pageRef !== null || personSections.get(p.key)?.has(section))
 		.map((p) => {
 			const pagesFor = personPages.get(p.key);
-			const topPages = pagesFor
+			const all = pagesFor
 				? [...pagesFor.entries()]
-						.sort((a, b) => b[1] - a[1])
-						.slice(0, 5)
+						.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 						.map(([field, views]) => {
 							const [s, page] = field.split('|');
 							return { section: s, page, views };
@@ -621,15 +786,25 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 				: [];
 			return {
 				...p,
+				firstSeen: p.firstSeen ?? null,
 				views: personViews.get(p.key) ?? 0,
 				logins: personLogins.get(p.key) ?? 0,
 				activeDays: personDays.get(p.key) ?? 0,
+				recentDays: personRecent.get(p.key) ?? 0,
 				actions: personActions.get(p.key) ?? 0,
-				topPages,
+				dailyViews: personDaily.get(p.key) ?? Array<number>(dayCount).fill(0),
+				pages: all,
+				topPages: all.slice(0, 5),
 				sections: [...(personSections.get(p.key) ?? [])].sort(),
 			};
 		})
 		.sort((a, b) => (b.lastSeen ?? 0) - (a.lastSeen ?? 0) || b.views - a.views);
+
+	const stickiness = Array<number>(8).fill(0);
+	for (const key of allOwners) {
+		if (!ownerOk(key)) continue;
+		stickiness[personRecent.get(key) ?? 0] += 1;
+	}
 
 	const activeDayCount = days.length || 1;
 	return {
@@ -639,11 +814,12 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 			anonymousViews,
 			owners: allOwners.size,
 			logins: days.reduce((s, d) => s + d.logins, 0),
-			actions: [...actionCounts.values()].reduce((s, n) => s + n, 0),
+			actions: actions.reduce((s, a) => s + a.count, 0),
 			avgDailyOwners:
 				Math.round((days.reduce((s, d) => s + d.activeOwners, 0) / activeDayCount) * 10) / 10,
 			weeklyOwners: weekOwners.size,
 		},
+		focused,
 		days,
 		pages,
 		sections: toRows(sectionViews, sectionLabel),
@@ -653,6 +829,7 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 		actions,
 		links,
 		people,
+		stickiness,
 	};
 }
 
@@ -678,6 +855,8 @@ export function mockInsights(
 	const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 	let linkSeed = 7;
 	const linkRand = () => ((linkSeed = (linkSeed * 16807) % 2147483647) - 1) / 2147483646;
+	let pathSeed = 11;
+	const pathRand = () => ((pathSeed = (pathSeed * 16807) % 2147483647) - 1) / 2147483646;
 	const pages = ['/', '/rosters', '/standings', '/lineup', '/players', '/trade-builder', '/schefter'];
 	const now = Date.now();
 	const days: InsightDayRaw[] = dates.map((date) => {
@@ -695,6 +874,7 @@ export function mockInsights(
 			userSections: {},
 			links: {},
 			userLinks: {},
+			paths: {},
 		};
 		const bump = (map: Record<string, number>, k: string, n = 1) => (map[k] = (map[k] ?? 0) + n);
 		const sunday = weekdayOf(date) === 0;
@@ -731,6 +911,18 @@ export function mockInsights(
 			bump(day.links, `${o.section}|${area}|${page}`);
 			bump(day.userLinks, `${o.key}|${o.section}|${area}`);
 		});
+		// Paths, likewise, from their own generator.
+		owners.forEach((o) => {
+			if (pathRand() > 0.4) return;
+			let from = pages[Math.floor(pathRand() ** 2 * pages.length)];
+			const steps = 1 + Math.floor(pathRand() * 4);
+			for (let i = 0; i < steps; i++) {
+				const to = pages[Math.floor(pathRand() * pages.length)];
+				if (to === from) continue;
+				bump(day.paths!, `${o.key}|${o.section}|${from}|${to}`);
+				from = to;
+			}
+		});
 		return day;
 	});
 	const people: InsightPerson[] = owners.map((o, i) => {
@@ -741,6 +933,8 @@ export function mockInsights(
 			username: `owner${i + 1}`,
 			lastSeen: i % 7 === 6 ? null : now - Math.floor(rand() * (i % 3 === 0 ? 20 : 2) * 86_400_000),
 			lastLogin: now - Math.floor(rand() * 40 * 86_400_000),
+			// Not drawn from `rand`, so every other mock number stays put.
+			firstSeen: now - (((i * 7) % 80) + 1) * 86_400_000,
 		};
 	});
 	return { days, people };

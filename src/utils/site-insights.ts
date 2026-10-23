@@ -17,11 +17,30 @@
  * - `insights:d:<date>:links`        `<section>|<area>|<page>` → arrivals by an
  *                                    in-site link (`-` = page not nameable)
  * - `insights:d:<date>:userlinks`    `<visitor>|<section>|<area>` → arrivals
+ * - `insights:d:<date>:paths`        `<visitor>|<section>|<from>|<to>` → steps
+ *                                    from one page to the next in a tab
  * - `insights:lastseen` / `insights:lastlogin`  `<visitor>` → epoch ms
  * - `insights:names`                 `<visitor>` → MFL username
+ * - `insights:firstseen`             `<visitor>` → epoch ms of their first
+ *                                    signed-in view (HSETNX; started Oct 2026,
+ *                                    seeded once from the daily hashes)
  *
- * The three un-dated hashes do not expire: they hold one field per owner who
- * has ever signed in, which is bounded by the leagues' size.
+ * MONTHLY ROLLUP (never expires — the long-term history the daily hashes
+ * drop after 90 days; `<month>` is YYYY-MM on the league clock):
+ *
+ * - `insights:m:<month>:pages`        `<section>|<page>` → views (everyone)
+ * - `insights:m:<month>:usersections` `<visitor>|<section>` → views
+ * - `insights:m:<month>:userpages`    `<visitor>|<section>|<page>` → views
+ * - `insights:m:<month>:userdays`     `<visitor>` → days with a view
+ * - `insights:lastday`                `<visitor>` → the last date counted in
+ *                                     userdays, so a day is counted once
+ *
+ * Each month's fields are bounded the same way the daily ones are (owners ×
+ * pages they actually opened), so a month costs about what a busy day does,
+ * once. Seeded once from the daily hashes (`seedInsightMonths`).
+ *
+ * The un-dated hashes do not expire: they hold one field per owner who has
+ * ever signed in, which is bounded by the leagues' size.
  *
  * `<visitor>` is `<leagueId>:<franchiseId>` (see `visitorKey`). The date and
  * hour are on the league's OFFICIAL clock, so "Sunday 10am" means what an
@@ -46,6 +65,7 @@ import {
 import {
 	ANONYMOUS_INSIGHT_ACTIONS,
 	INSIGHTS_OWNER,
+	INSIGHTS_TTL_DAYS,
 	INSIGHTS_TTL_SECONDS,
 	insightClock,
 	insightDates,
@@ -57,12 +77,20 @@ import {
 	type InsightPerson,
 	type InsightSource,
 } from './site-insights-model';
+import { insightMonths, type InsightMonthRaw } from './site-insights-trends';
 
 const PREFIX = 'insights';
 const dayKey = (date: string, name: string) => `${PREFIX}:d:${date}:${name}`;
+const monthKey = (month: string, name: string) => `${PREFIX}:m:${month}:${name}`;
+const LAST_DAY = `${PREFIX}:lastday`;
+/** Set once the monthly rollup has been seeded from the daily hashes. */
+const MONTHS_SEEDED = `${PREFIX}:m:seeded`;
 const LAST_SEEN = `${PREFIX}:lastseen`;
 const LAST_LOGIN = `${PREFIX}:lastlogin`;
 const NAMES = `${PREFIX}:names`;
+const FIRST_SEEN = `${PREFIX}:firstseen`;
+/** Set once the first-seen hash has been seeded from the daily hashes. */
+const FIRST_SEEN_SEEDED = `${PREFIX}:firstseen:seeded`;
 
 const DAY_HASHES = [
 	'pages',
@@ -77,7 +105,10 @@ const DAY_HASHES = [
 	'logins',
 	'links',
 	'userlinks',
+	'paths',
 ] as const;
+
+const MONTH_HASHES = ['pages', 'usersections', 'userpages', 'userdays'] as const;
 
 function clockNow(now = new Date()) {
 	return insightClock(now, leagueClock(DEFAULT_LEAGUE_SLUG).zone);
@@ -118,6 +149,9 @@ function sectionForUser(user: InsightActor): string {
  * ARGV[7] hour     ARGV[8] device ('' = skip)   ARGV[9] source ('' = skip)
  * ARGV[10] rate max ('0' = no limit)  ARGV[11] rate window seconds
  * KEYS[11] links  KEYS[12] userlinks   ARGV[12] link area ('' = skip)
+ * KEYS[13] firstseen
+ * KEYS[14] paths  KEYS[15..18] month pages, usersections, userpages, userdays
+ * KEYS[19] lastday   ARGV[13] previous page ('' = none)   ARGV[14] date
  *
  * Returns 0 when rate-limited (nothing written), else 1.
  */
@@ -132,13 +166,28 @@ local function bump(key, field)
   if redis.call('TTL', key) < 0 then redis.call('EXPIRE', key, ARGV[1]) end
 end
 local s = ARGV[2]
-if ARGV[3] ~= '' then bump(KEYS[1], s .. '|' .. ARGV[3]) end
+if ARGV[3] ~= '' then
+  bump(KEYS[1], s .. '|' .. ARGV[3])
+  redis.call('HINCRBY', KEYS[15], s .. '|' .. ARGV[3], 1)
+end
 if ARGV[4] == '' then
   bump(KEYS[2], 'anon|' .. s)
 else
   bump(KEYS[3], ARGV[4] .. '|' .. s)
-  if ARGV[3] ~= '' then bump(KEYS[4], ARGV[4] .. '|' .. s .. '|' .. ARGV[3]) end
+  redis.call('HINCRBY', KEYS[16], ARGV[4] .. '|' .. s, 1)
+  if ARGV[3] ~= '' then
+    bump(KEYS[4], ARGV[4] .. '|' .. s .. '|' .. ARGV[3])
+    redis.call('HINCRBY', KEYS[17], ARGV[4] .. '|' .. s .. '|' .. ARGV[3], 1)
+    if ARGV[13] ~= '' and ARGV[13] ~= ARGV[3] then
+      bump(KEYS[14], ARGV[4] .. '|' .. s .. '|' .. ARGV[13] .. '|' .. ARGV[3])
+    end
+  end
+  if redis.call('HGET', KEYS[19], ARGV[4]) ~= ARGV[14] then
+    redis.call('HSET', KEYS[19], ARGV[4], ARGV[14])
+    redis.call('HINCRBY', KEYS[18], ARGV[4], 1)
+  end
   redis.call('HSET', KEYS[8], ARGV[4], ARGV[5])
+  redis.call('HSETNX', KEYS[13], ARGV[4], ARGV[5])
   if ARGV[6] ~= '' then redis.call('HSET', KEYS[9], ARGV[4], ARGV[6]) end
 end
 bump(KEYS[5], s .. '|' .. ARGV[7])
@@ -164,6 +213,11 @@ export interface InsightVisit {
 	source: InsightSource | null;
 	/** The tagged area of the in-site link that brought the visitor here. */
 	via?: InsightLinkArea | null;
+	/**
+	 * The page before this one in the same tab and section, normalized like
+	 * `page`. Recorded for signed-in owners only.
+	 */
+	from?: string | null;
 	/** Anonymous callers only: an opaque per-caller key and its cap. */
 	rateLimit?: { callerKey: string; max: number; windowSeconds: number };
 }
@@ -176,6 +230,7 @@ export async function recordInsightVisit(
 		const redis = await getRedis();
 		if (!redis) return { limited: false };
 		const { date, hour } = clockNow(now);
+		const month = date.slice(0, 7);
 		const keys = [
 			dayKey(date, 'pages'),
 			dayKey(date, 'visitors'),
@@ -189,6 +244,13 @@ export async function recordInsightVisit(
 			`rate:insights-anon:${visit.rateLimit?.callerKey ?? 'none'}`,
 			dayKey(date, 'links'),
 			dayKey(date, 'userlinks'),
+			FIRST_SEEN,
+			dayKey(date, 'paths'),
+			monthKey(month, 'pages'),
+			monthKey(month, 'usersections'),
+			monthKey(month, 'userpages'),
+			monthKey(month, 'userdays'),
+			LAST_DAY,
 		];
 		const result = await redis.eval<number>(VISIT_SCRIPT, keys, [
 			INSIGHTS_TTL_SECONDS,
@@ -203,6 +265,8 @@ export async function recordInsightVisit(
 			String(visit.rateLimit?.max ?? 0),
 			String(visit.rateLimit?.windowSeconds ?? 60),
 			visit.via ?? '',
+			visit.user ? (visit.from ?? '') : '',
+			date,
 		]);
 		return { limited: Number(result) === 0 };
 	} catch (err) {
@@ -337,6 +401,7 @@ export async function readInsightDays(count: number, now = new Date()): Promise<
 			logins: at(9),
 			links: at(10),
 			userLinks: at(11),
+			paths: at(12),
 		};
 	});
 }
@@ -354,10 +419,12 @@ export async function readInsightPeople(): Promise<InsightPerson[]> {
 	pipe.hgetall(LAST_SEEN);
 	pipe.hgetall(LAST_LOGIN);
 	pipe.hgetall(NAMES);
+	pipe.hgetall(FIRST_SEEN);
 	const managed = ALL_LEAGUES;
 	for (const league of managed) pipe.hgetall(`activity:${league.id}`);
-	const [seen, login, names, ...legacy] = await pipe.exec<(Record<string, unknown> | null)[]>();
+	const [seen, login, names, first, ...legacy] = await pipe.exec<(Record<string, unknown> | null)[]>();
 
+	const firstSeen = toCounts(first);
 	const lastSeen = toCounts(seen);
 	const lastLogin = toCounts(login);
 	const usernames = (names ?? {}) as Record<string, unknown>;
@@ -385,6 +452,154 @@ export async function readInsightPeople(): Promise<InsightPerson[]> {
 			username: typeof name === 'string' && name ? name : null,
 			lastSeen: lastSeen[key] ?? null,
 			lastLogin: lastLogin[key] ?? null,
+			firstSeen: firstSeen[key] ?? null,
 		};
 	});
+}
+
+/**
+ * KEYS[1] firstseen   KEYS[2] seeded marker
+ * ARGV pairs: visitor, epoch ms — kept only where earlier than what is stored,
+ * so a visit recorded (HSETNX) before the seed ran is corrected, not kept.
+ */
+const SEED_FIRST_SEEN_SCRIPT = `
+for i = 1, #ARGV, 2 do
+  local cur = redis.call('HGET', KEYS[1], ARGV[i])
+  if not cur or tonumber(cur) > tonumber(ARGV[i + 1]) then
+    redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+  end
+end
+redis.call('SET', KEYS[2], '1')
+return 1
+`;
+
+/**
+ * Seed `insights:firstseen` ONCE from every daily hash still kept, so owners
+ * who started before the counter existed get the earliest day the report can
+ * prove (noon on that day, league clock). Runs on the report's first load
+ * after deploy; afterwards it is one GET. Never throws.
+ */
+export async function seedInsightFirstSeen(now = new Date()): Promise<void> {
+	try {
+		const redis = await getRedis();
+		if (!redis) return;
+		if (await redis.get(FIRST_SEEN_SEEDED)) return;
+		const dates = insightDates(clockNow(now).date, INSIGHTS_TTL_DAYS);
+		const pipe = redis.pipeline();
+		for (const date of dates) pipe.hgetall(dayKey(date, 'usersections'));
+		const results = await pipe.exec<(Record<string, unknown> | null)[]>();
+		const earliest = new Map<string, number>();
+		dates.forEach((date, i) => {
+			for (const field of Object.keys(results[i] ?? {})) {
+				const key = field.split('|')[0];
+				if (!key || earliest.has(key)) continue;
+				earliest.set(key, Date.parse(`${date}T12:00:00Z`));
+			}
+		});
+		const args = [...earliest.entries()].flatMap(([k, ms]) => [k, String(ms)]);
+		await redis.eval(SEED_FIRST_SEEN_SCRIPT, [FIRST_SEEN, FIRST_SEEN_SEEDED], args);
+	} catch (err) {
+		console.warn('[site-insights] first-seen seed failed:', err);
+	}
+}
+
+// ── Monthly rollup ──────────────────────────────────────────────────────────
+
+/** The last `count` months of the rollup, oldest first, in ONE pipeline. */
+export async function readInsightMonths(count: number, now = new Date()): Promise<InsightMonthRaw[] | null> {
+	const redis = await getRedis();
+	if (!redis) return null;
+	const months = insightMonths(clockNow(now).date, count);
+	const pipe = redis.pipeline();
+	for (const month of months) for (const name of MONTH_HASHES) pipe.hgetall(monthKey(month, name));
+	const results = await pipe.exec<(Record<string, unknown> | null)[]>();
+	return months.map((month, i) => {
+		const at = (j: number) => toCounts(results[i * MONTH_HASHES.length + j]);
+		return { month, pages: at(0), userSections: at(1), userPages: at(2), userDays: at(3) };
+	});
+}
+
+/**
+ * KEYS[1..4] a month's pages, usersections, userpages, userdays
+ * ARGV triples: hash index (1-4), field, value — each kept only where higher
+ * than what is stored, so views counted live before the seed ran are never
+ * counted twice (the daily hashes already hold them).
+ */
+const SEED_MONTH_SCRIPT = `
+for i = 1, #ARGV, 3 do
+  local key = KEYS[tonumber(ARGV[i])]
+  local cur = tonumber(redis.call('HGET', key, ARGV[i + 1]) or '0')
+  if tonumber(ARGV[i + 2]) > cur then redis.call('HSET', key, ARGV[i + 1], ARGV[i + 2]) end
+end
+return 1
+`;
+
+/** Fields per seed EVAL, so no one request grows without bound. */
+const SEED_BATCH = 800;
+
+/**
+ * Seed the monthly rollup ONCE from every daily hash still kept, so the
+ * month-by-month history starts 90 days back rather than on deploy day. Also
+ * marks today as counted for everyone already active today, so their next
+ * view does not add a second day. Runs on the report's first load after
+ * deploy; afterwards it is one GET. Never throws.
+ */
+export async function seedInsightMonths(now = new Date()): Promise<void> {
+	try {
+		const redis = await getRedis();
+		if (!redis) return;
+		if (await redis.get(MONTHS_SEEDED)) return;
+		const today = clockNow(now).date;
+		const dates = insightDates(today, INSIGHTS_TTL_DAYS);
+		const pipe = redis.pipeline();
+		for (const date of dates) {
+			pipe.hgetall(dayKey(date, 'pages'));
+			pipe.hgetall(dayKey(date, 'usersections'));
+			pipe.hgetall(dayKey(date, 'userpages'));
+		}
+		const results = await pipe.exec<(Record<string, unknown> | null)[]>();
+
+		const sums = new Map<string, Map<number, Map<string, number>>>();
+		const add = (month: string, hash: number, field: string, n: number) => {
+			let byHash = sums.get(month);
+			if (!byHash) sums.set(month, (byHash = new Map()));
+			let fields = byHash.get(hash);
+			if (!fields) byHash.set(hash, (fields = new Map()));
+			fields.set(field, (fields.get(field) ?? 0) + n);
+		};
+		const activeToday = new Set<string>();
+		dates.forEach((date, i) => {
+			const month = date.slice(0, 7);
+			const pages = toCounts(results[i * 3]);
+			const sections = toCounts(results[i * 3 + 1]);
+			const userPages = toCounts(results[i * 3 + 2]);
+			for (const [field, n] of Object.entries(pages)) add(month, 1, field, n);
+			const visitors = new Set<string>();
+			for (const [field, n] of Object.entries(sections)) {
+				add(month, 2, field, n);
+				const key = field.split('|')[0];
+				if (key) visitors.add(key);
+			}
+			for (const [field, n] of Object.entries(userPages)) add(month, 3, field, n);
+			for (const key of visitors) add(month, 4, key, 1);
+			if (date === today) for (const key of visitors) activeToday.add(key);
+		});
+
+		for (const [month, byHash] of sums) {
+			const keys = MONTH_HASHES.map((name) => monthKey(month, name));
+			const args: string[] = [];
+			for (const [hash, fields] of byHash) {
+				for (const [field, n] of fields) args.push(String(hash), field, String(n));
+			}
+			for (let i = 0; i < args.length; i += SEED_BATCH * 3) {
+				await redis.eval(SEED_MONTH_SCRIPT, keys, args.slice(i, i + SEED_BATCH * 3));
+			}
+		}
+		if (activeToday.size) {
+			await redis.hset(LAST_DAY, Object.fromEntries([...activeToday].map((k) => [k, today])));
+		}
+		await redis.set(MONTHS_SEEDED, '1');
+	} catch (err) {
+		console.warn('[site-insights] monthly seed failed:', err);
+	}
 }

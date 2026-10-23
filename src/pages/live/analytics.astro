@@ -4,9 +4,22 @@
  * commissioner/admin role (`canViewSiteInsights`). Everyone else, signed in or
  * not, is sent to the board — the page does not admit to existing.
  *
- * Site-wide on purpose: TheLeague, the AFL, Best Ball, MFL Live and the shared
- * host's own pages in one report, filterable by section. The per-league,
- * owner-visible `/activity` page is separate and unchanged.
+ * Site-wide on purpose: TheLeague, the AFL, Best Ball, Archie's, MFL Live and
+ * the shared host's own pages in one report, filterable by section. The
+ * per-league, owner-visible `/activity` page is separate and unchanged.
+ *
+ * Filters compose and live in the URL, so any view can be bookmarked:
+ * `days`, `section`, `owner` (a visitor key — the report becomes that owner's
+ * profile), `page` (`<section>|<path>` — the report becomes "who opened this
+ * page"), and `admins=show` (admins are left out by default; the commissioner
+ * seat was about half of TheLeague's signed-in views). `stage` and `persona`
+ * narrow the owners table to one lifecycle stage or usage style. Every table
+ * sorts by any column, and each sort is kept in the URL too
+ * (`s.<table>=<col>-<dir>`).
+ *
+ * Trends (lifecycle, depth curve, cohorts, personas, paths, month by month,
+ * and the change from the previous window) come from
+ * `site-insights-trends.ts`, under the same filters.
  *
  * Every number is derived by `buildInsightsReport` (pure, tested); this page
  * only reads and renders. Not in the page directory: search would show it to
@@ -21,8 +34,31 @@ import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import {
 	canViewSiteInsights,
 	readInsightDays,
+	readInsightMonths,
 	readInsightPeople,
+	seedInsightFirstSeen,
+	seedInsightMonths,
 } from '../../utils/site-insights';
+import {
+	LIFECYCLE_STAGES,
+	PERSONAS,
+	TREND_WEEKS,
+	buildDepthAndCohorts,
+	buildMonthRows,
+	buildPaths,
+	daysToRead,
+	insightMonths,
+	lifecycleStage,
+	mockInsightMonths,
+	parseLifecycleStage,
+	parsePersona,
+	percentChange,
+	personaOf,
+	splitWindows,
+	type InsightMonthRaw,
+	type LifecycleStage,
+	type Persona,
+} from '../../utils/site-insights-trends';
 import {
 	INSIGHTS_RANGES,
 	INSIGHTS_TTL_DAYS,
@@ -32,8 +68,12 @@ import {
 	insightSections,
 	mockInsights,
 	parseInsightsRange,
+	parseOwnerRef,
+	parsePageRef,
 	sectionLabel,
+	sectionOfVisitor,
 	visitorKey,
+	type InsightPageRef,
 } from '../../utils/site-insights-model';
 import { canonicalPath, directoryTitle } from '../../utils/site-analytics';
 import { readProductInterest } from '../../utils/product-interest';
@@ -42,6 +82,8 @@ import { formatLastSeen } from '../../utils/owner-activity';
 import { getLeagueTeamConfig, getLeagueTeamConfigs } from '../../utils/league-team-brands';
 import {
 	ALL_LEAGUES,
+	crossHostLeagueHref,
+	ensureLeaguePrefix,
 	getLeagueById,
 	getLeagueBySlug,
 	leagueClock,
@@ -56,26 +98,53 @@ const authUser = getAuthUser(Astro.request);
 if (!authUser) return Astro.redirect(mflLoginUrl('/live/analytics'));
 if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
 
-const range = parseInsightsRange(Astro.url.searchParams.get('days'));
-const sectionParam = Astro.url.searchParams.get('section');
+const params = Astro.url.searchParams;
+const range = parseInsightsRange(params.get('days'));
+const sectionParam = params.get('section');
 const sections = insightSections();
 const section = sectionParam && sections.includes(sectionParam) ? sectionParam : null;
-const useMock = Astro.url.searchParams.has('mock');
+const owner = parseOwnerRef(params.get('owner'));
+const pageRef = parsePageRef(params.get('page'), sections);
+const showAdmins = params.get('admins') === 'show';
+const stageParam = parseLifecycleStage(params.get('stage'));
+const personaParam = parsePersona(params.get('persona'));
+const useMock = params.has('mock');
+const MONTHS_SHOWN = 12;
+const zone = leagueClock(DEFAULT_LEAGUE_SLUG).zone;
+
+// Every registry league's admin seats. Their own visits are most of a small
+// league's traffic, so the report leaves them out unless asked.
+const adminKeys = new Set(
+	ALL_LEAGUES.flatMap((l) => (l.adminFranchiseIds ?? []).map((fid) => visitorKey(l.id, fid))),
+);
 
 let unavailable = false;
 let raw: Awaited<ReturnType<typeof readInsightDays>> = [];
 let people: Awaited<ReturnType<typeof readInsightPeople>> = [];
+let months: InsightMonthRaw[] = [];
+
+// Twice the window when the daily hashes still hold it, so every headline
+// number can say how it moved since the window before.
+const readDays = daysToRead(range, INSIGHTS_TTL_DAYS);
 
 if (useMock) {
-	const clock = leagueClock(DEFAULT_LEAGUE_SLUG).zone;
-	const dates = insightDates(insightClock(new Date(), clock).date, range);
+	const today = insightClock(new Date(), zone).date;
+	const dates = insightDates(today, readDays);
 	const owners = ALL_LEAGUES.flatMap((l) =>
 		getLeagueTeamConfigs(l.slug).map((t: any) => ({ key: visitorKey(l.id, t.franchiseId), section: l.slug })),
 	);
 	({ days: raw, people } = mockInsights(dates, owners));
+	months = mockInsightMonths(insightMonths(today, MONTHS_SHOWN), owners);
 } else {
 	try {
-		[raw, people] = await Promise.all([readInsightDays(range), readInsightPeople()]);
+		await Promise.all([seedInsightFirstSeen(), seedInsightMonths()]);
+		let monthRaw: InsightMonthRaw[] | null;
+		[raw, people, monthRaw] = await Promise.all([
+			readInsightDays(readDays),
+			readInsightPeople(),
+			readInsightMonths(MONTHS_SHOWN),
+		]);
+		months = monthRaw ?? [];
 		if (raw === null) unavailable = true;
 	} catch (err) {
 		console.warn('[live/analytics] read failed:', err);
@@ -83,11 +152,64 @@ if (useMock) {
 	}
 }
 
-const report = buildInsightsReport({ days: raw ?? [], people, section });
+const windows = splitWindows(raw ?? [], range);
+const filters = {
+	section,
+	owner,
+	page: pageRef,
+	excludeOwners: showAdmins ? new Set<string>() : adminKeys,
+};
+const report = buildInsightsReport({ days: windows.current, people, ...filters });
+const previous = windows.previous ? buildInsightsReport({ days: windows.previous, people, ...filters }) : null;
+
+const nowMs = Date.now();
+const { depth, cohorts } = buildDepthAndCohorts({ days: windows.current, people, ...filters, zone });
+const paths = buildPaths({ days: windows.current, ...filters });
+const monthRows = buildMonthRows({ months, people, ...filters, zone })
+	.filter((m) => m.views > 0 || m.owners > 0)
+	.reverse();
+
+// Lifecycle and persona per owner. Lifecycle counts every owner the section
+// covers (by their league), not just this window's visitors — the lapsed and
+// the never-seen are the point of it.
+const recentByKey = new Map(report.people.map((p) => [p.key, p.recentDays]));
+const stageOf = (p: { key: string; lastSeen: number | null; firstSeen?: number | null }): LifecycleStage =>
+	lifecycleStage({ ...p, recentDays: recentByKey.get(p.key) ?? 0 }, nowMs);
+const lifecyclePool = people.filter(
+	(p) =>
+		(showAdmins || !adminKeys.has(p.key)) &&
+		(section === null || sectionOfVisitor(p.key) === section || recentByKey.has(p.key)),
+);
+const lifecycleCounts = new Map<LifecycleStage, number>();
+for (const p of lifecyclePool) {
+	const stage = stageOf(p);
+	lifecycleCounts.set(stage, (lifecycleCounts.get(stage) ?? 0) + 1);
+}
+const lifecycleRows = (Object.keys(LIFECYCLE_STAGES) as LifecycleStage[]).map((stage) => ({
+	stage,
+	...LIFECYCLE_STAGES[stage],
+	count: lifecycleCounts.get(stage) ?? 0,
+}));
+const lifecycleTotal = lifecyclePool.length;
+
+const personaByKey = new Map(report.people.map((p) => [p.key, personaOf(p.pages)]));
+const personaCounts = new Map<Persona, number>();
+for (const persona of personaByKey.values()) if (persona) personaCounts.set(persona, (personaCounts.get(persona) ?? 0) + 1);
+const personaRows = (Object.keys(PERSONAS) as Persona[])
+	.map((persona) => ({ persona, ...PERSONAS[persona], count: personaCounts.get(persona) ?? 0 }))
+	.filter((r) => r.count > 0)
+	.sort((a, b) => b.count - a.count);
+const personaTotal = personaRows.reduce((s, r) => s + r.count, 0);
+
+const tablePeople = report.people.filter(
+	(p) => (!stageParam || stageOf(p) === stageParam) && (!personaParam || personaByKey.get(p.key) === personaParam),
+);
+
+const prevPageViews = new Map((previous?.pages ?? []).map((p) => [`${p.section}|${p.page}`, p.views]));
 
 // The homepage's "coming soon" product buttons. All-time, whatever the range.
 let interest: Awaited<ReturnType<typeof readProductInterest>> = null;
-if (!useMock) {
+if (!useMock && !report.focused) {
 	try {
 		interest = await readProductInterest();
 	} catch (err) {
@@ -100,7 +222,10 @@ if (!useMock) {
 const fmt = new Intl.NumberFormat('en-US');
 const n = (v: number) => fmt.format(v);
 
-function ownerLabel(leagueId: string, franchiseId: string): { team: string; league: string } {
+function ownerLabel(key: string): { team: string; league: string } {
+	const i = key.indexOf(':');
+	const leagueId = key.slice(0, i);
+	const franchiseId = key.slice(i + 1);
 	const league = getLeagueById(leagueId);
 	const config = league ? getLeagueTeamConfig(league.slug, franchiseId) : undefined;
 	return {
@@ -119,9 +244,23 @@ function pageLabel(s: string, page: string): string {
 	if (page === '/live/league/:id') return 'Live — one league';
 	if (page === '/live/settings') return 'Leagues & settings';
 	if (page === '/live/analytics') return 'Site analytics';
+	if (page === '/live/standings') return 'Live standings';
 	if (page === '/login') return 'Sign in';
 	if (page === '/') return 'Splash';
 	return page;
+}
+
+/**
+ * The real page behind a row, as an href that works from this host — the
+ * league's own domain where the shared host no longer serves it. Null for a
+ * path whose id segments were folded (`/players/:id`): there is no one page
+ * to open.
+ */
+function realPageHref(s: string, page: string): string | null {
+	if (page.includes(':id')) return null;
+	const league = getLeagueBySlug(s);
+	const path = league ? ensureLeaguePrefix(league, page) : page;
+	return crossHostLeagueHref(Astro.url.hostname, path);
 }
 
 function dateLabel(date: string): string {
@@ -134,6 +273,22 @@ function dateLabel(date: string): string {
 	});
 }
 
+function shortDate(ms: number | null | undefined): string {
+	if (!ms) return '—';
+	return new Date(ms).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+		timeZone: leagueClock(DEFAULT_LEAGUE_SLUG).zone,
+	});
+}
+
+/** A per-row trend: one bar per day, scaled to that owner's own busiest day. */
+function sparkBars(values: number[]): { x: number; h: number }[] {
+	const max = Math.max(1, ...values);
+	return values.map((v, i) => ({ x: i, h: v ? Math.max(2, Math.round((v / max) * 16)) : 0 }));
+}
+
 const clockLabel = leagueClock(DEFAULT_LEAGUE_SLUG).label;
 const maxDayViews = Math.max(1, ...report.days.map((d) => d.views));
 const maxDayOwners = Math.max(1, ...report.days.map((d) => d.activeOwners));
@@ -141,40 +296,93 @@ const maxHeat = Math.max(1, ...report.heatmap.flat());
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const hourLabel = (h: number) => (h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`);
 
-const topPages = report.pages.slice(0, 25);
-const maxPage = Math.max(1, ...topPages.map((p) => p.views));
+const maxPage = Math.max(1, ...report.pages.map((p) => p.views));
 const deviceTotal = report.devices.reduce((s, r) => s + r.count, 0);
 const sourceTotal = report.sources.reduce((s, r) => s + r.count, 0);
 const pct = (v: number, total: number) => (total ? Math.round((v / total) * 100) : 0);
+const stickyTotal = report.stickiness.reduce((s, v) => s + v, 0);
 
 const STALE_MS = 7 * 86_400_000;
-const nowMs = Date.now();
 const activeCount = report.people.filter((p) => p.lastSeen && nowMs - p.lastSeen < STALE_MS).length;
 
-const href = (params: { days?: number; section?: string | null }) => {
+/** "▲ 12%" against the previous window, or null when there is none to compare. */
+function delta(current: number, prev: number | undefined): { text: string; dir: 'up' | 'down' | 'flat' } | null {
+	if (!previous || prev === undefined) return null;
+	const change = percentChange(current, prev);
+	if (change === null) return current > 0 ? { text: 'new', dir: 'up' } : null;
+	if (change === 0) return { text: 'no change', dir: 'flat' };
+	return { text: `${change > 0 ? '▲' : '▼'} ${Math.abs(change)}%`, dir: change > 0 ? 'up' : 'down' };
+}
+const comparedTo = `vs the ${range} days before`;
+
+function monthLabel(month: string): string {
+	const [y, m] = month.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+const maxMonthViews = Math.max(1, ...monthRows.map((m) => m.views));
+const maxDepthPages = Math.max(1, ...depth.map((w) => w.avgPages));
+const cohortWeeks = Math.min(
+	TREND_WEEKS,
+	Math.max(0, ...cohorts.map((c) => c.retention.reduce<number>((last, v, i) => (v === null ? last : i + 1), 0))),
+);
+const pageFrom = pageRef
+	? paths.filter((p) => p.to === pageRef.page && p.from !== pageRef.page).slice(0, 8)
+	: [];
+const pageNext = pageRef
+	? paths.filter((p) => p.from === pageRef.page && p.to !== pageRef.page).slice(0, 8)
+	: [];
+
+interface FilterState {
+	days?: number;
+	section?: string | null;
+	owner?: string | null;
+	page?: InsightPageRef | null;
+	admins?: boolean;
+	stage?: LifecycleStage | null;
+	persona?: Persona | null;
+	hash?: string;
+}
+const href = (next: FilterState) => {
 	const q = new URLSearchParams();
-	const days = params.days ?? range;
-	const sec = params.section === undefined ? section : params.section;
+	const days = next.days ?? range;
+	const sec = next.section === undefined ? section : next.section;
+	const own = next.owner === undefined ? owner : next.owner;
+	const pg = next.page === undefined ? pageRef : next.page;
+	const admins = next.admins ?? showAdmins;
+	const stage = next.stage === undefined ? stageParam : next.stage;
+	const persona = next.persona === undefined ? personaParam : next.persona;
 	if (days !== 30) q.set('days', String(days));
 	if (sec) q.set('section', sec);
+	if (own) q.set('owner', own);
+	if (pg) q.set('page', `${pg.section}|${pg.page}`);
+	if (admins) q.set('admins', 'show');
+	if (stage) q.set('stage', stage);
+	if (persona) q.set('persona', persona);
 	if (useMock) q.set('mock', '');
 	const s = q.toString();
-	return `/live/analytics${s ? `?${s}` : ''}`;
+	return `/live/analytics${s ? `?${s}` : ''}${next.hash ? `#${next.hash}` : ''}`;
 };
 
 const sectionChips = [
 	{ key: null as string | null, label: 'Whole site' },
 	...sections.map((s) => ({ key: s as string | null, label: sectionLabel(s) })),
 ];
+
+const ownerPerson = owner ? report.people.find((p) => p.key === owner) ?? null : null;
+const ownerWho = owner ? ownerLabel(owner) : null;
+const pageTitle = pageRef ? pageLabel(pageRef.section, pageRef.page) : null;
+const pageRealHref = pageRef ? realPageHref(pageRef.section, pageRef.page) : null;
+const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 ---
 
 <MflAppLayout title="Site analytics — MFL Live" description="Admin-only site analytics">
-	<section class="ins">
+	<section class="ins" data-ins-root>
 		<a class="ins__back" href="/live">&larr; Board</a>
 		<header class="ins__head">
 			<h1 class="ins__title">Site analytics</h1>
 			<p class="ins__lede">
-				Who's using the site, and what they open. Visible only to you.
+				Who's using the site, and what they open. Visible only to you. Tap a page or an owner to
+				focus the whole report on it; tap any column heading to sort.
 				{useMock && <strong> Showing sample data.</strong>}
 			</p>
 		</header>
@@ -186,6 +394,13 @@ const sectionChips = [
 						{d} days
 					</a>
 				))}
+				<a
+					class:list={['ui-pill', 'ins__chip', { 'ui-pill--active': !showAdmins }]}
+					href={href({ admins: !showAdmins })}
+					title="Tap to switch: admin seats' own visits"
+				>
+					{showAdmins ? 'Admins included' : 'Admins hidden'}
+				</a>
 			</div>
 			<div class="ui-pills ins__chips" role="group" aria-label="Section">
 				{sectionChips.map((c) => (
@@ -198,44 +413,126 @@ const sectionChips = [
 					</a>
 				))}
 			</div>
+			{(owner || pageRef || stageParam || personaParam) && (
+				<div class="ui-pills ins__chips" role="group" aria-label="Focus">
+					{owner && ownerWho && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ owner: null })} aria-label={`Clear owner ${ownerWho.team}`}>
+							Owner: {ownerWho.team} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+					{pageRef && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ page: null })} aria-label={`Clear page ${pageTitle}`}>
+							Page: {pageTitle} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+					{stageParam && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ stage: null })} aria-label={`Clear stage ${LIFECYCLE_STAGES[stageParam].label}`}>
+							Stage: {LIFECYCLE_STAGES[stageParam].label} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+					{personaParam && (
+						<a class="ui-pill ui-pill--active ins__chip" href={href({ persona: null })} aria-label={`Clear style ${PERSONAS[personaParam].label}`}>
+							Style: {PERSONAS[personaParam].label} <span aria-hidden="true">✕</span>
+						</a>
+					)}
+				</div>
+			)}
 		</nav>
 
 		{unavailable ? (
 			<p class="ins__empty">Analytics storage is unavailable right now, so there's nothing to show. Try again shortly.</p>
 		) : (
 			<Fragment>
+				{owner && ownerWho && (
+					<section class="ins__card ins__profile" aria-labelledby="ins-profile">
+						<h2 class="ins__h2 ins__profile-name" id="ins-profile">{ownerWho.team}</h2>
+						<p class="ins__muted">
+							{ownerWho.league}{ownerPerson?.username && ` · ${ownerPerson.username}`}
+							{adminKeys.has(owner) && ' · admin'}
+						</p>
+						<dl class="ins__facts">
+							<div><dt>First seen</dt><dd>{shortDate(ownerPerson?.firstSeen)}</dd></div>
+							<div><dt>Last seen</dt><dd>{formatLastSeen(ownerPerson?.lastSeen ?? null)}</dd></div>
+							<div><dt>Last sign-in</dt><dd>{ownerPerson?.lastLogin ? formatLastSeen(ownerPerson.lastLogin) : '—'}</dd></div>
+							<div><dt>Active days</dt><dd>{ownerPerson?.activeDays ?? 0} of {range}</dd></div>
+							<div><dt>Last 7 days</dt><dd>{ownerPerson?.recentDays ?? 0} of 7</dd></div>
+							<div><dt>Pages opened</dt><dd>{report.pages.length}</dd></div>
+							<div><dt>Stage</dt><dd>{LIFECYCLE_STAGES[stageOf({ key: owner, lastSeen: ownerPerson?.lastSeen ?? null, firstSeen: ownerPerson?.firstSeen ?? null })].label}</dd></div>
+							<div><dt>Style</dt><dd>{(() => { const pz = personaOf(ownerPerson?.pages ?? []); return pz ? PERSONAS[pz].label : '—'; })()}</dd></div>
+						</dl>
+					</section>
+				)}
+
+				{pageRef && (
+					<section class="ins__card ins__profile" aria-labelledby="ins-page-focus">
+						<h2 class="ins__h2 ins__profile-name" id="ins-page-focus">{pageTitle}</h2>
+						<p class="ins__muted">
+							{sectionLabel(pageRef.section)} · <code>{pageRef.page}</code>
+						</p>
+						{pageRealHref ? (
+							<a class="cta cta--ghost ins__open" href={pageRealHref} target="_blank" rel="noopener">
+								Open this page <span aria-hidden="true">↗</span>
+							</a>
+						) : (
+							<p class="ins__note">One row for every item of this kind (ids folded), so there is no single page to open.</p>
+						)}
+					</section>
+				)}
+
 				<div class="ins__tiles">
-					<div class="ins__tile">
-						<span class="ins__tile-value">{n(report.totals.views)}</span>
-						<span class="ins__tile-label">Page views</span>
-					</div>
-					<div class="ins__tile">
-						<span class="ins__tile-value">{n(report.totals.owners)}</span>
-						<span class="ins__tile-label">Owners who visited</span>
-					</div>
-					<div class="ins__tile">
-						<span class="ins__tile-value">{n(report.totals.weeklyOwners)}</span>
-						<span class="ins__tile-label">Active in last 7 days</span>
-					</div>
-					<div class="ins__tile">
-						<span class="ins__tile-value">{report.totals.avgDailyOwners}</span>
-						<span class="ins__tile-label">Avg owners / day</span>
-					</div>
-					{section === null && (
-						<div class="ins__tile">
-							<span class="ins__tile-value">{n(report.totals.logins)}</span>
-							<span class="ins__tile-label">Sign-ins</span>
-						</div>
-					)}
-					<div class="ins__tile">
-						<span class="ins__tile-value">{n(report.totals.actions)}</span>
-						<span class="ins__tile-label">Actions taken</span>
-					</div>
-					<div class="ins__tile">
-						<span class="ins__tile-value">{pct(report.totals.anonymousViews, report.totals.views)}%</span>
-						<span class="ins__tile-label">Views while signed out</span>
-					</div>
+					{[
+						{ show: true, value: n(report.totals.views), label: viewsLabel, d: delta(report.totals.views, previous?.totals.views) },
+						{ show: !owner, value: n(report.totals.owners), label: 'Owners who visited', d: delta(report.totals.owners, previous?.totals.owners) },
+						{ show: !owner, value: n(report.totals.weeklyOwners), label: 'Active in last 7 days', d: delta(report.totals.weeklyOwners, previous?.totals.weeklyOwners) },
+						{ show: !owner, value: String(report.totals.avgDailyOwners), label: 'Avg owners / day', d: delta(report.totals.avgDailyOwners, previous?.totals.avgDailyOwners) },
+						{ show: section === null && !pageRef, value: n(report.totals.logins), label: 'Sign-ins', d: delta(report.totals.logins, previous?.totals.logins) },
+						{ show: !pageRef, value: n(report.totals.actions), label: 'Actions taken', d: delta(report.totals.actions, previous?.totals.actions) },
+						{ show: !owner, value: `${pct(report.totals.anonymousViews, report.totals.views)}%`, label: 'Views while signed out', d: null },
+					]
+						.filter((t) => t.show)
+						.map((t) => (
+							<div class="ins__tile">
+								<span class="ins__tile-value">{t.value}</span>
+								<span class="ins__tile-label">{t.label}</span>
+								{t.d && (
+									<span class:list={['ins__delta', `is-${t.d.dir}`]} title={comparedTo}>
+										{t.d.text}<span class="visually-hidden"> {comparedTo}</span>
+									</span>
+								)}
+							</div>
+						))}
 				</div>
+
+				{previous && <p class="ins__note ins__tiles-note">Arrows compare with the {range} days before.</p>}
+
+				{!report.focused && lifecycleTotal > 0 && (
+					<section class="ins__card" aria-labelledby="ins-life">
+						<h2 class="ins__h2" id="ins-life">Where owners are</h2>
+						<p class="ins__note">
+							Every owner{section ? ` in ${sectionLabel(section)}` : ''}, by where they are in their life on the site. Tap a stage to list those owners.
+						</p>
+						<div class="ins__stack-bar" role="img" aria-label={lifecycleRows.filter((r) => r.count).map((r) => `${r.label} ${r.count}`).join(', ')}>
+							{lifecycleRows.filter((r) => r.count > 0).map((r) => (
+								<span class={`ins__seg ins__seg--${r.stage}`} style={`flex-grow:${r.count}`} title={`${r.label}: ${r.count}`}></span>
+							))}
+						</div>
+						<ul class="ins__list ins__legend ins__legend--pct">
+							{lifecycleRows.map((r) => (
+								<li>
+									<a href={href({ stage: r.stage, owner: null, page: null, hash: 'ins-people' })} class:list={{ 'is-current': r.stage === stageParam }}>
+										<span class={`ins__swatch ins__seg--${r.stage}`} aria-hidden="true"></span>
+										<span>
+											<span class="ins__legend-label">{r.label}</span>
+											<span class="ins__legend-note">{r.note}</span>
+										</span>
+									</a>
+									<span class="num">{pct(r.count, lifecycleTotal)}%</span>
+									<span class="num">{r.count}</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
 
 				{report.totals.views === 0 && (
 					<p class="ins__empty">
@@ -245,116 +542,399 @@ const sectionChips = [
 				)}
 
 				<section class="ins__card" aria-labelledby="ins-daily">
-					<h2 class="ins__h2" id="ins-daily">Page views per day</h2>
+					<h2 class="ins__h2" id="ins-daily">{pageRef ? 'Views of this page per day' : 'Page views per day'}</h2>
 					<div class="ins__bars" role="img" aria-label={`Daily page views over the last ${range} days`}>
 						{report.days.map((d) => (
-							<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${n(d.views)} views (${n(d.anonymousViews)} signed out)`}>
+							<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${n(d.views)} views${owner ? '' : ` (${n(d.anonymousViews)} signed out)`}`}>
 								<div class="ins__bar" style={`height:${(d.views / maxDayViews) * 100}%`}></div>
 							</div>
 						))}
 					</div>
-					<h2 class="ins__h2 ins__h2--sub" id="ins-owners">Owners active per day</h2>
-					<div class="ins__bars ins__bars--short" role="img" aria-label={`Distinct owners active each day over the last ${range} days`}>
-						{report.days.map((d) => (
-							<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${d.activeOwners} owners${d.logins ? `, ${d.logins} sign-ins` : ''}`}>
-								<div class="ins__bar" style={`height:${(d.activeOwners / maxDayOwners) * 100}%`}></div>
+					{!owner && (
+						<Fragment>
+							<h2 class="ins__h2 ins__h2--sub" id="ins-owners">Owners active per day</h2>
+							<div class="ins__bars ins__bars--short" role="img" aria-label={`Distinct owners active each day over the last ${range} days`}>
+								{report.days.map((d) => (
+									<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${d.activeOwners} owners${d.logins ? `, ${d.logins} sign-ins` : ''}`}>
+										<div class="ins__bar" style={`height:${(d.activeOwners / maxDayOwners) * 100}%`}></div>
+									</div>
+								))}
 							</div>
-						))}
-					</div>
+						</Fragment>
+					)}
 					<div class="ins__axis">
 						<span>{report.days[0] && dateLabel(report.days[0].date)}</span>
 						<span>{report.days.at(-1) && dateLabel(report.days.at(-1)!.date)}</span>
 					</div>
 					<details class="ins__table-toggle">
 						<summary>Show as table</summary>
-						<table class="ui-table ins__table">
-							<thead><tr><th>Day</th><th class="num">Views</th><th class="num">Signed out</th><th class="num">Owners</th><th class="num">Sign-ins</th></tr></thead>
+						<table class="ui-table ins__table" data-sortable="daily">
+							<thead>
+								<tr>
+									<th data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Day</button></th>
+									<th class="num" data-sort="num"><button type="button" class="ins__sort">Views</button></th>
+									{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Signed out</button></th>}
+									{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+									{section === null && !pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Sign-ins</button></th>}
+								</tr>
+							</thead>
 							<tbody>
 								{[...report.days].reverse().map((d) => (
-									<tr><td>{dateLabel(d.date)}</td><td class="num">{n(d.views)}</td><td class="num">{n(d.anonymousViews)}</td><td class="num">{d.activeOwners}</td><td class="num">{d.logins}</td></tr>
+									<tr>
+										<td data-v={d.date.replaceAll('-', '')}>{dateLabel(d.date)}</td>
+										<td class="num">{n(d.views)}</td>
+										{!owner && <td class="num">{n(d.anonymousViews)}</td>}
+										{!owner && <td class="num">{d.activeOwners}</td>}
+										{section === null && !pageRef && <td class="num">{d.logins}</td>}
+									</tr>
 								))}
 							</tbody>
 						</table>
 					</details>
 				</section>
 
-				<section class="ins__card" aria-labelledby="ins-people">
-					<h2 class="ins__h2" id="ins-people">Owners</h2>
-					<p class="ins__note">
-						{activeCount} of {report.people.length} seen in the last week. Sorted by last seen;
-						tap a row for that owner's top pages.
-					</p>
-					<div class="ins__scroll">
-						<table class="ui-table ins__table ins__table--people">
-							<thead>
-								<tr>
-									<th>Owner</th>
-									<th>Last seen</th>
-									<th>Last sign-in</th>
-									<th class="num">Views</th>
-									<th class="num">Days</th>
-									<th class="num">Sign-ins</th>
-									<th class="num">Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								{report.people.map((p) => {
-									const who = ownerLabel(p.leagueId, p.franchiseId);
-									const stale = !p.lastSeen || nowMs - p.lastSeen > STALE_MS;
-									return (
-										<tr class:list={['ins__person', { 'is-stale': stale }]}>
-											<td>
-												<details class="ins__person-detail">
-													<summary>
+				{!report.focused && stickyTotal > 0 && (
+					<section class="ins__card" aria-labelledby="ins-sticky">
+						<h2 class="ins__h2" id="ins-sticky">How often owners come back</h2>
+						<p class="ins__note">
+							Owners who visited in the last {range} days, by how many of the last 7 days they opened the
+							site. The bottom rows are the owners who are hooked.
+						</p>
+						<ul class="ins__list">
+							{report.stickiness.map((count, d) => (
+								<li title={`${count} owners`}>
+									<span>{d === 0 ? 'Not this week' : d === 1 ? '1 day' : `${d} days`}</span>
+									<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(count, stickyTotal)}%`}></span></span>
+									<span class="num">{count}</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
+
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-depth">
+						<h2 class="ins__h2" id="ins-depth">{owner ? 'How their use has grown' : 'Do owners go deeper over time?'}</h2>
+						<p class="ins__note">
+							{owner
+								? 'Each week since their first visit: how many different pages they opened, and on how many days.'
+								: 'Each week since an owner\'s first visit: the average number of different pages opened, by the owners who came back that week.'}
+							{' '}Only full weeks inside the last {range} days count{range < 90 ? '; pick 90 days to see more of the curve' : ''}.
+						</p>
+						{depth.length === 0 ? (
+							<p class="ins__muted">No full week to show yet.</p>
+						) : (
+							<ul class="ins__list ins__depth">
+								{depth.map((w) => (
+									<li>
+										<span>Week {w.week + 1}</span>
+										<span class="ins__meter" aria-hidden="true"><span style={`width:${(w.avgPages / maxDepthPages) * 100}%`}></span></span>
+										<span class="num">
+											{w.active === 0
+												? 'away'
+												: `${w.avgPages} ${w.avgPages === 1 ? 'page' : 'pages'} · ${w.avgDays} ${w.avgDays === 1 ? 'day' : 'days'}`}
+											{!owner && <span class="ins__depth-sub">{w.active} of {w.eligible} came back</span>}
+										</span>
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+				)}
+
+				{!report.focused && cohorts.length > 0 && (
+					<section class="ins__card" aria-labelledby="ins-cohorts">
+						<h2 class="ins__h2" id="ins-cohorts">Do new owners stick?</h2>
+						<p class="ins__note">
+							Owners grouped by the week they first visited. Each square is the share who came back that many weeks later. Darker is more.
+						</p>
+						{cohortWeeks === 0 ? (
+							<p class="ins__muted">The newest owners haven't had a full week yet.</p>
+						) : (
+							<ul class="ins__cohorts">
+								{cohorts.map((c) => (
+									<li>
+										<span class="ins__cohort-head">
+											Week of {dateLabel(c.start)} <span class="ins__muted">· {c.size} {c.size === 1 ? 'owner' : 'owners'}</span>
+										</span>
+										{c.retention.slice(0, cohortWeeks).every((v) => v === null) ? (
+											<span class="ins__muted">Too new to tell: no full week since.</span>
+										) : (
+										<span class="ins__cohort-cells">
+											{c.retention.slice(0, cohortWeeks).map((v, i) => (
+												<span
+													class:list={['ins__cohort-cell', { 'is-empty': v === null }]}
+													style={v === null ? undefined : `--heat:${Math.round(v * 70)}%`}
+													title={v === null ? `Week ${i + 1}: not yet` : `Week ${i + 1}: ${Math.round(v * 100)}% came back`}
+												>
+													<span class="ins__cohort-week">W{i + 1}</span>
+													<span class="ins__cohort-value">{v === null ? '·' : `${Math.round(v * 100)}%`}</span>
+												</span>
+											))}
+										</span>
+										)}
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+				)}
+
+				{!owner && (
+					<section class="ins__card" aria-labelledby="ins-people">
+						<h2 class="ins__h2" id="ins-people">{pageRef ? 'Who opened this page' : 'Owners'}</h2>
+						<p class="ins__note">
+							{pageRef
+								? `${report.people.length} owners opened it in the last ${range} days. Tap an owner for their profile.`
+								: stageParam || personaParam
+									? `${tablePeople.length} of ${report.people.length} owners match. Tap an owner for their profile.`
+									: `${activeCount} of ${report.people.length} seen in the last week. Tap an owner for their profile.`}
+						</p>
+						<div class="ins__scroll">
+							<table class="ui-table ins__table ins__table--stack" data-sortable="people">
+								<thead>
+									<tr>
+										<th data-sort="text"><button type="button" class="ins__sort">Owner</button></th>
+										{!pageRef && <th aria-label="Daily views">Trend</th>}
+										<th class="num" data-sort="num" aria-sort={pageRef ? undefined : 'descending'}><button type="button" class="ins__sort">Last seen</button></th>
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">First seen</button></th>}
+										<th class="num" data-sort="num" aria-sort={pageRef ? 'descending' : undefined}><button type="button" class="ins__sort">Views</button></th>
+										<th class="num" data-sort="num"><button type="button" class="ins__sort">Days</button></th>
+										<th class="num" data-sort="num"><button type="button" class="ins__sort">Last 7</button></th>
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Pages</button></th>}
+										{!pageRef && section === null && <th class="num" data-sort="num"><button type="button" class="ins__sort">Sign-ins</button></th>}
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Actions</button></th>}
+										{!pageRef && <th data-sort="text"><button type="button" class="ins__sort">Stage</button></th>}
+										{!pageRef && <th data-sort="text"><button type="button" class="ins__sort">Style</button></th>}
+									</tr>
+								</thead>
+								<tbody>
+									{(pageRef ? [...tablePeople].sort((a, b) => b.views - a.views) : tablePeople).map((p) => {
+										const who = ownerLabel(p.key);
+										const stage = stageOf(p);
+										const persona = personaByKey.get(p.key) ?? null;
+										const stale = !p.lastSeen || nowMs - p.lastSeen > STALE_MS;
+										return (
+											<tr class:list={['ins__person', { 'is-stale': stale }]}>
+												<td data-v={who.team}>
+													<a class="ins__person-link" href={href({ owner: p.key, page: null })}>
 														<span class="ins__person-team">{who.team}</span>
 														<span class="ins__person-sub">
 															{who.league}{p.username && ` · ${p.username}`}
 														</span>
-													</summary>
-													{p.topPages.length ? (
-														<ol class="ins__person-pages">
-															{p.topPages.map((tp) => (
-																<li>{pageLabel(tp.section, tp.page)} <span class="ins__muted">({sectionLabel(tp.section)}) · {tp.views}</span></li>
-															))}
-														</ol>
-													) : (
-														<p class="ins__muted">No page views in this window.</p>
-													)}
-												</details>
-											</td>
-											<td>{formatLastSeen(p.lastSeen)}</td>
-											<td>{p.lastLogin ? formatLastSeen(p.lastLogin) : '—'}</td>
-											<td class="num">{n(p.views)}</td>
-											<td class="num">{p.activeDays}</td>
-											<td class="num">{p.logins}</td>
-											<td class="num">{p.actions}</td>
-										</tr>
-									);
-								})}
-							</tbody>
-						</table>
-					</div>
-				</section>
+													</a>
+												</td>
+												{!pageRef && (
+													<td class="ins__spark-cell" data-label="Trend">
+														<svg class="ins__spark" viewBox={`0 0 ${Math.max(1, p.dailyViews.length) * 3} 16`} preserveAspectRatio="none" aria-hidden="true">
+															{sparkBars(p.dailyViews).map((b) => b.h > 0 && <rect x={b.x * 3} y={16 - b.h} width="2" height={b.h} rx="0.5" />)}
+														</svg>
+													</td>
+												)}
+												<td class="num" data-label="Last seen" data-v={p.lastSeen ?? 0}>{formatLastSeen(p.lastSeen)}</td>
+												{!pageRef && <td class="num" data-label="First seen" data-v={p.firstSeen ?? 0}>{shortDate(p.firstSeen)}</td>}
+												<td class="num" data-label="Views" data-v={p.views}>{n(p.views)}</td>
+												<td class="num" data-label="Days">{p.activeDays}</td>
+												<td class="num" data-label="Last 7">{p.recentDays}</td>
+												{!pageRef && <td class="num" data-label="Pages">{p.pages.length}</td>}
+												{!pageRef && section === null && <td class="num" data-label="Sign-ins">{p.logins}</td>}
+												{!pageRef && <td class="num" data-label="Actions">{p.actions}</td>}
+												{!pageRef && <td class="ins__nowrap" data-label="Stage">{LIFECYCLE_STAGES[stage].label}</td>}
+												{!pageRef && <td class="ins__nowrap" data-label="Style" data-v={persona ? PERSONAS[persona].label : 'zz'}>{persona ? PERSONAS[persona].label : '—'}</td>}
+											</tr>
+										);
+									})}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				)}
 
-				<section class="ins__card" aria-labelledby="ins-pages">
-					<h2 class="ins__h2" id="ins-pages">Most popular pages</h2>
-					<p class="ins__note">Views include signed-out visitors; owners counts distinct signed-in owners.</p>
-					{topPages.length === 0 ? (
-						<p class="ins__muted">No pages recorded yet.</p>
+				{!report.focused && personaTotal > 0 && (
+					<section class="ins__card" aria-labelledby="ins-personas">
+						<h2 class="ins__h2" id="ins-personas">How owners use the site</h2>
+						<p class="ins__note">
+							Each owner's style, from the kinds of pages most of their views go to in the last {range} days. Tap a style to list those owners.
+						</p>
+						<ul class="ins__list ins__legend">
+							{personaRows.map((r) => (
+								<li>
+									<a href={href({ persona: r.persona, owner: null, page: null, hash: 'ins-people' })} class:list={{ 'is-current': r.persona === personaParam }}>
+										<span>
+											<span class="ins__legend-label">{r.label}</span>
+											<span class="ins__legend-note">{r.note}</span>
+										</span>
+									</a>
+									<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, personaTotal)}%`}></span></span>
+									<span class="num">{r.count}</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
+
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-pages">
+						<h2 class="ins__h2" id="ins-pages">{owner ? 'Pages they open' : 'Pages'}</h2>
+						<p class="ins__note">
+							{owner
+								? `Every page this owner opened in the last ${range} days. Tap a name to see who else opens it; ↗ opens the page itself.`
+								: 'Every page, most viewed first. Views include signed-out visitors; Owners counts distinct signed-in owners. Tap a name to see who opens it; ↗ opens the page itself.'}
+						</p>
+						{report.pages.length === 0 ? (
+							<p class="ins__muted">No pages recorded yet.</p>
+						) : (
+							<div class="ins__scroll">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="pages">
+									<thead>
+										<tr>
+											<th data-sort="text"><button type="button" class="ins__sort">Page</button></th>
+											<th data-sort="text"><button type="button" class="ins__sort">Section</button></th>
+											<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Views</button></th>
+											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Signed out</button></th>}
+											{previous && <th class="num" data-sort="num"><button type="button" class="ins__sort">Change</button></th>}
+										</tr>
+									</thead>
+									<tbody>
+										{report.pages.map((p) => {
+											const label = pageLabel(p.section, p.page);
+											const real = realPageHref(p.section, p.page);
+											return (
+												<tr>
+													<td data-v={label}>
+														<span class="ins__page-row">
+															<a class="ins__page-name" href={href({ page: { section: p.section, page: p.page }, owner: null })}>{label}</a>
+															{real && (
+																<a class="ins__open-icon" href={real} target="_blank" rel="noopener" aria-label={`Open ${label}`} title={real}>↗</a>
+															)}
+														</span>
+														<span class="ins__stack-sub">{sectionLabel(p.section)}</span>
+														<span class="ins__meter" aria-hidden="true"><span style={`width:${(p.views / maxPage) * 100}%`}></span></span>
+													</td>
+													<td class="ins__muted ins__nowrap ins__stack-hide" data-label="Section">{sectionLabel(p.section)}</td>
+													<td class="num" data-label="Views" data-v={p.views}>{n(p.views)}</td>
+													{!owner && <td class="num" data-label="Owners">{p.visitors}</td>}
+													{!owner && <td class="num" data-label="Signed out">{n(p.anonymousViews ?? 0)}</td>}
+													{previous && (() => {
+														const d = delta(p.views, prevPageViews.get(`${p.section}|${p.page}`) ?? 0);
+														const change = percentChange(p.views, prevPageViews.get(`${p.section}|${p.page}`) ?? 0);
+														return (
+															<td class="num" data-label="Change" data-v={change ?? 100000} title={comparedTo}>{d?.text ?? '—'}</td>
+														);
+													})()}
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</section>
+				)}
+
+				{pageRef && (
+					<div class="ins__split">
+						{[
+							{ id: 'ins-from', title: 'Where they came from', rows: pageFrom, other: (r: (typeof paths)[number]) => r.from },
+							{ id: 'ins-next', title: 'Where they went next', rows: pageNext, other: (r: (typeof paths)[number]) => r.to },
+						].map((col) => (
+							<section class="ins__card" aria-labelledby={col.id}>
+								<h2 class="ins__h2" id={col.id}>{col.title}</h2>
+								{col.rows.length === 0 ? (
+									<p class="ins__muted">No steps recorded yet.</p>
+								) : (
+									<ul class="ins__list">
+										{col.rows.map((r) => (
+											<li>
+												<a href={href({ page: { section: r.section, page: col.other(r) } })}>{pageLabel(r.section, col.other(r))}</a>
+												<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.steps, col.rows[0].steps)}%`}></span></span>
+												<span class="num">{n(r.steps)}</span>
+											</li>
+										))}
+									</ul>
+								)}
+							</section>
+						))}
+					</div>
+				)}
+
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-paths">
+						<h2 class="ins__h2" id="ins-paths">{owner ? 'Their usual paths' : 'Common paths'}</h2>
+						<p class="ins__note">
+							The 15 most common steps from one page straight to the next in the same tab, signed-in owners only. Started Oct 2026. Tap a page to focus on it.
+						</p>
+						{paths.length === 0 ? (
+							<p class="ins__muted">No steps recorded yet.</p>
+						) : (
+							<div class="ins__scroll">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="paths">
+									<thead>
+										<tr>
+											<th data-sort="text"><button type="button" class="ins__sort">Path</button></th>
+											<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Times</button></th>
+											{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+										</tr>
+									</thead>
+									<tbody>
+										{paths.slice(0, 15).map((r) => {
+											const fromLabel = pageLabel(r.section, r.from);
+											const toLabel = pageLabel(r.section, r.to);
+											return (
+												<tr>
+													<td data-v={`${fromLabel} ${toLabel}`}>
+														<span class="ins__path">
+															<a class="ins__page-name" href={href({ page: { section: r.section, page: r.from }, owner: null })}>{fromLabel}</a>
+															<span class="ins__path-arrow" aria-label="then">→</span>
+															<a class="ins__page-name" href={href({ page: { section: r.section, page: r.to }, owner: null })}>{toLabel}</a>
+														</span>
+														{section === null && <span class="ins__person-sub">{sectionLabel(r.section)}</span>}
+													</td>
+													<td class="num" data-label="Times">{n(r.steps)}</td>
+													{!owner && <td class="num" data-label="Owners">{r.owners}</td>}
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</section>
+				)}
+
+				<section class="ins__card" aria-labelledby="ins-months">
+					<h2 class="ins__h2" id="ins-months">Month by month</h2>
+					<p class="ins__note">
+						Kept for good, unlike the daily detail (90 days). Signed-in owners only. Started Oct 2026 and filled back from the days still on hand.
+					</p>
+					{monthRows.length === 0 ? (
+						<p class="ins__muted">Nothing recorded yet.</p>
 					) : (
 						<div class="ins__scroll">
-							<table class="ui-table ins__table">
-								<thead><tr><th>Page</th><th>Section</th><th class="num">Views</th><th class="num">Owners</th></tr></thead>
+							<table class="ui-table ins__table ins__table--stack" data-sortable="months">
+								<thead>
+									<tr>
+										<th data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Month</button></th>
+										<th class="num" data-sort="num"><button type="button" class="ins__sort">Views</button></th>
+										{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+										{!owner && section === null && !pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">New</button></th>}
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">{owner ? 'Days' : 'Avg days'}</button></th>}
+										{!pageRef && <th class="num" data-sort="num"><button type="button" class="ins__sort">Pages</button></th>}
+									</tr>
+								</thead>
 								<tbody>
-									{topPages.map((p) => (
+									{monthRows.map((m) => (
 										<tr>
-											<td>
-												<span class="ins__page-name">{pageLabel(p.section, p.page)}</span>
-												<span class="ins__meter" aria-hidden="true"><span style={`width:${(p.views / maxPage) * 100}%`}></span></span>
+											<td data-v={m.month.replace('-', '')}>
+												<span class="ins__page-name">{monthLabel(m.month)}</span>
+												<span class="ins__meter" aria-hidden="true"><span style={`width:${(m.views / maxMonthViews) * 100}%`}></span></span>
 											</td>
-											<td class="ins__muted">{sectionLabel(p.section)}</td>
-											<td class="num">{n(p.views)}</td>
-											<td class="num">{p.visitors}</td>
+											<td class="num" data-label="Views">{n(m.views)}</td>
+											{!owner && <td class="num" data-label="Owners">{m.owners}</td>}
+											{!owner && section === null && !pageRef && <td class="num" data-label="New">{m.newOwners}</td>}
+											{!pageRef && <td class="num" data-label={owner ? 'Days' : 'Avg days'}>{m.avgDays ?? '—'}</td>}
+											{!pageRef && <td class="num" data-label="Pages">{m.pages}</td>}
 										</tr>
 									))}
 								</tbody>
@@ -363,74 +943,81 @@ const sectionChips = [
 					)}
 				</section>
 
-				<section class="ins__card" aria-labelledby="ins-heat">
-					<h2 class="ins__h2" id="ins-heat">When people visit</h2>
-					<p class="ins__note">Page views by day of week and hour ({clockLabel}). Darker is busier.</p>
-					<div class="ins__scroll">
-						<table class="ins__heat">
-							<thead>
-								<tr>
-									<th scope="col"><span class="visually-hidden">Day</span></th>
-									{Array.from({ length: 24 }, (_, h) => (
-										<th scope="col">{h % 3 === 0 ? hourLabel(h) : ''}<span class="visually-hidden">{h % 3 === 0 ? '' : hourLabel(h)}</span></th>
-									))}
-								</tr>
-							</thead>
-							<tbody>
-								{report.heatmap.map((row, dow) => (
+				{!report.focused && (
+					<section class="ins__card" aria-labelledby="ins-heat">
+						<h2 class="ins__h2" id="ins-heat">When people visit</h2>
+						<p class="ins__note">
+							Page views by day of week and hour ({clockLabel}). Darker is busier.
+							{!showAdmins && ' Includes admins: these counters do not record who.'}
+						</p>
+						<div class="ins__scroll">
+							<table class="ins__heat">
+								<thead>
 									<tr>
-										<th scope="row">{WEEKDAYS[dow]}</th>
-										{row.map((v, h) => (
-											<td
-												style={`--heat:${v ? Math.max(8, Math.round((v / maxHeat) * 100)) : 0}%`}
-												title={`${WEEKDAYS[dow]} ${hourLabel(h)}: ${n(v)} views`}
-											>
-												<span class="visually-hidden">{n(v)}</span>
-											</td>
+										<th scope="col"><span class="visually-hidden">Day</span></th>
+										{Array.from({ length: 24 }, (_, h) => (
+											<th scope="col">{h % 3 === 0 ? hourLabel(h) : ''}<span class="visually-hidden">{h % 3 === 0 ? '' : hourLabel(h)}</span></th>
 										))}
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{report.heatmap.map((row, dow) => (
+										<tr>
+											<th scope="row">{WEEKDAYS[dow]}</th>
+											{row.map((v, h) => (
+												<td
+													style={`--heat:${v ? Math.max(8, Math.round((v / maxHeat) * 100)) : 0}%`}
+													title={`${WEEKDAYS[dow]} ${hourLabel(h)}: ${n(v)} views`}
+												>
+													<span class="visually-hidden">{n(v)}</span>
+												</td>
+											))}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				)}
+
+				{!report.focused && (
+					<div class="ins__split">
+						<section class="ins__card" aria-labelledby="ins-devices">
+							<h2 class="ins__h2" id="ins-devices">Devices</h2>
+							{report.devices.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
+								<ul class="ins__list">
+									{report.devices.map((r) => (
+										<li>
+											<span>{r.label}</span>
+											<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, deviceTotal)}%`}></span></span>
+											<span class="num">{pct(r.count, deviceTotal)}%</span>
+										</li>
+									))}
+								</ul>
+							)}
+						</section>
+						<section class="ins__card" aria-labelledby="ins-sources">
+							<h2 class="ins__h2" id="ins-sources">How people arrive</h2>
+							{report.sources.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
+								<ul class="ins__list">
+									{report.sources.map((r) => (
+										<li>
+											<span>{r.label}</span>
+											<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, sourceTotal)}%`}></span></span>
+											<span class="num">{pct(r.count, sourceTotal)}%</span>
+										</li>
+									))}
+								</ul>
+							)}
+							<p class="ins__note">
+								Counted once per visit, at the first page. Links opened from the GroupMe app send no
+								referrer, so they show as Direct.
+							</p>
+						</section>
 					</div>
-				</section>
+				)}
 
-				<div class="ins__split">
-					<section class="ins__card" aria-labelledby="ins-devices">
-						<h2 class="ins__h2" id="ins-devices">Devices</h2>
-						{report.devices.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
-							<ul class="ins__list">
-								{report.devices.map((r) => (
-									<li>
-										<span>{r.label}</span>
-										<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, deviceTotal)}%`}></span></span>
-										<span class="num">{pct(r.count, deviceTotal)}%</span>
-									</li>
-								))}
-							</ul>
-						)}
-					</section>
-					<section class="ins__card" aria-labelledby="ins-sources">
-						<h2 class="ins__h2" id="ins-sources">How people arrive</h2>
-						{report.sources.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
-							<ul class="ins__list">
-								{report.sources.map((r) => (
-									<li>
-										<span>{r.label}</span>
-										<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, sourceTotal)}%`}></span></span>
-										<span class="num">{pct(r.count, sourceTotal)}%</span>
-									</li>
-								))}
-							</ul>
-						)}
-						<p class="ins__note">
-							Counted once per visit, at the first page. Links opened from the GroupMe app send no
-							referrer, so they show as Direct.
-						</p>
-					</section>
-				</div>
-
-				{section === null && report.sections.length > 1 && (
+				{section === null && !report.focused && report.sections.length > 1 && (
 					<section class="ins__card" aria-labelledby="ins-sections">
 						<h2 class="ins__h2" id="ins-sections">By section</h2>
 						<ul class="ins__list">
@@ -445,82 +1032,121 @@ const sectionChips = [
 					</section>
 				)}
 
-				<section class="ins__card" aria-labelledby="ins-links">
-					<h2 class="ins__h2" id="ins-links">How people get around</h2>
-					<p class="ins__note">
-						Pages reached by clicking a link in each part of the site, counted when the page loads.
-						Owners counts distinct signed-in owners. Started Oct 2026; links typed or bookmarked are not counted.
-					</p>
-					<div class="ins__scroll">
-					<table class="ui-table ins__table">
-						<thead><tr><th>Clicked from</th><th class="num">Clicks</th><th class="num">Owners</th><th>Top destinations</th></tr></thead>
-						<tbody>
-							{report.links.map((l) => (
-								<tr>
-									<td>{l.label}</td>
-									<td class="num">{n(l.clicks)}</td>
-									<td class="num">{l.owners}</td>
-									<td class="ins__muted">
-										{l.destinations.length === 0
-											? '—'
-											: l.destinations.slice(0, 4).map((d) => `${pageLabel(d.section, d.page)} (${n(d.clicks)})`).join(' · ')}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-					</div>
-				</section>
-
-				<section class="ins__card" aria-labelledby="ins-actions">
-					<h2 class="ins__h2" id="ins-actions">Actions</h2>
-					<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>
-					<div class="ins__scroll">
-					<table class="ui-table ins__table">
-						<thead><tr><th>Action</th><th class="num">Times</th><th class="num">Owners</th></tr></thead>
-						<tbody>
-							{report.actions.map((a) => (
-								<tr>
-									<td>{a.label}</td>
-									<td class="num">{n(a.count)}</td>
-									<td class="num">{a.owners === null ? '—' : a.owners}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-					</div>
-				</section>
-
-				<section class="ins__card" aria-labelledby="ins-interest">
-					<h2 class="ins__h2" id="ins-interest">Product interest</h2>
-					<p class="ins__note">
-						Clicks on the "coming soon" product buttons, all time. People counts each browser once per product.
-					</p>
-					{interest === null ? (
-						<p class="ins__note">Not available right now.</p>
-					) : (
+				{!report.focused && (
+					<section class="ins__card" aria-labelledby="ins-links">
+						<h2 class="ins__h2" id="ins-links">How people get around</h2>
+						<p class="ins__note">
+							Pages reached by clicking a link in each part of the site, counted when the page loads.
+							Owners counts distinct signed-in owners. Started Oct 2026; links typed or bookmarked are not counted.
+						</p>
 						<div class="ins__scroll">
-						<table class="ui-table ins__table">
-							<thead><tr><th>Product</th><th class="num">People</th><th class="num">Clicks</th><th class="num">Emails</th><th>Emails left</th></tr></thead>
-							<tbody>
-								{interest.map((r) => (
+							<table class="ui-table ins__table ins__table--stack" data-sortable="links">
+								<thead>
 									<tr>
-										<td>{r.name}</td>
-										<td class="num">{n(r.people)}</td>
-										<td class="num">{n(r.clicks)}</td>
-										<td class="num">{n(r.emails.length)}</td>
-										<td class="ins__muted">{r.emails.length === 0 ? '—' : r.emails.map((e) => e.email).join(', ')}</td>
+										<th data-sort="text"><button type="button" class="ins__sort">Clicked from</button></th>
+										<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Clicks</button></th>
+										<th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>
+										<th>Top destinations</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{report.links.map((l) => (
+										<tr>
+											<td>{l.label}</td>
+											<td class="num" data-label="Clicks">{n(l.clicks)}</td>
+											<td class="num" data-label="Owners">{l.owners}</td>
+											<td class="ins__muted ins__wide" data-label="Top destinations">
+												{l.destinations.length === 0
+													? '—'
+													: l.destinations.slice(0, 4).map((d) => `${pageLabel(d.section, d.page)} (${n(d.clicks)})`).join(' · ')}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</div>
-					)}
-				</section>
+					</section>
+				)}
+
+				{!pageRef && (
+					<section class="ins__card" aria-labelledby="ins-actions">
+						<h2 class="ins__h2" id="ins-actions">Actions</h2>
+						<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>
+						<div class="ins__scroll">
+							<table class="ui-table ins__table" data-sortable="actions">
+								<thead>
+									<tr>
+										<th data-sort="text"><button type="button" class="ins__sort">Action</button></th>
+										<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">Times</button></th>
+										{!owner && <th class="num" data-sort="num"><button type="button" class="ins__sort">Owners</button></th>}
+									</tr>
+								</thead>
+								<tbody>
+									{report.actions.map((a) => (
+										<tr>
+											<td>{a.label}</td>
+											<td class="num">{n(a.count)}</td>
+											{!owner && <td class="num" data-v={a.owners ?? -1}>{a.owners === null ? '—' : a.owners}</td>}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				)}
+
+				{!report.focused && (
+					<section class="ins__card" aria-labelledby="ins-interest">
+						<h2 class="ins__h2" id="ins-interest">Product interest</h2>
+						<p class="ins__note">
+							Clicks on the "coming soon" product buttons, all time. People counts each browser once per product.
+						</p>
+						{interest === null ? (
+							<p class="ins__note">Not available right now.</p>
+						) : (
+							<div class="ins__scroll">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="interest">
+									<thead>
+										<tr>
+											<th data-sort="text"><button type="button" class="ins__sort">Product</button></th>
+											<th class="num" data-sort="num" aria-sort="descending"><button type="button" class="ins__sort">People</button></th>
+											<th class="num" data-sort="num"><button type="button" class="ins__sort">Clicks</button></th>
+											<th class="num" data-sort="num"><button type="button" class="ins__sort">Emails</button></th>
+											<th>Emails left</th>
+										</tr>
+									</thead>
+									<tbody>
+										{interest.map((r) => (
+											<tr>
+												<td>{r.name}</td>
+												<td class="num" data-label="People">{n(r.people)}</td>
+												<td class="num" data-label="Clicks">{n(r.clicks)}</td>
+												<td class="num" data-label="Emails">{n(r.emails.length)}</td>
+												<td class="ins__muted ins__wide" data-label="Emails left">{r.emails.length === 0 ? '—' : r.emails.map((e) => e.email).join(', ')}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</section>
+				)}
 			</Fragment>
 		)}
 	</section>
 </MflAppLayout>
+
+<script>
+	import { initSortableTables, onSortableHeaderClick } from '../../utils/sortable-table';
+
+	// Registered once per module: `document` survives every ClientRouter swap,
+	// and the handler acts only on the table that was clicked.
+	document.addEventListener('click', onSortableHeaderClick);
+	document.addEventListener('astro:page-load', () => {
+		const root = document.querySelector<HTMLElement>('[data-ins-root]');
+		if (root) initSortableTables(root);
+	});
+</script>
 
 <style>
 	.ins {
@@ -686,15 +1312,6 @@ const sectionChips = [
 	.ins__person.is-stale td {
 		color: var(--color-text-secondary);
 	}
-	.ins__person-detail summary {
-		cursor: pointer;
-		list-style: none;
-		display: flex;
-		flex-direction: column;
-	}
-	.ins__person-detail summary::-webkit-details-marker {
-		display: none;
-	}
 	.ins__person-team {
 		font-weight: 600;
 	}
@@ -702,15 +1319,7 @@ const sectionChips = [
 		font-size: var(--font-size-xs);
 		color: var(--color-text-secondary);
 	}
-	.ins__person-pages {
-		margin: 0.4rem 0 0;
-		padding-left: 1.2rem;
-		font-size: 0.8rem;
-	}
 
-	.ins__page-name {
-		display: block;
-	}
 	.ins__meter {
 		display: block;
 		height: 4px;
@@ -775,5 +1384,382 @@ const sectionChips = [
 		height: 1.4rem;
 		border-radius: 3px;
 		background: color-mix(in srgb, var(--color-primary) var(--heat), var(--color-border-subtle));
+	}
+
+	/* Sortable headers: the button fills the header so the whole cell is the
+	   tap target, and the arrow says which way it runs. */
+	.ins__table th[data-sort] {
+		padding: 0;
+	}
+	.ins__sort {
+		all: unset;
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		width: 100%;
+		min-height: 2.25rem;
+		padding: 0.45rem 0.5rem;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.num .ins__sort {
+		justify-content: flex-end;
+	}
+	.ins__sort:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
+	}
+	.ins__table th[aria-sort] .ins__sort {
+		color: var(--color-text-primary);
+	}
+	.ins__table th[aria-sort='descending'] .ins__sort::after {
+		content: '↓';
+	}
+	.ins__table th[aria-sort='ascending'] .ins__sort::after {
+		content: '↑';
+	}
+
+	/* Phones: a wide table becomes one card per row — the name across the
+	   top, every value under its own small label — so nothing hides behind a
+	   sideways scroll. The header row turns into a swipeable row of sort
+	   pills (the same buttons, so sorting and the URL state are unchanged).
+	   Columns with no sort (Trend, Top destinations) drop out of that row
+	   and keep their label on the card. */
+	@media (max-width: 639px) {
+		.ins__table--stack,
+		.ins__table--stack tbody {
+			display: block;
+		}
+		.ins__table--stack thead {
+			display: block;
+			margin-bottom: 0.25rem;
+		}
+		.ins__table--stack thead tr {
+			display: flex;
+			gap: 0.375rem;
+			overflow-x: auto;
+			padding: 3px 0 0.5rem;
+			overscroll-behavior-x: contain;
+		}
+		.ins__table--stack thead th {
+			display: block;
+			flex: none;
+			border: 0;
+			padding: 0;
+		}
+		.ins__table--stack thead th:not([data-sort]) {
+			display: none;
+		}
+		.ins__table--stack .ins__sort {
+			width: auto;
+			min-height: 2.25rem;
+			padding: 0 0.75rem;
+			border: 1px solid var(--color-border-subtle);
+			border-radius: 999px;
+		}
+		.ins__table--stack th[aria-sort] .ins__sort {
+			background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+			border-color: var(--color-primary);
+		}
+		.ins__table--stack tbody tr {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(3.9rem, 1fr));
+			gap: 0.35rem 0.5rem;
+			padding: 0.65rem 0;
+			border-bottom: 1px solid var(--color-border-subtle);
+		}
+		.ins__table--stack tbody td {
+			border: 0;
+			padding: 0;
+			min-width: 0;
+			text-align: left !important;
+		}
+		.ins__table--stack tbody td:first-child,
+		.ins__table--stack tbody td.ins__wide {
+			grid-column: 1 / -1;
+		}
+		.ins__table--stack td[data-label]::before {
+			content: attr(data-label);
+			display: block;
+			font-size: var(--font-size-2xs);
+			font-weight: 600;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--color-text-secondary);
+		}
+		/* The section moves under the page name, so the values below it
+		   get the width. */
+		.ins__table--stack .ins__stack-hide {
+			display: none;
+		}
+		.ins__table--stack .ins__stack-sub {
+			display: block;
+		}
+		.ins__table--stack .ins__person-sub {
+			white-space: normal;
+		}
+	}
+
+	.ins__stack-sub {
+		display: none;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+	}
+
+	/* Wider screens keep the table, with the name column pinned while it
+	   scrolls sideways. */
+	@media (min-width: 640px) {
+		.ins__table--stack td:first-child,
+		.ins__table--stack th:first-child {
+			position: sticky;
+			left: 0;
+			z-index: 1;
+			background: var(--color-surface-3);
+			min-width: 9rem;
+			max-width: 16rem;
+		}
+	}
+
+	.ins__person-link,
+	.ins__page-name {
+		color: inherit;
+		text-decoration: none;
+	}
+	.ins__person-link {
+		display: flex;
+		flex-direction: column;
+	}
+	.ins__person-link:hover .ins__person-team,
+	a.ins__page-name:hover {
+		text-decoration: underline;
+		color: inherit;
+	}
+	.ins__page-row {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
+	}
+	.ins__page-name {
+		font-weight: 600;
+	}
+	.ins__open-icon {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		margin: -0.35rem 0;
+		border-radius: 0.375rem;
+		color: var(--color-primary);
+		text-decoration: none;
+		font-weight: 700;
+	}
+	.ins__open-icon:hover {
+		background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+		color: var(--color-primary);
+	}
+
+	.ins__spark-cell {
+		vertical-align: middle !important;
+	}
+	.ins__spark {
+		display: block;
+		width: 4.5rem;
+		height: 1rem;
+		fill: var(--color-primary);
+	}
+
+	.ins__nowrap {
+		white-space: nowrap;
+	}
+	.ins__note + .ins__list {
+		margin-top: 0.75rem;
+	}
+	.ins__person-sub {
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.ins__profile {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+	.ins__profile-name {
+		margin: 0;
+		font-size: 1.2rem;
+	}
+	.ins__open {
+		align-self: flex-start;
+		margin-top: 0.25rem;
+	}
+	.ins__facts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr));
+		gap: 0.5rem 1rem;
+		margin: 0.5rem 0 0;
+	}
+	.ins__facts div {
+		display: flex;
+		flex-direction: column;
+	}
+	.ins__facts dt {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+	}
+	/* Change from the previous window. Neutral ink: the arrow carries the
+	   direction, so it reads the same without color. */
+	.ins__delta {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+	.ins__delta.is-up {
+		color: var(--color-text-primary);
+	}
+	.ins__tiles-note {
+		margin-top: -0.5rem;
+	}
+
+	/* Lifecycle — ordinal stages, so one hue stepped from strong (hooked) to
+	   faint (lapsed); the legend names every one, so identity is never color
+	   alone. 2px surface gaps between segments. */
+	.ins__stack-bar {
+		display: flex;
+		gap: 2px;
+		height: 1.25rem;
+		margin: 0.75rem 0;
+		border-radius: 4px;
+		overflow: hidden;
+	}
+	.ins__stack-bar > span {
+		flex-basis: 0;
+		min-width: 3px;
+	}
+	.ins__seg--hooked { background: var(--color-primary); }
+	.ins__seg--active { background: color-mix(in srgb, var(--color-primary) 72%, var(--color-surface-3)); }
+	.ins__seg--new {
+		background: repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-primary) 60%, var(--color-surface-3)) 0 3px,
+			color-mix(in srgb, var(--color-primary) 30%, var(--color-surface-3)) 3px 6px
+		);
+	}
+	.ins__seg--cooling { background: color-mix(in srgb, var(--color-primary) 38%, var(--color-surface-3)); }
+	.ins__seg--lapsed { background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-3)); }
+	.ins__seg--never {
+		background: var(--color-surface-3);
+		outline: 1px solid var(--color-border-subtle);
+		outline-offset: -1px;
+	}
+	.ins__swatch {
+		flex: none;
+		width: 0.85rem;
+		height: 0.85rem;
+		border-radius: 3px;
+		margin-top: 0.15rem;
+	}
+	.ins__legend a {
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+		text-decoration: none;
+		min-width: 0;
+	}
+	.ins__legend a:hover .ins__legend-label,
+	.ins__legend a.is-current .ins__legend-label {
+		text-decoration: underline;
+	}
+	.ins__legend li {
+		grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) auto;
+	}
+	.ins__legend--pct li {
+		grid-template-columns: minmax(0, 1fr) auto 2.5rem;
+	}
+	.ins__legend-label {
+		display: block;
+		font-weight: 600;
+	}
+	.ins__legend-note {
+		display: block;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+	}
+
+	/* Depth curve: one row per week, the value spelled out beside the bar. */
+	.ins__depth li {
+		grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+	}
+	.ins__depth-sub {
+		display: block;
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+		font-weight: 400;
+	}
+
+	/* Cohorts: one row per first-seen week; its squares wrap on a phone
+	   rather than scroll sideways. */
+	.ins__cohorts {
+		list-style: none;
+		margin: 0.75rem 0 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.ins__cohort-head {
+		display: block;
+		font-size: var(--font-size-sm);
+		font-weight: 600;
+		margin-bottom: 0.3rem;
+	}
+	.ins__cohort-cells {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
+		gap: 2px;
+	}
+	.ins__cohort-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 0.2rem 0;
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--color-primary) var(--heat, 0%), var(--color-border-subtle));
+		font-variant-numeric: tabular-nums;
+	}
+	.ins__cohort-cell.is-empty {
+		background: transparent;
+		outline: 1px solid var(--color-border-subtle);
+		outline-offset: -1px;
+		color: var(--color-text-secondary);
+	}
+	.ins__cohort-week {
+		font-size: var(--font-size-2xs);
+		color: var(--color-text-secondary);
+	}
+	.ins__cohort-value {
+		font-size: var(--font-size-xs);
+		font-weight: 600;
+	}
+
+	.ins__path {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.4rem;
+	}
+	.ins__path-arrow {
+		color: var(--color-text-secondary);
+	}
+
+	.ins__facts dd {
+		margin: 0;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
 	}
 </style>
