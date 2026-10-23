@@ -19,6 +19,12 @@ import type { BroadcastPollResponse } from '../../../types/live-broadcast';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import { revealDuration, selectRevealQueue } from '../../../utils/broadcast-moments';
 import {
+  SPOTLIGHT_GAP_MS,
+  SPOTLIGHT_HOLD_MS,
+  spotlightCandidates,
+  spotlightMoment,
+} from '../../../utils/broadcast-spotlight';
+import {
   buildStripPages,
   countCells,
   densityTier,
@@ -77,6 +83,7 @@ const DRIFT_POINTS = 12;
  */
 type Stage =
   | { key: string; kind: 'takeover'; moment: BroadcastMoment; occludes: 'strip' }
+  | { key: string; kind: 'spotlight'; moment: BroadcastMoment; occludes: 'strip' }
   | { key: string; kind: 'lower-third'; moment: BroadcastMoment; occludes: 'none' }
   | { key: string; kind: 'saver'; scene: SaverScene; occludes: 'all' };
 
@@ -686,7 +693,49 @@ export default function LiveBroadcast({ pageData }: Props) {
   // with a FULL fresh dwell — the room's attention was on the reveal, so the
   // page they come back to has effectively not been read yet. The handheld
   // board draws no strip (it pages its own cards), so there it never turns.
-  const stripPaused = !!current || isQuiet || mode === 'handheld';
+  // ── the idle spotlight (broadcast-spotlight.ts) ──────────────────────────
+  // One of the owner's own players on the field right now, between plays, so
+  // a quiet half still shows the takeover. A real reveal always outranks it:
+  // `allowed` drops the moment one queues, and the cycle resumes with a full
+  // gap after it.
+  const spotlightRows = useMemo(() => spotlightCandidates(pages), [pages]);
+  const [spotlight, setSpotlight] = useState({ index: 0, on: false });
+  const spotlightAllowed = !current && !isQuiet && mode === 'tv' && spotlightRows.length > 0;
+
+  useEffect(() => {
+    if (!spotlightAllowed) {
+      setSpotlight((s) => (s.on ? { ...s, on: false } : s));
+      return;
+    }
+    const id = window.setTimeout(
+      () => setSpotlight((s) => (s.on ? { index: s.index + 1, on: false } : { ...s, on: true })),
+      spotlight.on ? SPOTLIGHT_HOLD_MS : SPOTLIGHT_GAP_MS,
+    );
+    return () => window.clearTimeout(id);
+  }, [spotlightAllowed, spotlight.on]);
+
+  const spotlightRow =
+    spotlightAllowed && spotlight.on ? spotlightRows[spotlight.index % spotlightRows.length] : null;
+  const spotlightPanel = spotlightRow
+    ? data.panels.find((p) => p.leagueId === spotlightRow.leagueId)
+    : undefined;
+  const spotlit = useMemo(
+    () =>
+      spotlightRow && spotlightPanel
+        ? spotlightMoment(
+            spotlightRow,
+            spotlightPanel.franchiseId,
+            spotlightPanel.matchups[0]?.mine.name ?? '',
+            poll.statLines?.[spotlightRow.playerId] ?? '',
+          )
+        : null,
+    // Keyed on the row's identity and numbers, so the 1 Hz tick does not mint
+    // a new moment and defeat the takeover's memo().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [spotlightRow?.key, spotlightRow?.points, spotlightRow?.clock, spotlightPanel, poll.statLines],
+  );
+
+  const stripPaused = !!current || !!spotlit || isQuiet || mode === 'handheld';
 
   useEffect(() => {
     if (stripPaused || pages.length <= 1) return;
@@ -718,6 +767,8 @@ export default function LiveBroadcast({ pageData }: Props) {
     ? current.side === 'mine'
       ? { key: current.key, kind: 'takeover', moment: current, occludes: 'strip' }
       : { key: current.key, kind: 'lower-third', moment: current, occludes: 'none' }
+    : spotlit
+      ? { key: spotlit.key, kind: 'spotlight', moment: spotlit, occludes: 'strip' }
     : isQuiet
       ? { key: `saver:${SAVER_SCENES[saverScene]}`, kind: 'saver', scene: SAVER_SCENES[saverScene], occludes: 'all' }
       : null;
@@ -1161,9 +1212,10 @@ export default function LiveBroadcast({ pageData }: Props) {
       />
 
       {stage && (
-        <div className={`lbc__stage lbc__stage--${stage.kind === 'saver' ? 'saver' : stage.kind}`} key={stage.key}>
-          {stage.kind === 'takeover' && (
+        <div className={`lbc__stage lbc__stage--${stage.kind === 'spotlight' ? 'takeover' : stage.kind}`} key={stage.key}>
+          {(stage.kind === 'takeover' || stage.kind === 'spotlight') && (
             <MomentTakeover
+              kicker={stage.kind === 'spotlight' ? 'On the field' : undefined}
               moment={stage.moment}
               team={teamFor(stage.moment)}
               scoreLine={scoreLineFor(stage.moment)}
