@@ -13,7 +13,7 @@
  * Writes scripts/inmotion-migration/missed-report.json (sorted, so a re-run
  * of an unchanged server produces the same file).
  *
- * Runs in GitHub Actions (.github/workflows/copy-missed-inmotion-files.yml)
+ * Ran once in GitHub Actions (a one-off copy-missed-inmotion-files.yml, removed)
  * because the Claude sandbox cannot reach InMotion. Node built-ins only.
  */
 import { promises as fs } from 'node:fs';
