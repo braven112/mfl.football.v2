@@ -90,7 +90,11 @@ const bars = meetings.map((m, i) => {
   <dl class="gotw__facts">
     <div class="gotw__fact">
       <dt class="mpv-cap">Series streak</dt>
-      <dd>{series.streak ? `${short(series.streak.franchiseId)}, ${series.streak.count} straight` : 'Last meeting tied'}</dd>
+      <dd>{!series.streak
+        ? 'Last meeting tied'
+        : series.streak.count === 1
+          ? `${short(series.streak.franchiseId)} won the last one`
+          : `${short(series.streak.franchiseId)}, ${series.streak.count} straight`}</dd>
     </div>
     <div class="gotw__fact">
       <dt class="mpv-cap">Playoff meetings</dt>
