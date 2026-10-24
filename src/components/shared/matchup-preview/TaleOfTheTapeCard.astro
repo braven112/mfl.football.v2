@@ -169,21 +169,29 @@ else if (!series.disputed) {
 
   .tape__id {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     min-width: 0;
   }
 
+  /* Beside the logo while the name's longest word fits there; on its own
+     line under the logo when it does not. A name breaks only between words. */
   .tape__id-text {
     display: grid;
-    min-width: 0;
+    flex: 1 1 0;
+    min-width: min-content;
+    max-width: 100%;
   }
 
   .tape__name {
     font-weight: 700;
     font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.15;
-    overflow-wrap: anywhere;
+    /* break-word, not anywhere: it leaves the longest word as the name's
+       min-content width, which is what moves the name under the logo below
+       instead of splitting "Midwestside" into "Midwestsid / e". */
+    overflow-wrap: break-word;
   }
 
   .tape__name--a { color: var(--mpv-a); }

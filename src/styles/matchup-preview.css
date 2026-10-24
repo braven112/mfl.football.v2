@@ -65,6 +65,18 @@ html.dark .mpv-theme {
   font-variant-numeric: tabular-nums;
 }
 
+/* A team name breaks only BETWEEN words, never inside one ("Midwestsid / e"):
+   it shrinks until its longest word fits the column, down to a readable
+   floor. The component makes the name's column a `container-type:
+   inline-size` box and sets --mpv-word to the longest word's length; 0.62em
+   is a bold character with room to spare (Vend Sans measures 0.58). Only a
+   word too long even at the floor breaks, and break-word does that only then. */
+.mpv-fit {
+  overflow-wrap: break-word;
+  hyphens: none;
+  font-size: min(var(--mpv-fit-max), max(var(--font-size-2xs, 0.6875rem), calc(100cqi / (var(--mpv-word, 8) * 0.62))));
+}
+
 .mpv-logo {
   border-radius: 50%;
   flex: none;
