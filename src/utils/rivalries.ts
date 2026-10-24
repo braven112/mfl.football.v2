@@ -6,12 +6,14 @@
  * all rank rivals the same way — a copy per surface is exactly how two pages
  * end up disagreeing about who a franchise's biggest rival is.
  *
- * DATA CAVEAT (AFL): a pairing's `games` is only as complete as the ingested
- * head-to-head feeds. MFL's archived exports for AFL 2007-2019 carry the
- * postseason weeks only, so AFL career meeting counts under-report those years
- * and skew toward playoff games. `franchise-history.json#h2hCoverage` records
- * the shortfall per season; surfaces that show career totals should say so.
- * TheLeague's feeds are complete for every ingested year.
+ * DATA NOTE: a pairing's `games` is only as complete as the ingested
+ * head-to-head feeds, and `franchise-history.json#h2hCoverage` records that per
+ * season. Both leagues are complete today: the AFL's 2007-2019 regular seasons,
+ * which MFL's export API strips, were recovered in Aug 2026 from the rendered
+ * schedule (see scripts/compute-franchise-history.mjs). What a pairing DOES
+ * omit is games under a former owner — these surfaces are scoped to the
+ * current owners' shared history — so a count here can be lower than the
+ * all-time record book's.
  */
 
 /** One recorded meeting, as stored in franchise-history.json#matchupHistory. */
