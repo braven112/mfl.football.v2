@@ -1,0 +1,118 @@
+/**
+ * Matchup Preview visuals — the Game of the Week rivalry panel and the
+ * tale-of-the-tape cards (src/components/shared/matchup-preview/).
+ *
+ * Surfaces and ink come from the article's --sf-* tokens (the gray ramp they
+ * resolve to flips with the theme). Franchise colors arrive per element as
+ * --mpv-a / --mpv-b, set to `teamAccentVar(fid)` — the site-wide accent
+ * token that already clears 3:1 on the card in BOTH themes. Win/loss ink is
+ * literal per theme, like the Gauntlet's trend colors.
+ */
+.mpv-theme {
+  --mpv-win: #15803d;
+  --mpv-loss: #b91c1c;
+  --mpv-tie: #6b7280;
+  --mpv-on-chip: #ffffff;
+  --mpv-track: var(--color-gray-100, #f3f4f6);
+  --mpv-inset: var(--color-gray-50, #f8fafc);
+  --mpv-hot: var(--sf-accent, #1c497c);
+}
+
+html.dark .mpv-theme {
+  --mpv-win: #22c55e;
+  --mpv-loss: #f87171;
+  --mpv-tie: #9ca3af;
+  --mpv-on-chip: #0b1120;
+  --mpv-track: rgba(255, 255, 255, 0.08);
+  --mpv-inset: rgba(255, 255, 255, 0.04);
+}
+
+.mpv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.mpv-section--top {
+  padding-top: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.mpv-title {
+  margin: 0;
+  font-size: var(--style-section-size, 0.9rem);
+  text-transform: uppercase;
+  letter-spacing: var(--style-section-tracking, 0.08em);
+  font-weight: 700;
+  color: var(--sf-text-primary, #0f1419);
+  border-left: var(--style-section-rule, 3px solid var(--color-primary, #1c497c));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
+  font-family: var(--style-section-font, inherit);
+  font-style: var(--style-section-style, inherit);
+  padding-left: var(--style-section-rule-gap, 0.6rem);
+}
+
+.mpv-panel {
+  border: var(--style-card-border, 1px solid var(--sf-border, #e5e7eb));
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow: hidden;
+  background: var(--sf-bg, #fff);
+}
+
+.mpv-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.mpv-logo {
+  border-radius: 50%;
+  flex: none;
+  object-fit: contain;
+}
+
+/* ── Streak pill + result chips ── */
+.mpv-streak {
+  font-size: var(--font-size-2xs, 0.6875rem);
+  font-weight: 700;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mpv-streak--W { color: var(--mpv-win); background: color-mix(in srgb, var(--mpv-win) 14%, transparent); }
+.mpv-streak--L { color: var(--mpv-loss); background: color-mix(in srgb, var(--mpv-loss) 14%, transparent); }
+.mpv-streak--T { color: var(--mpv-tie); background: color-mix(in srgb, var(--mpv-tie) 14%, transparent); }
+
+.mpv-chips {
+  /* Ten slots that shrink rather than wrap: a phone column is ~150px. */
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1.0625rem));
+  gap: 2px;
+}
+
+.mpv-chip {
+  height: 1.0625rem;
+  border-radius: 4px;
+  font-size: var(--font-size-3xs, 0.625rem);
+  font-weight: 700;
+  line-height: 1.0625rem;
+  text-align: center;
+  color: var(--mpv-on-chip);
+}
+
+.mpv-chip--W { background: var(--mpv-win); }
+.mpv-chip--L { background: var(--mpv-loss); }
+.mpv-chip--T { background: var(--mpv-tie); }
+
+.mpv-cap {
+  font-size: var(--font-size-2xs, 0.6875rem);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sf-text-secondary, #536471);
+}
+
+.mpv-link {
+  font-weight: 700;
+  font-size: var(--font-size-sm, 0.875rem);
+}

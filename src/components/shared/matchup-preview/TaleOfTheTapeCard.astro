@@ -1,0 +1,274 @@
+---
+/**
+ * One matchup's tale of the tape: each side's record, streak, recent results,
+ * weekly scoring line and luck, with the all-time series underneath.
+ *
+ * The two sparklines share ONE vertical scale so the taller line really is
+ * the higher scorer. Luck is actual wins minus all-play expected wins
+ * (matchup-preview-visuals.mjs#sideSnapshot), drawn on a fixed ±3 track.
+ */
+import type { MatchupVisualsSide, MatchupVisualsSeries } from '../../../types/schefter';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import type { MatchupTeam } from './MatchupPreviewSection.astro';
+
+export interface Props {
+  a: MatchupVisualsSide;
+  b: MatchupVisualsSide;
+  series: MatchupVisualsSeries | null;
+  teamA: MatchupTeam;
+  teamB: MatchupTeam;
+  isGameOfWeek?: boolean;
+  rivalryHref?: string;
+}
+
+const { a, b, series, teamA, teamB, isGameOfWeek = false, rivalryHref } = Astro.props;
+
+const LUCK_RANGE = 3;
+const SW = 140;
+const SH = 44;
+const SP = 4;
+const all = [...a.weekly, ...b.weekly];
+const lo = all.length ? Math.min(...all) : 0;
+const hi = all.length ? Math.max(...all) : 1;
+const span = Math.max(hi - lo, 10);
+const base = lo - (span - (hi - lo)) / 2;
+
+function spark(values: number[]) {
+  if (values.length < 2) return null;
+  const pts = values.map((v, i) => [
+    SP + (i * (SW - SP * 2)) / (values.length - 1),
+    SH - SP - ((v - base) / span) * (SH - SP * 2),
+  ]);
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const [ex, ey] = pts[pts.length - 1];
+  const area = `${line} L${ex.toFixed(1)} ${SH} L${pts[0][0].toFixed(1)} ${SH} Z`;
+  return { line, area, ex, ey };
+}
+
+function luckText(luck: number | null) {
+  if (luck == null) return null;
+  if (Math.abs(luck) < 0.5) return 'Record matches scoring';
+  const n = Math.abs(luck);
+  return `${luck > 0 ? '+' : '−'}${n} win${n === 1 ? '' : 's'} vs all-play`;
+}
+
+const luckPos = (luck: number) => 50 + (Math.max(-LUCK_RANGE, Math.min(LUCK_RANGE, luck)) / LUCK_RANGE) * 50;
+const record = (s: MatchupVisualsSide) => `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`;
+
+const sides = [
+  { side: a, team: teamA, key: 'a', spark: spark(a.weekly) },
+  { side: b, team: teamB, key: 'b', spark: spark(b.weekly) },
+];
+
+let seriesLine: string | null = null;
+if (series === null) seriesLine = 'First meeting';
+else if (!series.disputed) {
+  const tie = series.ties ? `-${series.ties}` : '';
+  seriesLine = series.aWins === series.bWins
+    ? `Series even, ${series.aWins}-${series.bWins}${tie}`
+    : series.aWins > series.bWins
+      ? `${teamA.short} lead series ${series.aWins}-${series.bWins}${tie}`
+      : `${teamB.short} lead series ${series.bWins}-${series.aWins}${tie}`;
+  // A streak as long as the series is the record restated ("8-0 · won last 8").
+  if (series.streak && series.streak.count >= 3 && series.streak.count < series.games) {
+    const who = series.streak.franchiseId === a.franchiseId ? teamA.short : teamB.short;
+    seriesLine += ` · ${who} won last ${series.streak.count}`;
+  }
+}
+---
+
+<article
+  class:list={['tape mpv-panel', { 'tape--gotw': isGameOfWeek }]}
+  style={`--mpv-a: ${teamAccentVar(a.franchiseId, 'var(--sf-text-primary)')}; --mpv-b: ${teamAccentVar(b.franchiseId, 'var(--sf-text-secondary)')};`}
+  aria-label={`${teamA.name} vs ${teamB.name}`}
+>
+  {isGameOfWeek && <div class="tape__tag">Game of the Week</div>}
+  <div class="tape__cols">
+    {sides.map(({ side, team, key, spark: sp }) => (
+      <div class="tape__col">
+        <div class="tape__id">
+          {team.icon && <img class="mpv-logo" src={team.icon} alt="" width="36" height="36" loading="lazy" />}
+          <div class="tape__id-text">
+            <span class={`tape__name tape__name--${key}`}>{team.name}</span>
+            {side.ppg != null && <small class="mpv-num">{side.ppg.toFixed(1)} PPG</small>}
+          </div>
+        </div>
+        <div class="tape__big">
+          <span class="tape__rec mpv-num">{record(side)}</span>
+          {side.streak && <span class={`mpv-streak mpv-streak--${side.streak[0]}`}>{side.streak}</span>}
+        </div>
+        {side.form.length > 0 && (
+          <div class="tape__row">
+            <span class="mpv-cap">Last {side.form.length}</span>
+            <div class="mpv-chips" aria-label={`Last ${side.form.length} results: ${side.form.join(' ')}`}>
+              {side.form.map((r) => <span class={`mpv-chip mpv-chip--${r}`} aria-hidden="true">{r}</span>)}
+            </div>
+          </div>
+        )}
+        {sp && (
+          <div class="tape__row">
+            <span class="mpv-cap">Weekly score</span>
+            <svg class="tape__spark" viewBox={`0 0 ${SW} ${SH}`} aria-hidden="true">
+              <path d={sp.area} style={`fill: color-mix(in srgb, var(--mpv-${key}) 14%, transparent)`} />
+              <path d={sp.line} class="tape__spark-line" style={`stroke: var(--mpv-${key})`} />
+              <circle cx={sp.ex.toFixed(1)} cy={sp.ey.toFixed(1)} r="3" style={`fill: var(--mpv-${key})`} />
+            </svg>
+          </div>
+        )}
+        {side.luck != null && (
+          <div class="tape__row">
+            <span class="mpv-cap">Luck</span>
+            <div class="tape__luck" aria-hidden="true">
+              <i class="tape__luck-mid"></i>
+              <i class="tape__luck-dot" style={`left: ${luckPos(side.luck).toFixed(1)}%; background: var(--mpv-${key})`}></i>
+            </div>
+            <small class="tape__luck-text">{luckText(side.luck)}</small>
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+  {seriesLine && (
+    <div class="tape__foot">
+      <span>{seriesLine}</span>
+      {rivalryHref && series && !series.disputed && <a class="cta-link mpv-link" href={rivalryHref}>Rivalry</a>}
+    </div>
+  )}
+</article>
+
+<style>
+  .tape__tag {
+    padding: 0.5rem 0.875rem 0;
+    font-size: var(--font-size-2xs, 0.6875rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--mpv-hot);
+  }
+
+  .tape--gotw {
+    border-color: color-mix(in srgb, var(--mpv-hot) 45%, var(--sf-border, #e5e7eb));
+  }
+
+  .tape__cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tape__col {
+    padding: 0.75rem 0.875rem;
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .tape__col + .tape__col {
+    border-left: 1px solid var(--sf-border, #e5e7eb);
+  }
+
+  .tape__id {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .tape__id-text {
+    display: grid;
+    min-width: 0;
+  }
+
+  .tape__name {
+    font-weight: 700;
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .tape__name--a { color: var(--mpv-a); }
+  .tape__name--b { color: var(--mpv-b); }
+
+  .tape__id-text small {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .tape__big {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tape__rec {
+    font-size: var(--font-size-xl, 1.6rem);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--sf-text-primary, #0f1419);
+  }
+
+  .tape__row {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .tape__spark {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .tape__spark-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .tape__luck {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--mpv-track);
+    margin: 3px 0;
+  }
+
+  .tape__luck-mid {
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    width: 1px;
+    height: 12px;
+    background: var(--sf-text-secondary, #536471);
+    opacity: 0.5;
+  }
+
+  .tape__luck-dot {
+    position: absolute;
+    top: -3px;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--sf-bg, #fff);
+  }
+
+  .tape__luck-text {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .tape__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.875rem;
+    border-top: 1px solid var(--sf-border, #e5e7eb);
+    background: var(--mpv-inset);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 600;
+    color: var(--sf-text-primary, #0f1419);
+  }
+</style>

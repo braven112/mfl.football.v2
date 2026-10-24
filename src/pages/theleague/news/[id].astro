@@ -20,6 +20,7 @@ import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import type { SchefterFeed, SchefterPost, AuctionGrade } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
+import MatchupPreviewSection from '../../../components/shared/matchup-preview/MatchupPreviewSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import leagueConfig from '../../../data/theleague.config.json';
 
@@ -138,6 +139,14 @@ function gradeColor(grade: string): string {
         part="chart"
       />
 
+      <!-- Matchup Preview: the Game of the Week rivalry panel leads the copy -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={leagueConfig.teams}
+        rivalriesBase={r('/theleague/rivalries')}
+        part="top"
+      />
+
       <!-- Article body -->
       {isGradeArticle ? (
         <Fragment>
@@ -212,6 +221,14 @@ function gradeColor(grade: string): string {
           ))}
         </div>
       )}
+
+      <!-- Matchup Preview: a tale-of-the-tape card for every matchup, under the copy -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={leagueConfig.teams}
+        rivalriesBase={r('/theleague/rivalries')}
+        part="cards"
+      />
 
       <!-- The Gauntlet: luck, trap weeks + dashboard CTA (the chart sits above the copy) -->
       <GauntletArticleSection

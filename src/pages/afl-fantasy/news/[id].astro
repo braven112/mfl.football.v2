@@ -20,6 +20,7 @@ import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
+import MatchupPreviewSection from '../../../components/shared/matchup-preview/MatchupPreviewSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 
@@ -121,11 +122,27 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         part="chart"
       />
 
+      <!-- Matchup Preview: the Game of the Week rivalry panel leads the copy -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={aflConfig.teams}
+        rivalriesBase={r('/afl-fantasy/rivalries')}
+        part="top"
+      />
+
       <div class="sf-article__body">
         {post.content?.map(paragraph => (
           <p set:html={paragraph} />
         ))}
       </div>
+
+      <!-- Matchup Preview: a tale-of-the-tape card for every matchup, under the copy -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={aflConfig.teams}
+        rivalriesBase={r('/afl-fantasy/rivalries')}
+        part="cards"
+      />
 
       <!-- The Gauntlet: luck, trap weeks + dashboard CTA (the chart sits above the copy) -->
       <GauntletArticleSection
