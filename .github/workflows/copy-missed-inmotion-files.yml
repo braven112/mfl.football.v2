@@ -1,0 +1,42 @@
+name: Copy missed InMotion files (one-off)
+
+# One-off: copies the files the missed-files report found MFL pages still
+# loading from mfl.football onto Vercel at the same paths (public/), so the
+# InMotion backup can be cancelled. Runs here because the Claude sandbox
+# cannot reach InMotion. Delete this workflow before the PR it rides on
+# merges. See scripts/inmotion-migration/copy-missed.mjs.
+#
+# No dependency install: copy-missed.mjs imports node built-ins only.
+
+on:
+  push:
+    branches: [claude/project-thread-p5vcju]
+    paths:
+      - scripts/inmotion-migration/missed-urls.txt
+      - scripts/inmotion-migration/copy-missed.mjs
+      - .github/workflows/copy-missed-inmotion-files.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Copy files from InMotion
+        run: node ./scripts/inmotion-migration/copy-missed.mjs
+
+      - name: Commit and push copied files
+        uses: ./.github/actions/commit-push
+        with:
+          check-paths: 'public scripts/inmotion-migration/missed-report.json'
+          add-paths: 'public scripts/inmotion-migration/missed-report.json'
+          commit-message: 'chore: copy missed InMotion files to Vercel'
+          no-changes-message: 'No missed InMotion files changed.'
+          push-ref: ${{ github.ref_name }}

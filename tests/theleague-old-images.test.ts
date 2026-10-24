@@ -43,3 +43,26 @@ describe('TheLeague old /images URLs', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('TheLeague old /images URLs on mfl.football', () => {
+  // Some TheLeague seasons on MFL name mfl.football/images/… instead of
+  // theleague.us/images/… (both hosts served one InMotion folder). The
+  // missed-files report caught the_league_commish.png falling through to the
+  // InMotion backup that way, so the root route must answer from the same copy.
+  it('redirects a copied file to its Blob copy', async () => {
+    const { GET } = await import('../src/pages/images/[...path].ts');
+    const url = new URL('https://mfl.football/images/team_banners/the_league_commish.png');
+    const res = (await GET({
+      params: { path: 'team_banners/the_league_commish.png' },
+      url,
+      request: new Request(url),
+      rewrite: () => {
+        throw new Error('should not rewrite a copied file');
+      },
+    } as never)) as Response;
+    expect(res.status).toBe(308);
+    expect(res.headers.get('Location')).toBe(
+      `${report.blobHost}/${report.blobPrefix}/images/team_banners/the_league_commish.png`,
+    );
+  });
+});
