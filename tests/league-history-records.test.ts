@@ -1,8 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildHistoryDataset, holdingsBySeason } from '../src/utils/league-history/dataset.mjs';
-import { buildCategory, indexDataset, recordBook } from '../src/utils/league-history/records.mjs';
+import { buildHistoryDataset as buildDataset, holdingsBySeason } from '../src/utils/league-history/dataset.mjs';
+import { buildCategory as buildBoards, indexDataset, recordBook } from '../src/utils/league-history/records.mjs';
+
+interface Row { value: number; rank: number; entity: { key: string; name: string } }
+interface Board { id: string; rows: Row[] }
+interface Dataset {
+  games: unknown[][];
+  seasons: Array<{ y: number; done: number; teams: Record<string, { h: string; r: string }> }>;
+}
+// The engine is plain .mjs; these are the shapes the tests read.
+const buildHistoryDataset = buildDataset as unknown as (args: object) => Dataset;
+const buildCategory = buildBoards as unknown as (ix: unknown, category: string, scope?: string) => Board[];
 
 /**
  * League History engine — the owner attribution the Record Book groups by, and
@@ -64,46 +74,46 @@ describe('League History dataset', () => {
 
   it('falls back to the franchise slot when no owner is on record', () => {
     const d = buildHistoryDataset({ league: 't', games: [], ledgerRows: [row(2019, '0009')], ownerTenures: { owners: [] } });
-    expect(d.seasons[0].teams['0009'].h).toBe('slot:0009');
+    expect(d.seasons[0]!.teams['0009']!.h).toBe('slot:0009');
   });
 
   it('packs games as sorted tuples and marks a season done once it has a champion', () => {
     expect(ds.games[0]).toEqual([2020, 1, '0001', 150, '0002', 100, 0]);
     expect(ds.games).toHaveLength(games.length);
     expect(ds.seasons.map((s) => s.done)).toEqual([1, 1]);
-    expect(ds.seasons[0].teams['0001'].r).toBe('C');
+    expect(ds.seasons[0]!.teams['0001']!.r).toBe('C');
   });
 });
 
 describe('Record Book boards', () => {
   const ix = indexDataset(ds);
   const board = (cat: string, id: string, scope = 'all') =>
-    buildCategory(ix, cat, scope).find((b: { id: string }) => b.id === id);
+    buildCategory(ix, cat, scope).find((b) => b.id === id)!;
 
   it('counts a doubleheader score once on a score board', () => {
     const rows = board('single-game', 'most-points').rows;
-    expect(rows.filter((r: { value: number }) => r.value === 150)).toHaveLength(1);
+    expect(rows.filter((r) => r.value === 150)).toHaveLength(1);
   });
 
   it('keeps consolation games out of postseason and career totals', () => {
     const playoffs = board('career', 'career-wins', 'playoffs').rows;
-    const holders = Object.fromEntries(playoffs.map((r: { entity: { key: string }; value: number }) => [r.entity.key, r.value]));
+    const holders = Object.fromEntries(playoffs.map((r) => [r.entity.key, r.value]));
     // 0003's 140-60 consolation win is not a playoff win.
     expect(holders['slot:0003']).toBeUndefined();
     expect(holders['own-a']).toBe(2);
     // ...but it is still a single-game score under "All games".
-    expect(board('single-game', 'biggest-win').rows[0].value).toBe(80);
+    expect(board('single-game', 'biggest-win').rows[0]!.value).toBe(80);
   });
 
   it('follows an owner across slots and gives tied values a shared rank', () => {
     const wins = board('career', 'career-wins', 'regular').rows;
-    const bea = wins.find((r: { entity: { key: string } }) => r.entity.key === 'own-b');
+    const bea = wins.find((r) => r.entity.key === 'own-b');
     // Bea: 2020 week 2 win as 0002; the 2021 tie as 0003 is not a win.
-    expect(bea.value).toBe(1);
-    expect(bea.entity.name).toBe('Bea');
-    const coOwned = wins.find((r: { entity: { key: string } }) => r.entity.key === 'own-c+own-d');
+    expect(bea!.value).toBe(1);
+    expect(bea!.entity.name).toBe('Bea');
+    const coOwned = wins.find((r) => r.entity.key === 'own-c+own-d');
     expect(coOwned?.entity.name).toBe('Cy & Di');
-    const ranks = board('postseason', 'titles').rows.map((r: { rank: number }) => r.rank);
+    const ranks = board('postseason', 'titles').rows.map((r) => r.rank);
     expect(ranks).toEqual([1]);
   });
 

@@ -295,7 +295,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-title {
     margin: 0.125rem 0 0.375rem;
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 7vw, 3.5rem);
+    font-size: var(--font-size-3xl);
     line-height: 0.95;
     text-transform: uppercase;
   }
@@ -337,7 +337,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-board__title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(1.5rem, 4.5vw, 2rem);
+    font-size: var(--font-size-xl);
     line-height: 1;
     text-transform: uppercase;
   }
@@ -390,13 +390,13 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   }
   .rb-plaque__value {
     font-family: var(--font-display);
-    font-size: clamp(3.25rem, 14vw, 4.5rem);
+    font-size: calc(var(--font-size-3xl) * 1.25);
     line-height: 0.9;
     font-variant-numeric: tabular-nums;
   }
   .rb-plaque__unit {
     margin-left: 0.25rem;
-    font-size: 0.35em;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted);
     text-transform: uppercase;
   }
@@ -450,7 +450,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   }
   .rb-tile__value {
     font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
@@ -523,7 +523,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   }
   .rb-row__value {
     font-family: var(--font-display);
-    font-size: 1.375rem;
+    font-size: var(--font-size-lg);
     font-variant-numeric: tabular-nums;
   }
 
@@ -539,7 +539,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     font-weight: var(--font-weight-bold);
   }
   .rb-plaque__logo--blank {
-    font-size: 2rem;
+    font-size: var(--font-size-2xl);
   }
   .rb-tile__logo--blank,
   .rb-row__logo--blank {
@@ -561,7 +561,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-more__title {
     margin: 0 0 0.75rem;
     font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     text-transform: uppercase;
   }
   .rb-more__grid {
@@ -600,12 +600,12 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   }
   .rb-holder__value {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: var(--font-size-xl);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
   .rb-holder__value small {
-    font-size: 0.5em;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted);
     text-transform: uppercase;
   }
@@ -622,7 +622,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       padding: 1.5rem;
     }
     .rb-tile__value {
-      font-size: 1.875rem;
+      font-size: var(--font-size-2xl);
     }
   }
 </style>
