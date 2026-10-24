@@ -178,7 +178,7 @@ describe.each(leagues)('$league.slug season ledger', ({ league, ledgerPath, hist
 describe('measured orphan counts', () => {
   const cases = [
     { slug: 'theleague', total: 320, orphaned: 110 },
-    { slug: 'afl-fantasy', total: 576, orphaned: 230 },
+    { slug: 'afl-fantasy', total: 576, orphaned: 224 }, // 230 → 224 (2026-10-24): Avenging Amish owned since 2015, not 2021
   ];
 
   for (const { slug, total, orphaned } of cases) {
