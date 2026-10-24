@@ -284,7 +284,10 @@ const boardDivisions = divisionStandings.map((d) => ({
   seeding: divisionBadgeSeeding(d.name),
   logo: logoFor(divisionToConf[d.name]),
   champion: defendingChampions[d.name]?.icon
-    ? { name: defendingChampions[d.name].name, icon: defendingChampions[d.name].icon, year: previousYear }
+    ? { name: defendingChampions[d.name].name, icon: defendingChampions[d.name].icon, year: previousYear, // a retired identity keeps its own crest; a club still playing wears its seasonal mark
+        id: (aflConfig as unknown as { teams: TeamConfig[] }).teams.find((t) => t.franchiseId === defendingChampions[d.name].id)?.name === defendingChampions[d.name].name
+          ? defendingChampions[d.name].id
+          : undefined }
     : undefined,
 }));
 const boardConferences = conferenceLadders.map(({ id, standings }) => ({

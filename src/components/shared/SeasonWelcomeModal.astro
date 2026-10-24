@@ -1,0 +1,46 @@
+---
+/**
+ * SeasonWelcomeModal — "Your Christmas Week look" popup, once per device per
+ * season, showing the owner their team's drawn mark for a seasonal theme
+ * (`buildSeasonWelcome`, src/utils/season-welcome.ts). Mounted by the league
+ * layout for a signed-in owner while a season that sets `welcome` is open.
+ * The dialog, band and once-per-device script are WelcomeModal's.
+ */
+import WelcomeModal from './WelcomeModal.astro';
+import type { SeasonWelcome } from '../../utils/season-welcome';
+
+interface Props {
+  welcome: SeasonWelcome;
+  /** Registry slug of the league this page belongs to (ClientRouter gate). */
+  leagueSlug: string;
+  /** Stories only: render already open (non-modal), since a closed dialog draws nothing. */
+  previewOpen?: boolean;
+}
+
+const { welcome, leagueSlug, previewOpen = false } = Astro.props;
+---
+
+<WelcomeModal
+  id="season-welcome-modal"
+  leagueSlug={leagueSlug}
+  storageKey={welcome.storageKey}
+  ghost={welcome.ghost}
+  crest={welcome.crest}
+  crestShape="square"
+  bandStart={welcome.bandStart}
+  bandEnd={welcome.bandEnd}
+  bandGlow={welcome.bandGlow}
+  previewOpen={previewOpen}
+>
+  <p class="twm__eyebrow">{welcome.seasonName}</p>
+  <h2 class="twm__title" id="season-welcome-modal-title">
+    <span class="twm__lead">This week your logo is</span>
+    <span class="twm__name">{welcome.name}{/s$/i.test(welcome.name) ? '’' : '’s'} {welcome.seasonName} look</span>
+  </h2>
+  <p class="twm__note">
+    Every team&rsquo;s logo gets the {welcome.seasonName} treatment across the site. Your normal logo is back {welcome.returns}.
+  </p>
+  <div class="twm__actions">
+    <button type="button" class="cta cta--primary twm__btn" data-twm-close>Love it</button>
+  </div>
+</WelcomeModal>

@@ -198,6 +198,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
     stylesheet could drift below the contrast the fill was chosen to clear. */}
 <div
   class:list={['rhdr__plate', { 'rhdr__plate--franchise': !!skin }]}
+  data-franchise={franchiseId}
   style={`--rhdr-plate-ink: ${ROSTER_PLATE_INK};${skin ? ` --rhdr-fill: ${skin.fill};` : ''}`}
 >
   {skin?.crest && (

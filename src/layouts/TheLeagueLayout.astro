@@ -52,6 +52,8 @@ import { getThemePreference } from '../utils/theme-preference';
 import TransactionHubModal from '../components/shared/TransactionHubModal.astro';
 import ThrowbackWeekModal from '../components/shared/ThrowbackWeekModal.astro';
 import { buildThrowbackWelcome, type ThrowbackWelcome } from '../utils/throwback-welcome';
+import { buildSeasonWelcome } from '../utils/season-welcome';
+import SeasonWelcomeModal from '../components/shared/SeasonWelcomeModal.astro';
 import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
 import RosterLoader from '../components/shared/RosterLoader.astro';
 import NavProgress from '../components/shared/NavProgress.astro';
@@ -397,6 +399,14 @@ const season = activeSeasonalTheme(
 	Astro.locals.seasonPreview,
 );
 const modeLock = themeLock ?? season?.lock ?? undefined;
+// The season's welcome popup: a signed-in owner sees their team's drawn mark
+// once per device while a season that sets `welcome` is open (Christmas).
+const seasonWelcome = buildSeasonWelcome({
+	league,
+	franchiseId: sessionFranchiseId,
+	season,
+	now: getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+});
 
 import StagingBanner from '../components/shared/StagingBanner.astro';
 import DemoBanner from '../components/shared/DemoBanner.astro';
@@ -723,6 +733,7 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 		{throwbackWelcome && (
 			<ThrowbackWeekModal welcome={throwbackWelcome} leagueSlug={leagueContext.slug} pickerHref={throwbackPickerHref} />
 		)}
+		{seasonWelcome && <SeasonWelcomeModal welcome={seasonWelcome} leagueSlug={leagueContext.slug} />}
 		<script src="../scripts/transaction-hub.ts"></script>
 
 		{/* Body, never <head>: it renders a custom element, which ends <head> early and

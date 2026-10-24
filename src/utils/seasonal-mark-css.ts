@@ -44,6 +44,17 @@
  * sprite icon. `_menuIcons` maps such an image path to a drawing that, inside a
  * nav icon slot only, is tinted the nav's icon colour the same way; the same
  * image elsewhere keeps the plain `_swaps` drawing.
+ *
+ * The Brand Book (`<main data-brand-book>`) is exempt from the logo, `_swaps`
+ * and franchise-mark swaps: it always shows the standard marks, and draws each
+ * seasonal set beside them from the set's own files (owner, Oct 2026). Only
+ * its page content is exempt; the header and nav around it still swap.
+ *
+ * A set's `_trim` lists franchises with a knitted trim strip
+ * (<marks>/trim/<id>-top.png and -bottom.png, content hashes as values). The
+ * rule only names the strips as custom properties on that club's roster
+ * header plate (`.rhdr__plate[data-franchise]`); the season's stylesheet
+ * decides how to draw them.
  */
 import { SEASONAL_THEMES, SURFACE_SEASONAL_THEMES } from '../config/seasonal-themes.mjs';
 import { iconSrcVariants, type DarkIconTeamLike } from './team-icon-dark-css';
@@ -85,6 +96,21 @@ function markVersion(navSlug: string, seasonId: string, franchiseId: string): st
   const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _v?: Record<string, string> } | undefined;
   const v = set?._v?.[franchiseId];
   return typeof v === 'string' && /^[0-9a-f]+$/.test(v) ? `?v=${v}` : '';
+}
+
+/** Franchise id → content hash of its top and bottom trim strips (`_trim`). */
+function seasonalTrims(navSlug: string, seasonId: string): Map<string, { top: string; bottom: string }> {
+  const set = MARK_SETS[`../data/seasonal-marks/${navSlug}-${seasonId}.json`] as { _trim?: unknown } | undefined;
+  const out = new Map<string, { top: string; bottom: string }>();
+  const trims = set?._trim;
+  if (!trims || typeof trims !== 'object') return out;
+  for (const [fid, v] of Object.entries(trims as Record<string, { top?: unknown; bottom?: unknown }>)) {
+    const hash = (h: unknown) => (typeof h === 'string' && /^[0-9a-f]+$/.test(h) ? h : null);
+    const top = hash(v?.top);
+    const bottom = hash(v?.bottom);
+    if (/^\d{4}$/.test(fid) && top && bottom) out.set(fid, { top, bottom });
+  }
+  return out;
 }
 
 /** The league logo drawn for the season (`_logo`), as a file name in the marks directory, or null. */
@@ -136,6 +162,9 @@ function seasonalMenuIcons(navSlug: string, seasonId: string): Array<[string, st
 
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
+/** Appended to every swapped <img>: the Brand Book's own content keeps the standard marks. */
+const NOT_BRAND_BOOK = ':not([data-brand-book] img)';
+
 export function buildSeasonalMarkCss(
   navSlug: string,
   seasonalThemes: readonly string[] | undefined,
@@ -161,13 +190,13 @@ export function buildSeasonalMarkCss(
     const logoSrcs = [logo?.light, logo?.dark].filter((s): s is string => Boolean(s));
     if (logoFile && logoSrcs.length) {
       const selectors = scopes.flatMap((scope) =>
-        [...new Set(logoSrcs)].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
+        [...new Set(logoSrcs)].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]${NOT_BRAND_BOOK}`),
       );
       rules.push(`${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${logoFile}"); filter: none; }`);
     }
     for (const [from, file] of seasonalSwaps(navSlug, id)) {
       rules.push(
-        `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"] { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
+        `html[data-league="${navSlug}"][data-season="${id}"] img[src="${esc(from)}"]${NOT_BRAND_BOOK} { content: url("/assets/${navSlug}/${marks}/${file}"); filter: none; }`,
       );
     }
     for (const [icon, file] of seasonalIcons(navSlug, id)) {
@@ -187,17 +216,29 @@ export function buildSeasonalMarkCss(
         `html[data-league="${navSlug}"][data-season="${id}"] .nav-links__link--active .nav-links__icon img[src="${esc(from)}"] { background-color: #ffffff; }`,
       );
     }
+    const trims = seasonalTrims(navSlug, id);
     const drawn = seasonalMarkIds(navSlug, id);
     for (const team of teams) {
+      const trim = team?.franchiseId ? trims.get(team.franchiseId) : undefined;
+      if (trim) {
+        const dir = `/assets/${navSlug}/${marks}/trim/${team.franchiseId}`;
+        rules.push(
+          `html[data-league="${navSlug}"][data-season="${id}"] .rhdr__plate[data-franchise="${team.franchiseId}"] { --rhdr-trim-top: url("${dir}-top.png?v=${trim.top}"); --rhdr-trim-bottom: url("${dir}-bottom.png?v=${trim.bottom}"); }`,
+        );
+      }
       if (!team?.franchiseId || !drawn.has(team.franchiseId)) continue;
       const srcs = new Set<string>([`/assets/${navSlug}/icons/${team.franchiseId}.png`]);
       for (const field of MARK_FIELDS) {
         const src = team[field];
         if (src) iconSrcVariants(src).forEach((s) => srcs.add(s));
       }
-      const selectors = scopes.flatMap((scope) =>
-        [...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]`),
-      );
+      const selectors = scopes.flatMap((scope) => [
+        ...[...srcs].map((src) => `html[data-league="${scope}"][data-season="${id}"] img[src="${esc(src)}"]${NOT_BRAND_BOOK}`),
+        // An era crest naming a club that still plays (a defending champion
+        // under last season's identity) asks for the season's mark by id.
+        // League pages only: both leagues have a franchise 0013.
+        ...(scope === navSlug ? [`html[data-league="${scope}"][data-season="${id}"] img[data-seasonal-franchise="${team.franchiseId}"]${NOT_BRAND_BOOK}`] : []),
+      ]);
       const scale = markScale(navSlug, id, team.franchiseId);
       rules.push(
         `${selectors.join(',\n')} { content: url("/assets/${navSlug}/${marks}/${team.franchiseId}.png${markVersion(navSlug, id, team.franchiseId)}"); filter: none; border-radius: 0;${scale ? ` scale: ${scale};` : ''} }`,

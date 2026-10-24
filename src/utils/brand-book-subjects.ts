@@ -344,11 +344,24 @@ export function franchiseSeasonalMarks(slug: CanonicalLeagueSlug, franchiseId: s
     .filter(({ set }) => typeof set[franchiseId] === 'string')
     .map(({ id, folder, set, base }) => {
       const v = (set._v as Record<string, string> | undefined)?.[franchiseId];
+      // A set can also knit the club a trim strip for the roster header (`_trim`).
+      const trim = (set._trim as Record<string, Record<string, string>> | undefined)?.[franchiseId];
+      const trimFiles = trim
+        ? (['top', 'bottom'] as const)
+            .filter((edge) => typeof trim[edge] === 'string')
+            .map((edge) => {
+              const path = `${base}trim/${franchiseId}-${edge}.png`;
+              return { ...fileFromPath(path, `Header trim, ${edge}`), url: `${path}?v=${trim[edge]}`, forDark: true };
+            })
+        : [];
       return {
         id,
         name: seasonalSetName(id),
         folder,
-        files: [{ ...fileFromPath(`${base}${franchiseId}.png`, 'Crest'), url: `${base}${franchiseId}.png${v ? `?v=${v}` : ''}`, forDark: true }],
+        files: [
+          { ...fileFromPath(`${base}${franchiseId}.png`, 'Crest'), url: `${base}${franchiseId}.png${v ? `?v=${v}` : ''}`, forDark: true },
+          ...trimFiles,
+        ],
       };
     });
 }

@@ -54,7 +54,8 @@ describe('buildThrowbackWelcome', () => {
 
 describe('ThrowbackWeekModal wiring', () => {
   const layout = readFileSync('src/layouts/TheLeagueLayout.astro', 'utf8');
-  const modal = readFileSync('src/components/shared/ThrowbackWeekModal.astro', 'utf8');
+  // The dialog and its client gate live in the shared shell.
+  const modal = readFileSync('src/components/shared/WelcomeModal.astro', 'utf8');
 
   it('the layout keys it off the SESSION franchise and the real week', () => {
     expect(layout).toMatch(/franchiseId:\s*sessionFranchiseId/);
