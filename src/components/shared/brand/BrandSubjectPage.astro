@@ -67,7 +67,7 @@ const fileCount = subject.groups.reduce((n, g) => n + g.files.length, 0);
 ---
 
 <TheLeagueLayout title={`${subject.kind === 'league' ? 'League' : subject.name} brand | Brand Book | ${league.name}`}>
-  <main class="cb brand">
+  <main class="cb brand" data-brand-book>
     <nav class="cb__crumb">
       <a href={brandHref('')}>&larr; Brand Book</a>
       {

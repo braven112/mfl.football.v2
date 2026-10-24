@@ -1460,10 +1460,6 @@ button.lv-card:focus-visible {
   color: inherit;
   text-decoration: none;
 }
-.lv-panel__link:hover .lv-panel__chev,
-.lv-panel__link:focus-visible .lv-panel__chev {
-  transform: translateX(0.15rem);
-}
 .lv-panel__link:hover {
   color: var(--page-text);
 }
@@ -1472,8 +1468,45 @@ button.lv-card:focus-visible {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
-.lv-panel__chev {
+/* The name gives way before the label does: a long league name ellipsizes
+   rather than wrapping the row or pushing "See all games" off a phone. */
+.lv-panel__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* "See all games", right-aligned on the heading's own line. Styled as the
+   kit's arrow link (cta.css .cta-link) — same ink, weight and nudging arrow —
+   but a span, since the whole line is already the one link. */
+.lv-panel__all {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--primary-link-default-text-color);
+}
+.lv-panel__all::after {
+  content: '›';
+  content: '›' / '';
   transition: transform var(--transition-fast, 120ms) ease;
+}
+.lv-panel__link:hover .lv-panel__all {
+  color: var(--primary-link-hover-text-color);
+}
+.lv-panel__link:hover .lv-panel__all::after,
+.lv-panel__link:focus-visible .lv-panel__all::after {
+  transform: translateX(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-panel__all::after { transition: none; }
+  .lv-panel__link:hover .lv-panel__all::after { transform: none; }
 }
 
 /* ── Scores / Standings ───────────────────────────────────────────────────

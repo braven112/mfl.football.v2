@@ -41,7 +41,7 @@ interface Props {
   teams: BoardTeamConfig[];
   preferredTeamId?: string;
   hrefFor: (id: string) => string | undefined;
-  divisions: Array<{ name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo; champion?: { name: string; icon: string; year: number } }>;
+  divisions: Array<{ name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo; champion?: { name: string; icon: string; year: number; id?: string } }>;
   conferences: Array<{ id: string; name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo }>;
   tiers: Array<{ tier: string; teams: TeamStanding[]; movement?: TierMovement; promotionCutoff?: number; logo?: Logo }>;
   /** The promotion/relegation playoff (Premier League 9-10, D-League 3-4), ranked on all-play. */

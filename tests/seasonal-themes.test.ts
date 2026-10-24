@@ -16,6 +16,7 @@ import { stampBadgeYear } from '../src/utils/afl-badge';
 
 const ROOT = path.resolve(__dirname, '..');
 const at = (iso: string) => activeSeasonalTheme(['halloween'], new Date(iso))?.id ?? null;
+const atXmas = (iso: string) => activeSeasonalTheme(['halloween', 'christmas'], new Date(iso))?.id ?? null;
 
 describe('Halloween window', () => {
   it('opens the Tuesday that starts the first of its two NFL weeks (Oct 20 in 2026)', () => {
@@ -61,12 +62,41 @@ describe('Halloween window', () => {
   });
 });
 
+describe('Christmas window', () => {
+  it('opens the Tuesday of the NFL week holding Christmas (Dec 22 in 2026, Week 16)', () => {
+    expect(atXmas('2026-12-22T07:59:00Z')).toBeNull(); // Dec 21, 11:59pm PST
+    expect(atXmas('2026-12-22T08:00:00Z')).toBe('christmas');
+  });
+
+  it('runs through that week\'s Monday night game (Dec 28 in 2026)', () => {
+    expect(atXmas('2026-12-29T07:59:00Z')).toBe('christmas'); // Dec 28, 11:59pm PST
+    expect(atXmas('2026-12-29T08:00:00Z')).toBeNull();
+  });
+
+  it('always holds Christmas Day, whatever weekday it falls on', () => {
+    const w = (y: number) => SEASONAL_THEMES.christmas.window(y);
+    expect(w(2027)).toEqual({ start: { y: 2027, m: 12, d: 21 }, end: { y: 2027, m: 12, d: 27 } }); // Saturday
+    expect(w(2028)).toEqual({ start: { y: 2028, m: 12, d: 19 }, end: { y: 2028, m: 12, d: 25 } }); // Monday: last day
+    expect(w(2029)).toEqual({ start: { y: 2029, m: 12, d: 25 }, end: { y: 2029, m: 12, d: 31 } }); // Tuesday: first day
+  });
+
+  it('never overlaps Halloween', () => {
+    expect(atXmas('2026-10-25T12:00:00Z')).toBe('halloween');
+    expect(atXmas('2026-12-01T12:00:00Z')).toBeNull();
+  });
+});
+
 describe('opted-in leagues', () => {
   const optedIn: LeagueDefinition[] = ALL_LEAGUES.filter((l: LeagueDefinition) => l.seasonalThemes?.length);
 
   it('TheLeague wears Halloween, with all 16 marks drawn', () => {
     expect(optedIn.map((l) => l.slug)).toContain('theleague');
     expect(seasonalMarkIds('theleague', 'halloween').size).toBe(16);
+  });
+
+  it('both leagues wear Christmas, with every team knit (16 and 24)', () => {
+    expect(seasonalMarkIds('theleague', 'christmas').size).toBe(16);
+    expect(seasonalMarkIds('afl', 'christmas').size).toBe(24);
   });
 
   it('the AFL wears Halloween, with all 24 marks drawn', () => {
@@ -89,6 +119,16 @@ describe('opted-in leagues', () => {
       });
       if (!season?.marks) continue;
       it(`${league.slug}: its ${id} league logo is drawn and swapped in for both registry cuts`, () => {
+        // `"_logo": null` is a set's explicit "the league keeps its own logo"
+        // (Christmas: the sweaters are the season, the logo stays); a set
+        // that simply forgot it still fails here.
+        const set = JSON.parse(
+          fs.readFileSync(path.join(ROOT, 'src/data/seasonal-marks', `${league.navSlug}-${id}.json`), 'utf8'),
+        ) as { _logo?: string | null };
+        if (set._logo === null) {
+          expect(buildSeasonalMarkCss(league.navSlug, [id], [], league.logo)).not.toContain(`[data-season="${id}"] img[src="${league.logo.light}"]`);
+          return;
+        }
         const file = seasonalLogoFile(league.navSlug, id);
         expect(file, `no _logo in ${league.navSlug}-${id}.json`).toBeTruthy();
         expect(fs.existsSync(path.join(ROOT, 'public/assets', league.navSlug, season.marks!, file!))).toBe(true);
@@ -135,7 +175,19 @@ describe('opted-in leagues', () => {
           const drawn = seasonalSwapPath(league.navSlug, id, from);
           expect(drawn, `${from} → ${file} was rejected`).toBe(`/assets/${league.navSlug}/${season.marks}/${file}`);
           expect(fs.existsSync(path.join(ROOT, 'public', drawn!)), `${drawn} not drawn`).toBe(true);
-          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"] { content: url("${drawn}")`);
+          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"]:not([data-brand-book] img) { content: url("${drawn}")`);
+        }
+      });
+      it(`${league.slug}: the Brand Book keeps its standard marks while ${id} is open`, () => {
+        // The Brand Book always shows the standard marks, with each seasonal
+        // set drawn beside them (owner, Oct 2026): every swapped <img> rule
+        // exempts its content.
+        const teams = getLeagueTeams(league.navSlug);
+        const css = buildSeasonalMarkCss(league.navSlug, [id], teams, league.logo);
+        const selectors = css.split('\n').flatMap((line) => line.split(/,\s*/)).filter((s) => /\] img\[(src|data-seasonal-franchise)=/.test(s) && !s.includes(':has('));
+        expect(selectors.length).toBeGreaterThan(0);
+        for (const sel of selectors) {
+          expect(sel, sel).toContain(':not([data-brand-book] img)');
         }
       });
       it(`${league.slug}: every listed ${id} mark is a real franchise with a built file`, () => {
@@ -155,9 +207,9 @@ describe('opted-in leagues', () => {
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       for (const selector of block.split('{')[0]!.split(',')) {
-        // an <img> by its src, a sprite icon's <svg> by its <use>, or a nav icon slot's <img>
+        // an <img> by its src or by the club id it names, a sprite icon's <svg> by its <use>, or a nav icon slot's <img>
         expect(selector).toMatch(
-          /html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|svg:has\(> use\[href\$=|(\.nav-links__link--active )?\.nav-links__icon img\[src=)/,
+          /html\[data-league="\w+"\]\[data-season="halloween"\] (img\[src=|img\[data-seasonal-franchise=|svg:has\(> use\[href\$=|(\.nav-links__link--active )?\.nav-links__icon img\[src=)/,
         );
       }
     }

@@ -56,6 +56,7 @@ import type { MflLiveBoard } from '../../../types/mfl-live';
 import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
 import LvHauntedStats from './LvHauntedStats';
 import LvHauntedScene from './LvHauntedScene';
+import LvCabinScene from './LvCabinScene';
 import { hauntedStats } from '../../../utils/live/haunted-stats';
 import { overlayPanel, type OverlayMemory } from '../../../utils/live/espn-overlay';
 import { useLeagueRules } from './rules-cache';
@@ -113,7 +114,8 @@ export interface LiveBoardProps {
   title?: string;
   /**
    * The seasonal theme open for this page, or omitted. `'halloween'` adds the
-   * header's Monster of the Week and Scariest Game cards; the haunted scene
+   * header's Monster of the Week and Scariest Game cards and the haunted
+   * house's moving parts; `'christmas'` adds the snowed-in cabin's. The scene
    * behind them is CSS keyed on <html data-season> (seasonal-themes.css).
    */
   season?: string;
@@ -516,8 +518,8 @@ export default function LiveBoard({
   const haunted =
     season === 'halloween' ? hauntedStats(panelViews.map((v) => v.panel), board.playerMeta) : null;
   // Every score on the board, in one string: when it changes, the haunted
-  // house stirs (LvHauntedScene).
-  const hauntPulse = haunted
+  // house (LvHauntedScene) or the snowed-in cabin (LvCabinScene) stirs.
+  const scenePulse = haunted || season === 'christmas'
     ? panelViews
         .map((v) => v.panel.matchups.map((m) => m.sides.map((side) => side.live).join(',')).join(';'))
         .join('|')
@@ -675,7 +677,8 @@ export default function LiveBoard({
     <KickoffClockContext.Provider value={kickoffClock}>
     <div className="lv" ref={rootRef}>
       <div className="lv-head">
-        {haunted && <LvHauntedScene pulse={hauntPulse} />}
+        {haunted && <LvHauntedScene pulse={scenePulse} />}
+        {season === 'christmas' && <LvCabinScene pulse={scenePulse} />}
         <h1>
           {title}
           {demoLabel && <span className="lv-sample">{demoLabel}</span>}
@@ -770,21 +773,26 @@ export default function LiveBoard({
         />
       ) : (
         <>
-          {panelViews.map(({ panel, heldSince: panelHeld }) => (
+          {panelViews.map(({ panel, heldSince: panelHeld }) => {
+            // No league board exists for a Sleeper league, so it gets neither
+            // a linked heading nor the "See all games" button.
+            const panelHref =
+              panelHrefBase && panel.leagueId && panel.provider !== 'sleeper'
+                ? `${panelHrefBase}${encodeURIComponent(panel.leagueId)}`
+                : null;
+            return (
             <section key={panel.leagueId} className="lv-panel">
               {showPanelName && (
                 <h2 className="lv-panel__name">
-                  {/* No league board exists for a Sleeper league, so its
-                      heading is plain text rather than a dead link. */}
-                  {panelHrefBase && panel.leagueId && panel.provider !== 'sleeper' ? (
+                  {panelHref ? (
                     // The heading IS the link — the whole line, so it is a
-                    // thumb target rather than a word.
-                    <a
-                      className="lv-panel__link"
-                      href={`${panelHrefBase}${encodeURIComponent(panel.leagueId)}`}
-                    >
-                      {panel.leagueName}
-                      <span className="lv-panel__chev" aria-hidden="true">→</span>
+                    // thumb target rather than a word. A bare arrow beside the
+                    // name was too quiet (owners did not know it opened every
+                    // game), so the line now says so at its right end, on the
+                    // same line so it pushes nothing down.
+                    <a className="lv-panel__link" href={panelHref}>
+                      <span className="lv-panel__label">{panel.leagueName}</span>
+                      <span className="lv-panel__all">See all games</span>
                     </a>
                   ) : (
                     panel.leagueName
@@ -829,7 +837,8 @@ export default function LiveBoard({
                 />
               )}
             </section>
-          ))}
+            );
+          })}
 
           {/* Under the cards, on the Scores tab. Derived from the same panel
               those cards render, so it cannot disagree with them, and it

@@ -1,6 +1,7 @@
 /**
  * Seasonal themes — a palette, headline face and franchise-mark set a league
- * wears for a few days a year instead of its own (Halloween first, Oct 2026).
+ * wears for a few days a year instead of its own (Halloween first, Oct 2026;
+ * Christmas Week second, Dec 2026).
  *
  * A league opts in by listing the id in its registry entry's `seasonalThemes`
  * (src/config/leagues-data.mjs); nothing here names a league. While a window
@@ -23,6 +24,8 @@ const SEASON_ZONE = 'America/Los_Angeles';
  *   theme: string,
  *   lock: 'dark' | 'light' | null,
  *   marks: string | null,
+ *   name?: string,
+ *   welcome?: boolean,
  *   window: (year: number) => { start: CivilDate, end: CivilDate },
  * }} SeasonalTheme
  */
@@ -62,6 +65,40 @@ export const SEASONAL_THEMES = {
       };
     },
   },
+  christmas: {
+    id: 'christmas',
+    /** The palette — Candy Cane: a light sheet on a snowy frame. */
+    theme: 'christmas',
+    /**
+     * Light (owner's call, Oct 2026: the dark sheet read as black, then as
+     * dark green, neither of them a holiday look). The content is a light
+     * sheet (seasonal-themes.css) on the snow under the red header.
+     */
+    lock: 'light',
+    /** Franchise marks: each team knit into an ugly-sweater patch in its own colours. */
+    marks: 'christmas-marks',
+    /** What the welcome popup calls it. */
+    name: 'Christmas Week',
+    /**
+     * A signed-in owner gets a once-per-device popup showing their team's
+     * Christmas mark when the window opens (owner, Oct 2026: "so teams know
+     * what their new logo will look like"). src/utils/season-welcome.ts.
+     */
+    welcome: true,
+    /**
+     * The NFL game week holding Christmas Day, Tuesday through its Monday
+     * night game (owner's rule, Oct 2026: Week 16 in 2026, Dec 22–28). Taken
+     * from the date, never a week number: which NFL week holds Christmas
+     * moves with the calendar. A Monday Christmas is that week's last day;
+     * a Tuesday one, its first. Both ends inclusive, whole days in the
+     * league's zone.
+     */
+    window: (year) => {
+      const christmas = { y: year, m: 12, d: 25 };
+      const tuesday = addDays(christmas, -((weekday(christmas) + 5) % 7));
+      return { start: tuesday, end: addDays(tuesday, 6) };
+    },
+  },
 };
 
 /**
@@ -75,7 +112,7 @@ export const SEASONAL_THEMES = {
  * entry lists the season shows its drawn marks there too
  * (src/utils/seasonal-mark-css.ts); every other league keeps its own logos.
  */
-export const SURFACE_SEASONAL_THEMES = { mfl: ['halloween'] };
+export const SURFACE_SEASONAL_THEMES = { mfl: ['halloween', 'christmas'] };
 
 /** The calendar date `now` falls on in the league's zone. */
 function zonedDate(now) {

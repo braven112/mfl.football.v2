@@ -1,0 +1,424 @@
+---
+/**
+ * Brand Book — asset specs. What a new league or team owner sends us, at what
+ * size, and why it must stay simple. One page for every league, on the shared
+ * host only (`src/pages/brand/specs.astro`), so it can be handed to an owner
+ * before their league has a site of its own.
+ *
+ * The spec data lives in `src/utils/brand-asset-specs.ts`, where a test pins
+ * the "shown at" claims to the stored files.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import { AI_PROMPT, ASSET_SPECS, UPLOAD_LIMITS, type AssetSpec } from '../../../utils/brand-asset-specs';
+import { getLeagueBySlug, leagueUrl } from '../../../config/leagues';
+import '../../../styles/brand-book.css';
+
+/** A real crest at the sizes the site paints it — the case for keeping it simple. */
+const SHRINK_SRC = '/assets/theleague/group-me/0001.png';
+const SHRINK_SIZES = [100, 40, 16];
+/**
+ * Good next to bad at the same sizes. The busy crest is a made-up mark drawn
+ * for this page, so no real club is held up as the bad example.
+ */
+const SHRINK_EXAMPLES = [
+  { src: SHRINK_SRC, verdict: 'good', title: 'Bold and simple: stays crisp' },
+  { src: '/assets/brand-specs/example-busy-crest.svg', verdict: 'bad', title: 'Busy and detailed: turns to mud' },
+] as const;
+
+const groups: Array<{ title: string; note: string; specs: AssetSpec[] }> = [
+  {
+    title: 'Each team',
+    note: 'The team owner sends these.',
+    specs: ASSET_SPECS.filter((s) => s.owner === 'team'),
+  },
+  {
+    title: 'The league',
+    note: 'The commissioner sends these once for the whole league.',
+    specs: ASSET_SPECS.filter((s) => s.owner === 'league'),
+  },
+];
+/** The two full leagues' Brand Books, linked as worked examples of every spec here. */
+const examples = (['theleague', 'afl-fantasy'] as const).flatMap((slug) => {
+  const league = getLeagueBySlug(slug);
+  return league ? [{ name: league.name, href: leagueUrl(league, `/${slug}/brand`) }] : [];
+});
+const templates = ASSET_SPECS.flatMap((s) => (s.template ? [s.template] : []));
+---
+
+<MflAppLayout
+  title="Logo and asset specs | MFL.football"
+  description="The logos and art a new league or team sends us, with exact sizes, formats and tips for keeping them crisp."
+>
+  <main class="brand specs">
+    <header class="brand__header">
+      <p class="brand__eyebrow"><a href="/brand">Brand Book</a> &middot; Specs</p>
+      <h1>Logo and asset specs</h1>
+      <p class="brand__lede">
+        Joining with a new league or team? This is every logo and image we need, at the size to make it. We ask for
+        big files so we can resize them to look crisp in every spot on the site. Nothing is ever shown at the full
+        size you send.
+      </p>
+      <p class="brand__note">
+        Make them yourself (a designer, Canva, or an AI tool such as ChatGPT all work), or ask Brandon and we'll
+        make them for you.
+      </p>
+    </header>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Want it crisp at small sizes? Keep it simple</h2>
+      <p class="cb__note">
+        You send a 1024&nbsp;px file, but most of the time your crest is shown at 40&nbsp;px or smaller. Bold shapes,
+        thick outlines and two or three colors stay sharp at that size. Fine detail, thin lines, shading and small
+        text turn to mud.
+      </p>
+      {
+        SHRINK_EXAMPLES.map((ex) => (
+          <figure class:list={['specs__example', `is-${ex.verdict}`]}>
+            <figcaption>{ex.title}</figcaption>
+            <ul class="specs__shrink">
+              {SHRINK_SIZES.map((px) => (
+                <li>
+                  <span class="specs__shrink-box">
+                    <img src={ex.src} alt="" width={px} height={px} loading="lazy" />
+                  </span>
+                  <span class="specs__shrink-label">{px} px</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        ))
+      }
+      <ul class="specs__rules">
+        <li><strong>Do:</strong> one strong idea, big shapes, a thick outline, 2&ndash;3 colors.</li>
+        <li><strong>Avoid:</strong> gradients, photos, thin lines, drop shadows, and words smaller than the crest's main shape.</li>
+        <li><strong>Test it:</strong> shrink your file to 40&nbsp;px. If you can't tell what it is, simplify.</li>
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">File format: best to worst</h2>
+      <ol class="specs__rules specs__formats">
+        <li>
+          <strong>SVG &mdash; best.</strong> A vector file is sharp at every size, from a 16&nbsp;px browser tab to
+          a TV. Figma, Illustrator, Inkscape and Canva all export it.
+        </li>
+        <li>
+          <strong>Transparent PNG &mdash; good.</strong> Sharp as long as it is the full master size, and the
+          background stays see-through so your crest sits cleanly on any color.
+        </li>
+        <li>
+          <strong>JPG and other formats &mdash; avoid for logos.</strong> They can't be transparent, so your crest
+          arrives in a white or colored box that gets cropped against every background. It won't look like a
+          professional sports team. The only place a JPG is fine is the social share image.
+        </li>
+      </ol>
+    </section>
+
+    {
+      groups.map((g) => (
+        <section class="cb__section">
+          <h2 class="cb__h2">{g.title}</h2>
+          <p class="cb__note">{g.note}</p>
+          <ul class="specs__grid">
+            {g.specs.map((s) => (
+              <li class="ui-card specs__card" id={s.id}>
+                <div class="specs__card-head">
+                  <h3>{s.name}</h3>
+                  <span class:list={['specs__tag', s.required ? 'is-required' : 'is-optional']}>
+                    {s.required ? 'Required' : 'Optional'}
+                  </span>
+                </div>
+                <dl class="specs__dl">
+                  <dt>Size</dt>
+                  <dd>{s.size}</dd>
+                  <dt>Shape</dt>
+                  <dd>{s.ratio}</dd>
+                  <dt>Format</dt>
+                  <dd>{s.format}</dd>
+                  <dt>Background</dt>
+                  <dd>{s.background}</dd>
+                  <dt>Shown at</dt>
+                  <dd>{s.shownAt}</dd>
+                </dl>
+                {s.notes.map((n) => <p class="specs__card-note">{n}</p>)}
+                {s.template && (
+                  <p class="specs__card-dl">
+                    <a class="cb__dl" href={s.template.svg} download>Template (SVG)</a>
+                    <a class="cb__dl" href={s.template.png} download>Template (PNG)</a>
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <section class="cb__section">
+      <h2 class="cb__h2">See it done well</h2>
+      <p class="cb__note">
+        Every club in these two leagues has a crest, banner and colors made to these specs. Browse them for ideas.
+      </p>
+      <ul class="specs__templates">
+        {
+          examples.map((e) => (
+            <li>
+              <a href={e.href}>{e.name} Brand Book</a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Light and dark mode</h2>
+      <p class="cb__note">
+        Every crest is shown on three backgrounds: white, a dark card in dark mode, and your own team color. Check
+        yours on all three. If its outline is black or very dark, it disappears on the dark ones, so send the optional
+        dark-background version too, or give the crest a light outline.
+      </p>
+      <ul class="specs__grounds" aria-label="One crest on white, a dark card, and its team color">
+        <li class="is-light"><img src={SHRINK_SRC} alt="" width="88" height="88" loading="lazy" /><span>White</span></li>
+        <li class="is-dark"><img src={SHRINK_SRC} alt="" width="88" height="88" loading="lazy" /><span>Dark card</span></li>
+        <li class="is-band"><img src={SHRINK_SRC} alt="" width="88" height="88" loading="lazy" /><span>Team color</span></li>
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Templates</h2>
+      <p class="cb__note">
+        Each template is the master size with dashed safe-area guides. Open the SVG in Figma, Illustrator, Inkscape or
+        Canva, draw on the artwork layer, then delete the guides layer before you export. The PNG is the same layout,
+        useful as a reference image for an AI tool.
+      </p>
+      <ul class="specs__templates">
+        {
+          templates.map((t) => (
+            <li>
+              <span>{t.label}</span>
+              <a class="cb__dl" href={t.svg} download>SVG</a>
+              <a class="cb__dl" href={t.png} download>PNG</a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Using an AI image tool</h2>
+      <p class="cb__note">
+        Paste this into ChatGPT or a similar tool, fill in the brackets, and attach the crest template PNG. Ask for
+        changes until it passes the 40&nbsp;px test above.
+      </p>
+      <pre class="specs__prompt"><code>{AI_PROMPT}</code></pre>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Sending your files</h2>
+      <ul class="specs__rules">
+        <li>Name each file after what it is, e.g. <code>pigskins-crest.png</code>, <code>pigskins-banner.png</code>.</li>
+        <li>Up to {UPLOAD_LIMITS.maxMb}&nbsp;MB each. The Team branding page takes {UPLOAD_LIMITS.formats}, so send SVG files to Brandon directly.</li>
+        <li>Send them to Brandon, or your commissioner can upload them from the league's Team branding page.</li>
+      </ul>
+    </section>
+  </main>
+</MflAppLayout>
+
+<style>
+  .specs h3 {
+    margin: 0;
+    font-size: var(--font-size-base, 1rem);
+    color: var(--page-text, #111827);
+  }
+  .specs__example {
+    margin: 0 0 1rem;
+  }
+  .specs__example figcaption {
+    margin-bottom: 0.4rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 700;
+  }
+  .specs__example.is-good figcaption {
+    color: var(--color-success, #10b981);
+  }
+  .specs__example.is-bad figcaption {
+    color: var(--color-error, #dc2626);
+  }
+  .specs__shrink {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+  .specs__shrink li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .specs__shrink-box {
+    display: grid;
+    place-items: center;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm, 4px);
+    background: #ffffff;
+    border: var(--style-card-border, 1px solid var(--color-gray-300, #d1d5db));
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .specs__shrink img {
+    display: block;
+  }
+  .specs__shrink-label {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--color-gray-500, #6b7280);
+  }
+  .specs__rules {
+    margin: 0;
+    padding-left: 1.1rem;
+    max-width: 70ch;
+    color: var(--color-gray-600, #4b5563);
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.5;
+  }
+  .specs__formats li + li {
+    margin-top: 0.35rem;
+  }
+  .specs__rules strong {
+    color: var(--page-text, #111827);
+  }
+  .specs__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .specs__card {
+    min-width: 0;
+    padding: 0.9rem 1rem;
+  }
+  .specs__card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .specs__tag {
+    flex: none;
+    font-size: var(--font-size-2xs, 0.6875rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm, 4px);
+  }
+  .specs__tag.is-required {
+    background: var(--color-accent, #2563eb);
+    color: var(--on-color-accent, #fff);
+  }
+  .specs__tag.is-optional {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    color: var(--color-gray-500, #6b7280);
+  }
+  .specs__dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 0.75rem;
+    margin: 0 0 0.6rem;
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .specs__dl dt {
+    color: var(--color-gray-500, #6b7280);
+  }
+  .specs__dl dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--page-text, #111827);
+  }
+  .specs__card-note {
+    margin: 0 0 0.4rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-gray-600, #4b5563);
+  }
+  .specs__card-dl {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0.6rem 0 0;
+  }
+  .specs__grounds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+    max-width: 480px;
+  }
+  .specs__grounds li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 0.5rem 0.5rem;
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+  }
+  .specs__grounds img {
+    width: 100%;
+    max-width: 88px;
+    height: auto;
+  }
+  .specs__grounds .is-light {
+    background: #ffffff;
+    color: #4b5563;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .specs__grounds .is-dark {
+    background: #1e1e1e;
+    color: #d1d5db;
+  }
+  .specs__grounds .is-band {
+    background: #bd1f2b;
+    color: #ffffff;
+  }
+  /* These panes paint their OWN ground, so the site's dark-mode crest swap and
+     ring must not fire on them — same opt-out as the rest of the Brand Book. */
+  :global(html.dark) .specs__shrink img,
+  :global(html.dark) .specs__grounds img {
+    content: normal !important;
+    filter: none !important;
+  }
+  .specs__templates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .specs__templates li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .specs__templates li span {
+    flex: 1;
+    min-width: 0;
+  }
+  .specs__prompt {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md, 8px);
+    background: var(--content-bg-muted, #eeeeee);
+    color: var(--page-text, #111827);
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+</style>

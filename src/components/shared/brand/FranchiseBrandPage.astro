@@ -6,19 +6,19 @@
  * shared stylesheet, same section order, one different subject. It was briefly
  * a parallel set of markup and rules, and the parallel set re-shipped a bug
  * the club page had already fixed — the layout's global
- * `:global(h1),:global(h2) { color: … }` BEATS an inherited colour, so the
+ * `:global(h1),:global(h2) { color: … }` BEATS an inherited color, so the
  * hero heading rendered in the site's accent blue on top of a red hero.
  * `.cb__nick { color: inherit }` is the fix, and it only exists once now.
  *
  * ── Why the hero uses the DARK cut ────────────────────────────────────────
- * The hero band is the franchise's own colour, which for almost every one of
+ * The hero band is the franchise's own color, which for almost every one of
  * them is dark (five TheLeague franchises and three AFL ones wear `#181818`).
  * It is therefore neither a light nor a dark SURFACE — it is a third ground,
- * resolving to whichever assignment suits that colour's luminance
+ * resolving to whichever assignment suits that color's luminance
  * (`bandSlot`). Exactly the rule `franchise-band-brand.ts` already applies to
  * crests on deep-ink surfaces.
  *
- * ── Why the previews carry their own colours ─────────────────────────────
+ * ── Why the previews carry their own colors ─────────────────────────────
  * Each preview stands in for a real app surface, so it paints its OWN light or
  * dark ground and inherits nothing from the page theme. A "light" preview that
  * went dark for a dark-mode viewer would make the two previews identical,
@@ -120,7 +120,7 @@ const GROUND_COPY: Record<string, string> = {
       : brand.measuredIllegible
         ? 'The same surfaces in dark mode. No dark cut on file, and the light art measured illegible on ink — but this franchise has opted out of the ring, so it draws as authored.'
         : 'The same surfaces in dark mode. No dark cut on file, and the light art measured legible on ink as-is.',
-  band: `The team-colour band — a hero, a reveal card, a player modal. Dark in both themes, so it follows the ${band?.slot ?? 'dark'} assignment.`,
+  band: `The team-color band — a hero, a reveal card, a player modal. Dark in both themes, so it follows the ${band?.slot ?? 'dark'} assignment.`,
 };
 
 /** Where each cut is actually drawn, so the page answers "which file do I use". */
@@ -147,11 +147,11 @@ const USAGE: Array<{ term: string; detail: string }> = [
       'The wide lockup, for MFL’s franchise header and throwback era art. Never use it where a square mark is expected.',
   },
   {
-    term: 'A colour as FOREGROUND',
+    term: 'A color as FOREGROUND',
     detail: `Text, a rank numeral, a chart line, a legend swatch: read the token ${brand.accentProperty} via teamAccentVar(franchiseId), never the raw hex.`,
   },
   {
-    term: 'A colour as a FILL',
+    term: 'A color as a FILL',
     detail:
       'A full-bleed band with white copy on it takes the brand pair directly; the resolver floors it for white ink.',
   },
@@ -159,7 +159,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
 ---
 
 <TheLeagueLayout title={`${brand.name} brand | Brand Book | ${league.name}`}>
-  <main class="cb">
+  <main class="cb" data-brand-book>
     <nav class="cb__crumb"><a href={indexPath}>&larr; Brand Book</a></nav>
 
     <header class="cb__hero" style={`--hero-bg:${bg};--hero-ink:${ink}`}>
@@ -193,7 +193,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
           </p>
           {/* `.cb__nick` carries `color: inherit`, which is what beats the
               layout's global themed-h1 rule. Without it this renders in the
-              site's accent blue on top of the franchise's own colour. */}
+              site's accent blue on top of the franchise's own color. */}
           {/*
             The FULL name, unlike the club page's `{club.nick}`. An NFL club
             name IS "City Nick", so splitting it leaves a heading that still
@@ -208,9 +208,9 @@ const USAGE: Array<{ term: string; detail: string }> = [
     </header>
 
     <section class="cb__section">
-      <h2 class="cb__h2">Team colours</h2>
+      <h2 class="cb__h2">Team colors</h2>
       <p class="cb__note">
-        The club's official colours, and what each one is for. The <strong>chart hue</strong> is
+        The club's official colors, and what each one is for. The <strong>chart hue</strong> is
         for graphs only &mdash; never brand identity.
       </p>
       <ul class="cb__swatches">
@@ -237,7 +237,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">What the site actually paints</h2>
       <p class="cb__note">
-        What each colour resolves to per theme. Use these for anything in the foreground, not the
+        What each color resolves to per theme. Use these for anything in the foreground, not the
         raw hexes above.
       </p>
       <ul class="cb__derived-list">
@@ -363,14 +363,14 @@ const USAGE: Array<{ term: string; detail: string }> = [
       <h2 class="cb__h2">What each ground draws</h2>
       <p class="cb__note">
         Use the light cut on a white cell, and the dark cut on a dark card <em>and</em> on the
-        club's own colour.
+        club's own color.
       </p>
       <ul class="cb__grounds">
         {
           brand.grounds.map((g) => (
             <li class={`cb__ground ${g.slot === 'dark' || g.ground === 'band' ? 'is-dark' : 'is-light'}`}>
               <span class="cb__ground-head">
-                {g.ground === 'band' ? 'Team colour' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
+                {g.ground === 'band' ? 'Team color' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
               </span>
               <span class="cb__ground-art" style={g.ground === 'band' ? `background:${bg}` : undefined}>
                 <img src={g.url} alt="" loading="lazy" style={g.filter ? `filter:${g.filter}` : undefined} />
@@ -413,7 +413,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
         </li>
 
         <li class="cb__demo">
-          <span class="cb__demo-cap">Team colour <em>the third ground</em></span>
+          <span class="cb__demo-cap">Team color <em>the third ground</em></span>
           {/*
             `is-band` so this pane is inside the dark-swap opt-out with its
             siblings. Without a ground class it matched neither opt-out

@@ -7,7 +7,10 @@
  * scariest game, and a failed panel contributes nothing.
  */
 import { describe, it, expect } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { hauntedStats } from '../src/utils/live/haunted-stats';
+import LvHauntedStats from '../src/components/shared/live/LvHauntedStats';
 import type { LiveMatchup, LivePanel } from '../src/types/live';
 import type { PlayerMeta } from '../src/types/live-scoring';
 
@@ -103,5 +106,26 @@ describe('hauntedStats', () => {
     const game = matchup(side('A', 50, 0), side('B', 40, 0));
     const stats = hauntedStats([panel([game], [{ playerId: 'p1', points: 30 }], 'unavailable')], meta);
     expect(stats).toEqual({ monster: null, scariest: null });
+  });
+});
+
+describe('LvHauntedStats before kickoff', () => {
+  // The header's scene is sized to hold these cards; with neither drawn, the
+  // night before Week 7 showed a phone owner a big blank spot instead.
+  it('keeps both cards, waiting, when the week has no answer yet', () => {
+    const html = renderToStaticMarkup(createElement(LvHauntedStats, { stats: { monster: null, scariest: null } }));
+    expect(html).toContain('Monster of the Week');
+    expect(html).toContain('Scariest Game');
+    expect(html.match(/lv-haunt__card--waiting/g)).toHaveLength(2);
+  });
+
+  it('drops the waiting card once that card has an answer', () => {
+    const html = renderToStaticMarkup(
+      createElement(LvHauntedStats, {
+        stats: { monster: { playerId: '1', name: 'James Cook', points: 20.9, owners: 'Ninjas' }, scariest: null },
+      }),
+    );
+    expect(html).toContain('James Cook');
+    expect(html.match(/lv-haunt__card--waiting/g)).toHaveLength(1);
   });
 });

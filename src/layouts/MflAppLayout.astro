@@ -66,6 +66,7 @@ import { mflLoginUrl } from '../utils/mfl-login-redirect';
 import { ClientRouter } from 'astro:transitions';
 import ThemeScript from '../components/shared/ThemeScript.astro';
 import MflAppMenu from '../components/shared/mfl-live/MflAppMenu.astro';
+import NavProgress from '../components/shared/NavProgress.astro';
 import NflLogoDarkStyles from '../components/shared/NflLogoDarkStyles.astro';
 import TeamIconDarkStyles from '../components/shared/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
@@ -204,6 +205,11 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	</head>
 	<body>
 		<a class="mfl-skip" href="#mfl-main">Skip to content</a>
+		{/* Every /live page is SSR against MFL — the standings page assembles every
+		    watched league's board before it answers — so a tap can sit for
+		    seconds. The bar starts on the tap; the board dims (below) once the
+		    wait passes the 300 ms "no indicator" floor. */}
+		<NavProgress />
 
 		{!bare && (
 		<header class="mfl-bar">
@@ -399,6 +405,26 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 	.mfl-main {
 		padding: clamp(1rem, 4vw, 2rem) clamp(0.75rem, 3vw, 1.25rem);
 		padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	/* The bar rides on the near-black app bar in both themes, so it takes the
+	   accent the bar's own mark and rule already wear. */
+	:global(html) {
+		--nav-progress-color: var(--league-accent);
+	}
+
+	/* A pending navigation dims the board being left, so a tap reads as taken
+	   even before the bar has travelled. The delay keeps a fast swap from
+	   flashing (docs/claude/loading-standards.md: nothing under 0.3 s). */
+	:global(html.nav-pending) .mfl-main {
+		opacity: 0.45;
+		transition: opacity var(--transition-base) var(--duration-slow);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global(html.nav-pending) .mfl-main {
+			transition: none;
+		}
 	}
 
 	.mfl-main--bare {

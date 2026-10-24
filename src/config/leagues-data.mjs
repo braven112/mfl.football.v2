@@ -32,7 +32,7 @@ export const LEAGUES = {
      * Seasonal themes this league wears while their window is open — ids in
      * src/config/seasonal-themes.mjs. Absent = none.
      */
-    seasonalThemes: ['halloween'],
+    seasonalThemes: ['halloween', 'christmas'],
     /**
      * Icon set — a folder under public/assets/icons/sets/, or 'classic' (the
      * original public/assets/icons/sprite.svg). Absent = 'classic'. Every set
@@ -265,7 +265,7 @@ export const LEAGUES = {
     navSlug: /** @type {const} */ ('afl'),
     theme: 'afl',
     /** Seasonal themes — see TheLeague's entry. */
-    seasonalThemes: ['halloween'],
+    seasonalThemes: ['halloween', 'christmas'],
     /** Icon set — see TheLeague's entry. */
     iconSet: 'line',
     archetype: 'deluxe-keeper',

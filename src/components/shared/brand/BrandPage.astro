@@ -1,6 +1,6 @@
 ---
 /**
- * Brand Book — the index. Every mark this site draws, on its own colour.
+ * Brand Book — the index. Every mark this site draws, on its own color.
  *
  * TWO subjects under one roof, in this order: the LEAGUE's own franchises
  * (`FranchiseBrandPage`), then the 32 NFL clubs (`ClubBrandPage`). They share
@@ -27,10 +27,10 @@
  * `/brand/<slug>` could not say which one it meant. That is why the franchise
  * half appears only on a league's copy, rather than being a rule about tidiness.
  *
- * Each tile is the club's colour with the mark its BAND ground draws — which
- * is the dark cut for almost every club, because almost every club colour is
+ * Each tile is the club's color with the mark its BAND ground draws — which
+ * is the dark cut for almost every club, because almost every club color is
  * dark. That is the whole thesis of docs/plans/nfl-mark-assignments.md shown
- * 32 times: a club-colour band is a third ground, not a light one.
+ * 32 times: a club-color band is a third ground, not a light one.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
@@ -121,7 +121,7 @@ const fileIndex =
 ---
 
 <Layout title={league ? `Brand Book | ${league.name}` : 'NFL Brand Book'}>
-  <main class="brand">
+  <main class="brand" data-brand-book>
     <header class="brand__header">
       <p class="brand__eyebrow">
         Reference &middot;
@@ -130,8 +130,8 @@ const fileIndex =
       </p>
       <h1>{league ? 'Brand Book' : 'NFL Brand Book'}</h1>
       <p class="brand__lede">
-        Official marks and colours, and which cut to use on each ground &mdash; a white cell, a
-        dark card, or the club's own colour.
+        Official marks and colors, and which cut to use on each ground &mdash; a white cell, a
+        dark card, or the club's own color.
       </p>
       {
         derived.length > 0 && (
@@ -143,6 +143,14 @@ const fileIndex =
               </>
             ))}{' '}
             use a reversed cut drawn in-house &mdash; no official reversed mark is published.
+          </p>
+        )
+      }
+      {
+        !league && (
+          <p class="brand__note">
+            Joining with a new league or team? <a href="/brand/specs">Logo and asset specs</a> lists every file to send,
+            with sizes and templates.
           </p>
         )
       }
@@ -165,7 +173,7 @@ const fileIndex =
         <section class="cb__section">
           <h2 class="cb__h2">{league.name} clubs</h2>
           <p class="cb__note">
-            Each tile is the club's official colour wearing the cut that ground takes.
+            Each tile is the club's official color wearing the cut that ground takes.
           </p>
           <BrandFranchiseTiles franchises={franchises} hrefFor={franchiseHref} />
         </section>
@@ -297,7 +305,7 @@ const fileIndex =
      the Primary/ESPN-light entries in the filmstrip would all render the DARK
      cut for a dark-mode reader, and the comparison would show one mark twice.
      Scoped to the tiles' artwork, never the whole page: every tile already
-     declares its ground (the club's own colour) and must look the same in both
+     declares its ground (the club's own color) and must look the same in both
      themes, but nothing else here should be frozen out of the swap.
 
      `!important` because the swap rule's specificity matches this one's and
@@ -307,7 +315,7 @@ const fileIndex =
     content: normal !important;
   }
   /* NO `filter` reset here, unlike an earlier draft of this block. Every tile
-     on this index paints the club's or franchise's OWN colour, which is a dark
+     on this index paints the club's or franchise's OWN color, which is a dark
      ground for almost all of them — so a ring belongs on it, and the inline one
      this page sets is already correct. Resetting the filter also killed
      `--nfl-logo-ring`, which `nfl-logo-dark-css.ts` emits once guarded by

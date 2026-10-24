@@ -214,6 +214,10 @@ html[data-season='halloween'] .lv-head > :not(.lv-haunt-scene) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+/* Before kickoff: the same card, quieter, until the week has an answer. */
+.lv-haunt__card--waiting .lv-haunt__main {
+  color: var(--content-text-muted, #bdb4a8);
+}
 .lv-haunt__label {
   font-size: var(--font-size-2xs);
   font-weight: 600;
@@ -306,4 +310,379 @@ html[data-season='halloween'] .mll-hero__top .mll-h1::before {
 }
 html[data-season='halloween'] .mll-hero__side {
   max-width: 40rem;
+}
+
+/* ── Christmas Week (Candy Cane, snow frame) ─────────────────────────── */
+
+/* Cinzel Decorative Bold (SIL Open Font License, Google Fonts), latin subset.
+   Carol-card lettering (owner's pick, Oct 2026: Berkshire Swash read as
+   Halloween). */
+@font-face {
+  font-family: 'Cinzel Decorative';
+  src: url('/assets/fonts/CinzelDecorative-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Headlines only, for the same reason as Halloween's. */
+html[data-season='christmas'] :is(h1, h2, h3) {
+  font-family: 'Cinzel Decorative', var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Locked dark, so the Light / Auto / Dark control would be a dead switch. */
+html[data-season='christmas'] .theme-toggle,
+html[data-season='christmas'] .mfl-menu__theme {
+  display: none;
+}
+
+html[data-season='christmas'] .stb-seedchip--division_winner {
+  background: var(--color-primary);
+  color: var(--on-color-primary);
+}
+html[data-season='christmas'] .stb-seedchip--wild_card {
+  background: #2f8b59;
+  color: #fff;
+}
+
+/* The snow frame (owner's pick, Oct 2026): a snowy ground around the edges and
+   every page's content on one light sheet (the season locks light). Nothing
+   with text sits on the snow: the header and footer are red bands, and `main`
+   carries its own --page-bg. */
+html[data-season='christmas'],
+html[data-season='christmas'] body {
+  background-color: #dfe7ee;
+  background-image:
+    radial-gradient(circle at 20% 30%, #fff 0 1.6px, transparent 2.4px),
+    radial-gradient(circle at 70% 65%, #fff 0 1.2px, transparent 2px),
+    radial-gradient(circle at 45% 85%, #fff 0 2px, transparent 2.8px),
+    linear-gradient(#eef3f7, #d3dde6);
+  background-size: 46px 46px, 31px 31px, 73px 73px, 100% 100%;
+  background-attachment: fixed;
+}
+html[data-season='christmas'] :is(#page-wrapper > main, #mfl-main) {
+  box-sizing: border-box;
+  width: calc(100% - 12px);
+  margin: 14px auto var(--spacing-xl);
+  background: var(--page-bg);
+  border-radius: 14px;
+  box-shadow: var(--shadow-xl);
+  outline: 1px solid rgb(255 255 255 / 0.5);
+}
+html[data-season='christmas'] #page-wrapper > main {
+  padding-top: var(--padding-sm);
+}
+@media (min-width: 768px) {
+  html[data-season='christmas'] :is(#page-wrapper > main, #mfl-main) {
+    width: calc(100% - 3rem);
+    margin-top: var(--spacing-lg);
+    border-radius: 20px;
+  }
+  html[data-season='christmas'] #page-wrapper > main {
+    padding-top: var(--padding-md);
+  }
+}
+html[data-season='christmas'] #mfl-main {
+  max-width: 1232px;
+}
+
+/* The header is a red band with a peppermint stripe under it; the breadcrumb
+   bar above is the palette's own red. MFL Live's app bar gets the same stripe. */
+html[data-season='christmas'] .theleague-header {
+  background: #8f0f1a;
+  border-bottom: 0;
+  margin-bottom: 0;
+  box-shadow: none;
+  position: relative;
+}
+html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 8px;
+  background: repeating-linear-gradient(-45deg, #e8333f 0 10px, #fff 10px 20px);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+html[data-season='christmas'] .mfl-bar {
+  border-bottom: 0;
+}
+/* Labels that wear the league's red would vanish on the red bands. */
+html[data-season='christmas'] :is(.theleague-header .nav-label, .mfl-bar__live) {
+  color: #fff;
+}
+
+/* Live Scoring header (league boards and MFL Live): the title, week picker and
+   live pill sit over the snowed-in cabin. It stays INSIDE the sheet, with the
+   sheet's rounded corners, rather than Halloween's 100vw strip, so the frame
+   reads unbroken. Snow falls behind it all the time; LvCabinScene draws the
+   glow, windows and chimney smoke that play when the scores change. */
+html[data-season='christmas'] :is(.lv-page, .mfl-live-board) .lv-head {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  justify-content: stretch;
+  align-items: start;
+  gap: var(--spacing-md);
+  min-height: 16rem;
+  padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-lg);
+  background: #0d1424 url('/assets/seasonal/christmas/snowed-in-cabin.svg') right bottom / auto 100% no-repeat;
+  border-radius: 12px;
+  overflow: hidden;
+  isolation: isolate;
+}
+html[data-season='christmas'] :is(.lv-page, .mfl-live-board) .lv-head h1 {
+  font-size: clamp(2.25rem, 8vw, 3rem);
+  line-height: 1.05;
+  color: #fff;
+  text-shadow: 0 2px 16px rgb(0 0 0 / 0.75);
+}
+html[data-season='christmas'] :is(.lv-page, .mfl-live-board) .lv-head__right {
+  justify-content: flex-start;
+}
+html[data-season='christmas'] .lv-head > :not(.lv-haunt-scene) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Bold scores (owner's ask for the cabin board). */
+html[data-season='christmas'] :is(.lv-side__score, .lv-scorehead__score) {
+  font-weight: 800;
+}
+
+/* Snow: two layers of flakes drawn as tiled dots, each falling at its own
+   speed, so the fall never reads as one sheet sliding down. */
+.lv-cabin-scene__snow,
+.lv-cabin-scene__snow::after {
+  position: absolute;
+  inset: -200px 0 0;
+  background-image:
+    radial-gradient(circle at 15% 20%, #fff 0 1.5px, transparent 2.2px),
+    radial-gradient(circle at 60% 55%, rgb(255 255 255 / 0.8) 0 1.1px, transparent 1.8px),
+    radial-gradient(circle at 85% 80%, #fff 0 2px, transparent 2.8px);
+  background-size: 90px 100px, 60px 70px, 140px 100px;
+  animation: lv-cabin-snow 9s linear infinite;
+}
+.lv-cabin-scene__snow::after {
+  content: '';
+  inset: 0;
+  background-size: 120px 140px, 80px 90px, 170px 140px;
+  opacity: 0.6;
+  animation-duration: 14s;
+}
+@keyframes lv-cabin-snow {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-30px, 200px, 0); }
+}
+.lv-cabin-scene__glow {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lv-haunt-surge 3.2s ease-in-out both;
+}
+.lv-cabin-scene__window {
+  opacity: 0;
+  animation: lv-cabin-flicker 1.8s steps(1, end) both;
+}
+.lv-cabin-scene__window--1 { animation-delay: 0.2s; }
+/* Firelight, not a lamp in a draught: warm, bright, a soft stutter. */
+@keyframes lv-cabin-flicker {
+  0% { opacity: 1; fill: #ffcf6e; }
+  15% { opacity: 1; fill: #fff1c2; }
+  30% { opacity: 1; fill: #ffb547; }
+  45% { opacity: 1; fill: #fff1c2; }
+  70% { opacity: 0.7; fill: #ffd27a; }
+  100% { opacity: 0; fill: #ffcf6e; }
+}
+.lv-cabin-scene__smoke {
+  fill: rgb(235 240 248 / 0.55);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lv-cabin-puff 3s ease-out both;
+}
+.lv-cabin-scene__smoke--1 { animation-delay: 0.45s; }
+.lv-cabin-scene__smoke--2 { animation-delay: 0.9s; }
+@keyframes lv-cabin-puff {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-40px, -120px) scale(2.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-cabin-scene__snow,
+  .lv-cabin-scene__snow::after { animation: none; }
+  .lv-cabin-scene__glow,
+  .lv-cabin-scene__window,
+  .lv-cabin-scene__smoke { display: none; }
+}
+
+/* Roster header plates wear the club's sweater trim, knit top and bottom
+   (owner, Oct 2026). Each club's strips arrive as custom properties from the
+   seasonal mark rules (seasonal-mark-css.ts `_trim`); a plate without them
+   (a club with no drawn set) stays as it is. One height for every club, so
+   the plates line up; the stitch scales a touch to fit it. */
+html[data-season='christmas'] .rhdr__plate[data-franchise] {
+  --rhdr-trim-h: 40px;
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::before,
+html[data-season='christmas'] .rhdr__plate[data-franchise]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--rhdr-trim-h);
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::before {
+  top: 0;
+  background-image: var(--rhdr-trim-top, none);
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise]::after {
+  bottom: 0;
+  background-image: var(--rhdr-trim-bottom, none);
+}
+html[data-season='christmas'] .rhdr__plate[data-franchise] > .rhdr__inner {
+  padding-top: calc(var(--rhdr-trim-h) + 0.75rem);
+  padding-bottom: calc(var(--rhdr-trim-h) + 0.75rem);
+}
+@media (max-width: 640px) {
+  html[data-season='christmas'] .rhdr__plate[data-franchise] { --rhdr-trim-h: 30px; }
+}
+
+/* A string of lights hangs under the peppermint stripe. Every swag of wire is
+   one bulb wide, so stepping the tile one bulb at a time leaves the wire
+   still and walks the colours along it: chase lights from a single image. */
+html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -30px;
+  height: 24px;
+  background: url('/assets/seasonal/christmas/lights.svg') 0 0 / 120px 24px repeat-x;
+  pointer-events: none;
+  z-index: 5;
+  animation: xmas-lights-chase 3.2s steps(4) infinite;
+}
+@keyframes xmas-lights-chase {
+  to { background-position: 120px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-season='christmas'] :is(.theleague-header, .mfl-bar)::before { animation: none; }
+}
+
+/* A Santa hat cocked on the league crest in the header. */
+html[data-season='christmas'] .league_logo {
+  position: relative;
+}
+html[data-season='christmas'] .league_logo::after {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: -9px;
+  width: 34px;
+  height: 30px;
+  background: url('/assets/seasonal/christmas/santa-hat.svg') center / contain no-repeat;
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+/* The header band is red in a light page, so the league logo wears its cut
+   for a dark ground. */
+html[data-season='christmas'] #league_logo .header-logo-img--light { display: none; }
+html[data-season='christmas'] #league_logo .header-logo-img--dark { display: block; }
+/* "The" and ".us" read the secondary name colour, which is navy on the
+   red header; the themed palette has no slot for it, so it is set here. */
+html[data-season='christmas'] .theleague-header { --logo-name-secondary-color: #ffd9de; }
+
+/* ── Christmas: the blues that were not theme slots (owner's picks from the
+      Oct 2026 colour audit). Team colours are left alone; these are chrome. */
+
+/* Search box focus ring. */
+html[data-season='christmas'] .directory__search:focus {
+  border-color: var(--color-primary);
+}
+
+/* AFL homepage playoff preview: the seeds that are in. */
+html[data-season='christmas'] .afl-conf__seed-badge--in {
+  background: #1f7a46;
+  color: #ffffff;
+}
+
+/* AFL roster header conference rails wear the conference's mark colour (AL
+   red, NL blue); for the week the first rail is red and the second green. */
+html[data-season='christmas'] .rhdr-teams__conflabel {
+  background: #b5121b;
+}
+html[data-season='christmas'] .rhdr-teams__conf + .rhdr-teams__conf .rhdr-teams__conflabel {
+  background: #1f7a46;
+}
+
+/* MFL Live landing: the studio's navy line and second ground, and the AFL
+   row's navy wash, go to the season's red. TheLeague's row is already green. */
+html[data-season='christmas'] .mll {
+  --mll-studio-2: #1c1214;
+  --mll-studio-line: #3a1e22;
+}
+html[data-season='christmas'] .mll-row[data-league='afl-fantasy'] {
+  --league-accent-bg: #8f1219;
+}
+
+/* Playoffs: the game-status pills (live orange, final teal, scheduled indigo)
+   and the final card's navy edge. Final reads green, live and scheduled red. */
+html[data-season='christmas'] .status-final {
+  background: #e3f1e8;
+  color: #145a33;
+  border-color: rgba(31, 122, 70, 0.3);
+}
+html[data-season='christmas'] .status-scheduled {
+  background: #fdecee;
+  color: #8f1219;
+  border-color: rgba(181, 18, 27, 0.25);
+}
+html[data-season='christmas'] .status-live {
+  background: #b5121b;
+  color: #ffffff;
+  border-color: #b5121b;
+}
+html[data-season='christmas'] .matchup-card[data-status='final'] {
+  border-color: rgba(31, 122, 70, 0.35);
+}
+html[data-season='christmas'] .matchup-card[data-status='live'] {
+  border-color: #b5121b;
+}
+
+/* Draft Order: the active view tab (light-blue tile, blue icon), the blue
+   pick numbers, and the lavender dashed "to be decided" picks and their
+   legend swatch. Pick numbers go red, the to-be-decided picks evergreen. */
+html[data-season='christmas'] [data-view-selector='draft'] .view-tab[data-active='true'] {
+  background: #fdecee;
+}
+html[data-season='christmas'] [data-view-selector='draft'] .view-tab[data-active='true'] .view-tab__icon {
+  fill: var(--color-primary);
+  color: var(--color-primary);
+}
+html[data-season='christmas'] .draft-pick__number {
+  color: var(--color-primary);
+}
+html[data-season='christmas'] :is(.draft-pick--tbd, .legend-swatch--tbd) {
+  background: #e3f1e8;
+  border-color: #1f7a46;
+}
+html[data-season='christmas'] .draft-pick--tbd:hover {
+  background: #cfe7d8;
+  border-color: #145a33;
+}
+/* The special picks' 1px ring (lavender in the base grid) is a ring, not an
+   elevation, so it has no --shadow-* token; drop it and let the evergreen
+   border carry the edge. */
+html[data-season='christmas'] .draft-pick--special {
+  box-shadow: none;
 }
