@@ -61,6 +61,10 @@ const hasSample = pins.some((pin) => pin.isSample);
 
     <div class="owner-map__frame">
       <div class="owner-map__canvas" data-owner-map-canvas aria-hidden="true"></div>
+      <div class="owner-map__failed" role="status">
+        <p>The map could not load. The list below has every team.</p>
+        <p class="owner-map__failed-detail" data-owner-map-error></p>
+      </div>
       <div class="owner-map__panel" data-owner-map-panel hidden>
         <button type="button" class="owner-map__panel-close" data-owner-map-panel-close aria-label="Close">×</button>
         <div class="om-pop" data-owner-map-panel-rows></div>
@@ -106,7 +110,12 @@ const hasSample = pins.some((pin) => pin.isSample);
       })
       .catch((error) => {
         console.error('[owner-map] failed to start', error);
-        root.querySelector('.owner-map__frame')?.classList.add('owner-map__frame--failed');
+        const frame = root.querySelector<HTMLElement>('.owner-map__frame');
+        if (!frame) return;
+        frame.classList.add('owner-map__frame--failed');
+        // Test page: say WHY on screen, since a phone has no console to read.
+        const detail = frame.querySelector<HTMLElement>('[data-owner-map-error]');
+        if (detail) detail.textContent = error instanceof Error ? error.message : String(error);
       });
   });
 
@@ -164,15 +173,28 @@ const hasSample = pins.some((pin) => pin.isSample);
     position: absolute;
     inset: 0;
   }
-  .owner-map__frame--failed::after {
-    content: 'The map could not load. The list below has every owner.';
+  .owner-map__failed {
+    display: none;
+  }
+  .owner-map__frame--failed .owner-map__failed {
     position: absolute;
     inset: 0;
-    display: grid;
-    place-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     padding: 1rem;
     text-align: center;
     color: var(--content-text-muted, #555);
+  }
+  .owner-map__failed p {
+    margin: 0;
+  }
+  .owner-map__failed-detail {
+    font-family: var(--font-family-mono, monospace);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
   }
 
   .owner-map__list-section {

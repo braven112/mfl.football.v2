@@ -254,6 +254,12 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   const panelRows = root.querySelector<HTMLElement>('[data-owner-map-panel-rows]');
   const panelClose = root.querySelector<HTMLButtonElement>('[data-owner-map-panel-close]');
 
+  // MapLibre 5 draws with WebGL 2 only; say so plainly rather than let the
+  // constructor fail with a GL error.
+  if (!document.createElement('canvas').getContext('webgl2')) {
+    throw new Error('This browser has WebGL 2 turned off or unsupported, which the map needs.');
+  }
+
   const [{ default: maplibregl }, geo] = await Promise.all([
     import('maplibre-gl'),
     loadGeo(),
