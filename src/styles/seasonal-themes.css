@@ -680,6 +680,9 @@ html[data-season='christmas'] .draft-pick--tbd:hover {
   background: #cfe7d8;
   border-color: #145a33;
 }
+/* The special picks' 1px ring (lavender in the base grid) is a ring, not an
+   elevation, so it has no --shadow-* token; drop it and let the evergreen
+   border carry the edge. */
 html[data-season='christmas'] .draft-pick--special {
-  box-shadow: 0 0 0 1px rgba(31, 122, 70, 0.2);
+  box-shadow: none;
 }
