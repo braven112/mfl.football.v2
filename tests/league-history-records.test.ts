@@ -1,0 +1,140 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildHistoryDataset, holdingsBySeason } from '../src/utils/league-history/dataset.mjs';
+import { buildCategory, indexDataset, recordBook } from '../src/utils/league-history/records.mjs';
+
+/**
+ * League History engine — the owner attribution the Record Book groups by, and
+ * the board definitions that are easy to get wrong (doubleheaders, what counts
+ * as a postseason game, shared ranks, minimum games).
+ */
+
+const tenures = {
+  owners: [
+    { ownerId: 'own-a', displayName: 'Ann', slug: 'ann', tenures: [{ franchiseId: '0001', seasons: [{ year: 2020 }, { year: 2021 }] }] },
+    // Bea moves from slot 0002 to slot 0003 and keeps one career.
+    { ownerId: 'own-b', displayName: 'Bea', slug: 'bea', tenures: [
+      { franchiseId: '0002', seasons: [{ year: 2020 }] },
+      { franchiseId: '0003', seasons: [{ year: 2021 }] },
+    ] },
+    // Co-owners share slot 0002 in 2021.
+    { ownerId: 'own-c', displayName: 'Cy', slug: 'cy', tenures: [{ franchiseId: '0002', seasons: [{ year: 2021 }] }] },
+    { ownerId: 'own-d', displayName: 'Di', slug: 'di', tenures: [{ franchiseId: '0002', seasons: [{ year: 2021 }] }] },
+  ],
+};
+
+const row = (year: number, franchiseId: string, extra: Record<string, unknown> = {}) => ({
+  year, franchiseId, name: `Team ${franchiseId}`, wins: 1, losses: 1, ties: 0, pointsFor: 200,
+  divisionName: 'East', playoffResult: 'missed', ...extra,
+});
+
+const ledgerRows = [
+  row(2020, '0001', { playoffResult: 'champion' }),
+  row(2020, '0002', { playoffResult: 'runner-up' }),
+  row(2020, '0003'),
+  row(2021, '0001', { playoffResult: 'champion' }),
+  row(2021, '0002'),
+  row(2021, '0003', { playoffResult: 'runner-up' }),
+];
+
+const g = (year: number, week: number, winnerId: string, winnerScore: number, loserId: string, loserScore: number, isPlayoff = false) =>
+  ({ year, week, winnerId, winnerScore, loserId, loserScore, isPlayoff });
+
+const games = [
+  // 2020 week 1 is a doubleheader: 0001's one weekly score counts in two games.
+  g(2020, 1, '0001', 150, '0002', 100),
+  g(2020, 1, '0001', 150, '0003', 90),
+  g(2020, 2, '0002', 120, '0003', 110),
+  g(2020, 3, '0001', 130, '0002', 125, true), // final: both made the playoffs
+  g(2020, 3, '0003', 140, '0002', 60, true), // consolation: 0003 missed
+  g(2021, 1, '0003', 99, '0002', 99), // tie
+  g(2021, 2, '0001', 101, '0003', 100, true),
+];
+
+const ds = buildHistoryDataset({ league: 'test', games, ledgerRows, ownerTenures: tenures, firstPlayoffWeeks: { 2020: 3, 2021: 2 } });
+
+describe('League History dataset', () => {
+  it('credits each season to its holding, co-owners as one sorted set', () => {
+    const h = holdingsBySeason(tenures);
+    expect(h.get('0002|2020')).toBe('own-b');
+    expect(h.get('0003|2021')).toBe('own-b');
+    expect(h.get('0002|2021')).toBe('own-c+own-d');
+  });
+
+  it('falls back to the franchise slot when no owner is on record', () => {
+    const d = buildHistoryDataset({ league: 't', games: [], ledgerRows: [row(2019, '0009')], ownerTenures: { owners: [] } });
+    expect(d.seasons[0].teams['0009'].h).toBe('slot:0009');
+  });
+
+  it('packs games as sorted tuples and marks a season done once it has a champion', () => {
+    expect(ds.games[0]).toEqual([2020, 1, '0001', 150, '0002', 100, 0]);
+    expect(ds.games).toHaveLength(games.length);
+    expect(ds.seasons.map((s) => s.done)).toEqual([1, 1]);
+    expect(ds.seasons[0].teams['0001'].r).toBe('C');
+  });
+});
+
+describe('Record Book boards', () => {
+  const ix = indexDataset(ds);
+  const board = (cat: string, id: string, scope = 'all') =>
+    buildCategory(ix, cat, scope).find((b: { id: string }) => b.id === id);
+
+  it('counts a doubleheader score once on a score board', () => {
+    const rows = board('single-game', 'most-points').rows;
+    expect(rows.filter((r: { value: number }) => r.value === 150)).toHaveLength(1);
+  });
+
+  it('keeps consolation games out of postseason and career totals', () => {
+    const playoffs = board('career', 'career-wins', 'playoffs').rows;
+    const holders = Object.fromEntries(playoffs.map((r: { entity: { key: string }; value: number }) => [r.entity.key, r.value]));
+    // 0003's 140-60 consolation win is not a playoff win.
+    expect(holders['slot:0003']).toBeUndefined();
+    expect(holders['own-a']).toBe(2);
+    // ...but it is still a single-game score under "All games".
+    expect(board('single-game', 'biggest-win').rows[0].value).toBe(80);
+  });
+
+  it('follows an owner across slots and gives tied values a shared rank', () => {
+    const wins = board('career', 'career-wins', 'regular').rows;
+    const bea = wins.find((r: { entity: { key: string } }) => r.entity.key === 'own-b');
+    // Bea: 2020 week 2 win as 0002; the 2021 tie as 0003 is not a win.
+    expect(bea.value).toBe(1);
+    expect(bea.entity.name).toBe('Bea');
+    const coOwned = wins.find((r: { entity: { key: string } }) => r.entity.key === 'own-c+own-d');
+    expect(coOwned?.entity.name).toBe('Cy & Di');
+    const ranks = board('postseason', 'titles').rows.map((r: { rank: number }) => r.rank);
+    expect(ranks).toEqual([1]);
+  });
+
+  it('holds back rate boards until the minimum games', () => {
+    expect(board('career', 'career-pct', 'regular').rows).toEqual([]);
+  });
+
+  it('caches boards per dataset', () => {
+    const book = recordBook(ds);
+    expect(recordBook(ds)).toBe(book);
+    expect(book.category('season')).toBe(book.category('season'));
+  });
+});
+
+describe('League History data files', () => {
+  it.each(['theleague', 'afl-fantasy'])('%s: every game names two teams of its own season', (slug) => {
+    const file = JSON.parse(readFileSync(join(__dirname, '..', 'data', slug, 'derived', 'league-history.json'), 'utf8'));
+    expect(file.league).toBe(slug);
+    const teams = new Map(file.seasons.map((s: { y: number; teams: object }) => [s.y, s.teams]));
+    for (const [y, , wf, ws, lf, ls] of file.games) {
+      const t = teams.get(y) as Record<string, unknown>;
+      expect(t?.[wf], `${y} ${wf}`).toBeTruthy();
+      expect(t?.[lf], `${y} ${lf}`).toBeTruthy();
+      expect(ws).toBeGreaterThanOrEqual(ls);
+    }
+    for (const s of file.seasons) {
+      for (const t of Object.values(s.teams) as Array<{ h: string }>) {
+        for (const id of t.h.split('+')) {
+          if (!id.startsWith('slot:')) expect(file.owners[id], `${s.y} ${id}`).toBeTruthy();
+        }
+      }
+    }
+  });
+});

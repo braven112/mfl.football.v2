@@ -61,6 +61,8 @@ export const LEAGUE_JOBS = {
   'division-strength': (l) => syncs(l) && hasPage(l, 'division-strength.astro'),
   /** prebuild + roster-sync.yml: the Top Players leaderboard — for leagues that HAVE the page. */
   'top-players': (l) => syncs(l) && hasPage(l, 'top-players.astro'),
+  /** prebuild: the League History dataset — for leagues with the Record Book page. */
+  'league-history': (l) => syncs(l) && hasPage(l, 'history/record-book.astro'),
 
   // ── Schedule: leagues whose schedule this site draws ───────────────────
   /** schedule-release.yml: the draw. A league without a policy keeps MFL's own schedule. */

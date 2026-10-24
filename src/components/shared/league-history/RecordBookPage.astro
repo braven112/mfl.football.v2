@@ -1,0 +1,628 @@
+---
+/**
+ * Record Book — every league record, shared by TheLeague and the AFL.
+ *
+ * Boards come from `recordBook()` (src/utils/league-history/records.mjs) over
+ * the League History dataset the route imports. Every board MFLHistory.com
+ * shows is here (single game, season, career, postseason, milestones); what
+ * this page adds is the Trophy Room presentation: the record holder on a
+ * plaque, the three chasing them as tiles, the rest as ranked bars.
+ *
+ * Grouped by OWNER (the product default, Brandon 2026-10-24), so a career
+ * follows the person across franchise slots and a slot's earlier owner keeps
+ * theirs.
+ *
+ * Zero client JS: category, scope and board are all URL params switched by
+ * links (pills filter the same leaderboard, so they are pills, not tabs), and
+ * every view is bookmarkable.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import { CATEGORIES, SCOPES, recordBook } from '../../../utils/league-history/records.mjs';
+
+interface Row {
+  value: number;
+  display: string;
+  name: string;
+  icon: string | null;
+  owner: string | null;
+  context: string;
+  rank: number;
+  unit?: string;
+  entity: { key: string; name: string; franchiseId: string | null; ownerSlug: string | null };
+}
+interface Board {
+  id: string;
+  label: string;
+  title: string;
+  note?: string;
+  rows: Row[];
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: unknown;
+}
+
+const { leagueSlug, data } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const BASE = '/history/record-book';
+
+const SCOPE_LABEL: Record<string, string> = {
+  all: 'All games',
+  regular: 'Regular season',
+  playoffs: 'Playoffs',
+};
+
+const book = recordBook(data);
+const facts = book.facts();
+const params = Astro.url.searchParams;
+const category = CATEGORIES.find((c) => c.id === params.get('cat')) ?? CATEGORIES[0];
+const scopeParam = params.get('scope') ?? 'all';
+const scope = category.scoped && SCOPES.includes(scopeParam) ? scopeParam : 'all';
+const boards = book.category(category.id, scope) as Board[];
+const board = boards.find((b) => b.id === params.get('board')) ?? boards[0];
+
+/** A view's URL, leaving defaults out so the plain page stays the plain URL. */
+const viewHref = (next: { cat?: string; scope?: string; board?: string }) => {
+  const q = new URLSearchParams();
+  const cat = next.cat ?? category.id;
+  if (cat !== CATEGORIES[0].id) q.set('cat', cat);
+  const sc = next.scope ?? 'all';
+  if (sc !== 'all') q.set('scope', sc);
+  if (next.board) q.set('board', next.board);
+  const qs = q.toString();
+  return qs ? `${r(BASE)}?${qs}` : r(BASE);
+};
+
+const rows = board?.rows ?? [];
+const leader = rows[0];
+const tiedAtTop = rows.filter((row) => row.rank === 1).length;
+const chasers = rows.slice(1, 4);
+const rest = rows.slice(4);
+
+// Bars rank the shown rows against each other: the leader fills the track and
+// the tenth place still shows a stub, whichever direction the board sorts.
+const best = rows[0]?.value ?? 0;
+const worst = rows[rows.length - 1]?.value ?? 0;
+const barWidth = (value: number) =>
+  best === worst ? 100 : Math.round(35 + (65 * (value - worst)) / (best - worst));
+
+const ownerHref = (row: Row) => (row.entity.ownerSlug ? r(`/owners/${row.entity.ownerSlug}`) : null);
+const accent = (row: Row) =>
+  row.entity.franchiseId ? teamAccentVar(row.entity.franchiseId, 'var(--history-gold)') : 'var(--history-gold)';
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+const sub = (row: Row) => [row.owner, row.context].filter(Boolean).join(' · ');
+const unit = (row: Row) => (row.unit ? ` ${row.unit}` : '');
+
+const others = boards.filter((b) => b.id !== board?.id && b.rows.length);
+const pageTitle = `Record Book · ${league.name}`;
+const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${facts.lastSeason}` : '';
+---
+
+<TheLeagueLayout title={pageTitle}>
+  <div class="rb">
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'History' },
+        { label: 'Record Book' },
+      ]}
+    />
+
+    <header class="rb-head">
+      <p class="rb-kicker">League history · {span}</p>
+      <h1 class="rb-title">Record Book</h1>
+      <p class="rb-facts">
+        <span><b>{facts.seasons}</b> seasons</span>
+        <span><b>{facts.games.toLocaleString('en-US')}</b> games</span>
+        <span><b>{facts.champions}</b> different champions</span>
+      </p>
+    </header>
+
+    <nav class="rb-nav" aria-label="Record categories">
+      <ul class="ui-pills rb-pills">
+        {CATEGORIES.map((c) => (
+          <li>
+            <a class="ui-pill" href={viewHref({ cat: c.id })} aria-current={c.id === category.id ? 'page' : undefined}>
+              {c.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {category.scoped && (
+        <ul class="ui-pills rb-pills rb-pills--scope" aria-label="Games counted">
+          {SCOPES.map((s) => (
+            <li>
+              <a
+                class="ui-pill"
+                href={viewHref({ scope: s, board: board?.id })}
+                aria-current={s === scope ? 'true' : undefined}
+              >
+                {SCOPE_LABEL[s]}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </nav>
+
+    <section class="rb-board" aria-labelledby="rb-board-title">
+      <ul class="ui-pills rb-pills rb-pills--boards" aria-label="Records">
+        {boards.map((b) => (
+          <li>
+            <a
+              class="ui-pill"
+              href={viewHref({ scope, board: b.id })}
+              aria-current={b.id === board?.id ? 'true' : undefined}
+            >
+              {b.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <h2 class="rb-board__title" id="rb-board-title">
+        {board?.title ?? 'No records yet'}
+        {category.scoped && scope !== 'all' && <span class="rb-board__scope"> · {SCOPE_LABEL[scope]}</span>}
+      </h2>
+      {board?.note && <p class="rb-board__note">{board.note}</p>}
+
+      {leader ? (
+        <>
+          <article class="rb-plaque" style={`--rb-team: ${accent(leader)}`}>
+            <p class="rb-plaque__label">{tiedAtTop > 1 ? `Record · shared by ${tiedAtTop}` : 'The record'}</p>
+            {leader.icon ? (
+              <img class="rb-plaque__logo" src={leader.icon} alt="" width="88" height="88" loading="eager" />
+            ) : (
+              <span class="rb-plaque__logo rb-plaque__logo--blank" aria-hidden="true">{initials(leader.name)}</span>
+            )}
+            <p class="rb-plaque__value">
+              {leader.display}
+              {leader.unit && <span class="rb-plaque__unit">{leader.unit}</span>}
+            </p>
+            <p class="rb-plaque__name">
+              {ownerHref(leader) ? <a href={ownerHref(leader)}>{leader.name}</a> : leader.name}
+            </p>
+            <p class="rb-plaque__context">{sub(leader)}</p>
+          </article>
+
+          {chasers.length > 0 && (
+            <ol class="rb-chasers" aria-label="Next on the list">
+              {chasers.map((row) => (
+                <li class="rb-tile" style={`--rb-team: ${accent(row)}`}>
+                  <span class="rb-tile__rank">{row.rank}</span>
+                  {row.icon ? (
+                    <img class="rb-tile__logo" src={row.icon} alt="" width="40" height="40" loading="lazy" />
+                  ) : (
+                    <span class="rb-tile__logo rb-tile__logo--blank" aria-hidden="true">{initials(row.name)}</span>
+                  )}
+                  <span class="rb-tile__value">{row.display}<span class="visually-hidden">{unit(row)}</span></span>
+                  <span class="rb-tile__name">
+                    {ownerHref(row) ? <a href={ownerHref(row)}>{row.name}</a> : row.name}
+                  </span>
+                  <span class="rb-tile__context">{sub(row)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {rest.length > 0 && (
+            <ol class="rb-rows" aria-label="The rest of the top ten">
+              {rest.map((row) => (
+                <li class="rb-row" style={`--rb-team: ${accent(row)}; --rb-bar: ${barWidth(row.value)}%`}>
+                  <span class="rb-row__rank">{row.rank}</span>
+                  {row.icon ? (
+                    <img class="rb-row__logo" src={row.icon} alt="" width="28" height="28" loading="lazy" />
+                  ) : (
+                    <span class="rb-row__logo rb-row__logo--blank" aria-hidden="true">{initials(row.name)}</span>
+                  )}
+                  <span class="rb-row__body">
+                    <span class="rb-row__name">
+                      {ownerHref(row) ? <a href={ownerHref(row)}>{row.name}</a> : row.name}
+                    </span>
+                    <span class="rb-row__context">{sub(row)}</span>
+                    <span class="rb-row__bar" aria-hidden="true"></span>
+                  </span>
+                  <span class="rb-row__value">{row.display}<span class="visually-hidden">{unit(row)}</span></span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      ) : (
+        <p class="rb-empty">Nothing on this board yet.</p>
+      )}
+    </section>
+
+    {others.length > 0 && (
+      <section class="rb-more" aria-labelledby="rb-more-title">
+        <h2 class="rb-more__title" id="rb-more-title">More {category.label.toLowerCase()} records</h2>
+        <ul class="rb-more__grid">
+          {others.map((b) => {
+            const top = b.rows[0];
+            return (
+              <li>
+                <a class="rb-holder" href={viewHref({ scope, board: b.id })} style={`--rb-team: ${accent(top)}`}>
+                  <span class="rb-holder__label">{b.title}</span>
+                  <span class="rb-holder__value">
+                    {top.display}{top.unit && <small> {top.unit}</small>}
+                  </span>
+                  <span class="rb-holder__name">{top.name}</span>
+                  <span class="rb-holder__context">{top.context}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rb {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+
+  /* ── Header ───────────────────────────────────────────────────────────── */
+  .rb-head {
+    margin: 0.5rem 0 1rem;
+  }
+  .rb-kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rb-title {
+    margin: 0.125rem 0 0.375rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 7vw, 3.5rem);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .rb-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .rb-facts b {
+    color: var(--page-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Pills ────────────────────────────────────────────────────────────── */
+  .rb-nav {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .rb-pills--scope {
+    --ui-pill-tone: var(--history-gold);
+    --ui-pill-ink: var(--history-gold);
+  }
+  .rb-pills--boards {
+    margin-bottom: 1rem;
+  }
+
+  /* ── The board ────────────────────────────────────────────────────────── */
+  .rb-board {
+    padding: 1rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .rb-board__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 4.5vw, 2rem);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .rb-board__scope {
+    color: var(--content-text-muted);
+  }
+  .rb-board__note {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .rb-empty {
+    color: var(--content-text-muted);
+  }
+
+  /* The record holder, on a plaque. */
+  .rb-plaque {
+    position: relative;
+    margin-top: 1rem;
+    padding: 1.25rem 1rem 1rem;
+    overflow: hidden;
+    text-align: center;
+    background: linear-gradient(160deg, var(--card-bg) 20%, var(--history-gold-wash));
+    border: 1px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .rb-plaque::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--rb-team);
+  }
+  .rb-plaque p {
+    margin: 0;
+  }
+  .rb-plaque__label {
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rb-plaque__logo {
+    display: block;
+    width: 88px;
+    height: 88px;
+    margin: 0.5rem auto 0.375rem;
+    object-fit: contain;
+  }
+  .rb-plaque__value {
+    font-family: var(--font-display);
+    font-size: clamp(3.25rem, 14vw, 4.5rem);
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-plaque__unit {
+    margin-left: 0.25rem;
+    font-size: 0.35em;
+    color: var(--content-text-muted);
+    text-transform: uppercase;
+  }
+  .rb-plaque__name {
+    margin-top: 0.375rem !important;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+  }
+  .rb-plaque__context {
+    margin-top: 0.25rem !important;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Places 2 to 4, as tiles. */
+  .rb-chasers {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rb-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0.625rem 0.375rem 0.5rem;
+    text-align: center;
+    background: var(--content-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-top: 3px solid var(--rb-team);
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--radius-md, 12px);
+  }
+  .rb-tile__rank {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.5rem;
+    color: var(--history-gold);
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .rb-tile__logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+  .rb-tile__value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-tile__name {
+    max-width: 100%;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .rb-tile__context {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    line-height: 1.25;
+  }
+
+  /* Places 5 to 10, as ranked bars. */
+  .rb-rows {
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rb-row {
+    display: grid;
+    grid-template-columns: 1.5rem 28px minmax(0, 1fr) auto;
+    gap: 0.625rem;
+    align-items: center;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .rb-row:last-child {
+    border-bottom: 0;
+  }
+  .rb-row__rank {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .rb-row__logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+  .rb-row__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .rb-row__name {
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.2;
+  }
+  .rb-row__context {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    line-height: 1.3;
+  }
+  .rb-row__bar {
+    width: var(--rb-bar);
+    height: 4px;
+    margin-top: 0.375rem;
+    background: var(--rb-team);
+    border-radius: 2px;
+  }
+  .rb-row__value {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Initials where a season has no logo. */
+  .rb-plaque__logo--blank,
+  .rb-tile__logo--blank,
+  .rb-row__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--rb-team);
+    color: var(--color-white);
+    font-weight: var(--font-weight-bold);
+  }
+  .rb-plaque__logo--blank {
+    font-size: 2rem;
+  }
+  .rb-tile__logo--blank,
+  .rb-row__logo--blank {
+    font-size: var(--font-size-xs);
+  }
+
+  .rb-board a,
+  .rb-board a:hover {
+    color: inherit;
+  }
+  .rb-board a:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Other boards' holders ────────────────────────────────────────────── */
+  .rb-more {
+    margin-top: 1.5rem;
+  }
+  .rb-more__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    text-transform: uppercase;
+  }
+  .rb-more__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rb-holder,
+  .rb-holder:hover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    height: 100%;
+    padding: 0.75rem;
+    color: var(--page-text);
+    text-decoration: none;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-left: 4px solid var(--rb-team);
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--radius-md, 12px);
+  }
+  .rb-holder:hover {
+    border-color: var(--history-gold);
+    border-left-color: var(--rb-team);
+  }
+  .rb-holder__label {
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rb-holder__value {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-holder__value small {
+    font-size: 0.5em;
+    color: var(--content-text-muted);
+    text-transform: uppercase;
+  }
+  .rb-holder__name {
+    font-weight: var(--font-weight-semibold);
+  }
+  .rb-holder__context {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  @media (min-width: 768px) {
+    .rb-board {
+      padding: 1.5rem;
+    }
+    .rb-tile__value {
+      font-size: 1.875rem;
+    }
+  }
+</style>

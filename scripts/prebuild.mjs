@@ -128,9 +128,17 @@ const PARALLEL = [
   // without moving either onto the sequential critical path. (Both read the
   // season ledgers that compute:franchise-history writes in SEQUENTIAL above;
   // PARALLEL starts only after SEQUENTIAL finishes, so that half holds already.)
+  //
+  // The League History dataset (Record Book) joins the same chain: it reads the
+  // owner tenures to credit each season to its owner. One command per league
+  // with the page (league-jobs `league-history`).
   {
-    name: 'compute:owner-tenures → division-strength',
-    cmd: 'pnpm run compute:owner-tenures && pnpm run compute:division-strength',
+    name: 'compute:owner-tenures → division-strength → league-history',
+    cmd: [
+      'pnpm run compute:owner-tenures',
+      'pnpm run compute:division-strength',
+      ...leaguesFor('league-history').map((l) => `pnpm run compute:league-history --league=${l.slug}`),
+    ].join(' && '),
     previewSkip: true,
   },
   { name: 'fetch:live:lineups', cmd: 'pnpm run fetch:live:lineups', previewSkip: true },

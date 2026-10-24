@@ -17,6 +17,10 @@ html.dark {
      links, header chrome, nav) is NOT declared here — each league's theme
      owns its dark values in src/themes/<id>.json, compiled to
      src/styles/league-themes.generated.css. See src/config/theme-tokens.mjs. */
+  /* League History gold (tokens.css): the footer's trophy gold reads on a
+     dark ground, and the wash darkens to a warm card. */
+  --history-gold: #e6c976;
+  --history-gold-wash: #2e2614;
   /* ========================================
      Colors - Dark Mode Theme
      ======================================== */

@@ -15,6 +15,8 @@ const GATED = {
 	view: [
 		'src/pages/history/index.astro',
 		'src/pages/history/mfl/[id].astro',
+		'src/pages/theleague/history/record-book.astro',
+		'src/pages/afl-fantasy/history/record-book.astro',
 		'src/pages/api/league-history/mfl/build.ts',
 		'src/pages/api/og/league-history/mfl/[id]/[year].png.ts',
 	],
