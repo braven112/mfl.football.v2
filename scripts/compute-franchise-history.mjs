@@ -18,15 +18,20 @@
  * Writes:
  *   <data>/derived/franchise-history.json
  *
- * AFL CAVEAT (read before trusting AFL rivalry/highlight numbers): MFL's
- * archived schedule + weeklyResults exports for AFL 2007-2019 contain only
- * weeks 14-17 — the regular-season weeks come back as a flat franchise[] with
- * no opponent, so those meetings cannot be reconstructed. AFL career H2H
- * therefore under-counts those years and skews toward postseason games until
- * `node scripts/backfill-historical-feeds.mjs --league=afl` recovers them
- * (that script now detects the hole instead of caching it). 2003 is scores-only
- * and contributes nothing. Coverage is reported per year in this script's
- * output so the gap is visible rather than silently baked into a career total.
+ * AFL HISTORY (corrected 2026-10-24): MFL's export API returns AFL 2007-2019
+ * regular-season weeks with the opponent stripped, but every one of those
+ * seasons was RECOVERED in Aug 2026 from the rendered "By Franchise" schedule
+ * (scripts/recover-afl-schedule-from-html.mjs) into the committed
+ * schedule.json, so AFL head-to-head is complete for 2004-present. Only 2003
+ * is scores-only and contributes nothing. An older version of this note said
+ * the regular season was missing; it was stale, and it led a later session to
+ * tell the owner that pre-2020 AFL series records were playoffs-only. Read
+ * `h2hCoverage` in the output (or `node scripts/report-h2h-coverage.mjs`)
+ * rather than trusting a comment about coverage.
+ *
+ * What rivalry surfaces DO leave out on purpose is games played under a slot's
+ * former owner (owner-scoping, `bothAttributed`) — so an all-time pairing can
+ * show fewer meetings there than record-book.json, which counts every game.
  */
 
 import fs from 'node:fs';

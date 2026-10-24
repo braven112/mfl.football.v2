@@ -10,7 +10,8 @@
  *
  * H2H pairings are the one input rivalry pages cannot be derived without
  * (weekly-results.json is {franchiseId: score} with no opponent), and MFL's
- * archived exports for AFL 2007-2019 carry postseason weeks only.
+ * archived exports for AFL 2007-2019 carry postseason weeks only (since
+ * recovered from the rendered schedule; this report is how you confirm it).
  *
  * Usage:
  *   node scripts/report-h2h-coverage.mjs --league=afl
