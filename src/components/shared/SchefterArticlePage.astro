@@ -18,6 +18,7 @@ import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { postByline } from '../../utils/persona-server';
 import type { GauntletDerived } from '../../utils/schedule-strength';
 import '../../styles/schefter-feed.css';
+import '../../styles/schefter-article.css';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -101,7 +102,3 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
     </div>
   </div>
 </TheLeagueLayout>
-
-<style>
-  .sf-article { max-width: 40rem; margin: 0 auto; padding: 1rem 0; }
-</style>
