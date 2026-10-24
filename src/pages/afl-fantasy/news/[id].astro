@@ -19,6 +19,7 @@ import { personaLabels } from '../../../utils/persona.mjs';
 import { getSchefterFeedBySlug } from '../../../utils/schefter-league-data';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
+import '../../../styles/schefter-article.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
 import MatchupPreviewSection from '../../../components/shared/matchup-preview/MatchupPreviewSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
@@ -170,12 +171,3 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
     </div>
   </div>
 </TheLeagueLayout>
-
-<style>
-  .sf-article {
-    max-width: 40rem;
-    margin: 0 auto;
-    padding: 1rem 0;
-  }
-
-</style>
