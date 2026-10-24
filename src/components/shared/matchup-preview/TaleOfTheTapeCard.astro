@@ -89,7 +89,7 @@ else if (!series.disputed) {
         <div class="tape__id">
           {team.icon && <img class="mpv-logo" src={team.icon} alt="" width="36" height="36" loading="lazy" />}
           <div class="tape__id-text">
-            <span class={`tape__name tape__name--${key}`}>{team.name}</span>
+            <span class={`tape__name tape__name--${key}`}>{team.short}</span>
             {side.ppg != null && <small class="mpv-num">{side.ppg.toFixed(1)} PPG</small>}
           </div>
         </div>
@@ -169,28 +169,20 @@ else if (!series.disputed) {
 
   .tape__id {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     min-width: 0;
   }
 
-  /* Beside the logo while the name's longest word fits there; on its own
-     line under the logo when it does not. A name breaks only between words. */
   .tape__id-text {
     display: grid;
-    flex: 1 1 0;
-    min-width: min-content;
-    max-width: 100%;
+    min-width: 0;
   }
 
   .tape__name {
     font-weight: 700;
     font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.15;
-    /* break-word, not anywhere: it leaves the longest word as the name's
-       min-content width, which is what moves the name under the logo below
-       instead of splitting "Midwestside" into "Midwestsid / e". */
     overflow-wrap: break-word;
   }
 

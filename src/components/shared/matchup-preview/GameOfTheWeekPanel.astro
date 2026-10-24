@@ -25,8 +25,6 @@ const { a, b, series, teamA, teamB, rivalryHref } = Astro.props;
 
 const record = (s: MatchupVisualsSide) => `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`;
 const short = (id: string | null) => (id === a.franchiseId ? teamA.short : id === b.franchiseId ? teamB.short : '');
-/** The longest word in a name, for .mpv-fit (matchup-preview.css). */
-const longestWord = (name: string) => Math.max(...name.split(/\s+/).map((w) => w.length));
 const accentA = teamAccentVar(a.franchiseId, 'var(--sf-text-primary)');
 const accentB = teamAccentVar(b.franchiseId, 'var(--sf-text-secondary)');
 
@@ -67,7 +65,7 @@ const bars = meetings.map((m, i) => {
   <div class="gotw__head">
     <div class="gotw__team">
       {teamA.icon && <img class="mpv-logo" src={teamA.icon} alt="" width="52" height="52" loading="lazy" />}
-      <span class="gotw__name gotw__name--a mpv-fit" style={`--mpv-word: ${longestWord(teamA.name)}`}>{teamA.name}</span>
+      <span class="gotw__name gotw__name--a">{teamA.short}</span>
       <span class="gotw__rec">{record(a)}{a.streak && <> · {a.streak}</>}</span>
     </div>
     <div class="gotw__series" aria-label={`All-time series ${teamA.short} ${series.aWins}, ${teamB.short} ${series.bWins}${series.ties ? `, ${series.ties} ties` : ''}`}>
@@ -78,7 +76,7 @@ const bars = meetings.map((m, i) => {
     </div>
     <div class="gotw__team">
       {teamB.icon && <img class="mpv-logo" src={teamB.icon} alt="" width="52" height="52" loading="lazy" />}
-      <span class="gotw__name gotw__name--b mpv-fit" style={`--mpv-word: ${longestWord(teamB.name)}`}>{teamB.name}</span>
+      <span class="gotw__name gotw__name--b">{teamB.short}</span>
       <span class="gotw__rec">{record(b)}{b.streak && <> · {b.streak}</>}</span>
     </div>
   </div>
@@ -170,7 +168,6 @@ const bars = meetings.map((m, i) => {
   }
 
   .gotw__team {
-    container-type: inline-size;
     display: grid;
     justify-items: center;
     gap: 0.25rem;
@@ -180,8 +177,9 @@ const bars = meetings.map((m, i) => {
 
   .gotw__name {
     font-weight: 700;
-    --mpv-fit-max: var(--font-size-sm, 0.875rem);
+    font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.15;
+    overflow-wrap: break-word;
   }
 
   .gotw__name--a { color: var(--mpv-a); }
