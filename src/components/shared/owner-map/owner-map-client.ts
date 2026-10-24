@@ -188,8 +188,35 @@ function pinsGeoJson(pins: OwnerMapPin[]): GeoJSON.FeatureCollection<GeoJSON.Poi
   };
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+/**
+ * Pins arrive as JSON text from the page, so every URL in one is re-checked
+ * before it reaches an attribute: only a same-origin path or an https URL is
+ * used, never a `javascript:` or `data:` one.
+ */
+function safeUrl(value: string): string {
+  try {
+    const url = new URL(value, window.location.href);
+    if (url.protocol === 'https:' || url.origin === window.location.origin) return url.href;
+  } catch {
+    // fall through
+  }
+  return '';
+}
+
+function iconImg(pin: OwnerMapPin, className?: string): HTMLImageElement {
+  const img = document.createElement('img');
+  img.src = safeUrl(pin.icon);
+  img.alt = '';
+  img.decoding = 'async';
+  if (className) img.className = className;
+  return img;
+}
+
+function span(className: string, text: string): HTMLSpanElement {
+  const el = document.createElement('span');
+  el.className = className;
+  el.textContent = text;
+  return el;
 }
 
 /**
@@ -200,28 +227,22 @@ function escapeHtml(value: string): string {
 function iconBadge(pin: OwnerMapPin): HTMLSpanElement {
   const badge = document.createElement('span');
   badge.className = 'om-marker__icon';
-  const img = document.createElement('img');
-  img.src = pin.icon;
-  img.alt = '';
-  img.decoding = 'async';
-  badge.appendChild(img);
+  badge.appendChild(iconImg(pin));
   return badge;
 }
 
-function panelRowsHtml(pins: OwnerMapPin[]): string {
-  const rows = pins
-    .map(
-      (pin) => `
-        <a class="om-pop__row" href="${escapeHtml(pin.href)}">
-          <img class="om-pop__icon" src="${escapeHtml(pin.icon)}" alt="" />
-          <span class="om-pop__text">
-            <span class="om-pop__team">${escapeHtml(pin.teamName)}</span>
-            <span class="om-pop__meta">${escapeHtml(pin.ownerName)} · ${escapeHtml(pin.city.name)}, ${escapeHtml(pin.city.region)}</span>
-          </span>
-        </a>`,
-    )
-    .join('');
-  return rows;
+function panelRow(pin: OwnerMapPin): HTMLAnchorElement {
+  const row = document.createElement('a');
+  row.className = 'om-pop__row';
+  row.href = safeUrl(pin.href);
+  row.appendChild(iconImg(pin, 'om-pop__icon'));
+  const text = span('om-pop__text', '');
+  text.append(
+    span('om-pop__team', pin.teamName),
+    span('om-pop__meta', `${pin.ownerName} · ${pin.city.name}, ${pin.city.region}`),
+  );
+  row.appendChild(text);
+  return row;
 }
 
 export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
@@ -264,7 +285,7 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   // of a phone-width map runs off the frame.
   function openPanel(group: OwnerMapPin[]) {
     if (!panel || !panelRows) return;
-    panelRows.innerHTML = panelRowsHtml(group);
+    panelRows.replaceChildren(...group.map(panelRow));
     panel.hidden = false;
   }
   function closePanel() {
