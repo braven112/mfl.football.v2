@@ -58,7 +58,8 @@ export interface Props {
 	 * the owner who paired it. A TV has no session, and must not be offered
 	 * one: every other destination is session-gated and would greet it with a
 	 * sign-in form to be typed with a remote, which is the thing pairing exists
-	 * to avoid. So the menu offers the Broadcast alone and says whose it is.
+	 * to avoid. So the menu offers only what a pass can open (the Broadcast and
+	 * Live standings, both read-only) and says whose it is.
 	 */
 	pairedTvOwner?: string | null;
 }
@@ -87,8 +88,11 @@ const BOARD_LINKS = [
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
+/** The pages a TV pass opens. Read-only, and pinned by tests/broadcast-tv-pass-scope.test.ts. */
+const PAIRED_TV_LINKS = new Set(['/live/standings', '/live/broadcast']);
+
 const boardLinks: { href: string; label: string; icon: string }[] = pairedTv
-	? BOARD_LINKS.filter((link) => link.href === '/live/broadcast')
+	? BOARD_LINKS.filter((link) => PAIRED_TV_LINKS.has(link.href))
 	: [
 			...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
 			...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),

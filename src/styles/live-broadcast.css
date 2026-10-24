@@ -826,6 +826,39 @@
   outline-offset: 0.2vh;
 }
 
+/* ── The TV remote's D-pad (broadcast-dpad.ts) ──────────────────────────────
+   Drawn only while someone is steering; the hands-free board carries no mark.
+   `is-focus` is the game Left/Right is on, `is-featured` the one OK put in the
+   strip below. The outline sits INSIDE the cell, which the panel clips. */
+.lbc__cell.is-focus {
+  outline: 0.4vh solid var(--lbc-text);
+  outline-offset: -0.4vh;
+}
+.lbc__cell.is-featured {
+  background: color-mix(in srgb, var(--lbc-mine) 22%, transparent);
+}
+.lbc__extra.is-focus {
+  outline: 0.3vh solid var(--lbc-text);
+  outline-offset: 0.2vh;
+}
+.lbc__extra.is-featured {
+  color: var(--lbc-text);
+}
+
+/* The strip while the remote holds it: a rule along its top edge, and the
+   page count in its tag, so Left/Right visibly has somewhere to go. */
+.lbc__strip.is-steered::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 0.4vh;
+  background: var(--lbc-text);
+  z-index: 1;
+}
+.lbc__page-pos {
+  color: var(--lbc-text);
+}
+
 /* Expanded, the row holds nothing but the toggle — every league is a panel
    above it — so the control takes the right edge rather than sitting alone at
    the left of an empty rule. */

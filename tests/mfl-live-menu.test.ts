@@ -173,14 +173,15 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(menu).toMatch(/showSignIn \? \(/);
   });
 
-  it('offers a paired TV the Broadcast alone, and no sign-in', () => {
+  it('offers a paired TV the Broadcast and Live standings only, and no sign-in', () => {
     // A TV holds a watch-only pass, not a session. Every other destination is
     // session-gated, so a TV that wandered there (the brand link is the first
     // thing a remote's focus lands on) was asked to type an MFL password with
     // the remote: the exact thing QR pairing exists to avoid.
     const menu = read(MENU);
     expect(menu).toMatch(/const pairedTv = !signedIn && Boolean\(pairedTvOwner\)/);
-    expect(menu).toMatch(/pairedTv\s*\?\s*BOARD_LINKS\.filter\(\(link\) => link\.href === '\/live\/broadcast'\)/);
+    expect(menu).toContain("const PAIRED_TV_LINKS = new Set(['/live/standings', '/live/broadcast']);");
+    expect(menu).toMatch(/pairedTv\s*\?\s*BOARD_LINKS\.filter\(\(link\) => PAIRED_TV_LINKS\.has\(link\.href\)\)/);
     expect(menu).toMatch(/showSignIn = !signedIn && !pairedTv/);
     const layout = read(LAYOUT);
     expect(layout).toContain("pairedTvOwner && !authUser ? '/live/broadcast' : '/live'");
