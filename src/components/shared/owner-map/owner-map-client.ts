@@ -260,11 +260,11 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     throw new Error('This browser has WebGL 2 turned off or unsupported, which the map needs.');
   }
 
-  const [{ default: maplibregl }, geo] = await Promise.all([
-    import('maplibre-gl'),
-    loadGeo(),
-    import('maplibre-gl/dist/maplibre-gl.css'),
-  ]);
+  // MapLibre's stylesheet is imported by OwnerMapPage.astro, not here: a
+  // dynamic import() of a .css file built to a manifest entry naming a JS
+  // chunk that was never emitted, so on Vercel it 404'd and the map never
+  // started.
+  const [{ default: maplibregl }, geo] = await Promise.all([import('maplibre-gl'), loadGeo()]);
 
   const map: MlMap = new maplibregl.Map({
     container: canvasEl,

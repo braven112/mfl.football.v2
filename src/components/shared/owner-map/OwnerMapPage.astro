@@ -21,6 +21,8 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 import { buildOwnerMapPins, cityLabel } from '../../../utils/owner-map';
+// MapLibre's own stylesheet, scoped to this page by being imported here.
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
