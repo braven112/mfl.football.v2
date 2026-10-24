@@ -4,6 +4,7 @@
 > "Open" section is the only thing still unanswered. Sibling plans:
 > `docs/plans/live-scoring-broadcast.md` (the TV board),
 > `docs/plans/sunday-ticket.md` (the planner).
+> The store-app product built on this board: `docs/plans/mfl-live-store-app.md`.
 
 ## What it is
 
