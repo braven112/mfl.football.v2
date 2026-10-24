@@ -88,7 +88,7 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 			<figure class="mll-now__tv">
 				<figcaption class="mll-label">On the Broadcast</figcaption>
 				<div class="mll-tv">
-					<img src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" alt="A field goal takes over the TV in the scoring team's colours" />
+					<img src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" alt="A field goal takes over the TV in the scoring team's colors" />
 				</div>
 			</figure>
 			<div class="mll-now__stack">
@@ -137,15 +137,26 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		<div class="mll-chap__n" aria-hidden="true">02</div>
 		<div>
 			<h2 id="mll-broadcast" class="mll-h2">The Broadcast</h2>
-			<p>Your fantasy Sunday, produced like TV. Touchdowns take the whole screen in your team's colours, and your opponent's scores slide in without hiding your board.</p>
+			<p>Your fantasy Sunday, produced like TV. Touchdowns take the whole screen in your team's colors, and your opponent's scores slide in without hiding your board.</p>
 			<div class="mll-facts">
 				<div><b>Scan to pair</b>No passwords on a TV remote</div>
 				<div><b>All day</b>Burn-in protection built in</div>
 			</div>
 			<a class="cta-link" href="/live/broadcast">Open the Broadcast</a>
 		</div>
-		<div class="mll-tv">
-			<img src="/assets/mfl-live/landing-board.webp" width="1440" height="810" loading="lazy" alt="The Broadcast board: your matchup on top, your players' scores below" />
+		<div class="mll-scenes">
+			<figure class="mll-scene mll-scene--lead">
+				<img src="/assets/mfl-live/lifestyle-game-room.webp" width="1440" height="810" loading="lazy" alt="A game room with two TVs: the game on one, the Broadcast board celebrating a touchdown on the other" />
+				<figcaption>The game on one TV, your leagues on the other</figcaption>
+			</figure>
+			<figure class="mll-scene">
+				<img src="/assets/mfl-live/lifestyle-tv-wall.webp" width="1440" height="810" loading="lazy" alt="A wall of TVs showing three games, with one TV set aside as the Broadcast board" />
+				<figcaption>One screen as a dedicated scoreboard</figcaption>
+			</figure>
+			<figure class="mll-scene">
+				<img src="/assets/mfl-live/lifestyle-tablet.webp" width="1440" height="810" loading="lazy" alt="A tablet showing the live board, held in front of a TV playing the game" />
+				<figcaption>Or a tablet on the couch</figcaption>
+			</figure>
 		</div>
 	</section>
 
@@ -318,6 +329,19 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		box-shadow: 0 2.5rem 5rem -2rem rgba(0, 0, 0, 0.55);
 	}
 	.mll-tv img { display: block; width: 100%; height: auto; border-radius: 0.6rem; }
+
+	/* Real rooms, so the board reads as a second screen beside the game rather than a page on its own. */
+	.mll-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+	.mll-scene { margin: 0; }
+	.mll-scene--lead { grid-column: 1 / -1; }
+	.mll-scene img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border-radius: 0.85rem;
+		box-shadow: var(--shadow-lg);
+	}
+	.mll-scene figcaption { margin-top: 0.45rem; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 
 	.mll-mu {
 		background: var(--mll-studio);
@@ -532,7 +556,8 @@ const TICKER = ['Every MFL league you play in', 'The Broadcast', 'Live standings
 		.mll-now,
 		.mll-chap,
 		.mll-pricing,
-		.mll-facts { grid-template-columns: 1fr; }
+		.mll-facts,
+		.mll-scenes { grid-template-columns: 1fr; }
 		.mll-hero__top { gap: 1.5rem; }
 		.mll-chap { gap: 1.25rem; padding: 3rem 0; }
 		.mll-chap__n { font-size: calc(var(--font-size-3xl) * 1.2); }
