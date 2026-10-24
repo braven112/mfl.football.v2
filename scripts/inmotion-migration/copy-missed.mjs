@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const here = path.join(root, 'scripts/inmotion-migration');
+const PUBLIC_DIR = path.join(root, 'public');
 const SOURCE = 'https://old.mfl.football';
 const FILE = /\.(png|jpe?g|gif|svg|webp|ico|css|js)$/i;
 const TEXT = /\.(css|js)$/i;
@@ -86,7 +87,13 @@ async function run() {
 
   while (queue.length) {
     const p = queue.shift();
-    const dest = path.join(root, 'public', p);
+    const dest = path.join(PUBLIC_DIR, p);
+    // A decoded %2F in a referenced URL can spell "..": never write outside public/.
+    if (!dest.startsWith(PUBLIC_DIR + path.sep)) {
+      results.push({ path: p, status: 'missing', detail: 'outside public/' });
+      console.log(`[missed] SKIPPED ${p} (outside public/)`);
+      continue;
+    }
     if (await exists(dest)) {
       results.push({ path: p, status: 'already-public' });
       console.log(`[missed] ALREADY ${p}`);
