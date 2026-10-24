@@ -74,6 +74,13 @@ export const LEAGUE_JOBS = {
   /** Release-day column: only where this site draws the schedule. */
   'article:schedule-release': (l) => writes('schedule-release')(l) && Boolean(l.schedulePolicy),
   /**
+   * The Saturday Matchup Preview: every league whose feed is on and whose
+   * articleTypes allow it. Widened from the default league in Oct 2026 when
+   * the column gained its Game of the Week panel and tale-of-the-tape cards
+   * (owner's call: one more Claude write a week per league).
+   */
+  'article:matchup-preview': writes('matchup-preview'),
+  /**
    * Every other weekly column (previews, recaps, …): still the default league
    * alone, as before this module existed. Widening them is a Claude-cost call
    * per column, so it is a deliberate predicate change here, never a side

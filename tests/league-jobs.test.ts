@@ -41,6 +41,7 @@ describe('today’s leagues per job', () => {
     'pecking-order': ['theleague', 'afl-fantasy', 'archies'],
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies'],
     'article:schedule-release': ['theleague', 'afl-fantasy'],
+    'article:matchup-preview': ['theleague', 'afl-fantasy'],
     'article:weekly': ['theleague'],
   };
 
@@ -81,7 +82,7 @@ describe('a registry-only league', () => {
   });
 
   it('runs no AI job with its boxes unticked', () => {
-    for (const job of ['pecking-order', 'article:schedule-strength', 'article:schedule-release', 'article:weekly']) {
+    for (const job of ['pecking-order', 'article:schedule-strength', 'article:schedule-release', 'article:matchup-preview', 'article:weekly']) {
       expect(slugs(job, [off]), job).toEqual([]);
     }
   });
@@ -90,6 +91,7 @@ describe('a registry-only league', () => {
     expect(slugs('pecking-order', [on])).toEqual(['phantom']);
     // articleTypes: [] → no weekly article types bought yet.
     expect(slugs('article:schedule-strength', [on])).toEqual([]);
+    expect(slugs('article:matchup-preview', [on])).toEqual([]);
     expect(slugs('article:weekly', [on])).toEqual([]);
   });
 });
