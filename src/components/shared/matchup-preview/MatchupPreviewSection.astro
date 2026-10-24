@@ -1,0 +1,93 @@
+---
+/**
+ * Matchup Preview — article-embed visuals. One shared implementation for
+ * both leagues' news article pages (same reasoning as GauntletArticleSection).
+ *
+ * Rendered twice per article: `part="top"` above the copy (the Game of the
+ * Week rivalry panel leads) and `part="cards"` below it (a tale-of-the-tape
+ * card for every matchup). Owner's call, Oct 2026. Renders nothing for a
+ * post without `matchupVisuals`, so every other article pays nothing.
+ */
+import GameOfTheWeekPanel from './GameOfTheWeekPanel.astro';
+import TaleOfTheTapeCard from './TaleOfTheTapeCard.astro';
+import { canonicalRivalryPair } from '../../../utils/rivalries';
+import type { MatchupVisuals } from '../../../types/schefter';
+import '../../../styles/matchup-preview.css';
+
+interface TeamConfigEntry {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  icon?: string;
+}
+
+/** What the visuals need to know about a franchise. */
+export interface MatchupTeam {
+  name: string;
+  /** For tight spots: chart labels, "X lead series". */
+  short: string;
+  icon?: string;
+}
+
+export interface Props {
+  visuals: MatchupVisuals | null | undefined;
+  teams: TeamConfigEntry[];
+  /** Resolved base of the league's rivalry pages (e.g. r('/theleague/rivalries')); omit to drop the links. */
+  rivalriesBase?: string;
+  part: 'top' | 'cards';
+}
+
+const { visuals, teams, rivalriesBase, part } = Astro.props;
+
+const byId = new Map(teams.map((t) => [t.franchiseId, t]));
+const teamOf = (id: string): MatchupTeam => {
+  const t = byId.get(id);
+  return {
+    name: t?.nameMedium ?? t?.name ?? id,
+    short: t?.nameShort ?? t?.nameMedium ?? t?.abbrev ?? t?.name ?? id,
+    icon: t?.icon,
+  };
+};
+const rivalryHref = (a: string, b: string) =>
+  rivalriesBase ? `${rivalriesBase}/${canonicalRivalryPair(a, b)}` : undefined;
+
+const matchups = visuals?.matchups ?? [];
+const gotwIndex = visuals?.gameOfWeek ?? null;
+const gotw = gotwIndex != null ? matchups[gotwIndex] : null;
+const gotwSeries = gotw?.series && !gotw.series.disputed ? gotw.series : null;
+---
+
+{part === 'top' && gotw && gotwSeries && (
+  <section class="mpv-section mpv-section--top mpv-theme">
+    <h2 class="mpv-title">Game of the Week</h2>
+    <div class="mpv-panel">
+      <GameOfTheWeekPanel
+        a={gotw.a}
+        b={gotw.b}
+        series={gotwSeries}
+        teamA={teamOf(gotw.a.franchiseId)}
+        teamB={teamOf(gotw.b.franchiseId)}
+        rivalryHref={rivalryHref(gotw.a.franchiseId, gotw.b.franchiseId)}
+      />
+    </div>
+  </section>
+)}
+
+{part === 'cards' && matchups.length > 0 && (
+  <section class="mpv-section mpv-theme">
+    <h2 class="mpv-title">Tale of the Tape · Week {visuals!.week}</h2>
+    {matchups.map((m, i) => (
+      <TaleOfTheTapeCard
+        a={m.a}
+        b={m.b}
+        series={m.series}
+        teamA={teamOf(m.a.franchiseId)}
+        teamB={teamOf(m.b.franchiseId)}
+        isGameOfWeek={i === gotwIndex}
+        rivalryHref={rivalryHref(m.a.franchiseId, m.b.franchiseId)}
+      />
+    ))}
+  </section>
+)}
