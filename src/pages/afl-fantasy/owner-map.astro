@@ -1,0 +1,25 @@
+---
+/**
+ * Owner Map (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/owner-map/OwnerMapPage.
+ * The auth gate lives HERE, not in the component:
+ * Astro.redirect() only redirects from a PAGE. Per-league static data imports
+ * also belong here — a static import specifier can't be a runtime variable.
+ */
+import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
+import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import ownerData from '../../../data/afl-fantasy/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../types/owner-tenures';
+
+export const prerender = false;
+const LEAGUE = getLeagueBySlug('afl-fantasy')!;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
+  return Astro.redirect('/afl-fantasy');
+}
+---
+
+<OwnerMapPage leagueSlug="afl-fantasy" data={ownerData as unknown as OwnerTenuresFile} />
