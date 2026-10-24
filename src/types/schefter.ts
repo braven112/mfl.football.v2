@@ -281,6 +281,12 @@ export interface SchefterPost {
    * article page renders its rankings table / luck callout / trap weeks from.
    */
   scheduleStrength?: { year: number; week: number };
+  /**
+   * Matchup Preview articles: the Game of the Week rivalry panel and the
+   * tale-of-the-tape cards, snapshotted when the column was written
+   * (src/utils/matchup-preview-visuals.mjs).
+   */
+  matchupVisuals?: MatchupVisuals;
   /** Featured image path relative to /assets/schefter/ (articles only) */
   image?: string;
   /** Image alt text (articles only) */
@@ -441,4 +447,59 @@ export interface MFLRawTransaction {
   by_commish?: string;
   dropped?: string;
   expires?: string;
+}
+
+/** One team's tale of the tape in a Matchup Preview (matchup-preview-visuals.mjs#sideSnapshot). */
+export interface MatchupVisualsSide {
+  franchiseId: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  /** "W4" / "L2"; null before the team has played. */
+  streak: string | null;
+  /** Up to the last 10 results, oldest first. */
+  form: Array<'W' | 'L' | 'T'>;
+  /** One score per week played, oldest first. */
+  weekly: number[];
+  ppg: number | null;
+  allPlay: { wins: number; losses: number; ties: number } | null;
+  /** Actual wins minus all-play expected wins. */
+  luck: number | null;
+}
+
+export interface MatchupVisualsGame {
+  year: number;
+  week: number;
+  winnerId: string | null;
+  score: number;
+  opp: number;
+}
+
+/** The all-time series, from side A's perspective (matchup-preview-visuals.mjs#seriesSnapshot). */
+export type MatchupVisualsSeries =
+  | { disputed: true; games: number }
+  | {
+      disputed: false;
+      games: number;
+      aWins: number;
+      bWins: number;
+      ties: number;
+      since: number;
+      streak: { franchiseId: string; count: number } | null;
+      playoffGames: number;
+      playoffWins: number;
+      playoffLosses: number;
+      lastPlayoff?: MatchupVisualsGame;
+      biggest?: MatchupVisualsGame;
+      closest?: MatchupVisualsGame;
+      /** Game of the Week only: every meeting, A's score first. */
+      meetings?: Array<{ year: number; week: number; score: number; opp: number; playoff: boolean }>;
+    };
+
+export interface MatchupVisuals {
+  year: number;
+  week: number;
+  /** Index into `matchups`, or null when no pairing qualifies. */
+  gameOfWeek: number | null;
+  matchups: Array<{ a: MatchupVisualsSide; b: MatchupVisualsSide; series: MatchupVisualsSeries | null }>;
 }

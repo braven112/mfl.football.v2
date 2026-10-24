@@ -1,0 +1,294 @@
+---
+/**
+ * The Matchup Preview's Game of the Week: the featured pairing's all-time
+ * series, its streak and marquee games, and a bar for every meeting (margin
+ * of victory, above the line for side A, below for side B).
+ *
+ * Renders only from the post's snapshot (MatchupVisuals) and never states a
+ * record for a disputed series — the snapshot builder already refuses to
+ * pick one as the Game of the Week.
+ */
+import type { MatchupVisualsSide, MatchupVisualsSeries } from '../../../types/schefter';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import type { MatchupTeam } from './MatchupPreviewSection.astro';
+
+export interface Props {
+  a: MatchupVisualsSide;
+  b: MatchupVisualsSide;
+  series: Extract<MatchupVisualsSeries, { disputed: false }>;
+  teamA: MatchupTeam;
+  teamB: MatchupTeam;
+  rivalryHref?: string;
+}
+
+const { a, b, series, teamA, teamB, rivalryHref } = Astro.props;
+
+const record = (s: MatchupVisualsSide) => `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`;
+const short = (id: string | null) => (id === a.franchiseId ? teamA.short : id === b.franchiseId ? teamB.short : '');
+const accentA = teamAccentVar(a.franchiseId, 'var(--sf-text-primary)');
+const accentB = teamAccentVar(b.franchiseId, 'var(--sf-text-secondary)');
+
+const playoffLine = series.playoffGames === 0
+  ? 'None yet'
+  : series.playoffWins === series.playoffLosses
+    ? `${series.playoffGames} · split ${series.playoffWins}-${series.playoffLosses}`
+    : `${series.playoffGames} · ${series.playoffWins > series.playoffLosses ? teamA.short : teamB.short} ${Math.max(series.playoffWins, series.playoffLosses)}-${Math.min(series.playoffWins, series.playoffLosses)}`;
+
+// ── Margin chart geometry (one scale for bars and labels) ──
+const meetings = series.meetings ?? [];
+const W = 360;
+const H = 206;
+const MID = 98;
+const HALF = 70;
+const PAD_X = 8;
+const slot = meetings.length ? (W - PAD_X * 2) / meetings.length : 0;
+const barW = slot * 0.62;
+const maxMargin = Math.max(10, ...meetings.map((m) => Math.abs(m.score - m.opp)));
+const labelEvery = Math.max(1, Math.ceil(meetings.length / 9));
+const bars = meetings.map((m, i) => {
+  const margin = m.score - m.opp;
+  const h = Math.max(1.5, (Math.abs(margin) / maxMargin) * HALF);
+  const x = PAD_X + i * slot + (slot - barW) / 2;
+  return {
+    x,
+    y: margin >= 0 ? MID - h : MID,
+    h,
+    side: margin >= 0 ? 'a' : 'b',
+    playoff: m.playoff,
+    label: i % labelEvery === 0 || i === meetings.length - 1 ? `'${String(m.year).slice(2)}` : null,
+    title: `${m.year} week ${m.week}: ${teamA.short} ${m.score}, ${teamB.short} ${m.opp}${m.playoff ? ' (playoffs)' : ''}`,
+  };
+});
+---
+
+<div class="gotw" style={`--mpv-a: ${accentA}; --mpv-b: ${accentB};`}>
+  <div class="gotw__head">
+    <div class="gotw__team">
+      {teamA.icon && <img class="mpv-logo" src={teamA.icon} alt="" width="52" height="52" loading="lazy" />}
+      <span class="gotw__name gotw__name--a">{teamA.name}</span>
+      <span class="gotw__rec">{record(a)}{a.streak && <> · {a.streak}</>}</span>
+    </div>
+    <div class="gotw__series" aria-label={`All-time series ${teamA.short} ${series.aWins}, ${teamB.short} ${series.bWins}${series.ties ? `, ${series.ties} ties` : ''}`}>
+      <div class="gotw__score mpv-num">
+        <span class="gotw__name--a">{series.aWins}</span><span class="gotw__dash">–</span><span class="gotw__name--b">{series.bWins}</span>
+      </div>
+      <span class="mpv-cap">All-time series{series.ties ? ` · ${series.ties} tie${series.ties > 1 ? 's' : ''}` : ''}</span>
+    </div>
+    <div class="gotw__team">
+      {teamB.icon && <img class="mpv-logo" src={teamB.icon} alt="" width="52" height="52" loading="lazy" />}
+      <span class="gotw__name gotw__name--b">{teamB.name}</span>
+      <span class="gotw__rec">{record(b)}{b.streak && <> · {b.streak}</>}</span>
+    </div>
+  </div>
+
+  <div class="gotw__split" aria-hidden="true">
+    {series.aWins > 0 && <span class="gotw__split-a" style={`flex: ${series.aWins}`}></span>}
+    {series.ties > 0 && <span class="gotw__split-t" style={`flex: ${series.ties}`}></span>}
+    {series.bWins > 0 && <span class="gotw__split-b" style={`flex: ${series.bWins}`}></span>}
+  </div>
+
+  <dl class="gotw__facts">
+    <div class="gotw__fact">
+      <dt class="mpv-cap">Series streak</dt>
+      <dd>{!series.streak
+        ? 'Last meeting tied'
+        : series.streak.count === 1
+          ? `${short(series.streak.franchiseId)} won the last one`
+          : `${short(series.streak.franchiseId)}, ${series.streak.count} straight`}</dd>
+    </div>
+    <div class="gotw__fact">
+      <dt class="mpv-cap">Playoff meetings</dt>
+      <dd>{playoffLine}</dd>
+    </div>
+    {series.biggest && (
+      <div class="gotw__fact">
+        <dt class="mpv-cap">Biggest blowout</dt>
+        <dd><span class="mpv-num gotw__big">{series.biggest.score}–{series.biggest.opp}</span><small>{short(series.biggest.winnerId)}, {series.biggest.year}</small></dd>
+      </div>
+    )}
+    {series.closest && (
+      <div class="gotw__fact">
+        <dt class="mpv-cap">Closest game</dt>
+        <dd><span class="mpv-num gotw__big">{series.closest.score}–{series.closest.opp}</span><small>{short(series.closest.winnerId)}, {series.closest.year}</small></dd>
+      </div>
+    )}
+  </dl>
+
+  {bars.length > 1 && (
+    <figure class="gotw__chart">
+      <figcaption class="mpv-cap">Every meeting since {series.since} · margin of victory</figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Margin of victory in all ${bars.length} meetings since ${series.since}`}>
+        <text x={PAD_X} y="11" class="gotw__lbl" style="fill: var(--mpv-a)">{teamA.short} won by</text>
+        <text x={PAD_X} y={MID + HALF + 16} class="gotw__lbl" style="fill: var(--mpv-b)">{teamB.short} won by</text>
+        <line x1={PAD_X} x2={W - PAD_X} y1={MID} y2={MID} class="gotw__axis" style="stroke: var(--sf-border)" />
+        {bars.map((bar) => (
+          <g>
+            <rect
+              x={bar.x.toFixed(1)}
+              y={bar.y.toFixed(1)}
+              width={barW.toFixed(1)}
+              height={bar.h.toFixed(1)}
+              rx="2"
+              style={`fill: var(--mpv-${bar.side})`}
+            ><title>{bar.title}</title></rect>
+            {bar.playoff && (
+              <text
+                x={(bar.x + barW / 2).toFixed(1)}
+                y={(bar.side === 'a' ? bar.y - 4 : bar.y + bar.h + 11).toFixed(1)}
+                text-anchor="middle"
+                class="gotw__po"
+                style="fill: var(--mpv-hot)"
+              >★</text>
+            )}
+            {bar.label && (
+              <text x={(bar.x + barW / 2).toFixed(1)} y={H - 2} text-anchor="middle" class="gotw__yr" style="fill: var(--sf-text-secondary)">{bar.label}</text>
+            )}
+          </g>
+        ))}
+      </svg>
+      {meetings.some((m) => m.playoff) && <span class="gotw__legend"><span style="color: var(--mpv-hot)">★</span> playoff meeting</span>}
+    </figure>
+  )}
+
+  {rivalryHref && <a class="cta-link mpv-link gotw__cta" href={rivalryHref}>Full rivalry history</a>}
+</div>
+
+<style>
+  .gotw {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gotw__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.875rem 0.75rem;
+  }
+
+  .gotw__team {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .gotw__name {
+    font-weight: 700;
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .gotw__name--a { color: var(--mpv-a); }
+  .gotw__name--b { color: var(--mpv-b); }
+
+  .gotw__rec {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .gotw__series {
+    display: grid;
+    justify-items: center;
+    gap: 0.125rem;
+  }
+
+  .gotw__score {
+    font-size: var(--font-size-2xl, 2.5rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .gotw__dash {
+    color: var(--sf-text-secondary, #536471);
+    padding: 0 0.2rem;
+  }
+
+  .gotw__split {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    margin: 0 0.875rem;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .gotw__split-a { background: var(--mpv-a); }
+  .gotw__split-b { background: var(--mpv-b); }
+  .gotw__split-t { background: var(--mpv-tie); }
+
+  .gotw__facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    margin: 0.875rem 0 0;
+    background: var(--sf-border, #e5e7eb);
+    border-top: 1px solid var(--sf-border, #e5e7eb);
+    border-bottom: 1px solid var(--sf-border, #e5e7eb);
+  }
+
+  .gotw__fact {
+    background: var(--sf-bg, #fff);
+    padding: 0.625rem 0.875rem;
+    min-width: 0;
+  }
+
+  .gotw__fact dd {
+    margin: 0.125rem 0 0;
+    font-weight: 600;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--sf-text-primary, #0f1419);
+    display: grid;
+  }
+
+  .gotw__fact small {
+    font-weight: 400;
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .gotw__big {
+    font-size: var(--font-size-base, 1rem);
+    font-weight: 700;
+  }
+
+  .gotw__chart {
+    margin: 0;
+    padding: 0.75rem 0.625rem 0.25rem;
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .gotw__chart figcaption {
+    padding: 0 0.25rem;
+  }
+
+  .gotw__chart svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .gotw__axis { stroke-width: 1.5; }
+  .gotw__lbl { font-size: var(--font-size-3xs, 0.625rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .gotw__yr { font-size: var(--font-size-3xs, 0.625rem); font-weight: 600; }
+  .gotw__po { font-size: var(--font-size-2xs, 0.6875rem); }
+
+  .gotw__legend {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+    padding: 0 0.25rem;
+  }
+
+  .gotw__cta {
+    align-self: flex-start;
+    padding: 0.5rem 0.875rem 0.875rem;
+  }
+
+  @media (max-width: 380px) {
+    .gotw__score { font-size: var(--font-size-xl, 2rem); }
+  }
+</style>

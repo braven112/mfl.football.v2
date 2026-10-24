@@ -162,12 +162,16 @@ async function main() {
 
   const completedWeek = getCompletedWeek(weeklyResults, franchiseCount);
   const currentWeek = getCurrentNFLWeek(year);
-  const week = opts.week ?? completedWeek;
-
-  console.log(`  Season: ${year} | Current NFL week: ${currentWeek} | Last completed: ${completedWeek} | Target week: ${week}`);
-
   // Step 2: Dynamic import of article type module
   const mod = await import(`./article-types/${type}.mjs`);
+
+  // A column that previews the coming games targets the week AFTER the last
+  // completed one. Targeting completedWeek itself had the Friday and Saturday
+  // previews write up a week whose games were already final (the Oct 24
+  // "Week 6 Preview" quoted records that included Week 6).
+  const week = opts.week ?? (mod.config.previewsUpcomingWeek ? completedWeek + 1 : completedWeek);
+
+  console.log(`  Season: ${year} | Current NFL week: ${currentWeek} | Last completed: ${completedWeek} | Target week: ${week}`);
 
   // Step 3: Season guard.
   //

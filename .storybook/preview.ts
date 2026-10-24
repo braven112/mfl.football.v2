@@ -84,6 +84,11 @@ import '../src/styles/live-broadcast-handheld.css';
 // in frontmatter, which never reaches the canvas; every rule is under
 // `.gauntlet-theme`, so it restyles nothing else.
 import '../src/styles/schedule-strength.css';
+// The Matchup Preview visuals (Game of the Week, tale of the tape). Every rule
+// is under `.mpv-*`; schefter-feed.css supplies the --sf-* surface tokens those
+// rules read, and every one of its own rules is under `.sf-*`.
+import '../src/styles/schefter-feed.css';
+import '../src/styles/matchup-preview.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
