@@ -658,3 +658,28 @@ html[data-season='christmas'] .matchup-card[data-status='final'] {
 html[data-season='christmas'] .matchup-card[data-status='live'] {
   border-color: #b5121b;
 }
+
+/* Draft Order: the active view tab (light-blue tile, blue icon), the blue
+   pick numbers, and the lavender dashed "to be decided" picks and their
+   legend swatch. Pick numbers go red, the to-be-decided picks evergreen. */
+html[data-season='christmas'] [data-view-selector='draft'] .view-tab[data-active='true'] {
+  background: #fdecee;
+}
+html[data-season='christmas'] [data-view-selector='draft'] .view-tab[data-active='true'] .view-tab__icon {
+  fill: var(--color-primary);
+  color: var(--color-primary);
+}
+html[data-season='christmas'] .draft-pick__number {
+  color: var(--color-primary);
+}
+html[data-season='christmas'] :is(.draft-pick--tbd, .legend-swatch--tbd) {
+  background: #e3f1e8;
+  border-color: #1f7a46;
+}
+html[data-season='christmas'] .draft-pick--tbd:hover {
+  background: #cfe7d8;
+  border-color: #145a33;
+}
+html[data-season='christmas'] .draft-pick--special {
+  box-shadow: 0 0 0 1px rgba(31, 122, 70, 0.2);
+}

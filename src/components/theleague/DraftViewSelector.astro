@@ -29,7 +29,7 @@ function viewHref(view: string): string {
 }
 ---
 
-<div class="view-selector">
+<div class="view-selector" data-view-selector="draft">
   {VIEWS.map((v) => (
     <a
       href={viewHref(v.key)}
