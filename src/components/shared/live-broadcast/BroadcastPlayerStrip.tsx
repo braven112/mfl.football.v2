@@ -27,6 +27,10 @@ interface Props {
   hidden: boolean;
   /** Rows the lower-third band covers, dimmed rather than hidden. */
   dimTail: number;
+  /** The TV remote holds the strip: its rotation is stopped until Back. */
+  steered?: boolean;
+  /** "2 / 5" while steered, so Left/Right has somewhere visible to go. */
+  position?: string;
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
@@ -100,17 +104,22 @@ function Page({
   rowsPerPage,
   dimTail,
   out,
+  position = '',
 }: {
   page: StripPage;
   rowsPerPage: number;
   dimTail: number;
   out: boolean;
+  position?: string;
 }) {
   const rows = padPage(page, rowsPerPage);
   const dimFrom = dimTail > 0 ? rows.length - dimTail : rows.length;
   return (
     <div className={`lbc__page ${out ? 'is-out' : 'is-in'}`} aria-hidden={out || undefined}>
-      <p className="lbc__page-tag">{page.label}</p>
+      <p className="lbc__page-tag">
+        {page.label}
+        {position && <span className="lbc__page-pos"> · {position}</span>}
+      </p>
       {rows.map((row, i) => (
         <Row key={row?.key ?? `filler-${i}`} row={row} dim={i >= dimFrom} />
       ))}
@@ -118,11 +127,19 @@ function Page({
   );
 }
 
-function BroadcastPlayerStrip({ page, outgoing, rowsPerPage, hidden, dimTail }: Props) {
+function BroadcastPlayerStrip({
+  page,
+  outgoing,
+  rowsPerPage,
+  hidden,
+  dimTail,
+  steered = false,
+  position = '',
+}: Props) {
 
   return (
     <div
-      className={`lbc__strip${hidden ? ' is-hidden' : ''}`}
+      className={`lbc__strip${hidden ? ' is-hidden' : ''}${steered ? ' is-steered' : ''}`}
       aria-label="Your players"
       // A real boolean: React treats `inert=""` as FALSE and warns, so the
       // empty-string spelling silently never applied.
@@ -132,7 +149,14 @@ function BroadcastPlayerStrip({ page, outgoing, rowsPerPage, hidden, dimTail }: 
         <Page key={outgoing.key} page={outgoing} rowsPerPage={rowsPerPage} dimTail={dimTail} out />
       )}
       {page && (
-        <Page key={page.key} page={page} rowsPerPage={rowsPerPage} dimTail={dimTail} out={false} />
+        <Page
+          key={page.key}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          dimTail={dimTail}
+          out={false}
+          position={position}
+        />
       )}
     </div>
   );

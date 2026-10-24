@@ -13,6 +13,7 @@ import { matchupTimeLeft } from '../../../utils/broadcast-layout';
 import type { DensityTier } from '../../../utils/broadcast-layout';
 import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
+import { gameKey } from '../../../utils/broadcast-dpad';
 
 interface Props {
   /** The full-size panels — `splitPanels().featured`. */
@@ -42,7 +43,15 @@ interface Props {
   games: readonly NflGame[];
   /** Player identity, for mapping a starter to the NFL game he is in. */
   meta: Record<string, PlayerMeta>;
+  /** The game the TV remote has highlighted (`gameKey`), or null. */
+  focusGame?: string | null;
+  /** The game the remote featured in the strip below (`gameKey`), or null. */
+  featuredGame?: string | null;
 }
+
+/** The remote's two marks on a game: highlighted, and featured below. */
+const remoteMarks = (key: string, focus: string | null, featured: string | null) =>
+  `${key === focus ? ' is-focus' : ''}${key === featured ? ' is-featured' : ''}`;
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
@@ -77,6 +86,8 @@ function BroadcastScoreHeader({
   hidden,
   games,
   meta,
+  focusGame = null,
+  featuredGame = null,
 }: Props) {
   return (
     <section
@@ -145,7 +156,7 @@ function BroadcastScoreHeader({
                   return (
                     <div
                       key={matchup.index}
-                      className="lbc__cell"
+                      className={`lbc__cell${remoteMarks(gameKey(panel.leagueId, matchup.index), focusGame, featuredGame)}`}
                       style={{
                         // The SWATCH, resolved server-side against
                         // `--lbc-panel` — not `primary`, which is the
@@ -312,7 +323,10 @@ function BroadcastScoreHeader({
                   const theirsLive = theirs?.live ?? 0;
 
                   return (
-                    <li key={`${panel.leagueId}:${matchup.index}`} className="lbc__extra">
+                    <li
+                      key={`${panel.leagueId}:${matchup.index}`}
+                      className={`lbc__extra${remoteMarks(gameKey(panel.leagueId, matchup.index), focusGame, featuredGame)}`}
+                    >
                       <span className="lbc__extra-tag">{panel.leagueName}</span>
                       <span
                         className={`lbc__extra-team${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}

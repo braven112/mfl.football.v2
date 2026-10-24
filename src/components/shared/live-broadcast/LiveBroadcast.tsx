@@ -41,6 +41,14 @@ import HandheldBoard from './HandheldBoard';
 import BroadcastRemote from './BroadcastRemote';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import {
+  DPAD_IDLE,
+  dpadKeyFrom,
+  isSteering,
+  listGames,
+  stepDpad,
+  stripPanelsFor,
+} from '../../../utils/broadcast-dpad';
+import {
   BROADCAST_MODE_COOKIE,
   modeCookieAction,
   resolveBroadcastMode,
@@ -492,6 +500,13 @@ export default function LiveBroadcast({ pageData }: Props) {
    * exactly as it did before the remote existed.
    */
   const [pinned, setPinned] = useState<string | null>(null);
+
+  /**
+   * The TV remote's D-pad (broadcast-dpad.ts): which part of the board it has
+   * taken, and the game it featured. Idle is the hands-free board, unchanged.
+   */
+  const [dpad, setDpad] = useState(DPAD_IDLE);
+  const steering = isSteering(dpad);
   const boardPanels = useMemo(() => {
     if (!pinned) return data.panels;
     const only = data.panels.filter((p) => p.leagueId === pinned);
@@ -540,17 +555,27 @@ export default function LiveBroadcast({ pageData }: Props) {
   // value changes on every resize and would reshuffle the strip under the room.
   const rowsPerPage = tier <= 2 ? 6 : tier <= 4 ? 5 : 4;
 
+  // A featured game narrows the STRIP to its two rosters; the header keeps
+  // every game, so the room still sees the rest of the day.
+  const stripPanels = useMemo(
+    () => stripPanelsFor(boardPanels, dpad.featured),
+    [boardPanels, dpad.featured],
+  );
+
   const pages = useMemo<StripPage[]>(
     () =>
       buildStripPages({
-        panels: boardPanels,
+        panels: stripPanels,
         scores: teamScores,
         meta,
         games: poll.games,
         rowsPerPage,
       }),
-    [boardPanels, teamScores, meta, poll.games, rowsPerPage],
+    [stripPanels, teamScores, meta, poll.games, rowsPerPage],
   );
+
+  /** The header's games, in the order it draws them, for Left/Right. */
+  const games = useMemo(() => listGames([...featured, ...compact]), [featured, compact]);
 
   const anyLive = useMemo(
     () => poll.games.some((g) => g.state === 'in') || poll.leagues.some((l) => l.live),
@@ -700,7 +725,7 @@ export default function LiveBroadcast({ pageData }: Props) {
   // gap after it.
   const spotlightRows = useMemo(() => spotlightCandidates(pages), [pages]);
   const [spotlight, setSpotlight] = useState({ index: 0, on: false });
-  const spotlightAllowed = !current && !isQuiet && mode === 'tv' && spotlightRows.length > 0;
+  const spotlightAllowed = !current && !isQuiet && mode === 'tv' && !steering && spotlightRows.length > 0;
 
   useEffect(() => {
     if (!spotlightAllowed) {
@@ -735,7 +760,8 @@ export default function LiveBroadcast({ pageData }: Props) {
     [spotlightRow?.key, spotlightRow?.points, spotlightRow?.clock, spotlightPanel, poll.statLines],
   );
 
-  const stripPaused = !!current || !!spotlit || isQuiet || mode === 'handheld';
+  // The remote holding the strip stops its rotation until Back.
+  const stripPaused = !!current || !!spotlit || isQuiet || mode === 'handheld' || dpad.zone === 'strip';
 
   useEffect(() => {
     if (stripPaused || pages.length <= 1) return;
@@ -939,6 +965,92 @@ export default function LiveBroadcast({ pageData }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [data.pathname, rememberSound, unlockAudio]);
+
+  // ── the TV remote's D-pad (broadcast-dpad.ts) ────────────────────────────
+  // Only the full board takes it. The landing's preview (`modeHint`) leaves
+  // every key to the page, where OK on the preview is what opens this board.
+  const dpadEnabled = mode === 'tv' && !data.modeHint;
+
+  const turnPage = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (pages.length <= 1) return;
+      const n = pages.length;
+      const from = Math.min(pageIndex, n - 1);
+      setOutgoingKey(pages[from]?.key ?? null);
+      setPageIndex((from + (dir === 'next' ? 1 : -1) + n) % n);
+    },
+    [pages, pageIndex],
+  );
+
+  useEffect(() => {
+    if (!dpadEnabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const key = dpadKeyFrom(e.key);
+      if (!key) return;
+      // OK on a focused control (the overflow toggle, the way back) is that
+      // control's press, not the board's.
+      if (key === 'ok' && el && el !== document.body && /^(A|BUTTON)$/.test(el.tagName)) return;
+      const step = stepDpad(dpad, key, games);
+      if (!step.handled) return;
+      e.preventDefault();
+      if (step.state.featured !== dpad.featured) {
+        setOutgoingKey(null);
+        setPageIndex(0);
+      } else if (step.page) {
+        turnPage(step.page);
+      }
+      setDpad(step.state);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [dpadEnabled, dpad, games, turnPage]);
+
+  /**
+   * The TV's own Back key never reaches a page as a key: the app hands it to
+   * the WebView's history. So while the remote is steering, the board holds a
+   * history entry of its own, and Back pops THAT, returning to hands-free
+   * instead of leaving the board. Captured ahead of the page router's own
+   * popstate listener, which would otherwise re-render the page.
+   */
+  const steerEntry = useRef(false);
+  const swallowPop = useRef(false);
+  useEffect(() => {
+    if (!dpadEnabled) return;
+    const onPop = (e: PopStateEvent) => {
+      if (!steerEntry.current && !swallowPop.current) return;
+      e.stopImmediatePropagation();
+      if (swallowPop.current) {
+        swallowPop.current = false;
+        return;
+      }
+      steerEntry.current = false;
+      setDpad(DPAD_IDLE);
+      setOutgoingKey(null);
+      setPageIndex(0);
+    };
+    window.addEventListener('popstate', onPop, { capture: true });
+    return () => window.removeEventListener('popstate', onPop, { capture: true });
+  }, [dpadEnabled]);
+
+  useEffect(() => {
+    if (!dpadEnabled) return;
+    try {
+      if (steering && !steerEntry.current) {
+        history.pushState({ ...(history.state ?? {}), lbcSteer: true }, '');
+        steerEntry.current = true;
+      } else if (!steering && steerEntry.current) {
+        // Left by OK or a key rather than Back: drop the entry quietly.
+        steerEntry.current = false;
+        swallowPop.current = true;
+        history.back();
+      }
+    } catch (_err) {
+      /* no history: Escape still steps back */
+    }
+  }, [dpadEnabled, steering]);
 
   // ── the phone remote (a paired TV only) ──────────────────────────────────
   /**
@@ -1199,6 +1311,8 @@ export default function LiveBroadcast({ pageData }: Props) {
         hidden={occludes === 'all'}
         games={poll.games}
         meta={meta}
+        focusGame={dpad.zone === 'games' ? (games[dpad.game] ?? null) : null}
+        featuredGame={dpad.featured}
       />
 
       <BroadcastPlayerStrip
@@ -1209,6 +1323,12 @@ export default function LiveBroadcast({ pageData }: Props) {
         // The lower third covers the bottom of the strip; those rows dim rather
         // than disappear, so the page does not appear to lose content.
         dimTail={stage?.kind === 'lower-third' ? 2 : 0}
+        steered={dpad.zone === 'strip'}
+        position={
+          dpad.zone === 'strip' && pages.length > 1
+            ? `${Math.min(pageIndex, pages.length - 1) + 1} / ${pages.length}`
+            : ''
+        }
       />
 
       {stage && (

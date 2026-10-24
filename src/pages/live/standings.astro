@@ -17,10 +17,15 @@
  * ── SIGNED OUT GETS THE SHELL, NOT A BOUNCE ───────────────────────────────
  * Same as `/live`: there is a real page to show, and the sign-in goes to the
  * app's own `/login`, carrying this page as the way back.
+ *
+ * ── A PAIRED TV READS IT TOO ──────────────────────────────────────────────
+ * A TV's watch-only pass resolves through `getBroadcastViewer`, like the
+ * Broadcast's. Standings only READ, so the pass may open them; the league
+ * boards each table links to are session-gated, so a TV gets no links.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LiveStandingsBoard from '../../components/shared/live/LiveStandingsBoard';
-import { getMflLiveUser } from '../../utils/auth';
+import { getBroadcastViewer } from '../../utils/broadcast-viewer';
 import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
@@ -32,10 +37,13 @@ import '../../styles/live.css';
 // Scores must never be cached, and even the shell reads the session.
 export const prerender = false;
 
-const authUser = getMflLiveUser(Astro.request);
+const viewer = await getBroadcastViewer(Astro.request);
+const authUser = viewer?.user ?? null;
+const pairedTv = viewer?.via === 'tv';
 
-// Route-only write, before anything reads the cookie back.
-if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
+// Route-only write, before anything reads the cookie back. A TV's choice of
+// leagues belongs to the Broadcast, so it never writes this one.
+if (authUser && !pairedTv) rememberMflLiveChoice(Astro.url, Astro.cookies);
 
 const now = new Date();
 // The RAW resolver result, never clamped up to 1 — MFL serves no live scoring
@@ -71,6 +79,7 @@ if (authUser && week) {
 <MflAppLayout
 	title="Live standings — MFL Live"
 	description="Live, projected and final standings for every one of your MyFantasyLeague leagues, on one page."
+	pairedTvOwner={pairedTv ? (viewer?.user.name ?? null) : null}
 >
 	{!authUser ? (
 		<section class="mfl-live-intro">
@@ -96,7 +105,9 @@ if (authUser && week) {
 				Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if it
 				doesn&rsquo;t, your MFL sign-in may have expired.
 			</p>
-			<a class="cta cta--primary mfl-live-intro__cta" href={mflLoginUrl('/live/standings')}>Sign in again</a>
+			{!pairedTv && (
+				<a class="cta cta--primary mfl-live-intro__cta" href={mflLoginUrl('/live/standings')}>Sign in again</a>
+			)}
 		</section>
 	) : (
 		<LiveStandingsBoard
@@ -104,7 +115,7 @@ if (authUser && week) {
 			initial={standings}
 			pollUrl="/api/live-standings"
 			isLive={isLive}
-			panelHrefBase="/live/league/"
+			panelHrefBase={pairedTv ? undefined : '/live/league/'}
 			proLocked={!hasMflLivePro(authUser)}
 		/>
 	)}

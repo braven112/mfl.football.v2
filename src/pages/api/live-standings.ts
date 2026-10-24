@@ -7,17 +7,18 @@
  * `src/pages/live/standings.astro`.
  *
  * The league set comes from the session's own MFL leagues, narrowed by the
- * same cookie `/live` reads. Nothing in the query can widen it.
+ * same cookie `/live` reads. Nothing in the query can widen it. A paired TV's
+ * watch-only pass reads it too: it is the page's own poll, and read-only.
  */
 import type { APIRoute } from 'astro';
-import { getMflLiveUser } from '../../utils/auth';
+import { getBroadcastViewer } from '../../utils/broadcast-viewer';
 import { assembleMflLiveStandings } from '../../utils/live/mfl-live-standings';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, request, cookies }) => {
-  const user = getMflLiveUser(request);
+  const user = (await getBroadcastViewer(request))?.user;
   if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
 
   const week = parseInt(url.searchParams.get('week') ?? '', 10);
