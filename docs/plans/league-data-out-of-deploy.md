@@ -200,9 +200,13 @@ lacks from the committed row. The franchise cache now carries `contractInfo`.
 **Left on the file, a day's lag being fine:** activity's move fallback, hero
 casting and "owned by" labels (`offseason-hero-data.ts`), the matchup preview,
 the player-search owner badges, the NFL club roster badges, the Schefter scan
-and the weekly articles. The Top Players page's owner column is in this class
-too: production's prebuild recomputes the leaderboard from the committed (now
-daily) rosters.
+and the weekly articles.
+
+The Top Players page's Owner column was in this class until Oct 24: the
+leaderboard is still computed at prebuild from the committed (daily) rosters,
+but the page renders per request, so `withLiveOwners`
+(`src/utils/top-players-live-owners.ts`) lays the live rosters over the owner
+lists for the current league year. Points are unchanged.
 
 **Guard.** `tests/sync-noise-commit-guard.test.ts` pins every reader above to
 its overlay and classifies every `src/` reader of either feed: live, a route

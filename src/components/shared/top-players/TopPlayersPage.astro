@@ -44,6 +44,7 @@ import {
   viewHref,
 } from '../../../utils/top-players-view';
 import { buildPlayerCellHTML } from '../../../utils/player-cell-html';
+import { withLiveOwners } from '../../../utils/top-players-live-owners';
 import '../../../styles/player-cell.css';
 
 interface Props {
@@ -53,9 +54,12 @@ interface Props {
   basePath: string;
 }
 
-const { leagueSlug, data, view, basePath } = Astro.props;
+const { leagueSlug, view, basePath } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`Top Players: unknown league "${leagueSlug}"`);
+// The Owner column reads live rosters: the committed rosters.json behind the
+// file is a once-a-day snapshot now (src/utils/top-players-live-owners.ts).
+const data = await withLiveOwners(Astro.props.data, league);
 
 const positions = orderedPositions(data);
 const sections =
