@@ -42,6 +42,10 @@ export const SKIP_REWRITE_PREFIXES: readonly string[] = [
   '/_image',
   '/_server-islands/',
   '/404',
+  // The deliberate-404 target (docs/claude/rules/error-pages.md). A page's
+  // `Astro.rewrite('/_not-found')` re-runs this middleware; re-prefixing it
+  // to /<slug>/_not-found answered 508 Loop Detected on the league hosts.
+  '/_not-found',
   '/favicon.ico',
   '/assets/',
   '/manifest.json',

@@ -12,14 +12,33 @@
  * Fixing a season's champion stays admin-only after launch too, until the
  * commissioner claim flow exists (docs/plans/league-history-free-page.md).
  */
-import type { AuthUser } from '../auth';
+import { isCommissionerOrAdmin, type AuthUser } from '../auth';
+import { getLeagueBySlug } from '../../config/leagues';
 import { canViewSiteInsights } from '../site-insights';
 
 /** Flip at launch. While false, only the site owner's seat sees the pages. */
 export const LEAGUE_HISTORY_PUBLIC = false;
 
+/**
+ * The same owner's seat in the AFL. Sessions are per domain, so on
+ * afl-fantasy.com he is signed in as the AFL's franchise 0001, and the AFL's
+ * history pages turned him away on the AFL's own site (2026-10-25). VIEW only:
+ * fixing a champion stays with the insights seat below.
+ */
+const PREVIEW_SEATS = [{ leagueSlug: 'afl-fantasy', franchiseId: '0001' }] as const;
+
+function isPreviewSeat(user: AuthUser): boolean {
+	return PREVIEW_SEATS.some(
+		(seat) =>
+			user.leagueId === getLeagueBySlug(seat.leagueSlug)?.id &&
+			user.franchiseId === seat.franchiseId &&
+			isCommissionerOrAdmin(user),
+	);
+}
+
 export function canViewLeagueHistory(user: AuthUser | null | undefined): boolean {
-	return LEAGUE_HISTORY_PUBLIC || canViewSiteInsights(user);
+	if (LEAGUE_HISTORY_PUBLIC || canViewSiteInsights(user)) return true;
+	return !!user && isPreviewSeat(user);
 }
 
 /** Set or clear a season's champion. Admin only, before and after launch. */
