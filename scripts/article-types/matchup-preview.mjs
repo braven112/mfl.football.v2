@@ -6,7 +6,7 @@
  * AI output: { headline, excerpt, content: string[] }
  */
 
-import { loadTeams, loadJSON, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
+import { loadTeams, loadJSON, flipName, normalizePosition, formatDefName, resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
@@ -18,10 +18,21 @@ import {
   doubleheaderBriefing,
 } from '../article-utils/franchise-record.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
+import { buildMatchupVisuals } from '../../src/utils/matchup-preview-visuals.mjs';
+
+/**
+ * The column is short because the visuals carry the numbers (owner's call,
+ * Oct 2026): a Game of the Week rivalry panel leads the article and every
+ * matchup gets a tale-of-the-tape card under the copy. Hard cap, applied in
+ * buildPost — validate() only rejects too FEW paragraphs.
+ */
+const MAX_PARAGRAPHS = 4;
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
   requiredData: ['weekly-results-raw', 'projectedScores', 'standings', 'players', 'rosters', 'league'],
+  // Previews the games still to be played: the runner targets completedWeek + 1.
+  previewsUpcomingWeek: true,
   postType: 'article',
   // NOT 'breaking'. The homepage's breaking-story hero takes the freshest
   // tier:'breaking' post under 48h old at P0 (src/utils/offseason-hero-data.ts
@@ -100,12 +111,40 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // pairings TWICE. Unlabelled, that reads as a duplicate rather than the format.
   const weekFormat = summarizeWeekFormat(pairings);
 
+  // The visuals snapshot (Game of the Week panel + one card per matchup) rides
+  // on the post; the fact sheet reads the SAME snapshot so the copy can never
+  // state a series record or streak the cards beside it contradict.
+  let franchises;
+  try {
+    const historyFile = path.join(resolveMainRepo(projectRoot), LEAGUES[league].dataPath, 'derived', 'franchise-history.json');
+    const history = await loadJSON(historyFile);
+    franchises = history.franchises ?? history;
+  } catch {
+    // No ingested head-to-head: the cards still show this season's form.
+    franchises = undefined;
+  }
+  const visuals = buildMatchupVisuals({
+    pairings,
+    weeklyResultsRaw: data['weekly-results-raw'],
+    franchises,
+    year,
+    week,
+  });
+  const nameOf = (id) => teams.get(id)?.name ?? id;
+
   const lines = [];
   lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`FORMAT: ${weekFormat.label}`);
   lines.push('');
   const dhBriefing = doubleheaderBriefing(weekFormat);
   if (dhBriefing) { lines.push(dhBriefing); lines.push(''); }
+
+  if (visuals.gameOfWeek != null) {
+    const g = visuals.matchups[visuals.gameOfWeek];
+    lines.push(`GAME OF THE WEEK: ${nameOf(g.a.franchiseId)} vs ${nameOf(g.b.franchiseId)} (MATCHUP ${visuals.gameOfWeek + 1}) — the rivalry panel at the top of the article features it.`);
+    for (const fact of seriesFacts(g, nameOf, { full: true })) lines.push(`  ${fact}`);
+    lines.push('');
+  }
 
   // Track NFL teams with rostered players for broadcast guide
   const nflTeamPlayers = {}; // nflTeam → [{player, position, franchiseName}]
@@ -118,6 +157,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     const s2 = standingsMap[franchise2Id] || { wins: 0, losses: 0 };
 
     lines.push(`=== MATCHUP ${idx + 1}: ${t1?.name ?? franchise1Id} (${s1.wins}-${s1.losses}) vs ${t2?.name ?? franchise2Id} (${s2.wins}-${s2.losses}) ===`);
+    for (const fact of [...formFacts(visuals.matchups[idx], nameOf), ...seriesFacts(visuals.matchups[idx], nameOf)]) {
+      lines.push(`  ${fact}`);
+    }
 
     for (const [fid, teamInfo] of [[franchise1Id, t1], [franchise2Id, t2]]) {
       const roster = rosterMap[fid] || [];
@@ -178,12 +220,52 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     lines.push('US Broadcast channels: ' + Object.keys(broadcastData.countries.US.channels).join(', '));
   }
 
-  return { factSheet: lines.join('\n'), enrichment: {} };
+  return { factSheet: lines.join('\n'), enrichment: { visuals } };
+}
+
+/** This season's streak and luck for both sides, as fact-sheet lines. */
+function formFacts(m, nameOf) {
+  const out = [];
+  for (const side of [m.a, m.b]) {
+    const bits = [];
+    if (side.streak) bits.push(`current streak ${side.streak}`);
+    if (side.luck != null && Math.abs(side.luck) >= 1.5) {
+      bits.push(`${Math.abs(side.luck)} wins ${side.luck > 0 ? 'MORE' : 'FEWER'} than their weekly scores would earn against an average schedule`);
+    }
+    if (bits.length) out.push(`${nameOf(side.franchiseId)}: ${bits.join('; ')}`);
+  }
+  return out;
+}
+
+/**
+ * The all-time series as fact-sheet lines, always naming the side that leads
+ * (a bare "12-4" with no owner is how a record gets printed backwards).
+ * A disputed series states nothing — see matchup-preview-visuals.mjs.
+ */
+function seriesFacts(m, nameOf, { full = false } = {}) {
+  const s = m.series;
+  if (!s) return ['All-time series: first meeting under the current owners'];
+  if (s.disputed) return [];
+  const a = nameOf(m.a.franchiseId);
+  const b = nameOf(m.b.franchiseId);
+  const tie = s.ties ? `-${s.ties}` : '';
+  const record = s.aWins === s.bWins
+    ? `dead even at ${s.aWins}-${s.bWins}${tie}`
+    : s.aWins > s.bWins ? `${a} lead ${s.aWins}-${s.bWins}${tie}` : `${b} lead ${s.bWins}-${s.aWins}${tie}`;
+  const out = [`All-time series (${s.games} meetings since ${s.since}): ${record}`];
+  if (s.streak && s.streak.count >= 2) out.push(`Series streak: ${nameOf(s.streak.franchiseId)} have won the last ${s.streak.count} meetings`);
+  if (full) {
+    if (s.playoffGames) out.push(`Playoff meetings: ${s.playoffGames} (${a} ${s.playoffWins}-${s.playoffLosses})`);
+    if (s.biggest) out.push(`Biggest blowout: ${nameOf(s.biggest.winnerId)} ${s.biggest.score}-${s.biggest.opp} (${s.biggest.year})`);
+    if (s.closest) out.push(`Closest game: ${nameOf(s.closest.winnerId)} ${s.closest.score}-${s.closest.opp} (${s.closest.year})`);
+  }
+  return out;
 }
 
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
-Break down each fantasy matchup for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
+Preview the week's fantasy matchups and pick winners — be bold, be wrong sometimes, that's what makes it fun. This is the Saturday morning "what to watch" guide.
+The article page already SHOWS the numbers: a Game of the Week rivalry panel sits above your copy (series record, streak, playoff meetings, biggest and closest games, a chart of every meeting) and every matchup gets a tale-of-the-tape card below it (record, streak, recent results, weekly scores, luck). Your copy is SHORT and tells the story those visuals cannot: who wins and why. Do not recite records or streaks the cards already show.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
@@ -195,14 +277,15 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Opening paragraph...</p>", "<p>Matchup breakdowns...</p>", "<p>Broadcast guide section...</p>"]
+  "content": ["<p>Game of the Week...</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
 }
 
 INSTRUCTIONS:
-- Write 5-8 content paragraphs.
-- Cover at least the top 3-4 most interesting matchups.
-- Pick winners for each matchup — be bold.
-- Include a broadcast guide section (which NFL games to watch for fantasy implications).
+- Write exactly 3 or 4 SHORT paragraphs, each under 350 characters.
+- Paragraph 1: the GAME OF THE WEEK (if the fact sheet names one) — the rivalry angle and your pick.
+- Then 1-2 paragraphs on the next 2-3 most interesting matchups, with picks. Do not run through every game.
+- Last paragraph: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
+- Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
 - Reference specific projected scores and player names from the fact sheet.
 - Every name and number must come from the fact sheet.`;
 }
@@ -264,6 +347,10 @@ export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LE
     linkLabel: 'Read matchup preview',
     league: slug,
     authorId: 'claude',
-    content: aiOutput.content,
+    content: (aiOutput.content ?? []).slice(0, MAX_PARAGRAPHS),
+    // The Game of the Week panel and the tale-of-the-tape cards render from
+    // this snapshot (src/components/shared/matchup-preview/), taken when the
+    // column was written so an old preview keeps that week's numbers.
+    matchupVisuals: enrichment?.visuals ?? undefined,
   };
 }

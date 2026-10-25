@@ -22,6 +22,8 @@ import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs'
 export const config = {
   id: (year, week) => `sf_${year}_weekend_preview_w${String(week).padStart(2, '0')}`,
   requiredData: ['weekly-results-raw', 'projectedScores', 'standings', 'players', 'rosters', 'league'],
+  // Previews the games still to be played: the runner targets completedWeek + 1.
+  previewsUpcomingWeek: true,
   postType: 'article',
   // NOT 'breaking'. The homepage's breaking-story hero takes the freshest
   // tier:'breaking' post under 48h old at P0 (src/utils/offseason-hero-data.ts

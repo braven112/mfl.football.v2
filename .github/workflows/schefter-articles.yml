@@ -204,6 +204,10 @@ jobs:
             # no-op on every other day of the year. Each league announces when
             # ITS paste lands — there is no second date to keep in sync.
             each_league article:schedule-release node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE"
+          elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
+            # Every league whose articleTypes allow it (TheLeague and the AFL);
+            # each league previews its own slate from its own feeds.
+            each_league article:matchup-preview node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           else
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           fi
@@ -237,6 +241,8 @@ jobs:
             FILES="$(jobfiles article:schedule-strength '{schefterFeedPath}'),$(jobfiles article:schedule-strength '{dataPath}/derived')"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
+          elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
+            FILES="$(jobfiles article:matchup-preview '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             FILES="$(jobfiles pecking-order '{dataPath}/pecking-order')"
           else

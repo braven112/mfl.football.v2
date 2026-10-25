@@ -8,8 +8,8 @@ import path from 'node:path';
  * TheLeague Waits for Kickoff", an article whose entire body was "There are no
  * matchups scheduled for Week 0 of the 2026 season."
  *
- * The cause is a week-resolution mismatch that is still live: the runner
- * targets `opts.week ?? completedWeek` for every article type
+ * The cause was a week-resolution mismatch: the runner targeted
+ * `opts.week ?? completedWeek` for every article type
  * (schefter-weekly-articles.mjs), while the two forward-looking columns guard
  * on `currentWeek`. Before the season's first week finishes, completedWeek is
  * 0, `getMatchupPairings(raw, 0)` returns nothing, and the column writes a
@@ -73,5 +73,21 @@ describe('a preview with no matchups declines to publish', () => {
       expect(result).not.toBeNull();
       expect(result.factSheet).toContain('WEEK 5');
     });
+
+    // The runner reads this flag to target completedWeek + 1. Without it the
+    // column previewed a week whose games were already final: the Oct 24
+    // "Week 6 Preview" quoted records that included Week 6's results.
+    it(`${type} asks the runner for the upcoming week`, async () => {
+      const mod = await import(path.join(TYPES_DIR, `${type}.mjs`));
+      expect(mod.config.previewsUpcomingWeek).toBe(true);
+    });
   }
+});
+
+describe('the runner targets the upcoming week for a preview', () => {
+  it('adds one to completedWeek when the type asks for it', async () => {
+    const { readFileSync } = await import('node:fs');
+    const runner = readFileSync(path.join(ROOT, 'scripts/schefter-weekly-articles.mjs'), 'utf8');
+    expect(runner).toContain('mod.config.previewsUpcomingWeek ? completedWeek + 1 : completedWeek');
+  });
 });
