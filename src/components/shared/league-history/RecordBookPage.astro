@@ -12,9 +12,13 @@
  * follows the person across franchise slots and a slot's earlier owner keeps
  * theirs.
  *
- * Zero client JS: category, scope and board are all URL params switched by
- * links (pills filter the same leaderboard, so they are pills, not tabs), and
- * every view is bookmarkable.
+ * Every board also gets three charts (record-charts.mjs): the gap (the
+ * default) and where it sits, switched by pills, beside the highlighted
+ * "how the record grew" history (Brandon, 2026-10-25).
+ *
+ * Zero client JS: category, scope, board and chart are all URL params switched
+ * by links (pills filter the same leaderboard, so they are pills, not tabs),
+ * and every view is bookmarkable. The charts are server-drawn SVG.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
@@ -23,6 +27,7 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import { CATEGORIES, SCOPES, recordBook } from '../../../utils/league-history/records.mjs';
+import { gapChart, historyChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
 
 interface Row {
   value: number;
@@ -40,6 +45,8 @@ interface Board {
   label: string;
   title: string;
   note?: string;
+  asc: boolean;
+  population: Array<Array<number | string | null>>;
   rows: Row[];
 }
 
@@ -69,16 +76,29 @@ const scope = category.scoped && SCOPES.includes(scopeParam) ? scopeParam : 'all
 const boards = book.category(category.id, scope) as Board[];
 const board = boards.find((b) => b.id === params.get('board')) ?? boards[0];
 
+const CHARTS = [
+  { id: 'gap', label: 'The gap', draw: gapChart },
+  { id: 'spread', label: 'Where it sits', draw: spreadChart },
+];
+const chartView = CHARTS.find((c) => c.id === params.get('chart')) ?? CHARTS[0];
+// One drawing width for every screen: the SVG scales to its column, and at 400
+// its 11px labels stay readable from a phone (~0.85x) to a desktop column (~1.3x).
+const CHART_W = 400;
+const chart = board ? chartView.draw(board, CHART_W) : null;
+const history = board ? historyChart(board, CHART_W) : null;
+const historyBySeason = !!board?.population.length && board.population.every((p) => p[1] != null);
+
 /** A view's URL, leaving defaults out so the plain page stays the plain URL. */
-const viewHref = (next: { cat?: string; scope?: string; board?: string }) => {
+const viewHref = (next: { cat?: string; scope?: string; board?: string; chart?: string; hash?: string }) => {
   const q = new URLSearchParams();
   const cat = next.cat ?? category.id;
   if (cat !== CATEGORIES[0].id) q.set('cat', cat);
   const sc = next.scope ?? 'all';
   if (sc !== 'all') q.set('scope', sc);
   if (next.board) q.set('board', next.board);
+  if (next.chart && next.chart !== CHARTS[0].id) q.set('chart', next.chart);
   const qs = q.toString();
-  return qs ? `${r(BASE)}?${qs}` : r(BASE);
+  return `${qs ? `${r(BASE)}?${qs}` : r(BASE)}${next.hash ? `#${next.hash}` : ''}`;
 };
 
 const rows = board?.rows ?? [];
@@ -148,7 +168,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
             <li>
               <a
                 class="ui-pill"
-                href={viewHref({ scope: s, board: board?.id })}
+                href={viewHref({ scope: s, board: board?.id, chart: chartView.id })}
                 aria-current={s === scope ? 'true' : undefined}
               >
                 {SCOPE_LABEL[s]}
@@ -165,7 +185,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
           <li>
             <a
               class="ui-pill"
-              href={viewHref({ scope, board: b.id })}
+              href={viewHref({ scope, board: b.id, chart: chartView.id })}
               aria-current={b.id === board?.id ? 'true' : undefined}
             >
               {b.label}
@@ -181,7 +201,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       {board?.note && <p class="rb-board__note">{board.note}</p>}
 
       {leader ? (
-        <>
+        <div class="rb-layout">
           <article class="rb-plaque" style={`--rb-team: ${accent(leader)}`}>
             <p class="rb-plaque__label">{tiedAtTop > 1 ? `Record · shared by ${tiedAtTop}` : 'The record'}</p>
             {leader.icon ? (
@@ -199,6 +219,44 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
             <p class="rb-plaque__context">{sub(leader)}</p>
           </article>
 
+          {chart && (
+            <figure class="rb-viz" id="rb-viz">
+              <ul class="ui-pills rb-pills rb-pills--charts" aria-label="Chart">
+                {CHARTS.map((c) => (
+                  <li>
+                    <a
+                      class="ui-pill"
+                      href={viewHref({ scope, board: board.id, chart: c.id, hash: 'rb-viz' })}
+                      aria-current={c.id === chartView.id ? 'true' : undefined}
+                    >
+                      {c.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <div class="rb-viz__plot" set:html={chart.svg} />
+              <figcaption class="rb-viz__take">{chart.take}</figcaption>
+            </figure>
+          )}
+
+          {history && (
+            <figure class="rb-story">
+              <p class="rb-story__kicker">{historyBySeason ? 'How the record grew' : 'Everyone on the board'}</p>
+              <p class="rb-story__title">
+                {historyBySeason ? 'Every result, season by season' : 'The whole league on one line'}
+              </p>
+              <div class="rb-viz__plot" set:html={history.svg} />
+              <figcaption class="rb-viz__take">{history.take}</figcaption>
+              {historyBySeason && (
+                <p class="rb-story__legend">
+                  <span class="rb-key rb-key--line"></span> The record at the time
+                  <span class="rb-key rb-key--dot"></span> Top 10
+                </p>
+              )}
+            </figure>
+          )}
+
+          <div class="rb-list">
           {chasers.length > 0 && (
             <ol class="rb-chasers" aria-label="Next on the list">
               {chasers.map((row) => (
@@ -241,7 +299,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               ))}
             </ol>
           )}
-        </>
+          </div>
+        </div>
       ) : (
         <p class="rb-empty">Nothing on this board yet.</p>
       )}
@@ -353,10 +412,181 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     color: var(--content-text-muted);
   }
 
+  /* Plaque, charts, the record's history, then the rest of the top ten. Two
+     columns from 960px: the leaderboard on the left, the charts on the right. */
+  .rb-layout {
+    display: grid;
+    grid-template-areas: 'plaque' 'viz' 'story' 'list';
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .rb-plaque { grid-area: plaque; }
+  .rb-viz { grid-area: viz; }
+  .rb-story { grid-area: story; }
+  .rb-list { grid-area: list; }
+  @media (min-width: 960px) {
+    .rb-layout {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas: 'plaque viz' 'list story';
+      align-items: start;
+    }
+    /* The plaque fills the row beside the chart, its content centered. */
+    .rb-plaque {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+  }
+
+  /* ── Charts ───────────────────────────────────────────────────────────── */
+  .rb-viz,
+  .rb-story {
+    min-width: 0;
+    margin: 0;
+    padding: 0.75rem;
+    background: var(--content-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-md, 12px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  /* The highlighted one (Brandon's favorite): a gold edge and a heading. */
+  .rb-story {
+    border-color: var(--history-gold);
+    background: linear-gradient(180deg, var(--history-gold-wash), var(--content-bg) 40%);
+  }
+  .rb-story p {
+    margin: 0;
+  }
+  .rb-story__kicker {
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rb-story__title {
+    margin-bottom: 0.5rem !important;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .rb-story__legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.375rem !important;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .rb-key {
+    display: inline-block;
+    margin-left: 0.5rem;
+  }
+  .rb-key:first-child {
+    margin-left: 0;
+  }
+  .rb-key--line {
+    width: 16px;
+    height: 2px;
+    background: var(--history-gold);
+  }
+  .rb-key--dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--page-text);
+  }
+  .rb-pills--charts {
+    margin-bottom: 0.5rem;
+  }
+  .rb-viz__plot :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .rb-viz__take {
+    margin-top: 0.5rem;
+    font-size: var(--font-size-sm);
+  }
+  .rb-viz__plot :global(text) {
+    font-family: inherit;
+    font-size: var(--font-size-2xs);
+    fill: var(--content-text-muted);
+  }
+  .rb-viz__plot :global(.rbc-name),
+  .rb-viz__plot :global(.rbc-val) {
+    fill: var(--page-text);
+    font-size: var(--font-size-xs);
+  }
+  .rb-viz__plot :global(.rbc-name) {
+    font-weight: var(--font-weight-semibold);
+  }
+  .rb-viz__plot :global(.rbc-val) {
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-viz__plot :global(.rbc-big) {
+    fill: var(--history-gold);
+    font-family: var(--font-display);
+    font-size: var(--font-size-sm);
+  }
+  .rb-viz__plot :global(.rbc-grid) {
+    stroke: var(--content-border);
+    stroke-width: 1;
+  }
+  .rb-viz__plot :global(.rbc-base) {
+    stroke: var(--content-border);
+  }
+  .rb-viz__plot :global(.rbc-stem) {
+    stroke: color-mix(in srgb, var(--content-text-muted) 40%, transparent);
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-lead) {
+    fill: var(--history-gold);
+    stroke: var(--content-bg);
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-top) {
+    fill: var(--page-text);
+    stroke: var(--content-bg);
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-dot) {
+    fill: color-mix(in srgb, var(--content-text-muted) 45%, transparent);
+  }
+  .rb-viz__plot :global(.rbc-bar) {
+    fill: color-mix(in srgb, var(--content-text-muted) 40%, transparent);
+  }
+  .rb-viz__plot :global(.rbc-bar-top) {
+    fill: var(--history-gold);
+  }
+  .rb-viz__plot :global(.rbc-median) {
+    stroke: var(--content-text-muted);
+    stroke-dasharray: 3 3;
+  }
+  .rb-viz__plot :global(.rbc-record) {
+    stroke: var(--history-gold);
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-cloud) {
+    fill: none;
+    stroke: color-mix(in srgb, var(--content-text-muted) 45%, transparent);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .rb-viz__plot :global(.rbc-progress) {
+    fill: none;
+    stroke: var(--history-gold);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+
   /* The record holder, on a plaque. */
   .rb-plaque {
     position: relative;
-    margin-top: 1rem;
     padding: 1.25rem 1rem 1rem;
     overflow: hidden;
     text-align: center;
@@ -416,7 +646,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem;
-    margin: 0.75rem 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
   }

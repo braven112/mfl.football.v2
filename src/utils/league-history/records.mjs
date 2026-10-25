@@ -108,7 +108,7 @@ function rankBy(items, value, build, { asc = false, limit = 10 } = {}) {
     const rank = prev && prev.value === scored[i].v ? prev.rank : i + 1;
     out.push({ ...build(scored[i].item, scored[i].v), value: scored[i].v, rank });
   }
-  return out;
+  return withPopulation(out, scored.map((s) => [s.v, s.item.y ?? null, s.item.wk ?? null, null]), asc);
 }
 
 /** Ranked rows with shared ranks for equal values. */
@@ -122,7 +122,20 @@ function rankRows(rows, { asc = false, limit = 10 } = {}) {
     const rank = prev && prev.value === sorted[i].value ? prev.rank : i + 1;
     out.push({ ...sorted[i], rank });
   }
-  return out;
+  return withPopulation(out, rows.map((r) => [r.value, r.year ?? null, null, r.year == null ? r.name : null]), asc);
+}
+
+/**
+ * Every result a board ranked, not just its top ten, for the Record Book's
+ * charts (where the record sits against everything, and how it grew). Rides
+ * on the rows array and is lifted onto the board by buildCategory.
+ * Each entry: [value, year | null, week | null, name | null] (a name only for
+ * rows with no season, which the charts plot one dot per entity).
+ */
+function withPopulation(rows, population, asc) {
+  rows.population = population;
+  rows.asc = asc;
+  return rows;
 }
 
 function gameContext(ix, g, f) {
@@ -489,10 +502,19 @@ export const CATEGORIES = [
 
 /**
  * One category's boards. `scope` applies to Single game and Career only.
- * @returns {Array<{id:string,label:string,title:string,note?:string,rows:Array<object>}>}
+ * `population` is every result the board ranked (see withPopulation) and `asc`
+ * says the record is the LOWEST value (fewest points, fastest to a milestone).
+ * @returns {Array<{id:string,label:string,title:string,note?:string,asc:boolean,population:Array<Array<number|string|null>>,rows:Array<object>}>}
  */
 export function buildCategory(ix, category, scope = 'all') {
-  const sc = SCOPES.includes(scope) ? scope : 'all';
+  return categoryBoards(ix, category, SCOPES.includes(scope) ? scope : 'all').map((b) => ({
+    ...b,
+    asc: Boolean(b.rows.asc),
+    population: b.rows.population ?? [],
+  }));
+}
+
+function categoryBoards(ix, category, sc) {
   switch (category) {
     case 'single-game':
       return singleGameBoards(ix, sc);

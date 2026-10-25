@@ -118,7 +118,7 @@ describe('Record Book boards', () => {
   });
 
   it('holds back rate boards until the minimum games', () => {
-    expect(board('career', 'career-pct', 'regular').rows).toEqual([]);
+    expect(board('career', 'career-pct', 'regular').rows).toHaveLength(0);
   });
 
   it('caches boards per dataset', () => {
