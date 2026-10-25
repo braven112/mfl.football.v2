@@ -90,8 +90,11 @@ const myIds = new Set(viewerFranchise ? (latest?.teams[viewerFranchise]?.h ?? `s
 const mine = (key: string) => key.split('+').some((id) => myIds.has(id));
 
 const navSlug = league.navSlug as LeagueSlug;
-const currentName = (f: string) =>
-  (data as { seasons: Array<{ teams: Record<string, { n?: string }> }> }).seasons.findLast((s) => s.teams[f])?.teams[f]?.n;
+const lastNames = new Map<string, string | undefined>();
+for (const s of (data as { seasons: Array<{ teams: Record<string, { n?: string }> }> }).seasons) {
+  for (const [f, t] of Object.entries(s.teams)) lastNames.set(f, t.n);
+}
+const currentName = (f: string) => lastNames.get(f);
 const rafters: RafterBanner[] = banners.map((b) => ({
   year: b.year,
   kind: 'C',
