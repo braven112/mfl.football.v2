@@ -83,7 +83,7 @@ const modes = [
 
     <div class="ui-pills owner-map__toolbar" role="group" aria-label="Show on the map">
       {modes.map((mode, i) => (
-        <button type="button" class="ui-pill" data-owner-map-mode={mode.id} aria-pressed={String(i === 0)}>
+        <button type="button" class="ui-pill" data-owner-map-mode={mode.id} aria-pressed={i === 0 ? 'true' : 'false'}>
           {mode.label}
         </button>
       ))}
