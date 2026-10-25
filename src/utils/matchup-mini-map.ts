@@ -20,6 +20,9 @@ import { feature, mesh } from 'topojson-client';
 import type { Topology } from 'topojson-specification';
 import worldTopo from 'world-atlas/countries-50m.json';
 import usTopo from 'us-atlas/states-10m.json';
+import { milesBetween } from './hometown-geo.mjs';
+
+export { milesBetween };
 
 export const MINI_MAP_WIDTH = 320;
 export const MINI_MAP_HEIGHT = 180;
@@ -38,7 +41,6 @@ const MIN_SPAN = 1 / 2 ** 6;
 const CLAMP = 8;
 /** A point closer than this to the last one kept is dropped (viewBox units, about CSS px on a phone card). */
 const MIN_STEP = 2;
-const EARTH_RADIUS_MILES = 3958.8;
 const ANTARCTICA_ID = '010';
 
 export interface LatLng {
@@ -168,15 +170,6 @@ function toPath(shapes: Shape[], frame: Frame, closed: boolean): string {
     }
   }
   return parts.join('');
-}
-
-/** Great-circle distance, rounded to the mile. */
-export function milesBetween(a: LatLng, b: LatLng): number {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLng = (b.lng - a.lng) * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return Math.round(2 * EARTH_RADIUS_MILES * Math.asin(Math.min(1, Math.sqrt(h))));
 }
 
 /**

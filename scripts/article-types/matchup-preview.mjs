@@ -19,6 +19,7 @@ import {
 } from '../article-utils/franchise-record.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { buildMatchupVisuals } from '../../src/utils/matchup-preview-visuals.mjs';
+import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
 
 /**
  * The column is short because the visuals carry the numbers (owner's call,
@@ -131,6 +132,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     week,
   });
   const nameOf = (id) => teams.get(id)?.name ?? id;
+  // Owner Map hometowns (Redis): the same cities and miles the cards' mini
+  // maps print, so the copy and the map beside it agree.
+  const hometowns = await loadHometowns(league);
 
   const lines = [];
   lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — ${LEAGUES[league].name} (${year} Season)`);
@@ -160,6 +164,8 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     for (const fact of [...formFacts(visuals.matchups[idx], nameOf), ...seriesFacts(visuals.matchups[idx], nameOf)]) {
       lines.push(`  ${fact}`);
     }
+    const hometown = hometownFact(franchise1Id, franchise2Id, hometowns, nameOf);
+    if (hometown) lines.push(`  ${hometown}`);
 
     for (const [fid, teamInfo] of [[franchise1Id, t1], [franchise2Id, t2]]) {
       const roster = rosterMap[fid] || [];
@@ -265,7 +271,7 @@ function seriesFacts(m, nameOf, { full = false } = {}) {
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
 Preview the week's fantasy matchups and pick winners — be bold, be wrong sometimes, that's what makes it fun. This is the Saturday morning "what to watch" guide.
-The article page already SHOWS the numbers: a Game of the Week rivalry panel sits above your copy (series record, streak, playoff meetings, biggest and closest games, a chart of every meeting) and every matchup gets a tale-of-the-tape card below it (record, streak, recent results, weekly scores, luck). Your copy is SHORT and tells the story those visuals cannot: who wins and why. Do not recite records or streaks the cards already show.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
+The article page already SHOWS the numbers: a Game of the Week rivalry panel sits above your copy (series record, streak, playoff meetings, biggest and closest games, a chart of every meeting) and every matchup gets a tale-of-the-tape card below it (record, streak, recent results, weekly scores, luck). Your copy is SHORT and tells the story those visuals cannot: who wins and why. Do not recite records or streaks the cards already show.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
@@ -286,6 +292,7 @@ INSTRUCTIONS:
 - Then 1-2 paragraphs on the next 2-3 most interesting matchups, with picks. Do not run through every game.
 - Last paragraph: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
 - Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
+- Hometown references are optional flavor, at most twice; mileage only as the fact sheet states it.
 - Reference specific projected scores and player names from the fact sheet.
 - Every name and number must come from the fact sheet.`;
 }
