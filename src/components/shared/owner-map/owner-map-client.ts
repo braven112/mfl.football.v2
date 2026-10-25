@@ -16,10 +16,14 @@
  * Grouping: teams whose pins would overlap are drawn as one stacked marker
  * with a count. That is MapLibre's GeoJSON clustering; the markers themselves
  * are HTML so team icons render as real images.
+ *
+ * Filters (divisions, rivalries, champions, …) are decided in
+ * owner-map-views.ts; this file paints what a view returns.
  */
 import type { Map as MlMap, Marker, StyleSpecification, GeoJSONSource } from 'maplibre-gl';
 import type { Topology } from 'topojson-specification';
-import type { OwnerMapPin } from '../../../utils/owner-map';
+import type { OwnerMapData, OwnerMapPin } from '../../../utils/owner-map';
+import { computeView, defaultSub, subOptions, type MapMode, type ViewResult } from './owner-map-views';
 import countriesUrl from 'world-atlas/countries-50m.json?url';
 import statesUrl from 'us-atlas/states-10m.json?url';
 
@@ -177,16 +181,18 @@ function buildStyle(scope: HTMLElement, geo: Geo): StyleSpecification {
   };
 }
 
-function pinsGeoJson(pins: OwnerMapPin[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+function pinsGeoJson(pins: OwnerMapPin[], view: ViewResult): GeoJSON.FeatureCollection<GeoJSON.Point> {
   return {
     type: 'FeatureCollection',
-    features: pins.map((pin, index) => ({
+    features: view.visible.map((index) => ({
       type: 'Feature',
       properties: { index },
-      geometry: { type: 'Point', coordinates: [pin.city.lng, pin.city.lat] },
+      geometry: { type: 'Point', coordinates: [pins[index].city.lng, pins[index].city.lat] },
     })),
   };
 }
+
+const slotVar = (slot: number | null | undefined) => (slot ? `var(--chart-color-${slot})` : 'var(--league-accent)');
 
 /**
  * Pins arrive as JSON text from the page, so every URL in one is re-checked
@@ -224,14 +230,15 @@ function span(className: string, text: string): HTMLSpanElement {
  * icons by their src (Halloween squares some of them off), and the badge must
  * stay a circle whatever the art does.
  */
-function iconBadge(pin: OwnerMapPin): HTMLSpanElement {
+function iconBadge(pin: OwnerMapPin, slot: number | null | undefined): HTMLSpanElement {
   const badge = document.createElement('span');
   badge.className = 'om-marker__icon';
+  badge.style.setProperty('--om-ring', slotVar(slot));
   badge.appendChild(iconImg(pin));
   return badge;
 }
 
-function panelRow(pin: OwnerMapPin): HTMLAnchorElement {
+function panelRow(pin: OwnerMapPin, meta: string): HTMLAnchorElement {
   const row = document.createElement('a');
   row.className = 'om-pop__row';
   row.href = safeUrl(pin.href);
@@ -239,20 +246,45 @@ function panelRow(pin: OwnerMapPin): HTMLAnchorElement {
   const text = span('om-pop__text', '');
   text.append(
     span('om-pop__team', pin.teamName),
-    span('om-pop__meta', `${pin.ownerName} · ${pin.city.name}, ${pin.city.region}`),
+    span('om-pop__meta', meta),
   );
   row.appendChild(text);
   return row;
 }
 
+function pillButton(label: string, pressed: boolean, slot?: number | null): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ui-pill';
+  button.textContent = label;
+  button.setAttribute('aria-pressed', String(pressed));
+  if (slot) button.style.setProperty('--ui-pill-tone', slotVar(slot));
+  return button;
+}
+
+function legendItem(item: ViewResult['legend'][number]): HTMLLIElement {
+  const li = document.createElement('li');
+  li.className = 'om-legend__item';
+  const mark = span(item.kind === 'line' ? 'om-legend__line' : 'om-legend__swatch', '');
+  mark.style.setProperty('--om-ring', slotVar(item.slot));
+  li.append(mark, span('', item.label));
+  if (item.count !== undefined) li.append(span('om-legend__count', String(item.count)));
+  return li;
+}
+
 export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   const canvasEl = root.querySelector<HTMLElement>('[data-owner-map-canvas]');
-  const dataEl = root.querySelector<HTMLScriptElement>('[data-owner-map-pins]');
+  const dataEl = root.querySelector<HTMLScriptElement>('[data-owner-map-data]');
   if (!canvasEl || !dataEl) return () => {};
-  const pins = JSON.parse(dataEl.textContent || '[]') as OwnerMapPin[];
+  const data = JSON.parse(dataEl.textContent || '{}') as OwnerMapData;
+  const { pins } = data;
   const panel = root.querySelector<HTMLElement>('[data-owner-map-panel]');
   const panelRows = root.querySelector<HTMLElement>('[data-owner-map-panel-rows]');
   const panelClose = root.querySelector<HTMLButtonElement>('[data-owner-map-panel-close]');
+  const subBar = root.querySelector<HTMLElement>('[data-owner-map-sub]');
+  const legendEl = root.querySelector<HTMLElement>('[data-owner-map-legend]');
+  const captionEl = root.querySelector<HTMLElement>('[data-owner-map-caption]');
+  const rows = Array.from(root.querySelectorAll<HTMLElement>('[data-owner-map-row]'));
 
   // MapLibre 5 draws with WebGL 2 only; say so plainly rather than let the
   // constructor fail with a GL error.
@@ -284,27 +316,80 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     'bottom-right',
   );
 
+  let mode: MapMode = 'division';
+  let sub = defaultSub(data, mode);
+  let focus: number | null = null;
+  let view = computeView(data, mode, sub, focus);
+
   const markers = new Map<string, Marker>();
+  const clearMarkers = () => {
+    markers.forEach((marker) => marker.remove());
+    markers.clear();
+  };
 
   // The selected team(s) show in a card pinned to the bottom of the map
   // rather than a MapLibre popup: a popup anchored to a marker near the edge
   // of a phone-width map runs off the frame.
-  function openPanel(group: OwnerMapPin[]) {
+  function openPanel(group: number[]) {
     if (!panel || !panelRows) return;
-    panelRows.replaceChildren(...group.map(panelRow));
+    panelRows.replaceChildren(...group.map((i) => panelRow(pins[i], view.meta(i))));
     panel.hidden = false;
   }
   function closePanel() {
     if (panel) panel.hidden = true;
+    if (focus !== null) {
+      focus = null;
+      render(false);
+    }
   }
   panelClose?.addEventListener('click', closePanel);
   map.on('click', closePanel);
 
+  // Line colors must be solid for MapLibre, so each slot is resolved once per
+  // theme, like the land and water.
+  let lineColors = new Map<string, string>();
+  const resolveLineColors = () => {
+    lineColors = new Map();
+    lineColors.set('accent', solidToken(canvasEl, ['--league-accent', '--color-primary'], '#3b6b9a'));
+    for (let slot = 1; slot <= 6; slot += 1) {
+      lineColors.set(String(slot), solidToken(canvasEl, [`--chart-color-${slot}`], '#3b6b9a'));
+    }
+  };
+  resolveLineColors();
+
+  function linesGeoJson(): GeoJSON.FeatureCollection<GeoJSON.LineString> {
+    return {
+      type: 'FeatureCollection',
+      features: view.lines.map((line) => ({
+        type: 'Feature',
+        properties: {
+          color: lineColors.get(line.slot ? String(line.slot) : 'accent'),
+          width: 1 + line.weight,
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [pins[line.a].city.lng, pins[line.a].city.lat],
+            [pins[line.b].city.lng, pins[line.b].city.lat],
+          ],
+        },
+      })),
+    };
+  }
+
   function addPinLayer() {
     if (map.getSource('pins')) return;
+    map.addSource('links', { type: 'geojson', data: linesGeoJson() });
+    map.addLayer({
+      id: 'links',
+      type: 'line',
+      source: 'links',
+      layout: { 'line-cap': 'round' },
+      paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': 0.85 },
+    });
     map.addSource('pins', {
       type: 'geojson',
-      data: pinsGeoJson(pins),
+      data: pinsGeoJson(pins, view),
       cluster: true,
       clusterRadius: 34,
       clusterMaxZoom: MAX_ZOOM,
@@ -331,10 +416,10 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
       if (isCluster) {
         const clusterId = Number(props.cluster_id);
         const leaves = (await source.getClusterLeaves(clusterId, 50, 0)) as GeoJSON.Feature[];
-        const group = leaves.map((leaf) => pins[Number(leaf.properties?.index)]).filter(Boolean);
+        const group = leaves.map((leaf) => Number(leaf.properties?.index)).filter((i) => pins[i]);
         el.className = 'om-marker om-marker--group';
-        el.setAttribute('aria-label', `${group.length} teams: ${group.map((p) => p.teamName).join(', ')}`);
-        group.slice(0, 3).forEach((pin) => el.appendChild(iconBadge(pin)));
+        el.setAttribute('aria-label', `${group.length} teams: ${group.map((i) => pins[i].teamName).join(', ')}`);
+        group.slice(0, 3).forEach((i) => el.appendChild(iconBadge(pins[i], view.ring.get(i))));
         const count = document.createElement('span');
         count.className = 'om-marker__count';
         count.textContent = String(group.length);
@@ -347,14 +432,22 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
           else map.easeTo({ center: coords, zoom });
         });
       } else {
-        const pin = pins[Number(props.index)];
+        const index = Number(props.index);
+        const pin = pins[index];
         if (!pin) continue;
-        el.className = 'om-marker';
+        el.className = pin.franchiseId === data.myFranchiseId ? 'om-marker om-marker--mine' : 'om-marker';
         el.setAttribute('aria-label', `${pin.teamName}, ${pin.city.name}`);
-        el.appendChild(iconBadge(pin));
+        el.appendChild(iconBadge(pin, view.ring.get(index)));
+        const tag = view.tag.get(index);
+        if (tag) el.appendChild(span('om-marker__tag', tag));
         el.addEventListener('click', (event) => {
           event.stopPropagation();
-          openPanel([pin]);
+          // Divisions and rivalries draw the tapped team's own lines.
+          if (focus !== index) {
+            focus = index;
+            render(false);
+          }
+          openPanel([index]);
         });
       }
       markers.set(key, new maplibregl.Marker({ element: el }).setLngLat(coords).addTo(map));
@@ -368,19 +461,98 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   }
 
   let syncing = false;
+  let resync = false;
   const onRender = () => {
-    if (syncing) return;
+    if (syncing) {
+      resync = true;
+      return;
+    }
     syncing = true;
     syncMarkers().finally(() => {
       syncing = false;
+      if (resync) {
+        resync = false;
+        onRender();
+      }
     });
   };
 
   map.on('load', addPinLayer);
   map.on('render', onRender);
 
+  function fitToVisible() {
+    if (view.visible.length < 2) return;
+    let [w, s, e, n] = [180, 90, -180, -90];
+    for (const i of view.visible) {
+      const { lng, lat } = pins[i].city;
+      w = Math.min(w, lng);
+      e = Math.max(e, lng);
+      s = Math.min(s, lat);
+      n = Math.max(n, lat);
+    }
+    map.fitBounds(
+      [
+        [w, s],
+        [e, n],
+      ],
+      { padding: FIT_PADDING * 2, maxZoom: 6, speed: 1.6 },
+    );
+  }
+
+  function renderControls() {
+    root.querySelectorAll<HTMLButtonElement>('[data-owner-map-mode]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.ownerMapMode === mode));
+    });
+    subBar?.replaceChildren(
+      ...subOptions(data, mode).map((option) => {
+        const button = pillButton(option.label, option.id === sub, option.slot);
+        button.addEventListener('click', () => {
+          sub = option.id;
+          focus = null;
+          render(true);
+        });
+        return button;
+      }),
+    );
+    legendEl?.replaceChildren(...view.legend.map(legendItem));
+    if (captionEl) captionEl.textContent = view.caption;
+    const shown = new Set(view.visible.map((i) => pins[i].franchiseId));
+    rows.forEach((row) => {
+      row.hidden = !shown.has(row.dataset.ownerMapRow ?? '');
+    });
+  }
+
+  /** Recompute the view and repaint. `refit` moves the map to the teams shown. */
+  function render(refit: boolean) {
+    view = computeView(data, mode, sub, focus);
+    const pinSource = map.getSource('pins') as GeoJSONSource | undefined;
+    const linkSource = map.getSource('links') as GeoJSONSource | undefined;
+    if (pinSource) {
+      clearMarkers();
+      pinSource.setData(pinsGeoJson(pins, view));
+    }
+    linkSource?.setData(linesGeoJson());
+    if (focus === null) renderControls();
+    if (refit && view.fit) fitToVisible();
+    else if (refit) setView(currentArea, false);
+  }
+
+  const onModeClick = (event: Event) => {
+    closePanelOnly();
+    mode = (event.currentTarget as HTMLButtonElement).dataset.ownerMapMode as MapMode;
+    sub = defaultSub(data, mode);
+    focus = null;
+    render(true);
+  };
+  const modeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-owner-map-mode]'));
+  modeButtons.forEach((button) => button.addEventListener('click', onModeClick));
+  function closePanelOnly() {
+    if (panel) panel.hidden = true;
+  }
+  renderControls();
+
   // Rebuild the colors when the theme flips. setStyle drops every source, so
-  // the pin source is re-added once the new style is in.
+  // the pin and line sources are re-added once the new style is in.
   const themeKey = () =>
     `${document.documentElement.classList.contains('dark')}|${document.documentElement.dataset.league ?? ''}`;
   let lastTheme = themeKey();
@@ -388,18 +560,22 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     const next = themeKey();
     if (next === lastTheme) return;
     lastTheme = next;
+    resolveLineColors();
+    clearMarkers();
     map.setStyle(buildStyle(canvasEl, geo));
     map.once('styledata', addPinLayer);
   });
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-league'] });
 
-  const setView = (view: View) => {
-    closePanel();
-    map.fitBounds(view === 'us' ? US_BOUNDS : WORLD_BOUNDS, { padding: FIT_PADDING, speed: 1.6 });
+  let currentArea: View = 'us';
+  function setView(area: View, close = true) {
+    currentArea = area;
+    if (close) closePanelOnly();
+    map.fitBounds(area === 'us' ? US_BOUNDS : WORLD_BOUNDS, { padding: FIT_PADDING, speed: 1.6 });
     root.querySelectorAll<HTMLButtonElement>('[data-owner-map-view]').forEach((button) => {
-      button.setAttribute('aria-pressed', String(button.dataset.ownerMapView === view));
+      button.setAttribute('aria-pressed', String(button.dataset.ownerMapView === area));
     });
-  };
+  }
   const viewButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-owner-map-view]'));
   const onViewClick = (event: Event) => setView((event.currentTarget as HTMLButtonElement).dataset.ownerMapView as View);
   viewButtons.forEach((button) => button.addEventListener('click', onViewClick));
@@ -407,8 +583,9 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   return () => {
     themeObserver.disconnect();
     viewButtons.forEach((button) => button.removeEventListener('click', onViewClick));
+    modeButtons.forEach((button) => button.removeEventListener('click', onModeClick));
     panelClose?.removeEventListener('click', closePanel);
-    markers.forEach((marker) => marker.remove());
+    clearMarkers();
     map.remove();
   };
 }

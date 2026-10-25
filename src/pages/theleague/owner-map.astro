@@ -8,10 +8,12 @@
  * also belong here — a static import specifier can't be a runtime variable.
  */
 import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
-import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import ownerData from '../../../data/theleague/derived/owner-tenures.json';
+import history from '../../../data/theleague/derived/franchise-history.json';
 import type { OwnerTenuresFile } from '../../types/owner-tenures';
+import type { OwnerMapHistory } from '../../utils/owner-map';
 
 export const prerender = false;
 const LEAGUE = getLeagueBySlug('theleague')!;
@@ -22,4 +24,9 @@ if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
 }
 ---
 
-<OwnerMapPage leagueSlug="theleague" data={ownerData as unknown as OwnerTenuresFile} />
+<OwnerMapPage
+  leagueSlug="theleague"
+  data={ownerData as unknown as OwnerTenuresFile}
+  history={history as unknown as OwnerMapHistory}
+  myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
+/>

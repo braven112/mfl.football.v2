@@ -20,24 +20,49 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
-import { buildOwnerMapPins, cityLabel } from '../../../utils/owner-map';
+import { buildOwnerMapData, cityLabel } from '../../../utils/owner-map';
+import type { OwnerMapConference, OwnerMapHistory } from '../../../utils/owner-map';
 // MapLibre's own stylesheet, scoped to this page by being imported here.
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   data: OwnerTenuresFile;
+  history: OwnerMapHistory;
+  /** A league with conferences passes them; one without leaves the Conference pill off. */
+  conferences?: OwnerMapConference[];
+  /** The viewer's own team here, for the My division view. */
+  myFranchiseId?: string | null;
 }
 
-const { leagueSlug, data } = Astro.props;
+const { leagueSlug, data, history, conferences, myFranchiseId } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`OwnerMapPage: unknown league ${leagueSlug}`);
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
 
-const pins = buildOwnerMapPins(data, league.slug, (franchiseId) => r(`/franchises/${franchiseId}`));
+const mapData = buildOwnerMapData(data, history, {
+  leagueSlug: league.slug,
+  franchiseHref: (franchiseId) => r(`/franchises/${franchiseId}`),
+  conferences,
+  myFranchiseId,
+});
+const { pins } = mapData;
 const hasSample = pins.some((pin) => pin.isSample);
+
+// Every way the map can be filtered. Each filters the same map and list, so
+// they are pills, not tabs.
+const modes = [
+  { id: 'division', label: 'Divisions' },
+  ...(mapData.conferences.length ? [{ id: 'conference', label: 'Conferences' }] : []),
+  ...(mapData.myFranchiseId ? [{ id: 'mine', label: 'My division' }] : []),
+  { id: 'rivalries', label: 'Rivalries' },
+  { id: 'champions', label: 'Champions' },
+  { id: 'playoffs', label: 'Playoff teams' },
+  { id: 'tenure', label: 'Owner tenure' },
+  { id: 'hometown', label: 'Hometowns' },
+];
 ---
 
 <TheLeagueLayout title={`Owner Map | ${league.name}`}>
@@ -56,13 +81,21 @@ const hasSample = pins.some((pin) => pin.isSample);
       </p>
     )}
 
-    <div class="ui-pills owner-map__toolbar" role="group" aria-label="Map view">
-      <button type="button" class="ui-pill" data-owner-map-view="us" aria-pressed="true">United States</button>
-      <button type="button" class="ui-pill" data-owner-map-view="world" aria-pressed="false">World</button>
+    <div class="ui-pills owner-map__toolbar" role="group" aria-label="Show on the map">
+      {modes.map((mode, i) => (
+        <button type="button" class="ui-pill" data-owner-map-mode={mode.id} aria-pressed={String(i === 0)}>
+          {mode.label}
+        </button>
+      ))}
     </div>
+    <div class="ui-pills owner-map__toolbar owner-map__subbar" role="group" aria-label="Filter" data-owner-map-sub></div>
 
     <div class="owner-map__frame">
       <div class="owner-map__canvas" data-owner-map-canvas aria-hidden="true"></div>
+      <div class="owner-map__zoom" role="group" aria-label="Map area">
+        <button type="button" class="owner-map__zoom-btn" data-owner-map-view="us" aria-pressed="true">US</button>
+        <button type="button" class="owner-map__zoom-btn" data-owner-map-view="world" aria-pressed="false">World</button>
+      </div>
       <div class="owner-map__failed" role="status">
         <p>The map could not load. The list below has every team.</p>
         <p class="owner-map__failed-detail" data-owner-map-error></p>
@@ -73,11 +106,14 @@ const hasSample = pins.some((pin) => pin.isSample);
       </div>
     </div>
 
+    <p class="owner-map__caption" data-owner-map-caption aria-live="polite"></p>
+    <ul class="owner-map__legend" data-owner-map-legend></ul>
+
     <section class="owner-map__list-section" aria-labelledby="owner-map-list-heading">
       <h2 id="owner-map-list-heading" class="owner-map__section-title">Teams by hometown</h2>
       <ul class="owner-map__list">
         {pins.map((pin) => (
-          <li>
+          <li data-owner-map-row={pin.franchiseId}>
             <a class="owner-map__row" href={pin.href}>
               <img class="owner-map__row-icon" src={pin.icon} alt="" width="40" height="40" loading="lazy" />
               <span class="owner-map__row-text">
@@ -90,7 +126,7 @@ const hasSample = pins.some((pin) => pin.isSample);
       </ul>
     </section>
 
-    <script type="application/json" data-owner-map-pins set:html={JSON.stringify(pins).replace(/</g, '\\u003c')} />
+    <script type="application/json" data-owner-map-data set:html={JSON.stringify(mapData).replace(/</g, '\\u003c')} />
   </div>
 </TheLeagueLayout>
 
@@ -155,7 +191,84 @@ const hasSample = pins.some((pin) => pin.isSample);
   }
 
   .owner-map__toolbar {
+    margin-bottom: 0.5rem;
+  }
+  .owner-map__subbar:empty {
+    display: none;
+  }
+  .owner-map__subbar {
     margin-bottom: 0.75rem;
+  }
+
+  /* US / World sits on the map, so the pill rows above stay about WHO is shown. */
+  .owner-map__zoom {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    display: flex;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: var(--box-shadow-md);
+  }
+  .owner-map__zoom-btn {
+    min-height: 32px;
+    padding: 0 0.75rem;
+    border: 0;
+    background: none;
+    color: var(--content-text-muted, #555);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+  }
+  .owner-map__zoom-btn[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--card-bg));
+    color: var(--page-text);
+  }
+
+  .owner-map__caption {
+    margin: 0.75rem 0 0.25rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .owner-map__caption:empty {
+    display: none;
+  }
+  .owner-map__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  :global(.om-legend__item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  :global(.om-legend__swatch) {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--om-ring, var(--league-accent));
+  }
+  :global(.om-legend__line) {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--om-ring, var(--league-accent));
+  }
+  :global(.om-legend__count) {
+    color: var(--content-text-muted, #555);
+    font-variant-numeric: tabular-nums;
+  }
+  .owner-map__list li[hidden] {
+    display: none;
   }
 
   .owner-map__frame {
@@ -274,7 +387,7 @@ const hasSample = pins.some((pin) => pin.isSample);
     place-items: center;
     width: 40px;
     height: 40px;
-    border: 2px solid var(--league-accent);
+    border: 3px solid var(--om-ring, var(--league-accent));
     border-radius: 50%;
     overflow: hidden;
     background: var(--content-bg);
@@ -284,6 +397,27 @@ const hasSample = pins.some((pin) => pin.isSample);
     width: 30px;
     height: 30px;
     object-fit: contain;
+  }
+  :global(.om-marker--mine .om-marker__icon) {
+    outline: 2px solid var(--page-text);
+    outline-offset: 2px;
+  }
+  /* A title count or a playoff finish, on a single team's marker. */
+  :global(.om-marker__tag) {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    color: var(--page-text);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 16px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
   :global(.om-marker--group .om-marker__icon + .om-marker__icon) {
     margin-left: -20px;
