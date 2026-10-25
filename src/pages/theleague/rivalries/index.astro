@@ -3,6 +3,9 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
+import historyData from '../../../../data/theleague/derived/league-history.json';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { rivalryPairs } from '../../../utils/league-history/rivalry.mjs';
 import leagueConfig from '../../../data/theleague.config.json';
 
 export const prerender = false;
@@ -38,21 +41,27 @@ allFranchises.sort((a, b) =>
   (a.currentNameMedium || a.currentName).localeCompare(b.currentNameMedium || b.currentName)
 );
 
-// Pair record from row's perspective vs col, restricted to games where both
-// franchises had their CURRENT owners that year. Without that filter we'd
-// be conflating ownership eras and the rivalry framing breaks.
-type PairRecord = { wins: number; losses: number; ties: number; games: number; playoffGames: number };
+// Pair record from row's perspective vs col, from the League History dataset:
+// the same records each rivalry page shows, over the meetings both CURRENT
+// owners played (following an owner who moved franchises), consolation games
+// left out. Without the owner filter we'd be conflating ownership eras and
+// the rivalry framing breaks.
+type PairRecord = { wins: number; losses: number; ties: number; games: number; playoffGames: number; heat: number };
 
+const pairs = rivalryPairs(recordBook(historyData).ix) as Map<string, any>;
 function computePairRecord(row: FranchiseRow, colId: string): PairRecord {
-  const meetings = (row.matchupHistory[colId] || []).filter((m) => m.bothAttributed);
-  let wins = 0, losses = 0, ties = 0, playoffGames = 0;
-  for (const m of meetings) {
-    if (m.score > m.opponentScore) wins++;
-    else if (m.score < m.opponentScore) losses++;
-    else ties++;
-    if (m.isPlayoff) playoffGames++;
-  }
-  return { wins, losses, ties, games: meetings.length, playoffGames };
+  const [lo, hi] = [row.franchiseId, colId].sort();
+  const p = pairs.get(`${lo}-${hi}`);
+  if (!p) return { wins: 0, losses: 0, ties: 0, games: 0, playoffGames: 0, heat: 0 };
+  const rowIsA = row.franchiseId === p.a;
+  return {
+    wins: rowIsA ? p.wa : p.wb,
+    losses: rowIsA ? p.wb : p.wa,
+    ties: p.t,
+    games: p.games,
+    playoffGames: p.playoffs,
+    heat: p.heat,
+  };
 }
 
 function canonicalPair(a: string, b: string): string {
@@ -62,17 +71,6 @@ function canonicalPair(a: string, b: string): string {
 function recordLabel(r: PairRecord): string {
   if (!r.games) return '—';
   return r.ties > 0 ? `${r.wins}-${r.losses}-${r.ties}` : `${r.wins}-${r.losses}`;
-}
-
-// Intensity score: high when teams have played a lot and the record is close.
-// Used for cell shading + the "Hot rivalries" highlight strip.
-function intensity(r: PairRecord): number {
-  if (r.games === 0) return 0;
-  const total = r.wins + r.losses + r.ties;
-  const closeness = total > 0 ? 1 - Math.abs(r.wins - r.losses) / total : 0;
-  // Bonus for playoff meetings (each ~ 3 regular games of intensity).
-  const weighted = total + r.playoffGames * 3;
-  return closeness * Math.log2(1 + weighted);
 }
 
 // Top rivalries strip — highest intensity unique pairs.
@@ -92,7 +90,7 @@ for (const a of allFranchises) {
     seen.add(key);
     const rec = computePairRecord(a, b.franchiseId);
     if (rec.games < 4) continue; // need a baseline of meetings
-    topRivalries.push({ a, b, record: rec, intensity: intensity(rec) });
+    topRivalries.push({ a, b, record: rec, intensity: rec.heat });
   }
 }
 topRivalries.sort((x, y) => y.intensity - x.intensity);
@@ -181,7 +179,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
                     return <td class="self" aria-hidden="true">—</td>;
                   }
                   const rec = computePairRecord(row, col.franchiseId);
-                  const ints = intensity(rec);
+                  const ints = rec.heat;
                   const intsPct = Math.min(1, ints / 4); // 0..4 → 0..1
                   if (rec.games === 0) {
                     return (

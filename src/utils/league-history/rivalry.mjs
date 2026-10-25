@@ -6,9 +6,11 @@
  *
  * A rivalry page is a pair of franchise SLOTS. By default it counts only the
  * meetings both CURRENT owners played (`ownerOnly`), the way the franchise
- * page highlights its current owner (Brandon, 2026-10-25); `ownerOnly: false`
- * is every game the two slots ever played, each credited to the owners of the
- * day. The series counts regular season and playoff games; consolation games
+ * page highlights its current owner (Brandon, 2026-10-25), and that follows
+ * the OWNERS: a game they played from other slots before one moved franchises
+ * counts too, as the old rivalry pages and franchise history counted it.
+ * `ownerOnly: false` adds every game the two slots ever played, each credited
+ * to the owners of the day. The series counts regular season and playoff games; consolation games
  * are listed but never counted, the Record Book's "all games" scope.
  *
  * Heat is the shared rivalry formula (rivalry-intensity.mjs), so this page,
@@ -44,12 +46,21 @@ const isFinal = (ix, g) => {
   return r.has('C') && r.has('R');
 };
 
-/** Every game between two slots, from A's side, oldest first. */
-function meetingsOf(ix, a, b) {
+/**
+ * Every game between two slots, plus every game the two slots' current owners
+ * played each other from other slots (an owner who moved franchises), from A's
+ * side, oldest first. A is whichever team was slot `a` or `a`'s current owner.
+ */
+function meetingsOf(ix, a, b, ka, kb) {
   return ix.games
-    .filter((g) => (g.wf === a && g.lf === b) || (g.wf === b && g.lf === a))
     .map((g) => {
-      const aWon = g.wf === a;
+      const ew = ix.entityOf(g.y, g.wf);
+      const el = ix.entityOf(g.y, g.lf);
+      const slots = (g.wf === a && g.lf === b) || (g.wf === b && g.lf === a);
+      const owners = (ew === ka && el === kb) || (ew === kb && el === ka);
+      if (!slots && !owners) return null;
+      const aWon = slots ? g.wf === a : ew === ka;
+      const [fa, fb] = aWon ? [g.wf, g.lf] : [g.lf, g.wf];
       return {
         y: g.y,
         wk: g.wk,
@@ -58,12 +69,15 @@ function meetingsOf(ix, a, b) {
         sA: aWon ? g.ws : g.ls,
         sB: aWon ? g.ls : g.ws,
         winner: g.tie ? null : aWon ? 'A' : 'B',
-        nameA: ix.team(g.y, a)?.n ?? a,
-        nameB: ix.team(g.y, b)?.n ?? b,
-        holdingA: ix.entityOf(g.y, a),
-        holdingB: ix.entityOf(g.y, b),
+        franchiseA: fa,
+        franchiseB: fb,
+        nameA: ix.team(g.y, fa)?.n ?? fa,
+        nameB: ix.team(g.y, fb)?.n ?? fb,
+        holdingA: ix.entityOf(g.y, fa),
+        holdingB: ix.entityOf(g.y, fb),
       };
     })
+    .filter(Boolean)
     .sort((x, y) => x.y - y.y || x.wk - y.wk);
 }
 
@@ -95,28 +109,49 @@ export function seriesTally(meetings) {
   };
 }
 
-/** Heat of every pairing of active slots over the current owners' meetings, hottest first. Cached per index. */
-export function rivalryHeat(ix) {
-  if (ix._rivalryHeat) return ix._rivalryHeat;
+/**
+ * Every pairing of active slots, over the games their CURRENT owners played
+ * each other (from whichever slots they held then), consolation games left
+ * out: { a, b, wa, wb, t, games, playoffs, heat }, keyed `${a}-${b}` with the
+ * smaller id first. The rivalry index and each rivalry page's heat read this,
+ * so a pairing's record is the same everywhere. Cached per index.
+ */
+export function rivalryPairs(ix) {
+  if (ix._rivalryPairs) return ix._rivalryPairs;
   const latest = ix.ds.seasons.at(-1);
   const active = latest ? Object.keys(latest.teams) : [];
-  const holding = new Map(active.map((f) => [f, currentHolding(ix, f)?.key]));
+  const slotOf = new Map();
+  for (const f of active) {
+    const key = currentHolding(ix, f)?.key;
+    if (key) slotOf.set(key, f);
+  }
   const pairs = new Map();
   for (const g of ix.games) {
-    if (g.kind === 'consolation' || !holding.has(g.wf) || !holding.has(g.lf) || g.wf === g.lf) continue;
-    if (ix.entityOf(g.y, g.wf) !== holding.get(g.wf) || ix.entityOf(g.y, g.lf) !== holding.get(g.lf)) continue;
-    const [a, b] = [g.wf, g.lf].sort();
+    if (g.kind === 'consolation') continue;
+    const sw = slotOf.get(ix.entityOf(g.y, g.wf));
+    const sl = slotOf.get(ix.entityOf(g.y, g.lf));
+    if (!sw || !sl || sw === sl) continue;
+    const [a, b] = [sw, sl].sort();
     if (!pairs.has(`${a}-${b}`)) pairs.set(`${a}-${b}`, { a, b, wa: 0, wb: 0, t: 0, games: 0, playoffs: 0 });
     const p = pairs.get(`${a}-${b}`);
     p.games += 1;
     if (g.kind === 'playoffs') p.playoffs += 1;
     if (g.tie) p.t += 1;
-    else if (g.wf === a) p.wa += 1;
+    else if (sw === a) p.wa += 1;
     else p.wb += 1;
   }
-  const ranked = [...pairs.values()]
+  for (const p of pairs.values()) p.heat = rivalryIntensity(p.games, p.wa, p.wb, p.t, p.playoffs);
+  ix._rivalryPairs = pairs;
+  return pairs;
+}
+
+/** Pairings at or above the meetings floor, hottest first. Cached per index. */
+export function rivalryHeat(ix) {
+  if (ix._rivalryHeat) return ix._rivalryHeat;
+  const latest = ix.ds.seasons.at(-1);
+  const active = latest ? Object.keys(latest.teams) : [];
+  const ranked = [...rivalryPairs(ix).values()]
     .filter((p) => p.games >= MIN_RIVALRY_MEETINGS)
-    .map((p) => ({ ...p, heat: rivalryIntensity(p.games, p.wa, p.wb, p.t, p.playoffs) }))
     .sort((x, y) => y.heat - x.heat);
   ix._rivalryHeat = { ranked, pairings: (active.length * (active.length - 1)) / 2 };
   return ix._rivalryHeat;
@@ -133,7 +168,7 @@ export function rivalryHistory(ix, a, b, { ownerOnly = true } = {}) {
   if (!ha || !hb || a === b) return null;
   const latestYear = ix.ds.seasons.at(-1)?.y;
 
-  const all = meetingsOf(ix, a, b);
+  const all = meetingsOf(ix, a, b, ha.key, hb.key);
   const bothCurrent = (m) => m.holdingA === ha.key && m.holdingB === hb.key;
   const listed = ownerOnly ? all.filter(bothCurrent) : all;
   const counted = listed.filter((m) => m.kind !== 'consolation');
