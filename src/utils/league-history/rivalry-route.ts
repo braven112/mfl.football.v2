@@ -9,7 +9,7 @@ import { parseRivalryPair } from '../rivalries';
 import { franchiseList } from './franchise.mjs';
 
 export type RivalryPairRoute =
-  | { redirect: 'index' | string; a?: undefined; b?: undefined; playoffRounds?: undefined }
+  | { redirect: string; a?: undefined; b?: undefined; playoffRounds?: undefined }
   | { redirect: null; a: string; b: string; playoffRounds: Record<string, string> };
 
 export function rivalryPairRoute(historyData: unknown, franchiseHistory: any, slug: string | undefined): RivalryPairRoute {

@@ -21,7 +21,7 @@ export const prerender = false;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const route = rivalryPairRoute(historyData, franchiseHistory, Astro.params.pair);
-if (route.redirect) {
+if (route.redirect !== null) {
   const path = route.redirect === 'index' ? '/afl-fantasy/rivalries' : `/afl-fantasy/rivalries/${route.redirect}${Astro.url.search}`;
   return Astro.redirect(resolveLeaguePath(path, hideLeaguePrefix), route.redirect === 'index' ? 302 : 301);
 }
