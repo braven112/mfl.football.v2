@@ -28,6 +28,11 @@ export interface RafterBanner {
   href?: string | null;
   title?: string;
   mine?: boolean;
+  /**
+   * Colors to paint instead of the franchise's current pair: the caller passes
+   * a former team's own colors for a banner won under a different owner.
+   */
+  colors?: { primary: string; secondary: string } | null;
 }
 
 interface Props {
@@ -37,8 +42,11 @@ interface Props {
 }
 
 const { banners, navSlug } = Astro.props as Props;
-const bannerStyle = (f: string) => {
-  const pair = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
+const bannerStyle = (b: RafterBanner) => {
+  const f = b.franchiseId;
+  const pair = b.colors
+    ? toBroadcastPair(b.colors.primary, b.colors.secondary)
+    : toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
   return `--hb-a: ${pair.primary}; --hb-b: ${pair.secondary}`;
 };
 const initials = (name: string) =>
@@ -58,7 +66,7 @@ const initials = (name: string) =>
         <Tag
           class:list={['hr-banner', `hr-banner--${b.kind}`, { 'hr-banner--mine': b.mine }]}
           href={b.href ?? undefined}
-          style={bannerStyle(b.franchiseId)}
+          style={bannerStyle(b)}
           title={b.title}
         >
           <span class="hr-banner__year">{b.year}</span>

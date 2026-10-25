@@ -23,7 +23,7 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
-import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
 import { recordBook, resultLabel } from '../../../utils/league-history/records.mjs';
@@ -159,6 +159,9 @@ const banner = (y: number, kind: RafterBanner['kind']): RafterBanner => {
     name: s.name,
     icon: s.icon,
     caption,
+    // A banner won under an old name (another owner's team, or a complete
+    // rebrand) hangs in that era's own colors (Brandon, 2026-10-25).
+    colors: s.name !== h.name ? getTeamEraColors(franchiseId, navSlug, y) : null,
     title: `${y} ${kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion'}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
   };
 };
