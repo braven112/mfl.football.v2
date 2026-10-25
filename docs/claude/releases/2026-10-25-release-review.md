@@ -55,3 +55,19 @@ about 10 hours away, which left time to roll back.
   this release together with the 2026-10-24 queue.
 - Release-review lenses not run: gemini sweep, sibling-drift, guard-gap.
 - Next, for the Tuesday (Oct 27) release: the Rivalries index redesign.
+
+## Second release, same day
+
+**Verdict: GO, released over the same Sunday blackout on the owner's explicit word ("finish
+the release").** `main` fast-forwarded `8ea39f5b → f16bfdc9` at about 15:27 UTC (08:27 PT).
+Production deployment `dpl_7Cxhd4UN7ZgvLHb3qtCjCHXiVzRN`. Rollback candidate:
+`dpl_DhTGbkXfVbs7zhg2cAp1dKRkbEES` (`8ea39f5b`, a roster sync on top of the morning release).
+
+- **#1492:** League History on afl-fantasy.com answered **508 Loop Detected** for a signed-in
+  viewer who failed the gate. The page's `Astro.rewrite('/_not-found')` re-ran the league-host
+  middleware, which re-prefixed the target until Astro's rewrite guard tripped.
+  `/_not-found` now skips the rewrite, so that viewer gets a 404. The same PR lets the site
+  owner's AFL commissioner seat (AFL 0001) VIEW League History. Sessions are per domain, so
+  the TheLeague seat never reaches the AFL host. Fixing champions stays with the insights seat.
+- Gates: staging CI (Tests and Type baseline) was green on `f16bfdc9`. The PR's Vercel preview
+  failed with the known stale branch build cache (`cookie` `parseCookie`), not the code.
