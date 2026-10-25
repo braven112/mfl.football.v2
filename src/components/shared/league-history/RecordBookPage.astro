@@ -110,9 +110,12 @@ const CHARTS = [
   { id: 'spread', label: 'Where it sits', draw: spreadChart },
 ];
 const chartView = CHARTS.find((c) => c.id === params.get('chart')) ?? CHARTS[0];
-// One drawing width for every screen: the SVG scales to its column, and at 400
-// its 11px labels stay readable from a phone (~0.85x) to a desktop column (~1.3x).
+// Two drawing widths, because an SVG scales its text with it. A phone's chart
+// column is only 250-305px wide, so the 400 drawing shrank its labels to ~0.7x
+// (Brandon, 2026-10-25: too small to read). The phone drawing is about as wide
+// as that column, so its labels show near their real size; CSS picks one.
 const CHART_W = 400;
+const CHART_W_PHONE = 290;
 
 // The viewer's own results: the holding (owner, or co-owners) of their
 // franchise in the latest season, matched against every entity key, so an
@@ -140,7 +143,9 @@ const watches = book.watch() as Record<string, Watch[]>;
 const boardWatch = (board && watches[board.id]) || [];
 const chartOpts = { mine, href: rowHref, entityHref, watch: boardWatch };
 const chart = board ? chartView.draw(board, CHART_W, chartOpts) : null;
+const chartPhone = board ? chartView.draw(board, CHART_W_PHONE, chartOpts) : null;
 const history = board ? historyChart(board, CHART_W, chartOpts) : null;
+const historyPhone = board ? historyChart(board, CHART_W_PHONE, chartOpts) : null;
 const youOnBoard = !!board?.population.some((p) => mine(p[4] as string | null));
 const historyBySeason = !!board?.population.length && board.population.every((p) => p[1] != null);
 
@@ -367,7 +372,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
                   </li>
                 ))}
               </ul>
-              <div class="rb-viz__plot" set:html={chart.svg} />
+              <div class="rb-viz__plot rb-viz__plot--phone" set:html={chartPhone?.svg ?? chart.svg} />
+              <div class="rb-viz__plot rb-viz__plot--wide" set:html={chart.svg} />
               <figcaption class="rb-viz__take">{chart.take}</figcaption>
             </figure>
           )}
@@ -378,7 +384,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               <p class="rb-story__title">
                 {historyBySeason ? 'Every result, season by season' : 'The whole league on one line'}
               </p>
-              <div class="rb-viz__plot" set:html={history.svg} />
+              <div class="rb-viz__plot rb-viz__plot--phone" set:html={historyPhone?.svg ?? history.svg} />
+              <div class="rb-viz__plot rb-viz__plot--wide" set:html={history.svg} />
               <figcaption class="rb-viz__take">{history.take}</figcaption>
               <p class="rb-story__legend">
                 {historyBySeason && (
@@ -705,6 +712,17 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     width: 100%;
     height: auto;
     overflow: visible;
+  }
+  .rb-viz__plot--wide {
+    display: none;
+  }
+  @media (min-width: 640px) {
+    .rb-viz__plot--phone {
+      display: none;
+    }
+    .rb-viz__plot--wide {
+      display: block;
+    }
   }
   .rb-viz__take {
     margin-top: 0.5rem;

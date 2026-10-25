@@ -71,12 +71,15 @@ export function gapChart(board, W, opts = {}) {
   const top = board.rows.slice(0, 10);
   if (top.length < 2) return null;
   const fmt = formatterFor(top[0].display);
-  const L = Math.min(150, W * 0.36), R = 62, rowH = 26, T = 6, H = T + top.length * rowH + 24;
+  // A phone drawing gives the names more of the row: its labels render near
+  // full size, about 7.6px a character rather than 7.2.
+  const narrow = W < 360;
+  const L = Math.min(150, W * (narrow ? 0.46 : 0.36)), R = 62, rowH = 26, T = 6, H = T + top.length * rowH + 24;
   const vals = top.map((r) => r.value);
   const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.05 || 1;
   // Better is always to the right: a fewest-is-best board runs its axis backward.
   const x = board.asc ? scale(hi + pad, lo - pad, L, W - R) : scale(lo - pad, hi + pad, L, W - R);
-  const chars = Math.floor(L / 7.2);
+  const chars = Math.floor((L - 6) / (narrow ? 7.6 : 7.2));
   let g = '';
   for (const t of ticks(lo - pad, hi + pad, W < 480 ? 3 : 5, fmt.step)) {
     g += `<line class="rbc-grid" x1="${px(x(t))}" x2="${px(x(t))}" y1="${T}" y2="${H - 20}"/>`;
@@ -150,7 +153,9 @@ export function spreadChart(board, W, opts = {}) {
   if (yours != null) {
     const yx = px(x(yours));
     const anchor = yx < W * 0.25 ? 'start' : yx > W * 0.75 ? 'end' : 'middle';
-    g += `<line class="rbc-mine-line" x1="${yx}" x2="${yx}" y1="${T - 22}" y2="${base}"/>`;
+    // Stops level with the record's line, so it never strikes through the
+    // Record label on the row between it and its own label.
+    g += `<line class="rbc-mine-line" x1="${yx}" x2="${yx}" y1="${T - 4}" y2="${base}"/>`;
     g += `<text class="rbc-mine-label" x="${yx}" y="${T - 28}" text-anchor="${anchor}">Your best ${fmt(yours)}</text>`;
   }
   for (const t of ticks(lo, hi, W < 480 ? 4 : 6, fmt.step)) g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 4}" text-anchor="middle">${fmt(t)}</text>`;
