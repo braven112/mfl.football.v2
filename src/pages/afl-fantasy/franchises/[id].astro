@@ -9,7 +9,9 @@
  * links after the head to head. What stays here is the AFL's own: its identity lineage
  * (ownerHistory claims and award attribution, src/utils/afl-name-history.ts),
  * the conference in the division label, and its trophies
- * (AflFranchiseTrophies, into the page's slots). The data imports and the
+ * (AflFranchiseTrophies, into the page's slots). The trophy wall is gone: the
+ * Rafters hang every AFL title, so it only repeated them (Brandon,
+ * 2026-10-25: "get rid of the duplicates at the bottom"). The data imports and the
  * unknown-franchise redirect stay in the route (static import specifiers;
  * `Astro.redirect()` only redirects from a page).
  */
@@ -162,7 +164,5 @@ nameEras.sort((a, b) => a.yearStart - b.yearStart);
     isOwner={isOwner}
     keeperPlanner={true}
     rivalriesPage={true}
-  >
-    <AflFranchiseTrophies slot="before-career" part="wall" team={team} />
-  </FranchisePage>
+  />
 </HistoryFranchisePage>

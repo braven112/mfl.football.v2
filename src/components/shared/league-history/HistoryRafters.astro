@@ -47,6 +47,8 @@ export interface RafterHonor {
   franchiseId: string;
   caption: string;
   tier: 'gold' | 'silver';
+  /** The labelled row it hangs in; rows hang in this order, top first. */
+  row: { order: number; label: string };
 }
 
 interface Props {
@@ -101,14 +103,17 @@ const initials = (name: string) =>
   .hr {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
-    align-items: start;
+    /* Every banner in a row hangs to the same length, however its caption wraps. */
+    align-items: stretch;
     gap: 0.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  .hr-banner,
-  .hr-banner:hover {
+  .hr-item {
+    display: grid;
+  }
+  .hr-banner {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -125,7 +130,13 @@ const initials = (name: string) =>
     /* A pennant: the bottom edge notched to a point in the middle. */
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 0.875rem), 0 100%);
   }
+  /* Only the colors the layouts' global a:hover would change. Repeating the
+     whole banner rule under :hover outranked the division banner's shorter
+     length, so a tapped division banner (hover sticks on a phone) grew and
+     took a gold stripe. */
   a.hr-banner:hover {
+    color: var(--color-white);
+    text-decoration: none;
     filter: brightness(1.12);
   }
   .hr-banner--R {

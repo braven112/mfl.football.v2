@@ -141,7 +141,8 @@ function lockedLabel(t: TrophyCaseItem): string {
      on one line directly under the identity row. */}
 {part === 'summary' && (
 <div class="lockup-trophies">
-  <a class="lockup-trophies__label" href="#trophy-wall">Trophy wall</a>
+  {/* The Rafters hang every title now; the trophy wall that repeated them is gone. */}
+  <a class="lockup-trophies__label" href="#hf-rafters">The Rafters</a>
   <span class="lockup-trophies__count">
     {totalBadges} {totalBadges === 1 ? 'trophy' : 'trophies'}
   </span>

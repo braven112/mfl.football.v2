@@ -13,6 +13,7 @@
  */
 import HistoryRafters from './HistoryRafters.astro';
 import type { RafterBanner, RafterHonor } from './HistoryRafters.astro';
+import { groupRows } from '../../../utils/league-history/rafter-rows';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
@@ -151,21 +152,25 @@ const banner = (s: Season, kind: RafterBanner['kind'], label?: string): RafterBa
   colors: s.name !== currentName(s.franchiseId) ? getTeamEraColors(s.franchiseId, navSlug, s.y) : null,
   title: `${s.y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
 });
-// A league with its own titles hangs every one this owner won; otherwise
-// champion and runner-up.
+// A league with its own titles hangs every one this owner won, one labelled
+// row per kind; otherwise champion and runner-up in one unlabelled row.
 const seasonOf = (y: number, f: string) => h?.seasons.find((s) => s.y === y && s.franchiseId === f && !s.live);
-const titleBanners = h && honors
-  ? honors
-      .flatMap((x) => {
-        const s = seasonOf(x.year, x.franchiseId);
-        return s ? [banner(s, x.tier === 'silver' ? 'R' : 'C', x.caption)] : [];
-      })
-      .sort((a, b) => b.year - a.year)
-  : h
-  ? [...h.titles.map((s) => banner(s, 'C')), ...h.finals.filter((s) => s.r === 'R').map((s) => banner(s, 'R'))].sort(
-      (a, b) => b.year - a.year,
+const titleRows: Array<{ label: string | null; banners: RafterBanner[] }> = !h
+  ? []
+  : honors
+  ? groupRows(
+      honors.filter((x) => seasonOf(x.year, x.franchiseId)),
+      (x) => banner(seasonOf(x.year, x.franchiseId)!, x.tier === 'silver' ? 'R' : 'C', x.caption),
     )
-  : [];
+  : [
+      {
+        label: null,
+        banners: [...h.titles.map((s) => banner(s, 'C')), ...h.finals.filter((s) => s.r === 'R').map((s) => banner(s, 'R'))].sort(
+          (a, b) => b.year - a.year,
+        ),
+      },
+    ].filter((row) => row.banners.length > 0);
+const titleCount = titleRows.reduce((n, row) => n + row.banners.length, 0);
 const divisionBanners = h ? h.divisionTitles.map((s) => banner(s, 'D')).reverse() : [];
 
 const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');
@@ -211,9 +216,14 @@ const span = h ? (h.firstYear === h.lastYear ? String(h.firstYear) : `${h.firstY
     <section class="ho-section" aria-labelledby="ho-rafters">
       <p class="ho-section__kicker">Banners</p>
       <h2 class="ho-section__title" id="ho-rafters">The Rafters</h2>
-      {titleBanners.length + divisionBanners.length > 0 ? (
+      {titleCount + divisionBanners.length > 0 ? (
         <>
-          {titleBanners.length > 0 && <HistoryRafters banners={titleBanners} navSlug={navSlug} />}
+          {titleRows.map((row) => (
+            <>
+              {row.label && <p class="ho-rafters__label">{row.label}</p>}
+              <HistoryRafters banners={row.banners} navSlug={navSlug} />
+            </>
+          ))}
           {divisionBanners.length > 0 && (
             <>
               <p class="ho-rafters__label">Division titles</p>

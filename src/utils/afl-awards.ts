@@ -601,8 +601,21 @@ export function getFranchiseGrandSlam(franchiseId: string): GrandSlamStatus {
  * slot that won it (`sourceFranchiseId`), the id the dataset keys seasons by.
  * Division titles stay the dataset's own, so they are left out.
  */
-export function aflRafterHonors(): Array<{ year: number; franchiseId: string; caption: string; tier: 'gold' | 'silver' }> {
-  const out: Array<{ year: number; franchiseId: string; caption: string; tier: 'gold' | 'silver' }> = [];
+export function aflRafterHonors(): Array<{
+  year: number;
+  franchiseId: string;
+  caption: string;
+  tier: 'gold' | 'silver';
+  row: { order: number; label: string };
+}> {
+  // One row per tier, the trophy room's own grouping: league titles,
+  // conference titles, then the D-League and NIT (Brandon, 2026-10-25).
+  const ROWS = {
+    gold: { order: 0, label: 'Championships' },
+    conference: { order: 1, label: 'Conference titles' },
+    silver: { order: 2, label: 'Other titles' },
+  } as const;
+  const out: ReturnType<typeof aflRafterHonors> = [];
   for (const season of SEASONS) {
     // Taxonomy order, so a season's banners hang biggest title first.
     for (const type of AWARD_TYPES) {
@@ -610,7 +623,13 @@ export function aflRafterHonors(): Array<{ year: number; franchiseId: string; ca
       const award: any = season.awards?.[type.slug];
       const slot = award?.sourceFranchiseId ?? award?.franchiseId;
       if (!slot) continue;
-      out.push({ year: season.year, franchiseId: slot, caption: type.label, tier: type.tier === 'silver' ? 'silver' : 'gold' });
+      out.push({
+        year: season.year,
+        franchiseId: slot,
+        caption: type.label,
+        tier: type.tier === 'silver' ? 'silver' : 'gold',
+        row: ROWS[type.tier as keyof typeof ROWS] ?? ROWS.gold,
+      });
     }
   }
   return out;
