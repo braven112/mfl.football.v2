@@ -14,8 +14,10 @@
  * second copy of the palette in a style file.
  *
  * Grouping: teams whose pins would overlap are drawn as one stacked marker
- * with a count. That is MapLibre's GeoJSON clustering; the markers themselves
- * are HTML so team icons render as real images.
+ * with a count, but only within one part of the map (groupPins, pinArea in
+ * owner-map-views.ts). MapLibre's own clustering chained far-apart teams into
+ * one marker placed at their average, which put Cleveland in the Southeast.
+ * The markers are HTML so team icons render as real images.
  *
  * Filters (divisions, rivalries, champions, …) are decided in
  * owner-map-views.ts; this file paints what a view returns.
@@ -23,7 +25,7 @@
 import type { Map as MlMap, Marker, StyleSpecification, GeoJSONSource } from 'maplibre-gl';
 import type { Topology } from 'topojson-specification';
 import type { OwnerMapData, OwnerMapPin } from '../../../utils/owner-map';
-import { computeView, defaultSub, subOptions, type MapMode, type ViewResult } from './owner-map-views';
+import { computeView, defaultSub, groupPins, pinArea, subOptions, type MapMode, type ViewResult } from './owner-map-views';
 import countriesUrl from 'world-atlas/countries-50m.json?url';
 import statesUrl from 'us-atlas/states-10m.json?url';
 
@@ -37,6 +39,11 @@ const WORLD_BOUNDS: Bounds = [[-165, -50], [170, 72]];
 const FIT_PADDING = 28;
 /** The closest the map zooms. Pins are a hometown city, so street level has nothing to show. */
 const MAX_ZOOM = 8;
+/** Pins closer than this on screen (about one marker wide) stack into one. */
+const GROUP_RADIUS = 44;
+/** Below this zoom (the whole country) markers draw smaller (`owner-map--far`), so they stack sooner. */
+const FAR_ZOOM = 4;
+const FAR_GROUP_RADIUS = 34;
 
 const ANTARCTICA_ID = '010';
 
@@ -178,17 +185,6 @@ function buildStyle(scope: HTMLElement, geo: Geo): StyleSpecification {
         paint: { 'line-color': border, 'line-width': 0.5, 'line-opacity': 0.8 },
       },
     ],
-  };
-}
-
-function pinsGeoJson(pins: OwnerMapPin[], view: ViewResult): GeoJSON.FeatureCollection<GeoJSON.Point> {
-  return {
-    type: 'FeatureCollection',
-    features: view.visible.map((index) => ({
-      type: 'Feature',
-      properties: { index },
-      geometry: { type: 'Point', coordinates: [pins[index].city!.lng, pins[index].city!.lat] },
-    })),
   };
 }
 
@@ -381,7 +377,7 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   }
 
   function addPinLayer() {
-    if (map.getSource('pins')) return;
+    if (map.getSource('links')) return;
     map.addSource('links', { type: 'geojson', data: linesGeoJson() });
     map.addLayer({
       id: 'links',
@@ -390,36 +386,35 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
       layout: { 'line-cap': 'round' },
       paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': 0.85 },
     });
-    map.addSource('pins', {
-      type: 'geojson',
-      data: pinsGeoJson(pins, view),
-      cluster: true,
-      clusterRadius: 34,
-      clusterMaxZoom: MAX_ZOOM,
-    });
-    // MapLibre only clusters a source that a layer draws; this one is invisible.
-    map.addLayer({ id: 'pins-hit', type: 'circle', source: 'pins', paint: { 'circle-radius': 0, 'circle-opacity': 0 } });
   }
 
-  async function syncMarkers() {
-    const source = map.getSource('pins') as GeoJSONSource | undefined;
-    if (!source || !map.isSourceLoaded('pins')) return;
+  /**
+   * Draws the visible teams as markers, stacking the ones that would overlap
+   * at this zoom (groupPins). Regrouped when the zoom settles, not on every
+   * frame: panning never changes which pins overlap.
+   */
+  function syncMarkers() {
+    const far = map.getZoom() < FAR_ZOOM;
+    if (root.classList.contains('owner-map--far') !== far) {
+      root.classList.toggle('owner-map--far', far);
+      clearMarkers();
+    }
+    const points = view.visible.map((index) => {
+      const city = pins[index].city!;
+      const { x, y } = map.project([city.lng, city.lat]);
+      return { index, x, y, area: pinArea(city), lat: city.lat, lng: city.lng };
+    });
     const seen = new Set<string>();
-    for (const feature of map.querySourceFeatures('pins')) {
-      const props = feature.properties as Record<string, unknown>;
-      const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
-      const isCluster = Boolean(props.cluster);
-      const key = isCluster ? `c${props.cluster_id}` : `p${props.index}`;
-      if (seen.has(key)) continue;
+    for (const group of groupPins(points, far ? FAR_GROUP_RADIUS : GROUP_RADIUS)) {
+      const key = group.join(',');
       seen.add(key);
       if (markers.has(key)) continue;
+      const lng = group.reduce((sum, i) => sum + pins[i].city!.lng, 0) / group.length;
+      const lat = group.reduce((sum, i) => sum + pins[i].city!.lat, 0) / group.length;
 
       const el = document.createElement('button');
       el.type = 'button';
-      if (isCluster) {
-        const clusterId = Number(props.cluster_id);
-        const leaves = (await source.getClusterLeaves(clusterId, 50, 0)) as GeoJSON.Feature[];
-        const group = leaves.map((leaf) => Number(leaf.properties?.index)).filter((i) => pins[i]);
+      if (group.length > 1) {
         el.className = 'om-marker om-marker--group';
         el.setAttribute('aria-label', `${group.length} teams: ${group.map((i) => pins[i].teamName).join(', ')}`);
         group.slice(0, 3).forEach((i) => el.appendChild(iconBadge(pins[i], view.ring.get(i))));
@@ -427,17 +422,26 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
         count.className = 'om-marker__count';
         count.textContent = String(group.length);
         el.appendChild(count);
-        el.addEventListener('click', async (event) => {
+        el.addEventListener('click', (event) => {
           event.stopPropagation();
-          const zoom = await source.getClusterExpansionZoom(clusterId);
+          const sameSpot = group.every(
+            (i) => pins[i].city!.lng === pins[group[0]].city!.lng && pins[i].city!.lat === pins[group[0]].city!.lat,
+          );
           // Teams from the SAME city never separate; list them instead of zooming forever.
-          if (zoom > MAX_ZOOM || map.getZoom() >= MAX_ZOOM - 0.5) openPanel(group);
-          else map.easeTo({ center: coords, zoom });
+          if (sameSpot || map.getZoom() >= MAX_ZOOM - 0.5) {
+            openPanel(group);
+            return;
+          }
+          let [w, s, e, n] = [180, 90, -180, -90];
+          for (const i of group) {
+            const city = pins[i].city!;
+            [w, s, e, n] = [Math.min(w, city.lng), Math.min(s, city.lat), Math.max(e, city.lng), Math.max(n, city.lat)];
+          }
+          map.fitBounds([[w, s], [e, n]], { padding: FIT_PADDING * 3, maxZoom: MAX_ZOOM, speed: 1.6 });
         });
       } else {
-        const index = Number(props.index);
+        const index = group[0];
         const pin = pins[index];
-        if (!pin) continue;
         el.className = pin.franchiseId === data.myFranchiseId ? 'om-marker om-marker--mine' : 'om-marker';
         el.setAttribute('aria-label', `${pin.teamName}, ${pin.city?.name ?? ''}`);
         el.appendChild(iconBadge(pin, view.ring.get(index)));
@@ -453,7 +457,7 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
           openPanel([index]);
         });
       }
-      markers.set(key, new maplibregl.Marker({ element: el }).setLngLat(coords).addTo(map));
+      markers.set(key, new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map));
     }
     for (const [key, marker] of markers) {
       if (!seen.has(key)) {
@@ -463,28 +467,12 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     }
   }
 
-  let syncing = false;
-  let resync = false;
-  const onRender = () => {
-    if (syncing) {
-      resync = true;
-      return;
-    }
-    syncing = true;
-    syncMarkers().finally(() => {
-      syncing = false;
-      if (resync) {
-        resync = false;
-        onRender();
-      }
-    });
-  };
-
   map.on('load', () => {
     addPinLayer();
     if (view.fit) fitToVisible();
+    syncMarkers();
   });
-  map.on('render', onRender);
+  map.on('zoomend', syncMarkers);
 
   function fitToVisible() {
     if (view.visible.length < 2) return;
@@ -531,11 +519,10 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   /** Recompute the view and repaint. `refit` moves the map to the teams shown. */
   function render(refit: boolean) {
     view = computeView(data, mode, sub, focus);
-    const pinSource = map.getSource('pins') as GeoJSONSource | undefined;
     const linkSource = map.getSource('links') as GeoJSONSource | undefined;
-    if (pinSource) {
+    if (map.loaded()) {
       clearMarkers();
-      pinSource.setData(pinsGeoJson(pins, view));
+      syncMarkers();
     }
     linkSource?.setData(linesGeoJson());
     if (focus === null) renderControls();
@@ -569,7 +556,10 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     resolveLineColors();
     clearMarkers();
     map.setStyle(buildStyle(canvasEl, geo));
-    map.once('styledata', addPinLayer);
+    map.once('styledata', () => {
+      addPinLayer();
+      syncMarkers();
+    });
   });
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-league'] });
 

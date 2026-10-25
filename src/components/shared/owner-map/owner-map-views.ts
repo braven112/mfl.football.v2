@@ -290,3 +290,75 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
     }
   }
 }
+
+/**
+ * Which part of the map a hometown belongs to, for grouping. Teams only stack
+ * into one marker when they share an area, so Seattle never folds into Los
+ * Angeles and Cleveland never into Florida, however far out the map is zoomed.
+ * US cities go by state (Census divisions, with the Pacific split into the
+ * Northwest and California); anywhere else by country. A whole-state or
+ * whole-country pin stands alone.
+ */
+const STATE_AREA: Record<string, string> = {
+  WA: 'northwest', OR: 'northwest', ID: 'northwest', AK: 'northwest',
+  CA: 'california', NV: 'california', HI: 'california',
+  AZ: 'southwest', NM: 'southwest',
+  MT: 'mountain', WY: 'mountain', CO: 'mountain', UT: 'mountain',
+  ND: 'plains', SD: 'plains', NE: 'plains', KS: 'plains', MN: 'plains', IA: 'plains', MO: 'plains',
+  TX: 'south-central', OK: 'south-central', AR: 'south-central', LA: 'south-central',
+  WI: 'great-lakes', MI: 'great-lakes', IL: 'great-lakes', IN: 'great-lakes', OH: 'great-lakes',
+  KY: 'south', TN: 'south', MS: 'south', AL: 'south',
+  FL: 'southeast', GA: 'southeast', SC: 'southeast', NC: 'southeast', VA: 'southeast',
+  WV: 'southeast', MD: 'southeast', DE: 'southeast', DC: 'southeast',
+  NY: 'mid-atlantic', NJ: 'mid-atlantic', PA: 'mid-atlantic',
+  CT: 'new-england', RI: 'new-england', MA: 'new-england', VT: 'new-england', NH: 'new-england', ME: 'new-england',
+};
+
+export function pinArea(city: { name: string; region: string }): string {
+  if (city.region === 'US' || city.region === '') return `whole:${city.name}`;
+  return STATE_AREA[city.region] ?? `country:${city.region}`;
+}
+
+export interface ScreenPoint {
+  index: number;
+  x: number;
+  y: number;
+  area: string;
+  lat: number;
+  lng: number;
+}
+
+/** Teams farther apart than this on the ground never stack: about one metro area plus its suburbs. */
+export const MAX_GROUP_KM = 200;
+
+function kmBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Groups pins that would overlap on screen. A pin joins a group only when it
+ * is within `radius` pixels of that group's FIRST pin, in the same area, and
+ * within MAX_GROUP_KM of it on the ground (so Cleveland never folds into
+ * Chicago, nor Spokane into Seattle, at a zoom where their icons touch);
+ * measuring from the first pin rather than a moving middle keeps a group from
+ * creeping across the map as it grows, which is how a cluster's marker ended
+ * up a region away from every team in it.
+ */
+export function groupPins(points: ScreenPoint[], radius: number): number[][] {
+  const groups: { anchor: ScreenPoint; members: number[] }[] = [];
+  for (const point of points) {
+    const group = groups.find(
+      (g) =>
+        g.anchor.area === point.area &&
+        Math.hypot(g.anchor.x - point.x, g.anchor.y - point.y) <= radius &&
+        kmBetween(g.anchor, point) <= MAX_GROUP_KM,
+    );
+    if (group) group.members.push(point.index);
+    else groups.push({ anchor: point, members: [point.index] });
+  }
+  return groups.map((g) => g.members);
+}

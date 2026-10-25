@@ -633,8 +633,10 @@ const modes = [
 
   /* Markers and popups are created by MapLibre outside this component's
      scope, so their rules are global (prefixed om- to stay contained). */
+  /* No `position` here: MapLibre's .maplibregl-marker positions it absolutely
+     (which also anchors the count badge), and an equal-specificity override
+     wins or loses on stylesheet order, so dev stacked every marker in a column. */
   :global(.om-marker) {
-    position: relative;
     display: flex;
     align-items: center;
     padding: 0;
@@ -681,6 +683,24 @@ const modes = [
   }
   :global(.om-marker--group .om-marker__icon + .om-marker__icon) {
     margin-left: -20px;
+  }
+  /* A stack sits above single teams so its count is never hidden. */
+  :global(.om-marker--group) {
+    z-index: 1;
+  }
+  /* Zoomed out to the whole country, markers shrink and a stack fans out
+     less, so neighboring metros overlap as little as possible. */
+  .owner-map--far :global(.om-marker__icon) {
+    width: 32px;
+    height: 32px;
+    border-width: 2px;
+  }
+  .owner-map--far :global(.om-marker__icon img) {
+    width: 24px;
+    height: 24px;
+  }
+  .owner-map--far :global(.om-marker--group .om-marker__icon + .om-marker__icon) {
+    margin-left: -26px;
   }
   :global(.om-marker__count) {
     position: absolute;

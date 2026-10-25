@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildOwnerMapData, type OwnerMapHistory } from '../src/utils/owner-map';
-import { computeView, subOptions } from '../src/components/shared/owner-map/owner-map-views';
+import { computeView, groupPins, pinArea, subOptions } from '../src/components/shared/owner-map/owner-map-views';
 import type { OwnerTenuresFile } from '../src/types/owner-tenures';
 import theleagueOwners from '../data/theleague/derived/owner-tenures.json';
 import theleagueHistory from '../data/theleague/derived/franchise-history.json';
@@ -115,5 +115,28 @@ describe('owner map views', () => {
   it('offers every filter a pill row where it has one', () => {
     expect(subOptions(afl, 'conference').map((o) => o.id)).toEqual(['all', 'AL', 'NL']);
     expect(subOptions(theleague, 'division')).toHaveLength(5);
+  });
+});
+
+describe('owner map grouping', () => {
+  it('keeps the Northwest apart from California and the Northeast apart from the Southeast', () => {
+    expect(pinArea({ name: 'Seattle', region: 'WA' })).not.toBe(pinArea({ name: 'Los Angeles', region: 'CA' }));
+    expect(pinArea({ name: 'Boston', region: 'MA' })).not.toBe(pinArea({ name: 'Mount Airy', region: 'NC' }));
+    expect(pinArea({ name: 'Tacoma', region: 'WA' })).toBe(pinArea({ name: 'Snohomish', region: 'WA' }));
+    expect(pinArea({ name: 'Toronto', region: 'Canada' })).toBe('country:Canada');
+  });
+
+  it('stacks only pins near the first pin of a group and in its area', () => {
+    const groups = groupPins(
+      [
+        { index: 0, x: 0, y: 0, area: 'northwest', lat: 47.6, lng: -122.3 },
+        { index: 1, x: 30, y: 0, area: 'northwest', lat: 47.2, lng: -122.4 },
+        { index: 2, x: 60, y: 0, area: 'northwest', lat: 47.1, lng: -122.4 }, // near 1 but not the anchor: a new group
+        { index: 3, x: 10, y: 0, area: 'california', lat: 47.6, lng: -122.3 }, // close but another area
+        { index: 4, x: 20, y: 0, area: 'northwest', lat: 47.66, lng: -117.4 }, // Spokane: on screen, but 370 km away
+      ],
+      44,
+    );
+    expect(groups).toEqual([[0, 1], [2], [3], [4]]);
   });
 });
