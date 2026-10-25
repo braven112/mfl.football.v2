@@ -1,0 +1,806 @@
+---
+/**
+ * Owner Map — shared render for every league that has the route.
+ *
+ * Thin route wrappers under src/pages/<league>/owner-map.astro own the
+ * auth gate and the league's owner-tenures import; this component owns the
+ * markup. Keep it that way: Astro.redirect() only works from a page, and a
+ * static import specifier cannot be a runtime variable.
+ *
+ * TEST PAGE: every hometown is a sample city (src/utils/owner-map.ts) until
+ * owners can pick the city their team represents. The banner below says so.
+ *
+ * The map itself is a MapLibre island (owner-map-client.ts), loaded only on
+ * this page. The list under it carries the same pins as plain text, because a
+ * WebGL canvas is invisible to a screen reader.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { buildOwnerMapData, cityLabel } from '../../../utils/owner-map';
+import type { OwnerMapCity, OwnerMapConference, OwnerMapHistory } from '../../../utils/owner-map';
+// MapLibre's own stylesheet, scoped to this page by being imported here.
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: OwnerTenuresFile;
+  history: OwnerMapHistory;
+  /** A league with conferences passes them; one without leaves the Conference pill off. */
+  conferences?: OwnerMapConference[];
+  /** The viewer's own team here, for the My division view and picking their own hometown. */
+  myFranchiseId?: string | null;
+  /** Saved hometowns by franchise id (Redis, read by the route). */
+  hometowns: Record<string, OwnerMapCity>;
+  /** The league's commissioner, who may set any team's hometown. */
+  canEditAll?: boolean;
+}
+
+const { leagueSlug, data, history, conferences, myFranchiseId, hometowns, canEditAll = false } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`OwnerMapPage: unknown league ${leagueSlug}`);
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const mapData = buildOwnerMapData(data, history, {
+  leagueSlug: league.slug,
+  franchiseHref: (franchiseId) => r(`/franchises/${franchiseId}`),
+  conferences,
+  myFranchiseId,
+  hometowns,
+});
+const { pins } = mapData;
+const placed = pins.filter((pin) => pin.city);
+const unplaced = pins.filter((pin) => !pin.city);
+const mine = pins.find((pin) => pin.franchiseId === mapData.myFranchiseId) ?? null;
+const canEdit = (franchiseId: string) => canEditAll || franchiseId === mapData.myFranchiseId;
+
+// Every way the map can be filtered. Each filters the same map and list, so
+// they are pills, not tabs.
+const modes = [
+  { id: 'division', label: 'Divisions' },
+  ...(mapData.conferences.length ? [{ id: 'conference', label: 'Conferences' }] : []),
+  ...(mapData.myFranchiseId ? [{ id: 'mine', label: 'My division' }] : []),
+  { id: 'rivalries', label: 'Rivalries' },
+  { id: 'champions', label: 'Champions' },
+  { id: 'playoffs', label: 'Playoff teams' },
+  { id: 'tenure', label: 'Owner tenure' },
+  { id: 'hometown', label: 'Hometowns' },
+];
+---
+
+<TheLeagueLayout title={`Owner Map | ${league.name}`}>
+  <div class="owner-map" data-owner-map data-league={league.slug}>
+    <Breadcrumbs items={[{ label: 'Owners', href: `/${league.slug}/owners` }, { label: 'Owner Map' }]} />
+
+    <header class="owner-map__head">
+      <h1>Owner Map</h1>
+      <p class="owner-map__lede">The hometown every {league.name} team represents, chosen by its owner. Tap a logo to see who's from there.</p>
+    </header>
+
+    {mine && (
+      <div class="owner-map__mine">
+        <img class="owner-map__row-icon" src={mine.icon} alt="" width="40" height="40" />
+        <p class="owner-map__mine-text">
+          {mine.city ? (
+            <>Your team represents <strong>{cityLabel(mine.city)}</strong>.</>
+          ) : (
+            <>Your team isn't on the map yet. Pick the city it represents, usually where you grew up.</>
+          )}
+        </p>
+        <button
+          type="button"
+          class="cta cta--primary owner-map__mine-btn"
+          data-owner-map-pick
+          data-franchise={mine.franchiseId}
+          data-team={mine.teamName}
+          data-has-hometown={mine.city ? '1' : '0'}
+        >
+          {mine.city ? 'Change' : 'Pick hometown'}
+        </button>
+      </div>
+    )}
+
+    <div class="ui-pills owner-map__toolbar" role="group" aria-label="Show on the map">
+      {modes.map((mode, i) => (
+        <button type="button" class="ui-pill" data-owner-map-mode={mode.id} aria-pressed={i === 0 ? 'true' : 'false'}>
+          {mode.label}
+        </button>
+      ))}
+    </div>
+    <div class="ui-pills owner-map__toolbar owner-map__subbar" role="group" aria-label="Filter" data-owner-map-sub></div>
+
+    <div class="owner-map__frame">
+      <div class="owner-map__canvas" data-owner-map-canvas aria-hidden="true"></div>
+      <div class="owner-map__zoom" role="group" aria-label="Map area">
+        <button type="button" class="owner-map__zoom-btn" data-owner-map-view="us" aria-pressed="true">US</button>
+        <button type="button" class="owner-map__zoom-btn" data-owner-map-view="world" aria-pressed="false">World</button>
+      </div>
+      <div class="owner-map__failed" role="status">
+        <p>The map could not load. The list below has every team.</p>
+        <p class="owner-map__failed-detail" data-owner-map-error></p>
+      </div>
+      <div class="owner-map__panel" data-owner-map-panel hidden>
+        <button type="button" class="owner-map__panel-close" data-owner-map-panel-close aria-label="Close">×</button>
+        <div class="om-pop" data-owner-map-panel-rows></div>
+      </div>
+    </div>
+
+    <p class="owner-map__caption" data-owner-map-caption aria-live="polite"></p>
+    <ul class="owner-map__legend" data-owner-map-legend></ul>
+
+    <section class="owner-map__list-section" aria-labelledby="owner-map-list-heading">
+      <h2 id="owner-map-list-heading" class="owner-map__section-title">Teams by hometown</h2>
+      {placed.length === 0 && <p class="owner-map__empty">No team has picked a hometown yet.</p>}
+      <ul class="owner-map__list">
+        {placed.map((pin) => (
+          <li data-owner-map-row={pin.franchiseId}>
+            <a class="owner-map__row" href={pin.href}>
+              <img class="owner-map__row-icon" src={pin.icon} alt="" width="40" height="40" loading="lazy" />
+              <span class="owner-map__row-text">
+                <span class="owner-map__row-team">{pin.teamName}</span>
+                <span class="owner-map__row-meta">{pin.ownerName} · {pin.city && cityLabel(pin.city)}</span>
+              </span>
+            </a>
+            {canEditAll && (
+              <button
+                type="button"
+                class="cta-link owner-map__edit"
+                data-owner-map-pick
+                data-franchise={pin.franchiseId}
+                data-team={pin.teamName}
+                data-has-hometown="1"
+              >
+                Change
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    {unplaced.length > 0 && (
+      <section class="owner-map__list-section" aria-labelledby="owner-map-todo-heading">
+        <h2 id="owner-map-todo-heading" class="owner-map__section-title">Still picking a hometown</h2>
+        <ul class="owner-map__list">
+          {unplaced.map((pin) => (
+            <li>
+              <a class="owner-map__row" href={pin.href}>
+                <img class="owner-map__row-icon" src={pin.icon} alt="" width="40" height="40" loading="lazy" />
+                <span class="owner-map__row-text">
+                  <span class="owner-map__row-team">{pin.teamName}</span>
+                  <span class="owner-map__row-meta">{pin.ownerName}</span>
+                </span>
+              </a>
+              {canEdit(pin.franchiseId) && (
+                <button
+                  type="button"
+                  class="cta-link owner-map__edit"
+                  data-owner-map-pick
+                  data-franchise={pin.franchiseId}
+                  data-team={pin.teamName}
+                  data-has-hometown="0"
+                >
+                  Pick
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {canEditAll && (
+      <details class="owner-map__import" data-owner-map-import>
+        <summary class="owner-map__import-summary">Import hometowns (commissioner)</summary>
+        <p class="owner-map__import-hint">
+          One team per line: the team id, then the place. For example <code>0001 Seattle, WA</code>,
+          <code>0003 Sydney, Australia</code>, <code>0018 New Mexico</code>. Anything after <code>#</code> is ignored.
+          Teams you leave out keep what they have.
+        </p>
+        <label class="owner-map-picker__label" for="owner-map-import-text">Hometown list</label>
+        <textarea
+          id="owner-map-import-text"
+          class="owner-map__import-text"
+          rows="8"
+          spellcheck="false"
+          data-import-text
+          data-franchise-ids={pins.map((pin) => pin.franchiseId).join(',')}
+        ></textarea>
+        <button type="button" class="cta cta--primary" data-import-save>Save all</button>
+        <div class="owner-map__import-status" data-import-status role="status"></div>
+      </details>
+    )}
+
+    <dialog class="ui-modal owner-map-picker" data-owner-map-picker aria-labelledby="owner-map-picker-title">
+      <div class="owner-map-picker__head">
+        <h2 id="owner-map-picker-title" class="owner-map-picker__title" data-picker-title>Hometown</h2>
+        <button type="button" class="owner-map__panel-close" data-picker-close aria-label="Close">×</button>
+      </div>
+      <p class="owner-map-picker__hint">The city the team represents, usually where its owner grew up. A whole state or country works too.</p>
+      <label class="owner-map-picker__label" for="owner-map-picker-input">City or state</label>
+      <input
+        id="owner-map-picker-input"
+        class="owner-map-picker__input"
+        type="search"
+        autocomplete="off"
+        placeholder="Spokane, Iowa City, New Mexico…"
+        data-picker-input
+      />
+      <ul class="owner-map-picker__results" data-picker-results></ul>
+      <p class="owner-map-picker__status" data-picker-status role="status"></p>
+      <button type="button" class="cta cta--ghost" data-picker-clear hidden>Remove hometown</button>
+    </dialog>
+
+    <script type="application/json" data-owner-map-data set:html={JSON.stringify(mapData).replace(/</g, '\\u003c')} />
+  </div>
+</TheLeagueLayout>
+
+<script>
+  import { mountOwnerMap } from './owner-map-client';
+  import { mountHometownImport, mountHometownPicker } from './owner-map-picker';
+
+  let unmount: (() => void) | null = null;
+  let unmountPicker: (() => void) | null = null;
+
+  // `document` survives every ClientRouter swap, so this listener runs on
+  // every page. Gate on the swapped-in root, which also names its league,
+  // per the CLAUDE.md rule on astro:page-load gates.
+  document.addEventListener('astro:page-load', () => {
+    const root = document.querySelector<HTMLElement>('[data-owner-map][data-league]');
+    if (!root || root.dataset.ownerMapReady) return;
+    root.dataset.ownerMapReady = '1';
+    unmountPicker = mountHometownPicker(root);
+    mountHometownImport(root);
+    mountOwnerMap(root)
+      .then((dispose) => {
+        unmount = dispose;
+      })
+      .catch((error) => {
+        console.error('[owner-map] failed to start', error);
+        const frame = root.querySelector<HTMLElement>('.owner-map__frame');
+        if (!frame) return;
+        frame.classList.add('owner-map__frame--failed');
+        // Test page: say WHY on screen, since a phone has no console to read.
+        const detail = frame.querySelector<HTMLElement>('[data-owner-map-error]');
+        if (detail) detail.textContent = error instanceof Error ? error.message : String(error);
+      });
+  });
+
+  document.addEventListener('astro:before-swap', () => {
+    unmount?.();
+    unmount = null;
+    unmountPicker?.();
+    unmountPicker = null;
+  });
+</script>
+
+<style>
+  .owner-map {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
+  }
+  .owner-map__head h1 {
+    margin: 0.5rem 0 0.5rem;
+    font-size: var(--font-size-xl);
+  }
+  .owner-map__lede {
+    margin: 0 0 1rem;
+    max-width: 62ch;
+    color: var(--content-text-muted, #555);
+    line-height: 1.55;
+  }
+
+  .owner-map__mine {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem;
+    padding: 0.75rem;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    background: var(--card-bg);
+  }
+  .owner-map__mine-text {
+    flex: 1;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .owner-map__mine-btn {
+    flex: none;
+  }
+  .owner-map__empty {
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted, #555);
+  }
+  .owner-map__list li {
+    position: relative;
+  }
+  .owner-map__list li:has(.owner-map__edit) .owner-map__row {
+    padding-right: 5rem;
+  }
+  .owner-map__edit {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+  }
+
+  .owner-map__import {
+    margin: 1.5rem 0 0;
+    padding: 0.75rem;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    background: var(--card-bg);
+  }
+  .owner-map__import-summary {
+    min-height: var(--touch-target-min);
+    display: flex;
+    align-items: center;
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+  }
+  .owner-map__import-hint {
+    margin: 0.5rem 0 0.75rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.5;
+  }
+  .owner-map__import-text {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--content-border);
+    border-radius: 6px;
+    background: var(--content-bg);
+    color: var(--page-text);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .owner-map__import-status {
+    margin-top: 0.5rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.45;
+  }
+  .owner-map__import-status :global(ul) {
+    margin: 0.25rem 0 0;
+    padding-left: 1.25rem;
+  }
+
+  .owner-map-picker {
+    width: min(480px, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    padding: 1rem;
+  }
+  .owner-map-picker__head {
+    position: relative;
+    padding-right: 2.5rem;
+  }
+  .owner-map-picker__head .owner-map__panel-close {
+    top: -0.25rem;
+    right: -0.25rem;
+  }
+  .owner-map-picker__title {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-lg);
+  }
+  .owner-map-picker__hint {
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.45;
+  }
+  .owner-map-picker__label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+  }
+  .owner-map-picker__input {
+    width: 100%;
+    min-height: var(--touch-target-min);
+    padding: 0 0.75rem;
+    border: 1px solid var(--content-border);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--page-text);
+    font: inherit;
+  }
+  .owner-map-picker__results {
+    margin: 0.5rem 0;
+    padding: 0;
+    list-style: none;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+  :global(.owner-map-picker__result) {
+    display: block;
+    width: 100%;
+    min-height: var(--touch-target-min);
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid var(--content-border);
+    background: none;
+    color: var(--page-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  :global(.owner-map-picker__result:hover),
+  :global(.owner-map-picker__result:focus-visible) {
+    background: var(--content-bg-muted);
+  }
+  /* `.cta` sets its own display, which would override the hidden attribute. */
+  .owner-map-picker [data-picker-clear][hidden] {
+    display: none;
+  }
+  .owner-map-picker__status {
+    min-height: 1.25em;
+    margin: 0 0 0.5rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+
+  .owner-map__toolbar {
+    margin-bottom: 0.5rem;
+  }
+  .owner-map__subbar:empty {
+    display: none;
+  }
+  .owner-map__subbar {
+    margin-bottom: 0.75rem;
+  }
+
+  /* US / World sits on the map, so the pill rows above stay about WHO is shown. */
+  .owner-map__zoom {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    display: flex;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: var(--box-shadow-md);
+  }
+  .owner-map__zoom-btn {
+    min-height: 32px;
+    padding: 0 0.75rem;
+    border: 0;
+    background: none;
+    color: var(--content-text-muted, #555);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+  }
+  .owner-map__zoom-btn[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--card-bg));
+    color: var(--page-text);
+  }
+
+  .owner-map__caption {
+    margin: 0.75rem 0 0.25rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .owner-map__caption:empty {
+    display: none;
+  }
+  .owner-map__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  :global(.om-legend__item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  :global(.om-legend__swatch) {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--om-ring, var(--league-accent));
+  }
+  :global(.om-legend__line) {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--om-ring, var(--league-accent));
+  }
+  :global(.om-legend__count) {
+    color: var(--content-text-muted, #555);
+    font-variant-numeric: tabular-nums;
+  }
+  .owner-map__list li[hidden] {
+    display: none;
+  }
+
+  .owner-map__frame {
+    /* Read by the map (owner-map-client.ts solidToken), not by CSS. */
+    --om-land: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));
+    --om-border: color-mix(in srgb, var(--page-text) 28%, var(--content-bg));
+    position: relative;
+    /* Shaped like the lower 48 on a phone (about 4:3), taller on desktop. */
+    height: clamp(300px, 72vw, 560px);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    overflow: hidden;
+    background: var(--content-bg-muted);
+  }
+  .owner-map__canvas {
+    position: absolute;
+    inset: 0;
+  }
+  .owner-map__failed {
+    display: none;
+  }
+  .owner-map__frame--failed .owner-map__failed {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+    color: var(--content-text-muted, #555);
+  }
+  .owner-map__failed p {
+    margin: 0;
+  }
+  .owner-map__failed-detail {
+    font-family: var(--font-family-mono, monospace);
+    font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
+  }
+
+  .owner-map__list-section {
+    margin-top: 1.5rem;
+  }
+  .owner-map__section-title {
+    margin: 0 0 0.75rem;
+    padding-left: var(--style-section-rule-gap, 0.6rem);
+    padding-bottom: var(--style-section-mark-pad, 0);
+    border-left: var(--style-section-rule, 4px solid var(--league-accent));
+    background: var(--style-section-mark, none);
+    font-size: var(--font-size-sm, 0.875rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .owner-map__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .owner-map__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    background: var(--card-bg);
+    color: var(--page-text);
+    text-decoration: none;
+  }
+  .owner-map__row:hover {
+    border-color: var(--league-accent);
+    text-decoration: none;
+  }
+  .owner-map__row-icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+  .owner-map__row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .owner-map__row-team {
+    font-weight: var(--font-weight-semibold, 600);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .owner-map__row-meta {
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+
+  /* Markers and popups are created by MapLibre outside this component's
+     scope, so their rules are global (prefixed om- to stay contained). */
+  /* No `position` here: MapLibre's .maplibregl-marker positions it absolutely
+     (which also anchors the count badge), and an equal-specificity override
+     wins or loses on stylesheet order, so dev stacked every marker in a column. */
+  :global(.om-marker) {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  :global(.om-marker__icon) {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--om-ring, var(--league-accent));
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--content-bg);
+    box-shadow: var(--box-shadow-md);
+  }
+  :global(.om-marker__icon img) {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+  }
+  :global(.om-marker--mine .om-marker__icon) {
+    outline: 2px solid var(--page-text);
+    outline-offset: 2px;
+  }
+  /* A title count or a playoff finish, on a single team's marker. */
+  :global(.om-marker__tag) {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    color: var(--page-text);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 16px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.om-marker--group .om-marker__icon + .om-marker__icon) {
+    margin-left: -20px;
+  }
+  /* A stack sits above single teams so its count is never hidden. */
+  :global(.om-marker--group) {
+    z-index: 1;
+  }
+  /* Zoomed out to the whole country, markers shrink and a stack fans out
+     less, so neighboring metros overlap as little as possible. */
+  .owner-map--far :global(.om-marker__icon) {
+    width: 32px;
+    height: 32px;
+    border-width: 2px;
+  }
+  .owner-map--far :global(.om-marker__icon img) {
+    width: 24px;
+    height: 24px;
+  }
+  .owner-map--far :global(.om-marker--group .om-marker__icon + .om-marker__icon) {
+    margin-left: -26px;
+  }
+  :global(.om-marker__count) {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 11px;
+    background: var(--league-accent);
+    color: var(--on-league-accent, #fff);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 22px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .owner-map__panel {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 2;
+    max-width: 360px;
+    padding: 0.5rem;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--card-radius, 8px);
+    background: var(--content-bg);
+    box-shadow: var(--box-shadow-lg);
+  }
+  .owner-map__panel[hidden] {
+    display: none;
+  }
+  .owner-map__panel-close {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: none;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    cursor: pointer;
+  }
+  .om-pop {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 2rem;
+  }
+  /* Rows are injected by the map script, so they are outside this scope;
+     doubled class beats the layouts' global a / a:hover color. */
+  :global(.om-pop__row.om-pop__row) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    border-radius: 6px;
+    color: var(--page-text);
+    text-decoration: none;
+  }
+  :global(.om-pop__row.om-pop__row:hover) {
+    background: var(--content-bg-muted);
+    color: var(--page-text);
+    text-decoration: none;
+  }
+  :global(.om-pop__icon) {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  :global(.om-pop__text) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.om-pop__team) {
+    font-weight: var(--font-weight-semibold, 600);
+  }
+  :global(.om-pop__meta) {
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-xs);
+  }
+  :global(.owner-map .maplibregl-ctrl-group) {
+    background: var(--card-bg);
+  }
+  :global(.owner-map .maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    background: var(--content-bg);
+    color: var(--content-text-muted, #555);
+  }
+  :global(.owner-map .maplibregl-ctrl-attrib a) {
+    color: inherit;
+  }
+  :global(html.dark .owner-map .maplibregl-ctrl-attrib-button),
+  :global(html.dark .owner-map .maplibregl-ctrl-icon) {
+    filter: invert(1);
+  }
+</style>

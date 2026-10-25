@@ -9,6 +9,7 @@ import { franchiseSlug } from '../../../utils/franchise-marks';
 import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
 import EraSeasonTable from '../../../components/shared/franchises/EraSeasonTable.astro';
 import PreviousOwners from '../../../components/shared/franchises/PreviousOwners.astro';
+import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHometown.astro';
 import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 
@@ -387,6 +388,14 @@ const formatBid = (n: number): string => {
         <div class="stat-sub">{fr.championships.length} title{fr.championships.length === 1 ? '' : 's'}</div>
       </div>
     </section>
+
+    <FranchiseHometown
+      leagueSlug="theleague"
+      franchiseId={fr.franchiseId}
+      teamName={fr.currentNameMedium || fr.currentName}
+      icon={fr.currentIcon}
+      division={fr.currentDivision ?? null}
+    />
 
     {(fr.highlights?.highestSingleGame || fr.highlights?.lowestSingleGame || fr.highlights?.biggestBlowoutWin || fr.highlights?.biggestBlowoutLoss) && (
       <section class="highlights">

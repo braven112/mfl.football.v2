@@ -1,0 +1,46 @@
+---
+/**
+ * Owner Map (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/owner-map/OwnerMapPage.
+ * The auth gate lives HERE, not in the component:
+ * Astro.redirect() only redirects from a PAGE. Per-league static data imports
+ * also belong here — a static import specifier can't be a runtime variable.
+ */
+import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
+import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import { readHometowns } from '../../utils/owner-hometowns';
+import { getLeagueBySlug } from '../../config/leagues';
+import ownerData from '../../../data/afl-fantasy/derived/owner-tenures.json';
+import history from '../../../data/afl-fantasy/derived/franchise-history.json';
+import type { OwnerTenuresFile } from '../../types/owner-tenures';
+import type { OwnerMapConference, OwnerMapHistory } from '../../utils/owner-map';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getConferenceShort } from '../../utils/afl-conference';
+
+export const prerender = false;
+const LEAGUE = getLeagueBySlug('afl-fantasy')!;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
+  return Astro.redirect('/afl-fantasy');
+}
+const hometowns = await readHometowns(LEAGUE.slug);
+
+// The AL and NL, each with its own divisions.
+const conferences: OwnerMapConference[] = aflConfig.conferences.map((c) => ({
+  name: c.name,
+  short: getConferenceShort(c.code),
+  divisions: c.divisions,
+}));
+---
+
+<OwnerMapPage
+  leagueSlug="afl-fantasy"
+  data={ownerData as unknown as OwnerTenuresFile}
+  history={history as unknown as OwnerMapHistory}
+  conferences={conferences}
+  myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
+  hometowns={hometowns}
+  canEditAll={isCommissionerOrAdminForLeague(user, LEAGUE.id)}
+/>

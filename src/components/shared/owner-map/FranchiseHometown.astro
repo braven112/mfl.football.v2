@@ -1,0 +1,149 @@
+---
+/**
+ * The franchise page's hometown card: a small map of the team's area and a
+ * link to its division on the Owner Map, so a team page shows both views.
+ *
+ * Signed-in members of the league only, like the Owner Map itself: a
+ * hometown is shared with the league, and franchise pages are public. For
+ * anyone else this renders nothing.
+ *
+ * Reads the hometown from Redis itself; reading is safe in a component (only
+ * writing a cookie is not). The route passes the division because each
+ * league's franchise data is a different static import.
+ */
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { readHometowns } from '../../../utils/owner-hometowns';
+import { cityLabel } from '../../../utils/owner-map';
+// MapLibre's stylesheet must be a static import (see tests/dynamic-css-import-guard.test.ts).
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  franchiseId: string;
+  teamName: string;
+  icon: string;
+  division: string | null;
+}
+
+const { leagueSlug, franchiseId, teamName, icon, division } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+const user = getAuthUser(Astro.request);
+const canSee = !!league && !!user && isAuthorizedForLeague(user, league.id);
+const hometown = canSee ? (await readHometowns(leagueSlug))[franchiseId] ?? null : null;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const mapHref = (query = '') => resolveLeaguePath(`/${leagueSlug}/owner-map${query}`, hideLeaguePrefix);
+const divisionHref = division ? mapHref(`?division=${encodeURIComponent(division)}`) : mapHref();
+---
+
+{canSee && (
+  <section class="franchise-hometown" data-league={leagueSlug} aria-labelledby="franchise-hometown-heading">
+    <h2 id="franchise-hometown-heading" class="franchise-hometown__title">Hometown</h2>
+    {hometown ? (
+      <>
+        <div
+          class="franchise-hometown__map"
+          data-mini-map
+          data-lat={hometown.lat}
+          data-lng={hometown.lng}
+          data-kind={hometown.kind}
+          data-icon={icon}
+          aria-hidden="true"
+        ></div>
+        <p class="franchise-hometown__text">
+          {teamName} represents <strong>{cityLabel(hometown)}</strong>.
+        </p>
+      </>
+    ) : (
+      <p class="franchise-hometown__text">{teamName} hasn't picked a hometown yet.</p>
+    )}
+    <p class="franchise-hometown__links">
+      <a class="cta-link" href={divisionHref}>{division ? `See the ${division} division on the Owner Map` : 'Open the Owner Map'}</a>
+    </p>
+  </section>
+)}
+
+<script>
+  import { mountMiniMap } from './owner-map-client';
+
+  let unmount: (() => void) | null = null;
+
+  // Gate on the swapped-in section, which names its league (CLAUDE.md, astro:page-load gates).
+  document.addEventListener('astro:page-load', () => {
+    const el = document.querySelector<HTMLElement>('.franchise-hometown[data-league] [data-mini-map]');
+    if (!el || el.dataset.ready) return;
+    el.dataset.ready = '1';
+    mountMiniMap(el)
+      .then((dispose) => {
+        unmount = dispose;
+      })
+      .catch((error) => {
+        console.error('[owner-map] mini map failed', error);
+        el.hidden = true;
+      });
+  });
+
+  document.addEventListener('astro:before-swap', () => {
+    unmount?.();
+    unmount = null;
+  });
+</script>
+
+<style>
+  .franchise-hometown {
+    margin: 0 0 2rem;
+  }
+  .franchise-hometown__title {
+    margin: 0 0 0.75rem;
+    font-size: var(--font-size-lg);
+  }
+  .franchise-hometown__map {
+    /* Read by the map (owner-map-client.ts solidToken), not by CSS. */
+    --om-land: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));
+    --om-border: color-mix(in srgb, var(--page-text) 28%, var(--content-bg));
+    position: relative;
+    height: 220px;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    overflow: hidden;
+    background: var(--content-bg-muted);
+  }
+  .franchise-hometown__text {
+    margin: 0.75rem 0 0.25rem;
+  }
+  .franchise-hometown__links {
+    margin: 0;
+  }
+  .franchise-hometown :global(.om-marker) {
+    display: flex;
+  }
+  .franchise-hometown :global(.om-marker__icon) {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--league-accent);
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--content-bg);
+    box-shadow: var(--box-shadow-md);
+  }
+  .franchise-hometown :global(.om-marker__icon img) {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  .franchise-hometown :global(.maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    background: var(--content-bg);
+    color: var(--content-text-muted, #555);
+  }
+  .franchise-hometown :global(.maplibregl-ctrl-attrib a) {
+    color: inherit;
+  }
+  :global(html.dark) .franchise-hometown :global(.maplibregl-ctrl-attrib-button) {
+    filter: invert(1);
+  }
+</style>
