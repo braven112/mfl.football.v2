@@ -25,6 +25,7 @@ import type { LeagueSlug } from '../../../types/nav';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import HistoryRafters from './HistoryRafters.astro';
+import HistoryAsk from './HistoryAsk.astro';
 import { getTeamEraColors } from '../../../utils/team-colors';
 import type { RafterBanner } from './HistoryRafters.astro';
 import { recordBook, resultLabel } from '../../../utils/league-history/records.mjs';
@@ -145,6 +146,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     </header>
 
     <HistoryTabs leagueSlug={league.slug} current="home" />
+
+    <HistoryAsk league={league} base={r('').replace(/\/$/, '')} />
 
     <section class="hh-section" aria-labelledby="hh-rafters">
       <p class="hh-section__kicker">Every champion</p>

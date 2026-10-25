@@ -1,0 +1,57 @@
+---
+/**
+ * One Ask the History answer: the answer in words, then the rows our engine
+ * computed and the plain-words receipt of what was counted. Server-rendered
+ * on the shared answer page; the question box's script builds the same
+ * markup client-side (history-ask.css styles both).
+ */
+import '../../../styles/history-ask.css';
+import type { AskTable } from '../../../utils/league-history/ask';
+import { cellHref, formatCell, isNumericColumn } from '../../../utils/league-history/ask-format.mjs';
+
+interface Props {
+  question: string;
+  answer: string;
+  table: AskTable | null;
+  /** The league's path prefix ('/theleague', or '' on its own domain). */
+  base: string;
+}
+
+const { question, answer, table, base } = Astro.props as Props;
+const numeric = table ? table.columns.map((_, i) => isNumericColumn(table, i)) : [];
+---
+
+<article class="ha-answer">
+  <p class="ha-answer__q">{question}</p>
+  <p class="ha-answer__a">{answer}</p>
+  {table && table.rows.length > 0 && (
+    <div class="ha-table-wrap">
+      <table class="ui-table ha-table">
+        <thead>
+          <tr>{table.columns.map((c, i) => <th class:list={{ 'ha-num': numeric[i] }} scope="col">{c.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row) => (
+            <tr>
+              {table.columns.map((c, i) => {
+                const href = cellHref(c.key, row, base);
+                const text = formatCell(c.key, row.cells[i]);
+                return (
+                  <td class:list={{ 'ha-num': numeric[i] }} data-label={c.label}>
+                    {href ? <a href={href}>{text}</a> : text}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+  {table && (
+    <p class="ha-receipt">
+      {table.total === 1 ? '1 match' : `${table.total.toLocaleString('en-US')} matches`}
+      {table.total > table.rows.length && `, top ${table.rows.length} shown`} · {table.description}
+    </p>
+  )}
+</article>

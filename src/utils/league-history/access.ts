@@ -12,7 +12,7 @@
  * Fixing a season's champion stays admin-only after launch too, until the
  * commissioner claim flow exists (docs/plans/league-history-free-page.md).
  */
-import { isCommissionerOrAdmin, type AuthUser } from '../auth';
+import { franchiseIdForLeague, isCommissionerOrAdmin, type AuthUser } from '../auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { canViewSiteInsights } from '../site-insights';
 
@@ -59,4 +59,14 @@ export function canViewLeagueHistory(_user: AuthUser | null | undefined): boolea
 /** Set or clear a season's champion. Admin only, before and after launch. */
 export function canFixLeagueHistory(user: AuthUser | null | undefined): boolean {
 	return canViewSiteInsights(user);
+}
+
+/**
+ * Ask the History (the question box on the history home): signed-in owners of
+ * THAT league, since every question spends Claude tokens (Brandon,
+ * 2026-10-25). A shared answer stays readable by anyone, like the rest of the
+ * history pages; only asking is gated.
+ */
+export function canAskLeagueHistory(user: AuthUser | null | undefined, leagueId: string): boolean {
+	return !!franchiseIdForLeague(user, leagueId);
 }
