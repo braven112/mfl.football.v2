@@ -8,6 +8,9 @@
  * theme's border color so a near-black club still has an edge on a dark page.
  * The top stripe says what the banner is for: gold for a title, silver for a
  * title game lost, none for a division crown, which also hangs shorter.
+ *
+ * Each banner shows the logo the club won it under, and `data-earned-mark`
+ * keeps a seasonal theme from repainting it (seasonal-mark-css.ts).
  */
 import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
@@ -60,7 +63,7 @@ const initials = (name: string) =>
         >
           <span class="hr-banner__year">{b.year}</span>
           {b.icon ? (
-            <img class="hr-banner__logo" src={b.icon} alt="" width="44" height="44" loading="lazy" />
+            <img class="hr-banner__logo" src={b.icon} alt="" width="44" height="44" loading="lazy" data-earned-mark />
           ) : (
             <span class="hr-banner__logo hr-banner__logo--blank" aria-hidden="true">{initials(b.name)}</span>
           )}

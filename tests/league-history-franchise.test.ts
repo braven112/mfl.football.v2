@@ -22,7 +22,7 @@ interface History {
   owners: Array<{ seasons: number }>;
   headToHead: Array<Tally & { games: number }>;
 }
-const franchiseHistory = fh as unknown as (ix: unknown, id: string) => History | null;
+const franchiseHistory = fh as unknown as (ix: unknown, id: string, opts?: { ownerOnly?: boolean }) => History | null;
 const franchiseList = fl as unknown as (ds: unknown) => Array<{ franchiseId: string; active: boolean }>;
 const champions = champs as unknown as (ix: unknown) => Array<{ year: number }>;
 
@@ -56,6 +56,17 @@ describe.each(['theleague', 'afl-fantasy'])('%s franchise history', (slug) => {
 
   it('credits every season to one owner', () => {
     for (const h of all) expect(h.owners.reduce((n, o) => n + o.seasons, 0)).toBe(h.seasons.length);
+  });
+
+  it('narrows to the current owner run, games and seasons alike', () => {
+    for (const f of list) {
+      const whole = franchiseHistory(ix, f.franchiseId)!;
+      const mine = franchiseHistory(ix, f.franchiseId, { ownerOnly: true })!;
+      expect(mine.owners).toHaveLength(1);
+      expect(mine.seasons.length).toBeLessThanOrEqual(whole.seasons.length);
+      expect(mine.headToHead.reduce((n, o) => n + o.games, 0)).toBe(mine.games);
+      expect(mine.games).toBeLessThanOrEqual(whole.games);
+    }
   });
 
   it('returns null for a franchise the league never had', () => {

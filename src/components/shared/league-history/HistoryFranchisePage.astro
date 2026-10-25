@@ -69,6 +69,9 @@ interface GameLine {
 }
 interface History {
   franchiseId: string;
+  ownerOnly: boolean;
+  hadOtherOwners: boolean;
+  franchiseFirstYear: number;
   name: string;
   icon: string | null;
   active: boolean;
@@ -121,7 +124,12 @@ const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeag
 const navSlug = league.navSlug as LeagueSlug;
 
 const ix = recordBook(data).ix;
-const h = franchiseHistory(ix, franchiseId) as History;
+// The current owner's run by default (Brandon, 2026-10-25: "we should be only
+// highlighting the owner"); ?view=all counts every owner the slot has had.
+const ownerOnly = Astro.url.searchParams.get('view') !== 'all';
+const h = franchiseHistory(ix, franchiseId, { ownerOnly }) as History;
+const pageHref = r(`/history/franchises/${franchiseId}`);
+const ownerLabel = h.owner && !h.owner.key.startsWith('slot:') ? h.owner.name : 'Current owner';
 
 // The viewer's own franchise, by the same holding match the Record Book uses.
 const viewerFranchise = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
@@ -135,9 +143,15 @@ const pairStyle = (f: string) => {
 };
 
 const seasonByYear = new Map(h.seasons.map((s) => [s.y, s]));
+const ownerName = (key: string) => {
+  const o = h.owners.find((x) => x.entity.key === key);
+  return o && !key.startsWith('slot:') ? o.entity.name : 'Earlier owner';
+};
 const banner = (y: number, kind: RafterBanner['kind']): RafterBanner => {
   const s = seasonByYear.get(y)!;
-  const caption = kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`;
+  // In the all-owners view an earlier owner's banner says whose it is.
+  const earlier = h.owner && s.entityKey !== h.owner.key ? ownerName(s.entityKey) : null;
+  const caption = earlier ?? (kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`);
   return {
     year: y,
     kind,
@@ -178,7 +192,15 @@ const barClass = (s: Season) =>
 const finish = (s: Season) => (s.live ? 'In progress' : s.r ? resultLabel(s.r) : '');
 const opponents = h.headToHead.filter((o) => o.active);
 const formerOpponents = h.headToHead.filter((o) => !o.active);
-const priorNames = [...new Set(h.seasons.map((s) => s.name))].filter((n) => n !== h.name);
+// Earlier names: the owner's own in the owner view; in the all-owners view an
+// earlier owner's name is credited to that owner, never passed off as this one's.
+const priorNames = [
+  ...new Map(
+    h.seasons
+      .filter((s) => s.name !== h.name)
+      .map((s) => [s.name, h.owner && s.entityKey !== h.owner.key ? `${s.name} (${ownerName(s.entityKey)})` : s.name]),
+  ).values(),
+];
 ---
 
 <TheLeagueLayout title={`${h.name} · History · ${league.name}`}>
@@ -211,7 +233,9 @@ const priorNames = [...new Set(h.seasons.map((s) => s.name))].filter((n) => n !=
             {isMine && <span class="hf-hero__you">Your team</span>}
           </p>
         )}
-        {priorNames.length > 0 && <p class="hf-hero__aka">Also played as {priorNames.join(', ')}</p>}
+        {priorNames.length > 0 && (
+          <p class="hf-hero__aka">{ownerOnly ? 'Also played as' : 'Earlier names'} {priorNames.join(', ')}</p>
+        )}
         {h.titles.length > 0 && (
           <p class="hf-hero__cups" aria-label={`${h.titles.length} championships`}>
             {h.titles.map(() => <span class="hf-cup" aria-hidden="true"></span>)}
@@ -222,6 +246,21 @@ const priorNames = [...new Set(h.seasons.map((s) => s.name))].filter((n) => n !=
     </header>
 
     <HistoryTabs leagueSlug={league.slug} current="franchises" />
+
+    {h.hadOtherOwners && (
+      <ul class="ui-pills hf-pills" aria-label="Seasons counted">
+        <li>
+          <a class="ui-pill" href={pageHref} aria-current={ownerOnly ? 'page' : undefined}>
+            {ownerLabel}
+          </a>
+        </li>
+        <li>
+          <a class="ui-pill" href={`${pageHref}?view=all`} aria-current={!ownerOnly ? 'page' : undefined}>
+            All owners · since {h.franchiseFirstYear}
+          </a>
+        </li>
+      </ul>
+    )}
 
     <section class="hf-section" aria-labelledby="hf-rafters">
       <p class="hf-section__kicker">Banners</p>
@@ -362,7 +401,7 @@ const priorNames = [...new Set(h.seasons.map((s) => s.name))].filter((n) => n !=
       </section>
     )}
 
-    {h.owners.length > 0 && (
+    {!ownerOnly && h.owners.length > 0 && (
       <section class="hf-section" aria-labelledby="hf-owners">
         <p class="hf-section__kicker">Who ran it</p>
         <h2 class="hf-section__title" id="hf-owners">{h.owners.length === 1 ? 'The owner' : 'The owners'}</h2>
@@ -560,6 +599,9 @@ const priorNames = [...new Set(h.seasons.map((s) => s.name))].filter((n) => n !=
 
   .hf-section {
     margin-top: 1.5rem;
+  }
+  .hf-pills {
+    margin: 0 0 0.5rem;
   }
   .hf-section__kicker {
     margin: 0;

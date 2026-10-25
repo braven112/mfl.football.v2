@@ -96,7 +96,9 @@ const rafters: RafterBanner[] = banners.map((b) => ({
   name: b.name,
   icon: b.icon,
   caption: b.record,
-  href: r(`/history/franchises/${b.franchiseId}`),
+  // A franchise page opens on its current owner's run; a title won under an
+  // earlier owner lives in its all-owners view.
+  href: r(`/history/franchises/${b.franchiseId}${latest?.teams[b.franchiseId]?.h === b.entityKey ? '' : '?view=all'}`),
   title: `${b.year} champion: ${b.name}${b.owner ? ` (${b.owner})` : ''}, ${b.record}${b.runnerUp ? `, beat ${b.runnerUp}` : ''}`,
   mine: mine(b.entityKey),
 }));

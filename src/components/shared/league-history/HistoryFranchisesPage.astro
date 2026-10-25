@@ -44,7 +44,8 @@ const navSlug = league.navSlug as LeagueSlug;
 
 const ix = recordBook(data).ix;
 const cards = (franchiseList(data) as Array<{ franchiseId: string }>).map(
-  (f) => franchiseHistory(ix, f.franchiseId) as Card,
+  // Each card counts its current owner's run, like the page it opens.
+  (f) => franchiseHistory(ix, f.franchiseId, { ownerOnly: true }) as Card,
 );
 // Banners first, then title games, then winning percentage.
 cards.sort(

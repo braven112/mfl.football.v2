@@ -36,14 +36,17 @@ export function franchiseList(ds) {
 
 /**
  * The franchise's history, or null when the dataset never saw this id.
+ * `ownerOnly` keeps only the seasons and games of the holding that ran the
+ * slot most recently (Brandon, 2026-10-25: both views, whole franchise by
+ * default, the current owner's run one pill away).
  */
-export function franchiseHistory(ix, franchiseId) {
+export function franchiseHistory(ix, franchiseId, { ownerOnly = false } = {}) {
   const { ds } = ix;
   const looks = latestLooks(ds);
   if (!looks.has(franchiseId)) return null;
   const latestYear = ds.seasons.at(-1)?.y;
 
-  const seasons = [];
+  let seasons = [];
   for (const s of ds.seasons) {
     const t = s.teams[franchiseId];
     if (!t) continue;
@@ -66,6 +69,9 @@ export function franchiseHistory(ix, franchiseId) {
     });
   }
 
+  const holding = seasons.at(-1)?.entityKey ?? null;
+  const fullSpan = { firstYear: seasons[0]?.y ?? null, seasons: seasons.length };
+  if (ownerOnly) seasons = seasons.filter((s) => s.entityKey === holding);
   const done = seasons.filter((s) => !s.live);
   const titles = done.filter((s) => s.r === 'C').map((s) => s.y);
   const finals = done.filter((s) => s.r === 'C' || s.r === 'R').map((s) => s.y);
@@ -73,7 +79,9 @@ export function franchiseHistory(ix, franchiseId) {
   const divisionTitles = done.filter((s) => s.wonDivision).map((s) => s.y);
 
   // Games: the Record Book's all-games scope (no consolation games).
-  const games = ix.teamGames.filter((g) => g.f === franchiseId && g.kind !== 'consolation');
+  const games = ix.teamGames.filter(
+    (g) => g.f === franchiseId && g.kind !== 'consolation' && (!ownerOnly || ix.entityOf(g.y, franchiseId) === holding),
+  );
   const tally = (list) => {
     let w = 0;
     let l = 0;
@@ -159,6 +167,10 @@ export function franchiseHistory(ix, franchiseId) {
   const latestSeason = seasons.at(-1);
   return {
     franchiseId,
+    ownerOnly,
+    /** Whether the slot ever had another owner, i.e. whether the views differ. */
+    hadOtherOwners: fullSpan.seasons !== seasons.length || owners.length > 1,
+    franchiseFirstYear: fullSpan.firstYear,
     name: now.name,
     icon: now.icon,
     active: now.year === latestYear,
