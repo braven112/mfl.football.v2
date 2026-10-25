@@ -19,6 +19,7 @@ const GATED = {
 		'src/pages/afl-fantasy/history/record-book.astro',
 		'src/pages/api/league-history/mfl/build.ts',
 		'src/pages/api/og/league-history/mfl/[id]/[year].png.ts',
+		'src/pages/api/og/league-history/record.png.ts',
 	],
 	fix: ['src/pages/api/league-history/mfl/override.ts'],
 };

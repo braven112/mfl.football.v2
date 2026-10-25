@@ -7,8 +7,8 @@ import { formatterFor, gapChart, historyChart, spreadChart, ticks } from '../src
  * to be the right one).
  */
 
-const row = (rank: number, value: number, year: number | null, name = `Team ${rank}`) => ({
-  rank, value, display: value.toFixed(2), name, owner: null, context: `${year}`, year,
+const row = (rank: number, value: number, year: number | null, name = `Team ${rank}`, key = `own-${rank}`) => ({
+  rank, value, display: value.toFixed(2), name, owner: null, context: `${year}`, year, entity: { key },
 });
 
 const board = (opts: { asc?: boolean; rows: ReturnType<typeof row>[]; population: Array<Array<number | string | null>> }) =>
@@ -63,5 +63,37 @@ describe('Record Book charts', () => {
   it('escapes names in the drawing', () => {
     const b = board({ rows: [row(1, 2, 2020, '<b>&Co'), row(2, 1, 2020)], population: [[2, 2020, 1, null], [1, 2020, 1, null]] });
     expect(gapChart(b, 400)!.svg).toContain('&lt;b&gt;&amp;Co');
+  });
+
+  it('never prints the same tick twice on a count axis', () => {
+    expect(ticks(14.9, 16.1, 3, formatterFor('16').step)).toEqual([15, 16]);
+  });
+
+  it("draws the viewer's own results in their color and links every dot", () => {
+    const b = board({
+      rows: [row(1, 130, 2022, 'Team 1', 'own-a'), row(2, 120, 2020, 'Team 2', 'own-b')],
+      population: [
+        [130, 2022, 1, null, 'own-a'], [120, 2020, 1, null, 'own-b'], [90, 2021, 1, null, 'own-b'],
+        [80, 2021, 2, null, 'own-c'], [70, 2022, 2, null, 'own-c'],
+      ],
+    });
+    const opts = { mine: (k: string) => k === 'own-b', href: (r: { rank: number }) => `/x/${r.rank}` };
+    const gap = gapChart(b, 400, opts)!.svg;
+    expect(gap).toContain('<a href="/x/1">');
+    expect(gap.match(/class="rbc-mine"/g)).toHaveLength(1);
+    const hist = historyChart(b, 400, opts)!.svg;
+    expect(hist).toContain('rbc-mine-cloud');
+    expect(spreadChart(b, 400, opts)!.svg).toContain('Your best 120.00');
+  });
+
+  it("marks a season in progress where it is on pace to finish", () => {
+    const b = board({
+      rows: [row(1, 130, 2022), row(2, 120, 2020)],
+      population: [[130, 2022, 1, null], [120, 2020, 1, null]],
+    });
+    const watch = [{ name: 'Pace Setters', year: 2023, projected: 140, display: '140.00' }];
+    const svg = historyChart(b, 400, { watch })!.svg;
+    expect(svg).toContain('class="rbc-watch"');
+    expect(svg).toContain('Pace Setters · on pace for 140.00');
   });
 });

@@ -16,9 +16,15 @@
  * default) and where it sits, switched by pills, beside the highlighted
  * "how the record grew" history (Brandon, 2026-10-25).
  *
- * Zero client JS: category, scope, board and chart are all URL params switched
- * by links (pills filter the same leaderboard, so they are pills, not tabs),
- * and every view is bookmarkable. The charts are server-drawn SVG.
+ * Also (Brandon, 2026-10-25): the signed-in owner's own results light up in
+ * their team color, every dot opens its game, season or owner, a season in
+ * progress gets a "record watch" when a team is on pace for a season board,
+ * a record saves as a share card (/api/og/league-history/record.png), and an
+ * era pill reads the whole book over the last ten seasons.
+ *
+ * Zero client JS: era, category, scope, board and chart are all URL params
+ * switched by links (pills filter the same leaderboard, so they are pills, not
+ * tabs), and every view is bookmarkable. The charts are server-drawn SVG.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
@@ -26,7 +32,9 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { teamAccentVar } from '../../../utils/team-accent-css';
-import { CATEGORIES, SCOPES, recordBook } from '../../../utils/league-history/records.mjs';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { canonicalRivalryPair } from '../../../utils/rivalries';
+import { CATEGORIES, SCOPES, historyEras, recordBook } from '../../../utils/league-history/records.mjs';
 import { gapChart, historyChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
 
 interface Row {
@@ -38,7 +46,25 @@ interface Row {
   context: string;
   rank: number;
   unit?: string;
+  year?: number;
+  franchiseId?: string;
+  opponentId?: string;
   entity: { key: string; name: string; franchiseId: string | null; ownerSlug: string | null };
+}
+interface Watch {
+  name: string;
+  owner: string | null;
+  franchiseId: string;
+  projected: number;
+  display: string;
+  unit: string;
+  rank: number;
+  record: Row;
+  played: number;
+  full: number;
+}
+interface HistoryData {
+  seasons: Array<{ y: number; teams: Record<string, { h: string }> }>;
 }
 interface Board {
   id: string;
@@ -67,9 +93,11 @@ const SCOPE_LABEL: Record<string, string> = {
   playoffs: 'Playoffs',
 };
 
-const book = recordBook(data);
-const facts = book.facts();
 const params = Astro.url.searchParams;
+const eras = historyEras(data, league.historyEras ?? []);
+const era = eras.find((e) => e.id === params.get('era')) ?? eras[0];
+const book = recordBook(data, { from: era.from });
+const facts = book.facts();
 const category = CATEGORIES.find((c) => c.id === params.get('cat')) ?? CATEGORIES[0];
 const scopeParam = params.get('scope') ?? 'all';
 const scope = category.scoped && SCOPES.includes(scopeParam) ? scopeParam : 'all';
@@ -84,13 +112,42 @@ const chartView = CHARTS.find((c) => c.id === params.get('chart')) ?? CHARTS[0];
 // One drawing width for every screen: the SVG scales to its column, and at 400
 // its 11px labels stay readable from a phone (~0.85x) to a desktop column (~1.3x).
 const CHART_W = 400;
-const chart = board ? chartView.draw(board, CHART_W) : null;
-const history = board ? historyChart(board, CHART_W) : null;
+
+// The viewer's own results: the holding (owner, or co-owners) of their
+// franchise in the latest season, matched against every entity key, so an
+// owner who moved slots still finds every season of theirs.
+const viewerFranchise = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+const latestSeason = (data as HistoryData).seasons.at(-1);
+const myHolding = viewerFranchise ? (latestSeason?.teams[viewerFranchise]?.h ?? `slot:${viewerFranchise}`) : null;
+const myIds = new Set(myHolding ? myHolding.split('+') : []);
+const mine = (key: string | null | undefined) => !!key && key.split('+').some((id) => myIds.has(id));
+
+// Where a dot or row opens: a game's head-to-head page, a season's franchise
+// page, a career's owner page.
+const entityHref = (key: string | null | undefined) => {
+  if (!key) return null;
+  const e = book.ix.entity(key);
+  return e.ownerSlug ? r(`/owners/${e.ownerSlug}`) : e.franchiseId ? r(`/franchises/${e.franchiseId}`) : null;
+};
+const rowHref = (row: Row) => {
+  if (row.franchiseId && row.opponentId) return r(`/rivalries/${canonicalRivalryPair(row.franchiseId, row.opponentId)}`);
+  if (row.franchiseId && row.year != null) return r(`/franchises/${row.franchiseId}`);
+  return entityHref(row.entity.key);
+};
+
+const watches = book.watch() as Record<string, Watch[]>;
+const boardWatch = (board && watches[board.id]) || [];
+const chartOpts = { mine, href: rowHref, entityHref, watch: boardWatch };
+const chart = board ? chartView.draw(board, CHART_W, chartOpts) : null;
+const history = board ? historyChart(board, CHART_W, chartOpts) : null;
+const youOnBoard = !!board?.population.some((p) => mine(p[4] as string | null));
 const historyBySeason = !!board?.population.length && board.population.every((p) => p[1] != null);
 
 /** A view's URL, leaving defaults out so the plain page stays the plain URL. */
-const viewHref = (next: { cat?: string; scope?: string; board?: string; chart?: string; hash?: string }) => {
+const viewHref = (next: { cat?: string; scope?: string; board?: string; chart?: string; hash?: string; era?: string }) => {
   const q = new URLSearchParams();
+  const eraId = next.era ?? era.id;
+  if (eraId !== eras[0].id) q.set('era', eraId);
   const cat = next.cat ?? category.id;
   if (cat !== CATEGORIES[0].id) q.set('cat', cat);
   const sc = next.scope ?? 'all';
@@ -128,6 +185,30 @@ const sub = (row: Row) => [row.owner, row.context].filter(Boolean).join(' · ');
 const unit = (row: Row) => (row.unit ? ` ${row.unit}` : '');
 
 const others = boards.filter((b) => b.id !== board?.id && b.rows.length);
+
+// "On pace" wording: equal to the record ties it, better breaks it.
+const paceLine = (w: Watch) => {
+  const verdict =
+    w.rank > 1
+      ? `which would rank #${w.rank}`
+      : w.projected === w.record.value
+        ? `which would tie the record (${w.record.display})`
+        : `which would break the record (${w.record.display})`;
+  return `on pace for ${w.display}${w.unit ? ` ${w.unit}` : ''}, ${verdict}`;
+};
+// The header strip: every season board someone is on pace to break or tie,
+// the best pace only (the board's own banner lists the rest).
+const seasonBoards = book.category('season') as Board[];
+const recordChases = seasonBoards.flatMap((b) =>
+  (watches[b.id] ?? []).filter((w) => w.rank === 1).slice(0, 1).map((w) => ({ board: b, watch: w }))
+);
+
+const shareHref = (() => {
+  const q = new URLSearchParams({ league: league.slug, cat: category.id, board: board?.id ?? '' });
+  if (scope !== 'all') q.set('scope', scope);
+  if (era.id !== eras[0].id) q.set('era', era.id);
+  return `/api/og/league-history/record.png?${q}`;
+})();
 const pageTitle = `Record Book · ${league.name}`;
 const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${facts.lastSeason}` : '';
 ---
@@ -150,7 +231,37 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
         <span><b>{facts.games.toLocaleString('en-US')}</b> games</span>
         <span><b>{facts.champions}</b> different champions</span>
       </p>
+      {eras.length > 1 && (
+        <ul class="ui-pills rb-pills rb-pills--era" aria-label="Seasons counted">
+          {eras.map((e) => (
+            <li>
+              <a
+                class="ui-pill"
+                href={viewHref({ era: e.id, scope, board: board?.id, chart: chartView.id })}
+                aria-current={e.id === era.id ? 'true' : undefined}
+              >
+                {e.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </header>
+
+    {recordChases.length > 0 && (
+      <aside class="rb-chase" aria-labelledby="rb-chase-title">
+        <p class="rb-chase__kicker" id="rb-chase-title">Record watch · {latestSeason?.y}</p>
+        <ul class="rb-chase__list">
+          {recordChases.map(({ board: b, watch: w }) => (
+            <li style={`--rb-team: ${teamAccentVar(w.franchiseId, 'var(--history-gold)')}`}>
+              <a href={viewHref({ cat: 'season', board: b.id, hash: 'rb-board-title' })}>
+                <b>{w.name}</b> is {paceLine(w)} for {b.title.toLowerCase()}.
+              </a>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    )}
 
     <nav class="rb-nav" aria-label="Record categories">
       <ul class="ui-pills rb-pills">
@@ -179,7 +290,11 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       )}
     </nav>
 
-    <section class="rb-board" aria-labelledby="rb-board-title">
+    <section
+      class="rb-board"
+      aria-labelledby="rb-board-title"
+      style={viewerFranchise ? `--rb-mine: ${teamAccentVar(viewerFranchise, 'var(--history-gold)')}` : undefined}
+    >
       <ul class="ui-pills rb-pills rb-pills--boards" aria-label="Records">
         {boards.map((b) => (
           <li>
@@ -200,9 +315,23 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       </h2>
       {board?.note && <p class="rb-board__note">{board.note}</p>}
 
+      {boardWatch.length > 0 && (
+        <aside class="rb-watch">
+          <p class="rb-watch__kicker">Record watch · {latestSeason?.y}</p>
+          <ul class="rb-watch__list">
+            {boardWatch.map((w) => (
+              <li style={`--rb-team: ${teamAccentVar(w.franchiseId, 'var(--history-gold)')}`}>
+                <b>{w.name}</b>{w.owner && ` (${w.owner})`} is {paceLine(w)}.
+                <span class="rb-watch__played">{w.played} of {w.full} games played.</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
+
       {leader ? (
         <div class="rb-layout">
-          <article class="rb-plaque" style={`--rb-team: ${accent(leader)}`}>
+          <article class:list={['rb-plaque', { 'rb-mine': mine(leader.entity.key) }]} style={`--rb-team: ${accent(leader)}`}>
             <p class="rb-plaque__label">{tiedAtTop > 1 ? `Record · shared by ${tiedAtTop}` : 'The record'}</p>
             {leader.icon ? (
               <img class="rb-plaque__logo" src={leader.icon} alt="" width="88" height="88" loading="eager" />
@@ -217,6 +346,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               {ownerHref(leader) ? <a href={ownerHref(leader)}>{leader.name}</a> : leader.name}
             </p>
             <p class="rb-plaque__context">{sub(leader)}</p>
+            <a class="cta cta--ghost rb-share" href={shareHref} download={`${board.id}.png`}>Save as image</a>
           </article>
 
           {chart && (
@@ -247,12 +377,16 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               </p>
               <div class="rb-viz__plot" set:html={history.svg} />
               <figcaption class="rb-viz__take">{history.take}</figcaption>
-              {historyBySeason && (
-                <p class="rb-story__legend">
-                  <span class="rb-key rb-key--line"></span> The record at the time
-                  <span class="rb-key rb-key--dot"></span> Top 10
-                </p>
-              )}
+              <p class="rb-story__legend">
+                {historyBySeason && (
+                  <span class="rb-legend"><span class="rb-key rb-key--line"></span> The record at the time</span>
+                )}
+                <span class="rb-legend"><span class="rb-key rb-key--dot"></span> Top 10</span>
+                {youOnBoard && <span class="rb-legend"><span class="rb-key rb-key--mine"></span> Your results</span>}
+                {boardWatch.length > 0 && historyBySeason && (
+                  <span class="rb-legend"><span class="rb-key rb-key--watch"></span> On pace this season</span>
+                )}
+              </p>
             </figure>
           )}
 
@@ -260,7 +394,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
           {chasers.length > 0 && (
             <ol class="rb-chasers" aria-label="Next on the list">
               {chasers.map((row) => (
-                <li class="rb-tile" style={`--rb-team: ${accent(row)}`}>
+                <li class:list={['rb-tile', { 'rb-mine': mine(row.entity.key) }]} style={`--rb-team: ${accent(row)}`}>
                   <span class="rb-tile__rank">{row.rank}</span>
                   {row.icon ? (
                     <img class="rb-tile__logo" src={row.icon} alt="" width="40" height="40" loading="lazy" />
@@ -280,7 +414,10 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
           {rest.length > 0 && (
             <ol class="rb-rows" aria-label="The rest of the top ten">
               {rest.map((row) => (
-                <li class="rb-row" style={`--rb-team: ${accent(row)}; --rb-bar: ${barWidth(row.value)}%`}>
+                <li
+                  class:list={['rb-row', { 'rb-mine': mine(row.entity.key) }]}
+                  style={`--rb-team: ${accent(row)}; --rb-bar: ${barWidth(row.value)}%`}
+                >
                   <span class="rb-row__rank">{row.rank}</span>
                   {row.icon ? (
                     <img class="rb-row__logo" src={row.icon} alt="" width="28" height="28" loading="lazy" />
@@ -384,6 +521,52 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-pills--boards {
     margin-bottom: 1rem;
   }
+  .rb-pills--era {
+    margin-top: 0.75rem;
+  }
+
+  /* ── Record watch ─────────────────────────────────────────────────────── */
+  .rb-chase,
+  .rb-watch {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--history-gold-wash);
+    border: 1px solid var(--history-gold);
+    border-radius: var(--radius-md, 12px);
+  }
+  .rb-watch {
+    margin: 0.75rem 0 0;
+  }
+  .rb-chase__kicker,
+  .rb-watch__kicker {
+    margin: 0 0 0.25rem;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rb-chase__list,
+  .rb-watch__list {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm);
+  }
+  .rb-chase__list li,
+  .rb-watch__list li {
+    padding-left: 0.625rem;
+    border-left: 3px solid var(--rb-team);
+  }
+  .rb-chase a,
+  .rb-chase a:hover {
+    color: var(--page-text);
+  }
+  .rb-watch__played {
+    color: var(--content-text-muted);
+  }
 
   /* ── The board ────────────────────────────────────────────────────────── */
   .rb-board {
@@ -481,23 +664,35 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
   }
+  .rb-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-right: 0.75rem;
+    white-space: nowrap;
+  }
   .rb-key {
     display: inline-block;
-    margin-left: 0.5rem;
-  }
-  .rb-key:first-child {
-    margin-left: 0;
   }
   .rb-key--line {
     width: 16px;
     height: 2px;
     background: var(--history-gold);
   }
-  .rb-key--dot {
+  .rb-key--dot,
+  .rb-key--mine,
+  .rb-key--watch {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--page-text);
+  }
+  .rb-key--mine {
+    background: var(--rb-mine, var(--history-gold));
+  }
+  .rb-key--watch {
+    background: none;
+    border: 2px dashed var(--page-text);
   }
   .rb-pills--charts {
     margin-bottom: 0.5rem;
@@ -583,6 +778,45 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     stroke-width: 2;
     stroke-linejoin: round;
   }
+  /* The viewer's own results, in their team color. */
+  .rb-viz__plot :global(.rbc-mine) {
+    fill: var(--rb-mine, var(--history-gold));
+    stroke: var(--page-text);
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-name--mine) {
+    fill: var(--rb-mine, var(--history-gold));
+  }
+  .rb-viz__plot :global(.rbc-mine-cloud) {
+    fill: none;
+    stroke: var(--rb-mine, var(--history-gold));
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+  .rb-viz__plot :global(.rbc-mine-line) {
+    stroke: var(--rb-mine, var(--history-gold));
+    stroke-width: 2;
+  }
+  .rb-viz__plot :global(.rbc-mine-label) {
+    fill: var(--page-text);
+    font-weight: var(--font-weight-semibold);
+  }
+  .rb-viz__plot :global(.rbc-watch) {
+    fill: none;
+    stroke: var(--page-text);
+    stroke-width: 2;
+    stroke-dasharray: 3 2;
+  }
+  /* A whole gap-chart row is one tap target; the rect only catches the tap. */
+  .rb-viz__plot :global(.rbc-hit) {
+    fill: transparent;
+  }
+  .rb-viz__plot :global(a:hover .rbc-hit) {
+    fill: color-mix(in srgb, var(--history-gold) 10%, transparent);
+  }
+  .rb-viz__plot :global(a:focus-visible) {
+    outline: 2px solid var(--history-gold);
+  }
 
   /* The record holder, on a plaque. */
   .rb-plaque {
@@ -639,6 +873,22 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     margin-top: 0.25rem !important;
     color: var(--content-text-muted);
     font-size: var(--font-size-sm);
+  }
+  .rb-share {
+    align-self: center;
+    margin-top: 0.75rem;
+  }
+
+  /* The signed-in owner's own entries on the list. */
+  .rb-plaque.rb-mine,
+  .rb-tile.rb-mine {
+    outline: 2px solid var(--rb-mine, var(--history-gold));
+    outline-offset: -2px;
+  }
+  .rb-row.rb-mine {
+    padding-inline: 0.5rem;
+    border-radius: var(--radius-sm, 8px);
+    background: color-mix(in srgb, var(--rb-mine, var(--history-gold)) 14%, transparent);
   }
 
   /* Places 2 to 4, as tiles. */
@@ -776,11 +1026,11 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     font-size: var(--font-size-xs);
   }
 
-  .rb-board a,
-  .rb-board a:hover {
+  .rb-board a:not(.cta),
+  .rb-board a:not(.cta):hover {
     color: inherit;
   }
-  .rb-board a:hover {
+  .rb-board a:not(.cta):hover {
     text-decoration: underline;
   }
 

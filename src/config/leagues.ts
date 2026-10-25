@@ -338,6 +338,11 @@ export interface LeagueDefinition {
    */
   officialClock: LeagueClock;
   /**
+   * Record Book eras a league declares (a format or scoring change), each read
+   * from its `from` season on. See `historyEras` in leagues-data.mjs.
+   */
+  historyEras?: Array<{ id: string; label: string; from: number }>;
+  /**
    * `false` keeps the league off the mfl.football front door (src/pages/index.astro)
    * while it stays served at its own path. Absent → listed.
    */

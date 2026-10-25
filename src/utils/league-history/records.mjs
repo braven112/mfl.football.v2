@@ -99,7 +99,7 @@ const inScope = (kind, scope) =>
  * only for the ones that make the board. A single-game board ranks ~10,000
  * team-games to show ten; building all of them cost seconds per request.
  */
-function rankBy(items, value, build, { asc = false, limit = 10 } = {}) {
+function rankTop(items, value, build, { asc = false, limit = 10, key = () => null } = {}) {
   const scored = items.map((item) => ({ item, v: value(item) }));
   scored.sort((a, b) => (asc ? a.v - b.v : b.v - a.v));
   const out = [];
@@ -108,7 +108,7 @@ function rankBy(items, value, build, { asc = false, limit = 10 } = {}) {
     const rank = prev && prev.value === scored[i].v ? prev.rank : i + 1;
     out.push({ ...build(scored[i].item, scored[i].v), value: scored[i].v, rank });
   }
-  return withPopulation(out, scored.map((s) => [s.v, s.item.y ?? null, s.item.wk ?? null, null]), asc);
+  return withPopulation(out, scored.map((s) => [s.v, s.item.y ?? null, s.item.wk ?? null, null, key(s.item)]), asc);
 }
 
 /** Ranked rows with shared ranks for equal values. */
@@ -122,15 +122,20 @@ function rankRows(rows, { asc = false, limit = 10 } = {}) {
     const rank = prev && prev.value === sorted[i].value ? prev.rank : i + 1;
     out.push({ ...sorted[i], rank });
   }
-  return withPopulation(out, rows.map((r) => [r.value, r.year ?? null, null, r.year == null ? r.name : null]), asc);
+  return withPopulation(
+    out,
+    rows.map((r) => [r.value, r.year ?? null, null, r.year == null ? r.name : null, r.entity?.key ?? null]),
+    asc
+  );
 }
 
 /**
  * Every result a board ranked, not just its top ten, for the Record Book's
  * charts (where the record sits against everything, and how it grew). Rides
  * on the rows array and is lifted onto the board by buildCategory.
- * Each entry: [value, year | null, week | null, name | null] (a name only for
- * rows with no season, which the charts plot one dot per entity).
+ * Each entry: [value, year | null, week | null, name | null, entityKey | null]
+ * (a name only for rows with no season, which the charts plot one dot per
+ * entity; the entity key lets a chart pick out the viewer's own results).
  */
 function withPopulation(rows, population, asc) {
   rows.population = population;
@@ -158,6 +163,7 @@ function seasonRow(ix, y, f, value, display, context) {
     context,
     entity: e,
     year: y,
+    franchiseId: f,
   };
 }
 
@@ -196,12 +202,16 @@ function singleGameBoards(ix, scope) {
   const tg = onePerWeek(scoped);
   const tgr = onePerWeek(scoped, true);
   const gs = ix.games.filter((g) => scope === 'all' ? true : g.kind === scope);
-  const row = (g, f, v, d) => seasonRow(ix, g.y, f, v, d, gameContext(ix, g, f));
+  const row = (g, f, v, d) => ({
+    ...seasonRow(ix, g.y, f, v, d, gameContext(ix, g, f)),
+    opponentId: f === g.wf ? g.lf : g.wf,
+  });
   const pairRow = (g, v, d) => {
     const w = ix.team(g.y, g.wf);
     const l = ix.team(g.y, g.lf);
     return {
       ...seasonRow(ix, g.y, g.wf, v, d, `${g.y} · ${g.kind === 'playoffs' ? 'Playoffs, ' : ''}Week ${g.wk}`),
+      opponentId: g.lf,
       name: `${w?.n ?? g.wf} vs ${l?.n ?? g.lf}`,
       owner: null,
       context: `${fmt2(g.ws)} to ${fmt2(g.ls)} · ${g.y} · ${g.kind === 'playoffs' ? 'Playoffs, ' : ''}Week ${g.wk}`,
@@ -217,6 +227,8 @@ function singleGameBoards(ix, scope) {
   });
   const combinedRow = (g) => pairRow(g, combined(g), fmt2(combined(g)));
   const decided = gs.filter((g) => !g.tie);
+  const key = (g) => ix.entityOf(g.y, g.f ?? g.wf);
+  const rankBy = (items, value, build, opts = {}) => rankTop(items, value, build, { ...opts, key });
   return [
     { id: 'most-points', label: 'Most points', title: 'Most points in a game',
       rows: rankBy(tg, score, scoreRow) },
@@ -300,6 +312,11 @@ function singleSeasonBoards(ix) {
     }
   }
   const played = rows.filter((r) => r.t.w + r.t.l + r.t.t > 0);
+  // Season totals count finished seasons only: a season in progress is a
+  // partial total, which would sit at the bottom of every chart. Its pace is
+  // the record watch's job (recordWatch). Streaks still count it, because a
+  // streak running now is already real.
+  const finished = played.filter((r) => r.done);
   const rec = (t) => `${t.w}-${t.l}${t.t ? `-${t.t}` : ''}`;
   const sr = (r, v, d, ctx) => seasonRow(ix, r.y, r.f, v, d, `${r.y} · ${ctx}`);
   const wpct = (t) => (t.w + t.t * 0.5) / (t.w + t.l + t.t);
@@ -315,13 +332,13 @@ function singleSeasonBoards(ix) {
     );
   return [
     { id: 'most-wins', label: 'Most wins', title: 'Most wins in a season',
-      rows: rankRows(played.map((r) => ({ ...sr(r, r.t.w, fmt0(r.t.w), rec(r.t)), tiebreak: r.t.l }))) },
+      rows: rankRows(finished.map((r) => ({ ...sr(r, r.t.w, fmt0(r.t.w), rec(r.t)), tiebreak: r.t.l }))) },
     { id: 'most-losses', label: 'Most losses', title: 'Most losses in a season',
-      rows: rankRows(played.map((r) => ({ ...sr(r, r.t.l, fmt0(r.t.l), rec(r.t)), tiebreak: r.t.w }))) },
+      rows: rankRows(finished.map((r) => ({ ...sr(r, r.t.l, fmt0(r.t.l), rec(r.t)), tiebreak: r.t.w }))) },
     { id: 'best-record', label: 'Best record', title: 'Best winning percentage',
       rows: rankRows(played.filter((r) => r.done).map((r) => sr(r, wpct(r.t), pct(wpct(r.t)), rec(r.t)))) },
     { id: 'most-points-season', label: 'Most points', title: 'Most points in a season',
-      rows: rankRows(played.filter((r) => pts(r) > 0).map((r) => sr(r, pts(r), fmt2(pts(r)), rec(r.t)))) },
+      rows: rankRows(finished.filter((r) => pts(r) > 0).map((r) => sr(r, pts(r), fmt2(pts(r)), rec(r.t)))) },
     { id: 'fewest-points-season', label: 'Fewest points', title: 'Fewest points in a full season',
       rows: rankRows(played.filter((r) => r.done && pts(r) > 0).map((r) => sr(r, pts(r), fmt2(pts(r)), rec(r.t))), { asc: true }) },
     { id: 'division-record', label: 'Division record', title: 'Best record in division games',
@@ -331,7 +348,7 @@ function singleSeasonBoards(ix) {
         return sr(r, v, pct(v), `${r.st.divW}-${r.st.divL}${r.st.divT ? `-${r.st.divT}` : ''} in ${r.t.d ?? 'division'}`);
       })) },
     { id: 'high-point-weeks', label: 'Top-score weeks', title: 'Most weeks as the top scorer',
-      rows: rankRows(played.filter((r) => r.st?.highs).map((r) => sr(r, r.st.highs, fmt0(r.st.highs), `of ${r.st.weeks.size} weeks`))) },
+      rows: rankRows(finished.filter((r) => r.st?.highs).map((r) => sr(r, r.st.highs, fmt0(r.st.highs), `of ${r.st.weeks.size} weeks`))) },
     { id: 'season-win-streak', label: 'Win streak', title: 'Longest winning streak in a season',
       rows: streakBoard((g) => g.won) },
     { id: 'season-loss-streak', label: 'Losing streak', title: 'Longest losing streak in a season',
@@ -546,27 +563,146 @@ export function bookFacts(ix) {
   };
 }
 
+// ── Eras ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The windows a Record Book can be read over: all time, the last ten seasons,
+ * and any league-declared "since" eras (a scoring or roster change), passed in
+ * as `[{ id, label, from }]`. An era is a filter on the dataset, so every
+ * board, chart and career total is counted inside it.
+ */
+export function historyEras(ds, extra = []) {
+  const eras = [{ id: 'all', label: 'All time', from: null }];
+  const last = ds.lastSeason ?? ds.seasons[ds.seasons.length - 1]?.y;
+  if (last != null && last - (ds.firstSeason ?? last) >= 10) {
+    eras.push({ id: 'last10', label: 'Last 10 seasons', from: last - 9 });
+  }
+  for (const e of extra) if (e.from > (ds.firstSeason ?? 0)) eras.push(e);
+  return eras;
+}
+
+/** The dataset cut to seasons from `from` on. */
+export function eraDataset(ds, from) {
+  if (from == null) return ds;
+  return {
+    ...ds,
+    firstSeason: Math.max(from, ds.firstSeason ?? from),
+    seasons: ds.seasons.filter((s) => s.y >= from),
+    games: ds.games.filter((g) => g[0] >= from),
+  };
+}
+
+// ── Record watch ─────────────────────────────────────────────────────────────
+
+/**
+ * Season boards a season in progress can be on pace for. `project` turns the
+ * standings row so far into a full-season value, `format` displays it the way
+ * the board does. Points scale by WEEKS and results by GAMES: TheLeague's
+ * doubleheader weeks put two games on one weekly score, so a team nine games
+ * into an 18-game season can be six weeks into a 14-week one.
+ */
+const WATCHED = {
+  'most-points-season': { project: (t, s) => t.pf / s.weeks, format: fmt2, unit: 'points' },
+  'fewest-points-season': { project: (t, s) => t.pf / s.weeks, format: fmt2, unit: 'points' },
+  'most-wins': { project: (t, s) => Math.round(t.w / s.games), format: fmt0, unit: 'wins' },
+  'most-losses': { project: (t, s) => Math.round(t.l / s.games), format: fmt0, unit: 'losses' },
+  'best-record': { project: (t) => (t.w + t.t * 0.5) / (t.w + t.l + t.t), format: pct, unit: '' },
+};
+
+/**
+ * Who is on pace for a season board's top ten this season, best first:
+ * `{ boardId: [{ name, owner, franchiseId, entity, year, current, projected,
+ * display, rank, record, played, full }] }`. Empty outside a season in
+ * progress, and until a quarter of it is played (a two-game pace is noise).
+ * A full season is the median games (and scored weeks) a team played in the
+ * last finished one.
+ */
+export function recordWatch(ix, seasonBoards) {
+  const seasons = ix.ds.seasons;
+  const live = seasons[seasons.length - 1];
+  const prev = [...seasons].reverse().find((s) => s.done);
+  if (!live || live.done || !prev) return {};
+  const gp = (t) => t.w + t.l + t.t;
+  const median = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const weeksOf = new Map();
+  for (const g of ix.teamGames) {
+    if (g.kind !== 'regular' || (g.y !== live.y && g.y !== prev.y)) continue;
+    const k = `${g.y}|${g.f}`;
+    if (!weeksOf.has(k)) weeksOf.set(k, new Set());
+    weeksOf.get(k).add(g.wk);
+  }
+  const full = median(Object.values(prev.teams).map(gp));
+  const fullWeeks = median(Object.keys(prev.teams).map((f) => weeksOf.get(`${prev.y}|${f}`)?.size ?? 0));
+  if (!full || !fullWeeks) return {};
+  const out = {};
+  for (const board of seasonBoards) {
+    const spec = WATCHED[board.id];
+    if (!spec) continue;
+    // The board as it stands without this season's partial rows.
+    const field = board.rows.filter((r) => r.year !== live.y);
+    if (!field.length) continue;
+    const better = (a, b) => (board.asc ? a < b : a > b);
+    const watches = [];
+    for (const [f, t] of Object.entries(live.teams)) {
+      const played = gp(t);
+      if (played < full / 4 || played >= full) continue;
+      const weeks = weeksOf.get(`${live.y}|${f}`)?.size ?? 0;
+      if (!weeks) continue;
+      const projected = spec.project(t, { games: played / full, weeks: weeks / fullWeeks });
+      if (!Number.isFinite(projected)) continue;
+      const rank = 1 + field.filter((r) => better(r.value, projected)).length;
+      if (rank > 10 && field.length >= 10) continue;
+      const e = ix.entity(ix.entityOf(live.y, f));
+      watches.push({
+        name: t.n ?? f,
+        owner: ix.groupBy === 'owner' && !e.key.startsWith('slot:') ? e.name : null,
+        franchiseId: f,
+        entity: e,
+        year: live.y,
+        projected,
+        display: spec.format(projected),
+        unit: spec.unit,
+        rank,
+        record: field[0],
+        played,
+        full,
+      });
+    }
+    watches.sort((a, b) => (board.asc ? a.projected - b.projected : b.projected - a.projected));
+    if (watches.length) out[board.id] = watches.slice(0, 3);
+  }
+  return out;
+}
+
+// ── Cache ──────────────────────────────────────────────────────────────────────
+
 /**
  * Cached boards for a page request. The dataset is a static import, so the
  * same object arrives on every request to a route and the boards are built
  * once per server instance, not per view (the Season boards cost ~50 ms).
+ * `from` reads the book over an era (see historyEras).
  */
 const bookCache = new WeakMap();
-export function recordBook(ds, { groupBy = 'owner' } = {}) {
+export function recordBook(ds, { groupBy = 'owner', from = null } = {}) {
   if (!bookCache.has(ds)) bookCache.set(ds, new Map());
-  const byGroup = bookCache.get(ds);
-  if (!byGroup.has(groupBy)) {
-    const ix = indexDataset(ds, { groupBy });
+  const byView = bookCache.get(ds);
+  const viewKey = `${groupBy}|${from ?? 'all'}`;
+  if (!byView.has(viewKey)) {
+    const ix = indexDataset(eraDataset(ds, from), { groupBy });
     const boards = new Map();
     let facts = null;
-    byGroup.set(groupBy, {
+    let watch = null;
+    const category = (category, scope = 'all') => {
+      const key = `${category}|${scope}`;
+      if (!boards.has(key)) boards.set(key, buildCategory(ix, category, scope));
+      return boards.get(key);
+    };
+    byView.set(viewKey, {
+      ix,
       facts: () => (facts ??= bookFacts(ix)),
-      category: (category, scope = 'all') => {
-        const key = `${category}|${scope}`;
-        if (!boards.has(key)) boards.set(key, buildCategory(ix, category, scope));
-        return boards.get(key);
-      },
+      category,
+      watch: () => (watch ??= recordWatch(ix, category('season'))),
     });
   }
-  return byGroup.get(groupBy);
+  return byView.get(viewKey);
 }

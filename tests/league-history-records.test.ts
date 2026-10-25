@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildHistoryDataset as buildDataset, holdingsBySeason } from '../src/utils/league-history/dataset.mjs';
-import { buildCategory as buildBoards, indexDataset, recordBook } from '../src/utils/league-history/records.mjs';
+import {
+  buildCategory as buildBoards,
+  eraDataset,
+  historyEras,
+  indexDataset,
+  recordBook,
+  recordWatch as watchBoards,
+} from '../src/utils/league-history/records.mjs';
 
 interface Row { value: number; rank: number; entity: { key: string; name: string } }
 interface Board { id: string; rows: Row[] }
@@ -13,6 +20,8 @@ interface Dataset {
 // The engine is plain .mjs; these are the shapes the tests read.
 const buildHistoryDataset = buildDataset as unknown as (args: object) => Dataset;
 const buildCategory = buildBoards as unknown as (ix: unknown, category: string, scope?: string) => Board[];
+interface Watch { name: string; projected: number; rank: number; played: number; full: number }
+const recordWatch = watchBoards as unknown as (ix: unknown, boards: Board[]) => Record<string, Watch[]>;
 
 /**
  * League History engine — the owner attribution the Record Book groups by, and
@@ -125,6 +134,46 @@ describe('Record Book boards', () => {
     const book = recordBook(ds);
     expect(recordBook(ds)).toBe(book);
     expect(book.category('season')).toBe(book.category('season'));
+  });
+});
+
+describe('Record Book eras and record watch', () => {
+  it('offers the last ten seasons once a league has more than ten', () => {
+    const long = { firstSeason: 2010, lastSeason: 2026, seasons: [], games: [] };
+    expect(historyEras(long).map((e: { id: string; from: number | null }) => [e.id, e.from])).toEqual([['all', null], ['last10', 2017]]);
+    expect(historyEras({ ...long, firstSeason: 2020 })).toHaveLength(1);
+  });
+
+  it('cuts an era to its seasons and games', () => {
+    const cut = eraDataset(ds, 2021) as unknown as Dataset;
+    expect(cut.seasons.map((s) => s.y)).toEqual([2021]);
+    expect(cut.games.every((g) => g[0] === 2021)).toBe(true);
+    expect(eraDataset(ds, null)).toBe(ds);
+  });
+
+  it('projects points by weeks and wins by games, and only past a quarter of the season', () => {
+    // 2020 is the finished season: four teams play 4 games over 3 weeks
+    // (week 1 a doubleheader). 2021 is live: 0001 has played 2 games in 1 week.
+    const tg = (y: number, wk: number, w: string, l: string) => g(y, wk, w, 100, l, 90);
+    const games2 = [
+      tg(2020, 1, '0001', '0002'), tg(2020, 1, '0003', '0004'), tg(2020, 1, '0001', '0003'), tg(2020, 1, '0002', '0004'),
+      tg(2020, 2, '0001', '0004'), tg(2020, 2, '0002', '0003'), tg(2020, 3, '0001', '0002'), tg(2020, 3, '0003', '0004'),
+      tg(2021, 1, '0001', '0002'), tg(2021, 1, '0001', '0003'),
+    ];
+    const r = (y: number, f: string, w: number, l: number, pf: number, res = 'missed') =>
+      row(y, f, { wins: w, losses: l, pointsFor: pf, playoffResult: res });
+    const ledger = [
+      r(2020, '0001', 4, 0, 300, 'champion'), r(2020, '0002', 2, 2, 290), r(2020, '0003', 2, 2, 280), r(2020, '0004', 0, 4, 270),
+      r(2021, '0001', 2, 0, 200), r(2021, '0002', 0, 1, 90), r(2021, '0003', 0, 1, 90), r(2021, '0004', 0, 0, 0),
+    ];
+    const d = buildHistoryDataset({ league: 't', games: games2, ledgerRows: ledger, ownerTenures: { owners: [] }, firstPlayoffWeeks: {} });
+    const ix = indexDataset(d);
+    const w = recordWatch(ix, buildCategory(ix, 'season'));
+    // 200 points in 1 of 3 weeks → 600, over the record 300; 2 wins in 2 of 4 games → 4, tying it.
+    expect(w['most-points-season']![0]).toMatchObject({ name: 'Team 0001', projected: 600, rank: 1 });
+    expect(w['most-wins']![0]).toMatchObject({ name: 'Team 0001', projected: 4, rank: 1, played: 2, full: 4 });
+    // One game of four is not a quarter-season pace worth showing… (exactly 1/4 is).
+    expect(w['most-points-season']!.map((x) => x.name)).not.toContain('Team 0004');
   });
 });
 
