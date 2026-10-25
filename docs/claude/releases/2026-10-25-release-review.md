@@ -71,3 +71,16 @@ Production deployment `dpl_7Cxhd4UN7ZgvLHb3qtCjCHXiVzRN`. Rollback candidate:
   the TheLeague seat never reaches the AFL host. Fixing champions stays with the insights seat.
 - Gates: staging CI (Tests and Type baseline) was green on `f16bfdc9`. The PR's Vercel preview
   failed with the known stale branch build cache (`cookie` `parseCookie`), not the code.
+
+## Third release, same day
+
+**Verdict: GO, released on the owner's word ("fix that so everyone can see it", "same for AFL
+as well").** `main` fast-forwarded `9756d7ec → 9b864d4d` at about 16:45 UTC. Production
+deployment `dpl_8sYKQWBFqKSw3ptScbBUFwEhUYsM`.
+
+- **#1494:** League History is open to every visitor in TheLeague and the AFL. The owner had
+  announced it, and owners hit the admin-only gate. `canViewLeagueHistory` now admits everyone.
+  The any-league product (`/history`, `/history/mfl/<id>`, its build API and share card) keeps
+  the one-seat gate under `canUseHistoryProduct`. Fixing a champion stays admin-only.
+- Gates: staging CI (Tests and Type baseline) was green on `9b864d4d`.
+- Verified: signed out, `/afl-fantasy/history` returned 200 ("History · AFL"). No runtime errors.
