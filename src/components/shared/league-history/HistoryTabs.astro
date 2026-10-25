@@ -1,14 +1,14 @@
 ---
 /**
  * League History section tabs. These are unrelated views (the home's banners
- * and grid, the Record Book's boards), so they are tabs, not pills; pills
+ * and grid, the Record Book's boards, the franchises), so they are tabs, not pills; pills
  * filter inside a tab. Links, so the section stays zero-JS.
  */
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 interface Props {
   leagueSlug: string;
-  current: 'home' | 'record-book';
+  current: 'home' | 'record-book' | 'franchises';
 }
 
 const { leagueSlug, current } = Astro.props as Props;
@@ -16,6 +16,7 @@ const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
 const TABS = [
   { id: 'home', label: 'Home', path: '/history' },
   { id: 'record-book', label: 'Record Book', path: '/history/record-book' },
+  { id: 'franchises', label: 'Franchises', path: '/history/franchises' },
 ] as const;
 ---
 
