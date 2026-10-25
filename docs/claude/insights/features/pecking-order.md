@@ -6,6 +6,16 @@ TheLeague August 2026; ported to the AFL 2026-08-15.
 
 ---
 
+## 2026-10-25 - The Map Is Public While the Owner Map Is Not, and It Never Leaves the Lower 48
+
+**Context:** Each issue now opens with a map (`src/components/shared/owner-map/PeckingOrderMap.astro`): the top three at their hometowns, with pills for the full order and the week's movers. It reads the Owner Map's hometowns from Redis (`owner-map:hometowns:<slug>`).
+
+**Insight:** Two choices that look like oversights are deliberate. (1) The column is public and the Owner Map page is signed-in only, yet the map shows pins to everyone: a pin is the city a team REPRESENTS, not where an owner lives, and Brandon cleared showing it publicly on 2026-10-25. Only the link to the Owner Map is member-only. (2) The frame is always the lower 48. Framing to fit the teams shown pulled the map out to the whole world the moment a team from Sydney made the top three, and every US pin shrank to a dot; a highlighted team abroad is a chip in the corner instead. The map is still (`interactive: false`) because a draggable map in the middle of a phone column eats the scroll; each logo links to its team.
+
+**Recommendation:** Views live in `pecking-order-map-views.ts` (pure, tested by `tests/pecking-order-map-views.test.ts`). A league with fewer than two teams placed renders no map, which is also how Archie's (no hometowns) stays out without a league check.
+
+---
+
 ## 2026-09-16 - Choosing the Readiness Probe: the Landing Page Always 200s, and the Issue Permalink 200s While the Ballot Is Still Open
 
 **Context:** Both poll lanes had the announce-before-deploy race described in `schefter-weekly-articles.md` (2026-09-16), but neither showed the Schefter symptom. The column's announcement links `/pecking-order`, which exists every week of the year — so instead of a redirect, everyone it sent there was shown LAST week's rankings, and the ballot it invited them to vote in was not on the page because the poll block lives inside the issue file that had not deployed.

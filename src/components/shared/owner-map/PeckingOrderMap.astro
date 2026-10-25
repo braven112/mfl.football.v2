@@ -1,0 +1,258 @@
+---
+/**
+ * The Pecking Order's map: the week's order at each team's hometown, opening
+ * on the top three (Brandon, 2026-10-25), with pills for the full order and
+ * the week's movers. Views are decided in pecking-order-map-views.ts.
+ *
+ * Public, unlike the Owner Map page: a pin is the city a team represents,
+ * not where anyone lives (Brandon, 2026-10-25: "It's not even their real
+ * city"). The link to the full Owner Map shows only to signed-in members,
+ * because that page is theirs.
+ *
+ * Hometowns are read from Redis here; reading is safe in a component (only
+ * writing a cookie is not). A league with fewer than two teams placed (a
+ * league with no Owner Map, or one that just started picking) renders
+ * nothing.
+ */
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { readHometowns } from '../../../utils/owner-hometowns';
+import { RANK_MAP_MODES, type RankMapPin } from './pecking-order-map-views';
+// MapLibre's stylesheet must be a static import (see tests/dynamic-css-import-guard.test.ts).
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  rankings: { rank: number; franchiseId: string; previousRank: number | null }[];
+  teams: Map<string, { name?: string; icon?: string }>;
+  franchiseHref: (franchiseId: string) => string;
+}
+
+const { leagueSlug, rankings, teams, franchiseHref } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+const hometowns = league ? await readHometowns(leagueSlug) : {};
+
+const pins: RankMapPin[] = rankings.map((row) => {
+  const team = teams.get(row.franchiseId);
+  const home = hometowns[row.franchiseId];
+  return {
+    franchiseId: row.franchiseId,
+    rank: row.rank,
+    previousRank: row.previousRank,
+    teamName: team?.name ?? row.franchiseId,
+    icon: team?.icon ?? '',
+    href: franchiseHref(row.franchiseId),
+    city: home ? { name: home.name, region: home.region, lat: home.lat, lng: home.lng } : null,
+  };
+});
+const placedCount = pins.filter((p) => p.city).length;
+
+const user = getAuthUser(Astro.request);
+const isMember = !!league && !!user && isAuthorizedForLeague(user, league.id);
+const ownerMapHref = resolveLeaguePath(`/${leagueSlug}/owner-map`, Astro.locals.hideLeaguePrefix ?? false);
+---
+
+{placedCount >= 2 && (
+  <section class="po-map" data-league={leagueSlug} aria-labelledby="po-map-title">
+    <h2 class="po-map__title" id="po-map-title">The order on the map</h2>
+    <div class="ui-pills po-map__pills" role="group" aria-label="Show on the map">
+      {RANK_MAP_MODES.map((mode, i) => (
+        <button type="button" class="ui-pill" data-rank-map-mode={mode.id} aria-pressed={i === 0 ? 'true' : 'false'}>
+          {mode.label}
+        </button>
+      ))}
+    </div>
+    <div class="po-map__frame">
+      <div class="po-map__canvas" data-rank-map-canvas aria-hidden="true"></div>
+      <div class="po-map__away" data-rank-map-away hidden></div>
+    </div>
+    <p class="po-map__caption" data-rank-map-caption aria-live="polite"></p>
+    {isMember && (
+      <p class="po-map__links"><a class="cta-link" href={ownerMapHref}>Open the Owner Map</a></p>
+    )}
+    <script type="application/json" data-rank-map-data set:html={JSON.stringify(pins).replace(/</g, '\\u003c')}></script>
+  </section>
+)}
+
+<script>
+  import { mountRankMap } from './pecking-order-map-client';
+
+  let unmount: (() => void) | null = null;
+  let observer: IntersectionObserver | null = null;
+
+  // Gate on the swapped-in section, which names its league (CLAUDE.md, astro:page-load gates).
+  // MapLibre is only fetched once the map is about to scroll into view.
+  document.addEventListener('astro:page-load', () => {
+    const root = document.querySelector<HTMLElement>('.po-map[data-league]');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        observer?.disconnect();
+        observer = null;
+        mountRankMap(root)
+          .then((dispose) => {
+            unmount = dispose;
+          })
+          .catch((error) => {
+            console.error('[pecking-order-map] map failed', error);
+            root.hidden = true;
+          });
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(root);
+  });
+
+  document.addEventListener('astro:before-swap', () => {
+    observer?.disconnect();
+    observer = null;
+    unmount?.();
+    unmount = null;
+  });
+</script>
+
+<style>
+  .po-map {
+    margin: 0 0 var(--spacing-lg);
+  }
+  .po-map__title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: var(--font-size-lg);
+  }
+  .po-map__pills {
+    margin-bottom: var(--spacing-sm);
+  }
+  .po-map__frame {
+    /* Read by the map (owner-map-client.ts solidToken), not by CSS. */
+    --om-land: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));
+    --om-border: color-mix(in srgb, var(--page-text) 28%, var(--content-bg));
+    position: relative;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    overflow: hidden;
+    background: var(--content-bg-muted);
+  }
+  .po-map__canvas {
+    height: 260px;
+  }
+  @media (min-width: 640px) {
+    .po-map__canvas {
+      height: 360px;
+    }
+  }
+  /* Highlighted teams from outside the lower 48, as chips in the corner. */
+  .po-map__away {
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    z-index: 2;
+  }
+  .po-map__away[hidden] {
+    display: none;
+  }
+  .po-map :global(.po-map__away-pin) {
+    position: relative;
+    gap: var(--spacing-xs);
+    padding: 3px 10px 3px 3px;
+    border-radius: 999px;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    box-shadow: var(--box-shadow-md);
+    color: var(--page-text);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold, 700);
+  }
+  .po-map :global(.po-map__away-pin .om-marker__icon) {
+    --po-pin-size: 32px;
+    border-width: 2px;
+    box-shadow: none;
+  }
+  .po-map :global(.po-map__away-pin .om-marker__tag) {
+    position: static;
+    transform: none;
+    order: 2;
+  }
+  .po-map :global(.po-map__away-city) {
+    order: 1;
+  }
+  .po-map__caption {
+    margin: var(--spacing-sm) 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    min-height: 1.4em;
+  }
+  .po-map__links {
+    margin: var(--spacing-xs) 0 0;
+  }
+
+  /* Markers are created by MapLibre outside this component's scope. */
+  .po-map :global(.om-marker) {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .po-map :global(.om-marker__icon) {
+    display: grid;
+    place-items: center;
+    width: var(--po-pin-size, 40px);
+    height: var(--po-pin-size, 40px);
+    border: 3px solid var(--league-accent);
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--content-bg);
+    box-shadow: var(--box-shadow-md);
+  }
+  .po-map :global(.om-marker__icon img) {
+    width: 75%;
+    height: 75%;
+    object-fit: contain;
+  }
+  .po-map :global(.po-map__pin--up .om-marker__icon) {
+    border-color: var(--color-success);
+  }
+  .po-map :global(.po-map__pin--down .om-marker__icon) {
+    border-color: var(--color-error);
+  }
+  .po-map :global(.po-map__pin--faded) {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .po-map :global(.po-map__pin--faded .om-marker__icon) {
+    border-width: 2px;
+    border-color: var(--content-border);
+    box-shadow: none;
+  }
+  .po-map :global(.om-marker__tag) {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    color: var(--page-text);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 16px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .po-map :global(.maplibregl-ctrl.maplibregl-ctrl-attrib) {
+    background: var(--content-bg);
+    color: var(--content-text-muted, #555);
+  }
+  .po-map :global(.maplibregl-ctrl-attrib a) {
+    color: inherit;
+  }
+  :global(html.dark) .po-map :global(.maplibregl-ctrl-attrib-button) {
+    filter: invert(1);
+  }
+</style>
