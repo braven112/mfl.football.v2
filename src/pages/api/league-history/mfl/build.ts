@@ -5,7 +5,7 @@
  * The setup page calls this until `status` is 'done'; see `advanceMflHistory`
  * (src/utils/league-history/store.ts) for why a build is steps.
  *
- * Gated by `canViewLeagueHistory` (one seat until launch). Rate limits are
+ * Gated by `canUseHistoryProduct` (one seat until launch). Rate limits are
  * per client address: a step every few seconds is a normal build, a burst of
  * new leagues is not. Every MFL request is built from a validated numeric id
  * and MFL's own hosts (mfl-crawl.ts), so nothing a caller sends reaches a url.
@@ -15,7 +15,7 @@ import { getAuthUser } from '../../../../utils/auth';
 import { getClientIdentity } from '../../../../utils/client-ip';
 import { checkRateLimit } from '../../../../utils/rate-limit';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
-import { canViewLeagueHistory } from '../../../../utils/league-history/access';
+import { canUseHistoryProduct } from '../../../../utils/league-history/access';
 import { mflExportFetcher } from '../../../../utils/league-history/mfl-crawl';
 import { advanceMflHistory, isMflLeagueId, readMflHistory } from '../../../../utils/league-history/store';
 
@@ -25,7 +25,7 @@ const STEPS_PER_HOUR = 240;
 const NEW_LEAGUES_PER_HOUR = 10;
 
 export const POST: APIRoute = async ({ request }) => {
-	if (!canViewLeagueHistory(getAuthUser(request))) return json({ status: 'forbidden' }, 404);
+	if (!canUseHistoryProduct(getAuthUser(request))) return json({ status: 'forbidden' }, 404);
 
 	let leagueId = '';
 	try {

@@ -7,7 +7,7 @@
  * Data: src/utils/league-history/store.ts (Redis), admin fixes applied.
  * Plan: docs/plans/league-history-free-page.md.
  *
- * Gated by `canViewLeagueHistory` (one seat until launch). An unknown league
+ * Gated by `canUseHistoryProduct` (one seat until launch). An unknown league
  * shows the builder rather than a 404, so a link shared before the build ran
  * still lands somewhere useful.
  */
@@ -17,7 +17,7 @@ import HistoryFixForm from '../../../components/shared/league-history/HistoryFix
 import { getAuthUser } from '../../../utils/auth';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
-import { canFixLeagueHistory, canViewLeagueHistory } from '../../../utils/league-history/access';
+import { canFixLeagueHistory, canUseHistoryProduct } from '../../../utils/league-history/access';
 import {
 	effectiveSeasons,
 	isMflLeagueId,
@@ -32,7 +32,7 @@ export const prerender = false;
 
 const leagueId = Astro.params.id ?? '';
 const authUser = getAuthUser(Astro.request);
-if (!canViewLeagueHistory(authUser)) {
+if (!canUseHistoryProduct(authUser)) {
 	if (!authUser) return Astro.redirect(mflLoginUrl(`/history/mfl/${encodeURIComponent(leagueId)}`));
 	return Astro.rewrite('/_not-found');
 }

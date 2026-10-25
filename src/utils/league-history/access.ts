@@ -36,9 +36,24 @@ function isPreviewSeat(user: AuthUser): boolean {
 	);
 }
 
-export function canViewLeagueHistory(user: AuthUser | null | undefined): boolean {
+/**
+ * The free product for any MFL league: `/history`, `/history/mfl/<id>`, the
+ * build endpoint and its share cards. Still one seat until launch.
+ */
+export function canUseHistoryProduct(user: AuthUser | null | undefined): boolean {
 	if (LEAGUE_HISTORY_PUBLIC || canViewSiteInsights(user)) return true;
 	return !!user && isPreviewSeat(user);
+}
+
+/**
+ * Our own leagues' history pages (TheLeague and the AFL: history home,
+ * Record Book, franchise, owner and rivalry history sections). Open to every
+ * visitor, signed in or not, since 2026-10-25: the owner announced it to both
+ * leagues and owners hit the gate. The call sites keep the check so a page can
+ * be re-gated here without touching them.
+ */
+export function canViewLeagueHistory(_user: AuthUser | null | undefined): boolean {
+	return true;
 }
 
 /** Set or clear a season's champion. Admin only, before and after launch. */

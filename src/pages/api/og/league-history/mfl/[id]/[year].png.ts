@@ -12,7 +12,7 @@
  */
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../../../../utils/auth';
-import { canViewLeagueHistory } from '../../../../../../utils/league-history/access';
+import { canUseHistoryProduct } from '../../../../../../utils/league-history/access';
 import { renderChampionCardPng } from '../../../../../../utils/league-history/champion-card';
 import {
 	effectiveSeasons,
@@ -27,7 +27,7 @@ export const prerender = false;
 const notFound = () => new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
 
 export const GET: APIRoute = async ({ params, request }) => {
-	if (!canViewLeagueHistory(getAuthUser(request))) return notFound();
+	if (!canUseHistoryProduct(getAuthUser(request))) return notFound();
 	const leagueId = params.id ?? '';
 	const year = Number(params.year);
 	if (!isMflLeagueId(leagueId) || !Number.isInteger(year)) return notFound();
