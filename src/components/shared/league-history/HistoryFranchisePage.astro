@@ -23,6 +23,7 @@ import Breadcrumbs from '../Breadcrumbs.astro';
 import HistoryTabs from './HistoryTabs.astro';
 import HistoryRafters from './HistoryRafters.astro';
 import type { RafterBanner, RafterHonor } from './HistoryRafters.astro';
+import { groupRows } from '../../../utils/league-history/rafter-rows';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
@@ -173,17 +174,24 @@ const banner = (y: number, kind: RafterBanner['kind'], label?: string): RafterBa
     title: `${y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
   };
 };
-// A league with its own titles hangs every one of them; otherwise champion
-// and runner-up. Either way only seasons this view covers.
-const titleBanners = honors
-  ? honors
-      .filter((x) => x.franchiseId === franchiseId && seasonByYear.has(x.year) && !seasonByYear.get(x.year)!.live)
-      .map((x) => banner(x.year, x.tier === 'silver' ? 'R' : 'C', x.caption))
-      .sort((a, b) => b.year - a.year)
+// A league with its own titles hangs every one of them, one labelled row per
+// kind; otherwise champion and runner-up in one unlabelled row. Either way
+// only seasons this view covers.
+const titleRows: Array<{ label: string | null; banners: RafterBanner[] }> = honors
+  ? groupRows(
+      honors.filter((x) => x.franchiseId === franchiseId && seasonByYear.has(x.year) && !seasonByYear.get(x.year)!.live),
+      (x) => banner(x.year, x.tier === 'silver' ? 'R' : 'C', x.caption),
+    )
   : [
-      ...h.titles.map((y) => banner(y, 'C')),
-      ...h.finals.filter((y) => !h.titles.includes(y)).map((y) => banner(y, 'R')),
-    ].sort((a, b) => b.year - a.year);
+      {
+        label: null,
+        banners: [
+          ...h.titles.map((y) => banner(y, 'C')),
+          ...h.finals.filter((y) => !h.titles.includes(y)).map((y) => banner(y, 'R')),
+        ].sort((a, b) => b.year - a.year),
+      },
+    ].filter((row) => row.banners.length > 0);
+const titleCount = titleRows.reduce((n, row) => n + row.banners.length, 0);
 const divisionBanners = h.divisionTitles.map((y) => banner(y, 'D')).reverse();
 
 const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');
@@ -285,9 +293,14 @@ const priorNames = [
     <section class="hf-section" aria-labelledby="hf-rafters">
       <p class="hf-section__kicker">Banners</p>
       <h2 class="hf-section__title" id="hf-rafters">The Rafters</h2>
-      {titleBanners.length + divisionBanners.length > 0 ? (
+      {titleCount + divisionBanners.length > 0 ? (
         <>
-          {titleBanners.length > 0 && <HistoryRafters banners={titleBanners} navSlug={navSlug} />}
+          {titleRows.map((row) => (
+            <>
+              {row.label && <p class="hf-rafters__label">{row.label}</p>}
+              <HistoryRafters banners={row.banners} navSlug={navSlug} />
+            </>
+          ))}
           {divisionBanners.length > 0 && (
             <>
               <p class="hf-rafters__label">Division titles</p>
