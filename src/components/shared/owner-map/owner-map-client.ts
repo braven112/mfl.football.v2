@@ -31,9 +31,9 @@ import statesUrl from 'us-atlas/states-10m.json?url';
 
 type View = 'us' | 'world';
 
-type Bounds = [[number, number], [number, number]];
+export type Bounds = [[number, number], [number, number]];
 /** Lower 48, framed so it fills a phone-width map as well as a desktop one. */
-const US_BOUNDS: Bounds = [[-125, 24], [-66.5, 49.5]];
+export const US_BOUNDS: Bounds = [[-125, 24], [-66.5, 49.5]];
 const WORLD_BOUNDS: Bounds = [[-165, -50], [170, 72]];
 /** Room for half a 40px marker at the edge of the frame. */
 const FIT_PADDING = 28;
@@ -97,7 +97,7 @@ function splitAtAntimeridian(lines: GeoJSON.MultiLineString): GeoJSON.MultiLineS
   return { type: 'MultiLineString', coordinates: out };
 }
 
-function loadGeo(): Promise<Geo> {
+export function loadGeo(): Promise<Geo> {
   geoPromise ??= (async () => {
     const { feature, mesh } = await import('topojson-client');
     const [world, us] = await Promise.all([
@@ -161,7 +161,7 @@ function solidToken(scope: HTMLElement, names: string[], fallback: string): stri
   }
 }
 
-function buildStyle(scope: HTMLElement, geo: Geo): StyleSpecification {
+export function buildStyle(scope: HTMLElement, geo: Geo): StyleSpecification {
   // Land is the content surface lifted toward the text color, so it reads
   // against the water in every theme without a hand-picked pair per league.
   const water = solidToken(scope, ['--content-bg', '--content-bg-muted'], '#ffffff');
@@ -195,7 +195,7 @@ const slotVar = (slot: number | null | undefined) => (slot ? `var(--chart-color-
  * before it reaches an attribute: only a same-origin path or an https URL is
  * used, never a `javascript:` or `data:` one.
  */
-function safeUrl(value: string): string {
+export function safeUrl(value: string): string {
   try {
     const url = new URL(value, window.location.href);
     if (url.protocol === 'https:' || url.origin === window.location.origin) return url.href;

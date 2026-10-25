@@ -25,6 +25,8 @@ import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../utils/pecking-order-lede.mjs';
 import { spellOutShorthand } from '../../utils/pecking-order-wording.mjs';
+import PeckingOrderMap from './owner-map/PeckingOrderMap.astro';
+import type { CanonicalLeagueSlug } from '../../config/leagues';
 
 export interface RankingRow {
   rank: number;
@@ -218,6 +220,13 @@ const moved = (row: RankingRow) => (row.previousRank == null ? null : row.previo
     <HeadlineTag class="pr-hero__title">{issue.headline}</HeadlineTag>
     <p class="pr-hero__lede">{lede}</p>
   </header>
+
+  <PeckingOrderMap
+    leagueSlug={leagueDef.slug as CanonicalLeagueSlug}
+    rankings={issue.rankings}
+    teams={teams}
+    franchiseHref={franchiseHref}
+  />
 
   <ol class="pr-rankings" aria-label={issue.topN ? `The Pecking Order, top ${featured.length} of ${issue.rankings.length}` : 'The Pecking Order'}>
     {featured.map((row) => {
