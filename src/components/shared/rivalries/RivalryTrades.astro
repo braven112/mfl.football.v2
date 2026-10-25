@@ -1,0 +1,158 @@
+---
+/**
+ * Trades between a rivalry's two franchises, for the League History rivalry
+ * page's default slot. Both leagues keep their trade ledgers in
+ * derived/franchise-history.json in the same shape, so one component serves
+ * both; it replaced the two forked rivalry pages' own copies (Oct 2026).
+ *
+ * The ledger follows the page's view: both current owners' deals by default
+ * (`bothAttributed`), every deal between the two slots with ?view=all. Each
+ * side is named as it was THAT season (franchiseEraInYear): the RAW MFL slot
+ * matters, because ownerHistory attribution can file a trade under a
+ * franchise id whose own name history never covered that year.
+ */
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
+
+interface Trade {
+  year: number;
+  timestamp: number;
+  partnerId: string;
+  gaveUp: string[];
+  received: string[];
+  comments: string;
+  bothAttributed?: boolean;
+  sourceFranchiseId?: string | null;
+  partnerSourceId?: string | null;
+}
+
+interface Props {
+  /** The league's derived/franchise-history.json. */
+  history: any;
+  /** The league config's teams. */
+  teams: any[];
+  /** The canonical pair, smaller franchise id first. */
+  a: string;
+  b: string;
+  ownerOnly: boolean;
+}
+
+const { history, teams, a, b, ownerOnly } = Astro.props as Props;
+const teamLookup: Record<string, any> = Object.fromEntries(teams.map((t) => [t.franchiseId, t]));
+const frA = history?.franchises?.[a];
+const frB = history?.franchises?.[b];
+const playerNames = (history?.playerNames ?? {}) as Record<string, { name: string; position?: string; team?: string }>;
+
+const trades: Trade[] = ((frA?.trades ?? []) as Trade[])
+  .filter((t) => t.partnerId === b && (!ownerOnly || t.bothAttributed))
+  .sort((x, y) => y.timestamp - x.timestamp);
+
+const shortName = (fid: string) => {
+  const t = teamLookup[fid];
+  return t?.nameShort ?? t?.nameMedium ?? t?.name ?? fid;
+};
+const sideName = (slot: string, year: number, fallback: string) => franchiseEraInYear(teamLookup[slot], year)?.name ?? fallback;
+// A future pick's "via" team is named as it was in the trade's season.
+const asset = (code: string, year: number) =>
+  formatTradeAsset(code, playerNames, (fid) => franchiseEraInYear(teamLookup[fid], year)?.name ?? shortName(fid));
+const dateLabel = (t: Trade) =>
+  t.timestamp
+    ? new Date(t.timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : String(t.year);
+const nameA = frA?.currentNameShort || frA?.currentNameMedium || shortName(a);
+const nameB = frB?.currentNameShort || frB?.currentNameMedium || shortName(b);
+---
+
+{trades.length > 0 && (
+  <section class="rvt" aria-labelledby="rvt-title">
+    <p class="rvt__kicker">Off the field</p>
+    <h2 class="rvt__title" id="rvt-title">Trades between them ({trades.length})</h2>
+    <ol class="rvt__list">
+      {trades.map((t) => (
+        <li class="rvt__trade">
+          <p class="rvt__date">{dateLabel(t)}</p>
+          <div class="rvt__sides">
+            <div class="rvt__side">
+              <p class="rvt__who">{sideName(t.sourceFranchiseId ?? a, t.year, nameA)} sent</p>
+              <ul>{t.gaveUp.length ? t.gaveUp.map((c) => <li>{asset(c, t.year)}</li>) : <li class="rvt__none">Nothing</li>}</ul>
+            </div>
+            <div class="rvt__side">
+              <p class="rvt__who">{sideName(t.partnerSourceId ?? b, t.year, nameB)} sent</p>
+              <ul>{t.received.length ? t.received.map((c) => <li>{asset(c, t.year)}</li>) : <li class="rvt__none">Nothing</li>}</ul>
+            </div>
+          </div>
+          {t.comments && <p class="rvt__note">“{t.comments}”</p>}
+        </li>
+      ))}
+    </ol>
+  </section>
+)}
+
+<style>
+  .rvt {
+    margin-top: 1.5rem;
+  }
+  .rvt__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rvt__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .rvt__list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rvt__trade {
+    padding: 0.75rem 0.875rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .rvt__date {
+    margin: 0 0 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+  .rvt__sides {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+  .rvt__who {
+    margin: 0 0 0.25rem;
+    font-weight: var(--font-weight-semibold);
+  }
+  .rvt__side ul {
+    margin: 0;
+    padding-left: 1.125rem;
+    font-size: var(--font-size-sm);
+  }
+  .rvt__none {
+    color: var(--content-text-muted);
+  }
+  .rvt__note {
+    margin: 0.5rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-style: italic;
+  }
+
+  @media (min-width: 640px) {
+    .rvt__sides {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

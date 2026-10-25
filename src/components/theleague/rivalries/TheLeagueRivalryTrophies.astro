@@ -1,0 +1,123 @@
+---
+/**
+ * TheLeague's side-by-side trophy case for the League History rivalry page's
+ * default slot: titles, title games, division crowns and TheLeague's own
+ * awards (MVP, Jerry Jones, Brock Osweiler), each a row with both clubs'
+ * counts and the leader in gold. Carried over from TheLeague's old rivalry
+ * page (Oct 2026), whose badge rows it replaces. The counts are the current
+ * owner's, as derived/franchise-history.json keeps them.
+ */
+interface Props {
+  /** TheLeague's derived/franchise-history.json. */
+  history: any;
+  a: string;
+  b: string;
+}
+
+const { history, a, b } = Astro.props as Props;
+const frA = history?.franchises?.[a];
+const frB = history?.franchises?.[b];
+const ROWS = [
+  { key: 'championships', label: 'League titles' },
+  { key: 'runnerUps', label: 'Runner-up finishes' },
+  { key: 'divisionTitles', label: 'Division titles' },
+  { key: 'mvpAwards', label: 'MVP awards' },
+  { key: 'jerryJonesAwards', label: 'Jerry Jones awards' },
+  { key: 'brockOsweilerAwards', label: 'Brock Osweiler awards' },
+];
+const count = (fr: any, key: string) => (Array.isArray(fr?.[key]) ? fr[key].length : 0);
+const rows = ROWS.map((r) => ({ ...r, a: count(frA, r.key), b: count(frB, r.key) })).filter((r) => r.a + r.b > 0);
+const nameA = frA?.currentNameShort || frA?.currentNameMedium || frA?.currentName || a;
+const nameB = frB?.currentNameShort || frB?.currentNameMedium || frB?.currentName || b;
+---
+
+{frA && frB && rows.length > 0 && (
+  <section class="rvc" aria-labelledby="rvc-title">
+    <p class="rvc__kicker">Side by side</p>
+    <h2 class="rvc__title" id="rvc-title">The trophy case</h2>
+    <table class="ui-table rvc__table">
+      <thead>
+        <tr>
+          <th scope="col"><span class="visually-hidden">Award</span></th>
+          <th scope="col">{nameA}</th>
+          <th scope="col">{nameB}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr>
+            <th scope="row">{r.label}</th>
+            <td class:list={{ 'rvc--lead': r.a > r.b }}>{r.a}</td>
+            <td class:list={{ 'rvc--lead': r.b > r.a }}>{r.b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+)}
+
+<style>
+  .rvc {
+    margin-top: 1.5rem;
+  }
+  .rvc__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rvc__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  /* Three narrow columns: it fits a phone without scrolling sideways. */
+  .rvc__table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .rvc__table th,
+  .rvc__table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--content-border);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .rvc__table tbody tr:last-child th,
+  .rvc__table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .rvc__table thead th {
+    overflow: hidden;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .rvc__table thead th:first-child {
+    width: 45%;
+  }
+  .rvc__table tbody th {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
+  }
+  .rvc__table td {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .rvc--lead {
+    color: var(--history-gold);
+  }
+</style>

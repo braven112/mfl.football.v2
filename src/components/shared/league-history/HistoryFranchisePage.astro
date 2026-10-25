@@ -181,7 +181,9 @@ const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');
 const fmt2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt1 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const ownerHref = (e: Entity) => (e.ownerSlug ? r(`/owners/${e.ownerSlug}`) : null);
-const rivalryHref = (opp: string) => (rivalriesPage ? r(`/rivalries/${canonicalRivalryPair(franchiseId, opp)}`) : null);
+// The rivalry page has the same two views, so the all-owners view opens its every-game view.
+const rivalryHref = (opp: string) =>
+  rivalriesPage ? r(`/rivalries/${canonicalRivalryPair(franchiseId, opp)}${ownerOnly ? '' : '?view=all'}`) : null;
 const initials = (name: string) =>
   name
     .split(/\s+/)
