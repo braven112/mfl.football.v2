@@ -54,6 +54,15 @@ describe('SKIP_REWRITE_PREFIXES', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveLeagueRewrite', () => {
+  // A page's Astro.rewrite('/_not-found') re-runs middleware. Re-prefixing it
+  // spent Astro's fourth rewrite and answered 508 Loop Detected on the league
+  // hosts (AFL League History for a signed-in non-admin, 2026-10-25).
+  it('leaves the deliberate-404 target alone on every league host', () => {
+    for (const host of Object.keys(HOST_TO_SLUG)) {
+      expect(resolveLeagueRewrite(host, '/_not-found')).toBeNull();
+    }
+  });
+
   // -- theleague.us (the in-prod host) --
 
   it('rewrites / to /theleague on theleague.us', () => {
