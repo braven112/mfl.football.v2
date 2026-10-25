@@ -22,7 +22,7 @@ import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHom
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { getCurrentOwnerSince } from '../../../utils/afl-awards';
+import { aflRafterHonors, getCurrentOwnerSince } from '../../../utils/afl-awards';
 import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
@@ -122,7 +122,7 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
 nameEras.sort((a, b) => a.yearStart - b.yearStart);
 ---
 
-<HistoryFranchisePage leagueSlug="afl-fantasy" data={historyData} franchiseId={id!} rivalriesPage>
+<HistoryFranchisePage leagueSlug="afl-fantasy" data={historyData} franchiseId={id!} rivalriesPage honors={aflRafterHonors()}>
   <FranchisePage
     slot="hero-extra"
     part="hero"

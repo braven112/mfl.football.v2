@@ -591,3 +591,27 @@ export function getFranchiseGrandSlam(franchiseId: string): GrandSlamStatus {
   const year = Math.max(...types.map((t) => Math.min(...t.years)));
   return { completed: true, year, missingTypes: [] };
 }
+
+/**
+ * Every AFL title except division crowns, as League History Rafters banners
+ * (Brandon, 2026-10-25: "I want the rafters to show all of the
+ * championships"). The dataset alone only knows champion and runner-up, so a
+ * Super Bowl loser read "Runner-up"; here it hangs as AL or NL Champion, beside
+ * the AFL Cup, Premier League, D-League and NIT. `franchiseId` is the RAW MFL
+ * slot that won it (`sourceFranchiseId`), the id the dataset keys seasons by.
+ * Division titles stay the dataset's own, so they are left out.
+ */
+export function aflRafterHonors(): Array<{ year: number; franchiseId: string; caption: string; tier: 'gold' | 'silver' }> {
+  const out: Array<{ year: number; franchiseId: string; caption: string; tier: 'gold' | 'silver' }> = [];
+  for (const season of SEASONS) {
+    // Taxonomy order, so a season's banners hang biggest title first.
+    for (const type of AWARD_TYPES) {
+      if (type.category === 'division') continue;
+      const award: any = season.awards?.[type.slug];
+      const slot = award?.sourceFranchiseId ?? award?.franchiseId;
+      if (!slot) continue;
+      out.push({ year: season.year, franchiseId: slot, caption: type.label, tier: type.tier === 'silver' ? 'silver' : 'gold' });
+    }
+  }
+  return out;
+}

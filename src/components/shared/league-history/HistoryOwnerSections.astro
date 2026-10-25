@@ -12,7 +12,7 @@
  * dataset has no season for.
  */
 import HistoryRafters from './HistoryRafters.astro';
-import type { RafterBanner } from './HistoryRafters.astro';
+import type { RafterBanner, RafterHonor } from './HistoryRafters.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
@@ -116,9 +116,11 @@ interface Props {
   ownerSlug: string;
   /** The viewer's franchise in this league, to mark their own row. */
   viewerFranchise?: string | null;
+  /** The league's own titles, hung in place of champion and runner-up (see RafterHonor). */
+  honors?: RafterHonor[] | null;
 }
 
-const { leagueSlug, data, ownerSlug, viewerFranchise = null } = Astro.props as Props;
+const { leagueSlug, data, ownerSlug, viewerFranchise = null, honors = null } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
@@ -136,20 +138,30 @@ const pairStyle = (f: string, prefix = 'ho') => {
   const p = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
   return `--${prefix}-a: ${p.primary}; --${prefix}-b: ${p.secondary}`;
 };
-const banner = (s: Season, kind: RafterBanner['kind']): RafterBanner => ({
+const banner = (s: Season, kind: RafterBanner['kind'], label?: string): RafterBanner => ({
   year: s.y,
   kind,
   franchiseId: s.franchiseId,
   name: s.name,
   icon: s.icon,
-  caption: kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`,
+  caption: label ?? (kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`),
   href: r(`/franchises/${s.franchiseId}`),
   // A banner won under a name the slot no longer wears (a team this owner
   // left, or a rebrand) hangs in that era's own colors, as on the franchise page.
   colors: s.name !== currentName(s.franchiseId) ? getTeamEraColors(s.franchiseId, navSlug, s.y) : null,
-  title: `${s.y} ${kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion'}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
+  title: `${s.y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
 });
-const titleBanners = h
+// A league with its own titles hangs every one this owner won; otherwise
+// champion and runner-up.
+const seasonOf = (y: number, f: string) => h?.seasons.find((s) => s.y === y && s.franchiseId === f && !s.live);
+const titleBanners = h && honors
+  ? honors
+      .flatMap((x) => {
+        const s = seasonOf(x.year, x.franchiseId);
+        return s ? [banner(s, x.tier === 'silver' ? 'R' : 'C', x.caption)] : [];
+      })
+      .sort((a, b) => b.year - a.year)
+  : h
   ? [...h.titles.map((s) => banner(s, 'C')), ...h.finals.filter((s) => s.r === 'R').map((s) => banner(s, 'R'))].sort(
       (a, b) => b.year - a.year,
     )

@@ -22,7 +22,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
 import HistoryTabs from './HistoryTabs.astro';
 import HistoryRafters from './HistoryRafters.astro';
-import type { RafterBanner } from './HistoryRafters.astro';
+import type { RafterBanner, RafterHonor } from './HistoryRafters.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
@@ -119,9 +119,11 @@ interface Props {
   franchiseId: string;
   /** Whether the league has rivalry pages to link each opponent to. */
   rivalriesPage?: boolean;
+  /** The league's own titles, hung in place of champion and runner-up (see RafterHonor). */
+  honors?: RafterHonor[] | null;
 }
 
-const { leagueSlug, data, franchiseId, rivalriesPage = false } = Astro.props as Props;
+const { leagueSlug, data, franchiseId, rivalriesPage = false, honors = null } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
@@ -153,11 +155,11 @@ const ownerName = (key: string) => {
   const o = h.owners.find((x) => x.entity.key === key);
   return o && !key.startsWith('slot:') ? o.entity.name : 'Earlier owner';
 };
-const banner = (y: number, kind: RafterBanner['kind']): RafterBanner => {
+const banner = (y: number, kind: RafterBanner['kind'], label?: string): RafterBanner => {
   const s = seasonByYear.get(y)!;
   // In the all-owners view an earlier owner's banner says whose it is.
   const earlier = h.owner && s.entityKey !== h.owner.key ? ownerName(s.entityKey) : null;
-  const caption = earlier ?? (kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`);
+  const caption = earlier ?? label ?? (kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`);
   return {
     year: y,
     kind,
@@ -168,13 +170,20 @@ const banner = (y: number, kind: RafterBanner['kind']): RafterBanner => {
     // A banner won under an old name (another owner's team, or a complete
     // rebrand) hangs in that era's own colors (Brandon, 2026-10-25).
     colors: s.name !== h.name ? getTeamEraColors(franchiseId, navSlug, y) : null,
-    title: `${y} ${kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion'}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
+    title: `${y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
   };
 };
-const titleBanners = [
-  ...h.titles.map((y) => banner(y, 'C')),
-  ...h.finals.filter((y) => !h.titles.includes(y)).map((y) => banner(y, 'R')),
-].sort((a, b) => b.year - a.year);
+// A league with its own titles hangs every one of them; otherwise champion
+// and runner-up. Either way only seasons this view covers.
+const titleBanners = honors
+  ? honors
+      .filter((x) => x.franchiseId === franchiseId && seasonByYear.has(x.year) && !seasonByYear.get(x.year)!.live)
+      .map((x) => banner(x.year, x.tier === 'silver' ? 'R' : 'C', x.caption))
+      .sort((a, b) => b.year - a.year)
+  : [
+      ...h.titles.map((y) => banner(y, 'C')),
+      ...h.finals.filter((y) => !h.titles.includes(y)).map((y) => banner(y, 'R')),
+    ].sort((a, b) => b.year - a.year);
 const divisionBanners = h.divisionTitles.map((y) => banner(y, 'D')).reverse();
 
 const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');

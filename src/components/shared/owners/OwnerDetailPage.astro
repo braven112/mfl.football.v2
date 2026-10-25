@@ -36,6 +36,7 @@ import type { Owner, OwnerAward } from '../../../types/owner-tenures';
 import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
 import HistoryTabs from '../league-history/HistoryTabs.astro';
 import HistoryOwnerSections from '../league-history/HistoryOwnerSections.astro';
+import type { RafterHonor } from '../league-history/HistoryRafters.astro';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { canViewLeagueHistory } from '../../../utils/league-history/access';
 import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
@@ -48,9 +49,11 @@ interface Props {
   related: Record<string, Owner>;
   /** The league's League History dataset (`league-history.json`), when it has one. */
   historyData?: unknown;
+  /** The league's own titles for the Rafters (see RafterHonor). */
+  honors?: RafterHonor[] | null;
 }
 
-const { leagueSlug, owner, related, historyData } = Astro.props as Props;
+const { leagueSlug, owner, related, historyData, honors = null } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
@@ -223,7 +226,7 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
     {showHistory && <HistoryTabs leagueSlug={league.slug} current={null} />}
 
     {showHistory && (
-      <HistoryOwnerSections leagueSlug={leagueSlug} data={historyData} ownerSlug={owner.slug} viewerFranchise={viewerFranchise} />
+      <HistoryOwnerSections leagueSlug={leagueSlug} data={historyData} ownerSlug={owner.slug} viewerFranchise={viewerFranchise} honors={honors} />
     )}
 
     {owner.crossLeague.length > 0 && (
