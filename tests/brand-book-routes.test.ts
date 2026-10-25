@@ -196,7 +196,7 @@ describe('Brand Book — routes', () => {
     // too), so its link is written once, prefixed with the league it renders for.
     expect(read('src/pages/afl-fantasy/franchises/[id].astro')).toContain('<FranchisePage');
     for (const [league, file, prefix] of [
-      ['theleague', 'src/pages/theleague/franchises/[id].astro', '/theleague'],
+      ['theleague', 'src/components/theleague/franchises/TheLeagueFranchiseExtras.astro', '/theleague'],
       ['afl-fantasy', 'src/components/shared/franchises/FranchisePage.astro', '/${leagueSlug}'],
     ] as const) {
       const src = read(file);

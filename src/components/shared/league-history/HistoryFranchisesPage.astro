@@ -94,7 +94,7 @@ const initials = (name: string) =>
         <li>
           <a
             class:list={['hc-team', { 'hc-team--mine': c.franchiseId === viewerFranchise }]}
-            href={r(`/history/franchises/${c.franchiseId}`)}
+            href={r(`/franchises/${c.franchiseId}`)}
             style={cardStyle(c.franchiseId)}
           >
             {c.icon ? (
@@ -128,7 +128,7 @@ const initials = (name: string) =>
         <ol class="hc-grid">
           {former.map((c) => (
             <li>
-              <a class="hc-team" href={r(`/history/franchises/${c.franchiseId}`)} style={cardStyle(c.franchiseId)}>
+              <a class="hc-team" href={r(`/franchises/${c.franchiseId}`)} style={cardStyle(c.franchiseId)}>
                 {c.icon ? (
                   <img class="hc-team__logo" src={c.icon} alt="" width="48" height="48" loading="lazy" />
                 ) : (

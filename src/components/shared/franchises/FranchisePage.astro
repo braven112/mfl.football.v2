@@ -70,6 +70,14 @@ interface Props {
    * (Archie's plays two), points ÷ games halves the real figure.
    */
   pointsPerWeek?: number | null;
+  /**
+   * Render one part into the League History franchise page instead of a
+   * whole page (the AFL's franchise page is that page since 2026-10-25):
+   * `hero` is the action bar and the hero slots, `sections` the trade ledger,
+   * name history and quick links. Unset renders the full page, as package
+   * leagues with no League History dataset still do.
+   */
+  part?: 'hero' | 'sections';
 }
 
 const {
@@ -87,7 +95,9 @@ const {
   showPlayoffApps = true,
   showTitles = false,
   pointsPerWeek = null,
+  part,
 } = Astro.props;
+const Shell = part ? Fragment : TheLeagueLayout;
 const id: string = team.franchiseId;
 
 /**
@@ -262,8 +272,9 @@ const hasHighlights = Boolean(
 );
 ---
 
-<TheLeagueLayout title={`${team.name} | ${titleSuffix}`}>
-  <div class="franchise-detail">
+<Shell title={`${team.name} | ${titleSuffix}`}>
+  <div class:list={['franchise-detail', part && `franchise-detail--${part}`]}>
+    {part !== 'sections' && (
     <header class="franchise-hero">
       <a class="franchise-hero__back" href={`/${leagueSlug}/franchises`}>
         ← All franchises
@@ -340,10 +351,11 @@ const hasHighlights = Boolean(
         </div>
       </div>
     </header>
+    )}
 
-    <slot name="before-career" />
+    {part !== 'hero' && <slot name="before-career" />}
 
-    {fr && totalGames > 0 && (
+    {!part && fr && totalGames > 0 && (
       <section class="franchise-section career-strip" id="career-record">
         <h2 class="sr-only">All-time record</h2>
         <dl class="career-stats">
@@ -385,7 +397,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
-    {hasHighlights && (
+    {!part && hasHighlights && (
       <section class="franchise-section highlights" id="highlights">
         <h2>Single-Game Highlights</h2>
         <div class="highlight-grid">
@@ -429,7 +441,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
-    {topRivals.length > 0 && (
+    {!part && topRivals.length > 0 && (
       <section class="franchise-section rivals" id="rivals">
         <h2>Top Rivals</h2>
         <p class="rivals-sub">
@@ -469,7 +481,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
-    {allTrades.length > 0 && (
+    {part !== 'hero' && allTrades.length > 0 && (
       <section class="franchise-section trades" id="trade-ledger">
         <h2>Trade Ledger ({allTrades.length})</h2>
         {tradeYearGroups.map((group, gi) => (
@@ -520,7 +532,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
-    {(nameEras.length > 1 || priorOwnerCount > 0) && (
+    {part !== 'hero' && (nameEras.length > 1 || priorOwnerCount > 0) && (
       <section class="franchise-section name-history" id="name-history">
         <h2>Team Name History</h2>
         <ul class="name-history__list">
@@ -584,6 +596,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
+    {part !== 'hero' && (
     <section class="franchise-section">
       <h2>Quick links</h2>
       <div class="quick-links">
@@ -592,12 +605,47 @@ const hasHighlights = Boolean(
         </a>
       </div>
     </section>
+    )}
   </div>
-</TheLeagueLayout>
+</Shell>
 
 <style>
   .franchise-detail {
     padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  /* Embedded in the League History franchise page: that page owns the name,
+     banner and layout, so the hero keeps only its action bar and slots, on
+     the team-color band. */
+  .franchise-detail--hero,
+  .franchise-detail--sections {
+    padding: 0;
+  }
+  .franchise-detail--hero .franchise-hero,
+  .franchise-detail--hero .franchise-lockup {
+    margin: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .franchise-detail--hero .franchise-hero__back,
+  .franchise-detail--hero .franchise-lockup__banner,
+  .franchise-detail--hero .franchise-lockup__name,
+  .franchise-detail--hero .franchise-hero__div,
+  .franchise-detail--hero .franchise-lockup__aliases {
+    display: none;
+  }
+  .franchise-detail--hero .franchise-lockup__bar {
+    padding: 0.5rem 0 0;
+  }
+  .franchise-detail--sections .franchise-section {
+    margin-top: 1.5rem;
+  }
+  .franchise-detail--sections .franchise-section > h2 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
   }
 
   .franchise-hero {

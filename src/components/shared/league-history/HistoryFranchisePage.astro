@@ -5,8 +5,13 @@
  *
  * Built only from the dataset (franchise.mjs), so it is part of the history
  * product any MFL league gets, not a page tied to our leagues' curated files
- * (Brandon, 2026-10-25). Our leagues' fuller franchise pages (rosters, trades,
- * name eras, the owner map) stay at /franchises/<id> and are linked from here.
+ * (Brandon, 2026-10-25). It IS the league's franchise page, at
+ * /<league>/franchises/<id> and public (Brandon: "fully replace those
+ * franchise pages"); the History tabs show only to viewers who can see the
+ * rest of League History. A league's own sections (TheLeague's trade ledger
+ * and awards, the AFL's trophy wall) come in through slots: `hero-extra`
+ * under the name, `after-stats` after the plaques (the hometown map) and the
+ * default slot after the head-to-head list.
  *
  * Top to bottom: the Broadcast team-color hero, the franchise's own Rafters
  * (title, title game and division banners), plaques, a season-by-season win
@@ -23,6 +28,7 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { LeagueSlug } from '../../../types/nav';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { canViewLeagueHistory } from '../../../utils/league-history/access';
 import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
@@ -113,11 +119,9 @@ interface Props {
   franchiseId: string;
   /** Whether the league has rivalry pages to link each opponent to. */
   rivalriesPage?: boolean;
-  /** Whether the league has its own franchise page (rosters, trades) to link to. */
-  franchisePage?: boolean;
 }
 
-const { leagueSlug, data, franchiseId, rivalriesPage = false, franchisePage = false } = Astro.props as Props;
+const { leagueSlug, data, franchiseId, rivalriesPage = false } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
@@ -128,11 +132,13 @@ const ix = recordBook(data).ix;
 // highlighting the owner"); ?view=all counts every owner the slot has had.
 const ownerOnly = Astro.url.searchParams.get('view') !== 'all';
 const h = franchiseHistory(ix, franchiseId, { ownerOnly }) as History;
-const pageHref = r(`/history/franchises/${franchiseId}`);
+const pageHref = r(`/franchises/${franchiseId}`);
 const ownerLabel = h.owner && !h.owner.key.startsWith('slot:') ? h.owner.name : 'Current owner';
 
 // The viewer's own franchise, by the same holding match the Record Book uses.
-const viewerFranchise = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+const authUser = getAuthUser(Astro.request);
+const viewerFranchise = franchiseIdForLeague(authUser, league.id);
+const showHistoryTabs = canViewLeagueHistory(authUser);
 const isMine = viewerFranchise === franchiseId;
 
 const pair = toBroadcastPair(getTeamColorPrimary(franchiseId, navSlug), getTeamColorSecondary(franchiseId, navSlug));
@@ -206,13 +212,12 @@ const priorNames = [
 ];
 ---
 
-<TheLeagueLayout title={`${h.name} · History · ${league.name}`}>
+<TheLeagueLayout title={`${h.name} · ${league.name}`}>
   <div class="hf">
     <Breadcrumbs
       items={[
         { label: league.name, href: `/${league.slug}` },
-        { label: 'History', href: r('/history') },
-        { label: 'Franchises', href: r('/history/franchises') },
+        { label: 'Franchises', href: r('/franchises') },
         { label: h.name },
       ]}
     />
@@ -245,10 +250,11 @@ const priorNames = [
             <b>{h.titles.length}×</b> champion
           </p>
         )}
+        <slot name="hero-extra" />
       </div>
     </header>
 
-    <HistoryTabs leagueSlug={league.slug} current="franchises" />
+    {showHistoryTabs && <HistoryTabs leagueSlug={league.slug} current="franchises" />}
 
     {h.hadOtherOwners && (
       <ul class="ui-pills hf-pills" aria-label="Seasons counted">
@@ -312,6 +318,9 @@ const priorNames = [
         <span class="hf-plaque__sub">{Math.round(h.pointsFor).toLocaleString('en-US')} points</span>
       </div>
     </section>
+
+    {/* After the headline stats: the owner map's hometown card (PR #1481). */}
+    <slot name="after-stats" />
 
     <section class="hf-section" aria-labelledby="hf-seasons">
       <p class="hf-section__kicker">Season by season</p>
@@ -491,11 +500,7 @@ const priorNames = [
       </section>
     )}
 
-    {franchisePage && (
-      <p class="hf-more">
-        <a class="cta cta--ghost" href={r(`/franchises/${franchiseId}`)}>Rosters, trades and team history</a>
-      </p>
-    )}
+    <slot />
   </div>
 </TheLeagueLayout>
 
@@ -509,9 +514,15 @@ const priorNames = [
 
   /* ── Hero: the Broadcast team-color split ─────────────────────────────── */
   .hf-hero {
+    /* A league's hero slot content sits on the team colors: its text tokens
+       read white here, whatever theme the page is in. */
+    --page-text: var(--color-white);
+    --content-text-muted: color-mix(in srgb, var(--color-white) 82%, transparent);
+    --color-gray-400: color-mix(in srgb, var(--color-white) 72%, transparent);
+    --content-border: color-mix(in srgb, var(--color-white) 30%, transparent);
     display: flex;
     gap: 1rem;
-    align-items: center;
+    align-items: flex-start;
     margin: 0.5rem 0 1rem;
     padding: 1.25rem 1rem;
     color: var(--color-white);
@@ -927,9 +938,6 @@ const priorNames = [
     border-right: 2px solid var(--card-bg);
   }
 
-  .hf-more {
-    margin: 1.5rem 0 0;
-  }
 
   @media (min-width: 768px) {
     .hf-hero {

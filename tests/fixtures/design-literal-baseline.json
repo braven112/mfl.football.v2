@@ -1,10 +1,10 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-23",
+  "recordedAt": "2026-10-25",
   "totals": {
     "transition": 187,
-    "fontSize": 1932,
-    "shadow": 214
+    "fontSize": 1920,
+    "shadow": 207
   },
   "files": {
     "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
@@ -780,10 +780,6 @@
     "src/pages/theleague/draft/order.astro": {
       "fontSize": 8
     },
-    "src/pages/theleague/franchises/[id].astro": {
-      "fontSize": 12,
-      "shadow": 7
-    },
     "src/pages/theleague/franchises/index.astro": {
       "fontSize": 3,
       "shadow": 2
@@ -829,9 +825,6 @@
     "src/pages/theleague/mvp.astro": {
       "fontSize": 4,
       "shadow": 3
-    },
-    "src/pages/theleague/news/[id].astro": {
-      "fontSize": 12
     },
     "src/pages/theleague/players.astro": {
       "transition": 9,
@@ -983,6 +976,9 @@
     },
     "src/styles/schedule-release.css": {
       "fontSize": 14
+    },
+    "src/styles/schefter-article.css": {
+      "fontSize": 12
     },
     "src/styles/schefter-feed-compact.css": {
       "transition": 4,

@@ -1,31 +1,14 @@
 ---
 /**
- * League History franchise page (AFL) — thin route wrapper.
- *
- * Shared implementation: components/shared/league-history/HistoryFranchisePage.
- * The dataset is imported HERE because a static import specifier can't be a
- * runtime variable, and the gate and the unknown-franchise rewrite live here
- * because `Astro.redirect()` only redirects from a page. Admin-only until
- * League History launches (utils/league-history/access.ts).
+ * Old League History franchise URL (AFL). The franchise page moved to
+ * /afl-fantasy/franchises/<id> when it replaced the league's franchise pages
+ * (Brandon, 2026-10-25); this keeps earlier links working, view and all.
  */
-import HistoryFranchisePage from '../../../../components/shared/league-history/HistoryFranchisePage.astro';
-import historyData from '../../../../../data/afl-fantasy/derived/league-history.json';
-import { getAuthUser } from '../../../../utils/auth';
-import { mflLoginUrl } from '../../../../utils/mfl-login-redirect';
-import { canViewLeagueHistory } from '../../../../utils/league-history/access';
-import { franchiseList } from '../../../../utils/league-history/franchise.mjs';
+import { resolveLeaguePath } from '../../../../utils/nav-utils';
 
 export const prerender = false;
 
-const authUser = getAuthUser(Astro.request);
-if (!canViewLeagueHistory(authUser)) {
-  if (!authUser) return Astro.redirect(mflLoginUrl(Astro.url.pathname));
-  return Astro.rewrite('/_not-found');
-}
-const id = Astro.params.id ?? '';
-if (!(franchiseList(historyData) as Array<{ franchiseId: string }>).some((f) => f.franchiseId === id)) {
-  return Astro.rewrite('/_not-found');
-}
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const id = encodeURIComponent(Astro.params.id ?? '');
+return Astro.redirect(resolveLeaguePath(`/afl-fantasy/franchises/${id}${Astro.url.search}`, hideLeaguePrefix), 301);
 ---
-
-<HistoryFranchisePage leagueSlug="afl-fantasy" data={historyData} franchiseId={id} rivalriesPage franchisePage />
