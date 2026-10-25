@@ -28,6 +28,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -218,7 +219,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     <Breadcrumbs
       items={[
         { label: league.name, href: `/${league.slug}` },
-        { label: 'History' },
+        { label: 'History', href: `/${league.slug}/history` },
         { label: 'Record Book' },
       ]}
     />
@@ -262,6 +263,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
         </ul>
       </aside>
     )}
+
+    <HistoryTabs leagueSlug={league.slug} current="record-book" />
 
     <nav class="rb-nav" aria-label="Record categories">
       <ul class="ui-pills rb-pills">

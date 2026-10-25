@@ -1,0 +1,573 @@
+---
+/**
+ * League History home — shared by TheLeague and the AFL.
+ *
+ * The plan's Home tab (League History plan, 2026-10-24): "the Rafters", a
+ * banner per champion in team colors; the dynasties, owners ranked by titles;
+ * and the every-season grid, one row per owner and one square per season,
+ * colored by how the season ended. Data from home.mjs over the same cached
+ * index the Record Book reads (recordBook().ix).
+ *
+ * The grid is a heat strip, not a table: a 24-season row is 24 small squares,
+ * so it fits a phone without sideways scrolling (Brandon's rule). Each square
+ * carries its season's detail as a tooltip and the row's name opens the owner.
+ *
+ * Banners paint the franchise's broadcast pair (toBroadcastPair) under white
+ * text, the same treatment the broadcast board uses, plus a hairline in the
+ * theme's border color so a near-black club still has an edge on a dark page.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import { recordBook, resultLabel } from '../../../utils/league-history/records.mjs';
+import { champions, dynasties, seasonGrid } from '../../../utils/league-history/home.mjs';
+
+interface Entity {
+  key: string;
+  name: string;
+  team: string;
+  icon: string | null;
+  franchiseId: string | null;
+  ownerSlug: string | null;
+}
+interface Cell {
+  r: string | null;
+  name: string;
+  franchiseId: string;
+  record: string;
+  rank: number | null;
+  pf: number | null;
+}
+interface GridRow {
+  key: string;
+  entity: Entity;
+  cells: Record<number, Cell>;
+  titles: number;
+  finals: number;
+  trips: number;
+  seasons: number;
+}
+interface Champion {
+  year: number;
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+  record: string;
+  owner: string | null;
+  entityKey: string;
+  runnerUp: string | null;
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: unknown;
+}
+
+const { leagueSlug, data } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const book = recordBook(data);
+const facts = book.facts();
+const ix = book.ix;
+const banners = champions(ix) as Champion[];
+const dynastyRows = (dynasties(ix) as Array<{ entity: Entity; titles: number[]; finals: number; seasons: number }>).slice(0, 8);
+const grid = seasonGrid(ix) as { years: number[]; live: number | null; rows: GridRow[]; former: GridRow[] };
+
+// The viewer's own row, the same "holding" match the Record Book uses.
+const viewerFranchise = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+const latest = (data as { seasons: Array<{ y: number; teams: Record<string, { h: string }> }> }).seasons.at(-1);
+const myIds = new Set(viewerFranchise ? (latest?.teams[viewerFranchise]?.h ?? `slot:${viewerFranchise}`).split('+') : []);
+const mine = (key: string) => key.split('+').some((id) => myIds.has(id));
+
+const navSlug = league.navSlug as LeagueSlug;
+const bannerStyle = (f: string) => {
+  const pair = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
+  return `--hb-a: ${pair.primary}; --hb-b: ${pair.secondary}`;
+};
+const ownerHref = (e: Entity) =>
+  e.ownerSlug ? r(`/owners/${e.ownerSlug}`) : e.franchiseId ? r(`/franchises/${e.franchiseId}`) : null;
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+const yearLabelEvery = grid.years.length > 16 ? 5 : 2;
+const cellTitle = (y: number, c: Cell) =>
+  `${y} · ${c.name} · ${c.record}${c.r ? ` · ${resultLabel(c.r)}` : y === grid.live ? ' · in progress' : ''}`;
+const cellClass = (y: number, c: Cell | undefined) =>
+  !c ? 'hg-cell hg-cell--none' : c.r ? `hg-cell hg-cell--${c.r === '3' ? 'third' : c.r}` : y === grid.live ? 'hg-cell hg-cell--live' : 'hg-cell';
+
+const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${facts.lastSeason}` : '';
+---
+
+<TheLeagueLayout title={`History · ${league.name}`}>
+  <div class="hh">
+    <Breadcrumbs items={[{ label: league.name, href: `/${league.slug}` }, { label: 'History' }]} />
+
+    <header class="hh-head">
+      <p class="hh-kicker">League history · {span}</p>
+      <h1 class="hh-title">{league.name} History</h1>
+      <p class="hh-facts">
+        <span><b>{facts.seasons}</b> seasons</span>
+        <span><b>{facts.games.toLocaleString('en-US')}</b> games</span>
+        <span><b>{facts.champions}</b> different champions</span>
+      </p>
+    </header>
+
+    <HistoryTabs leagueSlug={league.slug} current="home" />
+
+    <section class="hh-section" aria-labelledby="hh-rafters">
+      <p class="hh-section__kicker">Every champion</p>
+      <h2 class="hh-section__title" id="hh-rafters">The Rafters</h2>
+      <ol class="hh-banners">
+        {banners.map((b) => (
+          <li>
+            <a
+              class:list={['hh-banner', { 'hh-banner--mine': mine(b.entityKey) }]}
+              href={r(`/franchises/${b.franchiseId}`)}
+              style={bannerStyle(b.franchiseId)}
+              title={`${b.year} champion: ${b.name}${b.owner ? ` (${b.owner})` : ''}, ${b.record}${b.runnerUp ? `, beat ${b.runnerUp}` : ''}`}
+            >
+              <span class="hh-banner__year">{b.year}</span>
+              {b.icon ? (
+                <img class="hh-banner__logo" src={b.icon} alt="" width="44" height="44" loading="lazy" />
+              ) : (
+                <span class="hh-banner__logo hh-banner__logo--blank" aria-hidden="true">{initials(b.name)}</span>
+              )}
+              <span class="hh-banner__name">{b.name}</span>
+              <span class="hh-banner__record">{b.record}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {dynastyRows.length > 0 && (
+      <section class="hh-section" aria-labelledby="hh-dynasties">
+        <p class="hh-section__kicker">Most titles</p>
+        <h2 class="hh-section__title" id="hh-dynasties">Dynasties</h2>
+        <ol class="hh-dynasties">
+          {dynastyRows.map((d, i) => (
+            <li class:list={['hh-dynasty', { 'hh-dynasty--mine': mine(d.entity.key) }]}>
+              <span class="hh-dynasty__rank">{i + 1}</span>
+              {d.entity.icon ? (
+                <img class="hh-dynasty__logo" src={d.entity.icon} alt="" width="32" height="32" loading="lazy" />
+              ) : (
+                <span class="hh-dynasty__logo hh-dynasty__logo--blank" aria-hidden="true">{initials(d.entity.name)}</span>
+              )}
+              <span class="hh-dynasty__body">
+                <span class="hh-dynasty__name">
+                  {ownerHref(d.entity) ? <a href={ownerHref(d.entity)}>{d.entity.name}</a> : d.entity.name}
+                </span>
+                <span class="hh-dynasty__years">{d.titles.join(', ')} · {d.finals} title {d.finals === 1 ? 'game' : 'games'}</span>
+              </span>
+              <span class="hh-dynasty__trophies" aria-label={`${d.titles.length} championships`}>
+                {d.titles.map(() => <span class="hh-trophy" aria-hidden="true"></span>)}
+                <b>{d.titles.length}</b>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )}
+
+    <section class="hh-section" aria-labelledby="hh-grid">
+      <p class="hh-section__kicker">Every season</p>
+      <h2 class="hh-section__title" id="hh-grid">How every season ended</h2>
+      <p class="hh-legend">
+        <span class="hh-legend__item"><span class="hg-cell hg-cell--C"></span> Champion</span>
+        <span class="hh-legend__item"><span class="hg-cell hg-cell--R"></span> Runner-up</span>
+        <span class="hh-legend__item"><span class="hg-cell hg-cell--P"></span> Playoffs</span>
+        <span class="hh-legend__item"><span class="hg-cell hg-cell--M"></span> Missed</span>
+        {grid.live && <span class="hh-legend__item"><span class="hg-cell hg-cell--live"></span> {grid.live}, in progress</span>}
+      </p>
+      <div class="hg" style={`--hg-n: ${grid.years.length}`}>
+        <div class="hg-row hg-row--years" aria-hidden="true">
+          <span></span>
+          {grid.years.map((y, i) => (
+            <span class="hg-year">{i % yearLabelEvery === 0 || i === grid.years.length - 1 ? `’${String(y).slice(2)}` : ''}</span>
+          ))}
+        </div>
+        {grid.rows.map((row) => (
+          <div class:list={['hg-row', { 'hg-row--mine': mine(row.key) }]}>
+            <span class="hg-name">
+              {ownerHref(row.entity) ? <a href={ownerHref(row.entity)}>{row.entity.name}</a> : row.entity.name}
+              {row.titles > 0 && <span class="hg-titles">{row.titles}×</span>}
+            </span>
+            {grid.years.map((y) => {
+              const c = row.cells[y];
+              return <span class={cellClass(y, c)} title={c ? cellTitle(y, c) : `${y} · not in the league`}></span>;
+            })}
+          </div>
+        ))}
+      </div>
+      {grid.former.length > 0 && (
+        <details class="hh-former">
+          <summary>Former owners ({grid.former.length})</summary>
+          <div class="hg" style={`--hg-n: ${grid.years.length}`}>
+            {grid.former.map((row) => (
+              <div class="hg-row">
+                <span class="hg-name">
+                  {ownerHref(row.entity) ? <a href={ownerHref(row.entity)}>{row.entity.name}</a> : row.entity.name}
+                  {row.titles > 0 && <span class="hg-titles">{row.titles}×</span>}
+                </span>
+                {grid.years.map((y) => {
+                  const c = row.cells[y];
+                  return <span class={cellClass(y, c)} title={c ? cellTitle(y, c) : `${y} · not in the league`}></span>;
+                })}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </section>
+
+    <a class="hh-next" href={r('/history/record-book')}>
+      <span class="hh-section__kicker">Next</span>
+      <span class="hh-next__title">The Record Book</span>
+      <span class="hh-next__sub">Every league record, with the charts behind it.</span>
+    </a>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .hh {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+  .hh-head {
+    margin: 0.5rem 0 1rem;
+  }
+  .hh-kicker,
+  .hh-section__kicker {
+    display: block;
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hh-title {
+    margin: 0.125rem 0 0.375rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .hh-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .hh-facts b {
+    color: var(--page-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hh-section {
+    margin-top: 1.5rem;
+  }
+  .hh-section__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  /* ── The Rafters ──────────────────────────────────────────────────────── */
+  .hh-banners {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hh-banner,
+  .hh-banner:hover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0.625rem 0.375rem 1.375rem;
+    color: var(--color-white);
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(180deg, var(--hb-a), var(--hb-b));
+    border: 1px solid var(--content-border);
+    border-top: 3px solid var(--history-gold);
+    /* A pennant: the bottom edge notched to a point in the middle. */
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 0.875rem), 0 100%);
+  }
+  .hh-banner:hover {
+    filter: brightness(1.12);
+  }
+  .hh-banner--mine {
+    border-top-color: var(--color-white);
+  }
+  .hh-banner__year {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    /* White, not gold: a gold year vanishes on a gold or yellow club. */
+    color: var(--color-white);
+  }
+  .hh-banner__logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+  .hh-banner__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-white) 18%, transparent);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-sm);
+  }
+  .hh-banner__name {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.15;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .hh-banner__record {
+    font-size: var(--font-size-2xs);
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Dynasties ────────────────────────────────────────────────────────── */
+  .hh-dynasties {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hh-dynasty {
+    display: grid;
+    grid-template-columns: 1.25rem 32px minmax(0, 1fr) auto;
+    gap: 0.625rem;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .hh-dynasty:last-child {
+    border-bottom: 0;
+  }
+  .hh-dynasty--mine {
+    background: var(--history-gold-wash);
+  }
+  .hh-dynasty__rank {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-align: right;
+  }
+  .hh-dynasty__logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+  .hh-dynasty__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--history-gold-wash);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+  }
+  .hh-dynasty__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .hh-dynasty__name {
+    font-weight: var(--font-weight-semibold);
+  }
+  .hh-dynasty__name a,
+  .hh-dynasty__name a:hover,
+  .hg-name a,
+  .hg-name a:hover {
+    color: inherit;
+  }
+  .hh-dynasty__years {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hh-dynasty__trophies {
+    display: flex;
+    align-items: center;
+    gap: 0.1875rem;
+    color: var(--history-gold);
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .hh-dynasty__trophies b {
+    margin-left: 0.25rem;
+    font-weight: inherit;
+  }
+  /* A small cup: a gold bowl on a stem. */
+  .hh-trophy {
+    width: 8px;
+    height: 12px;
+    background: var(--history-gold);
+    clip-path: polygon(0 0, 100% 0, 85% 45%, 60% 55%, 60% 80%, 85% 100%, 15% 100%, 40% 80%, 40% 55%, 15% 45%);
+  }
+
+  /* ── The season grid ──────────────────────────────────────────────────── */
+  .hh-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.875rem;
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hh-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    white-space: nowrap;
+  }
+  .hh-legend .hg-cell {
+    width: 10px;
+    height: 10px;
+  }
+  .hg {
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hg-row {
+    display: grid;
+    grid-template-columns: var(--hg-name-w, 6.25rem) repeat(var(--hg-n), minmax(0, 1fr));
+    gap: 2px;
+    align-items: center;
+    min-height: 1.5rem;
+  }
+  .hg-row--mine {
+    background: var(--history-gold-wash);
+    border-radius: var(--radius-sm, 6px);
+  }
+  .hg-row--years {
+    min-height: 1rem;
+  }
+  .hg-year {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    white-space: nowrap;
+    overflow: visible;
+  }
+  .hg-name {
+    min-width: 0;
+    padding-right: 0.375rem;
+    overflow: hidden;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .hg-titles {
+    margin-left: 0.25rem;
+    color: var(--history-gold);
+    font-family: var(--font-display);
+  }
+  .hg-cell {
+    display: block;
+    aspect-ratio: 1;
+    max-height: 1.375rem;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--page-text) 22%, transparent);
+  }
+  .hg-cell--none {
+    background: transparent;
+  }
+  .hg-cell--C {
+    background: var(--history-gold);
+  }
+  .hg-cell--R {
+    background: color-mix(in srgb, var(--page-text) 70%, transparent);
+  }
+  .hg-cell--third,
+  .hg-cell--P {
+    background: color-mix(in srgb, var(--page-text) 42%, transparent);
+  }
+  .hg-cell--M {
+    background: color-mix(in srgb, var(--page-text) 12%, transparent);
+  }
+  .hg-cell--live {
+    background: transparent;
+    outline: 1px dashed var(--content-text-muted);
+    outline-offset: -1px;
+  }
+  .hh-former {
+    margin-top: 0.75rem;
+  }
+  .hh-former summary {
+    margin-bottom: 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+
+  .hh-next,
+  .hh-next:hover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    color: var(--page-text);
+    text-decoration: none;
+    background: linear-gradient(160deg, var(--card-bg) 30%, var(--history-gold-wash));
+    border: 1px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .hh-next__title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    text-transform: uppercase;
+  }
+  .hh-next__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  @media (min-width: 768px) {
+    .hh-banners {
+      grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    }
+    .hg {
+      --hg-name-w: 10rem;
+      padding: 1rem;
+    }
+  }
+</style>

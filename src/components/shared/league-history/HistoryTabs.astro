@@ -1,0 +1,44 @@
+---
+/**
+ * League History section tabs. These are unrelated views (the home's banners
+ * and grid, the Record Book's boards), so they are tabs, not pills; pills
+ * filter inside a tab. Links, so the section stays zero-JS.
+ */
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+
+interface Props {
+  leagueSlug: string;
+  current: 'home' | 'record-book';
+}
+
+const { leagueSlug, current } = Astro.props as Props;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const TABS = [
+  { id: 'home', label: 'Home', path: '/history' },
+  { id: 'record-book', label: 'Record Book', path: '/history/record-book' },
+] as const;
+---
+
+<nav class="ui-tabs history-tabs" aria-label="League history">
+  {TABS.map((t) => (
+    <a
+      class="ui-tab history-tab"
+      href={resolveLeaguePath(`/${leagueSlug}${t.path}`, hideLeaguePrefix)}
+      aria-current={t.id === current ? 'page' : undefined}
+    >
+      {t.label}
+    </a>
+  ))}
+</nav>
+
+<style>
+  .history-tabs {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0 0 1rem;
+  }
+  .history-tab {
+    padding: 0.5rem 0;
+    text-decoration: none;
+  }
+</style>
