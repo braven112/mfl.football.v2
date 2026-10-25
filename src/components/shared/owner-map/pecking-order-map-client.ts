@@ -15,7 +15,7 @@
  */
 import type { Map as MlMap, Marker } from 'maplibre-gl';
 import { buildStyle, loadGeo, safeUrl, US_BOUNDS, type Bounds } from './owner-map-client';
-import { computeRankView, type RankMapMode, type RankMapPin } from './pecking-order-map-views';
+import { computeRankView, spreadOverlaps, type RankMapMode, type RankMapPin } from './pecking-order-map-views';
 
 const FIT_PADDING = 36;
 
@@ -55,6 +55,7 @@ export async function mountRankMap(root: HTMLElement): Promise<() => void> {
     const view = computeRankView(pins, mode);
     markers.splice(0).forEach((m) => m.remove());
     const away: HTMLElement[] = [];
+    const spread: { marker: Marker; z: number; size: number; lng: number; lat: number }[] = [];
     for (const mark of view.marks) {
       const pin = pins[mark.index];
       const offMap = !inside(US_BOUNDS, pin.city!.lng, pin.city!.lat);
@@ -89,8 +90,13 @@ export async function mountRankMap(root: HTMLElement): Promise<() => void> {
         away.push(el);
         continue;
       }
-      markers.push(new maplibregl.Marker({ element: el }).setLngLat([pin.city!.lng, pin.city!.lat]).addTo(map));
+      const marker = new maplibregl.Marker({ element: el }).setLngLat([pin.city!.lng, pin.city!.lat]).addTo(map);
+      markers.push(marker);
+      if (!mark.faded) spread.push({ marker, z: mark.z, size: mark.size, lng: pin.city!.lng, lat: pin.city!.lat });
     }
+    spread.sort((a, b) => b.z - a.z);
+    const offsets = spreadOverlaps(spread.map((s) => ({ ...map.project([s.lng, s.lat]), size: s.size })));
+    spread.forEach((s, i) => s.marker.setOffset(offsets[i]));
     awayEl?.replaceChildren(...away);
     if (awayEl) awayEl.hidden = away.length === 0;
     if (captionEl) captionEl.textContent = view.caption;
@@ -106,6 +112,8 @@ export async function mountRankMap(root: HTMLElement): Promise<() => void> {
   };
   modeButtons.forEach((button) => button.addEventListener('click', onModeClick));
   map.on('load', () => render());
+  // The spread is worked out in screen pixels, so it is redone when the frame changes size.
+  map.on('resize', () => render());
 
   // Repaint the land and water when the theme flips (same key as the Owner Map).
   const themeKey = () =>

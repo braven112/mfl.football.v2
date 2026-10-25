@@ -3,6 +3,7 @@ import {
   computeRankView,
   movers,
   sizeForRank,
+  spreadOverlaps,
   type RankMapPin,
 } from '../src/components/shared/owner-map/pecking-order-map-views';
 
@@ -68,5 +69,18 @@ describe('Pecking Order map views', () => {
     expect(sizeForRank(1, 16)).toBe(46);
     expect(sizeForRank(16, 16)).toBe(26);
     expect(sizeForRank(1, 1)).toBe(46);
+  });
+
+  it('spreads overlapping highlighted badges apart and leaves the first in place', () => {
+    const offsets = spreadOverlaps([
+      { x: 100, y: 100, size: 46 },
+      { x: 110, y: 100, size: 46 },
+      { x: 300, y: 300, size: 46 },
+    ]);
+    expect(offsets[0]).toEqual([0, 0]);
+    expect(offsets[1][0]).toBeGreaterThanOrEqual(40);
+    expect(offsets[2]).toEqual([0, 0]);
+    const stacked = spreadOverlaps([{ x: 0, y: 0, size: 40 }, { x: 0, y: 0, size: 40 }]);
+    expect(Math.abs(stacked[1][0])).toBe(44);
   });
 });

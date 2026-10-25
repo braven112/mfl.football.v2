@@ -160,3 +160,31 @@ export function computeRankView(pins: RankMapPin[], mode: RankMapMode): RankMapV
     caption: `The top ${TOP_COUNT}: ${names(pins, top)}.${missingNote(top)}`,
   };
 }
+
+/** Gap kept between two highlighted badges once they are pushed apart. */
+const SPREAD_GAP = 4;
+
+/**
+ * Screen offsets that push overlapping highlighted badges apart, so a No. 3
+ * from the same metro as No. 2 is not hidden under it (Seattle and Long
+ * Beach, WA in the AFL). Points arrive in drawing priority, highest first;
+ * the first keeps its spot and each later one moves directly away from
+ * whatever it overlaps. Faded pins are never passed in: they may overlap.
+ */
+export function spreadOverlaps(points: { x: number; y: number; size: number }[]): [number, number][] {
+  const placed: { x: number; y: number; size: number }[] = [];
+  return points.map((p) => {
+    let [x, y] = [p.x, p.y];
+    for (let pass = 0; pass < 6; pass += 1) {
+      const hit = placed.find((q) => Math.hypot(x - q.x, y - q.y) < (p.size + q.size) / 2 + SPREAD_GAP);
+      if (!hit) break;
+      const dist = Math.hypot(x - hit.x, y - hit.y);
+      // Straight on top of each other: move sideways, alternating sides.
+      const [ux, uy] = dist < 0.5 ? [placed.length % 2 ? -1 : 1, 0] : [(x - hit.x) / dist, (y - hit.y) / dist];
+      const need = (p.size + hit.size) / 2 + SPREAD_GAP;
+      [x, y] = [hit.x + ux * need, hit.y + uy * need];
+    }
+    placed.push({ x, y, size: p.size });
+    return [Math.round(x - p.x), Math.round(y - p.y)];
+  });
+}
