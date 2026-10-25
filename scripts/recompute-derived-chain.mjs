@@ -7,6 +7,8 @@
  *   compute-owner-tenures.mjs                        owner-tenures.json      (reads the ledger)
  *   compute-division-strength.mjs                    division-strength.json  (reads ledger + tenures
  *                                                                             + live schedule.json)
+ *   compute-league-history.mjs --league=<each>       league-history.json     (reads ledger + tenures
+ *                                                                             + schedule.json)
  *
  * Every file is derived from the ones above it, and the data tests demand
  * row-for-row agreement between them: season-ledger.test.ts compares each
@@ -61,6 +63,10 @@ export const CHAIN_FILES = [
   'season-ledger.json',
   'owner-tenures.json',
   'division-strength.json',
+  // Reads the ledger and the owner tenures. The site's one head-to-head
+  // (league-history/rivalry.mjs), so the columns' node scripts read it from
+  // git and it must move with the chain, not only at build time.
+  'league-history.json',
 ];
 
 /**
@@ -82,7 +88,9 @@ export const CHAIN_FILES = [
  *   theleague-division-titles          division titles vs that season's feeds
  *   historical-divisions               divisions vs each year's league.json
  *   playoff-field-size                 the ledger vs the bracket feeds
- *   rivalries                          the head-to-head ledger in the snapshot
+ *   rivalries                          the rivalry formula and coverage notes
+ *   head-to-head                       the League History dataset's one record
+ *                                      per pairing, over every league's real data
  *   afl-awards                         awards-history vs the AFL snapshot on
  *                                      which slot won each title/division
  *
@@ -103,6 +111,7 @@ export const CHAIN_GUARD_TESTS = [
   'tests/historical-divisions.test.ts',
   'tests/playoff-field-size.test.ts',
   'tests/rivalries.test.ts',
+  'tests/head-to-head.test.ts',
   'tests/afl-awards.test.ts',
 ];
 
@@ -114,6 +123,7 @@ export const CHAIN_GUARD_TESTS = [
  * best-ball-1 stays out.
  */
 const historyJobSlugs = new Set(leaguesFor('franchise-history').map((l) => l.slug));
+const leagueHistorySlugs = new Set(leaguesFor('league-history').map((l) => l.slug));
 export const chainLeagues = (root = ROOT) =>
   ALL_LEAGUES.filter(
     (league) =>
@@ -130,17 +140,29 @@ export const chainSteps = ({ emitMilestonePosts = false, root = ROOT } = {}) => 
   // Both iterate every league themselves, skipping one with no ledger.
   { label: 'owner-tenures', script: 'scripts/compute-owner-tenures.mjs', args: [] },
   { label: 'division-strength', script: 'scripts/compute-division-strength.mjs', args: [] },
+  ...chainLeagues(root)
+    .filter((league) => leagueHistorySlugs.has(league.slug))
+    .map((league) => ({
+      label: `league-history (${league.slug})`,
+      script: 'scripts/compute-league-history.mjs',
+      args: [`--league=${league.slug}`],
+    })),
 ];
 
 const derivedPath = (league, file) => path.posix.join(league.dataPath, 'derived', file);
 
 /**
  * The chain files one league gets: all of them, less the division-strength
- * report for a league with no page for it (league-jobs `division-strength`).
+ * report for a league with no page for it (league-jobs `division-strength`)
+ * and the League History dataset for one outside league-jobs `league-history`.
  */
 const divisionStrengthSlugs = new Set(leaguesFor('division-strength').map((l) => l.slug));
 export const chainFilesFor = (league) =>
-  CHAIN_FILES.filter((file) => file !== 'division-strength.json' || divisionStrengthSlugs.has(league.slug));
+  CHAIN_FILES.filter(
+    (file) =>
+      (file !== 'division-strength.json' || divisionStrengthSlugs.has(league.slug)) &&
+      (file !== 'league-history.json' || leagueHistorySlugs.has(league.slug)),
+  );
 
 /** Repo-relative derived files, every chain league × its chain files. */
 export const chainDerivedFiles = (root = ROOT) =>

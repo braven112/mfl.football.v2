@@ -21,14 +21,6 @@ interface FranchiseRow {
   currentIcon: string | null;
   currentBanner: string | null;
   currentColor: string | null;
-  matchupHistory: Record<string, Array<{
-    year: number;
-    week: number;
-    score: number;
-    opponentScore: number;
-    isPlayoff: boolean;
-    bothAttributed: boolean;
-  }>>;
 }
 
 const allFranchises: FranchiseRow[] = Object.values(

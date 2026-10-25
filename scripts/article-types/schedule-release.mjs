@@ -24,11 +24,9 @@ import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
-import {
-  describeSeries,
-  rivalryPairKey,
-  rivalrySeriesByPair,
-} from '../../src/utils/rivalry-intensity.mjs';
+import { describeSeries, rivalryPairKey } from '../../src/utils/rivalry-intensity.mjs';
+import { recordBook } from '../../src/utils/league-history/records.mjs';
+import { rivalrySeries } from '../../src/utils/league-history/rivalry.mjs';
 import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
 import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import {
@@ -223,13 +221,12 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   // `describeSeries`, never formatted here — the stored record belongs to
   // whichever id sorts first, so hand-formatting it prints the wrong team
   // winning the series.
-  const historyFile = path.join(mainRepo, registry.dataPath, 'derived', 'franchise-history.json');
+  const historyFile = path.join(mainRepo, registry.dataPath, 'derived', 'league-history.json');
   let series = {};
   try {
-    const history = JSON.parse(await fs.readFile(historyFile, 'utf8'));
-    series = rivalrySeriesByPair(history.franchises ?? history);
+    series = rivalrySeries(recordBook(JSON.parse(await fs.readFile(historyFile, 'utf8'))).ix);
   } catch {
-    // A league with no ingested head-to-head simply gets no rivalry section.
+    // A league with no League History dataset simply gets no rivalry section.
   }
   const renewals = [];
   const seenPair = new Set();

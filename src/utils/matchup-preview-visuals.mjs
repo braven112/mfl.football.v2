@@ -12,16 +12,13 @@
  * Every number comes from data the repo already has:
  *   - this season's form, streaks, weekly scores and all-play come from
  *     `weekly-results-raw.json` (only weeks BEFORE the previewed one);
- *   - the head-to-head series comes from `derived/franchise-history.json`
- *     `matchupHistory`, under the current owners (`currentOwnerMeetings`),
- *     the same data and filter the Rivalries pages use.
- *
- * A series whose two stored copies disagree is DISPUTED (see
- * `rivalrySeriesByPair` in rivalry-intensity.mjs) and is shipped without a
- * record — printing one would contradict the Rivalries page — and it can never
- * be the Game of the Week.
+ *   - the head-to-head series is the site's one definition
+ *     (`headToHeadMeetings`, league-history/rivalry.mjs) over the League
+ *     History dataset: the games the two current owners played each other,
+ *     consolation games left out — the record each rivalry page shows.
  */
-import { currentOwnerMeetings, tallyMeetings, rivalryIntensity, MIN_RIVALRY_MEETINGS } from './rivalry-intensity.mjs';
+import { rivalryIntensity, MIN_RIVALRY_MEETINGS } from './rivalry-intensity.mjs';
+import { headToHeadMeetings } from './league-history/rivalry.mjs';
 
 /** Results a form strip shows, newest last. */
 export const FORM_GAMES = 10;
@@ -125,28 +122,28 @@ export function sideSnapshot(franchiseId, season) {
 }
 
 /**
- * The head-to-head series between `a` and `b`, from A's perspective.
- * Null when they have never met under the current owners.
+ * The head-to-head series between `a` and `b`, from A's perspective, from an
+ * indexed League History dataset (`recordBook(ds).ix`). Null when they have
+ * never met under the current owners, or there is no dataset.
+ *
+ * `disputed` is always false now: there is one game list, so one answer. The
+ * field stays because posts already in the feed carry it and the renderers
+ * still read it.
  */
-export function seriesSnapshot(franchises, a, b, { withMeetings = false } = {}) {
-  const fromA = currentOwnerMeetings(franchises?.[a]?.matchupHistory, b);
-  const fromB = currentOwnerMeetings(franchises?.[b]?.matchupHistory, a);
-  if (fromA.length === 0 && fromB.length === 0) return null;
-  const ta = tallyMeetings(fromA);
-  const tb = tallyMeetings(fromB);
-  const disputed =
-    fromA.length !== fromB.length || ta.wins !== tb.losses || ta.losses !== tb.wins || ta.ties !== tb.ties;
-  if (disputed) return { disputed: true, games: fromA.length };
+export function seriesSnapshot(ix, a, b, { withMeetings = false } = {}) {
+  const games = ix ? headToHeadMeetings(ix, a, b) : null;
+  if (!games?.length) return null;
 
-  const ordered = [...fromA].sort((x, y) => x.year - y.year || x.week - y.week);
-  const meetings = ordered.map((m) => ({
-    year: m.year,
-    week: m.week,
-    score: round2(m.score),
-    opp: round2(m.opponentScore),
-    playoff: !!m.isPlayoff,
+  const meetings = games.map((m) => ({
+    year: m.y,
+    week: m.wk,
+    score: round2(m.sA),
+    opp: round2(m.sB),
+    playoff: m.kind === 'playoffs',
   }));
   const winnerOf = (m) => (m.score > m.opp ? a : m.score < m.opp ? b : null);
+  const aWins = meetings.filter((m) => m.score > m.opp).length;
+  const bWins = meetings.filter((m) => m.score < m.opp).length;
 
   let streak = null;
   const last = meetings[meetings.length - 1];
@@ -165,12 +162,12 @@ export function seriesSnapshot(franchises, a, b, { withMeetings = false } = {}) 
   return {
     disputed: false,
     games: meetings.length,
-    aWins: ta.wins,
-    bWins: ta.losses,
-    ties: ta.ties,
+    aWins,
+    bWins,
+    ties: meetings.length - aWins - bWins,
     since: meetings[0].year,
     streak,
-    playoffGames: ta.playoffGames,
+    playoffGames: meetings.filter((m) => m.playoff).length,
     playoffWins,
     playoffLosses,
     lastPlayoff: asGame([...meetings].reverse().find((m) => m.playoff)),
@@ -206,17 +203,17 @@ export function gameOfWeekScore(series, sideA, sideB) {
  * @param {{
  *   pairings: {franchise1Id: string, franchise2Id: string}[],
  *   weeklyResultsRaw: any[],
- *   franchises: Record<string, any> | undefined,   // franchise-history.json#franchises
+ *   history: object | undefined,   // recordBook(league-history.json).ix
  *   year: number,
  *   week: number,
  * }} input
  */
-export function buildMatchupVisuals({ pairings, weeklyResultsRaw, franchises, year, week }) {
+export function buildMatchupVisuals({ pairings, weeklyResultsRaw, history, year, week }) {
   const season = seasonGames(weeklyResultsRaw, week);
   const matchups = pairings.map(({ franchise1Id: a, franchise2Id: b }) => {
     const sideA = sideSnapshot(a, season);
     const sideB = sideSnapshot(b, season);
-    const series = seriesSnapshot(franchises, a, b);
+    const series = seriesSnapshot(history, a, b);
     return { a: sideA, b: sideB, series };
   });
 
@@ -231,7 +228,7 @@ export function buildMatchupVisuals({ pairings, weeklyResultsRaw, franchises, ye
   });
   if (gameOfWeek != null) {
     const m = matchups[gameOfWeek];
-    m.series = seriesSnapshot(franchises, m.a.franchiseId, m.b.franchiseId, { withMeetings: true });
+    m.series = seriesSnapshot(history, m.a.franchiseId, m.b.franchiseId, { withMeetings: true });
   }
   return { year, week, gameOfWeek, matchups };
 }

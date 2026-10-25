@@ -37,8 +37,8 @@ describe('today’s leagues per job', () => {
     // Only where the division-strength page exists.
     'division-strength': ['theleague', 'afl-fantasy'],
     'top-players': ['theleague', 'afl-fantasy'],
-    // Only where the Record Book page exists.
-    'league-history': ['theleague', 'afl-fantasy'],
+    // Every league with a franchise history: it is also the site's one head-to-head.
+    'league-history': ['theleague', 'afl-fantasy', 'archies'],
     'schedule-draw': ['theleague', 'afl-fantasy'],
     'pecking-order': ['theleague', 'afl-fantasy', 'archies'],
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies'],

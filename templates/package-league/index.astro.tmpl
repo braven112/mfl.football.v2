@@ -23,7 +23,7 @@ const rosterFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/
 const calendarFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/calendar.json');
 const playoffFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/playoff-brackets.json');
 // The Primetime front page's extra reads (registry `siteTheme`); unused by the Editorial homepage.
-const historyFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/derived/franchise-history.json');
+const historyFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/derived/league-history.json');
 const ytdScoreFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/playerScores-ytd.json');
 const peckingOrderIssues = import.meta.glob<any>('../../../data/__LEAGUE_SLUG__/pecking-order/*.json', { eager: true, import: 'default' });
 

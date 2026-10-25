@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { loadSpriteIconIds } from './helpers/sprite-icons';
-import { describeSeries, rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+import { describeSeries } from '../src/utils/rivalry-intensity.mjs';
 import {
   aflNationalLeagueDraft,
   laborDay,
@@ -538,13 +538,13 @@ describe('the rivalry lens', () => {
 /**
  * Disputed series.
  *
- * `matchupHistory` stores every meeting twice and the two copies do not always
- * agree — `bothAttributed` is resolved from each side's own owner history, so
- * a franchise identity that moved between slots leaves the sides counting
- * different games. TheLeague has 18 such pairings out of 105, the AFL 23 of
- * 162, and one of them landed on a 2026 marquee card. Stating a record we
- * cannot stand behind puts a head-to-head in the chat that the Rivalries page
- * contradicts.
+ * The series used to come from franchise-history.json's `matchupHistory`,
+ * which stored every meeting twice, and the two copies did not always agree:
+ * TheLeague had 18 such pairings, the AFL 41, and one landed on a 2026 marquee
+ * card. The series now comes from the League History dataset's single game
+ * list (`rivalrySeries`, league-history/rivalry.mjs; tests/head-to-head.test.ts)
+ * and is never disputed, but `describeSeries` and the marquee picks still
+ * refuse to print a record for one so marked.
  */
 describe('a series the two sides disagree about', () => {
   const nameOf = (id: string) => ({ '0001': 'Alpha', '0005': 'Bravo' })[id] ?? id;
@@ -566,46 +566,6 @@ describe('a series the two sides disagree about', () => {
     expect(describeSeries(disputed, '0001', '0005', nameOf)).toBeNull();
   });
 
-  it('flags the disagreement rather than picking a side', () => {
-    // 0001 counts 6 meetings against 0009; 0009 counts only 4 of them.
-    const franchises = {
-      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0, 0, 0]) } },
-      '0009': { matchupHistory: { '0001': meetings([1, 1, 0, 0]) } },
-    };
-    const byPair = rivalrySeriesByPair(franchises);
-    expect(byPair['0001-0009'].disputed).toBe(true);
-    expect(byPair['0001-0009'].games, 'still weights the pick').toBeGreaterThan(0);
-  });
-
-  // The first cut of this check built its mirror through `computeRivalEntries`,
-  // which applies the 4-meeting floor — so the WORSE the two copies disagreed
-  // the more likely the smaller side was filtered out and the pairing came
-  // back UNDISPUTED. Exactly backwards, and it left AFL 0001-0004 (8 meetings
-  // one side, 2 the other) asserting a record on a live reveal.
-  it('catches a disagreement where one side falls under the meetings floor', () => {
-    const franchises = {
-      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 1, 1, 0, 0, 0]) } },
-      '0009': { matchupHistory: { '0001': meetings([0, 1]) } },
-    };
-    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(true);
-  });
-
-  it('treats a side with no record of the series at all as disputed', () => {
-    const franchises = {
-      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0]) } },
-      '0009': { matchupHistory: {} },
-    };
-    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(true);
-  });
-
-  it('leaves an agreeing pairing undisputed', () => {
-    const franchises = {
-      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0]) } },
-      '0009': { matchupHistory: { '0001': meetings([0, 0, 0, 1]) } },
-    };
-    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(false);
-  });
-
   it('never prints a disputed record on a marquee card', () => {
     const ids = ['0001', '0002', '0003', '0004'];
     const ctx = {
@@ -625,13 +585,3 @@ describe('a series the two sides disagree about', () => {
   });
 });
 
-/** `wins` as 1s and 0s, as one franchise's `matchupHistory` entry. */
-function meetings(results: number[]) {
-  return results.map((win, i) => ({
-    year: 2010 + i,
-    week: 1,
-    score: win ? 100 : 50,
-    opponentScore: win ? 50 : 100,
-    bothAttributed: true,
-  }));
-}

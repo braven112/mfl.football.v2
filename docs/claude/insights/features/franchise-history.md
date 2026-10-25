@@ -1,5 +1,35 @@
 # Franchise History Pages — Insights
 
+## 2026-10-25 — A head-to-head record has one source, and it is not `matchupHistory`
+
+**Context:** Brandon caught one rivalry reading 16-14 on the index and 13-14 on
+its page (PR #1489). Fixing those two pages left every other surface on
+franchise-history.json's `matchupHistory`.
+
+**Insight:** `matchupHistory` counted consolation games and stored each game
+twice, each copy resolving its own side's owner history, so it disagreed with
+the rivalry pages on 83 of TheLeague's 114 pairings and 139 of the AFL's 218
+(41 AFL pairings disagreed with themselves). Matchup previews, the
+schedule-release column, the Owner Map and Archie's front page and Top Rivals
+all printed from it. It was also keyed by franchise id, so Archie's, which
+renumbers teams, credited one owner with results against an id's earlier holder.
+
+**Resolution:** league-history/rivalry.mjs is THE definition: the games the
+two CURRENT owners played each other, from whichever slots they held, regular
+season and playoffs, consolation left out (`rivalryPairs`,
+`headToHeadMeetings`, `rivalEntries`, `rivalrySeries`). Every caller reads it
+from league-history.json, which now rides the derived chain (it reads the
+ledger and the tenures) so the node scripts never read a stale copy, and every
+league with a franchise history gets one, Archie's included.
+
+**Evidence:** `tests/head-to-head.test.ts` pins the rule and the three views'
+agreement on every league's real data; `tests/head-to-head-source-guard.test.ts`
+fails on any `matchupHistory` read outside its producer and the rivalry route's
+round labels.
+
+**Recommendation:** A new surface that prints a series asks rivalry.mjs. Never
+tally games at a call site, from any file.
+
 ## 2026-10-09 — A franchise id is not an identity in a league that renumbers
 
 **Context:** The derived chain warned "standings name franchise 0100, which is

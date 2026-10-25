@@ -11,7 +11,9 @@
  * still to pick, and drawn nowhere, rather than placed on a made-up city.
  */
 import type { OwnerTenuresFile } from '../types/owner-tenures';
-import { canonicalRivalryPair, computeRivalEntries, type Matchup } from './rivalries';
+import { canonicalRivalryPair, type RivalEntry } from './rivalries';
+import { recordBook } from './league-history/records.mjs';
+import { rivalEntries } from './league-history/rivalry.mjs';
 
 export interface OwnerMapCity {
   name: string;
@@ -83,7 +85,6 @@ export interface OwnerMapHistory {
       franchiseId: string;
       currentDivision: string | null;
       yearByYear?: { year: number; divisionId: string | null; divisionName: string | null }[];
-      matchupHistory?: Record<string, Matchup[]>;
     }
   >;
 }
@@ -98,6 +99,8 @@ export function buildOwnerMapData(
     myFranchiseId?: string | null;
     /** Saved hometowns by franchise id. */
     hometowns?: Record<string, OwnerMapCity>;
+    /** data/<league>/derived/league-history.json: the head-to-head the rivalry lines are drawn from. */
+    historyData?: unknown;
   },
 ): OwnerMapData {
   const conferences = options.conferences ?? [];
@@ -150,10 +153,11 @@ export function buildOwnerMapData(
   const current = new Set(pins.map((p) => p.franchiseId));
   const rivalries: OwnerMapRivalry[] = [];
   const seen = new Set<string>();
+  // The site's one head-to-head (league-history/rivalry.mjs), so a line's
+  // record is the one its rivalry page shows.
+  const ix = options.historyData ? recordBook(options.historyData).ix : null;
   for (const pin of pins) {
-    const top = computeRivalEntries(history.franchises[pin.franchiseId]?.matchupHistory, pin.franchiseId).find((r) =>
-      current.has(r.opponentId),
-    );
+    const top = (ix ? (rivalEntries(ix, pin.franchiseId) as RivalEntry[]) : []).find((r) => current.has(r.opponentId));
     if (!top) continue;
     const key = canonicalRivalryPair(pin.franchiseId, top.opponentId);
     if (seen.has(key)) continue;

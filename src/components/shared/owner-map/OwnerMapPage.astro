@@ -29,6 +29,8 @@ interface Props {
   leagueSlug: CanonicalLeagueSlug;
   data: OwnerTenuresFile;
   history: OwnerMapHistory;
+  /** data/<league>/derived/league-history.json (the rivalry lines' head-to-head). */
+  historyData?: unknown;
   /** A league with conferences passes them; one without leaves the Conference pill off. */
   conferences?: OwnerMapConference[];
   /** The viewer's own team here, for the My division view and picking their own hometown. */
@@ -39,7 +41,7 @@ interface Props {
   canEditAll?: boolean;
 }
 
-const { leagueSlug, data, history, conferences, myFranchiseId, hometowns, canEditAll = false } = Astro.props;
+const { leagueSlug, data, history, historyData, conferences, myFranchiseId, hometowns, canEditAll = false } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`OwnerMapPage: unknown league ${leagueSlug}`);
 
@@ -52,6 +54,7 @@ const mapData = buildOwnerMapData(data, history, {
   conferences,
   myFranchiseId,
   hometowns,
+  historyData,
 });
 const { pins } = mapData;
 const placed = pins.filter((pin) => pin.city);

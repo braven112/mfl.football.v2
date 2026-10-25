@@ -6,6 +6,7 @@ import {
   currentStreak,
   buildMatchupVisuals,
 } from '../src/utils/matchup-preview-visuals.mjs';
+import { recordBook } from '../src/utils/league-history/records.mjs';
 
 /** One MFL weeklyResults entry: [[idA, scoreA, idB, scoreB], ...]. */
 function week(n: number, games: Array<[string, number, string, number]>) {
@@ -22,9 +23,21 @@ function week(n: number, games: Array<[string, number, string, number]>) {
   };
 }
 
-const meeting = (year: number, score: number, opponentScore: number, extra = {}) => ({
-  year, week: 1, score, opponentScore, isPlayoff: false, bothAttributed: true, ...extra,
-});
+/**
+ * An indexed League History dataset (the series' one source) from games
+ * `[year, winner, winnerScore, loser, loserScore, playoff?]`. Every franchise
+ * has the same owner in every season, and makes the playoffs.
+ */
+function historyOf(games: Array<[number, string, number, string, number, boolean?]>, ids = ['A', 'B', 'C', 'D']) {
+  const years = [...new Set(games.map((g) => g[0]))].sort();
+  const teams = Object.fromEntries(ids.map((id) => [id, { n: id, i: null, h: `o${id}`, w: 0, l: 0, t: 0, pf: 0, r: 'P' }]));
+  return recordBook({
+    league: 'test',
+    owners: Object.fromEntries(ids.map((id) => [`o${id}`, { name: id }])),
+    seasons: years.map((y) => ({ y, done: 1, pw: 15, teams })),
+    games: games.map(([y, wf, ws, lf, ls, playoff], i) => [y, playoff ? 15 : i % 14 + 1, wf, ws, lf, ls, playoff ? 1 : 0]),
+  }).ix;
+}
 
 describe('seasonGames / sideSnapshot', () => {
   const raw = [
@@ -72,13 +85,15 @@ describe('currentStreak', () => {
 });
 
 describe('seriesSnapshot', () => {
-  const franchises = {
-    A: { matchupHistory: { B: [meeting(2020, 120, 80), meeting(2021, 90, 100, { isPlayoff: true }), meeting(2022, 101, 100), meeting(2023, 140, 60)] } },
-    B: { matchupHistory: { A: [meeting(2020, 80, 120), meeting(2021, 100, 90, { isPlayoff: true }), meeting(2022, 100, 101), meeting(2023, 60, 140)] } },
-  };
+  const history = historyOf([
+    [2020, 'A', 120, 'B', 80],
+    [2021, 'B', 100, 'A', 90, true],
+    [2022, 'A', 101, 'B', 100],
+    [2023, 'A', 140, 'B', 60],
+  ]);
 
   it('states the record from side A and names the streak holder', () => {
-    const s = seriesSnapshot(franchises, 'A', 'B')!;
+    const s = seriesSnapshot(history, 'A', 'B')!;
     expect(s).toMatchObject({ disputed: false, games: 4, aWins: 3, bWins: 1, since: 2020, playoffGames: 1, playoffWins: 0, playoffLosses: 1 });
     expect(s.streak).toEqual({ franchiseId: 'A', count: 2 });
     expect(s.biggest).toMatchObject({ year: 2023, winnerId: 'A', score: 140, opp: 60 });
@@ -86,40 +101,22 @@ describe('seriesSnapshot', () => {
   });
 
   it('flips cleanly when asked from the other side', () => {
-    const s = seriesSnapshot(franchises, 'B', 'A')!;
+    const s = seriesSnapshot(history, 'B', 'A')!;
     expect(s).toMatchObject({ aWins: 1, bWins: 3 });
     expect(s.streak).toEqual({ franchiseId: 'A', count: 2 });
   });
 
-  it('refuses a record when the two stored copies disagree', () => {
-    const disputed = { A: franchises.A, B: { matchupHistory: { A: franchises.B.matchupHistory.A.slice(0, 3) } } };
-    expect(seriesSnapshot(disputed, 'A', 'B')).toEqual({ disputed: true, games: 4 });
-  });
-
-  it('ignores meetings with a former owner', () => {
-    const former = {
-      A: { matchupHistory: { B: [meeting(2020, 120, 80, { bothAttributed: false })] } },
-      B: { matchupHistory: { A: [meeting(2020, 80, 120, { bothAttributed: false })] } },
-    };
-    expect(seriesSnapshot(former, 'A', 'B')).toBeNull();
+  it('is null for a pairing that never met, or with no history at all', () => {
+    expect(seriesSnapshot(history, 'A', 'C')).toBeNull();
+    expect(seriesSnapshot(undefined, 'A', 'B')).toBeNull();
   });
 });
 
 describe('buildMatchupVisuals', () => {
-  const series = (aWins: number, bWins: number) => {
-    const a = [...Array(aWins)].map((_, i) => meeting(2010 + i, 110, 100));
-    const b = [...Array(bWins)].map((_, i) => meeting(2030 + i, 90, 100));
-    return [...a, ...b];
-  };
-  const mirror = (ms: ReturnType<typeof meeting>[]) => ms.map((m) => ({ ...m, score: m.opponentScore, opponentScore: m.score }));
-  const ab = series(3, 3);
-  const cd = series(3, 3);
-  const franchises = {
-    A: { matchupHistory: { B: ab } },
-    B: { matchupHistory: { A: mirror(ab) } },
-    C: { matchupHistory: { D: cd } },
-    D: { matchupHistory: { C: mirror(cd) } },
-  };
+  // A-B and C-D: the same 3-3 series.
+  const even = (x: string, y: string) =>
+    [...Array(6)].map((_, i) => [2010 + i, i < 3 ? x : y, 110, i < 3 ? y : x, 100] as [number, string, number, string, number]);
+  const history = historyOf([...even('A', 'B'), ...even('C', 'D')]);
   // A and B are 2-0; C and D are 0-2. Same series, so the stakes decide.
   const raw = [
     week(1, [['A', 120, 'C', 80], ['B', 110, 'D', 70]]),
@@ -130,7 +127,7 @@ describe('buildMatchupVisuals', () => {
     const v = buildMatchupVisuals({
       pairings: [{ franchise1Id: 'C', franchise2Id: 'D' }, { franchise1Id: 'A', franchise2Id: 'B' }],
       weeklyResultsRaw: raw,
-      franchises,
+      history,
       year: 2026,
       week: 3,
     });
@@ -144,7 +141,7 @@ describe('buildMatchupVisuals', () => {
     const v = buildMatchupVisuals({
       pairings: [{ franchise1Id: 'A', franchise2Id: 'C' }],
       weeklyResultsRaw: raw,
-      franchises,
+      history,
       year: 2026,
       week: 3,
     });

@@ -23,12 +23,13 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import {
-  computeRivalEntries,
   canonicalRivalryPair,
   formatRivalryRecord,
   describeCoverageGap,
 } from '../../../utils/rivalries';
 import type { NameEra } from '../../../utils/afl-name-history';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { rivalEntries } from '../../../utils/league-history/rivalry.mjs';
 import PreviousOwners from './PreviousOwners.astro';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -42,6 +43,12 @@ interface Props {
   teams: any[];
   /** data/<league>/derived/franchise-history.json. */
   history: any;
+  /**
+   * data/<league>/derived/league-history.json, the head-to-head Top Rivals
+   * reads (league-history/rivalry.mjs, the site's one definition). Without it
+   * the section hides.
+   */
+  historyData?: unknown;
   ownerTenures: OwnerTenuresFile | null;
   nameEras: NameEra[];
   /** Shown beside the name, e.g. "American League North". */
@@ -85,6 +92,7 @@ const {
   team,
   teams,
   history: franchiseHistory,
+  historyData,
   ownerTenures,
   nameEras,
   divisionLabel,
@@ -175,7 +183,9 @@ const seasonsPlayed = fr
   ? fr.yearByYear.filter((y: any) => y.wins + y.losses + y.ties > 0).length
   : 0;
 
-const topRivals = fr ? computeRivalEntries(fr.matchupHistory, id!).slice(0, 5) : [];
+// Only the full page shows Top Rivals; a `part` render skips the work.
+const topRivals: Array<{ opponentId: string; wins: number; losses: number; ties: number; games: number; playoffGames: number }> =
+  !part && historyData ? (rivalEntries(recordBook(historyData).ix, id!) as any[]).slice(0, 5) : [];
 
 // The gap between the rivalry records and the career record above, stated so an
 // owner who notices it is told why rather than concluding the site is broken.

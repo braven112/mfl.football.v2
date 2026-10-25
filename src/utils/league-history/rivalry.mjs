@@ -15,6 +15,17 @@
  *
  * Heat is the shared rivalry formula (rivalry-intensity.mjs), so this page,
  * the franchise pages and the schedule release rank a pairing the same way.
+ *
+ * THIS FILE IS THE HEAD-TO-HEAD DEFINITION for the whole site. A pairing's
+ * record is the games its two CURRENT owners played each other, from whichever
+ * slots they held, regular season and playoffs, consolation games left out.
+ * `rivalryPairs` tallies it for every pairing, `headToHeadMeetings` lists one
+ * pairing's games, and `rivalEntries` / `rivalrySeries` are the shapes the
+ * franchise pages, owner map, matchup previews and schedule release read. The
+ * old per-franchise `matchupHistory` in franchise-history.json counted
+ * consolation games and stored every game twice, and disagreed with the
+ * rivalry pages on most pairings; `tests/head-to-head-source-guard.test.ts`
+ * fails on a record tallied from it again.
  */
 
 import { MIN_RIVALRY_MEETINGS, rivalryIntensity } from '../rivalry-intensity.mjs';
@@ -83,6 +94,25 @@ function meetingsOf(ix, a, b, ka, kb) {
     .sort((x, y) => x.y - y.y || x.wk - y.wk);
 }
 
+/** Whether a meeting counts toward a record: regular season and playoffs, never a consolation game. */
+const counts = (m) => m.kind !== 'consolation';
+
+/**
+ * The games that make up a pairing's head-to-head record: every counted game
+ * the two slots' CURRENT owners played each other, from A's side, oldest
+ * first. Empty when they never met; null when the dataset never saw a slot.
+ * Each item is a rivalry-page meeting (`y`, `wk`, `kind`, `sA`, `sB`,
+ * `winner` 'A' | 'B' | null, …).
+ */
+export function headToHeadMeetings(ix, a, b) {
+  const ha = currentHolding(ix, a);
+  const hb = currentHolding(ix, b);
+  if (!ha || !hb || a === b) return null;
+  return meetingsOf(ix, a, b, ha.key, hb.key).filter(
+    (m) => m.holdingA === ha.key && m.holdingB === hb.key && counts(m),
+  );
+}
+
 /** W-L-T and the longest and current runs of a counted list of meetings, from A's side. */
 export function seriesTally(meetings) {
   let a = 0;
@@ -147,6 +177,54 @@ export function rivalryPairs(ix) {
   return pairs;
 }
 
+/**
+ * One slot's rivals among the active slots, hottest first, from its side:
+ * `[{ opponentId, wins, losses, ties, games, playoffGames, intensity }]`.
+ * Pairings under `minMeetings` are left out.
+ */
+export function rivalEntries(ix, franchiseId, { minMeetings = MIN_RIVALRY_MEETINGS } = {}) {
+  const out = [];
+  for (const p of rivalryPairs(ix).values()) {
+    if (p.games < minMeetings || (p.a !== franchiseId && p.b !== franchiseId)) continue;
+    const isA = p.a === franchiseId;
+    out.push({
+      opponentId: isA ? p.b : p.a,
+      wins: isA ? p.wa : p.wb,
+      losses: isA ? p.wb : p.wa,
+      ties: p.t,
+      games: p.games,
+      playoffGames: p.playoffs,
+      intensity: p.heat,
+    });
+  }
+  return out.sort((x, y) => y.intensity - x.intensity);
+}
+
+/**
+ * Every pairing's series keyed by `rivalryPairKey` (smaller id first), in the
+ * shape `describeSeries` (rivalry-intensity.mjs) reads: the record belongs to
+ * `perspective`, the smaller id. One game list means one answer per pairing,
+ * so a series is never `disputed` the way the two stored copies of the old
+ * `matchupHistory` could be.
+ */
+export function rivalrySeries(ix, { minMeetings = MIN_RIVALRY_MEETINGS } = {}) {
+  const out = {};
+  for (const [key, p] of rivalryPairs(ix)) {
+    if (p.games < minMeetings) continue;
+    out[key] = {
+      games: p.games,
+      playoffGames: p.playoffs,
+      intensity: p.heat,
+      perspective: p.a,
+      wins: p.wa,
+      losses: p.wb,
+      ties: p.t,
+      disputed: false,
+    };
+  }
+  return out;
+}
+
 /** Pairings at or above the meetings floor, hottest first. Cached per index. */
 export function rivalryHeat(ix) {
   if (ix._rivalryHeat) return ix._rivalryHeat;
@@ -173,7 +251,7 @@ export function rivalryHistory(ix, a, b, { ownerOnly = true } = {}) {
   const all = meetingsOf(ix, a, b, ha.key, hb.key);
   const bothCurrent = (m) => m.holdingA === ha.key && m.holdingB === hb.key;
   const listed = ownerOnly ? all.filter(bothCurrent) : all;
-  const counted = listed.filter((m) => m.kind !== 'consolation');
+  const counted = listed.filter(counts);
   const playoffs = counted.filter((m) => m.kind === 'playoffs');
   const series = seriesTally(counted);
   const playoffSeries = seriesTally(playoffs);

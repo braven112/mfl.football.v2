@@ -2,7 +2,7 @@
  * The franchise-history derived chain is committed whole, by one script.
  *
  * franchise-history.json + season-ledger.json -> owner-tenures.json ->
- * division-strength.json. Their data tests demand row-for-row agreement, so a
+ * division-strength.json + league-history.json. Their data tests demand row-for-row agreement, so a
  * commit carrying part of a regenerated chain breaks main. Sept 2026: the
  * Schefter nightly committed TheLeague's history without its ledger,
  * fetch-owner-names committed tenures + division strength against a stale
@@ -46,17 +46,23 @@ describe('the chain script', () => {
     expect(slugs(chainLeagues())).not.toContain('best-ball-1');
   });
 
-  it('runs every league history before owner tenures, and tenures before division strength', () => {
+  it('runs every league history before owner tenures, and tenures before division strength and the League History dataset', () => {
     const scripts = chainSteps().map((s) => s.script);
     const lastHistory = scripts.lastIndexOf('scripts/compute-franchise-history.mjs');
     const tenures = scripts.indexOf('scripts/compute-owner-tenures.mjs');
     const division = scripts.indexOf('scripts/compute-division-strength.mjs');
+    const firstDataset = scripts.indexOf('scripts/compute-league-history.mjs');
     expect(scripts.filter((s) => s === 'scripts/compute-franchise-history.mjs')).toHaveLength(
       chainLeagues().length
     );
     expect(lastHistory).toBeLessThan(tenures);
     expect(tenures).toBeLessThan(division);
-    expect(division).toBe(scripts.length - 1);
+    // The dataset reads the tenures: one run per league that gets it, last.
+    expect(firstDataset).toBe(division + 1);
+    expect(scripts.slice(firstDataset).every((s) => s === 'scripts/compute-league-history.mjs')).toBe(true);
+    expect(scripts.length - firstDataset).toBe(
+      (chainLeagues() as any[]).filter((l) => chainFilesFor(l).includes('league-history.json')).length
+    );
   });
 
   it('forwards the milestone flag to the history runs only, and only when asked', () => {
@@ -150,7 +156,7 @@ describe('every workflow goes through the script', () => {
 
   it('no workflow runs a chain producer directly', () => {
     const producer =
-      /compute-(franchise-history|owner-tenures|division-strength)\.mjs|compute:(afl-)?(franchise-history|owner-tenures|division-strength)/;
+      /compute-(franchise-history|owner-tenures|division-strength|league-history)\.mjs|compute:(afl-)?(franchise-history|owner-tenures|division-strength|league-history)/;
     expect(workflows.filter((w) => producer.test(w.code)).map((w) => w.file)).toEqual([]);
   });
 

@@ -14,6 +14,10 @@ import theleagueHistory from '../data/theleague/derived/franchise-history.json';
 import aflOwners from '../data/afl-fantasy/derived/owner-tenures.json';
 import aflHistory from '../data/afl-fantasy/derived/franchise-history.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
+import theleagueDataset from '../data/theleague/derived/league-history.json';
+import aflDataset from '../data/afl-fantasy/derived/league-history.json';
+import { recordBook } from '../src/utils/league-history/records.mjs';
+import { rivalryPairs } from '../src/utils/league-history/rivalry.mjs';
 
 const href = (id: string) => `/franchises/${id}`;
 // Real hometowns live in Redis, never in the repo; every team gets a stand-in here.
@@ -26,12 +30,13 @@ const placeAll = (data: { owners: { currentFranchiseId: string | null }[] }) =>
 const theleague = buildOwnerMapData(
   theleagueOwners as unknown as OwnerTenuresFile,
   theleagueHistory as unknown as OwnerMapHistory,
-  { leagueSlug: 'theleague', franchiseHref: href, myFranchiseId: '0001', hometowns: placeAll(theleagueOwners) },
+  { leagueSlug: 'theleague', franchiseHref: href, myFranchiseId: '0001', hometowns: placeAll(theleagueOwners), historyData: theleagueDataset },
 );
 const afl = buildOwnerMapData(aflOwners as unknown as OwnerTenuresFile, aflHistory as unknown as OwnerMapHistory, {
   leagueSlug: 'afl-fantasy',
   franchiseHref: href,
   hometowns: placeAll(aflOwners),
+  historyData: aflDataset,
   conferences: aflConfig.conferences.map((c, i) => ({ name: c.name, short: ['AL', 'NL'][i], divisions: c.divisions })),
 });
 
@@ -59,6 +64,18 @@ describe('owner map data', () => {
     const keys = theleague.rivalries.map((r) => [r.a, r.b].sort().join('-'));
     expect(new Set(keys).size).toBe(keys.length);
     expect(theleague.rivalries.every((r) => ids.has(r.a) && ids.has(r.b))).toBe(true);
+  });
+
+  it('draws each rivalry with the record its rivalry page shows', () => {
+    for (const [data, dataset] of [[theleague, theleagueDataset], [afl, aflDataset]] as const) {
+      expect(data.rivalries.length).toBeGreaterThan(0);
+      const pairs = rivalryPairs(recordBook(dataset).ix) as Map<string, any>;
+      for (const r of data.rivalries) {
+        const p = pairs.get([r.a, r.b].sort().join('-'))!;
+        const [aWins, bWins] = r.a === p.a ? [p.wa, p.wb] : [p.wb, p.wa];
+        expect([r.aWins, r.bWins, r.ties, r.games]).toEqual([aWins, bWins, p.t, p.games]);
+      }
+    }
   });
 
   it('only names the viewer when they own a team here', () => {

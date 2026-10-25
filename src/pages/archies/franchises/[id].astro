@@ -32,6 +32,11 @@ const history: any = Object.values(
   import.meta.glob('../../../../data/archies/derived/franchise-history.json', { eager: true, import: 'default' }),
 )[0];
 
+// The League History dataset: Top Rivals reads the site's one head-to-head.
+const historyData: unknown = Object.values(
+  import.meta.glob('../../../../data/archies/derived/league-history.json', { eager: true, import: 'default' }),
+)[0];
+
 const teams = config.teams as any[];
 const team = teams.find((t) => t.franchiseId === Astro.params.id);
 if (!team) return Astro.redirect(r(`/${league.slug}/franchises`));
@@ -56,6 +61,7 @@ const pointsPerWeek = fr && weeksScored ? fr.careerPointsFor / weeksScored : nul
   team={{ ...team, banner: null }}
   teams={teams}
   history={history ?? { franchises: {} }}
+  historyData={historyData}
   ownerTenures={null}
   nameEras={nameErasFromSeasons(fr?.yearByYear ?? [], team)}
   divisionLabel={division?.name ?? team.division ?? ''}
