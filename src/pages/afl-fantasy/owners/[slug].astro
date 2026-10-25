@@ -11,6 +11,7 @@ import { resolveOwnerDetail } from '../../../utils/owner-detail';
 import ownerData from '../../../../data/afl-fantasy/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
+import { aflRafterHonors } from '../../../utils/afl-awards';
 
 export const prerender = false;
 
@@ -18,4 +19,4 @@ const result = resolveOwnerDetail(Astro, 'afl-fantasy', ownerData as unknown as 
 if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
 ---
 
-<OwnerDetailPage leagueSlug="afl-fantasy" owner={result.owner} related={result.related} historyData={historyData} />
+<OwnerDetailPage leagueSlug="afl-fantasy" owner={result.owner} related={result.related} historyData={historyData} honors={aflRafterHonors()} />
