@@ -11,6 +11,7 @@
 import GameOfTheWeekPanel from './GameOfTheWeekPanel.astro';
 import TaleOfTheTapeCard from './TaleOfTheTapeCard.astro';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
+import { readHometowns, type StoredHometown } from '../../../utils/owner-hometowns';
 import type { MatchupVisuals } from '../../../types/schefter';
 import '../../../styles/matchup-preview.css';
 
@@ -36,10 +37,12 @@ export interface Props {
   teams: TeamConfigEntry[];
   /** Resolved base of the league's rivalry pages (e.g. r('/theleague/rivalries')); omit to drop the links. */
   rivalriesBase?: string;
+  /** The league whose Owner Map hometowns the cards' mini maps read; omit to draw no maps. */
+  leagueSlug?: string;
   part: 'top' | 'cards';
 }
 
-const { visuals, teams, rivalriesBase, part } = Astro.props;
+const { visuals, teams, rivalriesBase, leagueSlug, part } = Astro.props;
 
 const byId = new Map(teams.map((t) => [t.franchiseId, t]));
 const teamOf = (id: string): MatchupTeam => {
@@ -57,6 +60,12 @@ const matchups = visuals?.matchups ?? [];
 const gotwIndex = visuals?.gameOfWeek ?? null;
 const gotw = gotwIndex != null ? matchups[gotwIndex] : null;
 const gotwSeries = gotw?.series && !gotw.series.disputed ? gotw.series : null;
+
+// Hometowns are read live (Redis), so a team that picks one after the post
+// went out gets its map on the next view. Reads never throw; an outage just
+// drops the maps.
+const hometowns: Record<string, StoredHometown> =
+  part === 'cards' && leagueSlug && matchups.length > 0 ? await readHometowns(leagueSlug) : {};
 ---
 
 {part === 'top' && gotw && gotwSeries && (
@@ -87,6 +96,8 @@ const gotwSeries = gotw?.series && !gotw.series.disputed ? gotw.series : null;
         teamB={teamOf(m.b.franchiseId)}
         isGameOfWeek={i === gotwIndex}
         rivalryHref={rivalryHref(m.a.franchiseId, m.b.franchiseId)}
+        homeA={hometowns[m.a.franchiseId] ?? null}
+        homeB={hometowns[m.b.franchiseId] ?? null}
       />
     ))}
   </section>

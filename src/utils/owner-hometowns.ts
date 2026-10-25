@@ -16,6 +16,7 @@
  */
 import { getRedis } from './redis-client';
 import places from '../data/owner-map-places.json';
+import { hometownsKey } from './hometown-geo.mjs';
 
 export type PlaceKind = 'city' | 'state' | 'country';
 
@@ -33,7 +34,7 @@ export interface StoredHometown {
   setAt: string;
 }
 
-export const hometownsKey = (leagueSlug: string) => `owner-map:hometowns:${leagueSlug}`;
+export { hometownsKey };
 
 /** The bundled place with this name and region, or null. Population order, so the biggest wins a tie. */
 export function findPlace(name: string, region: string): PlaceRow | null {

@@ -1,0 +1,174 @@
+---
+/**
+ * One game's mini map on its tale-of-the-tape card: the two teams' hometowns
+ * with an arc between them, cropped from the same outlines the Owner Map
+ * draws (matchup-mini-map.ts), and a "miles apart" line under it.
+ *
+ * Public, unlike the Owner Map page: the owner's call (Oct 2026) — a pin is
+ * the city a team represents, not where anyone lives. The SVG is drawn on
+ * the server, so a card costs a few KB of paths and no map library.
+ *
+ * The badges are HTML over the SVG (percent positions), the same round
+ * wrapper the Owner Map markers use, so a seasonal theme that restyles a team
+ * icon by its src still sits inside a circle.
+ */
+import { buildMiniMap } from '../../../utils/matchup-mini-map';
+import { cityLabel } from '../../../utils/owner-map';
+import type { StoredHometown } from '../../../utils/owner-hometowns';
+import type { MatchupTeam } from './MatchupPreviewSection.astro';
+
+export interface Props {
+  homeA: StoredHometown | null;
+  homeB: StoredHometown | null;
+  teamA: MatchupTeam;
+  teamB: MatchupTeam;
+  /** Unique per card on the page (the gradient is referenced by id). */
+  routeId: string;
+}
+
+const { homeA, homeB, teamA, teamB, routeId } = Astro.props;
+const map = buildMiniMap(homeA, homeB);
+const gradientId = `mpv-route-${routeId}`;
+const missing = [!homeA && teamA.short, !homeB && teamB.short].filter(Boolean) as string[];
+
+function milesText(miles: number): string {
+  if (miles < 1) return 'Same hometown';
+  return `${miles.toLocaleString('en-US')} mile${miles === 1 ? '' : 's'} apart`;
+}
+---
+
+{map && homeA && homeB ? (
+  <figure class="mmap">
+    <div class="mmap__frame">
+      <svg class="mmap__svg" viewBox={`0 0 ${map.width} ${map.height}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={map.a.x} y1={map.a.y} x2={map.b.x} y2={map.b.y}>
+            <stop offset="0" style="stop-color: var(--mpv-a)" />
+            <stop offset="1" style="stop-color: var(--mpv-b)" />
+          </linearGradient>
+        </defs>
+        <rect class="mmap__water" width={map.width} height={map.height} />
+        <path class="mmap__land" d={map.land} />
+        <path class="mmap__states" d={map.states} />
+        <path class="mmap__route" d={map.route} style={`stroke: url(#${gradientId})`} />
+      </svg>
+      <span class="mmap__pin" style={`left: ${map.a.left}%; top: ${map.a.top}%; --mmap-ring: var(--mpv-a)`}>
+        {teamA.icon && <img src={teamA.icon} alt="" width="26" height="26" loading="lazy" decoding="async" />}
+      </span>
+      <span class="mmap__pin" style={`left: ${map.b.left}%; top: ${map.b.top}%; --mmap-ring: var(--mpv-b)`}>
+        {teamB.icon && <img src={teamB.icon} alt="" width="26" height="26" loading="lazy" decoding="async" />}
+      </span>
+    </div>
+    <figcaption class="mmap__caption">
+      <span class="mmap__cities">{cityLabel(homeA)} <span aria-hidden="true">·</span><span class="sr-only">vs</span> {cityLabel(homeB)}</span>
+      <strong class="mmap__miles mpv-num">{milesText(map.miles)}</strong>
+    </figcaption>
+  </figure>
+) : missing.length > 0 && missing.length < 2 ? (
+  <p class="mmap__missing">Map appears once {missing[0]} picks a hometown.</p>
+) : null}
+
+<style>
+  .mmap {
+    margin: 0;
+    border-top: 1px solid var(--sf-border, #e5e7eb);
+    /* The Owner Map's land and border mix (OwnerMapPage.astro), made from the
+       card's SOLID surface and text so it matches the card in either theme
+       (--card-bg is a gradient in some dark themes, which color-mix rejects). */
+    --mmap-water: var(--card-surface, var(--sf-bg, #ffffff));
+    --mmap-land: color-mix(in srgb, var(--sf-text-primary, #0f1419) 9%, var(--mmap-water));
+    --mmap-border: color-mix(in srgb, var(--sf-text-primary, #0f1419) 28%, var(--mmap-water));
+  }
+
+  .mmap__frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+
+  .mmap__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .mmap__water { fill: var(--mmap-water); }
+  /* Stroking the country shapes draws the coastlines and borders the Owner Map draws as a mesh. */
+  .mmap__land {
+    fill: var(--mmap-land);
+    stroke: var(--mmap-border);
+    stroke-width: 0.8;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .mmap__states {
+    fill: none;
+    stroke: var(--mmap-border);
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .mmap__states { stroke-width: 0.5; opacity: 0.8; }
+
+  .mmap__route {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    opacity: 0.85;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .mmap__pin {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border: 3px solid var(--mmap-ring, var(--league-accent));
+    border-radius: 50%;
+    background: var(--mmap-water);
+    box-shadow: var(--shadow-md);
+    box-sizing: border-box;
+  }
+
+  .mmap__pin img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .mmap__caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.875rem;
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .mmap__miles {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--sf-text-primary, #0f1419);
+  }
+
+  .mmap__missing {
+    margin: 0;
+    padding: 0.5rem 0.875rem;
+    border-top: 1px solid var(--sf-border, #e5e7eb);
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--sf-text-secondary, #536471);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>

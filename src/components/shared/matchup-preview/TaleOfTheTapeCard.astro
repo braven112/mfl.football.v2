@@ -10,6 +10,8 @@
 import type { MatchupVisualsSide, MatchupVisualsSeries } from '../../../types/schefter';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import type { MatchupTeam } from './MatchupPreviewSection.astro';
+import type { StoredHometown } from '../../../utils/owner-hometowns';
+import MatchupMiniMap from './MatchupMiniMap.astro';
 
 export interface Props {
   a: MatchupVisualsSide;
@@ -19,9 +21,12 @@ export interface Props {
   teamB: MatchupTeam;
   isGameOfWeek?: boolean;
   rivalryHref?: string;
+  /** Each side's hometown (Owner Map); the mini map draws only when both are set. */
+  homeA?: StoredHometown | null;
+  homeB?: StoredHometown | null;
 }
 
-const { a, b, series, teamA, teamB, isGameOfWeek = false, rivalryHref } = Astro.props;
+const { a, b, series, teamA, teamB, isGameOfWeek = false, rivalryHref, homeA = null, homeB = null } = Astro.props;
 
 const LUCK_RANGE = 3;
 const SW = 140;
@@ -128,6 +133,7 @@ else if (!series.disputed) {
       </div>
     ))}
   </div>
+  <MatchupMiniMap homeA={homeA} homeB={homeB} teamA={teamA} teamB={teamB} routeId={`${a.franchiseId}-${b.franchiseId}`} />
   {seriesLine && (
     <div class="tape__foot">
       <span>{seriesLine}</span>
