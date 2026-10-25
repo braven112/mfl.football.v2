@@ -1,0 +1,900 @@
+---
+/**
+ * League History rivalry page — one pairing's whole series in the Trophy Room
+ * style, shared by every league with a League History dataset.
+ *
+ * Built only from the dataset (rivalry.mjs), like the franchise page. It IS
+ * the league's rivalry page, at /<league>/rivalries/<a>-vs-<b> and public:
+ * Brandon chose to upgrade the existing pages in place (2026-10-25), and it
+ * replaced both leagues' forked copies. The History tabs show only to viewers
+ * who can see the rest of League History. A league's own sections (the trades
+ * between the two, TheLeague's trophy case, the AFL's coverage note) come in
+ * through the default slot, after the meetings.
+ *
+ * Top to bottom: the Broadcast split hero with the series score, the view
+ * pills (both current owners by default, every game with ?view=all), the
+ * tug-of-war bar, plaques, a margin chart of every meeting, the series
+ * highlights, the playoff meetings and every meeting. Zero client JS; the
+ * chart is plain CSS bars.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
+import EmptyState from '../states/EmptyState.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { canViewLeagueHistory } from '../../../utils/league-history/access';
+import { getTeamColor, getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { resolveTeamColorPair } from '../../../utils/team-color-contrast';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { rivalryHistory } from '../../../utils/league-history/rivalry.mjs';
+
+interface Entity {
+  key: string;
+  name: string;
+  ownerSlug: string | null;
+}
+interface Side {
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+  active: boolean;
+  owner: Entity;
+}
+interface Meeting {
+  y: number;
+  wk: number;
+  kind: 'regular' | 'playoffs' | 'consolation';
+  final: boolean;
+  sA: number;
+  sB: number;
+  winner: 'A' | 'B' | null;
+  nameA: string;
+  nameB: string;
+  holdingA: string;
+  holdingB: string;
+}
+interface Run {
+  len: number;
+  from: number;
+  to: number;
+}
+interface Tally {
+  a: number;
+  b: number;
+  t: number;
+  games: number;
+  record: string;
+  longestA: Run | null;
+  longestB: Run | null;
+  current: { side: 'A' | 'B'; len: number } | null;
+}
+interface Rivalry {
+  a: Side;
+  b: Side;
+  ownerOnly: boolean;
+  hadOtherOwners: boolean;
+  firstMeeting: number | null;
+  meetings: Meeting[];
+  series: Tally;
+  playoffs: Tally;
+  finals: Meeting[];
+  highs: Record<'blowout' | 'closest' | 'shootout' | 'topA' | 'topB', Meeting | null>;
+  pointsA: number;
+  pointsB: number;
+  heat: { rank: number; of: number } | null;
+  minMeetings: number;
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: unknown;
+  /** The canonical pair, smaller franchise id first. */
+  a: string;
+  b: string;
+  /**
+   * The league's own name for a playoff meeting's round, keyed `<year>-<week>`
+   * (the AFL's "NL Conference Championship"). The dataset only knows a final
+   * from any other playoff game.
+   */
+  playoffRounds?: Record<string, string>;
+}
+
+const { leagueSlug, data, a, b, playoffRounds = {} } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const navSlug = league.navSlug as LeagueSlug;
+
+const ix = recordBook(data).ix;
+// Both current owners' meetings by default, like the franchise page's owner
+// view; ?view=all is every game the two slots played.
+const ownerOnly = Astro.url.searchParams.get('view') !== 'all';
+const rv = rivalryHistory(ix, a, b, { ownerOnly }) as Rivalry;
+const pageHref = r(`/rivalries/${a}-vs-${b}`);
+const viewQuery = ownerOnly ? '' : '?view=all';
+
+const authUser = getAuthUser(Astro.request);
+const viewerFranchise = franchiseIdForLeague(authUser, league.id);
+const showHistoryTabs = canViewLeagueHistory(authUser);
+
+const colorOf = (f: string) => toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug)).primary;
+// The chart, tug bar and legend sit on the card, not the hero, so each side
+// needs a color that reads on THAT ground and differs from the other side's:
+// Vitside Mafia's near-black primary vanished on a dark card. One pair per
+// theme, picked by the shared team-color contrast rules.
+const colorSet = (f: string) => ({
+  colorPrimary: getTeamColorPrimary(f, navSlug),
+  colorSecondary: getTeamColorSecondary(f, navSlug),
+  color: getTeamColor(f, navSlug),
+});
+const chartPair = (background: string) =>
+  resolveTeamColorPair(colorSet(a), colorSet(b), {
+    background,
+    // Stricter than the default 18: a navy bar on a #262626 card cleared 18
+    // and still read as a hole in the chart.
+    minBackgroundContrast: 30,
+    forceAdjust: true,
+    homeVisibilityFallback: true,
+  });
+const onLight = chartPair('#ffffff');
+const onDark = chartPair('#262626');
+const sideStyle = [
+  `--rv-a: ${colorOf(a)}; --rv-b: ${colorOf(b)}`,
+  `--rv-ca-light: ${onLight.home}; --rv-cb-light: ${onLight.away}`,
+  `--rv-ca-dark: ${onDark.home}; --rv-cb-dark: ${onDark.away}`,
+].join('; ');
+
+const s = rv.series;
+const decided = s.a + s.b;
+const shareA = decided ? s.a / decided : 0.5;
+const nameOf = (side: 'A' | 'B') => (side === 'A' ? rv.a.name : rv.b.name);
+const leader = s.a > s.b ? rv.a : s.b > s.a ? rv.b : null;
+const leaderLine = !s.games
+  ? null
+  : leader
+    ? `${leader.name} leads ${Math.max(s.a, s.b)}–${Math.min(s.a, s.b)}${s.t ? `–${s.t}` : ''}`
+    : 'Dead even';
+const ownerHref = (e: Entity) => (e.ownerSlug ? r(`/owners/${e.ownerSlug}`) : null);
+const hasOwner = (e: Entity) => !e.key.startsWith('slot:');
+const viewerSide = viewerFranchise === a ? 'A' : viewerFranchise === b ? 'B' : null;
+
+const fmt2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt1 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const margin = (m: Meeting) => Math.abs(m.sA - m.sB);
+const kindLabel = (m: Meeting) =>
+  m.kind === 'regular'
+    ? null
+    : (playoffRounds[`${m.y}-${m.wk}`] ?? (m.kind === 'consolation' ? 'Consolation' : m.final ? 'Final' : 'Playoffs'));
+const winnerName = (m: Meeting) => (m.winner === 'A' ? m.nameA : m.winner === 'B' ? m.nameB : null);
+const gameLine = (m: Meeting) => `${m.y} · Week ${m.wk}${kindLabel(m) ? ` · ${kindLabel(m)}` : ''}`;
+// In the every-game view, a meeting played under an earlier owner says whose it was.
+const earlierOwners = (m: Meeting) =>
+  [
+    m.holdingA !== rv.a.owner.key ? ix.entity(m.holdingA) : null,
+    m.holdingB !== rv.b.owner.key ? ix.entity(m.holdingB) : null,
+  ]
+    .filter((e): e is Entity => !!e && hasOwner(e))
+    .map((e) => e.name);
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+// The margin chart: one column per counted meeting, A's wins up and B's down.
+const counted = rv.meetings.filter((m) => m.kind !== 'consolation');
+const maxMargin = Math.max(1, ...counted.map(margin));
+const labelEvery = counted.length > 24 ? 6 : counted.length > 12 ? 4 : 2;
+const runLine = (run: Run | null, side: 'A' | 'B') =>
+  run ? `${nameOf(side)}, ${run.from === run.to ? run.from : `${run.from}–${run.to}`}` : '';
+const longest =
+  (s.longestA?.len ?? 0) >= (s.longestB?.len ?? 0)
+    ? { run: s.longestA, side: 'A' as const }
+    : { run: s.longestB, side: 'B' as const };
+const playoffMeetings = counted.filter((m) => m.kind === 'playoffs').reverse();
+const title = `${rv.a.name} vs ${rv.b.name}`;
+---
+
+<TheLeagueLayout title={`${title} · Rivalry · ${league.name}`}>
+  <div class="hrv" style={sideStyle}>
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'Rivalries', href: r('/rivalries') },
+        { label: title },
+      ]}
+    />
+
+    <header class="hrv-hero">
+      {[rv.a, rv.b].map((side, i) => (
+        <a class:list={['hrv-side', `hrv-side--${i ? 'b' : 'a'}`]} href={r(`/franchises/${side.franchiseId}${viewQuery}`)}>
+          {side.icon ? (
+            <img class="hrv-side__logo" src={side.icon} alt="" width="64" height="64" />
+          ) : (
+            <span class="hrv-side__logo hrv-side__logo--blank" aria-hidden="true">{initials(side.name)}</span>
+          )}
+          <span class="hrv-side__name">{side.name}</span>
+          {hasOwner(side.owner) && <span class="hrv-side__owner">{side.owner.name}</span>}
+          {viewerSide === (i ? 'B' : 'A') && <span class="hrv-side__you">Your team</span>}
+        </a>
+      ))}
+      <div class="hrv-score">
+        {s.games > 0 ? (
+          <>
+            <span class="hrv-score__nums" aria-label={`Series ${s.record}`}>
+              <span>{s.a}</span>
+              <span class="hrv-score__dash" aria-hidden="true">–</span>
+              <span>{s.b}</span>
+              {s.t > 0 && <span class="hrv-score__ties">{s.t} {s.t === 1 ? 'tie' : 'ties'}</span>}
+            </span>
+            <span class="hrv-score__line">{leaderLine}</span>
+          </>
+        ) : (
+          <span class="hrv-score__line">No meetings yet</span>
+        )}
+        {rv.heat && (
+          <span class="hrv-heat">
+            {rv.heat.rank === 1 ? 'Hottest rivalry in the league' : `#${rv.heat.rank} of ${rv.heat.of} rivalries by heat`}
+          </span>
+        )}
+      </div>
+    </header>
+
+    {showHistoryTabs && <HistoryTabs leagueSlug={league.slug} />}
+
+    {rv.hadOtherOwners && (
+      <ul class="ui-pills hrv-pills" aria-label="Games counted">
+        <li>
+          <a class="ui-pill" href={pageHref} aria-current={ownerOnly ? 'page' : undefined}>
+            Current owners
+          </a>
+        </li>
+        <li>
+          <a class="ui-pill" href={`${pageHref}?view=all`} aria-current={!ownerOnly ? 'page' : undefined}>
+            Every game · since {rv.firstMeeting}
+          </a>
+        </li>
+      </ul>
+    )}
+
+    {s.games === 0 ? (
+      <EmptyState
+        title="They haven't met yet"
+        body={rv.hadOtherOwners
+          ? 'These two have not played each other under their current owners. Every game the two franchises played is one tap away.'
+          : 'These two franchises have no recorded meeting.'}
+      />
+    ) : (
+      <>
+        <div class="hrv-tug" role="img" aria-label={`${rv.a.name} ${s.a} wins, ${rv.b.name} ${s.b} wins`}>
+          <span class="hrv-tug__a" style={`width: ${(shareA * 100).toFixed(1)}%`}></span>
+          <span class="hrv-tug__b"></span>
+        </div>
+
+        <section class="hrv-plaques" aria-label="The series">
+          <div class="hrv-plaque hrv-plaque--lead">
+            <span class="hrv-plaque__label">The series</span>
+            <span class="hrv-plaque__value">{s.record}</span>
+            <span class="hrv-plaque__sub">
+              {s.games} {s.games === 1 ? 'meeting' : 'meetings'} · {counted[0].y}–{counted[counted.length - 1].y}
+            </span>
+          </div>
+          <div class="hrv-plaque">
+            <span class="hrv-plaque__label">Playoffs</span>
+            <span class="hrv-plaque__value">{rv.playoffs.games ? rv.playoffs.record : '—'}</span>
+            <span class="hrv-plaque__sub">
+              {rv.playoffs.games
+                ? `${rv.playoffs.games} ${rv.playoffs.games === 1 ? 'meeting' : 'meetings'}${rv.finals.length ? `, ${rv.finals.length} ${rv.finals.length === 1 ? 'final' : 'finals'}` : ''}`
+                : 'Never met in the playoffs'}
+            </span>
+          </div>
+          <div class="hrv-plaque">
+            <span class="hrv-plaque__label">Points per game</span>
+            <span class="hrv-plaque__value hrv-plaque__value--pair">{fmt1(rv.pointsA / s.games)}–{fmt1(rv.pointsB / s.games)}</span>
+            <span class="hrv-plaque__sub">{fmt2(Math.abs(rv.pointsA - rv.pointsB))} apart in all</span>
+          </div>
+          <div class="hrv-plaque">
+            <span class="hrv-plaque__label">Longest streak</span>
+            <span class="hrv-plaque__value">{longest.run?.len ?? 0}</span>
+            <span class="hrv-plaque__sub">{runLine(longest.run, longest.side)}</span>
+          </div>
+          <div class="hrv-plaque">
+            <span class="hrv-plaque__label">Current streak</span>
+            <span class="hrv-plaque__value">{s.current ? `W${s.current.len}` : '—'}</span>
+            <span class="hrv-plaque__sub">{s.current ? nameOf(s.current.side) : 'Last meeting was a tie'}</span>
+          </div>
+        </section>
+
+        <section class="hrv-section" aria-labelledby="hrv-chart">
+          <p class="hrv-section__kicker">Every meeting</p>
+          <h2 class="hrv-section__title" id="hrv-chart">Who won, and by how much</h2>
+          <p class="hrv-legend">
+            <span class="hrv-legend__item"><span class="hrv-swatch hrv-swatch--a"></span> {rv.a.name}</span>
+            <span class="hrv-legend__item"><span class="hrv-swatch hrv-swatch--b"></span> {rv.b.name}</span>
+            {playoffMeetings.length > 0 && (
+              <span class="hrv-legend__item"><span class="hrv-swatch hrv-swatch--playoff"></span> Playoffs</span>
+            )}
+          </p>
+          <div class="hrv-chart" style={`--rv-n: ${counted.length}`}>
+            <div class="hrv-chart__plot">
+              {counted.map((m) => (
+                <span class="hrv-col" title={`${gameLine(m)} · ${fmt2(m.sA)}–${fmt2(m.sB)}${winnerName(m) ? ` · ${winnerName(m)}` : ' · Tie'}`}>
+                  <span
+                    class:list={['hrv-bar', m.winner ? `hrv-bar--${m.winner}` : 'hrv-bar--tie', { 'hrv-bar--playoff': m.kind === 'playoffs' }]}
+                    style={`height: ${Math.max((margin(m) / maxMargin) * 50, 1.5).toFixed(1)}%`}
+                  ></span>
+                </span>
+              ))}
+            </div>
+            <div class="hrv-chart__years" aria-hidden="true">
+              {counted.map((m, i) => (
+                <span>{i % labelEvery === 0 || i === counted.length - 1 ? `’${String(m.y).slice(2)}` : ''}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section class="hrv-section" aria-labelledby="hrv-highs">
+          <p class="hrv-section__kicker">Series highlights</p>
+          <h2 class="hrv-section__title" id="hrv-highs">The games people bring up</h2>
+          <div class="hrv-highs">
+            {[
+              { m: rv.highs.blowout, label: 'Biggest blowout', value: (m: Meeting) => `+${fmt2(margin(m))}`, who: winnerName },
+              { m: rv.highs.closest, label: 'Closest game', value: (m: Meeting) => fmt2(margin(m)), who: winnerName },
+              { m: rv.highs.shootout, label: 'Most combined points', value: (m: Meeting) => fmt2(m.sA + m.sB), who: () => null },
+              { m: rv.highs.topA, label: `${rv.a.name}'s best`, value: (m: Meeting) => fmt2(m.sA), who: () => null },
+              { m: rv.highs.topB, label: `${rv.b.name}'s best`, value: (m: Meeting) => fmt2(m.sB), who: () => null },
+            ]
+              .filter((x) => x.m)
+              .map((x) => (
+                <div class="hrv-high">
+                  <span class="hrv-plaque__label">{x.label}</span>
+                  <span class="hrv-high__value">{x.value(x.m!)}</span>
+                  <span class="hrv-plaque__sub">
+                    {`${fmt2(x.m!.sA)}–${fmt2(x.m!.sB)}${x.who(x.m!) ? `, ${x.who(x.m!)}` : ''} · ${gameLine(x.m!)}`}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </section>
+
+        {playoffMeetings.length > 0 && (
+          <section class="hrv-section" aria-labelledby="hrv-playoffs">
+            <p class="hrv-section__kicker">When it counted</p>
+            <h2 class="hrv-section__title" id="hrv-playoffs">Playoff meetings</h2>
+            <ol class="hrv-list">
+              {playoffMeetings.map((m) => (
+                <li class:list={['hrv-game', { 'hrv-game--final': m.final }]}>
+                  <span class="hrv-game__year">{m.y}</span>
+                  <span class="hrv-game__body">
+                    <span class="hrv-game__win">{winnerName(m) ? `${winnerName(m)} won` : 'Tie'}</span>
+                    <span class="hrv-game__sub">{kindLabel(m)} · Week {m.wk}</span>
+                  </span>
+                  <span class="hrv-game__score">
+                    {fmt2(m.sA)}–{fmt2(m.sB)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        <section class="hrv-section" aria-labelledby="hrv-games">
+          <p class="hrv-section__kicker">Game by game</p>
+          <h2 class="hrv-section__title" id="hrv-games">
+            Every meeting ({rv.meetings.length})
+          </h2>
+          <ol class="hrv-list">
+            {rv.meetings
+              .slice()
+              .reverse()
+              .map((m) => {
+                const earlier = ownerOnly ? [] : earlierOwners(m);
+                const renamed = m.nameA !== rv.a.name || m.nameB !== rv.b.name;
+                return (
+                  <li class:list={['hrv-game', { 'hrv-game--playoff': m.kind === 'playoffs', 'hrv-game--consolation': m.kind === 'consolation' }]}>
+                    <span class="hrv-game__year">
+                      {m.y}
+                      <span class="hrv-game__wk">Wk {m.wk}</span>
+                    </span>
+                    <span class="hrv-game__body">
+                      <span class="hrv-game__scores">
+                        <span class:list={['hrv-game__team', { 'hrv-game__team--won': m.winner === 'A' }]}>
+                          <span class="hrv-game__name">{renamed ? m.nameA : rv.a.name}</span>
+                          <span class="hrv-game__pts">{fmt2(m.sA)}</span>
+                        </span>
+                        <span class:list={['hrv-game__team', { 'hrv-game__team--won': m.winner === 'B' }]}>
+                          <span class="hrv-game__name">{renamed ? m.nameB : rv.b.name}</span>
+                          <span class="hrv-game__pts">{fmt2(m.sB)}</span>
+                        </span>
+                      </span>
+                      {(kindLabel(m) || earlier.length > 0) && (
+                        <span class="hrv-game__sub">
+                          {[kindLabel(m), m.kind === 'consolation' && 'not counted', earlier.length > 0 && `under ${earlier.join(' and ')}`]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    <span class="hrv-game__margin">{m.winner ? `+${fmt2(margin(m))}` : 'Tie'}</span>
+                  </li>
+                );
+              })}
+          </ol>
+        </section>
+      </>
+    )}
+
+    <slot />
+
+    <p class="hrv-foot">
+      {[rv.a, rv.b].map((side, i) => (
+        <>
+          {i > 0 && ' · '}
+          <a href={r(`/franchises/${side.franchiseId}${viewQuery}`)}>{side.name}</a>
+          {hasOwner(side.owner) && ownerHref(side.owner) && (
+            <>
+              {' '}(<a href={ownerHref(side.owner)}>{side.owner.name}</a>)
+            </>
+          )}
+        </>
+      ))}
+    </p>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .hrv {
+    --rv-ca: var(--rv-ca-light);
+    --rv-cb: var(--rv-cb-light);
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+
+  :global(html.dark) .hrv {
+    --rv-ca: var(--rv-ca-dark);
+    --rv-cb: var(--rv-cb-dark);
+  }
+
+  /* ── Hero: the Broadcast split, one club's color per side ─────────────── */
+  .hrv-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'a b'
+      'score score';
+    margin: 0.5rem 0 1rem;
+    overflow: hidden;
+    color: var(--color-white);
+    background: linear-gradient(110deg, var(--rv-a) 0%, var(--rv-a) 50%, var(--rv-b) 50.2%, var(--rv-b) 100%);
+    border: 1px solid var(--content-border);
+    border-top: 3px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .hrv-side,
+  .hrv-side:hover {
+    grid-area: a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+    padding: 1.25rem 0.75rem 0.5rem;
+    color: var(--color-white);
+    text-align: center;
+    text-decoration: none;
+  }
+  .hrv-side--b,
+  .hrv-side--b:hover {
+    grid-area: b;
+  }
+  .hrv-side:hover .hrv-side__name {
+    text-decoration: underline;
+  }
+  .hrv-side__logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+  }
+  .hrv-side__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-white) 18%, transparent);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-lg);
+  }
+  .hrv-side__name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  .hrv-side__owner {
+    font-size: var(--font-size-xs);
+    opacity: 0.85;
+  }
+  .hrv-side__you {
+    padding: 0.0625rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .hrv-score {
+    grid-area: score;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem 1.25rem;
+    text-align: center;
+  }
+  .hrv-score__nums {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-size: calc(var(--font-size-3xl) * 1.4);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .hrv-score__dash {
+    opacity: 0.7;
+  }
+  .hrv-score__ties {
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    opacity: 0.85;
+  }
+  .hrv-score__line {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+  .hrv-heat {
+    margin-top: 0.25rem;
+    padding: 0.125rem 0.625rem;
+    /* On the team colors in both themes, so a fixed light chip, not the
+       theme's gold (dark in light theme). */
+    color: var(--color-black);
+    background: color-mix(in srgb, var(--color-white) 92%, transparent);
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .hrv-pills {
+    margin: 0 0 0.75rem;
+  }
+
+  /* The series as a tug of war: A's share of the decided games. */
+  .hrv-tug {
+    display: flex;
+    height: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--content-border);
+    border-radius: 999px;
+  }
+  .hrv-tug__a {
+    background: var(--rv-ca);
+    border-right: 2px solid var(--card-bg);
+  }
+  .hrv-tug__b {
+    flex: 1;
+    background: var(--rv-cb);
+  }
+
+  /* ── Plaques ──────────────────────────────────────────────────────────── */
+  .hrv-plaques {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .hrv-plaque,
+  .hrv-high {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.75rem 0.875rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hrv-plaque--lead {
+    grid-column: 1 / -1;
+    background: linear-gradient(160deg, var(--card-bg) 40%, var(--history-gold-wash));
+    border-color: var(--history-gold);
+  }
+  .hrv-plaque__label {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .hrv-plaque__value,
+  .hrv-high__value {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .hrv-plaque__value--pair {
+    font-size: var(--font-size-xl);
+    white-space: nowrap;
+  }
+  .hrv-plaque--lead .hrv-plaque__value {
+    font-size: var(--font-size-3xl);
+    color: var(--history-gold);
+  }
+  .hrv-plaque__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  .hrv-section {
+    margin-top: 1.5rem;
+  }
+  .hrv-section__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hrv-section__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  /* ── Margin chart ─────────────────────────────────────────────────────── */
+  .hrv-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.875rem;
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hrv-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .hrv-swatch {
+    display: inline-block;
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .hrv-swatch--a {
+    background: var(--rv-ca);
+  }
+  .hrv-swatch--b {
+    background: var(--rv-cb);
+  }
+  .hrv-swatch--playoff {
+    outline: 2px solid var(--history-gold);
+    outline-offset: -2px;
+  }
+  .hrv-chart {
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hrv-chart__plot {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--rv-n), minmax(0, 1fr));
+    gap: 2px;
+    height: 10rem;
+  }
+  /* The even line: A's wins rise above it, B's drop below. */
+  .hrv-chart__plot::before {
+    content: '';
+    position: absolute;
+    inset: 50% 0 auto;
+    border-top: 1px solid var(--content-text-muted);
+    opacity: 0.5;
+  }
+  .hrv-col {
+    position: relative;
+    height: 100%;
+  }
+  .hrv-bar {
+    position: absolute;
+    inset: auto 0 50%;
+    border-radius: 2px 2px 0 0;
+    outline: 1px solid color-mix(in srgb, var(--page-text) 18%, transparent);
+  }
+  .hrv-bar--A {
+    background: var(--rv-ca);
+  }
+  .hrv-bar--B {
+    top: 50%;
+    bottom: auto;
+    background: var(--rv-cb);
+    border-radius: 0 0 2px 2px;
+  }
+  .hrv-bar--tie {
+    background: var(--content-text-muted);
+  }
+  .hrv-bar--playoff {
+    outline: 2px solid var(--history-gold);
+  }
+  .hrv-chart__years {
+    display: grid;
+    grid-template-columns: repeat(var(--rv-n), minmax(0, 1fr));
+    gap: 2px;
+    margin-top: 0.375rem;
+  }
+  .hrv-chart__years span {
+    overflow: visible;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    white-space: nowrap;
+  }
+
+  /* ── Highlights ───────────────────────────────────────────────────────── */
+  .hrv-highs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* ── Meetings ─────────────────────────────────────────────────────────── */
+  .hrv-list {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hrv-game {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .hrv-game:last-child {
+    border-bottom: 0;
+  }
+  .hrv-game--final {
+    background: var(--history-gold-wash);
+  }
+  .hrv-game--playoff {
+    padding-left: calc(0.875rem - 3px);
+    border-left: 3px solid var(--history-gold);
+  }
+  .hrv-game--consolation {
+    opacity: 0.75;
+  }
+  .hrv-game__year {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: 2.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    line-height: 1;
+  }
+  .hrv-game__wk {
+    margin-top: 0.125rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+  }
+  .hrv-game__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  .hrv-game__win {
+    font-weight: var(--font-weight-semibold);
+  }
+  .hrv-game__scores {
+    display: flex;
+    flex-direction: column;
+  }
+  .hrv-game__team {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .hrv-game__team--won {
+    color: var(--page-text);
+    font-weight: var(--font-weight-semibold);
+  }
+  .hrv-game__name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .hrv-game__pts,
+  .hrv-game__score,
+  .hrv-game__margin {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .hrv-game__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hrv-game__score {
+    font-weight: var(--font-weight-semibold);
+  }
+  .hrv-game__margin {
+    width: 4.25rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    text-align: right;
+  }
+
+  .hrv-foot {
+    margin: 1.5rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  @media (min-width: 768px) {
+    .hrv-hero {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-areas: 'a score b';
+      align-items: center;
+    }
+    .hrv-side,
+    .hrv-side:hover {
+      padding: 1.75rem 1rem;
+    }
+    .hrv-side__logo {
+      width: 88px;
+      height: 88px;
+    }
+    .hrv-side__name {
+      font-size: var(--font-size-2xl);
+    }
+    .hrv-score {
+      padding: 1rem 1.5rem;
+    }
+    .hrv-plaques {
+      grid-template-columns: 2fr repeat(4, minmax(0, 1fr));
+    }
+    .hrv-plaque--lead {
+      grid-column: auto;
+    }
+    .hrv-highs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .hrv-chart__plot {
+      height: 13rem;
+    }
+  }
+</style>
