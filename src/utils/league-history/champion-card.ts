@@ -26,7 +26,7 @@ const el = (type: string, style: Record<string, unknown>, children?: Node | Node
 });
 
 let fonts: { name: string; data: Buffer; weight: 400 | 500 | 700; style: 'normal' }[] | null = null;
-function loadFonts() {
+export function loadFonts() {
 	if (fonts) return fonts;
 	const load = (file: string) => readFileSync(join(process.cwd(), 'src/assets/fonts/og', file));
 	fonts = [

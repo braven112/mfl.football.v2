@@ -463,6 +463,17 @@ export const LEAGUES = {
     // not on by default — it overrates youth for a one-season horizon.
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
     /**
+     * Record Book eras beyond "All time" and "Last 10 seasons": a pill reads
+     * every record from `from` on (src/utils/league-history/records.mjs
+     * historyEras). Brandon named these on 2026-10-25; the years come from
+     * the league history (six-team divisions first appear in 2013) and
+     * docs/claude/afl-rules.md (split Premier League tiers ran from 2018).
+     */
+    historyEras: [
+      { id: 'premier-league', label: 'Premier League era', from: 2018 },
+      { id: 'six-team-divisions', label: 'Six-team divisions', from: 2013 },
+    ],
+    /**
      * Week 11, deliberately NOT TheLeague's Week 4 — the two leagues share
      * owners and a site, so spacing the events apart gives each its own
      * moment instead of one crowded weekend.

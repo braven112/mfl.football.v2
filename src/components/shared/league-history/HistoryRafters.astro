@@ -1,0 +1,173 @@
+---
+/**
+ * The Rafters: banners hung for a league's champions (History home) or for one
+ * franchise's titles, title games and division crowns (its history page).
+ *
+ * Banners paint the franchise's broadcast pair (toBroadcastPair) under white
+ * text, the same treatment the broadcast board uses, plus a hairline in the
+ * theme's border color so a near-black club still has an edge on a dark page.
+ * The top stripe says what the banner is for: gold for a title, silver for a
+ * title game lost, none for a division crown, which also hangs shorter.
+ *
+ * Each banner shows the logo the club won it under, and `data-earned-mark`
+ * keeps a seasonal theme from repainting it (seasonal-mark-css.ts).
+ */
+import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import type { LeagueSlug } from '../../../types/nav';
+
+export interface RafterBanner {
+  year: number;
+  /** C: champion, R: runner-up, D: division title. */
+  kind: 'C' | 'R' | 'D';
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+  /** The line under the name: a record, or what the banner is for. */
+  caption?: string;
+  href?: string | null;
+  title?: string;
+  mine?: boolean;
+  /**
+   * Colors to paint instead of the franchise's current pair: the caller passes
+   * a former team's own colors for a banner won under a different owner.
+   */
+  colors?: { primary: string; secondary: string } | null;
+}
+
+interface Props {
+  banners: RafterBanner[];
+  /** The league's nav slug, for team colors. */
+  navSlug: LeagueSlug;
+}
+
+const { banners, navSlug } = Astro.props as Props;
+const bannerStyle = (b: RafterBanner) => {
+  const f = b.franchiseId;
+  const pair = b.colors
+    ? toBroadcastPair(b.colors.primary, b.colors.secondary)
+    : toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
+  return `--hb-a: ${pair.primary}; --hb-b: ${pair.secondary}`;
+};
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+---
+
+<ol class="hr">
+  {banners.map((b) => {
+    const Tag = b.href ? 'a' : 'div';
+    return (
+      <li class:list={['hr-item', `hr-item--${b.kind}`]}>
+        <Tag
+          class:list={['hr-banner', `hr-banner--${b.kind}`, { 'hr-banner--mine': b.mine }]}
+          href={b.href ?? undefined}
+          style={bannerStyle(b)}
+          title={b.title}
+        >
+          <span class="hr-banner__year">{b.year}</span>
+          {b.icon ? (
+            <img class="hr-banner__logo" src={b.icon} alt="" width="44" height="44" loading="lazy" data-earned-mark />
+          ) : (
+            <span class="hr-banner__logo hr-banner__logo--blank" aria-hidden="true">{initials(b.name)}</span>
+          )}
+          <span class="hr-banner__name">{b.name}</span>
+          {b.caption && <span class="hr-banner__caption">{b.caption}</span>}
+        </Tag>
+      </li>
+    );
+  })}
+</ol>
+
+<style>
+  .hr {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+    align-items: start;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hr-banner,
+  .hr-banner:hover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    box-sizing: border-box;
+    min-height: 9.5rem;
+    padding: 0.625rem 0.375rem 1.375rem;
+    color: var(--color-white);
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(180deg, var(--hb-a), var(--hb-b));
+    border: 1px solid var(--content-border);
+    border-top: 3px solid var(--history-gold);
+    /* A pennant: the bottom edge notched to a point in the middle. */
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 0.875rem), 0 100%);
+  }
+  a.hr-banner:hover {
+    filter: brightness(1.12);
+  }
+  .hr-banner--R {
+    border-top-color: var(--color-gray-300);
+  }
+  /* A division crown hangs shorter and carries no medal stripe. */
+  .hr-banner--D {
+    min-height: 7.25rem;
+    border-top-color: var(--content-border);
+  }
+  .hr-banner--D .hr-banner__logo {
+    width: 32px;
+    height: 32px;
+  }
+  .hr-banner--mine {
+    border-top-color: var(--color-white);
+  }
+  .hr-banner__year {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    /* White, not gold: a gold year vanishes on a gold or yellow club. */
+    color: var(--color-white);
+  }
+  .hr-banner__logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+  .hr-banner__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-white) 18%, transparent);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-sm);
+  }
+  .hr-banner__name {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.15;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .hr-banner__caption {
+    font-size: var(--font-size-2xs);
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  @media (min-width: 768px) {
+    .hr {
+      grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    }
+  }
+</style>

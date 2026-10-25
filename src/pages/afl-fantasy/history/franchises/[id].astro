@@ -1,0 +1,14 @@
+---
+/**
+ * Old League History franchise URL (AFL). The franchise page moved to
+ * /afl-fantasy/franchises/<id> when it replaced the league's franchise pages
+ * (Brandon, 2026-10-25); this keeps earlier links working, view and all.
+ */
+import { resolveLeaguePath } from '../../../../utils/nav-utils';
+
+export const prerender = false;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const id = encodeURIComponent(Astro.params.id ?? '');
+return Astro.redirect(resolveLeaguePath(`/afl-fantasy/franchises/${id}${Astro.url.search}`, hideLeaguePrefix), 301);
+---

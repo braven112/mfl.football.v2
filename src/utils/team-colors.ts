@@ -180,3 +180,22 @@ export function getTeamColors(franchiseId: string, league: LeagueSlug = 'theleag
     e.quaternary,
   ].filter(Boolean) as string[];
 }
+
+/**
+ * The colors a franchise wore in `year`, from its config `history` era that
+ * covers that year, or null when no era with colors covers it (a league with
+ * no era record). League History hangs a banner won under an old name (a
+ * different owner's team, or a complete rebrand) in that era's own colors.
+ */
+export function getTeamEraColors(
+  franchiseId: string,
+  league: LeagueSlug,
+  year: number,
+): { primary: string; secondary: string } | null {
+  const team = getLeagueTeams(league).find((t: any) => t.franchiseId === franchiseId);
+  const era = (team?.history ?? []).find(
+    (h: any) => h.yearStart <= year && (h.yearEnd == null || year <= h.yearEnd) && h.colorPrimary,
+  );
+  if (!era) return null;
+  return { primary: era.colorPrimary, secondary: era.colorSecondary ?? darken(era.colorPrimary) };
+}

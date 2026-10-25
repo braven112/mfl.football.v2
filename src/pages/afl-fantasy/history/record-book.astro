@@ -1,0 +1,26 @@
+---
+/**
+ * Record Book (AFL) — thin route wrapper.
+ *
+ * Shared implementation: components/shared/league-history/RecordBookPage.
+ * The dataset is imported HERE because a static import specifier can't be a
+ * runtime variable, and the gate lives here because `Astro.redirect()` only
+ * redirects from a page. Admin-only until League History launches
+ * (utils/league-history/access.ts).
+ */
+import RecordBookPage from '../../../components/shared/league-history/RecordBookPage.astro';
+import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
+import { getAuthUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { canViewLeagueHistory } from '../../../utils/league-history/access';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!canViewLeagueHistory(authUser)) {
+  if (!authUser) return Astro.redirect(mflLoginUrl(Astro.url.pathname));
+  return Astro.rewrite('/_not-found');
+}
+---
+
+<RecordBookPage leagueSlug="afl-fantasy" data={historyData} />

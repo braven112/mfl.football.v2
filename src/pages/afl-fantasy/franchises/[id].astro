@@ -1,8 +1,12 @@
 ---
 /**
- * AFL franchise page — route over the shared franchise page
- * (src/components/shared/franchises/FranchisePage.astro), which package leagues
- * render too. What stays here is the AFL's own: its identity lineage
+ * AFL franchise page — the shared League History franchise page
+ * (components/shared/league-history/HistoryFranchisePage), which replaced the
+ * old page (Brandon, 2026-10-25: "carry them all over"). The old shared
+ * franchise page (src/components/shared/franchises/FranchisePage.astro, which
+ * package leagues still render whole) now renders two PARTS into its slots:
+ * the action bar under the name and the trade ledger, name history and quick
+ * links after the head to head. What stays here is the AFL's own: its identity lineage
  * (ownerHistory claims and award attribution, src/utils/afl-name-history.ts),
  * the conference in the division label, and its trophies
  * (AflFranchiseTrophies, into the page's slots). The data imports and the
@@ -10,6 +14,9 @@
  * `Astro.redirect()` only redirects from a page).
  */
 import FranchisePage from '../../../components/shared/franchises/FranchisePage.astro';
+import HistoryFranchisePage from '../../../components/shared/league-history/HistoryFranchisePage.astro';
+import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
+import { franchiseList } from '../../../utils/league-history/franchise.mjs';
 import AflFranchiseTrophies from '../../../components/afl-fantasy/AflFranchiseTrophies.astro';
 import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHometown.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
@@ -34,7 +41,7 @@ const team = (aflConfig.teams as Array<any>).find(
   (t) => t.franchiseId === id
 );
 
-if (!team) {
+if (!team || !(franchiseList(historyData) as Array<{ franchiseId: string }>).some((f) => f.franchiseId === id)) {
   return Astro.redirect('/afl-fantasy/franchises');
 }
 
@@ -115,28 +122,47 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
 nameEras.sort((a, b) => a.yearStart - b.yearStart);
 ---
 
-<FranchisePage
-  leagueSlug="afl-fantasy"
-  team={team}
-  teams={aflConfig.teams as any[]}
-  history={franchiseHistory}
-  ownerTenures={ownerTenures as unknown as OwnerTenuresFile}
-  nameEras={nameEras}
-  divisionLabel={`${conferenceName} ${team.division}`}
-  titleSuffix="AFL Franchise"
-  isOwner={isOwner}
-  keeperPlanner={true}
-  rivalriesPage={true}
->
-  <AflFranchiseTrophies slot="hero-tags" part="pill" team={team} />
-  <AflFranchiseTrophies slot="lockup-extra" part="summary" team={team} />
-  <AflFranchiseTrophies slot="before-career" part="wall" team={team} />
+<HistoryFranchisePage leagueSlug="afl-fantasy" data={historyData} franchiseId={id!} rivalriesPage>
+  <FranchisePage
+    slot="hero-extra"
+    part="hero"
+    leagueSlug="afl-fantasy"
+    team={team}
+    teams={aflConfig.teams as any[]}
+    history={franchiseHistory}
+    ownerTenures={ownerTenures as unknown as OwnerTenuresFile}
+    nameEras={nameEras}
+    divisionLabel={`${conferenceName} ${team.division}`}
+    titleSuffix="AFL Franchise"
+    isOwner={isOwner}
+    keeperPlanner={true}
+    rivalriesPage={true}
+  >
+    <AflFranchiseTrophies slot="hero-tags" part="pill" team={team} />
+    <AflFranchiseTrophies slot="lockup-extra" part="summary" team={team} />
+  </FranchisePage>
   <FranchiseHometown
-    slot="before-career"
+    slot="after-stats"
     leagueSlug="afl-fantasy"
     franchiseId={team.franchiseId}
     teamName={team.nameMedium ?? team.name}
     icon={team.icon}
     division={team.division ?? null}
   />
-</FranchisePage>
+  <FranchisePage
+    part="sections"
+    leagueSlug="afl-fantasy"
+    team={team}
+    teams={aflConfig.teams as any[]}
+    history={franchiseHistory}
+    ownerTenures={ownerTenures as unknown as OwnerTenuresFile}
+    nameEras={nameEras}
+    divisionLabel={`${conferenceName} ${team.division}`}
+    titleSuffix="AFL Franchise"
+    isOwner={isOwner}
+    keeperPlanner={true}
+    rivalriesPage={true}
+  >
+    <AflFranchiseTrophies slot="before-career" part="wall" team={team} />
+  </FranchisePage>
+</HistoryFranchisePage>

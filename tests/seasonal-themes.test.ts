@@ -175,7 +175,7 @@ describe('opted-in leagues', () => {
           const drawn = seasonalSwapPath(league.navSlug, id, from);
           expect(drawn, `${from} → ${file} was rejected`).toBe(`/assets/${league.navSlug}/${season.marks}/${file}`);
           expect(fs.existsSync(path.join(ROOT, 'public', drawn!)), `${drawn} not drawn`).toBe(true);
-          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"]:not([data-brand-book] img) { content: url("${drawn}")`);
+          expect(css).toContain(`html[data-league="${league.navSlug}"][data-season="${id}"] img[src="${from}"]:not([data-brand-book] img):not([data-earned-mark]) { content: url("${drawn}")`);
         }
       });
       it(`${league.slug}: the Brand Book keeps its standard marks while ${id} is open`, () => {
@@ -188,6 +188,8 @@ describe('opted-in leagues', () => {
         expect(selectors.length).toBeGreaterThan(0);
         for (const sel of selectors) {
           expect(sel, sel).toContain(':not([data-brand-book] img)');
+          // A League History banner keeps the logo it was won under.
+          expect(sel, sel).toContain(':not([data-earned-mark])');
         }
       });
       it(`${league.slug}: every listed ${id} mark is a real franchise with a built file`, () => {

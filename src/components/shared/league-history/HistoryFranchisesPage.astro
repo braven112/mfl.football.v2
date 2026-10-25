@@ -1,0 +1,272 @@
+---
+/**
+ * League History franchises tab — every franchise the league has had, each a
+ * team-color card with its banners counted, opening that franchise's history
+ * page. Built only from the dataset (franchise.mjs), like the rest of the
+ * history product. Former franchises (no longer in the league) fold away.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { franchiseHistory, franchiseList } from '../../../utils/league-history/franchise.mjs';
+
+interface Card {
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+  active: boolean;
+  firstYear: number;
+  lastYear: number;
+  titles: number[];
+  finals: number[];
+  divisionTitles: number[];
+  regular: { record: string; pct: number };
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: unknown;
+}
+
+const { leagueSlug, data } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const navSlug = league.navSlug as LeagueSlug;
+
+const ix = recordBook(data).ix;
+const cards = (franchiseList(data) as Array<{ franchiseId: string }>).map(
+  // Each card counts its current owner's run, like the page it opens.
+  (f) => franchiseHistory(ix, f.franchiseId, { ownerOnly: true }) as Card,
+);
+// Banners first, then title games, then winning percentage.
+cards.sort(
+  (a, b) =>
+    b.titles.length - a.titles.length ||
+    b.finals.length - a.finals.length ||
+    b.regular.pct - a.regular.pct,
+);
+const active = cards.filter((c) => c.active);
+const former = cards.filter((c) => !c.active);
+const viewerFranchise = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+
+const cardStyle = (f: string) => {
+  const pair = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
+  return `--hc-a: ${pair.primary}; --hc-b: ${pair.secondary}`;
+};
+const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+---
+
+<TheLeagueLayout title={`Franchises · History · ${league.name}`}>
+  <div class="hc">
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'History', href: r('/history') },
+        { label: 'Franchises' },
+      ]}
+    />
+
+    <header class="hc-head">
+      <p class="hc-kicker">League history</p>
+      <h1 class="hc-title">Franchises</h1>
+    </header>
+
+    <HistoryTabs leagueSlug={league.slug} current="franchises" />
+
+    <ol class="hc-grid">
+      {active.map((c) => (
+        <li>
+          <a
+            class:list={['hc-team', { 'hc-team--mine': c.franchiseId === viewerFranchise }]}
+            href={r(`/franchises/${c.franchiseId}`)}
+            style={cardStyle(c.franchiseId)}
+          >
+            {c.icon ? (
+              <img class="hc-team__logo" src={c.icon} alt="" width="48" height="48" loading="lazy" />
+            ) : (
+              <span class="hc-team__logo hc-team__logo--blank" aria-hidden="true">{initials(c.name)}</span>
+            )}
+            <span class="hc-team__body">
+              <span class="hc-team__name">{c.name}</span>
+              <span class="hc-team__line">
+                {c.regular.record} · {pct(c.regular.pct)} · since {c.firstYear}
+              </span>
+              <span class="hc-team__banners">
+                {c.titles.length > 0 && (
+                  <span class="hc-team__cups" aria-label={`${c.titles.length} championships`}>
+                    {c.titles.map(() => <span class="hc-cup" aria-hidden="true"></span>)}
+                  </span>
+                )}
+                {c.titles.length === 0 && c.finals.length > 0 && <span>{c.finals.length}× finalist</span>}
+                {c.divisionTitles.length > 0 && <span>{c.divisionTitles.length}× division</span>}
+              </span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+
+    {former.length > 0 && (
+      <details class="hc-former">
+        <summary>Former franchises ({former.length})</summary>
+        <ol class="hc-grid">
+          {former.map((c) => (
+            <li>
+              <a class="hc-team" href={r(`/franchises/${c.franchiseId}`)} style={cardStyle(c.franchiseId)}>
+                {c.icon ? (
+                  <img class="hc-team__logo" src={c.icon} alt="" width="48" height="48" loading="lazy" />
+                ) : (
+                  <span class="hc-team__logo hc-team__logo--blank" aria-hidden="true">{initials(c.name)}</span>
+                )}
+                <span class="hc-team__body">
+                  <span class="hc-team__name">{c.name}</span>
+                  <span class="hc-team__line">
+                    {c.regular.record} · {c.firstYear}–{c.lastYear}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </details>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .hc {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+  .hc-head {
+    margin: 0.5rem 0 1rem;
+  }
+  .hc-kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hc-title {
+    margin: 0.125rem 0 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .hc-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hc-team,
+  .hc-team:hover {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem 0.875rem;
+    color: var(--color-white);
+    text-decoration: none;
+    background: linear-gradient(120deg, var(--hc-a) 0%, var(--hc-a) 76%, var(--hc-b) 76.2%, var(--hc-b) 100%);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .hc-team:hover {
+    filter: brightness(1.12);
+  }
+  .hc-team--mine {
+    outline: 2px solid var(--history-gold);
+    outline-offset: 2px;
+  }
+  .hc-team__logo {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  .hc-team__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-white) 18%, transparent);
+    font-weight: var(--font-weight-bold);
+  }
+  .hc-team__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  .hc-team__name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .hc-team__line,
+  .hc-team__banners {
+    font-size: var(--font-size-xs);
+    opacity: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .hc-team__banners {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .hc-team__cups {
+    display: inline-flex;
+    gap: 0.1875rem;
+  }
+  /* A small cup: a gold bowl on a stem. */
+  .hc-cup {
+    width: 8px;
+    height: 12px;
+    background: var(--history-gold);
+    clip-path: polygon(0 0, 100% 0, 85% 45%, 60% 55%, 60% 80%, 85% 100%, 15% 100%, 40% 80%, 40% 55%, 15% 45%);
+  }
+  .hc-former {
+    margin-top: 1rem;
+  }
+  .hc-former summary {
+    margin-bottom: 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+
+  @media (min-width: 640px) {
+    .hc-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .hc-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -50,6 +50,11 @@
  * seasonal set beside them from the set's own files (owner, Oct 2026). Only
  * its page content is exempt; the header and nav around it still swap.
  *
+ * So is an earned mark (`<img data-earned-mark>`): a League History banner
+ * shows the logo the club won it under, and a season's theme must never
+ * repaint a banner already in the rafters (Brandon, Oct 2026: "once you've
+ * earned it, it's in the rafters").
+ *
  * A set's `_trim` lists franchises with a knitted trim strip
  * (<marks>/trim/<id>-top.png and -bottom.png, content hashes as values). The
  * rule only names the strips as custom properties on that club's roster
@@ -163,7 +168,7 @@ function seasonalMenuIcons(navSlug: string, seasonId: string): Array<[string, st
 const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 /** Appended to every swapped <img>: the Brand Book's own content keeps the standard marks. */
-const NOT_BRAND_BOOK = ':not([data-brand-book] img)';
+const NOT_BRAND_BOOK = ':not([data-brand-book] img):not([data-earned-mark])';
 
 export function buildSeasonalMarkCss(
   navSlug: string,

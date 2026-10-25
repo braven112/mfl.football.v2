@@ -1,0 +1,861 @@
+---
+/**
+ * TheLeague's own sections on its franchise page, which is the shared League
+ * History franchise page (shared/league-history/HistoryFranchisePage) since
+ * Brandon had it replace the old one (2026-10-25: "carry them all over").
+ * `part` picks the slot: `hero` (award chips, roster and Brand Book links,
+ * under the name) or `sections` (awards honor roll, trade ledger, draft and
+ * auction history, badges, era history, previous owners). Moved from the old
+ * src/pages/theleague/franchises/[id].astro with its data logic intact and
+ * restyled in the Trophy Room look; titles, records, highs and head to head
+ * now come from the history page itself.
+ *
+ * Everything here reads franchise-history.json, which is owner-scoped: these
+ * sections are the CURRENT owner's, matching the page's default view.
+ */
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
+import leagueConfig from '../../../data/theleague.config.json';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
+import { franchiseSlug } from '../../../utils/franchise-marks';
+import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
+import { canonicalRivalryPair } from '../../../utils/rivalries';
+import EraSeasonTable from '../../shared/franchises/EraSeasonTable.astro';
+import PreviousOwners from '../../shared/franchises/PreviousOwners.astro';
+import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+
+interface Props {
+  part: 'hero' | 'sections';
+  franchiseId: string;
+}
+
+const { part, franchiseId: id } = Astro.props as Props;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const fr: any = (franchiseHistory.franchises as any)[id] ?? null;
+const team = (leagueConfig.teams as any[]).find((t) => t.franchiseId === id);
+
+const yearByYear: any[] = fr?.yearByYear ?? [];
+// Many older config history entries point at retired theleague.us/
+// mfladdons.com icon URLs that 404. Resolve every year-by-year row to a
+// local /assets icon: prefer one whose franchise NAME matches the row
+// (so a "Midwestside Connection" row rendered for 0011's 2011-2015
+// stint on franchise 0010 still gets the Midwestside icon), otherwise
+// fall back to the row's source franchise per-id icon.
+const normalize = (s: string): string =>
+  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
+const localIcon = (path: string | undefined): boolean =>
+  !!path && path.startsWith('/assets/');
+
+const nameToIconLookup: Record<string, string> = {};
+for (const t of leagueConfig.teams as any[]) {
+  if (localIcon(t.icon)) nameToIconLookup[normalize(t.name)] = t.icon;
+}
+
+const resolveRowIcon = (s: any): string => {
+  if (localIcon(s.icon)) return s.icon!;
+  const byName = nameToIconLookup[normalize(s.name || '')];
+  if (byName) return byName;
+  const sourceId = s.sourceFranchiseId ?? id;
+  return `/assets/theleague/icons/${sourceId}.png`;
+};
+
+// Build eras keyed by NAME CHANGES only — config history entries that share
+// the current name (or each other) are banner refreshes, not real eras, so
+// they get merged into one continuous span. The builder lives in
+// src/utils/franchise-eras.ts so the franchises index can compute the same
+// era anchors this page renders (its Former Identities strip links into
+// `#era-{yearStart}` and must know which anchors exist).
+const yearsForFranchise = yearByYear.map((y: any) => y.year);
+const minYear = Math.min(...yearsForFranchise);
+const maxYear = Math.max(...yearsForFranchise);
+const eras: Era[] = buildFranchiseEras(team, leagueConfig.teams as any[], yearsForFranchise);
+
+// Career derived stats
+const totalGames = fr.careerWins + fr.careerLosses + fr.careerTies;
+const winPct = totalGames
+  ? ((fr.careerWins + fr.careerTies * 0.5) / totalGames).toFixed(3).replace(/^0/, '')
+  : '.000';
+const recordString = fr.careerTies > 0
+  ? `${fr.careerWins}-${fr.careerLosses}-${fr.careerTies}`
+  : `${fr.careerWins}-${fr.careerLosses}`;
+
+const ppg = totalGames ? (fr.careerPointsFor / totalGames).toFixed(1) : '0.0';
+
+// Per-era career stats
+const eraStats = eras.map((era) => {
+  const seasons = yearByYear.filter((y: any) => y.year >= era.yearStart && y.year <= era.yearEnd);
+  const w = seasons.reduce((s: number, y: any) => s + y.wins, 0);
+  const l = seasons.reduce((s: number, y: any) => s + y.losses, 0);
+  const t = seasons.reduce((s: number, y: any) => s + y.ties, 0);
+  const pf = seasons.reduce((s: number, y: any) => s + y.pointsFor, 0);
+  const champs = fr.championships.filter((y: number) => y >= era.yearStart && y <= era.yearEnd);
+  const divTitles = fr.divisionTitles.filter((d: any) => d.year >= era.yearStart && d.year <= era.yearEnd);
+  const mvps = fr.mvpAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  const jerrys = fr.jerryJonesAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  const osweilers = fr.brockOsweilerAwards.filter((a: any) => a.year >= era.yearStart && a.year <= era.yearEnd);
+  return { era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers };
+});
+
+
+const formatCurrency = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
+
+
+const opponentMeta: Record<string, any> = Object.fromEntries(
+  (leagueConfig.teams as any[]).map((t) => [
+    t.franchiseId,
+    {
+      name: t.name,
+      nameMedium: t.nameMedium ?? t.name,
+      nameShort: t.nameShort ?? t.nameMedium ?? t.name,
+      icon: t.icon,
+      color: t.color,
+    },
+  ])
+);
+
+
+// Trade ledger — every trade involving this franchise, grouped by year for
+// rendering. Trades are stored in `fr.trades` oldest-first (see
+// scripts/compute-franchise-history.mjs); display newest-first.
+const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
+  string,
+  { name: string; position?: string; team?: string }
+>;
+const franchiseShortName = (fid: string): string => {
+  const meta = opponentMeta[fid];
+  return meta?.nameShort ?? meta?.nameMedium ?? meta?.name ?? fid;
+};
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear((leagueConfig.teams as any[]).find((x) => x.franchiseId === fid), year)?.name ?? franchiseShortName(fid)
+  );
+
+type FranchiseTrade = {
+  year: number;
+  timestamp: number;
+  partnerId: string;
+  gaveUp: string[];
+  received: string[];
+  comments: string;
+  bothAttributed: boolean;
+  partnerSourceId?: string | null;
+};
+const allTrades: FranchiseTrade[] = ((fr.trades as FranchiseTrade[]) || []).filter(
+  (t) => t.partnerId !== id
+);
+const tradesByYear = new Map<number, FranchiseTrade[]>();
+for (const t of allTrades) {
+  if (!tradesByYear.has(t.year)) tradesByYear.set(t.year, []);
+  tradesByYear.get(t.year)!.push(t);
+}
+const tradeYearGroups = Array.from(tradesByYear.entries())
+  .map(([year, trades]) => ({
+    year,
+    trades: trades.slice().sort((a, b) => b.timestamp - a.timestamp),
+  }))
+  .sort((a, b) => b.year - a.year);
+
+const tradeDateLabel = (t: FranchiseTrade): string => {
+  if (!t.timestamp) return String(t.year);
+  return new Date(t.timestamp * 1000).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+// Draft + auction history (Phase 4). Both are pre-sorted oldest-first by the
+// aggregator; we display newest year first with the most recent year auto-
+// expanded, matching the trade-ledger layout.
+type FranchiseDraftPick = {
+  year: number;
+  round: number;
+  pick: number;
+  playerId: string;
+  viaTrade: boolean;
+  comments: string;
+  timestamp: number;
+};
+type FranchiseAuctionWin = {
+  year: number;
+  playerId: string;
+  winningBid: number;
+  timestamp: number;
+};
+
+const groupByYearDesc = <T extends { year: number }>(items: T[]): { year: number; items: T[] }[] => {
+  const m = new Map<number, T[]>();
+  for (const it of items) {
+    if (!m.has(it.year)) m.set(it.year, []);
+    m.get(it.year)!.push(it);
+  }
+  return Array.from(m.entries())
+    .map(([year, items]) => ({ year, items }))
+    .sort((a, b) => b.year - a.year);
+};
+
+const draftPicks: FranchiseDraftPick[] = (fr.draftPicks as FranchiseDraftPick[]) || [];
+const draftYearGroups = groupByYearDesc(draftPicks).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => a.round - b.round || a.pick - b.pick),
+}));
+
+const auctionWins: FranchiseAuctionWin[] = (fr.auctionWins as FranchiseAuctionWin[]) || [];
+const auctionYearGroups = groupByYearDesc(auctionWins).map((g) => ({
+  year: g.year,
+  items: g.items.slice().sort((a, b) => b.winningBid - a.winningBid),
+  totalSpend: g.items.reduce((s, a) => s + a.winningBid, 0),
+}));
+
+const formatPlayerLabel = (playerId: string): string => {
+  const meta = playerNames[playerId];
+  if (meta) return `${meta.name}${meta.position ? ` (${meta.position})` : ''}`;
+  return `Player #${playerId}`;
+};
+
+const formatBid = (n: number): string => {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
+};
+---
+
+{fr && part === 'hero' && (
+  <>
+    <ul class="tf-chips">
+          {fr.mvpAwards.length > 0 && (
+            <li class="tf-chip tf-chip--mvp">
+              <span aria-hidden="true">⭐</span>
+              {fr.mvpAwards.length}x MVP
+            </li>
+          )}
+          {fr.jerryJonesAwards.length > 0 && (
+            <li class="tf-chip tf-chip--jerry">
+              <span aria-hidden="true">💸</span>
+              {fr.jerryJonesAwards.length}x Jerry Jones
+            </li>
+          )}
+          {fr.brockOsweilerAwards.length > 0 && (
+            <li class="tf-chip tf-chip--osweiler">
+              <span aria-hidden="true">📉</span>
+              {fr.brockOsweilerAwards.length}x Brock Osweiler
+            </li>
+          )}
+    </ul>
+        {team && (
+          <p class="hero-actions">
+            <a
+              class="cta cta--primary btn-roster"
+              href={resolveLeaguePath(`/theleague/rosters?franchise=${id}`, hideLeaguePrefix)}
+            >
+              View Current Roster →
+            </a>
+            {/*
+              Gated on `team` with the roster link, and for the same reason:
+              this route also serves FORMER franchises out of
+              `franchise-history.json`, which have no config entry and so no
+              brand page. The Brand Book covers the clubs that field a team
+              today.
+            */}
+            <a
+              class="cta cta--ghost btn-brand"
+              href={resolveLeaguePath(`/theleague/brand/${franchiseSlug(team)}`, hideLeaguePrefix)}
+            >
+              Brand &amp; logos →
+            </a>
+          </p>
+        )}
+  </>
+)}
+
+{fr && part === 'sections' && (
+  <div class="tf">
+    <section class="awards">
+      <p class="tf-kicker">Hardware</p>
+      <h2>Awards Honor Roll</h2>
+      <div class="awards-grid">
+        {fr.championships.length > 0 && (
+          <div class="tf-award award--championship">
+            <h3>🏆 League Titles ({fr.championships.length})</h3>
+            <ul>{fr.championships.map((y: number) => <li>{y}</li>)}</ul>
+          </div>
+        )}
+        {fr.runnerUps?.length > 0 && (
+          <div class="tf-award award--runnerup">
+            <h3>🥈 Runners-up ({fr.runnerUps.length})</h3>
+            <ul>{fr.runnerUps.map((y: number) => <li>{y}</li>)}</ul>
+          </div>
+        )}
+        {fr.divisionTitles.length > 0 && (
+          <div class="tf-award award--division">
+            <h3>🛡 Division Titles ({fr.divisionTitles.length})</h3>
+            <ul>{fr.divisionTitles.map((d: any) => <li>{d.year} · {d.divisionName}</li>)}</ul>
+          </div>
+        )}
+        {fr.mvpAwards.length > 0 && (
+          <div class="tf-award award--mvp">
+            <h3>⭐ MVP Awards ({fr.mvpAwards.length})</h3>
+            <ul>
+              {fr.mvpAwards.map((a: any) => (
+                <li>{a.year} · {a.playerName} ({a.position}) · {a.points.toFixed(1)} pts at {formatCurrency(a.salary)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.jerryJonesAwards.length > 0 && (
+          <div class="tf-award award--jerry">
+            <h3>💸 Jerry Jones Awards ({fr.jerryJonesAwards.length})</h3>
+            <p class="award-note dim small">Worst team starting-lineup cost-per-point that season.</p>
+            <ul>
+              {fr.jerryJonesAwards.map((a: any) => (
+                <li>{a.year} · {formatCurrency(a.totalSalary)} for {a.totalPoints.toFixed(0)} pts</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.brockOsweilerAwards.length > 0 && (
+          <div class="tf-award award--osweiler">
+            <h3>📉 Brock Osweiler Awards ({fr.brockOsweilerAwards.length})</h3>
+            <p class="award-note dim small">Worst single player $/point at $1.5M+ salary that season.</p>
+            <ul>
+              {fr.brockOsweilerAwards.map((a: any) => (
+                <li>{a.year} · {a.playerName} ({a.position}) · {a.points.toFixed(1)} pts at {formatCurrency(a.salary)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fr.championships.length === 0 && fr.divisionTitles.length === 0
+          && fr.mvpAwards.length === 0 && fr.jerryJonesAwards.length === 0
+          && fr.brockOsweilerAwards.length === 0 && (
+          <div class="tf-award empty">
+            <p class="dim">No award honors yet.</p>
+          </div>
+        )}
+      </div>
+    </section>
+
+    {fr.badges && fr.badges.length > 0 && (
+      <section class="badges-section" id="badges">
+        <p class="tf-kicker">Milestones</p>
+        <h2>Badges</h2>
+        <p class="dim small">
+          Career milestones, single-season feats, and league records held by this franchise.
+        </p>
+        {['career', 'season', 'game', 'trade'].map((tier) => {
+          const tierBadges = fr.badges.filter((b: any) => b.tier === tier);
+          if (tierBadges.length === 0) return null;
+          const tierLabel = tier === 'career'
+            ? 'Career'
+            : tier === 'season'
+            ? 'Single-Season'
+            : tier === 'game'
+            ? 'Single-Game'
+            : 'Trade';
+          return (
+            <div class="badge-tier">
+              <h3 class="badge-tier-label">{tierLabel}</h3>
+              <ul class="badge-grid">
+                {tierBadges.map((b: any) => (
+                  <li class={`ui-card badge-card badge-card--${b.tier}`} title={b.description}>
+                    <span class="badge-icon" aria-hidden="true">{b.icon}</span>
+                    <div class="badge-text">
+                      <div class="badge-name">{b.name}</div>
+                      <div class="badge-awards">
+                        {b.awards.map((a: any, i: number) => {
+                          const parts = [];
+                          if (a.year) parts.push(a.year);
+                          if (a.week) parts.push(`Wk ${a.week}`);
+                          if (a.value != null) parts.push(`${a.value}${a.suffix ? ' ' + a.suffix : ''}`);
+                          if (a.label && parts.length === 0) parts.push(a.label);
+                          else if (a.label) parts.push(`(${a.label})`);
+                          return (
+                            <span class="badge-award" key={i}>{parts.join(' · ') || '—'}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </section>
+    )}
+
+    <section class="eras">
+      <p class="tf-kicker">Every name</p>
+      <h2>Era History</h2>
+      {eraStats
+        .filter(({ seasons }) => seasons.length > 0)
+        .map(({ era, seasons, champs, divTitles, mvps, jerrys, osweilers }) => (
+        <EraSeasonTable
+          anchorId={`era-${era.yearStart}`}
+          name={era.name}
+          icon={era.icon ? resolveRowIcon(era) : null}
+          yearStart={era.yearStart}
+          yearEnd={era.yearEnd}
+          isCurrent={era.isCurrent}
+          priorFranchiseId={era.sourceFranchiseId ?? null}
+          seasons={seasons.map((s: any) => ({ ...s, icon: resolveRowIcon(s) }))}
+          awards={[
+            champs.length > 0 && { label: `🏆 ${champs.length} title${champs.length === 1 ? '' : 's'}` },
+            divTitles.length > 0 && { label: `🛡 ${divTitles.length} division` },
+            mvps.length > 0 && { label: `⭐ ${mvps.length} MVP` },
+            jerrys.length > 0 && { label: `💸 ${jerrys.length} Jerry Jones` },
+            osweilers.length > 0 && { label: `📉 ${osweilers.length} Osweiler` },
+          ].filter(Boolean)}
+        />
+      ))}
+    </section>
+
+    {/* The eras above are this owner's only. Everything the slot played under
+        someone else is on their page — this is the way there. */}
+    <PreviousOwners
+      leagueSlug="theleague"
+      franchiseId={id as string}
+      data={ownerTenures as unknown as OwnerTenuresFile}
+    />
+
+    {allTrades.length > 0 && (
+      <section class="trades-section">
+        <p class="tf-kicker">Deals</p>
+        <h2>Trade Ledger ({allTrades.length})</h2>
+        <p class="dim small">
+          Every trade involving the current owner — grouped by year, newest first.
+        </p>
+        {tradeYearGroups.map((group) => (
+          <details class="trade-year" open={group === tradeYearGroups[0]}>
+            <summary>
+              <span class="trade-year-label">{group.year}</span>
+              <span class="dim small">{group.trades.length} trade{group.trades.length === 1 ? '' : 's'}</span>
+            </summary>
+            <ul class="trade-list">
+              {group.trades.map((t) => {
+                const partnerMeta = opponentMeta[t.partnerId];
+                // The partner as it was named THAT season, not today.
+                const partnerEra = franchiseEraInYear(
+                  (leagueConfig.teams as any[]).find((x) => x.franchiseId === (t.partnerSourceId ?? t.partnerId)),
+                  t.year
+                );
+                const partnerName =
+                  partnerEra?.name ?? partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
+                const partnerIcon = partnerEra?.icon ?? partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
+                const rivalryHref = resolveLeaguePath(
+                  `/theleague/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`,
+                  hideLeaguePrefix
+                );
+                return (
+                  <li class="trade">
+                    <div class="trade-head">
+                      <a class="trade-partner" href={rivalryHref} title={`Rivalry vs ${partnerName}`}>
+                        <img src={partnerIcon} alt="" class="partner-icon" loading="lazy" />
+                        <span class="partner-name">{partnerName}</span>
+                      </a>
+                      <span class="dim small trade-date">{tradeDateLabel(t)}</span>
+                    </div>
+                    <div class="trade-cols">
+                      <div class="trade-col">
+                        <div class="t-name">Sent</div>
+                        {t.gaveUp.length > 0 ? (
+                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
+                        ) : (
+                          <p class="dim small">—</p>
+                        )}
+                      </div>
+                      <div class="trade-col">
+                        <div class="t-name">Received</div>
+                        {t.received.length > 0 ? (
+                          <ul>{t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
+                        ) : (
+                          <p class="dim small">—</p>
+                        )}
+                      </div>
+                    </div>
+                    {t.comments && <p class="trade-comments dim small">"{t.comments}"</p>}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {draftPicks.length > 0 && (
+      <section class="draft-section">
+        <p class="tf-kicker">Rookie draft</p>
+        <h2>Draft History ({draftPicks.length})</h2>
+        <p class="dim small">
+          Every rookie draft pick made by the current owner — grouped by year, in draft order.
+        </p>
+        {draftYearGroups.map((group) => (
+          <details class="year-group" open={group === draftYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} pick{group.items.length === 1 ? '' : 's'}</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((p) => (
+                <li class="pick-row">
+                  <span class="pick-slot">{p.round}.{String(p.pick).padStart(2, '0')}</span>
+                  <span class="pick-player">{formatPlayerLabel(p.playerId)}</span>
+                  {p.viaTrade && <span class="pick-tag" title="Pick acquired via trade">via trade</span>}
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {auctionWins.length > 0 && (
+      <section class="auction-section">
+        <p class="tf-kicker">Free agent auction</p>
+        <h2>Auction History ({auctionWins.length})</h2>
+        <p class="dim small">
+          Every auction win by the current owner — grouped by year, biggest bid first.
+        </p>
+        {auctionYearGroups.map((group) => (
+          <details class="year-group" open={group === auctionYearGroups[0]}>
+            <summary>
+              <span class="year-label">{group.year}</span>
+              <span class="dim small">{group.items.length} win{group.items.length === 1 ? '' : 's'} · {formatBid(group.totalSpend)} spent</span>
+            </summary>
+            <ol class="pick-list">
+              {group.items.map((a) => (
+                <li class="pick-row">
+                  <span class="pick-bid">{formatBid(a.winningBid)}</span>
+                  <span class="pick-player">{formatPlayerLabel(a.playerId)}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </section>
+    )}
+
+  </div>
+)}
+
+<style>
+  /* ── Hero: chips and links on the team-color band ─────────────────────── */
+  .tf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0.625rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tf-chips:empty {
+    display: none;
+  }
+  .tf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.625rem;
+    color: var(--color-white);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    background: color-mix(in srgb, var(--color-black) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-white) 45%, transparent);
+    border-radius: 999px;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+  }
+
+  /* ── Sections ─────────────────────────────────────────────────────────── */
+  .tf section {
+    margin-top: 1.5rem;
+  }
+  .tf h2 {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .tf-kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .dim {
+    color: var(--content-text-muted);
+  }
+  .small {
+    font-size: var(--font-size-xs);
+  }
+  .tf section > p:not(.tf-kicker) {
+    margin: -0.375rem 0 0.75rem;
+  }
+
+  /* Awards: plaques with a medal stripe. */
+  .awards-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .tf-award {
+    padding: 0.75rem 0.875rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-left: 3px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .tf-award h3 {
+    margin: 0 0 0.375rem;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+  }
+  .tf-award ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .tf-award li {
+    padding: 0.125rem 0;
+  }
+  .award--runnerup {
+    border-left-color: var(--color-gray-300);
+  }
+  .award--division,
+  .award--mvp {
+    border-left-color: var(--page-text);
+  }
+  .award--jerry,
+  .award--osweiler {
+    border-left-color: var(--content-text-muted);
+  }
+  .tf-award.empty {
+    border-left-color: var(--content-border);
+  }
+  .award-note {
+    margin: 0 0 0.375rem;
+  }
+
+  /* Badges */
+  .badge-tier {
+    margin-top: 0.75rem;
+  }
+  .badge-tier-label {
+    margin: 0 0 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .badge-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .badge-card {
+    display: flex;
+    gap: 0.625rem;
+    align-items: flex-start;
+    padding: 0.625rem 0.75rem;
+    border-left: 3px solid var(--history-gold);
+  }
+  .badge-card--season,
+  .badge-card--game,
+  .badge-card--trade {
+    border-left-color: var(--content-text-muted);
+  }
+  .badge-icon {
+    flex: none;
+    font-size: var(--font-size-xl);
+    line-height: 1;
+  }
+  .badge-text {
+    min-width: 0;
+  }
+  .badge-name {
+    font-weight: var(--font-weight-semibold);
+  }
+  .badge-awards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.625rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  /* Year groups: trades, draft picks and auction wins. */
+  .trade-year,
+  .year-group {
+    margin-bottom: 0.5rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    overflow: hidden;
+  }
+  .trade-year > summary,
+  .year-group > summary {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.625rem 0.875rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .trade-year > summary::-webkit-details-marker,
+  .year-group > summary::-webkit-details-marker {
+    display: none;
+  }
+  .trade-year > summary::before,
+  .year-group > summary::before {
+    content: '▸';
+    color: var(--history-gold);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  .trade-year[open] > summary::before,
+  .year-group[open] > summary::before {
+    transform: rotate(90deg);
+  }
+  .trade-year-label,
+  .year-label {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .trade-list,
+  .pick-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--content-border);
+  }
+  .trade {
+    padding: 0.75rem 0.875rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .trade:last-child {
+    border-bottom: 0;
+  }
+  .trade-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .trade-partner,
+  .trade-partner:hover {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+    color: var(--page-text);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+  }
+  .trade-partner:hover .partner-name {
+    text-decoration: underline;
+  }
+  .partner-icon {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+  .partner-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .trade-date {
+    flex: none;
+  }
+  .trade-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .t-name {
+    margin-bottom: 0.125rem;
+    color: var(--history-gold);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .trade-col ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  .trade-col li {
+    padding: 0.125rem 0;
+  }
+  .trade-col p {
+    margin: 0;
+  }
+  .trade-comments {
+    margin: 0.5rem 0 0;
+    font-style: italic;
+  }
+  .pick-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.5rem 0.875rem;
+    font-size: var(--font-size-sm);
+    border-bottom: 1px solid var(--content-border);
+  }
+  .pick-row:last-child {
+    border-bottom: 0;
+  }
+  .pick-slot,
+  .pick-bid {
+    flex: none;
+    min-width: 3.25rem;
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-bid {
+    color: var(--history-gold);
+  }
+  .pick-player {
+    flex: 1;
+    min-width: 0;
+  }
+  .pick-tag {
+    flex: none;
+    padding: 0 0.375rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    border: 1px solid var(--content-border);
+    border-radius: 999px;
+  }
+
+  @media (min-width: 768px) {
+    .awards-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .badge-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

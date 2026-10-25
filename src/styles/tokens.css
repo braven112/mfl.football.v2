@@ -477,6 +477,11 @@
   /* Text placed ON trophy gold — the sweep ribbon. Near-black rather than the
      footer's white, which would be 1.9:1 on this gold; this is ~11:1. */
   --trophy-gold-ink: #14100a;
+  /* Trophy gold as INK and WASH on the page's own ground — the League History
+     pages (Record Book plaques, kickers, rank numerals). --trophy-gold is
+     tuned for the dark footer and is too pale for text on white. */
+  --history-gold: #8a6416;                       /* text on white      5.6:1 */
+  --history-gold-wash: #f7eedb;                  /* plaque ground */
 
   /* ========================================
      Component Tokens - Badges/Status

@@ -1,0 +1,14 @@
+---
+/**
+ * Old League History franchise URL (The League). The franchise page moved to
+ * /theleague/franchises/<id> when it replaced the league's franchise pages
+ * (Brandon, 2026-10-25); this keeps earlier links working, view and all.
+ */
+import { resolveLeaguePath } from '../../../../utils/nav-utils';
+
+export const prerender = false;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const id = encodeURIComponent(Astro.params.id ?? '');
+return Astro.redirect(resolveLeaguePath(`/theleague/franchises/${id}${Astro.url.search}`, hideLeaguePrefix), 301);
+---
