@@ -2,10 +2,10 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
+import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { rivalryPairs } from '../../../utils/league-history/rivalry.mjs';
 import {
-  currentOwnerMeetings,
-  tallyMeetings,
-  rivalryIntensity,
   canonicalRivalryPair,
   formatRivalryRecord,
   describeCoverageGap,
@@ -50,16 +50,22 @@ type PairRecord = {
   intensity: number;
 };
 
+// Records come from the League History dataset, the same ones each rivalry
+// page shows: both current owners' meetings (following an owner who moved
+// franchises), consolation games left out.
+const pairs = rivalryPairs(recordBook(historyData).ix) as Map<string, any>;
 function pairRecord(row: FranchiseRow, colId: string): PairRecord {
-  const meetings = currentOwnerMeetings(row.matchupHistory, colId);
-  const { wins, losses, ties, playoffGames } = tallyMeetings(meetings);
+  const [lo, hi] = [row.franchiseId, colId].sort();
+  const p = pairs.get(`${lo}-${hi}`);
+  if (!p) return { wins: 0, losses: 0, ties: 0, games: 0, playoffGames: 0, intensity: 0 };
+  const rowIsA = row.franchiseId === p.a;
   return {
-    wins,
-    losses,
-    ties,
-    games: meetings.length,
-    playoffGames,
-    intensity: rivalryIntensity(meetings.length, wins, losses, ties, playoffGames),
+    wins: rowIsA ? p.wa : p.wb,
+    losses: rowIsA ? p.wb : p.wa,
+    ties: p.t,
+    games: p.games,
+    playoffGames: p.playoffs,
+    intensity: p.heat,
   };
 }
 
