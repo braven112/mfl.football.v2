@@ -8,7 +8,8 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 interface Props {
   leagueSlug: string;
-  current: 'home' | 'record-book' | 'franchises';
+  /** The tab this page is, or null for a page outside the tabs (an owner page). */
+  current: 'home' | 'record-book' | 'franchises' | null;
 }
 
 const { leagueSlug, current } = Astro.props as Props;

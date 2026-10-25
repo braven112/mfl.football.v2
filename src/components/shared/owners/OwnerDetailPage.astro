@@ -16,6 +16,15 @@
  *
  * The season tables are <EraSeasonTable>, the same component the franchise
  * page renders, so the two can never drift.
+ *
+ * ── League History ────────────────────────────────────────────────────────
+ * The page wears the League History Trophy Room look (Brandon, 2026-10-25:
+ * owner pages are upgraded in place at this address): a hero in the colors of
+ * the team the owner runs now, or last ran. The history sections — banners,
+ * career plaques, the season chart, the teams they ran, highs, head to head
+ * against every owner — come from the League History dataset through
+ * HistoryOwnerSections and render only for viewers canViewLeagueHistory
+ * admits; for everyone else the page keeps its old Career block.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
@@ -25,14 +34,23 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { Owner, OwnerAward } from '../../../types/owner-tenures';
 import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
+import HistoryTabs from '../league-history/HistoryTabs.astro';
+import HistoryOwnerSections from '../league-history/HistoryOwnerSections.astro';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { canViewLeagueHistory } from '../../../utils/league-history/access';
+import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import type { LeagueSlug } from '../../../types/nav';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   owner: Owner;
   related: Record<string, Owner>;
+  /** The league's League History dataset (`league-history.json`), when it has one. */
+  historyData?: unknown;
 }
 
-const { leagueSlug, owner, related } = Astro.props as Props;
+const { leagueSlug, owner, related, historyData } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
@@ -147,6 +165,25 @@ const coOwnerLinks = (owner.coOwners ?? []).map((co, i, all) => ({
 }));
 
 const pageTitle = `${owner.title} — ${league.name} owner history`;
+
+const authUser = getAuthUser(Astro.request);
+const showHistory = Boolean(historyData) && canViewLeagueHistory(authUser);
+const viewerFranchise = franchiseIdForLeague(authUser, league.id);
+
+// The hero wears the team the owner runs now, or the last one they ran — in
+// that team's own era colors when the slot has since been rebranded or sold.
+const navSlug = league.navSlug as LeagueSlug;
+const lastTenure = owner.tenures.reduce((a, b) => (b.yearEnd > a.yearEnd ? b : a), owner.tenures[0]);
+const heroFranchise = owner.currentFranchiseId ?? lastTenure?.franchiseId ?? null;
+const heroColors =
+  heroFranchise && !owner.isCurrent ? getTeamEraColors(heroFranchise, navSlug, owner.yearEnd) : null;
+const heroPair = heroFranchise
+  ? heroColors
+    ? toBroadcastPair(heroColors.primary, heroColors.secondary)
+    : toBroadcastPair(getTeamColorPrimary(heroFranchise, navSlug), getTeamColorSecondary(heroFranchise, navSlug))
+  : null;
+const heroStyle = heroPair ? `--ho-a: ${heroPair.primary}; --ho-b: ${heroPair.secondary}` : undefined;
+const teamNames = [...new Set(owner.identities.map((i) => i.name))];
 ---
 
 <TheLeagueLayout title={pageTitle}>
@@ -155,8 +192,8 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
       items={[{ label: 'Owners', href: r('/owners') }, { label: owner.title }]}
     />
 
-    <header class="hero">
-      <img class="hero-icon" src={owner.icon} alt="" width="88" height="88" />
+    <header class:list={['hero', { 'hero--team': heroPair }]} style={heroStyle}>
+      <img class="hero-icon" src={owner.icon} alt="" width="88" height="88" data-earned-mark />
       <div class="hero-text">
         <p class="pill-row">
           <span class:list={['pill', owner.isCurrent ? 'pill--current' : 'pill--former']}>
@@ -168,6 +205,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
         <p class="hero-meta">
           {yearLabel} · {league.name} · {slotLabel}
         </p>
+        {teamNames.length > 0 && <p class="hero-teams">{teamNames.join(' · ')}</p>}
         {owner.isShared && coOwnerLinks.length > 0 && (
           <p class="co-owners">
             Co-owned with {coOwnerLinks.map((co) => (<span>{co.separator}<a href={co.href}>{co.label}</a></span>))}. The record below is the team's, and counts for both.
@@ -181,6 +219,12 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
         )}
       </div>
     </header>
+
+    {showHistory && <HistoryTabs leagueSlug={league.slug} current={null} />}
+
+    {showHistory && (
+      <HistoryOwnerSections leagueSlug={leagueSlug} data={historyData} ownerSlug={owner.slug} viewerFranchise={viewerFranchise} />
+    )}
 
     {owner.crossLeague.length > 0 && (
       <section class="cross-league">
@@ -198,9 +242,10 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
       </section>
     )}
 
+    {(!showHistory || trophies.length + careerAwardChips.length > 0) && (
     <section class="career">
-      <h2>Career</h2>
-      <dl class="career-stats">
+      {showHistory ? <h2>Awards</h2> : <h2>Career</h2>}
+      {!showHistory && <dl class="career-stats">
         <div>
           <dt>Record</dt>
           <dd>{formatOwnerRecord(owner)} <span class="dim">({ownerWinPct(owner)})</span></dd>
@@ -217,7 +262,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
           <dt>Playoffs</dt>
           <dd>{totals.playoffAppearances}</dd>
         </div>
-      </dl>
+      </dl>}
 
       {trophies.length > 0 && (
         <div class="trophy-chips">
@@ -235,6 +280,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
         </div>
       )}
     </section>
+    )}
 
     <section class="tenures">
       <h2>{owner.tenures.length === 1 ? 'Seasons' : 'Tenures'}</h2>
@@ -330,6 +376,63 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     flex: 0 0 auto;
   }
   .hero-text { min-width: 0; }
+  /* League History look: the Broadcast team-color split under white text,
+     the same hero the franchise page wears. */
+  .hero--team {
+    --content-text-muted: color-mix(in srgb, var(--color-white) 82%, transparent);
+    --content-border: color-mix(in srgb, var(--color-white) 30%, transparent);
+    --content-bg-muted: color-mix(in srgb, var(--color-white) 18%, transparent);
+    --link-color: var(--color-white);
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem 1rem;
+    color: var(--color-white);
+    background: linear-gradient(120deg, var(--ho-a) 0%, var(--ho-a) 68%, var(--ho-b) 68.2%, var(--ho-b) 100%);
+    border: 1px solid var(--content-border);
+    border-top: 3px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .hero--team .hero-icon {
+    width: 72px;
+    height: 72px;
+    background: transparent;
+  }
+  .hero--team h1 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    line-height: 0.95;
+    text-transform: uppercase;
+    overflow-wrap: break-word;
+    color: var(--color-white);
+  }
+  /* White on any team color, in either theme. */
+  .hero--team .pill--current {
+    background: var(--color-white);
+    color: var(--color-black);
+  }
+  .hero--team .co-owners a {
+    text-decoration: underline;
+  }
+  .hero-teams {
+    margin: 0.25rem 0 0;
+    font-size: var(--font-size-xs);
+    opacity: 0.85;
+  }
+  @media (min-width: 640px) {
+    .hero--team {
+      flex-direction: row;
+      gap: 1.25rem;
+    }
+  }
+  @media (min-width: 768px) {
+    .hero--team {
+      padding: 1.75rem 1.5rem;
+    }
+    .hero--team .hero-icon {
+      width: 96px;
+      height: 96px;
+    }
+  }
   .hero h1 {
     margin: 0 0 0.25rem;
     font-size: 1.625rem;
@@ -418,11 +521,14 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
 
   h2 {
     margin: 0 0 0.75rem;
-    font-size: 1.25rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
   }
 
   /* ── Career ────────────────────────────────────────────────────────── */
-  .career { margin-bottom: 2rem; }
+  .career { margin: 2rem 0; }
   .career-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

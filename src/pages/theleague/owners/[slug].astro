@@ -10,6 +10,7 @@ import OwnerDetailPage from '../../../components/shared/owners/OwnerDetailPage.a
 import { resolveOwnerDetail } from '../../../utils/owner-detail';
 import ownerData from '../../../../data/theleague/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import historyData from '../../../../data/theleague/derived/league-history.json';
 
 export const prerender = false;
 
@@ -17,4 +18,4 @@ const result = resolveOwnerDetail(Astro, 'theleague', ownerData as unknown as Ow
 if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
 ---
 
-<OwnerDetailPage leagueSlug="theleague" owner={result.owner} related={result.related} />
+<OwnerDetailPage leagueSlug="theleague" owner={result.owner} related={result.related} historyData={historyData} />
