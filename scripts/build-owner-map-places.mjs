@@ -11,7 +11,7 @@
  *
  * What goes in:
  *   - every US state, placed at its middle (for "pin the middle of New Mexico")
- *   - every US city of 2,000 people or more
+ *   - every US town of 1,000 people or more (the smallest the source has)
  *   - every city elsewhere of 100,000 or more
  *
  * Each row is [name, region, lat, lng, kind] where region is a state code in
@@ -31,7 +31,7 @@ const states = require('us-atlas/states-10m.json');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'src/data/owner-map-places.json');
 
-const US_MIN_POPULATION = 2000;
+const US_MIN_POPULATION = 1000;
 const WORLD_MIN_POPULATION = 100000;
 
 const STATE_CODES = {
