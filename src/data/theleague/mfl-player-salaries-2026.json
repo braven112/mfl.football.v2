@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-25T15:01:34.554Z"
+    "fetchedAt": "2026-10-25T20:46:33.274Z"
   },
   "players": [
     {
@@ -127,8 +127,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Quadriceps",
         "gsisId": null
       },
       "nflverse": {
@@ -1892,12 +1892,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Quadriceps",
         "gsisId": null
       },
@@ -1926,6 +1926,10 @@
         {
           "id": "16596",
           "name": "Allen, Braelon"
+        },
+        {
+          "id": "16752",
+          "name": "Davis, Isaiah"
         }
       ]
     },
@@ -2880,7 +2884,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -2917,10 +2921,6 @@
         {
           "id": "16596",
           "name": "Allen, Braelon"
-        },
-        {
-          "id": "15708",
-          "name": "Hall, Breece"
         }
       ]
     },
@@ -3525,12 +3525,12 @@
       "gamesPlayed": 2,
       "depthChartAhead": [
         {
-          "id": "11222",
-          "name": "Allen, Keenan"
-        },
-        {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
         },
         {
           "id": "17510",
@@ -4476,8 +4476,8 @@
           "QB"
         ],
         "experience": 8,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Thumb",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0034855"
       },
       "nflverse": {
@@ -4826,8 +4826,8 @@
           "TE"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -8754,12 +8754,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Knee",
         "gsisId": null
       },
@@ -8832,8 +8832,8 @@
           "RB"
         ],
         "experience": 9,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": "00-0033293"
       },
       "nflverse": {
@@ -8940,12 +8940,12 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 8,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Hip",
         "gsisId": "00-0034837"
       },
@@ -8985,6 +8985,10 @@
         {
           "id": "17073",
           "name": "Ayomanor, Elic"
+        },
+        {
+          "id": "17171",
+          "name": "Dike, Chimere"
         }
       ]
     },
@@ -10047,7 +10051,7 @@
           "QB"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Back",
         "gsisId": null
       },
@@ -10171,8 +10175,8 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Head",
         "gsisId": null
       },
       "nflverse": {
@@ -11626,13 +11630,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -11736,12 +11740,12 @@
       "gamesPlayed": 6,
       "depthChartAhead": [
         {
-          "id": "11222",
-          "name": "Allen, Keenan"
-        },
-        {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
         }
       ]
     },
@@ -11986,7 +11990,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -12019,12 +12023,7 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": [
-        {
-          "id": "11222",
-          "name": "Allen, Keenan"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "0503",
@@ -12110,8 +12109,8 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Leg",
         "gsisId": null
       },
       "nflverse": {
@@ -15807,8 +15806,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
       "nflverse": {
@@ -16090,13 +16089,13 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": null,
@@ -16759,8 +16758,8 @@
           "TE"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": {
@@ -17018,7 +17017,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -17091,8 +17090,8 @@
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -17159,13 +17158,13 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "TE"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -18293,8 +18292,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -20786,7 +20785,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -20831,10 +20830,6 @@
         {
           "id": "17073",
           "name": "Ayomanor, Elic"
-        },
-        {
-          "id": "13629",
-          "name": "Ridley, Calvin"
         }
       ]
     },
@@ -20876,8 +20871,8 @@
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Toe",
         "gsisId": null
       },
       "nflverse": {
@@ -20949,8 +20944,8 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -22384,7 +22379,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -22416,7 +22411,12 @@
         ]
       },
       "gamesPlayed": 5,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        }
+      ]
     },
     {
       "id": "17042",
@@ -23690,8 +23690,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Calf",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -24287,8 +24287,8 @@
           "RB"
         ],
         "experience": 9,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Calf",
         "gsisId": "00-0033280"
       },
       "nflverse": {
@@ -25600,13 +25600,13 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -26865,8 +26865,8 @@
           "QB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": null,
@@ -26915,13 +26915,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
