@@ -16,14 +16,22 @@ import aflHistory from '../data/afl-fantasy/derived/franchise-history.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 
 const href = (id: string) => `/franchises/${id}`;
+// Real hometowns live in Redis, never in the repo; every team gets a stand-in here.
+const placeAll = (data: { owners: { currentFranchiseId: string | null }[] }) =>
+  Object.fromEntries(
+    data.owners
+      .filter((o) => o.currentFranchiseId)
+      .map((o, i) => [o.currentFranchiseId as string, { name: `Town ${i}`, region: 'WA', lat: 40 + i / 10, lng: -100 - i / 10 }]),
+  );
 const theleague = buildOwnerMapData(
   theleagueOwners as unknown as OwnerTenuresFile,
   theleagueHistory as unknown as OwnerMapHistory,
-  { leagueSlug: 'theleague', franchiseHref: href, myFranchiseId: '0001' },
+  { leagueSlug: 'theleague', franchiseHref: href, myFranchiseId: '0001', hometowns: placeAll(theleagueOwners) },
 );
 const afl = buildOwnerMapData(aflOwners as unknown as OwnerTenuresFile, aflHistory as unknown as OwnerMapHistory, {
   leagueSlug: 'afl-fantasy',
   franchiseHref: href,
+  hometowns: placeAll(aflOwners),
   conferences: aflConfig.conferences.map((c, i) => ({ name: c.name, short: ['AL', 'NL'][i], divisions: c.divisions })),
 });
 
@@ -56,6 +64,22 @@ describe('owner map data', () => {
   it('only names the viewer when they own a team here', () => {
     expect(theleague.myFranchiseId).toBe('0001');
     expect(afl.myFranchiseId).toBeNull();
+  });
+});
+
+describe('teams without a hometown', () => {
+  const bare = buildOwnerMapData(
+    theleagueOwners as unknown as OwnerTenuresFile,
+    theleagueHistory as unknown as OwnerMapHistory,
+    { leagueSlug: 'theleague', franchiseHref: href, hometowns: {} },
+  );
+
+  it('are drawn nowhere and draw no lines', () => {
+    for (const mode of ['division', 'rivalries', 'champions', 'tenure', 'hometown'] as const) {
+      const view = computeView(bare, mode, 'all', null);
+      expect(view.visible, mode).toEqual([]);
+      expect(view.lines, mode).toEqual([]);
+    }
   });
 });
 

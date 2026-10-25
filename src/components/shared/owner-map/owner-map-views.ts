@@ -10,7 +10,7 @@
  * league accent. The same slot colors a division's ring, its pill and its
  * lines, so a color means one thing on the whole page.
  */
-import type { OwnerMapData, OwnerMapPin } from '../../../utils/owner-map';
+import { cityLabel, type OwnerMapData, type OwnerMapPin } from '../../../utils/owner-map';
 
 export type MapMode = 'division' | 'conference' | 'mine' | 'rivalries' | 'champions' | 'playoffs' | 'tenure' | 'hometown';
 
@@ -81,12 +81,6 @@ export function subOptions(data: OwnerMapData, mode: MapMode): SubOption[] {
         { id: 'original', label: `Since ${data.foundingYear}` },
         { id: 'later', label: 'Joined later' },
       ];
-    case 'hometown':
-      return [
-        { id: 'all', label: 'All' },
-        { id: 'entered', label: 'Picked' },
-        { id: 'missing', label: 'Not picked yet' },
-      ];
     default:
       return [];
   }
@@ -96,7 +90,8 @@ export const defaultSub = (data: OwnerMapData, mode: MapMode): string => subOpti
 
 export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focus: number | null): ViewResult {
   const { pins } = data;
-  const all = pins.map((_, i) => i);
+  // A team with no hometown yet has nowhere to be drawn.
+  const all = pins.map((_, i) => i).filter((i) => pins[i].city);
   const divisionSlot = (pin: OwnerMapPin) => {
     const i = pin.division ? data.divisions.indexOf(pin.division) : -1;
     return i >= 0 ? i + 1 : null;
@@ -107,7 +102,7 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
     data.divisions
       .map((d, i) => ({ label: d, slot: i + 1, count: indexes.filter((x) => pins[x].division === d).length, kind: 'dot' as const }))
       .filter((item) => item.count > 0);
-  const where = (pin: OwnerMapPin) => `${pin.ownerName} · ${pin.city.name}, ${pin.city.region}`;
+  const where = (pin: OwnerMapPin) => (pin.city ? `${pin.ownerName} · ${cityLabel(pin.city)}` : pin.ownerName);
   const base = { tag: new Map<number, string>(), lines: [] as MapLine[], fit: false, meta: (i: number) => where(pins[i]) };
 
   switch (mode) {
@@ -127,7 +122,7 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
         };
       }
       // Tapping a team draws its own lines to the rest of its division.
-      const focused = focus !== null ? pins[focus] : null;
+      const focused = focus !== null && pins[focus]?.city ? pins[focus] : null;
       const lines = focused
         ? inDivision(focused.division)
             .filter((i) => i !== focus)
@@ -180,6 +175,9 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
     case 'mine': {
       const me = pins.findIndex((p) => p.franchiseId === data.myFranchiseId);
       if (me < 0) return { ...base, visible: all, ring: byDivision(all), legend: [], caption: '' };
+      if (!pins[me].city) {
+        return { ...base, visible: inDivision(pins[me].division), ring: byDivision(all), legend: [], caption: 'Pick your hometown to put your team on the map.', fit: true };
+      }
       const division = pins[me].division;
       const visible = inDivision(division);
       return {
@@ -203,7 +201,7 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
           slot: null,
           weight: 1 + Math.round((r.games / most) * 2),
         }))
-        .filter((line) => line.a >= 0 && line.b >= 0)
+        .filter((line) => line.a >= 0 && line.b >= 0 && pins[line.a].city && pins[line.b].city)
         .filter((line) => focus === null || line.a === focus || line.b === focus);
       const rivalOf = (i: number) => {
         const id = pins[i].franchiseId;
@@ -279,19 +277,15 @@ export function computeView(data: OwnerMapData, mode: MapMode, sub: string, focu
     }
 
     case 'hometown': {
-      const picked = (i: number) => !pins[i].isSample;
-      const visible = all.filter((i) => (sub === 'entered' ? picked(i) : sub === 'missing' ? !picked(i) : true));
-      const count = all.filter(picked).length;
+      const missing = pins.filter((p) => !p.city);
       return {
         ...base,
-        visible,
-        ring: new Map(visible.map((i) => [i, picked(i) ? 3 : 6])),
-        legend: [
-          { label: 'Picked', slot: 3, count: visible.filter(picked).length, kind: 'dot' as const },
-          { label: 'Not picked yet (sample city)', slot: 6, count: visible.filter((i) => !picked(i)).length, kind: 'dot' as const },
-        ].filter((item) => item.count > 0),
-        caption: `${count} of ${plural(pins.length, 'owner')} have picked a hometown.`,
-        meta: (i) => `${where(pins[i])} · ${picked(i) ? 'Picked' : 'Sample city'}`,
+        visible: all,
+        ring: byDivision(all),
+        legend: [],
+        caption: missing.length
+          ? `${all.length} of ${plural(pins.length, 'team')} have a hometown. Still to pick: ${missing.map((p) => p.teamName).join(', ')}.`
+          : `Every team has a hometown.`,
       };
     }
   }

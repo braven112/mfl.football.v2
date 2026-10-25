@@ -8,7 +8,8 @@
  * also belong here — a static import specifier can't be a runtime variable.
  */
 import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
-import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
 import ownerData from '../../../data/theleague/derived/owner-tenures.json';
 import history from '../../../data/theleague/derived/franchise-history.json';
@@ -22,6 +23,7 @@ const user = getAuthUser(Astro.request);
 if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
   return Astro.redirect('/theleague');
 }
+const hometowns = await readHometowns(LEAGUE.slug);
 ---
 
 <OwnerMapPage
@@ -29,4 +31,6 @@ if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
   data={ownerData as unknown as OwnerTenuresFile}
   history={history as unknown as OwnerMapHistory}
   myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
+  hometowns={hometowns}
+  canEditAll={isCommissionerOrAdminForLeague(user, LEAGUE.id)}
 />

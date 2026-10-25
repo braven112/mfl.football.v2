@@ -187,7 +187,7 @@ function pinsGeoJson(pins: OwnerMapPin[], view: ViewResult): GeoJSON.FeatureColl
     features: view.visible.map((index) => ({
       type: 'Feature',
       properties: { index },
-      geometry: { type: 'Point', coordinates: [pins[index].city.lng, pins[index].city.lat] },
+      geometry: { type: 'Point', coordinates: [pins[index].city!.lng, pins[index].city!.lat] },
     })),
   };
 }
@@ -319,6 +319,9 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
   let mode: MapMode = 'division';
   let sub = defaultSub(data, mode);
   let focus: number | null = null;
+  // `?division=North` opens on that division (the franchise pages link here).
+  const wantedDivision = new URLSearchParams(window.location.search).get('division');
+  if (wantedDivision && data.divisions.includes(wantedDivision)) sub = wantedDivision;
   let view = computeView(data, mode, sub, focus);
 
   const markers = new Map<string, Marker>();
@@ -369,8 +372,8 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
         geometry: {
           type: 'LineString',
           coordinates: [
-            [pins[line.a].city.lng, pins[line.a].city.lat],
-            [pins[line.b].city.lng, pins[line.b].city.lat],
+            [pins[line.a].city!.lng, pins[line.a].city!.lat],
+            [pins[line.b].city!.lng, pins[line.b].city!.lat],
           ],
         },
       })),
@@ -436,7 +439,7 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
         const pin = pins[index];
         if (!pin) continue;
         el.className = pin.franchiseId === data.myFranchiseId ? 'om-marker om-marker--mine' : 'om-marker';
-        el.setAttribute('aria-label', `${pin.teamName}, ${pin.city.name}`);
+        el.setAttribute('aria-label', `${pin.teamName}, ${pin.city?.name ?? ''}`);
         el.appendChild(iconBadge(pin, view.ring.get(index)));
         const tag = view.tag.get(index);
         if (tag) el.appendChild(span('om-marker__tag', tag));
@@ -477,14 +480,17 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     });
   };
 
-  map.on('load', addPinLayer);
+  map.on('load', () => {
+    addPinLayer();
+    if (view.fit) fitToVisible();
+  });
   map.on('render', onRender);
 
   function fitToVisible() {
     if (view.visible.length < 2) return;
     let [w, s, e, n] = [180, 90, -180, -90];
     for (const i of view.visible) {
-      const { lng, lat } = pins[i].city;
+      const { lng, lat } = pins[i].city!;
       w = Math.min(w, lng);
       e = Math.max(e, lng);
       s = Math.min(s, lat);
@@ -586,6 +592,60 @@ export async function mountOwnerMap(root: HTMLElement): Promise<() => void> {
     modeButtons.forEach((button) => button.removeEventListener('click', onModeClick));
     panelClose?.removeEventListener('click', closePanel);
     clearMarkers();
+    map.remove();
+  };
+}
+
+/**
+ * The small map on a franchise page: the team's hometown and the country
+ * around it, nothing to tap. Same bundled data and token colors as the
+ * Owner Map, so it follows the theme the same way.
+ */
+export async function mountMiniMap(el: HTMLElement): Promise<() => void> {
+  const lat = Number(el.dataset.lat);
+  const lng = Number(el.dataset.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return () => {};
+  if (!document.createElement('canvas').getContext('webgl2')) {
+    throw new Error('This browser has WebGL 2 turned off or unsupported, which the map needs.');
+  }
+  const [{ default: maplibregl }, geo] = await Promise.all([import('maplibre-gl'), loadGeo()]);
+  const map: MlMap = new maplibregl.Map({
+    container: el,
+    style: buildStyle(el, geo),
+    center: [lng, lat],
+    // A whole state is pinned at its middle, so show the state, not the town.
+    zoom: el.dataset.kind === 'state' ? 3.6 : 4.2,
+    interactive: false,
+    renderWorldCopies: false,
+    attributionControl: false,
+  });
+  map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Natural Earth · US Census' }), 'bottom-right');
+
+  const marker = document.createElement('span');
+  marker.className = 'om-marker';
+  const badge = document.createElement('span');
+  badge.className = 'om-marker__icon';
+  const img = document.createElement('img');
+  img.src = safeUrl(el.dataset.icon ?? '');
+  img.alt = '';
+  badge.appendChild(img);
+  marker.appendChild(badge);
+  const pin = new maplibregl.Marker({ element: marker }).setLngLat([lng, lat]).addTo(map);
+
+  const themeKey = () =>
+    `${document.documentElement.classList.contains('dark')}|${document.documentElement.dataset.league ?? ''}`;
+  let lastTheme = themeKey();
+  const themeObserver = new MutationObserver(() => {
+    const next = themeKey();
+    if (next === lastTheme) return;
+    lastTheme = next;
+    map.setStyle(buildStyle(el, geo));
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-league'] });
+
+  return () => {
+    themeObserver.disconnect();
+    pin.remove();
     map.remove();
   };
 }

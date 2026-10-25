@@ -11,6 +11,7 @@
  */
 import FranchisePage from '../../../components/shared/franchises/FranchisePage.astro';
 import AflFranchiseTrophies from '../../../components/afl-fantasy/AflFranchiseTrophies.astro';
+import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHometown.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -130,4 +131,12 @@ nameEras.sort((a, b) => a.yearStart - b.yearStart);
   <AflFranchiseTrophies slot="hero-tags" part="pill" team={team} />
   <AflFranchiseTrophies slot="lockup-extra" part="summary" team={team} />
   <AflFranchiseTrophies slot="before-career" part="wall" team={team} />
+  <FranchiseHometown
+    slot="before-career"
+    leagueSlug="afl-fantasy"
+    franchiseId={team.franchiseId}
+    teamName={team.nameMedium ?? team.name}
+    icon={team.icon}
+    division={team.division ?? null}
+  />
 </FranchisePage>

@@ -8,7 +8,8 @@
  * also belong here — a static import specifier can't be a runtime variable.
  */
 import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
-import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
 import ownerData from '../../../data/afl-fantasy/derived/owner-tenures.json';
 import history from '../../../data/afl-fantasy/derived/franchise-history.json';
@@ -24,6 +25,7 @@ const user = getAuthUser(Astro.request);
 if (!user || !isAuthorizedForLeague(user, LEAGUE.id)) {
   return Astro.redirect('/afl-fantasy');
 }
+const hometowns = await readHometowns(LEAGUE.slug);
 
 // The AL and NL, each with its own divisions.
 const conferences: OwnerMapConference[] = aflConfig.conferences.map((c) => ({
@@ -39,4 +41,6 @@ const conferences: OwnerMapConference[] = aflConfig.conferences.map((c) => ({
   history={history as unknown as OwnerMapHistory}
   conferences={conferences}
   myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
+  hometowns={hometowns}
+  canEditAll={isCommissionerOrAdminForLeague(user, LEAGUE.id)}
 />
