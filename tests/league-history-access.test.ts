@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { getLeagueBySlug } from '../src/config/leagues';
 import { LEAGUE_HISTORY_PUBLIC, canFixLeagueHistory, canViewLeagueHistory } from '../src/utils/league-history/access';
 
 /**
@@ -41,6 +42,17 @@ describe('League History access', () => {
 		const owner = { id: 'u', name: 'n', franchiseId: '0005', leagueId: '00000', role: 'owner' } as const;
 		expect(canViewLeagueHistory(owner)).toBe(false);
 		expect(canFixLeagueHistory(owner)).toBe(false);
+	});
+
+	it("lets the site owner's AFL commissioner seat view, but not fix", () => {
+		const aflId = getLeagueBySlug('afl-fantasy')!.id;
+		const seat = { id: 'u', name: 'n', franchiseId: '0001', leagueId: aflId, role: 'commissioner' } as const;
+		expect(canViewLeagueHistory(seat)).toBe(true);
+		expect(canFixLeagueHistory(seat)).toBe(false);
+		// The franchise and the league both count. (0001 is on the nav config's
+		// admin list, so isCommissionerOrAdmin admits it even without the role.)
+		expect(canViewLeagueHistory({ ...seat, franchiseId: '0002' })).toBe(false);
+		expect(canViewLeagueHistory({ ...seat, leagueId: '00000' })).toBe(false);
 	});
 
 	it.each(GATED.view)('%s checks canViewLeagueHistory', (file) => {
