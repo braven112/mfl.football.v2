@@ -5,11 +5,14 @@
  * The holder on the left with their value; the next four on the right as bars
  * on one scale (the "gap" chart, so the card says whether #1 is out on their
  * own). Always dark, so it reads the same in every chat client. The team logo
- * is drawn only when it is one of OUR files under public/ (a league's own
- * asset), never fetched from elsewhere.
+ * is drawn only when it is one of OUR site's own paths (a league's asset under
+ * /assets), fetched from the site itself; anything else, or a failed fetch,
+ * draws the card without it.
+ *
+ * Never read public/ from disk here: a process.cwd() join into public/ makes
+ * Vercel's file tracer ship all ~86 MB of it inside the server function, which
+ * pushed it past the 250 MB limit and failed the deploy (2026-10-25).
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { CARD_HEIGHT, CARD_WIDTH, loadFonts } from './champion-card';
@@ -40,6 +43,8 @@ export interface RecordCardInput {
 	/** True when the record is the LOWEST value (fewest points, fastest to…). */
 	asc: boolean;
 	rows: RecordCardRow[];
+	/** The holder's logo as a data URI (see logoDataUri), or null. */
+	logo?: string | null;
 }
 
 const INK = '#0f1115';
@@ -49,23 +54,33 @@ const TRACK = 'rgba(255,255,255,0.12)';
 
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-const MIME: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
+const MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
 
-/** A logo under public/ as a data URI, or null (remote, missing or a format satori can't draw). */
-export function localLogo(icon: string | null): string | null {
-	if (!icon || !icon.startsWith('/') || icon.startsWith('//')) return null;
-	const mime = MIME[extname(icon).toLowerCase()];
-	if (!mime) return null;
-	const publicDir = join(process.cwd(), 'public');
-	const file = normalize(join(publicDir, icon));
-	if (!file.startsWith(publicDir) || !existsSync(file)) return null;
-	return `data:${mime};base64,${readFileSync(file).toString('base64')}`;
+/** True for one of our own asset paths in a format satori can draw. */
+export function isOwnLogoPath(icon: string | null): icon is string {
+	return !!icon && /^\/assets\/[A-Za-z0-9/_.-]+\.(png|jpe?g)$/i.test(icon) && !icon.includes('..');
+}
+
+/**
+ * The holder's logo as a data URI, fetched from `origin` (the site serving
+ * this request), or null when the path is not ours or the fetch fails.
+ */
+export async function logoDataUri(icon: string | null, origin: string): Promise<string | null> {
+	if (!isOwnLogoPath(icon)) return null;
+	try {
+		const res = await fetch(new URL(icon, origin), { signal: AbortSignal.timeout(3000) });
+		if (!res.ok) return null;
+		const ext = icon.split('.').pop()!.toLowerCase();
+		return `data:${MIME[ext]};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+	} catch {
+		return null;
+	}
 }
 
 export function buildRecordCardTree(input: RecordCardInput): Node {
 	const [lead, ...rest] = input.rows;
 	const chasers = rest.slice(0, 4);
-	const logo = localLogo(lead.icon);
+	const logo = input.logo ?? null;
 	const valueSize = lead.display.length > 9 ? 120 : 150;
 	const vals = input.rows.slice(0, 5).map((r) => r.value);
 	const best = input.asc ? Math.min(...vals) : Math.max(...vals);

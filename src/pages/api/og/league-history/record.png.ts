@@ -14,7 +14,7 @@ import { getLeagueBySlug } from '../../../../config/leagues';
 import { getAuthUser } from '../../../../utils/auth';
 import { canViewLeagueHistory } from '../../../../utils/league-history/access';
 import { CATEGORIES, SCOPES, historyEras, recordBook } from '../../../../utils/league-history/records.mjs';
-import { renderRecordCardPng, type RecordCardRow } from '../../../../utils/league-history/record-card';
+import { logoDataUri, renderRecordCardPng, type RecordCardRow } from '../../../../utils/league-history/record-card';
 
 export const prerender = false;
 
@@ -58,6 +58,7 @@ export const GET: APIRoute = async ({ url, request }) => {
 			qualifier,
 			unit: board.rows[0].unit ?? null,
 			asc: board.asc,
+			logo: await logoDataUri(board.rows[0].icon, url.origin),
 			rows: board.rows.slice(0, 5).map((r) => ({
 				rank: r.rank,
 				name: r.name,
