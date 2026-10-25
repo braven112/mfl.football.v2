@@ -4,7 +4,7 @@
  * already run.
  *
  * Best ball is draft-only — no lineups, no waivers — so the league IS its
- * draft. The real slot's draft lives in PartyKit (a live external service);
+ * draft. The real slot's draft lives in Redis (the live draft store);
  * the demo never touches it. Instead this writes a completed draft session
  * that src/utils/best-ball-draft.ts serves on a demo deployment, and prospects
  * run their own mock drafts against bots.

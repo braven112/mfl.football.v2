@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
  * Export a completed best-ball official draft from the on-site draft room
- * (PartyKit session) to MyFantasyLeague — the "import it when done" step.
+ * (stored in Redis) to MyFantasyLeague — the "import it when done" step.
  * There is deliberately NO live syncing: the draft happens entirely on-site,
  * then this script pushes the final results to MFL in one commissioner write.
  *
  * What it does:
- *   1. Fetches the official session (`mock-{navSlug}-official-{year}`) from
- *      the PartyKit host — or reads it from --session-file for offline use.
+ *   1. Reads the official session (`{navSlug}-official-{year}`) from Redis,
+ *      the store the site's draft room writes — or from --session-file for
+ *      offline use.
  *   2. Validates it's the draft of record (official: true) and completed.
  *   3. Writes a committed JSON snapshot to
  *      {dataPath}/draft/{year}-draft-results.json — the durable record the
- *      site can render even if the PartyKit room is ever recycled.
+ *      site can render even after the stored session is gone.
  *   4. With --commit, POSTs the picks to MFL's commissioner import endpoint
  *      (same auth plumbing as apply-pending-contracts.mjs). Default is
  *      dry-run: print the XML payload and stop.
@@ -21,7 +22,7 @@
  *        [--session-file path.json] [--force] [--commit]
  *
  * Env:
- *   PUBLIC_PARTYKIT_HOST                     PartyKit host (session fetch)
+ *   UPSTASH_REDIS_REST_URL + _TOKEN          Redis (session read; KV_REST_API_* also work)
  *   MFL_USER_ID + (optional) MFL_IS_COMMISH  preferred (cookie-based, no login)
  *   MFL_USERNAME + MFL_PASSWORD              fallback (logs in to get cookie)
  *   MFL_WRITE_HOST                           override for the commissioner
@@ -36,6 +37,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
+import { mockDraftSessionKey } from '../src/utils/mock-draft-keys.mjs';
 
 function parseArgs(argv) {
   const args = { league: 'best-ball-1', year: null, sessionFile: null, commit: false, force: false };
@@ -51,16 +53,16 @@ function parseArgs(argv) {
   return args;
 }
 
-async function fetchSessionFromParty(navSlug, year) {
-  const raw = process.env.PUBLIC_PARTYKIT_HOST;
-  if (!raw) throw new Error('PUBLIC_PARTYKIT_HOST is not set (or pass --session-file).');
-  const host = raw.startsWith('http') ? raw : `https://${raw}`;
-  const url = `${host}/party/mock-${navSlug}-official-${year}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`PartyKit session fetch failed: HTTP ${res.status} (${url})`);
-  const data = await res.json();
-  if (!data?.session) throw new Error('PartyKit response had no session.');
-  return data.session;
+async function fetchSessionFromStore(navSlug, year) {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
+  if (!url || !token) throw new Error('Redis credentials are not set (or pass --session-file).');
+  const { Redis } = await import('@upstash/redis');
+  const key = mockDraftSessionKey(`${navSlug}-official-${year}`);
+  const session = await new Redis({ url, token }).get(key);
+  if (!session) throw new Error(`No stored session at ${key}.`);
+  return session;
 }
 
 function resolveWriteHost(league) {
@@ -142,7 +144,7 @@ async function main() {
   const session = args.sessionFile
     ? JSON.parse(readFileSync(args.sessionFile, 'utf-8')).session ??
       JSON.parse(readFileSync(args.sessionFile, 'utf-8'))
-    : await fetchSessionFromParty(league.navSlug, year);
+    : await fetchSessionFromStore(league.navSlug, year);
 
   // ── 2. Validate it's the completed draft of record ──
   if (!session.official) {

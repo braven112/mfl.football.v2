@@ -1,5 +1,5 @@
 /**
- * Reading a finished mock draft's session back out of PartyKit.
+ * Reading a mock draft's session back out of the store, for a page.
  *
  * This lives in a util, and the ROUTES call it, for one specific reason:
  * `Astro.redirect()` only redirects from a PAGE. Returned from a component's
@@ -13,39 +13,29 @@
  * uses.
  */
 
-/** A mock session as the party stores it. Deliberately loose — the page reads it defensively. */
+import { readMockDraft } from './mock-draft-store';
+
+/** A mock session as the store keeps it. Deliberately loose — the page reads it defensively. */
 export type MockSession = Record<string, any>;
 
-/** Ensure a protocol: the env var may be a bare hostname. */
-export function normalizePartyHost(raw: string | undefined | null): string {
-  if (!raw) return '';
-  return raw.startsWith('http') ? raw : `https://${raw}`;
+/** Session ids are ours (`create` makes them base-36; official ones are `{navSlug}-official-{year}`). */
+export function isValidMockDraftId(id: unknown): id is string {
+  return typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,79}$/i.test(id);
 }
 
 /**
  * Fetch one mock session, or null.
  *
- * Null covers every reason a results page cannot render — no PartyKit host
- * configured, the room garbage-collected, a network failure — because the
- * caller's response to all of them is the same bounce. It never throws.
+ * Null covers every reason a results page cannot render — no store
+ * configured, the session expired, a network failure — because the caller's
+ * response to all of them is the same bounce. It never throws.
  */
-export async function fetchMockSession(
-  rawPartyHost: string | undefined | null,
-  sessionId: string
-): Promise<MockSession | null> {
-  const partyHost = normalizePartyHost(rawPartyHost);
-  if (!partyHost || !sessionId) return null;
-
+export async function fetchMockSession(sessionId: string): Promise<MockSession | null> {
+  if (!isValidMockDraftId(sessionId)) return null;
   try {
-    const res = await fetch(`${partyHost}/party/mock-${encodeURIComponent(sessionId)}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return (data as { session?: MockSession }).session ?? null;
+    return await readMockDraft(sessionId);
   } catch (err) {
-    console.error('[mock-draft/results] Failed to fetch session:', (err as Error).message);
+    console.error('[mock-draft] Failed to read session:', (err as Error).message);
     return null;
   }
 }

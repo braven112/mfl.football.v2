@@ -1,7 +1,7 @@
 /**
  * GET /api/mock-draft/list
  *
- * Returns active mock draft sessions from the PartyKit registry.
+ * Returns active mock draft sessions from the lobby's registry (Redis).
  *
  * The LEAGUE always comes from the session, never a query param — a lobby
  * lists the caller's own league and nobody else's. `?conference=` selects a
@@ -15,6 +15,7 @@ import { getAuthUser } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { DEFAULT_LEAGUE_ID, getLeagueById } from '../../../config/leagues';
 import { conferenceUnit, mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
+import { listMockDrafts } from '../../../utils/mock-draft-store';
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -39,43 +40,21 @@ export const GET: APIRoute = async ({ request }) => {
     );
   }
 
-  const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-  if (!rawPartyHost) {
-    return new Response(
-      JSON.stringify({ success: false, sessions: [], message: 'PartyKit not configured.' }),
-      { status: 200, headers: JSON_HEADERS },
-    );
-  }
-  // Ensure protocol prefix for server-side fetch (env var may be bare hostname)
-  const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
-
   try {
-    const registryUrl = `${partyHost}/party/${mockRegistryRoom(
-      leagueId,
-      conference ? conferenceUnit(conference) : null,
-    )}`;
-    const res = await fetch(registryUrl, { method: 'GET' });
-
-    if (!res.ok) {
-      // Registry room may not exist yet — return empty list
-      return new Response(
-        JSON.stringify({ success: true, sessions: [] }),
-        { status: 200, headers: JSON_HEADERS },
-      );
-    }
-
-    const data = await res.json();
-    const sessions = (data as any).sessions || [];
-
+    const sessions = await listMockDrafts(
+      mockRegistryRoom(leagueId, conference ? conferenceUnit(conference) : null),
+    );
     return new Response(
       JSON.stringify({ success: true, sessions }),
       { status: 200, headers: JSON_HEADERS },
     );
   } catch (error) {
+    // Not an empty list: "no sessions" reads as "mine vanished". Say the
+    // lobby could not be read, and let the page show that.
     console.error('[mock-draft/list] Error:', error);
     return new Response(
-      JSON.stringify({ success: true, sessions: [] }),
-      { status: 200, headers: JSON_HEADERS },
+      JSON.stringify({ success: false, sessions: [], message: 'Could not load mock drafts.' }),
+      { status: 503, headers: JSON_HEADERS },
     );
   }
 };
