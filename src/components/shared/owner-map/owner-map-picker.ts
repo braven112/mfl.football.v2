@@ -148,3 +148,54 @@ export function mountHometownPicker(root: HTMLElement): () => void {
     if (dialog.open) dialog.close();
   };
 }
+
+/**
+ * The commissioner's paste-in import: many teams in one save. The server
+ * parses and checks every line (all or nothing) and lists the bad ones, so
+ * this only posts the text and shows the answer.
+ */
+export function mountHometownImport(root: HTMLElement): void {
+  const box = root.querySelector<HTMLElement>('[data-owner-map-import]');
+  const text = box?.querySelector<HTMLTextAreaElement>('[data-import-text]');
+  const save = box?.querySelector<HTMLButtonElement>('[data-import-save]');
+  const status = box?.querySelector<HTMLElement>('[data-import-status]');
+  if (!box || !text || !save || !status) return;
+  const league = root.dataset.league ?? '';
+  const franchiseIds = (text.dataset.franchiseIds ?? '').split(',').filter(Boolean);
+
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch(`/api/owner-map/hometown-import?league=${encodeURIComponent(league)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.value, franchiseIds }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        saved?: number;
+        message?: string;
+        errors?: { line: number; text: string; message: string }[];
+      };
+      if (res.ok && data.success) {
+        status.textContent = `Saved ${data.saved} ${data.saved === 1 ? 'team' : 'teams'}.`;
+        window.location.reload();
+        return;
+      }
+      status.replaceChildren(document.createTextNode(data.message || `Could not save (${res.status}).`));
+      if (data.errors?.length) {
+        const list = document.createElement('ul');
+        for (const error of data.errors) {
+          const li = document.createElement('li');
+          li.textContent = `Line ${error.line}: ${error.message}`;
+          list.appendChild(li);
+        }
+        status.appendChild(list);
+      }
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    }
+    save.disabled = false;
+  });
+}

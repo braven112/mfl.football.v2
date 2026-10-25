@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import places from '../src/data/owner-map-places.json';
 import { searchPlaces } from '../src/components/shared/owner-map/owner-map-picker';
-import { findPlace, type PlaceRow } from '../src/utils/owner-hometowns';
+import { findPlace, parseHometownImport, placeFromText, type PlaceRow } from '../src/utils/owner-hometowns';
 
 const rows = places as PlaceRow[];
 
@@ -47,5 +47,36 @@ describe('owner map place lookup', () => {
   it('refuses anything not in the list', () => {
     expect(findPlace('<script>', 'XX')).toBeNull();
     expect(findPlace('Boston', 'Narnia')).toBeNull();
+  });
+});
+
+describe('owner map commissioner import', () => {
+  it('reads a city, a city abroad, a state and a country', () => {
+    expect(placeFromText('Seattle, WA')?.slice(0, 2)).toEqual(['Seattle', 'WA']);
+    expect(placeFromText('Sydney, Australia')?.slice(0, 2)).toEqual(['Sydney', 'Australia']);
+    expect(placeFromText('New Mexico')?.slice(0, 2)).toEqual(['New Mexico', 'US']);
+    expect(placeFromText('United Kingdom')?.slice(0, 2)).toEqual(['United Kingdom', '']);
+  });
+
+  it('parses one team per line and ignores comments and blank lines', () => {
+    const { rows, errors } = parseHometownImport('0001 Seattle, WA   # Pacific Pigskins\n\n# a note\n0018 New Mexico\n');
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => [r.franchiseId, r.place[0]])).toEqual([
+      ['0001', 'Seattle'],
+      ['0018', 'New Mexico'],
+    ]);
+  });
+
+  it('reports every bad line with its number', () => {
+    const { rows, errors } = parseHometownImport('0001 Seattle, WA\nSeattle, WA\n0002 Narnia\n0001 Boston, MA');
+    expect(rows).toHaveLength(1);
+    expect(errors.map((e) => e.line)).toEqual([2, 3, 4]);
+  });
+});
+
+describe('owner map import against the league roster', () => {
+  it('refuses a team id the league does not have', () => {
+    const { errors } = parseHometownImport('0001 Seattle, WA\n0099 Boston, MA', new Set(['0001', '0002']));
+    expect(errors).toEqual([{ line: 2, text: '0099 Boston, MA', message: "Team 0099 isn't in this league." }]);
   });
 });

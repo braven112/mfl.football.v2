@@ -194,6 +194,28 @@ const modes = [
       </section>
     )}
 
+    {canEditAll && (
+      <details class="owner-map__import" data-owner-map-import>
+        <summary class="owner-map__import-summary">Import hometowns (commissioner)</summary>
+        <p class="owner-map__import-hint">
+          One team per line: the team id, then the place. For example <code>0001 Seattle, WA</code>,
+          <code>0003 Sydney, Australia</code>, <code>0018 New Mexico</code>. Anything after <code>#</code> is ignored.
+          Teams you leave out keep what they have.
+        </p>
+        <label class="owner-map-picker__label" for="owner-map-import-text">Hometown list</label>
+        <textarea
+          id="owner-map-import-text"
+          class="owner-map__import-text"
+          rows="8"
+          spellcheck="false"
+          data-import-text
+          data-franchise-ids={pins.map((pin) => pin.franchiseId).join(',')}
+        ></textarea>
+        <button type="button" class="cta cta--primary" data-import-save>Save all</button>
+        <div class="owner-map__import-status" data-import-status role="status"></div>
+      </details>
+    )}
+
     <dialog class="ui-modal owner-map-picker" data-owner-map-picker aria-labelledby="owner-map-picker-title">
       <div class="owner-map-picker__head">
         <h2 id="owner-map-picker-title" class="owner-map-picker__title" data-picker-title>Hometown</h2>
@@ -220,7 +242,7 @@ const modes = [
 
 <script>
   import { mountOwnerMap } from './owner-map-client';
-  import { mountHometownPicker } from './owner-map-picker';
+  import { mountHometownImport, mountHometownPicker } from './owner-map-picker';
 
   let unmount: (() => void) | null = null;
   let unmountPicker: (() => void) | null = null;
@@ -233,6 +255,7 @@ const modes = [
     if (!root || root.dataset.ownerMapReady) return;
     root.dataset.ownerMapReady = '1';
     unmountPicker = mountHometownPicker(root);
+    mountHometownImport(root);
     mountOwnerMap(root)
       .then((dispose) => {
         unmount = dispose;
@@ -307,6 +330,50 @@ const modes = [
     top: 50%;
     right: 0.75rem;
     transform: translateY(-50%);
+  }
+
+  .owner-map__import {
+    margin: 1.5rem 0 0;
+    padding: 0.75rem;
+    border: var(--style-card-border, 1px solid var(--content-border));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: var(--card-radius, 8px);
+    background: var(--card-bg);
+  }
+  .owner-map__import-summary {
+    min-height: var(--touch-target-min);
+    display: flex;
+    align-items: center;
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+  }
+  .owner-map__import-hint {
+    margin: 0.5rem 0 0.75rem;
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.5;
+  }
+  .owner-map__import-text {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--content-border);
+    border-radius: 6px;
+    background: var(--content-bg);
+    color: var(--page-text);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  .owner-map__import-status {
+    margin-top: 0.5rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: 1.45;
+  }
+  .owner-map__import-status :global(ul) {
+    margin: 0.25rem 0 0;
+    padding-left: 1.25rem;
   }
 
   .owner-map-picker {
