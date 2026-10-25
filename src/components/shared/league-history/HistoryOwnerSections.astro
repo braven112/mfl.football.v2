@@ -1,0 +1,797 @@
+---
+/**
+ * League History sections on an owner page: the owner's banners, career
+ * plaques, a season chart, the teams they ran, their high-water marks and head
+ * to head against every other owner. Computed from the league's History
+ * dataset (owner.mjs), in the Trophy Room language of HistoryFranchisePage.
+ *
+ * The owner page itself stays at /<league>/owners/<slug> and renders these
+ * only for viewers League History admits (Brandon, 2026-10-25: owner pages are
+ * upgraded in place, the history sections gated by canViewLeagueHistory). The
+ * caller does the gate; this component renders nothing for an owner the
+ * dataset has no season for.
+ */
+import HistoryRafters from './HistoryRafters.astro';
+import type { RafterBanner } from './HistoryRafters.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import { canonicalRivalryPair } from '../../../utils/rivalries';
+import { recordBook, resultLabel } from '../../../utils/league-history/records.mjs';
+import { ownerHistory, ownerIdForSlug } from '../../../utils/league-history/owner.mjs';
+
+interface Tally {
+  w: number;
+  l: number;
+  t: number;
+  record: string;
+  pct: number;
+}
+interface Season {
+  y: number;
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+  w: number;
+  l: number;
+  t: number;
+  pf: number | null;
+  rank: number | null;
+  division: string | null;
+  r: string | null;
+  wonDivision: boolean;
+  live: boolean;
+  holding: string;
+  teams: number;
+}
+interface GameLine {
+  y: number;
+  wk: number;
+  f: string;
+  s: number;
+  os: number;
+  opponentId: string;
+  opponent: string;
+  playoffs: boolean;
+}
+interface OwnerHistory {
+  ownerId: string;
+  name: string;
+  active: boolean;
+  team: { franchiseId: string; name: string; icon: string | null; division: string | null };
+  firstYear: number;
+  lastYear: number;
+  seasons: Season[];
+  titles: Season[];
+  finals: Season[];
+  trips: number;
+  divisionTitles: Season[];
+  regular: Tally;
+  playoffs: Tally;
+  games: number;
+  pointsFor: number;
+  pointsPerGame: number;
+  teams: Array<{
+    franchiseId: string;
+    name: string;
+    icon: string | null;
+    names: string[];
+    from: number;
+    to: number;
+    current: boolean;
+    seasons: number;
+    record: string;
+    titles: number;
+    coOwners: Array<{ ownerId: string; name: string; slug: string | null }>;
+  }>;
+  headToHead: Array<
+    Tally & {
+      key: string;
+      name: string;
+      team: string;
+      icon: string | null;
+      ownerSlug: string | null;
+      franchiseId: string | null;
+      active: boolean;
+      games: number;
+      playoffGames: number;
+      last: { y: number; f: string; of: string };
+      lastPairCurrent: boolean;
+    }
+  >;
+  highs: {
+    game: GameLine | null;
+    win: GameLine | null;
+    season: { y: number; name: string; record: string; pf: number | null; r: string | null } | null;
+  };
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: any;
+  /** The owner page's slug, the dataset's own `owners[id].slug`. */
+  ownerSlug: string;
+  /** The viewer's franchise in this league, to mark their own row. */
+  viewerFranchise?: string | null;
+}
+
+const { leagueSlug, data, ownerSlug, viewerFranchise = null } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const navSlug = league.navSlug as LeagueSlug;
+
+const ix = recordBook(data).ix;
+const ownerId = ownerIdForSlug(data, ownerSlug);
+const h = (ownerId ? ownerHistory(ix, ownerId) : null) as OwnerHistory | null;
+
+const latestYear: number | undefined = data.seasons.at(-1)?.y;
+const viewerKey = viewerFranchise && latestYear ? ix.entityOf(latestYear, viewerFranchise) : null;
+const currentName = (f: string): string | null => data.seasons.at(-1)?.teams?.[f]?.n ?? null;
+
+const pairStyle = (f: string, prefix = 'ho') => {
+  const p = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
+  return `--${prefix}-a: ${p.primary}; --${prefix}-b: ${p.secondary}`;
+};
+const banner = (s: Season, kind: RafterBanner['kind']): RafterBanner => ({
+  year: s.y,
+  kind,
+  franchiseId: s.franchiseId,
+  name: s.name,
+  icon: s.icon,
+  caption: kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`,
+  href: r(`/franchises/${s.franchiseId}`),
+  // A banner won under a name the slot no longer wears (a team this owner
+  // left, or a rebrand) hangs in that era's own colors, as on the franchise page.
+  colors: s.name !== currentName(s.franchiseId) ? getTeamEraColors(s.franchiseId, navSlug, s.y) : null,
+  title: `${s.y} ${kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion'}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
+});
+const titleBanners = h
+  ? [...h.titles.map((s) => banner(s, 'C')), ...h.finals.filter((s) => s.r === 'R').map((s) => banner(s, 'R'))].sort(
+      (a, b) => b.year - a.year,
+    )
+  : [];
+const divisionBanners = h ? h.divisionTitles.map((s) => banner(s, 'D')).reverse() : [];
+
+const pct = (n: number) => n.toFixed(3).replace(/^0(?=\.)/, '');
+const fmt2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt1 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+const games = (n: number) => `${n} ${n === 1 ? 'game' : 'games'}`;
+const yy = (y: number) => `’${String(y).slice(2)}`;
+const rivalryHref = (f: string, of: string, all: boolean) =>
+  r(`/rivalries/${canonicalRivalryPair(f, of)}${all ? '?view=all' : ''}`);
+
+// The season chart: one bar per season, its height the win share. An owner who
+// ran more than one team gets a team-color strip under each bar.
+const seasons = h?.seasons ?? [];
+const multiTeam = (h?.teams.length ?? 0) > 1;
+// Two slots under one name (an owner who carried his brand to a new slot)
+// need their years in the legend to tell the strips apart.
+const sameNames = new Set(h?.teams.map((t) => t.name)).size < (h?.teams.length ?? 0);
+// A season after a gap in the owner's career (years away from the league) is
+// always labelled, so the jump in years shows on the axis.
+const gapBefore = (i: number) => i > 0 && seasons[i]!.y - seasons[i - 1]!.y > 1;
+const yearLabelEvery = seasons.length > 14 ? 4 : 2;
+const share = (s: Season) => {
+  const g = s.w + s.l + s.t;
+  return g ? (s.w + s.t / 2) / g : 0;
+};
+const barClass = (s: Season) =>
+  s.live ? 'ho-bar ho-bar--live' : s.r ? `ho-bar ho-bar--${s.r === '3' ? 'P' : s.r}` : 'ho-bar';
+const finish = (s: Season) => (s.live ? 'In progress' : s.r ? resultLabel(s.r) : '');
+const opponents = h?.headToHead.filter((o) => o.active) ?? [];
+const formerOpponents = h?.headToHead.filter((o) => !o.active) ?? [];
+const span = h ? (h.firstYear === h.lastYear ? String(h.firstYear) : `${h.firstYear}–${h.active ? 'now' : h.lastYear}`) : '';
+---
+
+{h && (
+  <div class="ho">
+    <section class="ho-section" aria-labelledby="ho-rafters">
+      <p class="ho-section__kicker">Banners</p>
+      <h2 class="ho-section__title" id="ho-rafters">The Rafters</h2>
+      {titleBanners.length + divisionBanners.length > 0 ? (
+        <>
+          {titleBanners.length > 0 && <HistoryRafters banners={titleBanners} navSlug={navSlug} />}
+          {divisionBanners.length > 0 && (
+            <>
+              <p class="ho-rafters__label">Division titles</p>
+              <HistoryRafters banners={divisionBanners} navSlug={navSlug} />
+            </>
+          )}
+        </>
+      ) : (
+        <p class="ho-empty">
+          No banners yet. {h.trips > 0 ? `${h.trips} playoff ${h.trips === 1 ? 'trip' : 'trips'} and counting.` : 'The rafters are waiting.'}
+        </p>
+      )}
+    </section>
+
+    <section class="ho-plaques" aria-label="Career">
+      <div class="ho-plaque ho-plaque--lead">
+        <span class="ho-plaque__label">Career record</span>
+        <span class="ho-plaque__value">{h.regular.record}</span>
+        <span class="ho-plaque__sub">{pct(h.regular.pct)} · regular season</span>
+      </div>
+      <div class="ho-plaque">
+        <span class="ho-plaque__label">Playoffs</span>
+        <span class="ho-plaque__value">{h.playoffs.record}</span>
+        <span class="ho-plaque__sub">{h.trips} {h.trips === 1 ? 'trip' : 'trips'}</span>
+      </div>
+      <div class="ho-plaque">
+        <span class="ho-plaque__label">Titles</span>
+        <span class="ho-plaque__value">{h.titles.length}</span>
+        <span class="ho-plaque__sub">{h.finals.length} title {h.finals.length === 1 ? 'game' : 'games'}</span>
+      </div>
+      <div class="ho-plaque">
+        <span class="ho-plaque__label">Seasons</span>
+        <span class="ho-plaque__value">{seasons.length}</span>
+        <span class="ho-plaque__sub">{span}</span>
+      </div>
+      <div class="ho-plaque">
+        <span class="ho-plaque__label">Per game</span>
+        <span class="ho-plaque__value">{fmt1(h.pointsPerGame)}</span>
+        <span class="ho-plaque__sub">{Math.round(h.pointsFor).toLocaleString('en-US')} points</span>
+      </div>
+    </section>
+
+    <section class="ho-section" aria-labelledby="ho-seasons">
+      <p class="ho-section__kicker">Season by season</p>
+      <h2 class="ho-section__title" id="ho-seasons">Win share, every year</h2>
+      <p class="ho-legend">
+        <span class="ho-legend__item"><span class="ho-swatch ho-bar--C"></span> Champion</span>
+        <span class="ho-legend__item"><span class="ho-swatch ho-bar--R"></span> Runner-up</span>
+        <span class="ho-legend__item"><span class="ho-swatch ho-bar--P"></span> Playoffs</span>
+        <span class="ho-legend__item"><span class="ho-swatch ho-bar--M"></span> Missed</span>
+        {multiTeam && h.teams.map((t) => (
+          <span class="ho-legend__item">
+            <span class="ho-swatch ho-swatch--team" style={pairStyle(t.franchiseId)}></span> {t.name}
+            {sameNames && ` ${yy(t.from)}${t.to !== t.from ? `–${t.current ? 'now' : yy(t.to)}` : ''}`}
+          </span>
+        ))}
+      </p>
+      <div class="ho-chart" style={`--ho-n: ${seasons.length}`}>
+        <div class="ho-chart__plot">
+          <span class="ho-chart__even" aria-hidden="true"><span>.500</span></span>
+          {seasons.map((s) => (
+            <span
+              class="ho-col"
+              title={`${s.y} · ${s.name} · ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}${finish(s) ? ` · ${finish(s)}` : ''}`}
+            >
+              <span class={barClass(s)} style={`height: ${Math.max(share(s) * 100, 2).toFixed(1)}%`}></span>
+            </span>
+          ))}
+        </div>
+        {multiTeam && (
+          <div class="ho-chart__teams" aria-hidden="true">
+            {seasons.map((s) => <span style={pairStyle(s.franchiseId)}></span>)}
+          </div>
+        )}
+        <div class="ho-chart__years" aria-hidden="true">
+          {seasons.map((s, i) => (
+            <span>{i % yearLabelEvery === 0 || i === seasons.length - 1 || gapBefore(i) ? yy(s.y) : ''}</span>
+          ))}
+        </div>
+      </div>
+      <details class="ho-details">
+        <summary>Every season ({seasons.length})</summary>
+        <ol class="ho-seasons">
+          {seasons
+            .slice()
+            .reverse()
+            .map((s) => (
+              <li class:list={['ho-season', { 'ho-season--title': s.r === 'C' }]}>
+                <span class="ho-season__year">{s.y}</span>
+                <span class="ho-season__body">
+                  <span class="ho-season__record">
+                    {s.w}-{s.l}
+                    {s.t ? `-${s.t}` : ''}
+                    {s.rank && <span class="ho-season__rank"> · #{s.rank} of {s.teams}</span>}
+                  </span>
+                  <span class="ho-season__name">{s.name}</span>
+                </span>
+                <span class="ho-season__finish">
+                  {finish(s)}
+                  {s.pf != null && <span class="ho-season__pf">{fmt2(s.pf)} pts</span>}
+                </span>
+              </li>
+            ))}
+        </ol>
+      </details>
+    </section>
+
+    <section class="ho-section" aria-labelledby="ho-teams">
+      <p class="ho-section__kicker">Where they played</p>
+      <h2 class="ho-section__title" id="ho-teams">{h.teams.length === 1 ? 'The team' : 'The teams'}</h2>
+      <ol class="ho-list">
+        {h.teams.map((t) => (
+          <li>
+            <a class="ho-row ho-team" href={r(`/franchises/${t.franchiseId}`)} style={pairStyle(t.franchiseId)}>
+              {t.icon ? (
+                <img class="ho-row__logo" src={t.icon} alt="" width="36" height="36" loading="lazy" data-earned-mark />
+              ) : (
+                <span class="ho-row__logo ho-row__logo--blank" aria-hidden="true">{initials(t.name)}</span>
+              )}
+              <span class="ho-row__body">
+                <span class="ho-row__name">{t.name}</span>
+                <span class="ho-row__sub">
+                  {t.from === t.to ? t.from : `${t.from}–${t.current ? 'now' : t.to}`} · {t.seasons}{' '}
+                  {t.seasons === 1 ? 'season' : 'seasons'}
+                  {t.names.length > 1 && ` · also ${t.names.filter((n) => n !== t.name).join(', ')}`}
+                </span>
+                {t.coOwners.length > 0 && (
+                  <span class="ho-row__sub">Co-owned with {t.coOwners.map((c) => c.name).join(' & ')}</span>
+                )}
+              </span>
+              <span class="ho-row__stat">
+                {t.record}
+                {t.titles > 0 && <span class="ho-row__titles">{t.titles}× champ</span>}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {(h.highs.game || h.highs.season) && (
+      <section class="ho-section" aria-labelledby="ho-highs">
+        <p class="ho-section__kicker">Career bests</p>
+        <h2 class="ho-section__title" id="ho-highs">High-water marks</h2>
+        <div class="ho-highs">
+          {h.highs.season && (
+            <div class="ho-high">
+              <span class="ho-plaque__label">Best season</span>
+              <span class="ho-high__value">{h.highs.season.record}</span>
+              <span class="ho-plaque__sub">
+                {h.highs.season.y}
+                {multiTeam ? ` · ${h.highs.season.name}` : ''}
+                {h.highs.season.r ? ` · ${resultLabel(h.highs.season.r)}` : ''}
+              </span>
+            </div>
+          )}
+          {h.highs.game && (
+            <a class="ho-high" href={rivalryHref(h.highs.game.f, h.highs.game.opponentId, true)}>
+              <span class="ho-plaque__label">Highest score</span>
+              <span class="ho-high__value">{fmt2(h.highs.game.s)}</span>
+              <span class="ho-plaque__sub">
+                {h.highs.game.y} week {h.highs.game.wk} vs {h.highs.game.opponent}
+              </span>
+            </a>
+          )}
+          {h.highs.win && (
+            <a class="ho-high" href={rivalryHref(h.highs.win.f, h.highs.win.opponentId, true)}>
+              <span class="ho-plaque__label">Biggest win</span>
+              <span class="ho-high__value">+{fmt2(h.highs.win.s - h.highs.win.os)}</span>
+              <span class="ho-plaque__sub">
+                {fmt2(h.highs.win.s)}–{fmt2(h.highs.win.os)} vs {h.highs.win.opponent}, {h.highs.win.y}
+              </span>
+            </a>
+          )}
+        </div>
+      </section>
+    )}
+
+    {opponents.length > 0 && (
+      <section class="ho-section" aria-labelledby="ho-h2h">
+        <p class="ho-section__kicker">Head to head</p>
+        <h2 class="ho-section__title" id="ho-h2h">Against every owner</h2>
+        <ol class="ho-list">
+          {opponents.map((o) => (
+            <li>
+              <a
+                class:list={['ho-row', 'ho-vs', { 'ho-row--mine': o.key === viewerKey }]}
+                href={rivalryHref(o.last.f, o.last.of, !o.lastPairCurrent)}
+              >
+                {o.icon ? (
+                  <img class="ho-row__logo" src={o.icon} alt="" width="28" height="28" loading="lazy" />
+                ) : (
+                  <span class="ho-row__logo ho-row__logo--blank" aria-hidden="true">{initials(o.name)}</span>
+                )}
+                <span class="ho-row__body">
+                  <span class="ho-row__name">{o.name}</span>
+                  <span class="ho-row__sub ho-row__team">{o.team}</span>
+                  <span class="ho-vs__bar" style={o.franchiseId ? pairStyle(o.franchiseId) : undefined} aria-hidden="true">
+                    <span style={`width: ${(o.pct * 100).toFixed(1)}%`}></span>
+                  </span>
+                </span>
+                <span class="ho-row__stat">
+                  {o.record}
+                  <span class="ho-row__sub">{games(o.games)}</span>
+                  {o.playoffGames > 0 && <span class="ho-row__sub">{o.playoffGames} in playoffs</span>}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+        {formerOpponents.length > 0 && (
+          <details class="ho-details">
+            <summary>Former owners ({formerOpponents.length})</summary>
+            <ol class="ho-list">
+              {formerOpponents.map((o) => (
+                <li>
+                  <a class="ho-row" href={rivalryHref(o.last.f, o.last.of, true)}>
+                    <span class="ho-row__body">
+                      <span class="ho-row__name">{o.name}</span>
+                      <span class="ho-row__sub ho-row__team">{o.team}</span>
+                    </span>
+                    <span class="ho-row__stat">
+                      {o.record}
+                      <span class="ho-row__sub">{games(o.games)}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
+      </section>
+    )}
+  </div>
+)}
+
+<style>
+  /* The Trophy Room language of HistoryFranchisePage, scoped to this
+     component (Astro scoped CSS does not cross the component boundary). */
+  .ho {
+    color: var(--page-text);
+  }
+  .ho-section {
+    margin-top: 1.75rem;
+  }
+  .ho-section__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .ho-section__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .ho-rafters__label {
+    margin: 1rem 0 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .ho-empty {
+    margin: 0;
+    padding: 1rem;
+    color: var(--content-text-muted);
+    text-align: center;
+    border: 1px dashed var(--content-border);
+    border-radius: var(--radius-lg, 16px);
+  }
+
+  /* ── Plaques ──────────────────────────────────────────────────────────── */
+  .ho-plaques {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .ho-plaque,
+  .ho-high {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.75rem 0.875rem;
+    color: var(--page-text);
+    text-decoration: none;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .ho-plaque--lead {
+    grid-column: 1 / -1;
+    background: linear-gradient(160deg, var(--card-bg) 40%, var(--history-gold-wash));
+    border-color: var(--history-gold);
+  }
+  .ho-plaque__label {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .ho-plaque__value,
+  .ho-high__value {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .ho-plaque--lead .ho-plaque__value {
+    font-size: var(--font-size-3xl);
+    color: var(--history-gold);
+  }
+  .ho-plaque__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  /* ── Season chart ─────────────────────────────────────────────────────── */
+  .ho-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.875rem;
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .ho-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    white-space: nowrap;
+  }
+  .ho-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .ho-swatch--team {
+    background: linear-gradient(90deg, var(--ho-a) 50%, var(--ho-b) 50%);
+  }
+  .ho-chart {
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .ho-chart__plot {
+    position: relative;
+    /* Room on the right for the .500 label, clear of the bars. */
+    margin-right: 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(var(--ho-n), minmax(0, 1fr));
+    gap: 3px;
+    height: 9rem;
+    align-items: end;
+  }
+  .ho-chart__even {
+    position: absolute;
+    inset: 50% 0 auto;
+    border-top: 1px dashed var(--content-text-muted);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .ho-chart__even span {
+    position: absolute;
+    top: -0.5rem;
+    right: -1.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+  }
+  .ho-col {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+  }
+  .ho-bar {
+    display: block;
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    background: color-mix(in srgb, var(--page-text) 22%, transparent);
+  }
+  .ho-bar--C {
+    background: var(--history-gold);
+  }
+  .ho-bar--R {
+    background: color-mix(in srgb, var(--page-text) 70%, transparent);
+  }
+  .ho-bar--P {
+    background: color-mix(in srgb, var(--page-text) 42%, transparent);
+  }
+  .ho-bar--M {
+    background: color-mix(in srgb, var(--page-text) 14%, transparent);
+  }
+  .ho-bar--live {
+    background: transparent;
+    outline: 1px dashed var(--content-text-muted);
+    outline-offset: -1px;
+  }
+  .ho-chart__teams,
+  .ho-chart__years {
+    margin-right: 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(var(--ho-n), minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 0.25rem;
+  }
+  .ho-chart__teams span {
+    height: 5px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, var(--ho-a) 50%, var(--ho-b) 50%);
+  }
+  .ho-chart__years span {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    white-space: nowrap;
+    overflow: visible;
+  }
+
+  .ho-details {
+    margin-top: 0.75rem;
+  }
+  .ho-details summary {
+    margin-bottom: 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .ho-seasons,
+  .ho-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+    overflow: hidden;
+  }
+  .ho-season,
+  .ho-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    color: var(--page-text);
+    text-decoration: none;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .ho-season:last-child,
+  .ho-list > li:last-child > .ho-row {
+    border-bottom: 0;
+  }
+  .ho-season--title {
+    background: var(--history-gold-wash);
+  }
+  .ho-season__year {
+    flex: none;
+    width: 2.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .ho-season__body,
+  .ho-row__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .ho-season__record {
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  .ho-season__rank,
+  .ho-season__name,
+  .ho-season__pf,
+  .ho-row__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-normal);
+  }
+  .ho-season__finish {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: var(--font-size-sm);
+    text-align: right;
+  }
+
+  /* ── Highs ────────────────────────────────────────────────────────────── */
+  .ho-highs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  a.ho-high:hover {
+    color: var(--page-text);
+    border-color: var(--history-gold);
+  }
+
+  /* ── Teams and head to head ───────────────────────────────────────────── */
+  .ho-row__name,
+  .ho-row__team {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .ho-row__name {
+    font-weight: var(--font-weight-semibold);
+  }
+  .ho-row__stat {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .ho-row__titles {
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+  }
+  .ho-row__logo {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+  .ho-team .ho-row__logo {
+    width: 36px;
+    height: 36px;
+  }
+  .ho-row__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--history-gold-wash);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+  }
+  /* A team row carries its club's colors as a left stripe. */
+  .ho-team {
+    border-left: 4px solid var(--ho-a);
+  }
+  a.ho-row:hover {
+    color: var(--page-text);
+    background: var(--history-gold-wash);
+  }
+  .ho-row--mine {
+    background: var(--history-gold-wash);
+  }
+  /* This owner's win share against the opponent, over the opponent's colors. */
+  .ho-vs__bar {
+    position: relative;
+    display: block;
+    height: 6px;
+    margin-top: 0.3125rem;
+    overflow: hidden;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--ho-a, var(--content-border)), var(--ho-b, var(--content-border)));
+  }
+  .ho-vs__bar span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--history-gold);
+    border-right: 2px solid var(--card-bg);
+  }
+
+  @media (min-width: 768px) {
+    .ho-plaques {
+      grid-template-columns: 2fr repeat(4, minmax(0, 1fr));
+    }
+    .ho-plaque--lead {
+      grid-column: auto;
+    }
+    .ho-highs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .ho-chart__plot {
+      height: 12rem;
+    }
+  }
+</style>
