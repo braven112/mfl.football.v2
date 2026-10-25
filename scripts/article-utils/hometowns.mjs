@@ -12,11 +12,17 @@
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { hometownsKey, milesBetween, placeLabel } from '../../src/utils/hometown-geo.mjs';
 
-/** franchiseId → { name, region, lat, lng, kind } for every team that has picked one. */
+/**
+ * franchiseId → place for every team that has picked one.
+ * @param {string} league
+ * @param {{ redis?: { url: string, token: string } | null }} [options]
+ * @returns {Promise<Record<string, { name: string, region: string, lat: number, lng: number, kind: string }>>}
+ */
 export async function loadHometowns(league, { redis = getRedisConfig() } = {}) {
   if (!redis) return {};
   try {
     const flat = await redisCommand(redis, ['HGETALL', hometownsKey(league)]);
+    /** @type {Record<string, { name: string, region: string, lat: number, lng: number, kind: string }>} */
     const out = {};
     // Upstash REST returns HGETALL as a flat [field, value, field, value] list.
     for (let i = 0; i + 1 < (flat?.length ?? 0); i += 2) {

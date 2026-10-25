@@ -6,7 +6,9 @@ const nameOf = (id: string) => ({ '0001': 'Pacific Pigskins', '0002': 'Midwestsi
 const SPOKANE = { name: 'Spokane', region: 'WA', lat: 47.66, lng: -117.43, kind: 'city' };
 const DES_MOINES = { name: 'Des Moines', region: 'IA', lat: 41.59, lng: -93.62, kind: 'city' };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('hometown fact-sheet line', () => {
   it('names both cities and the miles, as the card prints them', () => {
