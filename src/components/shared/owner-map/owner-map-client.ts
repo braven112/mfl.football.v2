@@ -613,8 +613,8 @@ export async function mountMiniMap(el: HTMLElement): Promise<() => void> {
     container: el,
     style: buildStyle(el, geo),
     center: [lng, lat],
-    // A whole state is pinned at its middle, so show the state, not the town.
-    zoom: el.dataset.kind === 'state' ? 3.6 : 4.2,
+    // A whole state or country is pinned at its middle, so show all of it, not a town's worth.
+    zoom: el.dataset.kind === 'country' ? 2.2 : el.dataset.kind === 'state' ? 3.6 : 4.2,
     interactive: false,
     renderWorldCopies: false,
     attributionControl: false,

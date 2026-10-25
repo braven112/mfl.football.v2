@@ -24,6 +24,16 @@ describe('owner map place search', () => {
     expect(nm[4]).toBe('state');
   });
 
+  it('offers a whole country', () => {
+    const [au] = searchPlaces(rows, 'australia');
+    expect(au[4]).toBe('country');
+    expect(findPlace('Australia', '')).not.toBeNull();
+  });
+
+  it('finds a small town', () => {
+    expect(searchPlaces(rows, 'long beach, wa')[0].slice(0, 2)).toEqual(['Long Beach', 'WA']);
+  });
+
   it('ignores a one-letter search', () => {
     expect(searchPlaces(rows, 'a')).toEqual([]);
   });

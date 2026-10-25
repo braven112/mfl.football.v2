@@ -192,5 +192,6 @@ export function buildOwnerMapData(
   };
 }
 
-/** "Spokane, WA", "New Mexico" (a whole state), "London, United Kingdom". */
-export const cityLabel = (city: OwnerMapCity): string => (city.region === 'US' ? city.name : `${city.name}, ${city.region}`);
+/** "Spokane, WA", "New Mexico" (a whole state), "London, United Kingdom", "Australia" (a whole country). */
+export const cityLabel = (city: OwnerMapCity): string =>
+  city.region === 'US' || !city.region ? city.name : `${city.name}, ${city.region}`;

@@ -11,11 +11,13 @@
  *
  * What goes in:
  *   - every US state, placed at its middle (for "pin the middle of New Mexico")
+ *   - every other country, placed at its middle (for an owner whose city is not known yet)
  *   - every US town of 1,000 people or more (the smallest the source has)
  *   - every city elsewhere of 100,000 or more
  *
- * Each row is [name, region, lat, lng, kind] where region is a state code in
- * the US and a country name elsewhere, and kind is 'state' or 'city'. Sorted
+ * Each row is [name, region, lat, lng, kind] where region is a state code for
+ * a US city, 'US' for a state, a country name for a city elsewhere and empty
+ * for a country, and kind is 'city', 'state' or 'country'. Sorted
  * by population so the search can return the first matches it finds.
  */
 import { createRequire } from 'node:module';
@@ -27,6 +29,7 @@ import { feature } from 'topojson-client';
 const require = createRequire(import.meta.url);
 const cities = require('all-the-cities');
 const states = require('us-atlas/states-10m.json');
+const world = require('world-atlas/countries-50m.json');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'src/data/owner-map-places.json');
@@ -48,7 +51,7 @@ const STATE_CODES = {
 
 const round = (n) => Math.round(n * 1000) / 1000;
 
-/** Area-weighted centroid of a state's largest ring, which is the mainland for every state. */
+/** Area-weighted centroid of a state's or country's largest ring: its mainland. */
 function stateMiddle(geometry) {
   const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
   let best = null;
@@ -78,6 +81,12 @@ for (const f of feature(states, states.objects.states).features) {
   if (!code) continue;
   const middle = stateMiddle(f.geometry);
   rows.push({ row: [f.properties.name, 'US', round(middle.lat), round(middle.lng), 'state'], population: Infinity });
+}
+for (const f of feature(world, world.objects.countries).features) {
+  const name = f.properties.name;
+  if (!name || name === 'United States of America' || name === 'Antarctica' || !f.geometry) continue;
+  const middle = stateMiddle(f.geometry);
+  rows.push({ row: [name, '', round(middle.lat), round(middle.lng), 'country'], population: Infinity });
 }
 for (const city of cities) {
   const us = city.country === 'US';

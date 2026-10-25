@@ -17,14 +17,14 @@
 import { getRedis } from './redis-client';
 import places from '../data/owner-map-places.json';
 
-export type PlaceKind = 'city' | 'state';
+export type PlaceKind = 'city' | 'state' | 'country';
 
 /** [name, region, lat, lng, kind], as the build script writes it. */
 export type PlaceRow = [string, string, number, number, PlaceKind];
 
 export interface StoredHometown {
   name: string;
-  /** A US state code for a city, 'US' for a state, a country name elsewhere. */
+  /** A US state code for a city, 'US' for a state, a country name for a city abroad, '' for a country. */
   region: string;
   lat: number;
   lng: number;

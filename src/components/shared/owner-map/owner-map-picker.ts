@@ -2,8 +2,8 @@
  * Owner Map — the hometown picker.
  *
  * Every "Pick"/"Change" button on the page opens one dialog. Typing searches
- * the bundled place list (src/data/owner-map-places.json, about 16,000 US
- * cities, US states and large cities abroad), loaded only when the dialog
+ * the bundled place list (src/data/owner-map-places.json: US towns, US
+ * states, countries and large cities abroad), loaded only when the dialog
  * first opens. Choosing a place saves it through /api/owner-map/hometown and
  * reloads, so the map, the list and every filter redraw from the saved data.
  *
@@ -12,7 +12,7 @@
  */
 import placesUrl from '../../../data/owner-map-places.json?url';
 
-type PlaceRow = [string, string, number, number, 'city' | 'state'];
+type PlaceRow = [string, string, number, number, 'city' | 'state' | 'country'];
 
 const MAX_RESULTS = 12;
 
@@ -34,7 +34,11 @@ const fold = (text: string) =>
     .trim();
 
 const placeLabel = (row: PlaceRow) =>
-  row[4] === 'state' ? `${row[0]} (the whole state, pinned at its middle)` : `${row[0]}, ${row[1]}`;
+  row[4] === 'state'
+    ? `${row[0]} (the whole state, pinned at its middle)`
+    : row[4] === 'country'
+      ? `${row[0]} (the whole country, pinned at its middle)`
+      : `${row[0]}, ${row[1]}`;
 
 /**
  * Places whose name starts with the query come first, then "Name, Region"
