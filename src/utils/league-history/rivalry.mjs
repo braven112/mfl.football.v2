@@ -73,6 +73,8 @@ function meetingsOf(ix, a, b, ka, kb) {
         franchiseB: fb,
         nameA: ix.team(g.y, fa)?.n ?? fa,
         nameB: ix.team(g.y, fb)?.n ?? fb,
+        iconA: ix.team(g.y, fa)?.i ?? null,
+        iconB: ix.team(g.y, fb)?.i ?? null,
         holdingA: ix.entityOf(g.y, fa),
         holdingB: ix.entityOf(g.y, fb),
       };
