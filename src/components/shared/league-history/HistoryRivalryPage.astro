@@ -27,8 +27,8 @@ import type { LeagueSlug } from '../../../types/nav';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { canViewLeagueHistory } from '../../../utils/league-history/access';
-import { getTeamColor, getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
-import { resolveTeamColorPair } from '../../../utils/team-color-contrast';
+import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { ensureLegibleOn } from '../../../utils/team-color-contrast';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
 import { recordBook } from '../../../utils/league-history/records.mjs';
 import { rivalryHistory } from '../../../utils/league-history/rivalry.mjs';
@@ -55,6 +55,8 @@ interface Meeting {
   winner: 'A' | 'B' | null;
   nameA: string;
   nameB: string;
+  iconA: string | null;
+  iconB: string | null;
   holdingA: string;
   holdingB: string;
 }
@@ -123,26 +125,15 @@ const viewerFranchise = franchiseIdForLeague(authUser, league.id);
 const showHistoryTabs = canViewLeagueHistory(authUser);
 
 const colorOf = (f: string) => toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug)).primary;
-// The chart, tug bar and legend sit on the card, not the hero, so each side
-// needs a color that reads on THAT ground and differs from the other side's:
-// Vitside Mafia's near-black primary vanished on a dark card. One pair per
-// theme, picked by the shared team-color contrast rules.
-const colorSet = (f: string) => ({
-  colorPrimary: getTeamColorPrimary(f, navSlug),
-  colorSecondary: getTeamColorSecondary(f, navSlug),
-  color: getTeamColor(f, navSlug),
-});
-const chartPair = (background: string) =>
-  resolveTeamColorPair(colorSet(a), colorSet(b), {
-    background,
-    // Stricter than the default 18: a navy bar on a #262626 card cleared 18
-    // and still read as a hole in the chart.
-    minBackgroundContrast: 30,
-    forceAdjust: true,
-    homeVisibilityFallback: true,
-  });
-const onLight = chartPair('#ffffff');
-const onDark = chartPair('#262626');
+// The chart and its legend sit on the card, not the hero, but wear the hero's
+// colors so the page reads as one pairing (Brandon, 2026-10-25). Each is only
+// nudged lighter or darker where it would vanish into THAT theme's card:
+// Vitside Mafia's near-black primary disappeared on a dark one. 30 is
+// stricter than the default 18: a navy bar on a #262626 card cleared 18 and
+// still read as a hole in the chart.
+const chartColor = (f: string, background: string) => ensureLegibleOn(colorOf(f), background, 30);
+const onLight = { home: chartColor(a, '#ffffff'), away: chartColor(b, '#ffffff') };
+const onDark = { home: chartColor(a, '#262626'), away: chartColor(b, '#262626') };
 const sideStyle = [
   `--rv-a: ${colorOf(a)}; --rv-b: ${colorOf(b)}`,
   `--rv-ca-light: ${onLight.home}; --rv-cb-light: ${onLight.away}`,
@@ -171,6 +162,7 @@ const kindLabel = (m: Meeting) =>
     ? null
     : (playoffRounds[`${m.y}-${m.wk}`] ?? (m.kind === 'consolation' ? 'Consolation' : m.final ? 'Final' : 'Playoffs'));
 const winnerName = (m: Meeting) => (m.winner === 'A' ? m.nameA : m.winner === 'B' ? m.nameB : null);
+const winnerIcon = (m: Meeting) => (m.winner === 'A' ? m.iconA : m.winner === 'B' ? m.iconB : null);
 const gameLine = (m: Meeting) => `${m.y} · Week ${m.wk}${kindLabel(m) ? ` · ${kindLabel(m)}` : ''}`;
 // In the every-game view, a meeting played under an earlier owner says whose it was.
 const earlierOwners = (m: Meeting) =>
@@ -374,7 +366,14 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
                 <li class:list={['hrv-game', { 'hrv-game--final': m.final }]}>
                   <span class="hrv-game__year">{m.y}</span>
                   <span class="hrv-game__body">
-                    <span class="hrv-game__win">{winnerName(m) ? `${winnerName(m)} won` : 'Tie'}</span>
+                    {winnerIcon(m) ? (
+                      <span class="hrv-game__win hrv-game__win--logo">
+                        <img class="hrv-game__logo" src={winnerIcon(m)!} alt={winnerName(m) ?? ''} title={winnerName(m) ?? undefined} width="40" height="40" loading="lazy" />
+                        won
+                      </span>
+                    ) : (
+                      <span class="hrv-game__win">{winnerName(m) ? `${winnerName(m)} won` : 'Tie'}</span>
+                    )}
                     <span class="hrv-game__sub">{kindLabel(m)} · Week {m.wk}</span>
                   </span>
                   <span class="hrv-game__score">
@@ -579,7 +578,9 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
     margin: 0 0 0.75rem;
   }
 
-  /* The series as a tug of war: A's share of the decided games. */
+  /* The series as a tug of war: A's share of the decided games, in the
+     hero's club colors (the chart's, nudged only where a club would vanish
+     into the card). */
   .hrv-tug {
     display: flex;
     height: 10px;
@@ -817,6 +818,18 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
   }
   .hrv-game__win {
     font-weight: var(--font-weight-semibold);
+  }
+  /* A playoff winner is its logo, with "won" centered beside it. */
+  .hrv-game__win--logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .hrv-game__logo {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    object-fit: contain;
   }
   .hrv-game__scores {
     display: flex;
