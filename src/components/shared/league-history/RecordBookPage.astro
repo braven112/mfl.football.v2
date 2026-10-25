@@ -1060,6 +1060,9 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+    /* Border-box, or the padding and border spill past the grid cell and
+       each card runs under the next one. */
+    box-sizing: border-box;
     height: 100%;
     padding: 0.75rem;
     color: var(--page-text);
