@@ -64,7 +64,10 @@ describe.each(['theleague', 'afl-fantasy'])('%s franchise history', (slug) => {
       const mine = franchiseHistory(ix, f.franchiseId, { ownerOnly: true })!;
       expect(mine.owners).toHaveLength(1);
       expect(mine.seasons.length).toBeLessThanOrEqual(whole.seasons.length);
-      expect(mine.headToHead.reduce((n, o) => n + o.games, 0)).toBe(mine.games);
+      // The head-to-head rows are the rivalry page's records (games against each
+      // opponent's CURRENT owner, following owners across slots), pinned against
+      // rivalryPairs in tests/head-to-head.test.ts, so they are not a split of
+      // this slot's own games.
       expect(mine.games).toBeLessThanOrEqual(whole.games);
     }
   });

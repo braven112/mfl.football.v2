@@ -19,9 +19,15 @@
  * THIS FILE IS THE HEAD-TO-HEAD DEFINITION for the whole site. A pairing's
  * record is the games its two CURRENT owners played each other, from whichever
  * slots they held, regular season and playoffs, consolation games left out.
- * `rivalryPairs` tallies it for every pairing, `headToHeadMeetings` lists one
- * pairing's games, and `rivalEntries` / `rivalrySeries` are the shapes the
- * franchise pages, owner map, matchup previews and schedule release read. The
+ * Every count starts from ONE game index, `holdingGames` (the games one
+ * holding played another), so the rivalry pages, the franchise pages' and
+ * owner pages' head-to-head tables (`headToHeadByOpponent`, `headToHeadBySlot`)
+ * and the pairing tally cannot drift apart again: until Oct 2026 each of those
+ * three tallied its own games, and a franchise page row read 22-13 beside a
+ * rivalry page reading 16-5 for the same two teams. `rivalryPairs` tallies
+ * every pairing, `headToHeadMeetings` lists one pairing's games, and
+ * `rivalEntries` / `rivalrySeries` are the shapes the franchise pages, owner
+ * map, matchup previews and schedule release read. The
  * old per-franchise `matchupHistory` in franchise-history.json counted
  * consolation games and stored every game twice, and disagreed with the
  * rivalry pages on most pairings; `tests/head-to-head-source-guard.test.ts`
@@ -31,6 +37,9 @@
 import { MIN_RIVALRY_MEETINGS, rivalryIntensity } from '../rivalry-intensity.mjs';
 
 const record = (w, l, t) => `${w}-${l}${t ? `-${t}` : ''}`;
+
+/** Whether a game counts toward a record: regular season and playoffs, never a consolation game. */
+const counts = (m) => m.kind !== 'consolation';
 
 /** The holding (owner, or co-owners) that ran a slot in its latest season. */
 function currentHolding(ix, franchiseId) {
@@ -56,6 +65,113 @@ const isFinal = (ix, g) => {
   const r = new Set([ix.team(g.y, g.wf)?.r, ix.team(g.y, g.lf)?.r]);
   return r.has('C') && r.has('R');
 };
+
+/**
+ * THE game index every head-to-head count reads: each team-game (records.mjs
+ * `teamGames`, one row per side) filed under the holding that played it and
+ * the holding it played. Every kind is filed, consolation included, so a page
+ * can list a game it does not count; `counts` decides what a record adds up.
+ * Cached per index.
+ */
+function holdingIndex(ix) {
+  if (ix._holdingIndex) return ix._holdingIndex;
+  const index = new Map();
+  for (const g of ix.teamGames) {
+    const mine = ix.entityOf(g.y, g.f);
+    const theirs = ix.entityOf(g.y, g.of);
+    if (!index.has(mine)) index.set(mine, new Map());
+    const row = index.get(mine);
+    if (!row.has(theirs)) row.set(theirs, []);
+    row.get(theirs).push(g);
+  }
+  ix._holdingIndex = index;
+  return index;
+}
+
+/**
+ * Every game holding `ka` played holding `kb`, from `ka`'s side, oldest
+ * first, consolation games included (filter with `counts`). Team-game rows:
+ * `{ y, wk, kind, f, of, s, os, won, tie }`.
+ */
+export function holdingGames(ix, ka, kb) {
+  return holdingIndex(ix).get(ka)?.get(kb) ?? [];
+}
+
+/**
+ * The slot each holding now stands for: the slot it held most recently, an
+ * active slot before a retired one. A head-to-head row against a slot counts
+ * the games against this holding, so it is the rivalry page's record. Cached.
+ */
+function slotOfHolding(ix) {
+  if (ix._slotOfHolding) return ix._slotOfHolding;
+  const out = new Map();
+  // Oldest first, so a later season's holder overwrites an earlier one.
+  const lastSeen = new Map();
+  for (const s of ix.ds.seasons) for (const f of Object.keys(s.teams)) lastSeen.set(f, s.y);
+  const slots = [...lastSeen.entries()].sort((x, y) => x[1] - y[1]);
+  for (const [f, y] of slots) out.set(ix.entityOf(y, f), f);
+  ix._slotOfHolding = out;
+  return out;
+}
+
+/**
+ * The counted games the holdings in `holdings` played, grouped by the
+ * opponent's holding: `Map<holdingKey, teamGame[]>`, each list oldest first.
+ * An owner page passes every holding the owner was part of; games among
+ * those holdings are left out.
+ */
+export function headToHeadByOpponent(ix, holdings) {
+  const out = new Map();
+  for (const k of holdings) {
+    for (const [opp, list] of holdingIndex(ix).get(k) ?? []) {
+      // An owner with two teams at once (a pool league) can meet themselves: never a rivalry.
+      if (holdings.includes(opp)) continue;
+      const counted = list.filter(counts);
+      if (!counted.length) continue;
+      out.set(opp, [...(out.get(opp) ?? []), ...counted]);
+    }
+  }
+  for (const list of out.values()) list.sort((x, y) => x.y - y.y || x.wk - y.wk);
+  return out;
+}
+
+/**
+ * The counted games one holding played each opponent SLOT's current holding,
+ * grouped by that slot: `Map<franchiseId, teamGame[]>`. The franchise page's
+ * current-owner view; a row is exactly the rivalry page's record for the pair
+ * (Brandon, 2026-10-26: "Match the rivalry page"). Games against a slot's
+ * former owners belong to no row here; the all-owners view keeps them.
+ */
+export function headToHeadBySlot(ix, holding) {
+  const slots = slotOfHolding(ix);
+  const out = new Map();
+  for (const [opp, list] of headToHeadByOpponent(ix, [holding])) {
+    const slot = slots.get(opp);
+    if (slot) out.set(slot, list);
+  }
+  return out;
+}
+
+/** A team-game row as a rivalry-page meeting, from its own side (A). */
+function teamGameMeeting(ix, g) {
+  return {
+    y: g.y,
+    wk: g.wk,
+    kind: g.kind,
+    final: isFinal(ix, g),
+    sA: g.s,
+    sB: g.os,
+    winner: g.tie ? null : g.won ? 'A' : 'B',
+    franchiseA: g.f,
+    franchiseB: g.of,
+    nameA: ix.team(g.y, g.f)?.n ?? g.f,
+    nameB: ix.team(g.y, g.of)?.n ?? g.of,
+    iconA: ix.team(g.y, g.f)?.i ?? null,
+    iconB: ix.team(g.y, g.of)?.i ?? null,
+    holdingA: ix.entityOf(g.y, g.f),
+    holdingB: ix.entityOf(g.y, g.of),
+  };
+}
 
 /**
  * Every game between two slots, plus every game the two slots' current owners
@@ -94,9 +210,6 @@ function meetingsOf(ix, a, b, ka, kb) {
     .sort((x, y) => x.y - y.y || x.wk - y.wk);
 }
 
-/** Whether a meeting counts toward a record: regular season and playoffs, never a consolation game. */
-const counts = (m) => m.kind !== 'consolation';
-
 /**
  * The games that make up a pairing's head-to-head record: every counted game
  * the two slots' CURRENT owners played each other, from A's side, oldest
@@ -108,9 +221,9 @@ export function headToHeadMeetings(ix, a, b) {
   const ha = currentHolding(ix, a);
   const hb = currentHolding(ix, b);
   if (!ha || !hb || a === b) return null;
-  return meetingsOf(ix, a, b, ha.key, hb.key).filter(
-    (m) => m.holdingA === ha.key && m.holdingB === hb.key && counts(m),
-  );
+  return holdingGames(ix, ha.key, hb.key)
+    .filter(counts)
+    .map((g) => teamGameMeeting(ix, g));
 }
 
 /** W-L-T and the longest and current runs of a counted list of meetings, from A's side. */
@@ -151,26 +264,25 @@ export function seriesTally(meetings) {
 export function rivalryPairs(ix) {
   if (ix._rivalryPairs) return ix._rivalryPairs;
   const latest = ix.ds.seasons.at(-1);
-  const active = latest ? Object.keys(latest.teams) : [];
-  const slotOf = new Map();
-  for (const f of active) {
-    const key = currentHolding(ix, f)?.key;
-    if (key) slotOf.set(key, f);
-  }
+  const active = latest ? Object.keys(latest.teams).sort() : [];
+  const holdings = active.map((f) => currentHolding(ix, f)?.key);
   const pairs = new Map();
-  for (const g of ix.games) {
-    if (g.kind === 'consolation') continue;
-    const sw = slotOf.get(ix.entityOf(g.y, g.wf));
-    const sl = slotOf.get(ix.entityOf(g.y, g.lf));
-    if (!sw || !sl || sw === sl) continue;
-    const [a, b] = [sw, sl].sort();
-    if (!pairs.has(`${a}-${b}`)) pairs.set(`${a}-${b}`, { a, b, wa: 0, wb: 0, t: 0, games: 0, playoffs: 0 });
-    const p = pairs.get(`${a}-${b}`);
-    p.games += 1;
-    if (g.kind === 'playoffs') p.playoffs += 1;
-    if (g.tie) p.t += 1;
-    else if (sw === a) p.wa += 1;
-    else p.wb += 1;
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      if (!holdings[i] || !holdings[j] || holdings[i] === holdings[j]) continue;
+      const games = holdingGames(ix, holdings[i], holdings[j]).filter(counts);
+      if (!games.length) continue;
+      const [a, b] = [active[i], active[j]];
+      pairs.set(`${a}-${b}`, {
+        a,
+        b,
+        wa: games.filter((g) => g.won).length,
+        wb: games.filter((g) => !g.won && !g.tie).length,
+        t: games.filter((g) => g.tie).length,
+        games: games.length,
+        playoffs: games.filter((g) => g.kind === 'playoffs').length,
+      });
+    }
   }
   for (const p of pairs.values()) p.heat = rivalryIntensity(p.games, p.wa, p.wb, p.t, p.playoffs);
   ix._rivalryPairs = pairs;
@@ -250,7 +362,8 @@ export function rivalryHistory(ix, a, b, { ownerOnly = true } = {}) {
 
   const all = meetingsOf(ix, a, b, ha.key, hb.key);
   const bothCurrent = (m) => m.holdingA === ha.key && m.holdingB === hb.key;
-  const listed = ownerOnly ? all.filter(bothCurrent) : all;
+  // The current owners' games come from the one index every head-to-head reads.
+  const listed = ownerOnly ? holdingGames(ix, ha.key, hb.key).map((g) => teamGameMeeting(ix, g)) : all;
   const counted = listed.filter(counts);
   const playoffs = counted.filter((m) => m.kind === 'playoffs');
   const series = seriesTally(counted);

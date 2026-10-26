@@ -12,6 +12,8 @@ import {
 import { describeSeries } from '../src/utils/rivalry-intensity.mjs';
 import { seriesSnapshot } from '../src/utils/matchup-preview-visuals.mjs';
 import { meetingsBetween } from '../src/utils/front-page';
+import { franchiseHistory } from '../src/utils/league-history/franchise.mjs';
+import { ownerHistory } from '../src/utils/league-history/owner.mjs';
 
 /**
  * The site's one head-to-head definition (league-history/rivalry.mjs): a
@@ -106,6 +108,27 @@ describe('the head-to-head definition', () => {
   });
 });
 
+describe('the franchise and owner pages read the same record', () => {
+  it('counts a franchise row against the opponent’s current owner in the owner view', () => {
+    const row = (h: any, opp: string) => h.headToHead.find((o: any) => o.opponentId === opp);
+    const mine = franchiseHistory(ix, '0001', { ownerOnly: true }) as any;
+    expect(row(mine, '0002')).toMatchObject({ w: 2, l: 1, t: 1, games: 4 });
+    // o3's 2024 win from 0003 follows o3 to 0004; 0003's new owner o4 never met o1.
+    expect(row(mine, '0004')).toMatchObject({ w: 1, l: 1, games: 2 });
+    expect(row(mine, '0003')).toBeUndefined();
+    // The all-owners view keeps every game against each franchise id.
+    const whole = franchiseHistory(ix, '0001') as any;
+    expect(row(whole, '0002')).toMatchObject({ w: 3, l: 1, t: 1, games: 5 });
+    expect(row(whole, '0003')).toMatchObject({ w: 0, l: 1, games: 1 });
+  });
+
+  it('counts an owner row against the opponent’s holding', () => {
+    const o1 = ownerHistory(ix, 'o1') as any;
+    expect(o1.headToHead.find((o: any) => o.key === 'o2')).toMatchObject({ w: 2, l: 1, t: 1, games: 4 });
+    expect(o1.headToHead.find((o: any) => o.key === 'o9')).toMatchObject({ w: 1, games: 1 });
+  });
+});
+
 const tally = (games: any[]) => ({
   games: games.length,
   wa: games.filter((m) => m.winner === 'A').length,
@@ -137,6 +160,34 @@ describe.each(['theleague', 'afl-fantasy', 'archies'])('%s: one record per pairi
     for (const p of checked.slice(0, 150)) {
       const s = rivalryHistory(real, p.a, p.b)!.series;
       expect([s.games, s.a, s.b, s.t], `${p.a}-${p.b}`).toEqual([p.games, p.wa, p.wb, p.t]);
+    }
+  });
+
+  it('every franchise page row and owner page row matches the rivalry page', () => {
+    const latest = data.seasons.at(-1);
+    for (const f of Object.keys(latest.teams)) {
+      const h = franchiseHistory(real, f, { ownerOnly: true }) as any;
+      for (const o of h.headToHead.filter((x: any) => x.active)) {
+        const p = rivalryPairs(real).get([f, o.opponentId].sort().join('-')) as any;
+        const [w, l] = p.a === f ? [p.wa, p.wb] : [p.wb, p.wa];
+        expect([o.w, o.l, o.t, o.games], `${f} v ${o.opponentId}`).toEqual([w, l, p.t, p.games]);
+      }
+    }
+    // An owner who has only ever held one team: their rows against the
+    // league's current owners are the same pairs.
+    if (slug === 'archies') return;
+    for (const f of Object.keys(latest.teams)) {
+      const key = real.entityOf(latest.y, f);
+      if (key.includes('+') || key.startsWith('slot:')) continue;
+      const h = ownerHistory(real, key) as any;
+      if (!h || new Set(h.seasons.map((s: any) => s.holding)).size !== 1) continue;
+      for (const o of h.headToHead) {
+        const opp = Object.keys(latest.teams).find((g) => real.entityOf(latest.y, g) === o.key);
+        if (!opp || opp === f) continue;
+        const p = rivalryPairs(real).get([f, opp].sort().join('-')) as any;
+        const [w, l] = p.a === f ? [p.wa, p.wb] : [p.wb, p.wa];
+        expect([o.w, o.l, o.t, o.games], `${key} v ${o.key}`).toEqual([w, l, p.t, p.games]);
+      }
     }
   });
 

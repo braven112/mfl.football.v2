@@ -8,7 +8,13 @@
  * franchise id played, whoever held it, and `owners` lists the holdings that
  * ran it. Records count regular season and playoff games, never consolation
  * games, the Record Book's "all games" scope.
+ *
+ * The head-to-head table reads rivalry.mjs, the site's one head-to-head
+ * definition: in the current owner's view each row is the games against that
+ * opponent's current owner, the rivalry page's own record for the pair.
  */
+
+import { headToHeadBySlot } from './rivalry.mjs';
 
 const record = (w, l, t) => `${w}-${l}${t ? `-${t}` : ''}`;
 const winPct = (w, l, t) => {
@@ -118,11 +124,17 @@ export function franchiseHistory(ix, franchiseId, { ownerOnly = false } = {}) {
     current: o.years.at(-1) === latestYear,
   }));
 
-  // Head to head with every franchise id it has played.
-  const vs = new Map();
-  for (const g of games) {
-    if (!vs.has(g.of)) vs.set(g.of, []);
-    vs.get(g.of).push(g);
+  // Head to head. The current owner's view is rivalry.mjs's record against
+  // each slot's current owner, so a row always matches the rivalry page it
+  // links to; the all-owners view is every game against each franchise id.
+  let vs;
+  if (ownerOnly && holding) vs = headToHeadBySlot(ix, holding);
+  else {
+    vs = new Map();
+    for (const g of games) {
+      if (!vs.has(g.of)) vs.set(g.of, []);
+      vs.get(g.of).push(g);
+    }
   }
   const headToHead = [...vs.entries()]
     .map(([opponentId, list]) => {
