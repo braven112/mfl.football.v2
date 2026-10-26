@@ -94,11 +94,6 @@ const myIds = new Set(viewerFranchise ? (latest?.teams[viewerFranchise]?.h ?? `s
 const mine = (key: string) => key.split('+').some((id) => myIds.has(id));
 
 const navSlug = league.navSlug as LeagueSlug;
-const lastNames = new Map<string, string | undefined>();
-for (const s of (data as { seasons: Array<{ teams: Record<string, { n?: string }> }> }).seasons) {
-  for (const [f, t] of Object.entries(s.teams)) lastNames.set(f, t.n);
-}
-const currentName = (f: string) => lastNames.get(f);
 const rafters: RafterBanner[] = banners.map((b) => ({
   year: b.year,
   kind: 'C',
@@ -111,9 +106,9 @@ const rafters: RafterBanner[] = banners.map((b) => ({
   href: r(`/franchises/${b.franchiseId}${latest?.teams[b.franchiseId]?.h === b.entityKey ? '' : '?view=all'}`),
   title: `${b.year} champion: ${b.name}${b.owner ? ` (${b.owner})` : ''}, ${b.record}${b.runnerUp ? `, beat ${b.runnerUp}` : ''}`,
   mine: mine(b.entityKey),
-  // A title won under an old name (another owner's team, or a complete
-  // rebrand) hangs in that era's own colors.
-  colors: b.name === currentName(b.franchiseId) ? null : getTeamEraColors(b.franchiseId, navSlug, b.year),
+  // A title hangs in its own era's colors whenever the team kept a look for
+  // that year (an old name, or the same name under an earlier crest).
+  colors: getTeamEraColors(b.franchiseId, navSlug, b.year),
 }));
 const ownerHref = (e: Entity) =>
   e.ownerSlug ? r(`/owners/${e.ownerSlug}`) : e.franchiseId ? r(`/franchises/${e.franchiseId}`) : null;
