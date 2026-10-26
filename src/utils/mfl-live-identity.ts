@@ -128,6 +128,12 @@ export interface ResolveIdentityInput {
    * it with `leagueHasUploadedMarks` over the same map `mflIcon` comes from.
    */
   leagueHasMarks?: boolean;
+  /**
+   * Skip the NFL-club rung entirely. The store build of the MFL Live app may
+   * not ship NFL marks or club colours (docs/plans/mfl-live-store-app.md,
+   * Legal), so a franchise named "Cowboys" falls through to text there.
+   */
+  noNflArt?: boolean;
 }
 
 /** True when any franchise in a league's mark map carries an uploaded icon. */
@@ -190,7 +196,7 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
 
   // ── Rung 3: the name IS an NFL club ─────────────────────────────────────
   // Only where the league has no art of its own. See this module's header.
-  const nflCode = input.leagueHasMarks ? null : matchNflTeamName(franchiseName);
+  const nflCode = input.leagueHasMarks || input.noNflArt ? null : matchNflTeamName(franchiseName);
   if (nflCode) {
     // Through the accessor, never the table: it normalizes the code and
     // supplies the fallback, and `tests/team-color-backdrop-guard.test.ts`

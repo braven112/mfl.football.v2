@@ -77,6 +77,14 @@ export interface AssembleMflLiveInput {
   leaguesParam?: string | null;
   /** The remembered set from this board's OWN cookie. */
   leaguesCookie?: string | null;
+  /**
+   * MFL data only — the store build of the MFL Live app
+   * (docs/plans/mfl-live-store-app.md, Legal). No ESPN read at all (so no
+   * games strip, ticker or red zone), no Sleeper leagues, no headshots and no
+   * NFL club marks or colours. Scores, projections and yet-to-play all come
+   * from MFL and are unchanged. Pinned by `tests/mfl-live-board-store.test.ts`.
+   */
+  mflOnly?: boolean;
 }
 
 export interface AssembledMflLive {
@@ -179,9 +187,11 @@ export async function assembleMflLiveBoard(
   // second list is empty and the board is exactly the MFL board.
   const [mflLeagues, sleeperLeagues] = await Promise.all([
     discoverBoardLeagues(user),
-    getSleeperLink(user)
-      .then((link) => discoverSleeperBoardLeagues(link, year))
-      .catch(() => []),
+    input.mflOnly
+      ? Promise.resolve([])
+      : getSleeperLink(user)
+          .then((link) => discoverSleeperBoardLeagues(link, year))
+          .catch(() => []),
   ]);
   const leagues = [...mflLeagues, ...sleeperLeagues];
   // The param narrows what the SESSION already allows and can never widen it:
@@ -198,11 +208,10 @@ export async function assembleMflLiveBoard(
   // ticker and the red-zone banner are affordable on an all-leagues-on board.
   // Either can fail without costing the scores: the board simply has no rail
   // and no ticker, which is visibly less rather than wrong.
-  const scoreboardRead = fetchNflScoreboard({ week, year }).catch(() => ({
-    ok: false,
-    week,
-    games: [] as NflGame[],
-  }));
+  const noScoreboard = { ok: false, week, games: [] as NflGame[] };
+  const scoreboardRead = input.mflOnly
+    ? Promise.resolve(noScoreboard)
+    : fetchNflScoreboard({ week, year }).catch(() => noScoreboard);
   // Sleeper sends points but no game clock, so its read waits on the
   // scoreboard (for each starter's seconds left) and on the player id map —
   // and on nothing else, so it still overlaps the MFL fan-out.
@@ -229,7 +238,7 @@ export async function assembleMflLiveBoard(
     // not host, so it is the caller that wants the extra read.
     readCrossLeagueLive({ user, leagues: onMfl, week, year, withFranchiseNames: true }),
     scoreboardRead,
-    loadNflGameDetail({ week, year }).catch(() => null),
+    input.mflOnly ? Promise.resolve(null) : loadNflGameDetail({ week, year }).catch(() => null),
     sleeperReads,
     sleeperPlayers,
   ]);
@@ -267,7 +276,7 @@ export async function assembleMflLiveBoard(
       name: who?.name ?? `Player ${playerId}`,
       position: who?.position ?? '',
       nflTeam: who?.nflTeam ?? '',
-      headshot: who?.headshot ?? '',
+      headshot: input.mflOnly ? '' : (who?.headshot ?? ''),
       // NEVER shipped for joining — it can be a COLLEGE athlete id, and
       // college and NFL ids are both plain digits, so a bad join resolves a
       // different person rather than failing.
@@ -354,6 +363,7 @@ export async function assembleMflLiveBoard(
         // crest and never reaches this.
         mflIcon: read.franchiseIcons?.[fid],
         leagueHasMarks,
+        noNflArt: input.mflOnly,
       });
 
     const toTeam = (fid: string, fallbackName: string): MflLiveTeam => {

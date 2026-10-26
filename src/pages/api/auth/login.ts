@@ -38,6 +38,9 @@ const BB1_LEAGUE_ID = getLeagueBySlug('best-ball-1')!.id;
  * many real owners at once — so it is a flood ceiling, not a per-user limit.
  */
 const LOGIN_MAX_ATTEMPTS = 10;
+
+/** The `client` value the MFL Live mobile app sends with its sign-in. */
+const MFL_LIVE_APP_CLIENT = 'mfl-live-app';
 const LOGIN_MAX_PER_HOP = 100;
 const LOGIN_WINDOW_SECONDS = 15 * 60;
 
@@ -47,7 +50,7 @@ const USERNAME_KEY_MAX = 64;
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
-    const { username, password, leagueId, year, scope } = body;
+    const { username, password, leagueId, year, scope, client } = body;
 
     // Validate inputs
     if (!username || !password) {
@@ -245,9 +248,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
     if (commissionerAccount) await recordCommissionerLogin(resolvedLeagueId, commissionerAccount);
 
+    // The MFL Live mobile app keeps its session in the device keystore and
+    // sends it back as `Authorization: Bearer`, which only `getMflLiveUser`
+    // reads. So the token goes in the body for that client, on the mfl-live
+    // scope only — a browser sign-in never sees it, and keeps its httpOnly
+    // cookie as the only copy.
+    const appToken = scope === 'mfl-live' && client === MFL_LIVE_APP_CLIENT ? { token: sessionToken } : {};
+
     return new Response(
       JSON.stringify({
         success: true,
+        ...appToken,
         user: {
           userId: mflResponse.userId || username,
           username,

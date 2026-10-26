@@ -185,7 +185,9 @@ pilot leagues (`MFL_LIVE_PILOT_LEAGUE_IDS`), reachable solely through the
 until launch) widens that to any MFL league, but such a session is
 MFL-Live-ONLY: `getAuthUser` still refuses it, and only the /live surfaces
 call `getMflLiveUser`, which accepts it as a plain owner
-(`tests/mfl-live-open-sign-in.test.ts` pins the allowlist). `isCommissionerOrAdmin` trusts a role that
+(`tests/mfl-live-open-sign-in.test.ts` pins the allowlist). The MFL Live mobile app sends the SAME signed
+JWT as `Authorization: Bearer`; only `getMflLiveUser` reads that header, so it
+never becomes a site session (`tests/mfl-live-app-auth.test.ts`). `isCommissionerOrAdmin` trusts a role that
 carries no league, so an endpoint acting on a FIXED league (contracts,
 autocut, TheLeague's GroupMe) gates with `isCommissionerOrAdminForLeague`, and
 MFL writes use the caller's own cookie, never the server's env credentials

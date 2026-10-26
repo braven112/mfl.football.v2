@@ -7,6 +7,10 @@
  *
  * `no-store`, without exception: a CDN copy of a live board is wrong while
  * looking live.
+ *
+ * `?source=mfl` is the MFL Live mobile app's board: MFL data only, no ESPN,
+ * no Sleeper, no headshots or NFL club art (see `mflOnly` on the assembler).
+ * The app signs in with a Bearer token, which `getMflLiveUser` accepts.
  */
 
 import type { APIRoute } from 'astro';
@@ -55,6 +59,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       // resolver only returns ids already present in this owner's own list.
       leaguesParam: url.searchParams.get('leagues'),
       leaguesCookie: cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      mflOnly: url.searchParams.get('source') === 'mfl',
     });
     return new Response(JSON.stringify(board), { status: 200, headers: NO_STORE });
   } catch {

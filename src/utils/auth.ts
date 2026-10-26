@@ -8,7 +8,7 @@
  * testing, mint a real session via the login flow or createSessionToken().
  */
 
-import { getSessionTokenFromCookie, validateSessionToken } from './session';
+import { getSessionTokenFromAuthorization, getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
 import { getLeagueById, MFL_LIVE_OPEN_SIGN_IN, MFL_LIVE_PILOT_LEAGUE_IDS, mflLiveSignInLeagueIds } from '../config/leagues';
 import { isDemoDeploy } from './deploy-environment';
@@ -28,10 +28,18 @@ const normalizeFranchise = (value: string | null | undefined): string => {
   return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
 };
 
-/** The signed session, with no opinion yet on which leagues may hold one. */
-function readSession(request: Request): AuthUser | null {
+/**
+ * The signed session, with no opinion yet on which leagues may hold one.
+ *
+ * `allowBearer` lets the MFL Live mobile app present the same signed token as
+ * an `Authorization: Bearer` header. Only `getMflLiveUser` passes it, so the
+ * header can reach the /live surfaces and nothing else on the site.
+ */
+function readSession(request: Request, allowBearer = false): AuthUser | null {
   const cookieHeader = request.headers.get('cookie');
-  const sessionToken = getSessionTokenFromCookie(cookieHeader);
+  const sessionToken =
+    getSessionTokenFromCookie(cookieHeader) ??
+    (allowBearer ? getSessionTokenFromAuthorization(request.headers.get('authorization')) : null);
   if (!sessionToken) return null;
 
   const sessionData = validateSessionToken(sessionToken);
@@ -84,9 +92,13 @@ export function getAuthUser(request: Request): AuthUser | null {
  * stranger's session can only ever see the leagues their own MFL account is
  * in. Such a session is always a plain owner: MFL's commissioner cookie is
  * about THEIR league, never ours (`tests/auth-league-scope.test.ts`).
+ *
+ * It is also the ONLY reader that accepts the session as a Bearer header (the
+ * MFL Live mobile app). Same JWT, same signature check, same league rules.
  */
 export function getMflLiveUser(request: Request): AuthUser | null {
-  const user = readSession(request);
+  // The one reader that also takes the mobile app's Bearer header.
+  const user = readSession(request, true);
   if (!user) return null;
   // The MFL Live list, not every site league: a best-ball session is valid on
   // its own league's pages but is not an MFL Live session.
