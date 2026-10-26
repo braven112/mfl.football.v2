@@ -22,7 +22,7 @@
   background: var(--card-bg);
   border: 1px solid var(--history-gold);
   border-radius: 999px;
-  box-shadow: 0 0 0 4px var(--history-gold-wash);
+  outline: 4px solid var(--history-gold-wash);
 }
 .ha-bar:hover {
   color: var(--content-text-muted);
@@ -664,7 +664,7 @@
 }
 .hask-form:focus-within {
   border-color: var(--history-gold);
-  box-shadow: 0 0 0 3px var(--history-gold-wash);
+  outline: 3px solid var(--history-gold-wash);
 }
 .hask-input {
   flex: 1;
