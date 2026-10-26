@@ -5,7 +5,7 @@ name: MFL Live mobile (Android)
 # it costs a minute of Actions time and the APK/AAB appears on expo.dev.
 #
 #   pull request  -> type-check only (no EAS build, which spends build quota)
-#   push          -> type-check, then a `preview` build: an APK you install
+#   push          -> (staging only) type-check, then a `preview` build: an APK you install
 #                    straight from the build's page on expo.dev
 #   Run workflow  -> pick `preview` or `production` (the signed AAB for Play)
 #
@@ -21,7 +21,9 @@ on:
       - 'packages/shared-types/**'
       - '.github/workflows/mobile-android.yml'
   push:
-    branches: [main, staging]
+    # Staging only: a release fast-forwards main to a commit staging already
+    # built, so a main trigger would spend a second build on the same APK.
+    branches: [staging]
     paths:
       - 'apps/mobile/**'
       - 'packages/shared-types/**'

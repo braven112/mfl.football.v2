@@ -100,6 +100,13 @@ The wire contract is `packages/shared-types/src/mfl-live-app.ts`; the site's
 `src/types/mfl-live-app-contract.ts` asserts under `pnpm test:types`. A future
 need for shared RUNTIME code is the point to revisit this.
 
+EAS Build's pnpm refuses a lockfile entry published less than a day before the
+build. The first build failed on exactly that, because 24 Metro packages had
+shipped that morning. So the app's `pnpm-workspace.yaml` sets
+`minimumReleaseAge: 1440`, and the lockfile is resolved under the same rule.
+Preview builds start on pushes to `staging` only. A release fast-forwards `main`
+to a commit staging already built.
+
 ## Roadmap
 
 1. **V1 — live.** Live scoring, live standings, league logos, owner-set logos
