@@ -15,7 +15,7 @@ import MflAppLayout from '../layouts/MflAppLayout.astro';
 // SSR: the layout reads the theme cookie and the session.
 export const prerender = false;
 
-const updated = 'October 22, 2026';
+const updated = 'October 26, 2026';
 ---
 
 <MflAppLayout title="Privacy policy — MFL" description="What mfl.football and the MFL Live apps collect, why, and how to have it removed.">
@@ -67,6 +67,17 @@ const updated = 'October 22, 2026';
 				The app shows the league broadcast board from this website. It collects nothing beyond what the
 				website itself collects (above). It keeps your sign-in cookie on the TV so you don't have to sign in
 				again, and it asks for no other permissions besides network access.
+			</p>
+		</section>
+
+		<section class="policy__section">
+			<h2>The MFL Live phone app</h2>
+			<p>
+				The app shows your league's live scores and matchups. You sign in with your MyFantasyLeague username
+				and password, which go to MyFantasyLeague through our server to start a session; we don't store your
+				password. The app keeps the signed session in your phone's secure storage so you stay signed in, and
+				signing out deletes it. It asks for no permissions besides network access, and it collects nothing
+				beyond what the website collects (above).
 			</p>
 		</section>
 
