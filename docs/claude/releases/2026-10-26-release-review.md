@@ -61,3 +61,22 @@ season). Monday Night Football was about five hours away, which left time to rol
   week's staged changes.
 - An EAS preview build of the app started from the staging push (`dace8a9e`). The push to
   `main` starts another one for the same commit.
+
+## Second release, same day
+
+**GO, over the same game-day blackout, on the owner's word ("get it on to staging and prod").**
+`main` fast-forwarded `3810499b → c9d34893` at about 20:45 UTC (13:45 PT, Monday Oct 26).
+Production deployment `dpl_81Znn9TFZd7fjpP3m7uaL4bd88yd` went READY at about 20:50 UTC.
+Rollback candidate: `dpl_EaoJX5fDhLSqXAg3wBs6GpWtYFxq` (`3810499b`).
+
+What shipped:
+
+- Ask the History: trash talk comes back on the asker (#1512).
+- Ask the History: a site-menu item, a site-search entry in both leagues, and asking a typed
+  question straight from the header search (#1514).
+- Score overlay for the Google TV app (#1516), and the MFL Live app lockfile fix (#1517).
+
+Checks: staging CI and Visual tests green on `c9d34893`, the exact tip promoted. Fast-forward
+clean. No new Redis key shapes in the range (#1515's reacted-posts index was already on `main`).
+Production `/theleague/history/ask` returned 200 with the new menu item. The changelog already
+carries Ask the History and the overlay, so no new staged line.
