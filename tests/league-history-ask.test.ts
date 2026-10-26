@@ -139,11 +139,12 @@ describe('player units', () => {
     expect(weeks.summary.score!.sum).toBeCloseTo(points, 1);
   });
 
-  it("says which of the AFL's weeks have no player scores", () => {
-    expect(describeMissingWeeks(aflPlayers.missingWeeks)).toMatch(/^Player scores are missing for /);
+  it('has a player score for every final week, and can say when one is missing', () => {
     // Archive weeks come as a flat franchise[] with no matchups; their scores
-    // still count (they once read as missing for 2007-2019).
-    for (const year of Object.keys(aflPlayers.missingWeeks)) expect(Number(year)).toBeGreaterThan(2019);
+    // still count (they once read as missing for 2007-2019), and the AFL's
+    // unfetched playoff weeks were backfilled from MFL on 2026-10-26.
+    expect(aflPlayers.missingWeeks).toEqual({});
+    expect(theleaguePlayers.missingWeeks).toEqual({});
     expect(describeMissingWeeks({})).toBe('');
     expect(describeMissingWeeks({ 2010: [1, 2, 3, 5], 2011: [1, 2, 3, 5] })).toBe('Player scores are missing for 2010-2011 Weeks 1-3, 5');
   });
