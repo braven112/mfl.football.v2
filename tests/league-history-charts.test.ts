@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatterFor, gapChart, historyChart, spreadChart, ticks } from '../src/utils/league-history/record-charts.mjs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { formatterFor, gapChart, historyChart, paceChart, spreadChart, ticks } from '../src/utils/league-history/record-charts.mjs';
+import { paceSeries, recordBook } from '../src/utils/league-history/records.mjs';
 
 /**
  * Record Book charts — the record's history line, the population each chart
@@ -95,5 +98,48 @@ describe('Record Book charts', () => {
     const svg = historyChart(b, 400, { watch })!.svg;
     expect(svg).toContain('class="rbc-watch"');
     expect(svg).toContain('Pace Setters · on pace for 140.00');
+  });
+});
+
+describe('On pace chart', () => {
+  const pace = {
+    by: 'game' as const,
+    full: 14,
+    real: [[1, 1], [2, 2], [3, 2], [4, 3]],
+    projected: [[4, 3], [14, 11]],
+    record: [[1, 1], [14, 12]],
+    name: 'Pacific <Pigskins>',
+    display: '11 wins',
+    recordValue: 12,
+    recordDisplay: '12',
+    recordLabel: 'Bring The Pain, 2010',
+    color: 'var(--team-accent-0001)',
+  };
+
+  it('draws real solid, projected dashed, and names both numbers', () => {
+    const c = paceChart(pace, 400)!;
+    expect(c.svg).toContain('rbc-pace-real');
+    expect(c.svg).toContain('rbc-pace-proj');
+    expect(c.svg).toContain('Projected');
+    expect(c.svg).toContain('Pace 11 wins');
+    expect(c.svg).toContain('Record 12');
+    expect(c.svg).toContain('Pacific &lt;Pigskins&gt;');
+    expect(c.take).toBe('Pacific <Pigskins> has 3 after 4 games and is on pace for 11 wins; the record is 12 (Bring The Pain, 2010).');
+  });
+
+  it("leaves out a record holder's path that does not add up to the record", () => {
+    expect(paceChart(pace, 400)!.svg).toContain('rbc-pace-record');
+    expect(paceChart({ ...pace, record: [[1, 1], [13, 9]] }, 400)!.svg).not.toContain('rbc-pace-record');
+  });
+
+  it('builds the season so far from the game record (a live season)', () => {
+    const ds = JSON.parse(readFileSync(join(__dirname, '..', 'data', 'theleague', 'derived', 'league-history.json'), 'utf8'));
+    const book = recordBook(ds);
+    for (const [id, watches] of Object.entries(book.watch() as Record<string, any[]>)) {
+      const s = paceSeries(book.ix, id, watches[0])!;
+      expect(s.real.length).toBeGreaterThan(0);
+      expect(s.projected[0]).toEqual(s.real.at(-1));
+      expect(s.projected[1][1]).toBe(watches[0].projected);
+    }
   });
 });

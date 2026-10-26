@@ -1,0 +1,18 @@
+---
+/**
+ * A shared Ask the History answer (The League) — thin route wrapper.
+ *
+ * Shared implementation: components/shared/league-history/HistoryAnswerPage.
+ * Open to anyone with the link, like every history page; an unknown or
+ * expired id is a 404.
+ */
+import HistoryAnswerPage from '../../../../components/shared/league-history/HistoryAnswerPage.astro';
+import { readAnswer } from '../../../../utils/league-history/ask-store';
+
+export const prerender = false;
+
+const saved = await readAnswer('theleague', Astro.params.id ?? '').catch(() => null);
+if (!saved) return Astro.rewrite('/_not-found');
+---
+
+<HistoryAnswerPage leagueSlug="theleague" saved={saved} />

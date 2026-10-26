@@ -1,0 +1,327 @@
+/*
+ * Ask the History — the question box (HistoryAsk.astro) and an answer
+ * (HistoryAnswer.astro, and the same markup the box's script builds). A plain
+ * stylesheet rather than scoped styles because the box renders answers
+ * client-side, where Astro's scoping attributes never reach.
+ *
+ * Phones: the answer table becomes one card per row with every value
+ * labeled, never a sideways-scrolling table (Brandon's rule).
+ */
+.ha {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(160deg, var(--card-bg) 40%, var(--history-gold-wash));
+  border: 1px solid var(--history-gold);
+  border-radius: var(--radius-lg, 16px);
+}
+.ha__kicker {
+  margin: 0;
+  color: var(--history-gold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ha__title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  text-transform: uppercase;
+}
+.ha__lede {
+  margin: 0 0 0.75rem;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+.ha__form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.ha__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  color: var(--page-text);
+  font: inherit;
+  font-size: var(--font-size-base, 1rem);
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 10px);
+  resize: vertical;
+}
+.ha__input:focus {
+  outline: 2px solid var(--history-gold);
+  outline-offset: 1px;
+}
+.ha__signin {
+  margin: 0;
+}
+.ha__examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ha__example {
+  padding: 0.375rem 0.625rem;
+  color: var(--page-text);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ha__example:hover:not(:disabled) {
+  border-color: var(--history-gold);
+}
+.ha__example:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.ha__status {
+  margin: 0.75rem 0 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+.ha__status:empty {
+  display: none;
+}
+.ha__status[data-tone='error'] {
+  color: var(--page-text);
+  font-weight: var(--font-weight-semibold);
+}
+[data-ha-box][data-busy] .ha__status::after {
+  content: '';
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.5em;
+  border: 2px solid var(--history-gold);
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  animation: ha-spin 0.8s linear infinite;
+}
+@keyframes ha-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── An answer ─────────────────────────────────────────────────────────── */
+.ha-answer {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: var(--style-card-border, 1px solid var(--content-border));
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--style-card-shadow, none);
+}
+.ha-answer__q {
+  margin: 0 0 0.375rem;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+.ha-answer__a {
+  margin: 0 0 0.75rem;
+  color: var(--page-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+}
+.ha-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+/* The header row is the kit's (ui-table, table.css); only spacing is ours. */
+.ha-table th {
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+}
+.ha-table td {
+  padding: 0.4375rem 0.5rem;
+  border-bottom: 1px solid var(--content-border);
+}
+.ha-table tr:last-child td {
+  border-bottom: 0;
+}
+.ha-table .ha-num {
+  text-align: right;
+}
+.ha-table a,
+.ha-table a:hover {
+  color: inherit;
+  text-decoration-color: var(--history-gold);
+}
+/* The Record Book boards an answer is about. */
+.ha-records {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .ha-records {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+.ha-record {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--page-text);
+  text-decoration: none;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--history-gold);
+  border-radius: var(--radius-md, 10px);
+}
+.ha-record:hover {
+  color: var(--page-text);
+  text-decoration: none;
+  border-color: var(--history-gold);
+}
+.ha-record__kicker {
+  color: var(--history-gold);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ha-record__title {
+  font-weight: var(--font-weight-semibold);
+}
+.ha-record__leader {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.ha-chart {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 10px);
+}
+.ha-chart__title {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.ha-receipt {
+  margin: 0.625rem 0 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.ha-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  margin: 0.875rem 0 0;
+}
+
+@media (max-width: 639px) {
+  .ha__form {
+    flex-direction: column;
+  }
+  .ha-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .ha-table,
+  .ha-table tbody,
+  .ha-table tr,
+  .ha-table td {
+    display: block;
+  }
+  .ha-table tr {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .ha-table tr:last-child {
+    border-bottom: 0;
+  }
+  .ha-table td,
+  .ha-table td.ha-num {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.125rem 0;
+    text-align: right;
+    border: 0;
+  }
+  .ha-table td::before {
+    content: attr(data-label);
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    text-align: left;
+  }
+}
+
+/* The answers the league opened most (History home). */
+.ha-shelf {
+  margin-top: 1rem;
+}
+.ha-shelf__title {
+  margin: 0 0 0.5rem;
+  color: var(--history-gold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ha-shelf__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .ha-shelf__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ha-shelf__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  height: 100%;
+  padding: 0.75rem;
+  color: var(--page-text);
+  text-decoration: none;
+}
+.ha-shelf__card:hover {
+  color: var(--page-text);
+  text-decoration: none;
+  border-color: var(--history-gold);
+}
+.ha-shelf__q {
+  font-weight: var(--font-weight-semibold);
+}
+.ha-shelf__a {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.ha-shelf__meta {
+  margin-top: auto;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-2xs);
+}

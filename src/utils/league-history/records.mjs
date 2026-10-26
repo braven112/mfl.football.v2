@@ -666,12 +666,60 @@ export function recordWatch(ix, seasonBoards) {
         record: field[0],
         played,
         full,
+        weeks,
+        fullWeeks,
       });
     }
     watches.sort((a, b) => (board.asc ? a.projected - b.projected : b.projected - a.projected));
     if (watches.length) out[board.id] = watches.slice(0, 3);
   }
   return out;
+}
+
+/**
+ * The season so far and its projection, for the On pace chart: one point per
+ * scored WEEK on a points board (a doubleheader week is one score) and per
+ * GAME on a results board, cumulative, plus the record holder's own season on
+ * the same axis. `real` is what has been played; `projected` runs straight
+ * from the last real point to the watch's projection at a full season, so the
+ * line is exactly the pace the number on the page assumes.
+ * @returns {{ by: 'week'|'game', full: number, real: number[][], projected: number[][], record: number[][] } | null}
+ */
+export function paceSeries(ix, boardId, watch) {
+  const spec = WATCHED[boardId];
+  if (!spec || !watch) return null;
+  const byWeek = spec.unit === 'points';
+  const regular = (y, f) => ix.teamGames.filter((g) => g.y === y && g.f === f && g.kind === 'regular');
+  const series = (games) => {
+    const out = [];
+    if (byWeek) {
+      const seen = new Set();
+      let sum = 0;
+      for (const g of games) {
+        if (seen.has(g.wk)) continue;
+        seen.add(g.wk);
+        sum += g.s;
+        out.push([out.length + 1, Math.round(sum * 100) / 100]);
+      }
+      return out;
+    }
+    let w = 0, l = 0, t = 0;
+    for (const g of games) {
+      if (g.tie) t++;
+      else if (g.won) w++;
+      else l++;
+      const n = w + l + t;
+      out.push([n, boardId === 'most-losses' ? l : boardId === 'best-record' ? (w + t * 0.5) / n : w]);
+    }
+    return out;
+  };
+  const real = series(regular(watch.year, watch.franchiseId));
+  if (!real.length) return null;
+  const full = byWeek ? watch.fullWeeks : watch.full;
+  const last = real[real.length - 1];
+  const rec = watch.record;
+  const record = rec?.franchiseId && rec.year != null ? series(regular(rec.year, rec.franchiseId)) : [];
+  return { by: byWeek ? 'week' : 'game', full, real, projected: [last, [Math.max(full, last[0]), watch.projected]], record };
 }
 
 // ── Cache ──────────────────────────────────────────────────────────────────────

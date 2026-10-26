@@ -1,0 +1,87 @@
+---
+/**
+ * A shared Ask the History answer, /<league>/history/ask/<id> — shared by
+ * TheLeague and the AFL. Readable by anyone with the link, like every other
+ * history page; asking another question is still for signed-in owners
+ * (HistoryAsk.astro). The answer and its table are the ones saved when it was
+ * asked (ask-store.ts), so the link reads the same next season.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
+import HistoryAnswer from './HistoryAnswer.astro';
+import HistoryAsk from './HistoryAsk.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { countAnswerOpen, type SavedAnswer } from '../../../utils/league-history/ask-store';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  saved: SavedAnswer;
+}
+
+const { leagueSlug, saved } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+// Another owner opening the link is what puts an answer on the History home's
+// "most shared" shelf. A Redis hiccup must not cost the page.
+await countAnswerOpen(saved, franchiseIdForLeague(getAuthUser(Astro.request), league.id)).catch(() => {});
+const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+---
+
+<TheLeagueLayout title={`Ask the history · ${league.name}`} og={{ title: saved.question, description: saved.answer }}>
+  <div class="hap">
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'History', href: r('/history') },
+        { label: 'Ask the history' },
+      ]}
+    />
+    <HistoryTabs leagueSlug={league.slug} current="home" />
+    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
+    <p class="hap__meta">
+      Asked {saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
+      <button class="cta-link hap__share" type="button" data-hap-share>Share</button>
+    </p>
+    <HistoryAsk league={league} base={base} title="Ask your own" />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .hap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+  .hap__meta {
+    margin: 0.5rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hap__share {
+    margin-left: 0.5rem;
+  }
+</style>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const button = document.querySelector<HTMLButtonElement>('[data-hap-share]');
+    if (!button || button.dataset.init) return;
+    button.dataset.init = 'true';
+    button.addEventListener('click', async () => {
+      const url = location.href;
+      try {
+        if (navigator.share) return void (await navigator.share({ title: document.title, url }));
+        await navigator.clipboard.writeText(url);
+        button.textContent = 'Link copied';
+      } catch {
+        /* dismissed share sheet */
+      }
+    });
+  });
+</script>

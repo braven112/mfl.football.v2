@@ -25,6 +25,8 @@ import type { LeagueSlug } from '../../../types/nav';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import HistoryRafters from './HistoryRafters.astro';
+import HistoryAsk from './HistoryAsk.astro';
+import { popularAnswers } from '../../../utils/league-history/ask-store';
 import { getTeamEraColors } from '../../../utils/team-colors';
 import type { RafterBanner } from './HistoryRafters.astro';
 import { recordBook, resultLabel } from '../../../utils/league-history/records.mjs';
@@ -78,6 +80,8 @@ const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeag
 
 const book = recordBook(data);
 const facts = book.facts();
+// The shelf is a nicety: a Redis outage leaves it off, never the page.
+const popular = await popularAnswers(league.slug).catch(() => []);
 const ix = book.ix;
 const banners = champions(ix) as Champion[];
 const dynastyRows = (dynasties(ix) as Array<{ entity: Entity; titles: number[]; finals: number; seasons: number }>).slice(0, 8);
@@ -145,6 +149,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     </header>
 
     <HistoryTabs leagueSlug={league.slug} current="home" />
+
+    <HistoryAsk league={league} base={r('').replace(/\/$/, '')} popular={popular} />
 
     <section class="hh-section" aria-labelledby="hh-rafters">
       <p class="hh-section__kicker">Every champion</p>

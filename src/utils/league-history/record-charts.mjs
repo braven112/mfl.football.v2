@@ -285,3 +285,93 @@ function entityLine(board, top, pop, W, opts) {
     `${board.asc ? 'below' : 'above'} the middle of the pack (${fmt(median)}).`;
   return { svg: svg(W, H, g, 'Everyone on this board'), take };
 }
+
+/**
+ * E · On pace: a season in progress drawn against the record. Real results
+ * are a solid line ending at "Now"; the projection is a dashed line across a
+ * shaded "Projected" band to where that pace finishes a full season; the
+ * record holder's own season runs underneath in gold, so the race reads at a
+ * glance. `pace` is records.mjs paceSeries plus who it is:
+ *
+ *   { by: 'week'|'game', full, real, projected, record, name, display,
+ *     color?, recordValue, recordLabel, recordDisplay }
+ *
+ * `color` overrides the line color (default: the page text color, which keeps
+ * this season's line apart from the record's gold whatever the team wears).
+ * Names are escaped. `holder` in the result says whether the record holder's
+ * season was drawn.
+ */
+export function paceChart(pace, W, opts = {}) {
+  if (!pace?.real?.length) return null;
+  const fmt = formatterFor(pace.recordDisplay ?? pace.display);
+  const narrow = W < 360;
+  // The right margin holds the two end labels ("Record 1,068.58"), sized to
+  // the longer one at about 6.6px a character, so neither runs off the card.
+  const longest = Math.max(`Pace ${pace.display}`.length, pace.recordDisplay ? `Record ${pace.recordDisplay}`.length : 0, 6);
+  const T = 26, B = 24, R = Math.round(14 + longest * (narrow ? 6.8 : 6.6)), H = 210;
+  const pts = [...pace.real, ...pace.projected, ...(pace.record ?? []), ...(Number.isFinite(pace.recordValue) ? [[1, pace.recordValue]] : [])];
+  const vals = pts.map((p) => p[1]);
+  const isRate = pace.real.every((p) => p[1] <= 1) && (pace.record ?? []).every((p) => p[1] <= 1);
+  const vlo = isRate ? Math.min(...vals) : 0, vhi = Math.max(...vals);
+  const vpad = (vhi - vlo) * 0.06 || 1;
+  const yTicks = ticks(vlo, vhi, 4, fmt.step);
+  const L = 10 + Math.max(...yTicks.map((t) => fmt(t).length)) * 6;
+  const xMax = Math.max(pace.full, ...pts.map((p) => p[0]));
+  const x = scale(0.5, xMax + 0.5, L, W - R);
+  const y = scale(vlo - (isRate ? vpad : 0), vhi + vpad, H - B, T);
+  const now = pace.real[pace.real.length - 1];
+  const line = (ps) => ps.map((p, i) => `${i ? 'L' : 'M'}${px(x(p[0]))} ${px(y(p[1]))}`).join('');
+  const stroke = pace.color ? ` style="stroke:${esc(pace.color)}"` : '';
+  const fill = pace.color ? ` style="fill:${esc(pace.color)}"` : '';
+  let g = '';
+  // The future, shaded, so "projected" is a place on the chart, not a legend entry.
+  const nx = px(x(now[0] + 0.5));
+  g += `<rect class="rbc-pace-future" x="${nx}" y="${T}" width="${px(W - R - nx)}" height="${H - B - T}"/>`;
+  g += `<text class="rbc-axis" x="${px((nx + W - R) / 2)}" y="${T - 8}" text-anchor="middle">Projected</text>`;
+  g += `<text class="rbc-axis" x="${px((L + nx) / 2)}" y="${T - 8}" text-anchor="middle">Played</text>`;
+  for (const t of yTicks) {
+    g += `<line class="rbc-grid" x1="${L}" x2="${W - R}" y1="${px(y(t))}" y2="${px(y(t))}"/>`;
+    g += `<text class="rbc-axis" x="${L - 6}" y="${px(y(t)) + 4}" text-anchor="end">${fmt(t)}</text>`;
+  }
+  const every = Math.max(1, Math.ceil(xMax / (narrow ? 5 : 9)));
+  for (let i = 1; i <= xMax; i += every) g += `<text class="rbc-axis" x="${px(x(i))}" y="${H - 6}" text-anchor="middle">${i}</text>`;
+  g += `<text class="rbc-axis" x="${W - R + 6}" y="${H - 6}">${pace.by === 'week' ? 'week' : 'game'}</text>`;
+  // The record itself, as a line to reach; and the record holder's season,
+  // start to finish, when its games add up to the record (an early season's
+  // official total can include weeks the game record does not hold, and a
+  // path that ends short of its own label would mislead).
+  let recLabel = null;
+  if (Number.isFinite(pace.recordValue)) {
+    const ry = px(y(pace.recordValue));
+    g += `<line class="rbc-pace-target" x1="${L}" x2="${W - R}" y1="${ry}" y2="${ry}"/>`;
+    recLabel = { x: W - R + 6, y: ry + 4 };
+  }
+  const recEnd = pace.record?.[pace.record.length - 1];
+  const matches = recEnd && Number.isFinite(pace.recordValue) && Math.abs(recEnd[1] - pace.recordValue) <= Math.abs(pace.recordValue) * 0.005;
+  if (matches) {
+    g += `<path class="rbc-pace-record" d="${line(pace.record)}">${tip(`${pace.recordLabel} · ${pace.recordDisplay}`)}</path>`;
+    g += `<circle class="rbc-lead" cx="${px(x(recEnd[0]))}" cy="${px(y(recEnd[1]))}" r="4"/>`;
+  }
+  // This season: real, then the projection from where it stands now.
+  const [, to] = pace.projected;
+  g += `<path class="rbc-pace-proj"${stroke} d="${line(pace.projected)}"/>`;
+  g += `<circle class="rbc-pace-end"${stroke} cx="${px(x(to[0]))}" cy="${px(y(to[1]))}" r="5">${tip(`${pace.name} · on pace for ${pace.display}`)}</circle>`;
+  g += `<path class="rbc-pace-real"${stroke} d="${line(pace.real)}"/>`;
+  g += `<circle class="rbc-pace-now"${fill} cx="${px(x(now[0]))}" cy="${px(y(now[1]))}" r="5">${tip(`${pace.name} · ${fmt(now[1])} so far`)}</circle>`;
+  // The two end labels sit side by side at the season's end; nudge them
+  // apart when the pace and the record finish close together.
+  let projY = px(y(to[1])) + 4;
+  if (recLabel && Math.abs(recLabel.y - projY) < 14) {
+    const mid = (recLabel.y + projY) / 2;
+    const up = projY <= recLabel.y;
+    projY = px(mid + (up ? -7 : 7));
+    recLabel.y = px(mid + (up ? 7 : -7));
+  }
+  if (recLabel) g += `<text class="rbc-pace-label rbc-pace-label--record" x="${recLabel.x}" y="${recLabel.y}">Record ${esc(pace.recordDisplay)}</text>`;
+  g += `<text class="rbc-pace-label" x="${px(x(to[0]) + 8)}" y="${projY}">Pace ${esc(pace.display)}</text>`;
+  const take =
+    `${pace.name} has ${fmt(now[1])} after ${now[0]} ${pace.by === 'week' ? (now[0] === 1 ? 'week' : 'weeks') : now[0] === 1 ? 'game' : 'games'}` +
+    ` and is on pace for ${pace.display}` +
+    (pace.recordDisplay ? `; the record is ${pace.recordDisplay}${pace.recordLabel ? ` (${pace.recordLabel})` : ''}.` : '.');
+  return { svg: svg(W, H, g, `${pace.name}: played so far and projected`), take, holder: !!matches };
+}

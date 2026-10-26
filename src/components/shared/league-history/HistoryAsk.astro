@@ -1,0 +1,270 @@
+---
+/**
+ * Ask the History — the question box on the history home (and under a shared
+ * answer). An owner types a stats question; /api/league-history/ask computes
+ * the answer from the league's own game record and returns it with the rows
+ * that prove it and a share link.
+ *
+ * Asking is for signed-in owners of this league (canAskLeagueHistory); anyone
+ * else sees the examples and a sign-in link. The answer markup mirrors
+ * HistoryAnswer.astro, which renders the same answer on its shared page.
+ */
+import '../../../styles/history-ask.css';
+import '../../../styles/record-charts.css';
+import type { LeagueDefinition } from '../../../config/leagues';
+import { getAuthUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { canAskLeagueHistory } from '../../../utils/league-history/access';
+import type { PopularAnswer } from '../../../utils/league-history/ask-store';
+
+interface Props {
+  league: LeagueDefinition;
+  /** The league's path prefix ('/theleague', or '' on its own domain). */
+  base: string;
+  /** Heading level context: the home page titles the section, the answer page does not. */
+  title?: string;
+  /** The answers the most owners opened (ask-store popularAnswers), shown as a shelf. */
+  popular?: PopularAnswer[];
+}
+
+const { league, base, title = 'Ask the history', popular = [] } = Astro.props as Props;
+const canAsk = canAskLeagueHistory(getAuthUser(Astro.request), league.id);
+
+const EXAMPLES = [
+  'Which team started 9-1 with the fewest points?',
+  'Who has the most championships?',
+  'Most points by a QB in a playoff game?',
+  'What was the best waiver pickup ever?',
+  'Who won the most lopsided trade?',
+  'Has a team ever started 8-2 and missed the playoffs?',
+];
+---
+
+<section class="ha" data-ha-box data-league={league.slug} data-base={base} aria-labelledby="ha-title">
+  <p class="ha__kicker">Stats lookup</p>
+  <h2 class="ha__title" id="ha-title">{title}</h2>
+  <p class="ha__lede">Ask anything about the league's games, seasons, players, trades and drafts. The answer is counted from every game on record, with the rows to prove it.</p>
+
+  {canAsk ? (
+    <form class="ha__form" data-ha-form>
+      <label class="visually-hidden" for={`ha-q-${league.slug}`}>Your question</label>
+      <textarea
+        id={`ha-q-${league.slug}`}
+        class="ha__input"
+        name="question"
+        rows="2"
+        maxlength="300"
+        placeholder="Has a team ever started 9-1 with fewer total points?"
+        required
+      ></textarea>
+      <button class="cta cta--primary ha__submit" type="submit">Ask</button>
+    </form>
+  ) : (
+    <p class="ha__signin">
+      <a class="cta cta--primary" href={mflLoginUrl(Astro.url.pathname)}>Sign in to ask</a>
+    </p>
+  )}
+
+  <ul class="ha__examples" aria-label="Example questions">
+    {EXAMPLES.map((q) => (
+      <li>
+        <button class="ha__example" type="button" data-ha-example disabled={!canAsk}>{q}</button>
+      </li>
+    ))}
+  </ul>
+
+  <p class="ha__status" data-ha-status role="status" aria-live="polite"></p>
+  <div data-ha-result></div>
+
+  {popular.length > 0 && (
+    <div class="ha-shelf">
+      <p class="ha-shelf__title">Most shared</p>
+      <ul class="ha-shelf__list">
+        {popular.map(({ answer, opens }) => (
+          <li>
+            <a class="ui-card ha-shelf__card" href={`${base}/history/ask/${answer.id}`}>
+              <span class="ha-shelf__q">{answer.question}</span>
+              <span class="ha-shelf__a">{answer.answer}</span>
+              <span class="ha-shelf__meta">
+                Opened by {opens} {opens === 1 ? 'owner' : 'owners'}
+                {answer.askedBy.name ? ` · asked by ${answer.askedBy.name}` : ''}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</section>
+
+<script>
+  import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
+  import type { AskRecordLink, AskTable } from '../../../utils/league-history/ask';
+
+  type Answer = { id: string | null; question: string; answer: string; table: AskTable | null; asOf?: string; records?: AskRecordLink[]; error?: string };
+
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  function renderAnswer(data: Answer, base: string): HTMLElement {
+    const article = el('article', 'ha-answer');
+    article.append(el('p', 'ha-answer__q', data.question), el('p', 'ha-answer__a', data.answer));
+    if (data.records?.length) {
+      const list = el('ul', 'ha-records');
+      list.setAttribute('aria-label', 'In the Record Book');
+      for (const rec of data.records) {
+        const a = el('a', 'ha-record');
+        a.href = recordHref(base, rec.query);
+        a.append(el('span', 'ha-record__kicker', 'Record Book'), el('span', 'ha-record__title', rec.title));
+        if (rec.leader) a.append(el('span', 'ha-record__leader', rec.leader));
+        const li = el('li');
+        li.append(a);
+        list.append(li);
+      }
+      article.append(list);
+    }
+    // The chart SVG is built by record-charts.mjs, which escapes every name.
+    for (const c of answerCharts(data.table?.chart, base)) {
+      const fig = el('figure', 'ha-chart');
+      const phone = el('div', 'rb-viz__plot rb-viz__plot--phone');
+      phone.innerHTML = c.phone;
+      const wide = el('div', 'rb-viz__plot rb-viz__plot--wide');
+      wide.innerHTML = c.wide;
+      fig.append(el('p', 'ha-chart__title', c.title), phone, wide, el('figcaption', 'rb-viz__take', c.take));
+      article.append(fig);
+    }
+    const table = data.table;
+    if (table && table.rows.length) {
+      const numeric = table.columns.map((_, i) => isNumericColumn(table, i));
+      const wrap = el('div', 'ha-table-wrap');
+      const t = el('table', 'ui-table ha-table');
+      const head = el('tr');
+      table.columns.forEach((c, i) => {
+        const th = el('th', numeric[i] ? 'ha-num' : '', c.label);
+        th.scope = 'col';
+        head.append(th);
+      });
+      t.append(el('thead'));
+      t.tHead!.append(head);
+      const body = el('tbody');
+      for (const row of table.rows) {
+        const tr = el('tr');
+        table.columns.forEach((c, i) => {
+          const td = el('td', numeric[i] ? 'ha-num' : '');
+          td.dataset.label = c.label;
+          const text = formatCell(c.key, row.cells[i]);
+          const href = cellHref(c.key, row, base);
+          if (href) {
+            const a = el('a', '', text);
+            a.href = href;
+            td.append(a);
+          } else td.textContent = text;
+          tr.append(td);
+        });
+        body.append(tr);
+      }
+      t.append(body);
+      wrap.append(t);
+      article.append(wrap);
+    }
+    if (table) {
+      const matches = table.total === 1 ? '1 match' : `${table.total.toLocaleString('en-US')} matches`;
+      const shown = table.total > table.rows.length ? `, top ${table.rows.length} shown` : '';
+      article.append(el('p', 'ha-receipt', `${matches}${shown} · ${table.description}`));
+    }
+    if (data.asOf) article.append(el('p', 'ha-receipt', `${data.asOf}.`));
+    if (data.id) {
+      const actions = el('p', 'ha-actions');
+      const share = el('button', 'cta cta--ghost', 'Share this answer') as HTMLButtonElement;
+      share.type = 'button';
+      share.dataset.haShare = `${base}/history/ask/${data.id}`;
+      const open = el('a', 'cta-link', 'Open the answer page');
+      open.href = `${base}/history/ask/${data.id}`;
+      actions.append(share, open);
+      article.append(actions);
+    }
+    return article;
+  }
+
+  async function ask(root: HTMLElement, question: string) {
+    const status = root.querySelector<HTMLElement>('[data-ha-status]');
+    const result = root.querySelector<HTMLElement>('[data-ha-result]');
+    if (!status || !result || root.dataset.busy) return;
+    root.dataset.busy = 'true';
+    status.dataset.tone = 'info';
+    status.textContent = 'Going through every game…';
+    result.replaceChildren();
+    try {
+      const res = await fetch('/api/league-history/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ league: root.dataset.league, question }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Answer;
+      if (!res.ok || data.error) {
+        status.dataset.tone = 'error';
+        status.textContent = data.error ?? 'Something went wrong. Try again.';
+        return;
+      }
+      status.textContent = '';
+      result.append(renderAnswer(data, root.dataset.base ?? ''));
+    } catch {
+      status.dataset.tone = 'error';
+      status.textContent = 'Lost the connection. Try again.';
+    } finally {
+      delete root.dataset.busy;
+    }
+  }
+
+  async function shareLink(button: HTMLButtonElement) {
+    const url = new URL(button.dataset.haShare ?? '', location.origin).toString();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Ask the history', url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      button.textContent = 'Link copied';
+    } catch {
+      /* dismissed share sheet */
+    }
+  }
+
+  function init() {
+    for (const root of Array.from(document.querySelectorAll<HTMLElement>('[data-ha-box]'))) {
+      if (root.dataset.init) continue;
+      root.dataset.init = 'true';
+      const form = root.querySelector<HTMLFormElement>('[data-ha-form]');
+      const input = form?.querySelector<HTMLTextAreaElement>('textarea');
+      form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const q = input?.value.trim() ?? '';
+        if (q) void ask(root, q);
+      });
+      // Enter asks; Shift+Enter is a new line.
+      input?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          form?.requestSubmit();
+        }
+      });
+      root.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement;
+        const example = target.closest<HTMLButtonElement>('[data-ha-example]');
+        if (example && input) {
+          input.value = example.textContent?.trim() ?? '';
+          void ask(root, input.value);
+          return;
+        }
+        const share = target.closest<HTMLButtonElement>('[data-ha-share]');
+        if (share) void shareLink(share);
+      });
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
