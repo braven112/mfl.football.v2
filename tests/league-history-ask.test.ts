@@ -272,6 +272,34 @@ describe('askHistory', () => {
     expect(res.records).toEqual([expect.objectContaining({ title: board.title, query: `cat=season&board=${board.id}` })]);
   });
 
+  it('gives a follow-up the earlier turns and the asker, and returns the card and suggestions', async () => {
+    const { client, seen } = scripted([
+      [
+        {
+          type: 'tool_use',
+          id: 't1',
+          name: 'answer',
+          input: { answer: 'All ten did.', show: -1, headline: { value: '10 of 10', label: 'Made the playoffs' }, followUps: ['Who won it all?', '', 'x'.repeat(200), 'Fewest points by a champion?', 'One too many?'] },
+        },
+      ],
+    ]);
+    const res = await askHistory('theleague', TL, 'did they all make the playoffs?', {
+      client,
+      turns: [{ question: 'Which teams started 9-1?', answer: 'Ten teams.', steps: ['Team-seasons, first 10 regular-season games, where W = 9'] }],
+      asker: { team: 'Pacific Pigskins', owner: 'Brandon Shields' },
+    });
+    expect(res.headline).toEqual({ value: '10 of 10', label: 'Made the playoffs' });
+    expect(res.followUps).toHaveLength(3);
+    expect(res.followUps?.[0]).toBe('Who won it all?');
+    expect(res.followUps?.every((q) => q.length <= 80)).toBe(true);
+    const opening = String(seen[0].messages[0].content);
+    expect(opening).toContain('<asker>Pacific Pigskins (Brandon Shields)</asker>');
+    expect(opening).toContain('<asked>Which teams started 9-1?</asked>');
+    expect(opening).toMatch(/<question>did they all make the playoffs\?<\/question>$/);
+    // The asker rides in the message, so the system prompt stays one cached prefix for everyone.
+    expect(JSON.stringify(seen[0].system)).not.toContain('<asker>Pacific');
+  });
+
   it('throws rather than guessing when the model never answers', async () => {
     const { client } = scripted([]);
     await expect(askHistory('theleague', TL, 'q', { client })).rejects.toThrow();

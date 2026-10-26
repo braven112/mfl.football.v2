@@ -1,17 +1,21 @@
 ---
 /**
- * One Ask the History answer: the answer in words, then the rows our engine
- * computed and the plain-words receipt of what was counted. Server-rendered
- * on the shared answer page; the question box's script builds the same
- * markup client-side (history-ask.css styles both).
+ * One Ask the History answer: the big stat, the answer in words, the Record
+ * Book chart and boards, then the rows our engine computed and the
+ * plain-words receipt of what was counted. Server-rendered on the shared
+ * answer page; ask-render.ts builds the same markup on the ask screen
+ * (history-ask.css styles both).
  */
 import '../../../styles/history-ask.css';
 import '../../../styles/record-charts.css';
-import type { AskRecordLink, AskTable } from '../../../utils/league-history/ask';
+import type { AskHeadline, AskRecordLink, AskTable } from '../../../utils/league-history/ask';
+import { answerTeam, receipt, rowsLabel } from '../../../utils/league-history/ask-render';
 import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
 
 interface Props {
-  question: string;
+  /** Shown above the answer; the ask screen prints the question itself. */
+  question?: string;
+  headline?: AskHeadline | null;
   answer: string;
   table: AskTable | null;
   /** How far the record went when this was asked ('' or missing once every season is complete). */
@@ -22,14 +26,29 @@ interface Props {
   base: string;
 }
 
-const { question, answer, table, asOf, records = [], base } = Astro.props as Props;
+const { question, headline, answer, table, asOf, records = [], base } = Astro.props as Props;
+const team = answerTeam(table);
 const numeric = table ? table.columns.map((_, i) => isNumericColumn(table, i)) : [];
 const charts = answerCharts(table?.chart, base);
 ---
 
-<article class="ha-answer">
-  <p class="ha-answer__q">{question}</p>
+<article class="ha-answer" style={team ? `--ha-team: var(--team-accent-${team}, var(--history-gold))` : undefined}>
+  {question && <p class="ha-answer__q">{question}</p>}
+  {headline && (
+    <div class="ha-head">
+      <span class="ha-head__value">{headline.value}</span>
+      <span class="ha-head__label">{headline.label}</span>
+    </div>
+  )}
   <p class="ha-answer__a">{answer}</p>
+  {charts.map((c) => (
+    <figure class="ha-chart">
+      <p class="ha-chart__title">{c.title}</p>
+      <div class="rb-viz__plot rb-viz__plot--phone" set:html={c.phone} />
+      <div class="rb-viz__plot rb-viz__plot--wide" set:html={c.wide} />
+      <figcaption class="rb-viz__take">{c.take}</figcaption>
+    </figure>
+  ))}
   {records.length > 0 && (
     <ul class="ha-records" aria-label="In the Record Book">
       {records.map((rec) => (
@@ -43,16 +62,9 @@ const charts = answerCharts(table?.chart, base);
       ))}
     </ul>
   )}
-  {charts.map((c) => (
-    <figure class="ha-chart">
-      <p class="ha-chart__title">{c.title}</p>
-      <div class="rb-viz__plot rb-viz__plot--phone" set:html={c.phone} />
-      <div class="rb-viz__plot rb-viz__plot--wide" set:html={c.wide} />
-      <figcaption class="rb-viz__take">{c.take}</figcaption>
-    </figure>
-  ))}
   {table && table.rows.length > 0 && (
-    <div class="ha-table-wrap">
+    <details class="ha-rows" open={!table.chart && !headline}>
+      <summary class="ha-rows__toggle">{rowsLabel(table)}</summary>
       <table class="ui-table ha-table">
         <thead>
           <tr>{table.columns.map((c, i) => <th class:list={{ 'ha-num': numeric[i] }} scope="col">{c.label}</th>)}</tr>
@@ -73,13 +85,8 @@ const charts = answerCharts(table?.chart, base);
           ))}
         </tbody>
       </table>
-    </div>
+    </details>
   )}
-  {table && (
-    <p class="ha-receipt">
-      {table.total === 1 ? '1 match' : `${table.total.toLocaleString('en-US')} matches`}
-      {table.total > table.rows.length && `, top ${table.rows.length} shown`} · {table.description}
-    </p>
-  )}
+  {table && <p class="ha-receipt">{receipt(table)}</p>}
   {asOf && <p class="ha-receipt">{asOf}.</p>}
 </article>

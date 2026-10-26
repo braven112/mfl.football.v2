@@ -1,0 +1,258 @@
+---
+/**
+ * Ask the History — the ask screen, /<league>/history/ask (TheLeague + AFL).
+ *
+ * A conversation: every answer is a card (the big stat, the chart, the Record
+ * Book boards, the rows), and the input stays pinned to the bottom of the
+ * screen with tappable follow-ups above it, so a phone can keep asking with a
+ * thumb (Brandon, 2026-10-26: "combine A" and "the league is asking").
+ *
+ * A follow-up posts `after` = the answer it follows; the server reads the
+ * earlier turns back from the store, so they cannot be forged in the request.
+ * `?after=<id>` reopens a conversation at that answer (the URL keeps up as
+ * you ask, so a refresh or a shared link lands in the same place), `?q=`
+ * asks straight away (the History home's suggestions).
+ *
+ * Reading is open like every history page; asking is for signed-in owners of
+ * the league (canAskLeagueHistory).
+ */
+import '../../../styles/history-ask.css';
+import '../../../styles/record-charts.css';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import HistoryAnswer from './HistoryAnswer.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getAuthUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { canAskLeagueHistory } from '../../../utils/league-history/access';
+import { readAnswer } from '../../../utils/league-history/ask-store';
+import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  /** league-history.json, for the span of seasons in the header. */
+  data: { firstSeason?: number; lastSeason?: number };
+}
+
+const { leagueSlug, data } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
+const canAsk = canAskLeagueHistory(getAuthUser(Astro.request), league.id);
+
+const after = Astro.url.searchParams.get('after') ?? '';
+const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
+const first = Astro.url.searchParams.get('q')?.trim().slice(0, 300) ?? '';
+// Starters sit in the intro until the first answer; then the dock carries follow-ups.
+const chips = parent?.followUps ?? [];
+const span = data.firstSeason && data.lastSeason ? `${data.firstSeason} to ${data.lastSeason}` : '';
+const earlier = parent?.turns ?? [];
+const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
+---
+
+<TheLeagueLayout hideMobileNavIcons title={`Ask the History · ${league.name}`} og={{ title: `Ask the History · ${league.name}`, description: 'Ask anything about the league’s games, seasons, players, trades and drafts.' }}>
+  <div
+    class="hask"
+    data-hask
+    data-league={league.slug}
+    data-base={base}
+    data-after={parent?.id ?? ''}
+    data-first={canAsk ? first : ''}
+    data-turns={String(earlier.length + (parent ? 1 : 0))}
+  >
+    <header class="hask-top">
+      <a class="hask-icon" href={`${base}/history`} aria-label="Back to History">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+      <div class="hask-top__text">
+        <h1 class="hask-title">Ask the History</h1>
+        <p class="hask-sub">{league.name}{span && ` · ${span}`} · every game on record</p>
+      </div>
+      <button class="hask-icon hask-icon--gold" type="button" data-hask-share aria-label="Share this answer" hidden={!parent}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 002 2h10a2 2 0 002-2v-5"></path></svg>
+      </button>
+    </header>
+
+    <div class="hask-thread" data-hask-thread>
+      {!parent && (
+        <div class="hask-intro" data-hask-intro>
+          <p class="hask-intro__kicker">Stats lookup</p>
+          <p class="hask-intro__title">What do you want to know?</p>
+          <p class="hask-intro__lede">Games, seasons, players, trades and drafts. Every answer is counted from the league's own record, with the rows to prove it, and you can keep asking follow-ups.</p>
+          <ul class="hask-starters" aria-label="Questions to start with">
+            {ASK_EXAMPLES.map((q) => (
+              <li>
+                <button class="hask-starter" type="button" data-hask-suggest disabled={!canAsk}>
+                  <span>{q}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {earlier.map((t, i) => (
+        <section class="hask-turn hask-turn--earlier">
+          <p class="hask-asked"><span class="hask-asked__kicker">{asked(i)}</span>{t.question}</p>
+          <p class="hask-earlier">{t.answer}</p>
+        </section>
+      ))}
+      {parent && (
+        <section class="hask-turn">
+          <p class="hask-asked"><span class="hask-asked__kicker">{asked(earlier.length)}</span>{parent.question}</p>
+          <HistoryAnswer headline={parent.headline} answer={parent.answer} table={parent.table} asOf={parent.asOf} records={parent.records} base={base} />
+        </section>
+      )}
+    </div>
+
+    <div class="hask-dock">
+      <p class="hask-status" data-hask-status role="status" aria-live="polite"></p>
+      <div class="hask-suggestions" data-hask-suggestions aria-label="Suggested follow-ups">
+        {chips.map((q, i) => (
+          <button class:list={['hask-suggest', { 'hask-suggest--lead': i === 0 }]} type="button" data-hask-suggest disabled={!canAsk}>{q}</button>
+        ))}
+      </div>
+      {canAsk ? (
+        <form class="hask-form" data-hask-form>
+          <label class="visually-hidden" for={`hask-q-${league.slug}`}>{parent ? 'Ask a follow-up' : 'Your question'}</label>
+          <input
+            id={`hask-q-${league.slug}`}
+            class="hask-input"
+            name="question"
+            maxlength="300"
+            autocomplete="off"
+            enterkeyhint="send"
+            placeholder={parent ? 'Ask a follow-up…' : 'Ask the History anything…'}
+            required
+          />
+          <button class="hask-send" type="submit" aria-label="Ask">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+          </button>
+        </form>
+      ) : (
+        <p class="hask-signin">
+          <a class="cta cta--primary" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in to ask</a>
+          <span>Asking is for {league.name} owners.</span>
+        </p>
+      )}
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<script>
+  import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
+
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  function setChips(root: HTMLElement, questions: string[]) {
+    const box = root.querySelector<HTMLElement>('[data-hask-suggestions]');
+    if (!box) return;
+    box.setAttribute('aria-label', 'Suggested follow-ups');
+    box.replaceChildren(
+      ...questions.map((q, i) => {
+        const b = el('button', `hask-suggest${i === 0 ? ' hask-suggest--lead' : ''}`, q);
+        b.type = 'button';
+        b.dataset.haskSuggest = '';
+        return b;
+      }),
+    );
+  }
+
+  async function ask(root: HTMLElement, question: string) {
+    const thread = root.querySelector<HTMLElement>('[data-hask-thread]');
+    const status = root.querySelector<HTMLElement>('[data-hask-status]');
+    if (!thread || !status || root.dataset.busy) return;
+    root.dataset.busy = 'true';
+    status.textContent = '';
+    root.querySelector('[data-hask-intro]')?.remove();
+
+    const n = Number(root.dataset.turns ?? '0');
+    const turn = el('section', 'hask-turn');
+    const q = el('p', 'hask-asked');
+    q.append(el('span', 'hask-asked__kicker', n === 0 ? 'You asked' : 'Then you asked'), question);
+    const pending = el('div', 'hask-pending', 'Going through every game…');
+    pending.setAttribute('role', 'status');
+    turn.append(q, pending);
+    thread.append(turn);
+    turn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch('/api/league-history/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ league: root.dataset.league, question, after: root.dataset.after || undefined }),
+      });
+      const data = (await res.json().catch(() => ({}))) as ClientAnswer;
+      if (!res.ok || data.error) {
+        turn.remove();
+        status.textContent = data.error ?? 'Something went wrong. Try again.';
+        return false;
+      }
+      pending.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
+      root.dataset.turns = String(n + 1);
+      if (data.id) {
+        root.dataset.after = data.id;
+        const url = new URL(location.href);
+        url.searchParams.delete('q');
+        url.searchParams.set('after', data.id);
+        history.replaceState(history.state, '', url);
+        root.querySelector<HTMLElement>('[data-hask-share]')?.removeAttribute('hidden');
+      }
+      if (data.followUps?.length) setChips(root, data.followUps);
+      const input = root.querySelector<HTMLInputElement>('.hask-input');
+      if (input) input.placeholder = 'Ask a follow-up…';
+      return true;
+    } catch {
+      turn.remove();
+      status.textContent = 'Lost the connection. Try again.';
+      return false;
+    } finally {
+      delete root.dataset.busy;
+    }
+  }
+
+  async function share(root: HTMLElement, button: HTMLButtonElement) {
+    const id = root.dataset.after;
+    if (!id) return;
+    const url = new URL(`${root.dataset.base ?? ''}/history/ask/${id}`, location.origin).toString();
+    try {
+      if (navigator.share) return void (await navigator.share({ title: 'Ask the History', url }));
+      await navigator.clipboard.writeText(url);
+      button.setAttribute('aria-label', 'Link copied');
+      button.dataset.copied = 'true';
+    } catch {
+      /* dismissed share sheet */
+    }
+  }
+
+  function init() {
+    const root = document.querySelector<HTMLElement>('[data-hask]');
+    if (!root || root.dataset.init) return;
+    root.dataset.init = 'true';
+    const form = root.querySelector<HTMLFormElement>('[data-hask-form]');
+    const input = form?.querySelector<HTMLInputElement>('input');
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const q = input?.value.trim() ?? '';
+      if (!q || !input) return;
+      input.value = '';
+      if (!(await ask(root, q))) input.value = q;
+    });
+    root.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const chip = target.closest<HTMLButtonElement>('[data-hask-suggest]');
+      if (chip && !chip.disabled) return void ask(root, chip.textContent?.trim() ?? '');
+      const shareButton = target.closest<HTMLButtonElement>('[data-hask-share]');
+      if (shareButton) void share(root, shareButton);
+    });
+    if (root.dataset.first) void ask(root, root.dataset.first);
+    else if (root.dataset.after) root.querySelector('.hask-turn:last-child')?.scrollIntoView({ block: 'start' });
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
