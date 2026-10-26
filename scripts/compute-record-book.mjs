@@ -130,6 +130,7 @@ const rank = (rows, value, asc = false) => rankBy(rows, value, LIMIT, asc);
 // Games arrive season by season, so they are already oldest-first — which
 // rivalryTotals relies on to leave each slot under its most recent name.
 const rivalries = rivalryTotals(games);
+const played = games.filter((g) => !g.forfeit);
 
 const book = {
   generatedAt: new Date().toISOString(),
@@ -139,10 +140,12 @@ const book = {
   firstSeason: seasonsSeen.size ? Math.min(...seasonsSeen) : null,
   lastSeason: seasonsSeen.size ? Math.max(...seasonsSeen) : null,
   minLopsidedMeetings: MIN_LOPSIDED_MEETINGS,
-  highestScore: rank(games, (g) => g.winnerScore),
-  biggestBlowout: rank(games.filter((g) => !g.tie), (g) => g.margin),
-  closestGame: rank(games.filter((g) => !g.tie), (g) => g.margin, true),
-  highestCombined: rank(games, (g) => g.combined),
+  // Scoring boards rank performances, so a forfeit's 0.00 stays off them;
+  // streaks and rivalries count it, since MFL recorded the result.
+  highestScore: rank(played, (g) => g.winnerScore),
+  biggestBlowout: rank(played.filter((g) => !g.tie), (g) => g.margin),
+  closestGame: rank(played.filter((g) => !g.tie), (g) => g.margin, true),
+  highestCombined: rank(played, (g) => g.combined),
   longestWinStreak: longestStreaks(games, 'win', LIMIT),
   longestLosingStreak: longestStreaks(games, 'loss', LIMIT),
   mostPlayed: rank(rivalries, (r) => r.meetings),

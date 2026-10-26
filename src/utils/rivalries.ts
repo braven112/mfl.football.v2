@@ -6,32 +6,16 @@
  * all rank rivals the same way — a copy per surface is exactly how two pages
  * end up disagreeing about who a franchise's biggest rival is.
  *
- * DATA NOTE: a pairing's `games` is only as complete as the ingested
- * head-to-head feeds, and `franchise-history.json#h2hCoverage` records that per
- * season. Both leagues are complete today: the AFL's 2007-2019 regular seasons,
- * which MFL's export API strips, were recovered in Aug 2026 from the rendered
- * schedule (see scripts/compute-franchise-history.mjs). What a pairing DOES
- * omit is games under a former owner — these surfaces are scoped to the
- * current owners' shared history — so a count here can be lower than the
- * all-time record book's.
+ * WHICH GAMES COUNT is not decided here: the site's one head-to-head is
+ * league-history/rivalry.mjs (current owners, from whichever slots they held,
+ * regular season and playoffs, consolation games left out), so a count here
+ * can be lower than the all-time record book's. This file holds the pieces
+ * every surface shares around it: the intensity formula, slugs and formatting.
+ * `franchise-history.json#h2hCoverage` still records, per season, how complete
+ * MFL's archived games are.
  */
 
-/** One recorded meeting, as stored in franchise-history.json#matchupHistory. */
-export type Matchup = {
-  year: number;
-  week: number;
-  score: number;
-  opponentScore: number;
-  isPlayoff?: boolean;
-  playoffRound?: string | null;
-  /**
-   * False when either side of the game belongs to a former owner. Every
-   * rivalry surface is scoped to the CURRENT owners' shared history, so
-   * unattributed meetings are excluded from records and rankings alike.
-   */
-  bothAttributed?: boolean;
-};
-
+/** One rival, from the franchise's side (`rivalEntries`, league-history/rivalry.mjs). */
 export type RivalEntry = {
   opponentId: string;
   wins: number;
@@ -52,17 +36,6 @@ import * as intensity from './rivalry-intensity.mjs';
 
 export const MIN_RIVALRY_MEETINGS: number = intensity.MIN_RIVALRY_MEETINGS;
 
-/** Meetings between two franchises under the current owners, oldest-first. */
-export const currentOwnerMeetings: (
-  matchupHistory: Record<string, Matchup[]> | undefined,
-  opponentId: string
-) => Matchup[] = intensity.currentOwnerMeetings;
-
-/** Win/loss/tie/playoff tallies for a list of meetings, from OUR perspective. */
-export const tallyMeetings: (
-  meetings: Matchup[]
-) => { wins: number; losses: number; ties: number; playoffGames: number } = intensity.tallyMeetings;
-
 /** How charged a pairing is — see the .mjs for the reasoning behind the weights. */
 export const rivalryIntensity: (
   meetings: number,
@@ -71,13 +44,6 @@ export const rivalryIntensity: (
   ties: number,
   playoffGames: number
 ) => number = intensity.rivalryIntensity;
-
-/** Rank every opponent a franchise shares enough history with, most intense first. */
-export const computeRivalEntries: (
-  matchupHistory: Record<string, Matchup[]> | undefined,
-  selfId: string,
-  opts?: { minMeetings?: number }
-) => RivalEntry[] = intensity.computeRivalEntries;
 
 /**
  * URL slug for a pairing. Sorted so both franchises link to the SAME page —

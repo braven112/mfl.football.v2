@@ -19,6 +19,7 @@ import {
 } from '../article-utils/franchise-record.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { buildMatchupVisuals } from '../../src/utils/matchup-preview-visuals.mjs';
+import { recordBook } from '../../src/utils/league-history/records.mjs';
 import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
 
 /**
@@ -115,19 +116,20 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // The visuals snapshot (Game of the Week panel + one card per matchup) rides
   // on the post; the fact sheet reads the SAME snapshot so the copy can never
   // state a series record or streak the cards beside it contradict.
-  let franchises;
+  // The series is the League History dataset's head-to-head, the record each
+  // rivalry page shows (league-history/rivalry.mjs).
+  let history;
   try {
-    const historyFile = path.join(resolveMainRepo(projectRoot), LEAGUES[league].dataPath, 'derived', 'franchise-history.json');
-    const history = await loadJSON(historyFile);
-    franchises = history.franchises ?? history;
+    const historyFile = path.join(resolveMainRepo(projectRoot), LEAGUES[league].dataPath, 'derived', 'league-history.json');
+    history = recordBook(await loadJSON(historyFile)).ix;
   } catch {
-    // No ingested head-to-head: the cards still show this season's form.
-    franchises = undefined;
+    // No League History dataset: the cards still show this season's form.
+    history = undefined;
   }
   const visuals = buildMatchupVisuals({
     pairings,
     weeklyResultsRaw: data['weekly-results-raw'],
-    franchises,
+    history,
     year,
     week,
   });

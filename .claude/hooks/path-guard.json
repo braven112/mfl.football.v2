@@ -276,6 +276,23 @@
       ]
     },
     {
+      "name": "head-to-head",
+      "paths": [
+        "src/utils/league-history/**",
+        "src/utils/rivalr*",
+        "src/utils/matchup-preview-visuals.mjs",
+        "src/utils/front-page.ts",
+        "src/utils/owner-map.ts",
+        "scripts/compute-league-history.mjs",
+        "scripts/article-types/matchup-preview.mjs",
+        "scripts/article-types/schedule-release.mjs"
+      ],
+      "tests": [
+        "tests/head-to-head.test.ts",
+        "tests/head-to-head-source-guard.test.ts"
+      ]
+    },
+    {
       "name": "free-agents",
       "paths": [
         "src/pages/theleague/players.astro",

@@ -56,7 +56,8 @@ import { fileURLToPath } from 'node:url';
 
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
-import { rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+import { recordBook } from '../src/utils/league-history/records.mjs';
+import { rivalrySeries } from '../src/utils/league-history/rivalry.mjs';
 import { blockingFailures, goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
 import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 import {
@@ -390,10 +391,9 @@ function revealContext(slug, y) {
   // Missing history is not an error: a league with no ingested archives simply
   // scores on this year's evidence, exactly as it did before.
   let rivalry = {};
-  const historyFile = path.join(ROOT, registry.dataPath, 'derived', 'franchise-history.json');
+  const historyFile = path.join(ROOT, registry.dataPath, 'derived', 'league-history.json');
   if (fs.existsSync(historyFile)) {
-    const history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
-    rivalry = rivalrySeriesByPair(history.franchises ?? history);
+    rivalry = rivalrySeries(recordBook(JSON.parse(fs.readFileSync(historyFile, 'utf8'))).ix);
   }
 
   // Throwback Week, if this league runs one. Straight off the registry rather

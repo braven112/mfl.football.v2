@@ -13,6 +13,7 @@ import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
 import ownerData from '../../../data/theleague/derived/owner-tenures.json';
 import history from '../../../data/theleague/derived/franchise-history.json';
+import historyData from '../../../data/theleague/derived/league-history.json';
 import type { OwnerTenuresFile } from '../../types/owner-tenures';
 import type { OwnerMapHistory } from '../../utils/owner-map';
 
@@ -30,6 +31,7 @@ const hometowns = await readHometowns(LEAGUE.slug);
   leagueSlug="theleague"
   data={ownerData as unknown as OwnerTenuresFile}
   history={history as unknown as OwnerMapHistory}
+  historyData={historyData}
   myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
   hometowns={hometowns}
   canEditAll={isCommissionerOrAdminForLeague(user, LEAGUE.id)}

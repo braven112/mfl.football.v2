@@ -16,6 +16,7 @@
  *   - The lead is never empty in season. Columns (The Gauntlet, the Pecking
  *     Order), Schefter articles and the week in the books all qualify.
  */
+import { headToHeadMeetings } from './league-history/rivalry.mjs';
 import type { SchefterPost } from '../types/schefter';
 import type { WeekInTheBooks } from './package-league-home';
 
@@ -33,7 +34,7 @@ export interface ParsedWeek {
   matchups: Array<{ franchises: Array<{ id: string; score: number | null; isHome?: boolean }> }>;
 }
 
-/** One meeting from `franchise-history.json` → `matchupHistory[opponentId]`. */
+/** One head-to-head meeting, from one side (`meetingsBetween`). */
 export interface Meeting {
   year: number;
   week: number;
@@ -191,40 +192,24 @@ export function rivalryFacts(meetings: Meeting[] | undefined): RivalryFacts {
   return { meetings: games.length, wins, losses, ties, streak, last: games[games.length - 1] ?? null };
 }
 
-/** The slice of a derived franchise-history entry the series lookup reads. */
-export interface SeriesFranchise {
-  franchiseId?: string;
-  yearByYear?: Array<{ year: number; sourceFranchiseId?: string | null }>;
-  matchupHistory?: Record<string, Array<Meeting & { opponentSourceId?: string | null }>>;
-}
-
 /**
- * Every meeting between the viewer's team and `opp`. `matchupHistory` is keyed
- * by the id the opponent played under THAT season, so in a league that
- * renumbers its franchises (registry `renumbersFranchises` — Archie's) the
- * bucket under today's id also holds games against whoever held that id
- * before. There a meeting counts only when `opp` held that id in that year,
- * read from its own attributed `yearByYear`.
+ * Every counted meeting between the viewer's team and `opp`, from the
+ * viewer's side: the site's one head-to-head (`headToHeadMeetings`,
+ * league-history/rivalry.mjs) over an indexed League History dataset
+ * (`recordBook(ds).ix`). It follows the two CURRENT owners, so a league that
+ * renumbers its franchises (registry `renumbersFranchises`, Archie's) never
+ * credits a game against whoever held an id before. Undefined with no dataset.
  */
-export function meetingsBetween(
-  franchises: Record<string, SeriesFranchise> | undefined,
-  mine: string,
-  opp: string,
-  renumbers: boolean,
-): Meeting[] | undefined {
-  const history = franchises?.[mine]?.matchupHistory;
-  if (!renumbers) return history?.[opp];
-  if (!history) return undefined;
-  const heldIn = new Map(
-    (franchises?.[opp]?.yearByYear ?? []).map((y) => [y.year, y.sourceFranchiseId ?? opp] as const),
-  );
-  const out: Meeting[] = [];
-  for (const [key, list] of Object.entries(history)) {
-    for (const m of list) {
-      if (heldIn.get(m.year) === (m.opponentSourceId ?? key)) out.push(m);
-    }
-  }
-  return out;
+export function meetingsBetween(ix: unknown, mine: string, opp: string): Meeting[] | undefined {
+  if (!ix) return undefined;
+  const games = (headToHeadMeetings(ix, mine, opp) ?? []) as Array<{
+    y: number;
+    wk: number;
+    sA: number;
+    sB: number;
+    kind: string;
+  }>;
+  return games.map((m) => ({ year: m.y, week: m.wk, score: m.sA, opponentScore: m.sB, isPlayoff: m.kind === 'playoffs' }));
 }
 
 const record = (w: number, l: number, t: number) => (t > 0 ? `${w}–${l}–${t}` : `${w}–${l}`);

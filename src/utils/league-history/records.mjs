@@ -200,10 +200,13 @@ function onePerWeek(teamGames, withResult = false) {
 // ── Single game ──────────────────────────────────────────────────────────────
 
 function singleGameBoards(ix, scope) {
-  const scoped = scope === 'all' ? ix.teamGames : ix.teamGames.filter((g) => g.kind === scope);
+  // A forfeit (0.00, no lineup set) counts as a game everywhere else, but it is
+  // not a performance, so it never ranks on a scoring board.
+  const scoring = (g) => g.ws > 0 && g.ls > 0;
+  const scoped = (scope === 'all' ? ix.teamGames : ix.teamGames.filter((g) => g.kind === scope)).filter(scoring);
   const tg = onePerWeek(scoped);
   const tgr = onePerWeek(scoped, true);
-  const gs = ix.games.filter((g) => scope === 'all' ? true : g.kind === scope);
+  const gs = ix.games.filter((g) => (scope === 'all' ? true : g.kind === scope) && scoring(g));
   const row = (g, f, v, d) => ({
     ...seasonRow(ix, g.y, f, v, d, gameContext(ix, g, f)),
     opponentId: f === g.wf ? g.lf : g.wf,

@@ -13,6 +13,7 @@ import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
 import ownerData from '../../../data/afl-fantasy/derived/owner-tenures.json';
 import history from '../../../data/afl-fantasy/derived/franchise-history.json';
+import historyData from '../../../data/afl-fantasy/derived/league-history.json';
 import type { OwnerTenuresFile } from '../../types/owner-tenures';
 import type { OwnerMapConference, OwnerMapHistory } from '../../utils/owner-map';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
@@ -39,6 +40,7 @@ const conferences: OwnerMapConference[] = aflConfig.conferences.map((c) => ({
   leagueSlug="afl-fantasy"
   data={ownerData as unknown as OwnerTenuresFile}
   history={history as unknown as OwnerMapHistory}
+  historyData={historyData}
   conferences={conferences}
   myFranchiseId={franchiseIdForLeague(user, LEAGUE.id)}
   hometowns={hometowns}

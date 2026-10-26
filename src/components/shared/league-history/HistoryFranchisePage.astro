@@ -497,9 +497,8 @@ const priorNames = [
                   </span>
                   <span class="hf-row__stat">
                     {o.record}
-                    <span class="hf-row__sub">
-                      {o.games} games{o.playoffGames ? `, ${o.playoffGames} in playoffs` : ''}
-                    </span>
+                    <span class="hf-row__sub">{o.games} games</span>
+                    {o.playoffGames > 0 && <span class="hf-row__sub">{o.playoffGames} in playoffs</span>}
                   </span>
                 </Tag>
               </li>
@@ -949,6 +948,10 @@ const priorNames = [
   }
   .hf-row--mine {
     background: var(--history-gold-wash);
+  }
+  /* One width for every record column, so every bar beside it is the same length. */
+  .hf-vs .hf-row__stat {
+    width: 6.5rem;
   }
   /* This franchise's win share against the opponent, over the opponent's colors. */
   .hf-vs__bar {

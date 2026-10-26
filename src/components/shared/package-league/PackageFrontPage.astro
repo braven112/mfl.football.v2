@@ -38,11 +38,11 @@ import {
   teamsMentioned,
   topScorer,
   type FrontStory,
-  type SeriesFranchise,
   type MoveInput,
   type ParsedWeek,
 } from '../../../utils/front-page';
 import { loadSeasonFeed, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { recordBook } from '../../../utils/league-history/records.mjs';
 import { frontTeamArt } from '../../../utils/front-page-art';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { formatForViewer, formatMomentZones } from '../../../utils/viewer-clock';
@@ -69,7 +69,7 @@ interface Props {
   moves: MoveInput[];
   players: Map<string, PlayerIdentity>;
   playerName: (id: string) => string;
-  /** Lazy glob of data/<league>/derived/franchise-history.json (one file). */
+  /** Lazy glob of data/<league>/derived/league-history.json (one file): the rivalry stories' head-to-head. */
   historyFeeds?: LazyFeedGlob;
   /** Lazy glob of data/<league>/mfl-feeds/<year>/playerScores-ytd.json. */
   ytdScoreFeeds?: LazyFeedGlob;
@@ -118,9 +118,8 @@ const opponents = opponentsInWeek(thisWeek, mine);
 
 // ── Stories ─────────────────────────────────────────────────────────────────
 const historyModule = Object.values(historyFeeds)[0];
-const franchiseHistory = (historyModule ? unwrapFeedModule(await historyModule().catch(() => null)) : null) as {
-  franchises?: Record<string, SeriesFranchise>;
-} | null;
+const historyData = historyModule ? unwrapFeedModule(await historyModule().catch(() => null)) : null;
+const historyIndex = historyData ? recordBook(historyData).ix : null;
 
 const stories: FrontStory[] = [];
 /** The series over a rivalry card's art: the viewer's all-time record, or "first meeting". */
@@ -128,7 +127,7 @@ const overlays: Record<string, { text: string; label?: string }> = {};
 if (mine && teamsById[mine] && thisWeek) {
   for (const opp of opponents) {
     if (!teamsById[opp]) continue;
-    const meetings = meetingsBetween(franchiseHistory?.franchises, mine, opp, Boolean(league.renumbersFranchises));
+    const meetings = meetingsBetween(historyIndex, mine, opp);
     const f = rivalryFacts(meetings);
     overlays[`rivalry-${thisWeek.week}-${opp}`] =
       f.meetings === 0

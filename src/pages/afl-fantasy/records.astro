@@ -1,7 +1,9 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import recordBook from '../../../data/afl-fantasy/derived/record-book.json';
-import franchiseHistory from '../../../data/afl-fantasy/derived/franchise-history.json';
+import historyData from '../../../data/afl-fantasy/derived/league-history.json';
+import { recordBook as historyBook } from '../../utils/league-history/records.mjs';
+import { headToHeadMeetings } from '../../utils/league-history/rivalry.mjs';
 import { canonicalRivalryPair } from '../../utils/rivalries';
 
 export const prerender = false;
@@ -13,10 +15,8 @@ const book = recordBook as any;
 // predates both owners, that page renders "no recorded head-to-head meetings"
 // — a dead end dressed as a link. Link only when the destination has something
 // to show. (Closest Finish #4, No Frills v Fullybaked in 2008, is the case.)
-const ledger = ((franchiseHistory as any).franchises ?? {}) as Record<string, any>;
-const pairingHasMeetings = (a: string, b: string) =>
-  (ledger[a]?.matchupHistory?.[b]?.length ?? 0) > 0 ||
-  (ledger[b]?.matchupHistory?.[a]?.length ?? 0) > 0;
+const ix = historyBook(historyData).ix;
+const pairingHasMeetings = (a: string, b: string) => (headToHeadMeetings(ix, a, b)?.length ?? 0) > 0;
 
 const num = (n: number, dp = 2) =>
   n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });

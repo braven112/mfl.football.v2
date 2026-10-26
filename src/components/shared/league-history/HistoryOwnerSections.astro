@@ -786,6 +786,10 @@ const span = h ? (h.firstYear === h.lastYear ? String(h.firstYear) : `${h.firstY
     background: var(--history-gold-wash);
   }
   /* This owner's win share against the opponent, over the opponent's colors. */
+  /* One width for every record column, so every bar beside it is the same length. */
+  .ho-vs .ho-row__stat {
+    width: 6.5rem;
+  }
   .ho-vs__bar {
     position: relative;
     display: block;

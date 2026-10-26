@@ -12,6 +12,8 @@
  * consolation games, the Record Book's "all games" scope.
  */
 
+import { headToHeadByOpponent } from './rivalry.mjs';
+
 const record = (w, l, t) => `${w}-${l}${t ? `-${t}` : ''}`;
 const winPct = (w, l, t) => {
   const g = w + l + t;
@@ -117,13 +119,10 @@ export function ownerHistory(ix, ownerId) {
     })
     .sort((a, b) => b.to - a.to || b.from - a.from);
 
-  // Head to head with every other owner, grouped by the opponent's holding.
-  const vs = new Map();
-  for (const g of games) {
-    const key = ix.entityOf(g.y, g.of);
-    if (!vs.has(key)) vs.set(key, []);
-    vs.get(key).push(g);
-  }
+  // Head to head with every other owner, grouped by the opponent's holding,
+  // from rivalry.mjs's one game index: against an opponent's current holding,
+  // from the owner's current one, a row is the rivalry page's record.
+  const vs = headToHeadByOpponent(ix, [...new Set(seasons.map((s) => s.holding))]);
   const headToHead = [...vs.entries()]
     .map(([key, list]) => {
       const t = tally(list);
@@ -153,9 +152,11 @@ export function ownerHistory(ix, ownerId) {
     .sort((a, b) => b.games - a.games || b.pct - a.pct);
 
   const best = (list, value) => list.reduce((top, g) => (top && value(top) >= value(g) ? top : g), null);
-  const highGame = best(games, (g) => g.s);
+  // A forfeit (0.00, no lineup set) counts as a game but is no performance.
+  const scoring = games.filter((g) => g.s > 0 && g.os > 0);
+  const highGame = best(scoring, (g) => g.s);
   const bigWin = best(
-    games.filter((g) => g.won),
+    scoring.filter((g) => g.won),
     (g) => g.s - g.os,
   );
   const bestSeason = best(

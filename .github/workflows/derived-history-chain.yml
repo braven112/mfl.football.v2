@@ -3,7 +3,7 @@ name: Derived History Chain
 # THE lane that commits the franchise-history derived chain:
 #
 #   franchise-history.json + season-ledger.json   (one run per league)
-#     -> owner-tenures.json -> division-strength.json
+#     -> owner-tenures.json -> division-strength.json + league-history.json
 #
 # Each file is derived from the ones before it, and their data tests demand
 # row-for-row agreement, so a commit carrying only part of a regenerated chain

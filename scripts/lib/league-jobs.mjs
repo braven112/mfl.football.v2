@@ -61,8 +61,14 @@ export const LEAGUE_JOBS = {
   'division-strength': (l) => syncs(l) && hasPage(l, 'division-strength.astro'),
   /** prebuild + roster-sync.yml: the Top Players leaderboard — for leagues that HAVE the page. */
   'top-players': (l) => syncs(l) && hasPage(l, 'top-players.astro'),
-  /** prebuild: the League History dataset — for leagues with the Record Book page. */
-  'league-history': (l) => syncs(l) && hasPage(l, 'history/record-book.astro'),
+  /**
+   * prebuild + the derived chain: the League History dataset. Every league
+   * with a franchise history gets it, Record Book page or not, because it is
+   * also the site's one head-to-head (league-history/rivalry.mjs): the
+   * franchise pages, front page, owner map and columns read their records
+   * from it.
+   */
+  'league-history': (l) => LEAGUE_JOBS['franchise-history'](l),
 
   // ── Schedule: leagues whose schedule this site draws ───────────────────
   /** schedule-release.yml: the draw. A league without a policy keeps MFL's own schedule. */

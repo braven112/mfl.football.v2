@@ -189,7 +189,7 @@ export const marqueeMatchups = (
     doubleheaderWeeks = [],
     /**
      * Career head-to-head per pairing, keyed by `pairKey` — see
-     * `rivalrySeriesByPair`. Absent for a league with no ingested history, and
+     * `rivalrySeries` (league-history/rivalry.mjs). Absent for a league with no League History dataset, and
      * everything below degrades to the old behaviour rather than throwing.
      */
     rivalry = {},
