@@ -223,7 +223,6 @@ const paceCharts = paceBoards.slice(0, 3).flatMap((b) => {
     ...series,
     name: w.name,
     display: `${w.display}${w.unit ? ` ${w.unit}` : ''}`,
-    color: teamAccentVar(w.franchiseId, 'var(--page-text)'),
     recordValue: w.record.value,
     recordDisplay: w.record.display,
     recordLabel: [w.record.name, w.record.year].filter(Boolean).join(', '),
@@ -468,7 +467,8 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               <p class="rb-pace__legend">
                 <span class="rb-legend"><span class="rb-key rb-key--real"></span> Played</span>
                 <span class="rb-legend"><span class="rb-key rb-key--proj"></span> Projected</span>
-                <span class="rb-legend"><span class="rb-key rb-key--line"></span> Record holder's season</span>
+                <span class="rb-legend"><span class="rb-key rb-key--target"></span> The record</span>
+                {wide.holder && <span class="rb-legend"><span class="rb-key rb-key--line"></span> Record holder's season</span>}
               </p>
               <figcaption class="rb-viz__take">{wide.take} {w.played} of {w.full} games played.</figcaption>
             </figure>
@@ -623,11 +623,17 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-key--real {
     height: 3px;
     border-radius: 2px;
-    background: var(--rb-team);
+    background: var(--page-text);
+  }
+  .rb-key--target {
+    width: 18px;
+    height: 0;
+    vertical-align: middle;
+    border-top: 2px dotted var(--history-gold);
   }
   .rb-key--proj {
     height: 0;
-    border-top: 3px dashed var(--rb-team);
+    border-top: 3px dashed var(--page-text);
     border-radius: 0;
     background: none;
   }

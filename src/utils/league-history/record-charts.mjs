@@ -296,7 +296,10 @@ function entityLine(board, top, pop, W, opts) {
  *   { by: 'week'|'game', full, real, projected, record, name, display,
  *     color?, recordValue, recordLabel, recordDisplay }
  *
- * `color` is a CSS color (the team's accent var); names are escaped.
+ * `color` overrides the line color (default: the page text color, which keeps
+ * this season's line apart from the record's gold whatever the team wears).
+ * Names are escaped. `holder` in the result says whether the record holder's
+ * season was drawn.
  */
 export function paceChart(pace, W, opts = {}) {
   if (!pace?.real?.length) return null;
@@ -370,5 +373,5 @@ export function paceChart(pace, W, opts = {}) {
     `${pace.name} has ${fmt(now[1])} after ${now[0]} ${pace.by === 'week' ? (now[0] === 1 ? 'week' : 'weeks') : now[0] === 1 ? 'game' : 'games'}` +
     ` and is on pace for ${pace.display}` +
     (pace.recordDisplay ? `; the record is ${pace.recordDisplay}${pace.recordLabel ? ` (${pace.recordLabel})` : ''}.` : '.');
-  return { svg: svg(W, H, g, `${pace.name}: played so far and projected`), take };
+  return { svg: svg(W, H, g, `${pace.name}: played so far and projected`), take, holder: !!matches };
 }
