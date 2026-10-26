@@ -80,5 +80,49 @@
       "Switch leagues off in the board's own settings and it stops reading them altogether, which is what keeps a Sunday quick when you are in six of them. The choice is remembered on that device, so your phone and your laptop can watch different sets.",
       "Scores refresh on their own while games are being played and ease off once everything is final. The pill beside the week number says when the board last actually heard from MyFantasyLeague — a page that says \"live\" but has not been confirmed in an hour is not live, and that is how you tell."
     ]
+  },
+  {
+    "slug": "tv-app",
+    "title": "MFL Live on Google TV",
+    "summary": "Put your fantasy score, win chance and lineups on top of the game you're watching, and jump to the games your players are in.",
+    "icon": "scoreboard-2",
+    "updated": "2026-10-26",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "body": [
+      "The MFL Live TV app does two things. Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
+      {
+        "type": "list",
+        "heading": "Get the app",
+        "items": [
+          "<strong>Send Brandon your TV's Google account.</strong> That's the Gmail address signed in on your Google TV. He adds you as a tester and sends you a link to join the test.",
+          "<strong>Join the test.</strong> Open that link on your phone or computer, signed in to the same Google account, and tap to join.",
+          "<strong>Install it.</strong> After a few hours, search the Play Store on your TV for <strong>MFL Live</strong> and install it."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Set it up once",
+        "items": [
+          "<strong>Sign in.</strong> Open MFL Live on the TV and point your phone's camera at the QR code. Sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own.",
+          "<strong>Allow the overlay.</strong> Open the <strong>Score overlay</strong> tile. The first time, it asks to show over other apps: press OK and turn it on for MFL Live, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
+          "<strong>No switch on your TV?</strong> The tile shows a one-line command instead. Run it once from a computer on the same Wi-Fi, with ADB installed and network debugging turned on in the TV's Developer options: <code>adb shell appops set football.mfl.live SYSTEM_ALERT_WINDOW allow</code>",
+          "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Live settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "While you watch",
+        "items": [
+          "<strong>The score bar.</strong> Start a game in YouTube TV, then open the Score overlay tile. A thin bar across the top shows every matchup. It never takes the remote, so your TV app keeps working.",
+          "<strong>The full panel.</strong> Open the Score overlay tile again to bring up the panel: your score, win chance and both starting lineups. Left and Right move between your matchups.",
+          "<strong>Watch your players.</strong> The panel's Watch list shows the NFL games your starters are in, live games first. Up and Down pick a game and OK opens it on the TV through your TV's search, where you choose YouTube TV.",
+          "<strong>Back to the game.</strong> Back returns to the score bar, and so does any other button, so the next press reaches your TV app. The panel also drops back to the bar after 30 seconds. To close the overlay altogether, pick <strong>Hide overlay</strong> at the bottom of the Watch list."
+        ]
+      },
+      "The overlay is still new, so tell Brandon what works on your TV and what doesn't."
+    ]
   }
 ]
