@@ -31,6 +31,9 @@ import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEr
 import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
 import keeperHistory from '../../../../data/afl-fantasy/derived/keeper-history.json';
 import AflKeeperHistory from '../../../components/afl-fantasy/AflKeeperHistory.astro';
+import pickTradeData from '../../../../data/afl-fantasy/derived/pick-trades.json';
+import AflPickTrades from '../../../components/afl-fantasy/AflPickTrades.astro';
+import { franchisePickTrades } from '../../../utils/league-history/pick-trades.mjs';
 import { recordBook } from '../../../utils/league-history/records.mjs';
 import { franchiseKeepers } from '../../../utils/league-history/keepers.mjs';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
@@ -61,11 +64,12 @@ const conferenceName = conference?.name ?? team.conference;
 // viewer matches this franchise.
 const authUser = getAuthUser(Astro.request);
 
-// Keepers follow the page's view: the current owner's run by default,
-// every owner with ?view=all (HistoryFranchisePage reads the same param).
-const keepers = franchiseKeepers(keeperHistory, recordBook(historyData).ix, id!, {
-  ownerOnly: Astro.url.searchParams.get('view') !== 'all',
-});
+// Keepers and pick trades follow the page's view: the current owner's run by
+// default, every owner with ?view=all (HistoryFranchisePage reads the same param).
+const ownerOnly = Astro.url.searchParams.get('view') !== 'all';
+const historyIx = recordBook(historyData).ix;
+const keepers = franchiseKeepers(keeperHistory, historyIx, id!, { ownerOnly });
+const pickTrades = franchisePickTrades(pickTradeData, historyIx, id!, { ownerOnly });
 const isOwner =
   !!authUser &&
   authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id &&
@@ -176,4 +180,5 @@ nameEras.sort((a, b) => a.yearStart - b.yearStart);
     rivalriesPage={true}
   />
   <AflKeeperHistory slot="after-highs" history={keepers} />
+  <AflPickTrades slot="after-highs" trades={pickTrades} />
 </HistoryFranchisePage>

@@ -36,7 +36,7 @@ import { teamAccentVar } from '../../../utils/team-accent-css';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
 import { CATEGORIES, SCOPES, historyEras, paceSeries, recordBook } from '../../../utils/league-history/records.mjs';
-import { gapChart, historyChart, paceChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
+import { gapChart, historyChart, paceChart, seasonBarChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
 import '../../../styles/record-charts.css';
 
 interface Row {
@@ -86,9 +86,11 @@ interface Props {
   data: unknown;
   /** The league's keeper-history file, which adds the Keepers boards (utils/league-history/keepers.mjs). */
   keepers?: unknown;
+  /** The league's pick-trades file, which adds the Draft picks board (utils/league-history/pick-trades.mjs). */
+  picks?: unknown;
 }
 
-const { leagueSlug, data, keepers = null } = Astro.props as Props;
+const { leagueSlug, data, keepers = null, picks = null } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
@@ -103,7 +105,7 @@ const SCOPE_LABEL: Record<string, string> = {
 const params = Astro.url.searchParams;
 const eras = historyEras(data, league.historyEras ?? []);
 const era = eras.find((e) => e.id === params.get('era')) ?? eras[0];
-const book = recordBook(data, { from: era.from, keepers });
+const book = recordBook(data, { from: era.from, keepers, picks });
 const facts = book.facts();
 const categories = book.categories as typeof CATEGORIES;
 const category = categories.find((c) => c.id === params.get('cat')) ?? categories[0];
@@ -151,8 +153,11 @@ const boardWatch = (board && watches[board.id]) || [];
 const chartOpts = { mine, href: rowHref, entityHref, watch: boardWatch };
 const chart = board ? chartView.draw(board, CHART_W, chartOpts) : null;
 const chartPhone = board ? chartView.draw(board, CHART_W_PHONE, chartOpts) : null;
-const history = board ? historyChart(board, CHART_W, chartOpts) : null;
-const historyPhone = board ? historyChart(board, CHART_W_PHONE, chartOpts) : null;
+// A board that carries a per-season count (Draft picks) shows it in place of
+// the record's history, which says little for a board ranked by draft year.
+const series = (board as Board & { series?: Array<{ season: number; count: number }> })?.series ?? null;
+const history = series ? seasonBarChart(series, CHART_W) : board ? historyChart(board, CHART_W, chartOpts) : null;
+const historyPhone = series ? seasonBarChart(series, CHART_W_PHONE) : board ? historyChart(board, CHART_W_PHONE, chartOpts) : null;
 const youOnBoard = !!board?.population.some((p) => mine(p[4] as string | null));
 const historyBySeason = !!board?.population.length && board.population.every((p) => p[1] != null);
 
@@ -379,14 +384,14 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
 
           {history && (
             <figure class="rb-story">
-              <p class="rb-story__kicker">{historyBySeason ? 'How the record grew' : 'Everyone on the board'}</p>
+              <p class="rb-story__kicker">{series ? 'By season' : historyBySeason ? 'How the record grew' : 'Everyone on the board'}</p>
               <p class="rb-story__title">
-                {historyBySeason ? 'Every result, season by season' : 'The whole league on one line'}
+                {series ? 'Picks traded each season' : historyBySeason ? 'Every result, season by season' : 'The whole league on one line'}
               </p>
               <div class="rb-viz__plot rb-viz__plot--phone" set:html={historyPhone?.svg ?? history.svg} />
               <div class="rb-viz__plot rb-viz__plot--wide" set:html={history.svg} />
               <figcaption class="rb-viz__take">{history.take}</figcaption>
-              <p class="rb-story__legend">
+              {!series && <p class="rb-story__legend">
                 {historyBySeason && (
                   <span class="rb-legend"><span class="rb-key rb-key--line"></span> The record at the time</span>
                 )}
@@ -395,7 +400,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
                 {boardWatch.length > 0 && historyBySeason && (
                   <span class="rb-legend"><span class="rb-key rb-key--watch"></span> On pace this season</span>
                 )}
-              </p>
+              </p>}
             </figure>
           )}
 

@@ -23,6 +23,7 @@
  */
 
 import { keeperBoards } from './keepers.mjs';
+import { pickBoards } from './pick-trades.mjs';
 
 export const SCOPES = ['all', 'regular', 'playoffs'];
 
@@ -525,17 +526,22 @@ export const CATEGORIES = [
 /** Shown only for a league with a keeper-history file (see keepers.mjs). */
 export const KEEPERS_CATEGORY = { id: 'keepers', label: 'Keepers', scoped: false };
 
+/** Shown only for a league with a pick-trades file (see pick-trades.mjs). */
+export const PICKS_CATEGORY = { id: 'picks', label: 'Draft picks', scoped: false };
+
 /**
  * One category's boards. `scope` applies to Single game and Career only.
  * `population` is every result the board ranked (see withPopulation) and `asc`
  * says the record is the LOWEST value (fewest points, fastest to a milestone).
  * @returns {Array<{id:string,label:string,title:string,note?:string,asc:boolean,population:Array<Array<number|string|null>>,rows:Array<object>}>}
  */
-export function buildCategory(ix, category, scope = 'all', { keepers = null, from = null } = {}) {
+export function buildCategory(ix, category, scope = 'all', { keepers = null, picks = null, from = null } = {}) {
   const boards =
     category === KEEPERS_CATEGORY.id
       ? keepers ? keeperBoards(keepers, ix, { from, rankRows }) : []
-      : categoryBoards(ix, category, SCOPES.includes(scope) ? scope : 'all');
+      : category === PICKS_CATEGORY.id
+        ? picks ? pickBoards(picks, ix, { from, rankRows }) : []
+        : categoryBoards(ix, category, SCOPES.includes(scope) ? scope : 'all');
   return boards.map((b) => ({
     ...b,
     asc: Boolean(b.rows.asc),
@@ -741,18 +747,19 @@ export function paceSeries(ix, boardId, watch) {
  * same object arrives on every request to a route and the boards are built
  * once per server instance, not per view (the Season boards cost ~50 ms).
  * `from` reads the book over an era (see historyEras). `keepers` is the
- * league's keeper-history file, which adds the Keepers category; a league
- * passes the same file on every request, so it never changes the cached view.
+ * league's keeper-history file, which adds the Keepers category, and `picks`
+ * its pick-trades file, which adds Draft picks; a league passes the same files
+ * on every request, so they never change the cached view.
  */
 const bookCache = new WeakMap();
 /**
  * @param {any} ds
- * @param {{ groupBy?: string, from?: number | null, keepers?: any }} [opts]
+ * @param {{ groupBy?: string, from?: number | null, keepers?: any, picks?: any }} [opts]
  */
-export function recordBook(ds, { groupBy = 'owner', from = null, keepers = null } = {}) {
+export function recordBook(ds, { groupBy = 'owner', from = null, keepers = null, picks = null } = {}) {
   if (!bookCache.has(ds)) bookCache.set(ds, new Map());
   const byView = bookCache.get(ds);
-  const viewKey = `${groupBy}|${from ?? 'all'}|${keepers ? 'k' : ''}`;
+  const viewKey = `${groupBy}|${from ?? 'all'}|${keepers ? 'k' : ''}${picks ? 'p' : ''}`;
   if (!byView.has(viewKey)) {
     const ix = indexDataset(eraDataset(ds, from), { groupBy });
     const boards = new Map();
@@ -760,12 +767,12 @@ export function recordBook(ds, { groupBy = 'owner', from = null, keepers = null 
     let watch = null;
     const category = (category, scope = 'all') => {
       const key = `${category}|${scope}`;
-      if (!boards.has(key)) boards.set(key, buildCategory(ix, category, scope, { keepers, from }));
+      if (!boards.has(key)) boards.set(key, buildCategory(ix, category, scope, { keepers, picks, from }));
       return boards.get(key);
     };
     byView.set(viewKey, {
       ix,
-      categories: keepers ? [...CATEGORIES, KEEPERS_CATEGORY] : CATEGORIES,
+      categories: [...CATEGORIES, ...(keepers ? [KEEPERS_CATEGORY] : []), ...(picks ? [PICKS_CATEGORY] : [])],
       facts: () => (facts ??= bookFacts(ix)),
       category,
       watch: () => (watch ??= recordWatch(ix, category('season'))),
