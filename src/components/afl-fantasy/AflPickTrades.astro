@@ -1,0 +1,235 @@
+---
+/**
+ * Draft-pick trades for an AFL franchise page: every trade that moved a pick,
+ * newest first, with what went out, what came back, and what each pick turned
+ * into. Computed by utils/league-history/pick-trades.mjs (franchisePickTrades)
+ * in the route and passed in, so this only draws.
+ *
+ * Rendered into HistoryFranchisePage's after-highs slot by the AFL route; it
+ * carries its own styles because a slotted component never sees the page's
+ * scoped CSS.
+ */
+type Item =
+  | { kind: 'player'; name: string; position: string }
+  | { kind: 'pick'; label: string; fate: string; hops: number; guess: boolean };
+interface Trade {
+  ts: number;
+  season: number;
+  partner: { id: string; name: string };
+  gave: Item[];
+  got: Item[];
+}
+interface Props {
+  trades: { trades: Trade[]; sent: number; received: number } | null;
+  /** Trades shown before "Earlier trades". */
+  open?: number;
+}
+
+const { trades: data, open = 4 } = Astro.props as Props;
+const trades = data?.trades ?? [];
+const groups = [trades.slice(0, open), trades.slice(open)];
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const month = (ts: number) =>
+  new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'America/Los_Angeles' });
+---
+
+{trades.length > 0 && (
+  <section class="pt" aria-labelledby="pt-title">
+    <p class="pt__kicker">Draft picks</p>
+    <h2 class="pt__title" id="pt-title">Picks they dealt</h2>
+    <p class="pt__summary">
+      {plural(data!.sent, 'pick')} sent and {plural(data!.received, 'pick')} received in {plural(trades.length, 'trade')}.
+    </p>
+
+    {groups.map((list, i) =>
+      list.length === 0 ? null : (
+        <Fragment>
+          {i === 1 ? (
+            <details class="pt__more">
+              <summary>Earlier trades ({list.length})</summary>
+              <ol class="pt__trades">
+                {list.map((t) => (
+                  <li class="pt__trade">
+                    <p class="pt__head"><span>{month(t.ts)}</span><span class="pt__with">with {t.partner.name}</span></p>
+                    <div class="pt__sides">
+                      {[['Sent', t.gave], ['Got', t.got]].map(([label, items]) => (
+                        <div class="pt__side">
+                          <p class="pt__label">{label as string}</p>
+                          <ul class="pt__items">
+                            {(items as Item[]).map((it) =>
+                              it.kind === 'player' ? (
+                                <li class="pt__item"><span class="pt__pos">{it.position}</span> {it.name}</li>
+                              ) : (
+                                <li class:list={['pt__item', 'pt__item--pick', it.guess && 'pt__item--guess']}>
+                                  <span class="pt__pick">{it.label}{it.guess && <span class="pt__guess" title="Path is a best guess">?</span>}</span>
+                                  <span class="pt__fate">{it.fate}</span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ) : (
+            <ol class="pt__trades">
+              {list.map((t) => (
+                <li class="pt__trade">
+                  <p class="pt__head"><span>{month(t.ts)}</span><span class="pt__with">with {t.partner.name}</span></p>
+                  <div class="pt__sides">
+                    {[['Sent', t.gave], ['Got', t.got]].map(([label, items]) => (
+                      <div class="pt__side">
+                        <p class="pt__label">{label as string}</p>
+                        <ul class="pt__items">
+                          {(items as Item[]).map((it) =>
+                            it.kind === 'player' ? (
+                              <li class="pt__item"><span class="pt__pos">{it.position}</span> {it.name}</li>
+                            ) : (
+                              <li class:list={['pt__item', 'pt__item--pick', it.guess && 'pt__item--guess']}>
+                                <span class="pt__pick">{it.label}{it.guess && <span class="pt__guess" title="Path is a best guess">?</span>}</span>
+                                <span class="pt__fate">{it.fate}</span>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Fragment>
+      ),
+    )}
+
+    {trades.some((t) => [...t.gave, ...t.got].some((it) => it.kind === 'pick' && it.guess)) && (
+      <p class="pt__foot">A <span class="pt__guess">?</span> marks a pick whose path between teams is a best guess.</p>
+    )}
+  </section>
+)}
+
+<style>
+  .pt {
+    margin-top: 1.5rem;
+  }
+  .pt__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .pt__title {
+    margin: 0 0 0.25rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .pt__summary {
+    margin: 0 0 0.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .pt__trades {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pt__trade {
+    padding: 0.625rem 0.75rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .pt__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin: 0 0 0.5rem;
+    font-weight: var(--font-weight-bold);
+  }
+  .pt__with {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
+  }
+  .pt__sides {
+    display: grid;
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    .pt__sides {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .pt__side {
+    min-width: 0;
+  }
+  .pt__label {
+    margin: 0 0 0.25rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+  }
+  .pt__items {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pt__item {
+    font-size: var(--font-size-sm);
+  }
+  .pt__item--pick {
+    display: flex;
+    flex-direction: column;
+    padding-left: 0.5rem;
+    border-left: 2px solid var(--history-gold);
+  }
+  .pt__item--guess {
+    border-left-style: dashed;
+  }
+  .pt__pos {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+  .pt__pick {
+    font-weight: var(--font-weight-semibold);
+  }
+  .pt__fate {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .pt__guess {
+    margin-left: 0.125rem;
+    color: var(--history-gold);
+    font-weight: var(--font-weight-bold);
+  }
+  .pt__more {
+    margin-top: 0.75rem;
+  }
+  .pt__more summary {
+    margin-bottom: 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .pt__foot {
+    margin: 0.75rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+</style>

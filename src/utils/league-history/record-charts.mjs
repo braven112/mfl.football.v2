@@ -375,3 +375,40 @@ export function paceChart(pace, W, opts = {}) {
     (pace.recordDisplay ? `; the record is ${pace.recordDisplay}${pace.recordLabel ? ` (${pace.recordLabel})` : ''}.` : '.');
   return { svg: svg(W, H, g, `${pace.name}: played so far and projected`), take, holder: !!matches };
 }
+
+/**
+ * A count per season as bars (`series`: `[{ season, count }]`, oldest first),
+ * for a board that carries one in place of its record history (Draft picks:
+ * picks traded each season). The busiest season is gold; a season with no
+ * entry draws as an empty slot so gaps read as gaps.
+ */
+export function seasonBarChart(series, W, { noun = 'picks' } = {}) {
+  if (!series?.length) return null;
+  const first = series[0].season, last = series.at(-1).season;
+  const bySeason = new Map(series.map((s) => [s.season, s.count]));
+  const seasons = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const hi = Math.max(...series.map((s) => s.count));
+  const L = 28, R = 4, T = 14, B = 22, H = 170;
+  const step = (W - L - R) / seasons.length, bw = Math.max(2, step * 0.7);
+  const y = scale(0, hi, H - B, T);
+  let g = '';
+  for (const t of ticks(0, hi, 4, 1)) {
+    g += `<line class="rbc-grid" x1="${L}" x2="${W - R}" y1="${px(y(t))}" y2="${px(y(t))}"/>`;
+    g += `<text class="rbc-axis" x="${L - 4}" y="${px(y(t)) + 3}" text-anchor="end">${t}</text>`;
+  }
+  const every = Math.ceil(seasons.length / (W < 360 ? 5 : 8));
+  seasons.forEach((s, i) => {
+    const n = bySeason.get(s) ?? 0, x = L + i * step + (step - bw) / 2;
+    if (n) {
+      g += `<rect class="${n === hi ? 'rbc-bar-top' : 'rbc-bar'}" x="${px(x)}" y="${px(y(n))}" width="${px(bw)}" height="${px(H - B - y(n))}">${tip(`${s}: ${n} ${noun}`)}</rect>`;
+    }
+    if (i % every === 0 || i === seasons.length - 1) {
+      g += `<text class="rbc-axis" x="${px(x + bw / 2)}" y="${H - 6}" text-anchor="middle">${s}</text>`;
+    }
+  });
+  const peak = series.find((s) => s.count === hi);
+  const total = series.reduce((sum, s) => sum + s.count, 0);
+  const recent = series.filter((s) => s.season > last - 5).reduce((sum, s) => sum + s.count, 0);
+  const take = `${total} ${noun} changed hands from ${first} to ${last}; the busiest season was ${peak.season}, with ${hi}. The last five seasons saw ${recent}.`;
+  return { svg: svg(W, H, g, `${noun} traded each season, ${first} to ${last}`), take };
+}
