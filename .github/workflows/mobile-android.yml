@@ -1,0 +1,106 @@
+name: MFL Live mobile (Android)
+
+# Checks and builds the MFL Live phone app (apps/mobile). The build itself runs
+# on Expo's servers (EAS Build): this job only starts it, with --no-wait, so
+# it costs a minute of Actions time and the APK/AAB appears on expo.dev.
+#
+#   pull request  -> type-check only (no EAS build, which spends build quota)
+#   push          -> type-check, then a `preview` build: an APK you install
+#                    straight from the build's page on expo.dev
+#   Run workflow  -> pick `preview` or `production` (the signed AAB for Play)
+#
+# Needs the EXPO_TOKEN repository secret (expo.dev -> Account settings ->
+# Access tokens). Without it the build step says so and is skipped; the
+# type-check still runs. Signing keys are generated and held by EAS, never in
+# the repo.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared-types/**'
+      - '.github/workflows/mobile-android.yml'
+  push:
+    branches: [main, staging]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared-types/**'
+      - '.github/workflows/mobile-android.yml'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile: preview (installable APK) or production (signed AAB for Play)'
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+concurrency:
+  group: mobile-android-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # The shared preamble: pnpm at the pinned version, Node, and the root
+      # install. The app is its own pnpm workspace, so it installs next.
+      - name: Setup pnpm + Node
+        uses: ./.github/actions/setup
+
+      - name: Install the app's dependencies
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: apps/mobile
+        run: pnpm run typecheck
+
+  build:
+    name: Start EAS build
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check for the Expo token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -n "$EXPO_TOKEN" ]; then
+            echo "HAS_EXPO_TOKEN=true" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No EXPO_TOKEN secret yet; skipping the EAS build. Add it under Settings -> Secrets and variables -> Actions."
+          fi
+
+      - name: Setup pnpm + Node
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: ./.github/actions/setup
+
+      - name: Install the app's dependencies
+        if: env.HAS_EXPO_TOKEN == 'true'
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: pnpm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Start the build on EAS
+        if: env.HAS_EXPO_TOKEN == 'true'
+        working-directory: apps/mobile
+        env:
+          PROFILE: ${{ inputs.profile || 'preview' }}
+        run: eas build --platform android --profile "$PROFILE" --non-interactive --no-wait
