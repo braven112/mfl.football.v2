@@ -1,5 +1,5 @@
 {
-  "note": "AFL keeper sets: the seven players each franchise kept at the July 15 keeper deadline. 2009-2026 rebuilt from MFL rosters, transactions and drafts (both directions agree for 427 of 432 franchise-seasons). Later seasons are added by scripts/compute-afl-keeper-history.mjs from the July roster snapshots. 2005-2008 are estimated. 2007-2008: each season replayed back to its draft through the transaction log; where a team does not land on exactly seven, its best remaining players from the previous roster fill the set and are listed under estimated.uncertain. 2005-2006 (no transaction log survives): each team's week-1 roster minus its own draft picks, preferring players from its previous roster, then the previous season's best scorers; players not on the team's previous roster, or picked from more than seven, are listed under estimated.uncertain.",
+  "note": "AFL keeper sets: the seven players each franchise kept at the July 15 keeper deadline. 2009-2026 rebuilt from MFL rosters, transactions and drafts (both directions agree for 427 of 432 franchise-seasons). Later seasons are added by scripts/compute-afl-keeper-history.mjs from the July roster snapshots. 2005-2008 are estimated. 2007-2008: each season replayed back to its draft through the transaction log; where a team does not land on exactly seven, its best remaining players from the previous roster fill the set and are listed under estimated.uncertain. 2005-2006 (no transaction log survives): each team's week-1 roster minus its own draft picks, preferring players from its previous roster, then the previous season's best scorers; players not on the team's previous roster, or picked from more than seven, are listed under estimated.uncertain. 2005 franchise 0011 keeps Plaxico Burress in place of Drew Bledsoe, confirmed by the league commissioner.",
   "estimated": {
     "seasons": [
       2005,
@@ -49,7 +49,6 @@
           "5059"
         ],
         "0011": [
-          "1064",
           "4891"
         ],
         "0014": [
@@ -260,10 +259,10 @@
         "7393"
       ],
       "0011": [
-        "1064",
         "1197",
         "4891",
         "4920",
+        "5657",
         "6982",
         "7397",
         "7433"
