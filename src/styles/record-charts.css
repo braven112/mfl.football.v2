@@ -136,3 +136,51 @@
 .rb-viz__plot a:focus-visible {
   outline: 2px solid var(--history-gold);
 }
+/* On pace (paceChart): real is solid, projected is dashed over a shaded band. */
+.rb-viz__plot .rbc-pace-future {
+  fill: color-mix(in srgb, var(--content-text-muted) 10%, transparent);
+}
+.rb-viz__plot .rbc-pace-record {
+  fill: none;
+  stroke: var(--history-gold);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.rb-viz__plot .rbc-pace-real {
+  fill: none;
+  stroke: var(--page-text);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.rb-viz__plot .rbc-pace-proj {
+  fill: none;
+  stroke: var(--page-text);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 5;
+  opacity: 0.75;
+}
+.rb-viz__plot .rbc-pace-now {
+  fill: var(--page-text);
+  stroke: var(--content-bg);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-pace-end {
+  fill: var(--content-bg);
+  stroke: var(--page-text);
+  stroke-width: 2.5;
+}
+.rb-viz__plot .rbc-pace-label {
+  fill: var(--page-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.rb-viz__plot .rbc-pace-label--record {
+  fill: var(--history-gold);
+}
+.rb-viz__plot .rbc-pace-target {
+  stroke: var(--history-gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}

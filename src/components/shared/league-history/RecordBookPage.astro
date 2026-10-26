@@ -35,8 +35,8 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
-import { CATEGORIES, SCOPES, historyEras, recordBook } from '../../../utils/league-history/records.mjs';
-import { gapChart, historyChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
+import { CATEGORIES, SCOPES, historyEras, paceSeries, recordBook } from '../../../utils/league-history/records.mjs';
+import { gapChart, historyChart, paceChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
 import '../../../styles/record-charts.css';
 
 interface Row {
@@ -64,6 +64,9 @@ interface Watch {
   record: Row;
   played: number;
   full: number;
+  year: number;
+  weeks: number;
+  fullWeeks: number;
 }
 interface HistoryData {
   seasons: Array<{ y: number; teams: Record<string, { h: string }> }>;
@@ -203,12 +206,32 @@ const paceLine = (w: Watch) => {
         : `which would break the record (${w.record.display})`;
   return `on pace for ${w.display}${w.unit ? ` ${w.unit}` : ''}, ${verdict}`;
 };
-// The header strip: every season board someone is on pace to break or tie,
-// the best pace only (the board's own banner lists the rest).
+// On pace (Brandon, 2026-10-26: a chart, not an alert, "very clear what was
+// projected and what was real"): the season so far against the record, for
+// every season board someone is on pace to break or tie, plus the board in
+// view when it has a top-ten pace. The board in view comes first.
 const seasonBoards = book.category('season') as Board[];
-const recordChases = seasonBoards.flatMap((b) =>
-  (watches[b.id] ?? []).filter((w) => w.rank === 1).slice(0, 1).map((w) => ({ board: b, watch: w }))
+const paceBoards = seasonBoards.filter(
+  (b) => (watches[b.id] ?? []).some((w) => w.rank === 1) || (b.id === board?.id && (watches[b.id] ?? []).length > 0),
 );
+paceBoards.sort((a, b) => Number(b.id === board?.id) - Number(a.id === board?.id));
+const paceCharts = paceBoards.slice(0, 3).flatMap((b) => {
+  const w = watches[b.id][0];
+  const series = paceSeries(book.ix, b.id, w);
+  if (!series) return [];
+  const pace = {
+    ...series,
+    name: w.name,
+    display: `${w.display}${w.unit ? ` ${w.unit}` : ''}`,
+    color: teamAccentVar(w.franchiseId, 'var(--page-text)'),
+    recordValue: w.record.value,
+    recordDisplay: w.record.display,
+    recordLabel: [w.record.name, w.record.year].filter(Boolean).join(', '),
+  };
+  const wide = paceChart(pace, CHART_W);
+  if (!wide) return [];
+  return [{ board: b, watch: w, line: paceLine(w), wide, phone: paceChart(pace, CHART_W_PHONE) ?? wide }];
+});
 
 const shareHref = (() => {
   const q = new URLSearchParams({ league: league.slug, cat: category.id, board: board?.id ?? '' });
@@ -255,20 +278,6 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       )}
     </header>
 
-    {recordChases.length > 0 && (
-      <aside class="rb-chase" aria-labelledby="rb-chase-title">
-        <p class="rb-chase__kicker" id="rb-chase-title">Record watch · {latestSeason?.y}</p>
-        <ul class="rb-chase__list">
-          {recordChases.map(({ board: b, watch: w }) => (
-            <li style={`--rb-team: ${teamAccentVar(w.franchiseId, 'var(--history-gold)')}`}>
-              <a href={viewHref({ cat: 'season', board: b.id, hash: 'rb-board-title' })}>
-                <b>{w.name}</b> is {paceLine(w)} for {b.title.toLowerCase()}.
-              </a>
-            </li>
-          ))}
-        </ul>
-      </aside>
-    )}
 
     <HistoryTabs leagueSlug={league.slug} current="record-book" />
 
@@ -324,19 +333,6 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       </h2>
       {board?.note && <p class="rb-board__note">{board.note}</p>}
 
-      {boardWatch.length > 0 && (
-        <aside class="rb-watch">
-          <p class="rb-watch__kicker">Record watch · {latestSeason?.y}</p>
-          <ul class="rb-watch__list">
-            {boardWatch.map((w) => (
-              <li style={`--rb-team: ${teamAccentVar(w.franchiseId, 'var(--history-gold)')}`}>
-                <b>{w.name}</b>{w.owner && ` (${w.owner})`} is {paceLine(w)}.
-                <span class="rb-watch__played">{w.played} of {w.full} games played.</span>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      )}
 
       {leader ? (
         <div class="rb-layout">
@@ -454,6 +450,33 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       )}
     </section>
 
+    {paceCharts.length > 0 && (
+      <section class="rb-pace" aria-labelledby="rb-pace-title">
+        <p class="rb-pace__kicker">Record watch · {latestSeason?.y}</p>
+        <h2 class="rb-pace__title" id="rb-pace-title">On pace</h2>
+        <div class="rb-pace__grid">
+          {paceCharts.map(({ board: b, watch: w, line, wide, phone }) => (
+            <figure class="ui-card rb-pace__card" style={`--rb-team: ${teamAccentVar(w.franchiseId, 'var(--history-gold)')}`}>
+              <p class="rb-pace__board">
+                <a href={viewHref({ cat: 'season', board: b.id, hash: 'rb-board-title' })}>{b.title}</a>
+              </p>
+              <p class="rb-pace__who">
+                <b>{w.name}</b>{w.owner && ` (${w.owner})`} is {line}.
+              </p>
+              <div class="rb-viz__plot rb-viz__plot--phone" set:html={phone.svg} />
+              <div class="rb-viz__plot rb-viz__plot--wide" set:html={wide.svg} />
+              <p class="rb-pace__legend">
+                <span class="rb-legend"><span class="rb-key rb-key--real"></span> Played</span>
+                <span class="rb-legend"><span class="rb-key rb-key--proj"></span> Projected</span>
+                <span class="rb-legend"><span class="rb-key rb-key--line"></span> Record holder's season</span>
+              </p>
+              <figcaption class="rb-viz__take">{wide.take} {w.played} of {w.full} games played.</figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+    )}
+
     {others.length > 0 && (
       <section class="rb-more" aria-labelledby="rb-more-title">
         <h2 class="rb-more__title" id="rb-more-title">More {category.label.toLowerCase()} records</h2>
@@ -536,47 +559,77 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
     margin-top: 0.75rem;
   }
 
-  /* ── Record watch ─────────────────────────────────────────────────────── */
-  .rb-chase,
-  .rb-watch {
-    margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
-    background: var(--history-gold-wash);
-    border: 1px solid var(--history-gold);
-    border-radius: var(--radius-md, 12px);
+  /* ── On pace ──────────────────────────────────────────────────────────── */
+  .rb-pace {
+    margin-top: 1.5rem;
   }
-  .rb-watch {
-    margin: 0.75rem 0 0;
-  }
-  .rb-chase__kicker,
-  .rb-watch__kicker {
-    margin: 0 0 0.25rem;
+  .rb-pace__kicker {
+    margin: 0;
     color: var(--history-gold);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
-  .rb-chase__list,
-  .rb-watch__list {
+  .rb-pace__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .rb-pace__grid {
     display: grid;
-    gap: 0.375rem;
+    gap: 1rem;
+  }
+  @media (min-width: 900px) {
+    .rb-pace__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .rb-pace__card {
     margin: 0;
-    padding: 0;
-    list-style: none;
+    padding: 1rem;
+    border-top: 4px solid var(--rb-team);
+    border-radius: var(--radius-lg, 16px);
+  }
+  .rb-pace__board {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rb-pace__board a {
+    color: var(--history-gold);
+  }
+  .rb-pace__who {
+    margin: 0.25rem 0 0.5rem;
     font-size: var(--font-size-sm);
   }
-  .rb-chase__list li,
-  .rb-watch__list li {
-    padding-left: 0.625rem;
-    border-left: 3px solid var(--rb-team);
-  }
-  .rb-chase a,
-  .rb-chase a:hover {
-    color: var(--page-text);
-  }
-  .rb-watch__played {
+  .rb-pace__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin: 0.5rem 0 0;
     color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .rb-key--real,
+  .rb-key--proj {
+    width: 18px;
+    vertical-align: middle;
+  }
+  .rb-key--real {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--rb-team);
+  }
+  .rb-key--proj {
+    height: 0;
+    border-top: 3px dashed var(--rb-team);
+    border-radius: 0;
+    background: none;
   }
 
   /* ── The board ────────────────────────────────────────────────────────── */
