@@ -1,10 +1,10 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-25",
+  "recordedAt": "2026-10-26",
   "totals": {
-    "transition": 187,
-    "fontSize": 1897,
-    "shadow": 206
+    "transition": 186,
+    "fontSize": 1881,
+    "shadow": 205
   },
   "files": {
     "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
@@ -702,9 +702,6 @@
     "src/pages/afl-fantasy/records.astro": {
       "fontSize": 10
     },
-    "src/pages/afl-fantasy/rivalries/index.astro": {
-      "fontSize": 9
-    },
     "src/pages/afl-fantasy/rules.astro": {
       "fontSize": 3,
       "shadow": 2
@@ -835,11 +832,6 @@
       "transition": 1,
       "fontSize": 28,
       "shadow": 2
-    },
-    "src/pages/theleague/rivalries/index.astro": {
-      "transition": 1,
-      "fontSize": 7,
-      "shadow": 1
     },
     "src/pages/theleague/rookies-2026.astro": {
       "transition": 2,

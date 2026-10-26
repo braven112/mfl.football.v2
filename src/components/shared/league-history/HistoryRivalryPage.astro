@@ -239,7 +239,7 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
       </div>
     </header>
 
-    {showHistoryTabs && <HistoryTabs leagueSlug={league.slug} />}
+    {showHistoryTabs && <HistoryTabs leagueSlug={league.slug} current="rivalries" />}
 
     {rv.hadOtherOwners && (
       <ul class="ui-pills hrv-pills" aria-label="Games counted">

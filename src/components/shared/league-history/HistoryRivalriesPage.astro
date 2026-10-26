@@ -1,0 +1,737 @@
+---
+/**
+ * League History rivalries index — every pairing's series in the Trophy Room
+ * style, shared by every league with a League History dataset. It IS the
+ * league's rivalries page, at /<league>/rivalries, and public, like the
+ * rivalry pages it opens (it replaced both leagues' forked copies,
+ * 2026-10-26).
+ *
+ * Built only from the dataset's `rivalryPairs` (rivalry.mjs), so every record
+ * here is the one its rivalry page shows: both current owners' meetings,
+ * following an owner who moved franchises, consolation games left out.
+ *
+ * Top to bottom: the hottest rivalries as Broadcast split cards, one team's
+ * rivals (team pills, ?team=<id>; the viewer's own team by default), then the
+ * full head-to-head grid. A league can split the grid into groups (the AFL's
+ * conferences) through `gridGroups`; its own notes come in through the
+ * default slot, at the end. Zero client JS.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import HistoryTabs from './HistoryTabs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { canViewLeagueHistory } from '../../../utils/league-history/access';
+import { getTeamColorPrimary, getTeamColorSecondary } from '../../../utils/team-colors';
+import { ensureLegibleOn } from '../../../utils/team-color-contrast';
+import { toBroadcastPair } from '../../../utils/draft-broadcast';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { rivalryHeat, rivalryPairs } from '../../../utils/league-history/rivalry.mjs';
+
+interface Pair {
+  a: string;
+  b: string;
+  wa: number;
+  wb: number;
+  t: number;
+  games: number;
+  playoffs: number;
+  heat: number;
+}
+interface Team {
+  franchiseId: string;
+  name: string;
+  icon: string | null;
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: unknown;
+  /** Split the grid, e.g. the AFL's conferences. One grid of every team when left out. */
+  gridGroups?: Array<{ name: string; franchiseIds: string[] }> | null;
+}
+
+const { leagueSlug, data, gridGroups = null } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals?.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const navSlug = league.navSlug as LeagueSlug;
+
+const ix = recordBook(data).ix;
+const pairs = rivalryPairs(ix) as Map<string, Pair>;
+const heat = rivalryHeat(ix) as { ranked: Pair[]; pairings: number };
+
+// Today's teams, by name. The dataset's latest season is today's alignment.
+const latest = (data as { seasons: Array<{ y: number; teams: Record<string, { n: string; i?: string | null }> }> }).seasons.at(-1);
+const teams: Team[] = Object.entries(latest?.teams ?? {})
+  .map(([franchiseId, t]) => ({ franchiseId, name: t.n, icon: t.i ?? null }))
+  .sort((x, y) => x.name.localeCompare(y.name));
+const teamById = new Map(teams.map((t) => [t.franchiseId, t]));
+
+const authUser = getAuthUser(Astro.request);
+const viewerFranchise = franchiseIdForLeague(authUser, league.id);
+const showHistoryTabs = canViewLeagueHistory(authUser);
+
+const pairOf = (x: string, y: string) => pairs.get(x < y ? `${x}-${y}` : `${y}-${x}`) ?? null;
+const pairHref = (x: string, y: string) => r(`/rivalries/${x < y ? `${x}-vs-${y}` : `${y}-vs-${x}`}`);
+/** One side's record against the other: wins, losses, ties. */
+const sideOf = (p: Pair, f: string) =>
+  p.a === f ? { w: p.wa, l: p.wb, t: p.t } : { w: p.wb, l: p.wa, t: p.t };
+const record = (s: { w: number; l: number; t: number }) => `${s.w}–${s.l}${s.t ? `–${s.t}` : ''}`;
+
+const colorOf = (f: string) => toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug)).primary;
+// A bar sits on the card, so each color is nudged only where it would vanish
+// into THAT theme's card, as on the rivalry page.
+const barColors = (x: string, y: string) =>
+  [
+    `--rx-a-light: ${ensureLegibleOn(colorOf(x), '#ffffff', 30)}; --rx-b-light: ${ensureLegibleOn(colorOf(y), '#ffffff', 30)}`,
+    `--rx-a-dark: ${ensureLegibleOn(colorOf(x), '#262626', 30)}; --rx-b-dark: ${ensureLegibleOn(colorOf(y), '#262626', 30)}`,
+  ].join('; ');
+const share = (s: { w: number; l: number }) => (s.w + s.l ? s.w / (s.w + s.l) : 0.5);
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+// The hottest pairings: rivalryHeat's ranking, the same one each rivalry
+// page's "#3 of 276" reads.
+const hottest = heat.ranked.slice(0, 8);
+const maxHeat = hottest[0]?.heat ?? 1;
+const leaderLine = (p: Pair) => {
+  if (p.wa === p.wb) return 'Dead even';
+  const [lead, w, l] = p.wa > p.wb ? [p.a, p.wa, p.wb] : [p.b, p.wb, p.wa];
+  return `${teamById.get(lead)?.name ?? lead} leads ${w}–${l}${p.t ? `–${p.t}` : ''}`;
+};
+const heatRank = new Map(heat.ranked.map((p, i) => [`${p.a}-${p.b}`, i + 1]));
+
+// One team's rivals: the asked-for team, else the viewer's, else the team in
+// the hottest rivalry.
+const asked = Astro.url.searchParams.get('team');
+const focusId =
+  (asked && teamById.has(asked) ? asked : null) ??
+  (viewerFranchise && teamById.has(viewerFranchise) ? viewerFranchise : null) ??
+  hottest[0]?.a ??
+  teams[0]?.franchiseId ??
+  null;
+const focus = focusId ? teamById.get(focusId)! : null;
+const rivals = focus
+  ? teams
+      .filter((t) => t.franchiseId !== focus.franchiseId)
+      .map((t) => ({ team: t, pair: pairOf(focus.franchiseId, t.franchiseId) }))
+      .filter((x): x is { team: Team; pair: Pair } => !!x.pair && x.pair.games > 0)
+      .sort((x, y) => y.pair.heat - x.pair.heat)
+  : [];
+const RIVALS_SHOWN = 8;
+// The picked team's pill leads the row: a phone row swipes, and the picked
+// pill would otherwise sit off screen.
+const pillTeams = focus ? [focus, ...teams.filter((t) => t.franchiseId !== focus.franchiseId)] : teams;
+const teamHref = (f: string) => `${r('/rivalries')}?team=${f}#rx-rivals`;
+
+// Grid shading: five steps of the hottest pairing's heat, so the palette lives
+// in CSS and follows the theme.
+const gridMaxHeat = heat.ranked[0]?.heat ?? 1;
+const heatStep = (p: Pair | null) => {
+  if (!p || !p.games) return 0;
+  const ratio = p.heat / gridMaxHeat;
+  return ratio >= 0.8 ? 4 : ratio >= 0.6 ? 3 : ratio >= 0.4 ? 2 : 1;
+};
+const groups = (gridGroups ?? [{ name: 'Every team', franchiseIds: teams.map((t) => t.franchiseId) }])
+  .map((g) => ({
+    name: g.name,
+    teams: g.franchiseIds.map((f) => teamById.get(f)).filter((t): t is Team => !!t).sort((x, y) => x.name.localeCompare(y.name)),
+  }))
+  .filter((g) => g.teams.length > 1);
+---
+
+<TheLeagueLayout title={`Rivalries · ${league.name}`}>
+  <div class="rx">
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'Rivalries' },
+      ]}
+    />
+
+    <header class="rx-head">
+      <p class="rx-kicker">League history</p>
+      <h1 class="rx-title">Rivalries</h1>
+      <p class="rx-lede">
+        Every series between today's owners. Heat is how often they meet, how close it is, and how much rode on it.
+      </p>
+    </header>
+
+    {showHistoryTabs && <HistoryTabs leagueSlug={league.slug} current="rivalries" />}
+
+    {hottest.length > 0 && (
+      <section class="rx-section" aria-labelledby="rx-hot">
+        <p class="rx-section__kicker">The heat index</p>
+        <h2 class="rx-section__title" id="rx-hot">Hottest rivalries</h2>
+        <ol class="rx-hot">
+          {hottest.map((p, i) => {
+            const ta = teamById.get(p.a)!;
+            const tb = teamById.get(p.b)!;
+            return (
+              <li>
+                <a
+                  class:list={['rx-match', { 'rx-match--mine': viewerFranchise === p.a || viewerFranchise === p.b }]}
+                  href={pairHref(p.a, p.b)}
+                  style={`--rx-ha: ${colorOf(p.a)}; --rx-hb: ${colorOf(p.b)}`}
+                >
+                  <span class="rx-match__rank">#{i + 1}</span>
+                  <span class="rx-match__sides">
+                    {[ta, tb].map((t, j) => (
+                      <span class:list={['rx-match__side', `rx-match__side--${j ? 'b' : 'a'}`]}>
+                        {t.icon ? (
+                          <img class="rx-match__logo" src={t.icon} alt="" width="48" height="48" loading="lazy" />
+                        ) : (
+                          <span class="rx-match__logo rx-match__logo--blank" aria-hidden="true">{initials(t.name)}</span>
+                        )}
+                        <span class="rx-match__name">{t.name}</span>
+                        <span class="rx-match__wins">{j ? p.wb : p.wa}</span>
+                      </span>
+                    ))}
+                  </span>
+                  <span class="rx-match__foot">
+                    <span class="rx-match__lead">{leaderLine(p)}</span>
+                    <span class="rx-match__meta">
+                      {p.games} meetings{p.playoffs > 0 ? ` · ${p.playoffs} playoff` : ''}
+                    </span>
+                    <span class="rx-heat" role="img" aria-label={`Heat ${Math.round((p.heat / maxHeat) * 100)} of 100`}>
+                      <span class="rx-heat__fill" style={`width: ${((p.heat / maxHeat) * 100).toFixed(0)}%`}></span>
+                    </span>
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )}
+
+    {focus && (
+      <section class="rx-section" aria-labelledby="rx-rivals-title" id="rx-rivals">
+        <p class="rx-section__kicker">{focus.franchiseId === viewerFranchise ? 'Your team' : 'One team'}</p>
+        <h2 class="rx-section__title" id="rx-rivals-title">{focus.name}'s rivals</h2>
+        <ul class="ui-pills rx-pills" aria-label="Pick a team">
+          {pillTeams.map((t) => (
+            <li>
+              <a
+                class="ui-pill rx-pill"
+                href={teamHref(t.franchiseId)}
+                aria-current={t.franchiseId === focus.franchiseId ? 'page' : undefined}
+              >
+                {t.icon && <img class="rx-pill__logo" src={t.icon} alt="" width="20" height="20" loading="lazy" />}
+                {t.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+        {rivals.length === 0 ? (
+          <p class="rx-empty">No meetings under today's owners yet.</p>
+        ) : (
+          [rivals.slice(0, RIVALS_SHOWN), rivals.slice(RIVALS_SHOWN)].map((chunk, k) => {
+            const me = focus!;
+            const row = ({ team, pair }: { team: Team; pair: Pair }) => {
+              const s = sideOf(pair, me.franchiseId);
+              const rank = heatRank.get(`${pair.a}-${pair.b}`);
+              return (
+                <li>
+                  <a class="rx-rival" href={pairHref(me.franchiseId, team.franchiseId)} style={barColors(me.franchiseId, team.franchiseId)}>
+                    {team.icon ? (
+                      <img class="rx-rival__logo" src={team.icon} alt="" width="36" height="36" loading="lazy" />
+                    ) : (
+                      <span class="rx-rival__logo rx-rival__logo--blank" aria-hidden="true">{initials(team.name)}</span>
+                    )}
+                    <span class="rx-rival__body">
+                      <span class="rx-rival__top">
+                        <span class="rx-rival__name">{team.name}</span>
+                        <span class:list={['rx-rival__record', { 'rx-rival__record--up': s.w > s.l, 'rx-rival__record--down': s.w < s.l }]}>
+                          {record(s)}
+                        </span>
+                      </span>
+                      <span class="rx-tug" role="img" aria-label={`${me.name} ${s.w} wins, ${team.name} ${s.l} wins`}>
+                        <span class="rx-tug__a" style={`width: ${(share(s) * 100).toFixed(1)}%`}></span>
+                        <span class="rx-tug__b"></span>
+                      </span>
+                      <span class="rx-rival__meta">
+                        {pair.games} {pair.games === 1 ? 'meeting' : 'meetings'}
+                        {pair.playoffs > 0 && ` · ${pair.playoffs} playoff`}
+                        {rank && ` · #${rank} by heat`}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              );
+            };
+            if (!chunk.length) return null;
+            const list = <ol class="rx-rivals">{chunk.map(row)}</ol>;
+            // The hottest few show; the rest of the league folds away.
+            return k === 0 ? list : (
+              <details class="rx-more">
+                <summary>{rivals.length - RIVALS_SHOWN} more rivals</summary>
+                {list}
+              </details>
+            );
+          })
+        )}
+      </section>
+    )}
+
+    <section class="rx-section" aria-labelledby="rx-grid">
+      <p class="rx-section__kicker">Head to head</p>
+      <h2 class="rx-section__title" id="rx-grid">The grid</h2>
+      <p class="rx-note">Read across: each row is that team's record against the column. Hotter pairings are shaded gold. Tap a record for the series.</p>
+      {groups.map((g) => (
+        <div class="rx-grid-block">
+          {groups.length > 1 && <p class="rx-grid-block__title">{g.name}</p>}
+          <div class="rx-grid-scroll">
+            <table class="rx-grid">
+              <thead>
+                <tr>
+                  <th scope="col" class="rx-grid__corner"><span class="sr-only">Team</span></th>
+                  {g.teams.map((col) => (
+                    <th scope="col" class="rx-grid__col" title={col.name}>
+                      {col.icon ? (
+                        <img src={col.icon} alt={col.name} width="28" height="28" loading="lazy" />
+                      ) : (
+                        <span class="rx-grid__initials">{initials(col.name)}</span>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {g.teams.map((row) => (
+                  <tr class:list={{ 'rx-grid__row--mine': row.franchiseId === viewerFranchise }}>
+                    <th scope="row" class="rx-grid__row">
+                      <a href={teamHref(row.franchiseId)}>
+                        {row.icon && <img src={row.icon} alt="" width="24" height="24" loading="lazy" />}
+                        <span>{row.name}</span>
+                      </a>
+                    </th>
+                    {g.teams.map((col) => {
+                      if (col.franchiseId === row.franchiseId) return <td class="rx-grid__self" aria-hidden="true"></td>;
+                      const p = pairOf(row.franchiseId, col.franchiseId);
+                      if (!p || !p.games) return <td class="rx-grid__cell" data-heat="0"><span aria-label="Never met">·</span></td>;
+                      const s = sideOf(p, row.franchiseId);
+                      return (
+                        <td class:list={['rx-grid__cell', { 'rx-grid__cell--up': s.w > s.l }]} data-heat={heatStep(p)}>
+                          <a href={pairHref(row.franchiseId, col.franchiseId)} title={`${row.name} vs ${col.name}: ${record(s)} in ${p.games} meetings`}>
+                            {record(s)}
+                          </a>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <slot />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rx {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    color: var(--page-text);
+  }
+  .rx-rival {
+    --rx-a: var(--rx-a-light);
+    --rx-b: var(--rx-b-light);
+  }
+  :global(html.dark) .rx-rival {
+    --rx-a: var(--rx-a-dark);
+    --rx-b: var(--rx-b-dark);
+  }
+  .rx-head {
+    margin: 0.5rem 0 1rem;
+  }
+  .rx-kicker,
+  .rx-section__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .rx-title {
+    margin: 0.125rem 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .rx-lede,
+  .rx-note,
+  .rx-empty {
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .rx-section {
+    margin-top: 1.75rem;
+  }
+  .rx-section__title {
+    margin: 0.125rem 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  /* ── Hottest rivalries: Broadcast split cards ────────────────────────── */
+  .rx-hot,
+  .rx-rivals {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rx-match,
+  .rx-match:hover {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--color-white);
+    text-decoration: none;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-top: 3px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+  }
+  a.rx-match:hover {
+    color: var(--color-white);
+    text-decoration: none;
+    filter: brightness(1.08);
+  }
+  .rx-match--mine {
+    outline: 2px solid var(--history-gold);
+    outline-offset: 2px;
+  }
+  .rx-match__rank {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    z-index: 1;
+    transform: translateX(-50%);
+    padding: 0.125rem 0.5rem;
+    color: var(--color-black);
+    background: var(--history-gold);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+  }
+  .rx-match__sides {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    background: linear-gradient(110deg, var(--rx-ha) 0%, var(--rx-ha) 50%, var(--rx-hb) 50.2%, var(--rx-hb) 100%);
+  }
+  .rx-match__side {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'logo wins'
+      'name name';
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 1.75rem 0.75rem 0.75rem;
+  }
+  .rx-match__side--b {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'wins logo'
+      'name name';
+    text-align: right;
+  }
+  .rx-match__logo {
+    grid-area: logo;
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  .rx-match__logo--blank,
+  .rx-rival__logo--blank {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-white) 18%, transparent);
+    font-weight: var(--font-weight-bold);
+  }
+  .rx-match__wins {
+    grid-area: wins;
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .rx-match__side--a .rx-match__wins {
+    text-align: right;
+  }
+  .rx-match__name {
+    grid-area: name;
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rx-match__foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.25rem 0.75rem;
+    padding: 0.625rem 0.75rem 0.75rem;
+    color: var(--page-text);
+  }
+  .rx-match__lead {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+  }
+  .rx-match__meta {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .rx-heat {
+    grid-column: 1 / -1;
+    height: 4px;
+    overflow: hidden;
+    background: var(--history-gold-wash);
+    border-radius: var(--radius-full);
+  }
+  .rx-heat__fill {
+    display: block;
+    height: 100%;
+    background: var(--history-gold);
+  }
+
+  /* ── One team's rivals ───────────────────────────────────────────────── */
+  .rx-pills {
+    margin-bottom: 0.75rem;
+  }
+  .rx-more {
+    margin-top: 0.625rem;
+  }
+  .rx-more summary {
+    margin-bottom: 0.625rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+  }
+  .rx-pill__logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+  .rx-rival,
+  .rx-rival:hover {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    color: var(--page-text);
+    text-decoration: none;
+    background: var(--card-surface, var(--content-bg));
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md, 12px);
+  }
+  a.rx-rival:hover {
+    color: var(--page-text);
+    text-decoration: none;
+    border-color: var(--history-gold);
+  }
+  .rx-rival__logo {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  .rx-rival__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.3125rem;
+    min-width: 0;
+  }
+  .rx-rival__top {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .rx-rival__name {
+    overflow: hidden;
+    font-weight: var(--font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rx-rival__record {
+    flex: none;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    font-variant-numeric: tabular-nums;
+  }
+  .rx-rival__record--down {
+    color: var(--content-text-muted);
+  }
+  .rx-rival__meta {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .rx-tug {
+    display: flex;
+    height: 8px;
+    overflow: hidden;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-full);
+  }
+  .rx-tug__a {
+    background: var(--rx-a);
+    border-right: 2px solid var(--card-surface, var(--content-bg));
+  }
+  .rx-tug__b {
+    flex: 1;
+    background: var(--rx-b);
+  }
+
+  /* ── The grid ────────────────────────────────────────────────────────── */
+  .rx-note {
+    margin-bottom: 0.75rem;
+  }
+  .rx-grid-block + .rx-grid-block {
+    margin-top: 1.25rem;
+  }
+  .rx-grid-block__title {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rx-grid-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md, 12px);
+  }
+  .rx-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--font-size-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .rx-grid th,
+  .rx-grid td {
+    padding: 0;
+    border-bottom: 1px solid var(--content-border);
+    background: var(--card-surface, var(--content-bg));
+  }
+  .rx-grid__corner,
+  .rx-grid__row {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    border-right: 1px solid var(--content-border);
+  }
+  .rx-grid__col {
+    min-width: 3rem;
+    padding: 0.375rem 0.25rem;
+  }
+  .rx-grid__col img {
+    display: block;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    object-fit: contain;
+  }
+  .rx-grid__initials {
+    display: block;
+    text-align: center;
+    font-weight: var(--font-weight-bold);
+  }
+  .rx-grid__row a {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    width: 8.5rem;
+    padding: 0.375rem 0.5rem;
+    color: var(--page-text);
+    text-decoration: none;
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
+  }
+  .rx-grid__row a span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rx-grid__row img {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+  .rx-grid__row--mine .rx-grid__row {
+    background: var(--history-gold-wash);
+  }
+  .rx-grid__cell {
+    text-align: center;
+    color: var(--content-text-muted);
+  }
+  .rx-grid__cell a {
+    display: block;
+    padding: 0.5rem 0.25rem;
+    color: var(--page-text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .rx-grid__cell--up a {
+    font-weight: var(--font-weight-bold);
+  }
+  .rx-grid td.rx-grid__cell[data-heat='1'] {
+    background: color-mix(in srgb, var(--history-gold) 8%, var(--card-surface, var(--content-bg)));
+  }
+  .rx-grid td.rx-grid__cell[data-heat='2'] {
+    background: color-mix(in srgb, var(--history-gold) 18%, var(--card-surface, var(--content-bg)));
+  }
+  .rx-grid td.rx-grid__cell[data-heat='3'] {
+    background: color-mix(in srgb, var(--history-gold) 30%, var(--card-surface, var(--content-bg)));
+  }
+  .rx-grid td.rx-grid__cell[data-heat='4'] {
+    background: color-mix(in srgb, var(--history-gold) 45%, var(--card-surface, var(--content-bg)));
+  }
+  .rx-grid__self {
+    background: repeating-linear-gradient(135deg, var(--card-surface, var(--content-bg)) 0 4px, var(--content-border) 4px 5px);
+  }
+
+  @media (min-width: 640px) {
+    .rx-hot {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .rx-rivals {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
