@@ -38,7 +38,7 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
       ]}
     />
     <HistoryTabs leagueSlug={league.slug} current="home" />
-    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} base={base} />
+    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} asOf={saved.asOf} base={base} />
     <p class="hap__meta">
       Asked {saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
       <button class="cta-link hap__share" type="button" data-hap-share>Share</button>

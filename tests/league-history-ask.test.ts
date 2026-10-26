@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import theleague from '../data/theleague/derived/league-history.json';
 import afl from '../data/afl-fantasy/derived/league-history.json';
-import { QueryError, runQuery, normalizeQuery } from '../src/utils/league-history/ask-query.mjs';
+import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery } from '../src/utils/league-history/ask-query.mjs';
 import { askHistory } from '../src/utils/league-history/ask';
 import { recordBook } from '../src/utils/league-history/records.mjs';
 
@@ -65,6 +65,24 @@ describe('runQuery', () => {
     const r = runQuery(theleague, { unit: 'games', limit: 500 });
     expect(r.rows.length).toBe(25);
     expect(r.total).toBeGreaterThan(1000);
+  });
+});
+
+describe('dataAsOf', () => {
+  it('names the last final week of a season still being played, and nothing once it is complete', () => {
+    const ds = {
+      seasons: [{ y: 2025, done: 1, teams: {} }, { y: 2026, done: 0, teams: {} }],
+      games: [[2025, 14, 'a', 1, 'b', 0, 0], [2026, 5, 'a', 1, 'b', 0, 0], [2026, 6, 'a', 1, 'b', 0, 0]],
+    };
+    expect(dataAsOf(ds)).toEqual({ year: 2026, week: 6, inProgress: true });
+    expect(describeAsOf(dataAsOf(ds))).toContain('2026 Week 6');
+    expect(describeAsOf(dataAsOf({ ...ds, seasons: [{ y: 2025, done: 1, teams: {} }] }))).toBe('');
+  });
+
+  it('keeps an in-progress team out of a "first N games" window until N games are final', () => {
+    const latest = theleague.seasons.at(-1)!;
+    const r = runQuery(theleague, { unit: 'seasons', throughGames: 30, where: [{ field: 'year', op: 'eq', value: latest.y }] });
+    if (!latest.done) expect(r.total).toBe(0);
   });
 });
 

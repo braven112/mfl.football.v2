@@ -81,7 +81,7 @@ const EXAMPLES = [
     columns: Array<{ key: string; label: string }>;
     rows: Array<{ cells: Array<string | number | boolean | null>; franchiseId: string | null; ownerSlug: string | null; year: number | null }>;
   };
-  type Answer = { id: string | null; question: string; answer: string; table: Table | null; error?: string };
+  type Answer = { id: string | null; question: string; answer: string; table: Table | null; asOf?: string; error?: string };
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const node = document.createElement(tag);
@@ -132,6 +132,7 @@ const EXAMPLES = [
       const shown = table.total > table.rows.length ? `, top ${table.rows.length} shown` : '';
       article.append(el('p', 'ha-receipt', `${matches}${shown} · ${table.description}`));
     }
+    if (data.asOf) article.append(el('p', 'ha-receipt', `${data.asOf}.`));
     if (data.id) {
       const actions = el('p', 'ha-actions');
       const share = el('button', 'cta cta--ghost', 'Share this answer') as HTMLButtonElement;

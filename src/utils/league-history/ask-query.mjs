@@ -491,3 +491,27 @@ export function describeQuery(q) {
   }
   return parts.filter(Boolean).join(', ');
 }
+
+/**
+ * How far the record goes: the last week with a final score in the latest
+ * season, and whether that season is still being played. Every answer carries
+ * it, because "has anyone started 9-1?" asked mid-season depends on whether
+ * this week's games are in yet (Brandon, 2026-10-26). Games enter the record
+ * once MFL has them final; a week still being played is not counted.
+ * @returns {{ year: number | null, week: number | null, inProgress: boolean }}
+ */
+export function dataAsOf(ds) {
+  const latest = ds.seasons.at(-1);
+  if (!latest) return { year: null, week: null, inProgress: false };
+  let week = null;
+  for (const g of ds.games) if (g[0] === latest.y && (week === null || g[1] > week)) week = g[1];
+  return { year: latest.y, week, inProgress: !latest.done };
+}
+
+/** "Counted through 2026 Week 6 (the season is still being played)". */
+export function describeAsOf(asOf) {
+  if (!asOf?.year || !asOf.inProgress) return '';
+  return asOf.week
+    ? `Counted through ${asOf.year} Week ${asOf.week}; games still being played are not in yet`
+    : `The ${asOf.year} season has no final games yet`;
+}

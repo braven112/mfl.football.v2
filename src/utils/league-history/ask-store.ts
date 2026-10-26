@@ -20,6 +20,8 @@ export interface SavedAnswer {
   answer: string;
   table: AskTable | null;
   steps: string[];
+  /** Missing on answers saved before it existed. */
+  asOf?: string;
   askedBy: { franchiseId: string; name: string | null };
   createdAt: string;
 }

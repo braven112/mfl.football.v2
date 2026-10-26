@@ -13,11 +13,13 @@ interface Props {
   question: string;
   answer: string;
   table: AskTable | null;
+  /** How far the record went when this was asked ('' or missing once every season is complete). */
+  asOf?: string;
   /** The league's path prefix ('/theleague', or '' on its own domain). */
   base: string;
 }
 
-const { question, answer, table, base } = Astro.props as Props;
+const { question, answer, table, asOf, base } = Astro.props as Props;
 const numeric = table ? table.columns.map((_, i) => isNumericColumn(table, i)) : [];
 ---
 
@@ -54,4 +56,5 @@ const numeric = table ? table.columns.map((_, i) => isNumericColumn(table, i)) :
       {table.total > table.rows.length && `, top ${table.rows.length} shown`} · {table.description}
     </p>
   )}
+  {asOf && <p class="ha-receipt">{asOf}.</p>}
 </article>
