@@ -1,0 +1,261 @@
+---
+/**
+ * Keeper history for an AFL franchise or owner page: the seven players kept
+ * each season, newest first, with the longest-kept player called out. The
+ * data is computed by utils/league-history/keepers.mjs (franchiseKeepers /
+ * ownerKeepers) in the route and passed in, so this only draws.
+ *
+ * Rendered into the shared History pages' slots by the AFL routes; it carries
+ * its own styles because a slotted component never sees the page's scoped CSS.
+ */
+interface Keeper {
+  id: string;
+  name: string;
+  position: string;
+  streak: number;
+  uncertain?: boolean;
+}
+interface SeasonCard {
+  y: number;
+  franchiseId: string;
+  team: string;
+  icon: string | null;
+  estimated?: boolean;
+  keepers: Keeper[];
+}
+interface Props {
+  history: {
+    seasons: SeasonCard[];
+    longest: (Keeper & { from: number; to: number; team: string }) | null;
+  } | null;
+  /** Show the team on each season (an owner page spans franchises). */
+  showTeam?: boolean;
+  /** Seasons shown before "Earlier seasons". */
+  open?: number;
+}
+
+const { history, showTeam = false, open = 4 } = Astro.props as Props;
+const seasons = history?.seasons ?? [];
+const shown = seasons.slice(0, open);
+const earlier = seasons.slice(open);
+const longest = history?.longest ?? null;
+const anyEstimated = seasons.some((s) => s.estimated);
+const ordinal = (n: number) => {
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
+  return `${n}${tail}`;
+};
+---
+
+{seasons.length > 0 && (
+  <section class="kh" aria-labelledby="kh-title">
+    <p class="kh__kicker">Keepers</p>
+    <h2 class="kh__title" id="kh-title">Who they kept</h2>
+
+    {longest && longest.streak > 1 && (
+      <div class="kh__lead">
+        <span class="kh__label">Longest kept</span>
+        <span class="kh__lead-name">{longest.name}</span>
+        <span class="kh__sub">
+          {longest.position} · {longest.streak} straight seasons, {longest.from}–{longest.to}
+          {showTeam ? ` · ${longest.team}` : ''}
+        </span>
+      </div>
+    )}
+
+    {[shown, earlier].map((list, i) =>
+      list.length === 0 ? null : i === 0 ? (
+        <ol class="kh__seasons">
+          {list.map((s) => (
+            <li class="kh__season">
+              <p class="kh__year">
+                <span>{s.y}</span>
+                {showTeam && <span class="kh__team">{s.team}</span>}
+                {s.estimated && <span class="kh__est" title="Inferred from the rosters before and after, not recorded">Estimated</span>}
+              </p>
+              <ul class="kh__players">
+                {s.keepers.map((k) => (
+                  <li class:list={['kh__player', k.uncertain && 'kh__player--uncertain']} title={k.uncertain ? 'Best guess: picked to fill the seven' : undefined}>
+                    <span class="kh__pos">{k.position}</span>
+                    <span class="kh__name">{k.name}{k.uncertain && <span class="kh__guess" aria-label="best guess">?</span>}</span>
+                    {k.streak > 1 && <span class="kh__streak" title={`Kept ${k.streak} seasons in a row`}>{ordinal(k.streak)} yr</span>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <details class="kh__more">
+          <summary>Earlier seasons ({list.length})</summary>
+          <ol class="kh__seasons">
+            {list.map((s) => (
+              <li class="kh__season">
+                <p class="kh__year">
+                  <span>{s.y}</span>
+                  {showTeam && <span class="kh__team">{s.team}</span>}
+                  {s.estimated && <span class="kh__est" title="Inferred from the rosters before and after, not recorded">Estimated</span>}
+                </p>
+                <ul class="kh__players">
+                  {s.keepers.map((k) => (
+                    <li class:list={['kh__player', k.uncertain && 'kh__player--uncertain']} title={k.uncertain ? 'Best guess: picked to fill the seven' : undefined}>
+                      <span class="kh__pos">{k.position}</span>
+                      <span class="kh__name">{k.name}{k.uncertain && <span class="kh__guess" aria-label="best guess">?</span>}</span>
+                      {k.streak > 1 && <span class="kh__streak" title={`Kept ${k.streak} seasons in a row`}>{ordinal(k.streak)} yr</span>}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )
+    )}
+
+    {anyEstimated && (
+      <p class="kh__foot">
+        Estimated seasons are rebuilt from old rosters and trades, so a set may be off by a
+        player. A <span class="kh__guess">?</span> marks a best guess picked to make seven.
+      </p>
+    )}
+  </section>
+)}
+
+<style>
+  .kh {
+    margin-top: 1.5rem;
+  }
+  .kh__kicker {
+    margin: 0;
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .kh__title {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .kh__lead {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    background: linear-gradient(160deg, var(--card-bg) 40%, var(--history-gold-wash));
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .kh__label {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+  }
+  .kh__lead-name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+  }
+  .kh__sub {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .kh__seasons {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .kh__season {
+    padding: 0.625rem 0.75rem;
+    background: var(--card-bg);
+    border: var(--style-card-border, 1px solid var(--content-border));
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .kh__year {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin: 0 0 0.375rem;
+    font-weight: var(--font-weight-bold);
+  }
+  .kh__team {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
+  }
+  .kh__players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .kh__player {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: baseline;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: var(--font-size-sm);
+    border: 1px solid var(--content-border);
+    border-radius: 999px;
+  }
+  .kh__pos {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+  .kh__name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .kh__streak {
+    color: var(--history-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+  }
+  .kh__est {
+    padding: 0.0625rem 0.4375rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border: 1px dashed var(--content-border);
+    border-radius: 999px;
+  }
+  .kh__player--uncertain {
+    border-style: dashed;
+  }
+  .kh__guess {
+    margin-left: 0.125rem;
+    color: var(--history-gold);
+    font-weight: var(--font-weight-bold);
+  }
+  .kh__foot {
+    margin: 0.75rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .kh__more {
+    margin-top: 0.75rem;
+  }
+  .kh__more summary {
+    margin-bottom: 0.5rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+</style>

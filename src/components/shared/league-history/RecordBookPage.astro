@@ -84,9 +84,11 @@ interface Board {
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   data: unknown;
+  /** The league's keeper-history file, which adds the Keepers boards (utils/league-history/keepers.mjs). */
+  keepers?: unknown;
 }
 
-const { leagueSlug, data } = Astro.props as Props;
+const { leagueSlug, data, keepers = null } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
@@ -101,9 +103,10 @@ const SCOPE_LABEL: Record<string, string> = {
 const params = Astro.url.searchParams;
 const eras = historyEras(data, league.historyEras ?? []);
 const era = eras.find((e) => e.id === params.get('era')) ?? eras[0];
-const book = recordBook(data, { from: era.from });
+const book = recordBook(data, { from: era.from, keepers });
 const facts = book.facts();
-const category = CATEGORIES.find((c) => c.id === params.get('cat')) ?? CATEGORIES[0];
+const categories = book.categories as typeof CATEGORIES;
+const category = categories.find((c) => c.id === params.get('cat')) ?? categories[0];
 const scopeParam = params.get('scope') ?? 'all';
 const scope = category.scoped && SCOPES.includes(scopeParam) ? scopeParam : 'all';
 const boards = book.category(category.id, scope) as Board[];
@@ -282,7 +285,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
 
     <nav class="rb-nav" aria-label="Record categories">
       <ul class="ui-pills rb-pills">
-        {CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <li>
             <a class="ui-pill" href={viewHref({ cat: c.id })} aria-current={c.id === category.id ? 'page' : undefined}>
               {c.label}

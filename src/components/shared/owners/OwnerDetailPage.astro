@@ -229,6 +229,8 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
       <HistoryOwnerSections leagueSlug={leagueSlug} data={historyData} ownerSlug={owner.slug} viewerFranchise={viewerFranchise} honors={honors} />
     )}
 
+    {showHistory && <slot name="history-extra" />}
+
     {owner.crossLeague.length > 0 && (
       <section class="cross-league">
         <h2 class="sr-heading">Also in</h2>
