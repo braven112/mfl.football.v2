@@ -154,6 +154,20 @@ export function getSessionTokenFromCookie(cookieHeader: string | null): string |
 }
 
 /**
+ * The same signed session token, carried as `Authorization: Bearer <token>`.
+ *
+ * Only the MFL Live mobile app sends it: a native app keeps the token in the
+ * device keystore rather than a cookie jar. It is the identical JWT the cookie
+ * holds and passes the identical signature check — a second TRANSPORT, never
+ * a second identity source. Read only by `getMflLiveUser`.
+ */
+export function getSessionTokenFromAuthorization(header: string | null): string | null {
+  if (!header) return null;
+  const match = /^Bearer\s+(\S+)$/i.exec(header.trim());
+  return match ? match[1] : null;
+}
+
+/**
  * Create Set-Cookie header value with security flags
  * httpOnly: prevents JavaScript access
  * Secure: only sent over HTTPS
