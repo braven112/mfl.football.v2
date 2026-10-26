@@ -298,6 +298,11 @@ describe('askHistory', () => {
     expect(opening).toMatch(/<question>did they all make the playoffs\?<\/question>$/);
     // The asker rides in the message, so the system prompt stays one cached prefix for everyone.
     expect(JSON.stringify(seen[0].system)).not.toContain('<asker>Pacific');
+    // Trash talk is turned back on the asker: their worst season, football only (Brandon, 2026-10-26).
+    const system = JSON.stringify(seen[0].system);
+    expect(system).toContain('Trash talk comes back on the asker');
+    expect(system).toContain('sorted by winPct then pf');
+    expect(system).toMatch(/never make sexuality, race, religion/);
   });
 
   it('throws rather than guessing when the model never answers', async () => {
