@@ -1,10 +1,13 @@
 /**
  * Who is watching the broadcast: a signed-in owner, or a paired TV.
  *
- * The ONLY reader of a TV pass, and it may be called from exactly two places
+ * The ONLY reader of a TV pass, and it may be called only from the board's own
+ * read-only pages and polls
  * (pinned by tests/broadcast-tv-pass-scope.test.ts):
  *
  *  - `src/pages/live/broadcast/index.astro`, the board's MFL Live home;
+ *  - `src/pages/live/broadcast/overlay.astro`, the same board as the TV app's
+ *    see-through score overlay;
  *  - `src/pages/api/broadcast-live.ts`, the board's poll.
  *
  * A pass resolves to the owner's full `AuthUser`, MFL cookie included,

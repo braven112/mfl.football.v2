@@ -39,6 +39,7 @@ describe('TV pass scope', () => {
         'src/pages/api/broadcast-live.ts',
         'src/pages/api/live-standings.ts',
         'src/pages/live/broadcast/index.astro',
+        'src/pages/live/broadcast/overlay.astro',
         'src/pages/live/standings.astro',
         'src/utils/broadcast-viewer.ts',
       ].sort(),

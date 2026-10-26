@@ -5,4 +5,8 @@
         <item name="android:windowBackground">@color/board_ground</item>
         <item name="android:colorBackground">@color/board_ground</item>
     </style>
+
+    <!-- The overlay tile: no screen of its own, so nothing flashes over the
+         game when it starts the overlay and closes. -->
+    <style name="Theme.MflLive.Overlay" parent="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
 </resources>

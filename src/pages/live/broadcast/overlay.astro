@@ -1,0 +1,69 @@
+---
+/**
+ * MFL Live — the score overlay. `/live/broadcast/overlay`.
+ *
+ * Not a page anyone browses to: the Google TV app loads it into a see-through
+ * window drawn over another app (YouTube TV), so the owner can watch the game
+ * and their matchups at once. `?mode=panel|bar` is the app's hint for the
+ * first paint; after that the app switches views through the page's
+ * `window.__mflOverlay` handle (BroadcastOverlay.tsx).
+ *
+ * Its own document, no app layout: the page must be transparent edge to edge,
+ * and a layout paints a ground, a bar and a menu the video would show through.
+ *
+ * Who may watch is decided exactly as the board decides it — a signed-in
+ * owner, or a TV holding the watch-only pass from `/tv` — and it only reads.
+ */
+import BroadcastOverlay from '../../../components/shared/live-broadcast/BroadcastOverlay';
+import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
+import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
+import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import '../../../styles/broadcast-overlay.css';
+
+export const prerender = false;
+
+const viewer = await getBroadcastViewer(Astro.request);
+
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const year = getCurrentSeasonYear(testDate);
+const weekParam = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
+const week =
+  Number.isFinite(weekParam) && weekParam >= 1 && weekParam <= 25
+    ? weekParam
+    : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
+
+let pageData: string | null = null;
+if (viewer) {
+  try {
+    const board = await assembleBroadcastBoard({
+      user: viewer.user,
+      leaguesParam: Astro.url.searchParams.get('leagues'),
+      leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      week,
+      year,
+    });
+    pageData = JSON.stringify(
+      toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname }),
+    );
+  } catch {
+    pageData = null;
+  }
+}
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<!doctype html>
+<html lang="en" class="bov-doc">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Score overlay — MFL Live</title>
+  </head>
+  <body class="bov-doc">
+    <BroadcastOverlay client:load pageData={pageData} signedIn={Boolean(viewer)} mode={Astro.url.searchParams.get('mode')} />
+  </body>
+</html>

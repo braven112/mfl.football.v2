@@ -3,4 +3,7 @@
     <string name="app_name">MFL Live</string>
     <string name="offline_title">Can\'t reach the board</string>
     <string name="offline_body">Check the TV\'s internet connection. Press OK on the remote to try again.</string>
+    <string name="overlay_name">Score overlay</string>
+    <string name="overlay_permission_title">Let MFL Live show over other apps</string>
+    <string name="overlay_permission_body">Press OK to open the setting and turn it on for MFL Live (Settings › Apps › Special app access › Display over other apps). If this TV has no such setting, run this once from a computer on the same network:\n\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow\n\nThen open Score overlay again.</string>
 </resources>
