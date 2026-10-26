@@ -4,6 +4,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- The score overlay: a see-through window over YouTube TV, kept alive by
+         a foreground service while the game plays. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- Play's TV checks: leanback declared, and nothing a TV lacks marked as
          required. required="false" on leanback keeps the same build
          installable on Fire TV. -->
@@ -30,5 +36,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Its own tile and its own task: finishing it must reveal whatever
+             was playing, never the main app's board. -->
+        <activity
+            android:name=".OverlayActivity"
+            android:banner="@drawable/banner_overlay"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/overlay_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="football.mfl.live.overlay"
+            android:theme="@style/Theme.MflLive.Overlay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows live fantasy football scores over the video the user is watching, while the user has the overlay on." />
+        </service>
     </application>
 </manifest>

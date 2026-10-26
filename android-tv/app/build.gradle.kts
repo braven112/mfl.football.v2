@@ -14,6 +14,12 @@ plugins {
 val startUrl: String = (findProperty("startUrl") as String?)
     ?: "https://mfl.football/tv"
 
+// The score overlay's page lives on the same host as the start page, so a test
+// build pointed at staging overlays staging too.
+// (A regex, not java.net.URI: in this script `java` is the Java extension.)
+val overlayUrl: String =
+    (Regex("^https?://[^/]+").find(startUrl)?.value ?: "https://mfl.football") + "/live/broadcast/overlay"
+
 // Upload-key signing comes from the environment (GitHub secrets in CI) so the
 // keystore never lives in the repo. Without it, release builds are unsigned
 // and only the debug APK is installable.
@@ -32,6 +38,7 @@ android {
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = (findProperty("versionName") as String?) ?: "1.0.0"
         buildConfigField("String", "START_URL", "\"$startUrl\"")
+        buildConfigField("String", "OVERLAY_URL", "\"$overlayUrl\"")
     }
 
     buildFeatures {
