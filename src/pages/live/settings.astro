@@ -46,6 +46,7 @@ import {
 } from '../../utils/sleeper/players';
 import { readGlobalFixes, readMyFixes } from '../../utils/sleeper/player-fixes';
 import { sleeperAvatarUrl } from '../../utils/sleeper/client';
+import { DEFAULT_TV_SETTINGS, getTvSettings, type TvSettings } from '../../utils/mfl-live-tv-settings';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -62,12 +63,16 @@ let enabled: string[] = [];
 let viewerNames: Awaited<ReturnType<typeof readViewerFranchiseNames>> = {};
 let loadFailed = false;
 let sleeperLink: SleeperLink | null = null;
+let tvSettings: TvSettings = DEFAULT_TV_SETTINGS;
 
 if (authUser) {
   try {
     // Sleeper is optional and never fatal: a failed Sleeper read leaves the
     // MFL leagues to toggle and the link form to retry.
-    sleeperLink = await getSleeperLink(authUser).catch(() => null);
+    [sleeperLink, tvSettings] = await Promise.all([
+      getSleeperLink(authUser).catch(() => null),
+      getTvSettings(authUser),
+    ]);
     const [mflLeagues, sleeperLeagues] = await Promise.all([
       discoverBoardLeagues(authUser),
       discoverSleeperBoardLeagues(sleeperLink, getCurrentSeasonYear()).catch(() => []),
@@ -208,6 +213,12 @@ const SLEEPER_NOTICE: Record<string, string> = {
   error: 'Couldn\u2019t save that just now. Try again in a minute.',
 };
 const sleeperNotice = SLEEPER_NOTICE[Astro.url.searchParams.get('sleeper') ?? ''] ?? '';
+/** The TV form's one-word outcome, from `/api/live-tv-settings`'s redirect. */
+const TV_NOTICE: Record<string, string> = {
+  saved: 'Saved. Your TV picks it up the next time the overlay opens.',
+  error: 'Couldn\u2019t save that just now. Try again in a minute.',
+};
+const tvNotice = TV_NOTICE[Astro.url.searchParams.get('tv') ?? ''] ?? '';
 const sleeperAvatar = sleeperAvatarUrl(sleeperLink?.avatar);
 
 const rows = leagues.map((league) => {
@@ -326,6 +337,25 @@ const rows = leagues.map((league) => {
 						</div>
 					</form>
 				)}
+			</section>
+
+			{/* The TV app. A plain form like Sleeper's: one checkbox, one save. */}
+			<section class="mls-sleeper" id="tv" aria-labelledby="mls-tv-title">
+				<h2 class="mls-sleeper__title" id="mls-tv-title">TV</h2>
+				{tvNotice && <p class="mls-sleeper__notice" role="status">{tvNotice}</p>}
+				<form class="mls-sleeper__form" method="post" action="/api/live-tv-settings">
+					<p class="mls__lede">
+						The score overlay on Google TV lists the games your starters are in.
+						With NFL Sunday Ticket, every Sunday afternoon game is one you can open.
+					</p>
+					<label class="mls-tv__check">
+						<input type="checkbox" name="sundayTicket" checked={tvSettings.sundayTicket} />
+						<span>I have NFL Sunday Ticket</span>
+					</label>
+					<div class="mls-sleeper__row">
+						<button type="submit" class="cta cta--primary">Save</button>
+					</div>
+				</form>
 			</section>
 
 			{(fixRows.length > 0 || mineRows.length > 0 || fixNotice) && (

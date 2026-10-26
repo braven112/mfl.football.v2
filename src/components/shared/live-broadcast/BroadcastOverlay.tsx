@@ -9,9 +9,15 @@
  *  - the BAR: a thin strip across the top with one chip per game, which never
  *    takes the remote, so YouTube TV keeps it.
  *
+ * The panel also lists the NFL games the owner's starters are in (Watch).
+ * Up/Down picks one and OK hands it to the app, which opens it on the TV; the
+ * list ends with "Hide overlay", which closes the overlay altogether.
+ *
  * The app talks to this page through `window.__mflOverlay` (`setMode`,
- * `step`), because the keys reach the APP's window, not the page. Arrow keys
- * are also read here so the page can be checked in a desktop browser.
+ * `step`, `move`, `select`), because the keys reach the APP's window, not the
+ * page; the page answers through `window.MflOverlayHost` (`watch`, `hide`).
+ * Arrow keys and Enter are also read here so the page can be checked in a
+ * desktop browser.
  *
  * Numbers come from the board's own poll (`/api/broadcast-live`) and the
  * board's own model, through `overlayGames`; nothing here computes a score.
@@ -21,12 +27,16 @@ import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../type
 import type { PlayerMeta } from '../../../types/live-scoring';
 import {
   formatChance,
+  moveWatch,
   overlayGames,
+  overlayWatchList,
+  watchNote,
   overlayModeFrom,
   stepOverlay,
   type OverlayGame,
   type OverlayMode,
   type OverlaySide,
+  type WatchGame,
 } from '../../../utils/broadcast-overlay';
 
 /** Same order of cadence as the board: live scoring moves every few seconds. */
@@ -45,13 +55,23 @@ const BAR_HINT_MS = 12_000;
 interface OverlayHost {
   setMode: (mode: OverlayMode) => void;
   step: (delta: number) => void;
+  /** Up/Down through the Watch list. */
+  move: (delta: number) => void;
+  /** OK on the highlighted Watch row. */
+  select: () => void;
 }
 
 declare global {
   interface Window {
     __mflOverlay?: OverlayHost;
     /** The TV app's side of the bridge: which view its window is shaped for. */
-    MflOverlayHost?: { mode: () => string };
+    MflOverlayHost?: {
+      mode: () => string;
+      /** Open a game on the TV, by what a search for it should ask. Absent on app builds before Watch. */
+      watch?: (query: string) => void;
+      /** Close the overlay. */
+      hide?: () => void;
+    };
   }
 }
 
@@ -61,12 +81,14 @@ interface Props {
   /** Whether this TV (or browser) is signed in at all; null data then means a failed read. */
   signedIn: boolean;
   mode?: string | null;
+  /** The owner's answer on /live/settings; decides how a regional game is labeled. */
+  sundayTicket?: boolean;
 }
 
 const points = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '0.00');
 const onePlace = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode }: Props) {
+export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode, sundayTicket = false }: Props) {
   const data = useMemo<LiveBroadcastPageData | null>(
     () => (pageData ? (JSON.parse(pageData) as LiveBroadcastPageData) : null),
     [pageData],
@@ -85,6 +107,25 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
   const countRef = useRef(games.length);
   countRef.current = games.length;
 
+  const watch = useMemo<WatchGame[]>(() => overlayWatchList(games, poll?.games ?? []), [games, poll]);
+  // The highlighted Watch row; `watch.length` is the closing "Hide overlay" row.
+  const [pick, setPick] = useState(0);
+  const watchRef = useRef(watch);
+  watchRef.current = watch;
+  const pickRef = useRef(pick);
+  pickRef.current = Math.min(pick, watch.length);
+
+  const move = useCallback((delta: number) => {
+    setPick((i) => moveWatch(Math.min(i, watchRef.current.length), delta > 0 ? 1 : -1, watchRef.current.length));
+  }, []);
+
+  const select = useCallback(() => {
+    const host = window.MflOverlayHost;
+    const row = watchRef.current[pickRef.current];
+    if (row) host?.watch?.(row.query);
+    else host?.hide?.();
+  }, []);
+
   const step = useCallback((delta: number) => {
     setIndex((i) => stepOverlay(i, delta, countRef.current));
   }, []);
@@ -98,21 +139,26 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
     window.__mflOverlay = {
       setMode: (next) => setMode(overlayModeFrom(next)),
       step: (delta) => step(delta > 0 ? 1 : -1),
+      move,
+      select,
     };
     return () => {
       delete window.__mflOverlay;
     };
-  }, [step]);
+  }, [step, move, select]);
 
   // A desktop browser has no app around the page; the arrows still work.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') step(-1);
       else if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowUp') move(-1);
+      else if (e.key === 'ArrowDown') move(1);
+      else if (e.key === 'Enter') select();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [step]);
+  }, [step, move, select]);
 
   useEffect(() => {
     if (mode !== 'bar') return;
@@ -239,10 +285,28 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
         <Lineup side={game.opponent} />
       </div>
 
+      <p className="bov__label">Watch</p>
+      <ul className="bov__watch">
+        {watch.length === 0 && <li className="bov__watch-empty">None of your starters are playing right now.</li>}
+        {watch.map((row, i) => (
+          <li key={row.id} className="bov__watch-row" data-picked={pickRef.current === i || undefined}>
+            <span className="bov__watch-game">
+              {row.live && <span className="bov__live">Live</span>}
+              {row.label}
+            </span>
+            <span className="bov__watch-detail">{[row.detail, watchNote(row, sundayTicket)].filter(Boolean).join(' · ')}</span>
+            <span className="bov__watch-players">{row.players.join(', ')}</span>
+          </li>
+        ))}
+        <li className="bov__watch-row bov__watch-row--hide" data-picked={pickRef.current === watch.length || undefined}>
+          Hide overlay
+        </li>
+      </ul>
+
       <footer className="bov__keys">
-        {games.length > 1 && <span>◀ ▶ Next game</span>}
+        <span>▲ ▼ OK Pick</span>
+        {games.length > 1 && <span>◀ ▶ Next matchup</span>}
         <span>BACK Score bar</span>
-        <span>▼ Hide</span>
         {stale && <span className="bov__stale">Reconnecting</span>}
       </footer>
     </div>

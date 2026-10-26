@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatChance,
+  moveWatch,
   overlayGames,
   overlayModeFrom,
+  overlayWatchList,
   stepOverlay,
+  watchNote,
 } from '../src/utils/broadcast-overlay';
 import type { BroadcastLeaguePanel, BroadcastPollResponse, BroadcastTeam } from '../src/types/live-broadcast';
 import type { PlayerMeta } from '../src/types/live-scoring';
@@ -109,5 +112,42 @@ describe('overlay controls', () => {
     expect(formatChance(0)).toBe('0%');
     expect(formatChance(0.9999)).toBe('99.9%');
     expect(formatChance(0.992)).toBe('99.2%');
+  });
+});
+
+describe('overlay watch list', () => {
+  const panels = [panel('A', [{ index: 0, mine: team('0001', 'Greco'), opponent: team('0002', 'Nick') }])];
+  // Sun Oct 25 2026, 1:00 PM ET = 17:00Z; 8:20 PM ET = 00:20Z Monday.
+  const slate: BroadcastPollResponse['games'] = [
+    { id: 'g1', state: 'pre', shortDetail: 'Sun 1:00 PM ET', period: 0, clock: '', home: { code: 'SF', score: 0 }, away: { code: 'SEA', score: 0 }, possession: null, date: '2026-10-25T17:00Z', broadcast: 'FOX' },
+    { id: 'g2', state: 'in', shortDetail: '8:12 - 3rd', period: 3, clock: '8:12', home: { code: 'KC', score: 7 }, away: { code: 'DEN', score: 3 }, possession: null, date: '2026-10-26T00:20Z', broadcast: 'NBC' },
+    { id: 'g3', state: 'post', shortDetail: 'Final', period: 4, clock: '', home: { code: 'SEA', score: 0 }, away: { code: 'LAR', score: 0 }, possession: null, date: '2026-10-25T17:00Z', broadcast: 'CBS' },
+  ];
+  const games = () => overlayGames(panels, { ...poll, games: slate }, { ...meta, bn: { ...meta.bn, nflTeam: 'KC' } });
+
+  it("lists my starters' unfinished games, live first, and skips a game with none of them", () => {
+    const rows = overlayWatchList(games(), slate);
+    // The bench player's KC game is not listed: starters only.
+    expect(rows.map((r) => r.id)).toEqual(['g1']);
+    expect(rows[0]).toMatchObject({
+      label: 'SEA @ SF',
+      query: 'Seattle Seahawks vs San Francisco 49ers',
+      network: 'FOX',
+      players: ['Walker', 'Purdy'], // away team's first
+      regional: true,
+    });
+  });
+
+  it('labels a regional Sunday game by whether the owner has Sunday Ticket', () => {
+    const [row] = overlayWatchList(games(), slate);
+    expect(watchNote(row, true)).toBe('FOX · Sunday Ticket');
+    expect(watchNote(row, false)).toBe('FOX · local only');
+    expect(watchNote({ ...row, regional: false, network: 'NBC' }, false)).toBe('NBC');
+  });
+
+  it('moves through the rows and the closing Hide row without wrapping', () => {
+    expect(moveWatch(0, -1, 2)).toBe(0);
+    expect(moveWatch(1, 1, 2)).toBe(2);
+    expect(moveWatch(2, 1, 2)).toBe(2);
   });
 });

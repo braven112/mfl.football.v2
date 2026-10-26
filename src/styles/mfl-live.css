@@ -241,6 +241,22 @@
     display: flex;
     gap: 0.5rem;
   }
+  /* ── TV settings ── */
+  .mls-tv__check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    margin-bottom: 0.75rem;
+    color: var(--page-text);
+    cursor: pointer;
+  }
+  .mls-tv__check input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    accent-color: var(--color-primary, currentColor);
+  }
   .mls-sleeper__input {
     flex: 1;
     min-width: 0;

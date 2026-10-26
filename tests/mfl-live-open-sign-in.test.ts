@@ -162,6 +162,9 @@ describe('only the MFL Live surfaces read an open session', () => {
 		// An owner's crowd fix for a Sleeper player on their own roster, voted
 		// under the same hashed MFL username — never franchiseId.
 		'src/pages/api/live-sleeper-fix.ts',
+		// The viewer's TV settings (Sunday Ticket), keyed on the same hashed MFL
+		// username — never franchiseId. The TV only reads them.
+		'src/pages/api/live-tv-settings.ts',
 		'src/pages/api/league-board.ts',
 		// The Broadcast in MFL Live and pairing a TV to it. The board reads MFL
 		// with the owner's own cookie, like every other /live board.
