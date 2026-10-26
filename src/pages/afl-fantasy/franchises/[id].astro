@@ -29,6 +29,10 @@ import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-his
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
 import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
+import keeperHistory from '../../../../data/afl-fantasy/derived/keeper-history.json';
+import AflKeeperHistory from '../../../components/afl-fantasy/AflKeeperHistory.astro';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { franchiseKeepers } from '../../../utils/league-history/keepers.mjs';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 
 export const prerender = false;
@@ -56,6 +60,12 @@ const conferenceName = conference?.name ?? team.conference;
 // Auth — surface owner-only CTAs at the top of the page when the
 // viewer matches this franchise.
 const authUser = getAuthUser(Astro.request);
+
+// Keepers follow the page's view: the current owner's run by default,
+// every owner with ?view=all (HistoryFranchisePage reads the same param).
+const keepers = franchiseKeepers(keeperHistory, recordBook(historyData).ix, id!, {
+  ownerOnly: Astro.url.searchParams.get('view') !== 'all',
+});
 const isOwner =
   !!authUser &&
   authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id &&
@@ -165,4 +175,5 @@ nameEras.sort((a, b) => a.yearStart - b.yearStart);
     keeperPlanner={true}
     rivalriesPage={true}
   />
+  <AflKeeperHistory slot="after-highs" history={keepers} />
 </HistoryFranchisePage>

@@ -438,6 +438,8 @@ const priorNames = [
       </section>
     )}
 
+    <slot name="after-highs" />
+
     {!ownerOnly && h.owners.length > 0 && (
       <section class="hf-section" aria-labelledby="hf-owners">
         <p class="hf-section__kicker">Who ran it</p>

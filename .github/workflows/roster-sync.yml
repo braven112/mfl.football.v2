@@ -217,6 +217,12 @@ jobs:
       - name: Consolidate roster history
         run: node ./scripts/consolidate-roster-history.mjs
 
+      # Once the July roster snapshots settle at the keeper limit, record that
+      # season's keepers in League History's keeper-history.json. Writes only
+      # the first time a season settles; every other run is a no-op.
+      - name: Record AFL keeper history
+        run: node ./scripts/compute-afl-keeper-history.mjs
+
       # Push alerts ride this job rather than getting crons of their own:
       # it already runs every fifteen minutes with a checkout in hand, and both
       # scripts read the feeds fetched above. Each is non-fatal by design and

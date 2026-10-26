@@ -10,6 +10,7 @@
  */
 import RecordBookPage from '../../../components/shared/league-history/RecordBookPage.astro';
 import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
+import keeperHistory from '../../../../data/afl-fantasy/derived/keeper-history.json';
 import { getAuthUser } from '../../../utils/auth';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { canViewLeagueHistory } from '../../../utils/league-history/access';
@@ -23,4 +24,4 @@ if (!canViewLeagueHistory(authUser)) {
 }
 ---
 
-<RecordBookPage leagueSlug="afl-fantasy" data={historyData} />
+<RecordBookPage leagueSlug="afl-fantasy" data={historyData} keepers={keeperHistory} />

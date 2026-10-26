@@ -12,11 +12,21 @@ import ownerData from '../../../../data/afl-fantasy/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
 import { aflRafterHonors } from '../../../utils/afl-awards';
+import keeperHistory from '../../../../data/afl-fantasy/derived/keeper-history.json';
+import AflKeeperHistory from '../../../components/afl-fantasy/AflKeeperHistory.astro';
+import { recordBook } from '../../../utils/league-history/records.mjs';
+import { ownerIdForSlug } from '../../../utils/league-history/owner.mjs';
+import { ownerKeepers } from '../../../utils/league-history/keepers.mjs';
 
 export const prerender = false;
 
 const result = resolveOwnerDetail(Astro, 'afl-fantasy', ownerData as unknown as OwnerTenuresFile);
 if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
+
+const ownerId = ownerIdForSlug(historyData, result.owner.slug);
+const keepers = ownerId ? ownerKeepers(keeperHistory, recordBook(historyData).ix, ownerId) : null;
 ---
 
-<OwnerDetailPage leagueSlug="afl-fantasy" owner={result.owner} related={result.related} historyData={historyData} honors={aflRafterHonors()} />
+<OwnerDetailPage leagueSlug="afl-fantasy" owner={result.owner} related={result.related} historyData={historyData} honors={aflRafterHonors()}>
+  <AflKeeperHistory slot="history-extra" history={keepers} showTeam />
+</OwnerDetailPage>
