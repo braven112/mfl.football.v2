@@ -254,7 +254,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 </style>
 
 <script>
-  import { matchPages } from '../../../utils/page-search-match';
+  import { askHistoryRow, matchPages } from '../../../utils/page-search-match';
   import { cachedJson, loadPlayerIndex, searchPlayers } from '../../../utils/player-search-client';
 
   interface Entry {
@@ -392,6 +392,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
         const hits = searchPlayers(players, query, hrefs, MAX_PLAYERS)
           .map((l): Row => ({ href: l.href, title: l.name, detail: l.detail, badge: l.pos, reload: l.reload }));
         sections.push(['Players', hits]);
+      }
+      // Any typed question can go straight to Ask the History.
+      const hits = sections.reduce((sum, [, rows]) => sum + rows.length, 0);
+      const ask = askHistoryRow(pages, query, hits);
+      if (ask) {
+        const askSection: [string, Row[]] = ['Ask the History', [{ href: ask.href, title: `Ask: “${query}”`, detail: 'Get the answer from the league’s full history', icon: 'commenting' }]];
+        if (ask.first) sections.unshift(askSection); else sections.push(askSection);
       }
     }
 
