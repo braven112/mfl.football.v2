@@ -92,8 +92,12 @@ for (const year of years) {
     const wk = Number(wr?.week);
     if (!finalWeeks.has(`${y}|${wk}`)) continue;
     const seen = new Set();
-    for (const m of toArray(wr.matchup)) {
-      for (const fr of toArray(m?.franchise)) {
+    // Two shapes (backfill-historical-feeds.mjs): `matchup[].franchise[]`, and
+    // the flat `franchise[]` MFL returns for archive-year weeks, which has no
+    // opponent but every player's score. A playoff week can carry both.
+    const franchises = [...toArray(wr.matchup).flatMap((m) => toArray(m?.franchise)), ...toArray(wr.franchise)];
+    {
+      for (const fr of franchises) {
         for (const p of toArray(fr?.player)) {
           const score = Number(p?.score);
           if (!p?.id || p.score === undefined || p.score === '' || !Number.isFinite(score)) continue;
@@ -112,8 +116,8 @@ const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 rows.sort((a, b) => a[0] - b[0] || a[1] - b[1] || cmp(a[2], b[2]) || cmp(a[3], b[3]));
 const used = new Set(rows.map((r) => r[3]));
 
-// Weeks the team record has but the player feed does not (the AFL's 2007-2019
-// feeds kept only the last weeks), so an answer can say what it could not see.
+// Weeks the team record has but the player feed does not (a season fetched
+// short of its last weeks), so an answer can say what it could not see.
 const withPlayers = new Set(rows.map((r) => `${r[0]}|${r[1]}`));
 const missing = {};
 for (const key of [...finalWeeks].sort()) {

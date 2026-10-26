@@ -7,7 +7,7 @@
  * points a player scored AS A STARTER for the team that got him, regular
  * season and playoffs (consolation excluded, the same rule as every other
  * answer), from the week of the move to the end of that season. A league with
- * missing player weeks (the AFL's 2007-2019) undercounts there, and the
+ * missing player weeks (see missingWeeks) undercounts there, and the
  * engine's prompt says so.
  *
  * Four units:

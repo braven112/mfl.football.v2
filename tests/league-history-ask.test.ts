@@ -140,7 +140,10 @@ describe('player units', () => {
   });
 
   it("says which of the AFL's weeks have no player scores", () => {
-    expect(describeMissingWeeks(aflPlayers.missingWeeks)).toMatch(/^Player scores are missing for 2007/);
+    expect(describeMissingWeeks(aflPlayers.missingWeeks)).toMatch(/^Player scores are missing for /);
+    // Archive weeks come as a flat franchise[] with no matchups; their scores
+    // still count (they once read as missing for 2007-2019).
+    for (const year of Object.keys(aflPlayers.missingWeeks)) expect(Number(year)).toBeGreaterThan(2019);
     expect(describeMissingWeeks({})).toBe('');
     expect(describeMissingWeeks({ 2010: [1, 2, 3, 5], 2011: [1, 2, 3, 5] })).toBe('Player scores are missing for 2010-2011 Weeks 1-3, 5');
   });
