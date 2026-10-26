@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "MFL Live",
-    "slug": "mfl-live",
-    "owner": "braven112",
+    "slug": "mfl",
+    "owner": "fantasysports.dev",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,9 +19,14 @@
     "ios": {
       "bundleIdentifier": "football.mfl.live"
     },
-    "plugins": ["expo-secure-store"],
+    "plugins": [
+      "expo-secure-store"
+    ],
     "extra": {
-      "apiOrigin": "https://v2.mfl.football"
+      "apiOrigin": "https://v2.mfl.football",
+      "eas": {
+        "projectId": "45e0bbdf-e3b3-408d-8e0b-ac9950292d58"
+      }
     }
   }
 }
