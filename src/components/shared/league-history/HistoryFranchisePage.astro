@@ -168,9 +168,10 @@ const banner = (y: number, kind: RafterBanner['kind'], label?: string): RafterBa
     name: s.name,
     icon: s.icon,
     caption,
-    // A banner won under an old name (another owner's team, or a complete
-    // rebrand) hangs in that era's own colors (Brandon, 2026-10-25).
-    colors: s.name !== h.name ? getTeamEraColors(franchiseId, navSlug, y) : null,
+    // A banner hangs in its own era's colors whenever the team kept a look for
+    // that year: an old name, or the same name under an earlier crest (Smokane
+    // FC's 2006-2018 gas mask) (Brandon, 2026-10-25/26).
+    colors: getTeamEraColors(franchiseId, navSlug, y),
     title: `${y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
   };
 };

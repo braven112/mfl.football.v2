@@ -133,7 +133,6 @@ const h = (ownerId ? ownerHistory(ix, ownerId) : null) as OwnerHistory | null;
 
 const latestYear: number | undefined = data.seasons.at(-1)?.y;
 const viewerKey = viewerFranchise && latestYear ? ix.entityOf(latestYear, viewerFranchise) : null;
-const currentName = (f: string): string | null => data.seasons.at(-1)?.teams?.[f]?.n ?? null;
 
 const pairStyle = (f: string, prefix = 'ho') => {
   const p = toBroadcastPair(getTeamColorPrimary(f, navSlug), getTeamColorSecondary(f, navSlug));
@@ -147,9 +146,10 @@ const banner = (s: Season, kind: RafterBanner['kind'], label?: string): RafterBa
   icon: s.icon,
   caption: label ?? (kind === 'C' ? 'Champion' : kind === 'R' ? 'Runner-up' : `${s.division ?? 'Division'}`),
   href: r(`/franchises/${s.franchiseId}`),
-  // A banner won under a name the slot no longer wears (a team this owner
-  // left, or a rebrand) hangs in that era's own colors, as on the franchise page.
-  colors: s.name !== currentName(s.franchiseId) ? getTeamEraColors(s.franchiseId, navSlug, s.y) : null,
+  // A banner hangs in its own era's colors whenever the slot kept a look for
+  // that year (an old name, or the same name under an earlier crest), as on
+  // the franchise page.
+  colors: getTeamEraColors(s.franchiseId, navSlug, s.y),
   title: `${s.y} ${label ?? (kind === 'C' ? 'champion' : kind === 'R' ? 'runner-up' : 'division champion')}: ${s.name}, ${s.w}-${s.l}${s.t ? `-${s.t}` : ''}`,
 });
 // A league with its own titles hangs every one this owner won, one labelled
