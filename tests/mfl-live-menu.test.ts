@@ -201,6 +201,9 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(layout).toContain("const inTvApp = /\\bMFLLiveTV\\//.test(Astro.request.headers.get('user-agent') ?? '');");
     expect(layout).toContain("signInHref={inTvApp ? '/tv' : mflLoginUrl(");
     expect(layout).toContain('tvApp={inTvApp}');
+    // …and the TV app is never sent off to a league site, which needs a real
+    // session the TV's watch-only pass is not.
+    expect(layout).toContain('const sessionLeague = authUser && !inTvApp ? getLeagueById(authUser.leagueId) : null;');
     const menu = read(MENU);
     expect(menu).toContain("{tvApp ? 'Sign in with your phone' : 'Sign in with MyFantasyLeague'}");
   });

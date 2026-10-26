@@ -156,7 +156,10 @@ const inTvApp = /\bMFLLiveTV\//.test(Astro.request.headers.get('user-agent') ?? 
 // instead — the site its owners already use — until the owner decides to
 // point them at its pages here. A best-ball session is never an MFL Live
 // session (getMflLiveUser), so no draft-only league can reach this list.
-const sessionLeague = authUser ? getLeagueById(authUser.leagueId) : null;
+// Never inside the TV app (Brandon, Oct 2026: keep the TV on the board). A
+// league site needs a real session, which the TV's QR pass deliberately is
+// not, so a link there only ends at a password form typed with a remote.
+const sessionLeague = authUser && !inTvApp ? getLeagueById(authUser.leagueId) : null;
 const leagueLinks: { name: string; href: string }[] = sessionLeague
 	? [
 			{
