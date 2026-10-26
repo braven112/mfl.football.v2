@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-26T16:01:38.007Z"
+    "fetchedAt": "2026-10-26T20:01:32.721Z"
   },
   "players": [
     {
@@ -8149,7 +8149,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -8774,12 +8774,12 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "17499",
-          "name": "Lemon, Makai"
-        },
-        {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "17499",
+          "name": "Lemon, Makai"
         }
       ]
     },
@@ -9395,12 +9395,12 @@
       "gamesPlayed": 4,
       "depthChartAhead": [
         {
-          "id": "17499",
-          "name": "Lemon, Makai"
-        },
-        {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "17499",
+          "name": "Lemon, Makai"
         },
         {
           "id": "14105",
@@ -9669,7 +9669,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -9702,12 +9702,7 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": [
-        {
-          "id": "17499",
-          "name": "Lemon, Makai"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17527",
@@ -18409,7 +18404,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -18758,7 +18753,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -25111,12 +25106,12 @@
       "gamesPlayed": 6,
       "depthChartAhead": [
         {
-          "id": "17499",
-          "name": "Lemon, Makai"
-        },
-        {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "17499",
+          "name": "Lemon, Makai"
         },
         {
           "id": "14105",
@@ -27266,7 +27261,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -27299,7 +27294,12 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17333",
+          "name": "Cooper, Darius"
+        }
+      ]
     }
   ]
 }
