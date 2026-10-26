@@ -152,9 +152,11 @@ export function ownerHistory(ix, ownerId) {
     .sort((a, b) => b.games - a.games || b.pct - a.pct);
 
   const best = (list, value) => list.reduce((top, g) => (top && value(top) >= value(g) ? top : g), null);
-  const highGame = best(games, (g) => g.s);
+  // A forfeit (0.00, no lineup set) counts as a game but is no performance.
+  const scoring = games.filter((g) => g.s > 0 && g.os > 0);
+  const highGame = best(scoring, (g) => g.s);
   const bigWin = best(
-    games.filter((g) => g.won),
+    scoring.filter((g) => g.won),
     (g) => g.s - g.os,
   );
   const bestSeason = best(

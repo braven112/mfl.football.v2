@@ -370,13 +370,15 @@ export function rivalryHistory(ix, a, b, { ownerOnly = true } = {}) {
   const playoffSeries = seriesTally(playoffs);
 
   const best = (list, value) => list.reduce((top, m) => (top && value(top) >= value(m) ? top : m), null);
-  const decided = counted.filter((m) => m.winner);
+  // A forfeit (0.00, no lineup set) counts toward the series but is no performance.
+  const scoring = counted.filter((m) => m.sA > 0 && m.sB > 0);
+  const decided = scoring.filter((m) => m.winner);
   const highs = {
     blowout: best(decided, (m) => Math.abs(m.sA - m.sB)),
     closest: best(decided, (m) => -Math.abs(m.sA - m.sB)),
-    shootout: best(counted, (m) => m.sA + m.sB),
-    topA: best(counted, (m) => m.sA),
-    topB: best(counted, (m) => m.sB),
+    shootout: best(scoring, (m) => m.sA + m.sB),
+    topA: best(scoring, (m) => m.sA),
+    topB: best(scoring, (m) => m.sB),
   };
 
   // Season ledger: who took each season's meetings.

@@ -8,8 +8,22 @@
  * wrong stays testable.
  */
 
-/** A forfeit posts 0.00 and is not a performance worth ranking. */
+/**
+ * A forfeit (a team that set no lineup) posts 0.00 and is not a performance
+ * worth ranking on a scoring board. It is still a GAME: MFL recorded the
+ * result, so it counts toward records, streaks and head to head (Brandon,
+ * 2026-10-26: "a game counts when MFL recorded a result").
+ */
 export const isPlayed = (a, b) => a > 0 && b > 0;
+
+/**
+ * Whether MFL recorded a result for a matchup: both scores posted, and not a
+ * 0-0 placeholder. An unplayed week carries no score at all (MFL stamps it
+ * result "T"), so the score, not the result field, is what tells them apart.
+ */
+const hasResult = (a, b) =>
+  a.score != null && b.score != null && Number.isFinite(Number(a.score)) && Number.isFinite(Number(b.score)) &&
+  (Number(a.score) > 0 || Number(b.score) > 0);
 
 /** Highest-first by default; `asc` for "closest"-style boards. */
 export const rankBy = (rows, value, limit, asc = false) =>
@@ -36,9 +50,9 @@ export function gamesFromSchedule(schedule, { nameOf, year, firstPlayoffWeek = I
       if (fr.length !== 2) continue;
       const [a, b] = fr;
       if (a.id === b.id) continue;
+      if (!hasResult(a, b)) continue;
       const sa = Number(a.score);
       const sb = Number(b.score);
-      if (!isPlayed(sa, sb)) continue;
       const key = `${week}:${[a.id, b.id].sort().join(':')}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -57,6 +71,7 @@ export function gamesFromSchedule(schedule, { nameOf, year, firstPlayoffWeek = I
         margin: Math.abs(sa - sb),
         combined: sa + sb,
         tie: sa === sb,
+        forfeit: !isPlayed(sa, sb),
       });
     }
   }

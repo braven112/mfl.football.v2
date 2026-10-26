@@ -343,6 +343,14 @@
       "impact": "user",
       "area": "franchises",
       "league": "both"
+    },
+    {
+      "date": "2026-10-26",
+      "type": "bug-fix",
+      "summary": "League History now counts games a team forfeited by setting no lineup, so head-to-head records include them; scoring records still leave the 0.00 off.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "afl"
     }
   ]
 }

@@ -47,12 +47,27 @@ describe('gamesFromSchedule', () => {
     expect(g.winnerName).toBe('Team 0001');
   });
 
-  it('drops forfeits, which post as 0.00 and are not performances', () => {
+  it('keeps a forfeit as a game, flagged so scoring boards can leave it off', () => {
+    // A team that set no lineup posts 0.00; MFL still recorded the result.
     const games = collect(
       scheduleOf([{ week: 1, games: [['0001', 150.64, '0002', 0], ['0003', 120, '0004', 100]] }])
     );
-    expect(games).toHaveLength(1);
-    expect(games[0].winnerId).toBe('0003');
+    expect(games.map((g) => [g.winnerId, g.forfeit])).toEqual([
+      ['0001', true],
+      ['0003', false],
+    ]);
+  });
+
+  it('skips a week with no result yet: no scores posted, or 0-0', () => {
+    const unplayed = {
+      schedule: {
+        weeklySchedule: [
+          { week: '9', matchup: [{ franchise: [{ id: '0001', result: 'T' }, { id: '0002', result: 'T' }] }] },
+        ],
+      },
+    };
+    expect(collect(unplayed)).toHaveLength(0);
+    expect(collect(scheduleOf([{ week: 1, games: [['0001', 0, '0002', 0]] }]))).toHaveLength(0);
   });
 
   it('ignores a franchise scheduled against itself', () => {
