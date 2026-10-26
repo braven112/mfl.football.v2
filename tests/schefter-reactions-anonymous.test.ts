@@ -60,11 +60,33 @@ class FakeRedis {
     return (h[field] as T) ?? null;
   }
 
+  private sets = new Map<string, Set<string>>();
+  /** Every HGETALL the code issues — what Upstash bills per pipeline entry. */
+  hgetallCalls = 0;
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    const set = this.sets.get(key) ?? new Set<string>();
+    const before = set.size;
+    for (const m of members) set.add(m);
+    this.sets.set(key, set);
+    return set.size - before;
+  }
+
+  async smembers<T = string>(key: string): Promise<T[]> {
+    return [...(this.sets.get(key) ?? [])] as unknown as T[];
+  }
+
+  async scan(_cursor: number | string, opts: { match?: string } = {}): Promise<[string, string[]]> {
+    const prefix = (opts.match ?? '*').replace(/\*$/, '');
+    return ['0', [...this.store.keys(), ...this.sets.keys()].filter((k) => k.startsWith(prefix))];
+  }
+
   pipeline() {
     const ops: Array<() => Promise<unknown>> = [];
     const self = this;
     return {
       hgetall(key: string) {
+        self.hgetallCalls++;
         ops.push(() => self.hgetall(key));
       },
       async exec<T>(): Promise<T> {
@@ -76,6 +98,8 @@ class FakeRedis {
 
   _reset() {
     this.store.clear();
+    this.sets.clear();
+    this.hgetallCalls = 0;
   }
 
   _raw(key: string) {
@@ -203,5 +227,35 @@ describe('anonymous rumor reactions', () => {
     // Identified side still only has the original reaction; anonymous write
     // did not leak into the identified namespace.
     expect(identified.reactions).toEqual({ '🔥': 1 });
+  });
+
+  it('batch reads only the hashes of posts that were ever reacted to', async () => {
+    await mod.toggleReaction('sf_a', '0001', '🔥');
+    await mod.toggleAnonymousReaction('sf_rumor_b', HASH_A, '🔥');
+    const ids = Array.from({ length: 500 }, (_, i) => `sf_quiet_${i}`);
+    fakeRedis.hgetallCalls = 0;
+
+    const regular = await mod.getBatchReactions(['sf_a', ...ids], '0001');
+    const anon = await mod.getBatchAnonymousReactions(['sf_rumor_b', ...ids], HASH_A);
+
+    expect(regular.sf_a).toEqual({ reactions: { '🔥': 1 }, userReaction: '🔥' });
+    expect(anon.sf_rumor_b).toEqual({ reactions: { '🔥': 1 }, userReaction: '🔥' });
+    expect(regular.sf_quiet_7).toEqual({ reactions: {}, userReaction: null });
+    expect(anon.sf_quiet_7).toEqual({ reactions: {}, userReaction: null });
+    expect(fakeRedis.hgetallCalls).toBe(2);
+  });
+
+  it('seeds the index from reaction hashes written before it existed', async () => {
+    // Hashes as the pre-index code left them: no index set at all.
+    await fakeRedis.hset('schefter:reactions:sf_old', { '🔥': ['0002'] });
+    await fakeRedis.hset('schefter:reactions:anon:sf_rumor_old', { '💯': [HASH_B] });
+
+    const regular = await mod.getBatchReactions(['sf_old', 'sf_rumor_old']);
+    const anon = await mod.getBatchAnonymousReactions(['sf_old', 'sf_rumor_old']);
+
+    expect(regular.sf_old.reactions).toEqual({ '🔥': 1 });
+    expect(regular.sf_rumor_old.reactions).toEqual({});
+    expect(anon.sf_rumor_old.reactions).toEqual({ '💯': 1 });
+    expect(anon.sf_old.reactions).toEqual({});
   });
 });

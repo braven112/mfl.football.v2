@@ -75,6 +75,20 @@ export const GLOBAL_SCHEFTER_NAMESPACES = Object.freeze({
 });
 
 /**
+ * Which posts have EVER been reacted to — one set per reaction namespace,
+ * holding post ids. The feed renders ~500 posts and almost none carry a
+ * reaction, but Upstash bills every HGETALL in a pipeline, so reading each
+ * post's hash cost ~500 commands per news-page view and exhausted the plan's
+ * monthly cap in Oct 2026. The batch readers ask this set first and only read
+ * the hashes it names (src/utils/schefter-reactions.ts). Deliberately OUTSIDE
+ * the `schefter:reactions:` prefix so a SCAN of that prefix never sees it.
+ */
+export const REACTED_POSTS_INDEX = Object.freeze({
+  regular: 'schefter:reacted-posts',
+  anon: 'schefter:reacted-posts:anon',
+});
+
+/**
  * Build a key in one of the global namespaces.
  * @param {keyof typeof GLOBAL_SCHEFTER_NAMESPACES} ns
  * @param {string} [id] - optional id appended to the namespace prefix.
