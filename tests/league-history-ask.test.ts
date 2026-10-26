@@ -9,7 +9,7 @@ import theleaguePlayers from '../data/theleague/derived/league-history-players.j
 import aflPlayers from '../data/afl-fantasy/derived/league-history-players.json';
 import theleagueMoves from '../data/theleague/derived/league-history-moves.json';
 import aflMoves from '../data/afl-fantasy/derived/league-history-moves.json';
-import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery } from '../src/utils/league-history/ask-query.mjs';
+import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery, teamRenames } from '../src/utils/league-history/ask-query.mjs';
 import { askHistory } from '../src/utils/league-history/ask';
 import { recordBook } from '../src/utils/league-history/records.mjs';
 import { describeMissingWeeks } from '../src/utils/league-history/ask-players.mjs';
@@ -275,5 +275,29 @@ describe('askHistory', () => {
   it('throws rather than guessing when the model never answers', async () => {
     const { client } = scripted([]);
     await expect(askHistory('theleague', TL, 'q', { client })).rejects.toThrow();
+  });
+});
+
+describe('renamed teams', () => {
+  // Brandon, 2026-10-26: Poker in the Rear played 2014 as the Generals, and
+  // an answer about Poker in the Rear left that season out.
+  it('finds a team under every name it used', () => {
+    const r = runQuery(theleague, { unit: 'seasons', where: [{ field: 'team', op: 'eq', value: 'Poker in the Rear' }], columns: ['year', 'team'], limit: 20 });
+    expect(r.rows.map((row) => row.cells)).toEqual([
+      [2012, 'Poker in the Rear'],
+      [2013, 'Poker in the Rear'],
+      [2014, 'Generals'],
+      [2015, 'Poker in the Rear'],
+    ]);
+    expect(r.description).toContain('under any name');
+    const asOpponent = (value: string) => runQuery(theleague, { unit: 'games', where: [{ field: 'opponent', op: 'eq', value }] }).total;
+    expect(asOpponent('Generals')).toBe(asOpponent('Poker in the Rear'));
+    const notPoker = runQuery(theleague, { unit: 'seasons', where: [{ field: 'team', op: 'ne', value: 'Generals' }, { field: 'year', op: 'eq', value: 2014 }] });
+    expect(notPoker.total).toBe(Object.keys(theleague.seasons.find((s) => s.y === 2014)!.teams).length - 1);
+  });
+
+  it('lists every owner whose team went by more than one name, for the prompt', () => {
+    expect(teamRenames(theleague)).toContain('Garrett Fronk: Poker in the Rear (2012-2013, 2015), Generals (2014)');
+    expect(teamRenames(afl).some((line) => line.startsWith('Brandon Shields: Smokane (2003-2005), Smokane FC'))).toBe(true);
   });
 });

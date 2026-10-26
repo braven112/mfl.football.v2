@@ -18,7 +18,7 @@
  */
 import { SONNET_MODEL, responseText } from '../claude-models.mjs';
 import { getLeagueBySlug } from '../../config/leagues';
-import { QueryError, dataAsOf, describeAsOf, querySchema, runQuery } from './ask-query.mjs';
+import { QueryError, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
 
@@ -250,7 +250,7 @@ How to work:
 - Translate the question into one or more queries. "Started 9-1" means seasons with throughGames: 10, w = 9, l = 1. "Fewer points" with no comparison named means the fewest points in the same window (pf), and you should say which window you used.
 - For "has anyone ever / how many times" questions, rely on total, not on the rows shown.
 - When a question compares against a specific team or season, query that one too and compare.
-- Records are credited to owners: an owner who moved teams keeps one career. Team names are per season.
+- Records are credited to owners: an owner who moved teams keeps one career. Team names are per season, but a team that was renamed is still the same team: filtering on team (or opponent, partner) by any of its names matches every season under every name. When an answer covers a renamed team, name its other names (see Renamed teams).
 - Consolation games (toilet bowl, NIT) count as neither regular season nor playoffs. Season W/L/PF are regular season only.
 - ${latest && !latest.done ? `The ${latest.y} season is still being played. ${describeAsOf(dataAsOf(ds))}. A ${latest.y} team counts in a "first N games" question only once N of its games are final, so say so when this season's teams could change the answer (for example, a team one win from qualifying). Leave ${latest.y} out of questions about full seasons (complete = true).` : 'Every season in the record is complete.'}
 - Use the exact names from results. Match names with contains when the asker uses a nickname or part of a name.
@@ -261,7 +261,8 @@ How to work:
 - Keep queries few and focused; then call answer once.
 
 Current teams (owner): ${current}
-Every owner on record: ${formerOwners}`;
+Every owner on record: ${formerOwners}
+Renamed teams (owner: every name, with seasons): ${teamRenames(ds).join('; ') || 'none'}`;
 }
 
 /**

@@ -261,7 +261,18 @@ function prepare(ds) {
     }
   }
 
-  const prepared = { ix, latestYear, latestHoldings, gameRows, teamSeasons };
+  // Every name each owner's teams went by: a rebrand (Poker in the Rear was
+  // the Generals for 2014) is still the same team, because records follow the
+  // owner. teamFilter() reads this.
+  const namesByOwner = new Map();
+  for (const ts of teamSeasons) {
+    if (!namesByOwner.has(ts.owner.name)) namesByOwner.set(ts.owner.name, new Map());
+    const names = namesByOwner.get(ts.owner.name);
+    if (!names.has(ts.t.n)) names.set(ts.t.n, []);
+    names.get(ts.t.n).push(ts.y);
+  }
+
+  const prepared = { ix, latestYear, latestHoldings, gameRows, teamSeasons, namesByOwner };
   cache.set(ds, prepared);
   return prepared;
 }
@@ -461,7 +472,7 @@ export function runQuery(ds, rawQuery, extra = {}) {
   // A cut window ("first 10 games") only makes sense for a team that played
   // that many; a team 6 games into this season has not "started 9-1" or not.
   if (q.unit === 'seasons' && q.throughGames) rows = rows.filter((r) => r.games >= q.throughGames);
-  for (const c of q.where) rows = rows.filter((r) => OPS[c.op](r[c.field], c.value));
+  for (const c of q.where) rows = rows.filter(teamFilter(p, q.unit, c) ?? ((r) => OPS[c.op](r[c.field], c.value)));
   if (q.sort.length) {
     rows = rows.slice().sort((a, b) => {
       for (const s of q.sort) {
@@ -494,6 +505,53 @@ export function runQuery(ds, rawQuery, extra = {}) {
     summary,
     chart: q.chart ? chartBoard(q, rows) : null,
   };
+}
+
+/**
+ * A team-name field and the owner field that says whose team it was, per unit.
+ * Filtering on a team name matches that owner's team under EVERY name it used,
+ * so "Poker in the Rear" also finds its 2014 season as the Generals.
+ */
+const TEAM_OWNER_FIELD = { team: 'owner', opponent: 'opponentOwner', partner: 'partnerOwner' };
+const NAME_OPS = new Set(['eq', 'ne', 'in', 'contains']);
+
+function teamFilter(p, unit, c) {
+  const ownerField = TEAM_OWNER_FIELD[c.field];
+  if (!ownerField || !NAME_OPS.has(c.op) || !FIELDS[unit][ownerField]) return null;
+  const positive = c.op === 'ne' ? 'eq' : c.op;
+  const owners = new Set();
+  for (const [owner, names] of p.namesByOwner) {
+    if ([...names.keys()].some((n) => OPS[positive](n, c.value))) owners.add(owner);
+  }
+  const hit = (r) => OPS[positive](r[c.field], c.value) || owners.has(r[ownerField]);
+  return c.op === 'ne' ? (r) => !hit(r) : hit;
+}
+
+/**
+ * Owners whose teams went by more than one name, for the model's prompt:
+ * "Garrett Fronk: Poker in the Rear (2012-2013, 2015), Generals (2014)".
+ * @returns {string[]}
+ */
+export function teamRenames(ds) {
+  const p = prepare(ds);
+  const out = [];
+  for (const [owner, names] of p.namesByOwner) {
+    if (names.size < 2) continue;
+    const list = [...names].sort((a, b) => a[1][0] - b[1][0]).map(([n, ys]) => `${n} (${yearSpans(ys)})`);
+    out.push(`${owner}: ${list.join(', ')}`);
+  }
+  return out;
+}
+
+function yearSpans(years) {
+  const ys = [...new Set(years)].sort((a, b) => a - b);
+  const spans = [];
+  for (const y of ys) {
+    const last = spans.at(-1);
+    if (last && y === last[1] + 1) last[1] = y;
+    else spans.push([y, y]);
+  }
+  return spans.map(([a, b]) => (a === b ? `${a}` : `${a}-${b}`)).join(', ');
 }
 
 const CHART_TOP = 10;
@@ -603,7 +661,7 @@ export function describeQuery(q) {
     parts.push(
       'where ' +
         q.where
-          .map((c) => `${fields[c.field].label} ${OP_WORDS[c.op]} ${Array.isArray(c.value) ? c.value.join(' or ') : c.value}`)
+          .map((c) => `${fields[c.field].label} ${OP_WORDS[c.op]} ${Array.isArray(c.value) ? c.value.join(' or ') : c.value}${TEAM_OWNER_FIELD[c.field] && NAME_OPS.has(c.op) && fields[TEAM_OWNER_FIELD[c.field]] ? ' (under any name)' : ''}`)
           .join(' and '),
     );
   }
