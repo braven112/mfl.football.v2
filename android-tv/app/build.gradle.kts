@@ -16,7 +16,9 @@ val startUrl: String = (findProperty("startUrl") as String?)
 
 // The score overlay's page lives on the same host as the start page, so a test
 // build pointed at staging overlays staging too.
-val overlayUrl: String = java.net.URI(startUrl).let { "${it.scheme}://${it.authority}/live/broadcast/overlay" }
+// (A regex, not java.net.URI: in this script `java` is the Java extension.)
+val overlayUrl: String =
+    (Regex("^https?://[^/]+").find(startUrl)?.value ?: "https://mfl.football") + "/live/broadcast/overlay"
 
 // Upload-key signing comes from the environment (GitHub secrets in CI) so the
 // keystore never lives in the repo. Without it, release builds are unsigned
