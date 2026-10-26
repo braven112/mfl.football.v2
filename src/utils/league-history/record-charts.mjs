@@ -59,6 +59,9 @@ export function formatterFor(display) {
   );
 }
 
+/** An axis label: a whole-number tick drops the board's decimals ("1,050", not "1,050.00"), so a phone axis does not run its labels together. */
+const tickLabel = (fmt, t) => (Number.isInteger(t) && fmt.step < 1 && fmt.step !== 0.001 ? t.toLocaleString('en-US') : fmt(t));
+
 const svg = (w, h, body, label) =>
   `<svg class="rbc" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(label)}">${body}</svg>`;
 const tip = (text) => `<title>${esc(text)}</title>`;
@@ -83,7 +86,7 @@ export function gapChart(board, W, opts = {}) {
   let g = '';
   for (const t of ticks(lo - pad, hi + pad, W < 480 ? 3 : 5, fmt.step)) {
     g += `<line class="rbc-grid" x1="${px(x(t))}" x2="${px(x(t))}" y1="${T}" y2="${H - 20}"/>`;
-    g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 5}" text-anchor="middle">${fmt(t)}</text>`;
+    g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 5}" text-anchor="middle">${tickLabel(fmt, t)}</text>`;
   }
   top.forEach((r, i) => {
     const y = T + i * rowH + rowH / 2, lead = r.rank === 1, cx = px(x(r.value));
@@ -158,7 +161,7 @@ export function spreadChart(board, W, opts = {}) {
     g += `<line class="rbc-mine-line" x1="${yx}" x2="${yx}" y1="${T - 4}" y2="${base}"/>`;
     g += `<text class="rbc-mine-label" x="${yx}" y="${T - 28}" text-anchor="${anchor}">Your best ${fmt(yours)}</text>`;
   }
-  for (const t of ticks(lo, hi, W < 480 ? 4 : 6, fmt.step)) g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 4}" text-anchor="middle">${fmt(t)}</text>`;
+  for (const t of ticks(lo, hi, W < 480 ? 4 : 6, fmt.step)) g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 4}" text-anchor="middle">${tickLabel(fmt, t)}</text>`;
   const share = (top.length / n) * 100;
   const pct = share >= 10 ? share.toFixed(0) : share >= 1 ? share.toFixed(1) : share.toFixed(2);
   const diff = Math.abs(record - median);
@@ -191,14 +194,14 @@ function seasonHistory(board, top, pop, W, opts) {
   const yTicks = ticks(vlo, vhi, 4, fmt.step);
   // The left margin fits the widest axis label (about 6px a character at 11px).
   const T = 14, H = 220, R = 10, base = H - 22;
-  const L = 10 + Math.max(...yTicks.map((t) => fmt(t).length)) * 6;
+  const L = 10 + Math.max(...yTicks.map((t) => tickLabel(fmt, t).length)) * 6;
   const x = scale(y0 - 0.5, y1 + 0.5, L, W - R);
   const y = scale(vlo - vpad, vhi + vpad, base, T);
   const colW = Math.max(2, (x(y0 + 1) - x(y0)) * 0.7);
   let g = '';
   for (const t of yTicks) {
     g += `<line class="rbc-grid" x1="${L}" x2="${W - R}" y1="${px(y(t))}" y2="${px(y(t))}"/>`;
-    g += `<text class="rbc-axis" x="${L - 6}" y="${px(y(t)) + 4}" text-anchor="end">${fmt(t)}</text>`;
+    g += `<text class="rbc-axis" x="${L - 6}" y="${px(y(t)) + 4}" text-anchor="end">${tickLabel(fmt, t)}</text>`;
   }
   // The cloud is ONE path of zero-length round-capped segments: thousands of
   // results as a few KB, where a circle each would be hundreds.
@@ -277,7 +280,7 @@ function entityLine(board, top, pop, W, opts) {
       `<circle class="${cls}" cx="${px(cx)}" cy="${px(Math.max(6, Math.min(H - 26, cy)))}" r="${rank === 1 ? 6 : 4}">${tip(`${p[3] ?? ''} · ${fmt(p[0])}`)}</circle>`
     );
   }
-  for (const t of ticks(lo, hi, W < 480 ? 4 : 6, fmt.step)) g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 5}" text-anchor="middle">${fmt(t)}</text>`;
+  for (const t of ticks(lo, hi, W < 480 ? 4 : 6, fmt.step)) g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 5}" text-anchor="middle">${tickLabel(fmt, t)}</text>`;
   const sortedVals = sorted.map((p) => p[0]);
   const median = sortedVals[Math.floor(sortedVals.length / 2)];
   const take =
@@ -315,7 +318,7 @@ export function paceChart(pace, W, opts = {}) {
   const vlo = isRate ? Math.min(...vals) : 0, vhi = Math.max(...vals);
   const vpad = (vhi - vlo) * 0.06 || 1;
   const yTicks = ticks(vlo, vhi, 4, fmt.step);
-  const L = 10 + Math.max(...yTicks.map((t) => fmt(t).length)) * 6;
+  const L = 10 + Math.max(...yTicks.map((t) => tickLabel(fmt, t).length)) * 6;
   const xMax = Math.max(pace.full, ...pts.map((p) => p[0]));
   const x = scale(0.5, xMax + 0.5, L, W - R);
   const y = scale(vlo - (isRate ? vpad : 0), vhi + vpad, H - B, T);
@@ -331,7 +334,7 @@ export function paceChart(pace, W, opts = {}) {
   g += `<text class="rbc-axis" x="${px((L + nx) / 2)}" y="${T - 8}" text-anchor="middle">Played</text>`;
   for (const t of yTicks) {
     g += `<line class="rbc-grid" x1="${L}" x2="${W - R}" y1="${px(y(t))}" y2="${px(y(t))}"/>`;
-    g += `<text class="rbc-axis" x="${L - 6}" y="${px(y(t)) + 4}" text-anchor="end">${fmt(t)}</text>`;
+    g += `<text class="rbc-axis" x="${L - 6}" y="${px(y(t)) + 4}" text-anchor="end">${tickLabel(fmt, t)}</text>`;
   }
   const every = Math.max(1, Math.ceil(xMax / (narrow ? 5 : 9)));
   for (let i = 1; i <= xMax; i += every) g += `<text class="rbc-axis" x="${px(x(i))}" y="${H - 6}" text-anchor="middle">${i}</text>`;

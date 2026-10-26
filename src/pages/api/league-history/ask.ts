@@ -1,8 +1,12 @@
 /**
  * POST /api/league-history/ask — Ask the History.
- * Body: `{ "league": "theleague" | "afl-fantasy", "question": "..." }`
- * → `{ id, answer, table, steps }`; `id` opens the shareable answer page at
- *   /<league>/history/ask/<id>.
+ * Body: `{ "league": "theleague" | "afl-fantasy", "question": "...", "after"?: "<answer id>" }`
+ * → `{ id, answer, headline, followUps, table, steps }`; `id` opens the
+ *   shareable answer page at /<league>/history/ask/<id>.
+ *
+ * `after` makes it a follow-up: the earlier answers in that conversation are
+ * read back from the store (never from the request), so "what about in the
+ * playoffs?" knows what it is about.
  *
  * Signed-in owners of that league only (canAskLeagueHistory), and the league
  * comes from the URL the owner is on but must match the session, never just
@@ -19,12 +23,12 @@ import theleaguePlayers from '../../../../data/theleague/derived/league-history-
 import aflPlayers from '../../../../data/afl-fantasy/derived/league-history-players.json';
 import theleagueMoves from '../../../../data/theleague/derived/league-history-moves.json';
 import aflMoves from '../../../../data/afl-fantasy/derived/league-history-moves.json';
-import { getAuthUser } from '../../../utils/auth';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
-import { askHistory, type AskData } from '../../../utils/league-history/ask';
-import { saveAnswer } from '../../../utils/league-history/ask-store';
+import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
+import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
 
 export const prerender = false;
 
@@ -44,13 +48,27 @@ function json(data: unknown, status = 200): Response {
 	});
 }
 
+/** The asker's team in the latest season, so "my team" means something. */
+function askerOf(history: any, franchiseId: string | null): AskAsker | null {
+	const team = franchiseId ? history?.seasons?.at(-1)?.teams?.[franchiseId] : null;
+	if (!team) return null;
+	const owner = String(team.h ?? '')
+		.split('+')
+		.map((id: string) => history.owners?.[id]?.name)
+		.filter(Boolean)
+		.join(' & ');
+	return { team: team.n ?? null, owner: owner || null };
+}
+
 export const POST: APIRoute = async ({ request }) => {
 	let question = '';
 	let slug = '';
+	let after = '';
 	try {
-		const body = (await request.json()) as { question?: unknown; league?: unknown };
+		const body = (await request.json()) as { question?: unknown; league?: unknown; after?: unknown };
 		question = typeof body?.question === 'string' ? body.question.trim() : '';
 		slug = typeof body?.league === 'string' ? body.league : '';
+		after = typeof body?.after === 'string' ? body.after : '';
 	} catch {
 		return json({ error: 'Invalid request body' }, 400);
 	}
@@ -68,9 +86,13 @@ export const POST: APIRoute = async ({ request }) => {
 	const limit = await checkRateLimit('history-ask', `${league.slug}:${user.franchiseId}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
 	if (!limit.allowed) return json({ error: 'That is a lot of questions for one hour. Try again later.' }, 429);
 
+	// An expired or unknown parent just starts a fresh conversation.
+	const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
+	const turns = parent ? turnsAfter(parent) : [];
+
 	let result;
 	try {
-		result = await askHistory(league.slug, ds, question);
+		result = await askHistory(league.slug, ds, question, { turns, asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)) });
 	} catch (e) {
 		console.error('[league-history/ask] failed:', e);
 		return json({ error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' }, 503);
@@ -82,9 +104,12 @@ export const POST: APIRoute = async ({ request }) => {
 			league: league.slug,
 			question,
 			...result,
+			parent: parent?.id ?? null,
+			turns,
 			askedBy: { franchiseId: user.franchiseId, name: user.name || null },
 		});
 		id = saved?.id ?? null;
+		if (saved) await recordAsk(saved).catch((e) => console.error('[league-history/ask] count failed:', e));
 	} catch (e) {
 		// The answer still stands; it just has no share link.
 		console.error('[league-history/ask] save failed:', e);

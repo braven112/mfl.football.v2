@@ -50,8 +50,32 @@ export interface AskRecordLink {
   leader: string;
 }
 
+/** The answer's one big stat, for the answer card ("952.44" / "Fewest points by an 8-1 start"). */
+export interface AskHeadline {
+  value: string;
+  label: string;
+}
+
+/** An earlier question in the same conversation, as context for a follow-up. */
+export interface AskTurn {
+  question: string;
+  answer: string;
+  /** The engine's description of every query that answer ran. */
+  steps: string[];
+}
+
+/** Who is asking, so "my team" and "us" mean something. */
+export interface AskAsker {
+  team: string | null;
+  owner: string | null;
+}
+
 export interface AskResult {
   answer: string;
+  /** Missing on answers saved before the answer card existed. */
+  headline?: AskHeadline | null;
+  /** Up to three natural next questions; missing on older answers. */
+  followUps?: string[];
   table: AskTable | null;
   /** Plain-words description of every query run, in order. */
   steps: string[];
@@ -128,6 +152,22 @@ const ANSWER_TOOL = {
         type: 'string',
         description:
           'One to three plain sentences. Lead with the direct answer (yes/no, the name, the number), then the one or two facts that back it, including where it stands against the Record Book when a board covers it. No markdown, no lists.',
+      },
+      headline: {
+        type: 'object',
+        description:
+          "The answer's one big stat for the answer card, taken from a result: value is a number, a name or a one-word verdict (\"952.44\", \"Todd Gibel\", \"No.\", \"10 of 10\"), at most 14 characters; label says what it is in at most 8 words (\"Fewest points by an 8-1 start\"). Omit when no single stat sums the answer up.",
+        properties: {
+          value: { type: 'string' },
+          label: { type: 'string' },
+        },
+        required: ['value', 'label'],
+      },
+      followUps: {
+        type: 'array',
+        description:
+          'Two or three short follow-up questions the asker would naturally ask next, each answerable from these same fields, at most 7 words, written as the asker would type them ("Did they all make the playoffs?").',
+        items: { type: 'string' },
       },
       show: {
         type: 'integer',
@@ -232,6 +272,33 @@ function resolveRecords(history: any, cited: unknown): AskRecordLink[] {
   return out;
 }
 
+const clip = (s: unknown, max: number) => String(s ?? '').trim().slice(0, max);
+
+function headlineOf(input: any): AskHeadline | null {
+  const value = clip(input?.value, 24);
+  const label = clip(input?.label, 80);
+  return value && label ? { value, label } : null;
+}
+
+function followUpsOf(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input.map((q) => clip(q, 80)).filter((q) => q.length >= 5).slice(0, 3);
+}
+
+// Per request, so it stays out of the cached system prompt.
+const askerBlock = (asker: AskAsker | null) =>
+  asker?.team ? `<asker>${clip(asker.team, 80)}${asker.owner ? ` (${clip(asker.owner, 80)})` : ''}</asker>\n` : '';
+
+/** The earlier turns of a conversation, as the opening context of a follow-up. */
+function conversationBlock(turns: AskTurn[]): string {
+  if (!turns.length) return '';
+  const lines = turns.map(
+    (t, i) =>
+      `<turn n="${i + 1}"><asked>${clip(t.question, 300)}</asked><answered>${clip(t.answer, 600)}</answered>${t.steps.length ? `<queries>${t.steps.map((d) => clip(d, 300)).join(' | ')}</queries>` : ''}</turn>`,
+  );
+  return `<conversation>\nThe question below follows up on these earlier answers. Read "they", "them", "that team", "what about…" against them, and re-run the queries you need: an earlier answer is context, not a result you can quote numbers from.\n${lines.join('\n')}\n</conversation>\n\n`;
+}
+
 function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
@@ -258,7 +325,8 @@ How to work:
 - ${moves ? `Roster moves use the move units: trades (one row per side, with what the players each side got scored for it the rest of that season), pickups (waiver claims and free agents), draftPicks${moves.auctions?.length ? ', auctions (salary auction wins)' : ''}. "Best trade/pickup/pick" means the most points the player(s) scored for the team that got them unless the question says otherwise; say which measure you used. Contract lengths are not on record${moves.auctions?.length ? '; auction salaries are' : ''}.` : 'There are no trade, draft or pickup records for this league; say so if asked.'}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
-- Keep queries few and focused; then call answer once.
+- Keep queries few and focused; then call answer once, with a headline when one stat sums the answer up and two or three followUps.
+- <asker> names the team the person asking owns: "my team", "us", "we" and "I" mean that team.
 
 Current teams (owner): ${current}
 Every owner on record: ${formerOwners}
@@ -274,7 +342,7 @@ export async function askHistory(
   leagueSlug: string,
   data: AskData,
   question: string,
-  { client }: { client?: AnthropicLike } = {},
+  { client, turns = [], asker = null }: { client?: AnthropicLike; turns?: AskTurn[]; asker?: AskAsker | null } = {},
 ): Promise<AskResult> {
   const ds = data.history;
   let anthropic = client;
@@ -289,7 +357,7 @@ export async function askHistory(
   const results: AskTable[] = [];
   const steps: string[] = [];
   const messages: Array<{ role: 'user' | 'assistant'; content: unknown }> = [
-    { role: 'user', content: `<question>${question}</question>` },
+    { role: 'user', content: `${askerBlock(asker)}${conversationBlock(turns)}<question>${question}</question>` },
   ];
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -308,6 +376,8 @@ export async function askHistory(
       const show = Number(final.input?.show);
       return {
         answer: String(final.input?.answer ?? '').trim(),
+        headline: headlineOf(final.input?.headline),
+        followUps: followUpsOf(final.input?.followUps),
         table: Number.isInteger(show) && show >= 0 ? (results[show] ?? null) : null,
         steps,
         asOf,
@@ -317,7 +387,7 @@ export async function askHistory(
     if (!uses.length) {
       // Answered in plain text: keep it, with the last table as its receipt.
       const text = responseText(response).trim();
-      if (text) return { answer: text, table: results.at(-1) ?? null, steps, asOf, records: [] };
+      if (text) return { answer: text, headline: null, followUps: [], table: results.at(-1) ?? null, steps, asOf, records: [] };
       break;
     }
 

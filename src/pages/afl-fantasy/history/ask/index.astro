@@ -1,0 +1,16 @@
+---
+/**
+ * Ask the History (AFL) — thin route wrapper for the ask screen.
+ *
+ * Shared implementation: components/shared/league-history/HistoryAskPage.
+ * The dataset is imported HERE because a static import specifier can't be a
+ * runtime variable. Reading is open like every history page; asking is gated
+ * inside (canAskLeagueHistory).
+ */
+import HistoryAskPage from '../../../../components/shared/league-history/HistoryAskPage.astro';
+import historyData from '../../../../../data/afl-fantasy/derived/league-history.json';
+
+export const prerender = false;
+---
+
+<HistoryAskPage leagueSlug="afl-fantasy" data={historyData} />

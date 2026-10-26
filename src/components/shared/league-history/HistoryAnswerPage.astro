@@ -10,7 +10,6 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
 import HistoryTabs from './HistoryTabs.astro';
 import HistoryAnswer from './HistoryAnswer.astro';
-import HistoryAsk from './HistoryAsk.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { countAnswerOpen, type SavedAnswer } from '../../../utils/league-history/ask-store';
@@ -26,8 +25,8 @@ const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
-// Another owner opening the link is what puts an answer on the History home's
-// "most shared" shelf. A Redis hiccup must not cost the page.
+// Another owner opening the link counts toward the History home's "The league
+// is asking". A Redis hiccup must not cost the page.
 await countAnswerOpen(saved, franchiseIdForLeague(getAuthUser(Astro.request), league.id)).catch(() => {});
 const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 ---
@@ -42,12 +41,15 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
       ]}
     />
     <HistoryTabs leagueSlug={league.slug} current="home" />
-    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
+    <HistoryAnswer question={saved.question} headline={saved.headline} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
     <p class="hap__meta">
       Asked {saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
       <button class="cta-link hap__share" type="button" data-hap-share>Share</button>
     </p>
-    <HistoryAsk league={league} base={base} title="Ask your own" />
+    <p class="hap__next">
+      <a class="cta cta--primary" href={`${base}/history/ask?after=${saved.id}`}>Ask a follow-up</a>
+      <a class="cta cta--ghost" href={`${base}/history/ask`}>Ask your own</a>
+    </p>
   </div>
 </TheLeagueLayout>
 
@@ -65,6 +67,12 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
   }
   .hap__share {
     margin-left: 0.5rem;
+  }
+  .hap__next {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0 0;
   }
 </style>
 

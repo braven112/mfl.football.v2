@@ -58,7 +58,7 @@ export function answerCharts(chart, base) {
   const oneLine = !bySeason && chart.population.length <= 120;
   const out = [];
   for (const [title, draw] of [
-    [`Top ${Math.min(10, chart.rows.length)} by ${chart.label}`, gapChart],
+    [`${chart.asc ? 'Lowest' : 'Top'} ${Math.min(10, chart.rows.length)} by ${chart.label}`, gapChart],
     ...(bySeason || oneLine ? [[bySeason ? 'Every result, season by season' : 'Everyone on one line', historyChart]] : []),
   ]) {
     const wide = draw(chart, WIDE_W, { href });
@@ -68,3 +68,13 @@ export function answerCharts(chart, base) {
   }
   return out;
 }
+
+/** Starter questions, on the History home and the empty ask screen. */
+export const ASK_EXAMPLES = [
+  'How does my team’s start compare to history?',
+  'Which team started 9-1 with the fewest points?',
+  'Who has the most championships?',
+  'Most points by a QB in a playoff game?',
+  'What was the best waiver pickup ever?',
+  'Who won the most lopsided trade?',
+];
