@@ -13,7 +13,8 @@ import HistoryAnswer from './HistoryAnswer.astro';
 import HistoryAsk from './HistoryAsk.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import type { SavedAnswer } from '../../../utils/league-history/ask-store';
+import { countAnswerOpen, type SavedAnswer } from '../../../utils/league-history/ask-store';
+import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -25,6 +26,9 @@ const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
 const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+// Another owner opening the link is what puts an answer on the History home's
+// "most shared" shelf. A Redis hiccup must not cost the page.
+await countAnswerOpen(saved, franchiseIdForLeague(getAuthUser(Astro.request), league.id)).catch(() => {});
 const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 ---
 
@@ -38,7 +42,7 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
       ]}
     />
     <HistoryTabs leagueSlug={league.slug} current="home" />
-    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} asOf={saved.asOf} base={base} />
+    <HistoryAnswer question={saved.question} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
     <p class="hap__meta">
       Asked {saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
       <button class="cta-link hap__share" type="button" data-hap-share>Share</button>

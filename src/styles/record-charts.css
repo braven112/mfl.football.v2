@@ -1,0 +1,138 @@
+/*
+ * Record Book charts (utils/league-history/record-charts.mjs), wherever they
+ * are drawn: the Record Book itself and Ask the History answers. The SVG is
+ * set:html / innerHTML, so its classes are styled from a global sheet.
+ *
+ * `.rb-viz__plot--phone` / `--wide` hold the two drawing widths; CSS shows one.
+ */
+.rb-viz__plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.rb-viz__plot--wide {
+  display: none;
+}
+@media (min-width: 640px) {
+  .rb-viz__plot--phone {
+    display: none;
+  }
+  .rb-viz__plot--wide {
+    display: block;
+  }
+}
+.rb-viz__take {
+  margin-top: 0.5rem;
+  font-size: var(--font-size-sm);
+}
+.rb-viz__plot text {
+  font-family: inherit;
+  font-size: var(--font-size-2xs);
+  fill: var(--content-text-muted);
+}
+.rb-viz__plot .rbc-name,
+.rb-viz__plot .rbc-val {
+  fill: var(--page-text);
+  font-size: var(--font-size-xs);
+}
+.rb-viz__plot .rbc-name {
+  font-weight: var(--font-weight-semibold);
+}
+.rb-viz__plot .rbc-val {
+  font-variant-numeric: tabular-nums;
+}
+.rb-viz__plot .rbc-big {
+  fill: var(--history-gold);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+}
+.rb-viz__plot .rbc-grid {
+  stroke: var(--content-border);
+  stroke-width: 1;
+}
+.rb-viz__plot .rbc-base {
+  stroke: var(--content-border);
+}
+.rb-viz__plot .rbc-stem {
+  stroke: color-mix(in srgb, var(--content-text-muted) 40%, transparent);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-lead {
+  fill: var(--history-gold);
+  stroke: var(--content-bg);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-top {
+  fill: var(--page-text);
+  stroke: var(--content-bg);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-dot {
+  fill: color-mix(in srgb, var(--content-text-muted) 45%, transparent);
+}
+.rb-viz__plot .rbc-bar {
+  fill: color-mix(in srgb, var(--content-text-muted) 40%, transparent);
+}
+.rb-viz__plot .rbc-bar-top {
+  fill: var(--history-gold);
+}
+.rb-viz__plot .rbc-median {
+  stroke: var(--content-text-muted);
+  stroke-dasharray: 3 3;
+}
+.rb-viz__plot .rbc-record {
+  stroke: var(--history-gold);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-cloud {
+  fill: none;
+  stroke: color-mix(in srgb, var(--content-text-muted) 45%, transparent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.rb-viz__plot .rbc-progress {
+  fill: none;
+  stroke: var(--history-gold);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+/* The viewer's own results, in their team color. */
+.rb-viz__plot .rbc-mine {
+  fill: var(--rb-mine, var(--history-gold));
+  stroke: var(--page-text);
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-name--mine {
+  fill: var(--rb-mine, var(--history-gold));
+}
+.rb-viz__plot .rbc-mine-cloud {
+  fill: none;
+  stroke: var(--rb-mine, var(--history-gold));
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.rb-viz__plot .rbc-mine-line {
+  stroke: var(--rb-mine, var(--history-gold));
+  stroke-width: 2;
+}
+.rb-viz__plot .rbc-mine-label {
+  fill: var(--page-text);
+  font-weight: var(--font-weight-semibold);
+}
+.rb-viz__plot .rbc-watch {
+  fill: none;
+  stroke: var(--page-text);
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}
+/* A whole gap-chart row is one tap target; the rect only catches the tap. */
+.rb-viz__plot .rbc-hit {
+  fill: transparent;
+}
+.rb-viz__plot a:hover .rbc-hit {
+  fill: color-mix(in srgb, var(--history-gold) 10%, transparent);
+}
+.rb-viz__plot a:focus-visible {
+  outline: 2px solid var(--history-gold);
+}

@@ -8,23 +8,29 @@
  * comes from the URL the owner is on but must match the session, never just
  * the param. Rate-limited per franchise because every question spends Sonnet
  * tokens. The answer is computed from league-history.json by our own engine
- * (utils/league-history/ask-query.mjs); see ask.ts.
+ * (utils/league-history/ask-query.mjs), player questions from
+ * league-history-players.json, and trades/drafts/pickups from
+ * league-history-moves.json; see ask.ts.
  */
 import type { APIRoute } from 'astro';
 import theleagueHistory from '../../../../data/theleague/derived/league-history.json';
 import aflHistory from '../../../../data/afl-fantasy/derived/league-history.json';
+import theleaguePlayers from '../../../../data/theleague/derived/league-history-players.json';
+import aflPlayers from '../../../../data/afl-fantasy/derived/league-history-players.json';
+import theleagueMoves from '../../../../data/theleague/derived/league-history-moves.json';
+import aflMoves from '../../../../data/afl-fantasy/derived/league-history-moves.json';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
-import { askHistory } from '../../../utils/league-history/ask';
+import { askHistory, type AskData } from '../../../utils/league-history/ask';
 import { saveAnswer } from '../../../utils/league-history/ask-store';
 
 export const prerender = false;
 
-const DATASETS: Record<string, unknown> = {
-	theleague: theleagueHistory,
-	'afl-fantasy': aflHistory,
+const DATASETS: Record<string, AskData> = {
+	theleague: { history: theleagueHistory, players: theleaguePlayers, moves: theleagueMoves },
+	'afl-fantasy': { history: aflHistory, players: aflPlayers, moves: aflMoves },
 };
 
 const RATE_LIMIT_MAX = 20;

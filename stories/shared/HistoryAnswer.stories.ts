@@ -41,10 +41,44 @@ export default {
 
 export const WithTable = {};
 
+/** A ranking answer: its Record Book board and the Record Book's own charts. */
+export const WithChartAndRecord = {
+  args: {
+    records: [{ title: 'Fewest points in a season', query: 'cat=season&board=fewest-points-season', leader: '1,402.18 · Witch City Warlocks (Rick O’Keefe) · 2008' }],
+    table: {
+      ...table,
+      chart: {
+        field: 'pf',
+        label: 'PF',
+        asc: true,
+        rows: table.rows.map((r, i) => ({
+          value: r.cells[5] as number,
+          display: (r.cells[5] as number).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+          name: r.cells[1] as string,
+          owner: r.cells[2] as string,
+          context: String(r.year),
+          year: r.year,
+          rank: i + 1,
+          franchiseId: r.franchiseId,
+          entity: { key: null },
+        })),
+        population: [
+          [1105.32, 2008, null, 'Witch City Warlocks', null],
+          [1125.98, 2019, null, 'Pacific Pigskins', null],
+          [1169, 2008, null, 'Bring The Pain', null],
+          [1201.4, 2012, null, 'Degenerates', null],
+          [1244.9, 2016, null, 'Maverick', null],
+          [1288.02, 2023, null, 'Da Dangsters', null],
+        ],
+      },
+    },
+  },
+};
+
 export const NoData = {
   args: {
     question: 'Who threw the most touchdowns in a playoff game?',
-    answer: 'The history record has team scores, not player stats, so it cannot answer that one yet.',
+    answer: 'The record has every player\'s fantasy points, not touchdowns, so it cannot answer that one.',
     table: null,
   },
 };

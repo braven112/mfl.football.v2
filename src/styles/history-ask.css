@@ -161,6 +161,62 @@
   color: inherit;
   text-decoration-color: var(--history-gold);
 }
+/* The Record Book boards an answer is about. */
+.ha-records {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .ha-records {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+.ha-record {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--page-text);
+  text-decoration: none;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--history-gold);
+  border-radius: var(--radius-md, 10px);
+}
+.ha-record:hover {
+  color: var(--page-text);
+  text-decoration: none;
+  border-color: var(--history-gold);
+}
+.ha-record__kicker {
+  color: var(--history-gold);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ha-record__title {
+  font-weight: var(--font-weight-semibold);
+}
+.ha-record__leader {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.ha-chart {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 10px);
+}
+.ha-chart__title {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
 .ha-receipt {
   margin: 0.625rem 0 0;
   color: var(--content-text-muted);
@@ -213,4 +269,59 @@
     font-size: var(--font-size-xs);
     text-align: left;
   }
+}
+
+/* The answers the league opened most (History home). */
+.ha-shelf {
+  margin-top: 1rem;
+}
+.ha-shelf__title {
+  margin: 0 0 0.5rem;
+  color: var(--history-gold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ha-shelf__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .ha-shelf__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ha-shelf__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  height: 100%;
+  padding: 0.75rem;
+  color: var(--page-text);
+  text-decoration: none;
+}
+.ha-shelf__card:hover {
+  color: var(--page-text);
+  text-decoration: none;
+  border-color: var(--history-gold);
+}
+.ha-shelf__q {
+  font-weight: var(--font-weight-semibold);
+}
+.ha-shelf__a {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.ha-shelf__meta {
+  margin-top: auto;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-2xs);
 }

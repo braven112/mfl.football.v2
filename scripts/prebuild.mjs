@@ -133,11 +133,16 @@ const PARALLEL = [
   // owner tenures to credit each season to its owner. One command per league
   // with the page (league-jobs `league-history`).
   {
-    name: 'compute:owner-tenures → division-strength → league-history',
+    name: 'compute:owner-tenures → division-strength → league-history → league-history-players → league-history-moves',
     cmd: [
       'pnpm run compute:owner-tenures',
       'pnpm run compute:division-strength',
       ...leaguesFor('league-history').map((l) => `pnpm run compute:league-history --league=${l.slug}`),
+      // Ask the History's player questions: reads league-history.json to know
+      // which weeks are final, so it runs after it.
+      ...leaguesFor('league-history').map((l) => `pnpm run compute:league-history-players --league=${l.slug}`),
+      // ...and its trade/draft/pickup questions, gated on the same seasons.
+      ...leaguesFor('league-history').map((l) => `pnpm run compute:league-history-moves --league=${l.slug}`),
     ].join(' && '),
     previewSkip: true,
   },

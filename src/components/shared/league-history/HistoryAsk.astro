@@ -10,10 +10,12 @@
  * HistoryAnswer.astro, which renders the same answer on its shared page.
  */
 import '../../../styles/history-ask.css';
+import '../../../styles/record-charts.css';
 import type { LeagueDefinition } from '../../../config/leagues';
 import { getAuthUser } from '../../../utils/auth';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
+import type { PopularAnswer } from '../../../utils/league-history/ask-store';
 
 interface Props {
   league: LeagueDefinition;
@@ -21,24 +23,27 @@ interface Props {
   base: string;
   /** Heading level context: the home page titles the section, the answer page does not. */
   title?: string;
+  /** The answers the most owners opened (ask-store popularAnswers), shown as a shelf. */
+  popular?: PopularAnswer[];
 }
 
-const { league, base, title = 'Ask the history' } = Astro.props as Props;
+const { league, base, title = 'Ask the history', popular = [] } = Astro.props as Props;
 const canAsk = canAskLeagueHistory(getAuthUser(Astro.request), league.id);
 
 const EXAMPLES = [
   'Which team started 9-1 with the fewest points?',
   'Who has the most championships?',
-  'What is the highest score ever in a playoff game?',
+  'Most points by a QB in a playoff game?',
+  'What was the best waiver pickup ever?',
+  'Who won the most lopsided trade?',
   'Has a team ever started 8-2 and missed the playoffs?',
-  'Which owner has the best regular-season win percentage?',
 ];
 ---
 
 <section class="ha" data-ha-box data-league={league.slug} data-base={base} aria-labelledby="ha-title">
   <p class="ha__kicker">Stats lookup</p>
   <h2 class="ha__title" id="ha-title">{title}</h2>
-  <p class="ha__lede">Ask anything about the league's games, records and seasons. The answer is counted from every game on record, with the rows to prove it.</p>
+  <p class="ha__lede">Ask anything about the league's games, seasons, players, trades and drafts. The answer is counted from every game on record, with the rows to prove it.</p>
 
   {canAsk ? (
     <form class="ha__form" data-ha-form>
@@ -70,18 +75,33 @@ const EXAMPLES = [
 
   <p class="ha__status" data-ha-status role="status" aria-live="polite"></p>
   <div data-ha-result></div>
+
+  {popular.length > 0 && (
+    <div class="ha-shelf">
+      <p class="ha-shelf__title">Most shared</p>
+      <ul class="ha-shelf__list">
+        {popular.map(({ answer, opens }) => (
+          <li>
+            <a class="ui-card ha-shelf__card" href={`${base}/history/ask/${answer.id}`}>
+              <span class="ha-shelf__q">{answer.question}</span>
+              <span class="ha-shelf__a">{answer.answer}</span>
+              <span class="ha-shelf__meta">
+                Opened by {opens} {opens === 1 ? 'owner' : 'owners'}
+                {answer.askedBy.name ? ` · asked by ${answer.askedBy.name}` : ''}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
 </section>
 
 <script>
-  import { cellHref, formatCell, isNumericColumn } from '../../../utils/league-history/ask-format.mjs';
+  import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
+  import type { AskRecordLink, AskTable } from '../../../utils/league-history/ask';
 
-  type Table = {
-    description: string;
-    total: number;
-    columns: Array<{ key: string; label: string }>;
-    rows: Array<{ cells: Array<string | number | boolean | null>; franchiseId: string | null; ownerSlug: string | null; year: number | null }>;
-  };
-  type Answer = { id: string | null; question: string; answer: string; table: Table | null; asOf?: string; error?: string };
+  type Answer = { id: string | null; question: string; answer: string; table: AskTable | null; asOf?: string; records?: AskRecordLink[]; error?: string };
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const node = document.createElement(tag);
@@ -93,6 +113,30 @@ const EXAMPLES = [
   function renderAnswer(data: Answer, base: string): HTMLElement {
     const article = el('article', 'ha-answer');
     article.append(el('p', 'ha-answer__q', data.question), el('p', 'ha-answer__a', data.answer));
+    if (data.records?.length) {
+      const list = el('ul', 'ha-records');
+      list.setAttribute('aria-label', 'In the Record Book');
+      for (const rec of data.records) {
+        const a = el('a', 'ha-record');
+        a.href = recordHref(base, rec.query);
+        a.append(el('span', 'ha-record__kicker', 'Record Book'), el('span', 'ha-record__title', rec.title));
+        if (rec.leader) a.append(el('span', 'ha-record__leader', rec.leader));
+        const li = el('li');
+        li.append(a);
+        list.append(li);
+      }
+      article.append(list);
+    }
+    // The chart SVG is built by record-charts.mjs, which escapes every name.
+    for (const c of answerCharts(data.table?.chart, base)) {
+      const fig = el('figure', 'ha-chart');
+      const phone = el('div', 'rb-viz__plot rb-viz__plot--phone');
+      phone.innerHTML = c.phone;
+      const wide = el('div', 'rb-viz__plot rb-viz__plot--wide');
+      wide.innerHTML = c.wide;
+      fig.append(el('p', 'ha-chart__title', c.title), phone, wide, el('figcaption', 'rb-viz__take', c.take));
+      article.append(fig);
+    }
     const table = data.table;
     if (table && table.rows.length) {
       const numeric = table.columns.map((_, i) => isNumericColumn(table, i));

@@ -25,8 +25,11 @@
  */
 
 import { indexDataset } from './records.mjs';
+import { PLAYER_DEFAULT_COLUMNS, PLAYER_FIELDS, PLAYER_UNITS, preparePlayers } from './ask-players.mjs';
+import { MOVE_DEFAULT_COLUMNS, MOVE_FIELDS, MOVE_UNITS, prepareMoves } from './ask-moves.mjs';
 
-export const UNITS = ['seasons', 'games', 'owners'];
+export const TEAM_UNITS = ['seasons', 'games', 'owners'];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -101,6 +104,8 @@ export const FIELDS = {
     lastYear: { type: 'number', label: 'Last' },
     active: { type: 'boolean', label: 'Active', desc: 'owns a team in the latest season' },
   },
+  ...PLAYER_FIELDS,
+  ...MOVE_FIELDS,
 };
 
 const OPS = {
@@ -177,6 +182,12 @@ export function querySchema() {
         items: { type: 'string', enum: allFields },
         description: 'Numeric fields to summarize (min, max, avg, sum) over every matching row.',
       },
+      chart: {
+        type: 'string',
+        enum: allFields,
+        description:
+          'A numeric field to chart for the answer: the top ten on one scale, and every matching row season by season with how the record grew. Set it on the query you will show when the answer is a ranking or a record.',
+      },
     },
     required: ['unit'],
   };
@@ -186,6 +197,8 @@ const DEFAULT_COLUMNS = {
   seasons: ['year', 'team', 'owner', 'w', 'l', 'pf', 'finish'],
   games: ['year', 'week', 'team', 'score', 'opponent', 'oppScore', 'result'],
   owners: ['owner', 'seasons', 'w', 'l', 'titles', 'playoffApps'],
+  ...PLAYER_DEFAULT_COLUMNS,
+  ...MOVE_DEFAULT_COLUMNS,
 };
 
 /**
@@ -394,7 +407,13 @@ export function normalizeQuery(q) {
     ? { from: Number.isFinite(q.years.from) ? q.years.from : null, to: Number.isFinite(q.years.to) ? q.years.to : null }
     : null;
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number.isInteger(q.limit) ? q.limit : 10));
-  return { unit, throughGames, years, where, sort, limit, columns, summarize };
+  let chart = null;
+  if (q.chart != null && q.chart !== '') {
+    check(q.chart, 'chart');
+    if (fields[q.chart].type !== 'number') throw new QueryError(`chart: ${q.chart} is not a number`);
+    chart = q.chart;
+  }
+  return { unit, throughGames, years, where, sort, limit, columns, summarize, chart };
 }
 
 /**
@@ -405,19 +424,40 @@ export function normalizeQuery(q) {
 /**
  * @typedef {{ cells: Array<string | number | boolean | null>, franchiseId: string | null, ownerSlug: string | null, year: number | null }} AnswerRow
  * @typedef {{ min: number, max: number, avg: number, sum: number }} FieldSummary
- * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null> }} QueryResult
+ * @typedef {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> }} ChartBoard
+ * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
+ * @param {{ players?: any, moves?: any }} [extra] league-history-players.json (player units) and league-history-moves.json (trades, pickups, drafts, auctions)
  * @returns {QueryResult}
  */
-export function runQuery(ds, rawQuery) {
+export function runQuery(ds, rawQuery, extra = {}) {
   const q = normalizeQuery(rawQuery);
   const p = prepare(ds);
+  const isPlayer = PLAYER_UNITS.includes(q.unit);
+  const isMove = MOVE_UNITS.includes(q.unit);
+  if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
+  if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
+  const pp = (isPlayer || isMove) && extra.players ? preparePlayers(p, extra.players) : null;
+  const pm = isMove ? prepareMoves(p, pp, extra.moves) : null;
   let rows =
-    q.unit === 'seasons' ? seasonRows(p, q.throughGames) : q.unit === 'owners' ? ownerRows(p, q.years) : p.gameRows;
-  if (q.unit !== 'owners') rows = rows.filter((r) => inYears(r.year, q.years));
+    q.unit === 'seasons'
+      ? seasonRows(p, q.throughGames)
+      : q.unit === 'owners'
+        ? ownerRows(p, q.years)
+        : q.unit === 'games'
+          ? p.gameRows
+          : isMove
+            ? pm[q.unit]
+            : pp[q.unit];
+  if (q.unit !== 'owners' && q.unit !== 'playerCareers') rows = rows.filter((r) => inYears(r.year, q.years));
+  const filtersOn = (f) => q.where.some((c) => c.field === f);
   // Consolation games count nowhere unless asked for by name (records.mjs).
-  if (q.unit === 'games' && !q.where.some((c) => c.field === 'kind')) rows = rows.filter((r) => r.kind !== 'consolation');
+  if (q.unit === 'games' && !filtersOn('kind')) rows = rows.filter((r) => r.kind !== 'consolation');
+  // A player-week counts like the team's week: no consolation, no dead weeks,
+  // and only what he scored in the lineup, unless the question says otherwise.
+  if (q.unit === 'playerWeeks' && !filtersOn('kind')) rows = rows.filter((r) => r.kind === 'regular' || r.kind === 'playoffs');
+  if (q.unit === 'playerWeeks' && !filtersOn('started')) rows = rows.filter((r) => r.started);
   // A cut window ("first 10 games") only makes sense for a team that played
   // that many; a team 6 games into this season has not "started 9-1" or not.
   if (q.unit === 'seasons' && q.throughGames) rows = rows.filter((r) => r.games >= q.throughGames);
@@ -452,6 +492,79 @@ export function runQuery(ds, rawQuery) {
       year: r.year ?? null,
     })),
     summary,
+    chart: q.chart ? chartBoard(q, rows) : null,
+  };
+}
+
+const CHART_TOP = 10;
+const CHART_POPULATION = 1500;
+
+/**
+ * The matching rows as a Record Book board (records.mjs), so record-charts.mjs
+ * draws an answer exactly the way it draws a record: `rows` is the top ten by
+ * the charted field (ranked, ties sharing a rank), `population` every matching
+ * row as `[value, year, week, name, null]`. A big population (every player
+ * week) is thinned to CHART_POPULATION, always keeping the top ten and every
+ * row that set a new best on its way to the record, so the progression line
+ * stays exact.
+ * @returns {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> } | null}
+ */
+function chartBoard(q, rows) {
+  const field = q.chart;
+  const asc = q.sort[0]?.field === field ? q.sort[0].dir === 'asc' : false;
+  const valued = rows.filter((r) => Number.isFinite(r[field]));
+  if (valued.length < 2) return null;
+  const ranked = valued.slice().sort((a, b) => (asc ? a[field] - b[field] : b[field] - a[field]));
+  const integers = valued.every((r) => Number.isInteger(r[field]));
+  const display = (v) =>
+    field === 'winPct'
+      ? v.toFixed(3).replace(/^0(?=\.)/, '')
+      : v.toLocaleString('en-US', { minimumFractionDigits: integers ? 0 : 2, maximumFractionDigits: integers ? 0 : 2 });
+  const nameOf = (r) => r.player ?? r.team ?? r.owner ?? '';
+  const ownerOf = (r) => (r.player ? r.team ?? r.lastTeam ?? null : r.team && r.owner ? r.owner : null);
+  const contextOf = (r) => [r.year, r.week != null ? `Week ${r.week}` : null].filter((x) => x != null).join(' ');
+
+  const top = [];
+  ranked.slice(0, CHART_TOP).forEach((r, i) => {
+    const prev = top[i - 1];
+    top.push({
+      value: r[field],
+      display: display(r[field]),
+      name: nameOf(r),
+      owner: ownerOf(r),
+      context: contextOf(r),
+      year: r.year ?? null,
+      rank: prev && prev.value === r[field] ? prev.rank : i + 1,
+      franchiseId: r._franchiseId ?? null,
+      entity: { key: null },
+    });
+  });
+
+  let keep = valued;
+  if (valued.length > CHART_POPULATION) {
+    const must = new Set(ranked.slice(0, CHART_TOP));
+    const better = (a, b) => (asc ? a < b : a > b);
+    let best = null;
+    const chrono = valued.slice().sort((a, b) => (a.year ?? 0) - (b.year ?? 0) || (a.week ?? 0) - (b.week ?? 0));
+    for (const r of chrono) {
+      if (best === null || better(r[field], best)) {
+        best = r[field];
+        must.add(r);
+      }
+    }
+    const stride = valued.length / Math.max(1, CHART_POPULATION - must.size);
+    keep = [...must];
+    for (let i = 0; i < valued.length; i += stride) {
+      const r = valued[Math.floor(i)];
+      if (!must.has(r)) keep.push(r);
+    }
+  }
+  return {
+    field,
+    label: FIELDS[q.unit][field].label,
+    asc,
+    rows: top,
+    population: keep.map((r) => [r[field], r.year ?? null, r.week ?? null, nameOf(r), null]),
   };
 }
 
@@ -463,7 +576,18 @@ const cmp = (a, b) => {
   return String(a).localeCompare(String(b));
 };
 
-const UNIT_WORDS = { seasons: 'team-seasons', games: 'team-games', owners: 'owners' };
+const UNIT_WORDS = {
+  seasons: 'team-seasons',
+  games: 'team-games',
+  owners: 'owners',
+  playerWeeks: 'player-weeks',
+  playerSeasons: 'player-seasons (regular season, by team)',
+  playerCareers: 'player careers (regular season and playoffs, as a starter)',
+  trades: 'trades (one row per side)',
+  pickups: 'waiver and free-agent pickups',
+  draftPicks: 'draft picks',
+  auctions: 'auction wins',
+};
 
 /** "Team-seasons, first 10 regular-season games, where W = 9 and L = 1, sorted by PF (lowest first)". */
 export function describeQuery(q) {
@@ -483,7 +607,9 @@ export function describeQuery(q) {
           .join(' and '),
     );
   }
-  if (q.unit === 'games' && !q.where.some((c) => c.field === 'kind')) parts.push('regular season and playoffs (consolation games excluded)');
+  const filtersOn = (f) => q.where.some((c) => c.field === f);
+  if ((q.unit === 'games' || q.unit === 'playerWeeks') && !filtersOn('kind')) parts.push('regular season and playoffs (consolation games excluded)');
+  if (q.unit === 'playerWeeks' && !filtersOn('started')) parts.push('starters only');
   if (q.sort.length) {
     parts.push(
       'sorted by ' + q.sort.map((s) => `${fields[s.field].label} (${s.dir === 'asc' ? 'lowest' : 'highest'} first)`).join(', then '),

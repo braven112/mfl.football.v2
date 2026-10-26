@@ -6,8 +6,9 @@
  * markup client-side (history-ask.css styles both).
  */
 import '../../../styles/history-ask.css';
-import type { AskTable } from '../../../utils/league-history/ask';
-import { cellHref, formatCell, isNumericColumn } from '../../../utils/league-history/ask-format.mjs';
+import '../../../styles/record-charts.css';
+import type { AskRecordLink, AskTable } from '../../../utils/league-history/ask';
+import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
 
 interface Props {
   question: string;
@@ -15,17 +16,41 @@ interface Props {
   table: AskTable | null;
   /** How far the record went when this was asked ('' or missing once every season is complete). */
   asOf?: string;
+  /** Record Book boards the answer points to (missing on older answers). */
+  records?: AskRecordLink[];
   /** The league's path prefix ('/theleague', or '' on its own domain). */
   base: string;
 }
 
-const { question, answer, table, asOf, base } = Astro.props as Props;
+const { question, answer, table, asOf, records = [], base } = Astro.props as Props;
 const numeric = table ? table.columns.map((_, i) => isNumericColumn(table, i)) : [];
+const charts = answerCharts(table?.chart, base);
 ---
 
 <article class="ha-answer">
   <p class="ha-answer__q">{question}</p>
   <p class="ha-answer__a">{answer}</p>
+  {records.length > 0 && (
+    <ul class="ha-records" aria-label="In the Record Book">
+      {records.map((rec) => (
+        <li>
+          <a class="ha-record" href={recordHref(base, rec.query)}>
+            <span class="ha-record__kicker">Record Book</span>
+            <span class="ha-record__title">{rec.title}</span>
+            {rec.leader && <span class="ha-record__leader">{rec.leader}</span>}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+  {charts.map((c) => (
+    <figure class="ha-chart">
+      <p class="ha-chart__title">{c.title}</p>
+      <div class="rb-viz__plot rb-viz__plot--phone" set:html={c.phone} />
+      <div class="rb-viz__plot rb-viz__plot--wide" set:html={c.wide} />
+      <figcaption class="rb-viz__take">{c.take}</figcaption>
+    </figure>
+  ))}
   {table && table.rows.length > 0 && (
     <div class="ha-table-wrap">
       <table class="ui-table ha-table">
