@@ -137,6 +137,12 @@ const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
 const authUser = getMflLiveUser(Astro.request);
 
+// Inside the MFL Live Google TV app (android-tv/ appends `MFLLiveTV/<version>`
+// to the WebView's user agent), signing in means the phone QR on `/tv`, never
+// MyFantasyLeague's password form typed with a remote. The QR mints a
+// watch-only TV pass, not a session (broadcast-tv-pairing.ts says why).
+const inTvApp = /\bMFLLiveTV\//.test(Astro.request.headers.get('user-agent') ?? '');
+
 // The menu's "League sites" section names ONLY the signed-in owner's own
 // league (owner's call, Oct 2026, as MFL Live opened to Archie's members): a
 // list of every league this project runs showed each league's owners the
@@ -150,7 +156,10 @@ const authUser = getMflLiveUser(Astro.request);
 // instead — the site its owners already use — until the owner decides to
 // point them at its pages here. A best-ball session is never an MFL Live
 // session (getMflLiveUser), so no draft-only league can reach this list.
-const sessionLeague = authUser ? getLeagueById(authUser.leagueId) : null;
+// Never inside the TV app (Brandon, Oct 2026: keep the TV on the board). A
+// league site needs a real session, which the TV's QR pass deliberately is
+// not, so a link there only ends at a password form typed with a remote.
+const sessionLeague = authUser && !inTvApp ? getLeagueById(authUser.leagueId) : null;
 const leagueLinks: { name: string; href: string }[] = sessionLeague
 	? [
 			{
@@ -239,7 +248,8 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 					leagueLinks={leagueLinks}
 					ownerName={authUser?.name ?? null}
 					signedIn={Boolean(authUser)}
-					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
+					signInHref={inTvApp ? '/tv' : mflLoginUrl(Astro.url.pathname + Astro.url.search)}
+					tvApp={inTvApp}
 					currentPath={Astro.url.pathname}
 					showAnalytics={canViewSiteInsights(authUser)}
 					showProducts={canViewProductPages(authUser)}

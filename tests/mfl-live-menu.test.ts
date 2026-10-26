@@ -191,6 +191,23 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(page).toContain('pairedTvOwner={pairedTv ? (viewer?.user.name ?? null) : null}');
   });
 
+  it('sends sign-in inside the Google TV app to the phone QR, not a password form', () => {
+    // Brandon, Oct 2026: on a Shield the menu's sign-in opened MyFantasyLeague's
+    // password form, to be typed with a remote. The TV app tags its WebView's
+    // user agent `MFLLiveTV/<version>` (android-tv MainActivity), so the shell
+    // can send it to `/tv`, whose QR pairs the TV from a phone instead.
+    const layout = read(LAYOUT);
+    expect(read('android-tv/app/src/main/java/football/mfl/live/MainActivity.java')).toContain('" MFLLiveTV/"');
+    expect(layout).toContain("const inTvApp = /\\bMFLLiveTV\\//.test(Astro.request.headers.get('user-agent') ?? '');");
+    expect(layout).toContain("signInHref={inTvApp ? '/tv' : mflLoginUrl(");
+    expect(layout).toContain('tvApp={inTvApp}');
+    // …and the TV app is never sent off to a league site, which needs a real
+    // session the TV's watch-only pass is not.
+    expect(layout).toContain('const sessionLeague = authUser && !inTvApp ? getLeagueById(authUser.leagueId) : null;');
+    const menu = read(MENU);
+    expect(menu).toContain("{tvApp ? 'Sign in with your phone' : 'Sign in with MyFantasyLeague'}");
+  });
+
   it('gives a paired TV the landing, and a bare board if it falls back to one', () => {
     // Owner's call (Oct 2026): a TV opens the landing, preview focused for OK.
     const page = read('src/pages/live/broadcast/index.astro');
