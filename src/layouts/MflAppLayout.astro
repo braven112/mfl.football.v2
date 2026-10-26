@@ -137,6 +137,12 @@ const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
 const authUser = getMflLiveUser(Astro.request);
 
+// Inside the MFL Live Google TV app (android-tv/ appends `MFLLiveTV/<version>`
+// to the WebView's user agent), signing in means the phone QR on `/tv`, never
+// MyFantasyLeague's password form typed with a remote. The QR mints a
+// watch-only TV pass, not a session (broadcast-tv-pairing.ts says why).
+const inTvApp = /\bMFLLiveTV\//.test(Astro.request.headers.get('user-agent') ?? '');
+
 // The menu's "League sites" section names ONLY the signed-in owner's own
 // league (owner's call, Oct 2026, as MFL Live opened to Archie's members): a
 // list of every league this project runs showed each league's owners the
@@ -239,7 +245,8 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 					leagueLinks={leagueLinks}
 					ownerName={authUser?.name ?? null}
 					signedIn={Boolean(authUser)}
-					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
+					signInHref={inTvApp ? '/tv' : mflLoginUrl(Astro.url.pathname + Astro.url.search)}
+					tvApp={inTvApp}
 					currentPath={Astro.url.pathname}
 					showAnalytics={canViewSiteInsights(authUser)}
 					showProducts={canViewProductPages(authUser)}

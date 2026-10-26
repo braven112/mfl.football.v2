@@ -62,6 +62,11 @@ export interface Props {
 	 * Live standings, both read-only) and says whose it is.
 	 */
 	pairedTvOwner?: string | null;
+	/**
+	 * Viewing inside the MFL Live Google TV app. Sign-in then goes to the phone
+	 * QR on `/tv` (the layout points `signInHref` there) and says so.
+	 */
+	tvApp?: boolean;
 }
 
 const {
@@ -73,6 +78,7 @@ const {
 	showAnalytics = false,
 	showProducts = false,
 	pairedTvOwner = null,
+	tvApp = false,
 } = Astro.props as Props;
 const pairedTv = !signedIn && Boolean(pairedTvOwner);
 
@@ -237,7 +243,7 @@ const showSignIn = !signedIn && !pairedTv && !isCurrent(signInHref.split('?')[0]
 				<span class="mfl-menu__owner">Paired TV · {pairedTvOwner}&rsquo;s broadcast</span>
 			</div>
 		) : showSignIn ? (
-			<a class="mfl-menu__signin" href={signInHref}>Sign in with MyFantasyLeague</a>
+			<a class="mfl-menu__signin" href={signInHref}>{tvApp ? 'Sign in with your phone' : 'Sign in with MyFantasyLeague'}</a>
 		) : null}
 	</div>
 </div>
