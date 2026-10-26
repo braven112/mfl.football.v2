@@ -26,5 +26,8 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true
-  }
+  },
+  // The MFL Live mobile app is a separate React Native project with its own
+  // install and tsconfig; the site's type check must not read it.
+  "exclude": ["apps/mobile", "node_modules", "dist"]
 }

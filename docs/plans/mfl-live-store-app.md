@@ -85,6 +85,17 @@ once subscriptions cover it. Sources:
 [SportsData.io review](https://sportsapis.dev/apis/sportsdata-io),
 [Sportradar review](https://sportsapis.dev/apis/sportradar).
 
+## The app's install (2026-10-26)
+
+`apps/mobile` is excluded from the root pnpm workspace (`'!apps/mobile'`) and
+is its own pnpm workspace with its own lockfile, so React Native never enters
+the website's install on Vercel or in CI. It still REUSES the shared packages,
+through `import type` only (tsconfig `paths`), which is erased at build time.
+The wire contract is `packages/shared-types/src/mfl-live-app.ts`; the site's
+`MflLiveBoard` must stay assignable to it, which
+`src/types/mfl-live-app-contract.ts` asserts under `pnpm test:types`. A future
+need for shared RUNTIME code is the point to revisit this.
+
 ## Roadmap
 
 1. **V1 — live.** Live scoring, live standings, league logos, owner-set logos

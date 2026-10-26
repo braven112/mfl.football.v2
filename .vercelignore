@@ -27,3 +27,6 @@ tmp/
 # Local env files (should already be ignored)
 .env.local
 .env.*.local
+
+# The MFL Live mobile app builds on Expo EAS, never on Vercel
+apps/mobile/
