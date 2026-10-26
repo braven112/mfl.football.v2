@@ -1,6 +1,10 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  # The MFL Live mobile app installs on its own (apps/mobile/pnpm-lock.yaml),
+  # so React Native never enters the website's install on Vercel or in CI.
+  # It reuses @mfl/shared-types through type-only imports (see its tsconfig).
+  - '!apps/mobile'
 
 onlyBuiltDependencies:
   - workerd
