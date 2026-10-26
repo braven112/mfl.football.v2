@@ -1,2 +1,7 @@
 packages:
   - '.'
+
+# EAS Build's pnpm refuses any lockfile entry published less than a day before
+# the build (ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION), so resolve under the same
+# rule here: a lockfile made the morning a dependency shipped then still builds.
+minimumReleaseAge: 1440
