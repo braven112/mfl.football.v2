@@ -62,16 +62,16 @@ public class OverlayService extends Service {
     private static final String MODE_BAR = "bar";
     private static final String MODE_PANEL = "panel";
 
+    private WindowManager windowManager;
+    private KeyFrame root;
+    private WebView webView;
+    private String mode = MODE_BAR;
+
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable idleToBar = () -> setMode(MODE_BAR);
     private final Runnable retry = () -> {
         if (webView != null) webView.reload();
     };
-
-    private WindowManager windowManager;
-    private KeyFrame root;
-    private WebView webView;
-    private String mode = MODE_BAR;
 
     private final BroadcastReceiver screenOff = new BroadcastReceiver() {
         @Override
