@@ -20,6 +20,7 @@ import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-boa
 import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { getTvSettings } from '../../../utils/mfl-live-tv-settings';
 import '../../../styles/broadcast-overlay.css';
 
 export const prerender = false;
@@ -35,6 +36,8 @@ const week =
     : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
 
 let pageData: string | null = null;
+// The owner's own answer from /live/settings; a paired TV's pass is that owner.
+const tvSettings = await getTvSettings(viewer?.user);
 if (viewer) {
   try {
     const board = await assembleBroadcastBoard({
@@ -64,6 +67,12 @@ Astro.response.headers.set('Cache-Control', 'no-store');
     <title>Score overlay — MFL Live</title>
   </head>
   <body class="bov-doc">
-    <BroadcastOverlay client:load pageData={pageData} signedIn={Boolean(viewer)} mode={Astro.url.searchParams.get('mode')} />
+    <BroadcastOverlay
+      client:load
+      pageData={pageData}
+      signedIn={Boolean(viewer)}
+      mode={Astro.url.searchParams.get('mode')}
+      sundayTicket={tvSettings.sundayTicket}
+    />
   </body>
 </html>

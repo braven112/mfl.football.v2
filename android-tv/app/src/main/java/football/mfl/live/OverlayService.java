@@ -2,6 +2,8 @@ package football.mfl.live;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.SearchManager;
+import android.content.ActivityNotFoundException;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -40,10 +42,12 @@ import android.widget.FrameLayout;
  *
  *  - BAR: a thin strip across the top. It never takes the remote, so the app
  *    underneath (YouTube TV) keeps every key.
- *  - PANEL: a column down the left with one game and both lineups. It takes
- *    the remote while it is up: Left/Right step through games, Back drops to
- *    the bar, Down hides the overlay. With no key for {@link #PANEL_IDLE_MS}
- *    it drops to the bar on its own, so the remote is never stuck here.
+ *  - PANEL: a column down the left with one game, both lineups and the NFL
+ *    games the owner's starters are in. It takes the remote while it is up:
+ *    Left/Right step through games, Up/Down pick a game to watch and OK opens
+ *    it (the list's last row hides the overlay), Back drops to the bar. With
+ *    no key for {@link #PANEL_IDLE_MS} it drops to the bar on its own, so the
+ *    remote is never stuck here.
  *
  * Any other key while the panel is up also drops to the bar, so the next
  * press reaches the game. The overlay stops when the TV's screen goes off.
@@ -58,6 +62,9 @@ public class OverlayService extends Service {
     private static final long PANEL_IDLE_MS = 30_000;
     private static final long RETRY_MS = 60_000;
     private static final String UA_SUFFIX = " MFLLiveTV/" + BuildConfig.VERSION_NAME;
+
+    /** YouTube TV's Android TV package (not plain YouTube, which is com.google.android.youtube.tv). */
+    private static final String YOUTUBE_TV = "com.google.android.youtube.tvunplugged";
 
     private static final String MODE_BAR = "bar";
     private static final String MODE_PANEL = "panel";
@@ -214,9 +221,39 @@ public class OverlayService extends Service {
     }
 
     private void stepPage(int delta) {
+        callPage("step(" + delta + ")");
+    }
+
+    private void callPage(String call) {
         if (webView == null) return;
-        webView.evaluateJavascript(
-                "window.__mflOverlay && window.__mflOverlay.step(" + delta + ")", null);
+        webView.evaluateJavascript("window.__mflOverlay && window.__mflOverlay." + call, null);
+    }
+
+    /**
+     * Open an NFL game on the TV. Google does not publish a link straight to a
+     * game in YouTube TV, so this asks the TV's own search for it ("Seattle
+     * Seahawks vs San Francisco 49ers"), whose result offers the game in the
+     * owner's apps, YouTube TV and Sunday Ticket included. A TV without that
+     * search gets YouTube TV opened instead. The overlay drops to the bar
+     * either way, so the remote goes to what just opened.
+     */
+    private void openGame(String query) {
+        setMode(MODE_BAR);
+        Intent search = new Intent("android.search.action.GLOBAL_SEARCH")
+                .putExtra(SearchManager.QUERY, query);
+        if (launch(search)) return;
+        Intent app = getPackageManager().getLeanbackLaunchIntentForPackage(YOUTUBE_TV);
+        if (app == null) app = getPackageManager().getLaunchIntentForPackage(YOUTUBE_TV);
+        if (app != null) launch(app);
+    }
+
+    private boolean launch(Intent intent) {
+        try {
+            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return true;
+        } catch (ActivityNotFoundException | SecurityException e) {
+            return false;
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -275,8 +312,16 @@ public class OverlayService extends Service {
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                     stepPage(1);
                     return true;
+                case KeyEvent.KEYCODE_DPAD_UP:
+                    callPage("move(-1)");
+                    return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
-                    stopSelf();
+                    callPage("move(1)");
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                case KeyEvent.KEYCODE_ENTER:
+                case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                    callPage("select()");
                     return true;
                 default:
                     // Back, and anything meant for the game: hand the remote back.
@@ -286,11 +331,27 @@ public class OverlayService extends Service {
         }
     }
 
-    /** What the page may ask of the app. Read-only: the current view. */
+    /**
+     * What the page may ask of the app: the current view, to open a game, to
+     * close. Only our own page is ever loaded here ({@link OverlayClient}).
+     * Calls arrive on a WebView thread, so the work is posted to the main one.
+     */
     private final class Host {
         @JavascriptInterface
         public String mode() {
             return mode;
+        }
+
+        @JavascriptInterface
+        public void watch(String query) {
+            if (query == null || query.trim().isEmpty()) return;
+            String q = query.trim();
+            handler.post(() -> openGame(q.length() > 120 ? q.substring(0, 120) : q));
+        }
+
+        @JavascriptInterface
+        public void hide() {
+            handler.post(OverlayService.this::stopSelf);
         }
     }
 
