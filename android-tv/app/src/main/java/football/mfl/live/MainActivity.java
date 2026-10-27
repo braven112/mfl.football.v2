@@ -25,7 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * MFL Live for Google TV: the web broadcast board, full screen, nothing else.
+ * MFL Football for Google TV: the web broadcast board, full screen, nothing else.
  *
  * The board is the product; this app only supplies what a browser tab on a TV
  * can't: a home-screen tile, a screen that never sleeps mid-game, a session
