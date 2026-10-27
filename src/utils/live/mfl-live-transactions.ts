@@ -31,6 +31,7 @@ import { buildMflExportUrl } from '../mfl-url';
 import { formatMflName } from '../player-name-matching';
 import { getRedis } from '../redis-client';
 import { readLeagueFranchiseNames } from '../broadcast-live-source';
+import { appJson } from './owner-league';
 import {
   extractTransactionRows,
   normalizeTransactions,
@@ -363,13 +364,7 @@ export async function transactionsResponse(
   try {
     snapshot = await read(league, mflUserCookie);
   } catch {
-    return new Response(JSON.stringify({ ok: false, message: 'MFL did not answer. Pull down to try again.' }), {
-      status: 502,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
+    return appJson({ ok: false, message: 'MFL did not answer. Pull down to try again.' }, 502);
   }
-  return new Response(JSON.stringify(buildTransactionsFeed(league, snapshot, parseFeedQuery(params))), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
+  return appJson(buildTransactionsFeed(league, snapshot, parseFeedQuery(params)));
 }

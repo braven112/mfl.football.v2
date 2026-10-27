@@ -182,7 +182,7 @@ describe('reading and failing', () => {
       throw new Error('MFL down');
     });
     expect(res.status).toBe(502);
-    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('Cache-Control')).toContain('no-store');
   });
 
   it('reads with the owner cookie it was given', async () => {

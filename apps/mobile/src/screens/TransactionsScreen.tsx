@@ -186,7 +186,7 @@ export function TransactionsScreen({ route }: Props) {
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator color={t.accent} style={styles.spinner} />
-          ) : error ? null : (
+          ) : error ? undefined : (
             <Text style={[styles.empty, { color: t.muted }]}>
               {filter === 'all'
                 ? `No moves in ${feed?.leagueName ?? 'this league'} yet this ${feed?.year ?? ''} season.`
@@ -194,7 +194,7 @@ export function TransactionsScreen({ route }: Props) {
             </Text>
           )
         }
-        ListFooterComponent={loadingMore ? <ActivityIndicator color={t.accent} style={styles.spinner} /> : null}
+        ListFooterComponent={loadingMore ? <ActivityIndicator color={t.accent} style={styles.spinner} /> : undefined}
       />
     </View>
   );
