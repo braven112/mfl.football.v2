@@ -28,6 +28,6 @@ describe('themePath', () => {
   });
 
   it('keeps the prefix on a shared host', () => {
-    expect(themePath('archies', 'light', new URL('https://v2.mfl.football/archies/theme'), false)).toBe('/archies/theme/light');
+    expect(themePath('archies', 'light', new URL('https://mfl.football/archies/theme'), false)).toBe('/archies/theme/light');
   });
 });

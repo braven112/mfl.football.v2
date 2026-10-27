@@ -418,7 +418,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
   });
 
   it('links the served stylesheet, which carries every scoped rule', () => {
-    expect(module).toContain('https://v2.mfl.football/mfl/10105/standings.css');
+    expect(module).toContain('https://mfl.football/mfl/10105/standings.css');
     const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
     /* The league's own rules and the widget's additions both live there. */
     for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row',
@@ -433,7 +433,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
   });
 
   it('keeps the banner, caption and column widths', () => {
-    expect(module).toContain('https://v2.mfl.football/mfl/10105/banner.png');
+    expect(module).toContain('https://mfl.football/mfl/10105/banner.png');
     expect(module).toContain('<caption>MAD POWER 99</caption>');
     for (const col of ['col-rank', 'col-team', 'col-record', 'col-points', 'col-winnings', 'col-division']) {
       expect(module).toContain(col);
@@ -532,11 +532,11 @@ describe('module.html — the complete MESSAGE6 module', () => {
 
     /* The cap only works if the banner is served from that folder. */
     const module = readFileSync(path.join(process.cwd(), 'public/mfl/10105/module.html'), 'utf8');
-    expect(module).toMatch(/<img[^>]+src="https:\/\/v2\.mfl\.football\/mfl\/10105\/[^"]+"/);
+    expect(module).toMatch(/<img[^>]+src="https:\/\/mfl\.football\/mfl\/10105\/[^"]+"/);
   });
 
   it('carries the hosted widget and no hand-written team rows', () => {
-    expect(module).toContain('https://v2.mfl.football/mfl/10105/standings.js');
+    expect(module).toContain('https://mfl.football/mfl/10105/standings.js');
     /* One <tr> for the #madmen wrapper, one for the header. No data rows.
      * Checked by their markup, not by class names — the stylesheet mentions
      * .team-banner legitimately. */

@@ -378,7 +378,7 @@ describe('shared-host app manifest (MFL Live)', () => {
     //
     // The old rule existed because a '/' scope makes the installed app the app
     // for every league this host serves by path prefix. What changed is the
-    // product decision, not the mechanics: v2.mfl.football itself is now the
+    // product decision, not the mechanics: the shared host itself is now the
     // installable app, so its scope has to be the origin and its start_url has
     // to be the splash. /theleague/* and /afl-fantasy/* are not served on the
     // shared host (they 404 there), so the only league actually pulled into

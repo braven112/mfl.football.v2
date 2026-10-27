@@ -130,7 +130,7 @@ describe('the endpoint refuses uninvited leagues', () => {
     const { POST } = await import('../src/pages/api/auth/login');
     for (const leagueId of ['99999', pilot, undefined, '']) {
       const res = await POST({
-        request: new Request('https://v2.mfl.football/api/auth/login', {
+        request: new Request('https://mfl.football/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: 'u', password: 'p', leagueId }),

@@ -459,7 +459,7 @@ is the original design and is kept because its REASONING still governs (a
 manifest claims the origin it is served from, so the shared host must not
 serve a league's). What changed is only the app's own boundary:
 `/assets/mfl-live/site.webmanifest` now has `scope: "/"` and
-`start_url: "/"` — v2.mfl.football itself is the installable app, opening on
+`start_url: "/"` — the shared host (mfl.football; v2 before Oct 2026) is the installable app, opening on
 the splash, with the board reachable by a manifest shortcut and a visible
 band on the splash.
 

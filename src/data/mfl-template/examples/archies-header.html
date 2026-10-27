@@ -5,7 +5,7 @@
 <div id="archies-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
 <script>
 // ?v= busts Cloudflare's copy (s-maxage is a year); bump it when the sprite gains a symbol this header uses.
-fetch('https://v2.mfl.football/assets/icons/sprite.svg?v=2')
+fetch('https://mfl.football/assets/icons/sprite.svg?v=2')
   .then(function (r) { return r.ok ? r.text() : ''; })
   .then(function (svg) {
     document.getElementById('archies-sprite').innerHTML = svg.replace('style="display: none;"', '');
@@ -25,10 +25,10 @@ var lu_addOptionalStarters = false;
       <div class="col-md-6 col-lg-5 league_logo-wrapper">
         <a href="%STATICHOST%/%YEAR%/home/%LEAGUEID%">
           <div class="league_logo" id="league_logo">
-            <img src="https://v2.mfl.football/mfl/10105/archie-head.png" alt="Archie's" />
+            <img src="https://mfl.football/mfl/10105/archie-head.png" alt="Archie's" />
           </div>
           <div class="leaguename">
-            <img src="https://v2.mfl.football/mfl/10105/archies-wordmark.png" width="200" alt="Archie's" />
+            <img src="https://mfl.football/mfl/10105/archies-wordmark.png" width="200" alt="Archie's" />
           </div>
         </a>
         <div class="clearfix visible-xs-block visible-sm-block visible-md-block"></div>

@@ -73,7 +73,7 @@ empty, so there is nothing to derive them from.
 Add one line to the MESSAGE6 module, below the table:
 
 ```html
-<script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
+<script src="https://mfl.football/mfl/10105/standings.js" defer></script>
 ```
 
 Nothing else in the module needs to change, and the script needs no key. It
@@ -87,8 +87,8 @@ a stable URL instead of a third-party host:
 
 | File | Size | URL |
 |---|---|---|
-| `archie-head.png` | 400 × 662 | `https://v2.mfl.football/mfl/10105/archie-head.png` |
-| `archies-wordmark.png` | 450 × 200 | `https://v2.mfl.football/mfl/10105/archies-wordmark.png` |
+| `archie-head.png` | 400 × 662 | `https://mfl.football/mfl/10105/archie-head.png` |
+| `archies-wordmark.png` | 450 × 200 | `https://mfl.football/mfl/10105/archies-wordmark.png` |
 
 Both are transparent PNGs, stored at the size they were supplied. Nothing in
 the widget references them yet — they are here to be linked from MFL's own
@@ -102,22 +102,22 @@ size they were supplied:
 
 | File | Subject | URL |
 |---|---|---|
-| `headers/49ers-receiver.png` | 49ers receiver | `https://v2.mfl.football/mfl/10105/headers/49ers-receiver.png` |
-| `headers/49ers-quarterback.png` | 49ers quarterback | `https://v2.mfl.football/mfl/10105/headers/49ers-quarterback.png` |
-| `headers/steelers-92.png` | Steelers #92 | `https://v2.mfl.football/mfl/10105/headers/steelers-92.png` |
-| `headers/helmet-sketch.png` | Faded helmet sketch | `https://v2.mfl.football/mfl/10105/headers/helmet-sketch.png` |
-| `headers/silhouette-pointing.png` | Silhouette, finger raised | `https://v2.mfl.football/mfl/10105/headers/silhouette-pointing.png` |
-| `headers/silhouette-phone.png` | Silhouette, on the phone | `https://v2.mfl.football/mfl/10105/headers/silhouette-phone.png` |
-| `headers/bears-34.png` | Bears #34 | `https://v2.mfl.football/mfl/10105/headers/bears-34.png` |
-| `headers/chiefs-tight-end.png` | Chiefs tight end | `https://v2.mfl.football/mfl/10105/headers/chiefs-tight-end.png` |
-| `headers/vikings-84.png` | Vikings #84 | `https://v2.mfl.football/mfl/10105/headers/vikings-84.png` |
-| `headers/colts-quarterback.png` | Colts quarterback | `https://v2.mfl.football/mfl/10105/headers/colts-quarterback.png` |
-| `headers/packers-92.png` | Packers #92 | `https://v2.mfl.football/mfl/10105/headers/packers-92.png` |
-| `headers/dolphins-quarterback.png` | Dolphins quarterback | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback.png` |
-| `headers/dolphins-quarterback-throwing.png` | Dolphins quarterback, throwing | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback-throwing.png` |
-| `headers/patriots-12.png` | Patriots #12 | `https://v2.mfl.football/mfl/10105/headers/patriots-12.png` |
-| `headers/lions-running-back.png` | Lions running back | `https://v2.mfl.football/mfl/10105/headers/lions-running-back.png` |
-| `headers/patriots-white-jersey.png` | Patriots, white jersey | `https://v2.mfl.football/mfl/10105/headers/patriots-white-jersey.png` |
+| `headers/49ers-receiver.png` | 49ers receiver | `https://mfl.football/mfl/10105/headers/49ers-receiver.png` |
+| `headers/49ers-quarterback.png` | 49ers quarterback | `https://mfl.football/mfl/10105/headers/49ers-quarterback.png` |
+| `headers/steelers-92.png` | Steelers #92 | `https://mfl.football/mfl/10105/headers/steelers-92.png` |
+| `headers/helmet-sketch.png` | Faded helmet sketch | `https://mfl.football/mfl/10105/headers/helmet-sketch.png` |
+| `headers/silhouette-pointing.png` | Silhouette, finger raised | `https://mfl.football/mfl/10105/headers/silhouette-pointing.png` |
+| `headers/silhouette-phone.png` | Silhouette, on the phone | `https://mfl.football/mfl/10105/headers/silhouette-phone.png` |
+| `headers/bears-34.png` | Bears #34 | `https://mfl.football/mfl/10105/headers/bears-34.png` |
+| `headers/chiefs-tight-end.png` | Chiefs tight end | `https://mfl.football/mfl/10105/headers/chiefs-tight-end.png` |
+| `headers/vikings-84.png` | Vikings #84 | `https://mfl.football/mfl/10105/headers/vikings-84.png` |
+| `headers/colts-quarterback.png` | Colts quarterback | `https://mfl.football/mfl/10105/headers/colts-quarterback.png` |
+| `headers/packers-92.png` | Packers #92 | `https://mfl.football/mfl/10105/headers/packers-92.png` |
+| `headers/dolphins-quarterback.png` | Dolphins quarterback | `https://mfl.football/mfl/10105/headers/dolphins-quarterback.png` |
+| `headers/dolphins-quarterback-throwing.png` | Dolphins quarterback, throwing | `https://mfl.football/mfl/10105/headers/dolphins-quarterback-throwing.png` |
+| `headers/patriots-12.png` | Patriots #12 | `https://mfl.football/mfl/10105/headers/patriots-12.png` |
+| `headers/lions-running-back.png` | Lions running back | `https://mfl.football/mfl/10105/headers/lions-running-back.png` |
+| `headers/patriots-white-jersey.png` | Patriots, white jersey | `https://mfl.football/mfl/10105/headers/patriots-white-jersey.png` |
 
 Like the marks above, nothing in the widget references these yet.
 
@@ -125,8 +125,8 @@ Like the marks above, nothing in the widget references these yet.
 
 | File | Size | URL |
 |---|---|---|
-| `banners/pennants-21-25.png` | 1600 × 1000 | `https://v2.mfl.football/mfl/10105/banners/pennants-21-25.png` |
-| `banners/archies-corner.png` | 1548 × 250 | `https://v2.mfl.football/mfl/10105/banners/archies-corner.png` |
+| `banners/pennants-21-25.png` | 1600 × 1000 | `https://mfl.football/mfl/10105/banners/pennants-21-25.png` |
+| `banners/archies-corner.png` | 1548 × 250 | `https://mfl.football/mfl/10105/banners/archies-corner.png` |
 
 A rafter of hanging pennants numbered 21–25 (Eagles, Mavericks, Mavericks,
 Stingers, Dragons), transparent below the rafter.
@@ -135,8 +135,8 @@ Stingers, Dragons), transparent below the rafter.
 
 | File | URL |
 |---|---|
-| `rules/2025-bylaws-affl.pdf` | `https://v2.mfl.football/mfl/10105/rules/2025-bylaws-affl.pdf` |
-| `rules/abl-2026.pdf` | `https://v2.mfl.football/mfl/10105/rules/abl-2026.pdf` |
+| `rules/2025-bylaws-affl.pdf` | `https://mfl.football/mfl/10105/rules/2025-bylaws-affl.pdf` |
+| `rules/abl-2026.pdf` | `https://mfl.football/mfl/10105/rules/abl-2026.pdf` |
 
 Stored as supplied. To publish a new year's bylaws, add a new file rather than
 overwriting, so links to the old year keep working.
