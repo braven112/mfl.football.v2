@@ -24,10 +24,8 @@ export const POST: APIRoute = async ({ request }) => {
     return reply({ success: false, message: 'No team is linked to this sign-in.' }, 403);
   }
 
+  // A league this site does not run is sent to as well (app only, push-sender.ts).
   const league = getLeagueById(user.leagueId);
-  if (!league) {
-    return reply({ success: false, delivering: false, message: 'Alerts for this league are not available yet.' }, 200);
-  }
 
   const limit = await checkRateLimit('push-expo-test', `${user.leagueId}:${user.franchiseId}`, 5, 600);
   if (!limit.allowed) {
@@ -40,7 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
       user.franchiseId,
       {
         title: 'Test alert',
-        body: `Alerts are working for your ${league.name} team.`,
+        body: league ? `Alerts are working for your ${league.name} team.` : 'Alerts are working on this phone.',
         url: '/notifications',
         tag: 'push-test',
       },

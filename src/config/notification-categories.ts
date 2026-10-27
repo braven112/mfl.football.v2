@@ -38,6 +38,16 @@ export interface NotificationCategory {
   /** On unless the owner says otherwise. Keep this set small — see above. */
   defaultOn: boolean;
   /**
+   * The default on the MFL Football phone app, when it differs from the web's.
+   * The app is installed to get game-day and league alerts, and its users
+   * expect what every fantasy app sends untouched (the 2026-10-27 launch gate:
+   * trades, waivers, chat, on the clock); a browser subscription was opted
+   * into for far less. Alerts the site already sent keep the site's default
+   * on the app too — the owner's choice (2026-10-27), so close games and
+   * final scores stay opt-in. An owner's explicit choice always wins on both.
+   */
+  appDefaultOn?: boolean;
+  /**
    * Rough volume, shown in the UI so an owner can judge before opting in.
    * "A firehose" is a fair warning, not a deterrent to hide.
    */
@@ -131,6 +141,36 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    id: 'trade-accepted',
+    group: 'your-team',
+    label: 'Trades accepted',
+    description: 'A trade you offered was accepted.',
+    cadence: 'Rare',
+    defaultOn: false,
+    appDefaultOn: true,
+    live: true,
+  },
+  {
+    id: 'waiver-result',
+    group: 'your-team',
+    label: 'Your waiver results',
+    description: 'Which of your claims went through after a waiver run.',
+    cadence: 'Weekly in season, when you have claims in',
+    defaultOn: false,
+    appDefaultOn: true,
+    live: true,
+  },
+  {
+    id: 'draft-on-clock',
+    group: 'your-team',
+    label: "You're on the clock",
+    description: 'Your pick is up in the draft.',
+    cadence: 'Draft day only',
+    defaultOn: false,
+    appDefaultOn: true,
+    live: true,
+  },
+  {
     id: 'roster-deadline',
     group: 'your-team',
     label: 'League deadlines',
@@ -204,6 +244,16 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     description: 'Recaps, previews, The Gauntlet and the rest of the Schefter slate.',
     cadence: 'Several a week',
     defaultOn: false,
+    live: true,
+  },
+  {
+    id: 'league-chat',
+    group: 'league-news',
+    label: 'League chat',
+    description: "A new message in your league's MFL chat.",
+    cadence: 'Depends on your league — some are chatty',
+    defaultOn: false,
+    appDefaultOn: true,
     live: true,
   },
   {
@@ -372,6 +422,8 @@ export function isCategoryEnabled(
   stored: Record<string, boolean> | null | undefined,
   league: NotificationLeague,
   recipient?: NotificationRecipient,
+  /** Which transport is asking; only the untouched default differs (`appDefaultOn`). */
+  transport: 'web' | 'app' = 'web',
 ): boolean {
   const category = BY_ID.get(categoryId);
   if (!category) return false;
@@ -382,5 +434,6 @@ export function isCategoryEnabled(
   // refused here even if a preference for it is somehow stored.
   if (!allowedForRecipient(category, recipient)) return false;
   const explicit = stored?.[categoryId];
-  return typeof explicit === 'boolean' ? explicit : category.defaultOn;
+  if (typeof explicit === 'boolean') return explicit;
+  return transport === 'app' ? (category.appDefaultOn ?? category.defaultOn) : category.defaultOn;
 }

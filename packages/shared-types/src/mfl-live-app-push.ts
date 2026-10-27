@@ -26,11 +26,7 @@ export interface MflLiveAppPushResponse {
   success: boolean;
   /** Human-readable reason when `success` is false. */
   message?: string;
-  /**
-   * Register only. False when the signed-in league has no alert senders yet
-   * (a league this site does not run), so the app can say so instead of
-   * leaving the owner waiting for alerts that will not come.
-   */
+  /** Register only. Always true since every MFL league gets alerts. */
   delivering?: boolean;
 }
 
