@@ -50,7 +50,8 @@ function Tabs() {
       <Tab.Screen name="Matchups" component={MatchupsTab} />
       <Tab.Screen name="MyTeam" component={MyTeamScreen} options={{ title: 'My Team' }} />
       <Tab.Screen name="Players" component={PlayersScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
+      {/* Mounted at launch so its unread badge shows before the owner first opens Chat. */}
+      <Tab.Screen name="Chat" component={ChatScreen} options={{ lazy: false }} />
       <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );
