@@ -1,5 +1,5 @@
 /**
- * Push notifications in the MFL Live app — the wire contract between
+ * Push notifications in the MFL Football app — the wire contract between
  * `/api/push/expo-register`, `/api/push/expo-test` and `apps/mobile`.
  *
  * The server's own types (src/utils/push-expo.ts) must stay assignable to

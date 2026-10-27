@@ -1,5 +1,5 @@
 /**
- * Native push for the MFL Live app (src/utils/push-expo.ts) and its two
+ * Native push for the MFL Football app (src/utils/push-expo.ts) and its two
  * endpoints. The app signs in with Bearer, so both endpoints must read
  * `getMflLiveUser` — `getAuthUser` would refuse every request the app makes.
  */

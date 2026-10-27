@@ -117,7 +117,7 @@ export async function sendPushToFranchise(
     body: scrubLeagueNames(payload.body, league.slug),
   };
 
-  // Browsers and the MFL Live app are two transports behind this one door:
+  // Browsers and the MFL Football app are two transports behind this one door:
   // the preference check above already covered both.
   const [web, app] = await Promise.all([
     sendWebPush(leagueId, franchiseId, scrubbed),
@@ -132,7 +132,7 @@ export async function sendPushToFranchise(
   return result;
 }
 
-/** The MFL Live phone app's devices, through Expo's push service (push-expo.ts). */
+/** The MFL Football phone app's devices, through Expo's push service (push-expo.ts). */
 async function sendAppPush(
   leagueId: string,
   franchiseId: string,

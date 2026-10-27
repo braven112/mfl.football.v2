@@ -1,5 +1,5 @@
 /**
- * Native push for the MFL Live phone app, through Expo's push service.
+ * Native push for the MFL Football phone app, through Expo's push service.
  *
  * The app registers its Expo push token (`ExponentPushToken[…]`) here, and
  * `sendPushToFranchise` delivers every alert to those tokens as well as to the
