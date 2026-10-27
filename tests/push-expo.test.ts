@@ -8,7 +8,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  expoTokensKey,
+  accountTokensKey,
+  leagueIndexKey,
+  indexFields,
+  accountsForFranchise,
+  pushAccountKey,
   validateExpoToken,
   validatePlatform,
   buildExpoMessages,
@@ -23,14 +27,28 @@ import { NOTIFICATION_GROUPS } from '../src/config/notification-categories';
 const ROOT = join(__dirname, '..');
 const TOKEN = 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]';
 
-describe('expoTokensKey', () => {
-  it('scopes by league AND franchise — both leagues have a 0001', () => {
-    expect(expoTokensKey('11111', '0001')).not.toBe(expoTokensKey('22222', '0001'));
-    expect(expoTokensKey('11111', '0001')).toBe('push:expo:11111:0001');
+describe('storage keys', () => {
+  it('keys a phone by account, never by the MFL cookie', () => {
+    const account = pushAccountKey({ name: 'Brandon' })!;
+    expect(account).toBe(pushAccountKey({ name: ' brandon ' }));
+    expect(account).toMatch(/^[0-9a-f]{32}$/);
+    expect(accountTokensKey(account)).toBe(`push:expo:acct:${account}`);
+    expect(pushAccountKey({ name: '' })).toBeNull();
+  });
+
+  it('indexes teams per league — every league has a 0001', () => {
+    expect(leagueIndexKey('11111')).not.toBe(leagueIndexKey('22222'));
+    expect(indexFields('acct', [{ franchiseId: '0001' }, { franchiseId: '0001' }, { franchiseId: '' }])).toEqual(['0001:acct']);
+  });
+
+  it('finds every account holding a franchise, and only that franchise', () => {
+    const index = { '0001:a': 'a', '0001:b': 'b', '0010:c': 'c', '00010:d': 'd' };
+    expect(accountsForFranchise(index, '0001').sort()).toEqual(['a', 'b']);
+    expect(accountsForFranchise(index, '0010')).toEqual(['c']);
   });
 
   it('never shares a key with browser subscriptions', () => {
-    expect(expoTokensKey('11111', '0001').startsWith('push:subs:')).toBe(false);
+    expect(leagueIndexKey('11111').startsWith('push:subs:')).toBe(false);
   });
 });
 
@@ -128,7 +146,9 @@ describe('the app push endpoints', () => {
       expect(src).toMatch(/getMflLiveUser\(request\)/);
       expect(src).not.toMatch(/getAuthUser/);
       // Identity comes from the session, never the body.
-      expect(src).not.toMatch(/body\??\.(franchiseId|leagueId)/);
+      expect(src).not.toMatch(/body\??\.(franchiseId|leagueId|account)/);
+      // The MFL cookie is a credential: it is never the storage key.
+      expect(src).not.toMatch(/saveExpoToken\(user\.id/);
     });
   }
 

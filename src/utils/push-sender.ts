@@ -22,7 +22,7 @@ import { scrubLeagueNames } from './league-name-guard.mjs';
 import { isAdminFranchise } from '../config/nav-config';
 import { outboundAllowed } from './deploy-environment';
 import {
-  getExpoTokens,
+  getFranchiseExpoTokens,
   pruneExpoTokens,
   buildExpoMessages,
   sendExpoMessages,
@@ -141,7 +141,7 @@ async function sendAppPush(
 ): Promise<PushSendResult> {
   const result: PushSendResult = { sent: 0, failed: 0, pruned: 0, total: 0 };
   try {
-    const tokens = await getExpoTokens(leagueId, franchiseId);
+    const tokens = await getFranchiseExpoTokens(leagueId, franchiseId);
     result.total = tokens.length;
     if (tokens.length === 0) return result;
     const messages = buildExpoMessages(tokens.map((t) => t.token), payload, category, leagueId);
@@ -150,7 +150,8 @@ async function sendAppPush(
     result.failed = sent.failed;
     if (sent.deadTokens.length > 0) {
       result.pruned = sent.deadTokens.length;
-      await pruneExpoTokens(leagueId, franchiseId, sent.deadTokens);
+      const dead = new Set(sent.deadTokens);
+      await pruneExpoTokens(tokens.filter((t) => dead.has(t.token)));
     }
   } catch (e) {
     console.warn('[push-sender] app push failed:', e);
