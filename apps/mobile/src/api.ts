@@ -1,5 +1,5 @@
 /**
- * The two calls the app makes to the MFL Live server.
+ * How the app talks to the MFL Live server.
  *
  * The app never talks to MFL directly: the server signs in to MFL, reads each
  * league with the owner's own MFL cookie and assembles the board. In store
@@ -61,12 +61,65 @@ export async function signOutOnServer(): Promise<void> {
   }
 }
 
-export async function fetchBoard(token: string): Promise<MflLiveAppBoard> {
-  const res = await fetch(`${API_ORIGIN}/api/live-board?source=mfl`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-  });
+/** A request that reached the server but did not succeed. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The one way a screen calls the server: the session token as `Bearer`, which
+ * only `getMflLiveUser` accepts (tests/mfl-live-app-auth.test.ts). A 401 is
+ * `SignedOutError`, so every screen signs out the same way; any other failure
+ * is `ApiError` with the status, and the caller decides whether to keep what
+ * is already on screen.
+ */
+async function request<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_ORIGIN}${path}`, {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...init.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    throw new ApiError('Could not reach MFL Live. Check your connection.', 0);
+  }
   if (res.status === 401) throw new SignedOutError('Your session has ended. Sign in again.');
-  const body = (await res.json()) as MflLiveAppBoard;
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  if (!res.ok) {
+    const message = (body as { message?: string; error?: string } | null)?.message
+      ?? (body as { error?: string } | null)?.error;
+    throw new ApiError(message || 'MFL Live could not load this just now.', res.status);
+  }
+  return body as T;
+}
+
+/** GET a JSON endpoint on the MFL Live server, e.g. `apiGet(token, '/api/live-board?source=mfl')`. */
+export function apiGet<T>(token: string, path: string): Promise<T> {
+  return request<T>(token, path);
+}
+
+/** POST JSON to an endpoint on the MFL Live server. */
+export function apiPost<T>(token: string, path: string, body: unknown): Promise<T> {
+  return request<T>(token, path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export async function fetchBoard(token: string): Promise<MflLiveAppBoard> {
+  const body = await apiGet<MflLiveAppBoard>(token, '/api/live-board?source=mfl');
   // `ok: false` is a failed assembly, not an empty week: the caller keeps the
   // last good board rather than blanking the screen.
   if (!body.ok) throw new Error('MFL Live could not load your leagues just now.');

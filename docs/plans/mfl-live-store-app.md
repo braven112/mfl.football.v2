@@ -122,7 +122,11 @@ The owner's rule: get the core functionality right before theming or extras.
    fixed timer), pull to refresh, last-updated time, clear error and
    offseason states. Exists in a first form; this item is making it match.
 2. **App navigation.** A bottom tab bar (Matchups, Standings, Leagues) so the
-   next screens have a home.
+   next screens have a home. Every route is declared once in
+   `apps/mobile/src/navigation/types.ts` with a placeholder screen, so each
+   feature replaces its own screen file and never edits the navigator; screens
+   call the server through `apiGet` / `apiPost` (`src/api.ts`) and read the
+   session from `useSession()`.
 3. **League board.** Tap a league for every matchup in it plus the week's top
    scorers (`/live/league/<id>`, `/api/league-board`, which already accepts
    the app's Bearer sign-in). Needs a store-safe `source=mfl` mode like the
@@ -140,18 +144,26 @@ The owner's rule: get the core functionality right before theming or extras.
    wherever the web already has them; text marks otherwise. No NFL marks.
 7. **Pair a TV from the phone.** Scan the TV's QR code and approve it in the
    app instead of a browser (`/live/broadcast/pair`).
-8. **Push alerts** (new, not on the web board): kickoff reminders, close
-   games, finals. Owner to confirm it is wanted.
+8. **Push notifications** (owner 2026-10-27: "a very important feature"):
+   native push via `expo-notifications`, reusing the site's notification
+   categories. First alerts: lineup reminder, close game, final.
+9. **Sleeper** (owner 2026-10-27): the web's Sleeper leagues
+   (`docs/plans/mfl-live-sleeper.md`) on the app's board, and Sleeper
+   leagues in standings on the web and the app. This reverses decision 10's
+   "no Sleeper" for the store build; no Sleeper headshots, and Sleeper's API
+   terms for commercial use get checked first.
+10. **Manage your team** (proposed, awaiting the owner): set lineups through
+    the server with the owner's own MFL session, as `/api/lineup` already
+    does for TheLeague and the AFL; then adds, drops and waivers.
 
 **P2, needs a licensed data feed first (store rules: no ESPN data):**
 
-9. NFL games strip with game clocks.
-10. Cross-league scoring ticker and red-zone banner.
-11. Faster-than-MFL score movement.
+11. NFL games strip with game clocks.
+12. Cross-league scoring ticker and red-zone banner.
+13. Faster-than-MFL score movement.
 
 **Not coming to the phone:** the TV broadcast board and its overlay (TV app),
-site analytics and the Sleeper player-fix review (admin-only), and Sleeper
-leagues for now (decision 10; revisit with the owner).
+and site analytics and the Sleeper player-fix review (admin-only).
 
 **After this list:** light theme, iOS, then the roadmap below (history and
 rivalries, the reporter, subscriptions).
@@ -175,3 +187,12 @@ rivalries, the reporter, subscriptions).
   subscription turns on league-wide features for everyone in that league.
 - Which licensed stats feed, and whether v1 ships the NFL games strip at all.
 - Apple Developer account ($99/yr) timing.
+
+## Parallel work (2026-10-27)
+
+The plan above is split into work packages that run as separate threads, each
+owning its own files: `/mnt/project-files/mfl-live-app/parallel-work-packages.md`
+in the project's shared files. Two rules keep them apart: each package adds its
+own wire-contract file (`packages/shared-types/src/mfl-live-app-<pkg>.ts`)
+rather than editing the shared one, and only the shell (F), push (H) and TV
+pairing (G) packages add npm dependencies to `apps/mobile`.
