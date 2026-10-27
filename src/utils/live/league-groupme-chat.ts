@@ -23,10 +23,9 @@ import type { LeagueChatConfig, LeagueDefinition } from '../../config/leagues';
 import { getLeagueById } from '../../config/leagues';
 import type { GroupMeApiMessage } from '../../types/groupme';
 import { resolveLeagueGroupId } from '../../../scripts/lib/groupme-groups.mjs';
+import { fetchMessages } from '../groupme-client';
 import { getRedis } from '../redis-client';
 import type { ChatMessageView } from './mfl-live-app-chat';
-
-const API_BASE = 'https://api.groupme.com/v3';
 
 /** GroupMe caps a message at 1000 characters. */
 export const GROUPME_CHAT_MAX_LENGTH = 1000;
@@ -80,18 +79,9 @@ export type GroupMeReadResult = { ok: true; messages: GroupMeApiMessage[] } | { 
 
 /** The newest messages, oldest first. */
 export async function readGroupMeChat(groupId: string): Promise<GroupMeReadResult> {
-  const token = serviceToken();
-  if (!token) return { ok: false };
+  if (!serviceToken()) return { ok: false };
   try {
-    // Header auth keeps the token out of any error message's URL.
-    const res = await fetch(`${API_BASE}/groups/${encodeURIComponent(groupId)}/messages?limit=${PAGE}`, {
-      headers: { 'X-Access-Token': token },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (res.status === 304) return { ok: true, messages: [] };
-    if (!res.ok) return { ok: false };
-    const data = (await res.json()) as { response?: { messages?: GroupMeApiMessage[] } };
-    const messages = data.response?.messages ?? [];
+    const messages = await fetchMessages({ groupId, limit: PAGE });
     return { ok: true, messages: [...messages].reverse() };
   } catch {
     return { ok: false };
