@@ -153,3 +153,52 @@ export interface MflLiveAppDraftPool {
 }
 
 export type MflLiveAppDraftError = { ok: false; error: string };
+
+// ── Writes (package R, step 2) ───────────────────────────────────────────────
+
+/**
+ * `POST /api/mfl-live/draft-queue?league=` — replace your MFL pre-draft list.
+ *
+ * MFL's list is overwritten whole (it has no insert or move), so the app sends
+ * the list it STARTED from as `basedOn`. If MFL's list has changed since (you
+ * edited it on the website), nothing is written and the answer carries MFL's
+ * current list instead.
+ */
+export interface MflLiveAppDraftQueueRequest {
+  playerIds: string[];
+  basedOn: string[];
+}
+
+export type MflLiveAppDraftQueueResponse =
+  | { ok: true; queue: MflLiveAppDraftPlayer[] }
+  /** Your list changed on MFL since the app read it. `queue` is MFL's list now; nothing was written. */
+  | { ok: false; error: 'changed-on-mfl'; message: string; queue: MflLiveAppDraftPlayer[] }
+  | { ok: false; error: string; message: string };
+
+/**
+ * `POST /api/mfl-live/draft-pick?league=` — make your pick.
+ *
+ * `overall` is the slot the app showed you on the clock. The server refuses a
+ * pick for any other slot, so a screen that is a pick behind can never draft
+ * into the wrong slot.
+ */
+export interface MflLiveAppDraftPickRequest {
+  playerId: string;
+  overall: number;
+}
+
+export type MflLiveAppDraftPickResponse =
+  /** MFL has the pick: the board, re-read after the pick, shows it. */
+  | { ok: true; room: MflLiveAppDraftRoom }
+  | {
+      ok: false;
+      /**
+       * `not-on-clock`: it isn't your pick (any more). `taken`: that player is gone.
+       * `not-confirmed`: sent, but the board doesn't show it yet — check before picking again.
+       * `rejected`: MFL said no. `blocked`: a test build, which never writes to MFL.
+       */
+      error: 'not-on-clock' | 'taken' | 'not-confirmed' | 'rejected' | 'blocked' | 'unavailable';
+      message: string;
+      /** The board as MFL shows it now, when we could read it. */
+      room?: MflLiveAppDraftRoom;
+    };

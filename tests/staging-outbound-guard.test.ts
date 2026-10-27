@@ -215,7 +215,7 @@ describe('staging outbound-write guard', () => {
     // `import?TYPE=`, `add_drop?` and `csetup?` are MFL's own URL shapes and
     // appear nowhere else, whereas a bare `/import` also matches this repo's
     // own /api/accounting/import route.
-    const MUTATING = /\/(import\?TYPE=|add_drop\?|csetup\?)/;
+    const MUTATING = /\/(import\?TYPE=|add_drop\?|csetup\?|live_draft\?)/;
     const offenders: string[] = [];
 
     for (const file of SOURCE_FILES) {
@@ -278,6 +278,9 @@ describe('staging outbound-write guard', () => {
     // Same shape: the Custom Waiver Order form is the only way to write
     // waiver priority, and it is a page, not an import.
     expect(isMflWrite('GET', 'https://www49.myfantasyleague.com/2026/csetup?L=13522&C=WAIVORD')).toBe(true);
+    // The live draft room's commands make a pick (the app's draft room sends
+    // CMD=DRAFT), so even a GET there is a write.
+    expect(isMflWrite('GET', 'https://www49.myfantasyleague.com/2026/live_draft?L=13522&CMD=DRAFT')).toBe(true);
 
     // Reads stay reads — over-blocking would break every export on staging,
     // and staging showing real data is the entire reason it exists.

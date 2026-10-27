@@ -25,12 +25,14 @@ import { isDemoFetch } from './demo-isolation-core.mjs';
  *     how MFL's own page links it.
  *   - `csetup?C=WAIVORD` is the Custom Waiver Order form
  *     (`src/utils/afl-waiver-order.ts`), the only way to write waiver priority.
+ *   - `live_draft?CMD=DRAFT` makes a draft pick (the app's draft room,
+ *     `src/utils/live/mfl-live-draft-actions.ts`).
  *
  * A method-only test misses every one of these. That is not hypothetical: the
  * first version of this guard checked POST-or-`/import`, and a staging deploy
  * could still have deleted a real owner's waiver claim.
  */
-const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup'];
+const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup', '/live_draft'];
 
 /**
  * Is this call a WRITE rather than an export read?

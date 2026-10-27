@@ -3502,3 +3502,21 @@ Which window is live is MFL's own calendar (`resolveWaiverWindow`), never inferr
 **Evidence:** Production 409s on `/api/waiver-claim` (7 over 3 days); freeAgents reads on 2026-09-30 during the waiver window; verified after #1280 that no row reads locked on either page in that window.
 
 **Recommendation:** Never read the flag raw. `fetchDropLocks(leagueId, year, mode)` is the only door — it answers null outside FCFS without an MFL read. Guard: `tests/mfl-locks-window-gate.test.ts` (the raw reader is private; every consumer goes through `fetchDropLocks`; both pages resolve the window live before reading locks).
+
+---
+
+## 2026-10-27 - `live_draft` is a WRITE, and its reply is unverified
+
+**Context:** The MFL Football app's draft room (package R) makes picks for any
+MFL league through `live_draft` with `CMD=DRAFT` (`src/utils/live/mfl-live-draft-actions.ts`).
+
+**Insight:** `live_draft` mutates on any method, so `/live_draft` is now one of
+`MFL_MUTATING_PATHS` in `src/utils/mfl-fetch.ts` and staging/preview refuse to
+send it (`tests/staging-outbound-guard.test.ts`). Its parameters
+(`PLAYER_PICK`, `FRANCHISE_PICK`, `ROUND`, `PICK`) and reply shape have NOT
+been seen live: `api_info` is robots-blocked and returns 403 from our sandboxes,
+and no draft was running when this was built. So the app reads the reply only
+for an explicit `<error>` and decides success by re-reading the board (the slot
+must show the player); anything else is "sent, not confirmed". The request is
+built in one function, `buildDraftPickRequest`, so the first live draft can
+correct it in one place.
