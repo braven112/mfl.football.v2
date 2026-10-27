@@ -1,6 +1,6 @@
 // Renders the MFL Football store artwork: icons (the MFL.football mark with a
 // FOOTBALL pill) and the 1024x500 feature graphic (the full wordmark).
-// node android-tv/store/render-artwork.cjs [outDir]. Copy the icons to
+// [INTER_BOLD=/path/Inter-Bold.otf] node android-tv/store/render-artwork.cjs [outDir]. Copy the icons to
 // android-tv/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and apps/mobile/assets/.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -8,7 +8,15 @@ const path = require('path');
 const REPO = path.resolve(__dirname, '../..');
 const OUT = process.argv[2] || __dirname;
 const MARK = `<g fill="#f3f4f6"><rect x="9" y="12" width="12" height="42" rx="6"/><rect x="26" y="30" width="12" height="24" rx="6"/><rect x="43" y="12" width="12" height="42" rx="6"/></g><g fill="#ff4d61" stroke="#ff4d61"><g transform="translate(32 20) rotate(-15)"><path d="M-6.5 0Q0-5.4 6.5 0Q0 5.4-6.5 0Z" stroke-width="4.5" stroke-linejoin="round"/></g></g>`;
-const font = '@font-face{font-family:IB;src:url(data:font/otf;base64,' + fs.readFileSync('/usr/share/fonts/opentype/inter/Inter-Bold.otf').toString('base64') + ') format("opentype")}';
+// Inter Bold draws FOOTBALL. Point INTER_BOLD at the font file if it is not
+// at the Debian/Ubuntu path (fonts-inter); without it the pill text would
+// silently fall back to a serif, so fail instead.
+const INTER_BOLD = process.env.INTER_BOLD || '/usr/share/fonts/opentype/inter/Inter-Bold.otf';
+if (!fs.existsSync(INTER_BOLD)) {
+  console.error(`Inter Bold not found at ${INTER_BOLD}. Install fonts-inter or set INTER_BOLD=/path/to/Inter-Bold.otf`);
+  process.exit(1);
+}
+const font = '@font-face{font-family:IB;src:url(data:font/otf;base64,' + fs.readFileSync(INTER_BOLD).toString('base64') + ') format("opentype")}';
 // Icon drawn on a 512 grid: mark where the old icon had it, FOOTBALL pill where LIVE was.
 function icon(size, bg, transparent, inset) {
   const s = size / 512;
