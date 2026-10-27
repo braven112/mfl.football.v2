@@ -248,7 +248,12 @@ export function resolveWeekLineup(input: {
   ytdPayload: any;
   week: number;
   franchiseId: string;
-  league: CanonicalLeagueSlug;
+  /**
+   * The registry league, for the committed-feed fallback. Null for a league
+   * that isn't ours (the MFL Football app serves any MFL league): no feed is
+   * synced for it, so only the two live sources count.
+   */
+  league: CanonicalLeagueSlug | null;
   leagueYear: number;
 }): ResolvedWeekLineup {
   const { weekScopedPayload, ytdPayload, week, franchiseId, league, leagueYear } = input;
@@ -273,7 +278,7 @@ export function resolveWeekLineup(input: {
     return { entry: listedLive, starters: [], lineupReadOk: true, fromCache: false, weekScheduled: true, franchiseListed: true };
   }
 
-  const diskFeed = loadWeeklyResultsFeedFromDisk(league, leagueYear);
+  const diskFeed = league ? loadWeeklyResultsFeedFromDisk(league, leagueYear) : null;
   const diskEntry = findWeekResultsEntry(diskFeed, week);
   const diskStarters = extractLineupStarters(diskEntry, franchiseId);
   if (diskStarters.length > 0) {

@@ -54,7 +54,7 @@ import '../../../styles/network-badge.css';
 import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channels';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import type { LineupPlayer } from '../../../types/lineups';
-import { DEFAULT_LINEUP_SLOTS, eligibleSlotsFor, exceedsPositionMax, type LineupSlotLayout } from '../../../utils/lineup-slots';
+import { DEFAULT_LINEUP_SLOTS, assignLineupSlots, eligibleSlotsFor, type LineupSlotLayout } from '../../../utils/lineup-slots';
 import { findLineupProblems, hasBlockingProblem } from '../../../utils/lineup-problems';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 
@@ -400,10 +400,6 @@ const lineupFromCache = weekLineup.fromCache;
 const weekScheduled = weekLineup.weekScheduled;
 const starterIds = new Set(weekLineup.starters.map((p) => p.id));
 
-// Build initial slots based on starters
-const slots: { position: string; index: number; playerId: string | null; locked: boolean }[] = [];
-const usedPlayerIds = new Set<string>();
-
 // If MFL returned starters, use those; otherwise fill optimally by projection
 const hasStarters = starterIds.size > 0;
 // A week that has already been played can't take a new lineup, so never offer
@@ -423,39 +419,9 @@ const candidatePool = hasStarters
       .filter(p => p.rosterStatus === 'ROSTER' && (weekIsPast || (!p.gameLocked && !p.isBye)))
       .sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
 
-// Pre-allocate slots array to preserve positional order
-for (let i = 0; i < SLOT_POSITIONS.length; i++) {
-  slots.push({ position: SLOT_POSITIONS[i], index: i, playerId: null, locked: false });
-}
-
-// Pass 1: Fill position-specific slots (non-FLEX)
-for (let i = 0; i < slots.length; i++) {
-  if (slots[i].position === 'FLEX') continue;
-  const assignedPlayer = candidatePool.find(p => p.position === slots[i].position && !usedPlayerIds.has(p.id)) || null;
-  if (assignedPlayer) {
-    usedPlayerIds.add(assignedPlayer.id);
-    slots[i].playerId = assignedPlayer.id;
-    slots[i].locked = assignedPlayer.gameLocked;
-  }
-}
-
-// Pass 2: Fill FLEX slots with the best remaining flex-eligible players, never
-// starting more of a position than the league allows (a FLEX may take a
-// second QB in Archie's, never a third).
-for (let i = 0; i < slots.length; i++) {
-  if (slots[i].position !== 'FLEX') continue;
-  const seated = slots
-    .filter((s) => s.playerId)
-    .map((s) => roster.find((p) => p.id === s.playerId)?.position ?? '');
-  const assignedPlayer = candidatePool.find(p =>
-    p.eligibleSlots.includes('FLEX') && !usedPlayerIds.has(p.id) && !exceedsPositionMax(p.position, seated, POSITION_MAX)
-  ) || null;
-  if (assignedPlayer) {
-    usedPlayerIds.add(assignedPlayer.id);
-    slots[i].playerId = assignedPlayer.id;
-    slots[i].locked = assignedPlayer.gameLocked;
-  }
-}
+// Seat them: fixed positions first, then FLEX — the same helper the MFL
+// Football app's lineup endpoint uses (utils/lineup-slots.ts).
+const slots = assignLineupSlots(candidatePool, slotLayout);
 
 // What the nine slots actually represent, and whether saving them is safe.
 const fillState = resolveLineupFillState({
