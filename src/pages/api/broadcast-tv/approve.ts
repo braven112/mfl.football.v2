@@ -4,6 +4,8 @@ import { approvePairing, normalizeUserCode } from '../../../utils/broadcast-tv-p
 import { getPairingStore } from '../../../utils/broadcast-tv-store';
 import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { checkRateLimit } from '../../../utils/rate-limit';
+import { getSessionTokenFromAuthorization } from '../../../utils/session';
+import { readMflLiveSelection } from '../../../utils/mfl-live-selection-store';
 
 export const prerender = false;
 
@@ -13,6 +15,11 @@ export const prerender = false;
  * Signed-in owners only, and the pass is minted for the SESSION's owner —
  * nothing in the body can name someone else. The TV inherits the league set
  * this phone's broadcast is watching, read from this phone's own cookie.
+ * The phone APP has no cookie jar, so for a Bearer request the TV gets the
+ * leagues the owner watches in MFL Live instead — the account's stored
+ * selection (`mfl-live-selection-store.ts`), which the app's Leagues tab sets.
+ * A browser with no broadcast cookie keeps the broadcast's default, so the
+ * TV matches the league list `/live/broadcast/pair` previewed.
  *
  * Rate-limited per owner: six characters off a 29-letter alphabet is 594
  * million codes, which is plenty against guessing only while guessing is slow.
@@ -42,8 +49,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const store = await getPairingStore();
   if (!store) return json({ result: 'unavailable' }, 503);
 
-  const result = await approvePairing(store, code, user, {
-    leagues: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
-  });
+  const fromApp = getSessionTokenFromAuthorization(request.headers.get('authorization')) !== null;
+  const leagues =
+    cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? (fromApp ? await readMflLiveSelection(user, null) : null);
+  const result = await approvePairing(store, code, user, { leagues });
   return json({ result }, result === 'approved' ? 200 : 410);
 };
