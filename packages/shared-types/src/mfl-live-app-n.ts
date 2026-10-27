@@ -3,8 +3,11 @@
  * `/api/mfl-live/chat?league=<MFL id>` (package N,
  * /mnt/project-files/mfl-live-app/parallel-work-packages.md, round 2).
  *
- * This is MFL's own league chat, the one on the league's MFL home page, so a
- * message posted here shows on MFL and the reverse.
+ * By default this is MFL's own league chat, the one on the league's MFL home
+ * page, so a message posted here shows on MFL and the reverse. A league that
+ * talks in GroupMe gets its GroupMe group instead (`source: 'groupme'`):
+ * messages come from the group, and an owner posts as themself after signing
+ * in to GroupMe (until that ships, a post answers `groupme-sign-in`).
  *
  *   GET            → the chat, oldest first, and marks it read.
  *   GET &count=1   → only the unread count, for the tab badge. Marks nothing.
@@ -29,7 +32,17 @@ export interface MflLiveAppChatMessage {
   postedLabel: string;
   /** True for the account's own team. */
   mine: boolean;
+  /**
+   * GroupMe only. For a message from a person rather than a team,
+   * `franchiseId` is '' and `franchiseName` is their GroupMe name.
+   */
+  avatarUrl?: string | null;
+  /** GroupMe only: photos attached to the message. */
+  imageUrls?: string[];
 }
+
+/** Where the league's chat lives. */
+export type MflLiveAppChatSource = 'mfl' | 'groupme';
 
 export type MflLiveAppChatResponse =
   | {
@@ -42,8 +55,10 @@ export type MflLiveAppChatResponse =
       unread: number;
       /** Longest message the server accepts. */
       maxLength: number;
+      /** Absent from servers older than the GroupMe step: read it as 'mfl'. */
+      source?: MflLiveAppChatSource;
     }
-  /** `chat-unavailable`: MFL did not answer; the app keeps what it had. */
+  /** `chat-unavailable`: MFL (or GroupMe) did not answer; the app keeps what it had. */
   | { ok: false; error: 'chat-unavailable' };
 
 export type MflLiveAppChatCountResponse =
@@ -66,7 +81,9 @@ export type MflLiveAppChatPostResponse =
        * `empty` / `too-long`: fix the text. `refused`: MFL said no, `message`
        * is why. `blocked`: a test build that never writes to real leagues.
        * `unconfirmed`: MFL gave no answer and the message is not in the chat.
+       * `groupme-sign-in`: the league's chat is GroupMe, and posting needs
+       * the owner's own GroupMe sign-in.
        */
-      error: 'empty' | 'too-long' | 'refused' | 'blocked' | 'unconfirmed' | 'chat-unavailable';
+      error: 'empty' | 'too-long' | 'refused' | 'blocked' | 'unconfirmed' | 'chat-unavailable' | 'groupme-sign-in';
       message: string;
     };

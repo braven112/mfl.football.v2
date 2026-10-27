@@ -16,6 +16,14 @@ import { readChatMarker, writeChatMarker } from '../../../utils/mfl-chat-read-st
 import { buildChatView } from '../../../utils/live/mfl-live-app-chat';
 import { notifyLeagueEvent } from '../../../utils/push-events';
 import { appJson, requireOwnerLeague, type OwnerLeague } from '../../../utils/live/owner-league';
+import {
+  buildGroupMeChatView,
+  countUnreadGroupMe,
+  GROUPME_CHAT_MAX_LENGTH,
+  readGroupMeChat,
+  resolveLeagueGroupMe,
+  type LeagueGroupMe,
+} from '../../../utils/live/league-groupme-chat';
 
 export const prerender = false;
 
@@ -29,6 +37,9 @@ export const prerender = false;
  *
  * How MFL's chat is read and written, and why it is a file rather than an
  * export: src/utils/mfl-chat.ts.
+ *
+ * A league that talks in GroupMe gets its group here instead, same routes,
+ * same shape, `source: 'groupme'` — src/utils/live/league-groupme-chat.ts.
  */
 
 /** Names for the chat, from the league's own export. `{}` when unreadable. */
@@ -53,10 +64,46 @@ async function markRead(league: OwnerLeague, messages: MflChatMessage[]): Promis
   if (newest) await writeChatMarker(league.leagueId, league.franchiseId, { id: newest.id, at: newest.postedAt });
 }
 
+/**
+ * The GroupMe read marker lives beside MFL's under its own key, so a league
+ * moving between the two never compares a GroupMe id with an MFL one.
+ */
+const groupMeMarkerLeague = (league: OwnerLeague) => `${league.leagueId}:groupme`;
+
+async function groupMeGet(league: OwnerLeague, group: LeagueGroupMe, cookie: string, countOnly: boolean) {
+  const chat = await readGroupMeChat(group.groupId);
+  if (!chat.ok) return appJson({ ok: false, error: 'chat-unavailable' } satisfies MflLiveAppChatResponse, 503);
+  const names = await franchiseNames(league, cookie);
+  const view = buildGroupMeChatView(chat.messages, league.franchiseId, names);
+  const markerLeague = groupMeMarkerLeague(league);
+  const marker = await readChatMarker(markerLeague, league.franchiseId);
+  const unread = countUnreadGroupMe(view, marker?.id ?? null);
+  const newest = view[view.length - 1];
+  // A count marks nothing, except on the first look ever: count from now.
+  if (newest && (!countOnly || !marker)) {
+    await writeChatMarker(markerLeague, league.franchiseId, { id: newest.id, at: newest.postedAt });
+  }
+  if (countOnly) {
+    return appJson({ ok: true, leagueId: league.leagueId, unread } satisfies MflLiveAppChatCountResponse);
+  }
+  return appJson({
+    ok: true,
+    leagueId: league.leagueId,
+    franchiseId: league.franchiseId,
+    messages: view,
+    unread,
+    maxLength: GROUPME_CHAT_MAX_LENGTH,
+    source: 'groupme',
+  } satisfies MflLiveAppChatResponse);
+}
+
 export const GET: APIRoute = async ({ request, url }) => {
   const gate = await requireOwnerLeague(request, url.searchParams.get('league'));
   if (gate instanceof Response) return gate;
   const { user, league } = gate;
+
+  const group = await resolveLeagueGroupMe(league.leagueId);
+  if (group) return groupMeGet(league, group, user.id, url.searchParams.get('count') === '1');
 
   const chat = await readMflChat(league);
   if (!chat.ok) return appJson({ ok: false, error: 'chat-unavailable' } satisfies MflLiveAppChatResponse, 503);
@@ -80,6 +127,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     messages: buildChatView(chat.messages, league.franchiseId, names),
     unread,
     maxLength: MFL_CHAT_MAX_LENGTH,
+    source: 'mfl',
   } satisfies MflLiveAppChatResponse);
 };
 
@@ -94,6 +142,12 @@ export const POST: APIRoute = async ({ request, url }) => {
   const body = (await request.json().catch(() => null)) as { text?: unknown } | null;
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   if (!text) return fail('empty', 'Type a message first.', 400);
+
+  // Posting to GroupMe is as the owner themself, once they have signed in to
+  // GroupMe — the next step. Never through a bot, so until then: say so.
+  if (await resolveLeagueGroupMe(league.leagueId)) {
+    return fail('groupme-sign-in', 'Sign in to GroupMe to post. That arrives in the next app update.', 403);
+  }
   if (text.length > MFL_CHAT_MAX_LENGTH) {
     return fail('too-long', `Keep it under ${MFL_CHAT_MAX_LENGTH} characters.`, 400);
   }
@@ -142,3 +196,4 @@ export const POST: APIRoute = async ({ request, url }) => {
     messages: buildChatView(after.messages, league.franchiseId, names),
   } satisfies MflLiveAppChatPostResponse);
 };
+
