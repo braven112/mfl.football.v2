@@ -21,6 +21,7 @@ import { getMflLiveUser } from '../../utils/auth';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
+import { readMflLiveSelection } from '../../utils/mfl-live-selection-store';
 import { mflLiveAppCadence, toMflLiveAppBoard } from '../../utils/live/mfl-live-app-view';
 
 export const prerender = false;
@@ -87,7 +88,9 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       // A CHECK against what the session may see, never an input — the
       // resolver only returns ids already present in this owner's own list.
       leaguesParam: url.searchParams.get('leagues'),
-      leaguesCookie: cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      // The choice saved to the ACCOUNT, so the phone (which has no cookie)
+      // and the web board watch the same leagues; the cookie is the fallback.
+      leaguesCookie: await readMflLiveSelection(user, cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value),
       mflOnly,
     });
     return new Response(JSON.stringify(mflOnly ? toMflLiveAppBoard(board, kickoffs) : board), {
