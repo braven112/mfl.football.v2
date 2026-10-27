@@ -51,7 +51,8 @@ import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
-import { MFL_LIVE_LEAGUE_COOKIE, rememberMflLiveChoice } from '../../utils/mfl-live-selection';
+import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
+import { readMflLiveSelection, rememberMflLiveChoiceForAccount } from '../../utils/mfl-live-selection-store';
 import type { MflLiveBoard as Board } from '../../types/mfl-live';
 import '../../styles/live.css';
 
@@ -78,7 +79,7 @@ const authUser = getMflLiveUser(Astro.request);
 // carries a league set sticks for next time. `Astro.cookies.set()` from an
 // imported component throws after the headers are committed and blanks the
 // page, which is why this lives here rather than inside the board.
-if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
+if (authUser) await rememberMflLiveChoiceForAccount(Astro.url, Astro.cookies, authUser);
 
 const now = new Date();
 
@@ -130,7 +131,8 @@ if (authUser && week) {
       week,
       // A CHECK against what the session may see, never an input.
       leaguesParam: Astro.url.searchParams.get('leagues'),
-      leaguesCookie: Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      // The ACCOUNT's choice (shared with the phone app), the cookie as fallback.
+      leaguesCookie: await readMflLiveSelection(authUser, Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value),
     });
     board = assembled.board;
   } catch {
