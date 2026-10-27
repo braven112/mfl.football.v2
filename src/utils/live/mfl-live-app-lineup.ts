@@ -25,6 +25,7 @@ import type {
 } from '../../../packages/shared-types/src/mfl-live-app-j';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG, type CanonicalLeagueSlug } from '../../config/leagues';
 import { mflFetch } from '../mfl-fetch';
+import type { OwnerLeague } from './owner-league';
 import { buildMflExportUrl } from '../mfl-url';
 import {
   assignLineupSlots,
@@ -43,16 +44,8 @@ import { normalizeTeamCode } from '../nfl-logo';
 import { getCurrentWeekForYear } from '../current-week';
 import { isSeasonWindowOpen } from '../pecking-order-season-window.mjs';
 
-/** The league the request is for, as F2's `requireOwnerLeague` verified it. */
-export interface AppLineupLeague {
-  leagueId: string;
-  leagueName: string;
-  franchiseId: string;
-  franchiseName: string;
-  year: number;
-  /** `https://www49.myfantasyleague.com`, or null when MFL gave none. */
-  host: string | null;
-}
+/** The league the request is for, as `requireOwnerLeague` verified it. */
+export type AppLineupLeague = OwnerLeague;
 
 const DEFAULT_EXPORT_HOST = 'https://api.myfantasyleague.com';
 
