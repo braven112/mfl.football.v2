@@ -28,7 +28,11 @@ export type RootStackParamList = {
   /** Set this week's lineup (package J). */
   SetLineup: { leagueId: string };
   /** Add/drop, waiver claims and FAAB bids (package L). */
-  Waivers: { leagueId: string };
+  Waivers: {
+    leagueId: string;
+    /** Opens the add/drop sheet for this free agent (Add on the Players tab or a player card). */
+    add?: { id: string; name: string; position?: string; team?: string };
+  };
   /** One player's card (package K). */
   PlayerCard: { leagueId: string; playerId: string };
   /** The league's adds, drops, trades and waivers (package O). */
