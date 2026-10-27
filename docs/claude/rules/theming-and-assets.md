@@ -702,8 +702,9 @@ by whether the title has been won:
   own badge (`public/assets/afl/awards/`). For an award still in play,
   standing for what could be won (the AFL homepage standings' division shield
   for seeds 1–2), and beside a team already shown (the footer champions band
-  under the team banner, a Franchises index card's title counts, an owner
-  page's career title chips; Brandon approved all four as they are).
+  under the team banner, a Franchises index card's title counts). The owner
+  page's won-title chips are text only, since that page hangs the titles in
+  its own Rafters.
 
 A seasonal theme redraws the league-wide badges (`_swaps` in
 `src/data/seasonal-marks/afl-<season>.json`) and they must wear it: an `<img>`

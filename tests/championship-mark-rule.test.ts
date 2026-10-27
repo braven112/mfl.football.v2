@@ -6,8 +6,8 @@
  *    League History home and the franchise and owner pages. Nowhere else.
  *  - LEAGUE-WIDE: the award's own badge (public/assets/afl/awards/) stands for
  *    what COULD be won: the homepage standings' division shield, the playoff
- *    prizes. It also sits beside a team already shown in its own banner (the
- *    footer champions band, a Franchises index card). In a seasonal theme it
+ *    prizes. It also sits beside a team already shown (the footer champions
+ *    band under its banner, a Franchises index card's title counts). In a seasonal theme it
  *    wears that season's drawing, Christmas's knitted PNGs included.
  */
 import fs from 'node:fs';
@@ -41,6 +41,12 @@ describe('team-centric title banners hang only in the Rafters', () => {
     // A new caller showing a WON title outside the Rafters uses the league-wide
     // badge instead; one showing the Rafters themselves is added here.
     expect(importers).toEqual([...RAFTER_SURFACES].sort());
+  });
+
+  it("keeps the league-wide badge off the owner page's won-title chips", () => {
+    // The page hangs those titles in its Rafters; the chips are text only.
+    const page = fs.readFileSync(path.join(ROOT, 'src/components/shared/owners/OwnerDetailPage.astro'), 'utf8');
+    expect(page).not.toMatch(/getAwardBadge|\/assets\/afl\/awards\//);
   });
 });
 
