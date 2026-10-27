@@ -50,7 +50,12 @@ export interface DraftListWriteResult {
 }
 
 interface DraftListParams {
-  league: LeagueDefinition;
+  /**
+   * The league's MFL id and its own host. A registry league passes its
+   * `LeagueDefinition`; the MFL Football app passes any MFL league the owner
+   * is in, checked by `requireOwnerLeague` first.
+   */
+  league: Pick<LeagueDefinition, 'id' | 'mflHost'>;
   year: number | string;
   /** Raw MFL_USER_ID cookie value — the session JWT's userId. */
   mflUserCookie: string;
@@ -60,7 +65,7 @@ interface DraftListParams {
 const READ_HOST = 'https://api.myfantasyleague.com';
 
 /** The league's own host — writes go here directly to avoid the POST redirect. */
-const writeHost = (league: LeagueDefinition) => `https://${league.mflHost}`;
+const writeHost = (league: DraftListParams['league']) => `https://${league.mflHost}`;
 
 /**
  * Pull an error message out of an MFL response body, whatever shape it took.

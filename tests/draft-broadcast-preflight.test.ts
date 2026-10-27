@@ -767,7 +767,8 @@ describe('review round one', () => {
       // one, so the allowlist that closed a CodeQL SSRF alert was a no-op at
       // the exact line that reaches the network. Guarding the decision, not the
       // wording: nothing in that function may fetch anything but `safeUrl`.
-      const src = SRC('src/pages/api/draft/status.ts');
+      // Lives in draft-board-freshness.ts since the app's draft room shares it.
+      const src = SRC('src/utils/draft-board-freshness.ts');
       const fn = src.slice(
         src.indexOf('async function fetchStaticBoard'),
         src.indexOf('async function fetchStaticBoard') + 900
