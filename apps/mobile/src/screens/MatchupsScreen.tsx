@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import type { MflLiveAppPlayerMeta } from '@mfl/shared-types/mfl-live-app';
 import type { MflLiveAppLiveBoard, MflLiveAppLivePanel } from '@mfl/shared-types/mfl-live-app-a';
 import { fetchBoard, SignedOutError } from '../api';
@@ -107,7 +108,7 @@ export function MatchupsScreen({ token, onSignOut }: Props) {
     <View style={[styles.screen, { backgroundColor: t.ground, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: t.border }]}>
         <Text style={[styles.brand, { color: t.text }]}>
-          MFL <Text style={{ color: t.accentText }}>Live</Text>
+          MFL <Text style={{ color: t.accentText }}>Football</Text>
         </Text>
         <Pressable accessibilityRole="button" onPress={onSignOut} hitSlop={12}>
           <Text style={[styles.signOut, { color: t.muted }]}>Sign out</Text>
@@ -133,7 +134,7 @@ export function MatchupsScreen({ token, onSignOut }: Props) {
           <Notice
             t={t}
             tone="danger"
-            title="Couldn’t reach MFL Live"
+            title="Couldn’t reach MFL Football"
             body="Check your connection. We’ll keep trying, or pull down to try now."
           />
         ) : null}
@@ -200,9 +201,18 @@ function LeagueSection({
   playerMeta: Record<string, MflLiveAppPlayerMeta>;
   t: Theme;
 }) {
+  const navigation = useNavigation();
   return (
     <View style={styles.league}>
-      <Text style={[styles.leagueName, { color: t.text }]}>{league.leagueName}</Text>
+      {/* The way into the league's own board: every matchup and its top scorers. */}
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`Open the ${league.leagueName} board`}
+        onPress={() => navigation.navigate('LeagueBoard', { leagueId: league.leagueId, leagueName: league.leagueName })}
+        hitSlop={8}
+      >
+        <Text style={[styles.leagueName, { color: t.text }]}>{league.leagueName} ›</Text>
+      </Pressable>
       {heldSince !== null ? (
         <Text style={[styles.held, { color: t.danger }]}>
           MFL isn’t answering for this league. Scores from {ageLabel(heldSince, now)}.

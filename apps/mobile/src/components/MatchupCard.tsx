@@ -13,8 +13,8 @@ import { TeamMark } from './TeamMark';
 interface Props {
   matchup: MflLiveAppLiveMatchup;
   playerMeta: Record<string, MflLiveAppPlayerMeta>;
-  /** Decimal places for this league's scores. */
-  precision: number;
+  /** Decimal places for this league's scores; /live's default when omitted. */
+  precision?: number;
 }
 
 /**
