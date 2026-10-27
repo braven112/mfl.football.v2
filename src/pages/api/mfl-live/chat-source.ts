@@ -11,6 +11,7 @@ import {
   removeLeagueConnection,
   saveLeagueConnection,
 } from '../../../utils/live/league-groupme-connection';
+import { checkCommissioner } from '../../../utils/live/mfl-commissioner';
 import { appJson, requireOwnerLeague } from '../../../utils/live/owner-league';
 import { pushAccountKey } from '../../../utils/push-expo';
 
@@ -18,10 +19,11 @@ export const prerender = false;
 
 /**
  * Which chat a league's Chat tab shows in the MFL Football app, and switching
- * it — contract in packages/shared-types/src/mfl-live-app-n.ts. Any owner in
- * the league may connect a GroupMe group of their own or switch back to MFL
- * chat ("any owner, for now"); see
- * src/utils/live/league-groupme-connection.ts.
+ * it — contract in packages/shared-types/src/mfl-live-app-n.ts. Only the
+ * league's commissioner may connect a GroupMe group of their own or switch
+ * back to MFL chat (the owner, 2026-10-27), checked with MFL on every change
+ * (src/utils/live/mfl-commissioner.ts); everyone else just sees which chat it
+ * is. See src/utils/live/league-groupme-connection.ts.
  */
 
 export const GET: APIRoute = async ({ request, url }) => {
@@ -29,11 +31,17 @@ export const GET: APIRoute = async ({ request, url }) => {
   if (gate instanceof Response) return gate;
   const { user, league } = gate;
 
-  const group = await resolveLeagueGroupMe(league.leagueId);
+  const fixed = groupMeConfigFor(league.leagueId) !== null;
+  const [group, commissioner] = await Promise.all([
+    resolveLeagueGroupMe(league.leagueId),
+    fixed ? Promise.resolve('not-commissioner' as const) : checkCommissioner(league, user.id),
+  ]);
+  const canChange = commissioner === 'commissioner';
   const account = pushAccountKey(user);
   let link = account ? await readGroupMeLink(account) : null;
   let groups: Array<{ id: string; name: string; members: number }> = [];
-  if (link) {
+  // Only the commissioner is offered their groups to pick from.
+  if (link && canChange) {
     const mine = await fetchMyGroups(link.token);
     if (mine.ok) groups = mine.groups;
     else if (mine.unauthorized && account) {
@@ -46,7 +54,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     ok: true,
     leagueId: league.leagueId,
     source: group ? 'groupme' : 'mfl',
-    fixed: group?.fixed ?? groupMeConfigFor(league.leagueId) !== null,
+    fixed: group?.fixed ?? fixed,
+    canChange,
     connectedBy: group?.connectedBy
       ? { ...group.connectedBy, mine: group.connectedBy.franchiseId === league.franchiseId }
       : null,
@@ -70,6 +79,15 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   if (groupMeConfigFor(league.leagueId)) {
     return fail('fixed', "This league's chat is set up on our side and can't be changed here.");
+  }
+  // Asked of MFL on every change, never remembered: a commissioner can hand
+  // the league to someone else at any time.
+  const commissioner = await checkCommissioner(league, user.id);
+  if (commissioner === 'unknown') {
+    return fail('unavailable', "Couldn't confirm with MFL that you're the commissioner. Try again shortly.");
+  }
+  if (commissioner !== 'commissioner') {
+    return fail('not-commissioner', "Only your league's commissioner can change the league's chat.");
   }
   const account = pushAccountKey(user);
   if (!account) return fail('unavailable', 'Sign out and back in, then try again.');

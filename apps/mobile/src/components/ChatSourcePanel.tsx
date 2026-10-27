@@ -11,9 +11,9 @@ import { font, useTheme } from '../theme';
 
 /**
  * Which chat the league's Chat tab shows: MFL's own league chat, or a GroupMe
- * group. Any owner in the league can connect one of their own groups or switch
- * back; the tab says who connected it. Leagues whose GroupMe the server runs
- * are fixed. Contract: packages/shared-types/src/mfl-live-app-n.ts.
+ * group. Only the league's commissioner can connect one of their own groups or
+ * switch back; everyone else sees which chat it is. Leagues whose GroupMe the
+ * server runs are fixed. Contract: packages/shared-types/src/mfl-live-app-n.ts.
  */
 export function ChatSourcePanel({ leagueId, onChanged }: { leagueId: string; onChanged: () => void }) {
   const t = useTheme();
@@ -84,6 +84,8 @@ export function ChatSourcePanel({ leagueId, onChanged }: { leagueId: string; onC
   );
 
   const muted = { color: t.muted };
+  // Older servers don't say; they let anyone change it.
+  const canChange = state?.canChange ?? true;
   if (!state) {
     return (
       <View style={[styles.panel, { backgroundColor: t.card, borderColor: t.border }]}>
@@ -109,6 +111,8 @@ export function ChatSourcePanel({ leagueId, onChanged }: { leagueId: string; onC
 
       {state.fixed ? (
         <Text style={[styles.body, muted]}>This league's chat is set up by MFL Football.</Text>
+      ) : !canChange ? (
+        <Text style={[styles.body, muted]}>Only your league's commissioner can change the league's chat.</Text>
       ) : !state.groupMe.signedIn ? (
         <>
           <Text style={[styles.body, { color: t.text }]}>
@@ -140,7 +144,7 @@ export function ChatSourcePanel({ leagueId, onChanged }: { leagueId: string; onC
         </>
       )}
 
-      {!state.fixed && state.source === 'groupme' ? (
+      {!state.fixed && canChange && state.source === 'groupme' ? (
         <Button label="Use MFL chat instead" onPress={() => post({ groupId: null })} disabled={busy} />
       ) : null}
       {error ? <Text style={[styles.body, { color: t.danger }]}>{error}</Text> : null}
