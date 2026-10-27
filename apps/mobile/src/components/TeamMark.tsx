@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import type { MflLiveAppTeam } from '@mfl/shared-types/mfl-live-app';
 import { absoluteUrl } from '../api';
-import { useTheme } from '../theme';
+import { font, useTheme } from '../theme';
 
 /**
  * A franchise's own crest or uploaded logo, else its initials on a neutral
@@ -27,12 +27,12 @@ export function TeamMark({ team, size = 36 }: { team: MflLiveAppTeam; size?: num
   }
   return (
     <View style={[styles.field, { width: size, height: size, borderRadius: size / 2, backgroundColor: t.field }]}>
-      <Text style={[styles.initials, { color: t.muted, fontSize: size * 0.38 }]}>{team.initials}</Text>
+      <Text style={[styles.initials, { color: t.muted, fontFamily: font.regular, fontSize: size * 0.38 }]}>{team.initials}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   field: { alignItems: 'center', justifyContent: 'center' },
-  initials: { fontWeight: '700' },
+  initials: { fontFamily: font.bold },
 });

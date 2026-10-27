@@ -1,10 +1,11 @@
 /**
- * MFL Live's look: the AFL's design language with black where the AFL is
- * navy, gold accents, a light AND a dark theme (docs/plans/mfl-live-app.md,
- * Branding). The phone's own setting picks the theme.
+ * MFL Live's look: the web board's black and red (`html.dark[data-league="mfl"]`
+ * in src/styles/league-themes.generated.css), and its font, Vend Sans.
+ *
+ * One theme for now, on the owner's call (2026-10-27): no light theme until
+ * the app's core features are right. `useTheme` stays the one way a screen
+ * reads colours, so a second theme later is a change to this file only.
  */
-
-import { useColorScheme } from 'react-native';
 
 export interface Theme {
   dark: boolean;
@@ -14,40 +15,40 @@ export interface Theme {
   text: string;
   muted: string;
   accent: string;
+  /** Text on an `accent` fill. */
+  onAccent: string;
   accentText: string;
   win: string;
   danger: string;
   field: string;
 }
 
-const light: Theme = {
-  dark: false,
-  ground: '#f4f4f5',
-  card: '#ffffff',
-  border: '#e4e4e7',
-  text: '#111113',
-  muted: '#52525b',
-  accent: '#111113',
-  accentText: '#b45309',
-  win: '#15803d',
-  danger: '#b91c1c',
-  field: '#e4e4e7',
-};
-
-const dark: Theme = {
+const mflLive: Theme = {
   dark: true,
-  ground: '#0b0b0c',
-  card: '#18181b',
-  border: '#27272a',
-  text: '#f4f4f5',
-  muted: '#a1a1aa',
-  accent: '#d97706',
-  accentText: '#c9a44c',
+  ground: '#14161a',
+  card: '#1e2126',
+  border: '#3a3f47',
+  text: '#eef0f2',
+  muted: '#9aa0a9',
+  accent: '#d81b41',
+  onAccent: '#ffffff',
+  accentText: '#ef5350',
   win: '#4ade80',
-  danger: '#f87171',
-  field: '#27272a',
+  danger: '#ff8a80',
+  field: '#282c33',
 };
 
 export function useTheme(): Theme {
-  return useColorScheme() === 'dark' ? dark : light;
+  return mflLive;
 }
+
+/**
+ * Vend Sans, loaded in App.tsx. React Native picks a weight by FAMILY name, not
+ * by `fontWeight`, so every text style names one of these instead.
+ */
+export const font = {
+  regular: 'VendSans_400Regular',
+  medium: 'VendSans_500Medium',
+  semibold: 'VendSans_600SemiBold',
+  bold: 'VendSans_700Bold',
+} as const;

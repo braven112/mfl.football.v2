@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { signIn } from '../api';
-import { useTheme } from '../theme';
+import { font, useTheme } from '../theme';
 
 interface Props {
   onSignedIn: (token: string) => void;
@@ -85,9 +85,9 @@ export function SignInScreen({ onSignedIn }: Props) {
           style={[styles.button, { backgroundColor: t.accent, opacity: canSubmit ? 1 : 0.5 }]}
         >
           {busy ? (
-            <ActivityIndicator color={t.dark ? '#111113' : '#ffffff'} />
+            <ActivityIndicator color={t.onAccent} />
           ) : (
-            <Text style={[styles.buttonText, { color: t.dark ? '#111113' : '#ffffff' }]}>Sign in</Text>
+            <Text style={[styles.buttonText, { color: t.onAccent }]}>Sign in</Text>
           )}
         </Pressable>
 
@@ -103,12 +103,12 @@ export function SignInScreen({ onSignedIn }: Props) {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  brand: { fontSize: 36, fontWeight: '800', marginBottom: 8 },
-  lede: { fontSize: 16, marginBottom: 28, lineHeight: 22 },
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, marginBottom: 16 },
-  error: { fontSize: 14, marginBottom: 12 },
+  brand: { fontSize: 36, fontFamily: font.bold, marginBottom: 8 },
+  lede: { fontFamily: font.regular, fontSize: 16, marginBottom: 28, lineHeight: 22 },
+  label: { fontSize: 13, fontFamily: font.semibold, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontFamily: font.regular, fontSize: 16, marginBottom: 16 },
+  error: { fontFamily: font.regular, fontSize: 14, marginBottom: 12 },
   button: { borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  buttonText: { fontSize: 16, fontWeight: '700' },
-  fine: { fontSize: 12, marginTop: 24, lineHeight: 17 },
+  buttonText: { fontSize: 16, fontFamily: font.bold },
+  fine: { fontFamily: font.regular, fontSize: 12, marginTop: 24, lineHeight: 17 },
 });
