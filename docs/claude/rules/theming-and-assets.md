@@ -690,6 +690,29 @@ diff on one league as the rule not working; check the other.
 every franchise left on light art either carries a ring or opted out. Its
 manifest cases deliberately use AFL franchises for the same reason.
 
+## Championship marks — team-centric once WON, league-wide for what COULD be won
+
+Two kinds of championship art, and the owner's rule (Brandon, Oct 2026) picks
+by whether the title has been won:
+
+- **Team-centric** — the pennant in the club's colors with the logo it won
+  under (`HistoryRafters.astro`). Only for a title a club HAS won, and only in
+  the Rafters: League History home, the franchise page and the owner page.
+- **League-wide** — the award's own badge (`public/assets/afl/awards/`). For
+  an award still in play, standing for what could be won (the AFL homepage
+  standings' division shield for seeds 1–2, the playoff prizes), and beside a
+  team already shown in its own banner (the footer champions band, a
+  Franchises index card).
+
+A seasonal theme redraws the league-wide badges (`_swaps` in
+`src/data/seasonal-marks/afl-<season>.json`) and they must wear it: an `<img>`
+gets the CSS swap, and an inlined badge goes through `aflBadgeSvgs`
+(`afl-badge-art.ts`). Christmas draws its badges as PNG, which the inlined
+surfaces silently skipped until `aflBadgeSvgs` learned to wrap a PNG in an
+`<svg>` on the plain badge's viewBox. A Rafters banner is exempt
+(`data-earned-mark`): once it is earned, it stays as won.
+Guard: `tests/championship-mark-rule.test.ts`.
+
 ## Replacing a team's art is only a logo swap if no ERA changes
 
 `/publish-assets` regenerates three derived files (crest manifest, both asset

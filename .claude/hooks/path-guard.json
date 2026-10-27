@@ -1485,6 +1485,21 @@
         "tests/head-custom-element-guard.test.ts",
         "tests/site-styles.test.ts"
       ]
+    },
+    {
+      "name": "championship-marks",
+      "rules": "docs/claude/rules/theming-and-assets.md",
+      "paths": [
+        "src/utils/afl-badge*",
+        "src/components/shared/league-history/HistoryRafters.astro",
+        "src/components/afl-fantasy/AflFranchise*.astro",
+        "src/components/afl/hp-sections/AflConferencePlayoffPreview.astro",
+        "src/utils/footer-champions.ts"
+      ],
+      "tests": [
+        "tests/championship-mark-rule.test.ts"
+      ],
+      "note": "A title a club has WON hangs team-centric only in the Rafters (HistoryRafters); everywhere else the award's league-wide badge stands for what could be won, in the season's drawing (Christmas PNGs included)."
     }
   ]
 }
