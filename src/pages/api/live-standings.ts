@@ -24,12 +24,14 @@ import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { assembleMflLiveStandings } from '../../utils/live/mfl-live-standings';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
+import { readMflLiveSelection } from '../../utils/mfl-live-selection-store';
 import { hasMflLivePro } from '../../utils/mfl-live-pro';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, request, cookies }) => {
-  const user = (await getBroadcastViewer(request))?.user;
+  const viewer = await getBroadcastViewer(request);
+  const user = viewer?.user;
   if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
 
   const rawWeek = url.searchParams.get('week');
@@ -54,7 +56,13 @@ export const GET: APIRoute = async ({ url, request, cookies }) => {
       user,
       week,
       leaguesParam: url.searchParams.get('leagues'),
-      leaguesCookie: cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      // The account's stored choice (phone and web agree), the cookie as its
+      // migration fallback. A paired TV's pass is read-only and has no account
+      // store of its own to read, so it keeps the cookie path.
+      leaguesCookie: await readMflLiveSelection(
+        viewer?.via === 'tv' ? null : user,
+        cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value,
+      ),
       mflOnly: url.searchParams.get('source') === 'mfl',
       // The same check the web page makes before it unlocks Live and Projected.
       proLocked: !hasMflLivePro(user),
