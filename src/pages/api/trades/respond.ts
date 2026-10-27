@@ -21,10 +21,9 @@ import { recordInsightAction } from '../../../utils/site-insights';
 import { invalidateAppBadge } from '../../../utils/app-badge-cache';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
-import { mflFetch, describeMflFailure } from '../../../utils/mfl-fetch';
+import { describeMflFailure } from '../../../utils/mfl-fetch';
+import { respondToTrade, TRADE_RESPONSES, type TradeResponseKind } from '../../../utils/mfl-trade-ops';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-const VALID_RESPONSES = ['accept', 'reject', 'revoke'] as const;
-type TradeResponse = (typeof VALID_RESPONSES)[number];
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -61,9 +60,9 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (!VALID_RESPONSES.includes(response as TradeResponse)) {
+    if (!TRADE_RESPONSES.includes(response as TradeResponseKind)) {
       return new Response(
-        JSON.stringify({ success: false, message: `Invalid response: must be one of ${VALID_RESPONSES.join(', ')}` }),
+        JSON.stringify({ success: false, message: `Invalid response: must be one of ${TRADE_RESPONSES.join(', ')}` }),
         { status: 400, headers: JSON_HEADERS }
       );
     }
@@ -74,63 +73,21 @@ export const POST: APIRoute = async ({ request }) => {
     // doesn't contain it between the two rollover dates.
     const year = getLeagueYearForMflId(leagueId);
 
-    const params = new URLSearchParams({
-      TYPE: 'tradeResponse',
-      L: leagueId,
-      TRADE_ID: tradeId,
-      RESPONSE: response,
-    });
-
-    if (comments?.trim()) {
-      params.set('COMMENTS', comments.trim());
-    }
-
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
-
-    console.log(`[trades/respond] POST ${importUrl} (TRADE_ID=${tradeId}, RESPONSE=${response})`);
-
-    // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
-    const mflResponse = await mflFetch({
-      url: importUrl,
-      method: 'POST',
+    console.log(`[trades/respond] tradeResponse (TRADE_ID=${tradeId}, RESPONSE=${response})`);
+    const result = await respondToTrade({
+      leagueId,
+      year,
       mflUserCookie: user.id,
-      body: params.toString(),
+      tradeId: String(tradeId),
+      response: response as TradeResponseKind,
+      comments,
     });
-
-    const responseText = await mflResponse.text();
-    console.log('[trades/respond] MFL response:', mflResponse.status, responseText.substring(0, 500));
-
-    // MFL returns HTTP 200 even for errors — check response body
-    if (responseText.includes('<error>') || responseText.includes('"error"')) {
-      const errorMatch = responseText.match(/<error[^>]*>(.*?)<\/error>/s)
-        || responseText.match(/"error"\s*:\s*"([^"]+)"/);
-      const errorMsg = errorMatch?.[1] || 'MFL rejected the trade response';
+    if (!result.ok) {
       return new Response(
-        JSON.stringify({ success: false, message: errorMsg }),
-        { status: 400, headers: JSON_HEADERS }
+        JSON.stringify({ success: false, message: result.message }),
+        { status: result.status, headers: JSON_HEADERS }
       );
     }
-
-    if (!mflResponse.ok) {
-      return new Response(
-        JSON.stringify({ success: false, message: `MFL API error: ${mflResponse.status}` }),
-        { status: 502, headers: JSON_HEADERS }
-      );
-    }
-
-    // Detect when MFL returns HTML instead of API response
-    if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'MFL did not process the request. Please try again.' }),
-        { status: 502, headers: JSON_HEADERS }
-      );
-    }
-
-    const actionLabels: Record<TradeResponse, string> = {
-      accept: 'Trade accepted',
-      reject: 'Trade rejected',
-      revoke: 'Trade withdrawn',
-    };
 
     // The answered offer was one of the numbers on this owner's app icon.
     // Fire-and-forget: a stale badge must never fail a trade response.
@@ -138,7 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
     await recordInsightAction(user, 'trade_response');
 
     return new Response(
-      JSON.stringify({ success: true, message: actionLabels[response as TradeResponse] }),
+      JSON.stringify({ success: true, message: result.message }),
       { status: 200, headers: JSON_HEADERS }
     );
   } catch (error) {

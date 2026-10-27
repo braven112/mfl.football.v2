@@ -22,6 +22,7 @@
 import leagueConfig from '../data/theleague.config.json';
 import { LEAGUES } from '../config/leagues';
 import { getRedis } from './redis-client';
+import { resolveTradeProposer } from './mfl-trade-ops';
 import {
   schefterKey,
   DEFAULT_SCHEFTER_NAV_SLUG,
@@ -57,7 +58,7 @@ for (const team of (leagueConfig as { teams?: Array<{ name?: string; franchiseId
  * MFL's owner-view `pendingTrades` payload omits the `franchise` (originator)
  * field — it only carries `offeredto` (the partner) plus a `description` like
  * "Pacific Pigskins proposed a trade to ...". Mirror the resolver in
- * `src/pages/api/trades/pending.ts#resolveProposer` so the rumor scanner's
+ * `resolveTradeProposer` (src/utils/mfl-trade-ops.ts), shared with `/api/trades/pending`, so the rumor scanner's
  * downstream `String(raw.franchise || '').padStart(4, '0')` doesn't collapse
  * to `'0000'` and surface as "Team 0000" in the admin archive.
  */
@@ -65,23 +66,9 @@ export function resolveOriginatorFid(
   raw: Record<string, unknown>,
   reportingFranchiseId: string,
 ): string {
-  const reporterPadded = String(reportingFranchiseId).padStart(4, '0');
   const existing = String(raw.franchise ?? '').trim();
   if (existing) return existing.padStart(4, '0');
-
-  const partner = String(raw.offeredto ?? raw.franchise2 ?? '').trim().padStart(4, '0');
-  // Owner view: `offeredto` is always the counter-party. If the reporter is
-  // not the partner, the reporter authored the offer.
-  if (partner && partner !== reporterPadded) return reporterPadded;
-
-  // Reporter is the recipient — pull the proposer's name from the description.
-  const desc = String(raw.description ?? '');
-  const match = desc.match(/^(.+?)\s+proposed a trade to\s/i);
-  if (match) {
-    const fid = teamNameToFid.get(match[1].trim().toLowerCase());
-    if (fid) return fid.padStart(4, '0');
-  }
-  return '';
+  return resolveTradeProposer(raw, reportingFranchiseId, teamNameToFid);
 }
 
 /**

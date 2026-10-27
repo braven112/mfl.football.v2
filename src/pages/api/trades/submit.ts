@@ -21,7 +21,7 @@ import { recordInsightAction } from '../../../utils/site-insights';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
 import { mflFetch, describeMflFailure } from '../../../utils/mfl-fetch';
-import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
+import { proposeTrade } from '../../../utils/mfl-trade-ops';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
@@ -67,78 +67,23 @@ export const POST: APIRoute = async ({ request }) => {
     // the wrong MFL season between the two rollover dates.
     const year = getLeagueYearForMflId(leagueId);
 
-    // SECURITY: Verify the user owns every player they're offering
-    // willGiveUp is a comma-separated string of player IDs (and possibly draft pick tokens)
-    const offeredPlayerIds = willGiveUp.split(',').map((s: string) => s.trim()).filter((id: string) => id && /^\d+$/.test(id));
-
-    if (offeredPlayerIds.length > 0) {
-      const mflClient = createMFLApiClient({
-        leagueId,
-        year: String(year),
-        mflUserId: user.id,
-      });
-      const rosters = await mflClient.getRosters();
-      const userRoster = rosters[user.franchiseId] || [];
-
-      const notOwned = offeredPlayerIds.filter((pid: string) => !userRoster.includes(pid));
-      if (notOwned.length > 0) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'You can only offer players from your own roster.' }),
-          { status: 403, headers: JSON_HEADERS }
-        );
-      }
-    }
-
-    const params = new URLSearchParams({
-      TYPE: 'tradeProposal',
-      L: leagueId,
-      OFFEREDTO: offeredTo,
-      WILL_GIVE_UP: willGiveUp,
-      WILL_RECEIVE: willReceive,
-    });
-
-    if (comments?.trim()) {
-      params.set('COMMENTS', comments.trim());
-    }
-
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
-
-    console.log(`[trades/submit] POST ${importUrl} (OFFEREDTO=${offeredTo})`);
-
-    // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
-    const mflResponse = await mflFetch({
-      url: importUrl,
-      method: 'POST',
+    // The roster check, the owner-cookie import and MFL's HTTP-200 error
+    // bodies all live in the shared helper the app's endpoint calls too.
+    console.log(`[trades/submit] tradeProposal (OFFEREDTO=${offeredTo})`);
+    const result = await proposeTrade({
+      leagueId,
+      year,
       mflUserCookie: user.id,
-      body: params.toString(),
+      franchiseId: user.franchiseId,
+      offeredTo: String(offeredTo),
+      willGiveUp: String(willGiveUp),
+      willReceive: String(willReceive),
+      comments,
     });
-
-    const responseText = await mflResponse.text();
-    console.log('[trades/submit] MFL response:', mflResponse.status, responseText.substring(0, 500));
-
-    // MFL returns HTTP 200 even for errors — check response body
-    if (responseText.includes('<error>') || responseText.includes('"error"')) {
-      const errorMatch = responseText.match(/<error[^>]*>(.*?)<\/error>/s)
-        || responseText.match(/"error"\s*:\s*"([^"]+)"/);
-      const errorMsg = errorMatch?.[1] || 'MFL rejected the trade proposal';
+    if (!result.ok) {
       return new Response(
-        JSON.stringify({ success: false, message: errorMsg }),
-        { status: 400, headers: JSON_HEADERS }
-      );
-    }
-
-    if (!mflResponse.ok) {
-      return new Response(
-        JSON.stringify({ success: false, message: `MFL API error: ${mflResponse.status}` }),
-        { status: 502, headers: JSON_HEADERS }
-      );
-    }
-
-    // Detect when MFL returns an HTML page instead of an API response
-    if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'MFL did not process the trade. Please try again.' }),
-        { status: 502, headers: JSON_HEADERS }
+        JSON.stringify({ success: false, message: result.message }),
+        { status: result.status, headers: JSON_HEADERS }
       );
     }
 
