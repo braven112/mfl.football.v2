@@ -17,6 +17,11 @@
  * The same rule as `/live`: the league list comes from the owner's OWN MFL
  * cookie via `discoverBoardLeagues`, and the `?leagues=` param / cookie can
  * only pick from it (`resolveMflLiveLeagues` returns ids present in it).
+ *
+ * ── SLEEPER LEAGUES ───────────────────────────────────────────────────────
+ * The viewer's linked Sleeper leagues (`sl-…`) join the list the same way they
+ * join the board, and come back as the same table shape from
+ * `sleeper/standings.ts`. They have no Projected view.
  */
 import type { AuthUser } from '../auth';
 import type { LiveMatchup, LiveStandingsRow } from '../../types/live';
@@ -25,6 +30,12 @@ import { CROSS_LEAGUE_FAN_OUT_LIMIT, discoverBoardLeagues } from '../cross-leagu
 import { mapWithConcurrency } from '../fan-out';
 import { resolveMflLiveLeagues } from '../mfl-live-selection';
 import { assembleMflLeagueBoard } from './mfl-league-board';
+import { getSleeperLink, sleeperViewerKey } from '../sleeper/link';
+import { discoverSleeperBoardLeagues } from '../sleeper/live';
+import { applyPlayerFixes, readViewerFixes } from '../sleeper/player-fixes';
+import { loadSleeperPlayerMap, type SleeperPlayerMap } from '../sleeper/players';
+import { readSleeperStandings } from '../sleeper/standings';
+import { loadMflNflClock, SLEEPER_IN_STORE_APP } from '../sleeper/store-clock';
 import {
   isStandingsModeLocked,
   projectStandings,
@@ -36,6 +47,8 @@ import {
 export interface LiveStandingsLeague {
   leagueId: string;
   leagueName: string;
+  /** Absent for an MFL league. A Sleeper league has no Projected view. */
+  provider?: 'sleeper';
   /** MFL's rows, or null when the read failed — never an empty array for that. */
   standings: LiveStandingsRow[] | null;
   /** This week's matchups — what the Live and Projected views add. */
@@ -81,13 +94,16 @@ export interface AssembleMflLiveStandingsInput {
 
 /** Every view of one table this viewer may see. See `LiveStandingsLeague.views`. */
 export function standingsViewsFor(
-  table: Pick<LiveStandingsLeague, 'standings' | 'matchups'>,
+  table: Pick<LiveStandingsLeague, 'standings' | 'matchups' | 'provider'>,
   proLocked: boolean,
 ): MflLiveStandingsViews | null {
   if (!table.standings) return null;
   const views: MflLiveStandingsViews = {};
   for (const mode of STANDINGS_MODES) {
     if (isStandingsModeLocked(mode, proLocked)) continue;
+    // Sleeper ships live scores only, so a "projected" table would be the
+    // live one under a second label. Absent, and the app falls back to Final.
+    if (mode === 'projected' && table.provider === 'sleeper') continue;
     views[mode] = projectStandings(table.standings, table.matchups, mode);
   }
   return views;
@@ -99,11 +115,39 @@ export async function assembleMflLiveStandings(
   const { user, week } = input;
   const year = input.year ?? getCurrentSeasonYear();
 
-  const leagues = await discoverBoardLeagues(user);
+  // MFL and Sleeper discovered together, exactly as the board does, so the
+  // same leagues are switched on in both. No Sleeper link: an empty list.
+  const [mflLeagues, sleeperLeagues] = await Promise.all([
+    discoverBoardLeagues(user),
+    input.mflOnly && !SLEEPER_IN_STORE_APP
+      ? Promise.resolve([])
+      : getSleeperLink(user)
+          .then((link) => discoverSleeperBoardLeagues(link, year))
+          .catch(() => []),
+  ]);
+  const leagues = [...mflLeagues, ...sleeperLeagues];
   const { enabled } = resolveMflLiveLeagues(input.leaguesParam, input.leaguesCookie, leagues);
   const on = leagues.filter((l) => enabled.includes(l.id));
 
+  // What every Sleeper league shares: the player map and one NFL clock. The
+  // clock is MFL's own schedule on both surfaces — the standings only need
+  // "finished or not", and it keeps the store app free of ESPN.
+  const onSleeper = on.some((l) => l.provider === 'sleeper');
+  const sleeperShared = onSleeper
+    ? Promise.all([
+        Promise.all([
+          loadSleeperPlayerMap(year).catch((): SleeperPlayerMap => ({})),
+          readViewerFixes(sleeperViewerKey(user)).catch(() => ({})),
+        ]).then(([map, fixes]) => applyPlayerFixes(map, fixes)),
+        loadMflNflClock({ year, week }),
+      ])
+    : Promise.resolve([{}, null] as const);
+
   const settled = await mapWithConcurrency(on, CROSS_LEAGUE_FAN_OUT_LIMIT, async (league) => {
+    if (league.provider === 'sleeper') {
+      const [players, clock] = await sleeperShared;
+      return readSleeperStandings({ user, league, week, year, players, clock, mflOnly: input.mflOnly === true });
+    }
     const { board } = await assembleMflLeagueBoard({
       user,
       league,
@@ -120,6 +164,7 @@ export async function assembleMflLiveStandings(
     return {
       leagueId: league.id,
       leagueName: league.name,
+      ...(league.provider === 'sleeper' ? { provider: 'sleeper' as const } : {}),
       standings: panel?.standings ?? null,
       matchups: panel?.matchups ?? [],
     };

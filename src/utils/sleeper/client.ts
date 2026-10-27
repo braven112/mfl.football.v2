@@ -44,6 +44,22 @@ export interface SleeperRoster {
   co_owners?: string[] | null;
   /** Every player on the roster (starters, bench, reserve). */
   players?: string[] | null;
+  /** The season record. Points for are split into whole points and hundredths. */
+  settings?: {
+    wins?: number;
+    losses?: number;
+    ties?: number;
+    fpts?: number;
+    fpts_decimal?: number;
+  } | null;
+}
+
+/** The parts of a league's `settings` the standings read. */
+export interface SleeperLeagueSettings {
+  start_week?: number;
+  playoff_week_start?: number;
+  /** 1 when every week also scores each team against the league median. */
+  league_average_match?: number;
 }
 
 export interface SleeperLeagueUser {

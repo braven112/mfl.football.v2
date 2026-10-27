@@ -112,6 +112,13 @@ fits well inside the limit at our scale, and it uses the same fan-out limit and
   ESPN read on the web. Linking is still done on `/live/settings`: the link is
   keyed by the MFL account, so the app sees it. Commercial-use status of
   Sleeper's terms: `mfl-live-store-app.md` § Legal.
+- **Standings (2026-10-27).** `/live/standings` and the app's Standings tab
+  list Sleeper leagues too (`sleeper/standings.ts`). Sleeper sends records but
+  no order, so a Sleeper table is ordered by win percentage, then points for.
+  `weekGamesCounted` comes from the record against the calendar (two results
+  a week in a median league), playoff weeks add nothing, and there is no
+  Projected view; on the web, Projected reads a Sleeper matchup as Live, so an
+  unplayed one is never a 0-0 tie.
 
 ## Crowd player matching (Oct 2026)
 
