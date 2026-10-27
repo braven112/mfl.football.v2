@@ -70,7 +70,7 @@ const EXPECTED_AT_LEAST = [
   // waiver card (the AFL's and Archie's homepages hand it theirs).
   join('src', 'utils', 'league-hero', 'page.ts'),
   join('src', 'components', 'shared', 'free-agents', 'FreeAgentsPage.astro'),
-  join('src', 'pages', 'api', 'waiver-claim.ts'),
+  join('src', 'utils', 'waiver-claim-actions.ts'),
   join('src', 'pages', 'theleague', 'index.astro'),
   join('src', 'pages', 'theleague', 'players.astro'),
   join('src', 'utils', 'claim-context.ts'),

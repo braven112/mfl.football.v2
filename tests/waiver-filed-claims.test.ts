@@ -155,7 +155,7 @@ describe('readFiledWaiverClaims', () => {
 });
 
 describe('the manage-claims route', () => {
-  const ROUTE = fs.readFileSync(path.join(process.cwd(), 'src/pages/api/waiver-claims.ts'), 'utf-8');
+  const ROUTE = fs.readFileSync(path.join(process.cwd(), 'src/utils/waiver-claim-actions.ts'), 'utf-8');
   const CODE = ROUTE.split('\n')
     .filter((l) => {
       const t = l.trim();

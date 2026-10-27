@@ -137,7 +137,7 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
   it('the waiver claim route reads MFL only through mflFetch', () => {
     // The two reads this guard was written for, pinned directly: the
     // owner-gated calendar and the pendingWaivers verification.
-    const source = fs.readFileSync(path.join(SRC, 'pages/api/waiver-claim.ts'), 'utf-8');
+    const source = fs.readFileSync(path.join(SRC, 'utils/waiver-claim-actions.ts'), 'utf-8');
     expect(source).toContain('TYPE=calendar');
     expect(source).toContain('TYPE=pendingWaivers');
     for (const call of bareFetchCalls(source)) {
