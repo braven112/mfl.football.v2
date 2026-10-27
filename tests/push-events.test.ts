@@ -96,6 +96,12 @@ describe('alertsFor', () => {
       .toMatchObject({ franchiseId: '0007', category: 'draft-on-clock', payload: { title: "You're on the clock" } });
   });
 
+  it('opens the right app screen on tap', () => {
+    expect(alertsFor({ kind: 'trade-offer', leagueId: OUTSIDE, key: 't', fromFranchiseId: '0001', toFranchiseId: '0004', fromName: 'A' })[0].payload.screen).toBe('Trades');
+    expect(alertsFor({ kind: 'auction-outbid', leagueId: OUTSIDE, franchiseId: '0002', playerId: '9', playerName: 'Ja Chase', highBid: 1500, highBidAt: 't', bidderName: 'Hawks' })[0].payload)
+      .toMatchObject({ screen: 'Draft', title: "You've been outbid", body: 'Ja Chase is up to $1,500 (Hawks).' });
+  });
+
   it('words waiver results, and says nothing about an empty run', () => {
     expect(alertsFor({ kind: 'waiver-result', leagueId: OUTSIDE, key: 'w', franchiseId: '0002', added: ['A', 'B', 'C'] })[0].payload.body)
       .toBe('You got A, B and C.');
@@ -104,6 +110,7 @@ describe('alertsFor', () => {
 
   it('keys an event the same way for both callers', () => {
     expect(eventKey({ kind: 'draft-on-clock', leagueId: '1', franchiseId: '0001', overall: 5, round: 1, pick: 5 })).toBe('draft-on-clock:5');
+    expect(eventKey({ kind: 'auction-outbid', leagueId: '1', franchiseId: '0003', playerId: '77', playerName: 'x', highBid: 5, highBidAt: 't' })).toBe('auction-outbid:0003:77:t');
     // A league drafting on two boards counts overall from 1 on each.
     expect(eventKey({ kind: 'draft-on-clock', leagueId: '1', franchiseId: '0001', overall: 5, round: 1, pick: 5, unit: 'CONFERENCE01' })).toBe('draft-on-clock:CONFERENCE01:5');
     expect(eventKey({ kind: 'trade-accepted', leagueId: '1', key: '99', toFranchiseId: '0001', fromName: 'x' })).toBe('trade-accepted:99');
@@ -112,7 +119,7 @@ describe('alertsFor', () => {
 
 describe('app defaults', () => {
   it('turns the launch-gate alerts on for the app only', () => {
-    for (const id of ['trade-accepted', 'waiver-result', 'league-chat', 'draft-on-clock']) {
+    for (const id of ['trade-accepted', 'waiver-result', 'league-chat', 'draft-on-clock', 'auction-outbid']) {
       expect(getNotificationCategory(id), id).not.toBeNull();
       expect(isCategoryEnabled(id, {}, THELEAGUE, {}, 'app'), id).toBe(true);
       expect(isCategoryEnabled(id, {}, THELEAGUE, {}, 'web'), id).toBe(false);

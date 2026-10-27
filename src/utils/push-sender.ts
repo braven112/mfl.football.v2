@@ -19,6 +19,7 @@ import { readPreferences } from './push-preferences';
 import { isCategoryEnabled, type NotificationLeague } from '../config/notification-categories';
 import type { LeagueFeatures } from '../config/leagues';
 import { getLeagueById } from '../config/leagues';
+import type { MflLiveAppPushScreen } from '../../packages/shared-types/src/mfl-live-app-push';
 import { scrubLeagueNames } from './league-name-guard.mjs';
 import { isAdminFranchise } from '../config/nav-config';
 import { outboundAllowed } from './deploy-environment';
@@ -39,6 +40,8 @@ export interface PushPayload {
   url?: string;
   /** Notification tag — pushes with the same tag collapse into one. */
   tag?: string;
+  /** The app screen a tap opens (the app only; the web uses `url`). */
+  screen?: MflLiveAppPushScreen;
   /** Icon URL (site-relative). Defaults in the service worker. */
   icon?: string;
   /**

@@ -293,7 +293,7 @@ export async function pruneExpoTokens(
  */
 export function buildExpoMessages(
   tokens: string[],
-  payload: { title: string; body: string; url?: string; tag?: string },
+  payload: { title: string; body: string; url?: string; tag?: string; screen?: MflLiveAppPushData['screen'] },
   category: string,
   leagueId: string,
 ): ExpoPushMessage[] {
@@ -301,6 +301,7 @@ export function buildExpoMessages(
   const data: MflLiveAppPushData = { category, leagueId };
   if (payload.url) data.url = payload.url;
   if (payload.tag) data.tag = payload.tag;
+  if (payload.screen) data.screen = payload.screen;
   return tokens.map((to) => ({
     to,
     title: payload.title,

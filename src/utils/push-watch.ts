@@ -25,6 +25,8 @@
  *   - the draft board (R's reader; each board, for a league that drafts by
  *     conference), every run while a draft is upcoming or live and every half
  *     hour otherwise → "you're on the clock"
+ *   - each phone owner's auction room (R's reader), every two minutes while
+ *     players are up for bids and every half hour otherwise → "outbid"
  *
  * FIRST SIGHT ALERTS NOTHING. A league with no state is read once to record
  * what is already there; only what appears after that is news. Anything older
@@ -46,6 +48,8 @@ import { readLeagueTransactions, type OwnerLeagueRef } from './live/mfl-live-tra
 import { readMflChat, type MflChatMessage } from './mfl-chat';
 import { fetchPendingTradeRows, resolveTradeProposer } from './mfl-trade-ops';
 import { readMflLiveDraft } from './live/mfl-live-draft';
+import { readMflLiveAuction } from './live/mfl-live-auction';
+import type { MflLiveAppAuctionLot } from '../../packages/shared-types/src/mfl-live-app-auction';
 import type { OwnerLeague } from './live/owner-league';
 import type { TransactionRow } from './mfl-transactions';
 
@@ -58,6 +62,11 @@ const NEWS_WINDOW_MS = 24 * 60 * 60 * 1000;
 const SEEN_LIMIT = 200;
 /** A draft that is neither upcoming nor live is looked at this often. */
 const DRAFT_IDLE_MS = 30 * 60 * 1000;
+/**
+ * An open auction is read this often per owner. It is five MFL exports a
+ * read, and a slow auction's bids sit for hours, so two minutes is plenty.
+ */
+const AUCTION_OPEN_MS = 2 * 60 * 1000;
 /** An offer this owner made is remembered this long after it leaves pendingTrades. */
 const OUTGOING_KEEP_MS = 24 * 60 * 60 * 1000;
 
@@ -86,6 +95,15 @@ export interface WatchState {
   offersOut: Record<string, Record<string, { to: string; seenAt: number }>>;
   /** Per draft board (the room's `unit`, '' when the league has one board). */
   drafts: Record<string, DraftSeen>;
+  /** Per franchise: its auction room as last read, and the outbids already told. */
+  auctions: Record<string, AuctionSeen>;
+}
+
+export interface AuctionSeen {
+  status: string;
+  checkedAt: number;
+  /** `{playerId}:{highBidAt}` for each outbid lot already alerted (or seeded). */
+  outbid: string[];
 }
 
 export interface DraftSeen {
@@ -95,7 +113,7 @@ export interface DraftSeen {
 }
 
 export function emptyState(): WatchState {
-  return { tx: [], chat: [], offersIn: {}, offersOut: {}, drafts: {} };
+  return { tx: [], chat: [], offersIn: {}, offersOut: {}, drafts: {}, auctions: {} };
 }
 
 /** Record the account's leagues for the checker. Called on every app launch. */
@@ -221,6 +239,42 @@ export function mergeOutgoing(
   for (const [id, o] of Object.entries(previous)) if (now - o.seenAt < OUTGOING_KEEP_MS) next[id] = o;
   for (const o of current) next[o.id] = { to: o.to, seenAt: now };
   return next;
+}
+
+export function auctionDue(seen: AuctionSeen | undefined, now: number): boolean {
+  if (!seen) return true;
+  return now - seen.checkedAt >= (seen.status === 'open' ? AUCTION_OPEN_MS : DRAFT_IDLE_MS);
+}
+
+/** Lots this owner is newly outbid on, and the full set to remember. */
+export function outbidEvents(
+  leagueId: string,
+  franchiseId: string,
+  lots: MflLiveAppAuctionLot[],
+  told: string[],
+  teamName: (fid: string) => string,
+): { events: LeagueEvent[]; outbid: string[] } {
+  const known = new Set(told);
+  const events: LeagueEvent[] = [];
+  const outbid: string[] = [];
+  for (const lot of lots) {
+    if (!lot.outbid) continue;
+    const highBidAt = lot.highBidAt ?? `${lot.highBid}`;
+    const mark = `${lot.player.id}:${highBidAt}`;
+    outbid.push(mark);
+    if (known.has(mark)) continue;
+    events.push({
+      kind: 'auction-outbid',
+      leagueId,
+      franchiseId,
+      playerId: lot.player.id,
+      playerName: lot.player.name,
+      highBid: lot.highBid,
+      highBidAt,
+      ...(lot.highBidder ? { bidderName: teamName(lot.highBidder) } : {}),
+    });
+  }
+  return { events, outbid };
 }
 
 export function draftDue(drafts: WatchState['drafts'], now: number): boolean {
@@ -374,6 +428,18 @@ export async function checkLeague(leagueId: string, now = Date.now()): Promise<L
       state.drafts[unit] = { status: room.status, overall: clock?.overall ?? null, checkedAt: now };
       if (!room.unit) break;
     }
+  }
+
+  for (const reader of readers) {
+    const seen = state.auctions[reader.franchiseId];
+    if (!auctionDue(seen, now)) continue;
+    const league: OwnerLeague = { ...ref, franchiseId: reader.franchiseId };
+    const room = await readMflLiveAuction(league, reader.cookie, new Date(now)).catch(() => null);
+    if (!room?.ok) continue;
+    const found = outbidEvents(leagueId, reader.franchiseId, room.lots, seen?.outbid ?? [], teamName);
+    // An owner's first read only records, like a league's.
+    if (!seeding && seen) events.push(...found.events);
+    state.auctions[reader.franchiseId] = { status: room.status, checkedAt: now, outbid: found.outbid };
   }
 
   let sent = 0;

@@ -81,6 +81,19 @@ export type LeagueEvent =
        * conferences each count overall from 1): the room's `unit`.
        */
       unit?: string;
+    }
+  | {
+      kind: 'auction-outbid';
+      leagueId: string;
+      /** The owner who was outbid. */
+      franchiseId: string;
+      playerId: string;
+      playerName: string;
+      highBid: number;
+      /** When the bid that beat them was made — a later outbid on the same player alerts again. */
+      highBidAt: string;
+      /** Who holds the high bid now. */
+      bidderName?: string;
     };
 
 interface Alert {
@@ -104,9 +117,10 @@ function names(list: string[]): string {
 
 /** The key two callers agree on. Pure. */
 export function eventKey(event: LeagueEvent): string {
-  return event.kind === 'draft-on-clock'
-    ? `draft-on-clock:${event.unit ? `${event.unit}:` : ''}${event.overall}`
-    : `${event.kind}:${event.key}`;
+  if (event.kind === 'draft-on-clock') return `draft-on-clock:${event.unit ? `${event.unit}:` : ''}${event.overall}`;
+  // Two owners can each be outbid by the same bid, so the franchise is in the key.
+  if (event.kind === 'auction-outbid') return `auction-outbid:${event.franchiseId}:${event.playerId}:${event.highBidAt}`;
+  return `${event.kind}:${event.key}`;
 }
 
 /**
@@ -124,6 +138,7 @@ export function alertsFor(event: LeagueEvent): Alert[] {
           title: `Trade offer from ${event.fromName}`,
           body: event.summary ? clip(event.summary, CHAT_PREVIEW) : 'Open the app to see it and respond.',
           tag: tag(event.key),
+          screen: 'Trades',
         },
       }];
     case 'trade-accepted':
@@ -134,6 +149,7 @@ export function alertsFor(event: LeagueEvent): Alert[] {
           title: `${event.fromName} accepted your trade`,
           body: event.summary ? clip(event.summary, CHAT_PREVIEW) : 'The trade is done.',
           tag: tag(event.key),
+          screen: 'Transactions',
         },
       }];
     case 'waiver-result': {
@@ -144,7 +160,7 @@ export function alertsFor(event: LeagueEvent): Alert[] {
       return [{
         franchiseId: event.franchiseId,
         category: 'waiver-result',
-        payload: { title: 'Waivers are in', body, tag: tag(event.key) },
+        payload: { title: 'Waivers are in', body, tag: tag(event.key), screen: 'Transactions' },
       }];
     }
     case 'chat':
@@ -168,6 +184,19 @@ export function alertsFor(event: LeagueEvent): Alert[] {
           title: "You're on the clock",
           body: `Round ${event.round}, pick ${event.pick} (${event.overall} overall) is yours.`,
           tag: tag('draft'),
+          screen: 'Draft',
+        },
+      }];
+    case 'auction-outbid':
+      return [{
+        franchiseId: event.franchiseId,
+        category: 'auction-outbid',
+        payload: {
+          title: "You've been outbid",
+          body: `${event.playerName} is up to $${event.highBid.toLocaleString('en-US')}${event.bidderName ? ` (${event.bidderName})` : ''}.`,
+          // One notification per player: a newer outbid replaces the last.
+          tag: tag(event.playerId),
+          screen: 'Draft',
         },
       }];
   }

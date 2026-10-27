@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DarkTheme, NavigationContainer, type Theme as NavTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import { TradeBuilderScreen } from '../screens/TradeBuilderScreen';
 import { CommissionerScreen } from '../screens/CommissionerScreen';
 import { DraftScreen } from '../screens/DraftScreen';
 import type { RootStackParamList, TabParamList } from './types';
+import { navigationRef, useOpenFromAlert } from '../push/open-from-alert';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -78,9 +80,12 @@ export function RootNavigator() {
       heavy: { fontFamily: font.bold, fontWeight: 'normal' },
     },
   };
+  // A tapped alert opens its screen once the navigator can take it.
+  const [navReady, setNavReady] = useState(false);
+  useOpenFromAlert(navReady);
   return (
     <ActiveTeamProvider>
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer theme={navTheme} ref={navigationRef} onReady={() => setNavReady(true)}>
         <Stack.Navigator
           screenOptions={{
             headerStyle: { backgroundColor: t.card },

@@ -56,6 +56,10 @@ vi.mock('../src/utils/mfl-trade-ops', async (orig) => ({
   fetchPendingTradeRows: async (o: { franchiseId: string }) => ({ trades: pending[o.franchiseId] ?? [] }),
 }));
 const rooms: Record<string, any> = {};
+const auctions: Record<string, any> = {};
+vi.mock('../src/utils/live/mfl-live-auction', () => ({
+  readMflLiveAuction: async (league: { franchiseId: string }) => auctions[league.franchiseId] ?? null,
+}));
 vi.mock('../src/utils/live/mfl-live-draft', () => ({
   readMflLiveDraft: async (league: { franchiseId: string }) => rooms[league.franchiseId] ?? null,
 }));
@@ -68,6 +72,8 @@ import {
   splitOffers,
   mergeOutgoing,
   draftDue,
+  auctionDue,
+  outbidEvents,
   checkLeague,
   watchLeagues,
   watchStateKey,
@@ -94,6 +100,7 @@ beforeEach(() => {
   chat.messages = [];
   for (const k of Object.keys(pending)) delete pending[k];
   for (const k of Object.keys(rooms)) delete rooms[k];
+  for (const k of Object.keys(auctions)) delete auctions[k];
 });
 
 describe('detection', () => {
@@ -144,6 +151,25 @@ describe('detection', () => {
     expect(Object.keys(kept)).toEqual(['old']);
   });
 
+  it('reads an open auction every two minutes, a quiet one every half hour', () => {
+    expect(auctionDue(undefined, NOW)).toBe(true);
+    expect(auctionDue({ status: 'open', checkedAt: NOW - 60_000, outbid: [] }, NOW)).toBe(false);
+    expect(auctionDue({ status: 'open', checkedAt: NOW - 120_000, outbid: [] }, NOW)).toBe(true);
+    expect(auctionDue({ status: 'none', checkedAt: NOW - 600_000, outbid: [] }, NOW)).toBe(false);
+  });
+
+  it('tells an outbid once per bid that beat it', () => {
+    const lot = (id: string, at: string, outbid = true) => ({
+      player: { id, name: `P${id}`, position: 'WR' }, highBid: 12, highBidder: '0002', mine: false, outbid, highBidAt: at, bids: 3,
+    });
+    const first = outbidEvents(LEAGUE, '0001', [lot('1', 't1'), lot('2', 't1', false)] as any, [], (f) => `T${f}`);
+    expect(first.events).toEqual([
+      { kind: 'auction-outbid', leagueId: LEAGUE, franchiseId: '0001', playerId: '1', playerName: 'P1', highBid: 12, highBidAt: 't1', bidderName: 'T0002' },
+    ]);
+    expect(outbidEvents(LEAGUE, '0001', [lot('1', 't1')] as any, first.outbid, (f) => f).events).toEqual([]);
+    expect(outbidEvents(LEAGUE, '0001', [lot('1', 't2')] as any, first.outbid, (f) => f).events).toHaveLength(1);
+  });
+
   it('looks at a quiet draft every half hour, a live one every run', () => {
     expect(draftDue({}, NOW)).toBe(true);
     expect(draftDue({ '': { status: 'live', overall: 3, checkedAt: NOW } }, NOW)).toBe(true);
@@ -191,6 +217,22 @@ describe('checkLeague', () => {
     expect(notified.filter((e) => e.kind === 'draft-on-clock').map((e) => [e.unit, e.franchiseId])).toEqual([
       ['CONFERENCE00', '0001'],
       ['CONFERENCE01', '0002'],
+    ]);
+  });
+
+  it('alerts an owner outbid after their auction was first read', async () => {
+    await register();
+    const room = (at: string) => ({
+      ok: true, status: 'open',
+      lots: [{ player: { id: '9', name: 'Ja Chase', position: 'WR' }, highBid: 40, highBidder: '0002', mine: false, outbid: true, highBidAt: at, bids: 4 }],
+    });
+    auctions['0001'] = room('t1');
+    await checkLeague(LEAGUE, NOW);
+    expect(notified).toEqual([]);
+    auctions['0001'] = room('t2');
+    await checkLeague(LEAGUE, NOW + 3 * 60_000);
+    expect(notified.filter((e) => e.kind === 'auction-outbid')).toEqual([
+      expect.objectContaining({ franchiseId: '0001', playerId: '9', highBidAt: 't2', bidderName: 'Hawks' }),
     ]);
   });
 

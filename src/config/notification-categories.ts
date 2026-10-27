@@ -171,6 +171,16 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    id: 'auction-outbid',
+    group: 'your-team',
+    label: "You've been outbid",
+    description: 'Someone bid more on a player you bid on in an auction.',
+    cadence: 'Auction days only',
+    defaultOn: false,
+    appDefaultOn: true,
+    live: true,
+  },
+  {
     id: 'roster-deadline',
     group: 'your-team',
     label: 'League deadlines',
