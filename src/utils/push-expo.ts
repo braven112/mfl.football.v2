@@ -234,6 +234,13 @@ export async function getIndexedLeagues(account: string): Promise<string[]> {
   return Array.isArray(value) ? value.filter((v) => typeof v === 'string') : [];
 }
 
+/** How many phones an account still has (0 when none / no Redis). */
+export async function countExpoTokens(account: string): Promise<number> {
+  const redis = await getRedis();
+  if (!redis) return 0;
+  return (await redis.hlen(accountTokensKey(account))) ?? 0;
+}
+
 /** Forget one phone (sign-out, alerts turned off). Idempotent; false only when Redis is down. */
 export async function removeExpoToken(account: string, token: string): Promise<boolean> {
   const redis = await getRedis();

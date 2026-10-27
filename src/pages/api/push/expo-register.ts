@@ -11,15 +11,17 @@
  * cookie (`listOwnerLeagues`, the app's league switcher) and re-indexes the account's teams (push-expo.ts). The app registers
  * on every launch, so a team traded away or a league left stops alerting.
  *
- * `delivering` is false when the session's league has no alert senders yet
- * (a league this site does not run), so the app can say so.
+ * It also stores the owner's MFL sign-in, encrypted, for the one-minute MFL
+ * checker (push-credentials.ts), and forgets it with the account's last phone.
+ *
+ * `delivering` is always true now that leagues this site does not run get
+ * alerts too (push-events.ts); the field stays for older app builds.
  */
 
 import type { APIRoute } from 'astro';
 import { getMflLiveUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
-import { getLeagueById } from '../../../config/leagues';
 import { listOwnerLeagues } from '../../../utils/live/owner-league';
 import type { AuthUser } from '../../../utils/auth';
 import {
@@ -30,7 +32,9 @@ import {
   removeExpoToken,
   indexAccountTeams,
   getIndexedLeagues,
+  countExpoTokens,
 } from '../../../utils/push-expo';
+import { saveCredential, removeCredential } from '../../../utils/push-credentials';
 import type { MflLiveAppPushResponse } from '../../../../packages/shared-types/src/mfl-live-app-push';
 
 const reply = (body: MflLiveAppPushResponse, status: number) =>
@@ -92,7 +96,10 @@ export const POST: APIRoute = async ({ request }) => {
     const saved = await saveExpoToken(account, token, platform);
     if (!saved) return reply({ success: false, message: 'Alert storage is unavailable right now — try again later.' }, 503);
     await indexTeams(user, account).catch((e) => console.warn('[push/expo-register] index failed:', e));
-    return reply({ success: true, delivering: Boolean(getLeagueById(user.leagueId)) }, 200);
+    // The one-minute MFL checker reads as this owner (push-credentials.ts);
+    // refreshed on every launch so a lapsed app stops being read for.
+    await saveCredential(account, user.id).catch(() => false);
+    return reply({ success: true, delivering: true }, 200);
   } catch (e) {
     console.error('[push/expo-register] error:', e);
     return reply({ success: false, message: 'Internal server error.' }, 500);
@@ -110,6 +117,8 @@ export const DELETE: APIRoute = async ({ request }) => {
   try {
     const removed = await removeExpoToken(account, token);
     if (!removed) return reply({ success: false, message: 'Alert storage is unavailable right now — try again later.' }, 503);
+    // The last phone gone means nobody to alert: stop reading MFL as them.
+    if ((await countExpoTokens(account)) === 0) await removeCredential(account);
     return reply({ success: true }, 200);
   } catch (e) {
     console.error('[push/expo-register] delete error:', e);

@@ -16,7 +16,8 @@
 
 import { getSubscriptions, pruneSubscriptions } from './push-subscriptions';
 import { readPreferences } from './push-preferences';
-import { isCategoryEnabled } from '../config/notification-categories';
+import { isCategoryEnabled, type NotificationLeague } from '../config/notification-categories';
+import type { LeagueFeatures } from '../config/leagues';
 import { getLeagueById } from '../config/leagues';
 import { scrubLeagueNames } from './league-name-guard.mjs';
 import { isAdminFranchise } from '../config/nav-config';
@@ -27,6 +28,9 @@ import {
   buildExpoMessages,
   sendExpoMessages,
 } from './push-expo';
+
+/** What a league we do not run offers: none of our feature-gated alerts. */
+const OUTSIDE_LEAGUE: NotificationLeague = { features: {} as LeagueFeatures };
 
 export interface PushPayload {
   title: string;
@@ -99,6 +103,12 @@ export async function sendPushToFranchise(
 
   const league = getLeagueById(leagueId);
   if (!league) {
+    // A league this site does not run reaches the MFL Football app only: it
+    // has no web settings page, no admins of ours and none of our features,
+    // so only the plain owner-facing categories pass, on their app defaults.
+    if (/^\d+$/.test(leagueId) && isCategoryEnabled(category, null, OUTSIDE_LEAGUE, {}, 'app')) {
+      return sendAppPush(leagueId, franchiseId, payload, category);
+    }
     console.warn(`[push-sender] unknown league ${leagueId} — refusing to send.`);
     return result;
   }
@@ -108,7 +118,11 @@ export async function sendPushToFranchise(
   // whose body is attacker-shaped input; a caller-supplied `isAdmin` would let
   // one request address the league's plumbing alerts to all twelve owners.
   const recipient = { isAdmin: isAdminFranchise(franchiseId, league.navSlug) };
-  if (!isCategoryEnabled(category, stored, league, recipient)) return result;
+  // One check per transport: they differ only in an untouched default
+  // (`appDefaultOn`); an owner's explicit choice governs both.
+  const webOn = isCategoryEnabled(category, stored, league, recipient, 'web');
+  const appOn = isCategoryEnabled(category, stored, league, recipient, 'app');
+  if (!webOn && !appOn) return result;
 
   // Another league's name never reaches a lock screen (league-name-guard.mjs).
   const scrubbed: PushPayload = {
@@ -117,11 +131,12 @@ export async function sendPushToFranchise(
     body: scrubLeagueNames(payload.body, league.slug),
   };
 
-  // Browsers and the MFL Football app are two transports behind this one door:
-  // the preference check above already covered both.
+  // Browsers and the MFL Football app are two transports behind this one
+  // door, each sent only where the preference check above allowed it.
+  const none = Promise.resolve<PushSendResult>({ sent: 0, failed: 0, pruned: 0, total: 0 });
   const [web, app] = await Promise.all([
-    sendWebPush(leagueId, franchiseId, scrubbed),
-    sendAppPush(leagueId, franchiseId, scrubbed, category),
+    webOn ? sendWebPush(leagueId, franchiseId, scrubbed) : none,
+    appOn ? sendAppPush(leagueId, franchiseId, scrubbed, category) : none,
   ]);
   for (const part of [web, app]) {
     result.sent += part.sent;
