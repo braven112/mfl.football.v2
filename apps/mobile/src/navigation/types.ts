@@ -45,6 +45,8 @@ export type RootStackParamList = {
   Commissioner: { leagueId: string };
   /** The draft room (package R). */
   Draft: { leagueId: string };
+  /** Write a prompt for a team logo, to paste into ChatGPT, Gemini or Claude. */
+  TeamLogo: { leagueId: string };
 };
 
 declare global {

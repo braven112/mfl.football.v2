@@ -99,6 +99,9 @@ export function MyTeamScreen() {
               />
               <ActionButton t={t} label="Waivers" onPress={() => navigation.navigate('Waivers', { leagueId })} />
             </View>
+            <View style={styles.actions}>
+              <ActionButton t={t} label="Create team logo" onPress={() => navigation.navigate('TeamLogo', { leagueId })} />
+            </View>
 
             {shown.cap ? <CapCard cap={shown.cap} t={t} /> : null}
 
