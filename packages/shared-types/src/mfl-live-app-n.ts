@@ -91,3 +91,51 @@ export type MflLiveAppChatPostResponse =
       /** `groupme-sign-in` only; absent when the server cannot start one. */
       signInUrl?: string;
     };
+
+/**
+ * `/api/mfl-live/chat-source?league=` — which chat a league's Chat tab shows,
+ * and switching it (outside chat, step 3). Any owner in the league may
+ * connect a GroupMe group they belong to, or switch back to MFL chat; leagues
+ * whose GroupMe our server already runs are `fixed`.
+ *
+ *   GET                       → the current source and this owner's GroupMe groups.
+ *   POST { signIn: true }     → a GroupMe sign-in link to open in the browser.
+ *   POST { groupId: '123' }   → show that GroupMe group.
+ *   POST { groupId: null }    → back to MFL chat.
+ */
+export interface MflLiveAppChatSourceGroup {
+  id: string;
+  name: string;
+  members: number;
+}
+
+export type MflLiveAppChatSourceResponse =
+  | {
+      ok: true;
+      leagueId: string;
+      source: MflLiveAppChatSource;
+      /** Set by our server for this league; the app cannot change it. */
+      fixed: boolean;
+      /** Who connected the group (connected leagues only). */
+      connectedBy: { franchiseId: string; name: string; mine: boolean } | null;
+      groupName: string | null;
+      /** This owner's own GroupMe sign-in; their groups once signed in. */
+      groupMe: { signedIn: false } | { signedIn: true; name: string; groups: MflLiveAppChatSourceGroup[] };
+    }
+  | { ok: false; error: 'chat-unavailable' };
+
+export type MflLiveAppChatSourceRequest = { signIn: true } | { groupId: string | null };
+
+export type MflLiveAppChatSourcePostResponse =
+  | { ok: true; signInUrl?: string }
+  | {
+      ok: false;
+      /**
+       * `fixed`: this league's chat is set by our server. `not-your-group`:
+       * that group is not one of yours. `groupme-sign-in`: sign in first
+       * (`signInUrl`). `unavailable`: try again shortly.
+       */
+      error: 'fixed' | 'not-your-group' | 'groupme-sign-in' | 'unavailable';
+      message: string;
+      signInUrl?: string;
+    };

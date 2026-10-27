@@ -3,11 +3,15 @@
  *
  * Leagues that talk in GroupMe never use MFL's own chat, so for them the app
  * shows the GroupMe group instead (docs/plans/mfl-live-store-app.md,
- * "Outside chat"). This step covers the leagues whose GroupMe the site
- * already reaches: a registry league with `chat.provider === 'groupme'`. Its
- * group is found the way Roger finds it — from the bot id the registry names,
- * via `GET /v3/bots` (scripts/lib/groupme-groups.mjs) — and read with the
- * service token, which owns those bots and so is a member of the group.
+ * "Outside chat"). Two kinds of league get one:
+ *
+ * - A registry league with `chat.provider === 'groupme'`: the GroupMe the site
+ *   already reaches. Its group is found the way Roger finds it — from the bot
+ *   id the registry names, via `GET /v3/bots` (scripts/lib/groupme-groups.mjs)
+ *   — and read with the service token, which owns those bots.
+ * - Any other MFL league whose owner connected a group in the app
+ *   (src/utils/live/league-groupme-connection.ts). It is read with THAT
+ *   owner's own GroupMe sign-in, since the service token is in no such group.
  *
  * An owner posts AS THEMSELVES, never through a bot (the owner, 2026-10-27):
  * the first time they tap Send, the app asks them to sign in to GroupMe, and
@@ -24,6 +28,8 @@ import type { GroupMeApiMessage } from '../../types/groupme';
 import { resolveLeagueGroupId } from '../../../scripts/lib/groupme-groups.mjs';
 import { fetchMessages } from '../groupme-client';
 import { getRedis } from '../redis-client';
+import { readGroupMeLink } from './groupme-owner-auth';
+import { readLeagueConnection } from './league-groupme-connection';
 import type { ChatMessageView } from './mfl-live-app-chat';
 
 /** GroupMe caps a message at 1000 characters. */
@@ -33,9 +39,14 @@ export const GROUPME_CHAT_MAX_LENGTH = 1000;
 const PAGE = 50;
 
 export interface LeagueGroupMe {
-  /** Registry slug — the key the group-id cache already uses. */
-  slug: string;
   groupId: string;
+  /** The token the group is read with; absent means the service token. */
+  readToken?: string;
+  /** Set by the registry, so the app cannot change it. */
+  fixed: boolean;
+  /** Who connected it in the app (connected leagues only). */
+  connectedBy?: { franchiseId: string; name: string };
+  groupName?: string;
 }
 
 function serviceToken(): string | null {
@@ -58,8 +69,9 @@ export function groupMeConfigFor(
  */
 export async function resolveLeagueGroupMe(leagueId: string): Promise<LeagueGroupMe | null> {
   const config = groupMeConfigFor(leagueId);
+  if (!config) return resolveConnectedGroupMe(leagueId);
   const token = serviceToken();
-  if (!config || !token) return null;
+  if (!token) return null;
   const groupEnv = config.league.schefter?.env?.groupId;
   const redis = await getRedis().catch(() => null);
   const { groupId } = await resolveLeagueGroupId({
@@ -71,16 +83,34 @@ export async function resolveLeagueGroupMe(leagueId: string): Promise<LeagueGrou
     redis,
     token,
   }).catch(() => ({ groupId: null }));
-  return groupId ? { slug: config.league.slug, groupId } : null;
+  return groupId ? { groupId, fixed: true } : null;
+}
+
+/** A group an owner connected in the app, read with their own sign-in. */
+async function resolveConnectedGroupMe(leagueId: string): Promise<LeagueGroupMe | null> {
+  const connection = await readLeagueConnection(leagueId);
+  if (!connection) return null;
+  const link = await readGroupMeLink(connection.account);
+  // The connector signed out of GroupMe (or GroupMe revoked them): the chat
+  // can't be read until someone connects again, so it falls back to MFL's.
+  if (!link) return null;
+  return {
+    groupId: connection.groupId,
+    readToken: link.token,
+    fixed: false,
+    connectedBy: { franchiseId: connection.franchiseId, name: connection.franchiseName },
+    groupName: connection.groupName,
+  };
 }
 
 export type GroupMeReadResult = { ok: true; messages: GroupMeApiMessage[] } | { ok: false };
 
 /** The newest messages, oldest first. */
-export async function readGroupMeChat(groupId: string): Promise<GroupMeReadResult> {
-  if (!serviceToken()) return { ok: false };
+export async function readGroupMeChat(group: LeagueGroupMe): Promise<GroupMeReadResult> {
+  const token = group.readToken ?? serviceToken();
+  if (!token) return { ok: false };
   try {
-    const messages = await fetchMessages({ groupId, limit: PAGE });
+    const messages = await fetchMessages({ groupId: group.groupId, limit: PAGE, token });
     return { ok: true, messages: [...messages].reverse() };
   } catch {
     return { ok: false };

@@ -85,7 +85,7 @@ async function myGroupMeUserId(user: AuthUser): Promise<string | null> {
 }
 
 async function groupMeGet(league: OwnerLeague, group: LeagueGroupMe, user: AuthUser, countOnly: boolean) {
-  const chat = await readGroupMeChat(group.groupId);
+  const chat = await readGroupMeChat(group);
   if (!chat.ok) return appJson({ ok: false, error: 'chat-unavailable' } satisfies MflLiveAppChatResponse, 503);
   const names = await franchiseNames(league, user.id);
   const view = buildGroupMeChatView(chat.messages, league.franchiseId, names, await myGroupMeUserId(user));
@@ -244,7 +244,7 @@ async function groupMePost(league: OwnerLeague, group: LeagueGroupMe, user: Auth
   if (result !== 'sent') return fail('refused', 'GroupMe did not accept the message. Try again.', 502);
 
   // GroupMe notifies the group itself, so no push from here.
-  const after = await readGroupMeChat(group.groupId);
+  const after = await readGroupMeChat(group);
   if (!after.ok) return appJson({ ok: true, messages: [] } satisfies MflLiveAppChatPostResponse);
   const names = await franchiseNames(league, user.id);
   const view = buildGroupMeChatView(after.messages, league.franchiseId, names, link.userId);
