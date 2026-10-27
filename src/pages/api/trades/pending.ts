@@ -9,7 +9,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
-import { mflFetch } from '../../../utils/mfl-fetch';
+import { fetchPendingTradeRows, resolveTradeProposer } from '../../../utils/mfl-trade-ops';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import type { PendingTrade } from '../../../types/trade-builder';
 import { LEAGUES } from '../../../config/leagues';
@@ -17,7 +17,6 @@ import theleagueConfig from '../../../data/theleague.config.json';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getPlayerMap } from '../../../utils/player-map';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
-import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 /** Resolved asset for the trade alert modal (avoids needing full player data on client) */
@@ -126,19 +125,6 @@ export function getTeamMaps(leagueId: string): TeamMaps {
   return TEAM_MAPS_BY_LEAGUE[leagueId] ?? TEAM_MAPS_BY_LEAGUE[LEAGUES.theleague.id];
 }
 
-/** Extract proposing franchise from MFL description like "Pacific Pigskins proposed a trade to ..." */
-function resolveProposer(t: any, userFranchiseId: string, teamNameMap: Map<string, string>): string {
-  const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
-  if (offeredTo !== userFranchiseId) return userFranchiseId;
-  const desc: string = t.description || '';
-  const match = desc.match(/^(.+?)\s+proposed a trade to\s/i);
-  if (match) {
-    const fid = teamNameMap.get(match[1].trim().toLowerCase());
-    if (fid) return fid;
-  }
-  return '';
-}
-
 /** Parse raw MFL trade array into resolved trade objects */
 function processTrades(
   tradeArray: any[],
@@ -147,7 +133,7 @@ function processTrades(
   { teamNameMap, teamLookup }: TeamMaps,
 ) {
   return tradeArray.map((t: any) => {
-    const offeredBy = resolveProposer(t, userFranchiseId, teamNameMap);
+    const offeredBy = resolveTradeProposer(t, userFranchiseId, teamNameMap);
     const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
     const willGiveUp = (t.will_give_up || t.franchise1_gave_up || '').replace(/,\s*$/, '');
     const willReceive = (t.will_receive || t.franchise2_gave_up || '').replace(/,\s*$/, '');
@@ -177,35 +163,9 @@ function processTrades(
   });
 }
 
-/** Fetch and parse pending trades from MFL */
-async function fetchMflTrades(
-  year: number,
-  leagueId: string,
-  mflCookie: string,
-  franchiseId?: string,
-): Promise<{ trades: any[] | null; error?: string }> {
-  const url = buildMflExportUrl({
-    type: 'pendingTrades',
-    leagueId,
-    year,
-    // `|| undefined` preserves the original falsy guard (`if (franchiseId)`):
-    // an empty string omits the param entirely rather than sending FRANCHISE_ID=.
-    params: { FRANCHISE_ID: franchiseId || undefined },
-  });
-
-  const res = await mflFetch({ url, method: 'GET', mflUserCookie: mflCookie });
-  if (!res.ok) return { trades: null, error: `MFL HTTP ${res.status}` };
-
-  const text = await res.text();
-  let data: any;
-  try { data = JSON.parse(text); } catch { return { trades: null, error: 'Invalid JSON' }; }
-  if (data?.error) return { trades: null, error: 'MFL auth error' };
-
-  const pending = data?.pendingTrades;
-  const raw = pending?.pendingTrade ?? pending?.trade;
-  if (!raw) return { trades: [] };
-
-  return { trades: Array.isArray(raw) ? raw : [raw] };
+/** Fetch and parse pending trades from MFL (shared with the app's endpoint). */
+function fetchMflTrades(year: number, leagueId: string, mflCookie: string, franchiseId?: string) {
+  return fetchPendingTradeRows({ year, leagueId, mflUserCookie: mflCookie, franchiseId });
 }
 
 export const GET: APIRoute = async ({ request }) => {
