@@ -127,7 +127,7 @@ function staticUrlOf(draftResults: unknown, unit: string | undefined): string | 
   return toSafeMflUrl(found?.static_url);
 }
 
-function toPlayer(id: string, identity: (id: string) => DraftIdentity | undefined, year: number): MflLiveAppDraftPlayer {
+export function toPlayer(id: string, identity: (id: string) => DraftIdentity | undefined, year: number): MflLiveAppDraftPlayer {
   const who = identity(id);
   const player: MflLiveAppDraftPlayer = {
     id,
@@ -361,7 +361,7 @@ async function readBoard(league: OwnerLeague, mflUserCookie: string): Promise<Dr
 }
 
 /** The host MFL's write and read helpers take: `wwwNN.myfantasyleague.com`, no scheme. */
-function bareHost(league: OwnerLeague): string {
+export function bareHost(league: OwnerLeague): string {
   return (league.host ?? 'https://api.myfantasyleague.com').replace(/^https?:\/\//, '').replace(/\/+$/, '');
 }
 
@@ -395,7 +395,7 @@ async function readMissingIdentities(year: number, ids: string[]): Promise<Map<s
   return out;
 }
 
-async function identityFor(year: number, ids: string[]): Promise<(id: string) => DraftIdentity | undefined> {
+export async function identityFor(year: number, ids: string[]): Promise<(id: string) => DraftIdentity | undefined> {
   const map = getPlayerMap(year);
   const missing = await readMissingIdentities(year, ids.filter((id) => id && id !== SKIPPED && !map.has(id)));
   return (id) => {

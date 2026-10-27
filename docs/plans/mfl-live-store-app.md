@@ -45,6 +45,7 @@ What makes it worth paying for over MFL's app:
 | 14 | Feature order (2026-10-27, draft for owner review) | See **Phone app feature plan** | Correctness of the core live features first, then reach, then what needs a licensed data feed. |
 | 15 | Name (2026-10-27) | **MFL Football** (was MFL Live) | Another app is already called MFL Live. The phone app's display name, sign-in screen and Play listing say MFL Football; the website and the TV app are renamed in their own thread. Code identifiers (`MflLive*`, `mfl-live-*` files and routes) stay as they are. |
 | 16 | Launch gate (2026-10-27) | **No Play upload until every table-stakes feature works** | The owner: not worth selling or posting to the closed test without them. See **Launch gate: table stakes**. Manage your team (lineups, adds/drops, waivers, trades, chat, team page, commissioner actions) moves from proposed to required, and the app must act in any MFL league the account is in. |
+| 17 | Draft room scope (2026-10-27) | **Pick-by-pick AND auction drafts, both before launch** | The owner chose auctions too (decision card in the draft room thread). Order: the pick-by-pick room (board, queue, making a pick: #1548 and the next PR), then an auction room (nominate, bid, budgets), then the "you're on the clock" alert through the push package's one-minute checker. A pick counts as made only when the re-read board shows it; MFL's `live_draft` command had not been driven by this repo before. |
 
 ## Legal — what a wide-distribution app can and cannot carry
 
@@ -229,8 +230,9 @@ views; "pages bounce to the website" is a named complaint about MFL apps):
 10. **Push alerts** (P1 item 8) for lineup reminders, trades offered or
     accepted, waiver results and chat messages, arriving in seconds (late
     alerts are a named complaint).
-11. **Draft room** with "you're on the clock" alerts and making a pick. MFL
-    leagues draft in the summer, so this can land last, but it is in the gate.
+11. **Draft room** with "you're on the clock" alerts and making a pick, for
+    pick-by-pick AND auction drafts (decision 17). MFL leagues draft in the
+    summer, so this can land last, but it is in the gate.
 
 League and team identity (P1 item 6), pairing a TV (7) and Sleeper (9) stay
 planned but are not part of the gate. Every write uses the owner's own MFL

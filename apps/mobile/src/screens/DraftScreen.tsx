@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  Alert,
   AppState,
   FlatList,
   Pressable,
@@ -12,13 +13,15 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type {
+  MflLiveAppDraftPickResponse,
   MflLiveAppDraftPlayer,
   MflLiveAppDraftPool,
   MflLiveAppDraftPoolPlayer,
   MflLiveAppDraftRoom,
+  MflLiveAppDraftQueueResponse,
   MflLiveAppDraftSlot,
 } from '@mfl/shared-types/mfl-live-app-draft';
-import { ApiError, apiGet, SignedOutError } from '../api';
+import { ApiError, apiGet, apiPost, SignedOutError } from '../api';
 import { useSession } from '../session-context';
 import type { RootStackParamList } from '../navigation/types';
 import { font, useTheme, type Theme } from '../theme';
@@ -36,8 +39,10 @@ const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
  * board round by round, the players still available, and your MFL pre-draft
  * list (MFL picks from it if your clock runs out).
  *
- * Read only for now: editing the queue and making a pick come next. The board
- * re-reads itself on the server's `pollAfterMs` hint (seconds during a live
+ * You can add players to your queue, reorder or remove them, and save the list
+ * back to MFL, and when you're on the clock, draft a player. The server only
+ * sends a pick for the slot that is yours on the live board, and only calls it
+ * made once the board shows it. The board re-reads itself on the server's `pollAfterMs` hint (seconds during a live
  * draft, minutes otherwise) and stops while the app is in the background.
  * A failed read keeps the last good board on screen and says so.
  */
@@ -56,6 +61,11 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
   const [query, setQuery] = useState('');
   const [position, setPosition] = useState('All');
   const [active, setActive] = useState(AppState.currentState === 'active');
+  /** Your queue while you're editing it, before Save. null = not editing. */
+  const [queueEdit, setQueueEdit] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [notice, setNotice] = useState<{ tone?: 'danger'; text: string } | null>(null);
 
   const onFailure = useCallback(
     (e: unknown, fallback: string, set: (m: string) => void) => {
@@ -138,6 +148,98 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
     );
   }, [pool, room?.slots, query, position]);
 
+  const known = useMemo(() => {
+    const map = new Map<string, MflLiveAppDraftPlayer>();
+    for (const p of pool?.players ?? []) map.set(p.id, p);
+    for (const p of room?.queue ?? []) map.set(p.id, p);
+    return map;
+  }, [pool, room?.queue]);
+  const queueIds = queueEdit ?? room?.queue?.map((p) => p.id) ?? [];
+  const queueShown = queueIds.map((id) => known.get(id) ?? { id, name: `Player ${id}`, position: '', nflTeam: '' });
+  const inQueue = useMemo(() => new Set(queueIds), [queueIds.join(',')]);
+
+  const editQueue = useCallback(
+    (change: (ids: string[]) => string[]) => {
+      if (!room?.queue) return;
+      setQueueEdit((cur) => change([...(cur ?? room.queue!.map((p) => p.id))]));
+    },
+    [room?.queue],
+  );
+  const addToQueue = (id: string) => editQueue((ids) => (ids.includes(id) ? ids : [...ids, id]));
+  const removeFromQueue = (id: string) => editQueue((ids) => ids.filter((x) => x !== id));
+  const moveInQueue = (index: number, by: -1 | 1) =>
+    editQueue((ids) => {
+      const to = index + by;
+      if (to < 0 || to >= ids.length) return ids;
+      [ids[index], ids[to]] = [ids[to], ids[index]];
+      return ids;
+    });
+
+  const saveQueue = useCallback(async () => {
+    if (!queueEdit || !room?.queue) return;
+    setSaving(true);
+    try {
+      const res = await apiPost<MflLiveAppDraftQueueResponse>(
+        token,
+        `/api/mfl-live/draft-queue?league=${encodeURIComponent(leagueId)}`,
+        { playerIds: queueEdit, basedOn: room.queue.map((p) => p.id) },
+      );
+      if (res.ok) {
+        setRoom({ ...room, queue: res.queue });
+        setQueueEdit(null);
+        setNotice({ text: 'Your queue is saved on MyFantasyLeague.' });
+      } else {
+        if ('queue' in res) {
+          setRoom({ ...room, queue: res.queue });
+          setQueueEdit(null);
+        }
+        setNotice({ tone: 'danger', text: res.message });
+      }
+    } catch (e) {
+      onFailure(e, 'MFL Football could not save your queue just now.', (m) => setNotice({ tone: 'danger', text: m }));
+    } finally {
+      setSaving(false);
+    }
+  }, [queueEdit, room, token, leagueId, onFailure]);
+
+  const sendPick = useCallback(
+    async (player: MflLiveAppDraftPlayer, overall: number) => {
+      setPicking(true);
+      try {
+        const res = await apiPost<MflLiveAppDraftPickResponse>(
+          token,
+          `/api/mfl-live/draft-pick?league=${encodeURIComponent(leagueId)}`,
+          { playerId: player.id, overall },
+        );
+        if (res.ok) {
+          setRoom(res.room);
+          setQueueEdit((cur) => (cur ? cur.filter((id) => id !== player.id) : cur));
+          setNotice({ text: `You drafted ${player.name}.` });
+        } else {
+          if (res.room) setRoom(res.room);
+          setNotice({ tone: 'danger', text: res.message });
+        }
+      } catch (e) {
+        onFailure(e, 'MFL Football could not send your pick. Check the board before you try again.', (m) =>
+          setNotice({ tone: 'danger', text: m }),
+        );
+      } finally {
+        setPicking(false);
+      }
+    },
+    [token, leagueId, onFailure],
+  );
+
+  const myTurn = !!room?.onClock?.mine && room.kind !== 'auction';
+  const confirmPick = (player: MflLiveAppDraftPlayer) => {
+    const clock = room?.onClock;
+    if (!clock?.mine || picking) return;
+    Alert.alert(`Draft ${player.name}?`, `With pick ${clock.label}. This goes straight to MyFantasyLeague.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Draft', onPress: () => sendPick(player, clock.overall) },
+    ]);
+  };
+
   const rounds = useMemo(() => [...new Set(room?.slots.map((s) => s.round) ?? [])], [room?.slots]);
   const clockRound = room?.slots.find((s) => s.overall === room.onClock?.overall)?.round;
   const shownRound = round ?? clockRound ?? rounds[rounds.length - 1] ?? 1;
@@ -176,6 +278,26 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
       <View style={styles.top}>
         <ClockCard room={room} teamName={teamName} t={t} />
         {error ? <Notice t={t} tone="danger" title="Couldn’t refresh" body={error} /> : null}
+        {notice ? (
+          <Pressable onPress={() => setNotice(null)} accessibilityHint="Dismiss">
+            <Text
+              style={[
+                styles.banner,
+                { color: notice.tone === 'danger' ? t.danger : t.win, borderColor: notice.tone === 'danger' ? t.danger : t.border },
+              ]}
+            >
+              {notice.text}
+            </Text>
+          </Pressable>
+        ) : null}
+        {picking ? <Text style={[styles.banner, { color: t.muted, borderColor: t.border }]}>Sending your pick to MyFantasyLeague…</Text> : null}
+        {queueEdit ? (
+          <View style={[styles.saveBar, { backgroundColor: t.card, borderColor: t.border }]}>
+            <Text style={[styles.sub, { color: t.text, flex: 1 }]}>Your queue has changes.</Text>
+            <SmallButton t={t} label="Discard" onPress={() => setQueueEdit(null)} disabled={saving} />
+            <SmallButton t={t} primary label={saving ? 'Saving…' : 'Save'} onPress={saveQueue} disabled={saving} />
+          </View>
+        ) : null}
         <View style={[styles.tabs, { borderColor: t.border }]}>
           {TABS.map((x) => (
             <Pressable
@@ -187,7 +309,7 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
             >
               <Text style={[styles.tabText, { color: tab === x.key ? t.onAccent : t.muted }]}>
                 {x.label}
-                {x.key === 'queue' && room.queue ? `  ${room.queue.length}` : ''}
+                {x.key === 'queue' && room.queue ? `  ${queueIds.length}` : ''}
               </Text>
             </Pressable>
           ))}
@@ -253,7 +375,16 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
               player={item}
               t={t}
               onPress={() => navigation.navigate('PlayerCard', { leagueId, playerId: item.id })}
-            />
+            >
+              {room.queue ? (
+                inQueue.has(item.id) ? (
+                  <Text style={[styles.adp, { color: t.muted }]}>Queued</Text>
+                ) : (
+                  <SmallButton t={t} label="+ Queue" onPress={() => addToQueue(item.id)} />
+                )
+              ) : null}
+              {myTurn ? <SmallButton t={t} primary label="Draft" onPress={() => confirmPick(item)} disabled={picking} /> : null}
+            </PlayerRow>
           )}
           contentContainerStyle={styles.list}
         />
@@ -261,17 +392,17 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
 
       {tab === 'queue' ? (
         <FlatList
-          data={room.queue ?? []}
+          data={queueShown}
           keyExtractor={(p) => p.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.accent} />}
           ListHeaderComponent={
             <Text style={[styles.note, { color: t.muted }]}>
-              Your pre-draft list on MyFantasyLeague. If your clock runs out, MFL picks the first player here who’s still available.
+              Your pre-draft list on MyFantasyLeague. If your clock runs out, MFL picks the first player here who’s still available. Add players from Players, reorder them here, then Save.
             </Text>
           }
           ListEmptyComponent={
             <Text style={[styles.muted, { color: t.muted }]}>
-              {room.queue === null ? 'MFL didn’t send your list just now. Pull down to try again.' : 'Your list is empty.'}
+              {room.queue === null ? 'MFL didn’t send your list just now. Pull down to try again.' : 'Your list is empty. Add players from Players.'}
             </Text>
           }
           renderItem={({ item, index }) => (
@@ -280,7 +411,18 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
               rank={index + 1}
               t={t}
               onPress={() => navigation.navigate('PlayerCard', { leagueId, playerId: item.id })}
-            />
+            >
+              <SmallButton t={t} label="↑" onPress={() => moveInQueue(index, -1)} disabled={index === 0} accessibilityLabel="Move up" />
+              <SmallButton
+                t={t}
+                label="↓"
+                onPress={() => moveInQueue(index, 1)}
+                disabled={index === queueShown.length - 1}
+                accessibilityLabel="Move down"
+              />
+              <SmallButton t={t} label="✕" onPress={() => removeFromQueue(item.id)} accessibilityLabel="Remove" />
+              {myTurn ? <SmallButton t={t} primary label="Draft" onPress={() => confirmPick(item)} disabled={picking} /> : null}
+            </PlayerRow>
           )}
           contentContainerStyle={styles.list}
         />
@@ -339,7 +481,7 @@ function ClockCard({ room, teamName, t }: { room: MflLiveAppDraftRoom; teamName:
         </Text>
       ) : null}
       {clock?.mine ? (
-        <Text style={[styles.sub, { color: t.onAccent }]}>Make your pick on MyFantasyLeague. Picking from the app is coming next.</Text>
+        <Text style={[styles.sub, { color: t.onAccent }]}>Tap Draft next to a player in Players or your queue.</Text>
       ) : null}
       {details ? <Text style={[styles.sub, { color: clock?.mine ? t.onAccent : t.muted }]}>{details}</Text> : null}
     </View>
@@ -397,11 +539,13 @@ function PlayerRow({
   rank,
   t,
   onPress,
+  children,
 }: {
   player: MflLiveAppDraftPoolPlayer | MflLiveAppDraftPlayer;
   rank?: number;
   t: Theme;
   onPress: () => void;
+  children?: ReactNode;
 }) {
   const adp = 'adpRank' in player ? player.adpRank : undefined;
   return (
@@ -414,6 +558,39 @@ function PlayerRow({
         <Text style={[styles.rowSub, { color: t.muted }]}>{playerLine(player)}</Text>
       </View>
       {adp ? <Text style={[styles.adp, { color: t.muted }]}>ADP {adp}</Text> : null}
+      {children}
+    </Pressable>
+  );
+}
+
+function SmallButton({
+  t,
+  label,
+  onPress,
+  primary,
+  disabled,
+  accessibilityLabel,
+}: {
+  t: Theme;
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      hitSlop={6}
+      style={[
+        styles.smallButton,
+        { backgroundColor: primary ? t.accent : t.field, borderColor: primary ? t.accent : t.border, opacity: disabled ? 0.4 : 1 },
+      ]}
+    >
+      <Text style={[styles.smallButtonText, { color: primary ? t.onAccent : t.text }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -488,4 +665,8 @@ const styles = StyleSheet.create({
   rowSub: { fontFamily: font.regular, fontSize: 13 },
   slotLabel: { fontFamily: font.semibold, fontSize: 14, minWidth: 40 },
   adp: { fontFamily: font.medium, fontSize: 12 },
+  banner: { fontFamily: font.medium, fontSize: 14, borderWidth: 1, borderRadius: 10, padding: 10 },
+  saveBar: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, padding: 10 },
+  smallButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  smallButtonText: { fontFamily: font.semibold, fontSize: 13 },
 });
