@@ -14,7 +14,7 @@ import type { MflLiveAppDraftRoom } from '../packages/shared-types/src/mfl-live-
 const readMflLiveDraft = vi.fn();
 const pushDraftList = vi.fn();
 const mflFetch = vi.fn();
-const notifyLeagueEvent = vi.fn(async () => 1);
+const notifyLeagueEvent = vi.fn(async (_event: unknown) => 1);
 
 vi.mock('../src/utils/live/mfl-live-draft', async (orig) => ({
   ...(await orig<typeof import('../src/utils/live/mfl-live-draft')>()),
@@ -31,7 +31,7 @@ vi.mock('../src/utils/mfl-fetch', async (orig) => ({
 }));
 
 vi.mock('../src/utils/push-events', () => ({
-  notifyLeagueEvent: (...a: unknown[]) => notifyLeagueEvent(...(a as [])),
+  notifyLeagueEvent: (...a: unknown[]) => notifyLeagueEvent(a[0]),
 }));
 
 const { saveDraftQueue, makeDraftPick, refusePick, pickLanded, buildDraftPickRequest } = await import(
@@ -204,6 +204,15 @@ describe('makeDraftPick', () => {
       round: 1,
       pick: 3,
     });
+  });
+
+  it('names the conference board, so two boards’ same-numbered picks don’t share an alert', async () => {
+    const before = room({ unit: 'CONFERENCE01' });
+    const after = { ...withPick(before, 2, '300'), onClock: { overall: 3, label: '1.03', franchiseId: '0003', mine: false } };
+    readMflLiveDraft.mockResolvedValueOnce(before).mockResolvedValueOnce(after);
+    mflFetch.mockResolvedValue(new Response('<status>OK</status>'));
+    await makeDraftPick(league, 'cookie', { playerId: '300', overall: 2 }, fast);
+    expect(notifyLeagueEvent.mock.calls[0][0]).toMatchObject({ unit: 'CONFERENCE01', overall: 3 });
   });
 
   it('sends no alert for a pick the board does not show, or after the last pick', async () => {

@@ -158,6 +158,8 @@ export async function alertOnClock(leagueId: string, room: MflLiveAppDraftRoom):
     overall: next.overall,
     round: slot.round,
     pick: slot.pick,
+    // A league that drafts by conference has a board per unit, each counting from 1.
+    ...(room.unit ? { unit: room.unit } : {}),
   });
 }
 
