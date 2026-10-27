@@ -4,7 +4,7 @@
 
 <div id="mfl-template-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
 <script>
-fetch('https://v2.mfl.football/assets/icons/sprite.svg')
+fetch('https://mfl.football/assets/icons/sprite.svg')
   .then(function (r) { return r.ok ? r.text() : ''; })
   .then(function (svg) {
     document.getElementById('mfl-template-sprite').innerHTML = svg.replace('style="display: none;"', '');

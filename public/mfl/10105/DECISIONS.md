@@ -1,7 +1,7 @@
 # Archie's FFL (10105) — playoff standings widget: tiebreaker & ordering decisions
 
 > Status as of 2026-09-21: **shipped and settled.** The widget is live at
-> `v2.mfl.football/mfl/10105/`, Victory Points are published by MFL, Points For
+> `mfl.football/mfl/10105/`, Victory Points are published by MFL, Points For
 > breaks ties, and no questions remain open. This records every ordering and
 > tiebreaker decision, and which assumptions the live MFL feed contradicted
 > along the way.
@@ -118,7 +118,7 @@ reintroduce exactly the failure mode being removed, just automated.
 **Install, once:** one line in the MESSAGE6 module, below the table.
 
 ```html
-<script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
+<script src="https://mfl.football/mfl/10105/standings.js" defer></script>
 ```
 
 It carries no league id. Host, year and league are read from the page's own
@@ -134,8 +134,8 @@ schedule is not needed.
 commissioner re-pastes nothing, ever. That is the reason the file is hosted
 rather than embedded in the module.
 
-**Until the branch reaches `main`,** `https://v2.mfl.football/mfl/10105/standings.js`
-404s — `v2.mfl.football` serves this app's `public/` directory, but only what is
+**Until the branch reaches `main`,** `https://mfl.football/mfl/10105/standings.js`
+404s — `mfl.football` serves this app's `public/` directory, but only what is
 deployed. `paste-in.html` exists so the widget can be tried before then.
 
 **On failure:** the widget writes a visible "standings unavailable" state into

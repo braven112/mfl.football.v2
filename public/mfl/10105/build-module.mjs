@@ -26,9 +26,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Served from here rather than the league's old host, so a banner swap ships
 // with the widget instead of waiting on someone else's image server.
-const BANNER = 'https://v2.mfl.football/mfl/10105/banner.png';
-const SCRIPT = 'https://v2.mfl.football/mfl/10105/standings.js';
-const STYLES = 'https://v2.mfl.football/mfl/10105/standings.css';
+const BANNER = 'https://mfl.football/mfl/10105/banner.png';
+const SCRIPT = 'https://mfl.football/mfl/10105/standings.js';
+const STYLES = 'https://mfl.football/mfl/10105/standings.css';
 
 const out = `<!-- ============================================================
      MAD POWER 99 — the complete MESSAGE6 module.

@@ -99,10 +99,9 @@ describe('league stagingDomains', () => {
     // silently missed the staging twin, so TheLeagueLayout served a
     // per-league PWA identity on the one host whose job is to reproduce
     // production. The shared host belongs to no league in either environment.
-    // v2.mfl.football is where the app actually serves today. It is NOT the
-    // canonical origin (SHARED_APP_ORIGIN is still the apex, which is being
-    // pointed at Vercel separately), and that is exactly why it has to be
-    // listed: membership is "does this host serve every league by path
+    // v2.mfl.football served the app before the apex did and still does. It
+    // is NOT the canonical origin (SHARED_APP_ORIGIN is the apex), and that
+    // is exactly why it has to be listed: membership is "does this host serve every league by path
     // prefix?", never "is this the canonical name?". It shipped absent, so
     // production served TheLeague's scope-`/` manifest on a host carrying
     // every league, and suppressed MFL Live's own.

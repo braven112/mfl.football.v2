@@ -15,6 +15,16 @@ Edit the snippet files, never the page — the page renders whatever they hold.
 
 ---
 
+## 2026-10-27 — The shared host is the apex now; v2 stays an alias
+
+Every URL these headers and the Archie's modules (`public/mfl/10105/`) hand
+out moved from `v2.mfl.football` to `mfl.football` (`SHARED_APP_ORIGIN` in
+`src/config/leagues-data.mjs`). Both hosts serve the same production
+deployment, so a header or module already pasted into MFL with a v2 URL keeps
+working — nothing has to be re-pasted. Never detach v2 from the Vercel project
+while any pasted copy might still name it. Entries below are history and keep
+the host they were written against.
+
 ## 2026-09-25 — The header's jQuery is load-bearing for MFL itself
 
 **Context:** Review of Archie's header/footer HPMs. The footer script was the

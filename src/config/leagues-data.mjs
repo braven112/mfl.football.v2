@@ -983,19 +983,18 @@ export function defaultMflWriteHost(env = process.env) {
  * (/theleague/*, /afl-fantasy/*). Fallback target for absolute cross-league
  * URLs when a league has no apex domain of its own.
  *
- * This is v2, not the apex, and that is deliberate as of Sep 2026. The apex
- * `mfl.football` still answers 406 — it is being pointed at Vercel on its own
- * schedule, expected to take months — and this constant is not decoration:
- * it is the ONLY origin Best Ball #1 has (`domains: []`), so it is what every
- * absolute bb1 link, the league-switcher fallback and any GroupMe message
- * built by `leagueUrl` resolve to. Pointed at a host that 406s, those are
- * dead links in owners' chat clients, not a cosmetic inaccuracy.
+ * The apex, as of Oct 2026. From Sep 2026 this was `v2.mfl.football`, because
+ * the apex still answered 406 and this constant is not decoration: it is the
+ * ONLY origin Best Ball #1 has (`domains: []`), so it is what every absolute
+ * bb1 link, the league-switcher fallback and any GroupMe message built by
+ * `leagueUrl` resolve to. The apex now serves the same Vercel production
+ * deployment, and the owner asked for the whole site to use it.
  *
- * Flip this back to the apex once it serves, and delete nothing else — the
- * apex stays in SHARED_APP_HOSTS below either way, so both hosts behave
- * correctly through the switch and the flip is a one-line change.
+ * v2 stays attached and stays in SHARED_APP_HOSTS below: links already in
+ * owners' chat history, and the MFL modules pasted into league pages, still
+ * point at it. Never remove it from either place.
  */
-export const SHARED_APP_ORIGIN = 'https://v2.mfl.football';
+export const SHARED_APP_ORIGIN = 'https://mfl.football';
 
 /**
  * Every hostname that serves the shared app — production and its staging
@@ -1008,8 +1007,9 @@ export const SHARED_APP_ORIGIN = 'https://v2.mfl.football';
  * compare recognises production and silently misses staging.mfl.football,
  * which then behaves like a league's own host on the one site whose whole job
  * is to reproduce production. v2.mfl.football is the third case and the one
- * that proves the point — it is where the app actually serves today, it is
- * NOT the canonical origin, and an origin-derived check misses it entirely.
+ * that proves the point — it served the app before the apex did and still
+ * does, it is NOT the canonical origin, and an origin-derived check misses it
+ * entirely.
  *
  * Membership here is decided by ONE question: does this hostname serve every
  * league under a path prefix? Not "is it canonical", not "is it production".
