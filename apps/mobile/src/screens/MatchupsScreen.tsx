@@ -4,10 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { MflLiveAppPlayerMeta } from '@mfl/shared-types/mfl-live-app';
 import type { MflLiveAppLiveBoard, MflLiveAppLivePanel } from '@mfl/shared-types/mfl-live-app-a';
+import type { MflLiveAppIdentityPanel } from '@mfl/shared-types/mfl-live-app-e';
 import { fetchBoard, SignedOutError } from '../api';
 import { ageLabel, feedLabel, holdPanels, isLive, nextPollMs, precisionOf } from '../format';
 import { font, useTheme, type Theme } from '../theme';
 import { MatchupCard } from '../components/MatchupCard';
+import { LeagueMark } from '../components/LeagueMark';
 
 interface Props {
   token: string;
@@ -195,7 +197,7 @@ function LeagueSection({
   playerMeta,
   t,
 }: {
-  league: MflLiveAppLivePanel;
+  league: MflLiveAppLivePanel & MflLiveAppIdentityPanel;
   heldSince: number | null;
   now: number;
   playerMeta: Record<string, MflLiveAppPlayerMeta>;
@@ -210,7 +212,9 @@ function LeagueSection({
         accessibilityLabel={`Open the ${league.leagueName} board`}
         onPress={() => navigation.navigate('LeagueBoard', { leagueId: league.leagueId, leagueName: league.leagueName })}
         hitSlop={8}
+        style={styles.leagueHead}
       >
+        <LeagueMark logo={league.leagueLogo} name={league.leagueName} />
         <Text style={[styles.leagueName, { color: t.text }]}>{league.leagueName} ›</Text>
       </Pressable>
       {heldSince !== null ? (
@@ -259,7 +263,8 @@ const styles = StyleSheet.create({
   meta: { fontFamily: font.regular, fontSize: 13, marginBottom: 12 },
   empty: { fontFamily: font.regular, fontSize: 15, marginTop: 24, textAlign: 'center', lineHeight: 21 },
   league: { marginBottom: 12 },
-  leagueName: { fontSize: 13, fontFamily: font.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  leagueHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  leagueName: { fontSize: 13, fontFamily: font.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   held: { fontFamily: font.regular, fontSize: 12, marginBottom: 8 },
   notice: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 4, marginBottom: 12 },
   noticeTitle: { fontFamily: font.semibold, fontSize: 15 },
