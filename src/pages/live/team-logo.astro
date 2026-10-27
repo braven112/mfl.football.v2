@@ -15,7 +15,14 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import { getMflLiveUser } from '../../utils/auth';
 import { listOwnerLeagues } from '../../utils/live/owner-league';
-import { DEFAULT_LOGO_CHOICE, LOGO_COLORS, LOGO_KINDS, LOGO_MAX_COLORS, LOGO_STYLES } from '../../utils/team-logo-prompt';
+import {
+	DEFAULT_LOGO_CHOICE,
+	LOGO_COLOR_SUGGESTIONS,
+	LOGO_COLORS,
+	LOGO_KINDS,
+	LOGO_MAX_COLORS,
+	LOGO_STYLES,
+} from '../../utils/team-logo-prompt';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -60,7 +67,21 @@ const firstName = teams[0]?.name ?? '';
 		</div>
 
 		<div class="tlogo__field">
-			<span class="tlogo__label" id="tlogo-color-label">Colors · pick up to {LOGO_MAX_COLORS}</span>
+			<span class="tlogo__label" id="tlogo-suggest-label">Colors that work well together</span>
+			<div class="tlogo__chips" role="group" aria-labelledby="tlogo-suggest-label" data-suggestions>
+				{LOGO_COLOR_SUGGESTIONS.map((sg) => (
+					<button type="button" class="tlogo__suggest" data-suggest={sg.hexes.join(',')}>
+						<span class="tlogo__dots" aria-hidden="true">
+							{sg.hexes.map((hex) => <span class="tlogo__dot" style={`--swatch:${hex}`}></span>)}
+						</span>
+						{sg.label}
+					</button>
+				))}
+			</div>
+		</div>
+
+		<div class="tlogo__field">
+			<span class="tlogo__label" id="tlogo-color-label">Or pick your own · up to {LOGO_MAX_COLORS}</span>
 			<div class="tlogo__chips" role="group" aria-labelledby="tlogo-color-label" data-colors>
 				{LOGO_COLORS.map((c) => (
 					<button
@@ -78,6 +99,7 @@ const firstName = teams[0]?.name ?? '';
 				</label>
 			</div>
 			<p class="tlogo__picked" data-picked aria-live="polite"></p>
+			<p class="tlogo__note" data-color-note aria-live="polite"></p>
 		</div>
 
 		<div class="tlogo__field">
@@ -131,6 +153,12 @@ const firstName = teams[0]?.name ?? '';
 				'',
 			);
 			$('[data-prompt]').textContent = built.prompt;
+			const note = $<HTMLElement>('[data-color-note]');
+			note.dataset.tone = built.colorNote.tone;
+			note.textContent = built.colorNote.text;
+			root.querySelectorAll<HTMLElement>('[data-suggest]').forEach((b) =>
+				b.setAttribute('aria-pressed', String(b.dataset.suggest === colors.join(','))),
+			);
 			const warning = $<HTMLElement>('[data-warning]');
 			warning.hidden = !built.warning;
 			warning.textContent = built.warning ?? '';
@@ -149,6 +177,12 @@ const firstName = teams[0]?.name ?? '';
 				group.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
 				render();
 			});
+		});
+		$('[data-suggestions]').addEventListener('click', (e) => {
+			const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-suggest]');
+			if (!btn) return;
+			colors = btn.dataset.suggest!.split(',');
+			render();
 		});
 		$('[data-colors]').addEventListener('click', (e) => {
 			const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-hex]');
@@ -235,6 +269,46 @@ const firstName = teams[0]?.name ?? '';
 		margin: 0;
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
+	}
+	.tlogo__suggest {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font: inherit;
+		font-size: var(--font-size-sm);
+		padding: 0.45rem 0.75rem;
+		border-radius: 10px;
+		border: 1px solid var(--color-border-subtle);
+		background: transparent;
+		color: var(--page-text);
+		cursor: pointer;
+	}
+	.tlogo__suggest[aria-pressed='true'] {
+		border-color: var(--league-accent);
+		outline: 1px solid var(--league-accent);
+		outline-offset: -2px;
+	}
+	.tlogo__dots {
+		display: inline-flex;
+		gap: 3px;
+	}
+	.tlogo__dot {
+		width: 0.9rem;
+		height: 0.9rem;
+		border-radius: 50%;
+		background: var(--swatch);
+		border: 1px solid var(--color-border-subtle);
+	}
+	.tlogo__note {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.tlogo__note[data-tone='good'] {
+		color: var(--color-success);
+	}
+	.tlogo__note[data-tone='weak'] {
+		color: var(--color-warning);
 	}
 	.tlogo__warning {
 		color: var(--color-warning);

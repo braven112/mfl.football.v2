@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTeamLogoPrompt,
   cleanLogoText,
+  LOGO_COLOR_SUGGESTIONS,
   LOGO_COLORS,
+  LOGO_MIN_CONTRAST,
+  logoColorAdvice,
   LOGO_KINDS,
   LOGO_STYLES,
   logoPromptOptions,
@@ -10,6 +13,7 @@ import {
   pickLogoColors,
 } from '../src/utils/team-logo-prompt';
 import { AI_PROMPT } from '../src/utils/brand-asset-specs';
+import { contrastRatio } from '../src/utils/team-color-contrast';
 
 describe('team logo prompt builder', () => {
   it('every prompt carries the originality rule and our size rules', () => {
@@ -44,6 +48,34 @@ describe('team logo prompt builder', () => {
     expect(buildTeamLogoPrompt({ colors: ['#7a1f2b'] }, 'T').prompt).toContain('colors: #7A1F2B.');
     expect(pickLogoColors(['#C8102E', '#c8102e', 'red'])).toEqual(['#C8102E']);
     expect(pickLogoColors(undefined)).toEqual(['#C8102E', '#FFFFFF']);
+  });
+
+  it('every suggested colour set is accessible: each two colours clear 3:1', () => {
+    expect(LOGO_COLOR_SUGGESTIONS.length).toBeGreaterThanOrEqual(6);
+    for (const set of LOGO_COLOR_SUGGESTIONS) {
+      expect(set.hexes.length).toBeGreaterThanOrEqual(2);
+      for (let i = 0; i < set.hexes.length; i++) {
+        for (let j = i + 1; j < set.hexes.length; j++) {
+          expect(contrastRatio(set.hexes[i], set.hexes[j]), `${set.label}: ${set.hexes[i]} vs ${set.hexes[j]}`).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
+        }
+      }
+      expect(logoColorAdvice(set.hexes).note.tone).toBe('good');
+    }
+  });
+
+  it('flags colours too close to tell apart, and names them', () => {
+    const { note } = logoColorAdvice(['#C8102E', '#6B1F2A']);
+    expect(note.tone).toBe('weak');
+    expect(note.text).toMatch(/^Red and maroon are too close/);
+    expect(logoColorAdvice(['#C8102E']).note.tone).toBe('tip');
+  });
+
+  it('asks for an outline when every colour vanishes on our dark or light ground', () => {
+    expect(logoColorAdvice(['#13294B', '#111111']).outline).toBe('light');
+    expect(buildTeamLogoPrompt({ colors: ['#13294B', '#111111'] }, 'T').prompt).toContain('thin white outline');
+    expect(logoColorAdvice(['#FFFFFF', '#F3E9D2']).outline).toBe('dark');
+    expect(logoColorAdvice(['#C8102E', '#FFFFFF', '#111111']).outline).toBeUndefined();
+    expect(buildTeamLogoPrompt({ colors: ['#C8102E', '#FFFFFF'] }, 'T').prompt).not.toContain('outline so');
   });
 
   it('notes an NFL nickname without blocking it', () => {
