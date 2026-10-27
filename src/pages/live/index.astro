@@ -143,7 +143,7 @@ if (authUser && week) {
 ---
 
 <MflAppLayout
-	title="MFL Live — all your fantasy teams, one board"
+	title="MFL Football — all your fantasy teams, one board"
 	description="Live scoring for every one of your MyFantasyLeague teams, in one place."
 >
 	{!authUser && entryLeague ? (
@@ -172,17 +172,17 @@ if (authUser && week) {
 			{/* The install pitch, for signed-in owners only: a dismissible banner
 			    that retires itself once the app is installed. Never reported to
 			    `/api/app-install` — that record is the LEAGUE site's app, and
-			    MFL Live is a different one. */}
+			    MFL Football is a different one. */}
 			<InstallAppPrompt
 				variant="banner"
-				leagueName="MFL Live"
+				leagueName="MFL Football"
 				leagueSlug={getLeagueById(authUser.leagueId)?.slug ?? 'mfl-live'}
 				report={false}
 				bannerCopy={{
-					title: 'Put MFL Live on your Home Screen',
+					title: 'Put MFL Football on your Home Screen',
 					prompt: 'Install the app and your live scores are one tap away all game day, full screen, no browser tab.',
 					ios: 'On iPhone, tap Share, then Add to Home Screen, and live scoring opens like an app. Takes about five seconds.',
-					lastStep: 'Open MFL Live from your Home Screen.',
+					lastStep: 'Open MFL Football from your Home Screen.',
 				}}
 			/>
 			<LiveBoard
