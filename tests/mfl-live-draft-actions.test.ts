@@ -14,6 +14,7 @@ import type { MflLiveAppDraftRoom } from '../packages/shared-types/src/mfl-live-
 const readMflLiveDraft = vi.fn();
 const pushDraftList = vi.fn();
 const mflFetch = vi.fn();
+const notifyLeagueEvent = vi.fn(async () => 1);
 
 vi.mock('../src/utils/live/mfl-live-draft', async (orig) => ({
   ...(await orig<typeof import('../src/utils/live/mfl-live-draft')>()),
@@ -27,6 +28,10 @@ vi.mock('../src/utils/mfl-draft-list', async (orig) => ({
 vi.mock('../src/utils/mfl-fetch', async (orig) => ({
   ...(await orig<typeof import('../src/utils/mfl-fetch')>()),
   mflFetch: (...a: unknown[]) => mflFetch(...a),
+}));
+
+vi.mock('../src/utils/push-events', () => ({
+  notifyLeagueEvent: (...a: unknown[]) => notifyLeagueEvent(...(a as [])),
 }));
 
 const { saveDraftQueue, makeDraftPick, refusePick, pickLanded, buildDraftPickRequest } = await import(
@@ -78,6 +83,7 @@ beforeEach(() => {
   readMflLiveDraft.mockReset();
   pushDraftList.mockReset();
   mflFetch.mockReset();
+  notifyLeagueEvent.mockClear();
 });
 
 describe('saveDraftQueue', () => {
@@ -183,6 +189,36 @@ describe('makeDraftPick', () => {
     const call = mflFetch.mock.calls[0][0];
     expect(call.method).toBe('POST');
     expect(call.mflUserCookie).toBe('cookie');
+  });
+
+  it('alerts the team the pick put on the clock, once the board shows the pick', async () => {
+    const after = { ...withPick(room(), 2, '300'), onClock: { overall: 3, label: '1.03', franchiseId: '0003', mine: false } };
+    readMflLiveDraft.mockResolvedValueOnce(room()).mockResolvedValueOnce(after);
+    mflFetch.mockResolvedValue(new Response('<status>OK</status>'));
+    await makeDraftPick(league, 'cookie', { playerId: '300', overall: 2 }, fast);
+    expect(notifyLeagueEvent).toHaveBeenCalledWith({
+      kind: 'draft-on-clock',
+      leagueId: '55555',
+      franchiseId: '0003',
+      overall: 3,
+      round: 1,
+      pick: 3,
+    });
+  });
+
+  it('sends no alert for a pick the board does not show, or after the last pick', async () => {
+    readMflLiveDraft.mockResolvedValue(room());
+    mflFetch.mockResolvedValue(new Response('<html>ok</html>'));
+    await makeDraftPick(league, 'cookie', { playerId: '300', overall: 2 }, fast);
+    expect(notifyLeagueEvent).not.toHaveBeenCalled();
+
+    readMflLiveDraft.mockReset();
+    readMflLiveDraft
+      .mockResolvedValueOnce(room())
+      .mockResolvedValueOnce({ ...withPick(room(), 2, '300'), onClock: undefined, status: 'complete' });
+    const r = await makeDraftPick(league, 'cookie', { playerId: '300', overall: 2 }, fast);
+    expect(r.ok).toBe(true);
+    expect(notifyLeagueEvent).not.toHaveBeenCalled();
   });
 
   it('never calls a pick the board does not show a success', async () => {

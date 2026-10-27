@@ -34,6 +34,7 @@ import type { OwnerLeague } from './owner-league';
 import { bareHost, identityFor, readMflLiveDraft, toPlayer } from './mfl-live-draft';
 import { normalizePlayerIds, parseMflError, pushDraftList } from '../mfl-draft-list';
 import { describeMflFailure, mflFetch } from '../mfl-fetch';
+import { notifyLeagueEvent } from '../push-events';
 
 /** A pre-draft list is a few hundred players at most. */
 export const MAX_QUEUE = 1000;
@@ -140,6 +141,26 @@ export function refusePick(
   return null;
 }
 
+/**
+ * Tell the team the pick just put on the clock. Only after the board shows the
+ * pick, so an alert never fires for a pick MFL didn't take. The one-minute MFL
+ * checker reports the same slot for picks made on MFL's site; the event key
+ * (the slot's overall number) makes whichever comes first the only alert.
+ */
+export async function alertOnClock(leagueId: string, room: MflLiveAppDraftRoom): Promise<void> {
+  const next = room.onClock;
+  const slot = next && room.slots.find((s) => s.overall === next.overall);
+  if (!next || !slot) return;
+  await notifyLeagueEvent({
+    kind: 'draft-on-clock',
+    leagueId,
+    franchiseId: next.franchiseId,
+    overall: next.overall,
+    round: slot.round,
+    pick: slot.pick,
+  });
+}
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Make the owner's pick in the slot the app showed them on the clock. */
@@ -180,15 +201,14 @@ export async function makeDraftPick(
     return { ok: false, error: failure.blocked ? 'blocked' : 'unavailable', message: failure.message, room: before };
   }
 
-  // TODO(push, package H): once src/utils/push-events.ts lands (PR #1538),
-  // notify the team now on the clock here:
-  // notifyLeagueEvent({ kind: 'draft-on-clock', leagueId, franchiseId, overall, round, pick }).
-  // The push thread's one-minute checker covers picks made on MFL's website.
   let latest: MflLiveAppDraftRoom | null = before;
   for (const delay of options.confirmDelaysMs ?? [800, 1500, 2500]) {
     await wait(delay);
     latest = (await readMflLiveDraft(league, mflUserCookie).catch(() => null)) ?? latest;
-    if (latest && pickLanded(latest, overall, playerId, league.franchiseId)) return { ok: true, room: latest };
+    if (latest && pickLanded(latest, overall, playerId, league.franchiseId)) {
+      await alertOnClock(league.leagueId, latest);
+      return { ok: true, room: latest };
+    }
   }
   return {
     ok: false,
