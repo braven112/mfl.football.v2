@@ -14,7 +14,7 @@ import type {
 } from '../../../../packages/shared-types/src/mfl-live-app-league-board';
 import type { RootStackParamList } from '../navigation/types';
 import { apiGet, SignedOutError } from '../api';
-import { points, updatedAgo } from '../format';
+import { ageLabel, points } from '../format';
 import { useSession } from '../session-context';
 import { font, useTheme, type Theme } from '../theme';
 import { MatchupCard } from '../components/MatchupCard';
@@ -40,6 +40,8 @@ export function LeagueBoardScreen({ route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>('scores');
   const [now, setNow] = useState(Date.now());
+  // When the PHONE got the board: the server's clock is not the phone's.
+  const [receivedAt, setReceivedAt] = useState(0);
   const inFlight = useRef(false);
 
   const load = useCallback(async () => {
@@ -53,6 +55,7 @@ export function LeagueBoardScreen({ route }: Props) {
       // `ok: false` is a failed read, not an empty league: keep what is on screen.
       if (!next.ok) throw new Error('Could not read this league from MFL just now.');
       setBoard(next as MflLiveAppLeagueBoard);
+      setReceivedAt(Date.now());
       setError(null);
     } catch (e) {
       if (e instanceof SignedOutError) {
@@ -106,7 +109,7 @@ export function LeagueBoardScreen({ route }: Props) {
       {board ? (
         <Text style={[styles.meta, { color: t.muted }]}>
           {board.week ? `Week ${board.week}` : 'No NFL week is running'}
-          {board.fetchedAt ? `  ·  ${updatedAgo(board.fetchedAt, now)}` : ''}
+          {receivedAt ? `  ·  Updated ${ageLabel(receivedAt, now)}` : ''}
           {live ? '  ·  Live' : ''}
         </Text>
       ) : null}
@@ -120,7 +123,7 @@ export function LeagueBoardScreen({ route }: Props) {
           {tab === 'scores' ? (
             <Scores board={board} panel={panel} t={t} />
           ) : (
-            <Standings rows={panel.standings} t={t} />
+            <Standings rows={panel.standings} precision={panel.scorePrecision} t={t} />
           )}
         </>
       ) : null}
@@ -189,12 +192,14 @@ function Scores({ board, panel, t }: { board: MflLiveAppLeagueBoard; panel: MflL
   }
   return (
     <View>
-      {panel.leaders ? <Leaders leaders={panel.leaders} meta={board.playerMeta} t={t} /> : null}
+      {panel.leaders ? (
+        <Leaders leaders={panel.leaders} meta={board.playerMeta} precision={panel.scorePrecision} t={t} />
+      ) : null}
       <Text style={[styles.section, { color: t.text }]}>Matchups</Text>
       {orderMatchups(panel.matchups).map((m) => (
         <View key={m.index}>
           {m.viewerSide !== null ? <Text style={[styles.yours, { color: t.accentText }]}>Your matchup</Text> : null}
-          <MatchupCard matchup={fromViewer(m)} playerMeta={board.playerMeta} />
+          <MatchupCard matchup={fromViewer(m)} playerMeta={board.playerMeta} precision={panel.scorePrecision} />
         </View>
       ))}
     </View>
@@ -225,10 +230,12 @@ function fromViewer(m: MflLiveAppBoardMatchup): MflLiveAppMatchup {
 function Leaders({
   leaders,
   meta,
+  precision,
   t,
 }: {
   leaders: MflLiveAppLeaders;
   meta: Record<string, MflLiveAppPlayerMeta>;
+  precision?: number;
   t: Theme;
 }) {
   // A week nobody has played yet has no leaders; draw nothing rather than zeros.
@@ -244,7 +251,7 @@ function Leaders({
             <Text numberOfLines={1} style={[styles.rowName, { color: t.text }]}>
               {team.nameShort}
             </Text>
-            <Text style={[styles.rowPts, { color: t.text }]}>{points(team.live)}</Text>
+            <Text style={[styles.rowPts, { color: t.text }]}>{points(team.live, precision)}</Text>
           </View>
         ))}
         {leaders.players.slice(0, 5).map((p, i) => {
@@ -262,7 +269,7 @@ function Leaders({
                   {p.secondsRemaining > 0 ? '  ·  Playing' : '  ·  Final'}
                 </Text>
               </View>
-              <Text style={[styles.rowPts, { color: t.text }]}>{points(p.points)}</Text>
+              <Text style={[styles.rowPts, { color: t.text }]}>{points(p.points, precision)}</Text>
             </View>
           );
         })}
@@ -272,7 +279,16 @@ function Leaders({
 }
 
 /** MFL's rows in MFL's order. Never re-sorted: its order applies the league's tiebreakers. */
-function Standings({ rows, t }: { rows: MflLiveAppStandingsRow[] | null | undefined; t: Theme }) {
+function Standings({
+  rows,
+  precision,
+  t,
+}: {
+  rows: MflLiveAppStandingsRow[] | null | undefined;
+  /** The league's own decimals; the shared default when absent. */
+  precision?: number;
+  t: Theme;
+}) {
   if (rows === null) {
     return (
       <Text style={[styles.status, { color: t.danger, borderColor: t.border, backgroundColor: t.card }]}>
@@ -308,7 +324,7 @@ function Standings({ rows, t }: { rows: MflLiveAppStandingsRow[] | null | undefi
           <Text style={[styles.record, { color: t.text }]}>
             {row.ties ? `${row.wins}-${row.losses}-${row.ties}` : `${row.wins}-${row.losses}`}
           </Text>
-          <Text style={[styles.pf, { color: t.muted }]}>{points(row.pointsFor)}</Text>
+          <Text style={[styles.pf, { color: t.muted }]}>{points(row.pointsFor, precision)}</Text>
         </View>
       ))}
     </View>
