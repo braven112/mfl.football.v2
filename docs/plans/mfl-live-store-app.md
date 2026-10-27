@@ -200,6 +200,13 @@ views; "pages bounce to the website" is a named complaint about MFL apps):
    pending claims and cancelling one.
 4. **Player search and free agents**, sortable by projection, points and
    owned %, with a player card (status, bye, recent scores). No headshots.
+   *Built (package K, 2026-10-27):* `GET /api/mfl-live/players` (free agents,
+   all players, trending; sort `proj`/`pts`/`owned`) and `/api/mfl-live/player`
+   (the card, every scored week), assembled in `src/utils/live/mfl-players.ts`,
+   contract `mfl-live-app-k.ts`. Projections and points are the league's own
+   scoring; owned % and added % are MFL-wide (`topOwns`/`topAdds`). Free agency
+   is the account's own unit. The Add button appears once add/drop plugs into
+   `apps/mobile/src/players/player-actions.ts`.
 5. **Trades**: build and propose one, see pending offers, accept, reject or
    counter.
 6. **League chat** with unread badges.
