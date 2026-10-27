@@ -27,12 +27,13 @@ import { isDemoFetch } from './demo-isolation-core.mjs';
  *     (`src/utils/afl-waiver-order.ts`), the only way to write waiver priority.
  *   - `live_draft?CMD=DRAFT` makes a draft pick (the app's draft room,
  *     `src/utils/live/mfl-live-draft-actions.ts`).
+ *   - `chat_save?MESSAGE=` posts to the league chat (`src/utils/mfl-chat.ts`).
  *
  * A method-only test misses every one of these. That is not hypothetical: the
  * first version of this guard checked POST-or-`/import`, and a staging deploy
  * could still have deleted a real owner's waiver claim.
  */
-const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup', '/live_draft'];
+const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup', '/live_draft', '/chat_save'];
 
 /**
  * Is this call a WRITE rather than an export read?

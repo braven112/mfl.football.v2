@@ -212,7 +212,7 @@ describe('POST /api/mfl-live/chat', () => {
     expect(res.status).toBe(200);
     const [opts] = mflFetch.mock.calls[0];
     expect(opts).toMatchObject({ method: 'POST', mflUserCookie: 'owner-cookie' });
-    expect(opts.url).toBe('https://api.myfantasyleague.com/2026/import?TYPE=chat_save&L=55555&JSON=1');
+    expect(opts.url).toBe('https://api.myfantasyleague.com/2026/chat_save?L=55555&JSON=1');
     expect(opts.body).toBe('MESSAGE=gg');
     const body = await res.json();
     expect(body.messages.at(-1)).toMatchObject({ id: 'mine000000000001', mine: true });
