@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const requireOwnerLeague = vi.fn();
 const readLeagueFranchiseNames = vi.fn();
 const mflFetch = vi.fn();
+const notifyLeagueEvent = vi.fn();
 const markers = new Map<string, unknown>();
 
 vi.mock('../src/utils/live/owner-league', async (orig) => ({
@@ -24,6 +25,9 @@ vi.mock('../src/utils/broadcast-live-source', () => ({
 vi.mock('../src/utils/mfl-fetch', async (orig) => ({
   ...(await orig<typeof import('../src/utils/mfl-fetch')>()),
   mflFetch: (...a: unknown[]) => mflFetch(...a),
+}));
+vi.mock('../src/utils/push-events', () => ({
+  notifyLeagueEvent: (...a: unknown[]) => notifyLeagueEvent(...a),
 }));
 vi.mock('../src/utils/redis-client', () => ({
   getRedis: async () => ({
@@ -142,6 +146,7 @@ beforeEach(() => {
   requireOwnerLeague.mockReset().mockResolvedValue({ user, league });
   readLeagueFranchiseNames.mockReset().mockResolvedValue({ '0007': 'Desk Jockeys', '0012': 'Rivals' });
   mflFetch.mockReset().mockResolvedValue(new Response('<status>OK</status>'));
+  notifyLeagueEvent.mockReset().mockResolvedValue(1);
   vi.stubGlobal('fetch', vi.fn(async (u: string) => {
     expect(u).toBe('https://www49.myfantasyleague.com/fflnetdynamic2026/55555_chat.xml');
     return new Response(chatFile, { status: 200 });
@@ -211,6 +216,21 @@ describe('POST /api/mfl-live/chat', () => {
     expect(opts.body).toBe('MESSAGE=gg');
     const body = await res.json();
     expect(body.messages.at(-1)).toMatchObject({ id: 'mine000000000001', mine: true });
+    expect(notifyLeagueEvent).toHaveBeenCalledWith({
+      kind: 'chat',
+      leagueId: '55555',
+      key: 'mine000000000001',
+      fromFranchiseId: '0007',
+      fromName: 'Desk Jockeys',
+      text: 'gg',
+      franchiseIds: ['0007', '0012'],
+    });
+  });
+
+  it('alerts nobody when the post is not confirmed', async () => {
+    mflFetch.mockResolvedValue(new Response(''));
+    await post('hi');
+    expect(notifyLeagueEvent).not.toHaveBeenCalled();
   });
 
   it('rejects empty and over-long text before calling MFL', async () => {
