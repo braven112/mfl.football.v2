@@ -43,28 +43,33 @@ const shape = (xml) => {
   return tags;
 };
 
-for (const slug of ['theleague', 'afl-fantasy']) {
-  const lg = LEAGUES[slug];
-  for (const y of [year, year - 1]) {
-    for (const ext of ['xml', 'json']) {
-      const url = `https://${lg.mflHost}/fflnetdynamic${y}/${lg.id}_chat.${ext}`;
-      for (const withCookie of [false, true]) {
-        try {
-          const res = withCookie
-            ? await mflFetch({ url, cookies: { MFL_USER_ID: cookie } })
-            : await fetch(url);
-          const body = await res.text();
-          console.log(`\n--- ${slug} ${y} .${ext} cookie=${withCookie}: status ${res.status}, ${body.length} bytes, content-type ${res.headers.get('content-type')}, last-modified ${res.headers.get('last-modified')}, cache-control ${res.headers.get('cache-control')}`);
-          if (res.status === 200 && ext === 'xml') {
-            console.log('first 120 chars, letters masked:', body.slice(0, 120).replace(/[A-Za-z0-9](?![^<]*>)/g, 'x'));
-            console.log(JSON.stringify(shape(body), null, 1));
-            const ts = [...body.matchAll(/time(?:stamp)?="(\d+)"/g)].map((m) => Number(m[1]));
-            if (ts.length) console.log(`timestamps: n=${ts.length} first=${ts[0]} last=${ts[ts.length - 1]} sortedAsc=${ts.every((v, i) => !i || v >= ts[i - 1])}`);
-          }
-        } catch (err) {
-          console.log(`\n--- ${slug} ${y} .${ext} cookie=${withCookie}: failed: ${err.message}`);
-        }
-      }
-    }
-  }
+// Round 2 found the shape: <message franchise_id id message posted/>, the
+// file public (same bytes with or without the cookie), no .json variant.
+// Round 3 prints what the parser and the unread count depend on, still
+// without message text: the `posted` format, the id alphabet, and whether
+// document order is oldest-first.
+const lg = LEAGUES['afl-fantasy'];
+const res = await fetch(`https://${lg.mflHost}/fflnetdynamic${year - 1}/${lg.id}_chat.xml`);
+const xml = await res.text();
+const rows = [...xml.matchAll(/<message\s([^>]*?)\/?>/g)].map((m) => {
+  const at = {};
+  for (const a of m[1].matchAll(/([\w-]+)="([^"]*)"/g)) at[a[1]] = a[2];
+  return at;
+});
+console.log(`rows ${rows.length}`);
+const show = (r) => ({
+  posted: r.posted,
+  parsed: new Date(r.posted).toISOString?.() ?? null,
+  idPattern: (r.id ?? '').replace(/[0-9]/g, '9').replace(/[a-f]/g, 'h').replace(/[g-zG-Z]/g, 'A'),
+  franchise: r.franchise_id,
+  textLen: (r.message ?? '').length,
+  hasEntities: /&\w+;|&#\d+;/.test(r.message ?? ''),
+});
+for (const r of [...rows.slice(0, 3), ...rows.slice(-3)]) {
+  try { console.log(JSON.stringify(show(r))); } catch (e) { console.log(JSON.stringify({ posted: r.posted, err: e.message })); }
 }
+const times = rows.map((r) => Date.parse(r.posted));
+console.log(`all posted parse: ${times.every((t) => !Number.isNaN(t))}`);
+console.log(`oldest-first: ${times.every((t, i) => !i || t >= times[i - 1])}, newest-first: ${times.every((t, i) => !i || t <= times[i - 1])}`);
+console.log(`ids unique: ${new Set(rows.map((r) => r.id)).size === rows.length}`);
+console.log(`ids sort like time: ${rows.every((r, i) => !i || r.id >= rows[i - 1].id)}`);
