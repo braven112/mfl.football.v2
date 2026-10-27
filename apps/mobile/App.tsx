@@ -15,6 +15,7 @@ import { useTheme } from './src/theme';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { SessionProvider } from './src/session-context';
+import { registerForPush, unregisterForPush } from './src/push/notifications';
 
 /** Signed out shows sign-in; signed in shows the tabbed app (src/navigation). */
 export default function App() {
@@ -39,11 +40,18 @@ export default function App() {
     setToken(next);
   }, []);
 
+  // Alerts follow the sign-in: the phone registers on every signed-in launch
+  // (the server re-reads the account's leagues then) and leaves on sign-out.
+  useEffect(() => {
+    if (token) void registerForPush(token);
+  }, [token]);
+
   const onSignOut = useCallback(async () => {
+    if (token) await unregisterForPush(token);
     setToken(null);
     await clearToken();
     await signOutOnServer();
-  }, []);
+  }, [token]);
 
   const session = useMemo(() => (token ? { token, signOut: onSignOut } : null), [token, onSignOut]);
 
