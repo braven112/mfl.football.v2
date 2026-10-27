@@ -4,6 +4,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -54,6 +55,10 @@ export function ChatScreen() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const [source, setSource] = useState<MflLiveAppChatSource>('mfl');
+  /** GroupMe: the sign-in link to open before this owner's first post. */
+  const [signIn, setSignIn] = useState<{ url: string; message: string } | null>(null);
+  /** Opened the sign-in; send the draft again when the app comes back. */
+  const retryOnReturn = useRef(false);
   const list = useRef<FlatList<MflLiveAppChatMessage>>(null);
   const inFlight = useRef(false);
 
@@ -65,6 +70,7 @@ export function ChatScreen() {
   useEffect(() => {
     setMessages(null);
     setSource('mfl');
+    setSignIn(null);
     setUnread(0);
     setSendError(null);
   }, [leagueId]);
@@ -140,7 +146,13 @@ export function ChatScreen() {
     setSendError(null);
     try {
       const body = await apiPost<MflLiveAppChatPostResponse>(token, `/api/mfl-live/chat?league=${leagueId}`, { text });
+      if (!body.ok && body.error === 'groupme-sign-in' && body.signInUrl) {
+        // Keep the draft: it goes out once they're signed in.
+        setSignIn({ url: body.signInUrl, message: body.message });
+        return;
+      }
       if (!body.ok) throw new ApiError(body.message, 200);
+      setSignIn(null);
       setDraft('');
       if (body.messages.length) setMessages(body.messages);
       else load();
@@ -151,6 +163,26 @@ export function ChatScreen() {
       setSending(false);
     }
   }, [draft, leagueId, sending, token, signOut, load]);
+
+  const openSignIn = useCallback(() => {
+    if (!signIn) return;
+    retryOnReturn.current = true;
+    Linking.openURL(signIn.url).catch(() => {
+      retryOnReturn.current = false;
+      setSendError('Could not open the browser.');
+    });
+  }, [signIn]);
+
+  // Back from signing in to GroupMe: send what they were writing.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && retryOnReturn.current) {
+        retryOnReturn.current = false;
+        send();
+      }
+    });
+    return () => sub.remove();
+  }, [send]);
 
   const header = (
     <View style={[styles.header, { borderBottomColor: t.border }]}>
@@ -203,6 +235,18 @@ export function ChatScreen() {
         }
       />
       {sendError ? <Text style={[styles.status, { color: t.danger }]}>{sendError}</Text> : null}
+      {signIn ? (
+        <View style={[styles.signIn, { borderTopColor: t.border }]}>
+          <Text style={[styles.signInText, { color: t.text }]}>{signIn.message}</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={openSignIn}
+            style={[styles.send, { backgroundColor: t.accent }]}
+          >
+            <Text style={[styles.sendText, { color: t.onAccent }]}>Sign in to GroupMe</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <View style={[styles.composer, { borderTopColor: t.border, paddingBottom: 8 }]}>
         <TextInput
           value={draft}
@@ -306,4 +350,13 @@ const styles = StyleSheet.create({
   },
   send: { height: 42, borderRadius: 21, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
   sendText: { fontFamily: font.semibold, fontSize: 15 },
+  signIn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  signInText: { flex: 1, fontFamily: font.medium, fontSize: 14, lineHeight: 19 },
 });

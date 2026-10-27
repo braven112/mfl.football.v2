@@ -9,10 +9,9 @@
  * via `GET /v3/bots` (scripts/lib/groupme-groups.mjs) — and read with the
  * service token, which owns those bots and so is a member of the group.
  *
- * Reading only, in this step. An owner posts AS THEMSELVES, never through a
- * bot (the owner, 2026-10-27): the first time they tap Send, the app asks
- * them to sign in to GroupMe, and from then on their own token posts. Until
- * that sign-in ships the POST answers `groupme-sign-in`.
+ * An owner posts AS THEMSELVES, never through a bot (the owner, 2026-10-27):
+ * the first time they tap Send, the app asks them to sign in to GroupMe, and
+ * from then on their own token posts (src/utils/live/groupme-owner-auth.ts).
  *
  * Reads the group live on every open rather than through the site's Redis
  * mirror: that mirror's keys are TheLeague's alone (`groupme:messages`), and a
@@ -106,6 +105,8 @@ export function buildGroupMeChatView(
   messages: GroupMeApiMessage[],
   me: string,
   teams: Record<string, string>,
+  /** The account's own GroupMe user, once signed in: their messages are `mine`. */
+  myUserId: string | null = null,
 ): ChatMessageView[] {
   const prefixes = Object.entries(teams)
     .filter(([, name]) => name)
@@ -136,7 +137,7 @@ export function buildGroupMeChatView(
       text,
       postedAt: Number.isFinite(m.created_at) ? new Date(m.created_at * 1000).toISOString() : null,
       postedLabel: '',
-      mine: franchiseId !== '' && franchiseId === me,
+      mine: (franchiseId !== '' && franchiseId === me) || (myUserId !== null && m.user_id === myUserId),
       avatarUrl: !relayed && m.avatar_url?.startsWith('https://') ? m.avatar_url : null,
       imageUrls: images,
     });

@@ -133,9 +133,21 @@ describe('every app endpoint goes through the check', () => {
   const walk = (d: string): string[] =>
     readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [join(d, n)]));
 
+  /**
+   * Opened in the phone's BROWSER during the GroupMe sign-in, so no app
+   * session can reach them. Each is gated instead by a one-time state that only
+   * a signed-in chat POST mints (src/utils/live/groupme-owner-auth.ts). The
+   * callback's path is registered with GroupMe and cannot move out of here.
+   */
+  const BROWSER_ROUTES = new Set([
+    'src/pages/api/mfl-live/groupme/start.ts',
+    'src/pages/api/mfl-live/groupme/callback.ts',
+  ]);
+
   it('each file under src/pages/api/mfl-live calls requireOwnerLeague or requireAppUser', () => {
     const bad = walk(DIR)
       .filter((f) => /\.(ts|mjs)$/.test(f))
+      .filter((f) => !BROWSER_ROUTES.has(relative(ROOT, f)))
       .filter((f) => !/\brequire(OwnerLeague|AppUser)\(/.test(readFileSync(f, 'utf8')))
       .map((f) => relative(ROOT, f));
     expect(bad).toEqual([]);
