@@ -1,0 +1,33 @@
+name: Probe MFL Chat
+
+# READ-ONLY and TEMPORARY (phone app Package N). Finds which MFL export reads a
+# league's chat and which import posts to it, from MFL's own API reference plus
+# one read with the owner cookie. GETs only; nothing is written to MFL. Runs on
+# the package branch only, and is deleted once the answer is recorded in
+# docs/claude/insights/domains/mfl-api.md.
+
+on:
+  push:
+    branches: [claude/project-thread-hrltdd]
+    paths:
+      - scripts/probe-mfl-chat.mjs
+      - .github/workflows/probe-mfl-chat.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Probe
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+        run: node scripts/probe-mfl-chat.mjs
