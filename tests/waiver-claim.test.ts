@@ -250,7 +250,7 @@ describe('the write endpoint counts the ACTIVE roster, not the whole list', () =
    * how the false "roster is full (16/16)" shipped.
    */
   const source = fs.readFileSync(
-    path.join(process.cwd(), 'src/pages/api/waiver-claim.ts'),
+    path.join(process.cwd(), 'src/utils/waiver-claim-actions.ts'),
     'utf-8'
   );
 

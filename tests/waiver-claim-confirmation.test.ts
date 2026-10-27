@@ -28,7 +28,7 @@ import { readMflImportResult } from '../src/utils/mfl-import-result';
 import { readPendingWaiverPlayerIds, formatBidAmount } from '../src/utils/waiver-claim';
 
 const ROUTE = fs.readFileSync(
-  path.join(process.cwd(), 'src/pages/api/waiver-claim.ts'),
+  path.join(process.cwd(), 'src/utils/waiver-claim-actions.ts'),
   'utf-8'
 );
 

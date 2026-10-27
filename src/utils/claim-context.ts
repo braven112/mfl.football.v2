@@ -33,6 +33,7 @@
 import { getCurrentLeagueYear, getRolloverLeagueYear } from './league-year';
 import { readLiveWaiverEvents } from './live-waiver-calendar';
 import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
+import { mflFetch } from './mfl-fetch';
 import { getLeagueById, leagueClock, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
@@ -54,14 +55,17 @@ export function claimLeagueYear(league: LeagueDefinition): number {
 }
 
 /**
- * Read the live league payload. `fetch` is fine here (unlike the calendar
- * below): the league export is public.
+ * Read the live league payload. Through mflFetch with the owner's cookie: our
+ * leagues' export is public, but a private league outside this site (the phone
+ * app serves any MFL league) answers it only to a signed-in member.
  */
-async function readLeaguePayload(year: number, leagueId: string): Promise<Record<string, any> | null> {
+async function readLeaguePayload(year: number, leagueId: string, cookie: string): Promise<Record<string, any> | null> {
   try {
-    const res = await fetch(
-      `https://api.myfantasyleague.com/${year}/export?TYPE=league&L=${leagueId}&JSON=1&_=${Date.now()}`,
-    );
+    const res = await mflFetch({
+      url: `https://api.myfantasyleague.com/${year}/export?TYPE=league&L=${leagueId}&JSON=1&_=${Date.now()}`,
+      method: 'GET',
+      mflUserCookie: cookie,
+    });
     return (await res.json())?.league ?? null;
   } catch {
     return null;
@@ -126,25 +130,63 @@ async function readPlayerNames(year: number, ids: string[]): Promise<Map<string,
 export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = DEFAULT_VIEWER_CLOCK): Promise<ClaimContext | null> {
   const league = getLeagueById(user.leagueId);
   if (!league) return null;
+  return resolveOwnerClaimContext(
+    {
+      cookie: user.id,
+      franchiseId: user.franchiseId,
+      leagueId: league.id,
+      year: claimLeagueYear(league),
+      host: league.mflHost,
+      slug: league.slug,
+      dataPath: league.dataPath,
+    },
+    clock,
+  );
+}
 
-  const leagueId = league.id;
-  const year = claimLeagueYear(league);
+/** Who is asking, in which league — the subset of `OwnerLeagueContext` this read needs. */
+export interface ClaimContextOwner {
+  cookie: string;
+  franchiseId: string;
+  leagueId: string;
+  year: number;
+  /** Bare MFL web host. */
+  host: string;
+  /** Registry slug, or null for a league outside this site (the phone app). */
+  slug: string | null;
+  /** Registry data path for the committed calendar fallback; null outside this site. */
+  dataPath: string | null;
+}
 
-  const leaguePayload = await readLeaguePayload(year, leagueId);
+/**
+ * The same answer for any league the owner is in — the site's registry
+ * leagues through `resolveClaimContext`, and the phone app's any-MFL-league
+ * session through `/api/mfl-live/waivers`. A league outside this site has no
+ * committed calendar and no auction window of ours, so those two inputs are
+ * simply absent for it.
+ */
+export async function resolveOwnerClaimContext(
+  owner: ClaimContextOwner,
+  clock: ViewerClock = DEFAULT_VIEWER_CLOCK,
+): Promise<ClaimContext> {
+  const { leagueId, year } = owner;
+  const user = { id: owner.cookie, franchiseId: owner.franchiseId };
+
+  const leaguePayload = await readLeaguePayload(year, leagueId, owner.cookie);
   const rules = readBidRules(leaguePayload ?? {});
   // Live first, committed feed second. The live read is the fresher of the two
   // but it is owner-gated, so it is also the one that can come back empty for
   // reasons that have nothing to do with the league's schedule.
   const live = await readLiveWaiverEvents(year, leagueId, user.id);
-  const events = live ?? committedWaiverEvents(league.dataPath, year);
-  const window = resolveWaiverWindow(events as never, new Date(), leagueClock(league.slug).zone);
+  const events = live ?? (owner.dataPath ? committedWaiverEvents(owner.dataPath, year) : []);
+  const window = resolveWaiverWindow(events as never, new Date(), leagueClock(owner.slug).zone);
 
   // TheLeague replaces offseason free agency with a live auction on MFL. While
   // that window is open an in-place waiver claim is the wrong mechanism — the
   // free-agent page has always deep-linked to MFL's Place Bid page instead, and
   // the modal must agree with it rather than offering a form beside it. The
   // window comes from the shared resolver, never re-derived here.
-  const auctionOpen = isAuctionSeason(league.slug);
+  const auctionOpen = owner.slug ? isAuctionSeason(owner.slug) : false;
 
   const base: ClaimContext = {
     signedIn: true,
@@ -157,7 +199,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     year,
     windowMode: window.mode,
     windowLabel: describeWaiverWindow(window, clock),
-    addDropUrl: `https://${league.mflHost}/${year}/add_drop?L=${leagueId}`,
+    addDropUrl: `https://${owner.host}/${year}/add_drop?L=${leagueId}`,
     rosteredIds: [],
     tradeTargets: {},
     franchiseNames: {},

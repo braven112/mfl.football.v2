@@ -19,7 +19,13 @@ import { handledFailure } from '../src/utils/api-response';
  * the owner acts on inside a first-come window. ~66 other API routes return a
  * 5xx somewhere; that is a known gap, not a claim that they are fine.
  */
-const ROUTES = ['src/pages/api/waiver-claim.ts', 'src/pages/api/waiver-claims.ts'];
+// The routes are thin; the shared body both they and the phone app's
+// `/api/mfl-live/waivers` call holds every failure path.
+const ROUTES = [
+  'src/pages/api/waiver-claim.ts',
+  'src/pages/api/waiver-claims.ts',
+  'src/utils/waiver-claim-actions.ts',
+];
 
 describe('claim route handled-failure guard', () => {
   it('no claim route writes a literal 5xx status', () => {
