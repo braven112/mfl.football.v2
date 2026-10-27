@@ -104,6 +104,8 @@ describe('alertsFor', () => {
 
   it('keys an event the same way for both callers', () => {
     expect(eventKey({ kind: 'draft-on-clock', leagueId: '1', franchiseId: '0001', overall: 5, round: 1, pick: 5 })).toBe('draft-on-clock:5');
+    // A league drafting on two boards counts overall from 1 on each.
+    expect(eventKey({ kind: 'draft-on-clock', leagueId: '1', franchiseId: '0001', overall: 5, round: 1, pick: 5, unit: 'CONFERENCE01' })).toBe('draft-on-clock:CONFERENCE01:5');
     expect(eventKey({ kind: 'trade-accepted', leagueId: '1', key: '99', toFranchiseId: '0001', fromName: 'x' })).toBe('trade-accepted:99');
   });
 });

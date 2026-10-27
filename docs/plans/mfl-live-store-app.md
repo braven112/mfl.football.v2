@@ -180,7 +180,11 @@ The owner's rule: get the core functionality right before theming or extras.
    per settings group. For any MFL league (launch gate): actions taken in
    the app alert instantly, and the owner chose (2026-10-27) a server
    checker that reads MFL EVERY MINUTE for actions taken on MFL's own site,
-   keeping each owner's MFL sign-in on the server, encrypted.
+   keeping each owner's MFL sign-in on the server, encrypted. That checker
+   is `/api/cron/push-watch` (src/utils/push-watch.ts): it reads only the
+   leagues an app phone is registered in, records a league's first read
+   without alerting, and skips trade OFFERS in TheLeague and the AFL, whose
+   site already sends them.
 9. **Sleeper** (owner 2026-10-27): the web's Sleeper leagues
    (`docs/plans/mfl-live-sleeper.md`) on the app's board, and Sleeper
    leagues in standings on the web and the app. This reverses decision 10's

@@ -18,7 +18,8 @@
  *
  * The TTL is refreshed on every app launch (registration), so an owner who
  * stops opening the app stops being read on their behalf. Removed outright
- * when the account's last phone signs out, or when MFL refuses the cookie.
+ * when the account's last phone signs out; a cookie MFL has stopped accepting
+ * simply reads nothing until the TTL lapses or the app signs in again.
  */
 
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';

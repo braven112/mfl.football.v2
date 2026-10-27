@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/lineup-check",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/push-watch",
+      "schedule": "* * * * *"
     }
   ],
   "ignoreCommand": "node scripts/vercel-ignore-build.mjs",

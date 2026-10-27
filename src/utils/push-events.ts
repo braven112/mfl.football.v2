@@ -76,6 +76,11 @@ export type LeagueEvent =
       overall: number;
       round: number;
       pick: number;
+      /**
+       * The draft board, when the league drafts on more than one (the AFL's
+       * conferences each count overall from 1): the room's `unit`.
+       */
+      unit?: string;
     };
 
 interface Alert {
@@ -100,7 +105,7 @@ function names(list: string[]): string {
 /** The key two callers agree on. Pure. */
 export function eventKey(event: LeagueEvent): string {
   return event.kind === 'draft-on-clock'
-    ? `draft-on-clock:${event.overall}`
+    ? `draft-on-clock:${event.unit ? `${event.unit}:` : ''}${event.overall}`
     : `${event.kind}:${event.key}`;
 }
 

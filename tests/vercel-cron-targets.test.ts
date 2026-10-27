@@ -72,6 +72,17 @@ const SCHEDULED_BRIDGES = [
 ];
 
 /**
+ * Crons that do their work in the function itself: they dispatch no workflow
+ * and commit nothing, so the bridge checks below (a workflow on disk, no
+ * `schedule:`, cadence-gated builds) do not apply. They are still gated by
+ * CRON_SECRET, failing closed, like every target.
+ *
+ * `push-watch` is the one-minute MFL checker for the app's alerts
+ * (src/utils/push-watch.ts, the owner's 2026-10-27 choice).
+ */
+const IN_PROCESS_CRONS = ['src/pages/api/cron/push-watch.ts'];
+
+/**
  * Strip comments before scanning for CODE shapes.
  *
  * Without this the guard reads prose as an offence: the fix for the very bug
@@ -240,9 +251,23 @@ function workflowCommits(workflowSource: string): boolean {
   }
 }
 
+describe('in-process crons', () => {
+  it('dispatch no workflow and stay on a cron', () => {
+    const targets = new Set(crons.map((c) => routeFileFor(c.path)));
+    for (const route of IN_PROCESS_CRONS) {
+      expect(targets.has(route), `${route} has no cron in vercel.json`).toBe(true);
+      expect(
+        /dispatchWorkflow\(/.test(codeOnly(read(route))),
+        `${route} is listed as in-process but dispatches a workflow — it is a bridge, so move it to SCHEDULED_BRIDGES.`,
+      ).toBe(false);
+    }
+  });
+});
+
 describe('every bridged workflow', () => {
   const bridged = crons
     .map((c) => ({ cron: c, route: routeFileFor(c.path) }))
+    .filter((e) => !IN_PROCESS_CRONS.includes(e.route))
     .map((e) => ({ ...e, workflow: dispatchedWorkflowFor(e.route) }));
 
   it('is named by the route that fires it', () => {
