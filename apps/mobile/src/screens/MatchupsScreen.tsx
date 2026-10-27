@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MflLiveAppBoard, MflLiveAppLeaguePanel } from '@mfl/shared-types/mfl-live-app';
 import { fetchBoard, SignedOutError } from '../api';
 import { anyGameLive, updatedAgo } from '../format';
-import { useTheme, type Theme } from '../theme';
+import { font, useTheme, type Theme } from '../theme';
 import { MatchupCard } from '../components/MatchupCard';
 
 /** How often the board refreshes while one of your games is being played. */
@@ -156,13 +156,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  brand: { fontSize: 22, fontWeight: '800' },
-  signOut: { fontSize: 14 },
+  brand: { fontSize: 22, fontFamily: font.bold },
+  signOut: { fontFamily: font.regular, fontSize: 14 },
   content: { paddingHorizontal: 16, paddingTop: 12 },
-  meta: { fontSize: 13, marginBottom: 12 },
-  error: { fontSize: 14, marginBottom: 12 },
-  empty: { fontSize: 15, marginTop: 24, textAlign: 'center', lineHeight: 21 },
+  meta: { fontFamily: font.regular, fontSize: 13, marginBottom: 12 },
+  error: { fontFamily: font.regular, fontSize: 14, marginBottom: 12 },
+  empty: { fontFamily: font.regular, fontSize: 15, marginTop: 24, textAlign: 'center', lineHeight: 21 },
   league: { marginBottom: 12 },
-  leagueName: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-  status: { fontSize: 14, borderWidth: 1, borderRadius: 12, padding: 14, overflow: 'hidden' },
+  leagueName: { fontSize: 13, fontFamily: font.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  status: { fontFamily: font.regular, fontSize: 14, borderWidth: 1, borderRadius: 12, padding: 14, overflow: 'hidden' },
 });

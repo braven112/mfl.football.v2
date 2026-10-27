@@ -38,6 +38,8 @@ What makes it worth paying for over MFL's app:
 | 10 | Store-safe board (2026-10-26) | `?source=mfl` = **MFL data only** | No ESPN fetch at all (no games strip, ticker, red zone), no Sleeper, no headshots, no NFL club marks or colours. Scores, projections and yet-to-play are unchanged. `tests/mfl-live-board-store.test.ts`. |
 | 11 | Android package id (2026-10-26) | **`football.mfl.live.mobile`** | `football.mfl.live` is the Google TV app's id (`android-tv/`), and Play allows one app per id, so the phone app has its own id, listing and closed test. Permanent once uploaded to Play. The iOS bundle id stays `football.mfl.live`. App name "MFL Live". Expo project: `mfl` under the `fantasysports.dev` account (id `45e0bbdf-e3b3-408d-8e0b-ac9950292d58`). |
 | 12 | First build (2026-10-26) | Three PRs off staging: server store mode → `apps/mobile` (sign-in + matchups screens) → GitHub Actions `eas build --no-wait` | Standings is the next screen after. Proposal: https://claude.ai/artifact/5BWWrQvew8dhEUo3Lu2mne |
+| 13 | Look (2026-10-27) | **MFL Live's black and red, one theme; Vend Sans** | The web board's `html.dark[data-league="mfl"]` colours (ink `#14161a`, red `#d81b41` / `#ef5350`) and its font, bundled with `@expo-google-fonts/vend-sans` (OFL). No light theme until the core features are right; `apps/mobile/src/theme.ts` is the only place colours live, so one can be added there later. |
+| 14 | Feature order (2026-10-27, draft for owner review) | See **Phone app feature plan** | Correctness of the core live features first, then reach, then what needs a licensed data feed. |
 
 ## Legal — what a wide-distribution app can and cannot carry
 
@@ -106,6 +108,53 @@ shipped that morning. So the app's `pnpm-workspace.yaml` sets
 `minimumReleaseAge: 1440`, and the lockfile is resolved under the same rule.
 Preview builds start on pushes to `staging` only. A release fast-forwards `main`
 to a commit staging already built.
+
+## Phone app feature plan (2026-10-27, draft for owner review)
+
+What the web app (`mfl.football/live`) does, in the order the phone app gets it.
+The owner's rule: get the core functionality right before theming or extras.
+
+**P0, the core (each one checked against the web board for the same week):**
+
+1. **Matchups, correct and live.** Every league the account is in; score,
+   projection, yet-to-play, win probability; starters with points and status
+   on tap; refresh on the NFL clock (the web's `shouldPollLive` cadence, not a
+   fixed timer), pull to refresh, last-updated time, clear error and
+   offseason states. Exists in a first form; this item is making it match.
+2. **App navigation.** A bottom tab bar (Matchups, Standings, Leagues) so the
+   next screens have a home.
+3. **League board.** Tap a league for every matchup in it plus the week's top
+   scorers (`/live/league/<id>`, `/api/league-board`, which already accepts
+   the app's Bearer sign-in). Needs a store-safe `source=mfl` mode like the
+   board's.
+4. **Standings.** Every watched league's table with the Live / Projected /
+   Final switch (`/live/standings`, `/api/live-standings`). Same store-safe
+   mode needed.
+5. **Which leagues to watch.** The `/live/settings` switches. The web keeps
+   the choice in a cookie (`/api/live-leagues`); the app needs it kept per
+   account on the server so phone and web agree.
+
+**P1, reach:**
+
+6. **League and team identity.** League logos, team colours and owner logos
+   wherever the web already has them; text marks otherwise. No NFL marks.
+7. **Pair a TV from the phone.** Scan the TV's QR code and approve it in the
+   app instead of a browser (`/live/broadcast/pair`).
+8. **Push alerts** (new, not on the web board): kickoff reminders, close
+   games, finals. Owner to confirm it is wanted.
+
+**P2, needs a licensed data feed first (store rules: no ESPN data):**
+
+9. NFL games strip with game clocks.
+10. Cross-league scoring ticker and red-zone banner.
+11. Faster-than-MFL score movement.
+
+**Not coming to the phone:** the TV broadcast board and its overlay (TV app),
+site analytics and the Sleeper player-fix review (admin-only), and Sleeper
+leagues for now (decision 10; revisit with the owner).
+
+**After this list:** light theme, iOS, then the roadmap below (history and
+rivalries, the reporter, subscriptions).
 
 ## Roadmap
 

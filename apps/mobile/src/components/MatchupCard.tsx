@@ -7,7 +7,7 @@ import type {
   MflLiveAppTeam,
 } from '@mfl/shared-types/mfl-live-app';
 import { percent, points } from '../format';
-import { useTheme, type Theme } from '../theme';
+import { font, useTheme, type Theme } from '../theme';
 import { TeamMark } from './TeamMark';
 
 interface Props {
@@ -69,7 +69,7 @@ function TeamLine({
           {showProjection ? `  ·  proj ${points(team.projectedFinal)}` : ''}
         </Text>
       </View>
-      <Text style={[styles.score, { color: t.text, fontWeight: bold ? '800' : '500' }]}>{points(team.live)}</Text>
+      <Text style={[styles.score, { color: t.text, fontFamily: bold ? font.bold : font.medium }]}>{points(team.live)}</Text>
     </View>
   );
 }
@@ -133,20 +133,20 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 },
   teamLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   teamText: { flex: 1 },
-  teamName: { fontSize: 16, fontWeight: '600' },
-  sub: { fontSize: 12, marginTop: 2 },
-  score: { fontSize: 24, fontVariant: ['tabular-nums'] },
+  teamName: { fontSize: 16, fontFamily: font.semibold },
+  sub: { fontFamily: font.regular, fontSize: 12, marginTop: 2 },
+  score: { fontFamily: font.regular, fontSize: 24, fontVariant: ['tabular-nums'] },
   winWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   winTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   winFill: { height: 6 },
-  winText: { fontSize: 12, fontVariant: ['tabular-nums'] },
-  hint: { fontSize: 12, textAlign: 'center' },
+  winText: { fontFamily: font.regular, fontSize: 12, fontVariant: ['tabular-nums'] },
+  hint: { fontFamily: font.regular, fontSize: 12, textAlign: 'center' },
   detail: { gap: 16, marginTop: 4 },
   lineup: {},
-  lineupTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  lineupTitle: { fontSize: 13, fontFamily: font.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   playerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
-  pos: { width: 32, fontSize: 12, fontWeight: '700' },
+  pos: { width: 32, fontSize: 12, fontFamily: font.bold },
   playerText: { flex: 1 },
-  playerName: { fontSize: 15 },
-  playerPts: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  playerName: { fontFamily: font.regular, fontSize: 15 },
+  playerPts: { fontSize: 15, fontFamily: font.semibold, fontVariant: ['tabular-nums'] },
 });
