@@ -92,7 +92,7 @@ export function SignInScreen({ onSignedIn }: Props) {
         </Pressable>
 
         <Text style={[styles.fine, { color: t.muted }]}>
-          MFL Live is not affiliated with MyFantasyLeague or the NFL. Your password goes to MFL to sign you in and
+          MFL Football is not affiliated with MyFantasyLeague or the NFL. Your password goes to MFL to sign you in and
           is never stored on this phone.
         </Text>
       </View>

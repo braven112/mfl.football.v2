@@ -36,7 +36,7 @@
   },
   {
     "slug": "mfl-live",
-    "title": "MFL Live",
+    "title": "MFL Football",
     "summary": "Every team you own, in every MyFantasyLeague league, scoring on one page — then tap a league to see the whole thing: all its matchups, its standings, and the week's top scorers.",
     "icon": "scoreboard-2",
     "updated": "2026-09-20",
@@ -45,7 +45,7 @@
       "afl"
     ],
     "body": [
-      "Every other scoreboard on this site shows you one league. MFL Live shows you all of them: sign in once with your MyFantasyLeague account and it reads every league that account plays in — this league, the other one, and the ones nobody here has ever heard of — then puts every matchup on a single page. It lives at <a href=\"https://v2.mfl.football/live\">its own address</a> rather than under a league, because it does not belong to one.",
+      "Every other scoreboard on this site shows you one league. MFL Football shows you all of them: sign in once with your MyFantasyLeague account and it reads every league that account plays in — this league, the other one, and the ones nobody here has ever heard of — then puts every matchup on a single page. It lives at <a href=\"https://v2.mfl.football/live\">its own address</a> rather than under a league, because it does not belong to one.",
       {
         "type": "list",
         "heading": "What's on the board",
@@ -83,7 +83,7 @@
   },
   {
     "slug": "tv-app",
-    "title": "MFL Live on Google TV",
+    "title": "MFL Football on Google TV",
     "summary": "Put your fantasy score, win chance and lineups on top of the game you're watching, and jump to the games your players are in.",
     "icon": "scoreboard-2",
     "updated": "2026-10-26",
@@ -92,24 +92,24 @@
       "afl"
     ],
     "body": [
-      "The MFL Live TV app does two things. Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
+      "The MFL Football TV app does two things. Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
       {
         "type": "list",
         "heading": "Get the app",
         "items": [
           "<strong>Send Brandon your TV's Google account.</strong> That's the Gmail address signed in on your Google TV. He adds you as a tester and sends you a link to join the test.",
           "<strong>Join the test.</strong> Open that link on your phone or computer, signed in to the same Google account, and tap to join.",
-          "<strong>Install it.</strong> After a few hours, search the Play Store on your TV for <strong>MFL Live</strong> and install it."
+          "<strong>Install it.</strong> After a few hours, search the Play Store on your TV for <strong>MFL Football</strong> and install it."
         ]
       },
       {
         "type": "list",
         "heading": "Set it up once",
         "items": [
-          "<strong>Sign in.</strong> Open MFL Live on the TV and point your phone's camera at the QR code. Sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own.",
-          "<strong>Allow the overlay.</strong> Open the <strong>Score overlay</strong> tile. The first time, it asks to show over other apps: press OK and turn it on for MFL Live, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
+          "<strong>Sign in.</strong> Open MFL Football on the TV and point your phone's camera at the QR code. Sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own.",
+          "<strong>Allow the overlay.</strong> Open the <strong>Score overlay</strong> tile. The first time, it asks to show over other apps: press OK and turn it on for MFL Football, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
           "<strong>No switch on your TV?</strong> The tile shows a one-line command instead. Run it once from a computer on the same Wi-Fi, with ADB installed and network debugging turned on in the TV's Developer options: <code>adb shell appops set football.mfl.live SYSTEM_ALERT_WINDOW allow</code>",
-          "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Live settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
+          "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Football settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
         ]
       },
       {

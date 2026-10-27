@@ -35,7 +35,7 @@ export async function signIn(username: string, password: string): Promise<string
       body: JSON.stringify({ username, password, scope: 'mfl-live', client: APP_CLIENT }),
     });
   } catch {
-    throw new Error('Could not reach MFL Live. Check your connection and try again.');
+    throw new Error('Could not reach MFL Football. Check your connection and try again.');
   }
 
   // MFL and our own routes can both answer an error as a 200, so the body's
@@ -69,6 +69,6 @@ export async function fetchBoard(token: string): Promise<MflLiveAppBoard> {
   const body = (await res.json()) as MflLiveAppBoard;
   // `ok: false` is a failed assembly, not an empty week: the caller keeps the
   // last good board rather than blanking the screen.
-  if (!body.ok) throw new Error('MFL Live could not load your leagues just now.');
+  if (!body.ok) throw new Error('MFL Football could not load your leagues just now.');
   return body;
 }
