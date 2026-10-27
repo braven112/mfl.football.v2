@@ -152,6 +152,17 @@ The owner's rule: get the core functionality right before theming or extras.
 8. **Push notifications** (owner 2026-10-27: "a very important feature"):
    native push via `expo-notifications`, reusing the site's notification
    categories. First alerts: lineup reminder, close game, final.
+   Built as a second transport behind the site's one send door
+   (`sendPushToFranchise`): the app registers its Expo push token at
+   `/api/push/expo-register` (Bearer), tokens are stored per MFL ACCOUNT
+   (hashed username, never the cookie) with a per-league index of the
+   account's teams rebuilt from `myleagues` on every launch (`push:expo:*`,
+   src/utils/push-expo.ts), and every alert the site sends reaches the app
+   under the owner's existing notification settings, one Android channel
+   per settings group. For any MFL league (launch gate): actions taken in
+   the app alert instantly, and the owner chose (2026-10-27) a server
+   checker that reads MFL EVERY MINUTE for actions taken on MFL's own site,
+   keeping each owner's MFL sign-in on the server, encrypted.
 9. **Sleeper** (owner 2026-10-27): the web's Sleeper leagues
    (`docs/plans/mfl-live-sleeper.md`) on the app's board, and Sleeper
    leagues in standings on the web and the app. This reverses decision 10's

@@ -21,6 +21,12 @@ import { getLeagueById } from '../config/leagues';
 import { scrubLeagueNames } from './league-name-guard.mjs';
 import { isAdminFranchise } from '../config/nav-config';
 import { outboundAllowed } from './deploy-environment';
+import {
+  getExpoTokens,
+  pruneExpoTokens,
+  buildExpoMessages,
+  sendExpoMessages,
+} from './push-expo';
 
 export interface PushPayload {
   title: string;
@@ -104,6 +110,61 @@ export async function sendPushToFranchise(
   const recipient = { isAdmin: isAdminFranchise(franchiseId, league.navSlug) };
   if (!isCategoryEnabled(category, stored, league, recipient)) return result;
 
+  // Another league's name never reaches a lock screen (league-name-guard.mjs).
+  const scrubbed: PushPayload = {
+    ...payload,
+    title: scrubLeagueNames(payload.title, league.slug),
+    body: scrubLeagueNames(payload.body, league.slug),
+  };
+
+  // Browsers and the MFL Live app are two transports behind this one door:
+  // the preference check above already covered both.
+  const [web, app] = await Promise.all([
+    sendWebPush(leagueId, franchiseId, scrubbed),
+    sendAppPush(leagueId, franchiseId, scrubbed, category),
+  ]);
+  for (const part of [web, app]) {
+    result.sent += part.sent;
+    result.failed += part.failed;
+    result.pruned += part.pruned;
+    result.total += part.total;
+  }
+  return result;
+}
+
+/** The MFL Live phone app's devices, through Expo's push service (push-expo.ts). */
+async function sendAppPush(
+  leagueId: string,
+  franchiseId: string,
+  payload: PushPayload,
+  category: string,
+): Promise<PushSendResult> {
+  const result: PushSendResult = { sent: 0, failed: 0, pruned: 0, total: 0 };
+  try {
+    const tokens = await getExpoTokens(leagueId, franchiseId);
+    result.total = tokens.length;
+    if (tokens.length === 0) return result;
+    const messages = buildExpoMessages(tokens.map((t) => t.token), payload, category, leagueId);
+    const sent = await sendExpoMessages(messages);
+    result.sent = sent.sent;
+    result.failed = sent.failed;
+    if (sent.deadTokens.length > 0) {
+      result.pruned = sent.deadTokens.length;
+      await pruneExpoTokens(leagueId, franchiseId, sent.deadTokens);
+    }
+  } catch (e) {
+    console.warn('[push-sender] app push failed:', e);
+  }
+  return result;
+}
+
+/** Browser subscriptions, through web-push. */
+async function sendWebPush(
+  leagueId: string,
+  franchiseId: string,
+  payload: PushPayload,
+): Promise<PushSendResult> {
+  const result: PushSendResult = { sent: 0, failed: 0, pruned: 0, total: 0 };
   let webpush: typeof import('web-push') | null = null;
   try {
     const mod = await import('web-push');
@@ -126,12 +187,7 @@ export async function sendPushToFranchise(
     },
     TTL: 60 * 60 * 24, // give offline devices a day to pick it up
   };
-  // Another league's name never reaches a lock screen (league-name-guard.mjs).
-  const body = JSON.stringify({
-    ...payload,
-    title: scrubLeagueNames(payload.title, league.slug),
-    body: scrubLeagueNames(payload.body, league.slug),
-  });
+  const body = JSON.stringify(payload);
 
   const deadEndpoints: string[] = [];
   await Promise.all(
