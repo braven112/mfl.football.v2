@@ -1,0 +1,29 @@
+name: Probe MFL Chat
+
+# TEMPORARY. Finds the URL shape of MFL's chat_save request from its API
+# reference. No secrets, no cookie, no league id: nothing can be posted.
+# Deleted in the same PR once the answer is recorded.
+
+on:
+  push:
+    branches: [claude/project-thread-hrltdd]
+    paths:
+      - scripts/probe-mfl-chat.mjs
+      - .github/workflows/probe-mfl-chat.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Probe
+        run: node scripts/probe-mfl-chat.mjs
