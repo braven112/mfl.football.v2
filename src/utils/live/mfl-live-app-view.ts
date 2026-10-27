@@ -30,6 +30,7 @@ import { projectPlayerFinal } from '../live-win-probability';
 import { DEFAULT_SCORE_PRECISION } from './score-precision';
 import { isMatchupFinal } from './standings-projection';
 import { fromMflLiveBoard } from './from-mfl-live';
+import { appLeagueLogo } from './app-league-logo';
 
 /** The web board's own cadence (`LiveBoard.tsx`): a game on, or none. */
 export const APP_POLL_LIVE_MS = 25_000;
@@ -61,6 +62,8 @@ export interface MflLiveAppMatchupView extends Omit<MflLiveMatchup, 'mine' | 'op
 export interface MflLiveAppPanelView extends Omit<MflLiveLeaguePanel, 'matchups'> {
   matchups: MflLiveAppMatchupView[];
   scorePrecision: number;
+  /** The league's own logo, a site-relative PNG; '' for a league we do not run. */
+  leagueLogo: string;
 }
 
 /** The board as `/api/live-board?source=mfl` answers it. */
@@ -172,6 +175,7 @@ export function toMflLiveAppBoard(
   const leagues: MflLiveAppPanelView[] = board.leagues.map((panel, p) => ({
     ...panel,
     scorePrecision: canonical.panels[p]?.scorePrecision ?? DEFAULT_SCORE_PRECISION,
+    leagueLogo: appLeagueLogo(panel.slug),
     matchups: panel.matchups.map((m, i) => {
       const twin = canonical.panels[p]?.matchups[i];
       return {

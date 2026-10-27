@@ -6,12 +6,15 @@ import type {
   MflLiveAppLiveRow,
   MflLiveAppLiveTeam,
 } from '@mfl/shared-types/mfl-live-app-a';
+import type { MflLiveAppIdentityMatchup } from '@mfl/shared-types/mfl-live-app-e';
 import { gameStateLabel, gameStateOf, isFinal, points, winSplit } from '../format';
 import { font, useTheme, type Theme } from '../theme';
+import { matchupColors, type MatchupColors } from '../teamColors';
 import { TeamMark } from './TeamMark';
 
 interface Props {
-  matchup: MflLiveAppLiveMatchup;
+  /** Team colours ride along when the server sends them (package E). */
+  matchup: MflLiveAppLiveMatchup & MflLiveAppIdentityMatchup;
   playerMeta: Record<string, MflLiveAppPlayerMeta>;
   /** Decimal places for this league's scores; /live's default when omitted. */
   precision?: number;
@@ -30,6 +33,7 @@ export function MatchupCard({ matchup, playerMeta, precision }: Props) {
   const mineLeads = mine.live >= opponent.live;
   const showYtp = !final && mine.yetToPlay + opponent.yetToPlay > 0;
   const fmt = (n: number) => points(n, precision);
+  const colors = matchupColors(matchup, t);
 
   return (
     <Pressable
@@ -41,7 +45,8 @@ export function MatchupCard({ matchup, playerMeta, precision }: Props) {
         (showYtp ? `. ${mine.yetToPlay} and ${opponent.yetToPlay} to play` : '')
       }
       onPress={() => setOpen((v) => !v)}
-      style={[styles.card, { backgroundColor: t.card, borderColor: t.border }]}
+      // My team's colour down the card's edge, as the web board tints its card.
+      style={[styles.card, { backgroundColor: t.card, borderColor: t.border, borderLeftColor: colors.mine }]}
     >
       <View style={styles.head}>
         <Text style={[styles.badge, { color: final ? t.muted : t.accentText }]}>{final ? 'FINAL' : '● LIVE'}</Text>
@@ -55,7 +60,7 @@ export function MatchupCard({ matchup, playerMeta, precision }: Props) {
       <TeamLine team={mine} t={t} lead={mineLeads} showProjection={!noProjections} fmt={fmt} />
       <TeamLine team={opponent} t={t} lead={!mineLeads} showProjection={!noProjections} fmt={fmt} />
 
-      {final || noProjections ? null : <WinBar p={matchup.winProbability} t={t} />}
+      {final || noProjections ? null : <WinBar p={matchup.winProbability} t={t} colors={colors} />}
 
       {open ? (
         <View style={styles.detail}>
@@ -100,15 +105,16 @@ function TeamLine({
   );
 }
 
-function WinBar({ p, t }: { p: number; t: Theme }) {
+/** The win split in both teams' colours, each percentage in its team's ink. */
+function WinBar({ p, t, colors }: { p: number; t: Theme; colors: MatchupColors }) {
   const [mine, theirs] = winSplit(p);
   return (
     <View style={styles.winWrap} accessibilityLabel={`Win probability: you ${mine}%, them ${theirs}%`}>
-      <Text style={[styles.winText, { color: t.text }]}>{mine}%</Text>
-      <View style={[styles.winTrack, { backgroundColor: t.field }]}>
-        <View style={[styles.winFill, { width: `${mine}%`, backgroundColor: t.accent }]} />
+      <Text style={[styles.winText, { color: colors.mineInk }]}>{mine}%</Text>
+      <View style={[styles.winTrack, { backgroundColor: colors.theirs }]}>
+        <View style={[styles.winFill, { width: `${mine}%`, backgroundColor: colors.mine }]} />
       </View>
-      <Text style={[styles.winText, { color: t.muted }]}>{theirs}%</Text>
+      <Text style={[styles.winText, { color: colors.theirsInk }]}>{theirs}%</Text>
     </View>
   );
 }
@@ -192,7 +198,7 @@ function PlayerRow({
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 },
+  card: { borderWidth: 1, borderLeftWidth: 4, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badge: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.6 },
   headText: { fontFamily: font.regular, fontSize: 12, fontVariant: ['tabular-nums'] },
