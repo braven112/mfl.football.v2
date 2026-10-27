@@ -130,11 +130,15 @@ export function projectStandings(
   const week = new Map<string, { result: 'W' | 'L' | 'T'; points: number; final: boolean }[]>();
   for (const matchup of matchups) {
     const final = isMatchupFinal(matchup);
+    // A matchup with no projections behind it (a Sleeper league) can only be
+    // read as it stands: its "projected final" is the live score, and an
+    // unplayed one projected that way is a 0-0 tie added to both records.
+    const asLive = mode === 'live' || matchup.noProjections === true;
     // A live result needs a game that has started; a projected one does not —
     // "if every game ends as projected" covers the ones not yet kicked off.
-    if (mode === 'live' && !hasStarted(matchup)) continue;
+    if (asLive && !hasStarted(matchup)) continue;
     const score = (i: 0 | 1) =>
-      mode === 'live' ? matchup.sides[i].live : matchup.sides[i].projectedFinal;
+      asLive ? matchup.sides[i].live : matchup.sides[i].projectedFinal;
     ([0, 1] as const).forEach((i) => {
       const me = score(i);
       const them = score(i === 0 ? 1 : 0);
