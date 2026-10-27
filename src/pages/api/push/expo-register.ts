@@ -8,7 +8,7 @@
  *
  * A phone belongs to the ACCOUNT, and alerts follow every team the account
  * has: each registration re-reads MFL's own `myleagues` list with the owner's
- * cookie and re-indexes the account's teams (push-expo.ts). The app registers
+ * cookie (`listOwnerLeagues`, the app's league switcher) and re-indexes the account's teams (push-expo.ts). The app registers
  * on every launch, so a team traded away or a league left stops alerting.
  *
  * `delivering` is false when the session's league has no alert senders yet
@@ -20,8 +20,7 @@ import { getMflLiveUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { getLeagueById } from '../../../config/leagues';
-import { fetchMyLeagues } from '../../../utils/my-leagues';
-import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { listOwnerLeagues } from '../../../utils/live/owner-league';
 import type { AuthUser } from '../../../utils/auth';
 import {
   pushAccountKey,
@@ -62,11 +61,11 @@ function sessionFor(request: Request) {
  * complete `myleagues` answer may un-index a league.
  */
 async function indexTeams(user: AuthUser, account: string): Promise<void> {
-  // The LEAGUE year, as the /live board reads it (cross-league-live.ts).
-  const mine = await fetchMyLeagues(user.id, getLeagueYearForSlug('theleague')).catch(() => null);
+  // The same list the app's league switcher shows (owner-league.ts).
+  const mine = await listOwnerLeagues(user).catch(() => null);
   const teams = [
     { leagueId: user.leagueId, franchiseId: user.franchiseId },
-    ...(mine?.leagues ?? []).map((l) => ({ leagueId: l.id, franchiseId: l.franchiseId })),
+    ...(mine?.ok ? mine.leagues : []).map((l) => ({ leagueId: l.leagueId, franchiseId: l.franchiseId })),
   ];
   const previous = mine?.ok ? await getIndexedLeagues(account) : [];
   await indexAccountTeams(account, teams, previous);
