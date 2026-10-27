@@ -123,9 +123,6 @@
 - In tests, `resolveWeekLineup` and friends read committed feeds from
   `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
   year asserts against bot-synced data and fails later, on `main`.
-- **League chat has NO export.** Read it from the public file
-  `<host>/fflnetdynamic<year>/<league>_chat.xml` (404 = never chatted), post
-  with `import?TYPE=chat_save`. `src/utils/mfl-chat.ts`; entry 2026-10-27.
 <!-- /CURATED-HEAD -->
 
 ---
