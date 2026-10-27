@@ -127,6 +127,35 @@
 
 ---
 
+## 2026-10-27 - There Is No Auction API: No Bid, No Nominate, Only Events To Read
+
+Checked for the MFL Football app's auction room (package R, step 3) with a
+cookie-authenticated, GET-only probe against TheLeague.
+
+- **`api_info`'s Misc requests are only `live_draft`, `chat_save` and
+  `login`.** Nothing nominates a player or places a bid. `import
+  TYPE=auctionResults` exists but loads a finished OFFLINE auction; it is not a
+  bid.
+- **Owners bid on `options?L=<id>&O=43` ("Auction Bid")**; `O=44` is Auction
+  Results. Out of season that page renders NO form, so its field names cannot
+  be seen (or tested) until an auction is open. TheLeague's opens in March. Do
+  not ship a guessed form post — see "Don't ship inferred parameter names to a
+  write endpoint" in the head.
+- **Reading works today.** `transactions&TRANS_TYPE=AUCTION_INIT,AUCTION_BID,AUCTION_WON`
+  carries every nomination, bid and win, `transaction` = `"{playerId}|{amount}|"`,
+  `timestamp` in Unix seconds, NEWEST FIRST. `auctionResults` lists closed lots
+  (`winningBid`, `lastBidTime`). Who is up, the high bid, and "you were outbid"
+  are DERIVED: replay oldest first, the high bid is the max amount (not the
+  latest event), and a sale closes a lot only if it is not older than the lot's
+  last event, because a player can be nominated again after a sale.
+  `src/utils/live/mfl-live-auction.ts` does this; `tests/mfl-live-auction.test.ts`
+  pins it.
+- **A league can run a draft AND an auction in one year.** TheLeague's
+  `loadRosters` is `email_draft_email_auction` and its `draft_kind` is `email`,
+  so "is this an auction league?" is `auction_kind`, never `draft_kind`.
+
+---
+
 ## 2026-10-27 - League Chat Is A Static File, Not An Export
 
 **Context:** The MFL Football app (package N) needed to read and post a league's

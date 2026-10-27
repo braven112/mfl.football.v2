@@ -317,7 +317,7 @@ export function freeAgentIdsOf(freeAgents: unknown, unit: string | undefined): s
 // ── Network ──────────────────────────────────────────────────────────────────
 
 /** One MFL export with the owner's cookie; null for anything that is not a usable payload. */
-async function readExport(
+export async function readExport(
   league: OwnerLeague,
   mflUserCookie: string,
   type: string,

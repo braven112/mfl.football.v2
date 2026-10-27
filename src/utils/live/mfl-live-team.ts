@@ -88,7 +88,7 @@ export function isReadable(body: unknown): body is Record<string, any> {
   return !!body && typeof body === 'object' && !(body as { error?: unknown }).error;
 }
 
-const SLOT_BY_STATUS: Record<string, MflLiveAppRosterSlot> = {
+export const SLOT_BY_STATUS: Record<string, MflLiveAppRosterSlot> = {
   ROSTER: 'active',
   INJURED_RESERVE: 'ir',
   TAXI_SQUAD: 'taxi',
@@ -96,7 +96,7 @@ const SLOT_BY_STATUS: Record<string, MflLiveAppRosterSlot> = {
 const SLOT_ORDER: MflLiveAppRosterSlot[] = ['active', 'ir', 'taxi'];
 
 /** This franchise's row of a `rosters` export, or null when it is not there. */
-function findRoster(rosters: unknown, franchiseId: string): Record<string, any> | null {
+export function findRoster(rosters: unknown, franchiseId: string): Record<string, any> | null {
   if (!isReadable(rosters)) return null;
   const rows = asArray<any>((rosters as any).rosters?.franchise);
   return rows.find((r) => pad(r?.id) === franchiseId) ?? null;
@@ -177,9 +177,10 @@ export function buildMflLiveTeam(input: BuildMflLiveTeamInput): MflLiveAppTeamPa
   };
 }
 
-function capFor(
+/** MFL's own cap arithmetic (see the header). The auction room's budget reads it too. */
+export function capFor(
   settings: Record<string, any>,
-  players: MflLiveAppRosterPlayer[],
+  players: Pick<MflLiveAppRosterPlayer, 'salary' | 'slot'>[],
   adjustmentsPayload: unknown,
   franchiseId: string,
 ): MflLiveAppTeamCap | null {
