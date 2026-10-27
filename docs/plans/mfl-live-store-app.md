@@ -38,7 +38,7 @@ What makes it worth paying for over MFL's app:
 | 7 | V1 scope | **Port MFL Live**: live scoring + live standings, league logos, owner-editable league logos and team colors | Live scoring is the minimum worth releasing. |
 | 8 | Who pays | **Both**: an owner subscription, or a league plan the commissioner buys at a discount | League-wide features (the reporter) run for a league when a league plan exists or (to decide) when any owner in it subscribes. The single entitlement check is `hasMflLivePro` (`src/utils/mfl-live-pro.ts`) — a paid entitlement is OR-ed in there. |
 | 9 | How the app gets its data (2026-10-26) | **Through our server**, not MFL from the phone | The app signs in at `/api/auth/login` (`scope: 'mfl-live'`, `client: 'mfl-live-app'`), which returns the session token in the body for that client only; the app keeps it in the device keystore and sends it as `Authorization: Bearer`, which `getMflLiveUser` alone accepts (`tests/mfl-live-app-auth.test.ts`). It polls `/api/live-board?source=mfl`. Calling MFL directly would mean porting scoring and matchup logic first; revisit when the app must serve owners outside our leagues. |
-| 10 | Store-safe board (2026-10-26) | `?source=mfl` = **MFL data only** | No ESPN fetch at all (no games strip, ticker, red zone), no Sleeper, no headshots, no NFL club marks or colours. Scores, projections and yet-to-play are unchanged. `tests/mfl-live-board-store.test.ts`. |
+| 10 | Store-safe board (2026-10-26; Sleeper added 2026-10-27) | `?source=mfl` = **MFL data, plus the viewer's linked Sleeper leagues** | No ESPN fetch at all (no games strip, ticker, red zone), no headshots, no NFL club marks or colours. Scores, projections and yet-to-play are unchanged. Sleeper leagues (owner, 2026-10-27, reversing this row's original "no Sleeper") are clocked from MFL's own `nflSchedule` export instead of ESPN (`src/utils/sleeper/store-clock.ts`) and sit behind one switch, `SLEEPER_IN_STORE_APP` (see Legal). `tests/mfl-live-board-store.test.ts`. |
 | 11 | Android package id (2026-10-26, changed 2026-10-27) | **`football.mfl.app`** | `football.mfl.live` is the Google TV app's id (`android-tv/`), and Play allows one app per id, so the phone app has its own id, listing and closed test. It was `football.mfl.live.mobile` until the rename to MFL Football (decision 15); nothing had been uploaded to Play, so the owner dropped "live" from the id too. Permanent once uploaded to Play. The iOS bundle id stays `football.mfl.live`. Expo project: `mfl` under the `fantasysports.dev` account (id `45e0bbdf-e3b3-408d-8e0b-ac9950292d58`). |
 | 12 | First build (2026-10-26) | Three PRs off staging: server store mode → `apps/mobile` (sign-in + matchups screens) → GitHub Actions `eas build --no-wait` | Standings is the next screen after. Proposal: https://claude.ai/artifact/5BWWrQvew8dhEUo3Lu2mne |
 | 13 | Look (2026-10-27) | **MFL Live's black and red, one theme; Vend Sans** | The web board's `html.dark[data-league="mfl"]` colours (ink `#14161a`, red `#d81b41` / `#ef5350`) and its font, bundled with `@expo-google-fonts/vend-sans` (OFL). No light theme until the core features are right; `apps/mobile/src/theme.ts` is the only place colours live, so one can be added there later. |
@@ -64,6 +64,15 @@ changes hands. It is a map, not a ruling.
   reject unlicensed league marks; a "not affiliated" disclaimer does not help.
   Use team abbreviations with our own styling. This overrides
   `mfl-live-app.md` decision 13 (the NFL-artwork fallback) for the store build.
+- **Sleeper data: fine for the free test, needs Sleeper's OK before we charge**
+  (checked 2026-10-27). Sleeper's public API needs no key, but its General
+  Terms of Use (last updated 2026-10-06, support.sleeper.com article 5486620)
+  license the service for "personal and non-commercial use" (section 9.2) and
+  connect third-party products through a separate written agreement as an
+  "Approved Integration Partner" (section 2.9). So: ask Sleeper for partner
+  approval before the paid launch, and if they decline, set
+  `SLEEPER_IN_STORE_APP = false` (`src/utils/sleeper/store-clock.ts`), which
+  takes Sleeper out of the app and leaves the web board as it is.
 - **The reporter persona needs an original name.** "Schefter" is a real
   journalist; a paid product using his name invites a publicity claim.
 

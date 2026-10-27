@@ -40,7 +40,8 @@ import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
 import { getSleeperLink, sleeperViewerKey } from './sleeper/link';
 import { applyPlayerFixes, readViewerFixes } from './sleeper/player-fixes';
-import { discoverSleeperBoardLeagues, readSleeperLive } from './sleeper/live';
+import { discoverSleeperBoardLeagues, readSleeperLive, secondsRemainingByTeam } from './sleeper/live';
+import { loadMflNflClock, SLEEPER_IN_STORE_APP } from './sleeper/store-clock';
 import { loadSleeperPlayerMap, UNRESOLVED_PREFIX, type SleeperPlayerMap } from './sleeper/players';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
 import type { LiveSnapshot } from './live-scoring-snapshot';
@@ -80,8 +81,9 @@ export interface AssembleMflLiveInput {
   /**
    * MFL data only — the store build of the MFL Live app
    * (docs/plans/mfl-live-store-app.md, Legal). No ESPN read at all (so no
-   * games strip, ticker or red zone), no Sleeper leagues, no headshots and no
-   * NFL club marks or colours. Scores, projections and yet-to-play all come
+   * games strip, ticker or red zone), no headshots and no NFL club marks or
+   * colours. Sleeper leagues stay while `SLEEPER_IN_STORE_APP` allows them,
+   * clocked from MFL's schedule rather than ESPN's. Scores, projections and yet-to-play all come
    * from MFL and are unchanged. Pinned by `tests/mfl-live-board-store.test.ts`.
    */
   mflOnly?: boolean;
@@ -187,7 +189,7 @@ export async function assembleMflLiveBoard(
   // second list is empty and the board is exactly the MFL board.
   const [mflLeagues, sleeperLeagues] = await Promise.all([
     discoverBoardLeagues(user),
-    input.mflOnly
+    input.mflOnly && !SLEEPER_IN_STORE_APP
       ? Promise.resolve([])
       : getSleeperLink(user)
           .then((link) => discoverSleeperBoardLeagues(link, year))
@@ -224,13 +226,19 @@ export async function assembleMflLiveBoard(
         readViewerFixes(sleeperViewerKey(user)).catch(() => ({})),
       ]).then(([map, fixes]) => applyPlayerFixes(map, fixes))
     : Promise.resolve({});
+  // The clock: ESPN's scoreboard on the web, MFL's own schedule in the store
+  // app, which may not read ESPN (`sleeper/store-clock.ts`).
+  // A failed read is NOT an empty slate: read as one, every starter has zero
+  // seconds left and every live matchup reads Final. Null marks the Sleeper
+  // reads unavailable, so the board holds the last panel it confirmed instead.
+  const sleeperClock: Promise<ReadonlyMap<string, number> | null> = !onSleeper.length
+    ? Promise.resolve(null)
+    : input.mflOnly
+      ? loadMflNflClock({ year, week })
+      : scoreboardRead.then((sb) => (sb.ok ? secondsRemainingByTeam(sb.games ?? []) : null));
   const sleeperReads: Promise<LeagueLiveRead[]> = onSleeper.length
-    ? Promise.all([scoreboardRead, sleeperPlayers]).then(([sb, players]) =>
-        // A failed scoreboard is NOT an empty slate: read as one, every starter
-        // has zero seconds left and every live matchup reads Final. Passing
-        // null marks the Sleeper reads unavailable, so the board holds the
-        // last panel it confirmed instead.
-        readSleeperLive({ leagues: onSleeper, week, players, games: sb.ok ? (sb.games ?? []) : null }),
+    ? Promise.all([sleeperClock, sleeperPlayers]).then(([clock, players]) =>
+        readSleeperLive({ leagues: onSleeper, week, players, clock }),
       )
     : Promise.resolve([]);
   const [mflReads, scoreboard, detail, sleeperRows, sleeperMap] = await Promise.all([

@@ -105,6 +105,13 @@ fits well inside the limit at our scale, and it uses the same fan-out limit and
 - A Sleeper panel has no league-board link and no stat sheet (both read MFL).
 - Only the MFL Live board and its settings page read Sleeper. `/broadcast`,
   Sunday Ticket, standings and the league boards are untouched.
+- **The phone app (2026-10-27).** The store board (`?source=mfl`) shows
+  Sleeper leagues too. It may not read ESPN, so each starter's clock comes
+  from MFL's `nflSchedule` export (`sleeper/store-clock.ts`, cached 30 s); a
+  failed read marks the league unavailable rather than Final, same as a failed
+  ESPN read on the web. Linking is still done on `/live/settings`: the link is
+  keyed by the MFL account, so the app sees it. Commercial-use status of
+  Sleeper's terms: `mfl-live-store-app.md` § Legal.
 
 ## Crowd player matching (Oct 2026)
 
