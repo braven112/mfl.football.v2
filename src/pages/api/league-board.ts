@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, getMflLiveUser } from '../../utils/auth';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
 import { assembleLeagueBoard } from '../../utils/live/league-board';
 import { assembleMflLeagueBoard } from '../../utils/live/mfl-league-board';
@@ -38,6 +39,18 @@ export const prerender = false;
  * slate from `useNflScoreboard`, which shares its poll store with the games
  * rail, so putting an ESPN read on this route would add a second fetch per
  * viewer per poll for data the page already has a live source for.
+ *
+ * ── `?source=mfl` — THE PHONE APP'S STORE MODE ──────────────────────────
+ * The MFL Live app's league screen: `?mfl=<id>&source=mfl`. MFL data only —
+ * no player headshots, no NFL club marks or colours on a franchise named
+ * after a club (`mflOnly` on the assembler) — because the store build may not
+ * ship them (docs/plans/mfl-live-store-app.md, Legal). The app signs in with
+ * a Bearer token, which only `getMflLiveUser` accepts, so store mode exists
+ * on the `?mfl=` path alone: `?league=<slug>&source=mfl` is a 400 rather than
+ * a web board quietly served to an app that may not show it. The week is
+ * optional there and defaults to the running NFL week, as `/api/live-board`
+ * does, so the app need not know the NFL calendar. Wire contract:
+ * `packages/shared-types/src/mfl-live-app-league-board.ts`.
  */
 export const GET: APIRoute = async ({ url, request }) => {
   // Parsed once, before the two paths diverge — they validate identically and
@@ -55,8 +68,16 @@ export const GET: APIRoute = async ({ url, request }) => {
   // names a league this site runs and is public, while an MFL id is checked
   // against the owner's own league list and the read carries their cookie.
   const mflId = (url.searchParams.get('mfl') ?? '').trim();
+  const mflOnly = url.searchParams.get('source') === 'mfl';
   if (mflId) {
-    return mflLeagueBoard({ mflId, week, year, request });
+    // Store mode may omit the week. `0` when no NFL week is running — never
+    // clamped up to 1 — which the assembler answers with an empty board.
+    const resolvedWeek =
+      mflOnly && !url.searchParams.has('week') ? (getCurrentNFLWeek(new Date()) ?? 0) : week;
+    return mflLeagueBoard({ mflId, week: resolvedWeek, year, request, mflOnly });
+  }
+  if (mflOnly) {
+    return json({ ok: false, error: 'source=mfl needs an mfl league id' }, 400);
   }
 
   const slugParam = url.searchParams.get('league') ?? '';
@@ -111,8 +132,10 @@ async function mflLeagueBoard(input: {
   week: number;
   year: number;
   request: Request;
+  /** The phone app's store mode — see the header. */
+  mflOnly: boolean;
 }): Promise<Response> {
-  const { mflId, week, year, request } = input;
+  const { mflId, week, year, request, mflOnly } = input;
 
   // Unauthenticated is a 401, not an empty board: every read on this path uses
   // the owner's own MFL cookie, and there is nothing to serve without one.
@@ -121,7 +144,9 @@ async function mflLeagueBoard(input: {
   const user = getMflLiveUser(request);
   if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
 
-  if (!Number.isInteger(week) || week < 1 || week > 25) {
+  // Store mode accepts 0 — "no NFL week is running", resolved above.
+  const minWeek = mflOnly ? 0 : 1;
+  if (!Number.isInteger(week) || week < minWeek || week > 25) {
     return json({ ok: false, error: 'Valid week parameter required' }, 400);
   }
 
@@ -134,7 +159,7 @@ async function mflLeagueBoard(input: {
     const league = leagues.find((l) => l.id === mflId);
     if (!league) return json({ ok: false, error: 'Unknown league' }, 404);
 
-    const { board } = await assembleMflLeagueBoard({ user, league, week, year });
+    const { board } = await assembleMflLeagueBoard({ user, league, week, year, mflOnly });
     return json(board, 200);
   } catch {
     return json({ ok: false }, 200);
