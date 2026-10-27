@@ -24,6 +24,14 @@ import {
   resolveLeagueGroupMe,
   type LeagueGroupMe,
 } from '../../../utils/live/league-groupme-chat';
+import {
+  readGroupMeLink,
+  removeGroupMeLink,
+  startGroupMeSignIn,
+} from '../../../utils/live/groupme-owner-auth';
+import { postAsMember } from '../../../utils/groupme-client';
+import { pushAccountKey } from '../../../utils/push-expo';
+import type { AuthUser } from '../../../utils/auth';
 
 export const prerender = false;
 
@@ -70,11 +78,17 @@ async function markRead(league: OwnerLeague, messages: MflChatMessage[]): Promis
  */
 const groupMeMarkerLeague = (league: OwnerLeague) => `${league.leagueId}:groupme`;
 
-async function groupMeGet(league: OwnerLeague, group: LeagueGroupMe, cookie: string, countOnly: boolean) {
+/** The account's own GroupMe user id, once they have signed in to GroupMe. */
+async function myGroupMeUserId(user: AuthUser): Promise<string | null> {
+  const account = pushAccountKey(user);
+  return account ? ((await readGroupMeLink(account))?.userId ?? null) : null;
+}
+
+async function groupMeGet(league: OwnerLeague, group: LeagueGroupMe, user: AuthUser, countOnly: boolean) {
   const chat = await readGroupMeChat(group.groupId);
   if (!chat.ok) return appJson({ ok: false, error: 'chat-unavailable' } satisfies MflLiveAppChatResponse, 503);
-  const names = await franchiseNames(league, cookie);
-  const view = buildGroupMeChatView(chat.messages, league.franchiseId, names);
+  const names = await franchiseNames(league, user.id);
+  const view = buildGroupMeChatView(chat.messages, league.franchiseId, names, await myGroupMeUserId(user));
   const markerLeague = groupMeMarkerLeague(league);
   const marker = await readChatMarker(markerLeague, league.franchiseId);
   const unread = countUnreadGroupMe(view, marker?.id ?? null);
@@ -103,7 +117,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const { user, league } = gate;
 
   const group = await resolveLeagueGroupMe(league.leagueId);
-  if (group) return groupMeGet(league, group, user.id, url.searchParams.get('count') === '1');
+  if (group) return groupMeGet(league, group, user, url.searchParams.get('count') === '1');
 
   const chat = await readMflChat(league);
   if (!chat.ok) return appJson({ ok: false, error: 'chat-unavailable' } satisfies MflLiveAppChatResponse, 503);
@@ -143,11 +157,8 @@ export const POST: APIRoute = async ({ request, url }) => {
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   if (!text) return fail('empty', 'Type a message first.', 400);
 
-  // Posting to GroupMe is as the owner themself, once they have signed in to
-  // GroupMe — the next step. Never through a bot, so until then: say so.
-  if (await resolveLeagueGroupMe(league.leagueId)) {
-    return fail('groupme-sign-in', 'Sign in to GroupMe to post. That arrives in the next app update.', 403);
-  }
+  const group = await resolveLeagueGroupMe(league.leagueId);
+  if (group) return groupMePost(league, group, user, text);
   if (text.length > MFL_CHAT_MAX_LENGTH) {
     return fail('too-long', `Keep it under ${MFL_CHAT_MAX_LENGTH} characters.`, 400);
   }
@@ -197,3 +208,49 @@ export const POST: APIRoute = async ({ request, url }) => {
   } satisfies MflLiveAppChatPostResponse);
 };
 
+
+/**
+ * Posts into the league's GroupMe AS the owner, with their own GroupMe
+ * sign-in — never through a bot (the owner, 2026-10-27). No sign-in yet, or
+ * one GroupMe has revoked: answer `groupme-sign-in` with a fresh link.
+ */
+async function groupMePost(league: OwnerLeague, group: LeagueGroupMe, user: AuthUser, text: string) {
+  if (text.length > GROUPME_CHAT_MAX_LENGTH) {
+    return fail('too-long', `Keep it under ${GROUPME_CHAT_MAX_LENGTH} characters.`, 400);
+  }
+  const account = pushAccountKey(user);
+  if (!account) return fail('chat-unavailable', 'Sign out and back in, then try again.', 503);
+
+  const askToSignIn = async (message: string) => {
+    const signInUrl = await startGroupMeSignIn(account);
+    if (!signInUrl) return fail('chat-unavailable', 'GroupMe sign-in is unavailable right now. Try again shortly.', 503);
+    // 200, not 403: an expected answer the app acts on, and the app's
+    // client throws away the body of any non-2xx.
+    return appJson({ ok: false, error: 'groupme-sign-in', message, signInUrl } satisfies MflLiveAppChatPostResponse);
+  };
+
+  const link = await readGroupMeLink(account);
+  if (!link) return askToSignIn('Sign in to GroupMe once to post as yourself.');
+
+  const result = await postAsMember(group.groupId, link.token, text);
+  if (result === 'unauthorized') {
+    await removeGroupMeLink(account);
+    return askToSignIn('GroupMe signed you out. Sign in again to post.');
+  }
+  if (result === 'blocked') return fail('blocked', 'Test builds do not post to GroupMe.', 403);
+  if (result === 'not-a-member') {
+    return fail('refused', `${link.name || 'Your GroupMe account'} is not in this league's GroupMe.`, 403);
+  }
+  if (result !== 'sent') return fail('refused', 'GroupMe did not accept the message. Try again.', 502);
+
+  // GroupMe notifies the group itself, so no push from here.
+  const after = await readGroupMeChat(group.groupId);
+  if (!after.ok) return appJson({ ok: true, messages: [] } satisfies MflLiveAppChatPostResponse);
+  const names = await franchiseNames(league, user.id);
+  const view = buildGroupMeChatView(after.messages, league.franchiseId, names, link.userId);
+  const newest = view[view.length - 1];
+  if (newest) {
+    await writeChatMarker(groupMeMarkerLeague(league), league.franchiseId, { id: newest.id, at: newest.postedAt });
+  }
+  return appJson({ ok: true, messages: view } satisfies MflLiveAppChatPostResponse);
+}

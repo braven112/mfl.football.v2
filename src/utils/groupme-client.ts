@@ -291,6 +291,44 @@ export async function sendMessage(text: string, token: string): Promise<boolean>
   return true;
 }
 
+/** How a member's own post went — see postAsMember. */
+export type MemberPostResult = 'sent' | 'blocked' | 'unauthorized' | 'not-a-member' | 'failed';
+
+/**
+ * Post to a group AS the member whose token this is (the MFL Football app's
+ * GroupMe chat: src/utils/live/groupme-owner-auth.ts). Unlike sendMessage it
+ * says WHY a post failed, because the app answers each differently: a
+ * revoked token means "sign in again", a 403/404 means the owner is not in
+ * that league's group.
+ */
+export async function postAsMember(groupId: string, token: string, text: string): Promise<MemberPostResult> {
+  if (!outboundAllowed()) {
+    console.warn('[groupme] postAsMember suppressed on a non-production deployment');
+    return 'blocked';
+  }
+  try {
+    // Header auth: a fetch rejection's message can carry the URL.
+    const res = await fetch(`${API_BASE}/groups/${encodeURIComponent(groupId)}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Token': token },
+      body: JSON.stringify({
+        message: {
+          source_guid: `app_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          text: stripLinkAdjacentPunctuation(toChatPlainText(text)),
+        },
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) return 'sent';
+    if (res.status === 401) return 'unauthorized';
+    if (res.status === 403 || res.status === 404) return 'not-a-member';
+    console.error(`[groupme] postAsMember failed (${res.status})`);
+    return 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
 /**
  * Post a message as a bot (for Schefter auto-posts).
  * Uses GROUPME_BOT_ID env var.

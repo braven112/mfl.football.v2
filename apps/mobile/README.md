@@ -4,7 +4,7 @@ Expo (React Native) app for any MyFantasyLeague owner. Plan of record:
 `docs/plans/mfl-live-store-app.md`.
 
 - **Two screens, no router:** MFL sign-in, then your live matchups across
-  every league. The app talks only to our server (`v2.mfl.football`), which
+  every league. The app talks only to our server (`mfl.football`), which
   reads MFL; it never calls MFL directly.
 - **Store mode only:** the board is fetched with `?source=mfl` — MFL data
   only, per the store plan's Legal section. `tests/mfl-live-mobile-guard.test.ts`
