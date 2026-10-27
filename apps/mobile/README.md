@@ -1,4 +1,4 @@
-# MFL Live — the mobile app
+# MFL Football — the mobile app (formerly MFL Live)
 
 Expo (React Native) app for any MyFantasyLeague owner. Plan of record:
 `docs/plans/mfl-live-store-app.md`.
