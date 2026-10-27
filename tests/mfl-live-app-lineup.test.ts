@@ -71,14 +71,14 @@ function inputs(over: Partial<AppLineupInputs> = {}): AppLineupInputs {
     },
     weekResultsPayload: null,
     ytdResultsPayload: null,
-    projectionsPayload: {
-      projectedScores: { playerScore: ROSTER.map(([id], i) => ({ id, score: String(30 - i) })) },
-    },
+    projections: new Map(ROSTER.map(([id], i) => [id, 30 - i])),
+    liveRead: null,
+    franchiseNames: { '0004': 'Hosts' },
     nflSchedulePayload: {
       nflSchedule: {
         matchup: [
-          { kickoff: String(KICK_KC), team: [{ id: 'KCC' }, { id: 'LVR' }] },
-          { kickoff: String(KICK_DAL), team: [{ id: 'DAL' }, { id: 'NYG' }] },
+          { kickoff: String(KICK_KC), gameSecondsRemaining: '3600', team: [{ id: 'KCC', isHome: '1' }, { id: 'LVR', isHome: '0' }] },
+          { kickoff: String(KICK_DAL), gameSecondsRemaining: '3600', team: [{ id: 'DAL', isHome: '0' }, { id: 'NYG', isHome: '1' }] },
         ],
       },
     },
@@ -180,6 +180,71 @@ describe('buildAppLineupView', () => {
     expect(view.supported).toBe(false);
     expect(view.canSubmit).toBe(false);
     expect(view.slots).toEqual([]);
+  });
+});
+
+describe('matchup data, as the Matchups tab shows it', () => {
+  const SAVED = '101,201,202,301,302,401,303,501,601';
+  // Mid-game: the KC game is half played, DAL hasn't kicked off.
+  const snapshot = {
+    scores: { '0003': 20, '0004': 31 },
+    remaining: { '0003': 1800, '0004': 900 },
+    matchups: [{ home: '0004', away: '0003' }],
+    players: {
+      '0003': SAVED.split(',').map((id) => ({
+        id,
+        live: id === '101' ? 12 : id === '201' ? 8 : 0,
+        secondsRemaining: ['101', '201', '302', '401', '601'].includes(id) ? 1800 : 3600,
+        status: 'starter',
+      })),
+      '0004': [{ id: '999', live: 31, secondsRemaining: 900, status: 'starter' }],
+    },
+    bench: {},
+    playersYetToPlay: { '0003': 4, '0004': 0 },
+  } as any;
+
+  it('ships each player’s projection, live points, projected final, game state and NFL opponent', () => {
+    const view = buildAppLineupView(inputs({
+      nowMs: (KICK_KC + 1800) * 1000,
+      weekResultsPayload: weekResults(SAVED),
+      liveRead: { ok: true, snapshot },
+    }));
+    const qb = view.players.find((p) => p.id === '101')!;
+    expect(qb.projection).toBe(30);
+    expect(qb.live).toBe(12);
+    // Half the game left: live + half the full-game projection.
+    expect(qb.projectedFinal).toBeCloseTo(27);
+    expect(qb.gameState).toBe('in-progress');
+    expect(qb.opponent).toBe('vs LV');
+    const wr = view.players.find((p) => p.id === '301')!;
+    expect(wr.gameState).toBe('not-started');
+    expect(wr.opponent).toBe('@ NYG');
+    expect(view.players.find((p) => p.id === '203')!.opponent).toBeNull();
+    expect(view.scoring).toBe(true);
+  });
+
+  it('scores the fantasy game with the board’s numbers', () => {
+    const view = buildAppLineupView(inputs({
+      nowMs: (KICK_KC + 1800) * 1000,
+      weekResultsPayload: weekResults(SAVED),
+      liveRead: { ok: true, snapshot },
+    }));
+    expect(view.matchups).toHaveLength(1);
+    const m = view.matchups[0];
+    expect(m).toMatchObject({ opponentId: '0004', opponentName: 'Hosts', isHome: false });
+    expect(m.mine.live).toBe(20);
+    expect(m.opponent.live).toBe(31);
+    expect(m.mine.projectedFinal).toBeGreaterThan(m.mine.live);
+    expect(m.winProbability).toBeGreaterThan(0);
+  });
+
+  it('has projections but no matchups before the week is read live', () => {
+    const view = buildAppLineupView(inputs({ weekResultsPayload: weekResults(SAVED) }));
+    expect(view.matchups).toEqual([]);
+    expect(view.scoring).toBe(false);
+    const qb = view.players.find((p) => p.id === '101')!;
+    expect(qb.live).toBeNull();
+    expect(qb.projectedFinal).toBe(30);
   });
 });
 

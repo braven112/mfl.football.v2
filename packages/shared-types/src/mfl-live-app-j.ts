@@ -51,8 +51,19 @@ export interface MflLiveAppLineupPlayer {
   canStart: boolean;
   /** The slot types (`QB`, `FLEX`, …) he may fill in this league. */
   slots: string[];
-  /** The league's projection for the week, when MFL has one. */
+  /**
+   * The league's full-game projection for the week: the SAME number the
+   * Matchups tab uses (one loader on the server). Null when MFL has none.
+   */
   projection: number | null;
+  /** Points scored so far this week, from MFL's live scoring; null before the week is scored. */
+  live: number | null;
+  /** Live points plus the projection for the game time left (= `live` once final), as Matchups shows it. */
+  projectedFinal: number | null;
+  /** MFL's clock for his NFL game; null on bye or when unknown. */
+  gameState: 'not-started' | 'in-progress' | 'final' | null;
+  /** His NFL opponent this week, as text: `vs LV` at home, `@ LV` away. Null on bye. */
+  opponent: string | null;
   /** MFL injury designation (`Questionable`, `Out`, `IR`, …), or null. */
   injury: string | null;
   /** Ruled out for the week (Out, IR, Suspended). */
@@ -79,6 +90,29 @@ export interface MflLiveAppLineupProblem {
   playerId?: string;
   title: string;
   detail: string;
+}
+
+/** One side's numbers in a fantasy matchup, exactly as the Matchups tab shows them. */
+export interface MflLiveAppLineupSide {
+  live: number;
+  projectedFinal: number;
+  /** Starters whose NFL game hasn't kicked off. */
+  yetToPlay: number;
+}
+
+/**
+ * One of this week's fantasy games. A double-header week has two, scored off
+ * one lineup. The numbers are for the lineup MFL HAS (the saved one); an
+ * edited lineup's total is the sum of its starters' `projectedFinal`.
+ */
+export interface MflLiveAppLineupMatchup {
+  opponentId: string;
+  opponentName: string;
+  isHome: boolean;
+  mine: MflLiveAppLineupSide;
+  opponent: MflLiveAppLineupSide;
+  /** Your chance to win, 0-1, the same model the Matchups tab uses. */
+  winProbability: number | null;
 }
 
 export interface MflLiveAppLineup {
@@ -119,6 +153,10 @@ export interface MflLiveAppLineup {
   inSeason: boolean;
   /** The week's first kickoff, epoch seconds, or null when unknown. */
   firstKickoff: number | null;
+  /** This week's fantasy games; empty when MFL lists none (a bye) or live scoring couldn't be read. */
+  matchups: MflLiveAppLineupMatchup[];
+  /** MFL is scoring this week right now (games under way or played). */
+  scoring: boolean;
 }
 
 export interface MflLiveAppLineupSubmit {

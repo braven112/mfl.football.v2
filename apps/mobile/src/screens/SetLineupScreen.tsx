@@ -18,6 +18,7 @@ import type {
   MflLiveAppLineupSubmitResponse,
 } from '@mfl/shared-types/mfl-live-app-j';
 import { ApiError, apiGet, apiPost, SignedOutError } from '../api';
+import { gameStateLabel, points, winSplit } from '../format';
 import { useSession } from '../session-context';
 import { font, useTheme, type Theme } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
@@ -159,6 +160,8 @@ export function SetLineupScreen({ route }: Props) {
 
         {lineup ? (
           <>
+            <MatchupCard t={t} lineup={lineup} edited={dirty ? editedTotal(slots, players) : null} />
+
             <ModeBanner t={t} lineup={lineup} dirty={dirty} />
 
             {blocking.map((p) => (
@@ -197,7 +200,7 @@ export function SetLineupScreen({ route }: Props) {
                     >
                       <Text style={[styles.slot, { color: t.accentText }]}>{slot.position}</Text>
                       <PlayerLine t={t} player={player} week={lineup.week} />
-                      <Text style={[styles.trail, { color: t.muted }]}>{locked ? 'Locked' : editable ? 'Change' : ''}</Text>
+                      <Text style={[styles.trail, { color: t.muted }]}>{locked ? 'Locked' : ''}</Text>
                     </Pressable>
                   );
                 })}
@@ -263,6 +266,11 @@ function benchLabel(p: MflLiveAppLineupPlayer): string {
   if (p.rosterStatus === 'INJURED_RESERVE') return 'IR';
   if (p.rosterStatus === 'TAXI_SQUAD') return 'TAXI';
   return 'BN';
+}
+
+/** An edited lineup's total: each starter's projected final, as Matchups adds them up. */
+function editedTotal(slots: (string | null)[], players: Map<string, MflLiveAppLineupPlayer>): number {
+  return slots.reduce((sum, id) => sum + ((id && players.get(id)?.projectedFinal) || 0), 0);
 }
 
 /** Starters who won't score, from the server's own per-player flags. */
@@ -393,6 +401,10 @@ function ModeBanner({ t, lineup, dirty }: { t: Theme; lineup: MflLiveAppLineup; 
   }
 }
 
+/**
+ * One player, with this week's matchup numbers — the same projection, live
+ * points and game state the Matchups tab shows for him.
+ */
 function PlayerLine({ t, player, week }: { t: Theme; player: MflLiveAppLineupPlayer | null; week: number }) {
   if (!player) {
     return (
@@ -402,20 +414,76 @@ function PlayerLine({ t, player, week }: { t: Theme; player: MflLiveAppLineupPla
     );
   }
   const flag = player.isBye ? `Bye wk ${week}` : player.injury;
+  const started = player.live !== null && player.gameState !== null && player.gameState !== 'not-started';
   return (
-    <View style={styles.player}>
-      <Text numberOfLines={1} style={[styles.name, { color: t.text }]}>
-        {player.name}
-      </Text>
-      <Text numberOfLines={1} style={[styles.sub, { color: t.muted }]}>
-        {player.position}
-        {player.nflTeam ? `  ·  ${player.nflTeam}` : ''}
-        {player.projection !== null ? `  ·  proj ${player.projection.toFixed(1)}` : ''}
-        {flag ? (
-          <Text style={{ color: player.out || player.isBye ? t.danger : t.accentText }}>{`  ·  ${flag}`}</Text>
-        ) : null}
-      </Text>
-    </View>
+    <>
+      <View style={styles.player}>
+        <Text numberOfLines={1} style={[styles.name, { color: t.text }]}>
+          {player.name}
+        </Text>
+        <Text numberOfLines={1} style={[styles.sub, { color: t.muted }]}>
+          {player.position}
+          {player.nflTeam ? `  ·  ${player.nflTeam}` : ''}
+          {player.opponent ? ` ${player.opponent}` : ''}
+          {player.gameState && player.gameState !== 'not-started' ? `  ·  ${gameStateLabel(player.gameState)}` : ''}
+          {flag ? (
+            <Text style={{ color: player.out || player.isBye ? t.danger : t.accentText }}>{`  ·  ${flag}`}</Text>
+          ) : null}
+        </Text>
+      </View>
+      <View style={styles.points}>
+        <Text style={[styles.pointsMain, { color: started ? t.text : t.muted }]}>
+          {started ? points(player.live as number) : player.projection !== null ? points(player.projection) : '–'}
+        </Text>
+        <Text style={[styles.pointsSub, { color: t.muted }]}>
+          {started
+            ? player.projectedFinal !== null && player.gameState === 'in-progress'
+              ? `proj ${points(player.projectedFinal)}`
+              : ''
+            : player.projection !== null ? 'proj' : ''}
+        </Text>
+      </View>
+    </>
+  );
+}
+
+/** This week's fantasy game(s), with the Matchups tab's numbers. */
+function MatchupCard(props: { t: Theme; lineup: MflLiveAppLineup; edited: number | null }) {
+  const { t, lineup, edited } = props;
+  return (
+    <>
+      {lineup.matchups.map((m) => {
+        const [mine, theirs] = m.winProbability !== null ? winSplit(m.winProbability) : [null, null];
+        return (
+          <View key={m.opponentId} style={[styles.matchup, { backgroundColor: t.card, borderColor: t.border }]}>
+            <View style={styles.matchupSide}>
+              <Text numberOfLines={1} style={[styles.matchupName, { color: t.text }]}>{lineup.franchiseName}</Text>
+              <Text style={[styles.matchupScore, { color: t.text }]}>
+                {lineup.scoring ? points(m.mine.live) : points(m.mine.projectedFinal)}
+              </Text>
+              <Text style={[styles.matchupSub, { color: t.muted }]}>
+                {lineup.scoring ? `proj ${points(m.mine.projectedFinal)}` : 'projected'}
+                {mine !== null && lineup.scoring ? `  ·  ${mine}%` : ''}
+              </Text>
+            </View>
+            <Text style={[styles.matchupVs, { color: t.muted }]}>{m.isHome ? 'vs' : '@'}</Text>
+            <View style={[styles.matchupSide, styles.matchupRight]}>
+              <Text numberOfLines={1} style={[styles.matchupName, { color: t.text }]}>{m.opponentName}</Text>
+              <Text style={[styles.matchupScore, { color: t.text }]}>
+                {lineup.scoring ? points(m.opponent.live) : points(m.opponent.projectedFinal)}
+              </Text>
+              <Text style={[styles.matchupSub, { color: t.muted }]}>
+                {lineup.scoring ? `proj ${points(m.opponent.projectedFinal)}` : 'projected'}
+                {theirs !== null && lineup.scoring ? `  ·  ${theirs}%` : ''}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+      {edited !== null ? (
+        <Text style={[styles.edited, { color: t.accentText }]}>This lineup projects {points(edited)}</Text>
+      ) : null}
+    </>
   );
 }
 
@@ -510,6 +578,17 @@ const styles = StyleSheet.create({
   name: { fontFamily: font.semibold, fontSize: 15 },
   sub: { fontFamily: font.regular, fontSize: 13 },
   trail: { fontFamily: font.medium, fontSize: 12 },
+  points: { alignItems: 'flex-end', minWidth: 52 },
+  pointsMain: { fontFamily: font.bold, fontSize: 16 },
+  pointsSub: { fontFamily: font.regular, fontSize: 11 },
+  matchup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  matchupSide: { flex: 1, gap: 2 },
+  matchupRight: { alignItems: 'flex-end' },
+  matchupName: { fontFamily: font.semibold, fontSize: 14 },
+  matchupScore: { fontFamily: font.bold, fontSize: 24 },
+  matchupSub: { fontFamily: font.regular, fontSize: 12 },
+  matchupVs: { fontFamily: font.medium, fontSize: 13 },
+  edited: { fontFamily: font.semibold, fontSize: 14, textAlign: 'center' },
   bar: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 16, gap: 8 },
   result: { fontFamily: font.medium, fontSize: 14, flexShrink: 1 },
   save: { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },

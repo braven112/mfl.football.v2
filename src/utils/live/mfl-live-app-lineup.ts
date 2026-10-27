@@ -21,6 +21,7 @@
 
 import type {
   MflLiveAppLineup,
+  MflLiveAppLineupMatchup,
   MflLiveAppLineupPlayer,
 } from '../../../packages/shared-types/src/mfl-live-app-j';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG, type CanonicalLeagueSlug } from '../../config/leagues';
@@ -43,6 +44,20 @@ import { getPlayerMap, type PlayerIdentity } from '../player-map';
 import { normalizeTeamCode } from '../nfl-logo';
 import { getCurrentWeekForYear } from '../current-week';
 import { isSeasonWindowOpen } from '../pecking-order-season-window.mjs';
+import type { LivePlayerRow } from '../../types/live-scoring';
+import { hasLiveSignal, type LiveSnapshot } from '../live-scoring-snapshot';
+import { nflGameStateFromSeconds } from '../live-scoring-view';
+import { projectPlayerFinal } from '../live-win-probability';
+import {
+  findOwnerMatchups,
+  loadLeagueProjections,
+  loadLeagueSnapshot,
+  readLeagueFranchiseNames,
+  readOutsideLiveSnapshot,
+  scoreLeague,
+} from '../broadcast-live-source';
+import type { BoardLeague } from '../sunday-ticket-selection';
+import { getCurrentSeasonYear } from '../league-year';
 
 /** The league the request is for, as `requireOwnerLeague` verified it. */
 export type AppLineupLeague = OwnerLeague;
@@ -94,8 +109,17 @@ export interface AppLineupInputs {
   rostersPayload: any;
   weekResultsPayload: any;
   ytdResultsPayload: any;
-  projectionsPayload: any;
   nflSchedulePayload: any;
+  /**
+   * This league's full-game projections for the week, from
+   * `loadLeagueProjections` — the loader the Matchups tab's board uses, so a
+   * player's number here is the number he shows there.
+   */
+  projections: ReadonlyMap<string, number>;
+  /** MFL's live scoring for the week (`loadLeagueSnapshot`); null when not read (a future week). */
+  liveRead: { ok: boolean; snapshot: LiveSnapshot } | null;
+  /** Franchise id → name, for the opponent's name. */
+  franchiseNames: Record<string, string>;
   playersPayload: any;
   injuries: InjuryMap;
   identities: ReadonlyMap<string, PlayerIdentity>;
@@ -111,12 +135,22 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
     anyLeague: true,
   });
 
-  // Kickoffs from MFL's own NFL schedule — the source of truth for locks.
+  // Kickoffs from MFL's own NFL schedule — the source of truth for locks —
+  // plus each team's opponent and its game clock.
   const kickoffByTeam = new Map<string, number>();
+  const opponentByTeam = new Map<string, string>();
+  const gameSecondsByTeam = new Map<string, number>();
   for (const game of asArray(input.nflSchedulePayload?.nflSchedule?.matchup)) {
     const kickoff = parseInt((game as any)?.kickoff, 10) || 0;
-    for (const t of asArray((game as any)?.team)) {
-      if ((t as any)?.id) kickoffByTeam.set(normalizeTeamCode((t as any).id), kickoff);
+    const teams = asArray((game as any)?.team) as any[];
+    const seconds = parseInt((game as any)?.gameSecondsRemaining, 10);
+    for (const t of teams) {
+      if (!t?.id) continue;
+      const code = normalizeTeamCode(t.id);
+      kickoffByTeam.set(code, kickoff);
+      if (Number.isFinite(seconds)) gameSecondsByTeam.set(code, seconds);
+      const other = teams.find((o) => o !== t && o?.id);
+      if (other) opponentByTeam.set(code, `${t.isHome === '1' ? 'vs' : '@'} ${normalizeTeamCode(other.id)}`);
     }
   }
   const scheduleKnown = kickoffByTeam.size > 0;
@@ -124,11 +158,17 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
     ? Math.min(...[...kickoffByTeam.values()].filter((k) => k > 0))
     : null;
 
-  const projections = new Map<string, number>();
-  for (const p of asArray(input.projectionsPayload?.projectedScores?.playerScore)) {
-    const score = parseFloat((p as any)?.score);
-    if ((p as any)?.id && Number.isFinite(score)) projections.set((p as any).id, score);
+  const projections = input.projections;
+  // Every row MFL's live scoring has for this team, starters and bench.
+  const snapshot = input.liveRead?.ok ? input.liveRead.snapshot : null;
+  const liveRows = new Map<string, LivePlayerRow>();
+  for (const row of [
+    ...(snapshot?.players[league.franchiseId] ?? []),
+    ...(snapshot?.bench[league.franchiseId] ?? []),
+  ]) {
+    liveRows.set(row.id, row);
   }
+  const scoring = !!snapshot && hasLiveSignal(snapshot);
 
   const livePlayers = new Map<string, any>();
   for (const p of asArray(input.playersPayload?.players?.player)) {
@@ -154,6 +194,13 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
     const kickoff = kickoffByTeam.get(nflTeam) || null;
     const injury = input.injuries[rp.id]?.injuryStatus ?? null;
     const rosterStatus = rp.status || 'ROSTER';
+    const projection = projections.get(rp.id) ?? null;
+    const isBye = scheduleKnown && playsInNfl && kickoff === null;
+    // MFL's live clock for him when it is scoring the week, else his game's.
+    const row = scoring ? liveRows.get(rp.id) : undefined;
+    const seconds = row?.secondsRemaining ?? gameSecondsByTeam.get(nflTeam);
+    const gameState = isBye || seconds === undefined ? null : nflGameStateFromSeconds(seconds);
+    const livePoints = row ? row.live : null;
     return {
       id: rp.id,
       // Identity synced to disk first: the live `players` call is the one
@@ -164,11 +211,18 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
       rosterStatus,
       canStart: rosterStatus === 'ROSTER',
       slots: layout ? eligibleSlotsFor(position, layout) : [],
-      projection: projections.get(rp.id) ?? null,
+      projection,
+      live: livePoints,
+      // The Matchups tab's own blend of live points and projection.
+      projectedFinal: livePoints !== null && projection !== null && row
+        ? projectPlayerFinal({ live: livePoints, projected: projection, secondsRemaining: row.secondsRemaining })
+        : livePoints ?? projection,
+      gameState,
+      opponent: opponentByTeam.get(nflTeam) ?? null,
       injury,
       out: Boolean(injury && OUT_STATUSES.has(injury.toLowerCase())),
       // A bye is a real NFL team missing from a schedule we actually read.
-      isBye: scheduleKnown && playsInNfl && kickoff === null,
+      isBye,
       kickoff,
       locked: kickoff !== null && nowEpoch >= kickoff,
     };
@@ -236,6 +290,31 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
       })
     : [];
 
+  // This week's fantasy games, scored by the board's own function so the
+  // numbers match the Matchups tab.
+  const matchups: MflLiveAppLineupMatchup[] = [];
+  if (snapshot) {
+    const scored = scoreLeague(league.leagueId, snapshot, true, league.franchiseId, {}, projections);
+    findOwnerMatchups(snapshot.matchups, league.franchiseId).forEach((pair, i) => {
+      const side = (fid: string) => {
+        const team = scored.teams[fid];
+        return {
+          live: team?.live ?? 0,
+          projectedFinal: team?.projectedFinal ?? 0,
+          yetToPlay: team?.yetToPlay ?? 0,
+        };
+      };
+      matchups.push({
+        opponentId: pair.opponentId,
+        opponentName: input.franchiseNames[pair.opponentId] || `Team ${pair.opponentId}`,
+        isHome: pair.isHome,
+        mine: side(league.franchiseId),
+        opponent: side(pair.opponentId),
+        winProbability: scored.winProbability[i] ?? null,
+      });
+    });
+  }
+
   return {
     leagueId: league.leagueId,
     leagueName: league.leagueName,
@@ -256,6 +335,8 @@ export function buildAppLineupView(input: AppLineupInputs): MflLiveAppLineup {
     problems,
     inSeason: isLineupSeason(new Date(input.nowMs)),
     firstKickoff: firstKickoff && Number.isFinite(firstKickoff) ? firstKickoff : null,
+    matchups,
+    scoring,
   };
 }
 
@@ -286,17 +367,41 @@ export async function loadAppLineup(opts: {
   const url = (type: string, params: Record<string, string | number> = {}) =>
     buildMflExportUrl({ type, leagueId: league.leagueId, year: league.year, host, params });
 
-  const [leaguePayload, rostersPayload, weekResultsPayload, ytdResultsPayload, projectionsPayload, nflSchedulePayload, injuries] =
-    await Promise.all([
-      fetchExport(url('league'), ownerCookie),
-      fetchExport(url('rosters', { FRANCHISE: league.franchiseId }), ownerCookie),
-      fetchExport(url('weeklyResults', { W: week }), ownerCookie),
-      fetchExport(url('weeklyResults', { W: 'YTD' }), ownerCookie),
-      fetchExport(url('projectedScores', { W: week }), ownerCookie),
-      fetchExport(url('nflSchedule', { W: week }), ownerCookie),
-      // MFL's injury report is league-agnostic; the site keeps one copy.
-      loadLiveInjuryMap(DEFAULT_LEAGUE_SLUG).catch(() => ({}) as InjuryMap),
-    ]);
+  // The board's own view of this league, so the live scoring, projections and
+  // names come from the same readers as the Matchups tab.
+  const boardLeague: BoardLeague = {
+    id: league.leagueId,
+    name: league.leagueName,
+    franchiseId: league.franchiseId,
+    franchiseName: league.franchiseName,
+    registered: getLeagueById(league.leagueId),
+    host: league.host,
+    isSession: false,
+  };
+  // Live scoring is results-shaped: the SEASON year, as the board reads it.
+  const seasonYear = getCurrentSeasonYear();
+  // A week not yet reached has nothing to score; skip the read.
+  const wantsLive = week <= currentWeek;
+
+  const [
+    leaguePayload, rostersPayload, weekResultsPayload, ytdResultsPayload, nflSchedulePayload, injuries,
+    projections, liveRead, franchiseNames,
+  ] = await Promise.all([
+    fetchExport(url('league'), ownerCookie),
+    fetchExport(url('rosters', { FRANCHISE: league.franchiseId }), ownerCookie),
+    fetchExport(url('weeklyResults', { W: week }), ownerCookie),
+    fetchExport(url('weeklyResults', { W: 'YTD' }), ownerCookie),
+    fetchExport(url('nflSchedule', { W: week }), ownerCookie),
+    // MFL's injury report is league-agnostic; the site keeps one copy.
+    loadLiveInjuryMap(DEFAULT_LEAGUE_SLUG).catch(() => ({}) as InjuryMap),
+    loadLeagueProjections(boardLeague, week, ownerCookie, seasonYear).catch(() => new Map<string, number>()),
+    wantsLive
+      ? loadLeagueSnapshot({ league: boardLeague, year: seasonYear, week }, (l, y, w) =>
+          readOutsideLiveSnapshot(l, y, w, ownerCookie),
+        ).catch(() => null)
+      : Promise.resolve(null),
+    readLeagueFranchiseNames(boardLeague, seasonYear, ownerCookie).catch(() => ({}) as Record<string, string>),
+  ]);
 
   const identities = getPlayerMap(league.year);
   // Names the synced feed lacks (IDP players, a fresh signing) come from MFL.
@@ -318,9 +423,11 @@ export async function loadAppLineup(opts: {
     rostersPayload,
     weekResultsPayload,
     ytdResultsPayload,
-    projectionsPayload,
     nflSchedulePayload,
     playersPayload,
+    projections,
+    liveRead,
+    franchiseNames,
     injuries,
     identities,
   });
