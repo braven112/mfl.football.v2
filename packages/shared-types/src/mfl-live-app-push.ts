@@ -30,6 +30,12 @@ export interface MflLiveAppPushResponse {
   delivering?: boolean;
 }
 
+/**
+ * App screens a notification can open on tap — each takes the alert's
+ * `leagueId` as its only param (apps/mobile/src/navigation/types.ts).
+ */
+export type MflLiveAppPushScreen = 'Draft' | 'Trades' | 'Transactions';
+
 /** The `data` object on every notification the server sends the app. */
 export interface MflLiveAppPushData {
   /** Notification category id (the site's settings registry). */
@@ -40,4 +46,6 @@ export interface MflLiveAppPushData {
   url?: string;
   /** Alerts with the same tag replace each other. */
   tag?: string;
+  /** The app screen to open on tap, for the alert's league. */
+  screen?: MflLiveAppPushScreen;
 }
