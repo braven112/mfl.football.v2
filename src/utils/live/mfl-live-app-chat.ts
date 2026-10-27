@@ -14,6 +14,9 @@ export interface ChatMessageView {
   postedAt: string | null;
   postedLabel: string;
   mine: boolean;
+  /** GroupMe only — see league-groupme-chat.ts. */
+  avatarUrl?: string | null;
+  imageUrls?: string[];
 }
 
 /** Oldest first; private messages for other teams are left out. */

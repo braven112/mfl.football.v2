@@ -233,8 +233,10 @@ export async function fetchMessages(opts?: {
   beforeId?: string;
   limit?: number;
   token?: string;
+  /** Another league's group; defaults to TheLeague's GROUPME_GROUP_ID. */
+  groupId?: string;
 }): Promise<GroupMeApiMessage[]> {
-  const groupId = getGroupId();
+  const groupId = opts?.groupId ?? getGroupId();
   const token = opts?.token ?? getServiceToken();
   const limit = Math.min(opts?.limit ?? 100, 100);
 

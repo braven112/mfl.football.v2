@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AppState,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +18,7 @@ import type {
   MflLiveAppChatMessage,
   MflLiveAppChatPostResponse,
   MflLiveAppChatResponse,
+  MflLiveAppChatSource,
 } from '@mfl/shared-types/mfl-live-app-n';
 import { ApiError, apiGet, apiPost, SignedOutError } from '../api';
 import { useActiveTeam } from '../active-team';
@@ -30,8 +32,9 @@ const OPEN_POLL_MS = 10_000;
 const BADGE_POLL_MS = 60_000;
 
 /**
- * The league's own MFL chat (package N), as the active team. Messages sent
- * here show on MFL's site and the reverse. Opening the tab marks the chat
+ * The league's chat, as the active team: MFL's own league chat (package N),
+ * or the league's GroupMe group when it talks there instead. Either way a
+ * message sent here shows in that chat and the reverse. Opening the tab marks the chat
  * read; while another tab is in front, a light count keeps the badge current.
  */
 export function ChatScreen() {
@@ -50,6 +53,7 @@ export function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
+  const [source, setSource] = useState<MflLiveAppChatSource>('mfl');
   const list = useRef<FlatList<MflLiveAppChatMessage>>(null);
   const inFlight = useRef(false);
 
@@ -60,6 +64,7 @@ export function ChatScreen() {
   // A different league is a different chat: start clean.
   useEffect(() => {
     setMessages(null);
+    setSource('mfl');
     setUnread(0);
     setSendError(null);
   }, [leagueId]);
@@ -80,6 +85,7 @@ export function ChatScreen() {
       if (!body.ok) throw new Error(body.error);
       setMessages(body.messages);
       setMaxLength(body.maxLength);
+      setSource(body.source ?? 'mfl');
       setUnread(0);
       setFailing(false);
     } catch (e) {
@@ -148,7 +154,7 @@ export function ChatScreen() {
 
   const header = (
     <View style={[styles.header, { borderBottomColor: t.border }]}>
-      <Text style={[styles.title, { color: t.text }]}>League chat</Text>
+      <Text style={[styles.title, { color: t.text }]}>{source === 'groupme' ? 'GroupMe' : 'League chat'}</Text>
       <TeamSwitcher />
     </View>
   );
@@ -180,7 +186,7 @@ export function ChatScreen() {
     >
       {header}
       {failing ? (
-        <Text style={[styles.status, { color: t.danger }]}>Can't reach MFL right now. Retrying…</Text>
+        <Text style={[styles.status, { color: t.danger }]}>Can't reach {source === 'groupme' ? 'GroupMe' : 'MFL'} right now. Retrying…</Text>
       ) : null}
       <FlatList
         ref={list}
@@ -201,7 +207,7 @@ export function ChatScreen() {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder={`Message ${team.leagueName}`}
+          placeholder={source === 'groupme' ? `Message ${team.leagueName} on GroupMe` : `Message ${team.leagueName}`}
           placeholderTextColor={t.muted}
           maxLength={maxLength}
           multiline
@@ -235,6 +241,7 @@ function Bubble({ message, t }: { message: MflLiveAppChatMessage; t: Theme }) {
   const mine = message.mine;
   return (
     <View style={[styles.row, mine ? styles.rowMine : null]}>
+      {!mine && message.avatarUrl ? <Image source={{ uri: message.avatarUrl }} style={styles.avatar} /> : null}
       <View
         style={[
           styles.bubble,
@@ -246,7 +253,12 @@ function Bubble({ message, t }: { message: MflLiveAppChatMessage; t: Theme }) {
             {message.franchiseName || `Team ${message.franchiseId}`}
           </Text>
         ) : null}
-        <Text style={[styles.text, { color: mine ? t.onAccent : t.text }]}>{message.text}</Text>
+        {(message.imageUrls ?? []).map((uri) => (
+          <Image key={uri} source={{ uri }} style={styles.photo} resizeMode="cover" accessibilityLabel="Photo" />
+        ))}
+        {message.text ? (
+          <Text style={[styles.text, { color: mine ? t.onAccent : t.text }]}>{message.text}</Text>
+        ) : null}
         <Text style={[styles.time, { color: mine ? t.onAccent : t.muted }]}>{timeLabel(message)}</Text>
       </View>
     </View>
@@ -264,7 +276,9 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { padding: 12, gap: 8, flexGrow: 1 },
   empty: { marginTop: 48 },
-  row: { flexDirection: 'row' },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  avatar: { width: 28, height: 28, borderRadius: 14 },
+  photo: { width: 220, height: 220, borderRadius: 10, marginVertical: 4 },
   rowMine: { justifyContent: 'flex-end' },
   bubble: { maxWidth: '82%', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   name: { fontFamily: font.semibold, fontSize: 13 },
