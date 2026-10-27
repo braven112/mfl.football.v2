@@ -76,7 +76,7 @@ describe('reading Sleeper scores without a scoreboard', () => {
   it('marks every league unavailable rather than treating the week as over', async () => {
     const leagues = [{ id: 'sl-L1', name: 'Dynasty', franchiseId: '1' }] as never;
     responses.set('/league/L1/matchups/7', [{ roster_id: 1, matchup_id: 1, points: 10, starters: [] }]);
-    const reads = await readSleeperLive({ leagues, week: 7, players: {}, games: null });
+    const reads = await readSleeperLive({ leagues, week: 7, players: {}, clock: null });
     expect(reads.map((r) => r.ok)).toEqual([false]);
   });
 });

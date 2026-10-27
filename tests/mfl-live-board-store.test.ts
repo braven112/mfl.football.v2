@@ -16,6 +16,9 @@ const readCrossLeagueLive = vi.fn();
 const fetchNflScoreboard = vi.fn();
 const loadNflGameDetail = vi.fn();
 const getSleeperLink = vi.fn();
+const discoverSleeperBoardLeagues = vi.fn();
+const readSleeperLive = vi.fn();
+const loadMflNflClock = vi.fn();
 
 vi.mock('../src/utils/cross-league-live', () => ({
   discoverBoardLeagues: (...a: unknown[]) => discoverBoardLeagues(...a),
@@ -31,6 +34,23 @@ vi.mock('../src/utils/nfl-game-detail-source', () => ({
 vi.mock('../src/utils/sleeper/link', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSleeperLink: (...a: unknown[]) => getSleeperLink(...a),
+}));
+vi.mock('../src/utils/sleeper/live', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  discoverSleeperBoardLeagues: (...a: unknown[]) => discoverSleeperBoardLeagues(...a),
+  readSleeperLive: (...a: unknown[]) => readSleeperLive(...a),
+}));
+vi.mock('../src/utils/sleeper/store-clock', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  loadMflNflClock: (...a: unknown[]) => loadMflNflClock(...a),
+}));
+vi.mock('../src/utils/sleeper/players', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  loadSleeperPlayerMap: async () => ({}),
+}));
+vi.mock('../src/utils/sleeper/player-fixes', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  readViewerFixes: async () => ({}),
 }));
 vi.mock('../src/utils/player-map', () => ({
   getPlayerMap: () =>
@@ -90,14 +110,16 @@ beforeEach(() => {
   });
   loadNflGameDetail.mockResolvedValue(null);
   getSleeperLink.mockResolvedValue(null);
+  discoverSleeperBoardLeagues.mockResolvedValue([]);
+  readSleeperLive.mockResolvedValue([]);
+  loadMflNflClock.mockResolvedValue(new Map([['DAL', 1800]]));
 });
 
 describe('store mode', () => {
-  it('never reads ESPN or Sleeper', async () => {
+  it('never reads ESPN', async () => {
     await assembleMflLiveBoard({ user, week: 2, year: 2026, mflOnly: true });
     expect(fetchNflScoreboard).not.toHaveBeenCalled();
     expect(loadNflGameDetail).not.toHaveBeenCalled();
-    expect(getSleeperLink).not.toHaveBeenCalled();
   });
 
   it('ships no games strip, ticker or red zone', async () => {
@@ -136,5 +158,84 @@ describe('store mode', () => {
     expect(fetchNflScoreboard).toHaveBeenCalled();
     expect(board.games).toHaveLength(1);
     expect(board.leagues[0].matchups[0].mine.rung).toBe('nfl');
+  });
+});
+
+describe('store mode, Sleeper leagues', () => {
+  const sleeperLeague = {
+    id: 'sl-L1',
+    name: 'Sleeper dynasty',
+    franchiseId: '1',
+    franchiseName: 'Dallas Cowboys',
+    registered: null,
+    host: null,
+    isSession: false,
+    provider: 'sleeper',
+  } as any;
+
+  function sleeperRead(clock: ReadonlyMap<string, number> | null) {
+    return [
+      {
+        league: sleeperLeague,
+        ok: !!clock,
+        snapshot: clock
+          ? {
+              ...emptyLiveSnapshot(),
+              scores: { '1': 50, '2': 40 },
+              matchups: [{ home: '1', away: '2' }],
+              players: {
+                '1': [{ id: 'p1', live: 20, secondsRemaining: clock.get('DAL') ?? 0, status: 'starter' }],
+                '2': [{ id: 'sleeper:999', live: 8, secondsRemaining: 0, status: 'starter' }],
+              },
+            }
+          : null,
+        projections: new Map<string, number>(),
+        hasSignal: !!clock,
+        franchiseNames: { '1': 'Dallas Cowboys', '2': 'Rival' },
+        franchiseIcons: {},
+      },
+    ];
+  }
+
+  beforeEach(() => {
+    getSleeperLink.mockResolvedValue({ userId: 'u1', username: 'brandon' });
+    discoverSleeperBoardLeagues.mockResolvedValue([sleeperLeague]);
+    readSleeperLive.mockImplementation(async ({ clock }: { clock: ReadonlyMap<string, number> | null }) =>
+      sleeperRead(clock),
+    );
+  });
+
+  it('shows the linked Sleeper leagues, clocked by MFL rather than ESPN', async () => {
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026, mflOnly: true });
+    expect(fetchNflScoreboard).not.toHaveBeenCalled();
+    expect(loadMflNflClock).toHaveBeenCalledWith({ year: 2026, week: 2 });
+    expect(readSleeperLive.mock.calls[0][0].clock.get('DAL')).toBe(1800);
+    const panel = board.leagues.find((l) => l.leagueId === 'sl-L1')!;
+    expect(panel.provider).toBe('sleeper');
+    expect(panel.status).toBe('ok');
+    expect(panel.matchups[0].noProjections).toBe(true);
+    expect(panel.matchups[0].mine.live).toBe(50);
+  });
+
+  it('a Sleeper team named after a club gets no NFL mark, and no row gets a headshot', async () => {
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026, mflOnly: true });
+    const m = board.leagues.find((l) => l.leagueId === 'sl-L1')!.matchups[0];
+    for (const team of [m.mine, m.opponent]) {
+      expect(team.rung).not.toBe('nfl');
+      expect(team.icon).not.toMatch(/nfl-logos/);
+    }
+    for (const meta of Object.values(board.playerMeta)) expect(meta.headshot).toBe('');
+  });
+
+  it('an unreadable MFL clock marks the Sleeper league unavailable, never Final', async () => {
+    loadMflNflClock.mockResolvedValue(null);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026, mflOnly: true });
+    expect(board.leagues.find((l) => l.leagueId === 'sl-L1')!.status).toBe('unavailable');
+  });
+
+  it('the web board still clocks Sleeper from the ESPN scoreboard', async () => {
+    await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    expect(loadMflNflClock).not.toHaveBeenCalled();
+    expect(fetchNflScoreboard).toHaveBeenCalled();
   });
 });

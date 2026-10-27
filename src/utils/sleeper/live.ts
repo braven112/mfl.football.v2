@@ -19,8 +19,9 @@
  *    only). The board draws a Sleeper matchup without a win-probability bar
  *    or projected finals rather than with an empty map's hard 100/0.
  *  - **No per-player game clock.** Sleeper sends points, not seconds, so each
- *    starter's `secondsRemaining` comes from his NFL team's game on the
- *    ESPN scoreboard the board already loads.
+ *    starter's `secondsRemaining` comes from his NFL team's game: the ESPN
+ *    scoreboard the web board already loads, or MFL's own schedule in the
+ *    store app (`store-clock.ts`).
  *
  * SERVER-SIDE ONLY.
  */
@@ -367,13 +368,18 @@ export async function readSleeperLive(input: {
   leagues: readonly BoardLeague[];
   week: number;
   players: SleeperPlayerMap;
-  /** The week's NFL games, or null when the scoreboard could not be read. */
-  games: readonly NflGame[] | null;
+  /**
+   * Game-seconds left per NFL club (canonical code), or null when no clock
+   * could be read. The web board builds it from the ESPN scoreboard
+   * (`secondsRemainingByTeam`); the store app from MFL's own schedule
+   * (`store-clock.ts`), because it may not read ESPN.
+   */
+  clock: ReadonlyMap<string, number> | null;
 }): Promise<LeagueLiveRead[]> {
-  // Sleeper sends no clock, so without the scoreboard there is no telling a
-  // live matchup from a finished one. Unavailable, not guessed.
-  if (!input.games) return input.leagues.map(failed);
-  const secondsByTeam = secondsRemainingByTeam(input.games);
+  // Sleeper sends no clock, so without one there is no telling a live matchup
+  // from a finished one. Unavailable, not guessed.
+  if (!input.clock) return input.leagues.map(failed);
+  const secondsByTeam = input.clock;
   const settled = await mapWithConcurrency(input.leagues, FAN_OUT, async (league) => {
     const sid = sleeperLeagueIdOf(league.id);
     const [entries, meta] = await Promise.all([
