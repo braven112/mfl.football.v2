@@ -167,6 +167,21 @@ describe('POST /api/mfl-live/trades', () => {
   });
 });
 
+describe('a staging deployment', () => {
+  it('reports the refused send as blocked, not as an outage', async () => {
+    const { OutboundBlockedError } = await import('../src/utils/deploy-environment');
+    const { MFL_WRITE_BLOCKED_MESSAGE } = await import('../src/utils/mfl-fetch');
+    replies = [
+      (url) => {
+        if (/\/import$/.test(url)) throw new OutboundBlockedError('MFL write');
+        return undefined;
+      },
+    ];
+    const res = await post('trade-respond', { tradeId: '9', response: 'accept' });
+    expect(res).toEqual({ status: 503, body: { success: false, message: MFL_WRITE_BLOCKED_MESSAGE } });
+  });
+});
+
 describe('POST /api/mfl-live/trade-respond', () => {
   it('accepts with the owner cookie, reading MFL errors from the body', async () => {
     replies = [on(/tradeResponse/, () => text('<status>OK</status>'))];

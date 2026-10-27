@@ -84,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     if (!result.ok) {
       return new Response(
-        JSON.stringify({ success: false, message: result.message }),
+        JSON.stringify({ success: false, message: result.message, ...(result.blocked ? { blocked: true } : {}) }),
         { status: result.status, headers: JSON_HEADERS }
       );
     }

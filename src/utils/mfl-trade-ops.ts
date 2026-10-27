@@ -11,21 +11,44 @@
  *   body is read before the status (`docs/claude/rules/lineups.md`).
  * - A proposal may only offer players on the proposer's own roster.
  *
- * Errors from the network (including the staging write block) are thrown, so
- * each route keeps its own `describeMflFailure` catch.
+ * A staging/preview deployment refuses every MFL write; that refusal comes
+ * back as `{ ok: false, status: 503, blocked: true }` with the owner-facing
+ * message (mfl-fetch#describeMflFailure). Any other network error is thrown.
  */
 
-import { mflFetch } from './mfl-fetch';
+import { describeMflFailure, mflFetch } from './mfl-fetch';
 import { buildMflExportUrl } from './mfl-url';
 
 const DEFAULT_HOST = 'https://api.myfantasyleague.com';
 
 export type TradeOpResult =
   | { ok: true; message: string }
-  | { ok: false; status: number; message: string };
+  | { ok: false; status: number; message: string; blocked?: boolean };
 
 export const TRADE_RESPONSES = ['accept', 'reject', 'revoke'] as const;
 export type TradeResponseKind = (typeof TRADE_RESPONSES)[number];
+
+/** POST an import as the owner; a staging refusal becomes a result, anything else throws. */
+async function postImport(
+  year: number,
+  mflUserCookie: string,
+  params: URLSearchParams,
+): Promise<{ res: Response; text: string } | TradeOpResult> {
+  try {
+    // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH.
+    const res = await mflFetch({
+      url: `${DEFAULT_HOST}/${year}/import`,
+      method: 'POST',
+      mflUserCookie,
+      body: params.toString(),
+    });
+    return { res, text: await res.text() };
+  } catch (error) {
+    const failure = describeMflFailure(error);
+    if (failure.blocked) return { ok: false, status: 503, message: failure.message, blocked: true };
+    throw error;
+  }
+}
 
 const RESPONSE_LABELS: Record<TradeResponseKind, string> = {
   accept: 'Trade accepted',
@@ -130,14 +153,9 @@ export async function proposeTrade(opts: {
   });
   if (opts.comments?.trim()) params.set('COMMENTS', opts.comments.trim());
 
-  // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH.
-  const res = await mflFetch({
-    url: `${DEFAULT_HOST}/${opts.year}/import`,
-    method: 'POST',
-    mflUserCookie: opts.mflUserCookie,
-    body: params.toString(),
-  });
-  const text = await res.text();
+  const sent = await postImport(opts.year, opts.mflUserCookie, params);
+  if ('ok' in sent) return sent;
+  const { res, text } = sent;
   console.log('[mfl-trade-ops] tradeProposal:', res.status, text.substring(0, 500));
   return readMflImportReply(res.status, res.ok, text, {
     rejected: 'MFL rejected the trade proposal',
@@ -163,13 +181,9 @@ export async function respondToTrade(opts: {
   });
   if (opts.comments?.trim()) params.set('COMMENTS', opts.comments.trim());
 
-  const res = await mflFetch({
-    url: `${DEFAULT_HOST}/${opts.year}/import`,
-    method: 'POST',
-    mflUserCookie: opts.mflUserCookie,
-    body: params.toString(),
-  });
-  const text = await res.text();
+  const sent = await postImport(opts.year, opts.mflUserCookie, params);
+  if ('ok' in sent) return sent;
+  const { res, text } = sent;
   console.log('[mfl-trade-ops] tradeResponse:', res.status, text.substring(0, 500));
   return readMflImportReply(res.status, res.ok, text, {
     rejected: 'MFL rejected the trade response',
