@@ -17,6 +17,7 @@ import { useSession } from '../session-context';
 import { font, useTheme } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { dropPlayer, fetchWaivers, formatMoney, manageClaim } from '../waivers/api';
+import { AddDropSheet, type AddDropTarget } from '../waivers/AddDropSheet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Waivers'>;
 
@@ -29,7 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Waivers'>;
  * delete-then-refile would leave a moment with no claim at all.
  */
 export function WaiversScreen({ route, navigation }: Props) {
-  const { leagueId } = route.params;
+  const { leagueId, add } = route.params;
   const t = useTheme();
   const { token, signOut } = useSession();
   const [data, setData] = useState<MflLiveAppWaivers | null>(null);
@@ -39,6 +40,12 @@ export function WaiversScreen({ route, navigation }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   /** The claim whose drop is being changed, or 'cut' for a plain drop. */
   const [picking, setPicking] = useState<MflLiveAppFiledClaim | 'cut' | null>(null);
+  /** The free agent the add/drop sheet is open for (from Add on the Players tab). */
+  const [adding, setAdding] = useState<AddDropTarget | null>(add ?? null);
+
+  useEffect(() => {
+    if (add) setAdding(add);
+  }, [add]);
 
   const load = useCallback(async () => {
     try {
@@ -220,6 +227,19 @@ export function WaiversScreen({ route, navigation }: Props) {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <AddDropSheet
+        leagueId={leagueId}
+        player={adding}
+        onClose={() => {
+          setAdding(null);
+          navigation.setParams({ add: undefined });
+        }}
+        onDone={(message) => {
+          setNotice(message);
+          void load();
+        }}
+      />
 
       <Modal visible={picking !== null} transparent animationType="fade" onRequestClose={() => setPicking(null)}>
         <Pressable style={[styles.backdrop, { backgroundColor: t.scrim }]} onPress={() => setPicking(null)}>
