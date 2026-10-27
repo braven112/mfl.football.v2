@@ -57,6 +57,12 @@ export interface AssembleMflLeagueBoardInput {
   week: number;
   /** SEASON year — this board is results-shaped. */
   year?: number;
+  /**
+   * The store build of the MFL Live app: no headshots, no NFL club marks or
+   * colours on the cards, the standings rows or the leaders strip (which
+   * copies the cards' identities). See `BuildBoardInput.mflOnly`.
+   */
+  mflOnly?: boolean;
 }
 
 export interface AssembledMflLeagueBoard {
@@ -69,6 +75,7 @@ export async function assembleMflLeagueBoard(
   const { user, league } = input;
   const year = input.year ?? getCurrentSeasonYear();
   const week = input.week;
+  const mflOnly = input.mflOnly === true;
 
   const identity = { id: league.id, name: league.name, slug: league.registered?.slug ?? null };
 
@@ -98,6 +105,7 @@ export async function assembleMflLeagueBoard(
         projections: new Map(),
         viewerFranchiseId,
         surface: 'mfl',
+        mflOnly,
       }),
     };
   }
@@ -125,6 +133,7 @@ export async function assembleMflLeagueBoard(
       year,
       mflUserCookie: user.id,
       viewerFranchiseId,
+      noNflArt: mflOnly,
     }).catch((): LiveStandingsRow[] | null => null),
     // What lets the Live and Projected standings views add this week without
     // ever adding it twice — see `markWeekCounted`. Same failure posture as
@@ -156,6 +165,7 @@ export async function assembleMflLeagueBoard(
           viewerFranchiseId,
           franchiseNames: read?.franchiseNames ?? {},
           franchiseIcons: read?.franchiseIcons ?? {},
+          noNflArt: mflOnly,
         });
 
   // The read failed outright. `ok: false` with an empty snapshot is what makes
@@ -173,6 +183,7 @@ export async function assembleMflLeagueBoard(
       projections: new Map(),
       viewerFranchiseId,
       surface: 'mfl',
+      mflOnly,
     });
     board.panels[0].standings = standings;
     board.panels[0].leaders = null;
@@ -194,6 +205,7 @@ export async function assembleMflLeagueBoard(
     // confident wrong legibility answer. Seven TheLeague franchises are
     // `#181818`. See `./surface`.
     surface: 'mfl',
+    mflOnly,
   });
 
   const panel = board.panels[0];

@@ -113,6 +113,9 @@ export interface ReadLeagueStandingsInput {
   /** Uploaded marks from the same read as `franchiseNames`, so the Standings
    *  tab wears the crests the Scores tab does. */
   franchiseIcons?: Record<string, string>;
+  /** Store mode: skip the NFL-club rung, as the board's cards do. See
+   *  `BuildBoardInput.mflOnly` in `./read`. */
+  noNflArt?: boolean;
   now?: () => number;
 }
 
@@ -241,7 +244,13 @@ export function decorateStandings(
   rows: readonly LiveStandingsRow[],
   input: ReadLeagueStandingsInput,
 ): LiveStandingsRow[] {
-  const { league, viewerFranchiseId = null, franchiseNames = {}, franchiseIcons = {} } = input;
+  const {
+    league,
+    viewerFranchiseId = null,
+    franchiseNames = {},
+    franchiseIcons = {},
+    noNflArt = false,
+  } = input;
   const slug = league.registered?.slug ?? undefined;
   const leagueHasMarks = leagueHasUploadedMarks(franchiseIcons);
 
@@ -259,6 +268,7 @@ export function decorateStandings(
       leagueSlug: slug,
       mflIcon: franchiseIcons[row.franchiseId],
       leagueHasMarks,
+      noNflArt,
     });
     return {
       ...row,
