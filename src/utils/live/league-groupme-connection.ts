@@ -2,11 +2,11 @@
  * Which GroupMe group an MFL league's Chat tab shows, when an owner connected
  * one in the MFL Football app (plan doc decision 19, step 3).
  *
- * Any owner, for now (recommended to the owner 2026-10-27): the app cannot yet tell
- * who a league's commissioner is in someone else's MFL league, so any owner in
- * the league may connect a group they are a member of, or switch the tab back
- * to MFL chat, and the tab says who connected it. Narrow it to commissioners
- * here once that check exists.
+ * Commissioner only (the owner, 2026-10-27): the league's commissioner may
+ * connect a group they are a member of, or switch the tab back to MFL chat,
+ * and the tab says who connected it. The check is MFL's own, made on every
+ * change (src/utils/live/mfl-commissioner.ts, enforced in
+ * src/pages/api/mfl-live/chat-source.ts).
  *
  * The group is read with the CONNECTING owner's own GroupMe sign-in
  * (groupme-owner-auth.ts) — the service token is in no such group — so the

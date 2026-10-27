@@ -116,6 +116,11 @@ export type MflLiveAppChatSourceResponse =
       source: MflLiveAppChatSource;
       /** Set by our server for this league; the app cannot change it. */
       fixed: boolean;
+      /**
+       * True only for the league's commissioner, the one owner who may change
+       * the chat. Absent from older servers: read it as true.
+       */
+      canChange?: boolean;
       /** Who connected the group (connected leagues only). */
       connectedBy: { franchiseId: string; name: string; mine: boolean } | null;
       groupName: string | null;
@@ -131,11 +136,12 @@ export type MflLiveAppChatSourcePostResponse =
   | {
       ok: false;
       /**
-       * `fixed`: this league's chat is set by our server. `not-your-group`:
+       * `fixed`: this league's chat is set by our server. `not-commissioner`:
+       * only the league's commissioner may change it. `not-your-group`:
        * that group is not one of yours. `groupme-sign-in`: sign in first
        * (`signInUrl`). `unavailable`: try again shortly.
        */
-      error: 'fixed' | 'not-your-group' | 'groupme-sign-in' | 'unavailable';
+      error: 'fixed' | 'not-commissioner' | 'not-your-group' | 'groupme-sign-in' | 'unavailable';
       message: string;
       signInUrl?: string;
     };
