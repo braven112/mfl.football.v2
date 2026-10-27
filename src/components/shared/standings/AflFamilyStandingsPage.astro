@@ -16,7 +16,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import AflFamilyBoard from './AflFamilyBoard.astro';
 import { resolveSiteTheme } from '../../../utils/site-theme';
 import { TIERING } from './standings-table-config';
-import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import { getTierLogo, getTierLogoDark, getTierMonoMark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
 import { getConferenceLogo, getConferenceLogoDark } from '../../../utils/afl-conference';
 import StandingsViewSelector from '../StandingsViewSelector.astro';
 import YearSelector from '../YearSelector.astro';
@@ -213,6 +213,11 @@ const nitTeams = !competitions || !hasNit ? [] : conferenceLadders
 // Validate against known views so an unrecognized value (e.g. a stale
 // ?view=conference link) falls back to division instead of a blank page.
 // all_play is only a valid view for seasons the competition existed.
+// The All-Play tile wears the viewer's tier mark: D-League for a D-League
+// team, otherwise the Premier League (signed out, or the inaugural AFL Cup
+// season, which had no tiers yet).
+const viewerTier = yearPreferredTeamId ? tierMembership?.[yearPreferredTeamId] : undefined;
+const allPlayMark = allPlayEra ? getTierMonoMark(viewerTier === D_LEAGUE ? D_LEAGUE : PREMIER_LEAGUE) : null;
 const validViews = allPlayEra ? ['division', 'league', 'all_play'] : ['division', 'league'];
 const requestedView = Astro.url.searchParams.get('view');
 const view = (validViews.includes(requestedView ?? '')
@@ -357,7 +362,7 @@ const boardTiers = hasTierRecord
         )}
       </div>
       <div class="standings-hero__actions">
-        <StandingsViewSelector activeView={view} showAllPlay={allPlayEra} />
+        <StandingsViewSelector activeView={view} showAllPlay={allPlayEra} allPlayMark={allPlayMark} />
       </div>
     </header>
 

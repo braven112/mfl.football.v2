@@ -44,3 +44,15 @@ export function getTierLogoDark(tierName: string): string {
   if (tierName === D_LEAGUE || !tierName) return '/assets/afl/dleague-dark.svg';
   return `/assets/afl/tiers/${tierSlug(tierName)}-dark.svg`;
 }
+
+/**
+ * A one-colour cut of the AFL's two tier marks, for a CSS mask: the shape is
+ * the file's alpha, so the element's own background colour paints it and the
+ * mark follows the theme (the standings view tile tints it like an icon).
+ * Null for any tier without one — the caller keeps its generic icon.
+ */
+export function getTierMonoMark(tierName: string | null | undefined): string | null {
+  if (tierName === PREMIER_LEAGUE) return '/assets/afl/premier-mono.svg';
+  if (tierName === D_LEAGUE) return '/assets/afl/dleague-mono.svg';
+  return null;
+}
