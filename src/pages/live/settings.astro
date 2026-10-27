@@ -26,9 +26,9 @@ import { canViewSiteInsights } from '../../utils/site-insights';
 import { discoverBoardLeagues, readViewerFranchiseNames } from '../../utils/cross-league-live';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
-  rememberMflLiveChoice,
   resolveMflLiveLeagues,
 } from '../../utils/mfl-live-selection';
+import { readMflLiveSelection, rememberMflLiveChoiceForAccount } from '../../utils/mfl-live-selection-store';
 import { resolveFranchiseIdentity } from '../../utils/mfl-live-identity';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getSleeperLink, sleeperViewerKey, type SleeperLink } from '../../utils/sleeper/link';
@@ -55,7 +55,7 @@ const authUser = getMflLiveUser(Astro.request);
 
 // Route-only, and BEFORE anything reads the cookie back, so a click's own
 // choice is what this render reflects.
-if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
+if (authUser) await rememberMflLiveChoiceForAccount(Astro.url, Astro.cookies, authUser);
 
 let leagues: Awaited<ReturnType<typeof discoverBoardLeagues>> = [];
 let enabled: string[] = [];
@@ -80,7 +80,8 @@ if (authUser) {
     leagues = [...mflLeagues, ...sleeperLeagues];
     ({ enabled } = resolveMflLiveLeagues(
       Astro.url.searchParams.get('leagues'),
-      Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      // The ACCOUNT's choice (shared with the phone app), the cookie as fallback.
+      await readMflLiveSelection(authUser, Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value),
       leagues,
     ));
     // Never fatal: a missing name costs a sub-line, and this page's job is

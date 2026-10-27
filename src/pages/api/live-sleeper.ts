@@ -21,6 +21,7 @@ import { fetchSleeperUser, normalizeSleeperUsername } from '../../utils/sleeper/
 import { clearSleeperLink, setSleeperLink } from '../../utils/sleeper/link';
 import { discoverSleeperBoardLeagues } from '../../utils/sleeper/live';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { readMflLiveSelection, saveMflLiveSelection } from '../../utils/mfl-live-selection-store';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
   MFL_LIVE_LEAGUE_MAX_AGE,
@@ -67,8 +68,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   // switched OFF. Switch them on. A failed discovery leaves the selection as
   // it was; the toggles on settings still offer them.
   const leagues = await discoverSleeperBoardLeagues({ ...link, linkedAt: '' }, getCurrentSeasonYear()).catch(() => []);
-  const next = withLeaguesEnabled(cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value, leagues.map((l) => l.id));
+  const current = await readMflLiveSelection(user, cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value);
+  const next = withLeaguesEnabled(current, leagues.map((l) => l.id));
   if (next) {
+    await saveMflLiveSelection(user, next);
     cookies.set(MFL_LIVE_LEAGUE_COOKIE, next, {
       maxAge: MFL_LIVE_LEAGUE_MAX_AGE,
       path: '/',

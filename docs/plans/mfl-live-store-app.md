@@ -137,6 +137,14 @@ The owner's rule: get the core functionality right before theming or extras.
 5. **Which leagues to watch.** The `/live/settings` switches. The web keeps
    the choice in a cookie (`/api/live-leagues`); the app needs it kept per
    account on the server so phone and web agree.
+   *Server half built (Oct 27):* stored in Redis under the hashed MFL username
+   (`live:leagues:<viewer>`, `src/utils/mfl-live-selection-store.ts`), the key
+   the Sleeper link and TV settings already use. The account's choice beats
+   the cookie; a cookie with nothing stored is copied up once. Every MFL Live
+   surface reads it through `readMflLiveSelection`. The app GETs
+   `/api/live-leagues` (MFL leagues only) and POSTs `{ league, enabled }`; the
+   server applies the last-league and collapse-to-default rules and keeps any
+   Sleeper leagues switched on for the web. A paired TV keeps its own cookie.
 
 **P1, reach:**
 
