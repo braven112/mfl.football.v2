@@ -118,6 +118,11 @@ export function apiPost<T>(token: string, path: string, body: unknown): Promise<
   return request<T>(token, path, { method: 'POST', body: JSON.stringify(body) });
 }
 
+/** DELETE with a JSON body on the MFL Football server. */
+export function apiDelete<T>(token: string, path: string, body: unknown): Promise<T> {
+  return request<T>(token, path, { method: 'DELETE', body: JSON.stringify(body) });
+}
+
 export async function fetchBoard(token: string): Promise<MflLiveAppBoard> {
   const body = await apiGet<MflLiveAppBoard>(token, '/api/live-board?source=mfl');
   // `ok: false` is a failed assembly, not an empty week: the caller keeps the

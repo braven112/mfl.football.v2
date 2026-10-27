@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useActiveTeam } from '../active-team';
 import { TeamSwitcher } from '../components/TeamSwitcher';
 import { useSession } from '../session-context';
+import { sendTestAlert } from '../push/notifications';
 import { font, useTheme } from '../theme';
 
 type Row = { label: string; hint?: string; onPress: () => void; disabled?: boolean };
@@ -14,7 +16,8 @@ type Row = { label: string; hint?: string; onPress: () => void; disabled?: boole
 export function MoreScreen() {
   const t = useTheme();
   const navigation = useNavigation();
-  const { signOut } = useSession();
+  const { token, signOut } = useSession();
+  const [alertHint, setAlertHint] = useState('Send one to this phone');
   const { team } = useActiveTeam();
   const leagueId = team?.leagueId;
 
@@ -31,6 +34,14 @@ export function MoreScreen() {
     { label: 'Standings', hint: 'Every league you watch', onPress: () => navigation.navigate('Standings') },
     { label: 'Leagues to watch', onPress: () => navigation.navigate('Leagues') },
     { label: 'Pair a TV', onPress: () => navigation.navigate('PairTv') },
+    {
+      label: 'Test alerts',
+      hint: alertHint,
+      onPress: () => {
+        setAlertHint('Sending…');
+        void sendTestAlert(token).then(setAlertHint);
+      },
+    },
   ];
 
   const section = (title: string, rows: Row[]) => (
