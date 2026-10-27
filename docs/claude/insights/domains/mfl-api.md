@@ -188,8 +188,15 @@ What the live files showed (TheLeague and the AFL, 2025 and 2026):
   `TO_FID` message appears in this public file at all. The parser keeps any
   `to…` attribute as `toFranchiseId` and readers hide it from everyone else.
 - Sent as an EXPORT to a league host, `chat_save` answers "This API request
-  must go to api.myfantasyleague.com". The import therefore posts to the api
-  host. Not yet confirmed by a real write: the probe wrote nothing.
+  must go to api.myfantasyleague.com".
+- **`chat_save` is a MISC request, not an import type.** The first version
+  sent `import?TYPE=chat_save` and every production send failed with
+  `<error>Invalid Data Type (chat_save)</error>`. Misc requests use the form
+  `https://api.myfantasyleague.com/<year>/chat_save?L=…&MESSAGE=…`, the same
+  shape as `live_draft` and `login`; that path without a session answers
+  `<error>Intruder Alert!</error>`, so the path exists and needs the owner
+  cookie (probed 2026-10-27, with no cookie and no league id, so nothing was
+  posted). `mflFetch` counts `/chat_save` as a write.
 
 **Implication:** Never poll an export for chat; fetch the file, treat 404 as
 empty and non-XML (a throttled HTML page) as unavailable. Key dedupe and

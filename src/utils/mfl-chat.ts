@@ -8,10 +8,13 @@
  *   - READ is a static file, `<host>/fflnetdynamic<year>/<league>_chat.xml`.
  *     It is public (same bytes with or without a cookie), XML only (`.json`
  *     is a 404), and a 404 when the league has never chatted.
- *   - POST is `import?TYPE=chat_save` with `MESSAGE` (and an optional `TO_FID`
- *     for a private message, which this app does not send). It must go to
- *     `api.myfantasyleague.com`; a league host answers "This API request must
- *     go to api.myfantasyleague.com".
+ *   - POST is `chat_save` with `L` and `MESSAGE` (and an optional `TO_FID` for
+ *     a private message, which this app does not send). It is one of MFL's
+ *     "Misc" requests, a path of its own like `live_draft` and `login`, NOT an
+ *     import type: `import?TYPE=chat_save` answers "Invalid Data Type
+ *     (chat_save)", which is how the first production send failed. It must go
+ *     to `api.myfantasyleague.com`; a league host answers "This API request
+ *     must go to api.myfantasyleague.com".
  *
  * The file is `<messages><message id franchise_id message posted/>…</messages>`,
  * NEWEST FIRST, with the attributes in no fixed order. `posted` is a display
@@ -198,7 +201,7 @@ export async function postMflChat(
   league: { leagueId: string; year: number },
   text: string,
 ): Promise<MflChatPostOutcome> {
-  const url = `https://api.myfantasyleague.com/${league.year}/import?TYPE=chat_save&L=${encodeURIComponent(league.leagueId)}&JSON=1`;
+  const url = `https://api.myfantasyleague.com/${league.year}/chat_save?L=${encodeURIComponent(league.leagueId)}&JSON=1`;
   try {
     const res = await mflFetch({
       url,
