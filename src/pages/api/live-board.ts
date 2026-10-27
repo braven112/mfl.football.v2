@@ -10,7 +10,10 @@
  *
  * `?source=mfl` is the MFL Live mobile app's board: MFL data only, no ESPN,
  * no Sleeper, no headshots or NFL club art (see `mflOnly` on the assembler).
- * The app signs in with a Bearer token, which `getMflLiveUser` accepts.
+ * The app signs in with a Bearer token, which `getMflLiveUser` accepts. Its
+ * board also carries the decisions the web board makes client-side — game
+ * states, projected finals, Final, precision and the next-poll hint — see
+ * `utils/live/mfl-live-app-view.ts`.
  */
 
 import type { APIRoute } from 'astro';
@@ -18,6 +21,7 @@ import { getMflLiveUser } from '../../utils/auth';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
+import { mflLiveAppCadence, toMflLiveAppBoard } from '../../utils/live/mfl-live-app-view';
 
 export const prerender = false;
 
@@ -25,6 +29,29 @@ const NO_STORE = {
   'Content-Type': 'application/json',
   'Cache-Control': 'no-store, no-cache, must-revalidate',
 };
+
+/**
+ * Every kickoff MFL has published, for the app's poll hint. `import.meta.glob`
+ * of the FULL schedule, as in api/cron/lineup-check.ts: cron-generated files,
+ * and a kickoff stays visible however long ago MFL's week pointer moved. Any
+ * league's copy is the same NFL schedule, so the de-duplicated union is fine.
+ */
+const scheduleModules = import.meta.glob(
+  '../../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
+  { eager: true },
+);
+const kickoffs: string[] = [
+  ...new Set(
+    Object.values(scheduleModules).flatMap((m) => {
+      const weeks = (m as any)?.default?.fullNflSchedule?.nflSchedule;
+      if (!Array.isArray(weeks)) return [];
+      return weeks.flatMap((w: any) => {
+        const matchups = Array.isArray(w?.matchup) ? w.matchup : w?.matchup ? [w.matchup] : [];
+        return matchups.map((g: any) => g?.kickoff).filter(Boolean);
+      });
+    }),
+  ),
+];
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const user = getMflLiveUser(request);
@@ -40,13 +67,15 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   // request in the September pre-kickoff window fails against a perfectly
   // healthy league. `null` here means "no NFL week is running", which the
   // board renders as its own state rather than as a failed read.
+  const mflOnly = url.searchParams.get('source') === 'mfl';
   const currentWeek = getCurrentNFLWeek(new Date());
   const requested = Number.parseInt(url.searchParams.get('week') ?? '', 10);
   const week = Number.isFinite(requested) && requested > 0 ? requested : currentWeek;
 
   if (!week) {
+    const empty = { ok: true, week: 0, leagues: [], playerMeta: {}, preSeason: true };
     return new Response(
-      JSON.stringify({ ok: true, week: 0, leagues: [], playerMeta: {}, preSeason: true }),
+      JSON.stringify(mflOnly ? { ...empty, ...mflLiveAppCadence(empty, kickoffs, Date.now()) } : empty),
       { status: 200, headers: NO_STORE },
     );
   }
@@ -59,15 +88,21 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       // resolver only returns ids already present in this owner's own list.
       leaguesParam: url.searchParams.get('leagues'),
       leaguesCookie: cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
-      mflOnly: url.searchParams.get('source') === 'mfl',
+      mflOnly,
     });
-    return new Response(JSON.stringify(board), { status: 200, headers: NO_STORE });
+    return new Response(JSON.stringify(mflOnly ? toMflLiveAppBoard(board, kickoffs) : board), {
+      status: 200,
+      headers: NO_STORE,
+    });
   } catch {
     // 200 with `ok: false`, matching `/api/live-scoring`: the island keeps its
     // last good payload and flips a freshness pill rather than blanking a
     // board mid-afternoon. `{}` is truthy, so the client gates on the FLAG.
+    // The app still gets a poll hint, so a failed read is retried on the
+    // schedule's cadence rather than never.
+    const failed = { ok: false, week, leagues: [], playerMeta: {} };
     return new Response(
-      JSON.stringify({ ok: false, week, leagues: [], playerMeta: {} }),
+      JSON.stringify(mflOnly ? { ...failed, ...mflLiveAppCadence(failed, kickoffs, Date.now()) } : failed),
       { status: 200, headers: NO_STORE },
     );
   }

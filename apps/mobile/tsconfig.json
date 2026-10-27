@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@mfl/shared-types/mfl-live-app": ["../../packages/shared-types/src/mfl-live-app.ts"]
+      "@mfl/shared-types/*": ["../../packages/shared-types/src/*.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "expo-env.d.ts"],
