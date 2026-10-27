@@ -60,6 +60,16 @@ function parseRange(limit: string | number | undefined): [number, number] | null
   return hi >= lo ? [lo, hi] : null;
 }
 
+export interface LineupSlotsOptions {
+  /**
+   * Accept any MFL league's rules: any starter count and any position
+   * (IDP included). The MFL Football app sets lineups in leagues that aren't
+   * ours, whose import takes their own count; the site's pages and API take
+   * nine and stay on the strict default.
+   */
+  anyLeague?: boolean;
+}
+
 /**
  * The slot layout for a league's starter rules, or null when the page cannot
  * offer one: missing or unreadable rules, or rules that do not total exactly 9
@@ -67,34 +77,41 @@ function parseRange(limit: string | number | undefined): [number, number] | null
  * not be submitted. A package league's route 404s on null rather than show
  * a layout its league would reject.
  */
-export function lineupSlotsFor(rules: MflStarterRules | null | undefined): LineupSlotLayout | null {
+export function lineupSlotsFor(
+  rules: MflStarterRules | null | undefined,
+  opts: LineupSlotsOptions = {},
+): LineupSlotLayout | null {
   if (!rules?.position) return null;
   const list = Array.isArray(rules.position) ? rules.position : [rules.position];
   const count = parseRange(rules.count);
   if (!count) return null;
   // A ranged count ("1-9") is a cap: the page always seats the maximum.
   const total = count[1];
-  if (total !== 9) return null;
+  if (!opts.anyLeague && total !== 9) return null;
 
   const ranges = new Map<string, [number, number]>();
   for (const p of list) {
     const range = parseRange(p?.limit);
     if (!p?.name || !range) return null;
     const pos = normalizeLineupPosition(p.name);
-    if (!ORDER.includes(pos) || pos === 'FLEX') return null;
+    if (pos === 'FLEX') return null;
+    if (!ORDER.includes(pos) && !opts.anyLeague) return null;
     ranges.set(pos, range);
   }
+  // Positions the site's leagues never start (IDP: DL, LB, DB…) sort after
+  // DEF in MFL's own order. Only reachable with `anyLeague`.
+  const order = [...ORDER, ...[...ranges.keys()].filter((pos) => !ORDER.includes(pos))];
 
   const fixed = [...ranges.entries()].flatMap(([pos, [lo]]) => Array<string>(lo).fill(pos));
   const flexCount = total - fixed.length;
-  const flexEligible = ORDER.filter((pos) => {
+  const flexEligible = order.filter((pos) => {
     const r = ranges.get(pos);
     return r !== undefined && r[1] > r[0];
   });
   if (flexCount < 0 || (flexCount > 0 && flexEligible.length === 0)) return null;
 
   const positions = [...fixed, ...Array<string>(flexCount).fill('FLEX')].sort(
-    (a, b) => ORDER.indexOf(a) - ORDER.indexOf(b),
+    (a, b) => order.indexOf(a) - order.indexOf(b),
   );
   const eligibility: Record<string, string[]> = {};
   for (const pos of ranges.keys()) eligibility[pos] = [pos];
@@ -129,4 +146,67 @@ export function exceedsPositionMax(
   const max = positionMax[position];
   if (max === undefined) return false;
   return seatedPositions.filter((p) => p === position).length >= max;
+}
+
+export interface SlotCandidate {
+  id: string;
+  position: string;
+  gameLocked: boolean;
+}
+
+export interface AssignedSlot {
+  position: string;
+  index: number;
+  playerId: string | null;
+  locked: boolean;
+}
+
+/**
+ * Seat `candidates` (already filtered and ordered: a saved lineup's starters,
+ * or legal starters best-projection first) into the layout's slots. Fixed
+ * positions fill first, then each FLEX takes the best remaining flex-eligible
+ * player without starting more of a position than the league allows.
+ *
+ * Shared by the Set Lineup page and the MFL Football app's lineup endpoint,
+ * so the phone opens on the same lineup the page would.
+ */
+export function assignLineupSlots(candidates: readonly SlotCandidate[], layout: LineupSlotLayout): AssignedSlot[] {
+  const slots: AssignedSlot[] = layout.positions.map((position, index) => ({
+    position,
+    index,
+    playerId: null,
+    locked: false,
+  }));
+  const used = new Set<string>();
+  const byId = new Map(candidates.map((p) => [p.id, p]));
+
+  // Pass 1: position-specific slots (non-FLEX)
+  for (const slot of slots) {
+    if (slot.position === 'FLEX') continue;
+    const player = candidates.find((p) => p.position === slot.position && !used.has(p.id));
+    if (player) {
+      used.add(player.id);
+      slot.playerId = player.id;
+      slot.locked = player.gameLocked;
+    }
+  }
+
+  // Pass 2: FLEX slots, never past a position's maximum (a FLEX may take a
+  // second QB in Archie's, never a third).
+  for (const slot of slots) {
+    if (slot.position !== 'FLEX') continue;
+    const seated = slots
+      .filter((s) => s.playerId)
+      .map((s) => byId.get(s.playerId as string)?.position ?? '');
+    const player = candidates.find((p) =>
+      !used.has(p.id)
+      && eligibleSlotsFor(p.position, layout).includes('FLEX')
+      && !exceedsPositionMax(p.position, seated, layout.positionMax));
+    if (player) {
+      used.add(player.id);
+      slot.playerId = player.id;
+      slot.locked = player.gameLocked;
+    }
+  }
+  return slots;
 }

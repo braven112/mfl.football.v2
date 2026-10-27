@@ -18,19 +18,20 @@
  *
  * GET  ?week=N → { week, rosters } for the session user's franchise
  * POST {week, starters[9]} → submits lineup to MFL with the owner's cookie
- * (never commish credentials).
+ * (never commish credentials), through submitLineupToMfl (lineup-write.ts),
+ * which the MFL Football app's /api/mfl-live/lineup shares.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from './auth';
 import { recordInsightAction } from './site-insights';
-import { mflFetch, describeMflFailure } from './mfl-fetch';
+import { mflFetch } from './mfl-fetch';
+import { parseLineupSubmission, submitLineupToMfl } from './lineup-write';
 import { getLeagueYearForSlug } from './league-year';
 import { invalidateAppBadge } from './app-badge-cache';
 import { getCurrentWeekForYear } from './current-week';
 import { buildMflExportUrl } from './mfl-url';
 import { json } from './api-response';
-import { parseMflImportError } from './mfl-import-error';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; POST: APIRoute } {
@@ -43,69 +44,29 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
       if (!user?.id) return json({ error: 'Authentication required. Please sign in.' }, 401);
       if (!user.franchiseId) return json({ error: 'No franchise associated with your account.' }, 403);
 
-      const body = await request.json();
-      const { week, starters } = body as { week?: number; starters?: string[] };
+      const parsed = parseLineupSubmission(await request.json(), 9);
+      if (!parsed.ok) return json({ error: parsed.error }, 400);
 
-      const weekNum = typeof week === 'number' ? Math.floor(week) : NaN;
-      if (isNaN(weekNum) || weekNum < 1 || weekNum > 22 || !Array.isArray(starters) || starters.length !== 9) {
-        return json({ error: 'Invalid lineup: must provide week (1-22) and exactly 9 starter IDs.' }, 400);
-      }
-
-      // Validate all IDs are numeric strings (MFL player IDs)
-      if (starters.some((id) => !/^\d+$/.test(id))) {
-        return json({ error: 'Invalid player IDs in lineup.' }, 400);
-      }
-
-      const year = getLeagueYearForSlug(league.slug);
-      const starterList = starters.join(',');
-
-      // MFL lineup import endpoint
-      const url = `https://api.myfantasyleague.com/${year}/import`;
-      const postBody = `TYPE=lineup&L=${league.id}&W=${weekNum}&STARTERS=${starterList}`;
-
-      const response = await mflFetch({
-        url,
-        method: 'POST',
-        mflUserCookie: user.id,
-        body: postBody,
-        timeoutMs: 15_000,
+      const result = await submitLineupToMfl({
+        ...parsed.value,
+        leagueId: league.id,
+        year: getLeagueYearForSlug(league.slug),
+        ownerCookie: user.id,
+        mflHost: league.mflHost,
+        irEligibleStatuses: league.irEligibleInjuryStatuses,
       });
-
-      const text = await response.text();
-
-      // MFL returns XML: <status>OK</status> on success, <error>msg</error> on failure
-      if (text.includes('<error>')) {
-        const errorMsg = text.match(/<error>([\s\S]*?)<\/error>/)?.[1] || 'Unknown MFL error';
-        console.error('[lineup] MFL submit error:', errorMsg);
-        // MFL's error is an escaped HTML fragment, and some of them (an IR
-        // violation) can never succeed on retry — so the page needs a plain
-        // sentence it can SHOW, plus MFL's own link to the fix.
-        const parsed = parseMflImportError(errorMsg, {
-          mflHost: league.mflHost,
-          year,
-          irEligibleStatuses: league.irEligibleInjuryStatuses,
-        });
-        return json({ error: parsed.message, reason: parsed.reason, fixUrl: parsed.fixUrl }, 422);
+      if (!result.ok) {
+        const { ok: _ok, status, ...body } = result;
+        return json(body, status);
       }
 
-      if (text.includes('<status>OK</status>') || text.includes('>OK<')) {
-        // A lineup this owner had left broken or unsubmitted was one of the
-        // numbers on their app icon. Fire-and-forget: a stale badge must never
-        // fail a lineup MFL has already accepted.
-        void invalidateAppBadge(league.id, user.franchiseId);
-        await recordInsightAction(user, 'lineup_submit');
-        return json({ success: true, message: 'Lineup submitted successfully.' });
-      }
-
-      // Unexpected response
-      console.warn('[lineup] Unexpected MFL response:', text.slice(0, 500));
-      return json({ error: 'Unexpected response from MFL. Your lineup may or may not have been saved.' }, 500);
+      // A lineup this owner had left broken or unsubmitted was one of the
+      // numbers on their app icon. Fire-and-forget: a stale badge must never
+      // fail a lineup MFL has already accepted.
+      void invalidateAppBadge(league.id, user.franchiseId);
+      await recordInsightAction(user, 'lineup_submit');
+      return json({ success: true, message: 'Lineup submitted successfully.' });
     } catch (error) {
-      // A staging/preview deployment refusing to send is not an outage, and
-      // "Internal server error" is what it used to say — the one message that
-      // tells an owner validating a lineup change nothing at all.
-      const failure = describeMflFailure(error);
-      if (failure.blocked) return json({ error: failure.message, blocked: true }, 503);
       console.error('[lineup] Submit error:', error);
       return json({ error: 'Internal server error. Please try again.' }, 500);
     }
