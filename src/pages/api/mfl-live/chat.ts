@@ -14,6 +14,7 @@ import {
 } from '../../../utils/mfl-chat';
 import { readChatMarker, writeChatMarker } from '../../../utils/mfl-chat-read-state';
 import { buildChatView } from '../../../utils/live/mfl-live-app-chat';
+import { notifyLeagueEvent } from '../../../utils/push-events';
 import { appJson, requireOwnerLeague, type OwnerLeague } from '../../../utils/live/owner-league';
 
 export const prerender = false;
@@ -121,6 +122,21 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   await markRead(league, after.messages);
   const names = await franchiseNames(league, user.id);
+  // Alert the rest of the league. Keyed on MFL's own id so the push
+  // thread's chat checker, which reads the same file, never sends it twice;
+  // no id (MFL accepted but the file hasn't caught up) leaves it to that
+  // checker. Never for a private message. Never throws.
+  if (posted && !posted.toFranchiseId) {
+    await notifyLeagueEvent({
+      kind: 'chat',
+      leagueId: league.leagueId,
+      key: posted.id,
+      fromFranchiseId: league.franchiseId,
+      fromName: names[league.franchiseId] || league.franchiseName,
+      text: posted.text,
+      franchiseIds: Object.keys(names),
+    });
+  }
   return appJson({
     ok: true,
     messages: buildChatView(after.messages, league.franchiseId, names),
