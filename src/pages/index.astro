@@ -164,12 +164,12 @@ interface PaidCard {
 const PAID: PaidCard[] = [
   {
     slug: 'owner-suite',
-    name: 'MFL Football Pro',
+    name: 'Live scores Pro',
     who: 'For any MFL owner',
     price: proPrice,
     per: `/ season · or $${MFL_LIVE_PRO_PRICE.month}/month`,
     body: 'The Broadcast for your TV, live and projected standings, full boards and game-day alerts.',
-    note: `Owners in ${includedList} already have Pro this season: sign in at MFL Football.`,
+    note: `Owners in ${includedList} already have Pro this season: sign in to live scores.`,
   },
   {
     slug: 'league-history',
@@ -220,7 +220,7 @@ const AUTOMATED = [
     </a>
     <nav class="top__links" aria-label="Sections">
       <a href="#free">Free tools</a>
-      <a class="top__live" href="/live">MFL Football</a>
+      <a class="top__live" href="/live">Live scores</a>
       <a href="#products">Products</a>
       <a href="#leagues">Leagues</a>
     </nav>
@@ -266,10 +266,10 @@ const AUTOMATED = [
       </a>
       <a class="card" href="/live">
         <span class="tag tag--free">Free</span>
-        <h3>MFL Football scores</h3>
+        <h3>Live scores</h3>
         <p>Live scores for every MFL league you play in, on one screen.</p>
         <span class="card__up">Upgrade: <b>Pro {proPrice}/season</b></span>
-        <span class="card__more">Open MFL Football →</span>
+        <span class="card__more">Open live scores →</span>
       </a>
       <button type="button" class="card" data-interest="league-history" data-interest-name="The League History page">
         <span class="tag tag--soon">Free · Coming soon</span>
@@ -284,7 +284,7 @@ const AUTOMATED = [
   <section class="live" aria-labelledby="live-h">
     <div class="live__copy">
       <span class="live__kicker">New this season</span>
-      <h2 id="live-h">MFL Football</h2>
+      <h2 id="live-h">Live scores</h2>
       <p>
         Every MFL league you own, scored live on one board. Put it on the TV, watch the standings move,
         and get pinged when a game gets close.
@@ -293,9 +293,9 @@ const AUTOMATED = [
         <s>{proPrice}</s><strong>Free</strong>
         <span>for {includedList} owners through the {seasonYear} season</span>
       </p>
-      <a class="cta cta--primary live__cta" href="/live">See MFL Football →</a>
+      <a class="cta cta--primary live__cta" href="/live">See live scores →</a>
     </div>
-    <img class="live__img" src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" loading="lazy" alt="A field goal takes over the TV on the MFL Football Broadcast" />
+    <img class="live__img" src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" loading="lazy" alt="A field goal takes over the TV on the live scores Broadcast" />
   </section>
 
   <section class="block" id="products" aria-labelledby="products-h">
@@ -387,7 +387,7 @@ const AUTOMATED = [
 
   <footer class="foot">
     <span>MFL.football</span>
-    <a href="/live">MFL Football</a>
+    <a href="/live">Live scores</a>
     <a href="/instructions">Template instructions</a>
     <a href="/brand">Brand Book</a>
   </footer>
@@ -423,7 +423,7 @@ const AUTOMATED = [
   }
 
   /* Quieter than MFL Live's landing: the page follows the theme, and the one
-     loud surface is the MFL Football band, which is dark in BOTH themes (MFL
+     loud surface is the MFL Live band, which is dark in BOTH themes (MFL
      Live's own ground, #14161a family) so its literals do not flip. */
   .top {
     display: flex;
