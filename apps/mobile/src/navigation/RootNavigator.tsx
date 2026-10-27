@@ -22,6 +22,7 @@ import { TradesScreen } from '../screens/TradesScreen';
 import { TradeBuilderScreen } from '../screens/TradeBuilderScreen';
 import { CommissionerScreen } from '../screens/CommissionerScreen';
 import { DraftScreen } from '../screens/DraftScreen';
+import { TeamLogoScreen } from '../screens/TeamLogoScreen';
 import type { RootStackParamList, TabParamList } from './types';
 import { navigationRef, useOpenFromAlert } from '../push/open-from-alert';
 
@@ -111,6 +112,7 @@ export function RootNavigator() {
           <Stack.Screen name="TradeBuilder" component={TradeBuilderScreen} options={{ title: 'Propose a trade' }} />
           <Stack.Screen name="Commissioner" component={CommissionerScreen} />
           <Stack.Screen name="Draft" component={DraftScreen} options={{ title: 'Draft room' }} />
+          <Stack.Screen name="TeamLogo" component={TeamLogoScreen} options={{ title: 'Create team logo' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </ActiveTeamProvider>

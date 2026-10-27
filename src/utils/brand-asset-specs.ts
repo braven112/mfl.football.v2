@@ -9,6 +9,8 @@
  * describes when a stored size changes.
  */
 
+import { writeLogoPrompt } from './team-logo-prompt';
+
 export interface AssetSpec {
   id: string;
   name: string;
@@ -172,10 +174,15 @@ export const STORED_SIZES: ReadonlyArray<readonly [string, number, number]> = [
   ['assets/afl/favicons/favicon-512.png', 512, 512],
 ];
 
-/** Copy-paste starting point for an AI image tool. `[brackets]` are the owner's to fill. */
-export const AI_PROMPT =
-  'Design a sports team logo for a fantasy football team called "[team name]". ' +
-  'Flat vector style, bold simple shapes, thick clean outlines, 2–3 colors: [colors]. ' +
-  'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
-  'square 1024 × 1024, with some empty space around the edges. ' +
-  'It must stay recognizable when shrunk to 40 pixels.';
+/**
+ * Copy-paste starting point for an AI image tool. `[brackets]` are the owner's to fill.
+ * The same sentence the logo prompt builder writes (`team-logo-prompt.ts`), so the
+ * two can never drift.
+ */
+export const AI_PROMPT = writeLogoPrompt({
+  teamName: '[team name]',
+  idea: '[your mascot or idea]',
+  stylePhrase: 'a bold sports logo',
+  colors: '[colors]',
+  kind: 'icon',
+});

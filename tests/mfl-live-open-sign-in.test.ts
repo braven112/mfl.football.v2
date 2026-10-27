@@ -151,6 +151,7 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/login.astro',
 		'src/pages/live/index.astro',
 		'src/pages/live/settings.astro',
+		'src/pages/live/team-logo.astro',
 		'src/pages/live/standings.astro',
 		'src/pages/live/league/[id].astro',
 		'src/pages/api/live-board.ts',
