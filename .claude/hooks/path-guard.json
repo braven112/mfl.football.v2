@@ -294,6 +294,26 @@
       ]
     },
     {
+      "name": "game-results",
+      "paths": [
+        "src/utils/game-results.mjs",
+        "src/utils/record-book.mjs",
+        "src/utils/all-play.mjs",
+        "src/utils/standings-derived.ts",
+        "src/utils/division-strength.mjs",
+        "src/utils/schedule-data.mjs",
+        "scripts/compute-division-strength.mjs",
+        "scripts/compute-schedule-strength.mjs",
+        "scripts/compute-playoff-performance.mjs",
+        "scripts/generate-pecking-order.mjs",
+        "scripts/lib/pecking-order-math.mjs"
+      ],
+      "tests": [
+        "tests/game-results.test.ts",
+        "tests/game-results-guard.test.ts"
+      ]
+    },
+    {
       "name": "free-agents",
       "paths": [
         "src/pages/theleague/players.astro",

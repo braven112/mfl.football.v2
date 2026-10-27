@@ -32,6 +32,7 @@
 
 import type { LiveMatchup, LiveStandingsRow } from '../../types/live';
 import { NFL_GAME_SECONDS } from '../live-win-probability';
+import { resultOf } from '../game-results.mjs';
 
 export type StandingsMode = 'projected' | 'live' | 'final';
 
@@ -144,7 +145,7 @@ export function projectStandings(
       const them = score(i === 0 ? 1 : 0);
       const id = matchup.sides[i].franchiseId;
       const games = week.get(id) ?? [];
-      games.push({ result: me > them ? 'W' : me < them ? 'L' : 'T', points: me, final });
+      games.push({ result: resultOf(me, them) as 'W' | 'L' | 'T', points: me, final });
       week.set(id, games);
     });
   }

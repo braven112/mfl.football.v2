@@ -17,6 +17,7 @@ import {
   buildPairings,
   enrichStandingsFromResults,
 } from '../../scripts/lib/pecking-order-math.mjs';
+import { addResult, emptyRecord, weekGames } from './game-results.mjs';
 
 interface WeeklyResultsFeed {
   weeks?: Array<{ week?: number | string; scores?: Record<string, number | string> }>;
@@ -58,23 +59,21 @@ export function divisionRecords(
   throughWeek: number
 ): Map<string, { w: number; l: number; t: number }> {
   const records = new Map<string, { w: number; l: number; t: number }>();
+  // Which pairings are games, and their results, is game-results.mjs's call:
+  // MFL stamps an unplayed week "T", so the result field alone is not a game.
   for (const wk of asArray(schedule?.schedule?.weeklySchedule)) {
     if (Number(wk?.week) > throughWeek) continue;
-    for (const game of asArray(wk?.matchup as { franchise?: unknown } | undefined)) {
-      const sides = asArray(game?.franchise as { id?: string; result?: string } | undefined);
-      if (sides.length !== 2) continue;
-      const [a, b] = sides;
-      if (!a?.id || !b?.id) continue;
-      const div = divisionOf(a.id);
-      if (!div || div !== divisionOf(b.id)) continue;
-      for (const side of sides) {
-        const result = side.result;
-        if (result !== 'W' && result !== 'L' && result !== 'T') continue;
-        const rec = records.get(side.id!) ?? { w: 0, l: 0, t: 0 };
-        if (result === 'W') rec.w++;
-        else if (result === 'L') rec.l++;
-        else rec.t++;
-        records.set(side.id!, rec);
+    for (const g of weekGames(wk)) {
+      const div = divisionOf(g.a);
+      if (!div || div !== divisionOf(g.b)) continue;
+      for (const [id, result] of [
+        [g.a, g.ra],
+        [g.b, g.rb],
+      ] as const) {
+        const rec = emptyRecord();
+        addResult(rec, result);
+        const prev = records.get(id) ?? { w: 0, l: 0, t: 0 };
+        records.set(id, { w: prev.w + rec.wins, l: prev.l + rec.losses, t: prev.t + rec.ties });
       }
     }
   }

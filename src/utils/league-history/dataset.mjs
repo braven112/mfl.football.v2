@@ -10,6 +10,10 @@
  *
  * - games: `gamesFromSchedule` (record-book.mjs) over every season's
  *   schedule.json. Every game ever played, under every owner, deduplicated.
+ *   Which matchups are games and who won them is game-results.mjs's call.
+ *   Each game is `[year, week, winner, winnerScore, loser, loserScore,
+ *   playoff]`, plus an eighth `1` on the rare game whose scores tied but MFL
+ *   broke the tie (its tiebreaker), so the reader never calls it a tie.
  * - seasons: `season-ledger.json`. One row per franchise-season, ALL owners
  *   (the ledger is not owner-scoped the way franchise-history.json is), with
  *   that season's name, icon, division and finish.
@@ -115,6 +119,7 @@ export function buildHistoryDataset({ league, games, ledgerRows, ownerTenures, f
       g.loserId,
       round2(g.loserScore),
       g.isPlayoff ? 1 : 0,
+      ...(g.tie === false && g.winnerScore === g.loserScore ? [1] : []),
     ])
     .sort((a, b) => a[0] - b[0] || a[1] - b[1] || cmp(a[2], b[2]) || cmp(a[4], b[4]));
 

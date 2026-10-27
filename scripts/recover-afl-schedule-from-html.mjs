@@ -59,6 +59,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { resultOf } from '../src/utils/game-results.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -621,8 +622,8 @@ const existingByWeek = new Map(existing.map((wk) => [String(wk.week), wk]));
 
 const asMatchup = (g) => ({
   franchise: [
-    { id: g.home, score: g.homeScore.toFixed(2), isHome: '1', result: g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'T' },
-    { id: g.away, score: g.awayScore.toFixed(2), isHome: '0', result: g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'T' },
+    { id: g.home, score: g.homeScore.toFixed(2), isHome: '1', result: resultOf(g.homeScore, g.awayScore) },
+    { id: g.away, score: g.awayScore.toFixed(2), isHome: '0', result: resultOf(g.awayScore, g.homeScore) },
   ],
 });
 

@@ -27,12 +27,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { getSeasonYear, getCompletedWeek } from './article-utils/week-resolver.mjs';
+import { addResult, emptyRecord, scoreResult } from '../src/utils/game-results.mjs';
 import { loadJSON, tryLoadJSON, scheduleFromRawResults } from './article-utils/data-loaders.mjs';
 import {
   computeTeamStrengths,
   difficultyStep,
   buildOpponentGrid,
-  num,
   int,
   parseH2hRecord,
 } from './lib/team-strength.mjs';
@@ -84,23 +84,15 @@ async function loadPreviousWeek(league, year, week) {
 function computeRecord(grid, weeklyResults, fid, throughWeek) {
   const scoresByWeek = new Map();
   for (const w of (weeklyResults?.weeks || [])) scoresByWeek.set(int(w.week), w.scores || {});
-  let wins = 0, losses = 0, ties = 0;
+  const rec = emptyRecord();
   const opps = grid.get(fid);
-  if (!opps) return { wins, losses, ties };
+  if (!opps) return { wins: 0, losses: 0, ties: 0 };
   for (const [wk, oppIds] of opps) {
     if (wk > throughWeek) continue;
     const scores = scoresByWeek.get(wk);
-    const mine = num(scores?.[fid], NaN);
-    if (!Number.isFinite(mine)) continue;
-    for (const oppId of oppIds) {
-      const theirs = num(scores?.[oppId], NaN);
-      if (!Number.isFinite(theirs)) continue;
-      if (mine > theirs) wins++;
-      else if (mine < theirs) losses++;
-      else ties++;
-    }
+    for (const oppId of oppIds) addResult(rec, scoreResult(scores?.[fid], scores?.[oppId]));
   }
-  return { wins, losses, ties };
+  return { wins: rec.wins, losses: rec.losses, ties: rec.ties };
 }
 
 /** Largest pool the schedule swap covers (see computeScheduleSwap). */
@@ -122,21 +114,13 @@ export function computeScheduleSwap({ teams, grid, weeklyResults, throughWeek })
   for (const w of (weeklyResults?.weeks || [])) scoresByWeek.set(int(w.week), w.scores || {});
 
   const recordFor = (me, scheduleOf) => {
-    let wins = 0, losses = 0, ties = 0;
+    const rec = emptyRecord();
     for (const [wk, oppIds] of grid.get(scheduleOf) ?? []) {
       if (wk > throughWeek) continue;
       const scores = scoresByWeek.get(wk);
-      const mine = num(scores?.[me], NaN);
-      if (!Number.isFinite(mine)) continue;
-      for (const oppId of oppIds) {
-        const theirs = num(scores?.[oppId === me ? scheduleOf : oppId], NaN);
-        if (!Number.isFinite(theirs)) continue;
-        if (mine > theirs) wins++;
-        else if (mine < theirs) losses++;
-        else ties++;
-      }
+      for (const oppId of oppIds) addResult(rec, scoreResult(scores?.[me], scores?.[oppId === me ? scheduleOf : oppId]));
     }
-    return { wins, losses, ties };
+    return { wins: rec.wins, losses: rec.losses, ties: rec.ties };
   };
 
   const pool = t => teams.filter(o => (o.conference ?? null) === (t.conference ?? null));

@@ -21,11 +21,8 @@ export function rivalryPairRoute(historyData: unknown, franchiseHistory: any, sl
   if (`${a}-vs-${b}` !== slug) return { redirect: `${a}-vs-${b}` };
 
   // Round names from the league's franchise history ("Semifinal", the AFL's
-  // "NL Conference Championship"). A bare "Playoffs" says less than the
-  // page's own final-or-not call, so it is left out.
-  const playoffRounds: Record<string, string> = {};
-  for (const m of franchiseHistory?.franchises?.[a]?.matchupHistory?.[b] ?? []) {
-    if (m.isPlayoff && m.playoffRound && m.playoffRound !== 'Playoffs') playoffRounds[`${m.year}-${m.week}`] = m.playoffRound;
-  }
+  // "NL Conference Championship"), keyed `${year}-${week}`. Only a label: the
+  // games themselves are the League History dataset's.
+  const playoffRounds: Record<string, string> = { ...(franchiseHistory?.playoffRounds?.[`${a}-${b}`] ?? {}) };
   return { redirect: null, a, b, playoffRounds };
 }

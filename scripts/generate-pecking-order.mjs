@@ -60,6 +60,7 @@ import { num, int } from './lib/team-strength.mjs';
 // after the commit, once the issue is live. See scripts/lib/await-published.mjs.
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
 import { leaguesFor } from './lib/league-jobs.mjs';
+import { addResult, emptyRecord, scoreResult } from '../src/utils/game-results.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -237,10 +238,9 @@ export function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek,
       if (!me) continue;
       const opp = fs.find(f => f.id !== franchiseId);
       if (!opp) continue;
-      const myScore = num(scores[franchiseId], NaN);
-      const oppScore = num(scores[opp.id], NaN);
-      if (!Number.isFinite(myScore) || !Number.isFinite(oppScore)) continue;
-      games.push({ wk, myScore, oppScore });
+      const result = scoreResult(scores[franchiseId], scores[opp.id]);
+      if (!result) continue;
+      games.push({ wk, result });
     }
   }
   games.sort((a, b) => a.wk - b.wk);
@@ -249,13 +249,9 @@ export function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek,
   const playedWeeks = [...new Set(games.map(g => g.wk))].slice(-weeks);
   const window = new Set(playedWeeks);
   const slice = games.filter(g => window.has(g.wk));
-  let wins = 0, losses = 0, ties = 0;
-  for (const g of slice) {
-    if (g.myScore > g.oppScore) wins++;
-    else if (g.myScore < g.oppScore) losses++;
-    else ties++;
-  }
-  return { wins, losses, ties, gamesCounted: slice.length };
+  const rec = emptyRecord();
+  for (const g of slice) addResult(rec, g.result);
+  return { wins: rec.wins, losses: rec.losses, ties: rec.ties, gamesCounted: slice.length };
 }
 
 // ─── Trend (vs. previous week) ──────────────────────────────────────

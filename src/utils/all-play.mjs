@@ -21,6 +21,8 @@
  * @property {number} pct   (wins + 0.5*ties) / games.
  */
 
+import { allPlayWeek } from './game-results.mjs';
+
 /** Fallback cutoff for any season without its own entry. */
 export const DEFAULT_TIER_CUTOFF_WEEK = 17;
 
@@ -84,22 +86,16 @@ export function accumulateAllPlay(weeklyResults, cutoffWeek) {
     return r;
   };
 
+  // Each week's comparisons are game-results.mjs's all-play; a week where
+  // nobody scored is unplayed, never a week of ties.
   for (const week of weeksToProcess) {
-    const scores = Object.entries(week?.scores ?? {});
-
-    // For each team, compare against all other teams this week.
-    for (const [teamId, teamScoreRaw] of scores) {
-      const teamScore = Number(teamScoreRaw);
+    for (const [teamId, rec] of allPlayWeek(week?.scores ?? {})) {
       const record = ensure(teamId);
+      const teamScore = Number(week.scores[teamId]);
       record.pf += Number.isFinite(teamScore) ? teamScore : 0;
-
-      for (const [opponentId, opponentScoreRaw] of scores) {
-        if (teamId === opponentId) continue; // Don't compare to self.
-        const opponentScore = Number(opponentScoreRaw);
-        if (teamScore > opponentScore) record.wins++;
-        else if (teamScore < opponentScore) record.losses++;
-        else record.ties++;
-      }
+      record.wins += rec.wins;
+      record.losses += rec.losses;
+      record.ties += rec.ties;
     }
   }
 
