@@ -15,8 +15,8 @@
  *  - **Free agency is per UNIT.** A league whose `playerLimitUnit` is a
  *    conference or division answers one `freeAgents` list per unit, and a
  *    player rostered in one unit can be free in another. The account's own
- *    franchise decides which unit counts (the same unit keys as
- *    `mfl-locked-players.ts`). The `locked` flag is NOT read here: it means
+ *    franchise decides which unit counts (the same unit keys the drop-lock
+ *    reader uses). The `locked` flag is NOT read here: it means
  *    "no instant add", which only the add/drop flow can interpret
  *    (docs/claude/insights/domains/mfl-api.md § 2026-09-30).
  *  - **`res.ok` is not "the data is good."** MFL answers errors and throttles
@@ -134,7 +134,7 @@ export function parseInjuries(
   return map;
 }
 
-/** Unit key for a `freeAgents` unit label, as `mfl-locked-players.ts` keys it: `CONFERENCE00` → '00', `LEAGUE` → ''. */
+/** Unit key for a `freeAgents` unit label, as the drop-lock reader keys it: `CONFERENCE00` → '00', `LEAGUE` → ''. */
 export function unitKey(unit: unknown): string {
   const m = /^(?:CONFERENCE|DIVISION)(\w+)$/i.exec(String(unit ?? ''));
   return m ? m[1] : '';
