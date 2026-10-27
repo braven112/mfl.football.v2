@@ -11,7 +11,7 @@ import Constants from 'expo-constants';
 import type { MflLiveAppBoard, MflLiveAppLoginResponse } from '@mfl/shared-types/mfl-live-app';
 
 const API_ORIGIN: string =
-  (Constants.expoConfig?.extra?.apiOrigin as string | undefined) ?? 'https://v2.mfl.football';
+  (Constants.expoConfig?.extra?.apiOrigin as string | undefined) ?? 'https://mfl.football';
 
 /** Sent with sign-in so the server returns the session token in the body. */
 const APP_CLIENT = 'mfl-live-app';
