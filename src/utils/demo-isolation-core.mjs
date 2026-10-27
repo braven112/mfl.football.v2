@@ -50,6 +50,8 @@ export const DEMO_FORBIDDEN_ENV_PATTERNS = [
   /^SCHEFTER_/,
   /^ANTHROPIC_/, // LLM spend on the real account; the demo ships Roger/Schefter off
   /^JWT_SECRET$/, // production's session key — replaced by DEMO_JWT_SECRET below
+  /^EXPO_PUSH_/, // sends to real owners' phones through Expo
+  /^PUSH_CREDENTIAL_KEY$/, // opens the owners' stored MFL sign-ins
 ];
 
 /**
