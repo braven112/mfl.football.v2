@@ -291,6 +291,37 @@ export async function sendMessage(text: string, token: string): Promise<boolean>
   return true;
 }
 
+/**
+ * The groups a member's token belongs to, newest activity first — the picker
+ * an owner chooses their league's group from in the MFL Football app. Null
+ * when GroupMe refused or could not be reached; `unauthorized` for a revoked
+ * token.
+ */
+export async function fetchMyGroups(
+  token: string,
+): Promise<{ ok: true; groups: Array<{ id: string; name: string; members: number }> } | { ok: false; unauthorized: boolean }> {
+  try {
+    const res = await fetch(`${API_BASE}/groups?per_page=100&omit=memberships`, {
+      headers: { 'X-Access-Token': token },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return { ok: false, unauthorized: res.status === 401 };
+    const data = (await res.json()) as {
+      response?: Array<{ id?: unknown; group_id?: unknown; name?: unknown; members_count?: unknown }>;
+    };
+    const groups = (data.response ?? [])
+      .map((g) => ({
+        id: `${g.group_id ?? g.id ?? ''}`,
+        name: typeof g.name === 'string' ? g.name : '',
+        members: typeof g.members_count === 'number' ? g.members_count : 0,
+      }))
+      .filter((g) => /^\d+$/.test(g.id));
+    return { ok: true, groups };
+  } catch {
+    return { ok: false, unauthorized: false };
+  }
+}
+
 /** How a member's own post went — see postAsMember. */
 export type MemberPostResult = 'sent' | 'blocked' | 'unauthorized' | 'not-a-member' | 'failed';
 

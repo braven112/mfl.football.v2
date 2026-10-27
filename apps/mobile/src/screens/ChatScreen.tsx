@@ -25,6 +25,7 @@ import { ApiError, apiGet, apiPost, SignedOutError } from '../api';
 import { useActiveTeam } from '../active-team';
 import { useSession } from '../session-context';
 import { TeamSwitcher } from '../components/TeamSwitcher';
+import { ChatSourcePanel } from '../components/ChatSourcePanel';
 import { font, useTheme, type Theme } from '../theme';
 
 /** While you're reading the chat. */
@@ -59,6 +60,8 @@ export function ChatScreen() {
   const [signIn, setSignIn] = useState<{ url: string; message: string } | null>(null);
   /** Opened the sign-in; send the draft again when the app comes back. */
   const retryOnReturn = useRef(false);
+  /** The "which chat" settings, open under the header. */
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const list = useRef<FlatList<MflLiveAppChatMessage>>(null);
   const inFlight = useRef(false);
 
@@ -71,6 +74,7 @@ export function ChatScreen() {
     setMessages(null);
     setSource('mfl');
     setSignIn(null);
+    setSettingsOpen(false);
     setUnread(0);
     setSendError(null);
   }, [leagueId]);
@@ -186,7 +190,14 @@ export function ChatScreen() {
 
   const header = (
     <View style={[styles.header, { borderBottomColor: t.border }]}>
-      <Text style={[styles.title, { color: t.text }]}>{source === 'groupme' ? 'GroupMe' : 'League chat'}</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: t.text }]}>{source === 'groupme' ? 'GroupMe' : 'League chat'}</Text>
+        {leagueId ? (
+          <Pressable accessibilityRole="button" onPress={() => setSettingsOpen((o) => !o)} hitSlop={8}>
+            <Text style={[styles.link, { color: t.accentText }]}>{settingsOpen ? 'Done' : 'Switch chat'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <TeamSwitcher />
     </View>
   );
@@ -217,6 +228,16 @@ export function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {header}
+      {settingsOpen && leagueId ? (
+        <ChatSourcePanel
+          leagueId={leagueId}
+          onChanged={() => {
+            setMessages(null);
+            setSettingsOpen(false);
+            load();
+          }}
+        />
+      ) : null}
       {failing ? (
         <Text style={[styles.status, { color: t.danger }]}>Can't reach {source === 'groupme' ? 'GroupMe' : 'MFL'} right now. Retrying…</Text>
       ) : null}
@@ -313,6 +334,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontFamily: font.bold, fontSize: 22 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   muted: { fontFamily: font.regular, fontSize: 15, textAlign: 'center', lineHeight: 21 },
   link: { fontFamily: font.semibold, fontSize: 15 },
