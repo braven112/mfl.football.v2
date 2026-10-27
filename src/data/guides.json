@@ -36,7 +36,7 @@
   },
   {
     "slug": "mfl-live",
-    "title": "MFL Live",
+    "title": "MFL Football",
     "summary": "Every team you own, in every MyFantasyLeague league, scoring on one page — then tap a league to see the whole thing: all its matchups, its standings, and the week's top scorers.",
     "icon": "scoreboard-2",
     "updated": "2026-09-20",
@@ -45,7 +45,7 @@
       "afl"
     ],
     "body": [
-      "Every other scoreboard on this site shows you one league. MFL Live shows you all of them: sign in once with your MyFantasyLeague account and it reads every league that account plays in — this league, the other one, and the ones nobody here has ever heard of — then puts every matchup on a single page. It lives at <a href=\"https://v2.mfl.football/live\">its own address</a> rather than under a league, because it does not belong to one.",
+      "Every other scoreboard on this site shows you one league. MFL Football shows you all of them: sign in once with your MyFantasyLeague account and it reads every league that account plays in — this league, the other one, and the ones nobody here has ever heard of — then puts every matchup on a single page. It lives at <a href=\"https://v2.mfl.football/live\">its own address</a> rather than under a league, because it does not belong to one.",
       {
         "type": "list",
         "heading": "What's on the board",
@@ -109,7 +109,7 @@
           "<strong>Sign in.</strong> Open MFL Football on the TV and point your phone's camera at the QR code. Sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own.",
           "<strong>Allow the overlay.</strong> Open the <strong>Score overlay</strong> tile. The first time, it asks to show over other apps: press OK and turn it on for MFL Football, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
           "<strong>No switch on your TV?</strong> The tile shows a one-line command instead. Run it once from a computer on the same Wi-Fi, with ADB installed and network debugging turned on in the TV's Developer options: <code>adb shell appops set football.mfl.live SYSTEM_ALERT_WINDOW allow</code>",
-          "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Live settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
+          "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Football settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
         ]
       },
       {

@@ -71,7 +71,7 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
         : 'used';
 ---
 
-<MflAppLayout title="Pair a TV — MFL Live" description="Send your MFL Live broadcast to a TV.">
+<MflAppLayout title="Pair a TV — MFL Football" description="Send your MFL Football broadcast to a TV.">
   <section class="pair" aria-labelledby="pair-title">
     <a class="pair__back" href="/live/broadcast">&larr; Broadcast</a>
 
@@ -178,7 +178,7 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
                 ? 'Too many tries. Wait a few minutes and try again.'
                 : 'Something went wrong. Try again.';
       } catch {
-        result.textContent = 'Couldn’t reach MFL Live. Check your connection and try again.';
+        result.textContent = 'Couldn’t reach MFL Football. Check your connection and try again.';
       }
       button.disabled = false;
     };

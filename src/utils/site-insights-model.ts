@@ -50,7 +50,7 @@ export function insightSections(): string[] {
 }
 
 export function sectionLabel(section: string): string {
-	if (section === 'live') return 'MFL Live';
+	if (section === 'live') return 'MFL Football';
 	if (section === 'site') return 'Sign-in & splash';
 	return ALL_LEAGUES.find((l) => l.slug === section)?.name ?? section;
 }

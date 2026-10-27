@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const listedLeague = mflLiveSignInLeagueIds().includes(sessionLeagueId);
     const openLeague = openSignIn && !listedLeague && /^\d+$/.test(sessionLeagueId);
     if (!listedLeague && !openLeague) {
-      return json({ success: false, message: 'MFL Live is invite-only for now.' }, 403);
+      return json({ success: false, message: 'MFL Football is invite-only for now.' }, 403);
     }
 
     // Create JWT session

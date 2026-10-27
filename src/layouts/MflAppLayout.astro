@@ -194,7 +194,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="theme-color" content="#14161a" data-theme-color-light="#14161a" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<meta name="apple-mobile-web-app-title" content="MFL Live" />
+		<meta name="apple-mobile-web-app-title" content="MFL Football" />
 		<meta name="generator" content={Astro.generator} />
 		{description && <meta name="description" content={description} />}
 		<Font cssVariable="--font-vend-sans" />
@@ -222,7 +222,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 
 		{!bare && (
 		<header class="mfl-bar">
-			<a class="mfl-bar__brand" href={pairedTvOwner && !authUser ? '/live/broadcast' : '/live'} aria-label="MFL Live — home">
+			<a class="mfl-bar__brand" href={pairedTvOwner && !authUser ? '/live/broadcast' : '/live'} aria-label="MFL Football — home">
 				{/* The MFL.football mark (public/assets/logos/mfl-football-mark.svg),
 				    inlined so the bars take the bar's fixed ink and the football the
 				    accent. viewBox is cropped to the glyph's own bounds. */}

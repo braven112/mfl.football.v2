@@ -212,7 +212,7 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
         <p className="bov__note">
           {signedIn
             ? 'Can’t reach your leagues right now. Trying again in a minute.'
-            : 'Open MFL Live on this TV to sign it in, then start the overlay again.'}
+            : 'Open MFL Football on this TV to sign it in, then start the overlay again.'}
         </p>
       </div>
     );
