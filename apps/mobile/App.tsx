@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,9 +13,10 @@ import { signOutOnServer } from './src/api';
 import { clearToken, loadToken, saveToken } from './src/session';
 import { useTheme } from './src/theme';
 import { SignInScreen } from './src/screens/SignInScreen';
-import { MatchupsScreen } from './src/screens/MatchupsScreen';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { SessionProvider } from './src/session-context';
 
-/** Two screens, no router: signed out shows sign-in, signed in shows your matchups. */
+/** Signed out shows sign-in; signed in shows the tabbed app (src/navigation). */
 export default function App() {
   const t = useTheme();
   // Vend Sans ships inside the app, so this resolves on the first frames; a
@@ -44,15 +45,19 @@ export default function App() {
     await signOutOnServer();
   }, []);
 
+  const session = useMemo(() => (token ? { token, signOut: onSignOut } : null), [token, onSignOut]);
+
   return (
     <SafeAreaProvider>
-      <StatusBar style={t.dark ? 'light' : 'dark'} />
+      <StatusBar style="light" />
       {token === undefined || (!fontsLoaded && !fontError) ? (
         <View style={{ flex: 1, backgroundColor: t.ground, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={t.accent} />
         </View>
-      ) : token ? (
-        <MatchupsScreen token={token} onSignOut={onSignOut} />
+      ) : session ? (
+        <SessionProvider value={session}>
+          <RootNavigator />
+        </SessionProvider>
       ) : (
         <SignInScreen onSignedIn={onSignedIn} />
       )}
