@@ -44,6 +44,7 @@ What makes it worth paying for over MFL's app:
 | 13 | Look (2026-10-27) | **MFL Live's black and red, one theme; Vend Sans** | The web board's `html.dark[data-league="mfl"]` colours (ink `#14161a`, red `#d81b41` / `#ef5350`) and its font, bundled with `@expo-google-fonts/vend-sans` (OFL). No light theme until the core features are right; `apps/mobile/src/theme.ts` is the only place colours live, so one can be added there later. |
 | 14 | Feature order (2026-10-27, draft for owner review) | See **Phone app feature plan** | Correctness of the core live features first, then reach, then what needs a licensed data feed. |
 | 15 | Name (2026-10-27) | **MFL Football** (was MFL Live) | Another app is already called MFL Live. The phone app's display name, sign-in screen and Play listing say MFL Football; the website and the TV app are renamed in their own thread. Code identifiers (`MflLive*`, `mfl-live-*` files and routes) stay as they are. |
+| 16 | Launch gate (2026-10-27) | **No Play upload until every table-stakes feature works** | The owner: not worth selling or posting to the closed test without them. See **Launch gate: table stakes**. Manage your team (lineups, adds/drops, waivers, trades, chat, team page, commissioner actions) moves from proposed to required, and the app must act in any MFL league the account is in. |
 
 ## Legal — what a wide-distribution app can and cannot carry
 
@@ -156,9 +157,10 @@ The owner's rule: get the core functionality right before theming or extras.
    leagues in standings on the web and the app. This reverses decision 10's
    "no Sleeper" for the store build; no Sleeper headshots, and Sleeper's API
    terms for commercial use get checked first.
-10. **Manage your team** (proposed, awaiting the owner): set lineups through
-    the server with the owner's own MFL session, as `/api/lineup` already
-    does for TheLeague and the AFL; then adds, drops and waivers.
+10. **Manage your team** (approved 2026-10-27, now part of the launch gate
+    below): set lineups through the server with the owner's own MFL session,
+    as `/api/lineup` already does for TheLeague and the AFL; then adds, drops
+    and waivers.
 
 **P2, needs a licensed data feed first (store rules: no ESPN data):**
 
@@ -169,8 +171,46 @@ The owner's rule: get the core functionality right before theming or extras.
 **Not coming to the phone:** the TV broadcast board and its overlay (TV app),
 and site analytics and the Sleeper player-fix review (admin-only).
 
-**After this list:** light theme, iOS, then the roadmap below (history and
+**After the launch gate below:** light theme, iOS, then the roadmap below (history and
 rivalries, the reporter, subscriptions).
+
+## Launch gate: table stakes (owner 2026-10-27)
+
+The owner's rule: the app is not worth selling, or even posting to the Play
+closed test, until it has every table-stakes feature. "Table stakes" is what
+every app built for MyFantasyLeague already does (competitor research,
+https://claude.ai/artifact/KJzUueSwE2YmnG3TEEkvLG: MFL Live by Treeport, MFL
+Mobile, MFL Platinum, MFL Modern, plus Sleeper, Yahoo and ESPN). All of it runs
+on MFL data, so none of it waits on a licensed feed.
+
+Before the first Play upload, the app must do all of these, natively (no web
+views; "pages bounce to the website" is a named complaint about MFL apps):
+
+1. **Live matchups, league board and standings** (P0 items 1-5 above).
+2. **Set lineup**, with a "who's out" warning before kickoff.
+3. **Add and drop, and waiver claims with blind (FAAB) bids**, plus your
+   pending claims and cancelling one.
+4. **Player search and free agents**, sortable by projection, points and
+   owned %, with a player card (status, bye, recent scores). No headshots.
+5. **Trades**: build and propose one, see pending offers, accept, reject or
+   counter.
+6. **League chat** with unread badges.
+7. **Transactions feed** for the league (adds, drops, trades, waivers).
+8. **Your team page**: roster with status and byes, cap and contracts where
+   the league has them, draft picks.
+9. **Commissioner actions** in leagues the account runs: approve trades,
+   set a lineup for an owner, and the like.
+10. **Push alerts** (P1 item 8) for lineup reminders, trades offered or
+    accepted, waiver results and chat messages, arriving in seconds (late
+    alerts are a named complaint).
+11. **Draft room** with "you're on the clock" alerts and making a pick. MFL
+    leagues draft in the summer, so this can land last, but it is in the gate.
+
+League and team identity (P1 item 6), pairing a TV (7) and Sleeper (9) stay
+planned but are not part of the gate. Every write uses the owner's own MFL
+cookie, never the server's credentials (`tests/auth-league-scope.test.ts`), and
+the app must work for any MFL league the account is in, not just TheLeague and
+the AFL.
 
 ## Roadmap
 
@@ -200,3 +240,11 @@ in the project's shared files. Two rules keep them apart: each package adds its
 own wire-contract file (`packages/shared-types/src/mfl-live-app-<pkg>.ts`)
 rather than editing the shared one, and only the shell (F), push (H) and TV
 pairing (G) packages add npm dependencies to `apps/mobile`.
+
+Round 2 (same day) splits the launch gate into packages J to R: set lineup,
+players and free agents, add/drop and waivers, trades, league chat, the
+transactions feed, the team page, commissioner actions and the draft room,
+on a shared foundation (F2) that resolves which league and team the account
+is acting in. App endpoints for these live under `src/pages/api/mfl-live/`,
+call `getMflLiveUser`, and verify the league with `resolveOwnerLeague` before
+any MFL call; the site's own TheLeague/AFL endpoints stay as they are.
