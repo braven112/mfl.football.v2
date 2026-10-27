@@ -171,6 +171,13 @@ telling a human what to run locally, and pushes nothing. Routed by the
 
 ## GitHub's `schedule` is not a cadence — the Vercel cron is the primary trigger
 
+**Not every Vercel cron is a bridge.** `/api/cron/push-watch` (the app's
+one-minute alert checker, every minute) does its work in the function: it
+dispatches no workflow and commits nothing, so it costs no build and cannot
+collide with a job that pushes. It is listed in `IN_PROCESS_CRONS`
+(`tests/vercel-cron-targets.test.ts`) and must stay that way — a cron that
+starts committing is a bridge, with every rule below.
+
 GitHub Actions may drop a scheduled event, and on this repo it does, in bulk.
 Measured over 300 `roster-sync.yml` runs: until 2026-08-26 the delivered cadence
 held a 21-47 min median; **from 2026-08-27 it collapsed to a 2-5 HOUR median and

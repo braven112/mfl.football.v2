@@ -35,6 +35,7 @@ import {
   countExpoTokens,
 } from '../../../utils/push-expo';
 import { saveCredential, removeCredential } from '../../../utils/push-credentials';
+import { watchLeagues } from '../../../utils/push-watch';
 import type { MflLiveAppPushResponse } from '../../../../packages/shared-types/src/mfl-live-app-push';
 
 const reply = (body: MflLiveAppPushResponse, status: number) =>
@@ -73,6 +74,8 @@ async function indexTeams(user: AuthUser, account: string): Promise<void> {
   ];
   const previous = mine?.ok ? await getIndexedLeagues(account) : [];
   await indexAccountTeams(account, teams, previous);
+  // The one-minute checker reads MFL for these leagues (push-watch.ts).
+  if (mine?.ok) await watchLeagues(mine.leagues);
 }
 
 export const POST: APIRoute = async ({ request }) => {
