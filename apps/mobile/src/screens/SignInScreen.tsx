@@ -44,7 +44,7 @@ export function SignInScreen({ onSignedIn }: Props) {
     >
       <View style={styles.inner}>
         <Text style={[styles.brand, { color: t.text }]}>
-          MFL <Text style={{ color: t.accentText }}>Live</Text>
+          MFL <Text style={{ color: t.accentText }}>Football</Text>
         </Text>
         <Text style={[styles.lede, { color: t.muted }]}>
           Sign in with your MyFantasyLeague account to see your live matchups.
@@ -92,7 +92,7 @@ export function SignInScreen({ onSignedIn }: Props) {
         </Pressable>
 
         <Text style={[styles.fine, { color: t.muted }]}>
-          MFL Live is not affiliated with MyFantasyLeague or the NFL. Your password goes to MFL to sign you in and
+          MFL Football is not affiliated with MyFantasyLeague or the NFL. Your password goes to MFL to sign you in and
           is never stored on this phone.
         </Text>
       </View>

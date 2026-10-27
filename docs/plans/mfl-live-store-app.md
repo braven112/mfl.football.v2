@@ -1,5 +1,8 @@
 # MFL Live as a store app — the product we sell to any MFL owner
 
+> **Renamed MFL Football on 2026-10-27** (decision 15). The rest of this doc
+> still says MFL Live where it describes history and code names.
+
 > Vision of record, set with Brandon on 2026-10-24. Nothing here is built yet.
 > Sibling plans: `docs/plans/mfl-live-app.md` (the web board this grows from),
 > `docs/plans/mfl-live-league-boards.md`, `docs/plans/mfl-live-sleeper.md`.
@@ -40,6 +43,7 @@ What makes it worth paying for over MFL's app:
 | 12 | First build (2026-10-26) | Three PRs off staging: server store mode → `apps/mobile` (sign-in + matchups screens) → GitHub Actions `eas build --no-wait` | Standings is the next screen after. Proposal: https://claude.ai/artifact/5BWWrQvew8dhEUo3Lu2mne |
 | 13 | Look (2026-10-27) | **MFL Live's black and red, one theme; Vend Sans** | The web board's `html.dark[data-league="mfl"]` colours (ink `#14161a`, red `#d81b41` / `#ef5350`) and its font, bundled with `@expo-google-fonts/vend-sans` (OFL). No light theme until the core features are right; `apps/mobile/src/theme.ts` is the only place colours live, so one can be added there later. |
 | 14 | Feature order (2026-10-27, draft for owner review) | See **Phone app feature plan** | Correctness of the core live features first, then reach, then what needs a licensed data feed. |
+| 15 | Name (2026-10-27) | **MFL Football** (was MFL Live) | Another app is already called MFL Live. The phone app's display name, sign-in screen and Play listing say MFL Football; the website and the TV app are renamed in their own thread. Code identifiers (`MflLive*`, `mfl-live-*` files and routes) stay as they are. |
 
 ## Legal — what a wide-distribution app can and cannot carry
 

@@ -35,7 +35,7 @@ export async function signIn(username: string, password: string): Promise<string
       body: JSON.stringify({ username, password, scope: 'mfl-live', client: APP_CLIENT }),
     });
   } catch {
-    throw new Error('Could not reach MFL Live. Check your connection and try again.');
+    throw new Error('Could not reach MFL Football. Check your connection and try again.');
   }
 
   // MFL and our own routes can both answer an error as a 200, so the body's
@@ -91,7 +91,7 @@ async function request<T>(token: string, path: string, init: RequestInit = {}): 
       },
     });
   } catch {
-    throw new ApiError('Could not reach MFL Live. Check your connection.', 0);
+    throw new ApiError('Could not reach MFL Football. Check your connection.', 0);
   }
   if (res.status === 401) throw new SignedOutError('Your session has ended. Sign in again.');
   let body: unknown = null;
@@ -103,7 +103,7 @@ async function request<T>(token: string, path: string, init: RequestInit = {}): 
   if (!res.ok) {
     const message = (body as { message?: string; error?: string } | null)?.message
       ?? (body as { error?: string } | null)?.error;
-    throw new ApiError(message || 'MFL Live could not load this just now.', res.status);
+    throw new ApiError(message || 'MFL Football could not load this just now.', res.status);
   }
   return body as T;
 }
@@ -122,6 +122,6 @@ export async function fetchBoard(token: string): Promise<MflLiveAppBoard> {
   const body = await apiGet<MflLiveAppBoard>(token, '/api/live-board?source=mfl');
   // `ok: false` is a failed assembly, not an empty week: the caller keeps the
   // last good board rather than blanking the screen.
-  if (!body.ok) throw new Error('MFL Live could not load your leagues just now.');
+  if (!body.ok) throw new Error('MFL Football could not load your leagues just now.');
   return body;
 }
