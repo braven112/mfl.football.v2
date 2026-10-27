@@ -182,6 +182,11 @@ describe('only the MFL Live surfaces read an open session', () => {
 		// team there and hands back that franchise (never the request's).
 		// tests/mfl-live-owner-league.test.ts pins every endpoint to it.
 		'src/utils/live/owner-league.ts',
+		// The app's push token, keyed by the hashed MFL username (never the
+		// cookie) with a per-league index of the account's own teams from
+		// `myleagues`. The test button refuses any league this site does not run.
+		'src/pages/api/push/expo-register.ts',
+		'src/pages/api/push/expo-test.ts',
 	]);
 
 	function walk(dir: string, out: string[] = []): string[] {
