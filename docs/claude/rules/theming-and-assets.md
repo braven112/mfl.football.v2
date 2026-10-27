@@ -698,11 +698,12 @@ by whether the title has been won:
 - **Team-centric** — the pennant in the club's colors with the logo it won
   under (`HistoryRafters.astro`). Only for a title a club HAS won, and only in
   the Rafters: League History home, the franchise page and the owner page.
-- **League-wide** — the award's own badge (`public/assets/afl/awards/`). For
-  an award still in play, standing for what could be won (the AFL homepage
-  standings' division shield for seeds 1–2, the playoff prizes), and beside a
-  team already shown in its own banner (the footer champions band, a
-  Franchises index card).
+- **League-wide** — the league's OFFICIAL championship pennants, the award's
+  own badge (`public/assets/afl/awards/`). For an award still in play,
+  standing for what could be won (the AFL homepage standings' division shield
+  for seeds 1–2), and beside a team already shown (the footer champions band
+  under the team banner, a Franchises index card's title counts, an owner
+  page's career title chips; Brandon approved all four as they are).
 
 A seasonal theme redraws the league-wide badges (`_swaps` in
 `src/data/seasonal-marks/afl-<season>.json`) and they must wear it: an `<img>`
