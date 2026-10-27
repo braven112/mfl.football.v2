@@ -318,6 +318,13 @@ export interface BuildBoardInput {
    * rows. Omitted, the year's map is read.
    */
   playerMeta?: Record<string, PlayerMeta>;
+  /**
+   * The store build of the MFL Live app (docs/plans/mfl-live-store-app.md,
+   * Legal): no player headshots and no NFL club marks or colours, so a
+   * franchise named "Cowboys" falls through to its text mark. Scores and
+   * projections are untouched. Pinned by `tests/mfl-live-standings-store.test.ts`.
+   */
+  mflOnly?: boolean;
 }
 
 /**
@@ -383,6 +390,11 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
       };
     }
   }
+  // Store mode: no headshot leaves, including one a caller-supplied map
+  // carried in (the offseason sample's).
+  if (input.mflOnly) {
+    for (const id of Object.keys(playerMeta)) playerMeta[id] = { ...playerMeta[id], headshot: '' };
+  }
 
   // One lookup per league, not per franchise: `getLeagueTeamBrands` rebuilds
   // the whole Record per call, so calling it inside the loop would rebuild all
@@ -426,6 +438,7 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
       leagueSlug: slug ?? undefined,
       mflIcon: icons[franchiseId],
       leagueHasMarks,
+      noNflArt: input.mflOnly,
     });
     // Throwback art, when the caller supplied any. `initials` are RE-DERIVED
     // from the era name rather than carried over — they are the text rung's

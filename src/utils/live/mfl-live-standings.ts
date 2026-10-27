@@ -25,6 +25,13 @@ import { CROSS_LEAGUE_FAN_OUT_LIMIT, discoverBoardLeagues } from '../cross-leagu
 import { mapWithConcurrency } from '../fan-out';
 import { resolveMflLiveLeagues } from '../mfl-live-selection';
 import { assembleMflLeagueBoard } from './mfl-league-board';
+import {
+  isStandingsModeLocked,
+  projectStandings,
+  STANDINGS_MODES,
+  type ProjectedStandingsRow,
+  type StandingsMode,
+} from './standings-projection';
 
 export interface LiveStandingsLeague {
   leagueId: string;
@@ -33,12 +40,26 @@ export interface LiveStandingsLeague {
   standings: LiveStandingsRow[] | null;
   /** This week's matchups — what the Live and Projected views add. */
   matchups: LiveMatchup[];
+  /**
+   * Store mode only: the table's views, already built by `projectStandings`.
+   *
+   * The app cannot import site code, and a second copy of the "never count a
+   * week twice" overlay on a phone is the copy that drifts. So the server
+   * builds every view the viewer may see, and a locked view is simply absent
+   * — the lock is enforced here, not trusted to the client. `final` is
+   * always present (never locked); null when `standings` is null.
+   */
+  views?: MflLiveStandingsViews | null;
 }
+
+export type MflLiveStandingsViews = Partial<Record<StandingsMode, ProjectedStandingsRow[]>>;
 
 export interface MflLiveStandings {
   week: number;
   year: number;
   leagues: LiveStandingsLeague[];
+  /** Store mode only: Live and Projected need MFL Live Pro, and are absent from `views`. */
+  proLocked?: boolean;
 }
 
 export interface AssembleMflLiveStandingsInput {
@@ -48,6 +69,28 @@ export interface AssembleMflLiveStandingsInput {
   /** `?leagues=` — a CHECK against what the session may see, never an input. */
   leaguesParam?: string | null;
   leaguesCookie?: string | null;
+  /**
+   * The store build of the MFL Live app (`?source=mfl`): MFL data only, with
+   * no headshots and no NFL club marks or colours on any row or matchup.
+   * Pinned by `tests/mfl-live-standings-store.test.ts`.
+   */
+  mflOnly?: boolean;
+  /** Store mode only: withhold the Pro views (`hasMflLivePro` decides). */
+  proLocked?: boolean;
+}
+
+/** Every view of one table this viewer may see. See `LiveStandingsLeague.views`. */
+export function standingsViewsFor(
+  table: Pick<LiveStandingsLeague, 'standings' | 'matchups'>,
+  proLocked: boolean,
+): MflLiveStandingsViews | null {
+  if (!table.standings) return null;
+  const views: MflLiveStandingsViews = {};
+  for (const mode of STANDINGS_MODES) {
+    if (isStandingsModeLocked(mode, proLocked)) continue;
+    views[mode] = projectStandings(table.standings, table.matchups, mode);
+  }
+  return views;
 }
 
 export async function assembleMflLiveStandings(
@@ -61,7 +104,13 @@ export async function assembleMflLiveStandings(
   const on = leagues.filter((l) => enabled.includes(l.id));
 
   const settled = await mapWithConcurrency(on, CROSS_LEAGUE_FAN_OUT_LIMIT, async (league) => {
-    const { board } = await assembleMflLeagueBoard({ user, league, week, year });
+    const { board } = await assembleMflLeagueBoard({
+      user,
+      league,
+      week,
+      year,
+      mflOnly: input.mflOnly === true,
+    });
     return board.panels[0];
   });
 
@@ -76,5 +125,14 @@ export async function assembleMflLiveStandings(
     };
   });
 
+  if (input.mflOnly) {
+    const proLocked = input.proLocked === true;
+    return {
+      week,
+      year,
+      proLocked,
+      leagues: tables.map((t) => ({ ...t, views: standingsViewsFor(t, proLocked) })),
+    };
+  }
   return { week, year, leagues: tables };
 }
