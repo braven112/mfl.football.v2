@@ -21,17 +21,20 @@ import type {
   MflLiveAppDraftQueueResponse,
   MflLiveAppDraftSlot,
 } from '@mfl/shared-types/mfl-live-app-draft';
+import type { MflLiveAppAuctionRoom } from '@mfl/shared-types/mfl-live-app-auction';
 import { ApiError, apiGet, apiPost, SignedOutError } from '../api';
 import { useSession } from '../session-context';
 import type { RootStackParamList } from '../navigation/types';
 import { font, useTheme, type Theme } from '../theme';
+import { AuctionPanel } from './AuctionPanel';
 
-type Tab = 'board' | 'players' | 'queue';
+type Tab = 'board' | 'players' | 'queue' | 'auction';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'board', label: 'Board' },
   { key: 'players', label: 'Players' },
   { key: 'queue', label: 'My queue' },
 ];
+const AUCTION_TAB: { key: Tab; label: string } = { key: 'auction', label: 'Auction' };
 const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
 /**
@@ -45,6 +48,10 @@ const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
  * made once the board shows it. The board re-reads itself on the server's `pollAfterMs` hint (seconds during a live
  * draft, minutes otherwise) and stops while the app is in the background.
  * A failed read keeps the last good board on screen and says so.
+ *
+ * A league that also runs an auction (TheLeague drafts rookies and auctions
+ * free agents) gets an Auction tab; a league that drafts BY auction shows only
+ * the auction.
  */
 export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, 'Draft'>) {
   const t = useTheme();
@@ -66,6 +73,8 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
   const [saving, setSaving] = useState(false);
   const [picking, setPicking] = useState(false);
   const [notice, setNotice] = useState<{ tone?: 'danger'; text: string } | null>(null);
+  const [auction, setAuction] = useState<MflLiveAppAuctionRoom | null>(null);
+  const [auctionError, setAuctionError] = useState<string | null>(null);
 
   const onFailure = useCallback(
     (e: unknown, fallback: string, set: (m: string) => void) => {
@@ -100,10 +109,21 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
     }
   }, [leagueId, token, onFailure]);
 
+  const loadAuction = useCallback(async () => {
+    try {
+      const next = await apiGet<MflLiveAppAuctionRoom>(token, `/api/mfl-live/auction?league=${encodeURIComponent(leagueId)}`);
+      setAuction(next);
+      setAuctionError(null);
+    } catch (e) {
+      onFailure(e, 'MFL Football could not load the auction just now.', setAuctionError);
+    }
+  }, [leagueId, token, onFailure]);
+
   useEffect(() => {
     loadRoom();
     loadPool();
-  }, [loadRoom, loadPool]);
+    loadAuction();
+  }, [loadRoom, loadPool, loadAuction]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => setActive(s === 'active'));
@@ -120,15 +140,24 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
     };
   }, [active, room, loadRoom]);
 
+  const auctionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!active || !auction || auction.kind === 'none') return;
+    auctionTimer.current = setTimeout(loadAuction, auction.pollAfterMs);
+    return () => {
+      if (auctionTimer.current) clearTimeout(auctionTimer.current);
+    };
+  }, [active, auction, loadAuction]);
+
   useEffect(() => {
     if (room) navigation.setOptions({ title: `${room.leagueName} draft` });
   }, [room?.leagueName, navigation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadRoom(), loadPool()]);
+    await Promise.all([loadRoom(), loadPool(), loadAuction()]);
     setRefreshing(false);
-  }, [loadRoom, loadPool]);
+  }, [loadRoom, loadPool, loadAuction]);
 
   const teamName = useMemo(() => {
     const names = new Map(room?.teams.map((x) => [x.franchiseId, x.name]) ?? []);
@@ -261,17 +290,23 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
     );
   }
 
+  const auctionPanel = (
+    <AuctionPanel
+      auction={auction}
+      error={auctionError}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      teamName={teamName}
+      onPlayer={(playerId) => navigation.navigate('PlayerCard', { leagueId, playerId })}
+      t={t}
+    />
+  );
+
   if (room.kind === 'auction') {
-    return (
-      <View style={[styles.content, { backgroundColor: t.ground, flex: 1 }]}>
-        <Notice
-          t={t}
-          title="Auction drafts aren’t in the app yet"
-          body="This league drafts by auction. The app’s draft room runs pick-by-pick drafts for now."
-        />
-      </View>
-    );
+    return <View style={[styles.screen, { backgroundColor: t.ground, paddingTop: 12 }]}>{auctionPanel}</View>;
   }
+  const tabs = auction && auction.kind !== 'none' ? [...TABS, AUCTION_TAB] : TABS;
+  const outbid = auction?.lots.filter((l) => l.outbid).length ?? 0;
 
   return (
     <View style={[styles.screen, { backgroundColor: t.ground }]}>
@@ -299,7 +334,7 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
           </View>
         ) : null}
         <View style={[styles.tabs, { borderColor: t.border }]}>
-          {TABS.map((x) => (
+          {tabs.map((x) => (
             <Pressable
               key={x.key}
               onPress={() => setTab(x.key)}
@@ -310,6 +345,7 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
               <Text style={[styles.tabText, { color: tab === x.key ? t.onAccent : t.muted }]}>
                 {x.label}
                 {x.key === 'queue' && room.queue ? `  ${queueIds.length}` : ''}
+                {x.key === 'auction' && outbid ? `  ${outbid}!` : ''}
               </Text>
             </Pressable>
           ))}
@@ -427,6 +463,8 @@ export function DraftScreen({ route, navigation }: NativeStackScreenProps<RootSt
           contentContainerStyle={styles.list}
         />
       ) : null}
+
+      {tab === 'auction' ? auctionPanel : null}
     </View>
   );
 }
