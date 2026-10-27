@@ -21,6 +21,8 @@ export interface Theme {
   win: string;
   danger: string;
   field: string;
+  /** Dims the screen behind a sheet or menu. */
+  scrim: string;
 }
 
 const mflLive: Theme = {
@@ -36,6 +38,7 @@ const mflLive: Theme = {
   win: '#4ade80',
   danger: '#ff8a80',
   field: '#282c33',
+  scrim: 'rgba(0, 0, 0, 0.6)',
 };
 
 export function useTheme(): Theme {

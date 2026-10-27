@@ -176,6 +176,12 @@ describe('only the MFL Live surfaces read an open session', () => {
 		// The phone remote for those TVs: it reads only the owner's own TV list,
 		// keyed league + franchise (`ownerKeyFor`), and sends display commands.
 		'src/pages/api/broadcast-tv/remote.ts',
+		// The MFL Football app's "manage your team" endpoints
+		// (src/pages/api/mfl-live/*) read the session ONLY through this file,
+		// which honours a league only when the owner's own MFL account lists a
+		// team there and hands back that franchise (never the request's).
+		// tests/mfl-live-owner-league.test.ts pins every endpoint to it.
+		'src/utils/live/owner-league.ts',
 	]);
 
 	function walk(dir: string, out: string[] = []): string[] {
