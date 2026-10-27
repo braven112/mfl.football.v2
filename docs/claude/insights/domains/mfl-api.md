@@ -123,9 +123,54 @@
 - In tests, `resolveWeekLineup` and friends read committed feeds from
   `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
   year asserts against bot-synced data and fails later, on `main`.
+- **League chat has NO export.** Read it from the public file
+  `<host>/fflnetdynamic<year>/<league>_chat.xml` (404 = never chatted), post
+  with `import?TYPE=chat_save`. `src/utils/mfl-chat.ts`; entry 2026-10-27.
 <!-- /CURATED-HEAD -->
 
 ---
+
+## 2026-10-27 - League Chat Is A Static File, Not An Export
+
+**Context:** The MFL Football app (package N) needed to read and post a league's
+own MFL chat, in any MFL league. The export list has no chat type, and this
+sandbox could not reach MFL, so a temporary read-only GitHub Actions probe
+(`scripts/probe-mfl-chat.mjs`, deleted after) read MFL's API reference and the
+files themselves.
+
+**Insight:** MFL's API reference, `chat_save` entry, verbatim: "Posts a message
+to the league chat. Note that there's no API to get the chat messages. Those
+are available via the XML file located at
+http://HOST.myfantasyleague.com/fflnetdynamicYEAR/LEAGUE_ID_chat.xml … This
+file might not exist if no chat messages have been written to your league, so
+your client needs to handle a 404." Its params are `L`, `MESSAGE`
+(URL-encoded) and optional `TO_FID` (visible to that franchise only).
+
+What the live files showed (TheLeague and the AFL, 2025 and 2026):
+- `<messages><message id franchise_id message posted/>…</messages>`, attributes
+  in no fixed order, **newest first**. An empty league ships
+  `<messages></messages>`, not a 404.
+- **Public**: identical bytes with and without the owner cookie. XML only:
+  `_chat.json` is a 404.
+- `id` is a 16-character string, unique, and does NOT sort with time. It is
+  the only stable key.
+- `posted` is a display string in the league's zone, `Sat Aug 30 7:40:40 p.m.
+  PT 2025`, which `Date.parse` rejects. `parseMflChatPosted` places it.
+- MFL keeps a bounded tail (41 messages in the AFL's 2025 file), so a stored
+  "last read" id can fall out of the file.
+- No sampled message carried a recipient attribute, so it is unknown whether a
+  `TO_FID` message appears in this public file at all. The parser keeps any
+  `to…` attribute as `toFranchiseId` and readers hide it from everyone else.
+- Sent as an EXPORT to a league host, `chat_save` answers "This API request
+  must go to api.myfantasyleague.com". The import therefore posts to the api
+  host. Not yet confirmed by a real write: the probe wrote nothing.
+
+**Implication:** Never poll an export for chat; fetch the file, treat 404 as
+empty and non-XML (a throttled HTML page) as unavailable. Key dedupe and
+unread markers on `id`, scoped by league id AND franchise id.
+
+**Related Files:** `src/utils/mfl-chat.ts`, `src/utils/mfl-chat-read-state.ts`,
+`src/pages/api/mfl-live/chat.ts`, `tests/mfl-chat.test.ts`.
 
 ## 2026-09-04 - The Cookie Guard Only Sees Cookies It Can Read In The Call
 
