@@ -235,7 +235,7 @@ const preview = definePreview({
           // MFL Live's surface. Not a registry league — it is a theme key for
           // the shared host, and the one surface whose card ground differs
           // from both TheLeague's and the AFL's.
-          { value: 'mfl', title: 'MFL Live' },
+          { value: 'mfl', title: 'MFL Football' },
         ],
         dynamicTitle: true,
       },

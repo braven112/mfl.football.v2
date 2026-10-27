@@ -62,7 +62,7 @@
     {
       "date": "2026-10-22",
       "type": "new-feature",
-      "summary": "Archie's members get their own Archie's-branded sign-in for MFL Live, and land on live scoring once they're in.",
+      "summary": "Archie's members get their own Archie's-branded sign-in for MFL Football, and land on live scoring once they're in.",
       "impact": "user",
       "area": "live-scoring",
       "league": "archies",
@@ -70,12 +70,12 @@
       "headline": "Live scoring, signed in under Archie's own colors",
       "lede": "Follow the live scoring link from the league site and you get a sign-in with Archie's own mark on it. One MyFantasyLeague sign-in later, every league you play in is scoring on one board.",
       "image": "/assets/whats-new/archies-live-sign-in.webp",
-      "imageAlt": "The MFL Live sign-in page wearing the Archie's head and wordmark above the username and password fields"
+      "imageAlt": "The MFL Football sign-in page wearing the Archie's head and wordmark above the username and password fields"
     },
     {
       "date": "2026-10-22",
       "type": "enhancement",
-      "summary": "MFL Live now offers to install itself on your phone's Home Screen, so live scoring opens like an app on game day.",
+      "summary": "MFL Football now offers to install itself on your phone's Home Screen, so live scoring opens like an app on game day.",
       "impact": "user",
       "area": "live-scoring",
       "league": "archies"
@@ -83,7 +83,7 @@
     {
       "date": "2026-10-23",
       "type": "enhancement",
-      "summary": "MFL Live adds a See all games link beside each league's name, so every game in your league is one tap away.",
+      "summary": "MFL Football adds a See all games link beside each league's name, so every game in your league is one tap away.",
       "impact": "user",
       "area": "live-scoring",
       "league": "archies"
@@ -91,7 +91,7 @@
     {
       "date": "2026-10-22",
       "type": "bug-fix",
-      "summary": "The MFL Live menu now links only to your own league, not every league on the site.",
+      "summary": "The MFL Football menu now links only to your own league, not every league on the site.",
       "impact": "user",
       "area": "live-scoring",
       "league": "archies"
@@ -195,7 +195,7 @@
     {
       "date": "2026-10-22",
       "type": "bug-fix",
-      "summary": "Before kickoff, MFL Live's Halloween header now shows its Monster of the Week and Scariest Game cards waiting for the first scores, instead of a blank space.",
+      "summary": "Before kickoff, MFL Football's Halloween header now shows its Monster of the Week and Scariest Game cards waiting for the first scores, instead of a blank space.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -219,7 +219,7 @@
     {
       "date": "2026-10-22",
       "type": "bug-fix",
-      "summary": "Tapping between MFL Live pages now shows a loading bar and dims the page right away, so a slow page like Live standings no longer looks like the tap didn't register.",
+      "summary": "Tapping between MFL Football pages now shows a loading bar and dims the page right away, so a slow page like Live standings no longer looks like the tap didn't register.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -259,7 +259,7 @@
     {
       "date": "2026-10-24",
       "type": "style-tweak",
-      "summary": "The MFL Live home page now shows the Broadcast in real rooms: next to the game on a second TV, on a wall of TVs, and on a tablet.",
+      "summary": "The MFL Football home page now shows the Broadcast in real rooms: next to the game on a second TV, on a wall of TVs, and on a tablet.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -381,6 +381,14 @@
       "date": "2026-10-26",
       "type": "bug-fix",
       "summary": "In the Google TV app, the menu's sign-in now opens the phone QR code instead of a password form you'd type with the remote.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-27",
+      "type": "enhancement",
+      "summary": "MFL Live is now called MFL Football, on the site and in the Google TV app. Same address, same sign-in, nothing to redo.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"

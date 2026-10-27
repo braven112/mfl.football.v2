@@ -69,7 +69,7 @@ if (limit.allowed) {
 const shortHost = Astro.url.host.replace(/^www\./, '');
 ---
 
-<MflAppLayout title="Watch on your TV — MFL Live" description="Pair this TV with your MFL Live broadcast.">
+<MflAppLayout title="Watch on your TV — MFL Football" description="Pair this TV with your MFL Football broadcast.">
   <section class="tvp" aria-labelledby="tvp-title">
     {pairing ? (
       <div
@@ -79,11 +79,11 @@ const shortHost = Astro.url.host.replace(/^www\./, '');
         data-expires={String(pairing.expiresAt)}
       >
         <div class="tvp__copy">
-          <p class="tvp__eyebrow"><span class="tvp__dot" aria-hidden="true"></span> MFL Live · Broadcast</p>
+          <p class="tvp__eyebrow"><span class="tvp__dot" aria-hidden="true"></span> MFL Football · Broadcast</p>
           <h1 id="tvp-title" class="tvp__title">Put your Sunday on this TV</h1>
           <ol class="tvp__steps">
             <li><span>1</span><p>Point your phone&rsquo;s camera at the code.</p></li>
-            <li><span>2</span><p>Sign in to MFL Live if it asks, then tap <strong>Approve</strong>.</p></li>
+            <li><span>2</span><p>Sign in to MFL Football if it asks, then tap <strong>Approve</strong>.</p></li>
             <li><span>3</span><p>This screen switches to your board on its own.</p></li>
           </ol>
           <p class="tvp__alt">

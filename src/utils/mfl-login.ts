@@ -493,7 +493,7 @@ export async function authenticateWithMFL(
         franchiseId: '',
         leagueId: '',
         role: 'owner',
-        error: 'MFL Live is invite-only for now, and none of your MyFantasyLeague leagues are part of it yet.',
+        error: 'MFL Football is invite-only for now, and none of your MyFantasyLeague leagues are part of it yet.',
       };
     }
 
