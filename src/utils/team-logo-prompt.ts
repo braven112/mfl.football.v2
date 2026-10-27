@@ -23,8 +23,11 @@ import type {
   MflLiveAppLogoKind,
   MflLiveAppLogoOption,
   MflLiveAppLogoColor,
+  MflLiveAppLogoColorNote,
+  MflLiveAppLogoSuggestion,
 } from '../../packages/shared-types/src/mfl-live-app-logo';
 import { NFL_TEAM_NAMES } from './nfl-logo';
+import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 
 export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
   { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest' },
@@ -61,6 +64,35 @@ export const LOGO_COLORS: MflLiveAppLogoColor[] = [
 ];
 
 export const LOGO_MAX_COLORS = 3;
+
+/**
+ * One-tap colour sets that read well together and stay apart when tiny: every
+ * two colours in a set clear `LOGO_MIN_CONTRAST`, which
+ * tests/team-logo-prompt.test.ts checks, so a set added here cannot be a
+ * pair that blurs into one blob at 40 px.
+ */
+export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
+  { label: 'Red, white and black', hexes: ['#C8102E', '#FFFFFF', '#111111'] },
+  { label: 'Navy and gold', hexes: ['#13294B', '#FFB81C'] },
+  { label: 'Royal and white', hexes: ['#1D4ED8', '#FFFFFF'] },
+  { label: 'Forest and cream', hexes: ['#1E5631', '#F3E9D2'] },
+  { label: 'Kelly green and white', hexes: ['#00843D', '#FFFFFF'] },
+  { label: 'Purple and gold', hexes: ['#4C1D95', '#FFB81C'] },
+  { label: 'Black and orange', hexes: ['#111111', '#F26B1D'] },
+  { label: 'Maroon and gold', hexes: ['#6B1F2A', '#FFB81C'] },
+  { label: 'Navy and silver', hexes: ['#13294B', '#A5ACAF'] },
+  { label: 'Teal, black and white', hexes: ['#0F766E', '#111111', '#FFFFFF'] },
+];
+
+/**
+ * Two colours in a logo must differ by at least WCAG's 3:1 for graphics
+ * (1.4.11, the same bar as large text), or they merge when the logo is small.
+ */
+export const LOGO_MIN_CONTRAST = AA_LARGE_TEXT_RATIO;
+
+/** The grounds a logo sits on: the app's dark cards and the site's white pages. */
+const DARK_GROUND = '#14161A';
+const LIGHT_GROUND = '#FFFFFF';
 
 export const LOGO_KINDS: Array<MflLiveAppLogoOption<MflLiveAppLogoKind>> = [
   { id: 'icon', label: 'Square icon' },
@@ -107,7 +139,67 @@ export function colorsText(hexes: string[]): string {
   return named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}` : named[0];
 }
 
-const ORIGINAL =
+function colorName(hex: string): string {
+  return LOGO_COLORS.find((c) => c.hex === hex)?.name ?? hex;
+}
+
+const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/**
+ * Whether the owner's colours work together, in words: any two that are too
+ * close to tell apart, else a nod. Also whether the whole set disappears on a
+ * dark or a light ground, which the prompt then fixes with an outline.
+ */
+export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote; outline?: 'light' | 'dark' } {
+  const outline = hexes.every((h) => contrastRatio(h, DARK_GROUND) < LOGO_MIN_CONTRAST)
+    ? 'light'
+    : hexes.every((h) => contrastRatio(h, LIGHT_GROUND) < LOGO_MIN_CONTRAST)
+      ? 'dark'
+      : undefined;
+  const ground =
+    outline === 'light'
+      ? ' All of them are dark, so we asked for a thin white outline to show on dark screens.'
+      : outline === 'dark'
+        ? ' All of them are light, so we asked for a thin dark outline to show on white pages.'
+        : '';
+
+  let worst: { a: string; b: string; ratio: number } | null = null;
+  for (let i = 0; i < hexes.length; i++) {
+    for (let j = i + 1; j < hexes.length; j++) {
+      const ratio = contrastRatio(hexes[i], hexes[j]);
+      if (!worst || ratio < worst.ratio) worst = { a: hexes[i], b: hexes[j], ratio };
+    }
+  }
+
+  if (!worst) {
+    return {
+      outline,
+      note: { tone: 'tip', text: `One color makes a simple mark. Add a much lighter or darker second color so details show.${ground}` },
+    };
+  }
+  if (worst.ratio < LOGO_MIN_CONTRAST) {
+    return {
+      outline,
+      note: {
+        tone: 'weak',
+        text:
+          `${capital(colorName(worst.a))} and ${colorName(worst.b)} are too close to tell apart on a small logo ` +
+          `(${worst.ratio.toFixed(1)}:1, aim for 3:1). Swap one for a much lighter or darker color, or tap a suggested set.${ground}`,
+      },
+    };
+  }
+  return {
+    outline,
+    note: { tone: 'good', text: `Good contrast: these colors stay distinct even when the logo is tiny.${ground}` },
+  };
+}
+
+const OUTLINE: Record<'light' | 'dark', string> = {
+  light: 'Give the logo a thin white outline so it stands out on dark backgrounds.',
+  dark: 'Give the logo a thin dark outline so it stands out on white backgrounds.',
+};
+
+const ORIGINAL_RULE =
   'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
 
 /**
@@ -121,16 +213,19 @@ export function writeLogoPrompt(input: {
   stylePhrase: string;
   colors: string;
   kind: MflLiveAppLogoKind;
+  /** Asks for an outline when every colour vanishes on one of our grounds. */
+  outline?: 'light' | 'dark';
 }): string {
   const { teamName, idea, stylePhrase, colors, kind } = input;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
+  const closing = input.outline ? `${OUTLINE[input.outline]} ${ORIGINAL_RULE}` : ORIGINAL_RULE;
   if (kind === 'banner') {
     return (
       `Design a wide team banner for a fantasy football team called "${teamName}". ` +
       `On the left, the team logo: ${subject}. To its right, the team name in big, bold letters. ` +
       `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
       'No gradients, no photo textures. Transparent background, 1900 × 316 pixels (6:1), ' +
-      `with the logo and name filling the height. ${ORIGINAL}`
+      `with the logo and name filling the height. ${closing}`
     );
   }
   if (kind === 'svg') {
@@ -138,7 +233,7 @@ export function writeLogoPrompt(input: {
       `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
       `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
       'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL} Reply with the SVG code only.`
+      `It must stay recognizable when shrunk to 40 pixels. ${closing} Reply with the SVG code only.`
     );
   }
   return (
@@ -146,7 +241,7 @@ export function writeLogoPrompt(input: {
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
     'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL}`
+    `It must stay recognizable when shrunk to 40 pixels. ${closing}`
   );
 }
 
@@ -169,6 +264,7 @@ export interface BuiltLogoPrompt {
   choice: Required<MflLiveAppLogoChoice>;
   prompt: string;
   warning?: string;
+  colorNote: MflLiveAppLogoColorNote;
 }
 
 /**
@@ -186,10 +282,20 @@ export function buildTeamLogoPrompt(
   const colors = pickLogoColors(sent?.colors);
   const kind = LOGO_KINDS.find((k) => k.id === sent?.kind)?.id ?? DEFAULT_LOGO_CHOICE.kind;
 
+  const advice = logoColorAdvice(colors);
+
   return {
     choice: { teamName, idea, style: style.id, colors, kind },
-    prompt: writeLogoPrompt({ teamName, idea, stylePhrase: style.phrase, colors: colorsText(colors), kind }),
+    prompt: writeLogoPrompt({
+      teamName,
+      idea,
+      stylePhrase: style.phrase,
+      colors: colorsText(colors),
+      kind,
+      outline: advice.outline,
+    }),
     warning: nflNameWarning(teamName, idea),
+    colorNote: advice.note,
   };
 }
 
@@ -198,6 +304,7 @@ export function logoPromptOptions() {
   return {
     styles: LOGO_STYLES.map(({ id, label }) => ({ id, label })),
     colors: LOGO_COLORS,
+    suggestions: LOGO_COLOR_SUGGESTIONS,
     maxColors: LOGO_MAX_COLORS,
     kinds: LOGO_KINDS,
   };

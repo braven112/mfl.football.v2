@@ -27,6 +27,19 @@ export interface MflLiveAppLogoColor {
   hex: string;
 }
 
+/** A one-tap colour set whose colours all clear 3:1 against each other. */
+export interface MflLiveAppLogoSuggestion {
+  label: string;
+  hexes: string[];
+}
+
+/** Whether the picked colours work together, in a sentence. */
+export interface MflLiveAppLogoColorNote {
+  /** good: distinct; weak: two are too close; tip: one colour only. */
+  tone: 'good' | 'weak' | 'tip';
+  text: string;
+}
+
 /** The owner's choices, as the app sends them. */
 export interface MflLiveAppLogoChoice {
   /** The team name to draw. Empty means the team's MFL name. */
@@ -47,6 +60,8 @@ export interface MflLiveAppLogoPrompt {
   styles: MflLiveAppLogoOption[];
   /** The colour grid. Any other hex the owner types is accepted too. */
   colors: MflLiveAppLogoColor[];
+  /** Colour sets that read well together, shown above the grid. */
+  suggestions: MflLiveAppLogoSuggestion[];
   /** Most colours an owner may pick: a logo needs two or three to read when small. */
   maxColors: number;
   kinds: MflLiveAppLogoOption<MflLiveAppLogoKind>[];
@@ -54,6 +69,8 @@ export interface MflLiveAppLogoPrompt {
   choice: Required<MflLiveAppLogoChoice>;
   /** The finished prompt to copy or share. */
   prompt: string;
+  /** How well the picked colours stand apart. */
+  colorNote: MflLiveAppLogoColorNote;
   /** Set when the name or idea reads like an NFL club, which the art must not copy. */
   warning?: string;
 }

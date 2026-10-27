@@ -154,7 +154,36 @@ export function TeamLogoScreen({ route }: Props) {
         </View>
       </Field>
 
-      <Field t={t} label={`Colors · pick up to ${data.maxColors}`}>
+      <Field t={t} label="Colors that work well together">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>
+          {data.suggestions.map((sg) => {
+            const on = sg.hexes.join() === choice.colors.join();
+            return (
+              <Pressable
+                key={sg.label}
+                accessibilityRole="button"
+                accessibilityLabel={sg.label}
+                accessibilityState={{ selected: on }}
+                onPress={() => set({ colors: [...sg.hexes] })}
+                style={({ pressed }) => [
+                  styles.suggestion,
+                  { borderColor: on ? t.accent : t.border, backgroundColor: t.card },
+                  pressed ? styles.pressed : null,
+                ]}
+              >
+                <View style={styles.suggestionDots}>
+                  {sg.hexes.map((hex) => (
+                    <View key={hex} style={[styles.pickedDot, { backgroundColor: hex, borderColor: t.border }]} />
+                  ))}
+                </View>
+                <Text style={[styles.chipText, { color: t.text }]}>{sg.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </Field>
+
+      <Field t={t} label={`Or pick your own · up to ${data.maxColors}`}>
         <View style={styles.chips}>
           {data.colors.map((c) => {
             const at = choice.colors.indexOf(c.hex);
@@ -225,6 +254,16 @@ export function TeamLogoScreen({ route }: Props) {
             <Text style={[styles.hint, { color: t.muted }]}>No colors picked, so the prompt uses red and white.</Text>
           ) : null}
         </View>
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[
+            styles.hint,
+            { color: data.colorNote.tone === 'good' ? t.win : data.colorNote.tone === 'weak' ? t.danger : t.muted },
+          ]}
+        >
+          {data.colorNote.tone === 'good' ? '✓ ' : data.colorNote.tone === 'weak' ? '! ' : ''}
+          {data.colorNote.text}
+        </Text>
       </Field>
 
       <Field t={t} label="Make">
@@ -320,6 +359,9 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: font.medium, fontSize: 14 },
   swatch: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   swatchBadge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  suggestions: { gap: 8, paddingRight: 16 },
+  suggestion: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
+  suggestionDots: { flexDirection: 'row', gap: 4 },
   swatchBadgeText: { fontFamily: font.bold, fontSize: 12 },
   typedRow: { flexDirection: 'row', gap: 8 },
   typedInput: { flex: 1 },
