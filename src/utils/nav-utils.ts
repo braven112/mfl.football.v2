@@ -20,6 +20,7 @@ import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav'
 import { NAV_COOKIES, isAflFamily } from '../types/nav';
 import { isDemoEnv } from './demo-isolation-core.mjs';
 import { navConfig, getRouteEquivalence, getAdminFranchiseIds } from '../config/nav-config';
+import LEAGUE_ROUTES from '../data/league-routes.json';
 import {
   ALL_LEAGUES,
   getLeagueByNavSlug,
@@ -532,6 +533,18 @@ export function getVisibleSections(
  * getEquivalentRoute('/theleague/some-page', 'afl');
  * // Returns: '/afl-fantasy' (fallback to home)
  */
+/**
+ * Whether the league at `prefix` serves `pagePath`. The equivalence map names a
+ * page once for every league, but not every league has every page: Best Ball is
+ * draft-only, so the AFL's standings switched to a /best-ball-1/standings that
+ * 404s. A league missing from the generated list keeps the old behavior.
+ */
+function targetHasRoute(prefix: string, pagePath: string): boolean {
+  const routes = (LEAGUE_ROUTES as Record<string, string[]>)[prefix.slice(1)];
+  if (!routes) return true;
+  return routes.includes(pagePath.split('?')[0]);
+}
+
 export function getEquivalentRoute(
   currentPath: string,
   targetLeague: LeagueSlug
@@ -566,12 +579,12 @@ export function getEquivalentRoute(
   const fullPath = queryString ? `${pathname}?${queryString}` : pathname;
 
   // Check if this exact path (with query) exists in equivalence map
-  if (routeMap[fullPath]) {
+  if (routeMap[fullPath] && targetHasRoute(targetPrefix, routeMap[fullPath])) {
     return `${targetPrefix}${routeMap[fullPath]}`;
   }
 
   // Check if the base path (without query) exists
-  if (routeMap[pathname]) {
+  if (routeMap[pathname] && targetHasRoute(targetPrefix, routeMap[pathname])) {
     const basePath = routeMap[pathname];
     return queryString ? `${targetPrefix}${basePath}?${queryString}` : `${targetPrefix}${basePath}`;
   }
