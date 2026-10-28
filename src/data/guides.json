@@ -83,16 +83,27 @@
   },
   {
     "slug": "tv-app",
-    "title": "MFL Football on Google TV",
-    "summary": "Put your fantasy score, win chance and lineups on top of the game you're watching, and jump to the games your players are in.",
+    "title": "MFL Football on your TV",
+    "summary": "Watch the broadcast board on any TV, and on Google TV put your score, win chance and lineups on top of the game you're watching.",
     "icon": "scoreboard-2",
-    "updated": "2026-10-26",
+    "updated": "2026-10-27",
     "leagues": [
       "theleague",
       "afl"
     ],
     "body": [
-      "The MFL Football TV app does two things. Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
+      "There are two ways to watch on a TV. On a <strong>Google TV</strong>, the MFL Football app shows the full broadcast board and can also draw your scores over the game you're watching. On most other TVs and on Xbox, the TV's own web browser shows the same board, with no app to install.",
+      {
+        "type": "list",
+        "heading": "Which TV do you have?",
+        "items": [
+          "<strong>Google TV or Android TV.</strong> This includes most Sony TVs, many TCL and Hisense TVs, and a Chromecast or Google TV Streamer. Use the app, below.",
+          "<strong>Fire TV, Samsung, LG or Xbox.</strong> Use the web browser. The steps are under <em>Watch in your TV's browser</em>.",
+          "<strong>Roku or Apple TV.</strong> These have no web browser and there's no MFL Football app for them yet. Plug a Google TV stick, such as the Google TV Streamer or an onn 4K stick, into a spare HDMI port and use the app.",
+          "<strong>Not sure?</strong> Press Home on the remote. The home screen names the system: Google TV, Fire TV, Roku, Tizen (Samsung), webOS (LG) or VIDAA (Hisense). VIDAA's browser hasn't been tested, so a Google TV stick is the safe choice there."
+        ]
+      },
+      "<strong>The MFL Football app on Google TV.</strong> Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
       {
         "type": "list",
         "heading": "Get the app",
@@ -122,7 +133,30 @@
           "<strong>Back to the game.</strong> Back returns to the score bar, and so does any other button, so the next press reaches your TV app. The panel also drops back to the bar after 30 seconds. To close the overlay altogether, pick <strong>Hide overlay</strong> at the bottom of the Watch list."
         ]
       },
-      "The overlay is still new, so tell Brandon what works on your TV and what doesn't."
+      {
+        "type": "list",
+        "heading": "Watch in your TV's browser",
+        "items": [
+          "<strong>Open the browser.</strong> On Samsung it's the <strong>Internet</strong> app. On LG it's <strong>Web Browser</strong>. On Fire TV it's <strong>Silk Browser</strong>; if it isn't on your home screen, search for Silk and install it, it's free. On Xbox it's <strong>Microsoft Edge</strong>, under My games &amp; apps.",
+          "<strong>Go to mfl.football/tv.</strong> Type it into the address bar with the remote. A QR code appears.",
+          "<strong>Sign in with your phone.</strong> Point your phone's camera at the QR code, sign in if it asks, then tap <strong>Approve</strong>. The TV switches to the Broadcast page on its own. The TV only gets to watch; your sign-in stays on your phone.",
+          "<strong>Turn on sound first.</strong> Select <strong>Sound off</strong> next to the big button so it reads Sound on. A browser only plays sound after you've pressed something on the page, and that button isn't on screen once the board is full screen.",
+          "<strong>Go full screen.</strong> Select <strong>Go full screen</strong>. Back, or B on an Xbox controller, comes back out. If your browser can't do full screen, the same button opens the board on a page of its own that fills the screen instead.",
+          "<strong>Bookmark it.</strong> Add a bookmark for mfl.football/tv in the browser. Next time the board opens straight away, without the QR code."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Browser tips",
+        "items": [
+          "<strong>Keep the TV awake.</strong> The board asks the browser to keep the screen on, but not every TV browser listens, and none of them stops the TV's own power-off timer. Turn both off before kickoff to be safe. On Fire TV: Settings › Display &amp; Sounds › Screensaver › Start Time › Never. On Samsung and LG, look for the screen saver and Auto Power Off settings, usually under General or Energy Saving. On Xbox: Settings › General › Power options.",
+          "<strong>Using the remote.</strong> The board runs on its own, so you don't need to touch it. To steer it with the TV remote, open <strong>mfl.football/live/broadcast?view=board</strong> on the TV, the board on a page of its own. There, Down takes the player strip at the bottom and Left and Right flip its pages, and Up picks a game in the header, where OK shows just that game's two rosters. Back returns to the full board.",
+          "<strong>Steer from your phone.</strong> Some TV browsers, and Edge on Xbox, move an on-screen pointer with the arrows instead of passing them to the page. Your phone works on any of them: open <strong>mfl.football/live/broadcast?view=board</strong> on the phone, tap <strong>TV remote</strong> and pick the TV.",
+          "<strong>Older TVs.</strong> Browsers on TVs from before about 2020 may be too old to draw the board properly. If yours shows a blank or broken page, a Google TV stick is the fix."
+        ]
+      },
+      "<strong>What the browser can't do.</strong> The score overlay over the game only works in the Google TV app, because a web page can't draw on top of another app. The browser shows the board on its own screen, so you switch between it and the game. A Google TV stick in any TV's HDMI port gets you the overlay.",
+      "The overlay and the browser board are still new, so tell Brandon what works on your TV and what doesn't."
     ]
   }
 ]
