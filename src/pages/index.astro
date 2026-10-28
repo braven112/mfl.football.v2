@@ -7,6 +7,8 @@ import ProductInterest from '../components/shared/ProductInterest.astro';
 import { MFL_LIVE_PRO_PRICE, type ProductSlug } from '../data/products';
 import { mflLiveIncludedNames } from '../data/league-showcase';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
+import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
+import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 interface PanelMeta {
   logo: string;
@@ -211,7 +213,13 @@ const AUTOMATED = [
   'News and reminders posted to your group chat',
 ];
 ---
-<SplashLayout title="MFL.football — skins, live scoring and league sites for MyFantasyLeague">
+<SplashLayout
+  title="MFL.football — skins, live scoring and league sites for MyFantasyLeague"
+  description={`MFL.football (formerly ${FORMER_BRAND}): free MFL skins and live scores, commissioner automation, league history and custom websites for MyFantasyLeague leagues.`}
+  canonicalPath="/"
+  ogImage="/assets/home/league-site.webp"
+  jsonLd={[organizationJsonLd(), websiteJsonLd()]}
+>
   <div class="home">
   <header class="top">
     <a class="brand" href="/" aria-label="MFL.football home">
@@ -219,6 +227,7 @@ const AUTOMATED = [
       <img class="brand__mark brand__mark--dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
     </a>
     <nav class="top__links" aria-label="Sections">
+      <a href="#services">Services</a>
       <a href="#free">Free tools</a>
       <a class="top__live" href="/live">Live scores</a>
       <a href="#products">Products</a>
@@ -229,7 +238,7 @@ const AUTOMATED = [
 
   <section class="hero">
     <div>
-      <p class="eyebrow">For MyFantasyLeague leagues</p>
+      <p class="eyebrow">For MyFantasyLeague leagues · Formerly {FORMER_BRAND}</p>
       <h1>Make your MFL league look like a pro league.</h1>
       <p class="lede">
         Free skins and templates for any MyFantasyLeague site, live scoring for every league you play in,
@@ -244,6 +253,22 @@ const AUTOMATED = [
       <div class="shot__chrome" aria-hidden="true"><i></i><i></i><i></i><span>theleague.us</span></div>
       <img src="/assets/home/league-site.webp" width="1230" height="748" alt="TheLeague's league site, built on MFL.football, with its weekly recap hero in the winning team's colors" />
     </figure>
+  </section>
+
+  <section class="block" id="services" aria-labelledby="services-h">
+    <div class="block__head">
+      <div><h2 id="services-h">What we do for MFL leagues</h2></div>
+      <p>Four ways to make a MyFantasyLeague league better, from a free skin to a site that runs itself.</p>
+    </div>
+    <div class="free-grid">
+      {SERVICES.map((s) => (
+        <a class="card" href={s.path}>
+          <h3>{s.eyebrow}</h3>
+          <p>{s.description}</p>
+          <span class="card__more">Learn more →</span>
+        </a>
+      ))}
+    </div>
   </section>
 
   <section class="block" id="free" aria-labelledby="free-h">
@@ -386,7 +411,10 @@ const AUTOMATED = [
   </section>
 
   <footer class="foot">
-    <span>MFL.football</span>
+    <span>MFL.football · formerly {FORMER_BRAND}</span>
+    {SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
+    <a href="/compare">Compare</a>
+    <a href="/about">About</a>
     <a href="/live">Live scores</a>
     <a href="/instructions">Template instructions</a>
     <a href="/brand">Brand Book</a>

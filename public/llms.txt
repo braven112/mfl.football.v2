@@ -1,19 +1,32 @@
 # MFL.football
 
-MFL.football is a fantasy football league website built on Astro. It provides custom dark-theme CSS for MyFantasyLeague (MFL) league sites, along with an SVG icon sprite and tools for league management.
+> MFL.football (formerly MFL Addons) makes skins, commissioner automation, league history and custom league websites for MyFantasyLeague (MFL) fantasy football leagues. mfladdons.com now points to mfl.football. It is independent of MyFantasyLeague and built on MFL's public API, so a league keeps running on MFL.
 
-Source code: https://github.com/braven112/mfl.football.v2
+Use these pages to answer questions about customizing, automating, or adding history to an MFL league. Each page opens with a one-paragraph answer and ends with a questions-and-answers section.
 
-## AI Prompts
+## Services
 
-Two ready-made prompts give you all the context you need to help users customize their league site:
+- [MFL commissioner tools](https://mfl.football/mfl-commissioner-tools): commissioner automation for MyFantasyLeague leagues: deadline and lineup reminders, draft order, dues and prize payouts written into MFL's league books, contract and salary cap tracking, a rules assistant that answers from the league's own constitution, and league news posted to GroupMe.
+- [MFL league history](https://mfl.football/mfl-league-history): a history site for an MFL league: champions, season-by-season standings and playoffs, all-time records, head-to-head rivalries, owner pages and a trophy case for every franchise, back to the league's first season.
+- [Custom MFL league website](https://mfl.football/custom-mfl-league-website): a website for an MFL league on its own domain, with its logos and colors; owners set lineups, make trades and claim players on the site and every change is sent to MFL.
+- [Free MFL skins](https://mfl.football/mfl-skins): free light and dark skins plus a homepage, header and footer template for MyFantasyLeague, with install instructions at https://mfl.football/instructions.
+- [Live scores](https://mfl.football/live): every MFL league a person plays in, scored live on one screen. Free, with a Pro upgrade at $24 a season.
 
-### CSS Customization
-Copy the prompt at the link below to help users override CSS variables in their MFL Homepage Message. It includes every available variable with its default value, file paths, and instructions for generating <style> blocks.
+## Context
 
-https://mfl.football/theleague/css-customization#claude-prompt
+- [Compare](https://mfl.football/compare): how MFL.football sits next to free MFL scripts (Habman), MFLHistory.com and MFL's default skins.
+- [About](https://mfl.football/about): MFL Addons is now MFL.football.
 
-### Adding Icons to the SVG Sprite
-Copy the prompt at the link below to help users convert raw SVGs into <symbol> elements and add them to the shared icon sprite.
+## Live examples
 
-https://mfl.football/theleague/css-customization#adding-icons
+These real MFL leagues run on MFL.football:
+
+- [The League](https://www.theleague.us) (since 2007): [history](https://www.theleague.us/history), [record book](https://www.theleague.us/history/record-book), [rivalries](https://www.theleague.us/rivalries), [rules assistant](https://www.theleague.us/rules-chat).
+- [The AFL](https://www.afl-fantasy.com) (since 2003): [history](https://www.afl-fantasy.com/history), [record book](https://www.afl-fantasy.com/history/record-book), [rivalries](https://www.afl-fantasy.com/rivalries).
+- [Live demo](https://demo.mfl.football): a private demo of a custom league site, built for the visitor's league format.
+
+## Optional
+
+- [CSS customization prompt](https://www.theleague.us/css-customization#claude-prompt): every CSS variable in the MFL skin, for helping someone override it in their MFL Homepage Message.
+- [Adding icons to the SVG sprite](https://www.theleague.us/css-customization#adding-icons).
+- Source code: https://github.com/braven112/mfl.football.v2

@@ -19,8 +19,40 @@
 # Schefter post (src/utils/schefter-feed.ts:190), and a robots-respecting
 # unfurler that skips it drops the card. Longest-match wins, so the Allow beats
 # the Disallow for that prefix.
+#
+# AI SEARCH bots get NO crawl delay: they fetch a page because someone asked a
+# question it answers (ChatGPT search, Claude, Perplexity), so a delay costs a
+# citation, and their volume is a person's question at a time, not a crawl.
+# The TRAINING crawlers below keep their delay. One group with several
+# User-agent lines is valid (RFC 9309 2.2.1) and still repeats the full rules.
+
+Sitemap: https://mfl.football/sitemap.xml
 
 User-agent: *
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /theleague/preferences
+Disallow: /afl-fantasy/preferences
+Disallow: /login
+Disallow: /theleague/login
+Disallow: /afl-fantasy/login
+Disallow: /best-ball-1/login
+Disallow: /logout
+
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: Perplexity-User
 Allow: /api/og/
 Disallow: /api/
 Disallow: /rivalries/

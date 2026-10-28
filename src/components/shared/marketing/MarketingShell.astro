@@ -1,0 +1,178 @@
+---
+/**
+ * MarketingShell — the chrome for MFL.football's public service pages
+ * (/mfl-commissioner-tools, /mfl-league-history, /custom-mfl-league-website,
+ * /mfl-skins, /about, /compare). Same wordmark, brand tokens and footer as
+ * the homepage (src/pages/index.astro), so a visitor who lands here from a
+ * search moves between them without a seam.
+ *
+ * Every page that uses it is indexable on purpose, so it always passes a
+ * canonical path, a description and its JSON-LD through to SplashLayout.
+ */
+import SplashLayout from '../../../layouts/SplashLayout.astro';
+import ProductInterest from '../ProductInterest.astro';
+import { SERVICES, FORMER_BRAND } from '../../../data/mfl-services';
+import type { JsonLd } from '../../../utils/structured-data';
+
+export interface Props {
+	title: string;
+	description: string;
+	canonicalPath: string;
+	jsonLd?: JsonLd[];
+	ogImage?: string;
+}
+
+const { title, description, canonicalPath, jsonLd = [], ogImage = '/assets/home/league-site.webp' } = Astro.props as Props;
+const here = canonicalPath;
+---
+
+<SplashLayout title={title} description={description} canonicalPath={canonicalPath} jsonLd={jsonLd} ogImage={ogImage}>
+	<div class="mkt">
+		<header class="mkt-top">
+			<a class="mkt-brand" href="/" aria-label="MFL.football home">
+				<img class="mkt-brand__mark mkt-brand__mark--light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
+				<img class="mkt-brand__mark mkt-brand__mark--dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
+			</a>
+			<nav class="mkt-top__links" aria-label="Services">
+				{SERVICES.map((s) => (
+					<a href={s.path} aria-current={s.path === here ? 'page' : undefined}>{s.navLabel}</a>
+				))}
+				<a class="mkt-top__live" href="/live">Live scores</a>
+			</nav>
+		</header>
+
+		<slot />
+
+		<footer class="mkt-foot">
+			<p class="mkt-foot__brand">
+				<strong>MFL.football</strong> · formerly {FORMER_BRAND}. Skins, tools, history and websites for MyFantasyLeague leagues.
+			</p>
+			<nav class="mkt-foot__links" aria-label="Site">
+				{SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
+				<a href="/live">Live scores</a>
+				<a href="/compare">Compare</a>
+				<a href="/about">About</a>
+				<a href="/instructions">Template instructions</a>
+				<a href="/privacy">Privacy</a>
+			</nav>
+		</footer>
+
+		<ProductInterest />
+	</div>
+</SplashLayout>
+
+<style>
+	/* The homepage's brand tokens (src/pages/index.astro .home), so the CTA
+	   and links are red and black here too. */
+	.mkt {
+		--brand-ink: #111111;
+		--brand-red: #c8102e;
+		--brand-red-hover: #a10d25;
+		--primary-link-default-text-color: var(--brand-ink);
+		--primary-link-hover-text-color: var(--brand-red);
+		--secondary-color: var(--brand-red);
+		--cta-fill: var(--brand-red);
+		--cta-fill-hover: var(--brand-red-hover);
+		--on-cta-fill: #ffffff;
+		--btn-primary-border-hover: var(--brand-red);
+		/* Body copy follows the brand ink: the splash's own text token stays
+		   dark in dark mode, which left every plain paragraph unreadable. */
+		color: var(--brand-ink);
+	}
+
+	:global(html.dark) .mkt {
+		--brand-ink: #f2f3f5;
+		--brand-red: #ff4d5e;
+		--brand-red-hover: #ff7380;
+		--on-cta-fill: #111111;
+	}
+
+	.mkt-top {
+		display: flex;
+		align-items: center;
+		gap: 1.75rem;
+		padding: 1rem 0;
+		border-bottom: 1px solid var(--primary-content-border-color);
+	}
+
+	.mkt-brand {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.mkt-brand__mark {
+		display: block;
+		width: auto;
+		height: 1.6rem;
+	}
+
+	.mkt-brand__mark--dark,
+	:global(html.dark) .mkt-brand__mark--light {
+		display: none;
+	}
+
+	:global(html.dark) .mkt-brand__mark--dark {
+		display: block;
+	}
+
+	.mkt-top__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		margin-left: auto;
+		font-size: var(--font-size-sm);
+	}
+
+	.mkt-top__links a[aria-current='page'] {
+		font-weight: 700;
+		color: var(--brand-red);
+	}
+
+	.mkt-top__live {
+		font-weight: 700;
+	}
+
+	.mkt-top__live::before {
+		content: '';
+		display: inline-block;
+		width: 0.45rem;
+		height: 0.45rem;
+		margin-right: 0.4rem;
+		border-radius: 50%;
+		background: #e0263c;
+		vertical-align: 0.1em;
+	}
+
+	.mkt-foot {
+		margin-top: 4rem;
+		padding: 2rem 0;
+		border-top: 1px solid var(--primary-content-border-color);
+		font-size: var(--font-size-sm);
+		color: var(--color-gray-500);
+	}
+
+	.mkt-foot__brand {
+		margin: 0 0 1rem;
+	}
+
+	.mkt-foot__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1.5rem;
+	}
+
+	/* Phones: the links drop under the mark and wrap, never scroll sideways. */
+	@media (max-width: 760px) {
+		.mkt-top {
+			flex-wrap: wrap;
+			gap: 0.75rem;
+		}
+
+		.mkt-top__links {
+			width: 100%;
+			margin-left: 0;
+			gap: 0.4rem 1rem;
+			font-size: var(--font-size-xs);
+		}
+	}
+</style>
