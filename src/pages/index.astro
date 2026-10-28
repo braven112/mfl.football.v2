@@ -296,6 +296,12 @@ const AUTOMATED = [
         <span class="card__up">Upgrade: <b>Pro {proPrice}/season</b></span>
         <span class="card__more">Open live scores →</span>
       </a>
+      <a class="card" href="/mfl-all-play-standings">
+        <span class="tag tag--free">Free</span>
+        <h3>All-play standings</h3>
+        <p>Paste any MFL league ID: all-play standings and who the schedule helped or robbed.</p>
+        <span class="card__more">Run the report →</span>
+      </a>
       <button type="button" class="card" data-interest="league-history" data-interest-name="The League History page">
         <span class="tag tag--soon">Free · Coming soon</span>
         <h3>League History page</h3>
@@ -413,6 +419,7 @@ const AUTOMATED = [
   <footer class="foot">
     <span>MFL.football · formerly {FORMER_BRAND}</span>
     {SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
+    <a href="/mfl-all-play-standings">Free all-play standings</a>
     <a href="/compare">Compare</a>
     <a href="/about">About</a>
     <a href="/live">Live scores</a>
