@@ -7,6 +7,7 @@ import type {
   DraftPrediction,
   StandingsFranchise,
 } from '../types/standings';
+import { weekEntries, weekGames } from './game-results.mjs';
 
 interface TeamConfig {
   id: string;
@@ -476,10 +477,7 @@ export function buildHeadToHeadFromRaw(raw: unknown): HeadToHeadMap {
       ? Object.values(raw as Record<string, unknown>)
       : [];
 
-  const bump = (from: string, to: string, result: unknown) => {
-    // Only tally recognized W/L/T results; skip missing/unknown so a feed
-    // change can't silently inflate ties.
-    if (result !== 'W' && result !== 'L' && result !== 'T') return;
+  const bump = (from: string, to: string, result: 'W' | 'L' | 'T') => {
     if (!ledger.has(from)) ledger.set(from, new Map());
     const row = ledger.get(from)!;
     const rec = row.get(to) ?? { w: 0, l: 0, t: 0 };
@@ -489,18 +487,13 @@ export function buildHeadToHeadFromRaw(raw: unknown): HeadToHeadMap {
     row.set(to, rec);
   };
 
-  for (const weekEntry of weeks as any[]) {
-    const wr = weekEntry?.weeklyResults ?? weekEntry?.[0]?.weeklyResults;
-    if (!wr) continue;
-    const matchups = Array.isArray(wr.matchup) ? wr.matchup : wr.matchup ? [wr.matchup] : [];
-    for (const m of matchups) {
-      if (m?.regularSeason !== '1') continue;
-      const fr = m.franchise;
-      if (!Array.isArray(fr) || fr.length !== 2) continue;
-      const [x, y] = fr;
-      if (!x?.id || !y?.id) continue;
-      bump(x.id, y.id, x.result);
-      bump(y.id, x.id, y.result);
+  // Which matchups are games, and their results, is game-results.mjs's call
+  // (MFL's recorded W/L/T; an unplayed week's placeholder "T" is not a game).
+  for (const wr of weekEntries(weeks)) {
+    for (const g of weekGames(wr)) {
+      if (g.regularSeason !== true) continue;
+      bump(g.a, g.b, g.ra);
+      bump(g.b, g.a, g.rb);
     }
   }
 

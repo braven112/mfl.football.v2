@@ -19,6 +19,8 @@
  *    and let the fact sheet say what the week is.
  */
 
+import { sideResult } from '../../src/utils/game-results.mjs';
+
 /**
  * A franchise's true record from an MFL standings row.
  *
@@ -120,7 +122,7 @@ export function resultsByFranchise(matchups = []) {
         opponentId: opp.id,
         score: selfScore,
         opponentScore: oppScore,
-        result: selfScore > oppScore ? 'W' : selfScore < oppScore ? 'L' : 'T',
+        result: sideResult(self, opp, selfScore, oppScore),
       });
     }
   }

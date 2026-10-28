@@ -74,6 +74,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { allPlayWeek } from '../src/utils/game-results.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEAGUE_SLUG = 'theleague';
@@ -227,16 +228,12 @@ const allPlayThrough = (weekly, maxWeek) => {
   const acc = {};
   for (const wk of weekly?.weeks ?? []) {
     if (maxWeek != null && Number(wk.week) > maxWeek) continue;
-    const scores = Object.entries(wk.scores ?? {}).filter(([, s]) => Number.isFinite(Number(s)));
-    if (scores.length < 2) continue;
-    for (const [id, score] of scores) {
+    // One week of all-play is game-results.mjs's (an unscored week yields nothing).
+    for (const [id, rec] of allPlayWeek(wk.scores ?? {})) {
       acc[id] ??= { w: 0, l: 0, t: 0 };
-      for (const [other, otherScore] of scores) {
-        if (id === other) continue;
-        if (Number(score) > Number(otherScore)) acc[id].w += 1;
-        else if (Number(score) < Number(otherScore)) acc[id].l += 1;
-        else acc[id].t += 1;
-      }
+      acc[id].w += rec.wins;
+      acc[id].l += rec.losses;
+      acc[id].t += rec.ties;
     }
   }
   const out = {};

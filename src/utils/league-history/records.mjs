@@ -78,10 +78,11 @@ export function indexDataset(ds, { groupBy = 'owner' } = {}) {
     };
   };
 
-  const games = ds.games.map(([y, wk, wf, ws, lf, ls, pw]) => {
+  const games = ds.games.map(([y, wk, wf, ws, lf, ls, pw, broken]) => {
     const both = MADE_PLAYOFFS.has(team(y, wf)?.r) && MADE_PLAYOFFS.has(team(y, lf)?.r);
     const kind = !pw ? 'regular' : both ? 'playoffs' : 'consolation';
-    return { y, wk, wf, ws, lf, ls, kind, tie: ws === ls };
+    // `broken`: level scores, but MFL's tiebreaker gave the game to `wf`.
+    return { y, wk, wf, ws, lf, ls, kind, tie: ws === ls && !broken };
   });
 
   const teamGames = [];

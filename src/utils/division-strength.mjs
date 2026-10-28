@@ -36,49 +36,11 @@ export const divisionSlug = (name) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'division';
 
-/** A W-L-T record plus the points on both sides of it. */
-export const emptyRecord = () => ({
-  wins: 0,
-  losses: 0,
-  ties: 0,
-  pointsFor: 0,
-  pointsAgainst: 0,
-});
-
-/** Games in a record. Points are carried alongside and never counted here. */
-export const recordGames = (rec) => (rec ? rec.wins + rec.losses + rec.ties : 0);
-
-/** Fold one game's outcome into a record, from the record-holder's side. */
-export const addGame = (rec, scoreFor, scoreAgainst) => {
-  if (scoreFor > scoreAgainst) rec.wins += 1;
-  else if (scoreFor < scoreAgainst) rec.losses += 1;
-  else rec.ties += 1;
-  rec.pointsFor += scoreFor;
-  rec.pointsAgainst += scoreAgainst;
-  return rec;
-};
-
-/** Fold `b` into `a` in place. */
-export const mergeRecord = (a, b) => {
-  if (!b) return a;
-  a.wins += b.wins;
-  a.losses += b.losses;
-  a.ties += b.ties;
-  a.pointsFor += b.pointsFor;
-  a.pointsAgainst += b.pointsAgainst;
-  return a;
-};
-
-/**
- * Win percentage with ties as half a win — MFL's own convention, and the one
- * the standings pages already display. Null (not 0) when no games were played,
- * so "hasn't played" never sorts as "lost everything".
- */
-export const winPct = (rec) => {
-  const games = recordGames(rec);
-  if (!games) return null;
-  return (rec.wins + rec.ties / 2) / games;
-};
+// The record itself (a W-L-T plus points, ties as half a win) is the site's
+// one definition in game-results.mjs; re-exported so the pages and
+// compute-division-strength.mjs keep importing it from here.
+export { emptyRecord, recordGames, addGame, mergeRecord, winPct } from './game-results.mjs';
+import { recordGames, winPct } from './game-results.mjs';
 
 /** "10-8" / "10-8-1" / "—". */
 export const formatRecord = (rec) => {

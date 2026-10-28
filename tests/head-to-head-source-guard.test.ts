@@ -15,10 +15,10 @@ import { expectClean, scanForbidden } from './helpers/scan-guard';
  * dataset through `rivalryPairs` / `headToHeadMeetings` / `rivalEntries` /
  * `rivalrySeries`, and this fails on a file that goes back to the old list.
  *
- * Exemptions: the producer that writes `matchupHistory`, and the rivalry
- * route, which reads it only for the league's own NAMES of its playoff rounds
- * ("Semifinal") — a label, never a count. Comment lines are skipped: modules
- * that moved explain why. Tests are outside the scanned roots.
+ * franchise-history.json no longer carries `matchupHistory` at all (Oct
+ * 2026); the rivalry route's playoff round NAMES come from its
+ * `playoffRounds` map, a label, never a count. Comment lines are skipped:
+ * modules that moved explain why. Tests are outside the scanned roots.
  */
 describe('head-to-head records come from the League History dataset', () => {
   it('no file reads franchise-history.json#matchupHistory for a record', () => {
@@ -33,18 +33,7 @@ describe('head-to-head records come from the League History dataset', () => {
           pattern: /\b(?:currentOwnerMeetings|tallyMeetings|computeRivalEntries|rivalrySeriesByPair)\b/,
         },
       ],
-      allowlist: [
-        {
-          file: 'scripts/compute-franchise-history.mjs',
-          names: ['matchupHistory read'],
-          reason: 'the producer that writes matchupHistory',
-        },
-        {
-          file: 'src/utils/league-history/rivalry-route.ts',
-          names: ['matchupHistory read'],
-          reason: "reads only the league's playoff round names, a label shown beside the dataset's own games",
-        },
-      ],
+      allowlist: [],
       exempt: ({ line }) => {
         const t = line.trim();
         return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*');

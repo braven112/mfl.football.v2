@@ -21,6 +21,8 @@
  *    collapsing it to one silently drops half a week's scoring.
  */
 
+import { hasResult, sideResult } from './game-results.mjs';
+
 /**
  * One game from ONE franchise's point of view — the shape every per-franchise
  * accessor below returns, and the shape the roster header's props declare.
@@ -103,9 +105,9 @@ export function franchiseSchedule(weeks, franchiseId) {
       if (!mine) continue;
       const opponent = franchises.find((f) => f.id !== id);
       if (!opponent) continue;
-      // Both sides must carry a score: MFL has published a half-filled
-      // matchup mid-scoring, and a game with one score is not a result yet.
-      const played = mine.score != null && opponent.score != null;
+      // Played is game-results.mjs's call: both scores posted (MFL has
+      // published a half-filled matchup mid-scoring) and not a 0-0 placeholder.
+      const played = hasResult(mine, opponent);
       games.push({
         week,
         opponentId: opponent.id,
@@ -121,19 +123,8 @@ export function franchiseSchedule(weeks, franchiseId) {
   return out;
 }
 
-/**
- * MFL's own `result` wins once the game is played — it applies the league's
- * tie rules, which a score comparison does not. The score comparison is only
- * the fallback for a played game MFL left unlabelled.
- */
-function resolveOutcome(side, opponent) {
-  const result = (side.result ?? '').toUpperCase();
-  if (result === 'W' || result === 'L' || result === 'T') return result;
-  if (side.score == null || opponent?.score == null) return null;
-  if (side.score > opponent.score) return 'W';
-  if (side.score < opponent.score) return 'L';
-  return 'T';
-}
+/** MFL's own `result` once the game is played (it applies the league's tie rules), else the scores'. */
+const resolveOutcome = (side, opponent) => sideResult(side, opponent);
 
 /**
  * The next game that has not been played, at or after `fromWeek`. Returns null

@@ -19,14 +19,10 @@
  */
 import { rivalryIntensity, MIN_RIVALRY_MEETINGS } from './rivalry-intensity.mjs';
 import { headToHeadMeetings } from './league-history/rivalry.mjs';
+import { allPlayWeek, weekEntries, weekGames } from './game-results.mjs';
 
 /** Results a form strip shows, newest last. */
 export const FORM_GAMES = 10;
-
-const num = (v) => {
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? n : null;
-};
 
 /**
  * Every completed game before `week`, per franchise, oldest first.
@@ -45,38 +41,27 @@ export function seasonGames(weeklyResultsRaw, week) {
     if (!byFranchise.has(id)) byFranchise.set(id, { games: [], weekly: [], allPlay: { wins: 0, losses: 0, ties: 0 } });
     return byFranchise.get(id);
   };
-  const weeks = (Array.isArray(weeklyResultsRaw) ? weeklyResultsRaw : [])
-    .map((w) => w?.weeklyResults)
-    .filter((w) => w && Number(w.week) < week)
-    .sort((a, b) => Number(a.week) - Number(b.week));
+  // Which matchups are games, and their results, is game-results.mjs's call.
+  const weeks = (Array.isArray(weeklyResultsRaw) ? weekEntries(weeklyResultsRaw) : []).filter((w) => Number(w.week) < week);
 
   for (const w of weeks) {
     const wk = Number(w.week);
-    const matchups = [].concat(w.matchup ?? []);
     const weekScores = new Map();
-    for (const m of matchups) {
-      const sides = [].concat(m?.franchise ?? []);
-      if (sides.length !== 2) continue;
-      for (const [me, them] of [[sides[0], sides[1]], [sides[1], sides[0]]]) {
-        const result = me?.result;
-        const score = num(me?.score);
-        const opp = num(them?.score);
-        if (!me?.id || !them?.id || !['W', 'L', 'T'].includes(result) || score == null || opp == null) continue;
-        // An unplayed week can carry a placeholder T with 0-0; a real game has points.
-        if (score === 0 && opp === 0) continue;
-        get(me.id).games.push({ week: wk, result, score, opp, oppId: them.id });
-        weekScores.set(me.id, score);
+    for (const g of weekGames(w)) {
+      for (const [me, them, score, opp, result] of [
+        [g.a, g.b, g.sa, g.sb, g.ra],
+        [g.b, g.a, g.sb, g.sa, g.rb],
+      ]) {
+        get(me).games.push({ week: wk, result, score, opp, oppId: them });
+        weekScores.set(me, score);
       }
     }
-    for (const [id, score] of weekScores) {
+    for (const [id, rec] of allPlayWeek(weekScores)) {
       const f = get(id);
-      f.weekly.push({ week: wk, score });
-      for (const [otherId, other] of weekScores) {
-        if (otherId === id) continue;
-        if (score > other) f.allPlay.wins++;
-        else if (score < other) f.allPlay.losses++;
-        else f.allPlay.ties++;
-      }
+      f.weekly.push({ week: wk, score: weekScores.get(id) });
+      f.allPlay.wins += rec.wins;
+      f.allPlay.losses += rec.losses;
+      f.allPlay.ties += rec.ties;
     }
   }
   return byFranchise;

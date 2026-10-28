@@ -29,9 +29,11 @@
  * `h2hCoverage` in the output (or `node scripts/report-h2h-coverage.mjs`)
  * rather than trusting a comment about coverage.
  *
- * What rivalry surfaces DO leave out on purpose is games played under a slot's
- * former owner (owner-scoping, `bothAttributed`) — so an all-time pairing can
- * show fewer meetings there than record-book.json, which counts every game.
+ * Head-to-head records are NOT this file's: every rivalry, owner and
+ * franchise record reads the League History dataset
+ * (league-history/rivalry.mjs). This file keeps only the league's names for
+ * its playoff rounds (`playoffRounds`), a label the rivalry page shows beside
+ * the dataset's own games.
  */
 
 import fs from 'node:fs';
@@ -688,8 +690,6 @@ const ensureFranchise = (id) => {
         biggestBlowoutWin: null,
         biggestBlowoutLoss: null,
       },
-      headToHead: {}, // opponentFranchiseId -> { wins, losses, ties }
-      matchupHistory: {}, // opponentFranchiseId -> [{year, week, score, opponentScore, isPlayoff, playoffRound, sourceFranchiseId}]
       trades: [], // [{year, timestamp, partnerId, gaveUp[], received[], comments, sourceFranchiseId, partnerSourceId}]
       draftPicks: [], // [{year, round, pick, playerId, viaTrade, comments, timestamp, sourceFranchiseId}]
       auctionWins: [], // [{year, playerId, winningBid, timestamp, sourceFranchiseId}]
@@ -724,6 +724,16 @@ const ledgerRows = [];
 // derived JSON small while letting rivalry/franchise pages display human
 // names without bundling all 2,700+ players.
 const playerNameLookup = {};
+
+// Every pairing's meetings, keyed by the pair's source franchise ids (smaller
+// first, the rivalry page's own key), each meeting `${year}-${week}` → the
+// league's name for its playoff round or null. Only the named rounds are
+// written out (`playoffRounds`): the games and their records are the League
+// History dataset's (league-history/rivalry.mjs), never this file's. Until
+// Oct 2026 this file also carried a per-franchise `matchupHistory` and
+// `headToHead` tally; nothing read either once every record moved onto the
+// dataset, so they are gone.
+const pairMeetings = new Map();
 
 for (const year of years) {
   const yearDir = path.join(FEEDS_DIR, String(year));
@@ -1188,7 +1198,7 @@ for (const year of years) {
   // gaps) with matchup pairings + scores. We process weekly-results-raw
   // first; any (week, smallerId, biggerId) tuple it covers becomes
   // authoritative. Then we walk schedule.json and process anything not yet
-  // covered so playoff matchups land in matchupHistory.
+  // covered so playoff weeks get their round names.
   const matchupSeen = new Set();
   const recordMatchup = (aId, bId, aScore, bScore, weekNum) => {
     if (!aId || !bId) return;
@@ -1200,36 +1210,17 @@ for (const year of years) {
 
     const aTarget = attributeYear(aId, year);
     const bTarget = attributeYear(bId, year);
-    const bothAttributed = aTarget != null && bTarget != null;
 
     const playoffMatch = playoffMatchupKeys.get(`${weekNum}:${pa}:${pb}`) ?? null;
+    const pairKey = `${pa}-${pb}`;
+    if (!pairMeetings.has(pairKey)) pairMeetings.set(pairKey, new Map());
+    pairMeetings.get(pairKey).set(`${year}-${weekNum}`, { year, week: weekNum, round: playoffMatch?.round ?? null });
 
     // Skip games where either side belongs to a former owner (target null).
     // Each side gets credit independently — even if one franchise's owner
-    // changed mid-season, we still record the other side's H2H + blowout.
+    // changed mid-season, we still record the other side's blowout.
     if (aTarget) {
       const frA = ensureFranchise(aTarget);
-      // H2H opponent is the OTHER side's source franchise (stable across
-      // owner changes — Phase 2 rivalry pages key off this).
-      if (!frA.headToHead[bId]) frA.headToHead[bId] = { wins: 0, losses: 0, ties: 0 };
-      if (aScore > bScore) frA.headToHead[bId].wins++;
-      else if (aScore < bScore) frA.headToHead[bId].losses++;
-      else frA.headToHead[bId].ties++;
-
-      if (!frA.matchupHistory[bId]) frA.matchupHistory[bId] = [];
-      frA.matchupHistory[bId].push({
-        year,
-        week: weekNum,
-        score: aScore,
-        opponentScore: bScore,
-        isPlayoff: !!playoffMatch,
-        playoffRound: playoffMatch?.round ?? null,
-        playoffBracket: playoffMatch?.bracket ?? null,
-        sourceFranchiseId: aId !== aTarget ? aId : null,
-        opponentSourceId: bId !== bTarget ? bId : null,
-        bothAttributed,
-      });
-
       const margin = aScore - bScore;
       const game = {
         year, week: weekNum,
@@ -1247,25 +1238,6 @@ for (const year of years) {
     }
     if (bTarget) {
       const frB = ensureFranchise(bTarget);
-      if (!frB.headToHead[aId]) frB.headToHead[aId] = { wins: 0, losses: 0, ties: 0 };
-      if (bScore > aScore) frB.headToHead[aId].wins++;
-      else if (bScore < aScore) frB.headToHead[aId].losses++;
-      else frB.headToHead[aId].ties++;
-
-      if (!frB.matchupHistory[aId]) frB.matchupHistory[aId] = [];
-      frB.matchupHistory[aId].push({
-        year,
-        week: weekNum,
-        score: bScore,
-        opponentScore: aScore,
-        isPlayoff: !!playoffMatch,
-        playoffRound: playoffMatch?.round ?? null,
-        playoffBracket: playoffMatch?.bracket ?? null,
-        sourceFranchiseId: bId !== bTarget ? bId : null,
-        opponentSourceId: aId !== aTarget ? aId : null,
-        bothAttributed,
-      });
-
       const margin = bScore - aScore;
       const game = {
         year, week: weekNum,
@@ -1549,54 +1521,12 @@ for (const [id, fr] of franchiseMap) {
   fr.jerryJonesAwards.sort((a, b) => a.year - b.year);
   fr.brockOsweilerAwards.sort((a, b) => a.year - b.year);
 
-  // Sort each opponent's per-meeting history oldest → newest
-  for (const oppId of Object.keys(fr.matchupHistory)) {
-    fr.matchupHistory[oppId].sort((a, b) => a.year - b.year || a.week - b.week);
-  }
   // Trades oldest → newest by timestamp; ties → year asc
   fr.trades.sort((a, b) => a.timestamp - b.timestamp || a.year - b.year);
   // Draft picks: ascending by year then overall pick order
   fr.draftPicks.sort((a, b) => a.year - b.year || a.round - b.round || a.pick - b.pick);
   // Auction wins: ascending by year then bid time
   fr.auctionWins.sort((a, b) => a.year - b.year || a.timestamp - b.timestamp);
-
-  // Pre-2020 playoff enrichment: MFL retired the bracket data for older
-  // years so getPlayoffMatchupKeys can't tag those games. The hand-curated
-  // championship-history.json knows champion/runnerUp/thirdPlace per year
-  // — promote the LATEST meeting between champion+runnerUp (and the
-  // matching 3rd-place pair when present) to the championship/3rd round.
-  for (const [year, entry] of championshipManualByYear) {
-    const tagLatestMeeting = (sideA, sideB, round, bracket) => {
-      if (!sideA || !sideB) return;
-      // The franchise we're enriching (`id`) only sees the matchup if it's
-      // one of the two sides.
-      let opponent = null;
-      if (id === sideA) opponent = sideB;
-      else if (id === sideB) opponent = sideA;
-      else return;
-      const meetings = fr.matchupHistory[opponent] || [];
-      const yearMeetings = meetings.filter((m) => m.year === year);
-      if (!yearMeetings.length) return;
-      // Skip only if the latest meeting is already labeled with a more
-      // specific round than the generic "Playoffs" fallback. Otherwise we
-      // upgrade the round name in place.
-      const latest = yearMeetings[yearMeetings.length - 1];
-      if (latest.playoffRound && latest.playoffRound !== 'Playoffs' && latest.playoffRound !== round) {
-        return;
-      }
-      latest.isPlayoff = true;
-      latest.playoffRound = round;
-      latest.playoffBracket = bracket;
-    };
-    tagLatestMeeting(entry.champion, entry.runnerUp, 'Championship', 'championship');
-    // 3rd-place tag — populated from championship-history.json when the entry
-    // carries `thirdPlace` + `thirdPlaceLoser`. Many older years don't have
-    // this curated, in which case the consolation game stays as generic
-    // "Playoffs" (the rivalry page still counts it as a playoff meeting).
-    if (entry.thirdPlace && entry.thirdPlaceLoser) {
-      tagLatestMeeting(entry.thirdPlace, entry.thirdPlaceLoser, '3rd Place', 'consolation');
-    }
-  }
 
   // Attach current identity for index/detail rendering
   const team = currentTeams.find((t) => t.franchiseId === id);
@@ -1680,6 +1610,42 @@ if (!milestoneEmission.emit) {
   }
 }
 
+// Pre-2020 playoff enrichment: MFL retired the bracket data for older years,
+// so getPlayoffMatchupKeys can't name those rounds. The hand-curated
+// championship-history.json knows champion/runnerUp/thirdPlace per year —
+// name the pair's LATEST meeting that year the championship (or 3rd-place)
+// game, unless the bracket already gave it a more specific name.
+for (const [year, entry] of championshipManualByYear) {
+  const tagLatestMeeting = (sideA, sideB, round) => {
+    if (!sideA || !sideB) return;
+    const meetings = pairMeetings.get([sideA, sideB].sort().join('-'));
+    const latest = [...(meetings?.values() ?? [])]
+      .filter((m) => m.year === year)
+      .sort((a, b) => a.week - b.week)
+      .at(-1);
+    if (!latest) return;
+    if (latest.round && latest.round !== 'Playoffs' && latest.round !== round) return;
+    latest.round = round;
+  };
+  tagLatestMeeting(entry.champion, entry.runnerUp, 'Championship');
+  // Many older years carry no curated 3rd-place pair; their consolation
+  // game keeps the page's own label.
+  if (entry.thirdPlace && entry.thirdPlaceLoser) {
+    tagLatestMeeting(entry.thirdPlace, entry.thirdPlaceLoser, '3rd Place');
+  }
+}
+
+// The league's names for its playoff rounds, per pairing: `{ "0001-0004":
+// { "2019-15": "Semifinal" } }`. A bare "Playoffs" says less than the rivalry
+// page's own final-or-not call, so it is left out.
+const playoffRounds = {};
+for (const [pairKey, meetings] of [...pairMeetings].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [key, m] of [...meetings].sort(([, x], [, y]) => x.year - y.year || x.week - y.week)) {
+    if (!m.round || m.round === 'Playoffs') continue;
+    (playoffRounds[pairKey] ??= {})[key] = m.round;
+  }
+}
+
 const output = {
   generatedAt: new Date().toISOString(),
   league: LEAGUE_SLUG,
@@ -1687,6 +1653,7 @@ const output = {
   yearSummaries,
   h2hCoverage,
   franchises,
+  playoffRounds,
   playerNames: playerNameLookup,
 };
 

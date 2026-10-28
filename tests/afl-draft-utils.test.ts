@@ -259,9 +259,9 @@ describe('standings tiebreakers follow the AFL constitution', () => {
 describe('buildHeadToHeadFromRaw', () => {
   it('tallies regular-season matchups in both directions and ignores playoff games', () => {
     const raw = [
-      { weeklyResults: { week: '1', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'W' }, { id: '0021', result: 'L' }] }] } },
-      { weeklyResults: { week: '12', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'L' }, { id: '0021', result: 'W' }] }] } },
-      { weeklyResults: { week: '15', matchup: [{ regularSeason: '0', franchise: [{ id: '0014', result: 'L' }, { id: '0021', result: 'W' }] }] } },
+      { weeklyResults: { week: '1', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'W', score: '110.5' }, { id: '0021', result: 'L', score: '98' }] }] } },
+      { weeklyResults: { week: '12', matchup: [{ regularSeason: '1', franchise: [{ id: '0014', result: 'L', score: '87' }, { id: '0021', result: 'W', score: '91.2' }] }] } },
+      { weeklyResults: { week: '15', matchup: [{ regularSeason: '0', franchise: [{ id: '0014', result: 'L', score: '80' }, { id: '0021', result: 'W', score: '120' }] }] } },
     ];
     const m = buildHeadToHeadFromRaw(raw);
     expect(m.get('0014')?.get('0021')).toEqual({ w: 1, l: 1, t: 0 });

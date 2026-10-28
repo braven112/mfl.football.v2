@@ -17,6 +17,7 @@
  *     Order), Schefter articles and the week in the books all qualify.
  */
 import { headToHeadMeetings } from './league-history/rivalry.mjs';
+import { addResult, emptyRecord, resultOf } from './game-results.mjs';
 import type { SchefterPost } from '../types/schefter';
 import type { WeekInTheBooks } from './package-league-home';
 
@@ -41,6 +42,8 @@ export interface Meeting {
   score: number;
   opponentScore: number;
   isPlayoff?: boolean;
+  /** The recorded result from this side, when the source carries one (a tie MFL broke stays a W or L). */
+  result?: 'W' | 'L' | 'T';
 }
 
 // ── Stories ─────────────────────────────────────────────────────────────────
@@ -173,16 +176,13 @@ const byDate = (a: Meeting, b: Meeting) => a.year - b.year || a.week - b.week;
 /** Head-to-head facts from the viewer's side, oldest meeting first. */
 export function rivalryFacts(meetings: Meeting[] | undefined): RivalryFacts {
   const games = [...(meetings ?? [])].sort(byDate);
-  let wins = 0;
-  let losses = 0;
-  let ties = 0;
+  const tally = emptyRecord();
   const results = games.map((g) => {
-    const r: 'W' | 'L' | 'T' = g.score > g.opponentScore ? 'W' : g.score < g.opponentScore ? 'L' : 'T';
-    if (r === 'W') wins += 1;
-    else if (r === 'L') losses += 1;
-    else ties += 1;
+    const r = (g.result ?? resultOf(g.score, g.opponentScore)) as 'W' | 'L' | 'T';
+    addResult(tally, r);
     return r;
   });
+  const { wins, losses, ties } = tally;
   let streak: RivalryFacts['streak'] = null;
   for (let i = results.length - 1; i >= 0; i -= 1) {
     if (!streak) streak = { result: results[i], length: 1 };
@@ -208,8 +208,16 @@ export function meetingsBetween(ix: unknown, mine: string, opp: string): Meeting
     sA: number;
     sB: number;
     kind: string;
+    winner: 'A' | 'B' | null;
   }>;
-  return games.map((m) => ({ year: m.y, week: m.wk, score: m.sA, opponentScore: m.sB, isPlayoff: m.kind === 'playoffs' }));
+  return games.map((m) => ({
+    year: m.y,
+    week: m.wk,
+    score: m.sA,
+    opponentScore: m.sB,
+    isPlayoff: m.kind === 'playoffs',
+    result: m.winner === 'A' ? 'W' : m.winner === 'B' ? 'L' : 'T',
+  }));
 }
 
 const record = (w: number, l: number, t: number) => (t > 0 ? `${w}–${l}–${t}` : `${w}–${l}`);

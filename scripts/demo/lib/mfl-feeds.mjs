@@ -10,6 +10,7 @@
  */
 
 import { LEAGUE_RULES } from './simulate.mjs';
+import { resultOf } from '../../../src/utils/game-results.mjs';
 
 const money = (n) => `$${Number(n).toFixed(2)}`;
 const two = (n) => (Math.round(n * 100) / 100).toString();
@@ -171,7 +172,7 @@ export function scheduleFeed(season, franchises) {
       id,
       isHome: isHome ? '1' : '0',
       score: two(lineup.score),
-      result: lineup.score === other.score ? 'T' : lineup.score > other.score ? 'W' : 'L',
+      result: resultOf(lineup.score, other.score),
     });
     return {
       week: String(week),
@@ -191,7 +192,7 @@ export function scheduleFeed(season, franchises) {
               id,
               isHome: isHome ? '1' : '0',
               ...(lineup
-                ? { score: two(lineup.score), result: lineup.score === other.score ? 'T' : lineup.score > other.score ? 'W' : 'L' }
+                ? { score: two(lineup.score), result: resultOf(lineup.score, other.score) }
                 : {}),
             });
             return { franchise: [side(away, false, r?.[1], r?.[0]), side(home, true, r?.[0], r?.[1])] };
@@ -235,7 +236,7 @@ function lineupSide(id, lineup, other, isHome) {
     isHome: isHome ? '1' : '0',
     score: two(lineup.score),
     opt_pts: two(lineup.optPts),
-    result: lineup.score === other.score ? 'T' : lineup.score > other.score ? 'W' : 'L',
+    result: resultOf(lineup.score, other.score),
     starters: lineup.starters.map((p) => `${p},`).join(''),
     nonstarters: lineup.nonstarters.map((p) => `${p},`).join(''),
     optimal: lineup.optimal.map((p) => `${p},`).join(''),

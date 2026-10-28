@@ -26,6 +26,7 @@
  */
 
 import { num, int, rollingAvgPF, seasonAvgPF, minMax01 } from './team-strength.mjs';
+import { allPlayWeek, resultOf } from '../../src/utils/game-results.mjs';
 
 /** Component weights — must sum to 1.0. Exposed for the page's methodology line. */
 export const PECKING_ORDER_WEIGHTS = {
@@ -210,17 +211,17 @@ export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairin
   const margin = new Map(); // fid → { sum, games }: per-GAME
   const results = new Map(); // fid → ['W'|'L'|'T', …] in game order
   for (const { week, scores } of weeks) {
+    // Results are game-results.mjs's: a forfeit's 0.00 is a game and a loss,
+    // and a week nobody scored in is unplayed.
     const played = Object.entries(scores)
       .map(([fid, v]) => [fid, num(v, NaN)])
-      .filter(([, v]) => Number.isFinite(v) && v > 0);
-    for (const [fid, mine] of played) {
+      .filter(([, v]) => Number.isFinite(v));
+    if (!played.some(([, v]) => v > 0)) continue;
+    for (const [fid, week] of allPlayWeek(played)) {
       const rec = ap.get(fid) ?? { w: 0, l: 0, t: 0 };
-      for (const [other, theirs] of played) {
-        if (other === fid) continue;
-        if (mine > theirs) rec.w++;
-        else if (mine < theirs) rec.l++;
-        else rec.t++;
-      }
+      rec.w += week.wins;
+      rec.l += week.losses;
+      rec.t += week.ties;
       ap.set(fid, rec);
     }
     const byFid = new Map(played);
@@ -240,7 +241,7 @@ export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairin
         m.games += 1;
         margin.set(me, m);
         const list = results.get(me) ?? [];
-        list.push(mine > theirs ? 'W' : mine < theirs ? 'L' : 'T');
+        list.push(resultOf(mine, theirs));
         results.set(me, list);
       }
     }

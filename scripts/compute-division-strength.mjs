@@ -95,6 +95,7 @@ import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { leaguesFor } from './lib/league-jobs.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { weekGames } from '../src/utils/game-results.mjs';
 import { LEAGUE_SLUGS, resolveLeagueArg } from './lib/owner-tenure-inputs.mjs';
 import {
   addGame,
@@ -240,20 +241,13 @@ function readSeasonGames(yearDir) {
   const games = [];
   if (!schedule || !lastRegularSeasonWeek) return { games, resolved: false, lastRegularSeasonWeek };
 
+  // Which pairings are games, and who won them, is game-results.mjs's call
+  // (a 0-0 pairing is an unplayed week; a forfeit counts).
   for (const week of toArray(schedule.schedule?.weeklySchedule)) {
     const weekNum = Number(week.week);
     if (!weekNum || weekNum > lastRegularSeasonWeek) continue;
-    for (const matchup of toArray(week.matchup)) {
-      const sides = toArray(matchup.franchise);
-      if (sides.length !== 2) continue;
-      const [a, b] = sides;
-      const aScore = Number(a.score) || 0;
-      const bScore = Number(b.score) || 0;
-      // A 0-0 pairing is an unplayed game, not a tie — both leagues publish the
-      // full schedule before week 1, so every future week looks like this, and
-      // so does all of the AFL's 2003.
-      if (aScore === 0 && bScore === 0) continue;
-      games.push({ week: weekNum, aId: a.id, bId: b.id, aScore, bScore });
+    for (const g of weekGames(week)) {
+      games.push({ week: weekNum, aId: g.a, bId: g.b, aScore: g.sa, bScore: g.sb, aResult: g.ra, bResult: g.rb });
     }
   }
   return { games, resolved: games.length > 0, lastRegularSeasonWeek };
@@ -363,27 +357,27 @@ function buildLeague(slug) {
     for (const game of games) {
       const divA = divisionOf.get(game.aId);
       const divB = divisionOf.get(game.bId);
-      for (const [fid, scoreFor, scoreAgainst, own, other] of [
-        [game.aId, game.aScore, game.bScore, divA, divB],
-        [game.bId, game.bScore, game.aScore, divB, divA],
+      for (const [fid, scoreFor, scoreAgainst, own, other, result] of [
+        [game.aId, game.aScore, game.bScore, divA, divB, game.aResult],
+        [game.bId, game.bScore, game.aScore, divB, divA, game.bResult],
       ]) {
         const entry = perFranchise.get(fid);
         if (!entry) continue;
-        addGame(entry.replay, scoreFor, scoreAgainst);
+        addGame(entry.replay, scoreFor, scoreAgainst, result);
         if (!own || !other) continue;
-        addGame(own === other ? entry.intra : entry.inter, scoreFor, scoreAgainst);
+        addGame(own === other ? entry.intra : entry.inter, scoreFor, scoreAgainst, result);
       }
       // Division-vs-division ledger, recorded from BOTH sides so each division's
       // `vs` map is complete on its own. The two halves are exact mirrors, which
       // the guard test asserts.
       if (divA && divB && divA !== divB) {
-        for (const [own, opp, scoreFor, scoreAgainst] of [
-          [divA, divB, game.aScore, game.bScore],
-          [divB, divA, game.bScore, game.aScore],
+        for (const [own, opp, scoreFor, scoreAgainst, result] of [
+          [divA, divB, game.aScore, game.bScore, game.aResult],
+          [divB, divA, game.bScore, game.aScore, game.bResult],
         ]) {
           const bucket = ensureBucket(own);
           if (!bucket.vs.has(opp)) bucket.vs.set(opp, emptyRecord());
-          addGame(bucket.vs.get(opp), scoreFor, scoreAgainst);
+          addGame(bucket.vs.get(opp), scoreFor, scoreAgainst, result);
         }
       }
     }

@@ -116,8 +116,8 @@ describe('divisionRecords', () => {
           {
             week: '1',
             matchup: [
-              { franchise: [{ id: 'a', result: 'W' }, { id: 'b', result: 'L' }] },
-              { franchise: [{ id: 'c', result: 'W' }, { id: 'd', result: 'L' }] },
+              { franchise: [{ id: 'a', result: 'W', score: '101' }, { id: 'b', result: 'L', score: '90' }] },
+              { franchise: [{ id: 'c', result: 'W', score: '110' }, { id: 'd', result: 'L', score: '70' }] },
             ],
           },
         ],

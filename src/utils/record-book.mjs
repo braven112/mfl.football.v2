@@ -8,22 +8,10 @@
  * wrong stays testable.
  */
 
-/**
- * A forfeit (a team that set no lineup) posts 0.00 and is not a performance
- * worth ranking on a scoring board. It is still a GAME: MFL recorded the
- * result, so it counts toward records, streaks and head to head (Brandon,
- * 2026-10-26: "a game counts when MFL recorded a result").
- */
-export const isPlayed = (a, b) => a > 0 && b > 0;
+import { isForfeit, weekGames } from './game-results.mjs';
 
-/**
- * Whether MFL recorded a result for a matchup: both scores posted, and not a
- * 0-0 placeholder. An unplayed week carries no score at all (MFL stamps it
- * result "T"), so the score, not the result field, is what tells them apart.
- */
-const hasResult = (a, b) =>
-  a.score != null && b.score != null && Number.isFinite(Number(a.score)) && Number.isFinite(Number(b.score)) &&
-  (Number(a.score) > 0 || Number(b.score) > 0);
+/** A forfeit posts 0.00: a game (it counts in records), but not a performance to rank. */
+export const isPlayed = (a, b) => !isForfeit(a, b);
 
 /** Highest-first by default; `asc` for "closest"-style boards. */
 export const rankBy = (rows, value, limit, asc = false) =>
@@ -40,38 +28,32 @@ export const rankBy = (rows, value, limit, asc = false) =>
  * weeks.
  */
 export function gamesFromSchedule(schedule, { nameOf, year, firstPlayoffWeek = Infinity, toArray }) {
+  // Which matchups are games, and who won them, is game-results.mjs's call.
   const out = [];
   const seen = new Set();
   for (const wk of toArray(schedule?.schedule?.weeklySchedule)) {
-    const week = Number(wk.week);
-    if (!week) continue;
-    for (const m of toArray(wk.matchup)) {
-      const fr = toArray(m.franchise);
-      if (fr.length !== 2) continue;
-      const [a, b] = fr;
-      if (a.id === b.id) continue;
-      if (!hasResult(a, b)) continue;
-      const sa = Number(a.score);
-      const sb = Number(b.score);
-      const key = `${week}:${[a.id, b.id].sort().join(':')}`;
+    for (const g of weekGames(wk)) {
+      const key = `${g.week}:${[g.a, g.b].sort().join(':')}`;
       if (seen.has(key)) continue;
       seen.add(key);
-
-      const [hi, lo] = sa >= sb ? [a, b] : [b, a];
+      // MFL's recorded result decides the winner, so a tie it broke on its
+      // tiebreaker stays a win and a loss.
+      const aWon = g.ra === 'W' || (g.ra === 'T' && g.sa >= g.sb);
+      const [hi, lo, shi, slo] = aWon ? [g.a, g.b, g.sa, g.sb] : [g.b, g.a, g.sb, g.sa];
       out.push({
         year,
-        week,
-        isPlayoff: week >= firstPlayoffWeek,
-        winnerId: hi.id,
-        winnerName: nameOf(hi.id),
-        loserId: lo.id,
-        loserName: nameOf(lo.id),
-        winnerScore: Number(hi.score),
-        loserScore: Number(lo.score),
-        margin: Math.abs(sa - sb),
-        combined: sa + sb,
-        tie: sa === sb,
-        forfeit: !isPlayed(sa, sb),
+        week: g.week,
+        isPlayoff: g.week >= firstPlayoffWeek,
+        winnerId: hi,
+        winnerName: nameOf(hi),
+        loserId: lo,
+        loserName: nameOf(lo),
+        winnerScore: shi,
+        loserScore: slo,
+        margin: Math.abs(g.sa - g.sb),
+        combined: g.sa + g.sb,
+        tie: g.ra === 'T',
+        forfeit: isForfeit(g.sa, g.sb),
       });
     }
   }
