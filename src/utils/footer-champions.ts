@@ -44,6 +44,7 @@ import {
 } from './afl-awards';
 import { chooseTeamName } from './team-names';
 import theleagueAssets from '../data/theleague.assets.json';
+import { THELEAGUE_CHAMPION_BADGE } from './theleague-awards';
 import aflAwardsHistory from '../../data/afl-fantasy/awards-history.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
 
@@ -215,7 +216,7 @@ function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] 
       team: fullName,
       teamDisplay: chooseTeamName({ fullName, aliases: (team as any).aliases ?? [] }),
       year,
-      titles: [{ label: 'Defending Champion', badge: null, major: true }],
+      titles: [{ label: 'Defending Champion', badge: THELEAGUE_CHAMPION_BADGE, major: true }],
       banner: getCurrentBannerPath(team) ?? null,
       href: `${prefix}/playoffs`,
     },

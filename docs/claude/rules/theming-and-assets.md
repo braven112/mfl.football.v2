@@ -706,6 +706,13 @@ by whether the title has been won:
   page's won-title chips are text only, since that page hangs the titles in
   its own Rafters.
 
+TheLeague's set (Oct 2026) is a champion medallion and one shield per
+division (`public/assets/theleague/awards/`, read through
+`src/utils/theleague-awards.ts`), drawn by
+`scripts/build-theleague-award-badges.mjs` on the AFL's set, Halloween cut
+included; Christmas knits it in `build-sweater-league-marks.py`. Its homepage
+standings put the division shield beside each division leader (seeds 1–4).
+
 A seasonal theme redraws the league-wide badges (`_swaps` in
 `src/data/seasonal-marks/afl-<season>.json`) and they must wear it: an `<img>`
 gets the CSS swap, and an inlined badge goes through `aflBadgeSvgs`

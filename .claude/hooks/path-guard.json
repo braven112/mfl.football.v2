@@ -1494,7 +1494,10 @@
         "src/components/shared/league-history/HistoryRafters.astro",
         "src/components/afl-fantasy/AflFranchise*.astro",
         "src/components/afl/hp-sections/AflConferencePlayoffPreview.astro",
-        "src/utils/footer-champions.ts"
+        "src/utils/footer-champions.ts",
+        "src/utils/theleague-awards.ts",
+        "src/components/theleague/hp-sections/HpStandingsCompact.astro",
+        "scripts/build-theleague-award-badges.mjs"
       ],
       "tests": [
         "tests/championship-mark-rule.test.ts"

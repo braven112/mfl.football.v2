@@ -72,3 +72,43 @@ describe('league-wide badges wear the season, PNG drawings included', () => {
     expect(christmas['nit.svg']).toBe(normal['nit.svg']);
   });
 });
+
+describe("TheLeague's official pennants", () => {
+  const AWARDS = ['league-champion', 'northwest-champion', 'southwest-champion', 'central-champion', 'east-champion'];
+
+  it('has a drawing for every title, in every season it wears', () => {
+    for (const season of ['halloween', 'christmas']) {
+      const set = JSON.parse(
+        fs.readFileSync(path.join(ROOT, `src/data/seasonal-marks/theleague-${season}.json`), 'utf8'),
+      ) as { _swaps: Record<string, string> };
+      for (const a of AWARDS) {
+        const from = `/assets/theleague/awards/${a}.svg`;
+        expect(fs.existsSync(path.join(ROOT, 'public', from)), from).toBe(true);
+        const to = set._swaps[from];
+        expect(to, `${season} ${a}`).toBeTruthy();
+        expect(fs.existsSync(path.join(ROOT, 'public/assets/theleague', `${season}-marks`, to!)), `${season} ${to}`).toBe(true);
+      }
+    }
+  });
+
+  it('names a shield for every current division', async () => {
+    const { theleagueDivisionChampionBadge, THELEAGUE_CHAMPION_BADGE } = await import('../src/utils/theleague-awards');
+    const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/theleague.config.json'), 'utf8')) as { divisions: string[] };
+    for (const d of config.divisions) {
+      const badge = theleagueDivisionChampionBadge(d);
+      expect(badge, d).toBeTruthy();
+      expect(fs.existsSync(path.join(ROOT, 'public', badge!)), d).toBe(true);
+    }
+    expect(fs.existsSync(path.join(ROOT, 'public', THELEAGUE_CHAMPION_BADGE))).toBe(true);
+  });
+
+  it('keeps a stampable year on every drawing', async () => {
+    const { stampBadgeYear } = await import('../src/utils/afl-badge');
+    for (const a of AWARDS) {
+      const svg = fs.readFileSync(path.join(ROOT, 'public/assets/theleague/awards', `${a}.svg`), 'utf8');
+      expect(stampBadgeYear(svg, 2031), a).toContain('2031');
+      // colours inline only: an inlined badge's <style> would reach the page
+      expect(svg, a).not.toMatch(/<style|class="/);
+    }
+  });
+});
