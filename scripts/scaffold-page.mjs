@@ -27,6 +27,7 @@
  * Refuses to overwrite anything. Refuses fewer than 10 tags — a placeholder
  * tag would pass the test and defeat the point of the registry.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, LEAGUES } from '../src/config/leagues-data.mjs';
@@ -232,6 +233,8 @@ function main() {
   pageIcons.pages[localPath] = a.icon;
   pageIcons.pages = Object.fromEntries(Object.entries(pageIcons.pages).sort(([x], [y]) => x.localeCompare(y)));
   writeFileSync(join(ROOT, PAGE_ICONS), JSON.stringify(pageIcons, null, 2) + '\n');
+  // The league switcher only keeps a page that the target league has.
+  execFileSync(process.execPath, [join(ROOT, 'scripts/generate-league-routes.mjs')], { stdio: 'inherit' });
 
   console.log(`
 Next:

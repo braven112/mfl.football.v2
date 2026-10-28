@@ -16,6 +16,7 @@
  * prefix), __LEAGUE_NAME__ (full name), __LEAGUE_SHORT__ (short name, falling
  * back to the full name).
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -169,5 +170,11 @@ export function applyChanges(changes) {
       fs.mkdirSync(path.dirname(abs), { recursive: true });
       fs.writeFileSync(abs, c.content);
     }
+  }
+  // The league switcher only keeps a page that the target league has
+  // (src/data/league-routes.json). A fresh process, so a registry entry this
+  // change just wrote is loaded.
+  if (changes.length) {
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts/generate-league-routes.mjs')], { stdio: 'inherit' });
   }
 }

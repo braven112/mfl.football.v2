@@ -428,6 +428,14 @@
       "area": "live-scoring",
       "league": "afl",
       "guide": "/guides/tv-app"
+    },
+    {
+      "date": "2026-10-28",
+      "type": "bug-fix",
+      "summary": "Switching to Best Ball from a page it doesn't have, like standings, now opens the Best Ball home page instead of a 404.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
     }
   ]
 }
