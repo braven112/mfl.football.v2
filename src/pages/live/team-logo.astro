@@ -3,8 +3,8 @@
  * MFL Football — create a team logo, on the website.
  *
  * The same builder as the app's Create team logo screen: the owner picks a
- * style, one or two team colors (from the grid or any hex; white and black come
- * with every prompt) and the kind of art,
+ * style, one or two team colors (from the grid or any hex; the prompt offers
+ * white and black on top) and the kind of art,
  * and copies a prompt into ChatGPT, Gemini or Claude. We make no images
  * (decided with Brandon 2026-10-27). Every word of the prompt comes from
  * `src/utils/team-logo-prompt.ts`, which the client script imports, so the
@@ -125,7 +125,7 @@ const firstName = teams[0]?.name ?? '';
 </MflAppLayout>
 
 <script>
-	import { buildTeamLogoPrompt, LOGO_COLORS, LOGO_MAX_COLORS, normalizeHex, pickLogoColors } from '../../utils/team-logo-prompt';
+	import { buildTeamLogoPrompt, LOGO_COLORS, LOGO_MAX_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
 	import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
 
 	function init() {
@@ -149,7 +149,7 @@ const firstName = teams[0]?.name ?? '';
 			$('[data-picked]').textContent = colors.length
 				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it.`
 				: 'No colors picked, so the prompt uses red.';
-			$('[data-picked]').textContent += " White and black are always included, so you don't need to pick them.";
+			$('[data-picked]').textContent += ' The logo can always use white and black as well.';
 			const built = buildTeamLogoPrompt(
 				{ teamName: name.value, idea: idea.value, style: picked('style'), colors, kind: picked('kind') as MflLiveAppLogoKind },
 				'',
@@ -167,8 +167,6 @@ const firstName = teams[0]?.name ?? '';
 		}
 
 		function toggle(hex: string) {
-			// White and black come with every prompt, so they never take a slot.
-			if (pickLogoColors([hex])[0] !== hex) return;
 			if (colors.includes(hex)) colors = colors.filter((h) => h !== hex);
 			else if (colors.length < LOGO_MAX_COLORS) colors = [...colors, hex];
 			render();

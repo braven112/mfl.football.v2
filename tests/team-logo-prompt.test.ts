@@ -42,16 +42,24 @@ describe('team logo prompt builder', () => {
     expect(prompt).not.toContain('\n');
   });
 
-  it('takes one or two team colors; white and black come with every prompt and spend no slot', () => {
-    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#13294b', 'fff', '#111111', '#000', '#FFB81C', '#123456'] }, 'T');
+  it('takes one or two team colors, white and black included, and offers the neutrals not picked', () => {
+    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#13294b', '#FFB81C', '#123456'] }, 'T');
     expect(choice.colors).toEqual(['#13294B', '#FFB81C']);
     expect(prompt).toContain('colors: navy #13294B and gold #FFB81C, plus white and black wherever the logo needs them');
     expect(buildTeamLogoPrompt({ colors: ['#7a1f2b'] }, 'T').prompt).toContain('colors: #7A1F2B, plus white and black');
+
+    const redBlack = buildTeamLogoPrompt({ colors: ['#C8102E', '#111111'] }, 'T');
+    expect(redBlack.choice.colors).toEqual(['#C8102E', '#111111']);
+    expect(redBlack.prompt).toContain('red #C8102E and black #111111, plus white wherever the logo needs it');
+    const blackWhite = buildTeamLogoPrompt({ colors: ['#111111', 'fff'] }, 'T');
+    expect(blackWhite.choice.colors).toEqual(['#111111', '#FFFFFF']);
+    expect(blackWhite.prompt).toContain('colors: black #111111 and white #FFFFFF.');
+    expect(blackWhite.prompt).not.toContain('plus');
+
     expect(pickLogoColors(['#C8102E', '#c8102e', 'red'])).toEqual(['#C8102E']);
-    expect(pickLogoColors(['#FFFFFF', '#111111'])).toEqual(['#C8102E']);
     expect(pickLogoColors(undefined)).toEqual(['#C8102E']);
     expect(LOGO_MAX_COLORS).toBe(2);
-    expect(LOGO_COLORS.some((c) => /^#(F{6}|111111|0{6})$/.test(c.hex))).toBe(false);
+    expect(LOGO_COLORS.map((c) => c.name)).toEqual(expect.arrayContaining(['white', 'black']));
     for (const kind of LOGO_KINDS) {
       expect(buildTeamLogoPrompt({ kind: kind.id }, 'T').prompt).toContain('plus white and black');
     }
@@ -75,6 +83,7 @@ describe('team logo prompt builder', () => {
     expect(note.tone).toBe('weak');
     expect(note.text).toMatch(/^Red and maroon are too close/);
     expect(logoColorAdvice(['#C8102E']).note).toMatchObject({ tone: 'good', text: 'Red with white and black is a classic look.' });
+    expect(logoColorAdvice(['#FFFFFF']).note.text).toBe('White with black is a classic look.');
   });
 
   it('notes an NFL nickname without blocking it', () => {

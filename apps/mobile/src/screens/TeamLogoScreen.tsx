@@ -100,8 +100,7 @@ export function TeamLogoScreen({ route }: Props) {
   const addTyped = () => {
     const raw = typedHex.trim().replace(/^#/, '');
     const hex = `#${(raw.length === 3 ? raw.replace(/./g, (ch) => ch + ch) : raw).toUpperCase()}`;
-    // White and black come with every prompt, so they never take a slot.
-    if (!/^#(F{6}|0{6}|111111)$/.test(hex)) toggleColor(hex);
+    toggleColor(hex);
     setTypedHex('');
   };
 
@@ -253,7 +252,7 @@ export function TeamLogoScreen({ route }: Props) {
           ))}
           <Text style={[styles.hint, { color: t.muted }]}>
             {choice.colors.length === 0 ? 'No colors picked, so the prompt uses red. ' : ''}
-            White and black are always included, so you don't need to pick them.
+            The logo can always use white and black as well.
           </Text>
         </View>
         <Text
