@@ -155,7 +155,8 @@ export function TeamLogoScreen({ route }: Props) {
       </Field>
 
       <Field t={t} label="Team colors that work well together">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>
+        {/* One square per pair, split corner to corner: the second color is a triangle drawn with borders. */}
+        <View style={styles.chips}>
           {data.suggestions.map((sg) => {
             const on = sg.hexes.join() === choice.colors.join();
             return (
@@ -166,21 +167,17 @@ export function TeamLogoScreen({ route }: Props) {
                 accessibilityState={{ selected: on }}
                 onPress={() => set({ colors: [...sg.hexes] })}
                 style={({ pressed }) => [
-                  styles.suggestion,
-                  { borderColor: on ? t.accent : t.border, backgroundColor: t.card },
+                  styles.swatch,
+                  styles.pair,
+                  { backgroundColor: sg.hexes[0], borderColor: on ? t.accentText : t.border, borderWidth: on ? 3 : 1 },
                   pressed ? styles.pressed : null,
                 ]}
               >
-                <View style={styles.suggestionDots}>
-                  {sg.hexes.map((hex) => (
-                    <View key={hex} style={[styles.pickedDot, { backgroundColor: hex, borderColor: t.border }]} />
-                  ))}
-                </View>
-                <Text style={[styles.chipText, { color: t.text }]}>{sg.label}</Text>
+                {sg.hexes[1] ? <View style={[styles.pairHalf, { borderBottomColor: sg.hexes[1] }]} /> : null}
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       </Field>
 
       <Field t={t} label={`Or pick your own · up to ${data.maxColors}`}>
@@ -360,9 +357,17 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: font.medium, fontSize: 14 },
   swatch: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   swatchBadge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  suggestions: { gap: 8, paddingRight: 16 },
-  suggestion: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
-  suggestionDots: { flexDirection: 'row', gap: 4 },
+  pair: { overflow: 'hidden' },
+  pairHalf: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    borderBottomWidth: 44,
+    borderLeftWidth: 44,
+    borderLeftColor: 'transparent',
+  },
   swatchBadgeText: { fontFamily: font.bold, fontSize: 12 },
   typedRow: { flexDirection: 'row', gap: 8 },
   typedInput: { flex: 1 },

@@ -80,25 +80,23 @@ function neutralsFor(hexes: string[]): string[] {
 }
 
 /**
- * One-tap team colors that read well together and stay apart when tiny: the
- * two colors of a pair clear `LOGO_MIN_CONTRAST`, which
+ * Ten ready-made pairs, each shown as ONE square split between its two colors
+ * (Brandon, 2026-10-28: a shortcut row, not a wall of buttons; any other pair
+ * comes from the grid). Both colors clear `LOGO_MIN_CONTRAST`, which
  * tests/team-logo-prompt.test.ts checks, so a pair added here cannot blur
- * into one blob at 40 px. A single color is a full look too, since white and
- * black come with every prompt.
+ * into one blob at 40 px. The label is the square's accessible name.
  */
 export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
-  { label: 'Red', hexes: ['#C8102E'] },
   { label: 'Red and black', hexes: ['#C8102E', '#111111'] },
   { label: 'Black and white', hexes: ['#111111', '#FFFFFF'] },
   { label: 'Navy and gold', hexes: ['#13294B', '#FFB81C'] },
+  { label: 'Royal blue and white', hexes: ['#1D4ED8', '#FFFFFF'] },
   { label: 'Purple and gold', hexes: ['#4C1D95', '#FFB81C'] },
   { label: 'Maroon and gold', hexes: ['#6B1F2A', '#FFB81C'] },
   { label: 'Forest green and gold', hexes: ['#1E5631', '#FFB81C'] },
   { label: 'Navy and orange', hexes: ['#13294B', '#F26B1D'] },
   { label: 'Crimson and cream', hexes: ['#9E1B32', '#F3E9D2'] },
   { label: 'Navy and silver', hexes: ['#13294B', '#A5ACAF'] },
-  { label: 'Royal blue', hexes: ['#1D4ED8'] },
-  { label: 'Kelly green', hexes: ['#00843D'] },
 ];
 
 /**

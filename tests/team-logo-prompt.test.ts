@@ -66,14 +66,11 @@ describe('team logo prompt builder', () => {
   });
 
   it('every suggested pair is accessible: its two colors clear 3:1', () => {
-    expect(LOGO_COLOR_SUGGESTIONS.length).toBeGreaterThanOrEqual(6);
+    expect(LOGO_COLOR_SUGGESTIONS).toHaveLength(10);
     for (const set of LOGO_COLOR_SUGGESTIONS) {
-      expect(set.hexes.length).toBeGreaterThanOrEqual(1);
-      expect(set.hexes.length).toBeLessThanOrEqual(LOGO_MAX_COLORS);
+      expect(set.hexes, set.label).toHaveLength(2);
       expect(pickLogoColors(set.hexes)).toEqual(set.hexes);
-      if (set.hexes.length === 2) {
-        expect(contrastRatio(set.hexes[0], set.hexes[1]), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
-      }
+      expect(contrastRatio(set.hexes[0], set.hexes[1]), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
       expect(logoColorAdvice(set.hexes).note.tone).toBe('good');
     }
   });
