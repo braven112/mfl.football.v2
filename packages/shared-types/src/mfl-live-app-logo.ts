@@ -20,22 +20,22 @@ export interface MflLiveAppLogoOption<Id extends string = string> {
   label: string;
 }
 
-/** One colour in the grid the owner picks from. */
+/** One color in the grid the owner picks from. */
 export interface MflLiveAppLogoColor {
   name: string;
   /** `#RRGGBB`. */
   hex: string;
 }
 
-/** A one-tap colour set whose colours all clear 3:1 against each other. */
+/** A one-tap suggestion: one team color, or a pair that clears 3:1. */
 export interface MflLiveAppLogoSuggestion {
   label: string;
   hexes: string[];
 }
 
-/** Whether the picked colours work together, in a sentence. */
+/** Whether the picked colors work together, in a sentence. */
 export interface MflLiveAppLogoColorNote {
-  /** good: distinct; weak: two are too close; tip: one colour only. */
+  /** good: distinct; weak: two are too close; tip: kept for older app builds (one color is now "good"). */
   tone: 'good' | 'weak' | 'tip';
   text: string;
 }
@@ -47,7 +47,7 @@ export interface MflLiveAppLogoChoice {
   /** Mascot or idea, free text. Trimmed to 120 characters by the server. */
   idea?: string;
   style: string;
-  /** One to three `#RRGGBB` colours, main colour first: from the grid or typed by the owner. */
+  /** One or two `#RRGGBB` team colors, main color first: from the grid or typed by the owner. White and black are never listed; every prompt adds them. */
   colors: string[];
   kind: MflLiveAppLogoKind;
 }
@@ -58,18 +58,18 @@ export interface MflLiveAppLogoPrompt {
   /** The team's name on MFL, to pre-fill the field. */
   teamName: string;
   styles: MflLiveAppLogoOption[];
-  /** The colour grid. Any other hex the owner types is accepted too. */
+  /** The color grid. Any other hex the owner types is accepted too. */
   colors: MflLiveAppLogoColor[];
   /** Colour sets that read well together, shown above the grid. */
   suggestions: MflLiveAppLogoSuggestion[];
-  /** Most colours an owner may pick: a logo needs two or three to read when small. */
+  /** Most team colors an owner may pick (2). White and black come on top. */
   maxColors: number;
   kinds: MflLiveAppLogoOption<MflLiveAppLogoKind>[];
   /** The choice this prompt was built from (the defaults on a GET). */
   choice: Required<MflLiveAppLogoChoice>;
   /** The finished prompt to copy or share. */
   prompt: string;
-  /** How well the picked colours stand apart. */
+  /** How well the picked colors stand apart. */
   colorNote: MflLiveAppLogoColorNote;
   /** Set when the name or idea reads like an NFL club, which the art must not copy. */
   warning?: string;

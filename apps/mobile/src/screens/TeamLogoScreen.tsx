@@ -17,7 +17,7 @@ const TOOLS = [
 ] as const;
 
 /**
- * Create a team logo: the owner picks a style, colours and the kind of art,
+ * Create a team logo: the owner picks a style, one or two team colors and the kind of art,
  * and gets a prompt to paste into the AI tool they already use. We make no
  * images (decided 2026-10-27: no running cost, no AI moderation for Play).
  *
@@ -87,12 +87,12 @@ export function TeamLogoScreen({ route }: Props) {
 
   const set = (patch: Partial<MflLiveAppLogoChoice>) => setChoice((c) => (c ? { ...c, ...patch } : c));
 
-  // Tap a colour to add it, tap it again to take it out. The first one picked is the main colour.
+  // Tap a color to add it, tap it again to take it out. The first one picked is the main color.
   const toggleColor = (hex: string) =>
     setChoice((c) => {
       if (!c) return c;
       if (c.colors.includes(hex)) return { ...c, colors: c.colors.filter((h) => h !== hex) };
-      if (c.colors.length >= (data?.maxColors ?? 3)) return c;
+      if (c.colors.length >= (data?.maxColors ?? 2)) return c;
       return { ...c, colors: [...c.colors, hex] };
     });
   const [typedHex, setTypedHex] = useState('');
@@ -100,7 +100,8 @@ export function TeamLogoScreen({ route }: Props) {
   const addTyped = () => {
     const raw = typedHex.trim().replace(/^#/, '');
     const hex = `#${(raw.length === 3 ? raw.replace(/./g, (ch) => ch + ch) : raw).toUpperCase()}`;
-    toggleColor(hex);
+    // White and black come with every prompt, so they never take a slot.
+    if (!/^#(F{6}|0{6}|111111)$/.test(hex)) toggleColor(hex);
     setTypedHex('');
   };
 
@@ -154,7 +155,7 @@ export function TeamLogoScreen({ route }: Props) {
         </View>
       </Field>
 
-      <Field t={t} label="Colors that work well together">
+      <Field t={t} label="Team colors that work well together">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>
           {data.suggestions.map((sg) => {
             const on = sg.hexes.join() === choice.colors.join();
@@ -250,9 +251,10 @@ export function TeamLogoScreen({ route }: Props) {
               </Text>
             </Pressable>
           ))}
-          {choice.colors.length === 0 ? (
-            <Text style={[styles.hint, { color: t.muted }]}>No colors picked, so the prompt uses red and white.</Text>
-          ) : null}
+          <Text style={[styles.hint, { color: t.muted }]}>
+            {choice.colors.length === 0 ? 'No colors picked, so the prompt uses red. ' : ''}
+            White and black are always included, so you don't need to pick them.
+          </Text>
         </View>
         <Text
           accessibilityLiveRegion="polite"
