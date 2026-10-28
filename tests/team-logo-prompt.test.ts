@@ -7,6 +7,7 @@ import {
   LOGO_MIN_CONTRAST,
   logoColorAdvice,
   LOGO_KINDS,
+  LOGO_MAX_COLORS,
   LOGO_STYLES,
   logoPromptOptions,
   nflNameWarning,
@@ -31,7 +32,7 @@ describe('team logo prompt builder', () => {
 
   it('falls back to the defaults for unknown ids, and to the MFL name for an empty one', () => {
     const built = buildTeamLogoPrompt({ style: 'gone', colors: ['nope'], kind: 'gone' as never, teamName: '  ' }, 'Smokane FC');
-    expect(built.choice).toMatchObject({ teamName: 'Smokane FC', style: 'crest', colors: ['#C8102E', '#FFFFFF'], kind: 'icon' });
+    expect(built.choice).toMatchObject({ teamName: 'Smokane FC', style: 'crest', colors: ['#C8102E'], kind: 'icon' });
   });
 
   it('keeps owner text to one plain line so it cannot reshape the prompt', () => {
@@ -41,41 +42,39 @@ describe('team logo prompt builder', () => {
     expect(prompt).not.toContain('\n');
   });
 
-  it('takes the owner’s own colours: grid picks by name, typed hexes as given, at most three', () => {
-    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#c8102e', 'fff', '#111111', '#123456'] }, 'T');
-    expect(choice.colors).toEqual(['#C8102E', '#FFFFFF', '#111111']);
-    expect(prompt).toContain('red #C8102E, white #FFFFFF and black #111111');
-    expect(buildTeamLogoPrompt({ colors: ['#7a1f2b'] }, 'T').prompt).toContain('colors: #7A1F2B.');
+  it('takes one or two team colors; white and black come with every prompt and spend no slot', () => {
+    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#13294b', 'fff', '#111111', '#000', '#FFB81C', '#123456'] }, 'T');
+    expect(choice.colors).toEqual(['#13294B', '#FFB81C']);
+    expect(prompt).toContain('colors: navy #13294B and gold #FFB81C, plus white and black wherever the logo needs them');
+    expect(buildTeamLogoPrompt({ colors: ['#7a1f2b'] }, 'T').prompt).toContain('colors: #7A1F2B, plus white and black');
     expect(pickLogoColors(['#C8102E', '#c8102e', 'red'])).toEqual(['#C8102E']);
-    expect(pickLogoColors(undefined)).toEqual(['#C8102E', '#FFFFFF']);
+    expect(pickLogoColors(['#FFFFFF', '#111111'])).toEqual(['#C8102E']);
+    expect(pickLogoColors(undefined)).toEqual(['#C8102E']);
+    expect(LOGO_MAX_COLORS).toBe(2);
+    expect(LOGO_COLORS.some((c) => /^#(F{6}|111111|0{6})$/.test(c.hex))).toBe(false);
+    for (const kind of LOGO_KINDS) {
+      expect(buildTeamLogoPrompt({ kind: kind.id }, 'T').prompt).toContain('plus white and black');
+    }
   });
 
-  it('every suggested colour set is accessible: each two colours clear 3:1', () => {
+  it('every suggested pair is accessible: its two colors clear 3:1', () => {
     expect(LOGO_COLOR_SUGGESTIONS.length).toBeGreaterThanOrEqual(6);
     for (const set of LOGO_COLOR_SUGGESTIONS) {
-      expect(set.hexes.length).toBeGreaterThanOrEqual(2);
-      for (let i = 0; i < set.hexes.length; i++) {
-        for (let j = i + 1; j < set.hexes.length; j++) {
-          expect(contrastRatio(set.hexes[i], set.hexes[j]), `${set.label}: ${set.hexes[i]} vs ${set.hexes[j]}`).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
-        }
+      expect(set.hexes.length).toBeGreaterThanOrEqual(1);
+      expect(set.hexes.length).toBeLessThanOrEqual(LOGO_MAX_COLORS);
+      expect(pickLogoColors(set.hexes)).toEqual(set.hexes);
+      if (set.hexes.length === 2) {
+        expect(contrastRatio(set.hexes[0], set.hexes[1]), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
       }
       expect(logoColorAdvice(set.hexes).note.tone).toBe('good');
     }
   });
 
-  it('flags colours too close to tell apart, and names them', () => {
+  it('flags two colors too close to tell apart, and names them', () => {
     const { note } = logoColorAdvice(['#C8102E', '#6B1F2A']);
     expect(note.tone).toBe('weak');
     expect(note.text).toMatch(/^Red and maroon are too close/);
-    expect(logoColorAdvice(['#C8102E']).note.tone).toBe('tip');
-  });
-
-  it('asks for an outline when every colour vanishes on our dark or light ground', () => {
-    expect(logoColorAdvice(['#13294B', '#111111']).outline).toBe('light');
-    expect(buildTeamLogoPrompt({ colors: ['#13294B', '#111111'] }, 'T').prompt).toContain('thin white outline');
-    expect(logoColorAdvice(['#FFFFFF', '#F3E9D2']).outline).toBe('dark');
-    expect(logoColorAdvice(['#C8102E', '#FFFFFF', '#111111']).outline).toBeUndefined();
-    expect(buildTeamLogoPrompt({ colors: ['#C8102E', '#FFFFFF'] }, 'T').prompt).not.toContain('outline so');
+    expect(logoColorAdvice(['#C8102E']).note).toMatchObject({ tone: 'good', text: 'Red with white and black is a classic look.' });
   });
 
   it('notes an NFL nickname without blocking it', () => {

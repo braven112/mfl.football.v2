@@ -1,9 +1,9 @@
 /**
  * The team logo prompt builder (MFL Football app and `/live/team-logo`).
  *
- * We do not make images. An owner picks a style, colours and a kind of art,
- * and this writes the prompt they paste into the AI image tool they already
- * use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
+ * We do not make images. An owner picks a style, one or two team colors and a
+ * kind of art, and this writes the prompt they paste into the AI image tool
+ * they already use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
  * rather than pictures. The rules wrapped around their choices are the ones
  * our art has to meet: flat, bold and readable at 40 px, on a transparent
  * ground at the master sizes the Brand Book asks for (`brand-asset-specs.ts`),
@@ -38,9 +38,11 @@ export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
 ];
 
 /**
- * The colour grid. The owner taps up to `LOGO_MAX_COLORS` of these, or types
+ * The color grid. The owner taps up to `LOGO_MAX_COLORS` of these, or types
  * any other hex. Names go into the prompt beside the hex so the image tool
- * reads both.
+ * reads both. White and black are not on it: every prompt offers them on top
+ * of the team colors (`NEUTRALS`), because nearly every logo needs one or both
+ * for outlines and lettering (Brandon, 2026-10-28).
  */
 export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'red', hex: '#C8102E' },
@@ -59,40 +61,39 @@ export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'brown', hex: '#4E3629' },
   { name: 'cream', hex: '#F3E9D2' },
   { name: 'silver', hex: '#A5ACAF' },
-  { name: 'white', hex: '#FFFFFF' },
-  { name: 'black', hex: '#111111' },
 ];
 
-export const LOGO_MAX_COLORS = 3;
+export const LOGO_MAX_COLORS = 2;
+
+/** White and black: always allowed, so picking either one spends no slot. */
+const WHITE_AND_BLACK = /^#(F{6}|0{6}|111111)$/;
+const NEUTRALS = 'plus white and black wherever the logo needs them for outlines, lettering and contrast';
 
 /**
- * One-tap colour sets that read well together and stay apart when tiny: every
- * two colours in a set clear `LOGO_MIN_CONTRAST`, which
- * tests/team-logo-prompt.test.ts checks, so a set added here cannot be a
- * pair that blurs into one blob at 40 px.
+ * One-tap team colors that read well together and stay apart when tiny: the
+ * two colors of a pair clear `LOGO_MIN_CONTRAST`, which
+ * tests/team-logo-prompt.test.ts checks, so a pair added here cannot blur
+ * into one blob at 40 px. A single color is a full look too, since white and
+ * black come with every prompt.
  */
 export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
-  { label: 'Red, white and black', hexes: ['#C8102E', '#FFFFFF', '#111111'] },
+  { label: 'Red', hexes: ['#C8102E'] },
   { label: 'Navy and gold', hexes: ['#13294B', '#FFB81C'] },
-  { label: 'Royal and white', hexes: ['#1D4ED8', '#FFFFFF'] },
-  { label: 'Forest and cream', hexes: ['#1E5631', '#F3E9D2'] },
-  { label: 'Kelly green and white', hexes: ['#00843D', '#FFFFFF'] },
   { label: 'Purple and gold', hexes: ['#4C1D95', '#FFB81C'] },
-  { label: 'Black and orange', hexes: ['#111111', '#F26B1D'] },
   { label: 'Maroon and gold', hexes: ['#6B1F2A', '#FFB81C'] },
+  { label: 'Forest green and gold', hexes: ['#1E5631', '#FFB81C'] },
+  { label: 'Navy and orange', hexes: ['#13294B', '#F26B1D'] },
+  { label: 'Crimson and cream', hexes: ['#9E1B32', '#F3E9D2'] },
   { label: 'Navy and silver', hexes: ['#13294B', '#A5ACAF'] },
-  { label: 'Teal, black and white', hexes: ['#0F766E', '#111111', '#FFFFFF'] },
+  { label: 'Royal blue', hexes: ['#1D4ED8'] },
+  { label: 'Kelly green', hexes: ['#00843D'] },
 ];
 
 /**
- * Two colours in a logo must differ by at least WCAG's 3:1 for graphics
+ * Two colors in a logo must differ by at least WCAG's 3:1 for graphics
  * (1.4.11, the same bar as large text), or they merge when the logo is small.
  */
 export const LOGO_MIN_CONTRAST = AA_LARGE_TEXT_RATIO;
-
-/** The grounds a logo sits on: the app's dark cards and the site's white pages. */
-const DARK_GROUND = '#14161A';
-const LIGHT_GROUND = '#FFFFFF';
 
 export const LOGO_KINDS: Array<MflLiveAppLogoOption<MflLiveAppLogoKind>> = [
   { id: 'icon', label: 'Square icon' },
@@ -100,7 +101,7 @@ export const LOGO_KINDS: Array<MflLiveAppLogoOption<MflLiveAppLogoKind>> = [
   { id: 'svg', label: 'Vector (for Claude)' },
 ];
 
-export const DEFAULT_LOGO_CHOICE = { style: 'crest', colors: ['#C8102E', '#FFFFFF'], kind: 'icon' } as const;
+export const DEFAULT_LOGO_CHOICE = { style: 'crest', colors: ['#C8102E'], kind: 'icon' } as const;
 
 const IDEA_MAX = 120;
 const NAME_MAX = 60;
@@ -123,14 +124,20 @@ export function normalizeHex(value: unknown): string | null {
   return `#${h.toUpperCase()}`;
 }
 
-/** The owner's colours, cleaned: valid hexes only, no repeats, at most three. */
+/**
+ * The owner's team colors, cleaned: valid hexes only, no repeats, no white or
+ * black (every prompt already offers those), at most two.
+ */
 export function pickLogoColors(sent: unknown): string[] {
   const list = Array.isArray(sent) ? sent : [];
-  const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h))].slice(0, LOGO_MAX_COLORS);
+  const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h && !WHITE_AND_BLACK.test(h)))].slice(
+    0,
+    LOGO_MAX_COLORS,
+  );
   return hexes.length ? hexes : [...DEFAULT_LOGO_CHOICE.colors];
 }
 
-/** "red #C8102E, white #FFFFFF and black #111111"; a typed hex goes in on its own. */
+/** "navy #13294B and gold #FFB81C"; a typed hex goes in on its own. */
 export function colorsText(hexes: string[]): string {
   const named = hexes.map((h) => {
     const known = LOGO_COLORS.find((c) => c.hex === h);
@@ -146,58 +153,30 @@ function colorName(hex: string): string {
 const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /**
- * Whether the owner's colours work together, in words: any two that are too
- * close to tell apart, else a nod. Also whether the whole set disappears on a
- * dark or a light ground, which the prompt then fixes with an outline.
+ * Whether the owner's colors work together, in words: two that are too close
+ * to tell apart get a warning, otherwise a nod. White and black come with
+ * every prompt, so one color alone is a complete look, not a gap.
  */
-export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote; outline?: 'light' | 'dark' } {
-  const outline = hexes.every((h) => contrastRatio(h, DARK_GROUND) < LOGO_MIN_CONTRAST)
-    ? 'light'
-    : hexes.every((h) => contrastRatio(h, LIGHT_GROUND) < LOGO_MIN_CONTRAST)
-      ? 'dark'
-      : undefined;
-  const ground =
-    outline === 'light'
-      ? ' All of them are dark, so we asked for a thin white outline to show on dark screens.'
-      : outline === 'dark'
-        ? ' All of them are light, so we asked for a thin dark outline to show on white pages.'
-        : '';
-
-  let worst: { a: string; b: string; ratio: number } | null = null;
-  for (let i = 0; i < hexes.length; i++) {
-    for (let j = i + 1; j < hexes.length; j++) {
-      const ratio = contrastRatio(hexes[i], hexes[j]);
-      if (!worst || ratio < worst.ratio) worst = { a: hexes[i], b: hexes[j], ratio };
-    }
-  }
-
-  if (!worst) {
+export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote } {
+  if (hexes.length < 2) {
     return {
-      outline,
-      note: { tone: 'tip', text: `One color makes a simple mark. Add a much lighter or darker second color so details show.${ground}` },
+      note: { tone: 'good', text: `${capital(colorName(hexes[0] ?? DEFAULT_LOGO_CHOICE.colors[0]))} with white and black is a classic look.` },
     };
   }
-  if (worst.ratio < LOGO_MIN_CONTRAST) {
+  const [a, b] = hexes;
+  const ratio = contrastRatio(a, b);
+  if (ratio < LOGO_MIN_CONTRAST) {
     return {
-      outline,
       note: {
         tone: 'weak',
         text:
-          `${capital(colorName(worst.a))} and ${colorName(worst.b)} are too close to tell apart on a small logo ` +
-          `(${worst.ratio.toFixed(1)}:1, aim for 3:1). Swap one for a much lighter or darker color, or tap a suggested set.${ground}`,
+          `${capital(colorName(a))} and ${colorName(b)} are too close to tell apart on a small logo ` +
+          `(${ratio.toFixed(1)}:1, aim for 3:1). Swap one for a much lighter or darker color, or tap a suggestion.`,
       },
     };
   }
-  return {
-    outline,
-    note: { tone: 'good', text: `Good contrast: these colors stay distinct even when the logo is tiny.${ground}` },
-  };
+  return { note: { tone: 'good', text: 'Good contrast: these colors stay distinct even when the logo is tiny.' } };
 }
-
-const OUTLINE: Record<'light' | 'dark', string> = {
-  light: 'Give the logo a thin white outline so it stands out on dark backgrounds.',
-  dark: 'Give the logo a thin dark outline so it stands out on white backgrounds.',
-};
 
 const ORIGINAL_RULE =
   'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
@@ -205,7 +184,7 @@ const ORIGINAL_RULE =
 /**
  * The prompt for one set of choices. `colors` is already phrased ("crimson
  * #B3122E and gold #F2B705"), so the Brand Book can pass a `[colors]`
- * placeholder through the same sentence.
+ * placeholder through the same sentence. White and black are added here.
  */
 export function writeLogoPrompt(input: {
   teamName: string;
@@ -213,19 +192,17 @@ export function writeLogoPrompt(input: {
   stylePhrase: string;
   colors: string;
   kind: MflLiveAppLogoKind;
-  /** Asks for an outline when every colour vanishes on one of our grounds. */
-  outline?: 'light' | 'dark';
 }): string {
-  const { teamName, idea, stylePhrase, colors, kind } = input;
+  const { teamName, idea, stylePhrase, kind } = input;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
-  const closing = input.outline ? `${OUTLINE[input.outline]} ${ORIGINAL_RULE}` : ORIGINAL_RULE;
+  const colors = `${input.colors}, ${NEUTRALS}`;
   if (kind === 'banner') {
     return (
       `Design a wide team banner for a fantasy football team called "${teamName}". ` +
       `On the left, the team logo: ${subject}. To its right, the team name in big, bold letters. ` +
       `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
       'No gradients, no photo textures. Transparent background, 1900 × 316 pixels (6:1), ' +
-      `with the logo and name filling the height. ${closing}`
+      `with the logo and name filling the height. ${ORIGINAL_RULE}`
     );
   }
   if (kind === 'svg') {
@@ -233,7 +210,7 @@ export function writeLogoPrompt(input: {
       `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
       `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
       'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${closing} Reply with the SVG code only.`
+      `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE} Reply with the SVG code only.`
     );
   }
   return (
@@ -241,7 +218,7 @@ export function writeLogoPrompt(input: {
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
     'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${closing}`
+    `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE}`
   );
 }
 
@@ -282,8 +259,6 @@ export function buildTeamLogoPrompt(
   const colors = pickLogoColors(sent?.colors);
   const kind = LOGO_KINDS.find((k) => k.id === sent?.kind)?.id ?? DEFAULT_LOGO_CHOICE.kind;
 
-  const advice = logoColorAdvice(colors);
-
   return {
     choice: { teamName, idea, style: style.id, colors, kind },
     prompt: writeLogoPrompt({
@@ -292,10 +267,9 @@ export function buildTeamLogoPrompt(
       stylePhrase: style.phrase,
       colors: colorsText(colors),
       kind,
-      outline: advice.outline,
     }),
     warning: nflNameWarning(teamName, idea),
-    colorNote: advice.note,
+    colorNote: logoColorAdvice(colors).note,
   };
 }
 
