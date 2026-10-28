@@ -33,7 +33,7 @@ export interface CrawledSeason {
 	franchises: SeasonFranchise[];
 }
 
-export const MFL_EXPORT_TYPES = ['league', 'playoffBrackets', 'playoffBracket'] as const;
+export const MFL_EXPORT_TYPES = ['league', 'playoffBrackets', 'playoffBracket', 'weeklyResults'] as const;
 export type MflExportType = (typeof MFL_EXPORT_TYPES)[number];
 
 export interface ExportRequest {
@@ -60,6 +60,8 @@ export function exportUrl(req: ExportRequest): string {
 	if (!Number.isInteger(req.year) || req.year < 1999 || req.year > 2100) throw new Error('bad year');
 	if (!MFL_EXPORT_TYPES.includes(req.type)) throw new Error('bad export type');
 	const params = new URLSearchParams({ TYPE: req.type, L: req.leagueId, JSON: '1' });
+	// Every week played so far, in one response (`allWeeklyResults`).
+	if (req.type === 'weeklyResults') params.set('W', 'YTD');
 	if (req.bracketId) {
 		if (!/^\d{1,3}$/.test(req.bracketId)) throw new Error('bad bracket id');
 		params.set('BRACKET_ID', req.bracketId);
