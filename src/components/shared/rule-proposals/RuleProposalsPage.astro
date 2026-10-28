@@ -14,52 +14,81 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { AuthUser } from '../../../utils/auth';
+import type { RuleProposal } from '../../../data/rule-proposals';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { getVoteState, tallyVotes, VOTE_WINDOW_DAYS } from '../../../utils/rule-proposal-votes';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { formatForViewer } from '../../../utils/viewer-clock';
 
-export interface RuleProposal {
-  id: string;
-  title: string;
-  /** Season the change would take effect, e.g. "2027 season". */
-  season: string;
-  status: string;
-  summary: string;
-  /** One line per change, plain text. */
-  changes: string[];
-  /** The rulebook sections this would replace. */
-  replaces: string;
-  href: string;
-  linkLabel: string;
-}
+export type { RuleProposal };
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   proposals: RuleProposal[];
+  /** The signed-in owner (the route has already checked they belong to this league). */
+  user: AuthUser;
+  isCommissioner: boolean;
 }
 
-const { leagueSlug, proposals } = Astro.props;
+const { leagueSlug, proposals, user, isCommissioner } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`RuleProposalsPage: unknown league ${leagueSlug}`);
 
 // Every internal href on this page goes through resolveLeaguePath so apex
 // hosts (theleague.us) do not get a doubled league prefix.
 const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLeaguePrefix ?? false);
+
+const teams = Object.values(getLeagueTeamBrands(leagueSlug)).sort((a, b) => a.name.localeCompare(b.name));
+const franchiseIds = teams.map((t) => t.franchiseId);
+const clock = await readViewerClock(Astro.cookies, user, leagueSlug);
+const myFranchise = user.franchiseId;
+
+const cards = await Promise.all(
+  proposals.map(async (p) => {
+    const state = await getVoteState(leagueSlug, p.id);
+    const tally = tallyVotes(state, franchiseIds);
+    const when = tally.closesAt ? formatForViewer(tally.closesAt, clock, { weekday: true, date: true }) : '';
+    const status =
+      tally.phase === 'discussion'
+        ? 'Open for discussion'
+        : tally.phase === 'open'
+          ? 'Voting open'
+          : tally.passes
+            ? 'Passed'
+            : 'Did not pass';
+    return {
+      p,
+      tally,
+      when,
+      status,
+      mine: state.votes[myFranchise]?.choice ?? null,
+      ballots: teams.map((t) => ({ name: t.name, choice: state.votes[t.franchiseId]?.choice ?? null })),
+    };
+  }),
+);
 ---
 
 <TheLeagueLayout title={`Rule Proposals | ${league.name}`}>
-  <div class="rule-proposals">
+  <div class="rule-proposals" data-league={league.slug}>
     <header class="rule-proposals__header">
       <h1>Rule Proposals</h1>
-      <p>Ideas for next season's rulebook. Read each one before the league votes. <a class="cta-link" href={rulesPath}>Current rules</a></p>
+      <p>Ideas for next season's rulebook. Read each one, then vote when it opens. <a class="cta-link" href={rulesPath}>Current rules</a></p>
+      <p class="rule-proposals__rules">
+        A change needs 75% to pass. Teams that don't vote count as Yes, and each vote is final {VOTE_WINDOW_DAYS} days after it opens.
+        A vote between Feb. 15 and Week 17 needs 100% to take effect right away; otherwise it takes effect next season.
+      </p>
     </header>
 
-    {proposals.length === 0 ? (
+    {cards.length === 0 ? (
       <p class="rule-proposals__empty">No proposals are open right now.</p>
     ) : (
       <ol class="rule-proposals__list">
-        {proposals.map((p, i) => (
-          <li class="proposal" id={p.id}>
+        {cards.map(({ p, tally, when, status, mine, ballots }, i) => (
+          <li class="proposal" id={p.id} data-proposal={p.id}>
             <div class="proposal__meta">
               <span class="proposal__num">Proposal {i + 1}</span>
-              <span class="proposal__status">{p.status}</span>
+              <span class={`proposal__status proposal__status--${tally.phase === 'closed' ? (tally.passes ? 'passed' : 'failed') : tally.phase}`}>{status}</span>
               <span>{p.season}</span>
             </div>
             <h2 class="proposal__title">{p.title}</h2>
@@ -68,13 +97,112 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
               {p.changes.map((c) => <li>{c}</li>)}
             </ul>
             <p class="proposal__replaces">Replaces: {p.replaces}</p>
-            <a class="cta cta--primary" href={p.href} target="_blank" rel="noopener noreferrer">{p.linkLabel}</a>
+            <a class="cta cta--ghost" href={p.href} target="_blank" rel="noopener noreferrer">{p.linkLabel}</a>
+
+            <section class="vote" aria-label={`Vote on ${p.title}`}>
+              {tally.phase === 'discussion' ? (
+                <p class="vote__note">Voting hasn't opened yet. Once it opens, every team gets {VOTE_WINDOW_DAYS} days to vote.</p>
+              ) : (
+                <>
+                  <p class="vote__note">
+                    {tally.phase === 'open' ? `Voting closes ${when}.` : `Voting closed ${when}.`}
+                    {' '}Needs {tally.needed} of {tally.totalFranchises}.
+                    {tally.phase === 'open' && ` It fails if ${tally.noToFail} teams vote No.`}
+                  </p>
+                  <div class="vote__tally" role="group" aria-label="Vote count">
+                    <span class="vote__count vote__count--yes"><strong>{tally.yes}</strong> Yes</span>
+                    <span class="vote__count vote__count--no"><strong>{tally.no}</strong> No</span>
+                    <span class="vote__count"><strong>{tally.abstain}</strong> {tally.phase === 'open' ? 'not voted yet' : 'didn\'t vote'} (count as Yes)</span>
+                  </div>
+                  {tally.phase === 'open' && (
+                    <div class="vote__buttons">
+                      <span class="vote__prompt">{mine ? 'Your vote (tap to change):' : 'Your vote:'}</span>
+                      {(['yes', 'no'] as const).map((choice) => (
+                        <button
+                          type="button"
+                          class={`cta ${mine === choice ? 'cta--primary' : 'cta--ghost'}`}
+                          aria-pressed={mine === choice ? 'true' : 'false'}
+                          data-vote-action="vote"
+                          data-choice={choice}
+                        >
+                          {choice === 'yes' ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <details class="vote__ballots">
+                    <summary>How each team voted</summary>
+                    <ul>
+                      {ballots.map((b) => (
+                        <li>
+                          <span>{b.name}</span>
+                          <span class={`vote__choice vote__choice--${b.choice ?? 'none'}`}>
+                            {b.choice === 'yes' ? 'Yes' : b.choice === 'no' ? 'No' : 'Not voted'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </>
+              )}
+              {isCommissioner && (
+                <div class="vote__commish">
+                  {tally.phase === 'discussion' ? (
+                    <button type="button" class="cta cta--primary" data-vote-action="open">Open the vote</button>
+                  ) : (
+                    <button type="button" class="cta-link vote__cancel" data-vote-action="cancel">Cancel this vote and clear ballots</button>
+                  )}
+                </div>
+              )}
+              <p class="vote__error" role="alert" hidden></p>
+            </section>
           </li>
         ))}
       </ol>
     )}
   </div>
 </TheLeagueLayout>
+
+<script>
+  // Registered on document, so it survives ClientRouter swaps: the gate asks
+  // a node the swap REPLACED, and names its league (cross-league-init-gate).
+  function initRuleProposals() {
+    const root = document.querySelector<HTMLElement>('.rule-proposals[data-league]');
+    if (!root || root.dataset.init) return;
+    root.dataset.init = '1';
+    const league = root.dataset.league;
+
+    root.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-vote-action]');
+      if (!btn) return;
+      const card = btn.closest<HTMLElement>('[data-proposal]');
+      if (!card) return;
+      const action = btn.dataset.voteAction;
+      if (action === 'cancel' && !window.confirm('Cancel this vote? Every ballot cast so far will be cleared.')) return;
+      if (action === 'open' && !window.confirm(`Open voting now? Owners get 5 days.`)) return;
+      const error = card.querySelector<HTMLElement>('.vote__error');
+      if (error) error.hidden = true;
+      card.querySelectorAll<HTMLButtonElement>('[data-vote-action]').forEach((b) => (b.disabled = true));
+      try {
+        const res = await fetch('/api/rule-proposals/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ league, proposalId: card.dataset.proposal, action, choice: btn.dataset.choice }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+        window.location.reload();
+      } catch (err) {
+        if (error) {
+          error.textContent = (err as Error).message;
+          error.hidden = false;
+        }
+        card.querySelectorAll<HTMLButtonElement>('[data-vote-action]').forEach((b) => (b.disabled = false));
+      }
+    });
+  }
+  document.addEventListener('astro:page-load', initRuleProposals);
+</script>
 
 <style>
   .rule-proposals {
@@ -145,5 +273,97 @@ const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, Astro.locals.hideLea
     margin: 0;
     font-size: var(--font-size-sm);
     color: var(--color-gray-600, #4b5563);
+  }
+  .proposal__status--passed {
+    color: var(--color-success-dark, #15803d);
+  }
+  .proposal__status--failed {
+    color: var(--color-error-dark, #b91c1c);
+  }
+  .rule-proposals__rules {
+    margin-top: 0.5rem !important;
+    font-size: var(--font-size-sm);
+  }
+  .vote {
+    width: 100%;
+    display: grid;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--content-border, #e5e7eb);
+  }
+  .vote__note {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600, #4b5563);
+  }
+  .vote__tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+  }
+  .vote__count strong {
+    font-size: var(--font-size-lg);
+  }
+  .vote__count--yes strong {
+    color: var(--color-success-dark, #15803d);
+  }
+  .vote__count--no strong {
+    color: var(--color-error-dark, #b91c1c);
+  }
+  .vote__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .vote__buttons .cta {
+    min-width: 5.5rem;
+  }
+  .vote__prompt {
+    font-weight: 600;
+    margin-right: 0.25rem;
+  }
+  .vote__ballots summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .vote__ballots ul {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .vote__ballots li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: var(--font-size-sm);
+  }
+  .vote__choice {
+    font-weight: 600;
+  }
+  .vote__choice--yes {
+    color: var(--color-success-dark, #15803d);
+  }
+  .vote__choice--no {
+    color: var(--color-error-dark, #b91c1c);
+  }
+  .vote__choice--none {
+    color: var(--color-gray-600, #4b5563);
+    font-weight: 400;
+  }
+  .vote__cancel {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--font-size-sm);
+  }
+  .vote__error {
+    margin: 0;
+    color: var(--color-error-dark, #b91c1c);
+    font-size: var(--font-size-sm);
   }
 </style>
