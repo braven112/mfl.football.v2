@@ -186,19 +186,24 @@ export default function LiveBroadcast({ pageData }: Props) {
   }, [data.modeHint]);
 
   /**
-   * A phone on the coffee table must not go dark between scores. Handheld
-   * only: the television's behaviour does not change. Best-effort, and
-   * re-taken when the tab comes back, because the OS drops the lock on hide.
+   * The screen must not go dark between scores: a phone on the coffee table,
+   * and a television showing the board in its own browser (Fire TV, Samsung,
+   * LG, Xbox), where nothing else keeps it awake. The Google TV app holds the
+   * screen on natively, so this is a no-op there. Best-effort, and re-taken
+   * when the tab comes back, because the OS drops the lock on hide.
    */
   useEffect(() => {
-    if (mode !== 'handheld') return;
     let lock: { release?: () => Promise<void> } | null = null;
     let released = false;
     const acquire = async () => {
       try {
-        lock = await (navigator as unknown as {
+        const got = await (navigator as unknown as {
           wakeLock?: { request: (t: 'screen') => Promise<{ release?: () => Promise<void> }> };
         }).wakeLock?.request('screen') ?? null;
+        // Granted after the board unmounted: hand it straight back, or the
+        // screen stays held by a board that is no longer there.
+        if (released) void got?.release?.().catch(() => {});
+        else lock = got;
       } catch (_err) {
         /* unsupported or denied — the board still works */
       }
@@ -217,7 +222,7 @@ export default function LiveBroadcast({ pageData }: Props) {
         /* already gone */
       }
     };
-  }, [mode]);
+  }, []);
 
   /** Landscape on a phone: bring the board up past the site nav, once. */
   useEffect(() => {
