@@ -40,9 +40,10 @@ export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
 /**
  * The color grid. The owner taps up to `LOGO_MAX_COLORS` of these, or types
  * any other hex. Names go into the prompt beside the hex so the image tool
- * reads both. White and black are not on it: every prompt offers them on top
- * of the team colors (`NEUTRALS`), because nearly every logo needs one or both
- * for outlines and lettering (Brandon, 2026-10-28).
+ * reads both. White and black are on it, so a team can BE red and black or
+ * black and white; whichever of the two the owner did not pick, the prompt
+ * still offers on top (`neutralsFor`), because nearly every logo needs them for
+ * outlines and lettering (Brandon, 2026-10-28).
  */
 export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'red', hex: '#C8102E' },
@@ -61,13 +62,22 @@ export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'brown', hex: '#4E3629' },
   { name: 'cream', hex: '#F3E9D2' },
   { name: 'silver', hex: '#A5ACAF' },
+  { name: 'white', hex: '#FFFFFF' },
+  { name: 'black', hex: '#111111' },
 ];
 
 export const LOGO_MAX_COLORS = 2;
 
-/** White and black: always allowed, so picking either one spends no slot. */
-const WHITE_AND_BLACK = /^#(F{6}|0{6}|111111)$/;
-const NEUTRALS = 'plus white and black wherever the logo needs them for outlines, lettering and contrast';
+const WHITE = /^#F{6}$/;
+const BLACK = /^#(0{6}|111111)$/;
+
+/** White and black, less whichever the owner already picked as a team color. */
+function neutralsFor(hexes: string[]): string[] {
+  return [
+    ...(hexes.some((h) => WHITE.test(h)) ? [] : ['white']),
+    ...(hexes.some((h) => BLACK.test(h)) ? [] : ['black']),
+  ];
+}
 
 /**
  * One-tap team colors that read well together and stay apart when tiny: the
@@ -78,6 +88,8 @@ const NEUTRALS = 'plus white and black wherever the logo needs them for outlines
  */
 export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
   { label: 'Red', hexes: ['#C8102E'] },
+  { label: 'Red and black', hexes: ['#C8102E', '#111111'] },
+  { label: 'Black and white', hexes: ['#111111', '#FFFFFF'] },
   { label: 'Navy and gold', hexes: ['#13294B', '#FFB81C'] },
   { label: 'Purple and gold', hexes: ['#4C1D95', '#FFB81C'] },
   { label: 'Maroon and gold', hexes: ['#6B1F2A', '#FFB81C'] },
@@ -124,16 +136,10 @@ export function normalizeHex(value: unknown): string | null {
   return `#${h.toUpperCase()}`;
 }
 
-/**
- * The owner's team colors, cleaned: valid hexes only, no repeats, no white or
- * black (every prompt already offers those), at most two.
- */
+/** The owner's team colors, cleaned: valid hexes only, no repeats, at most two. */
 export function pickLogoColors(sent: unknown): string[] {
   const list = Array.isArray(sent) ? sent : [];
-  const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h && !WHITE_AND_BLACK.test(h)))].slice(
-    0,
-    LOGO_MAX_COLORS,
-  );
+  const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h))].slice(0, LOGO_MAX_COLORS);
   return hexes.length ? hexes : [...DEFAULT_LOGO_CHOICE.colors];
 }
 
@@ -160,7 +166,10 @@ const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote } {
   if (hexes.length < 2) {
     return {
-      note: { tone: 'good', text: `${capital(colorName(hexes[0] ?? DEFAULT_LOGO_CHOICE.colors[0]))} with white and black is a classic look.` },
+      note: {
+        tone: 'good',
+        text: `${capital(colorName(hexes[0] ?? DEFAULT_LOGO_CHOICE.colors[0]))} with ${neutralsFor(hexes).join(' and ')} is a classic look.`,
+      },
     };
   }
   const [a, b] = hexes;
@@ -184,7 +193,8 @@ const ORIGINAL_RULE =
 /**
  * The prompt for one set of choices. `colors` is already phrased ("crimson
  * #B3122E and gold #F2B705"), so the Brand Book can pass a `[colors]`
- * placeholder through the same sentence. White and black are added here.
+ * placeholder through the same sentence. `neutrals` is what the logo may use
+ * on top of them: white and black unless the owner picked one as a team color.
  */
 export function writeLogoPrompt(input: {
   teamName: string;
@@ -192,10 +202,13 @@ export function writeLogoPrompt(input: {
   stylePhrase: string;
   colors: string;
   kind: MflLiveAppLogoKind;
+  neutrals?: string[];
 }): string {
-  const { teamName, idea, stylePhrase, kind } = input;
+  const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
-  const colors = `${input.colors}, ${NEUTRALS}`;
+  const colors = neutrals.length
+    ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for outlines, lettering and contrast`
+    : input.colors;
   if (kind === 'banner') {
     return (
       `Design a wide team banner for a fantasy football team called "${teamName}". ` +
@@ -267,6 +280,7 @@ export function buildTeamLogoPrompt(
       stylePhrase: style.phrase,
       colors: colorsText(colors),
       kind,
+      neutrals: neutralsFor(colors),
     }),
     warning: nflNameWarning(teamName, idea),
     colorNote: logoColorAdvice(colors).note,
