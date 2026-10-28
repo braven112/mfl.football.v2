@@ -88,11 +88,13 @@ export function TeamLogoScreen({ route }: Props) {
   const set = (patch: Partial<MflLiveAppLogoChoice>) => setChoice((c) => (c ? { ...c, ...patch } : c));
 
   // Tap a color to add it, tap it again to take it out. The first one picked is the main color.
+  // When both slots are full (say, after a ready-made pair), a new color replaces the second.
   const toggleColor = (hex: string) =>
     setChoice((c) => {
       if (!c) return c;
       if (c.colors.includes(hex)) return { ...c, colors: c.colors.filter((h) => h !== hex) };
-      if (c.colors.length >= (data?.maxColors ?? 2)) return c;
+      const max = data?.maxColors ?? 2;
+      if (c.colors.length >= max) return { ...c, colors: [...c.colors.slice(0, max - 1), hex] };
       return { ...c, colors: [...c.colors, hex] };
     });
   const [typedHex, setTypedHex] = useState('');
@@ -221,11 +223,11 @@ export function TeamLogoScreen({ route }: Props) {
           />
           <Pressable
             accessibilityRole="button"
-            disabled={!typedValid || choice.colors.length >= data.maxColors}
+            disabled={!typedValid}
             onPress={addTyped}
             style={({ pressed }) => [
               styles.addButton,
-              { borderColor: t.border, backgroundColor: t.card, opacity: typedValid && choice.colors.length < data.maxColors ? 1 : 0.4 },
+              { borderColor: t.border, backgroundColor: t.card, opacity: typedValid ? 1 : 0.4 },
               pressed ? styles.pressed : null,
             ]}
           >

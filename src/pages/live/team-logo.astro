@@ -150,7 +150,7 @@ const firstName = teams[0]?.name ?? '';
 		function render() {
 			root.querySelectorAll<HTMLElement>('[data-hex]').forEach((b) => b.setAttribute('aria-pressed', String(colors.includes(b.dataset.hex!))));
 			$('[data-picked]').textContent = colors.length
-				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it.`
+				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it, or another to swap the second.`
 				: 'No colors picked, so the prompt uses red.';
 			$('[data-picked]').textContent += ' The logo can always use white and black as well.';
 			const built = buildTeamLogoPrompt(
@@ -172,6 +172,9 @@ const firstName = teams[0]?.name ?? '';
 		function toggle(hex: string) {
 			if (colors.includes(hex)) colors = colors.filter((h) => h !== hex);
 			else if (colors.length < LOGO_MAX_COLORS) colors = [...colors, hex];
+			// Full (say, after tapping a ready-made pair): the new color replaces the
+			// second, so the grid never locks up. The first stays the main color.
+			else colors = [...colors.slice(0, LOGO_MAX_COLORS - 1), hex];
 			render();
 		}
 
