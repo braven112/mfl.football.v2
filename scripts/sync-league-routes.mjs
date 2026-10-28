@@ -42,8 +42,6 @@ for (const league of leagues) {
   for (const c of changes) console.log(`${league.slug}: ${c.content === null ? 'delete' : 'write'} ${c.path}`);
   if (!check) applyChanges(changes);
 }
-// The league switcher only keeps a page that the target league has.
-if (pending && !check) await import('./generate-league-routes.mjs').then(async ({ buildLeagueRoutes, writeLeagueRoutes }) => writeLeagueRoutes(await buildLeagueRoutes()));
 if (!pending) console.log(`In line: ${leagues.map((l) => l.slug).join(', ')}`);
 if (check && pending) {
   console.error(`\n${pending} change(s) pending — run without --check to apply.`);
