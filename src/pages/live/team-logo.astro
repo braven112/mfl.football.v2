@@ -71,12 +71,15 @@ const firstName = teams[0]?.name ?? '';
 			<span class="tlogo__label" id="tlogo-suggest-label">Team colors that work well together</span>
 			<div class="tlogo__chips" role="group" aria-labelledby="tlogo-suggest-label" data-suggestions>
 				{LOGO_COLOR_SUGGESTIONS.map((sg) => (
-					<button type="button" class="tlogo__suggest" data-suggest={sg.hexes.join(',')}>
-						<span class="tlogo__dots" aria-hidden="true">
-							{sg.hexes.map((hex) => <span class="tlogo__dot" style={`--swatch:${hex}`}></span>)}
-						</span>
-						{sg.label}
-					</button>
+					<button
+						type="button"
+						class="tlogo__swatch tlogo__swatch--pair"
+						style={`--a:${sg.hexes[0]};--b:${sg.hexes[1]}`}
+						data-suggest={sg.hexes.join(',')}
+						aria-label={sg.label}
+						title={sg.label}
+						aria-pressed="false"
+					></button>
 				))}
 			</div>
 		</div>
@@ -272,34 +275,9 @@ const firstName = teams[0]?.name ?? '';
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 	}
-	.tlogo__suggest {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		font: inherit;
-		font-size: var(--font-size-sm);
-		padding: 0.45rem 0.75rem;
-		border-radius: 10px;
-		border: 1px solid var(--color-border-subtle);
-		background: transparent;
-		color: var(--page-text);
-		cursor: pointer;
-	}
-	.tlogo__suggest[aria-pressed='true'] {
-		border-color: var(--league-accent);
-		outline: 1px solid var(--league-accent);
-		outline-offset: -2px;
-	}
-	.tlogo__dots {
-		display: inline-flex;
-		gap: 3px;
-	}
-	.tlogo__dot {
-		width: 0.9rem;
-		height: 0.9rem;
-		border-radius: 50%;
-		background: var(--swatch);
-		border: 1px solid var(--color-border-subtle);
+	/* A ready-made pair: one square, split corner to corner. */
+	.tlogo__swatch--pair {
+		background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
 	}
 	.tlogo__note {
 		margin: 0;
