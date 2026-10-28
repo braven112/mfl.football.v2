@@ -1,0 +1,227 @@
+---
+/**
+ * /compare — MFL.football next to the other ways an MFL league customizes
+ * itself. AI answer tools quote comparisons readily, so every cell is a plain,
+ * checkable statement (src/data/mfl-services.ts COMPARISON) and the table is a
+ * real <table>. Phones get one card per row with every value labeled, never a
+ * sideways-scrolling table.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import { COMPARISON, FORMER_BRAND } from '../data/mfl-services';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const jsonLd = [
+  organizationJsonLd(),
+  faqJsonLd(COMPARISON.faqs),
+  breadcrumbJsonLd([
+    { name: 'MFL.football', path: '/' },
+    { name: 'Compare', path: '/compare' },
+  ]),
+];
+---
+
+<MarketingShell
+  title="MFL.football vs Habman Scripts, MFLHistory.com and Default MFL Skins"
+  description="How MFL.football compares with free MFL scripts, MFLHistory.com and MyFantasyLeague's default skins for customizing, automating and keeping history for an MFL league."
+  canonicalPath="/compare"
+  jsonLd={jsonLd}
+>
+  <article class="cmp">
+    <p class="cmp__eyebrow">Compare · Formerly {FORMER_BRAND}</p>
+    <h1>Ways to customize an MFL league, compared</h1>
+    <p class="cmp__answer">
+      There are four common ways to customize a MyFantasyLeague league: MFL’s built-in skins, free scripts like
+      Habman’s that run inside your MFL pages, a history site such as MFLHistory.com, or a league website from
+      MFL.football that adds automation and history on your own domain. Many leagues use more than one.
+    </p>
+
+    <table class="ui-table cmp__table">
+      <thead>
+        <tr>
+          <th scope="col"><span class="visually-hidden">Feature</span></th>
+          {COMPARISON.columns.map((c) => <th scope="col">{c}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {COMPARISON.rows.map((row) => (
+          <tr>
+            <th scope="row">{row.label}</th>
+            {row.values.map((v, i) => (
+              <td data-label={COMPARISON.columns[i]}>{v}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <p class="cmp__note">Other products change; check each one’s own site for current features and prices.</p>
+
+    <h2>Questions</h2>
+    <dl class="cmp__faq">
+      {COMPARISON.faqs.map((f) => (
+        <div>
+          <dt>{f.q}</dt>
+          <dd>{f.a}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <h2>Where to next</h2>
+    <ul class="cmp__next">
+      <li><a href="/mfl-skins">Free MFL skins</a></li>
+      <li><a href="/mfl-league-history">MFL league history</a></li>
+      <li><a href="/mfl-commissioner-tools">MFL commissioner tools</a></li>
+      <li><a href="/custom-mfl-league-website">Custom MFL league website</a></li>
+    </ul>
+  </article>
+</MarketingShell>
+
+<style>
+  .cmp {
+    padding: 3.5rem 0 0;
+  }
+
+  .cmp__eyebrow {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-red);
+  }
+
+  .cmp h1 {
+    max-width: 20em;
+    margin: 0.75rem 0 1.25rem;
+    font-size: var(--font-size-3xl);
+    line-height: 1;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .cmp__answer {
+    max-width: 46rem;
+    margin: 0 0 2rem;
+    font-size: var(--font-size-lg);
+    line-height: 1.5;
+  }
+
+  .cmp__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+
+  .cmp__table th,
+  .cmp__table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .cmp__table thead th {
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .cmp__table thead th:nth-child(2),
+  .cmp__table td:nth-of-type(1) {
+    background: color-mix(in srgb, var(--brand-red) 7%, transparent);
+  }
+
+  .cmp__note {
+    margin: 0.75rem 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+  }
+
+  .cmp h2 {
+    margin: 2.5rem 0 1rem;
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .cmp__faq {
+    display: grid;
+    gap: 1rem;
+    max-width: 46rem;
+    margin: 0;
+  }
+
+  .cmp__faq dt {
+    font-weight: 700;
+  }
+
+  .cmp__faq dd {
+    margin: 0.35rem 0 0;
+    color: var(--color-gray-600);
+    line-height: 1.55;
+  }
+
+  .cmp__next {
+    display: grid;
+    gap: 0.5rem;
+    padding-left: 1.2rem;
+    font-weight: 700;
+  }
+
+  /* Phones: one card per row, the row's name on top and every value labeled. */
+  @media (max-width: 760px) {
+    .cmp {
+      padding-top: 2rem;
+    }
+
+    .cmp__table thead {
+      display: none;
+    }
+
+    .cmp__table,
+    .cmp__table tbody,
+    .cmp__table tr,
+    .cmp__table th,
+    .cmp__table td {
+      display: block;
+    }
+
+    .cmp__table tr {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 14px;
+      background: var(--primary-content-bg-color);
+    }
+
+    .cmp__table th[scope='row'] {
+      padding: 0 0 0.5rem;
+      border: 0;
+      font-size: var(--font-size-base);
+    }
+
+    .cmp__table td {
+      padding: 0.4rem 0;
+      border: 0;
+    }
+
+    .cmp__table td:nth-of-type(1) {
+      background: none;
+    }
+
+    .cmp__table td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: var(--font-size-2xs);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-gray-500);
+    }
+
+    .cmp__table td:nth-of-type(1)::before {
+      color: var(--brand-red);
+    }
+  }
+</style>
