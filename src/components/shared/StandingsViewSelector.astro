@@ -15,9 +15,16 @@ export interface Props {
    * model shows its plain league table as 'League' (archies).
    */
   leagueLabel?: string;
+  /**
+   * A one-colour mark (a CSS mask URL) worn on the All-Play tile in place of
+   * the chart icon — the AFL shows the viewer's tier, Premier League or
+   * D-League. It is tinted exactly like the sprite icons, so it follows the
+   * theme and the selected state.
+   */
+  allPlayMark?: string | null;
 }
 
-const { activeView, showAllPlay = true, leagueLabel = 'Playoff' } = Astro.props;
+const { activeView, showAllPlay = true, leagueLabel = 'Playoff', allPlayMark = null } = Astro.props;
 
 const ALL_VIEWS = [
   { key: 'division', label: 'Division', icon: 'icon-numberone', aria: 'Division Standings' },
@@ -48,9 +55,13 @@ function viewHref(view: string): string {
       aria-current={activeView === v.key ? 'page' : undefined}
       title={v.aria}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-        <use href={`${spriteUrl}#${v.icon}`}></use>
-      </svg>
+      {v.key === 'all_play' && allPlayMark ? (
+        <span class="view-tab__icon view-tab__mark" style={`--view-tab-mark: url('${allPlayMark}')`} aria-hidden="true"></span>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+          <use href={`${spriteUrl}#${v.icon}`}></use>
+        </svg>
+      )}
       <span class="view-tab__label">{v.label}</span>
     </a>
   ))}
@@ -108,6 +119,17 @@ function viewHref(view: string): string {
   .view-tab[data-active="true"] .view-tab__icon {
     fill: var(--icon-btn-default-focus-color);
     color: var(--icon-btn-default-focus-color);
+  }
+
+  /* A mark is a mask, not a sprite: currentColor (set by the rules above)
+     paints it, so it tints with the theme and the selected state. */
+  .view-tab__mark {
+    display: block;
+    width: var(--icon-btn-default-size, 30px);
+    height: var(--icon-btn-default-size, 30px);
+    background-color: currentColor;
+    -webkit-mask: var(--view-tab-mark) center / contain no-repeat;
+    mask: var(--view-tab-mark) center / contain no-repeat;
   }
 
   .view-tab__label {

@@ -1217,7 +1217,7 @@ html[data-league="theleague"][data-season="christmas"] {
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-  --btn-icon-text-focus: var(--color-info);
+  --btn-icon-text-focus: var(--color-primary); /* Candy red, not the base info blue: a selected icon tile (Standings, Playoffs, Draft views) matches its red border and label. */
   --btn-primary-bg: var(--color-primary);
   --btn-primary-bg-hover: var(--color-primary-dark);
   --btn-primary-border: var(--color-primary);
@@ -1449,7 +1449,7 @@ html[data-league="theleague"][data-season="halloween"] {
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-  --btn-icon-text-focus: var(--color-info);
+  --btn-icon-text-focus: var(--color-primary);
   --btn-primary-bg: var(--color-primary);
   --btn-primary-bg-hover: var(--color-primary-dark);
   --btn-primary-border: var(--color-primary);

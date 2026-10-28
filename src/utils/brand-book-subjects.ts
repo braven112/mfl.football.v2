@@ -322,6 +322,16 @@ export function brandSubjects(
       const replaces = owner.groups.flatMap((g) => g.files).find((f) => f.url === from);
       add(owner, fileFromPath(`${base}${file}`, replaces ? replaces.label.replace(/, dark$/, '') : undefined));
     }
+    // The one-color cuts a set tints through a mask (menu icons, the Premier
+    // League glyph). Halloween's are its swap files already; Christmas draws a
+    // knit swap and needs a separate one-color cut, which lands here.
+    const menuIcons = (set._menuIcons && typeof set._menuIcons === 'object' ? set._menuIcons : {}) as Record<string, string>;
+    for (const [from, file] of Object.entries(menuIcons)) {
+      const owner =
+        subjects.find((s) => s.groups.some((g) => g.files.some((f) => f.url === from))) ?? subjects[0];
+      const replaces = owner.groups.flatMap((g) => g.files).find((f) => f.url === from);
+      add(owner, fileFromPath(`${base}${file}`, replaces ? `${replaces.label.replace(/, dark$/, '')}, one color` : undefined));
+    }
   }
 
   return subjects;

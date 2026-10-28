@@ -4,7 +4,8 @@
   "description": "Seasonal: a light sheet under a red header and peppermint stripe, framed by snow; candy-cane red for actions, evergreen for live state. Worn light-only (the season locks the page to light; seasonal-themes.css paints the snow frame around the content sheet); the dark block stays legible should the lock ever be lifted.",
   "notes": {
     "--btn-primary-text": "White on candy red #d92636 (about 4.9:1).",
-    "--color-secondary": "Snow white, not a second hue: red, white and evergreen only."
+    "--color-secondary": "Snow white, not a second hue: red, white and evergreen only.",
+    "--btn-icon-text-focus": "Candy red, not the base info blue: a selected icon tile (Standings, Playoffs, Draft views) matches its red border and label."
   },
   "light": {
     "--card-bg": "var(--color-white)",
@@ -46,7 +47,7 @@
     "--color-gray-700": "#374151",
     "--color-gray-800": "#1f2937",
     "--color-gray-900": "#111827",
-    "--btn-icon-text-focus": "var(--color-info)",
+    "--btn-icon-text-focus": "var(--color-primary)",
     "--btn-primary-bg": "var(--color-primary)",
     "--btn-primary-bg-hover": "var(--color-primary-dark)",
     "--btn-primary-border": "var(--color-primary)",
