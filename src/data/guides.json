@@ -139,9 +139,9 @@
         "items": [
           "<strong>Open the browser.</strong> On Samsung it's the <strong>Internet</strong> app. On LG it's <strong>Web Browser</strong>. On Fire TV it's <strong>Silk Browser</strong>; if it isn't on your home screen, search for Silk and install it, it's free. On Xbox it's <strong>Microsoft Edge</strong>, under My games &amp; apps.",
           "<strong>Go to mfl.football/tv.</strong> Type it into the address bar with the remote. A QR code appears.",
-          "<strong>Sign in with your phone.</strong> Point your phone's camera at the QR code, sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own. The TV only gets to watch; your sign-in stays on your phone.",
-          "<strong>Go full screen.</strong> Select <strong>Full screen</strong> in the bar above the scores. Back, or B on an Xbox controller, comes back out. If your browser has no full screen, the button doesn't appear, and the browser's own zoom can make the board fill more of the screen.",
-          "<strong>Turn on sound.</strong> Select <strong>Sound</strong> in the same bar. A browser only plays sound after you've pressed something on that page, so it needs one press on the TV itself.",
+          "<strong>Sign in with your phone.</strong> Point your phone's camera at the QR code, sign in if it asks, then tap <strong>Approve</strong>. The TV switches to the Broadcast page on its own. The TV only gets to watch; your sign-in stays on your phone.",
+          "<strong>Turn on sound first.</strong> Select <strong>Sound off</strong> next to the big button so it reads Sound on. A browser only plays sound after you've pressed something on the page, and that button isn't on screen once the board is full screen.",
+          "<strong>Go full screen.</strong> Select <strong>Go full screen</strong>. Back, or B on an Xbox controller, comes back out. If your browser can't do full screen, the same button opens the board on a page of its own that fills the screen instead.",
           "<strong>Bookmark it.</strong> Add a bookmark for mfl.football/tv in the browser. Next time the board opens straight away, without the QR code."
         ]
       },
@@ -150,8 +150,8 @@
         "heading": "Browser tips",
         "items": [
           "<strong>Keep the TV awake.</strong> The board asks the browser to keep the screen on, but not every TV browser listens, and none of them stops the TV's own power-off timer. Turn both off before kickoff to be safe. On Fire TV: Settings › Display &amp; Sounds › Screensaver › Start Time › Never. On Samsung and LG, look for the screen saver and Auto Power Off settings, usually under General or Energy Saving. On Xbox: Settings › General › Power options.",
-          "<strong>Using the remote.</strong> The board runs on its own, so you don't need to touch it. If you want to, Down takes the player strip at the bottom and Left and Right flip its pages, and Up picks a game in the header, where OK shows just that game's two rosters. Back returns to the full board.",
-          "<strong>When the arrows move a pointer instead.</strong> Some TV browsers, and Edge on Xbox, move an on-screen pointer with the arrows instead of passing them to the page. The board still runs on its own. To steer it, open the board on your phone and tap <strong>TV remote</strong>.",
+          "<strong>Using the remote.</strong> The board runs on its own, so you don't need to touch it. To steer it with the TV remote, open <strong>mfl.football/live/broadcast?view=board</strong> on the TV, the board on a page of its own. There, Down takes the player strip at the bottom and Left and Right flip its pages, and Up picks a game in the header, where OK shows just that game's two rosters. Back returns to the full board.",
+          "<strong>Steer from your phone.</strong> Some TV browsers, and Edge on Xbox, move an on-screen pointer with the arrows instead of passing them to the page. Your phone works on any of them: open <strong>mfl.football/live/broadcast?view=board</strong> on the phone, tap <strong>TV remote</strong> and pick the TV.",
           "<strong>Older TVs.</strong> Browsers on TVs from before about 2020 may be too old to draw the board properly. If yours shows a blank or broken page, a Google TV stick is the fix."
         ]
       },

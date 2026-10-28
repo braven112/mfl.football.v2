@@ -197,9 +197,13 @@ export default function LiveBroadcast({ pageData }: Props) {
     let released = false;
     const acquire = async () => {
       try {
-        lock = await (navigator as unknown as {
+        const got = await (navigator as unknown as {
           wakeLock?: { request: (t: 'screen') => Promise<{ release?: () => Promise<void> }> };
         }).wakeLock?.request('screen') ?? null;
+        // Granted after the board unmounted: hand it straight back, or the
+        // screen stays held by a board that is no longer there.
+        if (released) void got?.release?.().catch(() => {});
+        else lock = got;
       } catch (_err) {
         /* unsupported or denied — the board still works */
       }
@@ -218,7 +222,7 @@ export default function LiveBroadcast({ pageData }: Props) {
         /* already gone */
       }
     };
-  }, [mode]);
+  }, []);
 
   /** Landscape on a phone: bring the board up past the site nav, once. */
   useEffect(() => {
