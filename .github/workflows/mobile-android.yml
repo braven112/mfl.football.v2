@@ -1,13 +1,25 @@
 name: MFL Live mobile (Android)
 
-# Checks and builds the MFL Live phone app (apps/mobile). The build itself runs
-# on Expo's servers (EAS Build): this job only starts it, with --no-wait, so
-# it costs a minute of Actions time and the APK/AAB appears on expo.dev.
+# Checks and builds the MFL Football phone app (apps/mobile).
 #
-#   pull request  -> type-check only (no EAS build, which spends build quota)
-#   push          -> (staging only) type-check, then a `preview` build: an APK you install
-#                    straight from the build's page on expo.dev
-#   Run workflow  -> pick `preview` or `production` (the signed AAB for Play)
+# The build runs HERE, on the GitHub runner (`eas build --local`), not on
+# Expo's servers. Expo's free plan allows a fixed number of cloud Android
+# builds a month and this repo used them all up in a day (2026-10-27): every
+# app push to staging started one, and most were overtaken by the next push
+# before anyone installed them. A local build is not counted against that
+# quota. It still signs with the keystore EAS holds (fetched with EXPO_TOKEN),
+# so an APK built here installs over one built on expo.dev.
+#
+#   pull request  -> type-check only
+#   push          -> (staging only) type-check only; a build is a deliberate act
+#   Run workflow  -> type-check, then build `preview` (installable APK) or
+#                    `production` (signed AAB for Play), here or (runner:
+#                    expo) on EAS as before
+#
+# A preview APK built from staging is published to the rolling `mobile-preview` prerelease, so
+# the newest test build always downloads from one fixed link:
+#   https://github.com/<repo>/releases/download/mobile-preview/mfl-football.apk
+# A production AAB is attached to the run as an artifact.
 #
 # Needs the EXPO_TOKEN repository secret (expo.dev -> Account settings ->
 # Access tokens). Without it the build step says so and is skipped; the
@@ -38,6 +50,14 @@ on:
         options:
           - preview
           - production
+      runner:
+        description: 'Where to build: github (this runner, free) or expo (EAS cloud, uses the monthly free quota)'
+        required: true
+        default: github
+        type: choice
+        options:
+          - github
+          - expo
 
 concurrency:
   group: mobile-android-${{ github.head_ref || github.ref }}
@@ -65,10 +85,13 @@ jobs:
         run: pnpm run typecheck
 
   build:
-    name: Start EAS build
+    name: Build
     needs: check
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: write # the mobile-preview release
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -80,12 +103,21 @@ jobs:
           if [ -n "$EXPO_TOKEN" ]; then
             echo "HAS_EXPO_TOKEN=true" >> "$GITHUB_ENV"
           else
-            echo "::notice::No EXPO_TOKEN secret yet; skipping the EAS build. Add it under Settings -> Secrets and variables -> Actions."
+            echo "::notice::No EXPO_TOKEN secret yet; skipping the build. Add it under Settings -> Secrets and variables -> Actions."
           fi
 
       - name: Setup pnpm + Node
         if: env.HAS_EXPO_TOKEN == 'true'
         uses: ./.github/actions/setup
+
+      # React Native's Gradle build wants JDK 17; the runner's Android SDK is
+      # already installed and found through ANDROID_HOME.
+      - name: Set up Java 17
+        if: env.HAS_EXPO_TOKEN == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Install the app's dependencies
         if: env.HAS_EXPO_TOKEN == 'true'
@@ -101,8 +133,41 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Start the build on EAS
-        if: env.HAS_EXPO_TOKEN == 'true'
+        if: env.HAS_EXPO_TOKEN == 'true' && inputs.runner == 'expo'
         working-directory: apps/mobile
         env:
-          PROFILE: ${{ inputs.profile || 'preview' }}
+          PROFILE: ${{ inputs.profile }}
         run: eas build --platform android --profile "$PROFILE" --non-interactive --no-wait
+
+      - name: Build
+        if: env.HAS_EXPO_TOKEN == 'true' && inputs.runner == 'github'
+        working-directory: apps/mobile
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          if [ "$PROFILE" = production ]; then OUT=mfl-football.aab; else OUT=mfl-football.apk; fi
+          eas build --local --platform android --profile "$PROFILE" --non-interactive --output "$GITHUB_WORKSPACE/$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+
+      - name: Publish the test APK
+        if: env.HAS_EXPO_TOKEN == 'true' && inputs.runner == 'github' && inputs.profile == 'preview' && github.ref == 'refs/heads/staging'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Test build of ${GITHUB_REF_NAME} at ${GITHUB_SHA::7}, built $(date -u '+%Y-%m-%d %H:%M UTC'). Uninstall an older copy first if Android refuses to install it."
+          if gh release view mobile-preview >/dev/null 2>&1; then
+            gh release edit mobile-preview --notes "$NOTES"
+            gh release upload mobile-preview "$OUT" --clobber
+          else
+            gh release create mobile-preview "$OUT" --prerelease --target "$GITHUB_SHA" \
+              --title "MFL Football test build" --notes "$NOTES"
+          fi
+          echo "::notice::APK: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/mobile-preview/${OUT}"
+
+      - name: Keep the build on the run
+        if: env.HAS_EXPO_TOKEN == 'true' && inputs.runner == 'github'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUT }}
+          path: ${{ env.OUT }}
+          retention-days: 14
