@@ -2,13 +2,14 @@ name: Android TV app
 
 # Builds the MFL Live Google TV app (android-tv/): a debug APK to sideload and,
 # when the upload key is configured, a signed release bundle (.aab) to upload
-# to Play Console. The app is a full-screen shell around the web broadcast
+# to Play Console plus a signed release APK for the Amazon Appstore (Fire TV
+# takes an APK, not a bundle; it is the same app, signed with the same key). The app is a full-screen shell around the web broadcast
 # board, so most changes to what the TV shows ship with the SITE, not here —
 # this only needs to run when android-tv/ itself changes.
 #
 # Signing: the upload keystore lives only in repository secrets, never in the
 # repo. Without MFL_TV_KEYSTORE_BASE64 the job still builds the debug APK and
-# skips the bundle.
+# skips both release outputs.
 
 on:
   pull_request:
@@ -69,11 +70,12 @@ jobs:
           START_URL: ${{ inputs.start_url }}
         run: |
           chmod +x gradlew
-          # Play rejects a repeated versionCode, so every run gets a new one.
+          # Play and Amazon both reject a repeated versionCode, so every run
+          # gets a new one.
           ARGS="-PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}"
           if [ -n "$START_URL" ]; then ARGS="$ARGS -PstartUrl=$START_URL"; fi
           TASKS="assembleDebug"
-          if [ "$HAS_UPLOAD_KEY" = "true" ]; then TASKS="$TASKS bundleRelease"; fi
+          if [ "$HAS_UPLOAD_KEY" = "true" ]; then TASKS="$TASKS bundleRelease assembleRelease"; fi
           ./gradlew --no-daemon $ARGS $TASKS
 
       - name: Upload debug APK (sideload)
@@ -89,4 +91,12 @@ jobs:
         with:
           name: mfl-live-tv-release-aab
           path: android-tv/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: Upload release APK (Amazon Appstore)
+        if: env.HAS_UPLOAD_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfl-live-tv-release-apk
+          path: android-tv/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
