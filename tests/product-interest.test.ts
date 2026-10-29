@@ -64,6 +64,14 @@ describe('product interest', () => {
 		expect(mod.isInterestProduct(undefined)).toBe(false);
 	});
 
+	it('accepts the /addons doors that have no product page, and reports them', async () => {
+		for (const slug of ['tv-app', 'phone-app', 'custom-build']) expect(mod.isInterestProduct(slug)).toBe(true);
+		expect((await post({ product: 'tv-app', visitor: 'visitor-aaaa' })).status).toBe(200);
+		const tv = (await mod.readProductInterest())!.find((r) => r.slug === 'tv-app')!;
+		expect(tv.name).toBe('TV app');
+		expect(tv.people).toBe(1);
+	});
+
 	it('validates browser ids and emails', () => {
 		expect(mod.isVisitorId('3b241101-e2bb-4255-8caf-4136c566a962')).toBe(true);
 		expect(mod.isVisitorId('short')).toBe(false);

@@ -1,0 +1,536 @@
+---
+/**
+ * mfl.football/addons — the landing page for MFL Add-ons customers.
+ *
+ * MFL Add-ons was the product line people bought MFL skins and scripts from;
+ * it is now MFL Football. This page tells a returning customer that, then
+ * lists everything the platform makes today. Nothing here is sold: every
+ * paid product (and the apps) is a "coming soon" door (ProductInterest) that
+ * counts the click and offers to email the visitor at launch, so the page
+ * doubles as an interest survey for the old customer list. The free tools
+ * link straight to the real thing, as on the homepage.
+ *
+ * The look is the homepage's (src/pages/index.astro): same wordmark header,
+ * red-and-black brand tokens, card and plan boxes. Its styles are copied, not
+ * shared, because they are scoped to that page.
+ */
+import SplashLayout from '../layouts/SplashLayout.astro';
+import ProductInterest from '../components/shared/ProductInterest.astro';
+import type { InterestSlug } from '../utils/product-interest';
+
+interface Door {
+  slug: InterestSlug;
+  name: string;
+  who: string;
+  body: string;
+  /** Shown in the dialog under "coming soon", when the door needs a word more. */
+  note?: string;
+}
+
+const APPS: Array<Door & { img: string; alt: string }> = [
+  {
+    slug: 'tv-app',
+    name: 'TV app',
+    who: 'For game day on the big screen',
+    body: 'Every league you play in, live on your TV. Big plays take over the screen, and the standings move as the games do.',
+    img: '/assets/mfl-live/lifestyle-tv-wall.webp',
+    alt: 'Live fantasy scores on a wall of TVs',
+  },
+  {
+    slug: 'phone-app',
+    name: 'Phone app',
+    who: 'For checking scores anywhere',
+    body: 'Your matchups across every MFL league, in one app, with alerts when a game gets close.',
+    img: '/assets/mfl-live/lifestyle-tablet.webp',
+    alt: 'Live fantasy scores on a tablet',
+  },
+];
+
+const PRODUCTS: Door[] = [
+  {
+    slug: 'league-history',
+    name: 'League History',
+    who: 'For any league with a past',
+    body: 'Every season back to your first: champions, standings, playoffs, owner pages, rivalries and records.',
+  },
+  {
+    slug: 'owner-suite',
+    name: 'Live scores Pro',
+    who: 'For any MFL owner',
+    body: 'The Broadcast for your TV, live and projected standings, full boards and game-day alerts.',
+  },
+  {
+    slug: 'league-hub',
+    name: 'League Hub',
+    who: 'For a commissioner who wants a real site',
+    body: 'A branded site on your own domain with a draft hub, an AI league reporter, push alerts and more.',
+  },
+  {
+    slug: 'add-ons',
+    name: 'League add-ons',
+    who: 'For leagues that play their own way',
+    body: 'Side games, custom standings, prizes and payouts, contracts and the salary cap, and extra seasons of history.',
+  },
+  {
+    slug: 'large-league',
+    name: 'Large-league support',
+    who: 'For leagues with 32 teams or more',
+    body: 'A site that still works on a phone when your league has 100 teams and several drafts.',
+  },
+  {
+    slug: 'contest-package',
+    name: 'Contest Package',
+    who: 'For organizers running many leagues',
+    body: 'One competition across dozens or hundreds of MFL leagues.',
+  },
+  {
+    slug: 'league-package',
+    name: 'League Package',
+    who: 'For a league that wants it all handled',
+    body: 'Your own site with every feature we make, custom features built for your league, and priority support.',
+  },
+  {
+    slug: 'custom-build',
+    name: 'Custom builds',
+    who: 'For the idea nobody sells yet',
+    body: 'Tell us what your league needs. If we can build it for MFL, we will quote it up front.',
+    note: 'Leave your email and we will reach out to hear what you have in mind.',
+  },
+];
+---
+<SplashLayout title="MFL Add-ons is now MFL Football">
+  <div class="home">
+  <header class="top">
+    <a class="brand" href="/" aria-label="MFL.football home">
+      <img class="brand__mark brand__mark--light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
+      <img class="brand__mark brand__mark--dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
+    </a>
+    <a class="cta cta--ghost top__signin" href="/login">Sign in</a>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">MFL Add-ons</p>
+      <h1>MFL Add-ons is now MFL Football.</h1>
+      <p class="lede">
+        Offering more than ever before. The skins and templates you know are still here, and now there are live
+        scores, apps for your TV and phone, league history and full league sites.
+      </p>
+      <div class="hero__ctas">
+        <a class="cta cta--primary" href="#products">See everything</a>
+        <a class="cta cta--ghost" href="/instructions">Get the free skin</a>
+      </div>
+    </div>
+    <figure class="shot">
+      <div class="shot__chrome" aria-hidden="true"><i></i><i></i><i></i><span>theleague.us</span></div>
+      <img src="/assets/home/league-site.webp" width="1230" height="748" alt="A league site built on MFL Football, with its weekly recap hero in the winning team's colors" />
+    </figure>
+  </section>
+
+  <section class="block" id="free" aria-labelledby="free-h">
+    <div class="block__head">
+      <div><span class="tag tag--free">Free</span><h2 id="free-h">Still free</h2></div>
+      <p>Where MFL Add-ons started. Use them as long as you like.</p>
+    </div>
+    <div class="grid grid--3">
+      <a class="tile" href="/instructions#skin">
+        <span class="tag tag--free">Free</span>
+        <h3>MFL skin</h3>
+        <p>Light and dark themes for your league's MyFantasyLeague pages.</p>
+        <span class="more">Get the skin →</span>
+      </a>
+      <a class="tile" href="/instructions#homepage">
+        <span class="tag tag--free">Free</span>
+        <h3>Template builder</h3>
+        <p>A homepage, header and footer for MFL, with step-by-step install.</p>
+        <span class="more">Build a template →</span>
+      </a>
+      <a class="tile" href="/live">
+        <span class="tag tag--free">Free</span>
+        <h3>Live scores</h3>
+        <p>Live scores for every MFL league you play in, on one screen.</p>
+        <span class="more">Open live scores →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="block" id="apps" aria-labelledby="apps-h">
+    <div class="block__head">
+      <div><span class="tag tag--soon">New</span><h2 id="apps-h">Apps</h2></div>
+      <p>MFL Football on your TV and in your pocket. Tap one to tell us you want it.</p>
+    </div>
+    <div class="grid grid--2">
+      {APPS.map((a) => (
+        <button type="button" class="plan plan--app" data-interest={a.slug} data-interest-name={a.name} data-interest-note={a.note}>
+          <img class="plan__img" src={a.img} width="1440" height="810" loading="lazy" alt={a.alt} />
+          <span class="plan__who">{a.who}</span>
+          <h3>{a.name}</h3>
+          <p>{a.body}</p>
+          <span class="more">I'm interested →</span>
+        </button>
+      ))}
+    </div>
+  </section>
+
+  <section class="block" id="products" aria-labelledby="products-h">
+    <div class="block__head">
+      <div><span class="tag tag--soon">Coming soon</span><h2 id="products-h">For your league</h2></div>
+      <p>From one owner's game day to a fully custom league site. Tap anything you'd use and we'll tell you first.</p>
+    </div>
+    <div class="grid grid--4">
+      {PRODUCTS.map((p) => (
+        <button type="button" class="plan" data-interest={p.slug} data-interest-name={p.name} data-interest-note={p.note}>
+          <span class="plan__who">{p.who}</span>
+          <h3>{p.name}</h3>
+          <p>{p.body}</p>
+          <span class="more">I'm interested →</span>
+        </button>
+      ))}
+    </div>
+  </section>
+
+  <section class="thanks" aria-labelledby="thanks-h">
+    <h2 id="thanks-h">Bought from MFL Add-ons before?</h2>
+    <p>
+      Thank you. Same people, bigger lineup. Tap the things you'd use and leave your email, and you'll be the first to
+      hear when each one is ready.
+    </p>
+  </section>
+
+  <footer class="foot">
+    <span>MFL.football</span>
+    <a href="/">Home</a>
+    <a href="/live">Live scores</a>
+    <a href="/instructions">Template instructions</a>
+  </footer>
+
+  <ProductInterest />
+  </div>
+</SplashLayout>
+
+<style>
+  /* The homepage's brand tokens: red and black in both themes (see index.astro). */
+  .home {
+    --brand-ink: #111111;
+    --brand-red: #c8102e;
+    --brand-red-hover: #a10d25;
+    --primary-link-default-text-color: var(--brand-ink);
+    --primary-link-hover-text-color: var(--brand-red);
+    --secondary-color: var(--brand-red);
+    --cta-fill: var(--brand-red);
+    --cta-fill-hover: var(--brand-red-hover);
+    --on-cta-fill: #ffffff;
+    --btn-primary-border-hover: var(--brand-red);
+  }
+
+  :global(html.dark) .home {
+    --brand-ink: #f2f3f5;
+    --brand-red: #ff4d5e;
+    --brand-red-hover: #ff7380;
+    --on-cta-fill: #111111;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--primary-content-border-color);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .brand__mark {
+    display: block;
+    width: auto;
+    height: 1.6rem;
+  }
+
+  .brand__mark--dark,
+  :global(html.dark) .brand__mark--light {
+    display: none;
+  }
+
+  :global(html.dark) .brand__mark--dark {
+    display: block;
+  }
+
+  .top__signin {
+    margin-left: auto;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 3.5rem;
+    align-items: center;
+    padding: 4.5rem 0 3.5rem;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-red);
+  }
+
+  .hero h1 {
+    margin: 0.75rem 0 1rem;
+    font-size: var(--font-size-3xl);
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 0 0 1.75rem;
+    max-width: 30em;
+    font-size: var(--font-size-base);
+    color: var(--color-gray-600);
+  }
+
+  .hero__ctas {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .shot {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--primary-content-border-color);
+    border-radius: 16px;
+    background: var(--primary-content-bg-color);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .shot__chrome {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color);
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+  }
+
+  .shot__chrome i {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--primary-content-border-color);
+  }
+
+  .shot__chrome span {
+    margin-left: 0.75rem;
+  }
+
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .block {
+    padding: 3.5rem 0 0;
+  }
+
+  .block__head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .block__head h2 {
+    margin: 0.5rem 0 0;
+    font-size: var(--font-size-2xl);
+    line-height: 0.95;
+  }
+
+  .block__head p {
+    margin: 0;
+    max-width: 26em;
+    color: var(--color-gray-600);
+  }
+
+  .tag {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tag--free {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success-dark);
+  }
+
+  .tag--soon {
+    border: 1px solid var(--primary-content-border-color);
+    color: var(--color-gray-600);
+  }
+
+  .grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* Tiles are links or fake-door buttons; both reset to the same box. */
+  .tile,
+  .plan {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.4rem;
+    border: var(--style-card-border, 1px solid var(--primary-content-border-color));
+    box-shadow: var(--style-card-shadow, none);
+    border-radius: 16px;
+    background: var(--primary-content-bg-color);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+  }
+
+  .tile:hover,
+  .plan:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-gray-500);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .tile:focus-visible,
+  .plan:focus-visible {
+    outline: 2px solid var(--secondary-color);
+    outline-offset: 3px;
+  }
+
+  .tile h3,
+  .plan h3 {
+    margin: 0.2rem 0 0;
+    font-size: var(--font-size-lg);
+  }
+
+  .tile p,
+  .plan p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+  }
+
+  .more {
+    margin-top: auto;
+    padding-top: 0.4rem;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--secondary-color);
+  }
+
+  .plan__who {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-gray-500);
+  }
+
+  .plan--app {
+    padding-top: 0;
+    overflow: hidden;
+  }
+
+  .plan__img {
+    display: block;
+    width: calc(100% + 2.8rem);
+    height: auto;
+    margin: 0 -1.4rem 0.4rem;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .thanks {
+    margin-top: 3.5rem;
+    padding: 2rem;
+    border-left: 4px solid var(--brand-red);
+    border-radius: 12px;
+    background: var(--primary-content-bg-color);
+  }
+
+  .thanks h2 {
+    margin: 0 0 0.5rem;
+    /* Not xl: the splash layout redefines xl as a 60px headline. */
+    font-size: calc(var(--font-size-lg) * 1.3);
+  }
+
+  .thanks p {
+    margin: 0;
+    max-width: 40em;
+    color: var(--color-gray-600);
+  }
+
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--primary-content-border-color);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+  }
+
+  @media (max-width: 1000px) {
+    .grid--3,
+    .grid--4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero,
+    .grid--2,
+    .grid--3,
+    .grid--4 {
+      grid-template-columns: 1fr;
+    }
+
+    .hero {
+      gap: 2rem;
+      padding: 2.5rem 0 1rem;
+    }
+
+    .block__head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile,
+    .plan {
+      transition: none;
+    }
+  }
+</style>
