@@ -1,7 +1,7 @@
 // Renders every MFL Football app icon and tile: the mark big with MFL.football
 // small underneath, for the TV app (launcher icon, home-screen banners), the
-// phone app (icon, adaptive icon) and the Play listing (icon, TV banner), plus
-// the 1024x500 feature graphic (the full wordmark). Writes them in place.
+// phone app (icon, adaptive icon) and the Play listing (icon, TV banner,
+// 1024x500 feature graphic). Writes them in place.
 // [INTER_BOLD=/path/Inter-Bold.otf] node android-tv/store/render-artwork.cjs [storeOutDir]
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -35,11 +35,6 @@ function lockup(w, h, markPx, textPx, gap, bg, label, inset) {
 const square = (size, bg, inset) => lockup(size, size, size * 0.586, size * 0.09, size * 0.066, bg, null, inset);
 // Android TV banners are 16:9; the overlay's own tile names itself instead.
 const wide = (w, h, label) => lockup(w, h, h * 0.556, h * 0.089, h * 0.061, '#05070b', label);
-function feature() {
-  const wm = fs.readFileSync(`${REPO}/public/assets/logos/mfl-football-wordmark-dark.svg`, 'utf8');
-  return `<!doctype html><html><head><style>html,body{margin:0}body{width:1024px;height:500px;background:#05070b;display:flex;align-items:center;justify-content:center}
-  .w{width:780px}.w svg{width:100%;height:auto;display:block}</style></head><body><div class="w">${wm}</div></body></html>`;
-}
 const RES = `${REPO}/android-tv/app/src/main/res`;
 const MOBILE = `${REPO}/apps/mobile/assets`;
 const jobs = [
@@ -50,7 +45,7 @@ const jobs = [
   [`${RES}/drawable-xhdpi/banner_overlay.png`, 320, 180, wide(320, 180, 'Score overlay')],
   [`${MOBILE}/icon.png`, 1024, 1024, square(1024, '#05070b')],
   [`${MOBILE}/adaptive-icon.png`, 1024, 1024, square(1024, 'transparent', 0.62)],
-  [`${OUT}/feature-graphic-1024x500.png`, 1024, 500, feature()],
+  [`${OUT}/feature-graphic-1024x500.png`, 1024, 500, wide(1024, 500)],
 ];
 (async () => {
   const b = await chromium.launch();
