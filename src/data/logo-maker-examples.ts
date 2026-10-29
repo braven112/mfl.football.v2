@@ -7,6 +7,10 @@
  * fills the builder with the same choices, so a visitor starts from a logo
  * they can already see.
  *
+ * Text-free only (Brandon, 2026-10-29): the prompt forbids words on an icon,
+ * so an example with the team name on it would teach the opposite. Empty
+ * until one arrives; the page hides the section while it is.
+ *
  * Never a real player's or club's name or mark (tests/logo-maker.test.ts
  * checks the names against the NFL warning and every color against the
  * tool's grid).
@@ -24,14 +28,4 @@ export interface LogoMakerExample {
 	alt: string;
 }
 
-export const LOGO_MAKER_EXAMPLES: LogoMakerExample[] = [
-	{
-		teamName: 'Rhinos',
-		idea: 'an angry rhino head bursting out of a shield',
-		style: 'mascot',
-		colors: ['#4FA3E0', '#13294B'],
-		kind: 'icon',
-		image: '/assets/logo-maker/rhinos.webp',
-		alt: 'Rhinos: a scowling sky blue rhino head bursting out of a navy shield, with RHINOS in white varsity letters',
-	},
-];
+export const LOGO_MAKER_EXAMPLES: LogoMakerExample[] = [];

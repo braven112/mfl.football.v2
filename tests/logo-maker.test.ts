@@ -27,10 +27,6 @@ const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
 const PATH = '/fantasy-football-logo-maker';
 
 describe('logo maker examples', () => {
-	it('has at least one example', () => {
-		expect(LOGO_MAKER_EXAMPLES.length).toBeGreaterThan(0);
-	});
-
 	it('each example is a choice the builder takes unchanged', () => {
 		const gridHexes = new Set(LOGO_COLORS.map((c) => c.hex));
 		for (const ex of LOGO_MAKER_EXAMPLES) {

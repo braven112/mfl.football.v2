@@ -76,6 +76,7 @@ const jsonLd = [
 			<TeamLogoBuilder />
 		</section>
 
+		{LOGO_MAKER_EXAMPLES.length > 0 && (
 		<section class="lm-block" aria-labelledby="lm-examples">
 			<h2 id="lm-examples">Made with this tool</h2>
 			<p>A real logo from one of these prompts. Tap “Use this prompt” to start from the same choices.</p>
@@ -96,6 +97,7 @@ const jsonLd = [
 				))}
 			</ul>
 		</section>
+		)}
 
 		<section class="lm-block" aria-labelledby="lm-how">
 			<h2 id="lm-how">How it works</h2>
