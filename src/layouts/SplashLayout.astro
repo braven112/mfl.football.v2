@@ -36,9 +36,13 @@ import '../styles/pill.css';
 
 export interface Props {
 	title: string;
+	/** The search-result and link-preview summary. */
+	description?: string;
+	/** A markdown copy of the page for AI tools (`<link rel="alternate" type="text/markdown">`). */
+	markdownHref?: string;
 }
 
-const { title } = Astro.props as Props;
+const { title, description, markdownHref } = Astro.props as Props;
 
 // Resolve theme preference (server-side). 'auto' renders no class — the
 // pre-paint ThemeScript resolves it against prefers-color-scheme.
@@ -108,6 +112,10 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
+		{description && <meta name="description" content={description} />}
+		{description && <meta property="og:title" content={title} />}
+		{description && <meta property="og:description" content={description} />}
+		{markdownHref && <link rel="alternate" type="text/markdown" href={markdownHref} title={`${title} (markdown)`} />}
 	</head>
 	<body>
 		<StagingBanner />

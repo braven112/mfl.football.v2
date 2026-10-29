@@ -1,19 +1,16 @@
-# MFL.football
+# MFL Football
 
-MFL.football is a fantasy football league website built on Astro. It provides custom dark-theme CSS for MyFantasyLeague (MFL) league sites, along with an SVG icon sprite and tools for league management.
+> MFL Football (mfl.football, formerly MFL Add-ons) builds free tools, live scoring, apps and custom league sites for MyFantasyLeague (MFL) fantasy football leagues. It is independent and not affiliated with MyFantasyLeague.
 
-Source code: https://github.com/braven112/mfl.football.v2
+## Products
 
-## AI Prompts
+- [MFL Add-ons is now MFL Football](https://mfl.football/addons.md): every product in one list, in markdown. Free tools, league addresses and logo hosting, the TV and phone apps, and league sites.
+- [Team logo maker](https://mfl.football/live/team-logo): free. Writes an AI prompt for a fantasy team logo in your colors, to paste into ChatGPT, Gemini or Claude.
+- [Live scores](https://mfl.football/live): free live scoring across every MFL league an owner plays in.
+- [MFL skin and templates](https://mfl.football/instructions): free light and dark themes, plus a homepage, header and footer for MFL league pages.
 
-Two ready-made prompts give you all the context you need to help users customize their league site:
+## Optional
 
-### CSS Customization
-Copy the prompt at the link below to help users override CSS variables in their MFL Homepage Message. It includes every available variable with its default value, file paths, and instructions for generating <style> blocks.
-
-https://mfl.football/theleague/css-customization#claude-prompt
-
-### Adding Icons to the SVG Sprite
-Copy the prompt at the link below to help users convert raw SVGs into <symbol> elements and add them to the shared icon sprite.
-
-https://mfl.football/theleague/css-customization#adding-icons
+- [Source code](https://github.com/braven112/mfl.football.v2)
+- [CSS customization prompt](https://mfl.football/theleague/css-customization#claude-prompt): a ready-made prompt to help someone override CSS variables in their MFL Homepage Message.
+- [Adding icons to the SVG sprite](https://mfl.football/theleague/css-customization#adding-icons): a ready-made prompt to convert SVGs into symbols for the shared icon sprite.

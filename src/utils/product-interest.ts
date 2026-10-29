@@ -19,14 +19,35 @@
 import { PRODUCTS, type ProductSlug } from '../data/products';
 import { getRedis } from './redis-client';
 
-const visitorsKey = (slug: ProductSlug) => `product-interest:v:${slug}`;
+/**
+ * Doors with no product page behind them: things the MFL Add-ons landing page
+ * (`/addons`) asks about before they are priced or packaged. They count and
+ * keep emails exactly like a product, and Site Insights lists them alongside.
+ */
+export const INTEREST_ONLY = [
+	{ slug: 'tv-app', name: 'TV app' },
+	{ slug: 'phone-app', name: 'Phone app' },
+	{ slug: 'custom-build', name: 'Custom builds' },
+	{ slug: 'champion-card', name: 'Champion card' },
+	{ slug: 'league-domain', name: 'League domain' },
+	{ slug: 'logo-hosting', name: 'Logo hosting' },
+] as const;
+
+export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];
+
+const INTEREST_ITEMS: ReadonlyArray<{ slug: InterestSlug; name: string }> = [
+	...PRODUCTS.map((p) => ({ slug: p.slug, name: p.name })),
+	...INTEREST_ONLY,
+];
+
+const visitorsKey = (slug: InterestSlug) => `product-interest:v:${slug}`;
 const CLICKS_KEY = 'product-interest:clicks';
-const emailsKey = (slug: ProductSlug) => `product-interest:emails:${slug}`;
+const emailsKey = (slug: InterestSlug) => `product-interest:emails:${slug}`;
 
-const PRODUCT_SLUGS = new Set<string>(PRODUCTS.map((p) => p.slug));
+const INTEREST_SLUGS = new Set<string>(INTEREST_ITEMS.map((p) => p.slug));
 
-export function isInterestProduct(slug: unknown): slug is ProductSlug {
-	return typeof slug === 'string' && PRODUCT_SLUGS.has(slug);
+export function isInterestProduct(slug: unknown): slug is InterestSlug {
+	return typeof slug === 'string' && INTEREST_SLUGS.has(slug);
 }
 
 /** The browser id the page generates: a UUID, or anything close enough to one. */
@@ -43,7 +64,7 @@ export function normalizeEmail(raw: unknown): string | null {
 }
 
 /** Count a click. Returns false when storage is unavailable. */
-export async function recordInterestClick(slug: ProductSlug, visitor: string): Promise<boolean> {
+export async function recordInterestClick(slug: InterestSlug, visitor: string): Promise<boolean> {
 	const redis = await getRedis();
 	if (!redis) return false;
 	await Promise.all([redis.sadd(visitorsKey(slug), visitor), redis.hincrby(CLICKS_KEY, slug, 1)]);
@@ -57,7 +78,7 @@ export async function recordInterestClick(slug: ProductSlug, visitor: string): P
 export const MAX_EMAILS_PER_PRODUCT = 5000;
 
 /** Keep an email left in the dialog. The same address twice keeps the first time. */
-export async function recordInterestEmail(slug: ProductSlug, email: string, now = new Date()): Promise<boolean> {
+export async function recordInterestEmail(slug: InterestSlug, email: string, now = new Date()): Promise<boolean> {
 	const redis = await getRedis();
 	if (!redis) return false;
 	const existing = await redis.hget(emailsKey(slug), email);
@@ -68,7 +89,7 @@ export async function recordInterestEmail(slug: ProductSlug, email: string, now 
 }
 
 export interface ProductInterestRow {
-	slug: ProductSlug;
+	slug: InterestSlug;
 	name: string;
 	/** Browsers that clicked, each counted once. */
 	people: number;
@@ -83,7 +104,7 @@ export async function readProductInterest(): Promise<ProductInterestRow[] | null
 	if (!redis) return null;
 	const clicks = (await redis.hgetall<number | string>(CLICKS_KEY)) ?? {};
 	const rows = await Promise.all(
-		PRODUCTS.map(async (p): Promise<ProductInterestRow> => {
+		INTEREST_ITEMS.map(async (p): Promise<ProductInterestRow> => {
 			const [people, emails] = await Promise.all([
 				redis.scard(visitorsKey(p.slug)),
 				redis.hgetall<string>(emailsKey(p.slug)),
