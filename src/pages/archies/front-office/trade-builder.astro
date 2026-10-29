@@ -12,6 +12,8 @@ import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { rosterYears } from '../../../utils/rosters/roster-page-feeds';
 import config from '../../../../data/archies/archies.config.json';
 
 export const prerender = false;
@@ -19,15 +21,37 @@ export const prerender = false;
 const league = getLeagueBySlug('archies')!;
 const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
 
+// League data is read through the loader, not globbed (storage-and-build.md
+// § "League data lives in Blob"). The builder works on the newest season with
+// a roster, so only that season's feeds are loaded, keyed by repo path — the
+// shape `feedForYear` reads.
+const feedDir = `${league.dataPath}/mfl-feeds`;
+const loadFeeds = async (paths: string[]) =>
+  Object.fromEntries(await Promise.all(paths.map(async (p) => [p, await loadLeagueData(p)] as const)));
+const forYear = (file: string, year: number) =>
+  listLeagueData(`${feedDir}/*/${file}`).filter((p) => Number(p.split('/').at(-2)) === year);
+// players.json stayed current-era only while it was globbed; keep that window.
+const CURRENT_ERA_FLOOR = 2025;
+
+const rosters = await loadFeeds(listLeagueData(`${feedDir}/*/rosters.json`));
+const fallbackYear = getLeagueYearForSlug(league.slug);
+const year = rosterYears(rosters)[0] ?? fallbackYear;
+const [players, adp, picks, tradeBait, tradeBaitByFranchise] = await Promise.all([
+  loadFeeds(year >= CURRENT_ERA_FLOOR ? forYear('players.json', year) : []),
+  loadFeeds(forYear('adp-redraft.json', year)),
+  loadFeeds(forYear('futureDraftPicks.json', year)),
+  loadFeeds(forYear('tradeBait.json', year)),
+  loadFeeds(forYear('tradeBait-by-franchise.json', year)),
+]);
 const feeds = {
-  rosters: import.meta.glob('../../../../data/archies/mfl-feeds/*/rosters.json', { eager: true }),
-  players: import.meta.glob('../../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+  rosters,
+  players,
   // A redraft league values players on the REDRAFT board.
-  adp: import.meta.glob('../../../../data/archies/mfl-feeds/*/adp-redraft.json', { eager: true }),
+  adp,
   adpFile: 'adp-redraft.json',
-  picks: import.meta.glob('../../../../data/archies/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
-  tradeBait: import.meta.glob('../../../../data/archies/mfl-feeds/*/tradeBait.json', { eager: true }),
-  tradeBaitByFranchise: import.meta.glob('../../../../data/archies/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
+  picks,
+  tradeBait,
+  tradeBaitByFranchise,
 };
 
 // "Payton Manning Division" → "Payton Manning": the short label for the locked
@@ -39,7 +63,7 @@ const poolShort = Object.fromEntries(config.divisions.map((d) => [d.id, d.name.r
   leagueSlug={league.slug}
   leagueLabel={league.shortName ?? league.name}
   feeds={feeds}
-  fallbackYear={getLeagueYearForSlug(league.slug)}
+  fallbackYear={fallbackYear}
   teams={config.teams}
   divisions={config.divisions}
   poolShort={poolShort}

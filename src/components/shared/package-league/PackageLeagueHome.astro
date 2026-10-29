@@ -34,7 +34,7 @@ import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-prop
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { groupStandingsByDivision, rosterPlayerIds, standingsRows as feedStandingsRows, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
 import { madPlayoffSize, madQualifierTiers, madSeeds } from '../../../utils/mad-standings';
-import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { loadSeasonFeed, resolveSeason, seasonsFromGlob, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { loadTransactionsSeason } from '../../../utils/transactions-feeds';
 import { getGlobalPlayerMap } from '../../../utils/player-map';
@@ -68,10 +68,11 @@ interface Props {
   calendarFeeds: LazyFeedGlob;
   playoffFeeds: LazyFeedGlob;
   /**
-   * Eager glob of data/<league>/pecking-order/*.json (may be empty): feeds the
-   * Pecking Order card.
+   * Lazy glob-shaped map of data/<league>/pecking-order/*.json (may be empty):
+   * feeds the Pecking Order card. Lazy so only this season's latest issue (and
+   * this week's, when that differs) is ever read.
    */
-  peckingOrderIssues?: Record<string, any>;
+  peckingOrderIssues?: LazyFeedGlob;
   posts: SchefterPost[];
   /**
    * Whether the league has a page at an unprefixed path (`/calendar`), so no
@@ -175,14 +176,17 @@ const events = buildPackageLeagueEvents({ league, seasons, referenceDate: now })
 const timeline = packageWhatsNext(events, now, leagueYear);
 
 // ── The Pecking Order (THIS season's issues only) ───────────────────────────
-const seasonIssues = Object.entries(peckingOrderIssues)
-  .map(([file, data]) => {
+const seasonIssues = Object.keys(peckingOrderIssues)
+  .map((file) => {
     const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+    return m ? { year: Number(m[1]), week: Number(m[2]), file } : null;
   })
-  .filter((x): x is { year: number; week: number; data: any } => !!x && x.year === seasonYear)
+  .filter((x): x is { year: number; week: number; file: string } => !!x && x.year === seasonYear)
   .sort((a, b) => b.week - a.week);
-const latestIssue = (seasonIssues[0]?.data as PeckingOrderData | undefined) ?? null;
+const loadIssue = async (x: { year: number; week: number; file: string } | undefined) =>
+  x ? { year: x.year, week: x.week, data: unwrapFeedModule(await peckingOrderIssues[x.file]().catch(() => null)) as any } : null;
+const newestIssue = await loadIssue(seasonIssues[0]);
+const latestIssue = (newestIssue?.data as PeckingOrderData | undefined) ?? null;
 
 // ── Transactions (site only) ────────────────────────────────────────────────
 const txYear = resolveSeason(null, seasonsFromGlob(transactionFeeds), leagueYear);
@@ -248,7 +252,7 @@ const poolOf = (franchiseId: string) =>
 // week in the books. Last week's issue on this Tuesday would be old news
 // under a "power rankings are out" headline.
 const weekInBooks = getWeekInTheBooks(seasonYear, league.slug, now);
-const thisWeeksIssue = seasonIssues.find((x) => x.week === weekInBooks && weekInBooks > 0) ?? null;
+const thisWeeksIssue = await loadIssue(seasonIssues.find((x) => x.week === weekInBooks && weekInBooks > 0));
 const orderLeaderId: string | undefined = thisWeeksIssue?.data?.rankings?.[0]?.franchiseId;
 // MFL's own standings order already applies the league's tiebreakers — never re-sort it.
 const standingsRows = (standingsFeed as { leagueStandings?: { franchise?: Array<{ id: string }> } } | null)?.leagueStandings?.franchise;
@@ -327,7 +331,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     hasPage={hasPage}
     signInHref={signInHref}
     posts={posts}
-    latestIssue={seasonIssues[0] ? { year: seasonIssues[0].year, week: seasonIssues[0].week, ...seasonIssues[0].data } : null}
+    latestIssue={newestIssue ? { year: newestIssue.year, week: newestIssue.week, ...newestIssue.data } : null}
     moves={txRows}
     players={players}
     playerName={playerName}
