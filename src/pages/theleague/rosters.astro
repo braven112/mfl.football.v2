@@ -138,7 +138,7 @@ import {
 import { loadLeagueData } from '../../utils/league-data';
 import { loadFeedGlob } from '../../utils/rosters/loaded-feed-glob';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
-import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import RosterOptions from '../../components/shared/rosters/RosterOptions.astro';
 import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
@@ -1927,7 +1927,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       />
       <div class="roster-table-card">
         <div class="roster-controls">
-          <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
           <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
 
           <button class="clear-all-tags-btn" id="clearAllTagsBtn" data-sim-clear style="display: none;" title="Clear all contract actions">
@@ -1963,9 +1962,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           {/* Below the mode toggle, not above it: .mode-toggle has a negative
               top margin so it can ride up beside the team card, which means it
               covers anything stacked above it in this column. */}
-          {/* On a phone the trigger is an icon (sliders) at the end of the
-              GM | Coach row, so its name says what it opens. */}
-          <MyRankEditor league="theleague" accessibleName="My Rank sources" />
+          {/* Year picker + My Rank sources, the same control every league's
+              Rosters page carries: inline on desktop, behind one sliders
+              button at the end of the GM | Coach row on a phone. Older
+              seasons load on demand (/api/roster-season), and `?year=` deep
+              links to one (read by the page script on load). */}
+          <RosterOptions
+            years={seasonOptions}
+            selectedYear={defaultSeason}
+            selectId="rosterSeasonSelect"
+            rankingsLeague="theleague"
+          />
 
           {/* Phone only (idea B, user 2026-09-26): one scrolling row of sort
               chips for the mode on screen. Empty here — the page script builds
@@ -2783,10 +2790,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     margin-bottom: .5rem;
   }
 
-/* Hide roster-controls (now empty except hidden inputs) */
-.roster-controls {
-  display: none;
-}
 
   /* View Container */
   .view-container {
@@ -4226,7 +4229,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     }
   }
 
-  /* The My Rank pill shares .roster-controls with .mode-toggle, which lays out
+  /* The Year / My Rank options share .roster-controls with .mode-toggle, which lays out
      with `order` and rides up on a negative top margin — so a sibling that
      doesn't opt into the ordering renders first and gets covered by it.
      The wrapper is given a real display here (it is display: contents by
@@ -4237,7 +4240,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
      with a max-width query it would leave fractional widths (640.5px) matching
      neither branch, and the pill would fall back to order 0 — ahead of the
      toggle, and covered by it. */
-  .roster-controls :global(.mre-trigger-wrap) {
+  .roster-controls :global(.roster-options) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4249,7 +4252,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   /* .roster-controls becomes a column here — same breakpoint the page's own
      rule uses, so the two can never disagree about which shape it is. */
   @media (max-width: 640px) {
-    .roster-controls :global(.mre-trigger-wrap) {
+    .roster-controls :global(.roster-options) {
       order: 3;
       margin-right: 0;
     }
@@ -4885,11 +4888,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   // NOTE: there is deliberately NO background prefetch of the remaining
   // seasons. An earlier revision warmed all 18 frozen seasons on idle, which
-  // pulled back 7.09 MB — the entire payload this page just stopped shipping —
-  // to populate a cache nothing can read: `rosterSeasonSelect` is a HIDDEN
-  // input with no visible control bound to it, so `currentSeason` never leaves
-  // `defaultSeason` for a real visitor. If a season picker is ever added, warm
-  // seasons from ITS interaction (hover/open), never unconditionally on load.
+  // pulled back 7.09 MB — the entire payload this page just stopped shipping.
+  // The Year picker (`rosterSeasonSelect`) fetches the one season it is set
+  // to; if warming is ever wanted, warm from ITS interaction (hover/open),
+  // never unconditionally on load.
 
   /** Resolve league path — strips /theleague prefix on theleague.us */
   function resolveLeaguePath(path) {
@@ -6041,7 +6043,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // the last client-side dependency on having every season in memory, which
     // is what allows historical seasons to be fetched on demand.
 
-    const seasonSelect = document.getElementById('rosterSeasonSelect');
+    const seasonSelect = document.querySelector<HTMLSelectElement>('#rosterSeasonSelect');
     // A hidden <input>, not a <select> — it is the page's record of which
     // club is on screen, read by the parity harness and written by every
     // path that switches team. Typed, because `getElementById` returns a bare
@@ -10128,6 +10130,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       });
     });
 
+    // Keep the address on the season shown, so a shared link opens it.
+    const syncSeasonParam = (season) => {
+      const url = new URL(window.location.href);
+      if (season === config.defaultSeason) url.searchParams.delete('year');
+      else url.searchParams.set('year', season);
+      history.replaceState(history.state, '', url);
+    };
+
     seasonSelect?.addEventListener('change', async (event) => {
       const season = event.target.value;
 
@@ -10139,6 +10149,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         seasonRequestToken += 1;
         currentSeason = season;
         updateView();
+        syncSeasonParam(season);
         return;
       }
 
@@ -10159,7 +10170,25 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
       currentSeason = season;
       updateView();
+      syncSeasonParam(season);
     });
+
+    // `?year=` opens a past season: pick it and let the handler above fetch
+    // and render it. An unknown year is ignored and the page stays current.
+    // Compared with THIS init's `currentSeason`, not the select: the page
+    // inits twice on a first load (direct call + astro:page-load), and the
+    // second pass starts back on the default season with the select already
+    // showing the requested one.
+    const requestedSeason = new URL(window.location.href).searchParams.get('year');
+    if (
+      seasonSelect &&
+      requestedSeason &&
+      requestedSeason !== currentSeason &&
+      Array.from(seasonSelect.options).some((option) => option.value === requestedSeason)
+    ) {
+      seasonSelect.value = requestedSeason;
+      seasonSelect.dispatchEvent(new Event('change'));
+    }
 
     teamSelect?.addEventListener('change', (event) => {
       currentTeam = event.target.value;
