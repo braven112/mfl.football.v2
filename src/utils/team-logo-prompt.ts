@@ -185,6 +185,14 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
   return { note: { tone: 'good', text: 'Good contrast: these colors stay distinct even when the logo is tiny.' } };
 }
 
+/**
+ * Icons and vector logos are pictures only: our site shows team marks, never
+ * wordmarks, and image tools add the team name in big letters unless told not
+ * to (Brandon, 2026-10-29). The banner is the one kind that asks for the name.
+ */
+const NO_TEXT_RULE =
+  'Do not write the team name or any other words, letters or numbers anywhere in the logo: it is a picture-only mark.';
+
 const ORIGINAL_RULE =
   'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
 
@@ -204,8 +212,9 @@ export function writeLogoPrompt(input: {
 }): string {
   const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
+  const uses = kind === 'banner' ? 'outlines, lettering and contrast' : 'outlines and contrast';
   const colors = neutrals.length
-    ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for outlines, lettering and contrast`
+    ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for ${uses}`
     : input.colors;
   if (kind === 'banner') {
     return (
@@ -219,17 +228,17 @@ export function writeLogoPrompt(input: {
   if (kind === 'svg') {
     return (
       `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
-      `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
+      `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images. ` +
       'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE} Reply with the SVG code only.`
+      `It must stay recognizable when shrunk to 40 pixels. ${NO_TEXT_RULE} ${ORIGINAL_RULE} Reply with the SVG code only.`
     );
   }
   return (
     `Design a sports team logo for a fantasy football team called "${teamName}": ${subject}. ` +
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
-    'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
+    'No gradients, no photo textures. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE}`
+    `It must stay recognizable when shrunk to 40 pixels. ${NO_TEXT_RULE} ${ORIGINAL_RULE}`
   );
 }
 

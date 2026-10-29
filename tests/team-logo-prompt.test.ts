@@ -30,6 +30,17 @@ describe('team logo prompt builder', () => {
     expect(buildTeamLogoPrompt({ kind: 'svg' }, 'X').prompt).toContain('SVG');
   });
 
+  it('icons and vector logos are picture-only marks; only the banner asks for the name', () => {
+    for (const kind of ['icon', 'svg'] as const) {
+      const { prompt } = buildTeamLogoPrompt({ kind, teamName: 'Rhinos' }, '');
+      expect(prompt, kind).toContain('Do not write the team name or any other words, letters or numbers anywhere in the logo');
+      expect(prompt, kind).not.toMatch(/lettering/);
+    }
+    const banner = buildTeamLogoPrompt({ kind: 'banner', teamName: 'Rhinos' }, '').prompt;
+    expect(banner).toContain('the team name in big, bold letters');
+    expect(banner).not.toContain('Do not write the team name');
+  });
+
   it('falls back to the defaults for unknown ids, and to the MFL name for an empty one', () => {
     const built = buildTeamLogoPrompt({ style: 'gone', colors: ['nope'], kind: 'gone' as never, teamName: '  ' }, 'Smokane FC');
     expect(built.choice).toMatchObject({ teamName: 'Smokane FC', style: 'crest', colors: ['#C8102E'], kind: 'icon' });
