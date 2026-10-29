@@ -10022,8 +10022,26 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // Painted from THIS pass's numbers plus an unsimulated baseline computed
       // here too — never read back from a DOM cell — so they cannot disagree
       // with the footer above them.
-      const simBaseRows = buildDisplayRows(teamData);
-      const simBaseDead = aggregateDeadMoney(seasonData, currentTeam);
+      //
+      // They are labeled with THIS league year, so they always read the
+      // default season: a past season picked in the Year menu must not repaint
+      // "2026 cap space" with 2015's books (user, 2026-10-29). Same rule as the
+      // header's cap space above.
+      const capSeasonData =
+        currentSeason === defaultSeason ? null : seasons[defaultSeason] ?? initialSeasonDataConfig ?? null;
+      const capTeamData = capSeasonData
+        ? capSeasonData.teams?.[currentTeam] ?? { players: [], practiceSquad: [], injuredReserve: [] }
+        : teamData;
+      const capRows = capSeasonData ? applySimActionsToRows(buildDisplayRows(capTeamData), contractActions) : rows;
+      const capDead = capSeasonData
+        ? addSimDeadMoney(
+            aggregateDeadMoney(capSeasonData, currentTeam),
+            contractActions,
+            new Set(capRows.map((p: any) => String(p.id)))
+          )
+        : deadMoney;
+      const simBaseRows = buildDisplayRows(capTeamData);
+      const simBaseDead = aggregateDeadMoney(capSeasonData ?? seasonData, currentTeam);
       const simChargesFor = (r: SimRow[], acts: SimActions) =>
         calculateCapChargesWithActions(r, {
           salaryYears,
@@ -10044,14 +10062,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         }),
         capByYear: buildCapByYear({
           years: salaryYears,
-          capLimit: capLimitForSeason,
-          charges: capCharges,
-          dead: deadMoney,
+          capLimit: capSeasonData ? Number(capSeasonData.metadata?.capLimit ?? capLimit ?? 0) : capLimitForSeason,
+          charges: capSeasonData ? calculateCapCharges(capRows) : capCharges,
+          dead: capDead,
           baseCharges: simChargesFor(simBaseRows, {}),
           baseDead: simBaseDead,
         }),
         // A simulated cut or trade leaves the roster, so its salary leaves the bar.
-        buckets: calculateBucketCaps(withoutSimRemoved(rows, contractActions)),
+        buckets: calculateBucketCaps(withoutSimRemoved(capRows, contractActions)),
       });
 
       // Cutdown Plan panel tracks every view change (team switch, roster
