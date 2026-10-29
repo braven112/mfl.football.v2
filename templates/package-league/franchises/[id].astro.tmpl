@@ -12,7 +12,9 @@
  * `banner` is dropped: a package league's config carries MFL's square team
  * logo there, not a wide banner, and the hero hides the name behind a banner.
  *
- * The history is read through a glob, not a static import: the route exists
+ * The history is read through the league-data loader (missing → null), never a
+ * static import or glob — an import would fail the build, and either would
+ * compile the file into the serverless function. The route exists
  * from the moment the Franchise pages box is ticked, before the first sync has
  * built the file. The redirect stays here (`Astro.redirect()` only redirects
  * from a page).
@@ -23,23 +25,21 @@ import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { nameErasFromSeasons } from '../../../utils/franchise-name-eras';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
 const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
-const history: any = Object.values(
-  import.meta.glob('../../../../data/__LEAGUE_SLUG__/derived/franchise-history.json', { eager: true, import: 'default' }),
-)[0];
-
-// The League History dataset: Top Rivals reads the site's one head-to-head.
-const historyData: unknown = Object.values(
-  import.meta.glob('../../../../data/__LEAGUE_SLUG__/derived/league-history.json', { eager: true, import: 'default' }),
-)[0];
-
 const teams = config.teams as any[];
 const team = teams.find((t) => t.franchiseId === Astro.params.id);
 if (!team) return Astro.redirect(r(`/${league.slug}/franchises`));
+
+const [history, historyData] = await Promise.all([
+  loadLeagueData<any>(`${league.dataPath}/derived/franchise-history.json`),
+  // The League History dataset: Top Rivals reads the site's one head-to-head.
+  loadLeagueData<unknown>(`${league.dataPath}/derived/league-history.json`).then((d) => d ?? undefined),
+]);
 
 const fr = history?.franchises?.[team.franchiseId];
 const division = (config.divisions as Array<{ id: string; name: string }>).find((d) => d.id === team.divisionId);
@@ -47,10 +47,11 @@ const anyPlayoffs = Object.values(history?.franchises ?? {}).some((f: any) => f.
 
 // Weeks this club scored in, season by season — the divisor for a weekly
 // average, since a league may play several games a week on one score.
-const weeklyFeeds = import.meta.glob('../../../../data/__LEAGUE_SLUG__/mfl-feeds/*/weekly-results.json', { import: 'default' });
+const weeklyFeeds = await Promise.all(
+  listLeagueData(`${league.dataPath}/mfl-feeds/*/weekly-results.json`).map((p) => loadLeagueData<any>(p)),
+);
 let weeksScored = 0;
-for (const load of Object.values(weeklyFeeds)) {
-  const feed: any = await load();
+for (const feed of weeklyFeeds) {
   for (const week of feed?.weeks ?? []) if (week.scores?.[team.franchiseId] != null) weeksScored += 1;
 }
 const pointsPerWeek = fr && weeksScored ? fr.careerPointsFor / weeksScored : null;

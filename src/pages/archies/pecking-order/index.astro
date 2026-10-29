@@ -2,8 +2,9 @@
 /**
  * The Pecking Order (Archie's) — landing page.
  *
- * Thin wrapper over the shared landing component: globs this league's issue
- * JSON (the glob has to be a literal in the page) and hands it over. Which
+ * Thin wrapper over the shared landing component: reads this league's issue
+ * JSON through the league-data loader (never a glob, which would compile every
+ * issue into the serverless function) and hands it over. Which
  * state the page renders — live issue vs. preseason preview — is decided in
  * PeckingOrderLanding, so both leagues stay in step.
  * Permalink to a specific issue lives at /archies/pecking-order/[year]/[week].
@@ -14,10 +15,12 @@ import PeckingOrderLanding from '../../../components/shared/PeckingOrderLanding.
 import { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
 import { resolvePeckingOrderLanding } from '../../../utils/pecking-order-landing';
 import { getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
-const issueFiles = import.meta.glob<PeckingOrderData>(
-  '../../../../data/archies/pecking-order/*.json',
-  { eager: true, import: 'default' }
+const issuePaths = listLeagueData(`${getLeagueBySlug('archies')!.dataPath}/pecking-order/*.json`);
+const issueFiles: Record<string, PeckingOrderData> = Object.fromEntries(
+  await Promise.all(issuePaths.map(async (p) => [p, await loadLeagueData<PeckingOrderData>(p)] as const)),
 );
 
 const issues = Object.entries(issueFiles)
