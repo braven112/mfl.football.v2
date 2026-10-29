@@ -2,6 +2,7 @@ package football.mfl.live;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -148,8 +149,58 @@ public class MainActivity extends Activity {
         } else if (!pageFailed && webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            showExitMenu();
         }
+    }
+
+    /**
+     * Leaving the board is when the owner goes off to watch, so that is where
+     * the score overlay is offered. It is also the only way in on most TVs:
+     * the Google TV home screen shows one tile per app, which hides the
+     * separate Score overlay tile.
+     */
+    private void showExitMenu() {
+        boolean showing = OverlayService.isShowing();
+        String other = OverlayService.EDGE_TOP.equals(OverlayService.savedEdge(this))
+                ? OverlayService.EDGE_BOTTOM : OverlayService.EDGE_TOP;
+        String[] labels;
+        Runnable[] actions;
+        if (showing) {
+            labels = new String[] {
+                    getString(R.string.exit_keep),
+                    getString(OverlayService.EDGE_TOP.equals(other) ? R.string.exit_move_top : R.string.exit_move_bottom),
+                    getString(R.string.exit_hide),
+            };
+            actions = new Runnable[] {
+                    this::finish,
+                    () -> showOverlayAndLeave(other),
+                    () -> {
+                        startService(new Intent(this, OverlayService.class).setAction(OverlayService.ACTION_HIDE));
+                        finish();
+                    },
+            };
+        } else {
+            labels = new String[] {
+                    getString(R.string.exit_show_top),
+                    getString(R.string.exit_show_bottom),
+                    getString(R.string.exit_leave),
+            };
+            actions = new Runnable[] {
+                    () -> showOverlayAndLeave(OverlayService.EDGE_TOP),
+                    () -> showOverlayAndLeave(OverlayService.EDGE_BOTTOM),
+                    this::finish,
+            };
+        }
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(R.string.exit_title)
+                .setItems(labels, (dialog, which) -> actions[which].run())
+                .show();
+    }
+
+    /** Through the tile's activity, which asks for the overlay permission if the TV hasn't given it. */
+    private void showOverlayAndLeave(String edge) {
+        startActivity(new Intent(this, OverlayActivity.class).putExtra(OverlayService.EXTRA_EDGE, edge));
+        finish();
     }
 
     private static boolean isSelectKey(int keyCode) {
