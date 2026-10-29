@@ -1,0 +1,291 @@
+---
+/**
+ * /fantasy-football-logo-maker — the free team logo prompt builder, public
+ * and indexable, for any fantasy football player (not only MFL leagues).
+ *
+ * We make no images (decided with Brandon 2026-10-27): the visitor picks a
+ * look and copies a prompt into ChatGPT, Gemini or Claude. The form is the
+ * same `TeamLogoBuilder` MFL Live's `/live/team-logo` renders, so every word
+ * comes from `src/utils/team-logo-prompt.ts`. The examples are real runs of
+ * it (`src/data/logo-maker-examples.ts`).
+ *
+ * Importing your own MFL teams is the paid upgrade (Brandon, 2026-10-29); it
+ * is not on sale yet, so its button is the "I'm interested" door.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import TeamLogoBuilder from '../components/shared/TeamLogoBuilder.astro';
+import { FORMER_BRAND, type Faq } from '../data/mfl-services';
+import { LOGO_MAKER_EXAMPLES } from '../data/logo-maker-examples';
+import { LOGO_STYLES } from '../utils/team-logo-prompt';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const PATH = '/fantasy-football-logo-maker';
+const styleLabel = (id: string) => LOGO_STYLES.find((s) => s.id === id)?.label ?? id;
+
+const faqs: Faq[] = [
+	{ q: 'Is the fantasy football logo maker free?', a: `Yes. It is free, needs no account, and works for any fantasy football team on any site. It is made by MFL.football, formerly ${FORMER_BRAND}.` },
+	{ q: 'How do I make a fantasy football logo with AI?', a: 'Type your team name and a mascot idea, pick a style and up to two team colors, then copy the prompt. Paste it into ChatGPT or Gemini to get a picture, or into Claude to get a vector (SVG) logo you can resize without blur.' },
+	{ q: 'Why does the tool write a prompt instead of making the picture?', a: 'You already have a better image maker than we could run: ChatGPT, Gemini and Claude are free to try. The prompt carries the rules a good team logo needs, so whichever one you use gets them right.' },
+	{ q: 'What size should a fantasy football logo be?', a: 'A square logo at 1024 × 1024 pixels on a transparent background covers every fantasy site. Banners are 1900 × 316. The prompt asks for these sizes, and for a design that still reads when shrunk to 40 pixels.' },
+	{ q: 'Can I use an NFL team’s logo for my fantasy team?', a: 'No. NFL, college and pro logos are trademarks. Every prompt asks for an original design, and the tool warns you when your team name matches an NFL club so you ask for new art instead.' },
+	{ q: 'How do I put the logo on my MyFantasyLeague team?', a: 'On MFL, open your franchise settings and paste the image address into the Icon (square) or Logo (banner) field. MFL links to an image hosted on the web, so upload the file somewhere public first.' },
+];
+
+const jsonLd = [
+	organizationJsonLd(),
+	{
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: 'Free Fantasy Football Logo Maker',
+		url: `https://mfl.football${PATH}`,
+		applicationCategory: 'DesignApplication',
+		operatingSystem: 'Any',
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+		description: 'Free AI prompt builder for fantasy football team logos: pick a style and team colors, then paste the prompt into ChatGPT, Gemini or Claude.',
+		publisher: { '@id': 'https://mfl.football/#organization' },
+	},
+	faqJsonLd(faqs),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: 'Fantasy football logo maker', path: PATH },
+	]),
+];
+---
+
+<MarketingShell
+	title="Free Fantasy Football Logo Maker: AI Prompts for Your Team Logo"
+	description="Make a fantasy football team logo free: pick a style and team colors, then paste the prompt into ChatGPT, Gemini or Claude. No account needed."
+	canonicalPath={PATH}
+	jsonLd={jsonLd}
+	ogImage="/assets/logo-maker/examples.png"
+>
+	<article class="lm">
+		<header class="lm-hero">
+			<p class="lm-eyebrow">Free tool · Formerly {FORMER_BRAND}</p>
+			<h1>Free fantasy football logo maker</h1>
+			<p class="lm-answer">
+				Give your fantasy football team a real logo. Pick a style and your team colors, and we write the prompt.
+				Paste it into ChatGPT or Gemini for a picture, or into Claude for a vector logo. Free, no account, any league.
+			</p>
+		</header>
+
+		<section class="ui-card lm-card" aria-label="Logo prompt builder">
+			<TeamLogoBuilder />
+		</section>
+
+		<section class="lm-block" aria-labelledby="lm-examples">
+			<h2 id="lm-examples">Made with this prompt</h2>
+			<p>Each logo below came from one of these prompts, drawn by Claude in vector mode. Tap one to start from it.</p>
+			<ul class="lm-examples" role="list">
+				{LOGO_MAKER_EXAMPLES.map((ex) => (
+					<li class="lm-example">
+						<div class="lm-example__art">
+							<img src={ex.image} alt={ex.alt} width="200" height="200" loading="lazy" decoding="async" />
+						</div>
+						<h3 class="lm-example__name">{ex.teamName}</h3>
+						<p class="lm-example__style">{styleLabel(ex.style)}</p>
+						<button
+							type="button"
+							class="cta cta--ghost lm-example__use"
+							data-logo-use={JSON.stringify({ teamName: ex.teamName, idea: ex.idea, style: ex.style, colors: ex.colors, kind: ex.kind })}
+						>Use this prompt</button>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section class="lm-block" aria-labelledby="lm-how">
+			<h2 id="lm-how">How it works</h2>
+			<ol class="lm-steps">
+				<li><strong>Name it.</strong> Your team name and a mascot or idea, like “a charging boar with a football.”</li>
+				<li><strong>Pick a look.</strong> A crest, mascot, monogram, retro patch or round badge, in one or two team colors. The tool tells you when two colors are too close to tell apart on a small logo.</li>
+				<li><strong>Paste the prompt.</strong> ChatGPT or Gemini makes the picture; Claude writes a vector logo. The prompt asks for a transparent background, the right size, and an original design.</li>
+			</ol>
+		</section>
+
+		<section class="lm-block lm-pro" aria-labelledby="lm-pro">
+			<h2 id="lm-pro">Play on MyFantasyLeague?</h2>
+			<p>
+				Soon: bring in every team you own on MFL and get a logo prompt for each one in a single tap, with your
+				team names and colors already filled in.
+			</p>
+			<button type="button" class="cta cta--primary" data-interest="owner-suite" data-interest-name="Logo prompts for every MFL team you own">I’m interested</button>
+			<p class="lm-pro__more">
+				Run an MFL league? See our <a href="/mfl-commissioner-tools">commissioner tools</a>, a free
+				<a href="/mfl-all-play-standings">all-play standings report</a>, and <a href="/mfl-skins">free MFL skins</a>.
+			</p>
+		</section>
+
+		<section class="lm-block" aria-labelledby="lm-faq">
+			<h2 id="lm-faq">Questions</h2>
+			<dl class="lm-faq">
+				{faqs.map((f) => (
+					<div>
+						<dt>{f.q}</dt>
+						<dd>{f.a}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+	</article>
+</MarketingShell>
+
+<style>
+	.lm-hero {
+		max-width: 46rem;
+		padding: 3.5rem 0 1.5rem;
+	}
+
+	.lm-eyebrow {
+		margin: 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--brand-red);
+	}
+
+	.lm-hero h1 {
+		margin: 0.75rem 0 1.25rem;
+		font-size: var(--font-size-3xl);
+		line-height: 1;
+		text-transform: uppercase;
+		text-wrap: balance;
+	}
+
+	.lm-answer {
+		margin: 0;
+		font-size: var(--font-size-lg);
+		line-height: 1.5;
+	}
+
+	/* The kit (ui-card) owns the outline; the splash has no --card-bg, so
+	   the ground is the marketing shell's own. */
+	.lm-card {
+		max-width: 46rem;
+		padding: 1.25rem;
+		background: var(--primary-content-bg-color);
+	}
+
+	.lm-block {
+		max-width: 46rem;
+		padding-top: 3rem;
+		line-height: 1.55;
+	}
+
+	.lm-block h2 {
+		margin: 0 0 1rem;
+		font-size: var(--font-size-2xl);
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.lm-block a {
+		font-weight: 700;
+		text-decoration: underline;
+	}
+
+	.lm-examples {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 1.25rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.lm-example {
+		display: grid;
+		justify-items: center;
+		gap: 0.35rem;
+		padding: 1rem 0.75rem;
+		border: 1px solid var(--primary-content-border-color);
+		border-radius: 14px;
+		background: var(--primary-content-bg-color);
+		text-align: center;
+	}
+
+	/* One light ground in both themes: the logos are drawn for transparency
+	   with black outlines, which vanish on a dark card. */
+	.lm-example__art {
+		width: 100%;
+		display: grid;
+		place-items: center;
+		padding: 0.5rem;
+		border-radius: 10px;
+		background: #f4f1ea;
+	}
+
+	.lm-example__art img {
+		display: block;
+		width: 100%;
+		max-width: 9rem;
+		height: auto;
+	}
+
+	.lm-example__name {
+		margin: 0.25rem 0 0;
+		font-size: var(--font-size-base);
+		line-height: 1.2;
+	}
+
+	.lm-example__style {
+		margin: 0;
+		font-size: var(--font-size-xs);
+		color: var(--color-gray-500);
+	}
+
+	.lm-example__use {
+		margin-top: 0.4rem;
+	}
+
+	.lm-steps {
+		display: grid;
+		gap: 0.75rem;
+		margin: 0;
+		padding-left: 1.25rem;
+	}
+
+	.lm-pro__more {
+		margin: 1rem 0 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-gray-600);
+	}
+
+	.lm-faq {
+		display: grid;
+		gap: 1rem;
+		margin: 0;
+	}
+
+	.lm-faq dt {
+		font-weight: 700;
+	}
+
+	.lm-faq dd {
+		margin: 0.35rem 0 0;
+		color: var(--color-gray-600);
+	}
+
+	/* Phones: two examples a row, never a sideways scroll. */
+	@media (max-width: 760px) {
+		.lm-hero {
+			padding-top: 2rem;
+		}
+
+		.lm-card {
+			padding: 1rem;
+		}
+
+		.lm-examples {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.75rem;
+		}
+
+		.lm-example__use {
+			width: 100%;
+		}
+	}
+</style>
