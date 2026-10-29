@@ -4,6 +4,14 @@
     <string name="offline_title">Can\'t reach the board</string>
     <string name="offline_body">Check the TV\'s internet connection. Press OK on the remote to try again.</string>
     <string name="overlay_name">Score overlay</string>
+    <string name="exit_title">Keep your scores on screen?</string>
+    <string name="exit_show_top">Show scores at the top</string>
+    <string name="exit_show_bottom">Show scores at the bottom</string>
+    <string name="exit_move_top">Move scores to the top</string>
+    <string name="exit_move_bottom">Move scores to the bottom</string>
+    <string name="exit_keep">Keep scores on screen</string>
+    <string name="exit_hide">Turn off the score overlay</string>
+    <string name="exit_leave">Exit</string>
     <string name="overlay_permission_title">Let MFL Football show over other apps</string>
-    <string name="overlay_permission_body">Press OK to open the setting and turn it on for MFL Football (Settings › Apps › Special app access › Display over other apps). If this TV has no such setting, run this once from a computer on the same network:\n\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow\n\nThen open Score overlay again.</string>
+    <string name="overlay_permission_body">Press OK to open the setting and turn it on for MFL Football (Settings › Apps › Special app access › Display over other apps). If this TV has no such setting, run this once from a computer on the same network:\n\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow\n\nThen open MFL Football, press Back and pick Show scores again.</string>
 </resources>

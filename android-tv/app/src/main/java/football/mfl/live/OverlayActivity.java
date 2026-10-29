@@ -14,7 +14,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * The "Score overlay" tile. It has no screen of its own: it tells
+ * The "Score overlay" tile, and what the main app's exit menu starts (the
+ * Google TV home screen shows one tile per app, so on most TVs this one is
+ * hidden and the menu is the way in). It has no screen of its own: it tells
  * {@link OverlayService} to show (first launch: the score ticker; while
  * running: the ticker opened up with both lineups) and gets out of the way, so whatever was playing underneath
  * stays in front. Launched by voice ("open Score overlay") or a remote's app
@@ -47,6 +49,9 @@ public class OverlayActivity extends Activity {
 
     private void startOverlay() {
         Intent intent = new Intent(this, OverlayService.class).setAction(OverlayService.ACTION_SHOW);
+        // Started from the main app's menu: carry the edge the owner picked.
+        String edge = getIntent().getStringExtra(OverlayService.EXTRA_EDGE);
+        if (edge != null) intent.putExtra(OverlayService.EXTRA_EDGE, edge);
         if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(intent);
         } else {
