@@ -52,9 +52,11 @@ export interface Props {
 	ogImage?: string;
 	/** schema.org JSON-LD blocks for the page. */
 	jsonLd?: JsonLd[];
+	/** A markdown copy of the page for AI tools (`<link rel="alternate" type="text/markdown">`). */
+	markdownHref?: string;
 }
 
-const { title, description, canonicalPath, ogImage, jsonLd = [] } = Astro.props as Props;
+const { title, description, canonicalPath, ogImage, jsonLd = [], markdownHref } = Astro.props as Props;
 const canonical = canonicalPath ? canonicalUrl(canonicalPath) : null;
 const ogImageUrl = ogImage ? canonicalUrl(ogImage) : null;
 
@@ -137,6 +139,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		{ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
 		<meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
 		{jsonLd.map((block) => <script is:inline type="application/ld+json" set:html={jsonLdScript(block)} />)}
+		{markdownHref && <link rel="alternate" type="text/markdown" href={markdownHref} title={`${title} (markdown)`} />}
 	</head>
 	<body>
 		<StagingBanner />
