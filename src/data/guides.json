@@ -184,9 +184,31 @@
         "type": "list",
         "heading": "Turn it on",
         "items": [
-          "<strong>Start the game first.</strong> Open YouTube TV, or whatever you watch on, and start the game.",
-          "<strong>Open the Score overlay tile.</strong> Press Home, go to your apps and open <strong>Score overlay</strong>. You can also hold the voice button and say \"Open Score overlay\". The ticker appears and the game keeps playing underneath.",
+          "<strong>Which TVs.</strong> The overlay needs the MFL Football app, so it works on Google TV and Android TV: most Sony TVs, many TCL, Hisense and Philips TVs, a Chromecast with Google TV, a Google TV Streamer or an Nvidia Shield. Fire TV, Samsung, LG and Roku don't let one app draw over another, so use the Broadcast board in your TV's browser there instead (see <a href=\"/guides/tv-app\">MFL Football on your TV</a>).",
+          "<strong>With your voice, while the game plays.</strong> This is the easiest way. Start the game, hold the voice button on the remote (the microphone or Google Assistant button) and say \"Open Score overlay\". The ticker appears and the game keeps playing underneath.",
+          "<strong>From the Home screen, before the game.</strong> Press Home and open the <strong>Score overlay</strong> tile (where to find it is below). The ticker appears over the home screen. Then open YouTube TV, or whatever you watch on, and start the game. The ticker stays on top.",
+          "<strong>Why the order matters.</strong> Pressing Home while the game plays sends the game to the background. If that happens, open the overlay from Home and then go back into your TV app; the game picks up where it was.",
           "<strong>The first time only.</strong> The TV asks to let MFL Football show over other apps. Press OK, turn it on, then press Back. The setup steps in <a href=\"/guides/tv-app\">MFL Football on your TV</a> cover TVs without that switch."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Finding the Score overlay tile",
+        "items": [
+          "<strong>It's its own tile.</strong> Installing MFL Football adds two tiles: <strong>MFL Football</strong>, the full-screen board, and <strong>Score overlay</strong>. Open Score overlay for the ticker.",
+          "<strong>Google TV</strong> (Chromecast, Google TV Streamer, and Sony, TCL, Hisense and Philips TVs from about 2021 on). Press Home, pick <strong>Apps</strong> along the top, then <strong>See all apps</strong> at the end of the Your apps row, and choose Score overlay.",
+          "<strong>Older Android TV</strong> (Nvidia Shield, older Sony and Philips TVs, Xiaomi Mi Box and other Android TV boxes). Press Home and look in the <strong>Apps</strong> row; if it isn't there, open the full list from the <strong>Apps</strong> icon or the <strong>+</strong> at the end of the row.",
+          "<strong>Pin it for one press.</strong> Highlight the tile and hold OK. Pick <strong>Add to favorites</strong>, or <strong>Move</strong> if it's already in the row, and put it at the front of Your apps so it's right there on Home.",
+          "<strong>If voice opens a search instead.</strong> Some TVs answer \"Open Score overlay\" with search results. Try \"Launch Score overlay\", or pick Score overlay from the results. Saying \"Open MFL Football\" opens the full board, not the overlay."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Put it on a remote button",
+        "items": [
+          "<strong>Google TV Streamer.</strong> Its remote has a star button you can set to open any app. Go to Settings › Remotes &amp; accessories and set the star button to Score overlay. One press then opens the ticker, and a second press opens the lineups, right over the game.",
+          "<strong>Nvidia Shield.</strong> The 2019 Shield remote has a menu button you can set to open an app, under Settings › Remotes &amp; accessories.",
+          "<strong>Other remotes.</strong> Most Chromecast, Sony, TCL and Hisense remotes have no button you can assign. Voice is the way to open the overlay over a game there."
         ]
       },
       {
@@ -224,7 +246,7 @@
         "type": "list",
         "heading": "Open it up to see who's scoring",
         "items": [
-          "<strong>Open the Score overlay tile again</strong> while the ticker is on, or say \"Open Score overlay\" again. Both starting lineups open under the ticker, and it takes the remote while it's open, which the teal outline shows.",
+          "<strong>Open the overlay again</strong> while the ticker is on: say \"Open Score overlay\" again, or press your remote's shortcut button. Both starting lineups open under the ticker, and it takes the remote while it's open, which the teal outline shows. Opening it from the Home screen works too, but sends the game to the background, so voice or a button is best during a game.",
           "<strong>What's in it.</strong> Every starter on both sides with their points and their NFL game's clock: red while the game is live, <em>Final</em> once it's over, or the kickoff time. A starter who just had a big play stays highlighted in yellow for about a minute and a half.",
           "<strong>Left and Right</strong> move between your matchups.",
           "<strong>Back</strong> closes it and gives the remote back to your TV app. So does any button the overlay doesn't use, and it closes by itself after 30 seconds without a press."
@@ -240,7 +262,7 @@
         "type": "list",
         "heading": "Move it to the top or bottom",
         "items": [
-          "<strong>Open it up first</strong> (open the Score overlay tile again), then press <strong>Up</strong> to put the ticker at the top of the screen or <strong>Down</strong> to put it at the bottom.",
+          "<strong>Open it up first</strong> (open the overlay again), then press <strong>Up</strong> to put the ticker at the top of the screen or <strong>Down</strong> to put it at the bottom. You can also do this from the Home screen before the game: open the Score overlay tile twice, press Up or Down, then press Back.",
           "<strong>Pick the clear edge.</strong> Most networks put their score banner along the bottom, so the top is usually best, but some broadcasts and streaming apps use the top.",
           "<strong>It remembers.</strong> The TV keeps your choice, so the ticker comes back on the same edge next time."
         ]
