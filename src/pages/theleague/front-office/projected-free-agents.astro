@@ -27,6 +27,7 @@ import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorde
 import '../../../styles/player-cell.css';
 import leagueConfig from '../../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
 
 const currentYear = getCurrentLeagueYear();
 // The season whose point totals this page reports. It is NOT
@@ -37,58 +38,57 @@ const statsSeasonYear = resolveStatsSeasonYear();
 const mflHost = getLeagueBySlug('theleague')!.mflHost;
 
 // ── Load MFL data feeds ──
-// Year-filtered (2025+): this page reads only currentLeagueYear +
-// statsSeasonYear; the bare glob baked ~22 MB of historical players.json
-// into the server chunk. tests/current-era-feed-globs.test.ts guards it.
-const playerModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
-  { eager: true }
-);
-const rostersModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/rosters.json',
-  { eager: true }
-);
-const projectedScoresModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/projectedScores.json',
-  { eager: true }
-);
-const seasonWeeklyModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
-  { eager: true }
-);
-// Full-pool season-to-date scoring — see src/utils/stats-season.mjs.
-const seasonYtdModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
-  { eager: true }
-);
-// Per-week points for the WHOLE player pool — the fallback that lets the
-// modal's Season Results table exist for a practice-squad, injured-reserve or
-// free-agent player. weekly-results-raw above is MFL's ACTIVE-LINEUP export and
-// has no row for any of them. See src/utils/player-week-scores.mjs.
-const playerWeekScoreModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-by-week.json',
-  { eager: true }
-);
-const nflScheduleModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/nflSchedule.json',
-  { eager: true }
-);
-// MFL's W=ALL export — every week of the season. The plain nflSchedule.json
-// above carries only the CURRENT week from week 1 onward, which made the
-// modal's Season Results table render all 17 weeks as "Bye". Seasons synced in
-// the offseason have the full shape in nflSchedule.json, hence the fallback.
-const nflScheduleFullModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
-  { eager: true }
-);
-const fpaModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
-  { eager: true }
-);
-const leagueModules = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/league.json',
-  { eager: true }
-);
+// Read through the league-data loader (never bundled into the function), and
+// only for the two years this page renders: currentYear and statsSeasonYear.
+// Each object keeps the old glob's `{ path: data }` shape for exactly those
+// years, so findForYear reads them unchanged. The megafile feeds keep the
+// current-era floor (2025+) their year-filtered globs had.
+const FEED_ROOT = `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds`;
+const CURRENT_ERA_FLOOR = 2025;
+const loadFeedYears = async (
+  file: string,
+  years: number[],
+  eraFloor = 0,
+): Promise<Record<string, unknown>> => {
+  const wanted = [...new Set(years)].filter((y) => y >= eraFloor).sort((a, b) => a - b);
+  const loaded = await Promise.all(
+    wanted.map(async (y) => {
+      const path = `${FEED_ROOT}/${y}/${file}`;
+      return [path, await loadLeagueData(path)] as const;
+    }),
+  );
+  return Object.fromEntries(loaded.filter(([, data]) => data != null));
+};
+const [
+  playerModules,
+  rostersModules,
+  projectedScoresModules,
+  seasonWeeklyModules,
+  seasonYtdModules,
+  playerWeekScoreModules,
+  nflScheduleModules,
+  fpaModules,
+  leagueModules,
+] = await Promise.all([
+  loadFeedYears('players.json', [currentYear, statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('rosters.json', [currentYear]),
+  loadFeedYears('projectedScores.json', [currentYear]),
+  // Season-to-date points for the WHOLE player pool come from playerScores-ytd
+  // (src/utils/stats-season.mjs); playerScores-by-week is the per-week
+  // fallback for unrostered players (src/utils/player-week-scores.mjs).
+  loadFeedYears('weekly-results-raw.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('playerScores-ytd.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('playerScores-by-week.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('nflSchedule.json', [statsSeasonYear]),
+  loadFeedYears('fantasyPointsAllowed.json', [statsSeasonYear]),
+  loadFeedYears('league.json', [statsSeasonYear]),
+]);
+// MFL's W=ALL export (nflSchedule-full) is the other pages' first choice for
+// the modal's Season Results weeks. This page's glob for it pointed one
+// directory short (src/data/…) and never matched a file, so it has always
+// fallen through to nflSchedule.json; kept empty here so the page renders
+// exactly as before.
+const nflScheduleFullModules: Record<string, unknown> = {};
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;

@@ -19,6 +19,7 @@ import { resolveConfigForYear, resolvePreferredTeamIdForYear, type TeamConfig } 
 import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
@@ -31,12 +32,19 @@ import {
 } from '../../utils/standings-page';
 
 const league = getLeagueBySlug('theleague')!;
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json');
-const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json');
+// Lazy `{ path: () => data }` maps — the shape the old lazy globs had — so
+// only the seasons the page opens are read, through the league-data loader
+// (never bundled into the function).
+const lazyFeeds = (file: string) =>
+  Object.fromEntries(
+    listLeagueData(`${league.dataPath}/mfl-feeds/*/${file}`).map((path) => [path, () => loadLeagueData(path)]),
+  );
+const standingsFeeds = lazyFeeds('standings.json');
+const fetchMetaFeeds = lazyFeeds('fetch.meta.json');
 // Per-season division alignment. The league realigned repeatedly (2007-2010 ran
 // Pacific/Midwest/Central/Atlantic), so grouping an archived year by today's
 // map put the wrong teams together — see utils/historical-divisions.ts.
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json');
+const leagueFeeds = lazyFeeds('league.json');
 
 // The default year follows ?testDate= — the same clock the throwback gate below
 // reads — so /rollover-check can drive this page by date alone.

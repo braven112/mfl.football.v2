@@ -24,23 +24,35 @@ import GauntletArticleSection from '../../../components/shared/schedule-strength
 import MatchupPreviewSection from '../../../components/shared/matchup-preview/MatchupPreviewSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import leagueConfig from '../../../data/theleague.config.json';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+const league = getLeagueBySlug('theleague')!;
 
 // The Gauntlet articles render their rankings from the same derived JSON the
 // dashboard uses (single source of truth — article and page cannot disagree).
-// Lazy glob: GauntletArticleSection imports only the matching issue, and only
-// for posts that carry a scheduleStrength pointer.
-const gauntletFiles = import.meta.glob<GauntletDerived>(
-  '../../../../data/theleague/derived/schedule-strength-*.json',
-  { import: 'default' }
+// Lazy: GauntletArticleSection reads only the matching issue, and only for
+// posts that carry a scheduleStrength pointer — through the league-data
+// loader, never bundled into the function (src/utils/league-data.ts).
+const gauntletFiles: Record<string, () => Promise<GauntletDerived>> = Object.fromEntries(
+  listLeagueData(`${league.dataPath}/derived/schedule-strength-*.json`).map((path) => [
+    path,
+    () => loadLeagueData<GauntletDerived>(path) as Promise<GauntletDerived>,
+  ]),
 );
 
 // Posts older than the active window live in per-year archive files (see
-// scripts/lib/schefter-archive.mjs). Lazy glob: an archive year is only
-// loaded when the active feed misses, so permalinks to archived articles
-// keep resolving without the archive riding in this page's chunk.
-const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
-  '../../../data/theleague/schefter-archive/*.json',
-  { import: 'default' }
+// scripts/lib/schefter-archive.mjs). Lazy: an archive year is only read when
+// the active feed misses, so permalinks to archived articles keep resolving
+// without the archive riding in the function.
+const schefterFeedPath =
+  (league as { schefterFeedPath?: string }).schefterFeedPath ?? `${league.dataPath}/schefter-feed.json`;
+type ArchiveFile = { posts?: SchefterPost[] } | SchefterPost[];
+const archiveFiles: Record<string, () => Promise<ArchiveFile | null>> = Object.fromEntries(
+  listLeagueData(`${schefterFeedPath.replace(/[^/]+$/, '')}schefter-archive/*.json`).map((path) => [
+    path,
+    () => loadLeagueData<ArchiveFile>(path),
+  ]),
 );
 
 const { id } = Astro.params;

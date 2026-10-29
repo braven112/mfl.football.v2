@@ -17,29 +17,9 @@ import type { DraftPrediction, ToiletBowlResult } from '../../../types/standings
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../../utils/league-year';
-
-const standingsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const playoffBracketFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
-  {
-    eager: true,
-  }
-);
-// All years, eagerly: this page reads only NEXT year's board, but the feed is
-// small (304 KB across twenty seasons) and the glob predates the split. The
-// historical archive that used to browse it with ?year= is now
-// /draft/results, which globs the same feed LAZILY — see
-// utils/draft-results-feeds.ts for why that matters for the AFL's 1.2 MB.
-const draftResultsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json', {
-  eager: true,
-});
-const futureDraftPicksFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
-  eager: true,
-});
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -56,6 +36,23 @@ const extractFeedSeason = (filepath: string) => {
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
 const currentYear = getCurrentSeasonYear(testDate);
 const nextYear = getNextDraftYear(testDate);
+
+// Only this season's standings, bracket and future picks and next year's draft
+// board are rendered, so only those files are read — through the league-data
+// loader, never bundled into the function. Each object keeps the old eager
+// glob's `{ path: data }` shape for its one year.
+const FEED_ROOT = `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds`;
+const loadFeedYear = async (file: string, year: number): Promise<Record<string, unknown>> => {
+  const path = `${FEED_ROOT}/${year}/${file}`;
+  const data = await loadLeagueData(path);
+  return data != null ? { [path]: data } : {};
+};
+const [standingsFeeds, playoffBracketFeeds, draftResultsFeeds, futureDraftPicksFeeds] = await Promise.all([
+  loadFeedYear('standings.json', currentYear),
+  loadFeedYear('playoff-brackets.json', currentYear),
+  loadFeedYear('draftResults.json', nextYear),
+  loadFeedYear('futureDraftPicks.json', currentYear),
+]);
 
 // Load standings for current year
 const standingsKey = Object.keys(standingsFeeds).find(

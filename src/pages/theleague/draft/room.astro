@@ -3,8 +3,8 @@
  * Draft Room (The League) — thin route wrapper.
  *
  * Shared render lives in components/shared/draft-room/DraftRoomPage; the
- * assembly lives in utils/draft-room-data#buildDraftRoomData. The globs are
- * HERE because a static import specifier can't be a runtime variable.
+ * assembly lives in utils/draft-room-data#buildDraftRoomData. This league-year's
+ * feeds are read HERE, through the league-data loader (never bundled).
  *
  * TheLeague drafts as ONE unit, so no `unit` is passed and no conference
  * switcher renders — see the AFL twin, where that is the whole difference.
@@ -17,6 +17,7 @@ import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { buildDraftPlayers } from '../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
 import { buildDraftRoomData, mflBaseUrlFor } from '../../../utils/draft-room-data';
 import type { DraftRoomTeam } from '../../../types/draft-room';
 
@@ -25,9 +26,8 @@ export const prerender = false;
 const league = getLeagueBySlug('theleague')!;
 const leagueYear = getCurrentLeagueYear();
 const user = getAuthUser(Astro.request);
-
-const draftResultsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json', { eager: true });
-const leagueFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/league.json', { eager: true });
+const roomFeed = (file: string) => `${league.dataPath}/mfl-feeds/${leagueYear}/${file}`;
+const [draftResultsFeeds, leagueFeeds] = await Promise.all(['draftResults.json', 'league.json'].map(async (f) => ({ [roomFeed(f)]: await loadLeagueData(roomFeed(f)) }) as Record<string, unknown>));
 
 // Brand colors drive the pick-reveal splash — rookies rarely have an NFL team
 // at draft time, so the drafting franchise tints the moment.

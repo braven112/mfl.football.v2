@@ -14,10 +14,16 @@
  * rendering that component and the response is still a 200 with a blank body.
  */
 import DivisionStrengthPage from '../../components/shared/division-strength/DivisionStrengthPage.astro';
-import divisionData from '../../../data/theleague/derived/division-strength.json';
 import { resolveDivisionStrengthView } from '../../utils/division-strength-view';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import type { DivisionStrengthFile } from '../../types/division-strength';
+import { loadLeagueData } from '../../utils/league-data';
+import { getLeagueBySlug } from '../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const divisionData: any = await loadLeagueData(`${THELEAGUE_DATA}/derived/division-strength.json`);
 
 export const prerender = false;
 
