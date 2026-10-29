@@ -24,6 +24,10 @@ import { loadLeagueData } from '../../utils/league-data';
 
 // Read through the league-data loader, never bundled into the function
 // (src/utils/league-data.ts).
+// Type-only imports: erased at build, so they keep the files' shapes without
+// bundling a byte of them.
+type RspPreDraft = typeof import('../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json');
+type SleeperWatchlist = typeof import('../../../data/fantasy-expert/sleeper-watchlist/2026-class.json');
 const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
 const [rspData, rsp2025, rsp2024, sleeperData, fbgData, fbgDynastyData, pigskinRoster, leagueOwnership, rspPlayerIds] = (await Promise.all([
   loadLeagueData('data/fantasy-expert/sources/rsp/2026-pre-draft.json'),
@@ -35,7 +39,7 @@ const [rspData, rsp2025, rsp2024, sleeperData, fbgData, fbgDynastyData, pigskinR
   loadLeagueData(`${THELEAGUE_DATA}/pigskins-roster-2026.json`),
   loadLeagueData(`${THELEAGUE_DATA}/rsp-league-ownership.json`),
   loadLeagueData(`${THELEAGUE_DATA}/rsp-player-ids.json`),
-])) as [any, any, any, any, any, any, any, any, any];
+])) as [RspPreDraft, any, any, SleeperWatchlist, any, any, any, any, any];
 
 const THELEAGUE_MFL_HOST = getLeagueBySlug('theleague')!.mflHost;
 

@@ -45,7 +45,8 @@ const sources = (): string[] =>
 /** Specifiers that compile data into the bundle: globs over data paths and JSON imports. */
 const GLOB_RE = /import\.meta\.glob(?:<[^>]*>)?\(\s*(\[[^\]]*\]|'[^']*'|"[^"]*"|`[^`]*`)/g;
 const STATIC_IMPORT_RE = /(?:^|\n)\s*import\s+[^'"`;]*?from\s+['"]([^'"]+\.json)['"]/g;
-const DYNAMIC_IMPORT_RE = /\bimport\(\s*['"]([^'"]+\.json)['"]\s*\)/g;
+// `typeof import('…json')` is a type and erased at build, so it is not a read.
+const DYNAMIC_IMPORT_RE = /(?<!typeof\s+)\bimport\(\s*['"]([^'"]+\.json)['"]\s*\)/g;
 const isDataPath = (spec: string) => /(^|\/)data\//.test(spec);
 
 export function bundledDataReads(text: string): string[] {
@@ -76,6 +77,7 @@ describe('bundled league data ratchet', () => {
           "const g = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });",
           "const h = import.meta.glob('../styles/*.css');",
           "const d = await import('../../data/nfl/bye-weeks.json');",
+          "type T = typeof import('../../data/nfl/bye-weeks.json');",
         ].join('\n'),
       ),
     ).toHaveLength(4);

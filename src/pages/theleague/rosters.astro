@@ -238,7 +238,7 @@ const extractFeedSeason = (filepath) => {
 // caches the parsed file for every request on a warm instance, so this hands
 // back a COPY: these feeds were read fresh off disk per request before, and a
 // consumer that mutates one must never leak into the next render.
-const loadFeedJson = async (year: string | number, filename: string) => {
+const loadFeedJson = async (year: string | number, filename: string): Promise<any> => {
   const feedPath = `${TL_DATA_PATH}/mfl-feeds/${year}/${filename}`;
   try {
     const data = await loadLeagueData(feedPath);
