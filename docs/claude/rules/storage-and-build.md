@@ -69,6 +69,31 @@ personalizes nav/footer from the session on every page, so shared caching
 would leak one owner's nav to everyone. Requires client-side nav
 personalization first.
 
+### The function size budget
+
+The whole site deploys as ONE Vercel function (`_render`) — Astro 7's adapter
+has no per-route split — and Vercel rejects it above 250 MB uncompressed. It
+has failed a deploy three times (the raw `data/` tracer fallback at 263 MB, the
+Archie's feed archive, the logo tracer's native vectorizer at 250.69 MB on
+2026-10-29), each time with no signal before the deploy.
+
+`scripts/check-function-size.mjs` measures `.vercel/output/functions/` and
+prints the biggest contributors, grouped so the list names a cause (`dist chunk:
+players ×27`, a pnpm package, `data/<league>/mfl-feeds/*/<file>`). It runs
+report-only in `postbuild` on every build, and with `--enforce` in CI's
+`Function size` job, which fails above `BUDGET_MB` (240). The 10 MB of headroom
+is for data growth: feeds grow weekly in season and bot sync commits to `main`
+open no PR, so the staging push run is the first to see it.
+
+When it goes red, do not just trim the nearest file. About three quarters of the
+function (231 MB measured 2026-10-29) is league data — compiled feed globs in
+`dist/`, raw feed copies the tracer pulls in for `fs` readers, `src/data/` —
+and native modules exclude only their musl twins. Move data a request does not
+need out of the function (a derived snapshot, as TheLeague rosters did with
+`roster-season-payloads.json`) before reaching for Vercel's large-functions
+beta, which raises the limit without stopping the growth. Guard:
+`tests/function-size-budget.test.ts`.
+
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline
 from 2026-08-16 is committed under `data/perf-baseline/`.
