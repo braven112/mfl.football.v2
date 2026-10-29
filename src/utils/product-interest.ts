@@ -28,6 +28,9 @@ export const INTEREST_ONLY = [
 	{ slug: 'tv-app', name: 'TV app' },
 	{ slug: 'phone-app', name: 'Phone app' },
 	{ slug: 'custom-build', name: 'Custom builds' },
+	{ slug: 'champion-card', name: 'Champion card' },
+	{ slug: 'league-domain', name: 'League domain' },
+	{ slug: 'logo-hosting', name: 'Logo hosting' },
 ] as const;
 
 export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];
