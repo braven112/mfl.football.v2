@@ -10,6 +10,10 @@
  * doubles as an interest survey for the old customer list. The free tools
  * link straight to the real thing, as on the homepage.
  *
+ * Emphasis is Brandon's (Oct 2026): the team logo maker is THE free tool and
+ * leads; the champion card is free but secondary (its design is still open);
+ * skins are a footnote, because full league sites are where the value is.
+ *
  * The look is the homepage's (src/pages/index.astro): same wordmark header,
  * red-and-black brand tokens, card and plan boxes. Its styles are copied, not
  * shared, because they are scoped to that page.
@@ -46,7 +50,50 @@ const APPS: Array<Door & { img: string; alt: string }> = [
   },
 ];
 
+/** The cheap, yearly extras: the step after a free logo. */
+const EXTRAS: Door[] = [
+  {
+    slug: 'league-domain',
+    name: 'Your league’s own address',
+    who: 'For any MFL league',
+    body: 'yourleague.mfl.football, or a domain of your own, pointed at your MFL league. When MFL starts a new season, it follows your league for you.',
+    note: 'A small yearly subscription. Leave your email and we’ll tell you when it opens.',
+  },
+  {
+    slug: 'logo-hosting',
+    name: 'Logo and banner hosting',
+    who: 'For leagues with their own art',
+    body: 'Drop in your team logos and banners, and we host them at the right sizes for your MFL pages, so they never break.',
+    note: 'A small yearly subscription, and a natural pair with your league’s own address.',
+  },
+];
+
 const PRODUCTS: Door[] = [
+  {
+    slug: 'league-package',
+    name: 'League Package',
+    who: 'For a league that wants it all handled',
+    body: 'Your own site with every feature we make, custom features built for your league, and priority support.',
+  },
+  {
+    slug: 'league-hub',
+    name: 'League Hub',
+    who: 'For a commissioner who wants a real site',
+    body: 'A branded site on your own domain with a draft hub, an AI league reporter, push alerts and more.',
+  },
+  {
+    slug: 'custom-build',
+    name: 'Custom builds',
+    who: 'For the idea nobody sells yet',
+    body: 'Tell us what your league needs. If we can build it for MFL, we will quote it up front.',
+    note: 'Leave your email and we will reach out to hear what you have in mind.',
+  },
+  {
+    slug: 'add-ons',
+    name: 'League add-ons',
+    who: 'For leagues that play their own way',
+    body: 'Side games, custom standings, prizes and payouts, contracts and the salary cap, and extra seasons of history.',
+  },
   {
     slug: 'league-history',
     name: 'League History',
@@ -60,18 +107,6 @@ const PRODUCTS: Door[] = [
     body: 'The Broadcast for your TV, live and projected standings, full boards and game-day alerts.',
   },
   {
-    slug: 'league-hub',
-    name: 'League Hub',
-    who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with a draft hub, an AI league reporter, push alerts and more.',
-  },
-  {
-    slug: 'add-ons',
-    name: 'League add-ons',
-    who: 'For leagues that play their own way',
-    body: 'Side games, custom standings, prizes and payouts, contracts and the salary cap, and extra seasons of history.',
-  },
-  {
     slug: 'large-league',
     name: 'Large-league support',
     who: 'For leagues with 32 teams or more',
@@ -82,19 +117,6 @@ const PRODUCTS: Door[] = [
     name: 'Contest Package',
     who: 'For organizers running many leagues',
     body: 'One competition across dozens or hundreds of MFL leagues.',
-  },
-  {
-    slug: 'league-package',
-    name: 'League Package',
-    who: 'For a league that wants it all handled',
-    body: 'Your own site with every feature we make, custom features built for your league, and priority support.',
-  },
-  {
-    slug: 'custom-build',
-    name: 'Custom builds',
-    who: 'For the idea nobody sells yet',
-    body: 'Tell us what your league needs. If we can build it for MFL, we will quote it up front.',
-    note: 'Leave your email and we will reach out to hear what you have in mind.',
   },
 ];
 ---
@@ -113,12 +135,12 @@ const PRODUCTS: Door[] = [
       <p class="eyebrow">MFL Add-ons</p>
       <h1>MFL Add-ons is now MFL Football.</h1>
       <p class="lede">
-        Offering more than ever before. The skins and templates you know are still here, and now there are live
-        scores, apps for your TV and phone, league history and full league sites.
+        Offering more than ever before: free tools like our team logo maker, live scores, apps for your TV and
+        phone, league history, and full custom sites built for how your league plays.
       </p>
       <div class="hero__ctas">
         <a class="cta cta--primary" href="#products">See everything</a>
-        <a class="cta cta--ghost" href="/instructions">Get the free skin</a>
+        <a class="cta cta--ghost" href="/live/team-logo">Make a team logo</a>
       </div>
     </div>
     <figure class="shot">
@@ -129,28 +151,52 @@ const PRODUCTS: Door[] = [
 
   <section class="block" id="free" aria-labelledby="free-h">
     <div class="block__head">
-      <div><span class="tag tag--free">Free</span><h2 id="free-h">Still free</h2></div>
-      <p>Where MFL Add-ons started. Use them as long as you like.</p>
+      <div><span class="tag tag--free">Free</span><h2 id="free-h">Free tools</h2></div>
+      <p>No account, no catch. Use them as long as you like.</p>
     </div>
-    <div class="grid grid--3">
-      <a class="tile" href="/instructions#skin">
+    <a class="tile tile--feature" href="/live/team-logo">
+      <span class="feature__copy">
         <span class="tag tag--free">Free</span>
-        <h3>MFL skin</h3>
-        <p>Light and dark themes for your league's MyFantasyLeague pages.</p>
-        <span class="more">Get the skin →</span>
-      </a>
-      <a class="tile" href="/instructions#homepage">
-        <span class="tag tag--free">Free</span>
-        <h3>Template builder</h3>
-        <p>A homepage, header and footer for MFL, with step-by-step install.</p>
-        <span class="more">Build a template →</span>
-      </a>
+        <h3>Team logo maker</h3>
+        <p>
+          Pick a style, your team colors and the kind of art, and we write the prompt. Paste it into ChatGPT, Gemini or
+          Claude and walk away with a logo your league will notice.
+        </p>
+        <span class="more">Make your team logo →</span>
+      </span>
+      <img class="feature__img" src="/assets/addons/team-logo.webp" width="1080" height="810" loading="lazy" alt="The team logo maker: style, team colors and kind of art, with the finished prompt ready to copy" />
+    </a>
+    <div class="grid grid--2 free-row">
+      <button type="button" class="tile" data-interest="champion-card" data-interest-name="The champion card" data-interest-note="A card your champion can share in the group chat, free for every league.">
+        <span class="tag tag--soon">Free · Coming soon</span>
+        <h3>Champion card</h3>
+        <p>A card to crown your league champion and share in the group chat.</p>
+        <span class="more">I'm interested →</span>
+      </button>
       <a class="tile" href="/live">
         <span class="tag tag--free">Free</span>
         <h3>Live scores</h3>
         <p>Live scores for every MFL league you play in, on one screen.</p>
         <span class="more">Open live scores →</span>
       </a>
+    </div>
+    <p class="skins">Still running an MFL Add-ons skin? The <a href="/instructions">free skin and templates</a> are still here.</p>
+  </section>
+
+  <section class="block" id="extras" aria-labelledby="extras-h">
+    <div class="block__head">
+      <div><span class="tag tag--soon">Coming soon</span><h2 id="extras-h">Make it yours</h2></div>
+      <p>Made a logo? Give your league a home for it, and an address nobody has to look up.</p>
+    </div>
+    <div class="grid grid--2">
+      {EXTRAS.map((p) => (
+        <button type="button" class="plan" data-interest={p.slug} data-interest-name={p.name} data-interest-note={p.note}>
+          <span class="plan__who">{p.who}</span>
+          <h3>{p.name}</h3>
+          <p>{p.body}</p>
+          <span class="more">I'm interested →</span>
+        </button>
+      ))}
     </div>
   </section>
 
@@ -175,7 +221,7 @@ const PRODUCTS: Door[] = [
   <section class="block" id="products" aria-labelledby="products-h">
     <div class="block__head">
       <div><span class="tag tag--soon">Coming soon</span><h2 id="products-h">For your league</h2></div>
-      <p>From one owner's game day to a fully custom league site. Tap anything you'd use and we'll tell you first.</p>
+      <p>Our biggest work is full league sites: your own domain and every feature, built for how your league plays. Tap anything you'd use and we'll tell you first.</p>
     </div>
     <div class="grid grid--4">
       {PRODUCTS.map((p) => (
@@ -456,6 +502,48 @@ const PRODUCTS: Door[] = [
     color: var(--secondary-color);
   }
 
+  .tile--feature {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    align-items: center;
+    gap: 2rem;
+    padding: 0;
+    overflow: hidden;
+    border-color: var(--brand-red);
+  }
+
+  .feature__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 2rem;
+  }
+
+  .tile--feature h3 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .tile--feature p {
+    font-size: var(--font-size-base);
+  }
+
+  .feature__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .free-row {
+    margin-top: 1rem;
+  }
+
+  .skins {
+    margin: 1rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+  }
+
   .plan__who {
     font-size: var(--font-size-xs);
     font-weight: 600;
@@ -522,6 +610,7 @@ const PRODUCTS: Door[] = [
 
   @media (max-width: 760px) {
     .hero,
+    .tile--feature,
     .grid--2,
     .grid--3,
     .grid--4 {
