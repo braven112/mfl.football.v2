@@ -3,8 +3,8 @@
  *
  * We do not make images. An owner picks a style, one or two team colors and a
  * kind of art, and this writes the prompt they paste into the AI image tool
- * they already use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
- * rather than pictures. The rules wrapped around their choices are the ones
+ * they already use (ChatGPT, Gemini). An SVG-for-Claude kind was dropped on
+ * 2026-10-29: Brandon found its logos looked terrible next to the square icon's. The rules wrapped around their choices are the ones
  * our art has to meet: flat, bold and readable at 40 px, on a transparent
  * ground at the master sizes the Brand Book asks for (`brand-asset-specs.ts`),
  * and ORIGINAL — nothing that copies an NFL, college or pro mark, which the
@@ -108,7 +108,6 @@ export const LOGO_MIN_CONTRAST = AA_LARGE_TEXT_RATIO;
 export const LOGO_KINDS: Array<MflLiveAppLogoOption<MflLiveAppLogoKind>> = [
   { id: 'icon', label: 'Square icon' },
   { id: 'banner', label: 'Wide banner' },
-  { id: 'svg', label: 'Vector (for Claude)' },
 ];
 
 export const DEFAULT_LOGO_CHOICE = { style: 'crest', colors: ['#C8102E'], kind: 'icon' } as const;
@@ -186,7 +185,7 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
 }
 
 /**
- * Icons and vector logos are pictures only: our site shows team marks, never
+ * Icons are pictures only: our site shows team marks, never
  * wordmarks, and image tools add the team name in big letters unless told not
  * to (Brandon, 2026-10-29). The banner is the one kind that asks for the name.
  */
@@ -223,14 +222,6 @@ export function writeLogoPrompt(input: {
       `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
       'No gradients, no photo textures. Transparent background, 1900 × 316 pixels (6:1), ' +
       `with the logo and name filling the height. ${ORIGINAL_RULE}`
-    );
-  }
-  if (kind === 'svg') {
-    return (
-      `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
-      `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images. ` +
-      'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${NO_TEXT_RULE} ${ORIGINAL_RULE} Reply with the SVG code only.`
     );
   }
   return (

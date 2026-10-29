@@ -12,7 +12,7 @@
  * the server's builder is typed against it.
  */
 
-export type MflLiveAppLogoKind = 'icon' | 'banner' | 'svg';
+export type MflLiveAppLogoKind = 'icon' | 'banner';
 
 /** One tappable choice: a style or a kind of artwork. */
 export interface MflLiveAppLogoOption<Id extends string = string> {

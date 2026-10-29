@@ -4,7 +4,7 @@
  * and indexable, for any fantasy football player (not only MFL leagues).
  *
  * We make no images (decided with Brandon 2026-10-27): the visitor picks a
- * look and copies a prompt into ChatGPT, Gemini or Claude. The form is the
+ * look and copies a prompt into ChatGPT or Gemini. The form is the
  * same `TeamLogoBuilder` MFL Live's `/live/team-logo` renders, so every word
  * comes from `src/utils/team-logo-prompt.ts`. The examples are real runs of
  * it (`src/data/logo-maker-examples.ts`).
@@ -26,9 +26,9 @@ const styleLabel = (id: string) => LOGO_STYLES.find((s) => s.id === id)?.label ?
 
 const faqs: Faq[] = [
 	{ q: 'Is the fantasy football logo maker free?', a: `Yes. It is free, needs no account, and works for any fantasy football team on any site. It is made by MFL.football, formerly ${FORMER_BRAND}.` },
-	{ q: 'How do I make a fantasy football logo with AI?', a: 'Type your team name and a mascot idea, pick a style and up to two team colors, then copy the prompt. Paste it into ChatGPT or Gemini to get a picture, or into Claude to get a vector (SVG) logo you can resize without blur.' },
+	{ q: 'How do I make a fantasy football logo with AI?', a: 'Type your team name and a mascot idea, pick a style and up to two team colors, then copy the prompt. Paste it into ChatGPT or Gemini, ask for a few tries, and keep the one that still reads when it is tiny.' },
 	{ q: 'What makes a fantasy football logo look professional?', a: 'A mascot you can picture. Your team name can be a joke or a pun, but give the logo a real animal or object to draw, like a rhino or a viking helmet. A pun is hard to draw; a rhino is not. Then keep it to one or two team colors plus white and black.' },
-	{ q: 'Why does the tool write a prompt instead of making the picture?', a: 'You already have a better image maker than we could run: ChatGPT, Gemini and Claude are free to try. The prompt carries the rules a good team logo needs, so whichever one you use gets them right.' },
+	{ q: 'Why does the tool write a prompt instead of making the picture?', a: 'You already have a better image maker than we could run: ChatGPT and Gemini are free to try. The prompt carries the rules a good team logo needs, so whichever one you use gets them right.' },
 	{ q: 'What size should a fantasy football logo be?', a: 'A square logo at 1024 × 1024 pixels on a transparent background covers every fantasy site. Banners are 1900 × 316. The prompt asks for these sizes, and for a design that still reads when shrunk to 40 pixels.' },
 	{ q: 'Can I use an NFL team’s logo for my fantasy team?', a: 'No. NFL, college and pro logos are trademarks. Every prompt asks for an original design, and the tool warns you when your team name matches an NFL club so you ask for new art instead.' },
 	{ q: 'How do I put the logo on my MyFantasyLeague team?', a: 'On MFL, open your franchise settings and paste the image address into the Icon (square) or Logo (banner) field. MFL links to an image hosted on the web, so upload the file somewhere public first.' },
@@ -44,7 +44,7 @@ const jsonLd = [
 		applicationCategory: 'DesignApplication',
 		operatingSystem: 'Any',
 		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-		description: 'Free AI prompt builder for fantasy football team logos: pick a style and team colors, then paste the prompt into ChatGPT, Gemini or Claude.',
+		description: 'Free AI prompt builder for fantasy football team logos: pick a style and team colors, then paste the prompt into ChatGPT or Gemini.',
 		publisher: { '@id': 'https://mfl.football/#organization' },
 	},
 	faqJsonLd(faqs),
@@ -57,7 +57,7 @@ const jsonLd = [
 
 <MarketingShell
 	title="Free Fantasy Football Logo Maker: AI Prompts for Your Team Logo"
-	description="Make a fantasy football team logo free: pick a style and team colors, then paste the prompt into ChatGPT, Gemini or Claude. No account needed."
+	description="Make a fantasy football team logo free: pick a style and team colors, then paste the prompt into ChatGPT or Gemini. No account needed."
 	canonicalPath={PATH}
 	jsonLd={jsonLd}
 	ogImage="/assets/logo-maker/examples.png"
@@ -68,7 +68,7 @@ const jsonLd = [
 			<h1>Free fantasy football logo maker</h1>
 			<p class="lm-answer">
 				Give your fantasy football team a real logo. Pick a style and your team colors, and we write the prompt.
-				Paste it into ChatGPT or Gemini for a picture, or into Claude for a vector logo. Free, no account, any league.
+				Paste it into ChatGPT or Gemini and get your logo. Free, no account, any league.
 			</p>
 		</header>
 
@@ -104,7 +104,7 @@ const jsonLd = [
 			<ol class="lm-steps">
 				<li><strong>Name it.</strong> Your team name and a mascot, like “a charging boar with a football.” A silly team name is fine, but give it a mascot you can picture, like an animal or an object: that is what makes a clean, professional logo.</li>
 				<li><strong>Pick a look.</strong> A crest, mascot, monogram, retro patch or round badge, in one or two team colors. The tool tells you when two colors are too close to tell apart on a small logo.</li>
-				<li><strong>Paste the prompt.</strong> ChatGPT or Gemini makes the picture; Claude writes a vector logo. The prompt asks for a transparent background, the right size, and an original, picture-only design: no team name or letters on the logo.</li>
+				<li><strong>Paste the prompt.</strong> ChatGPT or Gemini makes the picture. The prompt asks for a transparent background, the right size, and an original, picture-only design: no team name or letters on the logo.</li>
 			</ol>
 		</section>
 

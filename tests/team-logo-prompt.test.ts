@@ -27,18 +27,21 @@ describe('team logo prompt builder', () => {
     }
     expect(buildTeamLogoPrompt({ kind: 'icon' }, 'X').prompt).toContain('1024 × 1024');
     expect(buildTeamLogoPrompt({ kind: 'banner' }, 'X').prompt).toContain('1900 × 316');
-    expect(buildTeamLogoPrompt({ kind: 'svg' }, 'X').prompt).toContain('SVG');
   });
 
-  it('icons and vector logos are picture-only marks; only the banner asks for the name', () => {
-    for (const kind of ['icon', 'svg'] as const) {
-      const { prompt } = buildTeamLogoPrompt({ kind, teamName: 'Rhinos' }, '');
-      expect(prompt, kind).toContain('Do not write the team name or any other words, letters or numbers anywhere in the logo');
-      expect(prompt, kind).not.toMatch(/lettering/);
-    }
+  it('the icon is a picture-only mark; only the banner asks for the name', () => {
+    const icon = buildTeamLogoPrompt({ kind: 'icon', teamName: 'Rhinos' }, '').prompt;
+    expect(icon).toContain('Do not write the team name or any other words, letters or numbers anywhere in the logo');
+    expect(icon).not.toMatch(/lettering/);
     const banner = buildTeamLogoPrompt({ kind: 'banner', teamName: 'Rhinos' }, '').prompt;
     expect(banner).toContain('the team name in big, bold letters');
     expect(banner).not.toContain('Do not write the team name');
+  });
+
+  it('an app build that still sends the retired SVG kind gets the square icon', () => {
+    const built = buildTeamLogoPrompt({ kind: 'svg' as never }, 'X');
+    expect(built.choice.kind).toBe('icon');
+    expect(built.prompt).not.toContain('SVG');
   });
 
   it('falls back to the defaults for unknown ids, and to the MFL name for an empty one', () => {
