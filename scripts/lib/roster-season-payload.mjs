@@ -327,6 +327,10 @@ export const indexRosterFeed = (data) => {
           contractYear: player.contractYear,
           contractInfo: player.contractInfo,
           status: player.status,
+          // A player rebuilt from the season's lineups whose contract no
+          // record kept (scripts/lib/season-end-rosters.mjs). Only set when
+          // true, so every other season's payload is byte-unchanged.
+          ...(player.salaryUnknown === '1' ? { salaryUnknown: true } : {}),
         };
       }
     });
@@ -685,6 +689,7 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
       depthChartAhead: player.depthChartAhead ?? null,
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
       contractInfo: liveData?.contractInfo || '',
+      ...(liveData?.salaryUnknown ? { salaryUnknown: true } : {}),
     };
 
     return playerObj;
