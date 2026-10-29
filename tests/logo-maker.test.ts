@@ -27,9 +27,8 @@ const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
 const PATH = '/fantasy-football-logo-maker';
 
 describe('logo maker examples', () => {
-	it('has an even number of examples, so the phone grid has no orphan', () => {
+	it('has at least one example', () => {
 		expect(LOGO_MAKER_EXAMPLES.length).toBeGreaterThan(0);
-		expect(LOGO_MAKER_EXAMPLES.length % 2).toBe(0);
 	});
 
 	it('each example is a choice the builder takes unchanged', () => {

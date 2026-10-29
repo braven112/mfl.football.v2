@@ -48,7 +48,11 @@ const { teams = [], initialName = '' } = Astro.props as Props;
 
 	<div class="tlogo__field">
 		<label class="tlogo__label" for="tlogo-idea">Mascot or idea</label>
-		<input id="tlogo-idea" class="tlogo__input" type="text" maxlength="120" placeholder="a charging boar with a football" />
+		<input id="tlogo-idea" class="tlogo__input" type="text" maxlength="120" placeholder="a charging boar with a football" aria-describedby="tlogo-idea-tip" />
+		<p class="tlogo__tip" id="tlogo-idea-tip">
+			Tip: your team name can be as silly as you like, but pick something real you can picture for the mascot,
+			like an animal or an object. That gives the cleanest, most professional-looking logo.
+		</p>
 	</div>
 
 	<div class="tlogo__field">
@@ -304,6 +308,7 @@ const { teams = [], initialName = '' } = Astro.props as Props;
 		cursor: pointer;
 	}
 	.tlogo__picked,
+	.tlogo__tip,
 	.tlogo__warning,
 	.tlogo__copied {
 		margin: 0;
