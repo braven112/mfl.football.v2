@@ -32,9 +32,10 @@ import baseline from './fixtures/league-data-import-baseline.json';
  *      slack is left for the next one to hide in (typecheck-baseline idiom).
  *      One key per line, so parallel PRs touching different files merge clean.
  *
- *   2. FUNCTION_EXCLUDED files are left out of the function, so a raw reader
- *      of one (a glob, an import, an fs read) works on a laptop and fails in
- *      production. Any such reader fails here first.
+ *   2. FUNCTION_EXCLUDED files are left out of the function, so an `fs` read of
+ *      one works on a laptop and fails in production. Any such reader fails
+ *      here first. (Globs and imports compile the data in and are unaffected;
+ *      the ratchet above is what moves those.)
  */
 
 const SOURCE_GLOBS = "'src/**/*.astro' 'src/**/*.ts' 'src/**/*.tsx' 'src/**/*.mjs' 'src/**/*.js'";
@@ -121,19 +122,17 @@ describe('FUNCTION_EXCLUDED', () => {
     }
   });
 
-  it('nothing in src/ reads an excluded file except through the loader', () => {
+  it('nothing in src/ reads an excluded file off disk except through the loader', () => {
     const offenders: string[] = [];
     for (const g of FUNCTION_EXCLUDED) {
-      // Match on the file name: a reader names it in a glob, an import or a
-      // path join, however the directories around it are spelled.
+      // Only RAW readers break: a glob or import is compiled into the bundle
+      // and never touches the excluded file. Match on the file name, however
+      // the directories around it are spelled in the path join.
       const base = g.split('/').pop()!;
       const nameRe = new RegExp(`(^|[/'"\`])${base.replace(/\./g, '\\.').replace(/\*/g, '[^/\'"\`]*')}(['"\`]|$)`);
       for (const file of sources()) {
         if (file === 'src/utils/league-data.ts') continue;
         const text = readFileSync(file, 'utf8');
-        for (const spec of bundledDataReads(text)) {
-          if (nameRe.test(spec.replace(/^['"\`[]+|['"\`\]]+$/g, '').split('/').pop() ?? '')) offenders.push(`${file}: ${spec}`);
-        }
         if (/from ['"](?:node:)?fs(?:\/promises)?['"]/.test(text) && nameRe.test(text)) {
           offenders.push(`${file}: fs read of ${base}`);
         }
