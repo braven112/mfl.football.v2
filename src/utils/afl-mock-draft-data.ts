@@ -21,12 +21,11 @@
  * not a silent one: `rosterSource` says which was used and the lobby prints it.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { getConferenceTeams, type ConferenceId } from './afl-conference';
 import { selectDraftUnit } from './draft-utils';
 import { getLeagueBySlug } from '../config/leagues';
+import { loadLeagueData } from './league-data';
 import {
   AFL_MOCK_ROUNDS,
   buildAflMockOrder,
@@ -45,9 +44,10 @@ const AFL_SLUG = 'afl-fantasy';
 /** Where a roster snapshot came from — surfaced, never swallowed. */
 export type RosterSource = 'live' | 'feed' | 'none';
 
-function readFeed(relativePath: string): unknown {
+/** League data, through src/utils/league-data.ts (the store, in production). */
+async function readFeed(relativePath: string): Promise<unknown> {
   try {
-    return JSON.parse(readFileSync(join(process.cwd(), relativePath), 'utf-8'));
+    return await loadLeagueData(relativePath);
   } catch {
     return null;
   }
@@ -74,7 +74,7 @@ export async function loadAflRosterFranchises(
     console.warn('[afl-mock-draft] Live roster fetch failed:', (err as Error).message);
   }
 
-  const franchises = rosterFranchisesOf(readFeed(aflFeedPath(year, 'rosters.json')));
+  const franchises = rosterFranchisesOf(await readFeed(aflFeedPath(year, 'rosters.json')));
   return franchises.length > 0
     ? { franchises, source: 'feed' }
     : { franchises: [], source: 'none' };
@@ -128,7 +128,7 @@ export async function buildAflMockContext(
   const rostered = rosteredPlayerIds(franchises, franchiseIds);
   const cuts = rosterCutState(franchises, franchiseIds);
 
-  const draftResults = readFeed(aflFeedPath(year, 'draftResults.json')) as
+  const draftResults = (await readFeed(aflFeedPath(year, 'draftResults.json'))) as
     | { draftResults?: { draftUnit?: unknown } }
     | null;
   const draftUnit = selectDraftUnit<{ round?: string; pick?: string; franchise?: string; player?: string }>(

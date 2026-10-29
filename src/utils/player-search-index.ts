@@ -12,13 +12,12 @@
  * player can have MORE than one owner: an AFL player is routinely held once
  * in each conference, so ownership is a list (getOwnersByPlayer), never one id.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
 import { getOwnersByPlayer } from './offseason-hero-data';
 import { asArray } from './mfl-normalize';
 import { formatMflName } from './player-name-matching';
+import { leagueFeedPath, readLeagueDataSync } from './league-data';
 
 export interface PlayerSearchEntry {
   id: string;
@@ -37,12 +36,12 @@ export interface PlayerSearchIndex {
   players: PlayerSearchEntry[];
 }
 
+/**
+ * League data through src/utils/league-data.ts. The index is PRERENDERED, so
+ * this runs at build time, where every committed feed is on disk.
+ */
 function readFeed(dataPath: string, year: number, file: string): any {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), file), 'utf8'));
-  } catch {
-    return null;
-  }
+  return readLeagueDataSync(leagueFeedPath(dataPath, year, file));
 }
 
 export function buildPlayerSearchIndex(league: CanonicalLeagueSlug): PlayerSearchIndex {

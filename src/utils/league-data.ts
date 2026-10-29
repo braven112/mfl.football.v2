@@ -153,6 +153,57 @@ export function getLeagueData<T = unknown>(path: string): T | null {
   return settled.get(key) as T | null;
 }
 
+/** `data/<league>/mfl-feeds/<year>/<file>` — one committed MFL feed, as a loader path. */
+export function leagueFeedPath(dataPath: string, year: number | string, file: string): string {
+  return `${normalize(dataPath).replace(/\/+$/, '')}/mfl-feeds/${year}/${file}`;
+}
+
+/** Whether `path` has been loaded (or preloaded) and is still in memory. */
+export function isLeagueDataLoaded(path: string): boolean {
+  return settled.has(normalize(path));
+}
+
+const warnedUnloaded = new Set<string>();
+
+/**
+ * The forgiving sync read, for long-standing sync helpers whose callers are
+ * not all able to preload yet (a page that renders a historical season, a
+ * component nobody has converted). The preloaded value when there is one;
+ * otherwise the file read off disk — which works in dev and for any file
+ * still shipped inside the function, and comes back null for a file
+ * FUNCTION_EXCLUDED has moved out — and a warning, once per path, naming the
+ * preload that was missed. Never throws, so a missed preload degrades one
+ * table instead of 500ing the page.
+ *
+ * A helper that caches what it builds must not cache a result read this way
+ * while `isLeagueDataLoaded(path)` is false: the request that DOES preload
+ * would otherwise keep being served the miss.
+ */
+export function readLeagueDataSync<T = unknown>(path: string): T | null {
+  const key = normalize(path);
+  if (settled.has(key)) return settled.get(key) as T | null;
+  if (!warnedUnloaded.has(key) && import.meta.env.MODE !== 'test') {
+    warnedUnloaded.add(key);
+    console.warn(
+      `[league-data] ${key} read synchronously before it was preloaded — falling back to disk. ` +
+        'Await the helper’s preload (or preloadLeagueData) first; an excluded file reads back null in production.',
+    );
+  }
+  try {
+    const { value, bytes } = readFromDisk(key);
+    // A file that WAS on disk is the real thing: keep it, so the next sync
+    // read is a lookup rather than another parse. A miss stays unsettled so
+    // a later preload can still fill it.
+    if (value !== null) {
+      settle(key, value, bytes);
+      cache.set(key, Promise.resolve(value));
+    }
+    return value as T | null;
+  } catch {
+    return null;
+  }
+}
+
 /** Whether a file exists, without reading it. */
 export function hasLeagueData(path: string): boolean {
   const key = normalize(path);

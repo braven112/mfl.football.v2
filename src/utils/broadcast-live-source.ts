@@ -29,7 +29,7 @@ import { mflFetch } from './mfl-fetch';
 import { attachRowProjections, computeTeamTotals } from './live-scoring-view';
 import { winProbability } from './live-win-probability';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from './league-year';
-import { projectionsForWeek, readLeagueFeed } from './sunday-ticket-sources';
+import { preloadLeagueFeeds, projectionsForWeek, readLeagueFeed } from './sunday-ticket-sources';
 import type { MatchupPairing, PlayerMeta } from '../types/live-scoring';
 import type {
   BroadcastLeagueScore,
@@ -450,6 +450,7 @@ export async function loadLeagueProjections(
   try {
     if (league.registered) {
       const leagueYear = getLeagueYearForSlug(league.registered.slug);
+      await preloadLeagueFeeds(league.registered, leagueYear, ['projectedScores.json']);
       const payload = readLeagueFeed(league.registered, leagueYear, 'projectedScores.json');
       const committed = projectionsForWeek(payload, week);
       if (committed.size > 0) return committed;

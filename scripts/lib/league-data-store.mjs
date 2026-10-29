@@ -41,7 +41,24 @@ export const MANIFEST_PATH = 'src/generated/league-data-manifest.json';
  * repo root (`*` = one path segment, `**` = any depth). Grow this ONLY when the
  * last raw reader of the files is gone — the guard test enforces it.
  */
-export const FUNCTION_EXCLUDED = [];
+export const FUNCTION_EXCLUDED = [
+  // Per-season feeds whose last raw reader moved to the loader (or that only
+  // globs ever read). NOT weekly-results.json: accounting-season-data.ts reads
+  // it off disk by a constructed name (`${feed}.json`) that the guard's
+  // file-name scan cannot see.
+  // A family whose remaining readers are SYNC helpers that a caller may not
+  // have preloaded yet (playerScores.json for the hero components, the RSP
+  // files for the draft room) stays in until those callers preload: its
+  // fallback reads the disk, which an excluded file is not on.
+  'data/*/mfl-feeds/*/player-scores-weekly.json',
+  'data/*/mfl-feeds/*/futureDraftPicks.json',
+  'data/*/mfl-feeds/*/auctionResults.json',
+  // player-map's identity files and the bye calendar: preloaded on every
+  // request by src/middleware.ts (src/utils/request-league-data.ts).
+  'data/*/derived/player-identity-union.json',
+  'data/*/derived/espn-nfl-id-backfill.json',
+  'data/nfl/bye-weeks.json',
+];
 
 /** Directories under the roots that are never league data the site reads. */
 const SKIP_DIRS = new Set(['perf-baseline', 'salary-history-archive', 'node_modules']);

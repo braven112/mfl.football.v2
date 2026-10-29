@@ -12,8 +12,6 @@
  * helper serves every league.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { getPlayer } from './player-map';
 import { loadLiveScoringPayload } from './live-scoring-source';
 import { loadLeagueWeekProjections } from './live/projections';

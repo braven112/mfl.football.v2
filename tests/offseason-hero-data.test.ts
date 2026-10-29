@@ -1,5 +1,19 @@
-import fs from 'node:fs';
 import { describe, it, expect, vi, afterEach } from 'vitest';
+
+// The current season's playerScores, substituted per test (see withFeedWeek).
+// Feeds are read through the league-data loader, so that is where the fixture
+// goes in — the loader caches what it reads, so an fs spy would be bypassed.
+const feedOverride = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../src/utils/league-data', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/utils/league-data')>();
+  return {
+    ...actual,
+    readLeagueDataSync: (p: string) =>
+      feedOverride.current !== null && /\/mfl-feeds\/2026\/playerScores\.json$/.test(p)
+        ? feedOverride.current
+        : actual.readLeagueDataSync(p),
+  };
+});
 import {
   getChampionshipResult,
   getTaggedPlayers,
@@ -175,22 +189,14 @@ describe('getWeekInTheBooks — the feed may never outrun the calendar', () => {
   // (2026-09-22, when the feed reached week 2). Only 2026's playerScores is
   // substituted — the frozen 2025 cases below still read the real archive.
   function withFeedWeek(week: number): void {
-    const hit = (p: unknown) =>
-      typeof p === 'string' && /[\\/]mfl-feeds[\\/]2026[\\/]playerScores\.json$/.test(p);
-    const body = JSON.stringify({
+    feedOverride.current = {
       playerScores: {
         playerScore: week > 0 ? [{ id: '1', week: String(week), score: '1.0' }] : [],
       },
-    });
-    const realExists = fs.existsSync;
-    const realRead = fs.readFileSync;
-    vi.spyOn(fs, 'existsSync').mockImplementation(((p: fs.PathLike) =>
-      hit(p) ? true : realExists(p)) as typeof fs.existsSync);
-    vi.spyOn(fs, 'readFileSync').mockImplementation(((p: any, ...rest: any[]) =>
-      hit(p) ? body : (realRead as any)(p, ...rest)) as typeof fs.readFileSync);
+    };
   }
   afterEach(() => {
-    vi.restoreAllMocks();
+    feedOverride.current = null;
   });
 
   it('agrees with the feed when the feed is behind the calendar', () => {

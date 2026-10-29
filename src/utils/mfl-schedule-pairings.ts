@@ -29,13 +29,12 @@
  * cookie, from the host `myleagues` named for it.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import type { MatchupPairing } from '../types/live-scoring';
 import type { LeagueDefinition } from '../config/leagues';
 import type { BoardLeague } from './sunday-ticket-selection';
 import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
+import { leagueFeedPath, loadLeagueData } from './league-data';
 
 function asArray<T>(value: T | T[] | null | undefined): T[] {
   if (Array.isArray(value)) return value;
@@ -350,7 +349,7 @@ export async function readRegisteredSchedulePairings(
   year: number,
   week: number,
   deps: {
-    readCommitted?: (file: string) => unknown;
+    readCommitted?: (file: string) => unknown | Promise<unknown>;
     fetchImpl?: typeof fetch;
   } = {},
 ): Promise<MatchupPairing[]> {
@@ -358,16 +357,10 @@ export async function readRegisteredSchedulePairings(
 
   const readCommitted =
     deps.readCommitted ??
-    ((file: string) => {
-      try {
-        const p = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), file);
-        return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
-      } catch {
-        return null;
-      }
-    });
+    // League data, through src/utils/league-data.ts (the store, in production).
+    ((file: string) => loadLeagueData(leagueFeedPath(league.dataPath, year, file)).catch(() => null));
 
-  const committed = parseSchedulePairings(readCommitted('schedule.json'), week);
+  const committed = parseSchedulePairings(await readCommitted('schedule.json'), week);
   if (committed.length > 0) return committed;
 
   const host = `https://${league.mflHost}`;

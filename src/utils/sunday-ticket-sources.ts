@@ -22,15 +22,15 @@
  *    whole roster stands in for either, flagged `lineupResolved: false`.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import type { LeagueDefinition } from '../config/leagues';
 import {
   extractLineupStarters,
   findWeekResultsEntry,
   loadRostersFeedFromDisk,
   loadWeeklyResultsFeedFromDisk,
+  preloadLineupFeeds,
 } from './lineup-sources';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 import type { PlayerIdentity } from './player-map';
 import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
@@ -147,12 +147,23 @@ export function buildContribution(input: BuildContributionInput): LeagueContribu
 
 /** One committed feed file under `data/<league>/mfl-feeds/<year>/`, or null. */
 export function readLeagueFeed(league: LeagueDefinition, leagueYear: number, file: string): any | null {
-  try {
-    const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), file);
-    return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
-  } catch {
-    return null;
-  }
+  return readLeagueDataSync(leagueFeedPath(league.dataPath, leagueYear, file));
+}
+
+/**
+ * Load `files` of one league-year so `readLeagueFeed` serves them from memory
+ * (league data lives in the store in production — src/utils/league-data.ts).
+ */
+export function preloadLeagueFeeds(league: LeagueDefinition, leagueYear: number, files: string[]): Promise<void> {
+  return preloadLeagueData(files.map((f) => leagueFeedPath(league.dataPath, leagueYear, f)));
+}
+
+/** Load everything `loadRegisteredContribution` reads for one league-year. */
+export async function preloadRegisteredContribution(league: LeagueDefinition, leagueYear: number): Promise<void> {
+  await Promise.all([
+    preloadLeagueFeeds(league, leagueYear, ['projectedScores.json']),
+    preloadLineupFeeds(league.slug as Parameters<typeof preloadLineupFeeds>[0], leagueYear),
+  ]);
 }
 
 export interface RegisteredContributionInput {
