@@ -6,6 +6,7 @@ import vercel from '@astrojs/vercel';
 import { REMOTE_MARK_HOSTS } from './src/utils/remote-image';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
+import { functionExcludedFiles } from './scripts/lib/league-data-store.mjs';
 import { schefterArchiveIncludeFiles, schefterOgIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
 import { isDemoEnv } from './src/utils/demo-isolation-core.mjs';
 
@@ -111,7 +112,9 @@ export default defineConfig({
     // years of archived feeds — plus roster-history snapshots and the derived/
     // files only globs read — in every request's function. See the module for
     // why this is safe and why it counts seasons instead of naming a year.
-    excludeFiles: archivedFeedFiles(),
+    // And league data the site now reads from Vercel Blob through
+    // src/utils/league-data.ts (scripts/lib/league-data-store.mjs).
+    excludeFiles: [...archivedFeedFiles(), ...functionExcludedFiles()],
   }),
   integrations: [react()],
   vite: {

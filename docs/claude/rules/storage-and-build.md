@@ -94,6 +94,34 @@ need out of the function (a derived snapshot, as TheLeague rosters did with
 beta, which raises the limit without stopping the growth. Guard:
 `tests/function-size-budget.test.ts`.
 
+### League data lives in Blob — read it with `loadLeagueData`
+
+Since Oct 2026 the site reads league data (`data/**`, `src/data/**` JSON)
+through `src/utils/league-data.ts`, which fetches it from Vercel Blob in
+production and off disk locally. The files stay committed in git; after
+prebuild, `scripts/publish-league-data.mjs` uploads the changed ones (named
+by content hash) and writes a manifest the function bundles. Before this, every
+`import.meta.glob` and JSON import of league data was compiled into the one
+function, so each new league cost 10-30 MB and the number of leagues was
+capped.
+
+- **New code reads with `await loadLeagueData(path)`**, or `await
+  preloadLeagueData([...])` once per request and `getLeagueData(path)` in a
+  sync helper. A sync read nobody preloaded throws, locally too. Paths are
+  repo-relative (`data/afl-fantasy/mfl-feeds/2019/players.json`);
+  `listLeagueData('data/<league>/mfl-feeds/*/x.json')` replaces a glob's keys.
+- **Never in client code.** A React island or `<script>` that imports a JSON
+  ships it to the browser, not the function; the loader is server-only.
+- **A real deploy without `BLOB_READ_WRITE_TOKEN` fails at publish**, on
+  purpose: the pages would have nothing to read. CI measures with
+  `LEAGUE_DATA_STORE=measure`, which writes the manifest without uploading.
+- **`FUNCTION_EXCLUDED`** (`scripts/lib/league-data-store.mjs`) lists files
+  left out of the function. Add a pattern only once the loader is its last
+  reader; a raw `fs` read of an excluded file ENOENTs in production only.
+- Guard: `tests/league-data-store.test.ts` — a shrink-only per-file count of
+  bundled data reads (`tests/fixtures/league-data-import-baseline.json`), and
+  no raw reader of an excluded file.
+
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline
 from 2026-08-16 is committed under `data/perf-baseline/`.

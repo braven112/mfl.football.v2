@@ -79,6 +79,9 @@ jobs:
         env:
           VERCEL: '1'
           VERCEL_ENV: preview
+          # Leave out what a real deploy stores in Blob, without uploading
+          # (scripts/publish-league-data.mjs).
+          LEAGUE_DATA_STORE: measure
           NODE_OPTIONS: --max-old-space-size=8192
 
       - name: Check function size budget
