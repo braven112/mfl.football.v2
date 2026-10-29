@@ -123,6 +123,13 @@ export interface RosterPageTeam {
 
 export interface RosterPageFeeds {
   rosters: EagerFeedGlob;
+  /**
+   * A past season's rebuilt end-of-season rosters (rosters-season-end.json,
+   * scripts/compute-season-end-rosters.mjs), read in place of rosters.json:
+   * MFL's export for an old season has lost every player whose contract has
+   * since expired. Absent for seasons the export still covers.
+   */
+  seasonEndRosters?: EagerFeedGlob;
   players: EagerFeedGlob;
   ytdScores: EagerFeedGlob;
   tradeBait: EagerFeedGlob;
@@ -187,7 +194,8 @@ const hasKeepers = leagueHasFeature(PAGE_LEAGUE_SLUG, 'keepers');
 const pools = rosterPools(conferences, divisions);
 const usesConferences = pools.usesConferences;
 
-let rostersData = feedForYear(feeds.rosters, selectedYear, 'rosters.json') as any;
+let rostersData = (feedForYear(feeds.seasonEndRosters, selectedYear, 'rosters-season-end.json') ??
+  feedForYear(feeds.rosters, selectedYear, 'rosters.json')) as any;
 const playersData = feedForYear(feeds.players, selectedYear, 'players.json') as any;
 const tradeBaitData = feedForYear(feeds.tradeBait, selectedYear, 'tradeBait.json') as any;
 const tradeBaitByFranchiseData = feedForYear(
