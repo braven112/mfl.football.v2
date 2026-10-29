@@ -103,7 +103,7 @@
           "<strong>Not sure?</strong> Press Home on the remote. The home screen names the system: Google TV, Fire TV, Roku, Tizen (Samsung), webOS (LG) or VIDAA (Hisense). VIDAA's browser hasn't been tested, so a Google TV stick is the safe choice there."
         ]
       },
-      "<strong>The MFL Football app on Google TV.</strong> Opened on its own, it shows the full broadcast board. Its <strong>Score overlay</strong> tile draws a see-through panel over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
+      "<strong>The MFL Football app on Google TV.</strong> Opened on its own, it shows the full broadcast board. Its score overlay (press Back in the app and pick <strong>Show scores</strong>) draws a see-through ticker over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
       {
         "type": "list",
         "heading": "Get the app",
@@ -118,7 +118,7 @@
         "heading": "Set it up once",
         "items": [
           "<strong>Sign in.</strong> Open MFL Football on the TV and point your phone's camera at the QR code. Sign in if it asks, then tap <strong>Approve</strong>. The TV switches to your board on its own.",
-          "<strong>Allow the overlay.</strong> Open the <strong>Score overlay</strong> tile. The first time, it asks to show over other apps: press OK and turn it on for MFL Football, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
+          "<strong>Allow the overlay.</strong> In MFL Football, press Back and pick <strong>Show scores at the top</strong>. The first time, it asks to show over other apps: press OK and turn it on for MFL Football, then press Back. On some TVs the switch is under Settings › Apps › Special app access › Display over other apps.",
           "<strong>No switch on your TV?</strong> The tile shows a one-line command instead. Run it once from a computer on the same Wi-Fi, with ADB installed and network debugging turned on in the TV's Developer options: <code>adb shell appops set football.mfl.live SYSTEM_ALERT_WINDOW allow</code>",
           "<strong>Sunday Ticket.</strong> If you have NFL Sunday Ticket, tick <em>I have NFL Sunday Ticket</em> in <a href=\"https://mfl.football/live/settings#tv\">MFL Football settings</a>. The overlay then marks every Sunday afternoon CBS and FOX game as one you can open."
         ]
@@ -128,12 +128,12 @@
         "heading": "While you watch",
         "items": [
           "<strong>The full walkthrough.</strong> <a href=\"/guides/tv-score-overlay\">The TV score overlay</a> covers every part of the overlay step by step, with pictures.",
-          "<strong>The score ticker.</strong> Start a game in YouTube TV, then open the Score overlay tile. A see-through strip shows your matchups one at a time, and the game's sound keeps playing. It never takes the remote, so your TV app keeps working.",
+          "<strong>The score ticker.</strong> In MFL Football, press Back and pick <strong>Show scores at the top</strong> or <strong>at the bottom</strong>, then start your game in YouTube TV. A see-through strip shows your matchups one at a time, and the game's sound keeps playing. It never takes the remote, so your TV app keeps working.",
           "<strong>Big plays.</strong> When one of your starters scores more than 3 points on a single play, a yellow banner slides over the ticker with the player, the play and the new score.",
-          "<strong>Open it up.</strong> Open the Score overlay tile again to see both starting lineups under the ticker, with whoever just scored lit up. Left and Right move between your matchups, and Up and Down move the ticker to the top or the bottom of the screen, out of the way of the network's own graphics. The TV remembers where you put it.",
+          "<strong>Open it up.</strong> On TVs that show the Score overlay tile, open it again (or say \"Open Score overlay\") to see both starting lineups under the ticker, with whoever just scored lit up. Left and Right move between your matchups, and Up and Down move the ticker to the top or the bottom of the screen, out of the way of the network's own graphics. The TV remembers where you put it.",
           "<strong>The full panel.</strong> Press OK while it's open to bring up the panel: your score, win chance and both starting lineups.",
           "<strong>Watch your players.</strong> The panel's Watch list shows the NFL games your starters are in, live games first. Up and Down pick a game and OK opens it on the TV through your TV's search, where you choose YouTube TV.",
-          "<strong>Back to the game.</strong> Back returns to the ticker, and so does any other button, so the next press reaches your TV app. It also drops back to the ticker after 30 seconds. To close the overlay altogether, pick <strong>Hide overlay</strong> at the bottom of the panel's Watch list."
+          "<strong>Back to the game.</strong> Back returns to the ticker, and so does any other button, so the next press reaches your TV app. It also drops back to the ticker after 30 seconds. To close the overlay altogether, open MFL Football, press Back and pick <strong>Turn off the score overlay</strong>."
         ]
       },
       {
@@ -184,9 +184,27 @@
         "type": "list",
         "heading": "Turn it on",
         "items": [
-          "<strong>Start the game first.</strong> Open YouTube TV, or whatever you watch on, and start the game.",
-          "<strong>Open the Score overlay tile.</strong> Press Home, go to your apps and open <strong>Score overlay</strong>. You can also hold the voice button and say \"Open Score overlay\". The ticker appears and the game keeps playing underneath.",
-          "<strong>The first time only.</strong> The TV asks to let MFL Football show over other apps. Press OK, turn it on, then press Back. The setup steps in <a href=\"/guides/tv-app\">MFL Football on your TV</a> cover TVs without that switch."
+          "<strong>Which TVs.</strong> The overlay needs the MFL Football app, so it works on Google TV and Android TV: most Sony TVs, many TCL, Hisense and Philips TVs, a Chromecast with Google TV, a Google TV Streamer or an Nvidia Shield. Fire TV, Samsung and LG don't let one app draw over another, so use the Broadcast board in your TV's browser there instead. Roku has no browser at all; plug a Google TV stick into a spare HDMI port and use the overlay on that. <a href=\"/guides/tv-app\">MFL Football on your TV</a> covers both.",
+          "<strong>Open MFL Football and press Back.</strong> On the board, press Back until a menu asks <em>Keep your scores on screen?</em> Pick <strong>Show scores at the top</strong> or <strong>Show scores at the bottom</strong>. The app closes and the ticker appears over the home screen.",
+          "<strong>Then start the game.</strong> Open YouTube TV, or whatever you watch on, and start the game. The ticker stays on top and the game's sound plays as normal.",
+          "<strong>Start the overlay before the game.</strong> Pressing Home while a game plays sends the game to the background, so turn the scores on first. If the game is already on, press Home, turn the scores on, then go back into your TV app; the game picks up where it was.",
+          "<strong>The first time only.</strong> The TV asks to let MFL Football show over other apps. Press OK, turn it on, then press Back. If it doesn't ask, or you said no, turn it on yourself: Settings › Apps › Special app access › Display over other apps (on Sony and most Google TVs; some TVs call it <em>Appear on top</em>, and older ones keep it under Apps › Security &amp; restrictions). Find MFL Football in the list and switch it to <em>Allowed</em>. The setup steps in <a href=\"/guides/tv-app\">MFL Football on your TV</a> cover TVs without that switch.",
+          "<strong>No menu?</strong> If Back just closes the app, your TV has an older version. Update MFL Football from the Play Store."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "tv-overlay-display-over-apps.webp",
+        "alt": "The TV's Allow display over other apps settings screen, with MFL Football switched on and marked Allowed.",
+        "caption": "Settings › Apps › Special app access › Display over other apps on a Sony TV. MFL Football should say Allowed."
+      },
+      {
+        "type": "list",
+        "heading": "The Score overlay tile and voice",
+        "items": [
+          "<strong>A shortcut on some TVs.</strong> MFL Football also installs a <strong>Score overlay</strong> tile. Most Google TV home screens show only one tile per app and hide it, but some Android TVs (Nvidia Shield, older Sony and Philips TVs, Android TV boxes) list it under Apps. If yours does, opening it turns the ticker on without leaving your game.",
+          "<strong>Voice.</strong> Hold the voice button on the remote and say \"Open Score overlay\". Whether this works depends on the TV finding that tile; if it opens a search or the MFL Football board instead, use the Back menu.",
+          "<strong>Pin it.</strong> If you can see the tile, highlight it, hold OK and pick <strong>Add to favorites</strong> (or <strong>Move</strong>) to keep it on the home screen."
         ]
       },
       {
@@ -224,7 +242,7 @@
         "type": "list",
         "heading": "Open it up to see who's scoring",
         "items": [
-          "<strong>Open the Score overlay tile again</strong> while the ticker is on, or say \"Open Score overlay\" again. Both starting lineups open under the ticker, and it takes the remote while it's open, which the teal outline shows.",
+          "<strong>Open the Score overlay again</strong> while the ticker is on, with the tile or by voice (see above). Both starting lineups open under the ticker, and it takes the remote while it's open, which the teal outline shows. On a TV that hides the tile and doesn't find it by voice, the full lineups are on the MFL Football board instead.",
           "<strong>What's in it.</strong> Every starter on both sides with their points and their NFL game's clock: red while the game is live, <em>Final</em> once it's over, or the kickoff time. A starter who just had a big play stays highlighted in yellow for about a minute and a half.",
           "<strong>Left and Right</strong> move between your matchups.",
           "<strong>Back</strong> closes it and gives the remote back to your TV app. So does any button the overlay doesn't use, and it closes by itself after 30 seconds without a press."
@@ -240,7 +258,7 @@
         "type": "list",
         "heading": "Move it to the top or bottom",
         "items": [
-          "<strong>Open it up first</strong> (open the Score overlay tile again), then press <strong>Up</strong> to put the ticker at the top of the screen or <strong>Down</strong> to put it at the bottom.",
+          "<strong>From the Back menu.</strong> Open MFL Football, press Back and pick <strong>Move scores to the top</strong> or <strong>Move scores to the bottom</strong>. With the lineups open you can also press <strong>Up</strong> for the top or <strong>Down</strong> for the bottom.",
           "<strong>Pick the clear edge.</strong> Most networks put their score banner along the bottom, so the top is usually best, but some broadcasts and streaming apps use the top.",
           "<strong>It remembers.</strong> The TV keeps your choice, so the ticker comes back on the same edge next time."
         ]
@@ -258,7 +276,8 @@
         "type": "list",
         "heading": "Turn it off",
         "items": [
-          "<strong>Hide overlay.</strong> Open the full panel (open the tile again, then press OK), go to the bottom of the Watch list and pick <strong>Hide overlay</strong>.",
+          "<strong>From the Back menu.</strong> Open MFL Football, press Back and pick <strong>Turn off the score overlay</strong>.",
+          "<strong>Or from the full panel.</strong> With the lineups open, press OK, go to the bottom of the Watch list and pick <strong>Hide overlay</strong>.",
           "<strong>Or turn off the TV.</strong> The overlay closes by itself when the screen goes off."
         ]
       },

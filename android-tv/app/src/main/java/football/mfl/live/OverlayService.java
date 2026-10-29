@@ -62,6 +62,16 @@ public class OverlayService extends Service {
 
     static final String ACTION_SHOW = "football.mfl.live.overlay.SHOW";
     static final String ACTION_HIDE = "football.mfl.live.overlay.HIDE";
+    /**
+     * On ACTION_SHOW: the edge the owner picked from the main app's menu. It
+     * shows (or keeps) the ticker on that edge rather than opening it up.
+     */
+    static final String EXTRA_EDGE = "edge";
+    static final String EDGE_TOP = "top";
+    static final String EDGE_BOTTOM = "bottom";
+
+    /** Whether the overlay is on screen, for the main app's exit menu. */
+    private static volatile boolean showing;
 
     private static final String CHANNEL_ID = "overlay";
     private static final int NOTIFICATION_ID = 1;
@@ -76,8 +86,6 @@ public class OverlayService extends Service {
     private static final String MODE_EXPANDED = "expanded";
     private static final String MODE_PANEL = "panel";
 
-    private static final String EDGE_TOP = "top";
-    private static final String EDGE_BOTTOM = "bottom";
     private static final String PREFS = "overlay";
     private static final String PREF_EDGE = "edge";
 
@@ -103,6 +111,16 @@ public class OverlayService extends Service {
             stopSelf();
         }
     };
+
+    static boolean isShowing() {
+        return showing;
+    }
+
+    /** The edge the ticker sits on, as the owner last left it. */
+    static String savedEdge(Context context) {
+        String saved = context.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_EDGE, EDGE_TOP);
+        return EDGE_BOTTOM.equals(saved) ? EDGE_BOTTOM : EDGE_TOP;
+    }
 
     static boolean canDraw(Context context) {
         return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(context);
@@ -136,6 +154,23 @@ public class OverlayService extends Service {
             return START_NOT_STICKY;
         }
 
+        String picked = intent != null ? intent.getStringExtra(EXTRA_EDGE) : null;
+        if (picked != null) {
+            // From the main app's menu, on the home screen: the ticker on the
+            // edge chosen, never the opened-up view, which takes the remote.
+            picked = EDGE_BOTTOM.equals(picked) ? EDGE_BOTTOM : EDGE_TOP;
+            prefs().edit().putString(PREF_EDGE, picked).apply();
+            if (root == null) {
+                edge = picked;
+                mode = MODE_BAR;
+                attach();
+            } else {
+                setMode(MODE_BAR);
+                setEdge(picked);
+            }
+            return START_NOT_STICKY;
+        }
+
         if (root == null) {
             // First launch: the bar, so starting the overlay from the home
             // screen never leaves the remote stuck on it.
@@ -151,6 +186,7 @@ public class OverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        showing = false;
         handler.removeCallbacksAndMessages(null);
         try {
             unregisterReceiver(screenOff);
@@ -198,6 +234,7 @@ public class OverlayService extends Service {
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void attach() {
+        showing = true;
         webView = new WebView(this);
         webView.setBackgroundColor(Color.TRANSPARENT);
         webView.setFocusable(false);
