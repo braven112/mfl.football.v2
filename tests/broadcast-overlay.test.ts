@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BIG_PLAY_MIN_POINTS,
+  detectBigPlays,
   formatChance,
+  overlayEdgeFrom,
   moveWatch,
   overlayGames,
   overlayModeFrom,
@@ -104,7 +107,15 @@ describe('overlay controls', () => {
   it('reads the mode hint, defaulting to the panel', () => {
     expect(overlayModeFrom('bar')).toBe('bar');
     expect(overlayModeFrom('panel')).toBe('panel');
+    expect(overlayModeFrom('expanded')).toBe('expanded');
     expect(overlayModeFrom(null)).toBe('panel');
+  });
+
+  it('reads the edge hint, defaulting to the top', () => {
+    expect(overlayEdgeFrom('bottom')).toBe('bottom');
+    expect(overlayEdgeFrom('top')).toBe('top');
+    expect(overlayEdgeFrom(null)).toBe('top');
+    expect(overlayEdgeFrom('left')).toBe('top');
   });
 
   it('prints 100% only for a settled game', () => {
@@ -149,5 +160,87 @@ describe('overlay watch list', () => {
     expect(moveWatch(0, -1, 2)).toBe(0);
     expect(moveWatch(1, 1, 2)).toBe(2);
     expect(moveWatch(2, 1, 2)).toBe(2);
+  });
+});
+
+describe('overlay big plays', () => {
+  const NOW = Date.parse('2026-10-26T20:00:30Z');
+  const pollWith = (rb: number, qb = 12, opp = 0) =>
+    ({
+      ...poll,
+      leagues: [
+        {
+          ...poll.leagues[0],
+          teams: {
+            '0001': {
+              ...poll.leagues[0].teams['0001'],
+              players: [
+                { id: 'rb', live: rb, secondsRemaining: 1800, status: 'starter', projected: 19 },
+                { id: 'qb', live: qb, secondsRemaining: 0, status: 'starter', projected: 20 },
+              ],
+            },
+            '0002': {
+              ...poll.leagues[0].teams['0002'],
+              players: [{ id: 'bn', live: opp, secondsRemaining: 1800, status: 'starter', projected: 10 }],
+            },
+          },
+        },
+      ],
+    }) as BroadcastPollResponse;
+  const matchup = { index: 0, mine: team('0001', 'Hammers'), opponent: team('0002', 'Ghosts') };
+  const gamesAt = (p: BroadcastPollResponse) => overlayGames([panel('A', [matchup])], p, meta);
+  const moment = {
+    key: 'p1:A:0001',
+    playId: 'p1',
+    leagueId: 'A',
+    leagueName: 'League A',
+    franchiseId: '0001',
+    franchiseName: 'Hammers',
+    side: 'mine' as const,
+    kind: 'touchdown' as const,
+    playerId: 'rb',
+    playerName: 'Kenneth Walker',
+    team: 'SEA',
+    text: 'Kenneth Walker 48 Yd Run (Kick)',
+    clock: 'Q3 4:08',
+    wallclock: '2026-10-26T20:00:10Z',
+    scoreValue: 6,
+    yards: 48,
+  };
+
+  it('only sets baselines on the first poll', () => {
+    const first = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
+    expect(first.alerts).toEqual([]);
+    expect(first.seen.get('A:0:rb')).toBe(9.4);
+  });
+
+  it("announces the viewer's starter gaining more than the threshold, with the board's play text", () => {
+    const { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
+    const { alerts } = detectBigPlays(seen, gamesAt(pollWith(20.2)), [moment], NOW);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({ playerId: 'rb', gained: 10.8, text: 'Kenneth Walker 48 Yd Run (Kick)' });
+  });
+
+  it('needs strictly more than the threshold', () => {
+    const { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
+    expect(detectBigPlays(seen, gamesAt(pollWith(9.4 + BIG_PLAY_MIN_POINTS)), [], NOW).alerts).toEqual([]);
+    expect(detectBigPlays(seen, gamesAt(pollWith(9.4 + BIG_PLAY_MIN_POINTS + 0.1)), [], NOW).alerts).toHaveLength(1);
+  });
+
+  it("never announces the opponent's players", () => {
+    const { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4, 12, 0)), [], NOW);
+    expect(detectBigPlays(seen, gamesAt(pollWith(9.4, 12, 20)), [], NOW).alerts).toEqual([]);
+  });
+
+  it('measures from the highest score seen, so a feed that blips to zero and back is no play', () => {
+    let { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
+    ({ seen } = detectBigPlays(seen, gamesAt(pollWith(0)), [], NOW));
+    expect(detectBigPlays(seen, gamesAt(pollWith(9.4)), [], NOW).alerts).toEqual([]);
+  });
+
+  it('leaves the play text out when the play is stale', () => {
+    const { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
+    const old = { ...moment, wallclock: '2026-10-26T19:40:00Z' };
+    expect(detectBigPlays(seen, gamesAt(pollWith(20.2)), [old], NOW).alerts[0].text).toBe('');
   });
 });

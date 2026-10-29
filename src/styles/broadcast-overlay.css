@@ -4,8 +4,10 @@
  * field, not on our page, so there is no light ground to follow.
  *
  * The TV app sizes the window to the view (a column down the left for the
- * panel, a strip across the top for the bar), so `vh`/`vw` here are the
- * WINDOW's, and everything scales with it. The padding keeps clear of TV
+ * panel, a short band at the top or bottom for the ticker, a taller one for
+ * the expanded ticker), so `vh`/`vw` here are the WINDOW's. The ticker's two
+ * windows differ in height but both span the screen, so the ticker is sized
+ * in `vw` and looks the same in either. The padding keeps clear of TV
  * overscan.
  */
 
@@ -331,4 +333,312 @@ body.bov-doc {
   font-size: 22vh;
   color: var(--bov-muted);
   white-space: nowrap;
+}
+
+/* ---- Ticker (bar + expanded) ---------------------------------------- */
+
+/* 1.6vw + 3.4vw = 5vw, which fits the 9%-high bar window of app builds from
+   before the ticker (1.0.46 and earlier) as well as today's 10%. */
+
+.bov--strip {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6vw;
+  padding: 1.6vw 3.5vw 0;
+  background: transparent;
+}
+
+/* At the bottom the strip hugs the bottom edge and the lineups open above it. */
+.bov--strip[data-edge='bottom'] {
+  flex-direction: column-reverse;
+  padding: 0 3.5vw 1.6vw;
+}
+
+.bov--strip .bov__note {
+  font-size: 1.3vw;
+  padding: 0;
+}
+
+.bov__strip {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 3.4vw;
+  overflow: hidden;
+  border-radius: 0.5vw;
+  background: rgba(6, 9, 13, 0.82);
+  font-size: 1.45vw;
+}
+
+.bov__strip[data-focused] {
+  outline: 0.2vw solid var(--bov-accent);
+}
+
+.bov__logo {
+  flex: none;
+  width: 3.4vw;
+  height: 3.4vw;
+}
+
+.bov__now {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6vw;
+  padding: 0 1.2vw;
+  white-space: nowrap;
+  animation: bov-in 0.45s ease;
+}
+
+@keyframes bov-in {
+  from {
+    opacity: 0;
+    transform: translateY(40%);
+  }
+}
+
+.bov__now-league {
+  max-width: 14vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1vw;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bov-muted);
+}
+
+.bov__now b {
+  font-size: 1.7vw;
+  font-weight: 800;
+}
+
+.bov__now b[data-lead],
+.bov__xp-pts[data-lead] {
+  color: #7ee08a;
+}
+
+.bov[data-stale] .bov__now b {
+  opacity: 0.6;
+}
+
+.bov__now-proj {
+  margin-left: 0.8vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1vw;
+  color: var(--bov-muted);
+}
+
+.bov__strip .bov__chip-chance {
+  margin-left: auto;
+  font-size: 1.1vw;
+}
+
+.bov__week {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6vw;
+  padding: 0 1.2vw;
+  font-size: 1vw;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bov-muted);
+}
+
+.bov__pips {
+  display: flex;
+  gap: 0.3vw;
+}
+
+.bov__pips i {
+  width: 0.45vw;
+  height: 0.45vw;
+  border-radius: 50%;
+  background: var(--bov-rule);
+}
+
+.bov__pips i[data-on] {
+  background: var(--bov-accent);
+}
+
+/* A big play slides over everything but the logo. */
+.bov__alert {
+  position: absolute;
+  inset: 0 0 0 3.4vw;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  padding: 0 1.2vw;
+  background: linear-gradient(90deg, #ffd400, #ffb700);
+  color: #111;
+  white-space: nowrap;
+  animation: bov-alert 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes bov-alert {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+.bov__alert-tag {
+  padding: 0.35vw 0.6vw;
+  border-radius: 0.25vw;
+  background: #111;
+  color: #ffd400;
+  font-size: 0.95vw;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bov__alert-who {
+  font-weight: 800;
+}
+
+.bov__alert-what {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.15vw;
+}
+
+.bov__alert-pts {
+  font-size: 1.8vw;
+  font-weight: 800;
+}
+
+.bov__alert-now {
+  font-size: 1.1vw;
+  font-weight: 700;
+}
+
+/* ---- Expanded ------------------------------------------------------- */
+
+.bov__xp {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vw;
+  padding: 1vw 1.4vw 0.8vw;
+  border-radius: 0.5vw;
+  background: rgba(6, 9, 13, 0.88);
+}
+
+.bov__xp-head {
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  font-size: 1.5vw;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.bov__xp-arrow {
+  color: var(--bov-accent);
+}
+
+.bov__xp-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.8vw;
+}
+
+.bov__xp-side--end {
+  justify-content: flex-end;
+}
+
+.bov__xp-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bov__xp-pts {
+  font-size: 2vw;
+  font-weight: 800;
+}
+
+.bov__xp-mid {
+  font-size: 0.95vw;
+  letter-spacing: 0.12em;
+  color: var(--bov-muted);
+  white-space: nowrap;
+}
+
+.bov__xp-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.4vw;
+}
+
+.bov__xp-lineup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15vw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bov__xp-lineup li {
+  display: grid;
+  grid-template-columns: 2.6vw 1fr auto 4vw;
+  align-items: center;
+  column-gap: 0.8vw;
+  padding: 0.3vw 0.5vw;
+  border-radius: 0.3vw;
+  font-size: 1.2vw;
+}
+
+/* A starter who just had a big play. */
+.bov__xp-lineup li[data-lit] {
+  background: rgba(255, 212, 0, 0.22);
+}
+
+.bov__xp-lineup li[data-lit] .bov__pts {
+  color: #ffd400;
+}
+
+.bov__xp-lineup .bov__pos {
+  font-size: 0.9vw;
+}
+
+.bov__xp-lineup .bov__pts {
+  font-size: 1.35vw;
+  text-align: right;
+}
+
+.bov__xp-team,
+.bov__xp-game {
+  font-size: 0.9vw;
+  color: var(--bov-muted);
+  white-space: nowrap;
+}
+
+.bov__xp-game[data-live] {
+  color: #ff6b5e;
+}
+
+.bov__xp-keys {
+  margin-top: 0;
+  padding-top: 0.6vw;
+  border-top: 1px solid var(--bov-rule);
+  font-size: 0.9vw;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bov__now,
+  .bov__alert {
+    animation: none;
+  }
 }

@@ -15,10 +15,10 @@ import android.widget.TextView;
 
 /**
  * The "Score overlay" tile. It has no screen of its own: it tells
- * {@link OverlayService} to show (first launch: the score bar; while running:
- * the full panel) and gets out of the way, so whatever was playing underneath
+ * {@link OverlayService} to show (first launch: the score ticker; while
+ * running: the ticker opened up with both lineups) and gets out of the way, so whatever was playing underneath
  * stays in front. Launched by voice ("open Score overlay") or a remote's app
- * button while YouTube TV plays, the panel comes up over the game.
+ * button while YouTube TV plays, the lineups open over the game.
  *
  * The one time it does show something is when the TV has not allowed the app
  * to draw over other apps yet; it says how, since some Google TV builds have

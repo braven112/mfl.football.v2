@@ -15,8 +15,18 @@ import { projectPlayerFinal } from './live-win-probability';
 import { normalizeUsNetwork } from './broadcast-channels';
 import { getNFLTeamName, normalizeTeamCode } from './nfl-logo';
 import type { NflGame } from '../types/live-scoring';
+import { isMomentFresh, momentTime, type BroadcastMoment } from './broadcast-moments';
 
-export type OverlayMode = 'panel' | 'bar';
+/**
+ * `bar` is the always-on ticker strip and never takes the remote; `expanded`
+ * opens the strip into both lineups while the app holds the remote; `panel`
+ * is the column with the Watch list. Older app builds only ever ask for `bar`
+ * and `panel`.
+ */
+export type OverlayMode = 'panel' | 'bar' | 'expanded';
+
+/** Which screen edge the strip sits on; the owner moves it to dodge the network's own graphics. */
+export type OverlayEdge = 'top' | 'bottom';
 
 export interface OverlayPlayer {
   id: string;
@@ -51,7 +61,12 @@ export interface OverlayGame {
 
 /** `?mode=` is a hint from the TV app; anything else is the panel. */
 export function overlayModeFrom(raw: string | null | undefined): OverlayMode {
-  return raw === 'bar' ? 'bar' : 'panel';
+  return raw === 'bar' || raw === 'expanded' ? raw : 'panel';
+}
+
+/** `?edge=` or the app's answer; anything else is the top, where the strip first shipped. */
+export function overlayEdgeFrom(raw: string | null | undefined): OverlayEdge {
+  return raw === 'bottom' ? 'bottom' : 'top';
 }
 
 /** Left/Right wrap through the games, like the board's remote. */
@@ -230,4 +245,107 @@ export function watchNote(game: WatchGame, sundayTicket: boolean): string {
 /** Up/Down through the Watch rows plus the closing "Hide overlay" row, without wrapping. */
 export function moveWatch(index: number, delta: number, rows: number): number {
   return Math.max(0, Math.min(rows, index + delta));
+}
+
+/**
+ * One play's worth of fantasy points, in fantasy points, for a big-play alert.
+ * STRICTLY more than this (the owner's call, Oct 2026: "anything over 3").
+ */
+export const BIG_PLAY_MIN_POINTS = 3;
+
+/** A big play by one of the viewer's own starters, as the ticker announces it. */
+export interface BigPlayAlert {
+  /** Unique per alert: the player plus the score he reached. */
+  key: string;
+  gameKey: string;
+  playerId: string;
+  playerName: string;
+  nflTeam: string;
+  /** Fantasy points the play was worth, as the scoring moved between two polls. */
+  gained: number;
+  /** ESPN's one-line summary of the play when the board has it; '' otherwise. */
+  text: string;
+  /** The viewer's team it scored for, and the matchup's score after it. */
+  teamName: string;
+  leagueName: string;
+  mineAbbrev: string;
+  opponentAbbrev: string;
+  mineLive: number;
+  opponentLive: number;
+  /** Other leagues where the viewer starts the same player, by name. */
+  alsoIn: string[];
+}
+
+/**
+ * The viewer's starters' big plays since the last poll.
+ *
+ * MFL's live scoring has no per-play fantasy value, so a play is the jump in a
+ * starter's points between two polls. `seen` is each starter's HIGHEST score
+ * so far, not his last one: the board has watched a feed report a live 87.0
+ * as zero for a poll and then recover, and measured from the last value that
+ * recovery is a phantom 87-point play. A starter seen for the first time
+ * (first poll, a promoted starter, a league that just came back) only sets
+ * his baseline. Two polls apart can hold two small plays; that is the price
+ * of reading scores rather than plays.
+ *
+ * The viewer's side only (the owner's call: "only show my players"). A player
+ * started in two leagues is one alert, naming the other leagues, because it
+ * is one play.
+ */
+export function detectBigPlays(
+  seen: ReadonlyMap<string, number>,
+  games: readonly OverlayGame[],
+  moments: readonly BroadcastMoment[],
+  now: number,
+): { alerts: BigPlayAlert[]; seen: Map<string, number> } {
+  const next = new Map(seen);
+  const alerts: BigPlayAlert[] = [];
+  const byPlayer = new Map<string, BigPlayAlert>();
+  for (const game of games) {
+    if (!game.readable) continue;
+    for (const player of game.mine.lineup) {
+      const id = `${game.key}:${player.id}`;
+      const before = seen.get(id);
+      next.set(id, Math.max(before ?? player.live, player.live));
+      if (before === undefined) continue;
+      const gained = Math.round((player.live - before) * 100) / 100;
+      if (!(gained > BIG_PLAY_MIN_POINTS)) continue;
+      const already = byPlayer.get(player.id);
+      if (already) {
+        if (!already.alsoIn.includes(game.leagueName) && already.leagueName !== game.leagueName) {
+          already.alsoIn.push(game.leagueName);
+        }
+        continue;
+      }
+      const alert: BigPlayAlert = {
+        key: `${id}:${player.live}`,
+        gameKey: game.key,
+        playerId: player.id,
+        playerName: player.name,
+        nflTeam: player.nflTeam,
+        gained,
+        text: playText(moments, player.id, now),
+        teamName: game.mine.name,
+        leagueName: game.leagueName,
+        mineAbbrev: game.mine.abbrev,
+        opponentAbbrev: game.opponent.abbrev,
+        mineLive: game.mine.live,
+        opponentLive: game.opponent.live,
+        alsoIn: [],
+      };
+      byPlayer.set(player.id, alert);
+      alerts.push(alert);
+    }
+  }
+  return { alerts, seen: next };
+}
+
+/** The newest fresh play the board credits to this player on the viewer's side. */
+function playText(moments: readonly BroadcastMoment[], playerId: string, now: number): string {
+  let best: BroadcastMoment | undefined;
+  for (const m of moments) {
+    if (m.side !== 'mine' || m.playerId !== playerId || !m.text || !isMomentFresh(m, now)) continue;
+    if (!best || (momentTime(m) ?? 0) > (momentTime(best) ?? 0)) best = m;
+  }
+  return best?.text ?? '';
 }
