@@ -17,25 +17,15 @@
  * league-history-moves.json; see ask.ts.
  */
 import type { APIRoute } from 'astro';
-import theleagueHistory from '../../../../data/theleague/derived/league-history.json';
-import aflHistory from '../../../../data/afl-fantasy/derived/league-history.json';
-import theleaguePlayers from '../../../../data/theleague/derived/league-history-players.json';
-import aflPlayers from '../../../../data/afl-fantasy/derived/league-history-players.json';
-import theleagueMoves from '../../../../data/theleague/derived/league-history-moves.json';
-import aflMoves from '../../../../data/afl-fantasy/derived/league-history-moves.json';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
 import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
+import { hasLeagueHistoryProduct, loadLeagueHistoryDataset } from '../../../utils/league-history/datasets';
 
 export const prerender = false;
-
-const DATASETS: Record<string, AskData> = {
-	theleague: { history: theleagueHistory, players: theleaguePlayers, moves: theleagueMoves },
-	'afl-fantasy': { history: aflHistory, players: aflPlayers, moves: aflMoves },
-};
 
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW = 3600;
@@ -73,8 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
 		return json({ error: 'Invalid request body' }, 400);
 	}
 	const league = getLeagueBySlug(slug);
-	const ds = league ? DATASETS[league.slug] : null;
-	if (!league || !ds) return json({ error: 'Unknown league.' }, 404);
+	if (!league || !hasLeagueHistoryProduct(league.dataPath)) return json({ error: 'Unknown league.' }, 404);
 
 	const user = getAuthUser(request);
 	if (!user) return json({ error: 'Sign in to ask the history.' }, 401);
@@ -92,6 +81,9 @@ export const POST: APIRoute = async ({ request }) => {
 
 	let result;
 	try {
+		// Only the league asked about, per request (utils/league-history/datasets).
+		const ds: AskData | null = await loadLeagueHistoryDataset(league.dataPath);
+		if (!ds) return json({ error: 'Unknown league.' }, 404);
 		result = await askHistory(league.slug, ds, question, { turns, asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)) });
 	} catch (e) {
 		console.error('[league-history/ask] failed:', e);
