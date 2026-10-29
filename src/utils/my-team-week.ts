@@ -19,11 +19,16 @@
  * "couldn't read it" are different answers, so a failed live read yields
  * `unknown` and the card says nothing rather than "not set".
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import type { LeagueDefinition } from '../config/leagues';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from './schedule-data.mjs';
-import { extractLineupStarters, findWeekResultsEntry, franchiseAppearsIn, loadWeeklyResultsFeedFromDisk } from './lineup-sources';
+import {
+  extractLineupStarters,
+  findWeekResultsEntry,
+  franchiseAppearsIn,
+  loadWeeklyResultsFeedFromDisk,
+  preloadLineupFeeds,
+} from './lineup-sources';
 import { readLiveWeekResults } from './lineup-submitted';
 import { byeWeeksForSeason } from './nfl-bye-weeks';
 import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
@@ -134,13 +139,12 @@ export function lineupStatusFromStarters(args: {
  * import that module's live-scoring/Redis graph for five lines.
  */
 function readFeed(league: LeagueDefinition, year: number, file: string): any | null {
-  try {
-    const p = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), file);
-    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
-  } catch {
-    return null;
-  }
+  return readLeagueDataSync(leagueFeedPath(league.dataPath, year, file));
 }
+
+/** Every feed `loadMyTeamWeek` reads, loaded up front (league data lives in the store — src/utils/league-data.ts). */
+const MY_TEAM_WEEK_FEEDS = ['schedule.json', 'standings.json'];
+const MY_TEAM_WEEK_OWNER_FEEDS = ['players.json', 'nflSchedule-full.json', 'injuries.json', 'league.json'];
 
 const playerIndexCache = new Map<string, Map<string, PlayerLike>>();
 
@@ -149,8 +153,10 @@ export function starterPlayerIndex(league: LeagueDefinition, leagueYear: number)
   const key = `${league.slug}:${leagueYear}`;
   let index = playerIndexCache.get(key);
   if (!index) {
-    index = buildPlayerIndex(readFeed(league, leagueYear, 'players.json')) as Map<string, PlayerLike>;
-    playerIndexCache.set(key, index);
+    const feed = readFeed(league, leagueYear, 'players.json');
+    index = buildPlayerIndex(feed) as Map<string, PlayerLike>;
+    // A feed that could not be read is not cached, so a later preload still lands.
+    if (feed) playerIndexCache.set(key, index);
   }
   return index;
 }
@@ -177,6 +183,12 @@ export async function loadMyTeamWeek(input: {
 }): Promise<MyTeamWeek | null> {
   const { league, franchiseId, leagueYear, seasonYear, now } = input;
   if (!franchiseId || !isSeasonWindowOpen(seasonYear, now)) return null;
+
+  const feeds = input.isOwner ? [...MY_TEAM_WEEK_FEEDS, ...MY_TEAM_WEEK_OWNER_FEEDS] : MY_TEAM_WEEK_FEEDS;
+  await Promise.all([
+    preloadLeagueData(feeds.map((f) => leagueFeedPath(league.dataPath, leagueYear, f))),
+    input.isOwner ? preloadLineupFeeds(league.slug as Parameters<typeof preloadLineupFeeds>[0], leagueYear) : null,
+  ]);
 
   const schedule = franchiseSchedule(parseWeeklySchedule(readFeed(league, leagueYear, 'schedule.json')), franchiseId);
   const next = findNextGame(schedule, input.currentNflWeek ?? 1);

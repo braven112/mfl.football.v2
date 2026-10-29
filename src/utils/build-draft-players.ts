@@ -11,12 +11,17 @@
  * Supports an optional `rookieOnly` flag to filter at build time.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { DraftRoomPlayer } from '../types/draft-room';
 import { getPlayerHeadshot, getCollegeHeadshot } from '../constants/roster-constants';
-import { getPlayerMap } from './player-map';
-import { enrichDraftPlayers, type DraftPlayerEnrichment, type AdpSource } from './draft-player-enrichment';
+import { getPlayerMap, preloadPlayerIdentity } from './player-map';
+import {
+  enrichDraftPlayers,
+  preloadDraftPlayerEnrichment,
+  type DraftPlayerEnrichment,
+  type AdpSource,
+} from './draft-player-enrichment';
+import { getLeagueBySlug } from '../config/leagues';
+import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 /**
  * Franchise IDs authorized to see licensed RSP (Rookie Scouting Portfolio) data.
@@ -80,34 +85,44 @@ function formatName(mflName: string): string {
   return parts.length === 2 ? `${parts[1]} ${parts[0]}` : mflName;
 }
 
+// League data, read through src/utils/league-data.ts (the store, in
+// production); callers await {@link preloadDraftPlayers} first.
+const theleagueDataPath = () => getLeagueBySlug('theleague')!.dataPath;
+const collegeIdsPath = () => `${theleagueDataPath()}/espn-college-ids.json`;
+const playersPath = (leagueYear: number) => leagueFeedPath(theleagueDataPath(), leagueYear, 'players.json');
+
 let collegeMapCache: Record<string, { espnCollegeId?: string }> | null = null;
 function loadCollegeMap(): Record<string, { espnCollegeId?: string }> {
   if (collegeMapCache) return collegeMapCache;
-  try {
-    const raw = JSON.parse(
-      readFileSync(join(process.cwd(), 'data/theleague/espn-college-ids.json'), 'utf-8')
-    );
-    collegeMapCache = raw?.players || {};
-  } catch {
-    collegeMapCache = {};
-  }
-  return collegeMapCache!;
+  const raw = readLeagueDataSync<any>(collegeIdsPath());
+  const map = raw?.players || {};
+  if (isLeagueDataLoaded(collegeIdsPath())) collegeMapCache = map;
+  return map;
 }
 
 function loadRawPlayers(leagueYear: number): any[] {
-  try {
-    const raw = JSON.parse(
-      readFileSync(
-        join(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/players.json`),
-        'utf-8'
-      )
-    );
-    const p = raw?.players?.player;
-    if (!p) return [];
-    return Array.isArray(p) ? p : [p];
-  } catch {
-    return [];
-  }
+  const raw = readLeagueDataSync<any>(playersPath(leagueYear));
+  const p = raw?.players?.player;
+  if (!p) return [];
+  return Array.isArray(p) ? p : [p];
+}
+
+/**
+ * Load everything {@link buildDraftPlayers} reads for `leagueYear` with these
+ * options, so the sync build is served from memory.
+ */
+export async function preloadDraftPlayers(
+  leagueYear: number,
+  options: Pick<BuildDraftPlayersOptions, 'enrich' | 'viewerFranchiseId' | 'viewerLeagueSlug' | 'adpSource'> = {},
+): Promise<void> {
+  const { enrich = true, viewerFranchiseId, viewerLeagueSlug = RSP_LICENSED_LEAGUE, adpSource } = options;
+  const includeRsp =
+    !!viewerFranchiseId && viewerLeagueSlug === RSP_LICENSED_LEAGUE && RSP_AUTHORIZED_FRANCHISES.has(viewerFranchiseId);
+  await Promise.all([
+    preloadLeagueData([collegeIdsPath(), playersPath(leagueYear)]),
+    preloadPlayerIdentity([leagueYear]),
+    enrich ? preloadDraftPlayerEnrichment(leagueYear, { includeRsp, adpSource }) : null,
+  ]);
 }
 
 export function buildDraftPlayers(

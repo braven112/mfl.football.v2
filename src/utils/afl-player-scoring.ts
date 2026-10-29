@@ -45,8 +45,7 @@
  */
 
 import { getLeagueBySlug } from '../config/leagues';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { hasLeagueData, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { asArray as ensureArray } from './mfl-normalize';
 import { processWeeklyScores } from './coach-data';
 
@@ -85,12 +84,26 @@ export interface PlayerSeasonScoring {
 const seasonScoresCache = new Map<string, SeasonScores>();
 const projectionsCache = new Map<string, Map<string, number>>();
 
-function readJson<T>(path: string): T | null {
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as T;
-  } catch {
-    return null;
-  }
+/**
+ * One feed, through the league-data loader (the store, in production —
+ * src/utils/league-data.ts). `cacheable` is false when the file exists but
+ * could not be read because nobody preloaded it: caching that empty answer
+ * would outlive the request that does preload.
+ */
+function readFeed<T>(path: string): { value: T | null; cacheable: boolean } {
+  const value = readLeagueDataSync<T>(path);
+  return { value, cacheable: value !== null || !hasLeagueData(path) };
+}
+
+/**
+ * Load the feeds `loadSeasonScores` / `loadProjections` read for one
+ * league-season, so the sync calls are served from memory.
+ */
+export function preloadSeasonScoring(dataPath: string, year: number): Promise<void> {
+  return preloadLeagueData([
+    leagueFeedPath(dataPath, year, 'weekly-results-raw.json'),
+    leagueFeedPath(dataPath, year, 'projectedScores.json'),
+  ]);
 }
 
 /**
@@ -115,12 +128,11 @@ export function loadSeasonScores(dataPath: string, year: number): SeasonScores {
   const hit = seasonScoresCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/weekly-results-raw.json`);
-  const file = readJson<unknown>(path);
+  const { value: file, cacheable } = readFeed<unknown>(leagueFeedPath(dataPath, year, 'weekly-results-raw.json'));
   // The second argument is the current week, which the canonical
   // implementation does not use; every scored week counts.
   const map = processWeeklyScores(file ?? [], 0);
-  seasonScoresCache.set(cacheKey, map);
+  if (cacheable) seasonScoresCache.set(cacheKey, map);
   return map;
 }
 
@@ -138,8 +150,7 @@ export function loadProjections(dataPath: string, year: number): Map<string, num
   const hit = projectionsCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/projectedScores.json`);
-  const file = readJson<ProjectedScoresFile>(path);
+  const { value: file, cacheable } = readFeed<ProjectedScoresFile>(leagueFeedPath(dataPath, year, 'projectedScores.json'));
   const entries = ensureArray(file?.projectedScores?.playerScore);
   const map = new Map<string, number>();
   for (const entry of entries) {
@@ -149,7 +160,7 @@ export function loadProjections(dataPath: string, year: number): Map<string, num
       map.set(entry.id, n);
     }
   }
-  projectionsCache.set(cacheKey, map);
+  if (cacheable) projectionsCache.set(cacheKey, map);
   return map;
 }
 

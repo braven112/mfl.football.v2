@@ -37,11 +37,11 @@
  * for an hour.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { getRedis } from '../redis-client';
+import { getLeagueBySlug } from '../../config/leagues';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from '../league-data';
 import { canonicalNflCode } from '../espn-game-detail';
-import { getPlayerMap } from '../player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../player-map';
 import { formatMflName, normalizePlayerName } from '../player-name-matching';
 import { sleeperGet, type SleeperPlayerRecord } from './client';
 
@@ -213,16 +213,21 @@ export function clearSleeperPlayerCache(): void {
  * `PlayerIdentity` does not carry) with `espn_id` replaced by `nflEspnId`, so
  * the backfilled NFL ids join too and a college id never can.
  */
+const mflPlayersPath = (year: number) =>
+  leagueFeedPath(getLeagueBySlug('theleague')!.dataPath, year, 'players.json');
+
+/**
+ * Load what {@link loadMflPlayerIndex} reads for `year` (league data lives in
+ * the store in production — src/utils/league-data.ts).
+ */
+export async function preloadMflPlayerIndex(year: number): Promise<void> {
+  await Promise.all([preloadLeagueData([mflPlayersPath(year)]), preloadPlayerIdentity([year])]);
+}
+
 function readMflPlayers(year: number): MflPlayerRow[] {
-  let rows: MflPlayerRow[] = [];
-  try {
-    const raw = JSON.parse(
-      readFileSync(join(process.cwd(), `data/theleague/mfl-feeds/${year}/players.json`), 'utf-8'),
-    );
-    rows = raw?.players?.player ?? [];
-  } catch {
-    return [];
-  }
+  const raw = readLeagueDataSync<any>(mflPlayersPath(year));
+  const rows: MflPlayerRow[] = raw?.players?.player ?? [];
+  if (!rows.length) return [];
   const identity = getPlayerMap(year);
   return rows.map((r) => ({ ...r, espn_id: identity.get(r.id)?.nflEspnId ?? r.espn_id ?? '' }));
 }
@@ -340,6 +345,7 @@ export async function loadSleeperPlayerMap(year: number): Promise<SleeperPlayerM
       failedAt = Date.now();
       return memory?.map ?? {};
     }
+    await preloadMflPlayerIndex(year).catch(() => undefined);
     const map = buildSleeperPlayerMap(body as Record<string, SleeperPlayerRecord>, readMflPlayers(year));
     memory = { at: Date.now(), map };
     await redis?.set(`${REDIS_KEY}:${year}`, map, { ex: REDIS_TTL_S }).catch(() => undefined);

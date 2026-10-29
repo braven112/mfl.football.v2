@@ -24,6 +24,7 @@ import {
   findWeekResultsEntry,
   franchiseAppearsIn,
   loadWeeklyResultsFeedFromDisk,
+  preloadLineupFeeds,
 } from './lineup-sources';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -91,6 +92,7 @@ export async function hasSubmittedLineup(input: HasSubmittedLineupInput): Promis
   const live = await readLive(input);
   if (live) return lineupSubmittedFromPayload(live, input.week, input.franchiseId, { allowUnlabeled: true });
   // Disk: confirm-only. A lineup saved since the last sync is simply absent.
+  await preloadLineupFeeds(input.league.slug as any, input.leagueYear);
   const disk = loadWeeklyResultsFeedFromDisk(input.league.slug as any, input.leagueYear);
   return lineupSubmittedFromPayload(disk, input.week, input.franchiseId) === true ? true : null;
 }
