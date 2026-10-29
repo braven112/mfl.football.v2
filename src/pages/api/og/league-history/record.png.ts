@@ -8,21 +8,14 @@
  * it yet: the page's "Save as image" link downloads it for posting instead.
  */
 import type { APIRoute } from 'astro';
-import theleagueHistory from '../../../../../data/theleague/derived/league-history.json';
-import aflHistory from '../../../../../data/afl-fantasy/derived/league-history.json';
 import { getLeagueBySlug } from '../../../../config/leagues';
 import { getAuthUser } from '../../../../utils/auth';
 import { canViewLeagueHistory } from '../../../../utils/league-history/access';
 import { CATEGORIES, SCOPES, historyEras, recordBook } from '../../../../utils/league-history/records.mjs';
 import { logoDataUri, renderRecordCardPng, type RecordCardRow } from '../../../../utils/league-history/record-card';
+import { hasLeagueHistoryProduct, loadLeagueHistory } from '../../../../utils/league-history/datasets';
 
 export const prerender = false;
-
-/** The leagues with a Record Book, by registry slug (the routes import the same files). */
-const DATASETS: Record<string, unknown> = {
-	theleague: theleagueHistory,
-	'afl-fantasy': aflHistory,
-};
 
 const SCOPE_LABEL: Record<string, string> = { regular: 'Regular season', playoffs: 'Playoffs' };
 
@@ -32,9 +25,12 @@ export const GET: APIRoute = async ({ url, request }) => {
 	if (!canViewLeagueHistory(getAuthUser(request))) return notFound();
 	const q = url.searchParams;
 	const slug = q.get('league') ?? '';
-	const data = DATASETS[slug];
-	const league = data ? getLeagueBySlug(slug) : undefined;
-	if (!data || !league) return notFound();
+	// The leagues with a Record Book, by canonical registry slug; only the one
+	// asked about is read (utils/league-history/datasets), never imported.
+	const league = getLeagueBySlug(slug);
+	if (!league || league.slug !== slug || !hasLeagueHistoryProduct(league.dataPath)) return notFound();
+	const data = await loadLeagueHistory(league.dataPath);
+	if (!data) return notFound();
 
 	const category = CATEGORIES.find((c) => c.id === q.get('cat'));
 	if (!category) return notFound();
