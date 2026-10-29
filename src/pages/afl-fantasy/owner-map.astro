@@ -11,13 +11,20 @@ import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
 import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
 import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
-import ownerData from '../../../data/afl-fantasy/derived/owner-tenures.json';
-import history from '../../../data/afl-fantasy/derived/franchise-history.json';
-import historyData from '../../../data/afl-fantasy/derived/league-history.json';
 import type { OwnerTenuresFile } from '../../types/owner-tenures';
 import type { OwnerMapConference, OwnerMapHistory } from '../../utils/owner-map';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getConferenceShort } from '../../utils/afl-conference';
+import { loadLeagueData } from '../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [ownerData, history, historyData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/owner-tenures.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/franchise-history.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+]);
 
 export const prerender = false;
 const LEAGUE = getLeagueBySlug('afl-fantasy')!;

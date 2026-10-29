@@ -17,6 +17,8 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import { resolveConfigForYear } from '../../../utils/team-names';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { buildDraftHubProps } from '../../../utils/draft-hub-data';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import type { LazyFeedGlob } from '../../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
@@ -27,10 +29,17 @@ const league = getLeagueBySlug('afl-fantasy')!;
 const user = getAuthUser(Astro.request);
 const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
 
+// Lazy, in the shape of a lazy `import.meta.glob`: the keys say which seasons
+// exist, and only the seasons the page asks for are read, through the
+// league-data loader (src/utils/league-data.ts) rather than the bundle.
+const lazyFeeds = (paths: string[]): LazyFeedGlob =>
+  Object.fromEntries(paths.map((p) => [p, () => loadLeagueData(p)]));
+const feedsDir = `${league.dataPath}/mfl-feeds`;
+
 const props = await buildDraftHubProps({
-  draftFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json'),
-  calendarFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/calendar.json'),
-  futurePickFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json'),
+  draftFeeds: lazyFeeds(listLeagueData(`${feedsDir}/*/draftResults.json`)),
+  calendarFeeds: lazyFeeds(listLeagueData(`${feedsDir}/*/calendar.json`)),
+  futurePickFeeds: lazyFeeds(listLeagueData(`${feedsDir}/*/futureDraftPicks.json`)),
   // Per-league rollover, NOT TheLeague's clock: the AFL flips June 1 and
   // TheLeague Feb 14, so using the latter would put the AFL hub on the wrong
   // season's calendar, future picks and team config for ~3.5 months a year.

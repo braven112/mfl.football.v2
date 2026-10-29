@@ -4,19 +4,21 @@
  *
  * Shared implementation lives in components/shared/top-players/TopPlayersPage.
  *
- * The derived file is imported HERE because static import specifiers can't be
- * runtime variables, and importing both leagues' files in the shared component
- * would ship the other league's leaderboard on every render of either route.
+ * The derived file is read HERE, through the league-data loader
+ * (src/utils/league-data.ts), so the shared component never names a league's
+ * data path and the leaderboard is not bundled into the server function.
  */
 import TopPlayersPage from '../../components/shared/top-players/TopPlayersPage.astro';
-import topPlayersData from '../../../data/afl-fantasy/derived/top-players.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadLeagueData } from '../../utils/league-data';
 import { resolveTopPlayersView } from '../../utils/top-players-view';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import type { TopPlayersFile } from '../../types/top-players';
 
 export const prerender = false;
 
-const data = topPlayersData as unknown as TopPlayersFile;
+const league = getLeagueBySlug('afl-fantasy')!;
+const data = (await loadLeagueData(`${league.dataPath}/derived/top-players.json`)) as unknown as TopPlayersFile;
 const basePath = resolveLeaguePath(
   '/afl-fantasy/top-players',
   Astro.locals.hideLeaguePrefix ?? false
