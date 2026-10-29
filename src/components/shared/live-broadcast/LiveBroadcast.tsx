@@ -103,7 +103,12 @@ const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
 
 export default function LiveBroadcast({ pageData }: Props) {
-  const data = useMemo(() => JSON.parse(pageData) as LiveBroadcastPageData, [pageData]);
+  /**
+   * State, not a memo of the prop: the landing page's league switches hand the
+   * board its new league set in place (`lbc:leagues`, `lbc:board-data` below),
+   * so a tap takes one league off the screen instead of remounting the board.
+   */
+  const [data, setData] = useState<LiveBroadcastPageData>(() => JSON.parse(pageData) as LiveBroadcastPageData);
 
   const [poll, setPoll] = useState<BroadcastPollResponse>(data.initial);
   const [status, setStatus] = useState<'ok' | 'error' | 'pending'>('ok');
@@ -280,6 +285,43 @@ export default function LiveBroadcast({ pageData }: Props) {
   const carryRef = useRef<Map<string, CarriedLeagueScore>>(
     seedCarry(data.initial.leagues, Date.parse(data.initial.fetchedAt) || Date.now()),
   );
+
+  /**
+   * League switches from the landing page, applied to THIS board in place.
+   *
+   * `lbc:leagues` is the instant half: a league switched off leaves the screen
+   * on the tap, before the server has answered. `lbc:board-data` is the
+   * server's answer — the whole page data for the new set, which is the only
+   * way a league switched ON gets its panels. Both keep the mounted board, so
+   * nothing on screen restarts; the poll loop follows `data.enabled`.
+   */
+  useEffect(() => {
+    const onLeagues = (e: Event) => {
+      const enabled = (e as CustomEvent<{ enabled?: string[] }>).detail?.enabled;
+      if (!Array.isArray(enabled)) return;
+      const keep = new Set(enabled);
+      setData((d) => ({
+        ...d,
+        enabled: d.enabled.filter((id) => keep.has(id)),
+        panels: d.panels.filter((p) => keep.has(p.leagueId)),
+      }));
+      setPoll((p) => ({ ...p, leagues: p.leagues.filter((l) => keep.has(l.leagueId)) }));
+    };
+    const onData = (e: Event) => {
+      const next = (e as CustomEvent<{ data?: LiveBroadcastPageData }>).detail?.data;
+      if (!next?.initial || !Array.isArray(next.panels)) return;
+      setData((d) => ({ ...next, modeHint: d.modeHint }));
+      carryRef.current = seedCarry(next.initial.leagues, Date.parse(next.initial.fetchedAt) || Date.now());
+      setPoll(next.initial);
+      if (next.initial.ok) setFetchedAt(Date.parse(next.initial.fetchedAt) || Date.now());
+    };
+    document.addEventListener('lbc:leagues', onLeagues);
+    document.addEventListener('lbc:board-data', onData);
+    return () => {
+      document.removeEventListener('lbc:leagues', onLeagues);
+      document.removeEventListener('lbc:board-data', onData);
+    };
+  }, []);
 
   /**
    * The rehearsal's origin, fixed at mount. Everything else about the demo is
