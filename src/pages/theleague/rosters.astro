@@ -6851,7 +6851,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               } else if (isFutureUfa) {
                 value = '—';
                 cellClass += ' salary-cell--future-ufa';
-              } else if (player.salaryUnknown && !action) {
+              } else if ((player as any).salaryUnknown && !action) {
                 // Contract lost with the season (scripts/lib/season-end-rosters.mjs).
                 value = '—';
                 cellClass += ' salary-cell--unknown';
