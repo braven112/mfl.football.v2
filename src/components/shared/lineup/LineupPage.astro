@@ -828,7 +828,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                 data-slot={slot.position} data-index={String(i)} data-player-id={player?.id || ''}>
               <button class="lineup-slot__card"
                       aria-label={player
-                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.isBye ? 'On bye. ' : oppTeam ? `${matchupLabel}. ` : ''}${player.projection ? `Projected ${player.projection} points.` : ''}${game?.channel ? ` On ${game.channel.name}.` : ''} Tap to change.`
+                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.isBye ? 'On bye. ' : oppTeam ? `${matchupLabel}${game?.kickoffShort ? `, ${game.kickoffShort}` : ''}. ` : ''}${player.projection ? `Projected ${player.projection} points.` : ''}${game?.channel ? ` On ${game.channel.name}.` : ''} Tap to change.`
                         : `${slot.position}: Empty slot. Tap to set.`}
                       aria-disabled={slot.locked ? 'true' : 'false'}
                       disabled={slot.locked}>
@@ -1484,7 +1484,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         if (!btn) return;
 
         btn.ariaLabel = player
-          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.isBye ? 'On bye. ' : oppTeam ? `${esc(matchupLabel)}. ` : ''}${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''}${ch ? ` On ${esc(ch.name)}.` : ''} Tap to change.`
+          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.isBye ? 'On bye. ' : oppTeam ? `${esc(matchupLabel)}${game?.kickoffShort ? `, ${esc(game.kickoffShort)}` : ''}. ` : ''}${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''}${ch ? ` On ${esc(ch.name)}.` : ''} Tap to change.`
           : `${esc(slot.position)}: Empty slot. Tap to set.`;
         btn.ariaDisabled = slot.locked ? 'true' : 'false';
         btn.disabled = slot.locked;
@@ -2656,6 +2656,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     position: relative;
     display: flex;
     align-items: baseline;
+  }
+
+  /* Holds the line open at the projection's height when there is no
+     projection (an empty feed), so the out-of-flow time still sits on the
+     second line instead of collapsing onto the opponent line above. */
+  .lineup-slot__meta::after {
+    content: '\200b';
+    font-size: var(--font-size-sm);
   }
 
   .lineup-slot__time {
