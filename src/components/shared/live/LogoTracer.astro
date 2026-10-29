@@ -1,0 +1,210 @@
+---
+/**
+ * "Make it an SVG": Owner Suite Pro's logo tracer, under the prompt builder on
+ * MFL Live's `/live/team-logo`. The owner picks the PNG ChatGPT or Gemini made
+ * them, `/api/mfl-live/logo-trace` traces it (`src/utils/logo-trace.ts`), and
+ * they see the result on a light ground and download it.
+ *
+ * Pro only (Brandon, 2026-10-29). Without Pro it still shows, badged and
+ * disabled, so the free tier can see what Pro adds, the way the Pro-locked
+ * standings views do; signed out, it offers the MFL sign-in instead.
+ */
+import { LOGO_TRACE_MAX_BYTES, SVG_USES } from '../../../utils/logo-trace';
+
+export interface Props {
+	/** The viewer has Owner Suite Pro (`hasMflLivePro`). */
+	pro: boolean;
+	/** Signed out: where the sign-in button goes. Omit when signed in. */
+	signInHref?: string;
+}
+
+const { pro, signInHref } = Astro.props as Props;
+const maxMb = Math.floor(LOGO_TRACE_MAX_BYTES / (1024 * 1024));
+---
+
+<section class="ltrace" data-logo-tracer data-max-bytes={LOGO_TRACE_MAX_BYTES} aria-labelledby="ltrace-title">
+	<h2 class="ltrace__title" id="ltrace-title">
+		Make it an SVG
+		<span class="ui-badge ui-badge--inline ltrace__badge">Pro</span>
+	</h2>
+	<p class="ltrace__lede">
+		Got your logo? Upload the PNG and we&rsquo;ll trace it into an SVG that stays sharp at any size, from a
+		tiny icon to a banner.
+	</p>
+	<details class="ltrace__why">
+		<summary>Why an SVG?</summary>
+		<p>A PNG is a grid of dots, so it gets blurry when you make it bigger. An SVG is drawn from shapes, so it stays sharp at any size.</p>
+		<ul>
+			{SVG_USES.map((u) => <li><strong>{u.title}.</strong> {u.text}</li>)}
+		</ul>
+	</details>
+
+	{pro ? (
+		<>
+			<label class="cta cta--primary ltrace__pick">
+				Choose your logo
+				<input type="file" accept="image/png,image/webp,image/jpeg" data-ltrace-file />
+			</label>
+			<p class="ltrace__hint">A PNG with a transparent background works best. Up to {maxMb} MB.</p>
+			<p class="ltrace__status" role="status" aria-live="polite" data-ltrace-status></p>
+			<div class="ltrace__result" data-ltrace-result hidden>
+				<div class="ltrace__art"><img alt="Your logo, traced as an SVG" data-ltrace-img /></div>
+				<a class="cta cta--primary" download="team-logo.svg" data-ltrace-download>Download SVG</a>
+			</div>
+		</>
+	) : (
+		<>
+			<p class="ltrace__locked">SVG tracing is part of Owner Suite Pro.</p>
+			{signInHref && <a class="cta cta--ghost" href={signInHref}>Sign in with MyFantasyLeague</a>}
+		</>
+	)}
+</section>
+
+<script>
+	const MESSAGES: Record<string, string> = {
+		'too-large': 'That file is too big. Try the PNG straight from ChatGPT or Gemini.',
+		'not-an-image': 'That doesn’t look like a PNG, JPEG or WebP image.',
+		'too-many-pixels': 'That image is too big to trace. Anything up to 2048 pixels across works.',
+		'rate-limited': 'That’s a lot of logos for one hour. Try again a little later.',
+		'pro-required': 'SVG tracing is part of Owner Suite Pro.',
+		'signed-out': 'Your sign-in expired. Refresh the page and sign in again.',
+	};
+
+	function init() {
+		const root = document.querySelector<HTMLElement>('[data-logo-tracer]');
+		const input = root?.querySelector<HTMLInputElement>('[data-ltrace-file]');
+		if (!root || !input || root.dataset.ready) return;
+		root.dataset.ready = '1';
+
+		const status = root.querySelector<HTMLElement>('[data-ltrace-status]')!;
+		const result = root.querySelector<HTMLElement>('[data-ltrace-result]')!;
+		const img = root.querySelector<HTMLImageElement>('[data-ltrace-img]')!;
+		const download = root.querySelector<HTMLAnchorElement>('[data-ltrace-download]')!;
+		const maxBytes = Number(root.dataset.maxBytes);
+		let url = '';
+
+		input.addEventListener('change', async () => {
+			const file = input.files?.[0];
+			input.value = '';
+			if (!file) return;
+			result.hidden = true;
+			if (url) URL.revokeObjectURL(url);
+			if (file.size > maxBytes) {
+				status.textContent = MESSAGES['too-large'];
+				return;
+			}
+			status.textContent = 'Tracing your logo…';
+			try {
+				const res = await fetch('/api/mfl-live/logo-trace', {
+					method: 'POST',
+					headers: { 'Content-Type': file.type || 'application/octet-stream' },
+					body: file,
+				});
+				if (!res.ok) {
+					const body = await res.json().catch(() => ({}));
+					status.textContent = MESSAGES[body.error] ?? 'Something went wrong tracing that logo. Try again.';
+					return;
+				}
+				url = URL.createObjectURL(await res.blob());
+				img.src = url;
+				download.href = url;
+				download.download = `${file.name.replace(/\.[a-z]+$/i, '') || 'team-logo'}.svg`;
+				result.hidden = false;
+				status.textContent = 'Done. Check it, then download.';
+			} catch {
+				status.textContent = 'Couldn’t reach the tracer. Check your connection and try again.';
+			}
+		});
+	}
+
+	init();
+	document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+	.ltrace {
+		display: grid;
+		gap: 0.75rem;
+		justify-items: start;
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--color-border-subtle, var(--primary-content-border-color));
+	}
+	.ltrace__title {
+		margin: 0;
+		font-size: var(--font-size-lg);
+	}
+	.ltrace__badge {
+		margin-left: 0.4rem;
+		padding: 0.05rem 0.4rem;
+		border: 1px solid currentColor;
+		color: var(--league-accent, var(--brand-red));
+		font-size: var(--font-size-3xs);
+		letter-spacing: var(--tracking-caps);
+		text-transform: uppercase;
+		vertical-align: middle;
+	}
+	.ltrace__lede,
+	.ltrace__hint,
+	.ltrace__status,
+	.ltrace__locked {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary, var(--color-gray-600));
+	}
+	.ltrace__why {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary, var(--color-gray-600));
+	}
+	.ltrace__why summary {
+		cursor: pointer;
+		font-weight: 700;
+		color: var(--league-accent, var(--brand-red));
+	}
+	.ltrace__why p {
+		margin: 0.5rem 0;
+	}
+	.ltrace__why ul {
+		display: grid;
+		gap: 0.35rem;
+		margin: 0;
+		padding-left: 1.1rem;
+	}
+	.ltrace__status:empty {
+		display: none;
+	}
+	.ltrace__pick {
+		position: relative;
+		overflow: hidden;
+		cursor: pointer;
+	}
+	.ltrace__pick input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+	.ltrace__result {
+		display: grid;
+		gap: 0.75rem;
+		justify-items: start;
+		width: 100%;
+	}
+	.ltrace__result[hidden] {
+		display: none;
+	}
+	/* One light ground in both themes: AI logos are drawn with black outlines
+	   for a transparent background, which vanish on a dark card. */
+	.ltrace__art {
+		width: 100%;
+		max-width: 18rem;
+		padding: 0.75rem;
+		border-radius: 12px;
+		background: #f4f1ea;
+	}
+	.ltrace__art img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+</style>

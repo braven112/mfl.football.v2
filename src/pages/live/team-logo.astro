@@ -12,12 +12,17 @@
  * `src/utils/team-logo-prompt.ts`.
  *
  * The owner's teams pre-fill the name. Signed out, the page still works with
- * a typed name; nothing here needs the session except that list.
+ * a typed name; nothing here needs the session except that list and the
+ * Owner Suite Pro tracer below it (`LogoTracer`), which turns the finished
+ * PNG into an SVG.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import TeamLogoBuilder from '../../components/shared/TeamLogoBuilder.astro';
 import { getMflLiveUser } from '../../utils/auth';
 import { listOwnerLeagues } from '../../utils/live/owner-league';
+import { hasMflLivePro } from '../../utils/mfl-live-pro';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import LogoTracer from '../../components/shared/live/LogoTracer.astro';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -36,5 +41,6 @@ const firstName = teams[0]?.name ?? '';
 			Pick a look and we&rsquo;ll write the prompt. Paste it into ChatGPT or Gemini to make the picture.
 		</p>
 		<TeamLogoBuilder teams={teams} initialName={firstName} />
+		<LogoTracer pro={hasMflLivePro(user)} signInHref={user ? undefined : mflLoginUrl('/live/team-logo')} />
 	</section>
 </MflAppLayout>
