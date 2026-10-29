@@ -20,7 +20,9 @@ import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 const issuePaths = listLeagueData(`${getLeagueBySlug('__LEAGUE_SLUG__')!.dataPath}/pecking-order/*.json`);
 const issueFiles: Record<string, PeckingOrderData> = Object.fromEntries(
-  await Promise.all(issuePaths.map(async (p) => [p, await loadLeagueData<PeckingOrderData>(p)] as const)),
+  (await Promise.all(issuePaths.map(async (p) => [p, await loadLeagueData<PeckingOrderData>(p)] as const))).filter(
+    (entry): entry is readonly [string, PeckingOrderData] => entry[1] !== null,
+  ),
 );
 
 const issues = Object.entries(issueFiles)
