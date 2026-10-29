@@ -41,6 +41,7 @@
     "compute:mfl-settings-digest": "node scripts/compute-mfl-settings-digest.mjs",
     "compute:top-players:afl": "node scripts/compute-top-players.mjs --league=afl-fantasy",
     "compute:roster-payloads": "node scripts/compute-roster-season-payloads.mjs",
+    "compute:season-end-rosters": "node scripts/compute-season-end-rosters.mjs",
     "compute:afl-franchise-history": "node scripts/compute-franchise-history.mjs --league=afl",
     "compute:afl-record-book": "node scripts/compute-record-book.mjs --league=afl",
     "recover:afl-schedule": "node scripts/recover-afl-schedule-from-html.mjs --league=afl",

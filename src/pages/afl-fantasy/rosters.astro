@@ -54,7 +54,10 @@ const availableYears = rosterYears(rostersFeeds);
 const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, FALLBACK_YEAR);
 
 const yearFeed = (file: string) => [`${FEEDS_DIR}/${selectedYear}/${file}`];
-const [players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedule, standings] = await Promise.all([
+const [seasonEndRosters, players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedule, standings] = await Promise.all([
+  // Who finished the season on each team (scripts/compute-season-end-rosters.mjs);
+  // absent for a live year, where rosters.json is already whole.
+  loadFeedEntries(yearFeed('rosters-season-end.json')),
   loadFeedEntries(yearFeed('players.json')),
   // Season-to-date points for the whole pool, the SAME source the Free Agents
   // column reads (src/utils/stats-season.mjs). Committed from 2025 on; an
@@ -68,6 +71,7 @@ const [players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedul
 ]);
 const feeds = {
   rosters: rostersFeeds,
+  seasonEndRosters,
   players,
   ytdScores,
   tradeBait,

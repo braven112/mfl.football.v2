@@ -1,9 +1,9 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-26",
+  "recordedAt": "2026-10-29",
   "totals": {
     "transition": 186,
-    "fontSize": 1881,
+    "fontSize": 1880,
     "shadow": 205
   },
   "files": {
@@ -353,7 +353,7 @@
     },
     "src/components/shared/rosters/RostersPage.astro": {
       "transition": 1,
-      "fontSize": 22
+      "fontSize": 21
     },
     "src/components/shared/rules-chat/RulesChatPage.astro": {
       "transition": 1,

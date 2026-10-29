@@ -839,7 +839,7 @@
   }
 
   /* ── Controls above the rows (idea B, user 2026-09-26) ─────────────── */
-  /* Row 1: GM | Coach on the left, My Rank as an icon on the right.
+  /* Row 1: GM | Coach on the left, Year + My Rank behind a sliders icon on the right.
      Row 2: one horizontally scrolling row of THIS mode's sort chips. The
      page's own rules make .roster-controls a padded row above 640px and a
      stretched column below it; on a phone it is one wrapping row either way. */
@@ -870,28 +870,13 @@
     border-radius: calc(var(--radius-md, 0.5rem) - 2px);
   }
 
-  .roster-page[data-league='theleague'] .roster-controls .mre-trigger-wrap {
+  /* Year + My Rank sources sit behind one sliders button at the row's end
+     (RosterOptions.astro). */
+  .roster-page[data-league='theleague'] .roster-controls .roster-options {
     order: 2;
     margin: 0 0 0 auto;
   }
 
-  /* The label stays in the tree (the name is "My Rank sources"); only the
-     sliders icon shows. `:not([hidden])` — the trigger is hidden until the
-     owner has a board, and a display here would outrank the attribute. */
-  .roster-page[data-league='theleague'] .mre-trigger:not([hidden]) {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    justify-content: center;
-    border-radius: var(--radius-md, 0.5rem);
-  }
-
-  .roster-page[data-league='theleague'] .mre-trigger .mre-trigger__icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .roster-page[data-league='theleague'] .mre-trigger__label,
   .roster-page[data-league='theleague'] .rr-chip__sr {
     position: absolute;
     width: 1px;

@@ -310,14 +310,24 @@ describe('rankings reach every decision page', () => {
     // Re-weighting the composite used to mean leaving the page for Import
     // Rankings and coming back. Every page that SHOWS the composite should be
     // able to edit it.
-    const EDITOR_HOSTS = [...FREE_AGENT_PAGES, ...ROSTER_PAGES];
 
-    it.each(EDITOR_HOSTS)('%s mounts the editor', (page) => {
+    it.each(FREE_AGENT_PAGES)('%s mounts the editor', (page) => {
       const src = read(page);
       expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
       // A literal nav slug, or the shared Free Agents / rosters page's
       // registry lookup (those pages serve several leagues).
       expect(src).toMatch(/<MyRankEditor\s+league=(?:"(theleague|afl)"|\{league\.navSlug\})/);
+    });
+
+    it.each(ROSTER_PAGES)('%s mounts the editor inside the roster options', (page) => {
+      // Rosters put Year and My Rank behind one sliders button on a phone, so
+      // the editor arrives through RosterOptions, which must still mount it.
+      const src = read(page);
+      expect(src).toContain('RosterOptions.astro');
+      expect(src).toMatch(/<RosterOptions[^>]*rankingsLeague=(?:"(theleague|afl)"|\{[^}]*league\.navSlug[^}]*\})/);
+      const options = read('src/components/shared/rosters/RosterOptions.astro');
+      expect(options).toContain('../rankings/MyRankEditor.astro');
+      expect(options).toContain('<MyRankEditor league={rankingsLeague} />');
     });
 
     it.each(FREE_AGENT_PAGES)('%s keeps the trigger out of the View group', (page) => {

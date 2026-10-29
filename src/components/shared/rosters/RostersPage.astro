@@ -89,7 +89,7 @@ import '../../../styles/injury-indicator.css';
 import { loginUrlFor } from '../../../utils/login-redirect';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../../utils/trade-bait';
 import { getCachedTradeBait } from '../../../utils/mfl-trade-bait-cache';
-import MyRankEditor from '../../../components/shared/rankings/MyRankEditor.astro';
+import RosterOptions from './RosterOptions.astro';
 import { buildKeeperPlannerStats, preloadKeeperPlannerStats } from '../../../utils/afl-keeper-planner-stats';
 import RosterHeader from '../../../components/shared/roster-header/RosterHeader.astro';
 import {
@@ -123,6 +123,13 @@ export interface RosterPageTeam {
 
 export interface RosterPageFeeds {
   rosters: EagerFeedGlob;
+  /**
+   * A past season's rebuilt end-of-season rosters (rosters-season-end.json,
+   * scripts/compute-season-end-rosters.mjs), read in place of rosters.json:
+   * MFL's export for an old season has lost every player whose contract has
+   * since expired. Absent for seasons the export still covers.
+   */
+  seasonEndRosters?: EagerFeedGlob;
   players: EagerFeedGlob;
   ytdScores: EagerFeedGlob;
   tradeBait: EagerFeedGlob;
@@ -187,7 +194,8 @@ const hasKeepers = leagueHasFeature(PAGE_LEAGUE_SLUG, 'keepers');
 const pools = rosterPools(conferences, divisions);
 const usesConferences = pools.usesConferences;
 
-let rostersData = feedForYear(feeds.rosters, selectedYear, 'rosters.json') as any;
+let rostersData = (feedForYear(feeds.seasonEndRosters, selectedYear, 'rosters-season-end.json') ??
+  feedForYear(feeds.rosters, selectedYear, 'rosters.json')) as any;
 const playersData = feedForYear(feeds.players, selectedYear, 'players.json') as any;
 const tradeBaitData = feedForYear(feeds.tradeBait, selectedYear, 'tradeBait.json') as any;
 const tradeBaitByFranchiseData = feedForYear(
@@ -1125,15 +1133,14 @@ const pageConfig = {
     <!-- Compact controls. The team switcher moved into the header's crest
          row above, which is why only the year remains here. -->
     <div class="roster-controls-bar">
-      <div class="roster-controls-bar__group">
-        <label for="year-select">Year</label>
-        <select id="year-select" data-current-year={selectedYear}>
-          {availableYears.map((year) => (
-            <option value={year} selected={year === selectedYear}>{year}</option>
-          ))}
-        </select>
-      </div>
-      {rankingsPage && <MyRankEditor league={league.navSlug} />}
+      {/* Year + My Rank sources: inline here, behind one sliders button on
+          a phone — the same control TheLeague's page carries. */}
+      <RosterOptions
+        years={availableYears}
+        selectedYear={selectedYear}
+        selectId="year-select"
+        rankingsLeague={rankingsPage ? league.navSlug : null}
+      />
       {/* Grouped | All players (position-groups.ts) and, on a phone, the
           sort chips built from the table's own sortable headers. */}
       <div class="roster-grouping" role="group" aria-label="Show the roster" data-rr-grouping>
@@ -2308,28 +2315,13 @@ const pageConfig = {
       box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
     }
 
-    .roster-controls-bar__group {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .roster-controls-bar__group label {
-      font-size: var(--font-size-2xs);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--color-gray-500, #6b7280);
-    }
-
-    .roster-controls-bar__group select {
-      padding: 0.35rem 0.5rem;
-      border: 1px solid var(--input-border, #e5e7eb);
-      border-radius: var(--radius-sm, 0.25rem);
-      background: var(--input-bg, #fff);
-      font-size: 0.85rem;
-      color: var(--input-text, #111827);
-      cursor: pointer;
+    /* Phone: the Year / My Rank sliders button closes the row on the right,
+       where TheLeague's sits, so its menu drops down inside the card. */
+    @media (max-width: 767px) {
+      .roster-controls-bar :global(.roster-options) {
+        order: 1;
+        margin-left: auto;
+      }
     }
 
     .roster-controls-bar__profile {
