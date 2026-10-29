@@ -53,6 +53,8 @@ import '../../../styles/loading.css';
 import '../../../styles/network-badge.css';
 import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channels';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { formatForViewer, DEFAULT_VIEWER_CLOCK } from '../../../utils/viewer-clock';
+import { leagueClock } from '../../../config/leagues';
 import type { LineupPlayer } from '../../../types/lineups';
 import { DEFAULT_LINEUP_SLOTS, assignLineupSlots, eligibleSlotsFor, type LineupSlotLayout } from '../../../utils/lineup-slots';
 import { findLineupProblems, hasBlockingProblem } from '../../../utils/lineup-problems';
@@ -108,9 +110,12 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 // its own, and awaiting it here would gate all nine MFL calls — each of which
 // carries its own 8s abort — behind an unbounded one. Nothing until the
 // schedule build needs the answer.
-const viewerPrefs = readViewerClock(Astro.cookies, user, league.slug)
-  .then((clock) => clock.prefs.country)
-  .catch(() => DEFAULT_COUNTRY);
+// The whole clock, not just the country: the replacement sheet also prints
+// each game's kickoff, and that goes through the same clock every other
+// league moment does (`formatForViewer` — the league's PT until the viewer
+// has chosen a zone of their own).
+const viewerClockRead = readViewerClock(Astro.cookies, user, league.slug)
+  .catch(() => ({ ...DEFAULT_VIEWER_CLOCK, prefs: { ...DEFAULT_VIEWER_CLOCK.prefs, country: DEFAULT_COUNTRY }, leagueClock: leagueClock(league.slug) }));
 
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
@@ -238,6 +243,12 @@ interface GameInfo {
    * and the badge is then absent rather than empty.
    */
   channel: { name: string; logo: string | null; title: string } | null;
+  /**
+   * "Sun 10:00 AM PT" — the kickoff in this viewer's clock, pre-formatted for
+   * the same reason as `channel`: the replacement sheet is client-rendered.
+   * null when neither MFL nor ESPN gave a usable time.
+   */
+  kickoffLabel: string | null;
 }
 
 /**
@@ -249,7 +260,8 @@ interface GameInfo {
  * and subscription ride in the tooltip, which is what makes the mark an answer
  * for someone watching from abroad.
  */
-const viewerCountry = await viewerPrefs;
+const viewerClock = await viewerClockRead;
+const viewerCountry = viewerClock.prefs.country;
 
 function channelFor(usNetwork: string | null | undefined) {
   const ch = resolveChannel(usNetwork, viewerCountry);
@@ -259,6 +271,15 @@ function channelFor(usNetwork: string | null | undefined) {
     logo: ch.logo,
     title: [ch.name, ch.note, ch.subscription].filter(Boolean).join(' · '),
   };
+}
+
+// MFL's kickoff first — it is what locks the slot, so the time printed next to
+// a player is the time he locks — then ESPN's game date.
+function kickoffLabelFor(homeTeam: string, espnDate: string | undefined): string | null {
+  const mflEpoch = kickoffByTeam.get(homeTeam) ?? 0;
+  const ms = mflEpoch > 0 ? mflEpoch * 1000 : espnDate ? Date.parse(espnDate) : NaN;
+  if (!Number.isFinite(ms)) return null;
+  return formatForViewer(new Date(ms), viewerClock, { weekday: true });
 }
 
 // Build schedule from live odds
@@ -304,6 +325,7 @@ Object.values(liveOdds).forEach((odds) => {
     overUnder: odds.overUnder !== 'N/A' ? parseFloat(String(odds.overUnder)) : null,
     fpaRanks,
     channel: channelFor(odds.broadcast),
+    kickoffLabel: kickoffLabelFor(homeTeam, odds.date),
     status: odds.status?.toLowerCase().includes('final') ? 'final'
       : odds.status?.toLowerCase().includes('progress') || odds.status?.match(/^\d/) ? 'live'
       : 'pre',
@@ -1204,6 +1226,30 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         return player?.gameIndex != null ? data.schedule[player.gameIndex] : null;
       }
 
+      /**
+       * "@ DAL · Sun 10:00 AM PT" under a player in the replacement sheet —
+       * the current starter and every eligible row, so the two compare on the
+       * same line. The kickoff is server-formatted (`kickoffLabel`).
+       */
+      function cdmMatchupHTML(p: any): string {
+        if (p.isBye) return `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
+        const game = getGame(p);
+        if (!game) return '';
+        const isHome = p.nflTeam === game.home;
+        const oppTeam = isHome ? game.away : game.home;
+        const time = game.kickoffLabel
+          ? `<span class="cdm-matchup__time">${esc(game.kickoffLabel)}</span>`
+          : '';
+        return `<div class="cdm-matchup">
+          <span class="cdm-matchup__text">
+            <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+            <span class="cdm-matchup__team">${esc(oppTeam)}</span>
+          </span>
+          ${time}
+        </div>`;
+      }
+
       /** Escape HTML to prevent XSS when inserting server-fetched data */
       function esc(str: string): string {
         const el = document.createElement('span');
@@ -1598,19 +1644,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             afterName: p.injury ? injuryBadgeHTML(p.injury) : '',
           });
 
-          const isHome = game ? p.nflTeam === game.home : false;
-          let matchupHtml = '';
-          if (p.isBye) {
-            matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
-          } else if (oppTeam) {
-            matchupHtml = `<div class="cdm-matchup">
-              <span class="cdm-matchup__text">
-                <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
-                <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-                <span class="cdm-matchup__team">${esc(oppTeam)}</span>
-              </span>
-            </div>`;
-          }
+          const matchupHtml = cdmMatchupHTML(p);
 
           return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
             <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
@@ -1649,7 +1683,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           cdmCurrent.innerHTML = `
             <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
             <div class="ui-card lineup-cdm__current-card">
-              ${cell}
+              <div class="lineup-cdm__current-player">${cell}${cdmMatchupHTML(currentPlayer)}</div>
               <div class="lineup-cdm__current-stats">
                 ${rankings.available && rankings.rank(currentPlayer.id) != null ? `<span class="lineup-cdm__stat lineup-cdm__stat--rank" title="${esc(rankings.fullName)}">#${rankings.rank(currentPlayer.id)} ${esc(rankings.label)}</span>` : ''}
                 ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
@@ -3065,8 +3099,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .cdm-matchup {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.1rem 0.4rem;
     margin-top: 0.2rem;
   }
 
@@ -3093,6 +3128,22 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   .cdm-matchup__prefix,
   .cdm-matchup__team {
     color: inherit;
+  }
+
+  /* The kickoff follows the opponent on the same line, quieter than it —
+     MFL's "@DAL Sun 10:00 a.m." — and wraps under it on a narrow cell
+     (`.cdm-matchup` wraps) rather than widening the Player column. */
+  .cdm-matchup__time {
+    font-size: var(--font-size-3xs);
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .lineup-cdm__current-player {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   .cdm-matchup--bye {
