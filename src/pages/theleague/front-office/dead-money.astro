@@ -13,14 +13,19 @@ import { getGlobalPlayerMap } from '../../../utils/player-map';
 import { resolveCutoutUrl } from '../../../utils/player-modal-band';
 import { buildNoHeadshotPlaceholder, getNflTeamColors } from '../../../utils/nfl-team-colors';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 // Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
 // Filters out minimum-contract players — we want big-money busts, not dart throws.
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
 
-const playerModules = import.meta.glob(
-  '../../../data/mfl-player-salaries-*.json',
-  { eager: true }
+// Every season is read: the awards span the league's whole history.
+const playerModules: Record<string, unknown> = Object.fromEntries(
+  await Promise.all(
+    listLeagueData('src/data/mfl-player-salaries-*.json').map(
+      async (path) => [path, await loadLeagueData(path)] as const,
+    ),
+  ),
 );
 
 const getModuleData = (mod) =>

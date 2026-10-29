@@ -80,10 +80,11 @@ import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 import TopPlayersPromo from '../../components/shared/hp-sections/TopPlayersPromo.astro';
-import topPlayersData from '../../../data/theleague/derived/top-players.json';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import type { TopPlayersFile } from '../../types/top-players';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
+const topPlayersData = await loadLeagueData(`${THELEAGUE.dataPath}/derived/top-players.json`);
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
@@ -340,15 +341,34 @@ const extractFeedSeason = (fp: string): string | null => {
   return m ? m[1] : null;
 };
 
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', { eager: true });
-// Year-filtered globs (2025+): everything below is filtered to
-// `currentSalaryYear`, so bundling all 20 seasons only bloated the server
-// chunk — players.json alone is ~1.4 MB × season. The brace pattern matches
-// 2025-2099 (self-advancing); tests/current-era-feed-globs.test.ts guards it.
-const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json', { eager: true });
-const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
-const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', { eager: true });
+// Only the newest salary file and that year's feeds are rendered, so only
+// those are read — through the league-data loader, never bundled. The feeds
+// are read in the current era (2025+) only, as the year-filtered globs this
+// replaced matched.
+const rosterModules: Record<string, unknown> = {};
+const salarySeasonOf = (p: string) => Number(p.match(/(\d{4})\.json$/)?.[1] ?? NaN);
+for (const path of listLeagueData('src/data/mfl-player-salaries-*.json')
+  .filter((p) => !Number.isNaN(salarySeasonOf(p)))
+  .sort((a, b) => salarySeasonOf(b) - salarySeasonOf(a))) {
+  const data = await loadLeagueData(path);
+  if (data) {
+    rosterModules[path] = data;
+    break;
+  }
+}
+const hpFeedYear = Object.keys(rosterModules)[0]?.match(/(\d{4})\.json$/)?.[1] ?? String(SALARY_YEARS[0]);
+const loadCurrentEraFeed = async (file: string): Promise<Record<string, unknown>> => {
+  if (Number(hpFeedYear) < 2025) return {};
+  const path = `${THELEAGUE.dataPath}/mfl-feeds/${hpFeedYear}/${file}`;
+  const data = await loadLeagueData(path);
+  return data ? { [path]: data } : {};
+};
+const [salaryAdjustmentFeeds, draftResultsFeeds, playerFeeds, transactionFeeds] = await Promise.all([
+  loadCurrentEraFeed('salaryAdjustments.json'),
+  loadCurrentEraFeed('draftResults.json'),
+  loadCurrentEraFeed('players.json'),
+  loadCurrentEraFeed('transactions.json'),
+]);
 
 const rosterEntries = Object.entries(rosterModules)
   .map(([path, mod]) => ({ season: extractSeason(path), data: getModuleData(mod) }))

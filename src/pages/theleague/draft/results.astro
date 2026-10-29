@@ -17,13 +17,24 @@ import leagueConfigData from '../../../data/theleague.config.json';
 import { getGlobalPlayerMap } from '../../../utils/player-map';
 import { resolveConfigForYear } from '../../../utils/team-names';
 import { buildDraftResultsView } from '../../../utils/draft-results-feeds';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 export const prerender = false;
 
 const identities = getGlobalPlayerMap('theleague');
 
+// Lazy `{ path: () => data }` map — the shape the old lazy glob had — read
+// through the league-data loader, never bundled into the function.
+const draftFeeds = Object.fromEntries(
+  listLeagueData(`${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/*/draftResults.json`).map((path) => [
+    path,
+    () => loadLeagueData(path),
+  ]),
+);
+
 const view = await buildDraftResultsView({
-  feeds: import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json'),
+  feeds: draftFeeds,
   params: Astro.url.searchParams,
   teamsForYear: (year) =>
     (resolveConfigForYear(leagueConfigData as any, year).teams ?? []).map((t: any) => ({

@@ -7,8 +7,14 @@
  * would ship the other league's owners to every render of either route.
  */
 import OwnersIndexPage from '../../../components/shared/owners/OwnersIndexPage.astro';
-import ownerData from '../../../../data/theleague/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const ownerData: any = await loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`);
 
 export const prerender = false;
 ---

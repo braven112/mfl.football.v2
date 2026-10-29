@@ -7,7 +7,13 @@
  * Public, like the rivalry pages it opens.
  */
 import HistoryRivalriesPage from '../../../components/shared/league-history/HistoryRivalriesPage.astro';
-import historyData from '../../../../data/theleague/derived/league-history.json';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const historyData: any = await loadLeagueData(`${THELEAGUE_DATA}/derived/league-history.json`);
 
 export const prerender = false;
 ---

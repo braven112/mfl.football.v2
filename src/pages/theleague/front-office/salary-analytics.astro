@@ -5,16 +5,20 @@ import RelatedReports from '../../../components/theleague/RelatedReports.astro';
 import leagueAssets from '../../../data/theleague.assets.json';
 import archiveUrls from '../../../data/theleague/salary-archive-urls.json';
 import { getActiveTeams, getCurrentIconPath } from '../../../utils/league-assets';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
 
-const summaryModules = import.meta.glob(
-  '../../../data/mfl-salary-averages-*.json',
-  { eager: true }
-);
-
-const weeklyModules = import.meta.glob(
-  '../../../data/salary-history/theleague/*/summary-week-*.json',
-  { eager: true }
-);
+// Every season and every weekly snapshot is serialized for the client-side
+// picker, so all of them are read — through the league-data loader, never
+// bundled into the function (src/utils/league-data.ts).
+const loadAll = async (pattern: string): Promise<Record<string, unknown>> =>
+  Object.fromEntries(
+    await Promise.all(listLeagueData(pattern).map(async (path) => [path, await loadLeagueData(path)] as const)),
+  );
+const [summaryModules, weeklyModules] = await Promise.all([
+  loadAll('src/data/mfl-salary-averages-*.json'),
+  loadAll(`src/data/salary-history/${getLeagueBySlug('theleague')!.slug}/*/summary-week-*.json`),
+]);
 
 const STARTER_COUNTS: Record<string, number> = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
 
