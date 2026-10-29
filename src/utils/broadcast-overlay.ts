@@ -253,6 +253,14 @@ export function moveWatch(index: number, delta: number, rows: number): number {
  */
 export const BIG_PLAY_MIN_POINTS = 3;
 
+/**
+ * How long one player's big play keeps a second banner for him away. Each
+ * league's feed is read on its own, so the same play can reach one league a
+ * poll after the other; a second real play worth more than 3 points inside a
+ * minute is rare enough to lose.
+ */
+export const BIG_PLAY_REPEAT_MS = 60_000;
+
 /** A big play by one of the viewer's own starters, as the ticker announces it. */
 export interface BigPlayAlert {
   /** Unique per alert: the player plus the score he reached. */
@@ -290,15 +298,19 @@ export interface BigPlayAlert {
  *
  * The viewer's side only (the owner's call: "only show my players"). A player
  * started in two leagues is one alert, naming the other leagues, because it
- * is one play.
+ * is one play, naming the other leagues he starts in, and `recent` (player
+ * id -> when he was last announced) keeps a league whose feed catches up a
+ * poll later from announcing it again.
  */
 export function detectBigPlays(
   seen: ReadonlyMap<string, number>,
   games: readonly OverlayGame[],
   moments: readonly BroadcastMoment[],
   now: number,
-): { alerts: BigPlayAlert[]; seen: Map<string, number> } {
+  recent: ReadonlyMap<string, number> = new Map(),
+): { alerts: BigPlayAlert[]; seen: Map<string, number>; recent: Map<string, number> } {
   const next = new Map(seen);
+  const nextRecent = new Map([...recent].filter(([, at]) => now - at < BIG_PLAY_REPEAT_MS));
   const alerts: BigPlayAlert[] = [];
   const byPlayer = new Map<string, BigPlayAlert>();
   for (const game of games) {
@@ -310,13 +322,7 @@ export function detectBigPlays(
       if (before === undefined) continue;
       const gained = Math.round((player.live - before) * 100) / 100;
       if (!(gained > BIG_PLAY_MIN_POINTS)) continue;
-      const already = byPlayer.get(player.id);
-      if (already) {
-        if (!already.alsoIn.includes(game.leagueName) && already.leagueName !== game.leagueName) {
-          already.alsoIn.push(game.leagueName);
-        }
-        continue;
-      }
+      if (byPlayer.has(player.id) || nextRecent.has(player.id)) continue;
       const alert: BigPlayAlert = {
         key: `${id}:${player.live}`,
         gameKey: game.key,
@@ -334,10 +340,19 @@ export function detectBigPlays(
         alsoIn: [],
       };
       byPlayer.set(player.id, alert);
+      nextRecent.set(player.id, now);
       alerts.push(alert);
     }
   }
-  return { alerts, seen: next };
+  // Every other league he starts in, whether or not its scoring rated the
+  // play as big.
+  for (const alert of alerts) {
+    for (const game of games) {
+      if (game.leagueName === alert.leagueName || alert.alsoIn.includes(game.leagueName)) continue;
+      if (game.mine.lineup.some((p) => p.id === alert.playerId)) alert.alsoIn.push(game.leagueName);
+    }
+  }
+  return { alerts, seen: next, recent: nextRecent };
 }
 
 /** The newest fresh play the board credits to this player on the viewer's side. */

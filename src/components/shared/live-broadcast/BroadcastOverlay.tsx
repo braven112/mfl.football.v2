@@ -215,13 +215,15 @@ export default function BroadcastOverlay({
   // Big plays: each poll is measured against the highest score each starter
   // has shown, so the first poll only sets baselines.
   const seenRef = useRef<Map<string, number>>(new Map());
+  const recentRef = useRef<Map<string, number>>(new Map());
   const [alerts, setAlerts] = useState<BigPlayAlert[]>([]);
   const [justScored, setJustScored] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!poll || games.length === 0) return;
     const now = Date.now();
-    const found = detectBigPlays(seenRef.current, games, poll.moments ?? [], now);
+    const found = detectBigPlays(seenRef.current, games, poll.moments ?? [], now, recentRef.current);
     seenRef.current = found.seen;
+    recentRef.current = found.recent;
     if (found.alerts.length === 0) return;
     setAlerts((queue) => [...queue, ...found.alerts]);
     // The ticker turns to the game the play counted in.
@@ -236,6 +238,17 @@ export default function BroadcastOverlay({
       return next;
     });
   }, [poll, games]);
+  // A highlight ends on its own clock, not at the next big play.
+  useEffect(() => {
+    const times = Object.values(justScored);
+    if (times.length === 0) return;
+    const wait = Math.max(0, Math.min(...times) + JUST_SCORED_MS - Date.now());
+    const t = window.setTimeout(() => {
+      const now = Date.now();
+      setJustScored((lit) => Object.fromEntries(Object.entries(lit).filter(([, at]) => now - at < JUST_SCORED_MS)));
+    }, wait);
+    return () => window.clearTimeout(t);
+  }, [justScored]);
   const alert = alerts[0];
   useEffect(() => {
     if (!alert) return;

@@ -238,6 +238,21 @@ describe('overlay big plays', () => {
     expect(detectBigPlays(seen, gamesAt(pollWith(9.4)), [], NOW).alerts).toEqual([]);
   });
 
+  it('announces a play once when a second league catches up a poll later, naming both leagues', () => {
+    const two = (a: number, b: number) =>
+      overlayGames(
+        [panel('A', [matchup]), panel('B', [matchup])],
+        { ...pollWith(a), leagues: [pollWith(a).leagues[0], { ...pollWith(b).leagues[0], leagueId: 'B' }] },
+        meta,
+      );
+    let state = detectBigPlays(new Map(), two(9.4, 9.4), [], NOW);
+    state = detectBigPlays(state.seen, two(20.2, 9.4), [], NOW, state.recent);
+    expect(state.alerts).toHaveLength(1);
+    expect(state.alerts[0].alsoIn).toEqual(['League B']);
+    state = detectBigPlays(state.seen, two(20.2, 20.2), [], NOW + 15_000, state.recent);
+    expect(state.alerts).toEqual([]);
+  });
+
   it('leaves the play text out when the play is stale', () => {
     const { seen } = detectBigPlays(new Map(), gamesAt(pollWith(9.4)), [], NOW);
     const old = { ...moment, wallclock: '2026-10-26T19:40:00Z' };
