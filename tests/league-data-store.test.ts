@@ -131,7 +131,7 @@ describe('FUNCTION_EXCLUDED', () => {
       const base = g.split('/').pop()!;
       const namePattern = base
         .split('*')
-        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .map((part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
         .join('[^/\'"`]*');
       const nameRe = new RegExp(`(^|[/'"\`])${namePattern}(['"\`]|$)`);
       for (const file of sources()) {
