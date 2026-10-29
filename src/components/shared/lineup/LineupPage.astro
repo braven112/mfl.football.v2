@@ -30,7 +30,7 @@ import { loadLiveInjuryMap } from '../../../utils/mfl-injuries-live-map';
 import '../../../styles/injury-indicator.css';
 import type { LeagueDefinition } from '../../../config/leagues';
 import type { AuthUser } from '../../../utils/auth';
-import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../../utils/lineup-sources';
+import { findWeekMatchups, preloadLineupFeeds, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../../utils/lineup-sources';
 import LineupGameStrip from '../LineupGameStrip.astro';
 import { buildMatchupCards } from '../../../utils/lineup-matchup-cards';
 import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../../utils/dark-surface-crest';
@@ -114,6 +114,14 @@ const viewerPrefs = readViewerClock(Astro.cookies, user, league.slug)
 
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
+// The committed-feed fallbacks below (resolveRostersPayload, resolveWeekLineup)
+// are sync over preloaded data — weekly-results-raw.json is not shipped inside
+// the function. STARTED here alongside the MFL calls, awaited before either
+// runs. Never fatal: a failed preload just means no committed fallback.
+const lineupFeedsReady = preloadLineupFeeds(league.slug as Parameters<typeof preloadLineupFeeds>[0], leagueYear).catch(
+  (err) => console.error('[lineup] committed feed preload failed:', err),
+);
+
 // Parallel data fetches (all 9 run concurrently to avoid waterfall)
 const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResultsRes, nflSchedRes, leagueSchedRes] = await Promise.all([
   // League-wide, not FRANCHISE-scoped: the matchup strip needs the OPPONENT's
@@ -140,6 +148,7 @@ const liveRostersData = rostersRes?.ok ? await rostersRes.json().catch(() => nul
 // MFL answers a throttled request with HTTP 200 and an error body, so fall
 // back to the committed feed whenever the payload has no franchises — an
 // empty roster renders every slot as "Tap to set".
+await lineupFeedsReady;
 const rostersData = resolveRostersPayload(liveRostersData, league.slug, leagueYear);
 const weekResultsData = weekResultsRes?.ok ? await weekResultsRes.json().catch(() => null) : null;
 const projData = projRes?.ok ? await projRes.json().catch(() => null) : null;

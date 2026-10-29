@@ -15,7 +15,7 @@ import {
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
 import { listLeagueData, loadLeagueData } from '../../utils/league-data';
@@ -114,6 +114,9 @@ const playerFeedEntries = Object.entries(playerFeeds)
   .filter((item) => item.season === currentYear && item.data);
 
 const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+// getPlayerMap is sync over preloaded data (players.json is not shipped inside
+// the function); this year may fall outside the middleware's hot set.
+await preloadPlayerIdentity([parseInt(currentYear) || 2026]).catch(() => undefined);
 const lsPlayerIdentityMap = getPlayerMap(parseInt(currentYear) || 2026);
 const playerMetaById = new Map<string, { name: string; position: string }>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {

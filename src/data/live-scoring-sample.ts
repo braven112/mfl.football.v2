@@ -107,9 +107,12 @@ function feedYears(dataPath: string): number[] {
 /**
  * How many of the newest seasons {@link getLiveScoringSample} is preloaded
  * for. The last completed regular season is the current one or the one
- * before; a season further back still resolves, off the sync fallback.
+ * before — or the one before THAT while a freshly created league year's
+ * directory sits ahead of an in-progress season. A season further back is not
+ * preloaded, and weekly-results-raw.json is not shipped inside the function,
+ * so the scan cannot reach it in production.
  */
-const SAMPLE_SEASONS_PRELOADED = 2;
+const SAMPLE_SEASONS_PRELOADED = 3;
 
 /** Load what {@link getLiveScoringSample} reads for `slug`. */
 export async function preloadLiveScoringSample(opts: { slug?: string } = {}): Promise<void> {

@@ -14,7 +14,7 @@ import leagueConfigData from '../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
-import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { loadLeagueData } from '../../../utils/league-data';
@@ -27,7 +27,7 @@ const league = getLeagueBySlug('theleague')!;
 const leagueYear = getCurrentLeagueYear();
 const user = getAuthUser(Astro.request);
 const roomFeed = (file: string) => `${league.dataPath}/mfl-feeds/${leagueYear}/${file}`;
-const [draftResultsFeeds, leagueFeeds] = await Promise.all(['draftResults.json', 'league.json'].map(async (f) => ({ [roomFeed(f)]: await loadLeagueData(roomFeed(f)) }) as Record<string, unknown>));
+const [[draftResultsFeeds, leagueFeeds]] = await Promise.all([Promise.all(['draftResults.json', 'league.json'].map(async (f) => ({ [roomFeed(f)]: await loadLeagueData(roomFeed(f)) }) as Record<string, unknown>)), preloadDraftPlayers(leagueYear, { viewerFranchiseId: user?.franchiseId })]); // + buildDraftPlayers' preload (players.json is not in the function)
 
 // Brand colors drive the pick-reveal splash — rookies rarely have an NFL team
 // at draft time, so the drafting franchise tints the moment.

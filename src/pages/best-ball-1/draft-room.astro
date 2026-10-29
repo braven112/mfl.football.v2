@@ -25,7 +25,7 @@ import { getAuthUser } from '../../utils/auth';
 import { loginUrlForRequest } from '../../utils/login-redirect';
 import { isAdminFranchise } from '../../config/nav-config';
 import { getBestBall1Preference } from '../../utils/team-preferences';
-import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../utils/build-draft-players';
 import { fetchOfficialDraftSession, officialDraftSessionId } from '../../utils/best-ball-draft';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../types/draft-room';
@@ -74,13 +74,17 @@ if (session) {
   // The player catalog feed is shared (see create route note); its directory
   // is keyed by the default league's year clock. Redraft ADP: this league
   // redrafts every season, so dynasty ranks would mislead the pool sort.
-  const players = buildDraftPlayers(getCurrentLeagueYear(), {
+  const poolOptions = {
     rookieOnly: false,
     viewerFranchiseId: user.franchiseId,
     // Best Ball's 0001 is not TheLeague's 0001, and RSP is licensed there.
     viewerLeagueSlug: 'best-ball-1',
     adpSource: 'redraft',
-  });
+  } as const;
+  // buildDraftPlayers is sync over preloaded data (players.json is not shipped
+  // inside the function), so load it first with the same options.
+  await preloadDraftPlayers(getCurrentLeagueYear(), poolOptions);
+  const players = buildDraftPlayers(getCurrentLeagueYear(), poolOptions);
 
   pageData = {
     leagueYear,

@@ -33,7 +33,7 @@ import {
   writeAccountingRecords,
   verifyWrites,
 } from '../../../utils/mfl-accounting';
-import { loadPayoutSeasonData } from '../../../utils/accounting-season-data';
+import { fetchPayoutSeasonData } from '../../../utils/accounting-season-loader';
 import { checkRateLimit } from '../../../utils/rate-limit';
 // .mjs planner, shared with node scripts (see its header). No ts-expect-error
 // here: its JSDoc types resolve, so the directive would itself be unused.
@@ -68,7 +68,7 @@ async function buildPlan(ctx: Extract<ReturnType<typeof resolveAccountingContext
     };
   }
 
-  const data = loadPayoutSeasonData(ctx.league, ctx.season);
+  const data = await fetchPayoutSeasonData(ctx.league, ctx.season);
   const plan = planPayouts({
     year: ctx.season,
     payouts,

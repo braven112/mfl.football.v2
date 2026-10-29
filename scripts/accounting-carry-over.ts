@@ -50,7 +50,9 @@ import {
   writeAccountingRecords,
   formatAmount,
 } from '../src/utils/mfl-accounting';
-import { loadFranchises } from '../src/utils/accounting-season-data';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { loadFranchises, type SeasonDataReader } from '../src/utils/accounting-season-data';
 import { leagueYearFor } from '../src/utils/accounting-request';
 import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
 // Shared .mjs helper used by the other MFL write scripts. No ts-expect-error:
@@ -59,6 +61,15 @@ import { loginToMFL } from './lib/mfl-api.mjs';
 // .mjs planner, shared with the API route (see its header). Its JSDoc types
 // resolve, so no ts-expect-error is needed here.
 import { planYearMigration, assessCarryReadiness } from '../src/utils/accounting-migration.mjs';
+
+/** The committed league data, off disk — this runs under tsx, outside Vite, so not through the site's loader. */
+const readFromDisk: SeasonDataReader = (repoPath) => {
+  try {
+    return JSON.parse(readFileSync(join(process.cwd(), repoPath), 'utf8'));
+  } catch {
+    return null;
+  }
+};
 
 /**
  * How quiet the old year must be before its balance counts as closing.
@@ -133,7 +144,7 @@ async function carryLeague(
     toYear: to,
     sourceLedger: source.ledger,
     targetRecords: target.ledger.records,
-    franchises: loadFranchises(league, to),
+    franchises: loadFranchises(league, to, readFromDisk),
   });
 
   // (2)-(6): every remaining precondition, in one tested place. See

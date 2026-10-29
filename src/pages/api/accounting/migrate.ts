@@ -29,7 +29,7 @@ import {
   writeAccountingRecords,
   verifyWrites,
 } from '../../../utils/mfl-accounting';
-import { loadFranchises } from '../../../utils/accounting-season-data';
+import { fetchFranchises } from '../../../utils/accounting-season-loader';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { planYearMigration, assessCarryReadiness } from '../../../utils/accounting-migration.mjs';
 
@@ -119,7 +119,7 @@ async function buildMigration(ctx: Ctx, url: URL) {
     toYear: to,
     sourceLedger: source.ledger,
     targetRecords: target.ledger.records,
-    franchises: loadFranchises(ctx.league, to),
+    franchises: await fetchFranchises(ctx.league, to),
   });
 
   // The same gate the unattended job is held to. Returned for DISPLAY only —

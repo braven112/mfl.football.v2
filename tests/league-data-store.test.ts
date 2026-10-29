@@ -38,6 +38,18 @@ import baseline from './fixtures/league-data-import-baseline.json';
  *      the ratchet above is what moves those.)
  */
 
+/**
+ * Modules under src/ that only node scripts import (run under tsx, outside
+ * Vite, where the loader cannot load), so their fs reads never run in the
+ * function. Each must say who uses it; the test below fails the moment
+ * anything in src/ imports one.
+ */
+const SCRIPT_ONLY_MODULES: Record<string, string> = {
+  // scripts/set-afl-waiver-order.ts and scripts/check-afl-waiver-order.ts read
+  // a completed season's feeds (weekly-results-raw.json among them) off disk.
+  'src/utils/afl-waiver-order-source.ts': 'AFL waiver-order scripts',
+};
+
 const SOURCE_GLOBS = "'src/**/*.astro' 'src/**/*.ts' 'src/**/*.tsx' 'src/**/*.mjs' 'src/**/*.js'";
 const sources = (): string[] =>
   execSync(`git ls-files ${SOURCE_GLOBS}`, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -124,6 +136,26 @@ describe('FUNCTION_EXCLUDED', () => {
     }
   });
 
+  it('every script-only module is imported by nothing in src/', () => {
+    // The exemption below holds only while the module never runs in the
+    // function: one import from a page or a util it reaches puts its raw fs
+    // read of an excluded file into production.
+    const importers: string[] = [];
+    for (const mod of Object.keys(SCRIPT_ONLY_MODULES)) {
+      const stem = mod.split('/').pop()!.replace(/\.[^.]+$/, '');
+      const importRe = new RegExp(`(?:from|import\\()\\s*['"][^'"]*/${stem}(?:\\.[a-z]+)?['"]`);
+      for (const file of sources()) {
+        if (file === mod) continue;
+        if (importRe.test(readFileSync(file, 'utf8'))) importers.push(`${file} imports ${mod}`);
+      }
+    }
+    expect(
+      importers,
+      'A SCRIPT_ONLY_MODULES entry is now reached from src/, so it runs in the function and its raw ' +
+        'fs read will ENOENT there. Read through the loader (or an injected reader) and drop the exemption.',
+    ).toEqual([]);
+  });
+
   it('nothing in src/ reads an excluded file off disk except through the loader', () => {
     const offenders: string[] = [];
     for (const g of FUNCTION_EXCLUDED) {
@@ -137,7 +169,7 @@ describe('FUNCTION_EXCLUDED', () => {
         .join('[^/\'"`]*');
       const nameRe = new RegExp(`(^|[/'"\`])${namePattern}(['"\`]|$)`);
       for (const file of sources()) {
-        if (file === 'src/utils/league-data.ts') continue;
+        if (file === 'src/utils/league-data.ts' || file in SCRIPT_ONLY_MODULES) continue;
         const text = readFileSync(file, 'utf8');
         if (/from ['"](?:node:)?fs(?:\/promises)?['"]/.test(text) && nameRe.test(text)) {
           offenders.push(`${file}: fs read of ${base}`);

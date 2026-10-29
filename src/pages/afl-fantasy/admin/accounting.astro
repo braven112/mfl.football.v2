@@ -20,7 +20,7 @@ import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redir
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { leagueYearFor } from '../../../utils/accounting-request';
-import { loadFranchises } from '../../../utils/accounting-season-data';
+import { fetchFranchises } from '../../../utils/accounting-season-loader';
 
 const user = getAuthUser(Astro.request);
 const league = getLeagueBySlug('afl-fantasy');
@@ -42,7 +42,7 @@ const season = getCurrentSeasonYear();
 // selectable because prizes get settled late.
 const seasons = Array.from({ length: 6 }, (_, index) => season - index);
 
-const franchises = loadFranchises(league, year);
+const franchises = await fetchFranchises(league, year);
 ---
 
 <TheLeagueLayout title="Accounting — Admin">

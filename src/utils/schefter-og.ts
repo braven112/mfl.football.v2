@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import type { SchefterPost } from '../types/schefter';
-import { getPlayerMap, type PlayerIdentity } from './player-map';
+import { getPlayerMap, preloadPlayerIdentity, type PlayerIdentity } from './player-map';
 import { getCurrentLeagueYear } from './league-year';
 import { getNflTeamColors, hexToRgba } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
@@ -436,6 +436,11 @@ function buildCardTree(opts: {
  * available, branded text-only card otherwise.
  */
 export async function renderSchefterOgPng(post: SchefterPost, league: OgLeague): Promise<Buffer> {
+  // resolveFeaturedPlayer reads this and last league year's identity maps,
+  // sync; the prior year is outside the middleware's hot set and players.json
+  // is not shipped inside the function, so load both first.
+  const year = getCurrentLeagueYear();
+  await preloadPlayerIdentity([year, year - 1]).catch(() => undefined);
   const player = resolveFeaturedPlayer(post);
   const headshotUri = player ? await fetchHeadshotDataUri(player.headshot) : null;
 

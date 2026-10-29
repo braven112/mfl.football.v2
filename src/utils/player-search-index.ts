@@ -14,10 +14,10 @@
  */
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
-import { getOwnersByPlayer } from './offseason-hero-data';
+import { getOwnersByPlayer, OWNERSHIP_FEEDS, preloadOffseasonHeroData } from './offseason-hero-data';
 import { asArray } from './mfl-normalize';
 import { formatMflName } from './player-name-matching';
-import { leagueFeedPath, readLeagueDataSync } from './league-data';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 export interface PlayerSearchEntry {
   id: string;
@@ -38,10 +38,24 @@ export interface PlayerSearchIndex {
 
 /**
  * League data through src/utils/league-data.ts. The index is PRERENDERED, so
- * this runs at build time, where every committed feed is on disk.
+ * this runs at build time; the route still awaits {@link preloadPlayerSearchIndex}
+ * first, so the sync build is served from memory rather than a disk fallback
+ * (players.json is not shipped inside the function).
  */
 function readFeed(dataPath: string, year: number, file: string): any {
   return readLeagueDataSync(leagueFeedPath(dataPath, year, file));
+}
+
+/** Load what `buildPlayerSearchIndex(league)` reads: this and last league year's feeds. */
+export async function preloadPlayerSearchIndex(league: CanonicalLeagueSlug): Promise<void> {
+  const def = getLeagueBySlug(league);
+  if (!def) return;
+  const current = getLeagueYearForSlug(league);
+  const years = [current, current - 1];
+  await Promise.all([
+    preloadLeagueData(years.flatMap((y) => ['players.json', 'league.json'].map((f) => leagueFeedPath(def.dataPath, y, f)))),
+    preloadOffseasonHeroData(league, years, OWNERSHIP_FEEDS),
+  ]);
 }
 
 export function buildPlayerSearchIndex(league: CanonicalLeagueSlug): PlayerSearchIndex {

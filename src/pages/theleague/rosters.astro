@@ -101,7 +101,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { parsePlayerWeekScores } from '../../utils/player-week-scores.mjs';
@@ -221,6 +221,16 @@ const [
   // in memory for as long as the instance is warm.
   loadLeagueData<{ seasons?: Record<string, any> }>(`${TL_DATA_PATH}/derived/roster-season-payloads.json`),
 ]);
+// getPlayerMap(year) is sync and served from memory. The middleware preloads
+// only today's league and season years; this page also asks for every
+// current-era season it holds feeds for (dead-money enrichment, the season
+// payloads), and players.json is not shipped inside the function — so a year
+// nobody preloaded would come back as an empty identity map in production.
+await preloadPlayerIdentity(
+  [...Object.keys(playersFeeds), ...Object.keys(salaryAdjustmentFeeds)]
+    .map((p) => Number(p.match(/mfl-feeds\/(\d{4})\//)?.[1]))
+    .filter((y) => Number.isInteger(y)),
+).catch((err) => console.error('[rosters] player identity preload failed:', err));
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 

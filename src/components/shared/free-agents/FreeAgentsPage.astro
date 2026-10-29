@@ -30,7 +30,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../PlayerDetailsModal.astro';
-import { loadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
+import { loadWeeklyPlayerResults, preloadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
 import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug, leagueClock, type CanonicalLeagueSlug } from '../../../config/leagues';
@@ -242,6 +242,12 @@ const statsSeasonYear = freeAgentsData.statsSeasonYear;
 // table and the column that opened it can never name different years. Read off
 // the committed feeds at request time (see weekly-player-results-feed.ts) — no
 // eager glob, so the SSR-slim property this page was refactored for holds.
+// Sync build over preloaded feeds: players.json and weekly-results-raw.json are
+// not shipped inside the function. A failed preload leaves the modal's Season
+// Results empty rather than failing the page.
+await preloadWeeklyPlayerResults(league.dataPath, statsSeasonYear).catch((err) =>
+  console.error('[free-agents] Season Results preload failed:', err),
+);
 const weeklyPlayerResults = loadWeeklyPlayerResults(league.dataPath, statsSeasonYear);
 
 const hasAdp = freeAgentsData.hasAdp;

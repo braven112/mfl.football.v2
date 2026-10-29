@@ -33,7 +33,7 @@ import DraftBroadcastIsland from '../../../components/shared/draft-broadcast/Dra
 import leagueConfigData from '../../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
-import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import {
   assignBoardRanks,
@@ -45,8 +45,10 @@ import {
   loadConferenceKeepers,
   loadFranchiseHoldings,
   loadRostersFeed,
+  preloadDraftBroadcast,
   trimToDraftable,
 } from '../../../utils/draft-broadcast-server';
+import { getLeagueData, leagueFeedPath } from '../../../utils/league-data';
 import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
 import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../../utils/broadcast-crest';
 import { resolveWarmDepth } from '../../../utils/draft-broadcast-images';
@@ -57,8 +59,6 @@ import type {
   DraftBroadcastPageData,
 } from '../../../types/draft-broadcast';
 import type { DraftRoomTeam } from '../../../types/draft-room';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import '../../../styles/draft-broadcast.css';
 
 export const prerender = false;
@@ -76,22 +76,20 @@ const yearParam = Astro.url.searchParams.get('year');
 const parsedYear = yearParam ? parseInt(yearParam, 10) : NaN;
 const leagueYear = Number.isFinite(parsedYear) ? parsedYear : defaultYear;
 
+// The sync helpers below (board, enrichment, keepers, rehearsal lookup, the
+// player pool) read league data from memory, so load it first — through the
+// loader (Blob in production) rather than import.meta.glob, which would
+// compile every season of these feeds into the server bundle to serve one.
+// `defaultYear` too: findRehearsalYear walks back from it, not from leagueYear.
+await Promise.all([
+  preloadDraftBroadcast(league.dataPath, leagueYear),
+  defaultYear !== leagueYear ? preloadDraftBroadcast(league.dataPath, defaultYear) : null,
+  preloadDraftPlayers(leagueYear),
+]);
+
 // ── Board skeleton (all 51 slots, filled or not) ──
-// fs rather than import.meta.glob: globbing would compile every season of
-// draftResults into the server bundle to serve one. (The draft ROOM globs;
-// it can afford to, being a smaller payload per season. This page reads the
-// same feed for up to 12 seasons when hunting a rehearsal year.)
 function readDraftResults(year: number): any {
-  try {
-    return JSON.parse(
-      readFileSync(
-        join(process.cwd(), `${league.dataPath}/mfl-feeds/${year}/draftResults.json`),
-        'utf-8'
-      )
-    );
-  } catch {
-    return null;
-  }
+  return getLeagueData(leagueFeedPath(league.dataPath, year, 'draftResults.json'));
 }
 
 // ── Which draft this board is WATCHING ──

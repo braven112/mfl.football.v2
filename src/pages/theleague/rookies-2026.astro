@@ -7,7 +7,7 @@
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/shared/PlayerCell.astro';
-import { getPlayerMap, type PlayerIdentity } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity, type PlayerIdentity } from '../../utils/player-map';
 import {
   NFL_TEAM_COLORS,
   NFL_COLORS_FALLBACK,
@@ -292,6 +292,9 @@ function normalizePlayerName(name: string): string {
     .trim();
 }
 const rookieByName = new Map<string, PlayerIdentity>();
+// getPlayerMap is sync over preloaded data (players.json is not shipped inside
+// the function); this year may fall outside the middleware's hot set.
+await preloadPlayerIdentity([LEAGUE_YEAR]).catch(() => undefined);
 for (const identity of getPlayerMap(LEAGUE_YEAR).values()) {
   if (identity.draftYear !== String(LEAGUE_YEAR)) continue;
   if (identity.position === 'DEF') continue;

@@ -24,7 +24,7 @@ import { getLeagueById, getLeagueBySlug, leagueClock } from '../../../config/lea
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getDailySlot, parseTestDate } from '../../../utils/hero-resolver';
-import { getPlayerMap } from '../../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../../utils/player-map';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { checkRateLimit } from '../../../utils/rate-limit';
@@ -42,6 +42,8 @@ import {
   loadLiveSnapshot,
   loadOutsideContribution,
   loadRegisteredContribution,
+  preloadLeagueFeeds,
+  preloadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
 import { buildSundayTicketMatchupCards, type SundayTicketMatchupCard } from '../../../utils/sunday-ticket-matchups';
@@ -111,6 +113,11 @@ const sundayLive = daily.slot === 'live-scoring' && (daily.gameWindow === 'sunda
 const seasonYear = getCurrentSeasonYear(now);
 const liveWindowOpen = isSeasonWindowOpen(seasonYear, now);
 
+// getPlayerMap is sync over preloaded data (players.json is not shipped inside
+// the function); the middleware's hot set usually has this year already.
+await preloadPlayerIdentity([leagueYear]).catch((err) =>
+  console.error('[sunday-ticket] player identity preload failed:', err),
+);
 const identity = getPlayerMap(leagueYear);
 
 // ── Who, and which leagues ─────────────────────────────────────────────
@@ -165,6 +172,26 @@ const country = prefs.country;
 const officialClock = leagueClock(pageLeague.slug);
 const zones = kickoffZonesFor(prefs, officialClock);
 const clockLabel = zoneSummary(prefs, officialClock);
+
+// ── Preload the committed feeds the sync readers below use ──────────────
+// loadRegisteredContribution (rosters, weekly-results-raw, projections), the
+// league-wide fallback and the slate (projections, nflSchedule), and each
+// registered league's schedule for the matchup band. weekly-results-raw.json is
+// not shipped inside the function, so an un-preloaded read is empty in
+// production. Never fatal: a store hiccup blanks a league, not the page.
+{
+  const registeredOn = boardLeagues.filter((l) => l.registered && enabledIds.has(l.id));
+  await Promise.all([
+    preloadLeagueFeeds(pageLeague, leagueYear, ['projectedScores.json', 'nflSchedule.json']),
+    ...registeredOn.map((l) => {
+      const year = getLeagueYearForSlug(l.registered!.slug, now);
+      return Promise.all([
+        preloadRegisteredContribution(l.registered!, year),
+        preloadLeagueFeeds(l.registered!, year, ['schedule.json']),
+      ]);
+    }),
+  ]).catch((err) => console.error('[sunday-ticket] league data preload failed:', err));
+}
 
 // ── Contributions ───────────────────────────────────────────────────────
 const notices: string[] = [];

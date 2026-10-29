@@ -43,16 +43,23 @@ export const MANIFEST_PATH = 'src/generated/league-data-manifest.json';
  */
 export const FUNCTION_EXCLUDED = [
   // Per-season feeds whose last raw reader moved to the loader (or that only
-  // globs ever read). NOT weekly-results.json: accounting-season-data.ts reads
-  // it off disk by a constructed name (`${feed}.json`) that the guard's
-  // file-name scan cannot see.
-  // A family whose remaining readers are SYNC helpers that a caller may not
-  // have preloaded yet (playerScores.json for the hero components, the RSP
-  // files for the draft room) stays in until those callers preload: its
-  // fallback reads the disk, which an excluded file is not on.
+  // globs ever read). The guard's file-name scan cannot see a name built at
+  // run time (`${feed}.json`), so before adding a family, also grep for
+  // readers that construct it.
+  // A family whose remaining readers are SYNC helpers (readLeagueDataSync)
+  // goes on this list only once every caller awaits the helper's preload:
+  // the sync fallback reads the disk, which an excluded file is not on, so a
+  // missed preload reads back null in production (playerScores.json for the
+  // hero components and the RSP files for the draft room are still in for
+  // that reason).
   'data/*/mfl-feeds/*/player-scores-weekly.json',
   'data/*/mfl-feeds/*/futureDraftPicks.json',
   'data/*/mfl-feeds/*/auctionResults.json',
+  // ~44 MB together. Every sync reader's caller preloads (player-map's hot
+  // set comes from src/middleware.ts); the AFL waiver-order source that reads
+  // weekly-results-raw.json off disk is script-only (tests/league-data-store.test.ts).
+  'data/*/mfl-feeds/*/players.json',
+  'data/*/mfl-feeds/*/weekly-results-raw.json',
   // player-map's identity files and the bye calendar: preloaded on every
   // request by src/middleware.ts (src/utils/request-league-data.ts).
   'data/*/derived/player-identity-union.json',

@@ -11,7 +11,7 @@
 import type { APIRoute, GetStaticPaths } from 'astro';
 import { ALL_LEAGUES, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { getSearchPath } from '../../../utils/nav-utils';
-import { buildPlayerSearchIndex } from '../../../utils/player-search-index';
+import { buildPlayerSearchIndex, preloadPlayerSearchIndex } from '../../../utils/player-search-index';
 
 export const prerender = true;
 
@@ -20,8 +20,10 @@ export const getStaticPaths: GetStaticPaths = () =>
     .filter((slug) => getSearchPath(slug))
     .map((league) => ({ params: { league } }));
 
-export const GET: APIRoute = ({ params }) => {
-  const { teams, players } = buildPlayerSearchIndex(params.league as CanonicalLeagueSlug);
+export const GET: APIRoute = async ({ params }) => {
+  const league = params.league as CanonicalLeagueSlug;
+  await preloadPlayerSearchIndex(league);
+  const { teams, players } = buildPlayerSearchIndex(league);
   return new Response(JSON.stringify({ teams, players }), {
     headers: { 'Content-Type': 'application/json' },
   });

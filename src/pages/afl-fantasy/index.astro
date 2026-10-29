@@ -54,7 +54,7 @@ import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
 import { chooseTeamName } from '../../utils/team-names';
-import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
+import { loadAflDraftSlot, preloadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import {
@@ -340,6 +340,13 @@ const myTeamWeek = inSeasonVariant && userFranchiseId
 // render "—": AFL has no MFL keeper construct, so there was no count to pass.
 // Resolved only for the offseason card that shows it, and only for a signed-in
 // / team-selected viewer — the draft tier reads feeds off disk.
+// loadAflDraftSlot is sync over preloaded feeds (weekly-results-raw.json is
+// not shipped inside the function), so load them before it runs.
+if (!inSeasonVariant && userFranchiseId) {
+  await preloadAflDraftSlot(effectiveDate).catch((err) =>
+    console.error('[afl home] draft slot preload failed:', err),
+  );
+}
 const spotlight = !inSeasonVariant && userFranchiseId
   ? await resolveAflTeamSpotlight({
       franchiseId: userFranchiseId,

@@ -49,7 +49,7 @@ const yearFeed = async (file: string) => {
   return { [path]: { default: await loadLeagueData(path) } };
 };
 
-const pageData = buildAflRoomPageData({
+const pageData = await buildAflRoomPageData({
   room,
   leagueYear,
   leagueId: league.id,

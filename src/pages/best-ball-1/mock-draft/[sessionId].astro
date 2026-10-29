@@ -16,7 +16,7 @@ import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../../utils/leagu
 import { getAuthUser } from '../../../utils/auth';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getBestBall1Preference } from '../../../utils/team-preferences';
-import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../../utils/build-draft-players';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../../types/draft-room';
 
 export const prerender = false;
@@ -52,13 +52,17 @@ const teams: DraftRoomTeam[] = (bb1Config.teams ?? []).map((team: any) => ({
 
 // ── Full veteran+rookie pool — best-ball mocks rehearse the startup draft ──
 // Redraft ADP: the league redrafts every season, so dynasty ranks mislead.
-const players = buildDraftPlayers(getCurrentLeagueYear(), {
+const poolOptions = {
   rookieOnly: false,
   viewerFranchiseId: user.franchiseId,
   // Best Ball's 0001 is not TheLeague's 0001, and RSP is licensed there.
   viewerLeagueSlug: 'best-ball-1',
   adpSource: 'redraft',
-});
+} as const;
+// buildDraftPlayers is sync over preloaded data (players.json is not shipped
+// inside the function), so load it first with the same options.
+await preloadDraftPlayers(getCurrentLeagueYear(), poolOptions);
+const players = buildDraftPlayers(getCurrentLeagueYear(), poolOptions);
 
 // ── Serialize page data — picks populate from the PartyKit session sync ──
 const pageData: DraftRoomPageData = {

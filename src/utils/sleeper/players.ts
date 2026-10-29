@@ -39,7 +39,7 @@
 
 import { getRedis } from '../redis-client';
 import { getLeagueBySlug } from '../../config/leagues';
-import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from '../league-data';
+import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from '../league-data';
 import { canonicalNflCode } from '../espn-game-detail';
 import { getPlayerMap, preloadPlayerIdentity } from '../player-map';
 import { formatMflName, normalizePlayerName } from '../player-name-matching';
@@ -247,6 +247,7 @@ let indexMemory: { year: number; at: number; index: Map<string, MflPlayerChoice>
 /**
  * Every fantasy-position MFL player, by id — what a crowd fix may point at.
  * Read from the committed feed, so it costs no network; held for an hour.
+ * Sync: the caller awaits {@link preloadMflPlayerIndex} first.
  */
 export function loadMflPlayerIndex(year: number): Map<string, MflPlayerChoice> {
   if (indexMemory && indexMemory.year === year && Date.now() - indexMemory.at < MEMORY_TTL_MS) {
@@ -262,7 +263,10 @@ export function loadMflPlayerIndex(year: number): Map<string, MflPlayerChoice> {
       team: r.team ? canonicalNflCode(r.team) : '',
     });
   }
-  indexMemory = { year, at: Date.now(), index };
+  // Only remember an index built from the real file: one read before anyone
+  // preloaded it (players.json is not shipped inside the function) is empty,
+  // and must not be served for the next hour.
+  if (isLeagueDataLoaded(mflPlayersPath(year))) indexMemory = { year, at: Date.now(), index };
   return index;
 }
 
