@@ -1,20 +1,26 @@
 /**
  * The score overlay the Google TV app draws over YouTube TV.
  *
- * Two views of the same games, and the TV app picks which:
+ * Three views of the same games, and the TV app picks which:
  *
+ *  - the BAR: the ticker strip, one line at the top or bottom of the screen
+ *    (the owner picks, to dodge the network's own graphics). It rotates
+ *    through the owner's games and announces his own starters' big plays. It
+ *    never takes the remote, so YouTube TV keeps it;
+ *  - EXPANDED: the strip opened into both starting lineups of one game, with
+ *    whoever just scored lit up. The app holds the remote: Left/Right steps
+ *    through the games, Up/Down moves the strip to the top or bottom, OK opens
+ *    the panel, Back returns to the bar;
  *  - the PANEL: one game at a time down the left of the screen, score, win
  *    chance and both starting lineups. The app gives it the remote while it is
- *    up, Left/Right steps through the owner's games, Back drops to the bar;
- *  - the BAR: a thin strip across the top with one chip per game, which never
- *    takes the remote, so YouTube TV keeps it.
+ *    up, Left/Right steps through the owner's games, Back drops to the bar.
  *
  * The panel also lists the NFL games the owner's starters are in (Watch).
  * Up/Down picks one and OK hands it to the app, which opens it on the TV; the
  * list ends with "Hide overlay", which closes the overlay altogether.
  *
  * The app talks to this page through `window.__mflOverlay` (`setMode`,
- * `step`, `move`, `select`), because the keys reach the APP's window, not the
+ * `setEdge`, `step`, `move`, `select`), because the keys reach the APP's window, not the
  * page; the page answers through `window.MflOverlayHost` (`watch`, `hide`).
  * Arrow keys and Enter are also read here so the page can be checked in a
  * desktop browser.
@@ -24,15 +30,20 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
-import type { PlayerMeta } from '../../../types/live-scoring';
+import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import {
+  detectBigPlays,
   formatChance,
+  overlayEdgeFrom,
   moveWatch,
   overlayGames,
   overlayWatchList,
   watchNote,
   overlayModeFrom,
   stepOverlay,
+  type BigPlayAlert,
+  type OverlayEdge,
   type OverlayGame,
   type OverlayMode,
   type OverlaySide,
@@ -51,9 +62,19 @@ const RELOAD_MS = 3 * 60 * 60_000;
 const RETRY_MS = 60_000;
 /** How long the bar says how to open the panel, the first time it shows. */
 const BAR_HINT_MS = 12_000;
+/** How long the ticker shows each of the owner's games before the next. */
+const ROTATE_MS = 8_000;
+/** How long a big-play banner covers the ticker. */
+const ALERT_MS = 7_000;
+/** How long a starter stays lit up in the expanded lineups after a big play. */
+const JUST_SCORED_MS = 90_000;
+/** The app's own mark, light on dark: the overlay is always dark. */
+const LOGO_SRC = '/assets/mfl-live/icon-v2.svg';
 
 interface OverlayHost {
   setMode: (mode: OverlayMode) => void;
+  /** Which edge the app has put the strip's window on. */
+  setEdge: (edge: OverlayEdge) => void;
   step: (delta: number) => void;
   /** Up/Down through the Watch list. */
   move: (delta: number) => void;
@@ -67,6 +88,8 @@ declare global {
     /** The TV app's side of the bridge: which view its window is shaped for. */
     MflOverlayHost?: {
       mode: () => string;
+      /** The strip's edge. Absent on app builds before the ticker. */
+      edge?: () => string;
       /** Open a game on the TV, by what a search for it should ask. Absent on app builds before Watch. */
       watch?: (query: string) => void;
       /** Close the overlay. */
@@ -81,6 +104,8 @@ interface Props {
   /** Whether this TV (or browser) is signed in at all; null data then means a failed read. */
   signedIn: boolean;
   mode?: string | null;
+  /** `?edge=`, the app's hint for the first paint. */
+  edge?: string | null;
   /** The owner's answer on /live/settings; decides how a regional game is labeled. */
   sundayTicket?: boolean;
 }
@@ -88,12 +113,21 @@ interface Props {
 const points = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '0.00');
 const onePlace = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode, sundayTicket = false }: Props) {
+export default function BroadcastOverlay({
+  pageData,
+  signedIn,
+  mode: initialMode,
+  edge: initialEdge,
+  sundayTicket = false,
+}: Props) {
   const data = useMemo<LiveBroadcastPageData | null>(
     () => (pageData ? (JSON.parse(pageData) as LiveBroadcastPageData) : null),
     [pageData],
   );
   const [mode, setMode] = useState<OverlayMode>(overlayModeFrom(initialMode));
+  const [edge, setEdge] = useState<OverlayEdge>(overlayEdgeFrom(initialEdge));
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [index, setIndex] = useState(0);
   const [poll, setPoll] = useState<BroadcastPollResponse | null>(data?.initial ?? null);
   const [meta, setMeta] = useState<Record<string, PlayerMeta>>(data?.playerMeta ?? {});
@@ -136,8 +170,11 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
   useEffect(() => {
     const hostMode = window.MflOverlayHost?.mode();
     if (hostMode) setMode(overlayModeFrom(hostMode));
+    const hostEdge = window.MflOverlayHost?.edge?.();
+    if (hostEdge) setEdge(overlayEdgeFrom(hostEdge));
     window.__mflOverlay = {
       setMode: (next) => setMode(overlayModeFrom(next)),
+      setEdge: (next) => setEdge(overlayEdgeFrom(next)),
       step: (delta) => step(delta > 0 ? 1 : -1),
       move,
       select,
@@ -152,9 +189,10 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') step(-1);
       else if (e.key === 'ArrowRight') step(1);
-      else if (e.key === 'ArrowUp') move(-1);
-      else if (e.key === 'ArrowDown') move(1);
-      else if (e.key === 'Enter') select();
+      // Expanded: Up/Down is the strip's edge, as the app does it on a TV.
+      else if (e.key === 'ArrowUp') modeRef.current === 'expanded' ? setEdge('top') : move(-1);
+      else if (e.key === 'ArrowDown') modeRef.current === 'expanded' ? setEdge('bottom') : move(1);
+      else if (e.key === 'Enter') modeRef.current === 'expanded' ? setMode('panel') : select();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -165,6 +203,58 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
     const t = window.setTimeout(() => setBarHint(false), BAR_HINT_MS);
     return () => window.clearTimeout(t);
   }, [mode]);
+
+  // The ticker rotates through the owner's games; expanded and the panel leave
+  // that to Left/Right.
+  useEffect(() => {
+    if (mode !== 'bar' || games.length < 2) return;
+    const t = window.setInterval(() => setIndex((i) => stepOverlay(i, 1, countRef.current)), ROTATE_MS);
+    return () => window.clearInterval(t);
+  }, [mode, games.length]);
+
+  // Big plays: each poll is measured against the highest score each starter
+  // has shown, so the first poll only sets baselines.
+  const seenRef = useRef<Map<string, number>>(new Map());
+  const recentRef = useRef<Map<string, number>>(new Map());
+  const [alerts, setAlerts] = useState<BigPlayAlert[]>([]);
+  const [justScored, setJustScored] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!poll || games.length === 0) return;
+    const now = Date.now();
+    const found = detectBigPlays(seenRef.current, games, poll.moments ?? [], now, recentRef.current);
+    seenRef.current = found.seen;
+    recentRef.current = found.recent;
+    if (found.alerts.length === 0) return;
+    setAlerts((queue) => [...queue, ...found.alerts]);
+    // The ticker turns to the game the play counted in.
+    if (modeRef.current === 'bar') {
+      const at = games.findIndex((g) => g.key === found.alerts[0].gameKey);
+      if (at >= 0) setIndex(at);
+    }
+    setJustScored((lit) => {
+      const next: Record<string, number> = {};
+      for (const [id, at] of Object.entries(lit)) if (now - at < JUST_SCORED_MS) next[id] = at;
+      for (const alert of found.alerts) next[alert.playerId] = now;
+      return next;
+    });
+  }, [poll, games]);
+  // A highlight ends on its own clock, not at the next big play.
+  useEffect(() => {
+    const times = Object.values(justScored);
+    if (times.length === 0) return;
+    const wait = Math.max(0, Math.min(...times) + JUST_SCORED_MS - Date.now());
+    const t = window.setTimeout(() => {
+      const now = Date.now();
+      setJustScored((lit) => Object.fromEntries(Object.entries(lit).filter(([, at]) => now - at < JUST_SCORED_MS)));
+    }, wait);
+    return () => window.clearTimeout(t);
+  }, [justScored]);
+  const alert = alerts[0];
+  useEffect(() => {
+    if (!alert) return;
+    const t = window.setTimeout(() => setAlerts((queue) => queue.slice(1)), ALERT_MS);
+    return () => window.clearTimeout(t);
+  }, [alert]);
 
   // A page that could not read the leagues tries again soon; a working one
   // still reloads now and then to pick up a new week.
@@ -226,27 +316,49 @@ export default function BroadcastOverlay({ pageData, signedIn, mode: initialMode
     );
   }
 
-  if (mode === 'bar') {
+  if (mode === 'bar' || mode === 'expanded') {
+    const current = games[Math.min(index, games.length - 1)];
     return (
-      <div className="bov bov--bar" data-stale={stale || undefined}>
-        <ul className="bov__chips">
-          {games.map((game) => (
-            <li className="bov__chip" key={game.key}>
-              <span className="bov__chip-league">{game.leagueName}</span>
-              <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.mine.swatch }}>
-                {game.mine.abbrev}
+      <div className={`bov bov--strip bov--${mode}`} data-edge={edge} data-stale={stale || undefined}>
+        <Ticker
+          game={current}
+          position={Math.min(index, games.length - 1)}
+          count={games.length}
+          week={data.week}
+          alert={alert}
+          focused={mode === 'expanded'}
+          hint={mode === 'bar' && barHint}
+        />
+        {mode === 'expanded' && (
+          <section className="bov__xp">
+            <header className="bov__xp-head">
+              {games.length > 1 && <span className="bov__xp-arrow">◀</span>}
+              <XpSide side={current.mine} readable={current.readable} lead={current.mine.live > current.opponent.live} />
+              <span className="bov__xp-mid">
+                {current.leagueName}
+                {games.length > 1 && ` · ${Math.min(index, games.length - 1) + 1} of ${games.length}`}
               </span>
-              <b>{game.readable ? onePlace(game.mine.live) : '–'}</b>
-              <span className="bov__chip-dash">–</span>
-              <b>{game.readable ? onePlace(game.opponent.live) : '–'}</b>
-              <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.opponent.swatch }}>
-                {game.opponent.abbrev}
-              </span>
-              {game.readable && <span className="bov__chip-chance">{formatChance(game.winChance)}</span>}
-            </li>
-          ))}
-        </ul>
-        {barHint && <p className="bov__hint">Open Score overlay again for the full panel</p>}
+              <XpSide
+                side={current.opponent}
+                readable={current.readable}
+                lead={current.opponent.live > current.mine.live}
+                end
+              />
+              {games.length > 1 && <span className="bov__xp-arrow">▶</span>}
+            </header>
+            <div className="bov__xp-cols">
+              <XpLineup side={current.mine} slate={poll?.games ?? []} lit={justScored} />
+              <XpLineup side={current.opponent} slate={poll?.games ?? []} lit={{}} />
+            </div>
+            <footer className="bov__keys bov__xp-keys">
+              {games.length > 1 && <span>◀ ▶ Matchups</span>}
+              <span>▲ ▼ Top or bottom</span>
+              <span>OK Watch a game</span>
+              <span>BACK Back to the game</span>
+              {stale && <span className="bov__stale">Reconnecting</span>}
+            </footer>
+          </section>
+        )}
       </div>
     );
   }
@@ -335,6 +447,122 @@ function Lineup({ side }: { side: OverlaySide }) {
           <span className="bov__pproj">{onePlace(player.projected)}</span>
         </li>
       ))}
+    </ol>
+  );
+}
+
+/** The one line that stays on screen: the logo, one of the owner's games, and big plays sliding over it. */
+function Ticker({
+  game,
+  position,
+  count,
+  week,
+  alert,
+  focused,
+  hint,
+}: {
+  game: OverlayGame;
+  position: number;
+  count: number;
+  week: number;
+  alert: BigPlayAlert | undefined;
+  focused: boolean;
+  /** The first few seconds: how to open it up, in place of the projections. */
+  hint: boolean;
+}) {
+  const mineLead = game.readable && game.mine.live > game.opponent.live;
+  const theirLead = game.readable && game.opponent.live > game.mine.live;
+  return (
+    <div className="bov__strip" data-focused={focused || undefined}>
+      <img className="bov__logo" src={LOGO_SRC} alt="MFL Football" />
+      <div className="bov__now" key={game.key}>
+        <span className="bov__now-league">{game.leagueName}</span>
+        <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.mine.swatch }}>
+          {game.mine.abbrev}
+        </span>
+        <b data-lead={mineLead || undefined}>{game.readable ? onePlace(game.mine.live) : '–'}</b>
+        <span className="bov__chip-dash">–</span>
+        <b data-lead={theirLead || undefined}>{game.readable ? onePlace(game.opponent.live) : '–'}</b>
+        <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.opponent.swatch }}>
+          {game.opponent.abbrev}
+        </span>
+        {hint ? (
+          <span className="bov__now-proj">Open Score overlay again to expand</span>
+        ) : game.readable && (
+          <span className="bov__now-proj">
+            Proj {onePlace(game.mine.projectedFinal)} – {onePlace(game.opponent.projectedFinal)}
+          </span>
+        )}
+        {game.readable && <span className="bov__chip-chance">{formatChance(game.winChance)}</span>}
+      </div>
+      <span className="bov__week">
+        {count > 1 && (
+          <span className="bov__pips" aria-hidden="true">
+            {Array.from({ length: count }, (_, i) => (
+              <i key={i} data-on={i === position || undefined} />
+            ))}
+          </span>
+        )}
+        Wk {week}
+      </span>
+      {alert && (
+        <div className="bov__alert" key={alert.key} role="status">
+          <span className="bov__alert-tag">Big play</span>
+          <span className="bov__alert-who">{alert.playerName}</span>
+          <span className="bov__alert-what">
+            {[alert.text, `for ${alert.teamName}`, ...alert.alsoIn.map((l) => `also ${l}`)].filter(Boolean).join(' · ')}
+          </span>
+          <span className="bov__alert-pts">+{onePlace(alert.gained)}</span>
+          <span className="bov__alert-now">
+            {alert.mineAbbrev} {onePlace(alert.mineLive)} – {onePlace(alert.opponentLive)} {alert.opponentAbbrev}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function XpSide({ side, readable, lead, end = false }: { side: OverlaySide; readable: boolean; lead: boolean; end?: boolean }) {
+  const name = <span className="bov__xp-name">{side.name}</span>;
+  const pts = (
+    <b className="bov__xp-pts" data-lead={lead || undefined}>
+      {readable ? points(side.live) : '–'}
+    </b>
+  );
+  return (
+    <span className={`bov__xp-side${end ? ' bov__xp-side--end' : ''}`}>
+      {end ? pts : name}
+      {end ? name : pts}
+    </span>
+  );
+}
+
+/** ESPN's clock for the player's NFL game ("8:12 - 3rd"), "Final", or its kickoff. */
+function gameNote(nflTeam: string, slate: readonly NflGame[]): { text: string; live: boolean } {
+  if (!nflTeam) return { text: '', live: false };
+  const game = slate.find((g) => normalizeTeamCode(g.away.code) === nflTeam || normalizeTeamCode(g.home.code) === nflTeam);
+  if (!game) return { text: '', live: false };
+  return { text: game.shortDetail, live: game.state === 'in' };
+}
+
+function XpLineup({ side, slate, lit }: { side: OverlaySide; slate: readonly NflGame[]; lit: Record<string, number> }) {
+  return (
+    <ol className="bov__xp-lineup">
+      {side.lineup.map((player) => {
+        const note = gameNote(player.nflTeam, slate);
+        return (
+          <li key={player.id} data-lit={lit[player.id] ? true : undefined}>
+            <span className="bov__pos">{player.position}</span>
+            <span className="bov__name">
+              {player.name} <span className="bov__xp-team">{player.nflTeam}</span>
+            </span>
+            <span className="bov__xp-game" data-live={note.live || undefined}>
+              {note.text}
+            </span>
+            <span className="bov__pts">{onePlace(player.live)}</span>
+          </li>
+        );
+      })}
     </ol>
   );
 }

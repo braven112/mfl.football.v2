@@ -11,6 +11,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
@@ -38,10 +39,15 @@ import android.widget.FrameLayout;
  * The score overlay: a see-through window over whatever the TV is playing,
  * holding the site's `/live/broadcast/overlay` page.
  *
- * Two views, and the window changes shape with them:
+ * Three views, and the window changes shape with them:
  *
- *  - BAR: a thin strip across the top. It never takes the remote, so the app
+ *  - BAR: the ticker, a short band across the top or the bottom of the screen
+ *    (the owner's pick, remembered). It never takes the remote, so the app
  *    underneath (YouTube TV) keeps every key.
+ *  - EXPANDED: the ticker opened into both lineups, a taller band on the same
+ *    edge. It takes the remote: Left/Right step through games, Up/Down move
+ *    the ticker to the top or the bottom, OK opens the panel, Back drops to
+ *    the bar. Launching the overlay again while it runs opens this view.
  *  - PANEL: a column down the left with one game, both lineups and the NFL
  *    games the owner's starters are in. It takes the remote while it is up:
  *    Left/Right step through games, Up/Down pick a game to watch and OK opens
@@ -67,12 +73,23 @@ public class OverlayService extends Service {
     private static final String YOUTUBE_TV = "com.google.android.youtube.tvunplugged";
 
     private static final String MODE_BAR = "bar";
+    private static final String MODE_EXPANDED = "expanded";
     private static final String MODE_PANEL = "panel";
+
+    private static final String EDGE_TOP = "top";
+    private static final String EDGE_BOTTOM = "bottom";
+    private static final String PREFS = "overlay";
+    private static final String PREF_EDGE = "edge";
+
+    /** Share of the screen's height each ticker view's window takes. */
+    private static final float BAR_HEIGHT = 0.10f;
+    private static final float EXPANDED_HEIGHT = 0.62f;
 
     private WindowManager windowManager;
     private KeyFrame root;
     private WebView webView;
     private String mode = MODE_BAR;
+    private String edge = EDGE_TOP;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable idleToBar = () -> setMode(MODE_BAR);
@@ -100,6 +117,7 @@ public class OverlayService extends Service {
     public void onCreate() {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        edge = EDGE_BOTTOM.equals(prefs().getString(PREF_EDGE, EDGE_TOP)) ? EDGE_BOTTOM : EDGE_TOP;
         IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(screenOff, filter, Context.RECEIVER_NOT_EXPORTED);
@@ -124,8 +142,9 @@ public class OverlayService extends Service {
             mode = MODE_BAR;
             attach();
         } else {
-            // Launched again while running, typically over the game: the panel.
-            setMode(MODE_PANEL);
+            // Launched again while running, typically over the game: the
+            // ticker opens up.
+            setMode(MODE_EXPANDED);
         }
         return START_NOT_STICKY;
     }
@@ -199,7 +218,7 @@ public class OverlayService extends Service {
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         windowManager.addView(root, layoutFor(mode));
-        webView.loadUrl(BuildConfig.OVERLAY_URL + "?mode=" + mode);
+        webView.loadUrl(BuildConfig.OVERLAY_URL + "?mode=" + mode + "&edge=" + edge);
     }
 
     private void setMode(String next) {
@@ -208,7 +227,7 @@ public class OverlayService extends Service {
         handler.removeCallbacks(idleToBar);
         windowManager.updateViewLayout(root, layoutFor(next));
         pushModeToPage();
-        if (MODE_PANEL.equals(next)) {
+        if (!MODE_BAR.equals(next)) {
             root.requestFocus();
             handler.postDelayed(idleToBar, PANEL_IDLE_MS);
         }
@@ -218,6 +237,22 @@ public class OverlayService extends Service {
         if (webView == null) return;
         webView.evaluateJavascript(
                 "window.__mflOverlay && window.__mflOverlay.setMode('" + mode + "')", null);
+        webView.evaluateJavascript(
+                "window.__mflOverlay && window.__mflOverlay.setEdge && window.__mflOverlay.setEdge('" + edge + "')",
+                null);
+    }
+
+    /** Move the ticker to the top or the bottom, and remember it for next time. */
+    private void setEdge(String next) {
+        if (root == null || next.equals(edge)) return;
+        edge = next;
+        prefs().edit().putString(PREF_EDGE, edge).apply();
+        windowManager.updateViewLayout(root, layoutFor(mode));
+        pushModeToPage();
+    }
+
+    private SharedPreferences prefs() {
+        return getSharedPreferences(PREFS, MODE_PRIVATE);
     }
 
     private void stepPage(int delta) {
@@ -263,10 +298,11 @@ public class OverlayService extends Service {
                 : WindowManager.LayoutParams.TYPE_PHONE;
         Rect screen = screenBounds();
         boolean panel = MODE_PANEL.equals(forMode);
+        boolean bar = MODE_BAR.equals(forMode);
 
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        if (!panel) {
+        if (bar) {
             // The bar is for looking at only; every key stays with the game.
             flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                     | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
@@ -274,9 +310,11 @@ public class OverlayService extends Service {
 
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 panel ? Math.round(screen.width() * 0.45f) : ViewGroup.LayoutParams.MATCH_PARENT,
-                panel ? ViewGroup.LayoutParams.MATCH_PARENT : Math.round(screen.height() * 0.09f),
+                panel
+                        ? ViewGroup.LayoutParams.MATCH_PARENT
+                        : Math.round(screen.height() * (bar ? BAR_HEIGHT : EXPANDED_HEIGHT)),
                 type, flags, PixelFormat.TRANSLUCENT);
-        params.gravity = Gravity.TOP | Gravity.START;
+        params.gravity = (!panel && EDGE_BOTTOM.equals(edge) ? Gravity.BOTTOM : Gravity.TOP) | Gravity.START;
         return params;
     }
 
@@ -300,11 +338,12 @@ public class OverlayService extends Service {
 
         @Override
         public boolean dispatchKeyEvent(KeyEvent event) {
-            if (!MODE_PANEL.equals(mode)) return super.dispatchKeyEvent(event);
+            if (MODE_BAR.equals(mode)) return super.dispatchKeyEvent(event);
             if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
 
             handler.removeCallbacks(idleToBar);
             handler.postDelayed(idleToBar, PANEL_IDLE_MS);
+            if (MODE_EXPANDED.equals(mode)) return expandedKey(event.getKeyCode());
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                     stepPage(-1);
@@ -331,6 +370,33 @@ public class OverlayService extends Service {
         }
     }
 
+    /** The remote while the ticker is open: games, edge, the panel, and back to the game. */
+    private boolean expandedKey(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                stepPage(-1);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                stepPage(1);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_UP:
+                setEdge(EDGE_TOP);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+                setEdge(EDGE_BOTTOM);
+                return true;
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                setMode(MODE_PANEL);
+                return true;
+            default:
+                // Back, and anything meant for the game: hand the remote back.
+                setMode(MODE_BAR);
+                return true;
+        }
+    }
+
     /**
      * What the page may ask of the app: the current view, to open a game, to
      * close. Only our own page is ever loaded here ({@link OverlayClient}).
@@ -340,6 +406,11 @@ public class OverlayService extends Service {
         @JavascriptInterface
         public String mode() {
             return mode;
+        }
+
+        @JavascriptInterface
+        public String edge() {
+            return edge;
         }
 
         @JavascriptInterface

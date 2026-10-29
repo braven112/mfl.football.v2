@@ -4,8 +4,8 @@
  *
  * Not a page anyone browses to: the Google TV app loads it into a see-through
  * window drawn over another app (YouTube TV), so the owner can watch the game
- * and their matchups at once. `?mode=panel|bar` is the app's hint for the
- * first paint; after that the app switches views through the page's
+ * and their matchups at once. `?mode=panel|bar|expanded` and `?edge=top|bottom`
+ * are the app's hints for the first paint; after that the app switches views through the page's
  * `window.__mflOverlay` handle (BroadcastOverlay.tsx).
  *
  * Its own document, no app layout: the page must be transparent edge to edge,
@@ -72,6 +72,7 @@ Astro.response.headers.set('Cache-Control', 'no-store');
       pageData={pageData}
       signedIn={Boolean(viewer)}
       mode={Astro.url.searchParams.get('mode')}
+      edge={Astro.url.searchParams.get('edge')}
       sundayTicket={tvSettings.sundayTicket}
     />
   </body>
