@@ -6,14 +6,15 @@
  * so the API route stays thin and a test can plan a season without touching
  * the filesystem.
  *
- * Feeds are read at REQUEST time rather than import-globbed, matching
- * schedule-plan.ts: the newest three seasons per league ship inside the
- * serverless function (scripts/lib/archived-feed-files.mjs), which is what
- * makes a current-or-recent season resolvable here.
+ * File access is INJECTED (`read`), because this module has two kinds of
+ * caller: the site (pages and API routes), which reads league data through the
+ * loader in src/utils/league-data.ts — Blob in production — via
+ * `accounting-season-loader.ts`, and node scripts run under tsx
+ * (scripts/accounting-carry-over.ts), which read the committed files off disk
+ * and cannot load the Vite-only loader. Each caller first fetches the paths the
+ * `…Paths` helpers name, then hands in a sync reader over them.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import type { LeagueDefinition } from '../config/leagues';
 import { calculateAllPlayFromWeekly, getTierAllPlayStandings } from './standings';
 import { getTierMembership } from './afl-tier';
@@ -32,17 +33,44 @@ export interface PayoutSeasonData {
   tierTable?: Record<string, string[]>;
 }
 
-const readJson = <T,>(file: string): T | null => {
+/** Sync read of a repo-relative league data path (`data/theleague/…json`): parsed JSON, or null when missing. */
+export type SeasonDataReader = (repoPath: string) => unknown;
+
+const readJson = <T,>(read: SeasonDataReader, repoPath: string): T | null => {
   try {
-    if (!fs.existsSync(file)) return null;
-    return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
+    return (read(repoPath) ?? null) as T | null;
   } catch {
     return null;
   }
 };
 
+const dataDir = (league: LeagueDefinition) => league.dataPath.replace(/^\.?\//, '').replace(/\/+$/, '');
+
 const feedPath = (league: LeagueDefinition, year: number, feed: string) =>
-  path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), `${feed}.json`);
+  `${dataDir(league)}/mfl-feeds/${year}/${feed}.json`;
+
+const tierConfigPath = (league: LeagueDefinition) => `${dataDir(league)}/afl.config.json`;
+const awardsPath = (league: LeagueDefinition) => `${dataDir(league)}/awards-history.json`;
+
+/** Every path `loadPayoutSeasonData(league, year, read)` reads. */
+export function payoutSeasonPaths(league: LeagueDefinition, year: number): string[] {
+  return [
+    feedPath(league, year, 'playoff-brackets'),
+    feedPath(league, year, 'weekly-results'),
+    feedPath(league, year, 'standings'),
+    feedPath(league, year, 'league'),
+    tierConfigPath(league),
+    awardsPath(league),
+  ];
+}
+
+/** League years `loadFranchises` falls back through. */
+const franchiseYears = (year: number) => [year, year - 1, year - 2];
+
+/** Every path `loadFranchises(league, year, read)` reads. */
+export function franchisePaths(league: LeagueDefinition, year: number): string[] {
+  return franchiseYears(year).map((candidate) => feedPath(league, candidate, 'league'));
+}
 
 /**
  * The AFL's all-play tier table, ranked, as franchise ids per tier.
@@ -58,26 +86,25 @@ const feedPath = (league: LeagueDefinition, year: number, feed: string) =>
  * Returns an empty table (not a throw) for a league or season with no tier
  * competition; the planner then reports those prizes unresolved.
  */
-function buildTierTable(league: LeagueDefinition, year: number): Record<string, string[]> {
-  const standings = readJson<any>(feedPath(league, year, 'standings'));
+function buildTierTable(read: SeasonDataReader, league: LeagueDefinition, year: number): Record<string, string[]> {
+  const standings = readJson<any>(read, feedPath(league, year, 'standings'));
   const franchises = standings?.leagueStandings?.franchise;
   if (!Array.isArray(franchises) || franchises.length === 0) return {};
 
   const tierMembership = getTierMembership(year);
   if (!tierMembership) return {};
 
-  const configFile = path.join(process.cwd(), league.dataPath, 'afl.config.json');
-  const baseConfig = readJson<any>(configFile);
+  const baseConfig = readJson<any>(read, tierConfigPath(league));
   if (!baseConfig) return {};
 
-  const weeklyResults = readJson<any>(feedPath(league, year, 'weekly-results'));
+  const weeklyResults = readJson<any>(read, feedPath(league, year, 'weekly-results'));
   const cutoffWeek = resolveTierCutoffWeek(baseConfig?.tierCompetition, year);
   const calculatedAllPlay = weeklyResults
     ? calculateAllPlayFromWeekly(weeklyResults, cutoffWeek)
     : undefined;
 
   const yearResolved = resolveConfigForYear(baseConfig, year);
-  const seasonStructure = extractSeasonStructure(readJson<any>(feedPath(league, year, 'league')));
+  const seasonStructure = extractSeasonStructure(readJson<any>(read, feedPath(league, year, 'league')));
   const seasonConfig = applySeasonStructure(yearResolved, seasonStructure);
 
   const tiers = getTierAllPlayStandings(
@@ -98,9 +125,11 @@ function buildTierTable(league: LeagueDefinition, year: number): Record<string, 
 }
 
 /** Resolved award winners for a season, or {} when the league records none. */
-function loadAwards(league: LeagueDefinition, year: number): Record<string, any> {
-  const file = path.join(process.cwd(), league.dataPath, 'awards-history.json');
-  const history = readJson<{ seasons?: Array<{ year: number; awards?: Record<string, any> }> }>(file);
+function loadAwards(read: SeasonDataReader, league: LeagueDefinition, year: number): Record<string, any> {
+  const history = readJson<{ seasons?: Array<{ year: number; awards?: Record<string, any> }> }>(
+    read,
+    awardsPath(league),
+  );
   const season = history?.seasons?.find((entry) => Number(entry.year) === year);
   return season?.awards ?? {};
 }
@@ -114,19 +143,20 @@ function loadAwards(league: LeagueDefinition, year: number): Record<string, any>
  */
 export function loadPayoutSeasonData(
   league: LeagueDefinition,
-  year: number
+  year: number,
+  read: SeasonDataReader
 ): PayoutSeasonData {
-  const playoffs = readJson<any>(feedPath(league, year, 'playoff-brackets'));
-  const weekly = readJson<any>(feedPath(league, year, 'weekly-results'));
+  const playoffs = readJson<any>(read, feedPath(league, year, 'playoff-brackets'));
+  const weekly = readJson<any>(read, feedPath(league, year, 'weekly-results'));
 
   return {
     bracketMeta: playoffs?.playoffBrackets?.playoffBracket
       ? [].concat(playoffs.playoffBrackets.playoffBracket)
       : [],
     brackets: playoffs?.brackets ?? {},
-    awards: loadAwards(league, year),
+    awards: loadAwards(read, league, year),
     weeklyScores: weekly?.weeks ?? [],
-    tierTable: buildTierTable(league, year),
+    tierTable: buildTierTable(read, league, year),
   };
 }
 
@@ -141,10 +171,11 @@ export function loadPayoutSeasonData(
  */
 export function loadFranchises(
   league: LeagueDefinition,
-  year: number
+  year: number,
+  read: SeasonDataReader
 ): Array<{ id: string; name: string }> {
-  for (const candidate of [year, year - 1, year - 2]) {
-    const feed = readJson<any>(feedPath(league, candidate, 'league'));
+  for (const candidate of franchiseYears(year)) {
+    const feed = readJson<any>(read, feedPath(league, candidate, 'league'));
     const franchises = feed?.league?.franchises?.franchise;
     if (!Array.isArray(franchises) || franchises.length === 0) continue;
     return franchises

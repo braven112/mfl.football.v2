@@ -10,11 +10,10 @@
  * league's config file (CLAUDE.md § "never hardcode league constants").
  */
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { LEAGUES, type CanonicalLeagueSlug } from '../config/leagues';
-import { getPlayerMap } from './player-map';
-import { getOwnersByPlayer } from './offseason-hero-data';
+import { getPlayerMap, preloadPlayerIdentity } from './player-map';
+import { getOwnersByPlayer, OWNERSHIP_FEEDS, preloadOffseasonHeroData } from './offseason-hero-data';
+import { leagueFeedPath, listLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 export interface ClubRosterEntry {
   franchiseId: string;
@@ -28,15 +27,15 @@ export interface ClubRosterEntry {
   players: { id: string; name: string; position: string; espnId: string | null; headshot: string }[];
 }
 
-function feedsRoot(league: CanonicalLeagueSlug): string {
+function dataPathOf(league: CanonicalLeagueSlug): string {
   // A demo-only slot (keeper) is absent from LEAGUES everywhere but a demo deployment.
   const entry = LEAGUES[league];
   if (!entry) throw new Error(`nfl-club-rosters: league ${league} is not registered here`);
-  return join(process.cwd(), entry.dataPath, 'mfl-feeds');
+  return entry.dataPath;
 }
 
 /**
- * The newest league-year directory on disk.
+ * The newest league-year directory with feeds in it.
  *
  * An MFL feed directory is keyed by the LEAGUE year, not the season year, and
  * the two disagree between the league rollover and Labor Day — so this reads
@@ -44,27 +43,35 @@ function feedsRoot(league: CanonicalLeagueSlug): string {
  * (CLAUDE.md § "An MFL feed directory is keyed by the LEAGUE year").
  */
 export function latestFeedYear(league: CanonicalLeagueSlug): number | null {
-  const root = feedsRoot(league);
-  if (!existsSync(root)) return null;
-  const years = readdirSync(root)
+  const years = listLeagueData(`${dataPathOf(league)}/mfl-feeds/*/*.json`)
+    .map((p) => p.split('/').at(-2) ?? '')
     .filter((d) => /^\d{4}$/.test(d))
     .map(Number)
     .sort((a, b) => b - a);
   return years[0] ?? null;
 }
 
+/**
+ * Load what {@link clubRosterHolders} reads for `league` (league data lives in
+ * the store in production — src/utils/league-data.ts).
+ */
+export async function preloadClubRosterHolders(league: CanonicalLeagueSlug): Promise<void> {
+  const year = latestFeedYear(league);
+  if (!year) return;
+  await Promise.all([
+    preloadPlayerIdentity([year]),
+    preloadOffseasonHeroData(league, [year], OWNERSHIP_FEEDS),
+    preloadLeagueData([leagueFeedPath(dataPathOf(league), year, 'league.json')]),
+  ]);
+}
+
 function franchiseNames(league: CanonicalLeagueSlug, year: number): Map<string, string> {
   const out = new Map<string, string>();
-  const path = join(feedsRoot(league), String(year), 'league.json');
-  if (!existsSync(path)) return out;
-  try {
-    const raw = JSON.parse(readFileSync(path, 'utf-8'));
-    const list = raw?.league?.franchises?.franchise ?? [];
-    for (const f of Array.isArray(list) ? list : [list]) {
-      if (f?.id) out.set(f.id, f.name || f.id);
-    }
-  } catch {
-    /* a feed we cannot read is an empty roster panel, never a broken page */
+  // A feed we cannot read is an empty roster panel, never a broken page.
+  const raw = readLeagueDataSync<any>(leagueFeedPath(dataPathOf(league), year, 'league.json'));
+  const list = raw?.league?.franchises?.franchise ?? [];
+  for (const f of Array.isArray(list) ? list : [list]) {
+    if (f?.id) out.set(f.id, f.name || f.id);
   }
   return out;
 }

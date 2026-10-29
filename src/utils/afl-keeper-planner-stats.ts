@@ -12,20 +12,25 @@
  * both KeeperPlanner call sites (rosters.astro, the Front Office panel)
  * already pass as `year`.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { getLeagueBySlug } from '../config/leagues';
 import { computeSeasonPoints, type MflPlayersFeed, type WeeklyResultsRaw } from './afl-keeper-analysis';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
-const loadFeedJson = (year: number, filename: string, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): any => {
-  const feedPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/${filename}`);
-  try {
-    if (fs.existsSync(feedPath)) return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-  } catch {
-    // Missing/malformed feed — caller treats the year as having no data.
-  }
-  return null;
-};
+/** Every feed `buildKeeperPlannerStats` reads for one year. */
+const FEEDS = ['players.json', 'weekly-results-raw.json', 'adp-dynasty.json', 'adp-redraft.json'];
+
+// Missing/malformed feed — the caller treats the year as having no data.
+// League data, read through src/utils/league-data.ts (the store, in production).
+const loadFeedJson = (year: number, filename: string, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): any =>
+  readLeagueDataSync(leagueFeedPath(dataPath, year, filename));
+
+/** Load what `buildKeeperPlannerStats(year, dataPath)` reads, so its sync reads are served from memory. */
+export function preloadKeeperPlannerStats(
+  year: number,
+  dataPath = getLeagueBySlug('afl-fantasy')!.dataPath,
+): Promise<void> {
+  return preloadLeagueData(FEEDS.map((f) => leagueFeedPath(dataPath, year, f)));
+}
 
 export interface KeeperPlannerPlayerStats {
   ppg: number | null;

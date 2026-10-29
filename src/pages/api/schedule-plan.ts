@@ -13,26 +13,50 @@
  * schedule. See docs/claude/rules/schedule-optimization.md.
  */
 import type { APIRoute } from 'astro';
-import fs from 'node:fs';
-import path from 'node:path';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
 import { planSchedule, SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
+import { leagueFeedPath, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
-/** Feeds live under data/<league>/mfl-feeds/<year>/. The newest three seasons
- *  ship into the serverless function (scripts/lib/archived-feed-files.mjs), so
- *  a request-time read of the current or prior season resolves. */
-const readFeedFile = (dataPath: string, year: number, feed: string): any => {
-  try {
-    const file = path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), `${feed}.json`);
-    if (!fs.existsSync(file)) return null;
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
+/**
+ * Every feed `planSchedule` asks its injected `readFeed` for, as
+ * `[yearOffset, feed]`. planSchedule is sync and shared with the CLI scripts
+ * (which read off disk), so this route loads the feeds first — through the
+ * loader, because some (players.json) no longer ship inside the function —
+ * and hands planSchedule a lookup over what it loaded.
+ */
+const PLAN_FEEDS: Array<[number, string]> = [
+  [0, 'league'],
+  [0, 'schedule'],
+  [0, 'rosters'],
+  [0, 'players'],
+  [0, 'ranking-sources'],
+  [-1, 'league'],
+  [-1, 'standings'],
+];
+
+/** Load the feeds and return planSchedule's `readFeed`. A missing or unreadable feed reads as null. */
+const loadFeedReader = async (dataPath: string, year: number) => {
+  const loaded = new Map<string, any>();
+  await Promise.all(
+    PLAN_FEEDS.map(async ([offset, feed]) => {
+      const y = year + offset;
+      const value = await loadLeagueData(leagueFeedPath(dataPath, y, `${feed}.json`)).catch(() => null);
+      loaded.set(`${y}/${feed}`, value);
+    }),
+  );
+  return (y: number, feed: string): any => {
+    const key = `${y}/${feed}`;
+    if (!loaded.has(key)) {
+      // A feed planSchedule started reading that PLAN_FEEDS does not list.
+      console.warn(`[schedule-plan] feed ${key} was not preloaded; add it to PLAN_FEEDS`);
+      return null;
+    }
+    return loaded.get(key);
+  };
 };
 
 /**
@@ -42,15 +66,8 @@ const readFeedFile = (dataPath: string, year: number, feed: string): any => {
 const PREVIEW_COLORING_ITERATIONS = 8000;
 
 /** Player values for the projected-starter bye model. Shared across leagues. */
-const readRankingSources = (year: number): any => {
-  try {
-    const file = path.join(process.cwd(), 'data', 'ranking-sources', `${year}.json`);
-    if (!fs.existsSync(file)) return null;
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
-};
+const readRankingSources = (year: number): Promise<any> =>
+  loadLeagueData(`data/ranking-sources/${year}.json`).catch(() => null);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -95,6 +112,10 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   try {
+    const [readFeed, rankingSources] = await Promise.all([
+      loadFeedReader(league.dataPath, year),
+      readRankingSources(year),
+    ]);
     const plan = planSchedule({
       slug,
       year,
@@ -103,8 +124,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       // Player values for the projected-starter bye model. Shared across
       // leagues, so it does not come through readFeed (which is scoped to one
       // league's mfl-feeds directory). Null degrades to whole-roster counts.
-      rankingSources: readRankingSources(year),
-      readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
+      rankingSources,
+      readFeed,
       // Bounded for the function's 30s ceiling. The colouring refinement needs
       // ~150k iterations to clear the structured seed's local optimum and that
       // alone takes ~30s, so this preview gets a fraction of it and returns at

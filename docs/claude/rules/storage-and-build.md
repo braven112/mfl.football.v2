@@ -69,6 +69,59 @@ personalizes nav/footer from the session on every page, so shared caching
 would leak one owner's nav to everyone. Requires client-side nav
 personalization first.
 
+### The function size budget
+
+The whole site deploys as ONE Vercel function (`_render`) — Astro 7's adapter
+has no per-route split — and Vercel rejects it above 250 MB uncompressed. It
+has failed a deploy three times (the raw `data/` tracer fallback at 263 MB, the
+Archie's feed archive, the logo tracer's native vectorizer at 250.69 MB on
+2026-10-29), each time with no signal before the deploy.
+
+`scripts/check-function-size.mjs` measures `.vercel/output/functions/` and
+prints the biggest contributors, grouped so the list names a cause (`dist chunk:
+players ×27`, a pnpm package, `data/<league>/mfl-feeds/*/<file>`). It runs
+report-only in `postbuild` on every build, and with `--enforce` in CI's
+`Function size` job, which fails above `BUDGET_MB` (240). The 10 MB of headroom
+is for data growth: feeds grow weekly in season and bot sync commits to `main`
+open no PR, so the staging push run is the first to see it.
+
+When it goes red, do not just trim the nearest file. About three quarters of the
+function (231 MB measured 2026-10-29) is league data — compiled feed globs in
+`dist/`, raw feed copies the tracer pulls in for `fs` readers, `src/data/` —
+and native modules exclude only their musl twins. Move data a request does not
+need out of the function (a derived snapshot, as TheLeague rosters did with
+`roster-season-payloads.json`) before reaching for Vercel's large-functions
+beta, which raises the limit without stopping the growth. Guard:
+`tests/function-size-budget.test.ts`.
+
+### League data lives in Blob — read it with `loadLeagueData`
+
+Since Oct 2026 the site reads league data (`data/**`, `src/data/**` JSON)
+through `src/utils/league-data.ts`, which fetches it from Vercel Blob in
+production and off disk locally. The files stay committed in git; after
+prebuild, `scripts/publish-league-data.mjs` uploads the changed ones (named
+by content hash) and writes a manifest the function bundles. Before this, every
+`import.meta.glob` and JSON import of league data was compiled into the one
+function, so each new league cost 10-30 MB and the number of leagues was
+capped.
+
+- **New code reads with `await loadLeagueData(path)`**, or `await
+  preloadLeagueData([...])` once per request and `getLeagueData(path)` in a
+  sync helper. A sync read nobody preloaded throws, locally too. Paths are
+  repo-relative (`data/afl-fantasy/mfl-feeds/2019/players.json`);
+  `listLeagueData('data/<league>/mfl-feeds/*/x.json')` replaces a glob's keys.
+- **Never in client code.** A React island or `<script>` that imports a JSON
+  ships it to the browser, not the function; the loader is server-only.
+- **A real deploy without `BLOB_READ_WRITE_TOKEN` fails at publish**, on
+  purpose: the pages would have nothing to read. CI measures with
+  `LEAGUE_DATA_STORE=measure`, which writes the manifest without uploading.
+- **`FUNCTION_EXCLUDED`** (`scripts/lib/league-data-store.mjs`) lists files
+  left out of the function. Add a pattern only once the loader is its last
+  reader; a raw `fs` read of an excluded file ENOENTs in production only.
+- Guard: `tests/league-data-store.test.ts` — a shrink-only per-file count of
+  bundled data reads (`tests/fixtures/league-data-import-baseline.json`), and
+  no raw reader of an excluded file.
+
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline
 from 2026-08-16 is committed under `data/perf-baseline/`.

@@ -25,7 +25,7 @@ import CollegeLogoDarkStyles from '../CollegeLogoDarkStyles.astro';
 import PlayerCell from '../PlayerCell.astro';
 import PlayerDetailsModal from '../PlayerDetailsModal.astro';
 import PlayerInjuryModal from '../PlayerInjuryModal.astro';
-import { loadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
+import { loadWeeklyPlayerResults, preloadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
 import AFLActionModal from '../AFLActionModal.astro';
 import SignInModal from '../../../components/shared/SignInModal.astro';
 import KeeperPlanner, {
@@ -41,6 +41,7 @@ import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import {
   loadFantasyPointsAllowed,
+  preloadFantasyPointsAllowed,
   getOpponentFpa,
   fpaTier,
 } from '../../../utils/nfl-matchups';
@@ -60,6 +61,7 @@ import collegeLogos from '../../../data/college-logos.json';
 import {
   loadSeasonScores,
   loadProjections,
+  preloadSeasonScoring,
   summarizeSeasonScores,
   recentScoreAverage,
 } from '../../../utils/afl-player-scoring';
@@ -88,7 +90,7 @@ import { loginUrlFor } from '../../../utils/login-redirect';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../../utils/trade-bait';
 import { getCachedTradeBait } from '../../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../../components/shared/rankings/MyRankEditor.astro';
-import { buildKeeperPlannerStats } from '../../../utils/afl-keeper-planner-stats';
+import { buildKeeperPlannerStats, preloadKeeperPlannerStats } from '../../../utils/afl-keeper-planner-stats';
 import RosterHeader from '../../../components/shared/roster-header/RosterHeader.astro';
 import {
   buildTeamGroups,
@@ -572,6 +574,19 @@ const sv = (v: number | null | undefined): string | undefined =>
 // columns here are season stats, so both turn over on the league's start day.
 const nflWeek = getCurrentWeek();
 const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
+
+// The sync readers below (points allowed, season scoring, Season Results, the
+// keeper planner's stats) are served from memory, so load what they read
+// first — players.json and weekly-results-raw.json are not shipped inside the
+// function, so a reader nobody preloaded comes back empty in production.
+// Never fatal: a store hiccup leaves those columns blank, not the page a 500.
+await Promise.all([
+  preloadFantasyPointsAllowed(nflYear),
+  preloadFantasyPointsAllowed(nflYear - 1),
+  preloadSeasonScoring(league.dataPath, selectedYear),
+  preloadWeeklyPlayerResults(league.dataPath, selectedYear),
+  hasKeepers ? preloadKeeperPlannerStats(selectedYear, league.dataPath) : null,
+]).catch((err) => console.error('[rosters] league data preload failed:', err));
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
 const oddsMap = await loadLiveOddsData(nflWeek);
 

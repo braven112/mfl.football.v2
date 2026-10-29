@@ -12,13 +12,18 @@ import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeaguePersona } from '../../utils/persona-server';
 import { personaLabels } from '../../utils/persona.mjs';
 import archiesConfig from '../../../data/archies/archies.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
-// Lazy glob: weekly issues are retained forever (published articles point at
-// them), so only the selected year's latest file is imported per request —
-// an eager glob would bundle every archived issue into the server chunk.
-const files = import.meta.glob<GauntletDerived>(
-  '../../../data/archies/derived/schedule-strength-*.json',
-  { import: 'default' }
+// Weekly issues are retained forever (published articles point at them), so
+// only the selected year's latest file is read per request, through the
+// league-data loader — a glob would compile every issue into the function.
+const { dataPath } = getLeagueBySlug('archies')!;
+const files: Record<string, () => Promise<GauntletDerived>> = Object.fromEntries(
+  listLeagueData(`${dataPath}/derived/schedule-strength-*.json`).map((p) => [
+    p,
+    () => loadLeagueData<GauntletDerived>(p) as Promise<GauntletDerived>,
+  ]),
 );
 
 const view = await resolveGauntletViewLazy({

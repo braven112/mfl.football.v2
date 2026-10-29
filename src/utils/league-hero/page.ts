@@ -22,7 +22,7 @@ import { isSaturdayEveningPT } from '../sunday-ticket-window';
 import { hasSubmittedLineup } from '../lineup-submitted';
 import { getCurrentNFLWeek } from '../current-week';
 import { getCurrentSeasonYear } from '../league-year';
-import { getRecapWeek, getOwnersByPlayer } from '../offseason-hero-data';
+import { getRecapWeek, getOwnersByPlayer, HERO_CASTING_FEEDS, preloadOffseasonHeroData } from '../offseason-hero-data';
 import { resolveRecapDestination } from '../hero-recap-destination';
 import { resolveWaiverWindow } from '../waiver-window';
 import { waiverDeadlineCopy } from '../waiver-deadline-copy';
@@ -103,6 +103,15 @@ async function bylined(league: LeagueDefinition, post: SchefterPost): Promise<La
 export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise<LeagueHeroState> {
   const { league, effectiveDate } = input;
   const profile = getLeagueHeroProfile(league.slug);
+
+  // The recap, ownership and casting helpers (offseason-hero-data.ts) are
+  // sync reads of league data, which lives in the store in production: load
+  // the league's feeds for both of the years they are asked about.
+  await preloadOffseasonHeroData(
+    league.slug,
+    [input.leagueYear, getCurrentSeasonYear(effectiveDate)],
+    HERO_CASTING_FEEDS,
+  );
 
   // Whether this season's reveal is already locked — read here so the
   // resolver stays synchronous and side-effect free.

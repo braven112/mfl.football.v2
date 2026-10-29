@@ -57,3 +57,32 @@ jobs:
           # rosters.astro needs the big heap — 8192 OOMs, verified on a
           # 15 GB / 4 vCPU box matching ubuntu-latest. Don't lower this.
           TYPECHECK_NODE_OPTIONS: --max-old-space-size=12288
+
+  function-size:
+    name: Function size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      # The whole site is ONE Vercel function with a hard 250 MB limit, and
+      # Vercel only says so after a deploy has already failed. This builds the
+      # same output Vercel would and fails above the 240 MB budget, printing
+      # what fills it (scripts/check-function-size.mjs). VERCEL_ENV=preview
+      # takes the slim prebuild — committed data artifacts, no network
+      # fetches — which is what a preview deploy measures too.
+      - name: Build
+        run: pnpm build
+        env:
+          VERCEL: '1'
+          VERCEL_ENV: preview
+          # Leave out what a real deploy stores in Blob, without uploading
+          # (scripts/publish-league-data.mjs).
+          LEAGUE_DATA_STORE: measure
+          NODE_OPTIONS: --max-old-space-size=8192
+
+      - name: Check function size budget
+        run: node scripts/check-function-size.mjs --enforce --top=25

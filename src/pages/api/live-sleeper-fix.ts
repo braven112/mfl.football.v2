@@ -22,7 +22,7 @@ import { getMflLiveUser } from '../../utils/auth';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getSleeperLink, sleeperViewerKey } from '../../utils/sleeper/link';
 import { discoverSleeperBoardLeagues, readViewerSleeperPlayers } from '../../utils/sleeper/live';
-import { loadMflPlayerIndex, loadSleeperPlayerMap } from '../../utils/sleeper/players';
+import { loadMflPlayerIndex, loadSleeperPlayerMap, preloadMflPlayerIndex } from '../../utils/sleeper/players';
 import { MFL_PLAYER_ID, SLEEPER_PLAYER_ID, clearPlayerFix, submitPlayerFix } from '../../utils/sleeper/player-fixes';
 
 export const prerender = false;
@@ -56,6 +56,8 @@ export const POST: APIRoute = async ({ request }) => {
   const [map, link] = await Promise.all([
     loadSleeperPlayerMap(year),
     getSleeperLink(user).catch(() => null),
+    // loadMflPlayerIndex below is sync over this (players.json is not shipped in the function).
+    preloadMflPlayerIndex(year).catch(() => undefined),
   ]);
   const player = map[sid];
   if (!link || !player || player.mfl) return back('invalid');

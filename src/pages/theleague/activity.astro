@@ -2,9 +2,10 @@
 /**
  * Owner Activity (TheLeague) — thin route wrapper.
  *
- * The page is components/shared/OwnerActivityPage; the gate and the globs stay
- * here (Astro.rewrite only works from a page, and a static import specifier
- * can't be a runtime variable). Private by default:
+ * The page is components/shared/OwnerActivityPage; the gate and the feed
+ * listings stay here (Astro.rewrite only works from a page). The feeds are
+ * read through the league-data loader, lazily — only the seasons the page
+ * opens are fetched (src/utils/league-data.ts). Private by default:
  * src/utils/owner-activity-access.ts.
  */
 import OwnerActivityPage from '../../components/shared/OwnerActivityPage.astro';
@@ -12,6 +13,7 @@ import { getAuthUser } from '../../utils/auth';
 import { resolveOwnerActivityAccess } from '../../utils/owner-activity-access';
 import { loginUrlForRequest, forbiddenPathFor } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
@@ -20,8 +22,11 @@ const access = await resolveOwnerActivityAccess(getAuthUser(Astro.request), leag
 if (access.kind === 'login') return Astro.redirect(loginUrlForRequest(Astro, league));
 if (access.kind === 'forbidden') return Astro.rewrite(forbiddenPathFor(league, 'admin'));
 
-const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json');
-const lastVisitFiles = import.meta.glob('../../../data/theleague/owner-last-visit.json');
+// Lazy `{ path: () => data }` maps, the shape the old lazy globs had.
+const lazyFeeds = (pattern: string) =>
+  Object.fromEntries(listLeagueData(pattern).map((path) => [path, () => loadLeagueData(path)]));
+const transactionFeeds = lazyFeeds(`${league.dataPath}/mfl-feeds/*/transactions.json`);
+const lastVisitFiles = lazyFeeds(`${league.dataPath}/owner-last-visit.json`);
 ---
 
 <OwnerActivityPage

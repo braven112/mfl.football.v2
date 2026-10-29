@@ -46,14 +46,13 @@ import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
 import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { buildPlayoffRoundView } from '../../utils/hero-data/playoff-round-data';
-import fs from 'node:fs';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrlFor } from '../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
@@ -80,10 +79,11 @@ import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 import TopPlayersPromo from '../../components/shared/hp-sections/TopPlayersPromo.astro';
-import topPlayersData from '../../../data/theleague/derived/top-players.json';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import type { TopPlayersFile } from '../../types/top-players';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
+const topPlayersData = await loadLeagueData(`${THELEAGUE.dataPath}/derived/top-players.json`);
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
@@ -340,15 +340,34 @@ const extractFeedSeason = (fp: string): string | null => {
   return m ? m[1] : null;
 };
 
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', { eager: true });
-// Year-filtered globs (2025+): everything below is filtered to
-// `currentSalaryYear`, so bundling all 20 seasons only bloated the server
-// chunk — players.json alone is ~1.4 MB × season. The brace pattern matches
-// 2025-2099 (self-advancing); tests/current-era-feed-globs.test.ts guards it.
-const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json', { eager: true });
-const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
-const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', { eager: true });
+// Only the newest salary file and that year's feeds are rendered, so only
+// those are read — through the league-data loader, never bundled. The feeds
+// are read in the current era (2025+) only, as the year-filtered globs this
+// replaced matched.
+const rosterModules: Record<string, unknown> = {};
+const salarySeasonOf = (p: string) => Number(p.match(/(\d{4})\.json$/)?.[1] ?? NaN);
+for (const path of listLeagueData('src/data/mfl-player-salaries-*.json')
+  .filter((p) => !Number.isNaN(salarySeasonOf(p)))
+  .sort((a, b) => salarySeasonOf(b) - salarySeasonOf(a))) {
+  const data = await loadLeagueData(path);
+  if (data) {
+    rosterModules[path] = data;
+    break;
+  }
+}
+const hpFeedYear = Object.keys(rosterModules)[0]?.match(/(\d{4})\.json$/)?.[1] ?? String(SALARY_YEARS[0]);
+const loadCurrentEraFeed = async (file: string): Promise<Record<string, unknown>> => {
+  if (Number(hpFeedYear) < 2025) return {};
+  const path = `${THELEAGUE.dataPath}/mfl-feeds/${hpFeedYear}/${file}`;
+  const data = await loadLeagueData(path);
+  return data ? { [path]: data } : {};
+};
+const [salaryAdjustmentFeeds, draftResultsFeeds, playerFeeds, transactionFeeds] = await Promise.all([
+  loadCurrentEraFeed('salaryAdjustments.json'),
+  loadCurrentEraFeed('draftResults.json'),
+  loadCurrentEraFeed('players.json'),
+  loadCurrentEraFeed('transactions.json'),
+]);
 
 const rosterEntries = Object.entries(rosterModules)
   .map(([path, mod]) => ({ season: extractSeason(path), data: getModuleData(mod) }))
@@ -395,6 +414,9 @@ const liveTransactions = userFranchiseId
   : null;
 const rawTransactions: MFLRawTransaction[] = mergeTransactionRows(staticTransactions, liveTransactions);
 
+// getPlayerMap is sync over preloaded data (players.json is not shipped inside
+// the function); this year may fall outside the middleware's hot set.
+await preloadPlayerIdentity([parseInt(currentSalaryYear) || getCurrentLeagueYear()]).catch(() => undefined);
 const hpPlayerIdentityMap = getPlayerMap(parseInt(currentSalaryYear) || getCurrentLeagueYear());
 const playerMetaById = new Map<string, { name: string; position: string }>();
 const eligibilityPlayersById = new Map<string, MFLPlayerInfo>();
@@ -793,10 +815,9 @@ if (liveScoring && heroState.metadata.gameWindow === 'mnf' && heroState.metadata
 if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && heroState.slot === 'standings') {
   try {
     const seasonYear = getCurrentSeasonYear();
-    // Read the feeds from disk (not `await import`) so live feed updates aren't
-    // masked by Vite's JSON module cache — matches the readJsonFile pattern used
-    // across the hero-data helpers, and keeps dev + prod reading the same bytes.
-    const feedData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`, 'utf8'));
+    // Through the league-data loader (not `await import`), so the feeds stay
+    // out of the function bundle and dev + prod read the same bytes.
+    const feedData = await loadLeagueData<any>(`${THELEAGUE.dataPath}/mfl-feeds/${seasonYear}/playoff-brackets.json`);
     const champRaw = feedData?.brackets?.['1'];
 
     if (champRaw) {
@@ -804,7 +825,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
 
       if (champBracket) {
         // Build standings + seed maps for resolving bracket references
-        const standingsData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/standings.json`, 'utf8'));
+        const standingsData = await loadLeagueData<any>(`${THELEAGUE.dataPath}/mfl-feeds/${seasonYear}/standings.json`);
         const franchiseList = standingsData?.leagueStandings?.franchise
           ? Array.isArray(standingsData.leagueStandings.franchise)
             ? standingsData.leagueStandings.franchise

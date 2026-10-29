@@ -10,7 +10,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { canViewSiteInsights } from '../../utils/site-insights';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { loadMflPlayerIndex } from '../../utils/sleeper/players';
+import { loadMflPlayerIndex, preloadMflPlayerIndex } from '../../utils/sleeper/players';
 import { MFL_PLAYER_ID, SLEEPER_PLAYER_ID, approvePlayerFix, rejectPlayerFix } from '../../utils/sleeper/player-fixes';
 
 export const prerender = false;
@@ -30,6 +30,8 @@ export const POST: APIRoute = async ({ request }) => {
   if (!SLEEPER_PLAYER_ID.test(sid) || !MFL_PLAYER_ID.test(mfl)) return to('/live/player-fixes?done=invalid');
 
   if (action === 'approve') {
+    // Sync over preloaded data: players.json is not shipped inside the function.
+    await preloadMflPlayerIndex(getCurrentSeasonYear()).catch(() => undefined);
     if (!loadMflPlayerIndex(getCurrentSeasonYear()).has(mfl)) return to('/live/player-fixes?done=invalid');
     return to(`/live/player-fixes?done=${(await approvePlayerFix(sid, mfl)) ? 'approved' : 'error'}`);
   }

@@ -26,6 +26,7 @@ import { getRedis } from './redis-client';
 import { currentDemoContext } from './demo-request-context';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { LEAGUES } from '../config/leagues-data.mjs';
+import { loadLeagueData } from './league-data';
 
 /** MFL's default bid and add salary: the league minimum, as MFL writes it. */
 const MINIMUM_SALARY = String(LEAGUES.theleague.minimumSalary);
@@ -34,33 +35,34 @@ type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 
 // ── Base data: the generated league, loaded lazily per file ─────────────────
 
-// One glob per league the demo serves an MFL for: the dynasty league in
-// TheLeague's slot, and the keeper league in its demo-only slot. Literal
-// specifiers — a glob cannot take a variable — keyed by the slot's slug.
-const FEED_LOADERS: Record<'theleague' | 'keeper' | 'afl-fantasy' | 'best-ball-1', Record<string, () => Promise<Json>>> = {
-  theleague: import.meta.glob<Json>(
-    '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
-    { import: 'default' },
-  ),
-  keeper: import.meta.glob<Json>(
-    '../../data/keeper/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
-    { import: 'default' },
-  ),
-  // The big league in the AFL's slot. Current-era years only: the real AFL's
-  // feeds reach back to 2003, and on a production build this glob would
-  // otherwise chunk every one of them into the server bundle.
-  'afl-fantasy': import.meta.glob<Json>(
-    '../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
-    { import: 'default' },
-  ),
-  // The redraft demo's best-ball league: a draft and its season so far, for
-  // the live scoring board (the real best-ball league commits no feeds here).
-  'best-ball-1': import.meta.glob<Json>(
-    '../../data/best-ball-1/mfl-feeds/*/{league,rosters,players,schedule,weekly-results-raw,live-week,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
-    { import: 'default' },
-  ),
+// The feeds the stand-in serves, per league the demo answers an MFL for: the
+// dynasty league in TheLeague's slot, the keeper league in its demo-only slot,
+// the big league in the AFL's, and the redraft demo's best-ball league. Read
+// through the league-data loader (src/utils/league-data.ts) rather than a glob,
+// so none of it is compiled into the function.
+const COMMON_FEEDS = [
+  'league', 'rosters', 'players', 'standings', 'schedule', 'weekly-results-raw', 'live-week', 'transactions',
+  'draftResults', 'auctionResults', 'futureDraftPicks', 'salaryAdjustments', 'calendar', 'projectedScores',
+  'injuries', 'nflSchedule', 'fantasyPointsAllowed',
+];
+const FEED_NAMES: Record<'theleague' | 'keeper' | 'afl-fantasy' | 'best-ball-1', ReadonlySet<string>> = {
+  theleague: new Set(COMMON_FEEDS),
+  keeper: new Set(COMMON_FEEDS),
+  'afl-fantasy': new Set(COMMON_FEEDS.filter((n) => !['auctionResults', 'futureDraftPicks', 'salaryAdjustments'].includes(n))),
+  // A draft and its season so far, for the live scoring board (the real
+  // best-ball league commits no feeds here).
+  'best-ball-1': new Set([
+    'league', 'rosters', 'players', 'schedule', 'weekly-results-raw', 'live-week', 'projectedScores', 'injuries',
+    'nflSchedule', 'fantasyPointsAllowed',
+  ]),
 };
-type StandinSlug = keyof typeof FEED_LOADERS;
+/**
+ * Which seasons a slot serves. The big league in the AFL's slot serves the
+ * current era only: the real AFL's feeds reach back to 2003.
+ */
+const servesYear = (slug: StandinSlug, year: string): boolean =>
+  /^\d{4}$/.test(year) && (slug !== 'afl-fantasy' || Number(year) >= 2025);
+type StandinSlug = keyof typeof FEED_NAMES;
 
 /**
  * Which league this call is answering for — set once per call from its `L=`
@@ -75,10 +77,13 @@ const baseCache = new Map<string, Promise<Json | null>>();
 
 function loadFeed(year: string, name: string): Promise<Json | null> {
   const slug = activeSlug();
-  const key = `../../data/${slug}/mfl-feeds/${year}/${name}.json`;
+  const key = `data/${slug}/mfl-feeds/${year}/${name}.json`;
   if (!baseCache.has(key)) {
-    const loader = FEED_LOADERS[slug][key];
-    baseCache.set(key, loader ? loader().then((v) => structuredClone(v)).catch(() => null) : Promise.resolve(null));
+    const served = FEED_NAMES[slug].has(name) && servesYear(slug, year);
+    baseCache.set(
+      key,
+      served ? loadLeagueData<Json>(key).then((v) => structuredClone(v)).catch(() => null) : Promise.resolve(null),
+    );
   }
   // Every caller gets its own copy: overlays mutate what they are handed.
   return baseCache.get(key)!.then((v) => (v == null ? null : structuredClone(v)));

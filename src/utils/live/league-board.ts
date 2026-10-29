@@ -28,7 +28,12 @@ import { getLeagueConfigStructure, getLeagueTeamConfigs } from '../league-team-b
 import { buildPanelGroups } from './board-groups';
 import { getLeagueYearForSlug } from '../league-year';
 import { applyThrowbackToBoard, type ThrowbackPreview } from '../throwback-live-scoring';
-import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
+import {
+  getCurrentRosterSample,
+  getLiveScoringSample,
+  preloadCurrentRosterSample,
+  preloadLiveScoringSample,
+} from '../../data/live-scoring-sample';
 import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
 
@@ -193,6 +198,7 @@ async function assembleUngrouped(
   // the AFL June 1), and the roster replay reads THAT year off disk — so it is
   // the per-league clock, never the season one.
   const rosterYear = getLeagueYearForSlug(slug);
+  await (isRosterSample ? preloadCurrentRosterSample({ slug, year: rosterYear }) : preloadLiveScoringSample({ slug }));
   const replay = isRosterSample
     ? getCurrentRosterSample({ slug, year: rosterYear })
     : getLiveScoringSample({ slug, doubleheader: searchParams.get('dh') === '1' });

@@ -5,7 +5,6 @@
  * Shared render lives in components/shared/draft-room/DraftRoomPage; the
  * AFL-specific decisions live in utils/afl-draft-room, which documents WHY
  * the two conferences draft on different MFL pages and must never be crossed.
- * See TheLeague's twin for why the globs are here.
  *
  * Everything downstream is scoped to the chosen conference: the board, the
  * franchises, the deep link, the clock's units, and the client's poll URL —
@@ -19,6 +18,7 @@ import { getAFLPreference, resolveAFLTeamSelection } from '../../../utils/team-p
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { buildAflRoomPageData, resolveAflRoomFor } from '../../../utils/afl-draft-room';
+import { loadLeagueData } from '../../../utils/league-data';
 
 export const prerender = false;
 
@@ -43,14 +43,20 @@ const room = resolveAflRoomFor(
   myFranchiseId
 );
 
-const pageData = buildAflRoomPageData({
+const leagueYear = getLeagueYearForSlug('afl-fantasy');
+const yearFeed = async (file: string) => {
+  const path = `${league.dataPath}/mfl-feeds/${leagueYear}/${file}`;
+  return { [path]: { default: await loadLeagueData(path) } };
+};
+
+const pageData = await buildAflRoomPageData({
   room,
-  leagueYear: getLeagueYearForSlug('afl-fantasy'),
+  leagueYear,
   leagueId: league.id,
   mflHost: league.mflHost,
   myFranchiseId,
-  draftResultsFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', { eager: true }),
-  leagueFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/league.json', { eager: true }),
+  draftResultsFeeds: await yearFeed('draftResults.json'),
+  leagueFeeds: await yearFeed('league.json'),
   partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
 });
 ---

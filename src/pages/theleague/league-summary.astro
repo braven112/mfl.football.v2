@@ -15,9 +15,10 @@ import {
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
@@ -25,27 +26,34 @@ export const prerender = false;
 // Data loading — same patterns as league-comparison.astro and rosters.astro
 // ---------------------------------------------------------------------------
 
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
-  eager: true,
-});
+// Only the newest salary file and that season's feeds are rendered, so only
+// those are read (src/utils/league-data.ts — kept out of the function bundle).
+const rosterModules: Record<string, unknown> = {};
+const salarySeasonOf = (p: string) => Number(p.match(/(\d{4})\.json$/)?.[1] ?? NaN);
+for (const path of listLeagueData('src/data/mfl-player-salaries-*.json')
+  .filter((p) => !Number.isNaN(salarySeasonOf(p)))
+  .sort((a, b) => salarySeasonOf(b) - salarySeasonOf(a))) {
+  const data = await loadLeagueData(path);
+  if (data) {
+    rosterModules[path] = data;
+    break;
+  }
+}
 
-// Year-filtered globs (2025+): all three feeds are filtered to the current
-// salary year below, so all-years globs only bloated the server chunk.
-// Pattern matches 2025-2099; tests/current-era-feed-globs.test.ts guards it.
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
-  { eager: true }
-);
-
-const draftResultsFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json',
-  { eager: true }
-);
-
-const playerFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
-  { eager: true }
-);
+// The three feeds are read for the current salary year only, and only in the
+// current era (2025+) the old year-filtered globs covered.
+const feedYear = Object.keys(rosterModules)[0]?.match(/(\d{4})\.json$/)?.[1] ?? String(SALARY_YEARS[0]);
+const feedPath = (file: string) => `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${feedYear}/${file}`;
+const loadCurrentEraFeed = async (file: string): Promise<Record<string, unknown>> => {
+  if (Number(feedYear) < 2025) return {};
+  const data = await loadLeagueData(feedPath(file));
+  return data ? { [feedPath(file)]: data } : {};
+};
+const [salaryAdjustmentFeeds, draftResultsFeeds, playerFeeds] = await Promise.all([
+  loadCurrentEraFeed('salaryAdjustments.json'),
+  loadCurrentEraFeed('draftResults.json'),
+  loadCurrentEraFeed('players.json'),
+]);
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -106,6 +114,9 @@ const playerFeedEntries = Object.entries(playerFeeds)
   .filter((item) => item.season === currentYear && item.data);
 
 const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+// getPlayerMap is sync over preloaded data (players.json is not shipped inside
+// the function); this year may fall outside the middleware's hot set.
+await preloadPlayerIdentity([parseInt(currentYear) || 2026]).catch(() => undefined);
 const lsPlayerIdentityMap = getPlayerMap(parseInt(currentYear) || 2026);
 const playerMetaById = new Map<string, { name: string; position: string }>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {

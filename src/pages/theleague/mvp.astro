@@ -7,10 +7,15 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getNflLogoUrl, getPlayerImageUrl, re
 import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
-const playerModules = import.meta.glob(
-  '../../data/mfl-player-salaries-*.json',
-  { eager: true }
+// Every season is read: the MVP table spans the league's whole history.
+const playerModules: Record<string, unknown> = Object.fromEntries(
+  await Promise.all(
+    listLeagueData('src/data/mfl-player-salaries-*.json').map(
+      async (path) => [path, await loadLeagueData(path)] as const,
+    ),
+  ),
 );
 
 const getModuleData = (mod: any) =>

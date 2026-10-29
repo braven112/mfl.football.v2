@@ -33,6 +33,7 @@ import { getPlayerMap } from '../../../utils/player-map';
 import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
 import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 import { calculateAllSurplusValues } from '../../../utils/surplus-value';
 import { buildPickValueMap } from '../../../utils/draft-pick-value';
 import type { PlayerSurplusData, DraftPickValueData } from '../../../types/trade-builder';
@@ -44,47 +45,54 @@ const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
 
-// Load data feeds for the current league year
-// Year-filtered globs (2025+): every feed on this page resolves via
-// findFeed(..., leagueYearStr) (trade bait also leagueYear-1), so bundling
-// all 20 seasons only bloated the server chunk. Pattern matches 2025-2099;
-// tests/current-era-feed-globs.test.ts guards it.
-const rostersFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json',
-  { eager: true }
-);
-const playersFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
-  { eager: true }
-);
-const salaryAdjFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
-  { eager: true }
-);
-const draftPickFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/futureDraftPicks.json',
-  { eager: true }
-);
-const draftResultsFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json',
-  { eager: true }
-);
-const tradeBaitFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/tradeBait.json',
-  { eager: true }
-);
-const salaryAvgModules = import.meta.glob(
-  '../../../data/mfl-salary-averages-*.json',
-  { eager: true }
-);
-const projScoreFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/projectedScores.json',
-  { eager: true }
-);
-const adpDynastyFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/adp-dynasty.json',
-  { eager: true }
-);
+// Load data feeds for the current league year (trade bait also the year
+// before), through the league-data loader — never bundled into the function.
+// Each object keeps the old glob's `{ path: data }` shape for the years read,
+// so findFeed resolves them unchanged; the current-era floor (2025+) the
+// year-filtered globs had is kept.
+const FEED_ROOT = `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds`;
+const CURRENT_ERA_FLOOR = 2025;
+const loadFeedYears = async (file: string, years: number[]): Promise<Record<string, unknown>> => {
+  const wanted = [...new Set(years)].filter((y) => y >= CURRENT_ERA_FLOOR).sort((a, b) => a - b);
+  const loaded = await Promise.all(
+    wanted.map(async (y) => {
+      const path = `${FEED_ROOT}/${y}/${file}`;
+      return [path, await loadLeagueData(path)] as const;
+    }),
+  );
+  return Object.fromEntries(loaded.filter(([, data]) => data != null));
+};
+// Salary averages: the frozen year is this league year or the one before, and
+// the newest file is the fallback — those are the only files read.
+const loadSalaryAverages = async (): Promise<Record<string, unknown>> => {
+  const keys = listLeagueData('src/data/mfl-salary-averages-*.json');
+  const newest = [...keys].sort().reverse()[0];
+  const wanted = keys.filter(
+    (k) => k.includes(leagueYearStr) || k.includes(String(leagueYear - 1)) || k === newest,
+  );
+  return Object.fromEntries(await Promise.all(wanted.map(async (k) => [k, await loadLeagueData(k)] as const)));
+};
+const [
+  rostersFeeds,
+  playersFeeds,
+  salaryAdjFeeds,
+  draftPickFeeds,
+  draftResultsFeeds,
+  tradeBaitFeeds,
+  salaryAvgModules,
+  projScoreFeeds,
+  adpDynastyFeeds,
+] = await Promise.all([
+  loadFeedYears('rosters.json', [leagueYear]),
+  loadFeedYears('players.json', [leagueYear]),
+  loadFeedYears('salaryAdjustments.json', [leagueYear]),
+  loadFeedYears('futureDraftPicks.json', [leagueYear]),
+  loadFeedYears('draftResults.json', [leagueYear]),
+  loadFeedYears('tradeBait.json', [leagueYear, leagueYear - 1]),
+  loadSalaryAverages(),
+  loadFeedYears('projectedScores.json', [leagueYear]),
+  loadFeedYears('adp-dynasty.json', [leagueYear]),
+]);
 
 const getModuleData = (mod: unknown) =>
   mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;

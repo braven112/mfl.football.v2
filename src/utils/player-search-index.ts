@@ -12,13 +12,12 @@
  * player can have MORE than one owner: an AFL player is routinely held once
  * in each conference, so ownership is a list (getOwnersByPlayer), never one id.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
-import { getOwnersByPlayer } from './offseason-hero-data';
+import { getOwnersByPlayer, OWNERSHIP_FEEDS, preloadOffseasonHeroData } from './offseason-hero-data';
 import { asArray } from './mfl-normalize';
 import { formatMflName } from './player-name-matching';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 export interface PlayerSearchEntry {
   id: string;
@@ -37,12 +36,26 @@ export interface PlayerSearchIndex {
   players: PlayerSearchEntry[];
 }
 
+/**
+ * League data through src/utils/league-data.ts. The index is PRERENDERED, so
+ * this runs at build time; the route still awaits {@link preloadPlayerSearchIndex}
+ * first, so the sync build is served from memory rather than a disk fallback
+ * (players.json is not shipped inside the function).
+ */
 function readFeed(dataPath: string, year: number, file: string): any {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), file), 'utf8'));
-  } catch {
-    return null;
-  }
+  return readLeagueDataSync(leagueFeedPath(dataPath, year, file));
+}
+
+/** Load what `buildPlayerSearchIndex(league)` reads: this and last league year's feeds. */
+export async function preloadPlayerSearchIndex(league: CanonicalLeagueSlug): Promise<void> {
+  const def = getLeagueBySlug(league);
+  if (!def) return;
+  const current = getLeagueYearForSlug(league);
+  const years = [current, current - 1];
+  await Promise.all([
+    preloadLeagueData(years.flatMap((y) => ['players.json', 'league.json'].map((f) => leagueFeedPath(def.dataPath, y, f)))),
+    preloadOffseasonHeroData(league, years, OWNERSHIP_FEEDS),
+  ]);
 }
 
 export function buildPlayerSearchIndex(league: CanonicalLeagueSlug): PlayerSearchIndex {

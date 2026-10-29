@@ -27,21 +27,20 @@
 import type { WaiverSystem } from './waiver-claim';
 import { readBidRules } from './waiver-claim';
 
-// Narrow globs, one per league, matching the year layout the feeds already
-// use. Eager so the JSON is bundled rather than fetched per request.
-const THELEAGUE_FEEDS = import.meta.glob('../../data/theleague/mfl-feeds/20*/league.json', {
-  eager: true,
-});
-const AFL_FEEDS = import.meta.glob('../../data/afl-fantasy/mfl-feeds/20*/league.json', {
-  eager: true,
-});
+import { getLeagueBySlug } from '../config/leagues';
+import { leagueFeedPath, listLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
 
-function feedsFor(leagueSlug: string): Record<string, unknown> | null {
-  if (leagueSlug === 'theleague') return THELEAGUE_FEEDS;
-  if (leagueSlug === 'afl-fantasy') return AFL_FEEDS;
+/**
+ * Every season's league.json for a league, by path — read through the
+ * league-data loader (src/utils/league-data.ts), so only the one season a
+ * call needs is ever parsed, and none of it is compiled into the function.
+ */
+function feedsFor(leagueSlug: string): string[] | null {
   // Best-ball has no waiver feeds at all — it is draft-only
   // (docs/claude/rules/best-ball.md), so there is nothing to read.
-  return null;
+  if (leagueSlug !== 'theleague' && leagueSlug !== 'afl-fantasy') return null;
+  const dataPath = getLeagueBySlug(leagueSlug)?.dataPath;
+  return dataPath ? listLeagueData(leagueFeedPath(dataPath, '20*', 'league.json')) : null;
 }
 
 /**
@@ -53,16 +52,22 @@ function feedsFor(leagueSlug: string): Record<string, unknown> | null {
  * default: it would put a fabricated priority order in front of a blind-bid
  * league for the whole window between a rollover and the first feed sync.
  */
-function readLeaguePayload(leagueSlug: string, year: number): Record<string, any> | null {
+function chooseFeed(leagueSlug: string, year: number): string | null {
   const feeds = feedsFor(leagueSlug);
-  if (!feeds) return null;
+  if (!feeds || feeds.length === 0) return null;
+  const exact = feeds.find((path) => path.includes(`/${year}/`));
+  return exact ?? [...feeds].sort((a, b) => b.localeCompare(a))[0];
+}
 
-  const entries = Object.entries(feeds);
-  if (entries.length === 0) return null;
+function readLeaguePayload(leagueSlug: string, year: number): Record<string, any> | null {
+  const chosen = chooseFeed(leagueSlug, year);
+  return chosen ? (readLeagueDataSync<any>(chosen)?.league ?? null) : null;
+}
 
-  const exact = entries.find(([path]) => path.includes(`/${year}/`));
-  const chosen = exact ?? entries.sort(([a], [b]) => b.localeCompare(a))[0];
-  return (chosen[1] as any)?.default?.league ?? null;
+/** Load the one league.json {@link getWaiverSystem} reads for this league-year. */
+export async function preloadWaiverSystem(leagueSlug: string, year: number): Promise<void> {
+  const chosen = chooseFeed(leagueSlug, year);
+  if (chosen) await preloadLeagueData([chosen]);
 }
 
 /**

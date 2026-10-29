@@ -2,8 +2,8 @@
 /**
  * Rosters (AFL) — thin route wrapper over the shared rosters page
  * (src/components/shared/rosters/RostersPage.astro), which Archie's renders
- * too. What stays here, and why: the literal globs (a static import specifier
- * cannot be a runtime variable), the empty-year redirect (`Astro.redirect()`
+ * too. What stays here, and why: the feed reads for the selected season, the
+ * empty-year redirect (`Astro.redirect()`
  * only redirects from a PAGE) and the `?myteam` preference cookie WRITE
  * (`Astro.cookies.set` from a component throws after the headers commit).
  */
@@ -14,6 +14,7 @@ import { getAFLPreference, getAFLTeamData, setAFLPreference } from '../../utils/
 import { getAllTeams } from '../../utils/afl-conference';
 import { resolveRosterYear, rosterYearIsRenderable, rosterYears } from '../../utils/rosters/roster-page-feeds';
 import aflLeagueConfig from '../../../data/afl-fantasy/afl.config.json';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
@@ -30,30 +31,51 @@ if (myTeamParam) {
   }
 }
 
-const feeds = {
-  rosters: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true }),
-  players: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true }),
-  // Season-to-date points for the whole pool, the SAME source the Free Agents
-  // column reads (src/utils/stats-season.mjs). Committed from 2025 on, so the
-  // year glob matches what theleague/players.astro uses.
-  ytdScores: import.meta.glob(
-    '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
-    { eager: true }
-  ),
-  tradeBait: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true }),
-  tradeBaitByFranchise: import.meta.glob(
-    '../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json',
-    { eager: true }
-  ),
-  futurePicks: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
-  schedule: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
-  standings: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
-};
+// Feeds come through the league-data loader (src/utils/league-data.ts), not
+// eager globs: the year picker only needs every season's rosters.json, and
+// the page renders ONE season, so only that season's players, scores, bait,
+// picks, schedule and standings are read. Each entry keeps the
+// `{ [path]: { default } }` shape the shared page's `feedForYear` expects.
+const FEEDS_DIR = `${league.dataPath}/mfl-feeds`;
+async function loadFeedEntries(paths: string[]): Promise<Record<string, { default: unknown }>> {
+  const values = await Promise.all(paths.map((p) => loadLeagueData(p)));
+  const out: Record<string, { default: unknown }> = {};
+  paths.forEach((p, i) => {
+    if (values[i] != null) out[p] = { default: values[i] };
+  });
+  return out;
+}
+
+const rostersFeeds = await loadFeedEntries(listLeagueData(`${FEEDS_DIR}/*/rosters.json`));
 
 // Year selector: only years whose rosters.json has real data (skips an
 // empty/errored placeholder for a league year MFL has not created yet).
-const availableYears = rosterYears(feeds.rosters);
+const availableYears = rosterYears(rostersFeeds);
 const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, FALLBACK_YEAR);
+
+const yearFeed = (file: string) => [`${FEEDS_DIR}/${selectedYear}/${file}`];
+const [players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedule, standings] = await Promise.all([
+  loadFeedEntries(yearFeed('players.json')),
+  // Season-to-date points for the whole pool, the SAME source the Free Agents
+  // column reads (src/utils/stats-season.mjs). Committed from 2025 on; an
+  // earlier season has no file and reads as absent.
+  loadFeedEntries(yearFeed('playerScores-ytd.json')),
+  loadFeedEntries(yearFeed('tradeBait.json')),
+  loadFeedEntries(yearFeed('tradeBait-by-franchise.json')),
+  loadFeedEntries(yearFeed('futureDraftPicks.json')),
+  loadFeedEntries(yearFeed('schedule.json')),
+  loadFeedEntries(yearFeed('standings.json')),
+]);
+const feeds = {
+  rosters: rostersFeeds,
+  players,
+  ytdScores,
+  tradeBait,
+  tradeBaitByFranchise,
+  futurePicks,
+  schedule,
+  standings,
+};
 
 if (!rosterYearIsRenderable(feeds.rosters, feeds.players, selectedYear)) {
   return Astro.redirect(`/afl-fantasy/rosters?year=${availableYears[0] ?? FALLBACK_YEAR}`);

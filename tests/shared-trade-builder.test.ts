@@ -86,7 +86,8 @@ describe('the routes are thin wrappers', () => {
   it.each(Object.entries(ROUTES))('%s renders TradeBuilderPage with its own globs', (slug, route) => {
     const src = read(route);
     expect(src).toContain("from '../../../components/shared/trade-builder/TradeBuilderPage.astro'");
-    expect(src).toContain(`import.meta.glob('../../../../data/${slug}/mfl-feeds/`);
+    // Its own feeds: a literal glob, or (package leagues) the league-data loader.
+    expect(src).toMatch(new RegExp(`import\\.meta\\.glob\\('\\.\\./\\.\\./\\.\\./\\.\\./data/${slug}/mfl-feeds/|listLeagueData\\(`));
     expect(src.split('\n').length).toBeLessThan(80);
   });
 

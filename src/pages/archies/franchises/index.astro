@@ -5,22 +5,21 @@
  *
  * Archie's's clubs, grouped by division, with career records from every season
  * MFL holds for the league (the franchise-history chain). The history is read
- * through a glob: until the first sync after the Franchise pages box is ticked
+ * through the league-data loader (missing → null): until the first sync after the Franchise pages box is ticked
  * has built it, every card reads 0-0 and the lede says the history is coming.
  */
 import FranchisesIndexPage, { type FranchiseCardRow } from '../../../components/shared/franchises/FranchisesIndexPage.astro';
 import config from '../../../../data/archies/archies.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loadLeagueData } from '../../../utils/league-data';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('archies')!;
 const short = league.shortName ?? league.name;
 const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
-const history: any = Object.values(
-  import.meta.glob('../../../../data/archies/derived/franchise-history.json', { eager: true, import: 'default' }),
-)[0];
+const history: any = await loadLeagueData(`${league.dataPath}/derived/franchise-history.json`);
 
 const card = (team: any): FranchiseCardRow & { wins: number } => {
   const fr = history?.franchises?.[team.franchiseId];

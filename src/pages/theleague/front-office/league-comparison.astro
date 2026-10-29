@@ -17,17 +17,29 @@ import {
 } from '../../../utils/league-comparison-utils';
 import { parseNumber } from '../../../utils/formatters';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { LEAGUES } from '../../../config/leagues';
 
-// Load roster and salary data
-const rosterModules = import.meta.glob('../../../data/mfl-player-salaries-*.json', {
-  eager: true,
-});
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
-  {
-    eager: true,
+// Load roster and salary data. Only the newest salary file and that season's
+// adjustments are rendered, so only those are read.
+const leagueDataPath = LEAGUES.theleague.dataPath;
+const rosterModules: Record<string, unknown> = {};
+for (const path of listLeagueData('src/data/mfl-player-salaries-*.json')
+  .filter((p) => /(\d{4})\.json$/.test(p))
+  .sort((a, b) => Number(b.match(/(\d{4})\.json$/)![1]) - Number(a.match(/(\d{4})\.json$/)![1]))) {
+  const data = await loadLeagueData(path);
+  if (data) {
+    rosterModules[path] = data;
+    break;
   }
-);
+}
+const newestSalarySeason = Object.keys(rosterModules)[0]?.match(/(\d{4})\.json$/)?.[1] ?? getCurrentSeasonYear().toString();
+const salaryAdjustmentPath = `${leagueDataPath}/mfl-feeds/${newestSalarySeason}/salaryAdjustments.json`;
+const salaryAdjustmentFeeds: Record<string, unknown> = {};
+{
+  const data = await loadLeagueData(salaryAdjustmentPath);
+  if (data) salaryAdjustmentFeeds[salaryAdjustmentPath] = data;
+}
 
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;

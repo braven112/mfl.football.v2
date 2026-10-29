@@ -95,15 +95,13 @@ import { buildDraftAssets } from '../../utils/rosters/draft-assets';
 import { resolveEligibility } from '../../utils/rosters/eligibility';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
-import fs from 'fs';
-import path from 'path';
 import {
   getTheLeaguePreference,
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { parsePlayerWeekScores } from '../../utils/player-week-scores.mjs';
@@ -136,10 +134,9 @@ import {
   annotateTierDividers as annotateTierDividersCore,
   annotateActiveStriping as annotateActiveStripingCore,
 } from '../../utils/roster-utils';
-// Precomputed payloads for every historical season (see
-// scripts/compute-roster-season-payloads.mjs); the shared builder computes
-// the current league/season years live at request time.
-import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
+// Historical season payloads are loaded per request below (loadLeagueData).
+import { loadLeagueData } from '../../utils/league-data';
+import { loadFeedGlob } from '../../utils/rosters/loaded-feed-glob';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
@@ -169,44 +166,71 @@ const currentSeasonYearStr = String(getCurrentSeasonYear());
 // weeklyResultsRawData is loaded below with other season-specific feeds
 // playerScoresMap is computed after the feed loading block
 
-// Current-era globs only (2025+, see tests/current-era-feed-globs.test.ts).
-// Historical seasons are served from the precomputed derived payloads
-// (data/theleague/derived/roster-season-payloads.json, built by
-// scripts/compute-roster-season-payloads.mjs during prebuild) — bundling all
-// ~20 seasons of feeds here cost 30+ MB of server chunk per cold start.
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-20{2[5-9],[3-9][0-9]}.json', {
-  eager: true,
-});
-const salaryAveragesModules = import.meta.glob('../../data/mfl-salary-averages-*.json', {
-  eager: true,
-});
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
-  {
-    eager: true,
-  }
-);
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json', {
-  eager: true,
-});
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/standings.json', {
-  eager: true,
-});
-// The roster header's gameday bar. Keyed by the LEAGUE year, like every feed
-// directory here — it rolls in February, not at Labor Day.
-const headerScheduleFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/schedule.json',
-  { eager: true, import: 'default' }
-);
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', {
-  eager: true,
-});
-const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', {
-  eager: true,
-});
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', {
-  eager: true,
-});
+// Current-era feeds only (2025+). Historical seasons are served from the
+// precomputed derived payloads (data/theleague/derived/roster-season-payloads.json,
+// built by scripts/compute-roster-season-payloads.mjs during prebuild).
+//
+// Read through the league-data loader, NOT `import.meta.glob`: an eager glob
+// compiled every matched file into this page's server chunk (~5 MB of feeds,
+// plus the 11 MB derived file below), and the whole site is one Vercel
+// function with a 250 MB ceiling (src/utils/league-data.ts). `loadFeedGlob`
+// hands back the glob's own shape — same relative keys, `{ default }` values —
+// so nothing below this block changed.
+const PAGE_DIR = 'src/pages/theleague';
+const TL_DATA_PATH = getLeagueBySlug('theleague')!.dataPath;
+/** The 2025+ era the old globs' `20{2[5-9],[3-9][0-9]}` year segment matched. */
+const CURRENT_ERA_YEAR = /^20(?:2[5-9]|[3-9]\d)$/;
+const isCurrentEraFeed = (repoPath: string) => CURRENT_ERA_YEAR.test(repoPath.split('/').at(-2) ?? '');
+const loadCurrentEraFeeds = (file: string, importDefault = false) =>
+  loadFeedGlob(`${TL_DATA_PATH}/mfl-feeds/*/${file}`, {
+    relativeTo: PAGE_DIR,
+    keep: isCurrentEraFeed,
+    importDefault,
+  });
+const [
+  rosterModules,
+  salaryAveragesModules,
+  salaryAdjustmentFeeds,
+  leagueFeeds,
+  standingsFeeds,
+  // The roster header's gameday bar. Keyed by the LEAGUE year, like every feed
+  // directory here — it rolls in February, not at Labor Day.
+  headerScheduleFeeds,
+  playersFeeds,
+  rostersFeeds,
+  transactionsFeeds,
+  derivedRosterSeasonPayloads,
+] = await Promise.all([
+  loadFeedGlob('src/data/mfl-player-salaries-*.json', {
+    relativeTo: PAGE_DIR,
+    keep: (p) => CURRENT_ERA_YEAR.test(p.match(/mfl-player-salaries-(\d{4})\.json$/)?.[1] ?? ''),
+  }),
+  loadFeedGlob('src/data/mfl-salary-averages-*.json', { relativeTo: PAGE_DIR }),
+  loadCurrentEraFeeds('salaryAdjustments.json'),
+  loadCurrentEraFeeds('league.json'),
+  loadCurrentEraFeeds('standings.json'),
+  loadCurrentEraFeeds('schedule.json', true),
+  loadCurrentEraFeeds('players.json'),
+  loadCurrentEraFeeds('rosters.json'),
+  loadCurrentEraFeeds('transactions.json'),
+  // Precomputed payloads for every historical season (see
+  // scripts/compute-roster-season-payloads.mjs); the shared builder computes
+  // the current league/season years live at request time. Loaded whole: the
+  // server render reads every season's keys and team ids (seasonOptions,
+  // knownTeamIds) plus the previous season's points, and the loader keeps it
+  // in memory for as long as the instance is warm.
+  loadLeagueData<{ seasons?: Record<string, any> }>(`${TL_DATA_PATH}/derived/roster-season-payloads.json`),
+]);
+// getPlayerMap(year) is sync and served from memory. The middleware preloads
+// only today's league and season years; this page also asks for every
+// current-era season it holds feeds for (dead-money enrichment, the season
+// payloads), and players.json is not shipped inside the function — so a year
+// nobody preloaded would come back as an empty identity map in production.
+await preloadPlayerIdentity(
+  [...Object.keys(playersFeeds), ...Object.keys(salaryAdjustmentFeeds)]
+    .map((p) => Number(p.match(/mfl-feeds\/(\d{4})\//)?.[1]))
+    .filter((y) => Number.isInteger(y)),
+).catch((err) => console.error('[rosters] player identity preload failed:', err));
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -220,13 +244,15 @@ const extractFeedSeason = (filepath) => {
   return match ? match[1] : null;
 };
 
-// Load season-specific feed data using fs — avoids globbing massive JSON files
-const loadFeedJson = (year: string | number, filename: string) => {
-  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
+// Load one season's feed file through the league-data loader. The loader
+// caches the parsed file for every request on a warm instance, so this hands
+// back a COPY: these feeds were read fresh off disk per request before, and a
+// consumer that mutates one must never leak into the next render.
+const loadFeedJson = async (year: string | number, filename: string): Promise<any> => {
+  const feedPath = `${TL_DATA_PATH}/mfl-feeds/${year}/${filename}`;
   try {
-    if (fs.existsSync(feedPath)) {
-      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-    }
+    const data = await loadLeagueData(feedPath);
+    return data == null ? null : structuredClone(data);
   } catch (e) {
     console.warn(`⚠️ Failed to load feed ${feedPath}:`, e);
   }
@@ -275,20 +301,22 @@ const fetchLiveTradeBait = async (yr: string): Promise<string[] | null> => {
 // Fetch live trade bait for the current league year (where writes happen)
 const liveTradeBait = await fetchLiveTradeBait(currentLeagueYearStr);
 
-feedYears.forEach((yr) => {
+for (const yr of feedYears) {
+  const [tb, ps, wr, fpa] = await Promise.all([
+    yr === currentLeagueYearStr && liveTradeBait ? null : loadFeedJson(yr, 'tradeBait.json'),
+    loadFeedJson(yr, 'projectedScores.json'),
+    loadFeedJson(yr, 'weekly-results-raw.json'),
+    loadFeedJson(yr, 'fantasyPointsAllowed.json'),
+  ]);
   if (yr === currentLeagueYearStr && liveTradeBait) {
     tradeBaitBySeason[yr] = new Set(liveTradeBait);
-  } else {
-    const tb = loadFeedJson(yr, 'tradeBait.json');
-    if (tb) tradeBaitBySeason[yr] = new Set(tb);
+  } else if (tb) {
+    tradeBaitBySeason[yr] = new Set(tb);
   }
-  const ps = loadFeedJson(yr, 'projectedScores.json');
   if (ps) projectedScoresBySeason[yr] = ps;
-  const wr = loadFeedJson(yr, 'weekly-results-raw.json');
   if (wr) weeklyResultsRawBySeason[yr] = wr;
-  const fpa = loadFeedJson(yr, 'fantasyPointsAllowed.json');
   if (fpa) fantasyPointsAllowedBySeason[yr] = fpa;
-});
+}
 
 // ONE season for every stat column on this page: the most recent one whose
 // week 1 has kicked off (src/utils/stats-season.mjs). NOT currentSeasonYear,
@@ -305,7 +333,7 @@ const statsSeasonYear = resolveStatsSeasonYear();
 const statsSeasonYearStr = String(statsSeasonYear);
 const weeklyResultsRawData =
   weeklyResultsRawBySeason[statsSeasonYearStr]
-  ?? loadFeedJson(statsSeasonYearStr, 'weekly-results-raw.json')
+  ?? (await loadFeedJson(statsSeasonYearStr, 'weekly-results-raw.json'))
   ?? {};
 // The RATE pair's input (Trend, Avg) — never the season total: this feed
 // records a player only for weeks a roster held him, and a doubleheader lists
@@ -315,7 +343,7 @@ const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum
 // The total is MFL's own, from the same full-pool source and parser the Free
 // Agents points column reads.
 const ytdPointsByPlayer = parseYtdPlayerScores(
-  loadFeedJson(statsSeasonYearStr, 'playerScores-ytd.json'),
+  await loadFeedJson(statsSeasonYearStr, 'playerScores-ytd.json'),
 );
 
 // Build weekly player results for the modal's Season Results table.
@@ -334,17 +362,17 @@ const modalWeeklyResultsRaw = weeklyResultsRawBySeason[currentSeasonYearStr] ?? 
 // synced in the offseason and have the full shape in nflSchedule.json, so the
 // fallback is what keeps them working.
 const nflScheduleData =
-  loadFeedJson(currentSeasonYearStr, 'nflSchedule-full.json') ??
-  loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
-const leagueJsonData = loadFeedJson(currentSeasonYearStr, 'league.json');
-const playersJsonData = loadFeedJson(currentSeasonYearStr, 'players.json');
+  (await loadFeedJson(currentSeasonYearStr, 'nflSchedule-full.json')) ??
+  (await loadFeedJson(currentSeasonYearStr, 'nflSchedule.json'));
+const leagueJsonData = await loadFeedJson(currentSeasonYearStr, 'league.json');
+const playersJsonData = await loadFeedJson(currentSeasonYearStr, 'players.json');
 // Per-week points for the WHOLE player pool. `modalWeeklyResultsRaw` is MFL's
 // weeklyResults export, which lists a franchise's ACTIVE LINEUP — so a
 // practice-squad, injured-reserve or free-agent player has no row in it at all
 // and the modal hid its Season Results table for them entirely. Same season as
 // everything else feeding this table, for the reason above.
 const playerWeekScores = parsePlayerWeekScores(
-  loadFeedJson(currentSeasonYearStr, 'playerScores-by-week.json'),
+  await loadFeedJson(currentSeasonYearStr, 'playerScores-by-week.json'),
 );
 const weeklyPlayerResults = (nflScheduleData && modalWeeklyResultsRaw && Array.isArray(modalWeeklyResultsRaw))
   ? buildWeeklyPlayerResults(
@@ -737,7 +765,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) =>
 // between derived-file regenerations. Live computation wins whenever a
 // season is one of the current years (a stale derived entry for a current
 // year is overwritten below).
-const derivedSeasonPayloads = derivedRosterSeasonPayloads.seasons ?? {};
+const derivedSeasonPayloads = derivedRosterSeasonPayloads?.seasons ?? {};
 const newestDerivedSeason = Math.max(
   0,
   ...Object.keys(derivedSeasonPayloads).map(Number).filter(Number.isFinite)
@@ -1006,7 +1034,7 @@ const draftSeasonYear = getCurrentSeasonYear();
 const draftNextYear = draftSeasonYear + 1;
 
 // Get last fetched timestamp from meta file
-const fetchMeta = loadFeedJson(currentLeagueYear, 'fetch.meta.json');
+const fetchMeta = await loadFeedJson(currentLeagueYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 // Load standings and bracket data for draft predictions (from the season that was played)
 const standingsKey = Object.keys(standingsFeeds).find(
@@ -1014,15 +1042,15 @@ const standingsKey = Object.keys(standingsFeeds).find(
 );
 const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
 
-const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
+const bracketData = await loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
 
 // Load draft results from next year to show actual picks with trades
-const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
+const draftResultsData = await loadFeedJson(draftNextYear, 'draftResults.json');
 
 // Load transactions from season year to extract trade information. In season
 // that is the league year, whose committed feed is a once-a-day snapshot
 // (scripts/lib/held-sync-files.mjs), so a pick traded today comes live.
-const committedTransactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+const committedTransactionsData = await loadFeedJson(draftSeasonYear, 'transactions.json');
 const transactionsData = committedTransactionsData && draftSeasonYear === currentLeagueYear
   ? { transactions: { transaction: mergeTransactionRows(
       [committedTransactionsData.transactions?.transaction ?? []].flat(),
@@ -1533,7 +1561,7 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
   // already excludes trades (ACQUISITION_TYPES only) — plan decision #9.
   // The committed feed is a once-a-day snapshot (scripts/lib/held-sync-files.mjs),
   // so the last 3 days come live from MFL on top of it.
-  const rawTxFeed = loadFeedJson(currentLeagueYear, 'transactions.json');
+  const rawTxFeed = await loadFeedJson(currentLeagueYear, 'transactions.json');
   const rawTxList = rawTxFeed?.transactions?.transaction ?? [];
   const autocutAcquisitions = parseTransactions(
     mergeTransactionRows(
@@ -1560,8 +1588,9 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
       if (entry.franchiseId === authUser.franchiseId) ownRosterIds.add(pid);
     }
   } else {
+    const ownRostersFeed = await loadFeedJson(currentLeagueYear, 'rosters.json');
     for (const fr of (() => {
-      const feed = loadFeedJson(currentLeagueYear, 'rosters.json');
+      const feed = ownRostersFeed;
       const list = feed?.rosters?.franchise;
       return Array.isArray(list) ? list : list ? [list] : [];
     })()) {
@@ -1571,8 +1600,8 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
     }
   }
   const autocutRookieIds = buildRookiePriorityFromFeeds({
-    playersFeed: loadFeedJson(currentLeagueYear, 'players.json'),
-    draftResultsFeed: loadFeedJson(currentLeagueYear, 'draftResults.json'),
+    playersFeed: await loadFeedJson(currentLeagueYear, 'players.json'),
+    draftResultsFeed: await loadFeedJson(currentLeagueYear, 'draftResults.json'),
   }).filter((pid) => ownRosterIds.has(pid));
 
   const deadlineLabel = `${autocutDeadline.toLocaleDateString('en-US', {

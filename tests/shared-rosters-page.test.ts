@@ -180,7 +180,8 @@ describe('the routes are thin wrappers over the one page', () => {
     expect(src).toContain("from '../../components/shared/rosters/RostersPage.astro'");
     expect(src).toContain('<RostersPage');
     const slug = route.split('/')[2];
-    expect(src).toContain(`import.meta.glob('../../../data/${slug}/mfl-feeds/`);
+    // Its own feeds: a literal glob, or (package leagues) the league-data loader.
+    expect(src).toMatch(new RegExp(`import\\.meta\\.glob\\('\\.\\./\\.\\./\\.\\./data/${slug}/mfl-feeds/|listLeagueData\\(`));
     // A redirect for an empty year can only live in the route.
     expect(src).toContain('return Astro.redirect(');
   });

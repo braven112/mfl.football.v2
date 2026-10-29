@@ -23,8 +23,7 @@
  */
 
 import { getLeagueBySlug } from '../../../config/leagues';
-import fs from 'node:fs';
-import path from 'node:path';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
 import PlayerCell from '../PlayerCell.astro';
 // The ⋮ kebab's styles. Imported here rather than left to the host: the
 // free-agent pages get this via WatchListBridge, but the Front Office panel
@@ -171,12 +170,11 @@ const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
 // dwelling on a deadline that's now old news. isDraftConducted flips true at
 // the first made pick (src/utils/draft-utils.ts), same signal the draft
 // pages already use to tell "upcoming order" from "history".
-const draftResultsPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/draftResults.json`);
+// Read through the loader (Blob in production), not off disk.
 let draftConducted = false;
 try {
-  if (fs.existsSync(draftResultsPath)) {
-    draftConducted = isDraftConducted(JSON.parse(fs.readFileSync(draftResultsPath, 'utf8')));
-  }
+  const draftResults = await loadLeagueData(leagueFeedPath(dataPath, year, 'draftResults.json'));
+  if (draftResults) draftConducted = isDraftConducted(draftResults);
 } catch {
   // Missing/malformed feed — treat as not yet drafted (pre-draft framing).
 }

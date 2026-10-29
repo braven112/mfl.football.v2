@@ -7,8 +7,16 @@
  * would ship the other league's owners to every render of either route.
  */
 import OwnersIndexPage from '../../../components/shared/owners/OwnersIndexPage.astro';
-import ownerData from '../../../../data/afl-fantasy/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [ownerData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/owner-tenures.json`),
+]);
 
 export const prerender = false;
 ---

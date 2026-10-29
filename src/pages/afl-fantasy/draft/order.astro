@@ -14,8 +14,7 @@ import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } f
 import { isDraftConducted } from '../../../utils/draft-utils';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
-import fs from 'fs';
-import path from 'path';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
 
 // Note: This page is server-rendered (not prerendered) to support team preferences
 // export const prerender = true;
@@ -27,10 +26,19 @@ import path from 'path';
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
 const currentYear = getCurrentSeasonYear(testDate);
 const nextYear = getNextDraftYear(testDate);
-const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
-const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
+const aflLeague = getLeagueBySlug('afl-fantasy')!;
+const feedPath = (year: number, file: string) => leagueFeedPath(aflLeague.dataPath, year, file);
 
-const standingsData = JSON.parse(fs.readFileSync(standingsPath, 'utf-8'));
+// Read through the loader (Blob in production): these feeds are not all
+// shipped inside the function, so a raw fs read would ENOENT there.
+const [standingsData, weeklyResultsRaw, playoffBracketsData, aflDraftResults] = await Promise.all([
+  loadLeagueData<any>(feedPath(currentYear, 'standings.json')),
+  loadLeagueData<any>(feedPath(currentYear, 'weekly-results-raw.json')).catch(() => null),
+  loadLeagueData<any>(feedPath(currentYear, 'playoff-brackets.json')).catch(() => null),
+  // The drafts land in the NEXT draft year's feed folder — see below.
+  loadLeagueData<unknown>(feedPath(nextYear, 'draftResults.json')).catch(() => null),
+]);
+if (!standingsData) throw new Error(`AFL standings feed missing for ${currentYear}`);
 const standings = Array.isArray(standingsData.leagueStandings.franchise)
   ? standingsData.leagueStandings.franchise
   : [standingsData.leagueStandings.franchise];
@@ -56,8 +64,8 @@ const teamConfigMap = new Map(
 // overall record, so they can't distinguish two specific teams.
 let headToHead;
 try {
-  const rawPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'weekly-results-raw.json');
-  headToHead = buildHeadToHeadFromRaw(JSON.parse(fs.readFileSync(rawPath, 'utf-8')));
+  if (!weeklyResultsRaw) throw new Error('no raw weekly results yet');
+  headToHead = buildHeadToHeadFromRaw(weeklyResultsRaw);
 } catch (error) {
   // Raw weekly results may not exist yet (preseason) — h2h step is skipped and
   // ties fall through to division record and the rest of the chain.
@@ -89,7 +97,7 @@ const preferredTeamId = resolveAFLTeamSelection({
   cookiePreference: cookiePreference?.franchiseId,
   authUserFranchise: franchiseIdForLeague(
     getAuthUser(Astro.request),
-    getLeagueBySlug('afl-fantasy')!.id
+    aflLeague.id
   ),
 }) ?? '';
 
@@ -98,12 +106,11 @@ const preferredTeamConfig = teamConfigMap.get(preferredTeamId);
 const preferredConference = preferredTeamConfig?.conference || '00';
 
 // Load playoff bracket data and parse conference champions and NIT results
-let playoffBracketsData;
 let conferenceChampions = new Map<string, string>();
 let nitResults = new Map<string, Array<{ franchiseId: string; finishPosition: number }>>();
 
 try {
-  playoffBracketsData = JSON.parse(fs.readFileSync(playoffBracketsPath, 'utf-8'));
+  if (!playoffBracketsData) throw new Error('no playoff brackets yet');
   conferenceChampions = parseConferenceChampions(playoffBracketsData, teamConfigMap);
   nitResults = parseNITResults(playoffBracketsData, teamConfigMap);
 } catch (error) {
@@ -130,13 +137,7 @@ const draftOrders = calculateAFLDraftOrder(
 // The drafts land in the NEXT draft year's feed folder (e.g. the Aug 2026
 // drafts for the 2026 season live under mfl-feeds/2026/), which may not exist
 // yet — a missing file simply means "not drafted".
-let aflDraftResults: unknown = null;
-try {
-  const draftResultsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', nextYear.toString(), 'draftResults.json');
-  aflDraftResults = JSON.parse(fs.readFileSync(draftResultsPath, 'utf-8'));
-} catch (error) {
-  // Draft results don't exist until the conference drafts happen.
-}
+// (aflDraftResults is loaded above; null until the conference drafts happen.)
 
 const draftPhase: 'projected' | 'official' | 'drafted' = isDraftConducted(aflDraftResults)
   ? 'drafted'

@@ -17,7 +17,7 @@ import { getAuthUser } from '../../utils/auth';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import { canViewSiteInsights } from '../../utils/site-insights';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { loadMflPlayerIndex } from '../../utils/sleeper/players';
+import { loadMflPlayerIndex, preloadMflPlayerIndex } from '../../utils/sleeper/players';
 import { listFixReviews } from '../../utils/sleeper/player-fixes';
 import '../../styles/mfl-live.css';
 
@@ -28,6 +28,8 @@ if (!authUser) return Astro.redirect(mflLoginUrl('/live/player-fixes'));
 if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
 
 const reviews = await listFixReviews();
+// Sync over preloaded data: players.json is not shipped inside the function.
+await preloadMflPlayerIndex(getCurrentSeasonYear()).catch(() => undefined);
 const index = loadMflPlayerIndex(getCurrentSeasonYear());
 const mflName = (id: string) => {
 	const p = index.get(id);

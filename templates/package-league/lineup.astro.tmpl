@@ -16,7 +16,7 @@ import { getAuthUser } from '../../utils/auth';
 import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
-import { feedForYear } from '../../utils/rosters/roster-page-feeds';
+import { loadLeagueData } from '../../utils/league-data';
 import { lineupSlotsFor } from '../../utils/lineup-slots';
 import config from '../../../data/__LEAGUE_SLUG__/__LEAGUE_SLUG__.config.json';
 
@@ -28,14 +28,18 @@ if (!user?.franchiseId || user.leagueId !== league.id) {
   return Astro.redirect(loginUrlForRequest(Astro, league));
 }
 
-const leagueFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/league.json', { eager: true });
 // Just after the league-year rollover the new year's league.json may not be
 // synced yet, so fall back to last year's rules rather than to another
 // league's layout. Rules the page cannot offer (not nine starters) are a 404.
+// Read through the league-data loader (never a glob: that compiles every
+// season into the serverless function).
 const leagueYear = getLeagueYearForSlug(league.slug);
-const slotLayout = [leagueYear, leagueYear - 1]
-  .map((year) => lineupSlotsFor(feedForYear(leagueFeeds, year, 'league.json')?.league?.starters))
-  .find(Boolean);
+const leagueFeeds = await Promise.all(
+  [leagueYear, leagueYear - 1].map((year) =>
+    loadLeagueData<any>(`${league.dataPath}/mfl-feeds/${year}/league.json`),
+  ),
+);
+const slotLayout = leagueFeeds.map((feed) => lineupSlotsFor(feed?.league?.starters)).find(Boolean);
 if (!slotLayout) return Astro.rewrite('/_not-found');
 ---
 

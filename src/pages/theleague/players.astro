@@ -38,6 +38,7 @@ import nflByeWeeksFile from '../../../data/nfl/bye-weeks.json';
 import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { fetchDropLocks } from '../../utils/mfl-locked-players';
 import { waiverEventsLiveFirst } from '../../utils/live-waiver-calendar';
@@ -100,90 +101,105 @@ const theLeagueDef = getLeagueBySlug('theleague');
 if (!theLeagueDef) throw new Error('League registry is missing the "theleague" entry');
 const mflHost = theLeagueDef.mflHost;
 const mflLeagueId = theLeagueDef.id;
-// Year-filtered (2025+): this page reads only currentLeagueYear +
-// currentSeasonYear; the bare glob baked ~22 MB of historical players.json
-// into the server chunk. tests/current-era-feed-globs.test.ts guards it.
-const playerModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
-  { eager: true }
-);
-const projectedScoresModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
-  { eager: true }
-);
-const rostersModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/rosters.json',
-  { eager: true }
-);
-
-const adpDynastyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
-  { eager: true }
-);
-const adpRedraftModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
-  { eager: true }
-);
-const seasonWeeklyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
-  { eager: true }
-);
-// Season-to-date points for the WHOLE player pool. weekly-results-raw sees a
-// player only for the weeks he sat on a roster, which on a free-agent page is
-// blind to almost every row — see src/utils/stats-season.mjs.
-const seasonYtdModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
-  { eager: true }
-);
-// Per-week points for the WHOLE player pool — the fallback that lets the
-// modal's Season Results table exist for a practice-squad, injured-reserve or
-// free-agent player. weekly-results-raw above is MFL's ACTIVE-LINEUP export and
-// has no row for any of them. See src/utils/player-week-scores.mjs.
-const playerWeekScoreModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-by-week.json',
-  { eager: true }
-);
-// NFL facts, not league data — one file serves both free-agent pages. See
+// Feeds are read through the league-data loader (never bundled into the
+// function), and only for the two years this page renders: the league year
+// (`currentYear`) and the stats season (`statsSeasonYear`). Each object below
+// keeps the old glob's `{ path: data }` shape for exactly those years, so
+// findForYear reads them unchanged. The megafile feeds (players.json,
+// weekly-results-raw, the playerScores and nflSchedule-full exports) keep
+// the current-era floor (2025+) their year-filtered globs had.
+const statsSeasonYear = resolveStatsSeasonYear(nowRef);
+const FEED_ROOT = `${theLeagueDef.dataPath}/mfl-feeds`;
+const CURRENT_ERA_FLOOR = 2025;
+const loadFeedYears = async (
+  file: string,
+  years: number[],
+  eraFloor = 0,
+): Promise<Record<string, unknown>> => {
+  const wanted = [...new Set(years)].filter((y) => y >= eraFloor).sort((a, b) => a - b);
+  const loaded = await Promise.all(
+    wanted.map(async (y) => {
+      const path = `${FEED_ROOT}/${y}/${file}`;
+      return [path, await loadLeagueData(path)] as const;
+    }),
+  );
+  return Object.fromEntries(loaded.filter(([, data]) => data != null));
+};
+const bothYears = [currentYear, statsSeasonYear];
+const [
+  playerModules,
+  projectedScoresModules,
+  rostersModules,
+  adpDynastyModules,
+  adpRedraftModules,
+  seasonWeeklyModules,
+  seasonYtdModules,
+  playerWeekScoreModules,
+  nflScheduleModules,
+  nflScheduleFullModules,
+  fpaModules,
+  leagueModules,
+  auctionResultsModules,
+  draftResultsModules,
+] = await Promise.all([
+  loadFeedYears('players.json', bothYears, CURRENT_ERA_FLOOR),
+  loadFeedYears('projectedScores.json', [currentYear]),
+  loadFeedYears('rosters.json', [currentYear]),
+  loadFeedYears('adp-dynasty.json', [currentYear]),
+  loadFeedYears('adp-redraft.json', [currentYear]),
+  // weekly-results-raw sees a player only for the weeks he sat on a roster;
+  // the playerScores-ytd export is the season-to-date points for the WHOLE
+  // pool (src/utils/stats-season.mjs), and playerScores-by-week is the per-week
+  // fallback that lets the modal's Season Results table exist for a
+  // practice-squad, IR or free-agent player (src/utils/player-week-scores.mjs).
+  loadFeedYears('weekly-results-raw.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('playerScores-ytd.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('playerScores-by-week.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  // MFL's W=ALL export (nflSchedule-full) carries every week; the plain
+  // nflSchedule.json carries only the CURRENT week from week 1 onward, which
+  // made the modal's Season Results table render all 17 weeks as "Bye".
+  // Seasons synced in the offseason have the full shape in nflSchedule.json,
+  // hence the fallback below.
+  loadFeedYears('nflSchedule.json', [statsSeasonYear]),
+  loadFeedYears('nflSchedule-full.json', [statsSeasonYear], CURRENT_ERA_FLOOR),
+  loadFeedYears('fantasyPointsAllowed.json', [statsSeasonYear]),
+  loadFeedYears('league.json', [statsSeasonYear]),
+  loadFeedYears('auctionResults.json', [currentYear]),
+  loadFeedYears('draftResults.json', [currentYear]),
+]);
+// NFL facts, not league data — one file serves both free-agent pages. Every
+// season's file is read: the season is picked from what exists. See
 // src/utils/snap-count-season.mjs.
-const snapCountModules = import.meta.glob(
-  '../../../data/nfl/snap-counts-*.json',
-  { eager: true }
+const snapCountModules: Record<string, unknown> = Object.fromEntries(
+  await Promise.all(
+    listLeagueData('data/nfl/snap-counts-*.json').map(async (path) => [path, await loadLeagueData(path)] as const),
+  ),
 );
-const nflScheduleModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/nflSchedule.json',
-  { eager: true }
-);
-// MFL's W=ALL export — every week of the season. The plain nflSchedule.json
-// above carries only the CURRENT week from week 1 onward, which made the
-// modal's Season Results table render all 17 weeks as "Bye". Seasons synced in
-// the offseason have the full shape in nflSchedule.json, hence the fallback.
-const nflScheduleFullModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
-  { eager: true }
-);
-const fpaModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
-  { eager: true }
-);
-const leagueModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/league.json',
-  { eager: true }
-);
-const auctionResultsModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/auctionResults.json',
-  { eager: true }
-);
-const draftResultsModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/draftResults.json',
-  { eager: true }
-);
-const salaryAvgModules = import.meta.glob(
-  '../../data/mfl-salary-averages-*.json',
-  { eager: true }
-);
-const playerSalaryHistoryModules = import.meta.glob(
-  '../../data/mfl-player-salaries-*.json',
-  { eager: true }
+// Salary averages: the frozen year is this league year or the one before, and
+// the newest file is the fallback — those are the only files read.
+const salaryAvgModules: Record<string, unknown> = await (async () => {
+  const keys = listLeagueData('src/data/mfl-salary-averages-*.json');
+  const leagueYear = getCurrentLeagueYear();
+  const newest = [...keys].sort().reverse()[0];
+  const wanted = keys.filter(
+    (k) => k.includes(String(leagueYear)) || k.includes(String(leagueYear - 1)) || k === newest,
+  );
+  return Object.fromEntries(
+    await Promise.all(wanted.map(async (k) => [k, await loadLeagueData(k)] as const)),
+  );
+})();
+// Player salaries for the last three completed league years only.
+const playerSalaryHistoryModules: Record<string, unknown> = Object.fromEntries(
+  (
+    await Promise.all(
+      [currentYear - 1, currentYear - 2, currentYear - 3]
+        .filter((y) => y > 0)
+        .map(async (y) => {
+          const path = `src/data/mfl-player-salaries-${y}.json`;
+          return [path, await loadLeagueData(path)] as const;
+        }),
+    )
+  ).filter(([, data]) => data != null),
 );
 
 const getModuleData = (mod: any) =>
@@ -234,7 +250,7 @@ const adpRdfMap = buildAdpMap(adpRedraftModules);
 // day is NFL week 1, so this holds last season's finished total until then and
 // switches to this season's running total from kickoff on. Literally the same
 // function the snap-count columns beside it use, so the two can never disagree.
-const statsSeasonYear = resolveStatsSeasonYear(nowRef);
+// (`statsSeasonYear` is resolved above, where the feeds are loaded.)
 const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
 // The YTD feed is the ONLY source for the points column. The league's weekly
 // results are deliberately not a fallback for it: they cannot see an

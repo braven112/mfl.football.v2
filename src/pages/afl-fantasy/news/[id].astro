@@ -23,21 +23,24 @@ import '../../../styles/schefter-article.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
 import MatchupPreviewSection from '../../../components/shared/matchup-preview/MatchupPreviewSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 
-// Lazy glob: GauntletArticleSection imports only the matching issue, and only
-// for posts that carry a scheduleStrength pointer — plain articles pay nothing.
-const gauntletFiles = import.meta.glob<GauntletDerived>(
-  '../../../../data/afl-fantasy/derived/schedule-strength-*.json',
-  { import: 'default' }
-);
+// Lazy maps in the shape of a lazy `import.meta.glob`, read through the
+// league-data loader (src/utils/league-data.ts) rather than the bundle.
+const dataPath = getLeagueBySlug('afl-fantasy')!.dataPath;
+const lazyFiles = <T,>(paths: string[]): Record<string, () => Promise<T>> =>
+  Object.fromEntries(paths.map((p) => [p, () => loadLeagueData<T>(p) as Promise<T>]));
+
+// GauntletArticleSection reads only the matching issue, and only for posts
+// that carry a scheduleStrength pointer — plain articles pay nothing.
+const gauntletFiles = lazyFiles<GauntletDerived>(listLeagueData(`${dataPath}/derived/schedule-strength-*.json`));
 
 // Posts older than the active window live in per-year archive files (see
-// scripts/lib/schefter-archive.mjs). Lazy glob so permalinks to archived
-// articles keep resolving without bundling the archive into this chunk.
-const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
-  '../../../../data/afl-fantasy/schefter-archive/*.json',
-  { import: 'default' }
+// scripts/lib/schefter-archive.mjs), read only when the active feed misses.
+const archiveFiles = lazyFiles<{ posts?: SchefterPost[] } | SchefterPost[]>(
+  listLeagueData(`${dataPath}/schefter-archive/*.json`)
 );
 
 const { id } = Astro.params;
