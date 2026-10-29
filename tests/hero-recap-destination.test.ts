@@ -283,22 +283,23 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
   });
 
   it('resolves both years BEFORE the hero block that consumes one', () => {
-    // resolveSeasonYearWithData closes over an import.meta.glob const, so
-    // calling it above that declaration is a temporal-dead-zone ReferenceError
-    // rather than a wrong answer. Ordering is the contract.
+    // resolveSeasonYearWithData reads the standings feeds synchronously
+    // (getLeagueData), which throws for any file nobody preloaded. Calling it
+    // above the preload is an error rather than a wrong answer. Ordering is
+    // the contract.
     //
     // The constraint is on the CALL, not on the function declaration —
     // `function resolveSeasonYearWithData` is hoisted, so where it sits is
     // irrelevant and asserting against it is vacuous. What must hold is that
-    // `const standingsFeeds` is initialised before the call runs.
-    const glob = PAGE.indexOf('const standingsFeeds = import.meta.glob');
+    // the feeds are preloaded before the call runs.
+    const glob = PAGE.indexOf('await preloadLeagueData([');
     const call = PAGE.indexOf('const seasonYear = resolveSeasonYearWithData();');
     const hero = PAGE.indexOf('resolveLeagueHomeHero({');
     expect(glob).toBeGreaterThan(-1);
     expect(call).toBeGreaterThan(-1);
     expect(hero).toBeGreaterThan(-1);
 
-    // The glob must be initialised before the walk-back is CALLED…
+    // The feeds must be preloaded before the walk-back is CALLED…
     expect(glob).toBeLessThan(call);
     // …and the whole resolution must precede the hero block that reads it.
     expect(call).toBeLessThan(hero);

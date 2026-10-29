@@ -39,12 +39,13 @@ function walk(dir: string, out: string[] = []): string[] {
 describe('import.meta.glob lookup keys resolve from their own file', () => {
   const files = SCAN_DIRS.flatMap((d) => walk(path.join(ROOT, d)));
 
-  it('finds lookups to check (the scan is not vacuous)', () => {
-    const count = files.reduce(
-      (n, f) => n + [...readFileSync(f, 'utf8').matchAll(LOOKUP)].length,
-      0,
-    );
-    expect(count).toBeGreaterThan(10);
+  it('recognizes a lookup (the scan is not vacuous)', () => {
+    // Real lookups shrink toward zero as pages move to the league-data loader
+    // (src/utils/league-data.ts), so the pattern is checked on a sample
+    // instead of a floor on the live count.
+    const sample = 'const x = feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/rosters.json`];';
+    expect([...sample.matchAll(LOOKUP)]).toHaveLength(1);
+    expect(files.length).toBeGreaterThan(10);
   });
 
   it('every relative `data/` lookup key reaches the repo-root data directory', () => {

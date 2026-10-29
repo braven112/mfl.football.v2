@@ -69,8 +69,13 @@ const collectHeavyGlobs = (): Hit[] => {
 describe('current-era feed globs', () => {
   const hits = collectHeavyGlobs();
 
-  it('finds the heavy-feed globs (guard is wired to real files)', () => {
-    expect(hits.length).toBeGreaterThan(10);
+  it('recognizes a heavy-feed glob (the scan is wired correctly)', () => {
+    // Real hits shrink toward zero as pages move to the league-data loader
+    // (src/utils/league-data.ts), so the wiring is checked on a sample instead
+    // of a floor on the live count.
+    const sample = "../../data/afl-fantasy/mfl-feeds/*/players.json";
+    expect(sample.match(HEAVY_FEED)?.groups?.years).toBe('*');
+    expect(Array.isArray(hits)).toBe(true);
   });
 
   it('every players.json / weekly-results-raw glob carries a year filter', () => {
