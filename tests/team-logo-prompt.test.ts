@@ -38,6 +38,17 @@ describe('team logo prompt builder', () => {
     expect(banner).not.toContain('Do not write the team name');
   });
 
+  it('a monogram, or an idea asking for a letter, gets letters that form one symbol, and no words', () => {
+    const asked = buildTeamLogoPrompt({ kind: 'icon', style: 'crest', teamName: 'Maryville', idea: 'a stylized M with a crowned princess' }, '').prompt;
+    const mono = buildTeamLogoPrompt({ kind: 'icon', style: 'monogram', teamName: 'Maryville' }, '').prompt;
+    for (const p of [asked, mono]) {
+      expect(p).toContain('The letters must form one symbol: a single stylized initial, or two initials interlocked into one mark. Do not write the team name');
+      expect(p).not.toContain('it is a picture-only mark');
+    }
+    const plain = buildTeamLogoPrompt({ kind: 'icon', style: 'crest', teamName: 'Rhinos', idea: 'a charging rhino in a shield' }, '').prompt;
+    expect(plain).toContain('it is a picture-only mark');
+  });
+
   it('an app build that still sends the retired SVG kind gets the square icon', () => {
     const built = buildTeamLogoPrompt({ kind: 'svg' as never }, 'X');
     expect(built.choice.kind).toBe('icon');

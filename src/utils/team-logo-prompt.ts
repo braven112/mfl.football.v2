@@ -32,7 +32,7 @@ import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
   { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest' },
   { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head' },
-  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials' },
+  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram: one stylized initial of the team name, or two initials interlocked into a single symbol' },
   { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch' },
   { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle' },
 ];
@@ -192,6 +192,23 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
 const NO_TEXT_RULE =
   'Do not write the team name or any other words, letters or numbers anywhere in the logo: it is a picture-only mark.';
 
+/**
+ * One stylized letter is a graphic, not text (Brandon, 2026-10-29: "an M or
+ * an S, which is a great way to incorporate a letter and a logo in one"), and
+ * so are two letters interlocked into one symbol, the way a city's cap logo
+ * joins its initials: "we really just want one symbol". A word is what fails,
+ * because it cannot be read once the logo is shrunk. So a monogram, or an idea
+ * that asks for a letter ("a stylized M"), gets letters that form ONE symbol;
+ * the flat no-letters rule contradicted both.
+ */
+const INITIALS_RULE =
+  'The letters must form one symbol: a single stylized initial, or two initials interlocked into one mark. Do not write the team name or any other words, letters or numbers in the logo.';
+
+/** The owner's idea asks for a letter in the mark: "a stylized M", "initials", "monogram". */
+export function ideaAsksForInitials(idea: string): boolean {
+  return /\b(?:letter|letters|initial|initials|monogram|interlocking|interlocked)\b/i.test(idea) || /\b(?:stylized|stylised|big|bold|block|script)\s+[A-Z]\b/.test(idea);
+}
+
 const ORIGINAL_RULE =
   'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
 
@@ -208,8 +225,10 @@ export function writeLogoPrompt(input: {
   colors: string;
   kind: MflLiveAppLogoKind;
   neutrals?: string[];
+  /** The mark is built on the team's initials (`INITIALS_RULE`), not a picture alone. */
+  initials?: boolean;
 }): string {
-  const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
+  const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'], initials = false } = input;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
   const uses = kind === 'banner' ? 'outlines, lettering and contrast' : 'outlines and contrast';
   const colors = neutrals.length
@@ -229,7 +248,7 @@ export function writeLogoPrompt(input: {
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
     'No gradients, no photo textures. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${NO_TEXT_RULE} ${ORIGINAL_RULE}`
+    `It must stay recognizable when shrunk to 40 pixels. ${initials ? INITIALS_RULE : NO_TEXT_RULE} ${ORIGINAL_RULE}`
   );
 }
 
@@ -279,6 +298,7 @@ export function buildTeamLogoPrompt(
       colors: colorsText(colors),
       kind,
       neutrals: neutralsFor(colors),
+      initials: style.id === 'monogram' || ideaAsksForInitials(idea),
     }),
     warning: nflNameWarning(teamName, idea),
     colorNote: logoColorAdvice(colors).note,
