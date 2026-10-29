@@ -232,8 +232,9 @@ const PRODUCTS: Door[] = [
 
   .top {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 1.75rem;
+    gap: 1rem 1.75rem;
     padding: 1rem 0;
     border-bottom: 1px solid var(--primary-content-border-color);
   }
@@ -370,8 +371,13 @@ const PRODUCTS: Door[] = [
     text-transform: uppercase;
   }
 
+  /* Darker than --color-success-dark in light mode: that one is 3.3:1 on this tint. */
   .tag--free {
     background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: #046c4e;
+  }
+
+  :global(html.dark) .tag--free {
     color: var(--color-success-dark);
   }
 
@@ -505,6 +511,12 @@ const PRODUCTS: Door[] = [
     .grid--3,
     .grid--4 {
       grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 360px) {
+    .brand__mark {
+      height: 1.25rem;
     }
   }
 
