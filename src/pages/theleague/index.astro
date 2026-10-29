@@ -53,7 +53,6 @@ import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { buildPlayoffRoundView } from '../../utils/hero-data/playoff-round-data';
-import fs from 'node:fs';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrlFor } from '../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
@@ -813,10 +812,9 @@ if (liveScoring && heroState.metadata.gameWindow === 'mnf' && heroState.metadata
 if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && heroState.slot === 'standings') {
   try {
     const seasonYear = getCurrentSeasonYear();
-    // Read the feeds from disk (not `await import`) so live feed updates aren't
-    // masked by Vite's JSON module cache — matches the readJsonFile pattern used
-    // across the hero-data helpers, and keeps dev + prod reading the same bytes.
-    const feedData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`, 'utf8'));
+    // Through the league-data loader (not `await import`), so the feeds stay
+    // out of the function bundle and dev + prod read the same bytes.
+    const feedData = await loadLeagueData<any>(`${THELEAGUE.dataPath}/mfl-feeds/${seasonYear}/playoff-brackets.json`);
     const champRaw = feedData?.brackets?.['1'];
 
     if (champRaw) {
@@ -824,7 +822,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
 
       if (champBracket) {
         // Build standings + seed maps for resolving bracket references
-        const standingsData = JSON.parse(fs.readFileSync(`data/theleague/mfl-feeds/${seasonYear}/standings.json`, 'utf8'));
+        const standingsData = await loadLeagueData<any>(`${THELEAGUE.dataPath}/mfl-feeds/${seasonYear}/standings.json`);
         const franchiseList = standingsData?.leagueStandings?.franchise
           ? Array.isArray(standingsData.leagueStandings.franchise)
             ? standingsData.leagueStandings.franchise
