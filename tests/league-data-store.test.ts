@@ -129,7 +129,11 @@ describe('FUNCTION_EXCLUDED', () => {
       // and never touches the excluded file. Match on the file name, however
       // the directories around it are spelled in the path join.
       const base = g.split('/').pop()!;
-      const nameRe = new RegExp(`(^|[/'"\`])${base.replace(/\./g, '\\.').replace(/\*/g, '[^/\'"\`]*')}(['"\`]|$)`);
+      const namePattern = base
+        .split('*')
+        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('[^/\'"`]*');
+      const nameRe = new RegExp(`(^|[/'"\`])${namePattern}(['"\`]|$)`);
       for (const file of sources()) {
         if (file === 'src/utils/league-data.ts') continue;
         const text = readFileSync(file, 'utf8');
