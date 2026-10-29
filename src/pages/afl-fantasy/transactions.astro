@@ -4,30 +4,31 @@
  *
  * Shared implementation lives in components/shared/transactions/TransactionsPage.
  *
- * The GLOBS live HERE and cannot move into the shared component, for two
- * separate reasons that happen to point the same way:
- *   - a static import specifier can't be a runtime variable, and
- *   - globbing both leagues in the shared component would put the other
- *     league's 20 seasons of feeds in the chunk that renders either route.
- *
- * LAZY (`eager: false`), which is the whole point: the glob's KEYS answer
- * "which seasons exist" at build time for free, while only the season being
- * viewed is actually read. TheLeague's transactions archive is ~2.6 MB.
- *
- * A glob rather than a static import is also what keeps the build alive for a
- * league whose feed a workflow has not written yet — a static import of a
- * cron-generated file hard-fails the build for EVERY league until it exists
- * (docs/claude/rules/storage-and-build.md).
+ * The feed MAPS are built HERE, so the shared component never names a
+ * league's data path. Each is lazy, in the shape of a lazy `import.meta.glob`:
+ * its KEYS answer "which seasons exist", while only the season being viewed is
+ * actually read — through the league-data loader (src/utils/league-data.ts),
+ * so no season is bundled into the server function.
  */
 import TransactionsPage from '../../components/shared/transactions/TransactionsPage.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
-const transactionFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json');
-const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json');
+const league = getLeagueBySlug('afl-fantasy')!;
+const lazyFeeds = (paths: string[]): LazyFeedGlob =>
+  Object.fromEntries(paths.map((p) => [p, () => loadLeagueData(p)]));
+
+const transactionFeeds = lazyFeeds(listLeagueData(`${league.dataPath}/mfl-feeds/*/transactions.json`));
+const leagueFeeds = lazyFeeds(listLeagueData(`${league.dataPath}/mfl-feeds/*/league.json`));
 // Schefter's feed and its archive years, for the story on each move. Same
 // lazy shape: only the files for the season being viewed are read.
-const schefterPosts = import.meta.glob(['../../../data/afl-fantasy/schefter-feed.json', '../../../data/afl-fantasy/schefter-archive/*.json']);
+const schefterPosts = lazyFeeds([
+  ...listLeagueData(`${league.dataPath}/schefter-feed.json`),
+  ...listLeagueData(`${league.dataPath}/schefter-archive/*.json`),
+]);
 ---
 
 <TransactionsPage leagueSlug="afl-fantasy" transactionFeeds={transactionFeeds} leagueFeeds={leagueFeeds} schefterPosts={schefterPosts} />

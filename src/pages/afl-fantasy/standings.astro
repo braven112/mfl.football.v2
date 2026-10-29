@@ -4,7 +4,8 @@
  * (components/shared/standings/AflFamilyStandingsPage), shared with the custom-site demo's
  * keeper slot.
  *
- * Kept HERE: the feed globs (a glob specifier cannot be a runtime variable),
+ * Kept HERE: the feed reads (through the league-data loader,
+ * src/utils/league-data.ts, so no season is bundled into the server function),
  * the season redirects (`Astro.redirect()` only redirects from a page), and
  * the team-preference cookie (a component cannot set one).
  */
@@ -14,18 +15,42 @@ import { feedsByYear, resolveStandingsRoute } from '../../utils/afl-family-stand
 import { getAFLPreference, setAFLPreference, getAFLTeamData, resolveAFLTeamSelection } from '../../utils/team-preferences';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 const league = getLeagueBySlug('afl-fantasy')!;
+const FEEDS_DIR = `${league.dataPath}/mfl-feeds`;
+/** Path → parsed file for each path that exists, the shape `feedsByYear` reads. */
+async function loadFeeds(paths: string[]): Promise<Record<string, unknown>> {
+  const values = await Promise.all(paths.map((p) => loadLeagueData(p)));
+  const out: Record<string, unknown> = {};
+  paths.forEach((p, i) => {
+    if (values[i] != null) out[p] = values[i];
+  });
+  return out;
+}
+// Every season's standings (they decide which seasons the picker offers) and
+// fetch stamps are small; the rest is read for the season on screen only.
+const [allStandings, allFetchMeta] = await Promise.all([
+  loadFeeds(listLeagueData(`${FEEDS_DIR}/*/standings.json`)),
+  loadFeeds(listLeagueData(`${FEEDS_DIR}/*/fetch.meta.json`)),
+]);
 const feeds = {
-  standings: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true })),
-  fetchMeta: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/fetch.meta.json', { eager: true })),
-  weeklyResults: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', { eager: true })),
+  standings: feedsByYear(allStandings),
+  fetchMeta: feedsByYear(allFetchMeta),
+  weeklyResults: new Map<number, any>(),
   // Each season's division/conference structure (the 2003-2012 AFL ran six
   // divisions; see afl-structure.ts).
-  league: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', { eager: true })),
+  league: new Map<number, any>(),
 };
 const route = await resolveStandingsRoute(Astro.url, league, '/afl-fantasy', feeds);
 if ('redirect' in route) return Astro.redirect(route.redirect);
+
+const [weeklyResults, seasonLeagues] = await Promise.all([
+  loadFeeds([`${FEEDS_DIR}/${route.selectedYear}/weekly-results.json`]),
+  loadFeeds([route.selectedYear, route.selectedYear - 1].map((y) => `${FEEDS_DIR}/${y}/league.json`)),
+]);
+feeds.weeklyResults = feedsByYear(weeklyResults);
+feeds.league = feedsByYear(seasonLeagues);
 
 // A ?myteam= link sets the owner's team preference.
 const myTeamParam = Astro.url.searchParams.get('myteam');

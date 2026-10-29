@@ -34,13 +34,13 @@ const CURRENT_ERA = '20{2[5-9],[3-9][0-9]}';
 /** AFL keeper era, matches 2024-2099 — see tests/afl-keeper-feed-globs.test.ts. */
 const KEEPER_ERA = '20{2[4-9],[3-9][0-9]}';
 
-const ALLOWLIST_BARE_YEAR = new Set([
-  // ?year= browsing back to 2010; players.json is needed per selected year.
+const ALLOWLIST_BARE_YEAR = new Set<string>([
   // (theleague/rosters.astro left this list when Phase 3 landed: its
   // historical payloads now come from the derived snapshot written by
   // scripts/compute-roster-season-payloads.mjs, and its feed globs are
-  // current-era filtered.)
-  'src/pages/afl-fantasy/rosters.astro',
+  // current-era filtered. afl-fantasy/rosters.astro left it in Oct 2026: it
+  // reads only the selected season's players.json through the league-data
+  // loader, src/utils/league-data.ts.)
 ]);
 
 const HEAVY_FEED = /\/mfl-feeds\/(?<years>[^/]+)\/(?:[^/']*\{[^}]*\})?[^/']*?(players|weekly-results-raw)\.json/;
