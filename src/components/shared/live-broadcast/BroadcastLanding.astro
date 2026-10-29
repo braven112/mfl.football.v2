@@ -526,6 +526,24 @@ const fmtDate = (ms: number) =>
    */
   let toggleSeq = 0;
   let toggleAbort: AbortController | null = null;
+  /** The leagues the preview board has data for — what a failed request leaves it able to show. */
+  let loaded = new Set<string>();
+  /**
+   * The latest word sent to the board. The island hydrates on its own clock,
+   * so a switch pressed first would be shouted at nobody; it asks for this
+   * with `lbc:board-ready` once it is listening.
+   */
+  let pendingBoard: { leagues?: string[]; data?: unknown } = {};
+
+  function tellBoard(update: { leagues?: string[]; data?: unknown }) {
+    if (update.data) pendingBoard = { data: update.data };
+    else if (update.leagues) {
+      // A removal after fresh data still has to take that league off.
+      pendingBoard = { ...pendingBoard, leagues: update.leagues };
+    }
+    if (update.data) document.dispatchEvent(new CustomEvent('lbc:board-data', { detail: { data: update.data } }));
+    if (update.leagues) document.dispatchEvent(new CustomEvent('lbc:leagues', { detail: { enabled: update.leagues } }));
+  }
 
   const ids = (raw: string | undefined) => (raw ? raw.split(',').filter(Boolean) : []);
 
@@ -633,9 +651,13 @@ const fmtDate = (ms: number) =>
       html = await res.text();
     } catch {
       // A removal is already done — the switch, the board and the cookie all
-      // say so — and the rows catch up on the next visit. An ADD has nothing
-      // to draw without the server, so only then does the page go fetch it.
-      if (seq === toggleSeq && adding && !abort.signal.aborted) window.location.href = href;
+      // say so — and the rows catch up on the next visit. A league the board
+      // has no data for (this tap's add, or an earlier one whose request this
+      // tap aborted) cannot be drawn without the server, so only then does
+      // the page go fetch it.
+      if (seq !== toggleSeq || abort.signal.aborted) return;
+      const wanted = new URL(href, location.href).searchParams.get('leagues')?.split(',') ?? [];
+      if (wanted.some((id) => id && id !== 'default' && !loaded.has(id))) window.location.href = href;
       return;
     }
     if (seq !== toggleSeq) return;
@@ -647,10 +669,18 @@ const fmtDate = (ms: number) =>
     const stats = document.querySelector('.bcl-stats');
     const freshStats = next.querySelector('.bcl-stats');
     if (stats && freshStats) stats.replaceWith(document.importNode(freshStats, true));
-    const data = boardDataFrom(next);
-    if (data) document.dispatchEvent(new CustomEvent('lbc:board-data', { detail: { data } }));
+    const data = boardDataFrom(next) as { enabled?: unknown } | null;
+    if (data) tellBoard({ data });
     else swapBoard(next);
+    const on = Array.isArray(data?.enabled) ? (data.enabled as string[]) : null;
+    loaded = new Set(on ?? enabledCards());
     initLeagueToggles();
+  }
+
+  function enabledCards(): string[] {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-bcl-leagues] [data-league-id].is-on')).map(
+      (c) => c.dataset.leagueId!,
+    );
   }
 
   function initLeagueToggles() {
@@ -676,8 +706,8 @@ const fmtDate = (ms: number) =>
       if (!adding) {
         // Off the board on the tap. `selection` is null when the set is back
         // to the defaults, so the board is told the cards' own answer.
-        const on = enabled.filter((x) => x !== id);
-        document.dispatchEvent(new CustomEvent('lbc:leagues', { detail: { enabled: on } }));
+        loaded.delete(id);
+        tellBoard({ leagues: enabled.filter((x) => x !== id) });
       }
       toggleSeq += 1;
       void applyToggle(broadcastHref(list.dataset.path || '/live/broadcast', selection, week), toggleSeq, adding);
@@ -704,6 +734,9 @@ const fmtDate = (ms: number) =>
     focusPreview();
     initSound();
     initUnpair();
+    // A fresh page: its board was rendered with exactly the cards that are on.
+    pendingBoard = {};
+    loaded = new Set(enabledCards());
     initLeagueToggles();
   }
 
@@ -714,6 +747,13 @@ const fmtDate = (ms: number) =>
     if (detail?.from === 'landing') return;
     const btn = document.querySelector<HTMLElement>('[data-bcl-sound]');
     if (btn && typeof detail?.on === 'boolean') paintSound(btn, detail.on);
+  });
+
+  document.addEventListener('lbc:board-ready', () => {
+    if (!document.querySelector('[data-bcl-leagues]')) return;
+    const { data, leagues } = pendingBoard;
+    if (data) document.dispatchEvent(new CustomEvent('lbc:board-data', { detail: { data } }));
+    if (leagues) document.dispatchEvent(new CustomEvent('lbc:leagues', { detail: { enabled: leagues } }));
   });
 
   initBroadcastLanding();
