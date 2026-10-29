@@ -53,7 +53,8 @@ import '../../../styles/loading.css';
 import '../../../styles/network-badge.css';
 import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channels';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
-import { formatForViewer, DEFAULT_VIEWER_CLOCK } from '../../../utils/viewer-clock';
+import { formatForViewer, formatMomentLine, DEFAULT_VIEWER_CLOCK } from '../../../utils/viewer-clock';
+import { eventZonesFor } from '../../../utils/viewer-preferences';
 import { leagueClock } from '../../../config/leagues';
 import type { LineupPlayer } from '../../../types/lineups';
 import { DEFAULT_LINEUP_SLOTS, assignLineupSlots, eligibleSlotsFor, type LineupSlotLayout } from '../../../utils/lineup-slots';
@@ -249,6 +250,12 @@ interface GameInfo {
    * null when neither MFL nor ESPN gave a usable time.
    */
   kickoffLabel: string | null;
+  /**
+   * The same kickoff in the viewer's OWN clock alone, for the lineup slot's
+   * projection line. A slot row has room for one clock, not the two-zone line
+   * a viewer off Pacific gets in the sheet ("Sun 1:00 PM ET · 10:00 AM PT").
+   */
+  kickoffShort: string | null;
 }
 
 /**
@@ -275,11 +282,15 @@ function channelFor(usNetwork: string | null | undefined) {
 
 // MFL's kickoff first — it is what locks the slot, so the time printed next to
 // a player is the time he locks — then ESPN's game date.
-function kickoffLabelFor(homeTeam: string, espnDate: string | undefined): string | null {
+function kickoffLabelsFor(homeTeam: string, espnDate: string | undefined): { full: string; short: string } | null {
   const mflEpoch = kickoffByTeam.get(homeTeam) ?? 0;
   const ms = mflEpoch > 0 ? mflEpoch * 1000 : espnDate ? Date.parse(espnDate) : NaN;
   if (!Number.isFinite(ms)) return null;
-  return formatForViewer(new Date(ms), viewerClock, { weekday: true });
+  const at = new Date(ms);
+  return {
+    full: formatForViewer(at, viewerClock, { weekday: true }),
+    short: formatMomentLine(at, eventZonesFor(viewerClock).slice(0, 1), { weekday: true }),
+  };
 }
 
 // Build schedule from live odds
@@ -316,6 +327,7 @@ Object.values(liveOdds).forEach((odds) => {
     if (homeStats) fpaRanks[awayTeam][pos] = homeStats.rank;
   }
 
+  const kickoffLabels = kickoffLabelsFor(homeTeam, odds.date);
   schedule.push({
     id: odds.id,
     home: homeTeam,
@@ -325,7 +337,8 @@ Object.values(liveOdds).forEach((odds) => {
     overUnder: odds.overUnder !== 'N/A' ? parseFloat(String(odds.overUnder)) : null,
     fpaRanks,
     channel: channelFor(odds.broadcast),
-    kickoffLabel: kickoffLabelFor(homeTeam, odds.date),
+    kickoffLabel: kickoffLabels?.full ?? null,
+    kickoffShort: kickoffLabels?.short ?? null,
     status: odds.status?.toLowerCase().includes('final') ? 'final'
       : odds.status?.toLowerCase().includes('progress') || odds.status?.match(/^\d/) ? 'live'
       : 'pre',
@@ -869,9 +882,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                           <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
                           <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="20" height="20" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
                         </div>
-                        {player.projection != null && (
-                          <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
-                        )}
+                        <div class="lineup-slot__meta">
+                          {game?.kickoffShort && <span class="lineup-slot__time">{game.kickoffShort}</span>}
+                          {player.projection != null && (
+                            <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
+                          )}
+                        </div>
                       </>
                     ) : null}
                     {player.streak && <span class="lineup-streak" title={`${player.streak}-week hot streak`}>🔥</span>}
@@ -1519,7 +1535,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
               <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
               <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="20" height="20" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
             </div>
-            ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
+            <div class="lineup-slot__meta">
+              ${game?.kickoffShort ? `<span class="lineup-slot__time">${esc(game.kickoffShort)}</span>` : ''}
+              ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
+            </div>
           `;
         }
         if (player.streak) {
@@ -2625,6 +2644,28 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-slot__opp-prefix + .lineup-slot__opp-logo {
     flex-shrink: 0;
+  }
+
+  /* Kickoff + projection share the second line, so the time adds no row
+     height ("Sun 10:00 AM PT  21.4"). Same markup in the .astro branch and the
+     client's renderSlot — the two are a pair.
+     The time hangs LEFT of the projection, out of flow, into the empty space
+     beside the position under the name: in flow it widened this column and
+     truncated long names at 360px ("Parker Washi…"). */
+  .lineup-slot__meta {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+  }
+
+  .lineup-slot__time {
+    position: absolute;
+    right: calc(100% + 0.5rem);
+    bottom: 0.1em;
+    font-size: var(--font-size-2xs);
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .lineup-slot__proj {
