@@ -60,7 +60,7 @@ const POLL_TIMEOUT_MS = 12_000;
 const RELOAD_MS = 3 * 60 * 60_000;
 /** A page that could not read the leagues at all tries again this soon. */
 const RETRY_MS = 60_000;
-/** How long the bar says how to open the panel, the first time it shows. */
+/** How long the bar says how to move or turn it off (the main app's Back menu), the first time it shows. */
 const BAR_HINT_MS = 12_000;
 /** How long the ticker shows each of the owner's games before the next. */
 const ROTATE_MS = 8_000;
@@ -487,7 +487,7 @@ function Ticker({
           {game.opponent.abbrev}
         </span>
         {hint ? (
-          <span className="bov__now-proj">Open Score overlay again to expand</span>
+          <span className="bov__now-proj">Move or turn off: MFL Football › Back</span>
         ) : game.readable && (
           <span className="bov__now-proj">
             Proj {onePlace(game.mine.projectedFinal)} – {onePlace(game.opponent.projectedFinal)}
