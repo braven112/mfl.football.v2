@@ -111,6 +111,10 @@ const SEQUENTIAL = [
 ];
 
 const PARALLEL = [
+  // The logo prompt builder's short list of well-known players
+  // (src/utils/team-logo-references.ts): reads the committed ranking sources
+  // and players.json, writes one small committed file.
+  { name: 'compute:logo-reference-players', cmd: 'pnpm run compute:logo-reference-players', previewSkip: true },
   // Pure local compute (feeds already on disk, no network, independent
   // output dir) — overlaps with the network fetches instead of serializing
   // onto the build critical path.

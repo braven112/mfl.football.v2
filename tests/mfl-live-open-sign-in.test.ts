@@ -172,6 +172,8 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/utils/broadcast-viewer.ts',
 		'src/pages/tv.astro',
 		'src/pages/live/broadcast/pair.astro',
+		// Remote mode: the phone's full-screen remote for those same TVs.
+		'src/pages/live/broadcast/remote.astro',
 		'src/pages/api/broadcast-tv/approve.ts',
 		'src/pages/api/broadcast-tv/revoke.ts',
 		// The phone remote for those TVs: it reads only the owner's own TV list,

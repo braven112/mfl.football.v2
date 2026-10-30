@@ -18,8 +18,25 @@ export type RemoteCommand =
    */
   | { kind: 'overlay'; action: OverlayAction };
 
-export type OverlayAction = 'small' | 'quarter' | 'top' | 'bottom' | 'left' | 'right';
-const OVERLAY_ACTIONS: readonly OverlayAction[] = ['small', 'quarter', 'top', 'bottom', 'left', 'right'];
+/**
+ * A corner (`top-right`) names both moves in ONE command: the server keeps
+ * only the latest command, so an edge and a side sent as two would leave the
+ * TV with whichever arrived last.
+ */
+export type OverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type OverlayAction = 'small' | 'quarter' | 'top' | 'bottom' | 'left' | 'right' | OverlayCorner;
+const OVERLAY_ACTIONS: readonly OverlayAction[] = [
+  'small',
+  'quarter',
+  'top',
+  'bottom',
+  'left',
+  'right',
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+];
 
 /** What the TV reads: is a remote active, and the latest command if any. */
 export interface RemoteState {

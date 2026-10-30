@@ -1,7 +1,7 @@
 /**
  * The team logo prompt builder (MFL Football app and `/live/team-logo`).
  *
- * We do not make images. An owner picks a style, one or two team colors and a
+ * We do not make images. An owner picks a style, one to three team colors and a
  * kind of art, and this writes the prompt they paste into the AI image tool
  * they already use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
  * rather than pictures. The rules wrapped around their choices are the ones
@@ -26,15 +26,22 @@ import type {
   MflLiveAppLogoColorNote,
   MflLiveAppLogoSuggestion,
 } from '../../packages/shared-types/src/mfl-live-app-logo';
-import { NFL_TEAM_NAMES } from './nfl-logo';
+import { findLogoReference, referenceNote, referencePromptLine } from './team-logo-references';
 import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 
-export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
-  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest' },
-  { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head' },
-  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials' },
-  { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch' },
-  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle' },
+/**
+ * `hint` is the one line on each style's card, saying in plain words what the
+ * label means. `image` is an example logo in that style, shown above the name
+ * on the website: Brandon is making these (2026-10-30); until one is set the
+ * card shows its name and hint alone. Put the files in
+ * `public/assets/team-logo-styles/` and name them here.
+ */
+export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string; hint: string; image?: string }> = [
+  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest', hint: 'A shield with your initials, old-school varsity' },
+  { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head', hint: 'A mascot head in sharp, simple shapes' },
+  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials', hint: 'Your initials, big and bold, no picture' },
+  { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch', hint: 'A stitched 1970s patch, like on a jacket' },
+  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle', hint: 'A circle with the team name around the mascot' },
 ];
 
 /**
@@ -66,7 +73,15 @@ export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'black', hex: '#111111' },
 ];
 
-export const LOGO_MAX_COLORS = 2;
+/**
+ * How many team colors an owner may pick. The website asks "2 or 3 colors"
+ * first (`LOGO_COLOR_COUNTS`) and caps the grid at that; the server takes up
+ * to three either way (Brandon, 2026-10-30: a third color gives a logo more
+ * life).
+ */
+export const LOGO_MAX_COLORS = 3;
+export const LOGO_COLOR_COUNTS = [2, 3] as const;
+export const DEFAULT_LOGO_COLOR_COUNT = 2;
 
 const WHITE = /^#F{6}$/;
 const BLACK = /^#(0{6}|111111)$/;
@@ -97,6 +112,25 @@ export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
   { label: 'Navy and orange', hexes: ['#13294B', '#F26B1D'] },
   { label: 'Crimson and cream', hexes: ['#9E1B32', '#F3E9D2'] },
   { label: 'Navy and silver', hexes: ['#13294B', '#A5ACAF'] },
+];
+
+/**
+ * Ten ready-made trios for the three-color mode, shown as one square split in
+ * three. Each passes `logoColorAdvice`: the first two clear 3:1 like a pair,
+ * and the third clears 3:1 against at least one of them, so it always has a
+ * color to sit on (tests/team-logo-prompt.test.ts).
+ */
+export const LOGO_COLOR_TRIOS: MflLiveAppLogoSuggestion[] = [
+  { label: 'Red, white and navy', hexes: ['#C8102E', '#FFFFFF', '#13294B'] },
+  { label: 'Navy, gold and red', hexes: ['#13294B', '#FFB81C', '#C8102E'] },
+  { label: 'Teal, black and orange', hexes: ['#0F766E', '#111111', '#F26B1D'] },
+  { label: 'Navy, orange and silver', hexes: ['#13294B', '#F26B1D', '#A5ACAF'] },
+  { label: 'Red, black and silver', hexes: ['#C8102E', '#111111', '#A5ACAF'] },
+  { label: 'Crimson, cream and black', hexes: ['#9E1B32', '#F3E9D2', '#111111'] },
+  { label: 'Purple, gold and white', hexes: ['#4C1D95', '#FFB81C', '#FFFFFF'] },
+  { label: 'Forest green, gold and white', hexes: ['#1E5631', '#FFB81C', '#FFFFFF'] },
+  { label: 'Sky blue, navy and white', hexes: ['#4FA3E0', '#13294B', '#FFFFFF'] },
+  { label: 'Brown, orange and cream', hexes: ['#4E3629', '#F26B1D', '#F3E9D2'] },
 ];
 
 /**
@@ -134,7 +168,7 @@ export function normalizeHex(value: unknown): string | null {
   return `#${h.toUpperCase()}`;
 }
 
-/** The owner's team colors, cleaned: valid hexes only, no repeats, at most two. */
+/** The owner's team colors, cleaned: valid hexes only, no repeats, at most three. */
 export function pickLogoColors(sent: unknown): string[] {
   const list = Array.isArray(sent) ? sent : [];
   const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h))].slice(0, LOGO_MAX_COLORS);
@@ -157,9 +191,11 @@ function colorName(hex: string): string {
 const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /**
- * Whether the owner's colors work together, in words: two that are too close
- * to tell apart get a warning, otherwise a nod. White and black come with
- * every prompt, so one color alone is a complete look, not a gap.
+ * Whether the owner's colors work together, in words. The first two must
+ * stand apart (3:1), or they merge on a small logo. A third color is an
+ * accent: it only needs one of the other two to sit on, so red, white and
+ * navy passes even though red and navy alone are close. White and black come
+ * with every prompt, so one color alone is a complete look, not a gap.
  */
 export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote } {
   if (hexes.length < 2) {
@@ -170,7 +206,7 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
       },
     };
   }
-  const [a, b] = hexes;
+  const [a, b, c] = hexes;
   const ratio = contrastRatio(a, b);
   if (ratio < LOGO_MIN_CONTRAST) {
     return {
@@ -182,11 +218,29 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
       },
     };
   }
+  if (c && Math.max(contrastRatio(c, a), contrastRatio(c, b)) < LOGO_MIN_CONTRAST) {
+    return {
+      note: {
+        tone: 'weak',
+        text:
+          `${capital(colorName(c))} is too close to both ${colorName(a)} and ${colorName(b)} to stand out on a small logo. ` +
+          'Swap it for a much lighter or darker color, or tap a suggestion.',
+      },
+    };
+  }
   return { note: { tone: 'good', text: 'Good contrast: these colors stay distinct even when the logo is tiny.' } };
 }
 
+/**
+ * Every prompt ends here. Team names riff on real players, clubs and news, and
+ * Brandon wants the art to hint at them as much as possible (2026-10-30), so
+ * the rule invites the reference and draws the line only at a real face and at
+ * a team's actual marks.
+ */
 const ORIGINAL_RULE =
-  'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
+  'If the name or idea refers to a real player, team, celebrity or news moment, capture its spirit as strongly as you can ' +
+  "(the joke, the moment, the personality, the colors), but never draw a real person's face or likeness, " +
+  'and do not copy or resemble any NFL, college or professional team logo, helmet, uniform, shield or wordmark.';
 
 /**
  * The prompt for one set of choices. `colors` is already phrased ("crimson
@@ -201,8 +255,11 @@ export function writeLogoPrompt(input: {
   colors: string;
   kind: MflLiveAppLogoKind;
   neutrals?: string[];
+  /** A sentence about the real player or club the name nods to (`referencePromptLine`). */
+  reference?: string;
 }): string {
   const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
+  const rule = input.reference ? `${input.reference} ${ORIGINAL_RULE}` : ORIGINAL_RULE;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
   const colors = neutrals.length
     ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for outlines, lettering and contrast`
@@ -213,7 +270,7 @@ export function writeLogoPrompt(input: {
       `On the left, the team logo: ${subject}. To its right, the team name in big, bold letters. ` +
       `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
       'No gradients, no photo textures. Transparent background, 1900 × 316 pixels (6:1), ' +
-      `with the logo and name filling the height. ${ORIGINAL_RULE}`
+      `with the logo and name filling the height. ${rule}`
     );
   }
   if (kind === 'svg') {
@@ -221,7 +278,7 @@ export function writeLogoPrompt(input: {
       `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
       `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
       'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE} Reply with the SVG code only.`
+      `It must stay recognizable when shrunk to 40 pixels. ${rule} Reply with the SVG code only.`
     );
   }
   return (
@@ -229,23 +286,8 @@ export function writeLogoPrompt(input: {
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
     'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE}`
+    `It must stay recognizable when shrunk to 40 pixels. ${rule}`
   );
-}
-
-/** NFL club nicknames, plural as the clubs use them ("Packers", "49ers"). */
-const NFL_NICKNAMES = Object.values(NFL_TEAM_NAMES).map((full) => full.split(' ').pop() as string);
-
-/**
- * A gentle note when the name or idea names an NFL club. Not a block: an owner
- * may call their team anything, but the art must not borrow the club's mark.
- */
-export function nflNameWarning(...texts: string[]): string | undefined {
-  const joined = texts.join(' ');
-  const hit = NFL_NICKNAMES.find((n) => new RegExp(`\\b${n}\\b`, 'i').test(joined));
-  return hit
-    ? `“${hit}” is an NFL team’s name. That’s fine for your team, but ask for new art, not their logo or colors.`
-    : undefined;
 }
 
 export interface BuiltLogoPrompt {
@@ -269,6 +311,7 @@ export function buildTeamLogoPrompt(
   const style = LOGO_STYLES.find((s) => s.id === sent?.style) ?? LOGO_STYLES.find((s) => s.id === DEFAULT_LOGO_CHOICE.style)!;
   const colors = pickLogoColors(sent?.colors);
   const kind = LOGO_KINDS.find((k) => k.id === sent?.kind)?.id ?? DEFAULT_LOGO_CHOICE.kind;
+  const reference = findLogoReference(teamName, idea);
 
   return {
     choice: { teamName, idea, style: style.id, colors, kind },
@@ -279,8 +322,9 @@ export function buildTeamLogoPrompt(
       colors: colorsText(colors),
       kind,
       neutrals: neutralsFor(colors),
+      reference: reference && referencePromptLine(reference),
     }),
-    warning: nflNameWarning(teamName, idea),
+    warning: reference && referenceNote(reference),
     colorNote: logoColorAdvice(colors).note,
   };
 }
@@ -288,9 +332,10 @@ export function buildTeamLogoPrompt(
 /** The choices as the app lists them (no prompt wording leaves the server). */
 export function logoPromptOptions() {
   return {
-    styles: LOGO_STYLES.map(({ id, label }) => ({ id, label })),
+    styles: LOGO_STYLES.map(({ id, label, hint }) => ({ id, label, hint })),
     colors: LOGO_COLORS,
     suggestions: LOGO_COLOR_SUGGESTIONS,
+    trios: LOGO_COLOR_TRIOS,
     maxColors: LOGO_MAX_COLORS,
     kinds: LOGO_KINDS,
   };

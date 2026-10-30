@@ -3,7 +3,7 @@
  * MFL Football — create a team logo, on the website.
  *
  * The same builder as the app's Create team logo screen: the owner picks a
- * style, one or two team colors (from the grid or any hex; the prompt offers
+ * style, two or three team colors (from the grid or any hex; the prompt offers
  * white and black on top) and the kind of art,
  * and copies a prompt into ChatGPT, Gemini or Claude. We make no images
  * (decided with Brandon 2026-10-27). Every word of the prompt comes from
@@ -18,10 +18,12 @@ import { getMflLiveUser } from '../../utils/auth';
 import { listOwnerLeagues } from '../../utils/live/owner-league';
 import {
 	DEFAULT_LOGO_CHOICE,
+	DEFAULT_LOGO_COLOR_COUNT,
+	LOGO_COLOR_COUNTS,
 	LOGO_COLOR_SUGGESTIONS,
+	LOGO_COLOR_TRIOS,
 	LOGO_COLORS,
 	LOGO_KINDS,
-	LOGO_MAX_COLORS,
 	LOGO_STYLES,
 } from '../../utils/team-logo-prompt';
 import '../../styles/mfl-live.css';
@@ -60,9 +62,22 @@ const firstName = teams[0]?.name ?? '';
 
 		<div class="tlogo__field">
 			<span class="tlogo__label" id="tlogo-style-label">Style</span>
-			<div class="ui-pills" role="group" aria-labelledby="tlogo-style-label" data-group="style">
+			<div class="tlogo__styles" role="group" aria-labelledby="tlogo-style-label" data-group="style">
 				{LOGO_STYLES.map((s) => (
-					<button type="button" class="ui-pill" data-value={s.id} aria-pressed={(s.id === DEFAULT_LOGO_CHOICE.style) ? 'true' : 'false'}>{s.label}</button>
+					<button type="button" class="tlogo__style" data-value={s.id} aria-pressed={(s.id === DEFAULT_LOGO_CHOICE.style) ? 'true' : 'false'}>
+						{s.image && <img class="tlogo__art" src={s.image} alt="" width="88" height="88" loading="lazy" />}
+						<span class="tlogo__style-name">{s.label}</span>
+						<span class="tlogo__style-hint">{s.hint}</span>
+					</button>
+				))}
+			</div>
+		</div>
+
+		<div class="tlogo__field">
+			<span class="tlogo__label" id="tlogo-count-label">How many team colors</span>
+			<div class="ui-pills" role="group" aria-labelledby="tlogo-count-label" data-group="count">
+				{LOGO_COLOR_COUNTS.map((n) => (
+					<button type="button" class="ui-pill" data-value={String(n)} aria-pressed={(n === DEFAULT_LOGO_COLOR_COUNT) ? 'true' : 'false'}>{n} colors</button>
 				))}
 			</div>
 		</div>
@@ -76,16 +91,30 @@ const firstName = teams[0]?.name ?? '';
 						class="tlogo__swatch tlogo__swatch--pair"
 						style={`--a:${sg.hexes[0]};--b:${sg.hexes[1]}`}
 						data-suggest={sg.hexes.join(',')}
+						data-count="2"
 						aria-label={sg.label}
 						title={sg.label}
 						aria-pressed="false"
+					></button>
+				))}
+				{LOGO_COLOR_TRIOS.map((sg) => (
+					<button
+						type="button"
+						class="tlogo__swatch tlogo__swatch--trio"
+						style={`--a:${sg.hexes[0]};--b:${sg.hexes[1]};--c:${sg.hexes[2]}`}
+						data-suggest={sg.hexes.join(',')}
+						data-count="3"
+						aria-label={sg.label}
+						title={sg.label}
+						aria-pressed="false"
+						hidden
 					></button>
 				))}
 			</div>
 		</div>
 
 		<div class="tlogo__field">
-			<span class="tlogo__label" id="tlogo-color-label">Or pick your own · up to {LOGO_MAX_COLORS}</span>
+			<span class="tlogo__label" id="tlogo-color-label">Or pick your own · up to <span data-max>{DEFAULT_LOGO_COLOR_COUNT}</span></span>
 			<div class="tlogo__chips" role="group" aria-labelledby="tlogo-color-label" data-colors>
 				{LOGO_COLORS.map((c) => (
 					<button
@@ -128,8 +157,8 @@ const firstName = teams[0]?.name ?? '';
 </MflAppLayout>
 
 <script>
-	import { buildTeamLogoPrompt, LOGO_COLORS, LOGO_MAX_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
-	import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
+	import { buildTeamLogoPrompt, LOGO_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
+		import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
 
 	function init() {
 		const found = document.querySelector<HTMLElement>('[data-team-logo]');
@@ -146,11 +175,17 @@ const firstName = teams[0]?.name ?? '';
 		const picked = (group: string) =>
 			root.querySelector<HTMLElement>(`[data-group="${group}"] [aria-pressed="true"]`)?.dataset.value ?? '';
 		const colorName = (hex: string) => LOGO_COLORS.find((c) => c.hex === hex)?.name ?? hex;
+		// The "2 colors / 3 colors" choice: how many the grid holds before a new
+		// tap swaps the last one, and which ready-made sets show.
+		const maxColors = () => Number(picked('count')) || 2;
 
 		function render() {
 			root.querySelectorAll<HTMLElement>('[data-hex]').forEach((b) => b.setAttribute('aria-pressed', String(colors.includes(b.dataset.hex!))));
+			const max = maxColors();
+			$('[data-max]').textContent = String(max);
+			root.querySelectorAll<HTMLElement>('[data-suggest]').forEach((b) => (b.hidden = Number(b.dataset.count) !== max));
 			$('[data-picked]').textContent = colors.length
-				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it, or another to swap the second.`
+				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it, or another to swap the last one.`
 				: 'No colors picked, so the prompt uses red.';
 			$('[data-picked]').textContent += ' The logo can always use white and black as well.';
 			const built = buildTeamLogoPrompt(
@@ -170,11 +205,12 @@ const firstName = teams[0]?.name ?? '';
 		}
 
 		function toggle(hex: string) {
+			const max = maxColors();
 			if (colors.includes(hex)) colors = colors.filter((h) => h !== hex);
-			else if (colors.length < LOGO_MAX_COLORS) colors = [...colors, hex];
-			// Full (say, after tapping a ready-made pair): the new color replaces the
-			// second, so the grid never locks up. The first stays the main color.
-			else colors = [...colors.slice(0, LOGO_MAX_COLORS - 1), hex];
+			else if (colors.length < max) colors = [...colors, hex];
+			// Full (say, after tapping a ready-made set): the new color replaces the
+			// last, so the grid never locks up. The first stays the main color.
+			else colors = [...colors.slice(0, max - 1), hex];
 			render();
 		}
 
@@ -183,6 +219,8 @@ const firstName = teams[0]?.name ?? '';
 				const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-value]');
 				if (!btn) return;
 				group.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+				// Going from 3 colors to 2 drops the third.
+				if (group.dataset.group === 'count') colors = colors.slice(0, maxColors());
 				render();
 			});
 		});
@@ -278,6 +316,52 @@ const firstName = teams[0]?.name ?? '';
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 	}
+	/* The style picker: a card per style, its example logo (once there is one) above its name. */
+	.tlogo__styles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+		gap: 0.6rem;
+	}
+	.tlogo__style {
+		display: grid;
+		justify-items: center;
+		align-content: start;
+		gap: 0.3rem;
+		padding: 0.75rem 0.6rem;
+		border-radius: 12px;
+		border: 1px solid var(--color-border-subtle);
+		background: var(--color-surface-3);
+		color: var(--page-text);
+		font: inherit;
+		text-align: center;
+		cursor: pointer;
+	}
+	.tlogo__style[aria-pressed='true'] {
+		outline: 3px solid var(--league-accent);
+		outline-offset: 1px;
+	}
+	.tlogo__art {
+		display: block;
+		width: 5.5rem;
+		height: 5.5rem;
+		object-fit: contain;
+	}
+	.tlogo__style-name {
+		font-weight: 700;
+		font-size: var(--font-size-sm);
+	}
+	.tlogo__style-hint {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+		line-height: 1.35;
+	}
+	/* A ready-made trio: one square in three diagonal bands. */
+	.tlogo__swatch--trio {
+		background: linear-gradient(135deg, var(--a) 0 36%, var(--b) 36% 64%, var(--c) 64%);
+	}
+	.tlogo__swatch[hidden] {
+		display: none;
+	}
 	/* A ready-made pair: one square, split corner to corner. */
 	.tlogo__swatch--pair {
 		background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
@@ -293,8 +377,9 @@ const firstName = teams[0]?.name ?? '';
 	.tlogo__note[data-tone='weak'] {
 		color: var(--color-warning);
 	}
+	/* A real player or club spotted in the name: a friendly heads-up, not an error. */
 	.tlogo__warning {
-		color: var(--color-warning);
+		color: var(--page-text);
 		margin-bottom: 0.75rem;
 	}
 	.tlogo__prompt {

@@ -4,9 +4,12 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.SearchManager;
+import android.app.UiModeManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.net.Uri;
@@ -53,6 +56,7 @@ public class MainActivity extends Activity {
 
     /** Appended to the WebView's user agent so the site can tell it's on a TV. */
     private static final String UA_SUFFIX = " MFLLiveTV/" + BuildConfig.VERSION_NAME;
+    private static final String UA_SUFFIX_PHONE = " MFLLiveRemote/" + BuildConfig.VERSION_NAME;
 
     private FrameLayout root;
     private WebView webView;
@@ -70,11 +74,25 @@ public class MainActivity extends Activity {
      */
     private volatile String bridgeToken = newToken();
     private static final String HOME_HOST = Uri.parse(BuildConfig.START_URL).getHost();
+    /**
+     * Remote mode: on a phone this app is the remote for the owner's TV, not
+     * a board to watch, so it opens the full-screen remote page instead.
+     */
+    private static final String REMOTE_PATH = "/live/broadcast/remote";
+    /** Running on a phone or tablet rather than a TV; set once in onCreate. */
+    private boolean phone;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        phone = isPhone();
+        // The remote is a portrait page; the manifest's landscape lock is for TVs.
+        // The theme is Fullscreen for TVs, which hides a phone's status bar too.
+        if (phone) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
 
         // A TV that dims or starts its screensaver during a live slate is the
         // one failure a browser tab can't avoid; the app's whole reason to exist.
@@ -94,7 +112,9 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setUserAgentString(settings.getUserAgentString() + UA_SUFFIX);
+        // On a phone the site must treat this as a phone, not a TV: a phone can
+        // sign in with MyFantasyLeague, where a TV pairs by QR instead.
+        settings.setUserAgentString(settings.getUserAgentString() + (phone ? UA_SUFFIX_PHONE : UA_SUFFIX));
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
@@ -117,9 +137,29 @@ public class MainActivity extends Activity {
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
-            webView.loadUrl(BuildConfig.START_URL);
+            webView.loadUrl(homeUrl());
         }
         webView.requestFocus();
+    }
+
+    /**
+     * A TV runs in television UI mode, or (an older Android TV box, a Fire TV)
+     * at least declares leanback; anything else with a touchscreen is a phone
+     * or tablet.
+     */
+    private boolean isPhone() {
+        UiModeManager ui = (UiModeManager) getSystemService(UI_MODE_SERVICE);
+        if (ui != null && ui.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) return false;
+        PackageManager pm = getPackageManager();
+        if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) return false;
+        return pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
+    }
+
+    /** The board on a TV; remote mode on a phone (sign-in redirects back to it). */
+    private String homeUrl() {
+        if (!phone) return BuildConfig.START_URL;
+        Uri start = Uri.parse(BuildConfig.START_URL);
+        return start.buildUpon().encodedPath(REMOTE_PATH).encodedQuery(null).fragment(null).build().toString();
     }
 
     @Override
@@ -174,6 +214,9 @@ public class MainActivity extends Activity {
             exitCustomView();
         } else if (!pageFailed && webView.canGoBack()) {
             webView.goBack();
+        } else if (phone) {
+            // No score overlay on a phone: Back simply leaves.
+            finish();
         } else {
             showExitMenu();
         }
@@ -241,7 +284,7 @@ public class MainActivity extends Activity {
         offlineView.setVisibility(View.GONE);
         String current = webView.getUrl();
         if (current == null || current.startsWith("about:")) {
-            webView.loadUrl(BuildConfig.START_URL);
+            webView.loadUrl(homeUrl());
         } else {
             webView.reload();
         }
@@ -281,6 +324,9 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void hideSystemBars() {
+        // A phone keeps its status and navigation bars: the remote is an app
+        // screen, not a full-screen board.
+        if (phone) return;
         View decor = getWindow().getDecorView();
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);

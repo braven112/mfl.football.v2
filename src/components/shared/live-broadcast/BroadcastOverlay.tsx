@@ -74,6 +74,9 @@ import {
   type WatchGame,
 } from '../../../utils/broadcast-overlay';
 
+/** The MFL.football mark, light ink for a dark ground. */
+const MFL_MARK = '/assets/logos/mfl-football-mark-dark.svg';
+
 /** Same order of cadence as the board: live scoring moves every few seconds. */
 const POLL_MS = 15_000;
 const POLL_TIMEOUT_MS = 12_000;
@@ -384,17 +387,21 @@ export default function BroadcastOverlay({
     else if (cmd.kind === 'overlay') {
       // Only the corner app can resize or move sideways: an older build's
       // moveTo reads anything but 'bottom' as 'top'.
-      if (!cornerRef.current) {
-        if (cmd.action === 'top' || cmd.action === 'bottom') host?.moveTo?.(cmd.action);
-        return;
-      }
       if (cmd.action === 'quarter' || cmd.action === 'small') {
+        if (!cornerRef.current) return;
         setSize(cmd.action);
         host?.setSize?.(cmd.action);
-      } else {
-        if (cmd.action === 'left' || cmd.action === 'right') setSide(cmd.action);
-        else setEdge(cmd.action);
-        host?.moveTo?.(cmd.action);
+        return;
+      }
+      // A corner is an edge and a side in one press.
+      for (const move of cmd.action.split('-') as ('top' | 'bottom' | 'left' | 'right')[]) {
+        if (!cornerRef.current) {
+          if (move === 'top' || move === 'bottom') host?.moveTo?.(move);
+          continue;
+        }
+        if (move === 'left' || move === 'right') setSide(move);
+        else setEdge(move);
+        host?.moveTo?.(move);
       }
     }
   }, [remote, step]);
@@ -480,7 +487,7 @@ export default function BroadcastOverlay({
           />
         ) : (
           <>
-            <Ticker game={current} logo={logoFor(current)} position={at} count={games.length} focused={false} />
+            <Ticker game={current} logo={logoFor(current)} focused={false} />
             {barHint && <p className="bov__tip">Move, resize or turn off: your phone’s TV remote, or MFL Football › Back</p>}
           </>
         )}
@@ -495,8 +502,6 @@ export default function BroadcastOverlay({
         <Ticker
           game={current}
           logo={logoFor(current)}
-          position={Math.min(index, games.length - 1)}
-          count={games.length}
           alert={alert}
           focused={mode === 'expanded'}
         />
@@ -673,12 +678,13 @@ function WinBar({ game }: { game: OverlayGame }) {
   );
 }
 
-/** League, both crests and scores, and the win bar: the box's one line. */
+/** Our mark, the league, both crests and scores, and the win bar: the box's one line. */
 function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
   const mineLead = game.readable && game.mine.live > game.opponent.live;
   const theirLead = game.readable && game.opponent.live > game.mine.live;
   return (
     <span className="bov__row" key={game.key}>
+      <img className="bov__brand" src={MFL_MARK} alt="MFL Football" />
       <LeagueMark game={game} logo={logo} />
       <span className="bov__sep" aria-hidden="true" />
       <Crest side={game.mine} />
@@ -702,15 +708,11 @@ function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
 function Ticker({
   game,
   logo,
-  position,
-  count,
   alert,
   focused,
 }: {
   game: OverlayGame;
   logo: string;
-  position: number;
-  count: number;
   alert?: BigPlayAlert;
   focused: boolean;
 }) {
@@ -724,13 +726,6 @@ function Ticker({
         </span>
       ) : (
         <ScoreRow game={game} logo={logo} />
-      )}
-      {count > 1 && (
-        <span className="bov__pips" aria-hidden="true">
-          {Array.from({ length: count }, (_, i) => (
-            <i key={i} data-on={i === position || undefined} />
-          ))}
-        </span>
       )}
     </div>
   );
