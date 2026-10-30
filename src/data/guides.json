@@ -103,7 +103,7 @@
           "<strong>Not sure?</strong> Press Home on the remote. The home screen names the system: Google TV, Fire TV, Roku, Tizen (Samsung), webOS (LG) or VIDAA (Hisense). VIDAA's browser hasn't been tested, so a Google TV stick is the safe choice there."
         ]
       },
-      "<strong>The MFL Football app on Google TV.</strong> Opened on its own, it shows the full broadcast board. Its score overlay (press Back in the app and pick <strong>Show scores</strong>) draws a see-through ticker over whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
+      "<strong>The MFL Football app on Google TV.</strong> Opened on its own, it shows the full broadcast board. Its score overlay (press Back in the app and pick <strong>Show scores</strong>) draws a small see-through score box in a corner of whatever you're watching, such as YouTube TV, so you can follow your matchups without leaving the game. The app is in testing right now, so getting it takes one extra step.",
       {
         "type": "list",
         "heading": "Get the app",
@@ -128,12 +128,12 @@
         "heading": "While you watch",
         "items": [
           "<strong>The full walkthrough.</strong> <a href=\"/guides/tv-score-overlay\">The TV score overlay</a> covers every part of the overlay step by step, with pictures.",
-          "<strong>The score ticker.</strong> In MFL Football, press Back and pick <strong>Show scores at the top</strong> or <strong>at the bottom</strong>, then start your game in YouTube TV. A see-through strip shows your matchups one at a time, and the game's sound keeps playing. It never takes the remote, so your TV app keeps working.",
-          "<strong>Big plays.</strong> When one of your starters scores more than 3 points on a single play, a yellow banner slides over the ticker with the player, the play and the new score.",
-          "<strong>Open it up.</strong> On TVs that show the Score overlay tile, open it again (or say \"Open Score overlay\") to see both starting lineups under the ticker, with whoever just scored lit up. Left and Right move between your matchups, and Up and Down move the ticker to the top or the bottom of the screen, out of the way of the network's own graphics. The TV remembers where you put it.",
-          "<strong>The full panel.</strong> Press OK while it's open to bring up the panel: your score, win chance and both starting lineups.",
+          "<strong>The score box.</strong> In MFL Football, press Back and pick <strong>Show scores at the top</strong> or <strong>at the bottom</strong>, then start your game in YouTube TV. A small see-through box in the corner shows your matchups one at a time, with team logos and a win bar, and the game's sound keeps playing. It never takes the remote, so your TV app keeps working.",
+          "<strong>Big plays.</strong> When one of your starters scores more than 3 points on a single play, the box grows for a few seconds with the player, the play and the new score.",
+          "<strong>Steer it from your phone.</strong> On the live board on your phone, tap <strong>TV remote</strong>: <strong>Quarter screen</strong> fills a corner with both lineups (made for multiview), <strong>Small</strong> shrinks it back, and Top, Bottom, Left and Right move it out of the way of the network's own graphics. The TV remembers where you put it.",
+          "<strong>The full panel.</strong> On TVs that show the Score overlay tile, open it again (or say \"Open Score overlay\") to open both lineups with the TV remote, then press OK for the panel: your score, win chance and both starting lineups.",
           "<strong>Watch your players.</strong> The panel's Watch list shows the NFL games your starters are in, live games first. Up and Down pick a game and OK opens it on the TV through your TV's search, where you choose YouTube TV.",
-          "<strong>Back to the game.</strong> Back returns to the ticker, and so does any other button, so the next press reaches your TV app. It also drops back to the ticker after 30 seconds. To close the overlay altogether, open MFL Football, press Back and pick <strong>Turn off the score overlay</strong>."
+          "<strong>Back to the game.</strong> Back returns to the score box, and so does any other button, so the next press reaches your TV app. It also drops back to the score box after 30 seconds. To close the overlay altogether, open MFL Football, press Back and pick <strong>Turn off the score overlay</strong>."
         ]
       },
       {
@@ -165,7 +165,7 @@
   {
     "slug": "tv-score-overlay",
     "title": "The TV score overlay",
-    "summary": "Keep your scores on screen while you watch the game on Google TV: a see-through ticker at the top or bottom, a banner for your big plays, and your lineups one press away.",
+    "summary": "Keep your scores on screen while you watch the game on Google TV: a small see-through score box in a corner, a pop-out for your big plays, and a quarter-screen view for multiview.",
     "icon": "scoreboard-2",
     "updated": "2026-10-30",
     "leagues": [
@@ -173,20 +173,20 @@
       "afl"
     ],
     "body": [
-      "The score overlay is part of the MFL Football app on Google TV. It draws a thin, see-through ticker over whatever you're watching, such as YouTube TV, NFL Sunday Ticket or a local channel, so your fantasy scores stay on screen without covering the game. The game's sound keeps playing the whole time. If you haven't installed the app yet, start with <a href=\"/guides/tv-app\">MFL Football on your TV</a>.",
+      "The score overlay is part of the MFL Football app on Google TV. It draws a small, see-through score box in a corner of whatever you're watching, such as YouTube TV, NFL Sunday Ticket or a local channel, so your fantasy scores stay on screen without covering the game. The game's sound keeps playing the whole time. If you haven't installed the app yet, start with <a href=\"/guides/tv-app\">MFL Football on your TV</a>.",
       {
         "type": "image",
         "src": "tv-overlay-ticker-top.webp",
-        "alt": "A football broadcast with the MFL Football ticker across the top of the screen: the app logo, the league name, both teams' scores, projected finals, win chance and the week.",
-        "caption": "The ticker at the top of the screen, with the network's score banner left clear at the bottom."
+        "alt": "A football broadcast with the MFL Football score box in the upper right corner: the league's logo, both teams' logos and scores, and a win bar in the two teams' colors.",
+        "caption": "The score box in the upper right, clear of the network's score banner at the bottom."
       },
       {
         "type": "list",
         "heading": "Turn it on",
         "items": [
           "<strong>Which TVs.</strong> The overlay needs the MFL Football app, so it works on Google TV and Android TV: most Sony TVs, many TCL, Hisense and Philips TVs, a Chromecast with Google TV, a Google TV Streamer or an Nvidia Shield. Fire TV, Samsung and LG don't let one app draw over another, so use the Broadcast board in your TV's browser there instead. Roku has no browser at all; plug a Google TV stick into a spare HDMI port and use the overlay on that. <a href=\"/guides/tv-app\">MFL Football on your TV</a> covers both.",
-          "<strong>Open MFL Football and press Back.</strong> On the board, press Back until a menu asks <em>Keep your scores on screen?</em> Pick <strong>Show scores at the top</strong> or <strong>Show scores at the bottom</strong>. The app closes and the ticker appears over the home screen.",
-          "<strong>Then start the game.</strong> Open YouTube TV, or whatever you watch on, and start the game. The ticker stays on top and the game's sound plays as normal.",
+          "<strong>Open MFL Football and press Back.</strong> On the board, press Back until a menu asks <em>Keep your scores on screen?</em> Pick <strong>Show scores at the top</strong> or <strong>Show scores at the bottom</strong>. The app closes and the score box appears over the home screen.",
+          "<strong>Then start the game.</strong> Open YouTube TV, or whatever you watch on, and start the game. The score box stays on top and the game's sound plays as normal.",
           "<strong>Start the overlay before the game.</strong> Pressing Home while a game plays sends the game to the background, so turn the scores on first. If the game is already on, press Home, turn the scores on, then go back into your TV app; the game picks up where it was.",
           "<strong>The first time only.</strong> The TV asks to let MFL Football show over other apps. Press OK, turn it on, then press Back. If it doesn't ask, or you said no, turn it on yourself: Settings › Apps › Special app access › Display over other apps (on Sony and most Google TVs; some TVs call it <em>Appear on top</em>, and older ones keep it under Apps › Security &amp; restrictions). Find MFL Football in the list and switch it to <em>Allowed</em>. The setup steps in <a href=\"/guides/tv-app\">MFL Football on your TV</a> cover TVs without that switch.",
           "<strong>No menu?</strong> If Back just closes the app, your TV has an older version. Update MFL Football from the Play Store."
@@ -209,66 +209,66 @@
       },
       {
         "type": "list",
-        "heading": "Reading the ticker",
+        "heading": "Reading the score box",
         "items": [
-          "<strong>One matchup at a time.</strong> The ticker shows the league, your team and your opponent with both live scores, then both projected finals and your chance to win. The leading score is green.",
-          "<strong>It rotates.</strong> If you're in more than one league, or have two games in a doubleheader week, the ticker moves to the next one every 8 seconds. The dots next to the week show which one you're on.",
+          "<strong>One matchup at a time.</strong> The box shows the league's logo, then your team's logo and score, a win bar, and your opponent's score and logo. The leading score is gold.",
+          "<strong>The win bar.</strong> Your team's color fills your chance to win and your opponent's color fills the rest. Once a game is decided, the loser's color disappears.",
+          "<strong>It rotates.</strong> If you're in more than one league, or have two games in a doubleheader week, the box moves to the next one every 8 seconds. The dots on the right show which one you're on.",
           "<strong>It never takes the remote.</strong> Every button press still goes to your TV app, so you can pause, rewind and change channels as usual."
         ]
       },
       {
         "type": "image",
         "src": "tv-overlay-big-play.webp",
-        "alt": "The ticker turned into a yellow Big Play banner reading Justin Jefferson, 48 yard touchdown pass, plus 10.8 points, with the matchup's new score.",
-        "caption": "A big play by one of your starters takes over the ticker for a few seconds."
+        "alt": "The score box grown into the upper right quarter of the screen: Big play, Bijan Robinson with his photo, plus 7.2 points, above the matchup's new score.",
+        "caption": "A big play by one of your starters grows the box for a few seconds."
       },
       {
         "type": "list",
         "heading": "Big plays",
         "items": [
-          "<strong>Only your players.</strong> When one of your own starters scores more than 3 fantasy points on a single play, a yellow <strong>Big play</strong> banner slides across the ticker. Your opponent's players never trigger one.",
-          "<strong>What it shows.</strong> The player, what happened when the play-by-play has it (\"48 Yd pass from Sam Darnold\"), the points it was worth, and your matchup's new score. The ticker also switches to that matchup.",
-          "<strong>Several leagues.</strong> If you start the same player in more than one league, you get one banner that names the other leagues too.",
-          "<strong>Timing.</strong> The banner shows up when the fantasy scoring updates, usually within a minute of the play, and stays for about 7 seconds. Several big plays at once take turns."
+          "<strong>Only your players.</strong> When one of your own starters scores more than 3 fantasy points on a single play, the box grows into its quarter of the screen with a <strong>Big play</strong> card. Your opponent's players never trigger one.",
+          "<strong>What it shows.</strong> The player's photo and name, what happened when the play-by-play has it (\"48 Yd pass from Sam Darnold\"), the points it was worth, and your matchup's new score along the top.",
+          "<strong>Several leagues.</strong> If you start the same player in more than one league, you get one card that names the other leagues too.",
+          "<strong>Timing.</strong> The card shows up when the fantasy scoring updates, usually within a minute of the play, and stays for about 7 seconds before the box shrinks back. Several big plays at once take turns."
         ]
       },
       {
         "type": "image",
-        "src": "tv-overlay-expanded.webp",
-        "alt": "The ticker opened up into both starting lineups, with each player's NFL game clock and points, and the player who just scored highlighted in yellow.",
-        "caption": "Open it up to see both lineups. Whoever just scored is highlighted."
+        "src": "tv-overlay-quarter.webp",
+        "alt": "A YouTube TV multiview with three games in three quarters of the screen and the MFL Football quarter view in the fourth: both starting lineups with each player's points, and the other matchups along the bottom.",
+        "caption": "Quarter screen: your fantasy matchup takes the spare quarter of a multiview."
       },
       {
         "type": "list",
-        "heading": "Open it up to see who's scoring",
+        "heading": "Quarter screen, for multiview",
         "items": [
-          "<strong>From your phone, while the show plays.</strong> On your phone, open the live board at <strong>mfl.football/live/broadcast</strong> (signed in, as the owner who paired the TV), tap <strong>TV remote</strong> and pick <strong>Show lineups</strong>. Both starting lineups open under the ticker, and your TV remote keeps working on the show. <strong>Hide lineups</strong> closes them, <strong>Next game</strong> moves to your next matchup, and they close by themselves after two minutes.",
-          "<strong>Or open the Score overlay again</strong> on a TV that shows its tile. The lineups then take the TV remote while they're open, which the teal outline shows.",
-          "<strong>What's in it.</strong> Every starter on both sides with their points and their NFL game's clock: red while the game is live, <em>Final</em> once it's over, or the kickoff time. A starter who just had a big play stays highlighted in yellow for about a minute and a half.",
-          "<strong>Left and Right</strong> move between your matchups.",
-          "<strong>Back</strong> closes it and gives the remote back to your TV app. So does any button the overlay doesn't use, and it closes by itself after 30 seconds without a press."
+          "<strong>Fill a whole quarter.</strong> When YouTube TV's multiview shows three games and you don't need the fourth, put your fantasy scores there. On your phone, open the live board at <strong>mfl.football/live/broadcast</strong> (signed in, as the owner who paired the TV), tap <strong>TV remote</strong> and pick <strong>Quarter screen</strong>. <strong>Small</strong> puts the score box back.",
+          "<strong>What's in it.</strong> Both starting lineups with each player's points. A green dot marks who is playing right now, and players whose games are over are dimmed. Your other matchups sit along the bottom, and the main one changes every 20 seconds. <strong>Next game</strong> on your phone moves it sooner.",
+          "<strong>Big plays here.</strong> The player's row lights up in gold instead of a pop-out.",
+          "<strong>It stays.</strong> Quarter screen stays up until you pick Small, even after the TV restarts the overlay. Your TV remote keeps working on the show the whole time."
         ]
       },
       {
         "type": "image",
         "src": "tv-overlay-ticker-bottom.webp",
-        "alt": "The same broadcast with the network's score banner at the top of the screen, and the MFL Football ticker moved to the bottom to stay out of its way.",
-        "caption": "When the network's graphics are at the top, move the ticker to the bottom."
+        "alt": "The same broadcast with the network's score banner at the top of the screen, and the MFL Football score box moved to the lower left corner to stay out of its way.",
+        "caption": "When the network's graphics are in the way, move the box to another corner."
       },
       {
         "type": "list",
-        "heading": "Move it to the top or bottom",
+        "heading": "Move it to another corner",
         "items": [
-          "<strong>From your phone.</strong> On the live board on your phone (<strong>mfl.football/live/broadcast</strong>), open <strong>TV remote</strong> and tap <strong>Top</strong> or <strong>Bottom</strong>. You can also open MFL Football on the TV, press <strong>Back</strong> and pick <strong>Move scores to the top</strong> or <strong>bottom</strong>.",
-          "<strong>Pick the clear edge.</strong> Most networks put their score banner along the bottom, so the top is usually best, but some broadcasts and streaming apps use the top.",
-          "<strong>It remembers.</strong> The TV keeps your choice, so the ticker comes back on the same edge next time."
+          "<strong>From your phone.</strong> On the live board on your phone (<strong>mfl.football/live/broadcast</strong>), open <strong>TV remote</strong> and tap <strong>Top</strong>, <strong>Bottom</strong>, <strong>Left</strong> or <strong>Right</strong>. You can also open MFL Football on the TV, press <strong>Back</strong> and pick <strong>Move scores to the top</strong> or <strong>bottom</strong>.",
+          "<strong>Pick the clear corner.</strong> Most networks put their score banner along the bottom, so the upper right is usually best, but some broadcasts and streaming apps use the top.",
+          "<strong>It remembers.</strong> The TV keeps your choice, so the box comes back in the same corner next time."
         ]
       },
       {
         "type": "list",
         "heading": "The full panel and Watch list",
         "items": [
-          "<strong>Press OK</strong> while the lineups are open to bring up the full panel down the left side: your score, win chance, projections and both starting lineups.",
+          "<strong>Open the Score overlay again</strong> on a TV that shows its tile to open both lineups with the TV remote, then press <strong>OK</strong> to bring up the full panel down the left side: your score, win chance, projections and both starting lineups.",
           "<strong>Watch your players.</strong> The panel's Watch list shows the NFL games your starters are in, live games first. Up and Down pick a game and OK opens it through your TV's search, where you choose your TV app. With <em>I have NFL Sunday Ticket</em> ticked in <a href=\"https://mfl.football/live/settings#tv\">MFL Football settings</a>, every Sunday afternoon CBS and FOX game is marked as one you can open.",
           "<strong>Back</strong> returns to the ticker."
         ]
@@ -278,7 +278,7 @@
         "heading": "Turn it off",
         "items": [
           "<strong>From the Back menu.</strong> Open MFL Football, press Back and pick <strong>Turn off the score overlay</strong>.",
-          "<strong>Or from the full panel.</strong> With the lineups open, press OK, go to the bottom of the Watch list and pick <strong>Hide overlay</strong>.",
+          "<strong>Or from the full panel.</strong> With the full panel open, go to the bottom of the Watch list and pick <strong>Hide overlay</strong>.",
           "<strong>Or turn off the TV.</strong> The overlay closes by itself when the screen goes off."
         ]
       },
