@@ -462,7 +462,7 @@ export default function BroadcastOverlay({
             stale={stale}
           />
         ) : alert ? (
-          <BigPlay alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
+          <BigPlay key={alert.key} alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} position={at} count={games.length} focused={false} />
