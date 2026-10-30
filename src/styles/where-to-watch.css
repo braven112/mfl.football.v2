@@ -1,0 +1,161 @@
+/*
+ * Where to watch (`/live/broadcast/watch`). An ordinary themed page on a phone
+ * or desktop; on a paired TV the layout goes bare and the same rows fill the
+ * screen, sized in rem so they read from across the room.
+ */
+.wtw {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+  display: grid;
+  gap: 1.25rem;
+  color: var(--page-text);
+}
+
+.wtw__title {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  line-height: 1.1;
+}
+
+.wtw__sub,
+.wtw__foot,
+.wtw__none {
+  margin: 0;
+  color: var(--content-text-muted);
+}
+
+.wtw--empty {
+  justify-items: start;
+}
+
+.wtw__list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.wtw__day {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.wtw__day-label {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+
+.wtw__row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-border-subtle);
+  border-radius: 0.6rem;
+  background: var(--content-bg);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wtw__row:hover,
+.wtw__row:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* A remote's focus is the only cursor a TV has; make it unmissable. */
+.wtw__row:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  outline-offset: 2px;
+}
+
+.wtw__when {
+  font-variant-numeric: tabular-nums;
+  color: var(--content-text-muted);
+}
+
+.wtw__when--live {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.wtw__game {
+  display: grid;
+  min-width: 0;
+}
+
+.wtw__game b {
+  font-size: var(--font-size-lg);
+}
+
+.wtw__players {
+  color: var(--content-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wtw__how {
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+  text-align: right;
+}
+
+/* Channel marks are drawn for a light ground; a white chip keeps them legible in both themes. */
+.wtw__logo {
+  height: 1.75rem;
+  width: auto;
+  max-width: 7rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.35rem;
+  background: #fff;
+  object-fit: contain;
+}
+
+.wtw__net {
+  font-weight: 700;
+}
+
+.wtw__app {
+  font-size: var(--font-size-sm);
+}
+
+/* The words carry the warning; the dot only marks it, so the text keeps full contrast. */
+.wtw__app--maybe {
+  font-weight: 600;
+}
+
+.wtw__app--maybe::before {
+  content: '';
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: var(--color-warning);
+  vertical-align: 0.05em;
+}
+
+@media (max-width: 34rem) {
+  .wtw__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .wtw__when {
+    grid-column: 1 / -1;
+  }
+}
+
+/* A paired TV (bare layout): the whole screen, everything a size up for ten feet. */
+.mfl-main--bare .wtw {
+  max-width: none;
+  padding: 3rem 4rem;
+  zoom: 1.25;
+}

@@ -23,6 +23,16 @@
         <intent>
             <action android:name="android.search.action.GLOBAL_SEARCH" />
         </intent>
+        <!-- Where to watch lists the apps the TV's home screen shows, so it
+             can open the one carrying a game (Prime Video, Netflix, DAZN...). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

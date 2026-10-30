@@ -3,7 +3,11 @@ package football.mfl.live;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.SearchManager;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -15,6 +19,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -24,6 +29,16 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.security.SecureRandom;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MFL Football for Google TV: the web broadcast board, full screen, nothing else.
@@ -45,6 +60,16 @@ public class MainActivity extends Activity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private boolean pageFailed;
+    /** The host of the page on screen, for the Where to watch bridge; written on the UI thread. */
+    private volatile String pageHost;
+    /**
+     * A fresh secret per page load, handed to the main frame only. The bridge
+     * is visible to every frame, so the host check alone can't keep out an
+     * embedded third-party frame; that frame can't read the board's window,
+     * so it can't learn this.
+     */
+    private volatile String bridgeToken = newToken();
+    private static final String HOME_HOST = Uri.parse(BuildConfig.START_URL).getHost();
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -77,6 +102,7 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new BoardClient());
         webView.setWebChromeClient(new BoardChrome());
+        webView.addJavascriptInterface(new TvHost(), "MflTvHost");
 
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -314,6 +340,127 @@ public class MainActivity extends Activity {
         @Override
         public void onPageFinished(WebView view, String url) {
             CookieManager.getInstance().flush();
+            // evaluateJavascript runs in the main frame alone, so only the board learns the token.
+            if (url != null && HOME_HOST != null && HOME_HOST.equalsIgnoreCase(Uri.parse(url).getHost())) {
+                view.evaluateJavascript("window.__mflTvToken=" + JSONObject.quote(bridgeToken)
+                        + ";window.dispatchEvent(new Event('mfltv:ready'));", null);
+            }
+        }
+
+        @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            pageHost = url == null ? null : Uri.parse(url).getHost();
+            bridgeToken = newToken();
+        }
+
+        @Override
+        public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+            pageHost = url == null ? null : Uri.parse(url).getHost();
+        }
+    }
+
+    /**
+     * Where to watch (`/live/broadcast/watch`): the page asks which apps the
+     * TV has and opens the one carrying a game. Answers only the board's own
+     * host's main frame (the page must pass `bridgeToken`), since every link
+     * stays inside this WebView and the app list is nobody else's business.
+     * It reaches nothing but apps the TV's own home screen already shows (the
+     * launcher queries in the manifest).
+     */
+    private final class TvHost {
+        @JavascriptInterface
+        public String apps(String token) {
+            if (!trusted(token)) return "[]";
+            JSONArray out = new JSONArray();
+            for (Map.Entry<String, String> app : launchableApps().entrySet()) {
+                try {
+                    out.put(new JSONObject().put("pkg", app.getKey()).put("label", app.getValue()));
+                } catch (Exception ignored) {
+                    // A label JSON can't hold; that app is left off the list.
+                }
+            }
+            return out.toString();
+        }
+
+        @JavascriptInterface
+        public boolean open(String token, String pkg) {
+            return trusted(token) && openApp(pkg);
+        }
+
+        /** The TV's own search for a game, as the overlay does; else `fallback` opened. */
+        @JavascriptInterface
+        public boolean search(String token, String query, String fallback) {
+            if (!trusted(token) || query == null || query.trim().isEmpty()) return false;
+            String q = query.trim();
+            Intent search = new Intent("android.search.action.GLOBAL_SEARCH")
+                    .putExtra(SearchManager.QUERY, q.length() > 120 ? q.substring(0, 120) : q);
+            if (search.resolveActivity(getPackageManager()) != null && launchOnUi(search)) return true;
+            return fallback != null && !fallback.isEmpty() && openApp(fallback);
+        }
+
+        private boolean trusted(String token) {
+            String host = pageHost;
+            return token != null && token.equals(bridgeToken)
+                    && host != null && host.equalsIgnoreCase(HOME_HOST);
+        }
+    }
+
+    private boolean openApp(String pkg) {
+        if (pkg == null || !launchableApps().containsKey(pkg)) return false;
+        Intent intent = launchIntentFor(pkg);
+        return intent != null && launchOnUi(intent);
+    }
+
+    private static String newToken() {
+        byte[] bytes = new byte[18];
+        new SecureRandom().nextBytes(bytes);
+        StringBuilder hex = new StringBuilder();
+        for (byte b : bytes) hex.append(String.format("%02x", b));
+        return hex.toString();
+    }
+
+    /** Package → label of every app the TV's launcher shows (leanback first, then phone-style launchers, as on Fire TV). */
+    private Map<String, String> launchableApps() {
+        PackageManager pm = getPackageManager();
+        Map<String, String> apps = new LinkedHashMap<>();
+        String[] categories = {Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER};
+        for (String category : categories) {
+            List<ResolveInfo> found = pm.queryIntentActivities(
+                    new Intent(Intent.ACTION_MAIN).addCategory(category), 0);
+            for (ResolveInfo info : found) {
+                String pkg = info.activityInfo.packageName;
+                if (pkg.equals(getPackageName()) || apps.containsKey(pkg)) continue;
+                apps.put(pkg, String.valueOf(info.loadLabel(pm)));
+            }
+        }
+        return apps;
+    }
+
+    private Intent launchIntentFor(String pkg) {
+        PackageManager pm = getPackageManager();
+        Intent intent = pm.getLeanbackLaunchIntentForPackage(pkg);
+        return intent != null ? intent : pm.getLaunchIntentForPackage(pkg);
+    }
+
+    /**
+     * Starts `intent` on the UI thread and reports whether it really started.
+     * The bridge is called on a WebView thread, so this waits (briefly) for the
+     * answer; a TV that takes longer than that is counted as having refused.
+     */
+    private boolean launchOnUi(Intent intent) {
+        FutureTask<Boolean> task = new FutureTask<>(() -> {
+            try {
+                startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return true;
+            } catch (ActivityNotFoundException | SecurityException e) {
+                return false;
+            }
+        });
+        runOnUiThread(task);
+        try {
+            return task.get(3, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            return false;
         }
     }
 
