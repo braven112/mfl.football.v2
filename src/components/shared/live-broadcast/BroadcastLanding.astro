@@ -156,7 +156,7 @@ const fmtDate = (ms: number) =>
       </div>
       <button
         type="button"
-        class="bcl-tab"
+        class="bcl-edge"
         data-bcl-drawer-open
         aria-controls="bcl-drawer"
         aria-expanded="false"
@@ -1755,7 +1755,7 @@ const fmtDate = (ms: number) =>
     border-radius: 0;
   }
 
-  .bcl-tab {
+  .bcl-edge {
     position: fixed;
     top: 50%;
     right: 0;
@@ -1772,19 +1772,19 @@ const fmtDate = (ms: number) =>
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: opacity 600ms ease;
+    transition: opacity var(--transition-slow);
   }
 
-  .bcl--tv[data-tab-idle='true'] .bcl-tab:not(:focus-visible) {
+  .bcl--tv[data-tab-idle='true'] .bcl-edge:not(:focus-visible) {
     opacity: 0.3;
   }
 
-  .bcl--tv[data-drawer-open] .bcl-tab {
+  .bcl--tv[data-drawer-open] .bcl-edge {
     opacity: 0;
     pointer-events: none;
   }
 
-  .bcl-tab:focus-visible {
+  .bcl-edge:focus-visible {
     outline: 3px solid #60a5fa;
     outline-offset: 2px;
   }
@@ -1806,28 +1806,29 @@ const fmtDate = (ms: number) =>
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.9em;
-    padding: 1.2em 1.2em 1em;
-    font-size: clamp(12px, 1.15vw, 20px);
+    gap: 0.9rem;
+    padding: 1.2rem 1.2rem 1rem;
+    font-size: var(--font-size-sm);
     background: rgba(8, 13, 22, 0.96);
     border-left: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: -2vw 0 4vw rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-xl);
     color: var(--color-text-primary);
+    /* Slides in; leaves at once (no visibility delay to time), which on a
+       TV reads as the remote's Back doing exactly what it says. */
     transform: translateX(100%);
     visibility: hidden;
-    transition: transform 260ms ease, visibility 0s linear 260ms;
   }
 
   .bcl-drawer[data-open='true'] {
     transform: none;
     visibility: visible;
-    transition: transform 260ms ease;
+    transition: transform var(--transition-base);
   }
 
   /* The board behind an open drawer steps back, still live. */
   .bcl--tv[data-drawer-open] .bcl-tvboard {
     filter: brightness(0.55);
-    transition: filter 260ms ease;
+    transition: filter var(--transition-base);
   }
 
   .bcl-drawer .bcl-section {
@@ -1835,16 +1836,16 @@ const fmtDate = (ms: number) =>
   }
 
   .bcl-drawer .bcl-section__head {
-    margin-bottom: 0.8em;
+    margin-bottom: 0.8rem;
   }
 
   .bcl-drawer .bcl-section__head p {
-    font-size: 0.85em;
+    font-size: var(--font-size-xs);
   }
 
   .bcl-drawer__label {
     margin: 0;
-    font-size: 0.75em;
+    font-size: var(--font-size-xs);
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1855,27 +1856,26 @@ const fmtDate = (ms: number) =>
     display: flex;
     align-items: baseline;
     gap: 0.4em;
-    font-size: 2.2em;
+    font-size: var(--font-size-2xl);
     line-height: 1;
   }
 
   .bcl-count small {
     font-family: var(--font-family-base);
-    font-size: 0.36em;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: none;
     color: var(--color-text-secondary);
   }
 
   .bcl-drawer .bcl-leagues {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.55em;
   }
 
   .bcl-drawer .bcl-league {
     padding: 0.5em 0.75em;
     gap: 0.7em;
-    font-size: 1em;
   }
 
   .bcl-drawer .bcl-league__mark,
@@ -1885,7 +1885,7 @@ const fmtDate = (ms: number) =>
   }
 
   .bcl-drawer .bcl-league__text span {
-    font-size: 0.8em;
+    font-size: var(--font-size-xs);
   }
 
   /* Always the on-dark cut: the drawer is dark in either theme. */
@@ -1943,7 +1943,7 @@ const fmtDate = (ms: number) =>
 
   .bcl-drawer__note {
     margin: 0;
-    font-size: 0.85em;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
   }
 
@@ -1962,12 +1962,12 @@ const fmtDate = (ms: number) =>
   .bcl-drawer__foot .bcl-tv__btn {
     margin: 0;
     padding: 0.6em 1em;
-    font-size: 0.85em;
+    font-size: var(--font-size-xs);
   }
 
   .bcl-drawer__hint {
     margin: 0;
-    font-size: 0.75em;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
   }
 
@@ -1981,7 +1981,7 @@ const fmtDate = (ms: number) =>
   @media (prefers-reduced-motion: reduce) {
     .bcl-drawer,
     .bcl-drawer[data-open='true'],
-    .bcl-tab {
+    .bcl-edge {
       transition: none;
     }
   }
