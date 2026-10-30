@@ -26,7 +26,7 @@ import type {
   MflLiveAppLogoColorNote,
   MflLiveAppLogoSuggestion,
 } from '../../packages/shared-types/src/mfl-live-app-logo';
-import { NFL_TEAM_NAMES } from './nfl-logo';
+import { findLogoReference, referenceNote, referencePromptLine } from './team-logo-references';
 import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 
 /**
@@ -231,8 +231,16 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
   return { note: { tone: 'good', text: 'Good contrast: these colors stay distinct even when the logo is tiny.' } };
 }
 
+/**
+ * Every prompt ends here. Team names riff on real players, clubs and news, and
+ * Brandon wants the art to hint at them as much as possible (2026-10-30), so
+ * the rule invites the reference and draws the line only at a real face and at
+ * a team's actual marks.
+ */
 const ORIGINAL_RULE =
-  'It must be an original design: do not copy or resemble any NFL, college or professional team logo, shield or wordmark.';
+  'If the name or idea refers to a real player, team, celebrity or news moment, capture its spirit as strongly as you can ' +
+  "(the joke, the moment, the personality, the colors), but never draw a real person's face or likeness, " +
+  'and do not copy or resemble any NFL, college or professional team logo, helmet, uniform, shield or wordmark.';
 
 /**
  * The prompt for one set of choices. `colors` is already phrased ("crimson
@@ -247,8 +255,11 @@ export function writeLogoPrompt(input: {
   colors: string;
   kind: MflLiveAppLogoKind;
   neutrals?: string[];
+  /** A sentence about the real player or club the name nods to (`referencePromptLine`). */
+  reference?: string;
 }): string {
   const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
+  const rule = input.reference ? `${input.reference} ${ORIGINAL_RULE}` : ORIGINAL_RULE;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
   const colors = neutrals.length
     ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for outlines, lettering and contrast`
@@ -259,7 +270,7 @@ export function writeLogoPrompt(input: {
       `On the left, the team logo: ${subject}. To its right, the team name in big, bold letters. ` +
       `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
       'No gradients, no photo textures. Transparent background, 1900 × 316 pixels (6:1), ' +
-      `with the logo and name filling the height. ${ORIGINAL_RULE}`
+      `with the logo and name filling the height. ${rule}`
     );
   }
   if (kind === 'svg') {
@@ -267,7 +278,7 @@ export function writeLogoPrompt(input: {
       `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
       `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
       'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE} Reply with the SVG code only.`
+      `It must stay recognizable when shrunk to 40 pixels. ${rule} Reply with the SVG code only.`
     );
   }
   return (
@@ -275,23 +286,8 @@ export function writeLogoPrompt(input: {
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
     'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${ORIGINAL_RULE}`
+    `It must stay recognizable when shrunk to 40 pixels. ${rule}`
   );
-}
-
-/** NFL club nicknames, plural as the clubs use them ("Packers", "49ers"). */
-const NFL_NICKNAMES = Object.values(NFL_TEAM_NAMES).map((full) => full.split(' ').pop() as string);
-
-/**
- * A gentle note when the name or idea names an NFL club. Not a block: an owner
- * may call their team anything, but the art must not borrow the club's mark.
- */
-export function nflNameWarning(...texts: string[]): string | undefined {
-  const joined = texts.join(' ');
-  const hit = NFL_NICKNAMES.find((n) => new RegExp(`\\b${n}\\b`, 'i').test(joined));
-  return hit
-    ? `“${hit}” is an NFL team’s name. That’s fine for your team, but ask for new art, not their logo or colors.`
-    : undefined;
 }
 
 export interface BuiltLogoPrompt {
@@ -315,6 +311,7 @@ export function buildTeamLogoPrompt(
   const style = LOGO_STYLES.find((s) => s.id === sent?.style) ?? LOGO_STYLES.find((s) => s.id === DEFAULT_LOGO_CHOICE.style)!;
   const colors = pickLogoColors(sent?.colors);
   const kind = LOGO_KINDS.find((k) => k.id === sent?.kind)?.id ?? DEFAULT_LOGO_CHOICE.kind;
+  const reference = findLogoReference(teamName, idea);
 
   return {
     choice: { teamName, idea, style: style.id, colors, kind },
@@ -325,8 +322,9 @@ export function buildTeamLogoPrompt(
       colors: colorsText(colors),
       kind,
       neutrals: neutralsFor(colors),
+      reference: reference && referencePromptLine(reference),
     }),
-    warning: nflNameWarning(teamName, idea),
+    warning: reference && referenceNote(reference),
     colorNote: logoColorAdvice(colors).note,
   };
 }
