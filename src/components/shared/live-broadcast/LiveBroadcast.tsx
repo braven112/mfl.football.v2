@@ -56,6 +56,7 @@ import {
 } from '../../../utils/broadcast-mode';
 import { DEMO_PERIOD_MS, demoElapsed, demoLoopIndex, demoPollAt } from '../../../utils/broadcast-demo';
 import { carryLeagueScores, seedCarry, type CarriedLeagueScore } from '../../../utils/broadcast-carry';
+import { pushQuietEntry, restoreUnderQuietEntry, type QuietEntry } from '../../../utils/quiet-history';
 import {
   POLL_TIMEOUT_MS,
   POLL_WATCHDOG_MS,
@@ -1080,16 +1081,21 @@ export default function LiveBroadcast({ pageData }: Props) {
    * The TV's own Back key never reaches a page as a key: the app hands it to
    * the WebView's history. So while the remote is steering, the board holds a
    * history entry of its own, and Back pops THAT, returning to hands-free
-   * instead of leaving the board. Captured ahead of the page router's own
-   * popstate listener, which would otherwise re-render the page.
+   * instead of leaving the board. A QUIET entry (`quiet-history.ts`): the page
+   * router hears every pop before any listener here, capture or not, and
+   * re-rendered the whole page on this Back until the entry beneath ours held
+   * the null state it ignores.
    */
   const steerEntry = useRef(false);
+  const steerQuiet = useRef<QuietEntry | null>(null);
   const swallowPop = useRef(false);
   useEffect(() => {
     if (!dpadEnabled) return;
     const onPop = (e: PopStateEvent) => {
       if (!steerEntry.current && !swallowPop.current) return;
       e.stopImmediatePropagation();
+      restoreUnderQuietEntry(steerQuiet.current);
+      steerQuiet.current = null;
       if (swallowPop.current) {
         swallowPop.current = false;
         return;
@@ -1107,7 +1113,7 @@ export default function LiveBroadcast({ pageData }: Props) {
     if (!dpadEnabled) return;
     try {
       if (steering && !steerEntry.current) {
-        history.pushState({ ...(history.state ?? {}), lbcSteer: true }, '');
+        steerQuiet.current = pushQuietEntry({ lbcSteer: true });
         steerEntry.current = true;
       } else if (!steering && steerEntry.current) {
         // Left by OK or a key rather than Back: drop the entry quietly.

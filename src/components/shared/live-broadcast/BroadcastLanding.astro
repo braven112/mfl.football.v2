@@ -505,6 +505,7 @@ const fmtDate = (ms: number) =>
     broadcastHref,
     toggleLeagueSelection,
   } from '../../../utils/broadcast-selection';
+  import { pushQuietEntry, restoreUnderQuietEntry, type QuietEntry } from '../../../utils/quiet-history';
 
   type FsElement = Element & {
     webkitRequestFullscreen?: () => Promise<void> | void;
@@ -752,6 +753,7 @@ const fmtDate = (ms: number) =>
     // the new set, and a reload must too.
     writeLeagueCookie(href);
     history.replaceState(history.state, '', href);
+    if (drawerOpen()) drawerHref = href;
     let html: string;
     try {
       const res = await fetch(href, {
@@ -862,21 +864,22 @@ const fmtDate = (ms: number) =>
    * Back: the app hands the TV's Back key to the WebView's history, never to
    * the page, so an open drawer holds a history entry of its own and Back pops
    * that. With the drawer shut and no entry left, Back reaches the app's own
-   * menu (the score overlay) as before.
-   *
-   * The page router hears that pop FIRST: Chromium runs a window's popstate
-   * listeners in the order they were added, capture or not, and the router's
-   * was added before anything here, so `stopImmediatePropagation` cannot
-   * reach it — it re-rendered the whole page on every Back. What stops it is
-   * its own rule: it ignores a pop whose state is null. So the entry UNDER
-   * the drawer's holds null while the drawer is open, and gets its state back
-   * the moment the drawer's entry is popped.
+   * menu (the score overlay) as before. The entry is a QUIET one
+   * (`quiet-history.ts`), or the page router re-renders the page on that Back.
    */
   const DRAWER_SEEN_KEY = 'bc_tv_drawer_seen';
   let drawerEntry = false;
   let swallowDrawerPop = false;
-  /** The router's state for the entry under the drawer's, parked while the drawer is open. */
-  let parkedState: unknown = null;
+  /** The drawer's own history entry, while it is on top. */
+  let drawerQuiet: QuietEntry | null = null;
+  /**
+   * The newest league-selection URL written while the drawer was open. A
+   * switch rewrites the DRAWER's entry, which closing pops; the entry under
+   * it must take this URL with it, or a reload brings the old set back.
+   */
+  let drawerHref: string | null = null;
+  /** The TV home this bookkeeping belongs to. */
+  let drawerHome: HTMLElement | null = null;
   let tabIdleTimer: number | undefined;
 
   const drawerEl = () => document.querySelector<HTMLElement>('[data-bcl-drawer]');
@@ -897,10 +900,9 @@ const fmtDate = (ms: number) =>
     document.querySelector('[data-bcl-drawer-open]')?.setAttribute('aria-expanded', open ? 'true' : 'false');
     document.querySelector('[data-bcl-tv-home]')?.toggleAttribute('data-drawer-open', open);
     if (open) {
+      drawerHref = null;
       try {
-        parkedState = history.state;
-        history.replaceState(null, '');
-        history.pushState({ ...((parkedState as object | null) ?? {}), bclDrawer: true }, '');
+        drawerQuiet = pushQuietEntry({ bclDrawer: true });
         drawerEntry = true;
       } catch {
         /* no history: Left and Escape still close it */
@@ -938,7 +940,13 @@ const fmtDate = (ms: number) =>
   function initDrawer() {
     const home = document.querySelector<HTMLElement>('[data-bcl-tv-home]');
     if (!home) return;
+    // This init runs at load AND on the router's first `astro:page-load`, for
+    // the same page. Only a NEW page starts the drawer's bookkeeping over; the
+    // second call must not disown a drawer the first one just opened.
+    if (home === drawerHome) return;
+    drawerHome = home;
     drawerEntry = false;
+    drawerHref = null;
     const tab = document.querySelector<HTMLElement>('[data-bcl-drawer-open]');
     if (tab) tab.onclick = () => setDrawer(true);
     wakeTab();
@@ -999,14 +1007,18 @@ const fmtDate = (ms: number) =>
     if (!document.querySelector('[data-bcl-tv-home]')) return;
     const active = document.activeElement;
     if (active && active !== document.body && !active.closest('[data-bcl-viewport]')) return;
+    // The remote is steering the board (its own history entry is on top):
+    // OK there belongs to the board, and Back steps out of steering first.
+    if ((history.state as { lbcSteer?: boolean } | null)?.lbcSteer) return;
     setDrawer(true);
   });
 
   window.addEventListener(
     'popstate',
-    () => {
+    (e) => {
       if (swallowDrawerPop) {
         swallowDrawerPop = false;
+        e.stopImmediatePropagation();
         restoreParkedState();
         return;
       }
@@ -1016,6 +1028,9 @@ const fmtDate = (ms: number) =>
         drawerEntry = false;
         return;
       }
+      // Ours alone: the board's own Back listener (added after this one)
+      // would otherwise take the same pop as the end of its steering.
+      e.stopImmediatePropagation();
       drawerEntry = false;
       restoreParkedState();
       setDrawer(false, 'back');
@@ -1024,13 +1039,9 @@ const fmtDate = (ms: number) =>
   );
 
   function restoreParkedState() {
-    if (history.state !== null || parkedState === null) return;
-    try {
-      history.replaceState(parkedState, '');
-    } catch {
-      /* the router copes with a null entry: it ignores it */
-    }
-    parkedState = null;
+    restoreUnderQuietEntry(drawerQuiet, drawerHref ?? undefined);
+    drawerQuiet = null;
+    drawerHref = null;
   }
 
   // A click on the board beside an open drawer closes it.
