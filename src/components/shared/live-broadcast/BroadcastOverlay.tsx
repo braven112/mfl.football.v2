@@ -638,9 +638,14 @@ function Crest({ side }: { side: OverlaySide }) {
   );
 }
 
-/** The viewer's colour for their win chance, the opponent's for the rest. */
+/**
+ * The viewer's colour for their win chance, the opponent's for the rest. An
+ * open game also gets a divider at the split, which is all that shows it when
+ * both clubs wear the same colour (outside leagues share a neutral one).
+ */
 function WinBar({ game }: { game: OverlayGame }) {
   const share = winBarShare(game.winChance);
+  const open = share > 0 && share < 100;
   return (
     <span
       className="bov__wp"
@@ -648,7 +653,7 @@ function WinBar({ game }: { game: OverlayGame }) {
       aria-label={`Win chance ${formatChance(game.winChance)}`}
       style={{ ['--bov-me' as string]: game.mine.swatch, ['--bov-them' as string]: game.opponent.swatch }}
     >
-      <i style={{ width: `${share}%` }} />
+      <i style={{ width: `${share}%` }} data-split={open || undefined} />
     </span>
   );
 }
@@ -728,7 +733,9 @@ function BigPlay({
   logo: string;
   meta: PlayerMeta | undefined;
 }) {
-  const headshot = meta?.headshot ?? '';
+  // A photo URL can exist and still fail to load; the team logo stands in.
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const headshot = photoFailed ? '' : (meta?.headshot ?? '');
   const what = [alert.text, ...alert.alsoIn.map((l) => `also ${l}`)].filter(Boolean).join(' · ');
   return (
     <div className="bov__play" key={alert.key} role="status">
@@ -737,7 +744,7 @@ function BigPlay({
       </div>
       <div className="bov__play-body">
         {headshot ? (
-          <img className="bov__shot" src={headshot} alt="" />
+          <img className="bov__shot" src={headshot} alt="" onError={() => setPhotoFailed(true)} />
         ) : (
           <img className="bov__shot bov__shot--team" src={getNFLTeamLogo(alert.nflTeam, 'dark')} alt="" />
         )}

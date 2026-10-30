@@ -416,6 +416,11 @@ body.bov-doc {
   background: var(--bov-me);
 }
 
+.bov__wp i[data-split] {
+  box-sizing: border-box;
+  border-right: 2px solid rgba(255, 255, 255, 0.9);
+}
+
 .bov__pips {
   display: flex;
   gap: calc(var(--u) * 0.35);
