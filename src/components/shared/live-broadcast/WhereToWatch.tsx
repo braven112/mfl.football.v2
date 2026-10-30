@@ -11,11 +11,18 @@
  *
  * Up/Down moves between rows on a remote; the browser's own focus does the
  * rest, so every row is a real button.
+ *
+ * The bridge answers only with the per-page token the app hands the main frame
+ * (`window.__mflTvToken`, announced by a `mfltv:ready` event once the page has
+ * loaded), so an embedded frame can't list the TV's apps.
+ *
+ * Kickoff days and times are the TV's own clock, so they render only after
+ * mount: the server's clock would disagree and break hydration.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { PlayerMeta } from '../../../types/live-scoring';
-import { overlayGames, overlayWatchList } from '../../../utils/broadcast-overlay';
+import { overlayWatchList, ownerSides } from '../../../utils/broadcast-overlay';
 import type { CountryCode } from '../../../utils/broadcast-channels';
 import { parseInstalledApps, watchRows, type InstalledApp, type WatchRow } from '../../../utils/where-to-watch';
 
@@ -28,12 +35,14 @@ declare global {
     /** The Google TV app's bridge for this screen. Absent in a browser and on app builds before it. */
     MflTvHost?: {
       /** JSON `[{ pkg, label }]` of the apps the TV can launch. */
-      apps: () => string;
+      apps: (token: string) => string;
       /** Launch an installed app by package; false when the TV can't. */
-      open: (pkg: string) => boolean;
+      open: (token: string, pkg: string) => boolean;
       /** The TV's own search for a game, else `fallback` opened; false when neither worked. */
-      search: (query: string, fallback: string) => boolean;
+      search: (token: string, query: string, fallback: string) => boolean;
     };
+    /** The bridge's per-page secret, set by the TV app in the main frame only. */
+    __mflTvToken?: string;
   }
 }
 
@@ -69,17 +78,27 @@ export default function WhereToWatch({ pageData, country, sundayTicket, tv }: Pr
   const [installed, setInstalled] = useState<InstalledApp[] | null>(null);
   const [hasHost, setHasHost] = useState(false);
   const [notice, setNotice] = useState('');
+  const [now, setNow] = useState<Date | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setNow(new Date()), [poll]);
 
   useEffect(() => {
     const host = window.MflTvHost;
     setHasHost(Boolean(host));
     if (!host) return;
-    try {
-      setInstalled(parseInstalledApps(host.apps()));
-    } catch {
-      setInstalled(null);
-    }
+    const read = () => {
+      const token = window.__mflTvToken;
+      if (!token) return;
+      try {
+        setInstalled(parseInstalledApps(host.apps(token)));
+      } catch {
+        setInstalled(null);
+      }
+    };
+    read();
+    window.addEventListener('mfltv:ready', read);
+    return () => window.removeEventListener('mfltv:ready', read);
   }, []);
 
   useEffect(() => {
@@ -114,21 +133,29 @@ export default function WhereToWatch({ pageData, country, sundayTicket, tv }: Pr
 
   const rows = useMemo<WatchRow[]>(() => {
     if (!poll) return [];
-    const games = overlayGames(data.panels, poll, meta);
-    return watchRows(overlayWatchList(games, poll.games ?? [], Infinity), { country, sundayTicket, installed });
+    const sides = ownerSides(data.panels, poll, meta);
+    return watchRows(overlayWatchList(sides, poll.games ?? [], Infinity), { country, sundayTicket, installed });
   }, [data, poll, meta, country, sundayTicket, installed]);
 
+  // A league MFL could not read has no starters to list; with no rows at all
+  // that is an outage, not a week with nothing left to watch.
+  const unreadable = useMemo(
+    () =>
+      data.panels.some((p) => p.status === 'unavailable') ||
+      Boolean(poll?.leagues.some((l) => l.ok === false)),
+    [data, poll],
+  );
+
   const groups = useMemo(() => {
-    const now = new Date();
     const out: { day: string; rows: WatchRow[] }[] = [];
     for (const row of rows) {
-      const day = row.live ? 'On now' : dayLabel(row.kickoff, now);
+      const day = row.live ? 'On now' : now ? dayLabel(row.kickoff, now) : 'This week';
       const last = out[out.length - 1];
       if (last && last.day === day) last.rows.push(row);
       else out.push({ day, rows: [row] });
     }
     return out;
-  }, [rows]);
+  }, [rows, now]);
 
   // A paired TV starts on the first game, so OK does something straight away.
   useEffect(() => {
@@ -150,12 +177,15 @@ export default function WhereToWatch({ pageData, country, sundayTicket, tv }: Pr
 
   const watch = useCallback((row: WatchRow) => {
     const host = window.MflTvHost;
-    if (!host) {
+    const token = window.__mflTvToken;
+    if (!host || !token) {
       setNotice('Open this screen in the MFL Football app on your TV to start a game from here.');
       return;
     }
     const ok =
-      row.action.kind === 'app' ? host.open(row.action.pkg) : host.search(row.action.query, row.action.fallback ?? '');
+      row.action.kind === 'app'
+        ? host.open(token, row.action.pkg)
+        : host.search(token, row.action.query, row.action.fallback ?? '');
     if (!ok) setNotice(`This TV couldn’t open that. Search for “${row.query}” on your TV.`);
   }, []);
 
@@ -170,7 +200,11 @@ export default function WhereToWatch({ pageData, country, sundayTicket, tv }: Pr
       </header>
 
       {rows.length === 0 ? (
-        <p className="wtw__none">None of your starters have a game left to watch this week.</p>
+        <p className="wtw__none">
+          {unreadable
+            ? 'We couldn’t read your lineups from MyFantasyLeague just now. This screen tries again every minute.'
+            : 'None of your starters have a game left to watch this week.'}
+        </p>
       ) : (
         <div className="wtw__list" ref={listRef} onKeyDown={onKey}>
           {groups.map((group) => (
@@ -179,7 +213,7 @@ export default function WhereToWatch({ pageData, country, sundayTicket, tv }: Pr
               {group.rows.map((row) => (
                 <button type="button" className="wtw__row" key={row.id} onClick={() => watch(row)}>
                   <span className={row.live ? 'wtw__when wtw__when--live' : 'wtw__when'}>
-                    {row.live ? row.detail || 'Live' : kickoffTime(row.kickoff)}
+                    {row.live ? row.detail || 'Live' : now ? kickoffTime(row.kickoff) : ''}
                   </span>
                   <span className="wtw__game">
                     <b>{row.label}</b>

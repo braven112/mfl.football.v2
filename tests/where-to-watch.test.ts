@@ -61,6 +61,30 @@ describe('where to watch', () => {
     expect(row.action.kind).toBe('search');
   });
 
+  it('names no app for a network it does not know, or before one is announced', () => {
+    for (const network of ['', 'Some New Streamer']) {
+      const row = watchRow(game({ network }), { country: 'US', sundayTicket: false, installed: [YTTV] });
+      expect(row.app).toBeNull();
+      expect(row.action).toEqual({ kind: 'search', query: row.query });
+    }
+    expect(watchRow(game({ network: '' }), { country: 'US', sundayTicket: false, installed: [] }).how).toBe('Channel not announced yet');
+  });
+
+  it('keeps a Sunday Ticket game on YouTube TV, never the network streamer', () => {
+    const paramount: InstalledApp = { pkg: 'com.cbs.ott', label: 'Paramount+' };
+    const row = watchRow(game({ network: 'CBS', regional: true }), { country: 'US', sundayTicket: true, installed: [paramount] });
+    expect(row.action).toEqual({ kind: 'search', query: row.query });
+    // Without Sunday Ticket the local CBS game is on Paramount+.
+    const local = watchRow(game({ network: 'CBS', regional: true }), { country: 'US', sundayTicket: false, installed: [paramount] });
+    expect(local.action).toEqual({ kind: 'app', pkg: paramount.pkg });
+  });
+
+  it('opens YouTube for a YouTube game in Canada', () => {
+    const youtube: InstalledApp = { pkg: 'com.google.android.youtube.tv', label: 'YouTube' };
+    const row = watchRow(game({ network: 'YouTube' }), { country: 'CA', sundayTicket: false, installed: [DAZN_UNKNOWN_PKG, youtube] });
+    expect(row.action).toEqual({ kind: 'app', pkg: youtube.pkg });
+  });
+
   it('prefers the chosen country, then the connection, then the US', () => {
     expect(watchCountry('CA', 'US')).toBe('CA');
     expect(watchCountry(null, 'CA')).toBe('CA');

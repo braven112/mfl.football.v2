@@ -33,9 +33,12 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.security.SecureRandom;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MFL Football for Google TV: the web broadcast board, full screen, nothing else.
@@ -59,6 +62,13 @@ public class MainActivity extends Activity {
     private boolean pageFailed;
     /** The host of the page on screen, for the Where to watch bridge; written on the UI thread. */
     private volatile String pageHost;
+    /**
+     * A fresh secret per page load, handed to the main frame only. The bridge
+     * is visible to every frame, so the host check alone can't keep out an
+     * embedded third-party frame; that frame can't read the board's window,
+     * so it can't learn this.
+     */
+    private volatile String bridgeToken = newToken();
     private static final String HOME_HOST = Uri.parse(BuildConfig.START_URL).getHost();
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -330,11 +340,17 @@ public class MainActivity extends Activity {
         @Override
         public void onPageFinished(WebView view, String url) {
             CookieManager.getInstance().flush();
+            // evaluateJavascript runs in the main frame alone, so only the board learns the token.
+            if (url != null && HOME_HOST != null && HOME_HOST.equalsIgnoreCase(Uri.parse(url).getHost())) {
+                view.evaluateJavascript("window.__mflTvToken=" + JSONObject.quote(bridgeToken)
+                        + ";window.dispatchEvent(new Event('mfltv:ready'));", null);
+            }
         }
 
         @Override
         public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
             pageHost = url == null ? null : Uri.parse(url).getHost();
+            bridgeToken = newToken();
         }
 
         @Override
@@ -346,14 +362,15 @@ public class MainActivity extends Activity {
     /**
      * Where to watch (`/live/broadcast/watch`): the page asks which apps the
      * TV has and opens the one carrying a game. Answers only the board's own
-     * host, since every link stays inside this WebView and the app list is
-     * nobody else's business. It reaches nothing but apps the TV's own home
-     * screen already shows (the launcher queries in the manifest).
+     * host's main frame (the page must pass `bridgeToken`), since every link
+     * stays inside this WebView and the app list is nobody else's business.
+     * It reaches nothing but apps the TV's own home screen already shows (the
+     * launcher queries in the manifest).
      */
     private final class TvHost {
         @JavascriptInterface
-        public String apps() {
-            if (!onHome()) return "[]";
+        public String apps(String token) {
+            if (!trusted(token)) return "[]";
             JSONArray out = new JSONArray();
             for (Map.Entry<String, String> app : launchableApps().entrySet()) {
                 try {
@@ -366,27 +383,40 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public boolean open(String pkg) {
-            if (!onHome() || pkg == null || !launchableApps().containsKey(pkg)) return false;
-            Intent intent = launchIntentFor(pkg);
-            return intent != null && launchOnUi(intent);
+        public boolean open(String token, String pkg) {
+            return trusted(token) && openApp(pkg);
         }
 
         /** The TV's own search for a game, as the overlay does; else `fallback` opened. */
         @JavascriptInterface
-        public boolean search(String query, String fallback) {
-            if (!onHome() || query == null || query.trim().isEmpty()) return false;
+        public boolean search(String token, String query, String fallback) {
+            if (!trusted(token) || query == null || query.trim().isEmpty()) return false;
             String q = query.trim();
             Intent search = new Intent("android.search.action.GLOBAL_SEARCH")
                     .putExtra(SearchManager.QUERY, q.length() > 120 ? q.substring(0, 120) : q);
             if (search.resolveActivity(getPackageManager()) != null && launchOnUi(search)) return true;
-            return fallback != null && !fallback.isEmpty() && open(fallback);
+            return fallback != null && !fallback.isEmpty() && openApp(fallback);
         }
 
-        private boolean onHome() {
+        private boolean trusted(String token) {
             String host = pageHost;
-            return host != null && host.equalsIgnoreCase(HOME_HOST);
+            return token != null && token.equals(bridgeToken)
+                    && host != null && host.equalsIgnoreCase(HOME_HOST);
         }
+    }
+
+    private boolean openApp(String pkg) {
+        if (pkg == null || !launchableApps().containsKey(pkg)) return false;
+        Intent intent = launchIntentFor(pkg);
+        return intent != null && launchOnUi(intent);
+    }
+
+    private static String newToken() {
+        byte[] bytes = new byte[18];
+        new SecureRandom().nextBytes(bytes);
+        StringBuilder hex = new StringBuilder();
+        for (byte b : bytes) hex.append(String.format("%02x", b));
+        return hex.toString();
     }
 
     /** Package → label of every app the TV's launcher shows (leanback first, then phone-style launchers, as on Fire TV). */
@@ -412,15 +442,26 @@ public class MainActivity extends Activity {
         return intent != null ? intent : pm.getLaunchIntentForPackage(pkg);
     }
 
+    /**
+     * Starts `intent` on the UI thread and reports whether it really started.
+     * The bridge is called on a WebView thread, so this waits (briefly) for the
+     * answer; a TV that takes longer than that is counted as having refused.
+     */
     private boolean launchOnUi(Intent intent) {
-        runOnUiThread(() -> {
+        FutureTask<Boolean> task = new FutureTask<>(() -> {
             try {
                 startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            } catch (ActivityNotFoundException | SecurityException ignored) {
-                // The TV refused; the page has already been told it was asked.
+                return true;
+            } catch (ActivityNotFoundException | SecurityException e) {
+                return false;
             }
         });
-        return true;
+        runOnUiThread(task);
+        try {
+            return task.get(3, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** Lets the board's fullscreen button work inside the WebView. */

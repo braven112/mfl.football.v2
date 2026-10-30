@@ -128,8 +128,20 @@
   font-size: var(--font-size-sm);
 }
 
+/* The words carry the warning; the dot only marks it, so the text keeps full contrast. */
 .wtw__app--maybe {
-  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.wtw__app--maybe::before {
+  content: '';
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: var(--color-warning);
+  vertical-align: 0.05em;
 }
 
 @media (max-width: 34rem) {

@@ -65,6 +65,7 @@ const US_APPS: Record<string, ServiceId[]> = {
   'Prime Video': ['primeVideo'],
   Netflix: ['netflix'],
   YouTube: ['youtube'],
+  Peacock: ['peacock'],
 };
 
 const CA_APPS: { match: RegExp; apps: ServiceId[] }[] = [
@@ -73,6 +74,7 @@ const CA_APPS: { match: RegExp; apps: ServiceId[] }[] = [
   { match: /CTV/i, apps: ['ctv', 'dazn'] },
   { match: /Netflix/i, apps: ['netflix'] },
   { match: /Prime Video/i, apps: ['primeVideo'] },
+  { match: /YouTube/i, apps: ['youtube'] },
 ];
 
 /** An app the TV app reports as installed. */
@@ -108,9 +110,18 @@ function findInstalled(id: ServiceId, installed: readonly InstalledApp[]): Insta
   );
 }
 
-function candidatesFor(network: string, channel: ChannelInfo | null, country: CountryCode): ServiceId[] {
-  if (country === 'US') return US_APPS[normalizeUsNetwork(network)] ?? ['youtubeTv'];
-  if (country === 'CA' && channel) return CA_APPS.find((c) => c.match.test(channel.name))?.apps ?? ['dazn'];
+/**
+ * A network we don't know (or none yet) gets no app: naming YouTube TV for a
+ * streaming exclusive would send the owner to the wrong place. A regional
+ * game watched through Sunday Ticket only plays in YouTube TV, so the
+ * network's own streamer (Paramount+ for CBS) is not offered for it.
+ */
+function candidatesFor(game: WatchGame, channel: ChannelInfo | null, ctx: WatchContext): ServiceId[] {
+  if (ctx.country === 'US') {
+    if (game.regional && ctx.sundayTicket) return ['youtubeTv'];
+    return US_APPS[normalizeUsNetwork(game.network)] ?? [];
+  }
+  if (ctx.country === 'CA' && channel) return CA_APPS.find((c) => c.match.test(channel.name))?.apps ?? ['dazn'];
   return [];
 }
 
@@ -123,7 +134,7 @@ export interface WatchContext {
 
 export function watchRow(game: WatchGame, ctx: WatchContext): WatchRow {
   const channel = resolveChannel(game.network, ctx.country);
-  const candidates = candidatesFor(game.network, channel, ctx.country);
+  const candidates = candidatesFor(game, channel, ctx);
 
   let pick: { id: ServiceId; app: InstalledApp | null } | null = null;
   if (ctx.installed) {

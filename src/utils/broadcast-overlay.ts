@@ -128,6 +128,28 @@ function sideFor(
 }
 
 /**
+ * The viewer's own side in every league, opponent or not. The Where to watch
+ * screen reads this rather than `overlayGames`: a fantasy bye, or a league
+ * with no head-to-head matchups, still has starters playing NFL games.
+ */
+export function ownerSides(
+  panels: readonly BroadcastLeaguePanel[],
+  poll: BroadcastPollResponse,
+  meta: Record<string, PlayerMeta>,
+): { mine: OverlaySide }[] {
+  const scores = new Map(poll.leagues.map((league) => [league.leagueId, league]));
+  const sides: { mine: OverlaySide }[] = [];
+  for (const panel of panels) {
+    const players = scores.get(panel.leagueId)?.teams[panel.franchiseId]?.players;
+    if (!players) continue;
+    sides.push({
+      mine: { name: '', abbrev: '', swatch: '', live: 0, projectedFinal: 0, lineup: lineupFor(players, meta) },
+    });
+  }
+  return sides;
+}
+
+/**
  * Every game with an opponent, in board order: league by league, then each
  * league's matchups (a doubleheader is two games). A bye has nothing to put
  * on screen over a football game, so it is left out.
@@ -254,7 +276,7 @@ const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0] ?? name
  * to watch screen reads the same list, uncapped (`limit` Infinity).
  */
 export function overlayWatchList(
-  games: readonly OverlayGame[],
+  games: readonly Pick<OverlayGame, 'mine'>[],
   slate: readonly NflGame[],
   limit: number = WATCH_LIMIT,
 ): WatchGame[] {
