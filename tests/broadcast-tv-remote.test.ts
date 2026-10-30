@@ -48,7 +48,18 @@ async function pairTv(store: ReturnType<typeof memoryPairingStore>, user: AuthUs
 
 describe('the command list is closed', () => {
   it('accepts exactly the display commands', () => {
-    for (const raw of ['page:next', 'page:prev', 'sound:on', 'sound:off', 'reset', 'pin-league:13522']) {
+    for (const raw of [
+      'page:next',
+      'page:prev',
+      'sound:on',
+      'sound:off',
+      'reset',
+      'pin-league:13522',
+      'overlay:lineups',
+      'overlay:ticker',
+      'overlay:top',
+      'overlay:bottom',
+    ]) {
       const parsed = parseRemoteCommand(raw);
       expect(parsed).not.toBeNull();
       expect(formatRemoteCommand(parsed!)).toBe(raw);
@@ -66,6 +77,11 @@ describe('the command list is closed', () => {
       'pin-league:13522/../x',
       'pin-league:https://example.com',
       'navigate:/x',
+      'overlay:',
+      'overlay:panel',
+      'overlay:hide',
+      'overlay:lineups ',
+      'OVERLAY:TOP',
       '<script>',
       'open',
       `pin-league:${'1'.repeat(40)}`,
@@ -170,7 +186,11 @@ describe('who may send, who may read', () => {
   });
 
   it('the TV island re-parses every command before applying it', () => {
-    const src = read('src/components/shared/live-broadcast/LiveBroadcast.tsx');
-    expect(src).toMatch(/parseRemoteCommand\(remote\.command\)/);
+    for (const file of [
+      'src/components/shared/live-broadcast/LiveBroadcast.tsx',
+      'src/components/shared/live-broadcast/BroadcastOverlay.tsx',
+    ]) {
+      expect(read(file)).toMatch(/parseRemoteCommand\(remote\.command\)/);
+    }
   });
 });
