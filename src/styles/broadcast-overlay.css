@@ -273,13 +273,15 @@ body.bov-doc {
  * strip windows (expanded, and the bar of app builds before the corner
  * layout) span the screen, so there it is 1vw; the corner window is half the
  * screen wide, so there it is 2vw. Either way the box is the same size on the
- * TV. The ground is light on purpose (Brandon, Oct 2026): the game should
- * show through, and a shadow keeps the white ink readable over a bright field.
+ * TV. The ground is see-through on purpose (Brandon, Oct 2026): the game
+ * should show through, and a shadow keeps the white ink readable over a bright
+ * field. It was .36, which read too faint on a real TV; he asked for twice as
+ * dark.
  */
 
 .bov {
   --u: 1vw;
-  --bov-box: rgba(6, 9, 13, 0.36);
+  --bov-box: rgba(6, 9, 13, 0.72);
   --bov-quarter: rgba(6, 9, 13, 0.9);
   --bov-gold: #ffd400;
   --bov-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.5);
@@ -343,10 +345,17 @@ body.bov-doc {
   }
 }
 
-.bov__lg {
-  height: calc(var(--u) * 2.9);
+/* Every mark in the line is 80% of its first size, which pays for our own
+   mark without widening the box (Brandon, Oct 2026). */
+.bov__brand {
+  height: calc(var(--u) * 2.32);
   width: auto;
-  max-width: calc(var(--u) * 7);
+}
+
+.bov__lg {
+  height: calc(var(--u) * 2.32);
+  width: auto;
+  max-width: calc(var(--u) * 5.6);
   object-fit: contain;
 }
 
@@ -366,8 +375,8 @@ body.bov-doc {
 }
 
 .bov__crest {
-  width: calc(var(--u) * 3.3);
-  height: calc(var(--u) * 3.3);
+  width: calc(var(--u) * 2.64);
+  height: calc(var(--u) * 2.64);
   object-fit: contain;
 }
 
@@ -419,23 +428,6 @@ body.bov-doc {
 .bov__wp i[data-split] {
   box-sizing: border-box;
   border-right: 2px solid rgba(255, 255, 255, 0.9);
-}
-
-.bov__pips {
-  display: flex;
-  gap: calc(var(--u) * 0.35);
-  margin-left: calc(var(--u) * 0.3);
-}
-
-.bov__pips i {
-  width: calc(var(--u) * 0.5);
-  height: calc(var(--u) * 0.5);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.bov__pips i[data-on] {
-  background: #fff;
 }
 
 /* On a strip window there is no room to grow, so a big play takes the box's line. */
