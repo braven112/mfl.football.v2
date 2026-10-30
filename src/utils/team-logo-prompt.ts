@@ -1,7 +1,7 @@
 /**
  * The team logo prompt builder (MFL Football app and `/live/team-logo`).
  *
- * We do not make images. An owner picks a style, one or two team colors and a
+ * We do not make images. An owner picks a style, one to three team colors and a
  * kind of art, and this writes the prompt they paste into the AI image tool
  * they already use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
  * rather than pictures. The rules wrapped around their choices are the ones
@@ -29,12 +29,17 @@ import type {
 import { NFL_TEAM_NAMES } from './nfl-logo';
 import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 
-export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string }> = [
-  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest' },
-  { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head' },
-  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials' },
-  { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch' },
-  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle' },
+/**
+ * `hint` is the one line under each style's sample sketch on the website
+ * (`team-logo-style-art.ts` draws the sketch), saying in plain words what the
+ * label means.
+ */
+export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string; hint: string }> = [
+  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest', hint: 'A shield with your initials, old-school varsity' },
+  { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head', hint: 'A mascot head in sharp, simple shapes' },
+  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials', hint: 'Your initials, big and bold, no picture' },
+  { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch', hint: 'A stitched 1970s patch, like on a jacket' },
+  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle', hint: 'A circle with the team name around the mascot' },
 ];
 
 /**
@@ -66,7 +71,15 @@ export const LOGO_COLORS: MflLiveAppLogoColor[] = [
   { name: 'black', hex: '#111111' },
 ];
 
-export const LOGO_MAX_COLORS = 2;
+/**
+ * How many team colors an owner may pick. The website asks "2 or 3 colors"
+ * first (`LOGO_COLOR_COUNTS`) and caps the grid at that; the server takes up
+ * to three either way (Brandon, 2026-10-30: a third color gives a logo more
+ * life).
+ */
+export const LOGO_MAX_COLORS = 3;
+export const LOGO_COLOR_COUNTS = [2, 3] as const;
+export const DEFAULT_LOGO_COLOR_COUNT = 2;
 
 const WHITE = /^#F{6}$/;
 const BLACK = /^#(0{6}|111111)$/;
@@ -97,6 +110,25 @@ export const LOGO_COLOR_SUGGESTIONS: MflLiveAppLogoSuggestion[] = [
   { label: 'Navy and orange', hexes: ['#13294B', '#F26B1D'] },
   { label: 'Crimson and cream', hexes: ['#9E1B32', '#F3E9D2'] },
   { label: 'Navy and silver', hexes: ['#13294B', '#A5ACAF'] },
+];
+
+/**
+ * Ten ready-made trios for the three-color mode, shown as one square split in
+ * three. Each passes `logoColorAdvice`: the first two clear 3:1 like a pair,
+ * and the third clears 3:1 against at least one of them, so it always has a
+ * color to sit on (tests/team-logo-prompt.test.ts).
+ */
+export const LOGO_COLOR_TRIOS: MflLiveAppLogoSuggestion[] = [
+  { label: 'Red, white and navy', hexes: ['#C8102E', '#FFFFFF', '#13294B'] },
+  { label: 'Navy, gold and red', hexes: ['#13294B', '#FFB81C', '#C8102E'] },
+  { label: 'Teal, black and orange', hexes: ['#0F766E', '#111111', '#F26B1D'] },
+  { label: 'Navy, orange and silver', hexes: ['#13294B', '#F26B1D', '#A5ACAF'] },
+  { label: 'Red, black and silver', hexes: ['#C8102E', '#111111', '#A5ACAF'] },
+  { label: 'Crimson, cream and black', hexes: ['#9E1B32', '#F3E9D2', '#111111'] },
+  { label: 'Purple, gold and white', hexes: ['#4C1D95', '#FFB81C', '#FFFFFF'] },
+  { label: 'Forest green, gold and white', hexes: ['#1E5631', '#FFB81C', '#FFFFFF'] },
+  { label: 'Sky blue, navy and white', hexes: ['#4FA3E0', '#13294B', '#FFFFFF'] },
+  { label: 'Brown, orange and cream', hexes: ['#4E3629', '#F26B1D', '#F3E9D2'] },
 ];
 
 /**
@@ -134,7 +166,7 @@ export function normalizeHex(value: unknown): string | null {
   return `#${h.toUpperCase()}`;
 }
 
-/** The owner's team colors, cleaned: valid hexes only, no repeats, at most two. */
+/** The owner's team colors, cleaned: valid hexes only, no repeats, at most three. */
 export function pickLogoColors(sent: unknown): string[] {
   const list = Array.isArray(sent) ? sent : [];
   const hexes = [...new Set(list.map(normalizeHex).filter((h): h is string => !!h))].slice(0, LOGO_MAX_COLORS);
@@ -157,9 +189,11 @@ function colorName(hex: string): string {
 const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /**
- * Whether the owner's colors work together, in words: two that are too close
- * to tell apart get a warning, otherwise a nod. White and black come with
- * every prompt, so one color alone is a complete look, not a gap.
+ * Whether the owner's colors work together, in words. The first two must
+ * stand apart (3:1), or they merge on a small logo. A third color is an
+ * accent: it only needs one of the other two to sit on, so red, white and
+ * navy passes even though red and navy alone are close. White and black come
+ * with every prompt, so one color alone is a complete look, not a gap.
  */
 export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNote } {
   if (hexes.length < 2) {
@@ -170,7 +204,7 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
       },
     };
   }
-  const [a, b] = hexes;
+  const [a, b, c] = hexes;
   const ratio = contrastRatio(a, b);
   if (ratio < LOGO_MIN_CONTRAST) {
     return {
@@ -179,6 +213,16 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
         text:
           `${capital(colorName(a))} and ${colorName(b)} are too close to tell apart on a small logo ` +
           `(${ratio.toFixed(1)}:1, aim for 3:1). Swap one for a much lighter or darker color, or tap a suggestion.`,
+      },
+    };
+  }
+  if (c && Math.max(contrastRatio(c, a), contrastRatio(c, b)) < LOGO_MIN_CONTRAST) {
+    return {
+      note: {
+        tone: 'weak',
+        text:
+          `${capital(colorName(c))} is too close to both ${colorName(a)} and ${colorName(b)} to stand out on a small logo. ` +
+          'Swap it for a much lighter or darker color, or tap a suggestion.',
       },
     };
   }
@@ -288,9 +332,10 @@ export function buildTeamLogoPrompt(
 /** The choices as the app lists them (no prompt wording leaves the server). */
 export function logoPromptOptions() {
   return {
-    styles: LOGO_STYLES.map(({ id, label }) => ({ id, label })),
+    styles: LOGO_STYLES.map(({ id, label, hint }) => ({ id, label, hint })),
     colors: LOGO_COLORS,
     suggestions: LOGO_COLOR_SUGGESTIONS,
+    trios: LOGO_COLOR_TRIOS,
     maxColors: LOGO_MAX_COLORS,
     kinds: LOGO_KINDS,
   };

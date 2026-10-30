@@ -18,6 +18,8 @@ export type MflLiveAppLogoKind = 'icon' | 'banner' | 'svg';
 export interface MflLiveAppLogoOption<Id extends string = string> {
   id: Id;
   label: string;
+  /** A style's one-line description, in plain words. */
+  hint?: string;
 }
 
 /** One color in the grid the owner picks from. */
@@ -27,7 +29,7 @@ export interface MflLiveAppLogoColor {
   hex: string;
 }
 
-/** A one-tap suggestion: one team color, or a pair that clears 3:1. */
+/** A one-tap suggestion: a pair that clears 3:1, or a trio whose third color clears 3:1 against one of the others. */
 export interface MflLiveAppLogoSuggestion {
   label: string;
   hexes: string[];
@@ -47,7 +49,7 @@ export interface MflLiveAppLogoChoice {
   /** Mascot or idea, free text. Trimmed to 120 characters by the server. */
   idea?: string;
   style: string;
-  /** One or two `#RRGGBB` team colors, main color first: from the grid or typed by the owner. Either may be white or black; the prompt offers whichever of those is not picked. */
+  /** One to three `#RRGGBB` team colors, main color first: from the grid or typed by the owner. Either may be white or black; the prompt offers whichever of those is not picked. */
   colors: string[];
   kind: MflLiveAppLogoKind;
 }
@@ -62,7 +64,9 @@ export interface MflLiveAppLogoPrompt {
   colors: MflLiveAppLogoColor[];
   /** Colour sets that read well together, shown above the grid. */
   suggestions: MflLiveAppLogoSuggestion[];
-  /** Most team colors an owner may pick (2). The prompt offers white and black on top. */
+  /** Ready-made three-color sets, for an owner who wants a third color. */
+  trios?: MflLiveAppLogoSuggestion[];
+  /** Most team colors an owner may pick (3). The prompt offers white and black on top. */
   maxColors: number;
   kinds: MflLiveAppLogoOption<MflLiveAppLogoKind>[];
   /** The choice this prompt was built from (the defaults on a GET). */

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTeamLogoPrompt,
   cleanLogoText,
+  LOGO_COLOR_COUNTS,
   LOGO_COLOR_SUGGESTIONS,
+  LOGO_COLOR_TRIOS,
   LOGO_COLORS,
   LOGO_MIN_CONTRAST,
   logoColorAdvice,
@@ -14,6 +16,7 @@ import {
   pickLogoColors,
 } from '../src/utils/team-logo-prompt';
 import { AI_PROMPT } from '../src/utils/brand-asset-specs';
+import { logoStyleArt, teamInitials } from '../src/utils/team-logo-style-art';
 import { contrastRatio } from '../src/utils/team-color-contrast';
 
 describe('team logo prompt builder', () => {
@@ -42,10 +45,13 @@ describe('team logo prompt builder', () => {
     expect(prompt).not.toContain('\n');
   });
 
-  it('takes one or two team colors, white and black included, and offers the neutrals not picked', () => {
-    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#13294b', '#FFB81C', '#123456'] }, 'T');
+  it('takes one to three team colors, white and black included, and offers the neutrals not picked', () => {
+    const { prompt, choice } = buildTeamLogoPrompt({ colors: ['#13294b', '#FFB81C'] }, 'T');
     expect(choice.colors).toEqual(['#13294B', '#FFB81C']);
     expect(prompt).toContain('colors: navy #13294B and gold #FFB81C, plus white and black wherever the logo needs them');
+    const three = buildTeamLogoPrompt({ colors: ['#13294b', '#FFB81C', '#c8102e', '#123456'] }, 'T');
+    expect(three.choice.colors).toEqual(['#13294B', '#FFB81C', '#C8102E']);
+    expect(three.prompt).toContain('colors: navy #13294B, gold #FFB81C and red #C8102E, plus white and black');
     expect(buildTeamLogoPrompt({ colors: ['#7a1f2b'] }, 'T').prompt).toContain('colors: #7A1F2B, plus white and black');
 
     const redBlack = buildTeamLogoPrompt({ colors: ['#C8102E', '#111111'] }, 'T');
@@ -58,7 +64,8 @@ describe('team logo prompt builder', () => {
 
     expect(pickLogoColors(['#C8102E', '#c8102e', 'red'])).toEqual(['#C8102E']);
     expect(pickLogoColors(undefined)).toEqual(['#C8102E']);
-    expect(LOGO_MAX_COLORS).toBe(2);
+    expect(LOGO_MAX_COLORS).toBe(3);
+    expect([...LOGO_COLOR_COUNTS]).toEqual([2, 3]);
     expect(LOGO_COLORS.map((c) => c.name)).toEqual(expect.arrayContaining(['white', 'black']));
     for (const kind of LOGO_KINDS) {
       expect(buildTeamLogoPrompt({ kind: kind.id }, 'T').prompt).toContain('plus white and black');
@@ -73,6 +80,24 @@ describe('team logo prompt builder', () => {
       expect(contrastRatio(set.hexes[0], set.hexes[1]), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
       expect(logoColorAdvice(set.hexes).note.tone).toBe('good');
     }
+  });
+
+  it('every suggested trio passes: the first two clear 3:1 and the third clears 3:1 against one of them', () => {
+    expect(LOGO_COLOR_TRIOS).toHaveLength(10);
+    for (const set of LOGO_COLOR_TRIOS) {
+      const [a, b, c] = set.hexes;
+      expect(set.hexes, set.label).toHaveLength(3);
+      expect(pickLogoColors(set.hexes)).toEqual(set.hexes);
+      expect(contrastRatio(a, b), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
+      expect(Math.max(contrastRatio(c, a), contrastRatio(c, b)), set.label).toBeGreaterThanOrEqual(LOGO_MIN_CONTRAST);
+      expect(logoColorAdvice(set.hexes).note.tone, set.label).toBe('good');
+    }
+  });
+
+  it('flags a third color too close to both of the others', () => {
+    const { note } = logoColorAdvice(['#13294B', '#4FA3E0', '#1D4ED8']);
+    expect(note.tone).toBe('weak');
+    expect(note.text).toMatch(/^Royal blue is too close to both navy and sky blue/);
   });
 
   it('flags two colors too close to tell apart, and names them', () => {
@@ -97,6 +122,20 @@ describe('team logo prompt builder', () => {
     expect(opts.colors.every((c) => /^#[0-9A-F]{6}$/.test(c.hex))).toBe(true);
     expect(new Set(LOGO_STYLES.map((s) => s.id)).size).toBe(LOGO_STYLES.length);
     expect(new Set(LOGO_COLORS.map((c) => c.hex)).size).toBe(LOGO_COLORS.length);
+  });
+
+  it('draws a sample sketch for every style, in the picked colors', () => {
+    expect(teamInitials('Pacific Pigskins')).toBe('PP');
+    expect(teamInitials('Smokane')).toBe('S');
+    expect(teamInitials('  ')).toBe('MT');
+    for (const style of LOGO_STYLES) {
+      expect(style.hint, style.id).toBeTruthy();
+      const svg = logoStyleArt(style.id, ['#13294B', '#FFB81C', '#C8102E'], 'Pacific Pigskins');
+      expect(svg, style.id).toMatch(/^<svg [^>]*viewBox="0 0 100 100"/);
+      expect(svg, style.id).toContain('#13294B');
+    }
+    expect(logoStyleArt('crest', ['#13294B'], 'Pacific Pigskins')).toContain('>PP<');
+    expect(logoStyleArt('badge', ['#13294B'], '<b>&')).not.toContain('<b>');
   });
 
   it('the Brand Book prompt is the builder icon prompt with placeholders', () => {
