@@ -4,8 +4,9 @@
  *
  * Not a page anyone browses to: the Google TV app loads it into a see-through
  * window drawn over another app (YouTube TV), so the owner can watch the game
- * and their matchups at once. `?mode=panel|bar|expanded` and `?edge=top|bottom`
- * are the app's hints for the first paint; after that the app switches views through the page's
+ * and their matchups at once. `?mode=panel|bar|expanded`, `?edge=top|bottom`,
+ * `?side=left|right`, `?size=small|quarter` and `?layout=corner` are the
+ * app's hints for the first paint; after that the app switches views through the page's
  * `window.__mflOverlay` handle (BroadcastOverlay.tsx).
  *
  * Its own document, no app layout: the page must be transparent edge to edge,
@@ -21,6 +22,7 @@ import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getTvSettings } from '../../../utils/mfl-live-tv-settings';
+import { getLeagueBySlug } from '../../../config/leagues';
 import '../../../styles/broadcast-overlay.css';
 
 export const prerender = false;
@@ -36,6 +38,9 @@ const week =
     : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
 
 let pageData: string | null = null;
+// Each registry league's on-dark logo, by MFL id: the overlay only ever darkens
+// the picture behind it, and its ink is white.
+const leagueLogos: Record<string, string> = {};
 // The owner's own answer from /live/settings; a paired TV's pass is that owner.
 const tvSettings = await getTvSettings(viewer?.user);
 if (viewer) {
@@ -47,9 +52,12 @@ if (viewer) {
       week,
       year,
     });
-    pageData = JSON.stringify(
-      toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname }),
-    );
+    const page = toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname });
+    for (const panel of page.panels) {
+      const logo = panel.slug ? getLeagueBySlug(panel.slug)?.logo.dark : undefined;
+      if (logo) leagueLogos[panel.leagueId] = logo;
+    }
+    pageData = JSON.stringify(page);
   } catch {
     pageData = null;
   }
@@ -73,6 +81,10 @@ Astro.response.headers.set('Cache-Control', 'no-store');
       signedIn={Boolean(viewer)}
       mode={Astro.url.searchParams.get('mode')}
       edge={Astro.url.searchParams.get('edge')}
+      side={Astro.url.searchParams.get('side')}
+      size={Astro.url.searchParams.get('size')}
+      layout={Astro.url.searchParams.get('layout')}
+      leagueLogos={leagueLogos}
       sundayTicket={tvSettings.sundayTicket}
     />
   </body>

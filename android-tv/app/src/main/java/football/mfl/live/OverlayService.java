@@ -41,9 +41,11 @@ import android.widget.FrameLayout;
  *
  * Three views, and the window changes shape with them:
  *
- *  - BAR: the ticker, a short band across the top or the bottom of the screen
- *    (the owner's pick, remembered). It never takes the remote, so the app
- *    underneath (YouTube TV) keeps every key.
+ *  - BAR: a quarter of the screen in the corner the owner picked (top or
+ *    bottom, left or right, remembered). The page draws a small score box in
+ *    that corner and leaves the rest see-through; a big play grows the box,
+ *    and the phone's Quarter fills it with both lineups. It never takes the
+ *    remote, so the app underneath (YouTube TV) keeps every key.
  *  - EXPANDED: the ticker opened into both lineups, a taller band on the same
  *    edge. It takes the remote: Left/Right step through games, Up/Down move
  *    the ticker to the top or the bottom, OK opens the panel, Back drops to
@@ -69,6 +71,10 @@ public class OverlayService extends Service {
     static final String EXTRA_EDGE = "edge";
     static final String EDGE_TOP = "top";
     static final String EDGE_BOTTOM = "bottom";
+    static final String SIDE_LEFT = "left";
+    static final String SIDE_RIGHT = "right";
+    private static final String SIZE_SMALL = "small";
+    private static final String SIZE_QUARTER = "quarter";
 
     /** Whether the overlay is on screen, for the main app's exit menu. */
     private static volatile boolean showing;
@@ -76,8 +82,6 @@ public class OverlayService extends Service {
     private static final String CHANNEL_ID = "overlay";
     private static final int NOTIFICATION_ID = 1;
     private static final long PANEL_IDLE_MS = 30_000;
-    /** Lineups opened from the phone close on their own after this long. */
-    private static final long PHONE_LINEUPS_MS = 120_000;
     private static final long RETRY_MS = 60_000;
     private static final String UA_SUFFIX = " MFLLiveTV/" + BuildConfig.VERSION_NAME;
 
@@ -90,21 +94,27 @@ public class OverlayService extends Service {
 
     private static final String PREFS = "overlay";
     private static final String PREF_EDGE = "edge";
+    private static final String PREF_SIDE = "side";
+    private static final String PREF_SIZE = "size";
 
-    /** Share of the screen's height each ticker view's window takes. */
-    private static final float BAR_HEIGHT = 0.10f;
+    /**
+     * The always-on view's window is a quarter of the screen, in the corner
+     * the owner picked. The page draws the small box in its corner and leaves
+     * the rest see-through; a big play grows the box into the quarter, and
+     * the Quarter size fills it with both lineups (a YouTube TV multiview
+     * shows three games in the other three).
+     */
+    private static final float CORNER_SHARE = 0.5f;
+    /** Share of the screen's height the opened-up view (TV remote) takes. */
     private static final float EXPANDED_HEIGHT = 0.62f;
 
     private WindowManager windowManager;
     private KeyFrame root;
     private WebView webView;
     private String mode = MODE_BAR;
-    /**
-     * The lineups are open because the phone asked: shown, but the window
-     * stays unfocusable, so every key still reaches the show underneath.
-     */
-    private boolean passive;
     private String edge = EDGE_TOP;
+    private String side = SIDE_RIGHT;
+    private String size = SIZE_SMALL;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable idleToBar = () -> setMode(MODE_BAR);
@@ -143,6 +153,8 @@ public class OverlayService extends Service {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         edge = EDGE_BOTTOM.equals(prefs().getString(PREF_EDGE, EDGE_TOP)) ? EDGE_BOTTOM : EDGE_TOP;
+        side = SIDE_LEFT.equals(prefs().getString(PREF_SIDE, SIDE_RIGHT)) ? SIDE_LEFT : SIDE_RIGHT;
+        size = SIZE_QUARTER.equals(prefs().getString(PREF_SIZE, SIZE_SMALL)) ? SIZE_QUARTER : SIZE_SMALL;
         IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(screenOff, filter, Context.RECEIVER_NOT_EXPORTED);
@@ -262,13 +274,13 @@ public class OverlayService extends Service {
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         windowManager.addView(root, layoutFor(mode));
-        webView.loadUrl(BuildConfig.OVERLAY_URL + "?mode=" + mode + "&edge=" + edge);
+        webView.loadUrl(BuildConfig.OVERLAY_URL + "?mode=" + mode + "&edge=" + edge
+                + "&side=" + side + "&size=" + size + "&layout=corner");
     }
 
     private void setMode(String next) {
         if (root == null) return;
         mode = next;
-        passive = false;
         handler.removeCallbacks(idleToBar);
         windowManager.updateViewLayout(root, layoutFor(next));
         pushModeToPage();
@@ -278,16 +290,16 @@ public class OverlayService extends Service {
         }
     }
 
-    /** The phone remote's Show lineups: the expanded view, without the TV's remote. */
-    private void showLineupsPassively() {
-        if (root == null) return;
-        if (MODE_EXPANDED.equals(mode) && !passive) return; // already open, and steered by the TV remote
-        mode = MODE_EXPANDED;
-        passive = true;
-        handler.removeCallbacks(idleToBar);
-        windowManager.updateViewLayout(root, layoutFor(mode));
-        pushModeToPage();
-        handler.postDelayed(idleToBar, PHONE_LINEUPS_MS);
+    /**
+     * The phone remote's Small / Quarter. Only the page changes: the window is
+     * already the quarter, and never takes the remote, so the show keeps it.
+     * Remembered, so a Quarter left up for a multiview survives a reload.
+     */
+    private void setSize(String next) {
+        size = SIZE_QUARTER.equals(next) ? SIZE_QUARTER : SIZE_SMALL;
+        prefs().edit().putString(PREF_SIZE, size).apply();
+        if (!MODE_BAR.equals(mode)) setMode(MODE_BAR);
+        else pushModeToPage();
     }
 
     private void pushModeToPage() {
@@ -298,8 +310,20 @@ public class OverlayService extends Service {
                 "window.__mflOverlay && window.__mflOverlay.setEdge && window.__mflOverlay.setEdge('" + edge + "')",
                 null);
         webView.evaluateJavascript(
-                "window.__mflOverlay && window.__mflOverlay.setPassive && window.__mflOverlay.setPassive(" + passive + ")",
+                "window.__mflOverlay && window.__mflOverlay.setSide && window.__mflOverlay.setSide('" + side + "')",
                 null);
+        webView.evaluateJavascript(
+                "window.__mflOverlay && window.__mflOverlay.setSize && window.__mflOverlay.setSize('" + size + "')",
+                null);
+    }
+
+    /** Move the corner box to the left or the right, and remember it for next time. */
+    private void setSide(String next) {
+        if (root == null || next.equals(side)) return;
+        side = next;
+        prefs().edit().putString(PREF_SIDE, side).apply();
+        windowManager.updateViewLayout(root, layoutFor(mode));
+        pushModeToPage();
     }
 
     /** Move the ticker to the top or the bottom, and remember it for next time. */
@@ -362,20 +386,30 @@ public class OverlayService extends Service {
 
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        if (bar || passive) {
-            // The bar, and lineups the phone opened, are for looking at only;
-            // every key stays with the game.
+        if (bar) {
+            // The corner box, at either size, is for looking at only; every
+            // key stays with the game.
             flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                     | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
         }
 
+        int width;
+        int height;
+        if (bar) {
+            width = Math.round(screen.width() * CORNER_SHARE);
+            height = Math.round(screen.height() * CORNER_SHARE);
+        } else if (panel) {
+            width = Math.round(screen.width() * 0.45f);
+            height = ViewGroup.LayoutParams.MATCH_PARENT;
+        } else {
+            width = ViewGroup.LayoutParams.MATCH_PARENT;
+            height = Math.round(screen.height() * EXPANDED_HEIGHT);
+        }
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                panel ? Math.round(screen.width() * 0.45f) : ViewGroup.LayoutParams.MATCH_PARENT,
-                panel
-                        ? ViewGroup.LayoutParams.MATCH_PARENT
-                        : Math.round(screen.height() * (bar ? BAR_HEIGHT : EXPANDED_HEIGHT)),
-                type, flags, PixelFormat.TRANSLUCENT);
-        params.gravity = (!panel && EDGE_BOTTOM.equals(edge) ? Gravity.BOTTOM : Gravity.TOP) | Gravity.START;
+                width, height, type, flags, PixelFormat.TRANSLUCENT);
+        int vertical = !panel && EDGE_BOTTOM.equals(edge) ? Gravity.BOTTOM : Gravity.TOP;
+        int horizontal = bar && SIDE_RIGHT.equals(side) ? Gravity.END : Gravity.START;
+        params.gravity = vertical | horizontal;
         return params;
     }
 
@@ -474,6 +508,22 @@ public class OverlayService extends Service {
             return edge;
         }
 
+        /** The always-on window is a quarter of the screen in a corner (this build on). */
+        @JavascriptInterface
+        public String layout() {
+            return "corner";
+        }
+
+        @JavascriptInterface
+        public String side() {
+            return side;
+        }
+
+        @JavascriptInterface
+        public String size() {
+            return size;
+        }
+
         @JavascriptInterface
         public void watch(String query) {
             if (query == null || query.trim().isEmpty()) return;
@@ -486,20 +536,19 @@ public class OverlayService extends Service {
             handler.post(OverlayService.this::stopSelf);
         }
 
-        /** The phone remote: open (true) or close the lineups, leaving the TV's remote with the show. */
+        /** The phone remote: the corner box at its `small` or `quarter` size. */
         @JavascriptInterface
-        public void lineups(boolean show) {
-            handler.post(() -> {
-                if (show) showLineupsPassively();
-                else if (!MODE_BAR.equals(mode)) setMode(MODE_BAR);
-            });
+        public void setSize(String next) {
+            handler.post(() -> OverlayService.this.setSize(next));
         }
 
-        /** The phone remote: the strip to the top or the bottom. */
+        /** The phone remote: the corner box to the top, bottom, left or right. */
         @JavascriptInterface
         public void moveTo(String where) {
-            String next = EDGE_BOTTOM.equals(where) ? EDGE_BOTTOM : EDGE_TOP;
-            handler.post(() -> setEdge(next));
+            handler.post(() -> {
+                if (SIDE_LEFT.equals(where) || SIDE_RIGHT.equals(where)) setSide(where);
+                else setEdge(EDGE_BOTTOM.equals(where) ? EDGE_BOTTOM : EDGE_TOP);
+            });
         }
     }
 

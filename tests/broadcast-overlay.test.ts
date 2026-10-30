@@ -3,13 +3,17 @@ import {
   BIG_PLAY_MIN_POINTS,
   detectBigPlays,
   formatChance,
+  leagueShortName,
+  overlayColumnFrom,
   overlayEdgeFrom,
+  overlaySizeFrom,
   moveWatch,
   overlayGames,
   overlayModeFrom,
   overlayWatchList,
   stepOverlay,
   watchNote,
+  winBarShare,
 } from '../src/utils/broadcast-overlay';
 import type { BroadcastLeaguePanel, BroadcastPollResponse, BroadcastTeam } from '../src/types/live-broadcast';
 import type { PlayerMeta } from '../src/types/live-scoring';
@@ -90,6 +94,22 @@ describe('overlay games', () => {
     expect(game.mine.lineup[0].projected).toBe(12);
   });
 
+  it("carries each club's on-dark crest and the league id for its logo", () => {
+    const withArt = panel('A', [
+      {
+        index: 0,
+        mine: { ...team('0001', 'Mine'), iconSmall: '/mine.png', iconSmallStroke: '#fff' },
+        opponent: { ...team('0002', 'Them'), iconSmall: '/them.png' },
+      },
+    ]);
+    const [game] = overlayGames([withArt], poll, meta);
+    expect(game.leagueId).toBe('A');
+    expect(game.mine.icon).toBe('/mine.png');
+    expect(game.mine.iconStroke).toBe('#fff');
+    expect(game.opponent.icon).toBe('/them.png');
+    expect(game.opponent.iconStroke).toBeUndefined();
+  });
+
   it('marks a game unreadable when its league feed failed', () => {
     const failed = { ...poll, leagues: [{ ...poll.leagues[0], ok: false }] };
     expect(overlayGames(panels, failed, meta)[0].readable).toBe(false);
@@ -116,6 +136,30 @@ describe('overlay controls', () => {
     expect(overlayEdgeFrom('top')).toBe('top');
     expect(overlayEdgeFrom(null)).toBe('top');
     expect(overlayEdgeFrom('left')).toBe('top');
+  });
+
+  it('reads the corner box hints, defaulting to a small box on the right', () => {
+    expect(overlayColumnFrom('left')).toBe('left');
+    expect(overlayColumnFrom(null)).toBe('right');
+    expect(overlayColumnFrom('bottom')).toBe('right');
+    expect(overlaySizeFrom('quarter')).toBe('quarter');
+    expect(overlaySizeFrom(null)).toBe('small');
+    expect(overlaySizeFrom('expanded')).toBe('small');
+  });
+
+  it("splits the win bar by the board's win chance, so a decided game shows one colour", () => {
+    expect(winBarShare(0.71)).toBeCloseTo(71);
+    expect(winBarShare(1)).toBe(100);
+    expect(winBarShare(0)).toBe(0);
+    expect(winBarShare(1.4)).toBe(100);
+    expect(winBarShare(Number.NaN)).toBe(50);
+  });
+
+  it('names a league that has no logo by a short name', () => {
+    expect(leagueShortName('Best Ball 2026')).toBe('BB26');
+    expect(leagueShortName('Dynasty')).toBe('DYNAST');
+    expect(leagueShortName('  ')).toBe('');
+    expect(leagueShortName('The Big Fantasy League Of Friends')).toBe('TBFLO');
   });
 
   it('prints 100% only for a settled game', () => {
