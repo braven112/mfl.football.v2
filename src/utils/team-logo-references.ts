@@ -29,7 +29,10 @@ const COMMON_WORDS = new Set(
     'hayes henderson hill howard hughes hunt jackson james jenkins johnson jones jordan king lee lewis long love ' +
     'martin mason miller mitchell moore morris murphy nelson perry pope powell price reed reynolds rice richardson ' +
     'robinson ross russell sanders scott simmons smith stewart stone sullivan swift taylor thomas thompson walker ' +
-    'wallace ward watson west white williams wilson wood wright young'
+    'wallace ward watson west white williams wilson wood wright young ' +
+    // Surnames on the generated list that are everyday words too.
+    'beck boston branch burden cousins dell downs fields flowers helm hunter knight lane lemon likely london marks ' +
+    'nix noel spears strange tate tracy worthy'
   ).split(' '),
 );
 
@@ -105,23 +108,26 @@ const distinctive = (w: string, unique: Set<string>) => w.length >= 3 && unique.
 
 /**
  * The real player or club the owner's name or idea nods to, or undefined.
- * Strongest match first: a full player name, then a surname, then a first
- * name, then a club nickname.
+ * Strongest match first: a full player name (in the name or the idea), then a
+ * surname, then a first name, then a club nickname. A single word counts only
+ * in the TEAM NAME, where the puns live: the idea is a free description ("a
+ * charging knight") whose ordinary words would otherwise name a player.
  */
-export function findLogoReference(...texts: string[]): LogoReference | undefined {
-  const hay = words(texts.join(' '));
-  if (!hay.length) return undefined;
+export function findLogoReference(teamName: string, idea = ''): LogoReference | undefined {
+  const nameWords = words(teamName);
+  const all = [...nameWords, ...words(idea)];
+  if (!all.length) return undefined;
   const players = playerCandidates();
-  const set = new Set(hay);
+  const inName = new Set(nameWords);
   const player =
-    players.find((c) => c.full.length > 1 && hasRun(hay, c.full)) ??
-    players.find((c) => set.has(c.last) && distinctive(c.last, uniqueLast)) ??
-    players.find((c) => set.has(c.first) && distinctive(c.first, uniqueFirst) && !COMMON_FIRST_NAMES.has(c.first));
+    players.find((c) => c.full.length > 1 && (hasRun(nameWords, c.full) || hasRun(words(idea), c.full))) ??
+    players.find((c) => inName.has(c.last) && distinctive(c.last, uniqueLast)) ??
+    players.find((c) => inName.has(c.first) && distinctive(c.first, uniqueFirst) && !COMMON_FIRST_NAMES.has(c.first));
   if (player) return player.ref;
 
   for (const team of Object.values(NFL_TEAM_NAMES)) {
     const nickname = team.split(' ').pop() as string;
-    if (set.has(nickname.toLowerCase())) return { kind: 'team', nickname, team };
+    if (all.includes(nickname.toLowerCase())) return { kind: 'team', nickname, team };
   }
   return undefined;
 }
@@ -141,7 +147,7 @@ export function referencePromptLine(ref: LogoReference): string {
     return (
       `The name is a nod to NFL ${role} ${ref.name} of the ${ref.team}: hint at that as strongly as you can ` +
       '(the joke in the name, the position, signature moves and celebrations, nicknames, and the team colors where they fit the colors above), ' +
-      "but with an original cartoon character, never the real person's face or likeness."
+      "but in original art in the style above, never the real person's face or likeness."
     );
   }
   return (

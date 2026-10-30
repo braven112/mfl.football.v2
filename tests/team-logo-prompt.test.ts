@@ -114,6 +114,8 @@ describe('team logo prompt builder', () => {
     const built = buildTeamLogoPrompt({ teamName: 'Mahomes Alone' }, '');
     expect(built.prompt).toContain('a nod to NFL quarterback Patrick Mahomes of the Kansas City Chiefs');
     expect(built.prompt).toMatch(/never the real person's face or likeness/);
+    // Style-neutral, so a Monogram (no picture) is not asked for a character.
+    expect(buildTeamLogoPrompt({ teamName: 'Mahomes Alone', style: 'monogram' }, '').prompt).not.toMatch(/cartoon character/);
     expect(built.warning).toMatch(/^Sounds like a nod to Patrick Mahomes/);
   });
 
@@ -122,6 +124,12 @@ describe('team logo prompt builder', () => {
     expect(findLogoReference('Swift Justice')).toBeUndefined();
     expect(findLogoReference('a charging boar')).toBeUndefined();
     expect(findLogoReference('Dallas Destroyers')).toBeUndefined();
+    expect(findLogoReference('Golden Knight', 'a strange, likely lemon')).toBeUndefined();
+    // An everyday word in the IDEA never names a player, nor replaces the one in the name.
+    expect(findLogoReference('Gridiron Goats', 'a charging knight')).toBeUndefined();
+    expect(findLogoReference('Mahomes Alone', 'a charging knight')).toMatchObject({ name: 'Patrick Mahomes' });
+    // A full name in the idea still counts.
+    expect(findLogoReference('Gridiron Goats', 'Travis Kelce dancing')).toMatchObject({ name: 'Travis Kelce' });
     expect(buildTeamLogoPrompt({ teamName: 'Gridiron Goats' }, '').warning).toBeUndefined();
   });
 
