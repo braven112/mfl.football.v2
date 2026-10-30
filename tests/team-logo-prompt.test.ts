@@ -12,11 +12,11 @@ import {
   LOGO_MAX_COLORS,
   LOGO_STYLES,
   logoPromptOptions,
-  nflNameWarning,
   pickLogoColors,
 } from '../src/utils/team-logo-prompt';
 import { AI_PROMPT } from '../src/utils/brand-asset-specs';
 import { contrastRatio } from '../src/utils/team-color-contrast';
+import { findLogoReference } from '../src/utils/team-logo-references';
 
 describe('team logo prompt builder', () => {
   it('every prompt carries the originality rule and our size rules', () => {
@@ -107,12 +107,30 @@ describe('team logo prompt builder', () => {
     expect(logoColorAdvice(['#FFFFFF']).note.text).toBe('White with black is a classic look.');
   });
 
-  it('notes an NFL nickname without blocking it', () => {
-    expect(nflNameWarning('Lambeau Packers')).toMatch(/Packers/);
-    expect(nflNameWarning('a charging bear')).toBeUndefined();
-    const built = buildTeamLogoPrompt({ teamName: 'Motown Lions' }, '');
-    expect(built.warning).toMatch(/Lions/);
-    expect(built.prompt).toContain('Motown Lions');
+  it('spots a real player in the name and hints at them without their face', () => {
+    expect(findLogoReference('Mahomes Alone')).toMatchObject({ kind: 'player', name: 'Patrick Mahomes', team: 'Kansas City Chiefs' });
+    expect(findLogoReference('Dak to the Future')).toMatchObject({ kind: 'player', name: 'Dak Prescott' });
+    expect(findLogoReference('Bijan Mustard')).toMatchObject({ kind: 'player', name: 'Bijan Robinson' });
+    const built = buildTeamLogoPrompt({ teamName: 'Mahomes Alone' }, '');
+    expect(built.prompt).toContain('a nod to NFL quarterback Patrick Mahomes of the Kansas City Chiefs');
+    expect(built.prompt).toMatch(/never the real person's face or likeness/);
+    expect(built.warning).toMatch(/^Sounds like a nod to Patrick Mahomes/);
+  });
+
+  it('does not read an everyday word as a player', () => {
+    expect(findLogoReference('Brown Recluses')).toBeUndefined();
+    expect(findLogoReference('Swift Justice')).toBeUndefined();
+    expect(findLogoReference('a charging boar')).toBeUndefined();
+    expect(findLogoReference('Dallas Destroyers')).toBeUndefined();
+    expect(buildTeamLogoPrompt({ teamName: 'Gridiron Goats' }, '').warning).toBeUndefined();
+  });
+
+  it('spots an NFL club nickname and asks for its spirit and colors, not its logo', () => {
+    const built = buildTeamLogoPrompt({ teamName: 'Lambeau Packers' }, '');
+    expect(built.warning).toMatch(/Packers/);
+    expect(built.prompt).toContain('a nod to the Green Bay Packers');
+    expect(built.prompt).toContain('Lambeau Packers');
+    expect(buildTeamLogoPrompt({ teamName: 'Motown Lions' }, '').warning).toMatch(/Lions/);
   });
 
   it('sends the app choices but no prompt wording', () => {

@@ -75,6 +75,6 @@ export interface MflLiveAppLogoPrompt {
   prompt: string;
   /** How well the picked colors stand apart. */
   colorNote: MflLiveAppLogoColorNote;
-  /** Set when the name or idea reads like an NFL club, which the art must not copy. */
+  /** Set when the name or idea nods to a real NFL player or club: the prompt hints at it without copying a face or a team mark. */
   warning?: string;
 }
