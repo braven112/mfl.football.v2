@@ -4,7 +4,9 @@
  *
  * A button in the handheld board's bar, drawn only when the signed-in owner
  * has a TV paired. It opens a panel of DISPLAY commands — focus one league,
- * turn the strip a page, sound on or off, back to the full board — each a
+ * turn the strip a page, sound on or off, back to the full board, and the TV
+ * app's score overlay (lineups open or closed, top or bottom, next game:
+ * mid-show the TV's own remote belongs to the show) — each a
  * closed-list string the server checks against the owner's own TV list and
  * the TV checks again before it applies it.
  *
@@ -210,6 +212,25 @@ export default function BroadcastRemote({ panels }: Props) {
                     {p.leagueName}
                   </button>
                 ))}
+              </div>
+
+              <div className="lbh__remote-row" role="group" aria-label="Score overlay">
+                <span className="lbh__remote-label">Overlay</span>
+                <button type="button" className="lbh__remote-chip" onClick={() => void send({ kind: 'overlay', action: 'lineups' }, 'Show lineups')}>
+                  Show lineups
+                </button>
+                <button type="button" className="lbh__remote-chip" onClick={() => void send({ kind: 'overlay', action: 'ticker' }, 'Hide lineups')}>
+                  Hide lineups
+                </button>
+                <button type="button" className="lbh__remote-chip" onClick={() => void send({ kind: 'page', dir: 'next' }, 'Next game')}>
+                  Next game ›
+                </button>
+                <button type="button" className="lbh__remote-chip" onClick={() => void send({ kind: 'overlay', action: 'top' }, 'Ticker at the top')}>
+                  Top
+                </button>
+                <button type="button" className="lbh__remote-chip" onClick={() => void send({ kind: 'overlay', action: 'bottom' }, 'Ticker at the bottom')}>
+                  Bottom
+                </button>
               </div>
 
               <div className="lbh__remote-row" role="group" aria-label="Player strip">
