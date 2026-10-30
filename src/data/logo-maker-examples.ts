@@ -40,4 +40,14 @@ export const LOGO_MAKER_EXAMPLES: LogoMakerExample[] = [
 		image: '/assets/logo-maker/maryville.webp',
 		alt: 'Maryville logo: a crimson stylized M with a crowned princess, her hair flowing into cream ocean waves',
 	},
+	{
+		// Brandon's own run, 2026-10-30, as the Modern mascot example.
+		teamName: 'Walruses',
+		idea: 'a tough walrus in a football helmet, tusks out',
+		style: 'mascot',
+		colors: ['#13294B', '#A5ACAF'],
+		kind: 'icon',
+		image: '/assets/logo-maker/walruses.webp',
+		alt: 'Walruses logo: a scowling gray walrus with long white tusks in a navy and silver football helmet',
+	},
 ];
