@@ -336,9 +336,10 @@ const fmtDate = (ms: number) =>
               ))}
             </ul>
           )}
-          {tvs.length > 0 && (
-            <a class="cta cta--primary bcl-tv__btn" href="/live/broadcast/remote">Open the TV remote</a>
-          )}
+          {/* Always offered: a TV paired while signed in to the other league
+              is not in this list, and the remote page says what to do when
+              it finds none. */}
+          <a class="cta cta--primary bcl-tv__btn" href="/live/broadcast/remote">Open the TV remote</a>
           <a class="cta cta--ghost bcl-tv__btn" href="/live/broadcast/pair">Enter a TV code</a>
         </Fragment>
       ) : (
