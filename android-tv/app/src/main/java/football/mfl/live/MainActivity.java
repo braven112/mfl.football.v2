@@ -88,7 +88,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         phone = isPhone();
         // The remote is a portrait page; the manifest's landscape lock is for TVs.
-        if (phone) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        // The theme is Fullscreen for TVs, which hides a phone's status bar too.
+        if (phone) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
 
         // A TV that dims or starts its screensaver during a live slate is the
         // one failure a browser tab can't avoid; the app's whole reason to exist.

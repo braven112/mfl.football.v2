@@ -1,9 +1,10 @@
 ---
 /**
  * MFL Live — remote mode: the whole phone screen as a remote for the owner's
- * paired TV. Opened from the board's TV remote button; on an iPhone it can be
- * added to the home screen and opened like an app. The Android phone app
- * draws the same buttons natively (apps/mobile TvRemoteScreen).
+ * paired TV. Opened from the board's TV remote button, and it is what the TV
+ * app opens when installed on a phone (android-tv MainActivity). On an
+ * iPhone it can be added to the home screen and opened like an app; its own
+ * manifest makes that icon open here rather than at the splash.
  *
  * Signed-in owners only: the remote only reaches TVs paired from this owner
  * (`/api/broadcast-tv/remote` checks the pass against the session).
@@ -35,7 +36,7 @@ try {
 }
 ---
 
-<MflAppLayout title="TV remote — MFL Football" description="Use your phone as a remote for MFL Football on your TV.">
+<MflAppLayout title="TV remote — MFL Football" description="Use your phone as a remote for MFL Football on your TV." remoteManifest>
   <section class="tvr-page" aria-labelledby="tvr-title">
     <a class="tvr-page__back" href="/live/broadcast">&larr; Broadcast</a>
     <h1 id="tvr-title" class="tvr-page__title">TV remote</h1>

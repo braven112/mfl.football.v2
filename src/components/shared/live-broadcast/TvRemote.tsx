@@ -5,15 +5,15 @@
  * the score overlay first because mid-game the TV's own remote belongs to
  * the show underneath.
  *
- * The corner is picked on a drawing of the screen: one tap sends both halves
- * of it (`overlay:top` + `overlay:right`), since the TV stores the edge and
- * the side separately.
+ * The corner is picked on a drawing of the screen: one tap sends ONE command
+ * naming both halves (`overlay:top-right`), because the server keeps only the
+ * latest command and an edge and a side sent apart could lose the edge.
  *
  * What it cannot do, and says so: a browser grants full screen and starts
  * audio only after a tap ON that device, so the TV needs one touch of its own.
  */
 import { useEffect, useState } from 'react';
-import type { OverlayAction } from '../../../utils/broadcast-remote-commands';
+import type { OverlayAction, OverlayCorner } from '../../../utils/broadcast-remote-commands';
 import { tvLabel, usePairedTvs, useTvRemote, type PairedTv } from './useTvRemote';
 
 export interface TvRemoteLeague {
@@ -28,14 +28,11 @@ interface Props {
   tvs?: PairedTv[];
 }
 
-type Edge = 'top' | 'bottom';
-type Side = 'left' | 'right';
-
-const CORNERS: { edge: Edge; side: Side; label: string }[] = [
-  { edge: 'top', side: 'left', label: 'Upper left' },
-  { edge: 'top', side: 'right', label: 'Upper right' },
-  { edge: 'bottom', side: 'left', label: 'Lower left' },
-  { edge: 'bottom', side: 'right', label: 'Lower right' },
+const CORNERS: { key: OverlayCorner; label: string }[] = [
+  { key: 'top-left', label: 'Upper left' },
+  { key: 'top-right', label: 'Upper right' },
+  { key: 'bottom-left', label: 'Lower left' },
+  { key: 'bottom-right', label: 'Lower right' },
 ];
 
 /** Whether the page is on screen: a phone in a pocket should let the TV rest. */
@@ -132,18 +129,17 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
 
         <p className="tvr__sub">Corner</p>
         <div className="tvr__screen" role="group" aria-label="Overlay corner">
-          {CORNERS.map((c) => {
-            const key = `${c.edge}-${c.side}`;
+          {CORNERS.map(({ key, label }) => {
             return (
               <button
                 key={key}
                 type="button"
                 className={`tvr__corner tvr__corner--${key}`}
                 aria-pressed={corner === key}
-                aria-label={c.label}
+                aria-label={label}
                 onClick={() => {
                   setCorner(key);
-                  void send([overlay(c.edge), overlay(c.side)], c.label);
+                  void send(overlay(key), label);
                 }}
               >
                 <span className="tvr__corner-mark" aria-hidden="true" />

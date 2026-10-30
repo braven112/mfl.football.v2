@@ -67,9 +67,16 @@ function findManifests(dir: string, out: string[] = []): string[] {
  */
 const SHARED_APP_MANIFEST = path.join(PUBLIC, 'assets', 'mfl-live', 'site.webmanifest');
 
-/** Manifests belonging to a league apex — everything but the shared-host app. */
+/**
+ * Remote mode's own manifest (`/live/broadcast/remote`), so "Add to Home
+ * Screen" from the remote opens the remote rather than the splash. Shared
+ * host, linked only by that page.
+ */
+const REMOTE_APP_MANIFEST = path.join(PUBLIC, 'assets', 'mfl-live', 'remote.webmanifest');
+
+/** Manifests belonging to a league apex — everything but the shared-host apps. */
 function leagueManifestsOnly(all: string[]): string[] {
-  return all.filter((f) => f !== SHARED_APP_MANIFEST);
+  return all.filter((f) => f !== SHARED_APP_MANIFEST && f !== REMOTE_APP_MANIFEST);
 }
 
 describe('PWA manifests', () => {
