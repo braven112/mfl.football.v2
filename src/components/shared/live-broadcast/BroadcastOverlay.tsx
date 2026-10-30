@@ -384,17 +384,21 @@ export default function BroadcastOverlay({
     else if (cmd.kind === 'overlay') {
       // Only the corner app can resize or move sideways: an older build's
       // moveTo reads anything but 'bottom' as 'top'.
-      if (!cornerRef.current) {
-        if (cmd.action === 'top' || cmd.action === 'bottom') host?.moveTo?.(cmd.action);
-        return;
-      }
       if (cmd.action === 'quarter' || cmd.action === 'small') {
+        if (!cornerRef.current) return;
         setSize(cmd.action);
         host?.setSize?.(cmd.action);
-      } else {
-        if (cmd.action === 'left' || cmd.action === 'right') setSide(cmd.action);
-        else setEdge(cmd.action);
-        host?.moveTo?.(cmd.action);
+        return;
+      }
+      // A corner is an edge and a side in one press.
+      for (const move of cmd.action.split('-') as ('top' | 'bottom' | 'left' | 'right')[]) {
+        if (!cornerRef.current) {
+          if (move === 'top' || move === 'bottom') host?.moveTo?.(move);
+          continue;
+        }
+        if (move === 'left' || move === 'right') setSide(move);
+        else setEdge(move);
+        host?.moveTo?.(move);
       }
     }
   }, [remote, step]);

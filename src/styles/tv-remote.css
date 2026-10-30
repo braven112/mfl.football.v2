@@ -1,0 +1,225 @@
+/*
+ * Remote mode (/live/broadcast/remote): big thumb targets, the score overlay
+ * first. The React island's markup is unscoped, hence a plain stylesheet.
+ */
+.tvr-page {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 2rem;
+}
+
+.tvr-page__back {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.tvr-page__title {
+  margin: 0.5rem 0 1rem;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+}
+
+.tvr {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.tvr__status,
+.tvr__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.tvr__hint {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.tvr__empty {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.tvr__empty-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.tvr__empty-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.tvr__group {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+
+.tvr__heading {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--league-accent);
+}
+
+.tvr__sub {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.tvr__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.tvr__tvs,
+.tvr__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tvr__big,
+.tvr__choice,
+.tvr__corner {
+  font: inherit;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 16%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tvr__big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 4.5rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  font-size: var(--font-size-base);
+  font-weight: 700;
+}
+
+.tvr__big--wide {
+  min-height: 3.5rem;
+}
+
+.tvr__choice {
+  min-height: var(--touch-target-min);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.tvr__big:active,
+.tvr__choice:active,
+.tvr__corner:active {
+  background: color-mix(in srgb, var(--league-accent) 25%, transparent);
+}
+
+.tvr__big[aria-pressed='true'],
+.tvr__choice[aria-pressed='true'],
+.tvr__corner[aria-pressed='true'] {
+  border-color: var(--league-accent);
+  background: color-mix(in srgb, var(--league-accent) 18%, transparent);
+}
+
+.tvr__big:focus-visible,
+.tvr__choice:focus-visible,
+.tvr__corner:focus-visible {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 2px;
+}
+
+/* A little picture of each size: the TV, with the box drawn in its corner. */
+.tvr__glyph {
+  position: relative;
+  width: 3.2rem;
+  aspect-ratio: 16 / 9;
+  border: 2px solid currentColor;
+  border-radius: 0.3rem;
+  opacity: 0.85;
+}
+
+.tvr__glyph::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  border-radius: 0.15rem;
+  background: var(--league-accent);
+}
+
+.tvr__glyph--small::after {
+  width: 34%;
+  height: 22%;
+}
+
+.tvr__glyph--quarter::after {
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  border-radius: 0;
+}
+
+/* The corner picker: the TV screen, a corner per quarter. */
+.tvr__screen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.375rem;
+  aspect-ratio: 16 / 9;
+  padding: 0.375rem;
+  border: 2px solid color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+  border-radius: 0.75rem;
+}
+
+.tvr__corner {
+  position: relative;
+  border-radius: 0.5rem;
+}
+
+.tvr__corner-mark {
+  position: absolute;
+  width: 40%;
+  height: 30%;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+}
+
+.tvr__corner[aria-pressed='true'] .tvr__corner-mark {
+  background: var(--league-accent);
+}
+
+.tvr__corner--top-left .tvr__corner-mark { top: 0.5rem; left: 0.5rem; }
+.tvr__corner--top-right .tvr__corner-mark { top: 0.5rem; right: 0.5rem; }
+.tvr__corner--bottom-left .tvr__corner-mark { bottom: 0.5rem; left: 0.5rem; }
+.tvr__corner--bottom-right .tvr__corner-mark { bottom: 0.5rem; right: 0.5rem; }
+
+.tvr__note {
+  position: sticky;
+  bottom: 1rem;
+  min-height: 1.5rem;
+  margin: 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}

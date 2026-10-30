@@ -115,9 +115,15 @@ export interface Props {
 	 * board, which is the only thing a TV opens and has nowhere to go from.
 	 */
 	bare?: boolean;
+	/**
+	 * Link remote mode's manifest instead of the app's, so a page added to the
+	 * home screen from `/live/broadcast/remote` opens the remote, not the
+	 * splash. Shared host only, like the app's.
+	 */
+	remoteManifest?: boolean;
 }
 
-const { title, description, pairedTvOwner = null, bare = false } = Astro.props as Props;
+const { title, description, pairedTvOwner = null, bare = false, remoteManifest = false } = Astro.props as Props;
 
 // 'auto' renders no class — the pre-paint ThemeScript resolves it against
 // prefers-color-scheme before first paint.
@@ -189,7 +195,9 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<link rel="icon" type="image/svg+xml" href="/assets/mfl-live/icon-v2.svg" />
 		<link rel="apple-touch-icon" href="/assets/mfl-live/apple-touch-icon-v2.png" />
 		{onSharedHost && (
-			<link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
+			remoteManifest
+				? <link rel="manifest" href="/assets/mfl-live/remote.webmanifest" crossorigin="use-credentials" />
+				: <link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
 		)}
 		<meta name="theme-color" content="#14161a" data-theme-color-light="#14161a" />
 		<meta name="mobile-web-app-capable" content="yes" />

@@ -61,6 +61,8 @@ describe('the command list is closed', () => {
       'overlay:bottom',
       'overlay:left',
       'overlay:right',
+      'overlay:top-right',
+      'overlay:bottom-left',
     ]) {
       const parsed = parseRemoteCommand(raw);
       expect(parsed).not.toBeNull();
@@ -83,6 +85,8 @@ describe('the command list is closed', () => {
       'overlay:panel',
       'overlay:hide',
       'overlay:quarter ',
+      'overlay:top-middle',
+      'overlay:right-top',
       'overlay:lineups',
       'overlay:ticker',
       'OVERLAY:TOP',
