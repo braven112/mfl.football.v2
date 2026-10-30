@@ -505,17 +505,45 @@ const fmtDate = (ms: number) =>
    * scroll back to the top and the preview board rebuilt from nothing, for
    * one switch.
    *
-   * With script, a tap flips the switch at once, then fetches the same href in
-   * the background. That request is what remembers the choice (the route
-   * sets the cookie), and its page supplies the fresh league rows, the
-   * numbers in the hero and the preview board. Only the newest tap's answer
-   * is applied, so a quick second tap is never undone by the first one's.
-   * That holds for the cookie too: the older request is aborted, and the
-   * newest choice is written here as well, because two requests' Set-Cookie
-   * headers land in whatever order the server answers them.
+   * With script, a tap flips the switch at once and a league switched OFF
+   * leaves the preview board on the same tap (`lbc:leagues`). The same href is
+   * then fetched in the background: that request is what remembers the choice
+   * (the route sets the cookie), and its page supplies the fresh league rows,
+   * the numbers in the hero and the board data for the new set — the only way
+   * a league switched ON gets its panels.
+   *
+   * Nothing is REPLACED. Replacing the list (as this first did) dropped the
+   * remote's focus with the card it sat on, so the next D-pad press started
+   * from the top of the page — on a TV, indistinguishable from a reload. So
+   * each card is patched where it stands, and the board takes its new data
+   * through `lbc:board-data` rather than being remounted.
+   *
+   * Only the newest tap's answer is applied, so a quick second tap is never
+   * undone by the first one's. That holds for the cookie too: the older
+   * request is aborted, and the newest choice is written here as well,
+   * because two requests' Set-Cookie headers land in whatever order the
+   * server answers them.
    */
   let toggleSeq = 0;
   let toggleAbort: AbortController | null = null;
+  /** The leagues the preview board has data for — what a failed request leaves it able to show. */
+  let loaded = new Set<string>();
+  /**
+   * The latest word sent to the board. The island hydrates on its own clock,
+   * so a switch pressed first would be shouted at nobody; it asks for this
+   * with `lbc:board-ready` once it is listening.
+   */
+  let pendingBoard: { leagues?: string[]; data?: unknown } = {};
+
+  function tellBoard(update: { leagues?: string[]; data?: unknown }) {
+    if (update.data) pendingBoard = { data: update.data };
+    else if (update.leagues) {
+      // A removal after fresh data still has to take that league off.
+      pendingBoard = { ...pendingBoard, leagues: update.leagues };
+    }
+    if (update.data) document.dispatchEvent(new CustomEvent('lbc:board-data', { detail: { data: update.data } }));
+    if (update.leagues) document.dispatchEvent(new CustomEvent('lbc:leagues', { detail: { enabled: update.leagues } }));
+  }
 
   const ids = (raw: string | undefined) => (raw ? raw.split(',').filter(Boolean) : []);
 
@@ -531,7 +559,71 @@ const fmtDate = (ms: number) =>
     }
   }
 
-  /** The new page's island in place of the old one, unmounted first so it stops polling. */
+  function writeLeagueCookie(href: string) {
+    const leagues = new URL(href, location.href).searchParams.get('leagues') ?? 'default';
+    try {
+      document.cookie = `${BROADCAST_LEAGUE_COOKIE}=${encodeURIComponent(leagues)}; path=/; max-age=${BROADCAST_LEAGUE_MAX_AGE}; samesite=lax`;
+    } catch {
+      /* the server's own Set-Cookie still stands */
+    }
+  }
+
+  /**
+   * One card brought up to date from the fresh page, in place.
+   *
+   * Same element whenever it can be, so focus stays on it. Only a card that
+   * changes between a link and the locked span (the last league on) has to be
+   * swapped, and that is never the card just pressed: a pressed card is a
+   * link before and after.
+   */
+  function patchCard(card: HTMLElement, fresh: HTMLElement) {
+    if (card.tagName !== fresh.tagName) {
+      card.replaceWith(document.importNode(fresh, true));
+      return;
+    }
+    for (const attr of Array.from(card.attributes)) {
+      if (!fresh.hasAttribute(attr.name)) card.removeAttribute(attr.name);
+    }
+    for (const attr of Array.from(fresh.attributes)) {
+      if (card.getAttribute(attr.name) !== attr.value) card.setAttribute(attr.name, attr.value);
+    }
+    if (card.innerHTML !== fresh.innerHTML) card.innerHTML = fresh.innerHTML;
+  }
+
+  function patchLeagues(list: HTMLElement, freshList: HTMLElement) {
+    // The list's own data (the set, the defaults) comes across too.
+    for (const attr of Array.from(freshList.attributes)) list.setAttribute(attr.name, attr.value);
+    const current = new Map(
+      Array.from(list.querySelectorAll<HTMLElement>('[data-league-id]')).map((c) => [c.dataset.leagueId!, c]),
+    );
+    const freshCards = Array.from(freshList.querySelectorAll<HTMLElement>('[data-league-id]'));
+    const sameLeagues =
+      freshCards.length === current.size && freshCards.every((c) => current.has(c.dataset.leagueId!));
+    if (!sameLeagues) {
+      // A different set of leagues altogether (MFL answered differently this
+      // time): nothing to patch against, so take the fresh list whole.
+      list.replaceWith(document.importNode(freshList, true));
+      return;
+    }
+    for (const fresh of freshCards) patchCard(current.get(fresh.dataset.leagueId!)!, fresh);
+  }
+
+  /**
+   * The board data out of the fresh page's island props. Astro serializes a
+   * plain prop as `[0, value]`; anything else means the format moved, and the
+   * caller falls back to swapping the island.
+   */
+  function boardDataFrom(next: Document): unknown {
+    const island = next.querySelector('[data-bcl-viewport] astro-island');
+    try {
+      const raw = JSON.parse(island?.getAttribute('props') ?? '')?.pageData;
+      return Array.isArray(raw) && raw[0] === 0 && typeof raw[1] === 'string' ? JSON.parse(raw[1]) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Last resort: the new page's island in place of the old one, unmounted first so it stops polling. */
   function swapBoard(next: Document) {
     const oldIsland = document.querySelector('[data-bcl-viewport] astro-island');
     const newIsland = next.querySelector('[data-bcl-viewport] astro-island');
@@ -540,10 +632,14 @@ const fmtDate = (ms: number) =>
     oldIsland.replaceWith(document.importNode(newIsland, true));
   }
 
-  async function applyToggle(href: string, seq: number) {
+  async function applyToggle(href: string, seq: number, adding: boolean) {
     toggleAbort?.abort();
     const abort = new AbortController();
     toggleAbort = abort;
+    // Remembered now, not when the server answers: the board already shows
+    // the new set, and a reload must too.
+    writeLeagueCookie(href);
+    history.replaceState(history.state, '', href);
     let html: string;
     try {
       const res = await fetch(href, {
@@ -554,27 +650,37 @@ const fmtDate = (ms: number) =>
       if (!res.ok) throw new Error(String(res.status));
       html = await res.text();
     } catch {
-      if (seq === toggleSeq) window.location.href = href;
+      // A removal is already done — the switch, the board and the cookie all
+      // say so — and the rows catch up on the next visit. A league the board
+      // has no data for (this tap's add, or an earlier one whose request this
+      // tap aborted) cannot be drawn without the server, so only then does
+      // the page go fetch it.
+      if (seq !== toggleSeq || abort.signal.aborted) return;
+      const wanted = new URL(href, location.href).searchParams.get('leagues')?.split(',') ?? [];
+      if (wanted.some((id) => id && id !== 'default' && !loaded.has(id))) window.location.href = href;
       return;
     }
     if (seq !== toggleSeq) return;
-    const leagues = new URL(href, location.href).searchParams.get('leagues') ?? 'default';
-    try {
-      document.cookie = `${BROADCAST_LEAGUE_COOKIE}=${encodeURIComponent(leagues)}; path=/; max-age=${BROADCAST_LEAGUE_MAX_AGE}; samesite=lax`;
-    } catch {
-      /* the server's own Set-Cookie still stands */
-    }
+    writeLeagueCookie(href);
     const next = new DOMParser().parseFromString(html, 'text/html');
-    const list = document.querySelector('[data-bcl-leagues]');
-    const freshList = next.querySelector('[data-bcl-leagues]');
-    if (list && freshList) list.replaceWith(document.importNode(freshList, true));
+    const list = document.querySelector<HTMLElement>('[data-bcl-leagues]');
+    const freshList = next.querySelector<HTMLElement>('[data-bcl-leagues]');
+    if (list && freshList) patchLeagues(list, freshList);
     const stats = document.querySelector('.bcl-stats');
     const freshStats = next.querySelector('.bcl-stats');
     if (stats && freshStats) stats.replaceWith(document.importNode(freshStats, true));
-    swapBoard(next);
-    // A reload keeps what is on screen: the URL carries the set the cookie now holds.
-    history.replaceState(history.state, '', href);
+    const data = boardDataFrom(next) as { enabled?: unknown } | null;
+    if (data) tellBoard({ data });
+    else swapBoard(next);
+    const on = Array.isArray(data?.enabled) ? (data.enabled as string[]) : null;
+    loaded = new Set(on ?? enabledCards());
     initLeagueToggles();
+  }
+
+  function enabledCards(): string[] {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-bcl-leagues] [data-league-id].is-on')).map(
+      (c) => c.dataset.leagueId!,
+    );
   }
 
   function initLeagueToggles() {
@@ -595,9 +701,16 @@ const fmtDate = (ms: number) =>
       const all = ids(list.dataset.all);
       const selection = toggleLeagueSelection(enabled, all, id, ids(list.dataset.defaults));
       const week = list.dataset.week ? Number(list.dataset.week) : null;
-      paintCard(card, !card.classList.contains('is-on'));
+      const adding = !card.classList.contains('is-on');
+      paintCard(card, adding);
+      if (!adding) {
+        // Off the board on the tap. `selection` is null when the set is back
+        // to the defaults, so the board is told the cards' own answer.
+        loaded.delete(id);
+        tellBoard({ leagues: enabled.filter((x) => x !== id) });
+      }
       toggleSeq += 1;
-      void applyToggle(broadcastHref(list.dataset.path || '/live/broadcast', selection, week), toggleSeq);
+      void applyToggle(broadcastHref(list.dataset.path || '/live/broadcast', selection, week), toggleSeq, adding);
     };
   }
 
@@ -621,6 +734,9 @@ const fmtDate = (ms: number) =>
     focusPreview();
     initSound();
     initUnpair();
+    // A fresh page: its board was rendered with exactly the cards that are on.
+    pendingBoard = {};
+    loaded = new Set(enabledCards());
     initLeagueToggles();
   }
 
@@ -631,6 +747,13 @@ const fmtDate = (ms: number) =>
     if (detail?.from === 'landing') return;
     const btn = document.querySelector<HTMLElement>('[data-bcl-sound]');
     if (btn && typeof detail?.on === 'boolean') paintSound(btn, detail.on);
+  });
+
+  document.addEventListener('lbc:board-ready', () => {
+    if (!document.querySelector('[data-bcl-leagues]')) return;
+    const { data, leagues } = pendingBoard;
+    if (data) document.dispatchEvent(new CustomEvent('lbc:board-data', { detail: { data } }));
+    if (leagues) document.dispatchEvent(new CustomEvent('lbc:leagues', { detail: { enabled: leagues } }));
   });
 
   initBroadcastLanding();

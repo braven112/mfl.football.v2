@@ -103,7 +103,12 @@ const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
 
 export default function LiveBroadcast({ pageData }: Props) {
-  const data = useMemo(() => JSON.parse(pageData) as LiveBroadcastPageData, [pageData]);
+  /**
+   * State, not a memo of the prop: the landing page's league switches hand the
+   * board its new league set in place (`lbc:leagues`, `lbc:board-data` below),
+   * so a tap takes one league off the screen instead of remounting the board.
+   */
+  const [data, setData] = useState<LiveBroadcastPageData>(() => JSON.parse(pageData) as LiveBroadcastPageData);
 
   const [poll, setPoll] = useState<BroadcastPollResponse>(data.initial);
   const [status, setStatus] = useState<'ok' | 'error' | 'pending'>('ok');
@@ -282,6 +287,61 @@ export default function LiveBroadcast({ pageData }: Props) {
   );
 
   /**
+   * Bumped by every league switch below. A poll still in flight for the OLD
+   * set checks it on landing and drops its answer, or it would put a removed
+   * league's reveals back on screen, or blank a just-added league's scores.
+   */
+  const selectionGenRef = useRef(0);
+
+  /**
+   * League switches from the landing page, applied to THIS board in place.
+   *
+   * `lbc:leagues` is the instant half: a league switched off leaves the screen
+   * on the tap, before the server has answered. `lbc:board-data` is the
+   * server's answer — the whole page data for the new set, which is the only
+   * way a league switched ON gets its panels. Both keep the mounted board, so
+   * nothing on screen restarts; the poll loop follows `data.enabled`.
+   */
+  useEffect(() => {
+    const onLeagues = (e: Event) => {
+      const enabled = (e as CustomEvent<{ enabled?: string[] }>).detail?.enabled;
+      if (!Array.isArray(enabled)) return;
+      const keep = new Set(enabled);
+      setData((d) => ({
+        ...d,
+        enabled: d.enabled.filter((id) => keep.has(id)),
+        panels: d.panels.filter((p) => keep.has(p.leagueId)),
+      }));
+      selectionGenRef.current += 1;
+      setPoll((p) => ({
+        ...p,
+        leagues: p.leagues.filter((l) => keep.has(l.leagueId)),
+        moments: p.moments.filter((m) => keep.has(m.leagueId)),
+        redZone: p.redZone
+          .map((a) => ({ ...a, players: a.players.filter((pl) => keep.has(pl.leagueId)) }))
+          .filter((a) => a.players.length > 0),
+      }));
+    };
+    const onData = (e: Event) => {
+      const next = (e as CustomEvent<{ data?: LiveBroadcastPageData }>).detail?.data;
+      if (!next?.initial || !Array.isArray(next.panels)) return;
+      selectionGenRef.current += 1;
+      setData((d) => ({ ...next, modeHint: d.modeHint }));
+      carryRef.current = seedCarry(next.initial.leagues, Date.parse(next.initial.fetchedAt) || Date.now());
+      setPoll(next.initial);
+      if (next.initial.ok) setFetchedAt(Date.parse(next.initial.fetchedAt) || Date.now());
+    };
+    document.addEventListener('lbc:leagues', onLeagues);
+    document.addEventListener('lbc:board-data', onData);
+    // A switch pressed before this board hydrated is waiting for it: ask.
+    document.dispatchEvent(new CustomEvent('lbc:board-ready'));
+    return () => {
+      document.removeEventListener('lbc:leagues', onLeagues);
+      document.removeEventListener('lbc:board-data', onData);
+    };
+  }, []);
+
+  /**
    * The rehearsal's origin, fixed at mount. Everything else about the demo is
    * a pure function of (now - this), so the loop is reproducible: the same
    * second of the loop always renders the same way, which is what makes it
@@ -308,6 +368,7 @@ export default function LiveBroadcast({ pageData }: Props) {
     // it is on — a rehearsal that could be confused with live scores would be
     // worse than no rehearsal.
     if (data.demo) return;
+    const gen = selectionGenRef.current;
     try {
       const params = new URLSearchParams({ leagues: data.enabled.join(','), week: String(data.week) });
       // Forward `?testDate=` so the poll resolves the same SEASON the page
@@ -327,6 +388,8 @@ export default function LiveBroadcast({ pageData }: Props) {
       // gating on the presence of a field would wipe every score off a live
       // board while the freshness pill still reported the poll healthy.
       if (!res.ok || body?.ok === false) throw new Error('poll not ok');
+      // Asked for a league set that has since changed: not this board's answer.
+      if (gen !== selectionGenRef.current) return;
 
       // Per-league retention, same rule as the whole-response one above and
       // for the same reason. Bounded by STALE_MS: past the age at which this
