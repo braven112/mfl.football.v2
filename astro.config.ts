@@ -7,6 +7,7 @@ import { REMOTE_MARK_HOSTS } from './src/utils/remote-image';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
 import { functionExcludedFiles } from './scripts/lib/league-data-store.mjs';
+import { muslBinaryFiles } from './scripts/lib/musl-binary-files.mjs';
 import { schefterArchiveIncludeFiles, schefterOgIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
 import { isDemoEnv } from './src/utils/demo-isolation-core.mjs';
 
@@ -114,7 +115,9 @@ export default defineConfig({
     // why this is safe and why it counts seasons instead of naming a year.
     // And league data the site now reads from Vercel Blob through
     // src/utils/league-data.ts (scripts/lib/league-data-store.mjs).
-    excludeFiles: [...archivedFeedFiles(), ...functionExcludedFiles()],
+    // And the musl builds of every native module, which the glibc runtime
+    // never loads (scripts/lib/musl-binary-files.mjs).
+    excludeFiles: [...archivedFeedFiles(), ...functionExcludedFiles(), ...muslBinaryFiles()],
   }),
   integrations: [react()],
   vite: {

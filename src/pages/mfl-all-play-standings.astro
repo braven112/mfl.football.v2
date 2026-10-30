@@ -1,0 +1,495 @@
+---
+/**
+ * /mfl-all-play-standings — the free tool: all-play standings and a luck
+ * report for ANY public MyFantasyLeague league, from its league id.
+ *
+ * Built to be linked: a report is its own address (`?league=<id>&year=<y>`),
+ * so a commissioner can drop it in the group chat. Reports are noindex with a
+ * canonical back to the tool, because every league id is a page and a crawler
+ * must not walk them all into MFL requests; the tool page itself is indexed.
+ *
+ * Results are cached in Redis for 30 minutes per league and season, and each
+ * visitor is rate limited, because each fresh report is three MFL requests.
+ * The math: src/utils/mfl-all-play-report.ts. The fetch:
+ * src/utils/mfl-all-play-load.ts.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import { FORMER_BRAND, type Faq } from '../data/mfl-services';
+import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
+import { loadAllPlay, parseLeagueIdInput, type LoadedAllPlay } from '../utils/mfl-all-play-load';
+import { formatLuck, formatPct } from '../utils/mfl-all-play-report';
+import { MflLeagueNotFound, MflRetryLater, mflExportFetcher } from '../utils/league-history/mfl-crawl';
+import { checkRateLimit } from '../utils/rate-limit';
+import { getRedis } from '../utils/redis-client';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const PATH = '/mfl-all-play-standings';
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const seasonYear = getCurrentSeasonYear(testDate);
+const idYear = getCurrentLeagueYear(testDate);
+const YEARS = Array.from({ length: 10 }, (_, i) => seasonYear - i);
+
+const rawLeague = Astro.url.searchParams.get('league');
+const leagueId = parseLeagueIdInput(rawLeague);
+const yearParam = Number(Astro.url.searchParams.get('year'));
+const year = YEARS.includes(yearParam) ? yearParam : seasonYear;
+
+let report: LoadedAllPlay | null = null;
+let error: string | null = null;
+
+if (rawLeague && !leagueId) {
+	error = 'That doesn’t look like an MFL league ID. It’s the number at the end of your league’s address, like 12345.';
+} else if (leagueId) {
+	const cacheKey = `all-play:v1:${leagueId}:${year}`;
+	const redis = await getRedis().catch(() => null);
+	try {
+		report = redis ? await redis.get<LoadedAllPlay>(cacheKey) : null;
+	} catch {
+		report = null;
+	}
+	if (!report) {
+		let visitor = Astro.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+		try {
+			visitor ||= Astro.clientAddress;
+		} catch {
+			/* no client address on this adapter */
+		}
+		const limit = await checkRateLimit('all-play-tool', visitor || 'unknown', 20, 600);
+		if (!limit.allowed) {
+			error = 'Too many reports in a short time. Try again in a few minutes.';
+		} else {
+			try {
+				report = await loadAllPlay(leagueId, year, idYear, mflExportFetcher);
+				try {
+					await redis?.set(cacheKey, report, { ex: 1800 });
+				} catch {
+					/* a cache miss next time is fine */
+				}
+			} catch (err) {
+				if (err instanceof MflRetryLater) error = 'MyFantasyLeague is busy right now. Try again in a minute.';
+				else if (err instanceof MflLeagueNotFound)
+					error = `MFL couldn’t find a public ${year} season for league ${leagueId}. Check the ID, the season, and that the league’s results are public.`;
+				else error = 'Something went wrong reading that league. Try again in a minute.';
+			}
+		}
+	}
+	if (report && report.rows.length === 0) {
+		error = `League ${leagueId} has no finished regular-season weeks in ${year} yet.`;
+		report = null;
+	}
+	Astro.response.headers.set('X-Robots-Tag', 'noindex, follow');
+}
+
+const isReport = Boolean(leagueId);
+const luckiest = report ? [...report.rows].sort((a, b) => b.luck - a.luck)[0] : null;
+const unluckiest = report ? [...report.rows].sort((a, b) => a.luck - b.luck)[0] : null;
+
+const faqs: Faq[] = [
+	{ q: 'What are all-play standings in fantasy football?', a: 'All-play standings rank teams as if every team played every other team every week. Each week a team gets a win for every team it outscored and a loss for every team that outscored it, which removes the luck of the schedule.' },
+	{ q: 'How do I find my MFL league ID?', a: 'Open your league on MyFantasyLeague and look at the address: the number after /home/ is your league ID, for example 12345 in myfantasyleague.com/2026/home/12345. You can also paste the whole address.' },
+	{ q: 'What does the luck number mean?', a: 'Luck is a team’s real wins minus the wins its all-play rate predicts over the same games. A positive number means the schedule handed the team extra wins; a negative number means it kept meeting opponents on their best weeks.' },
+	{ q: 'Which weeks are counted?', a: 'Finished regular-season weeks only. The week being played now and playoff games are left out, so the numbers can differ from MFL’s own all-play column, which can include playoff weeks.' },
+	{ q: 'Does it work for private leagues?', a: 'It reads the same public results anyone can see on MyFantasyLeague. If a league hides its results from visitors, the report cannot read them.' },
+	{ q: 'Is it free?', a: `Yes. The report is free, needs no account, and works for any public MyFantasyLeague league. It is made by MFL.football, formerly ${FORMER_BRAND}.` },
+];
+
+const jsonLd = [
+	organizationJsonLd(),
+	{
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: 'MFL All-Play Standings and Luck Report',
+		url: `https://mfl.football${PATH}`,
+		applicationCategory: 'SportsApplication',
+		operatingSystem: 'Any',
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+		description: 'Free all-play standings and a luck report for any MyFantasyLeague (MFL) fantasy football league, from its league ID.',
+		publisher: { '@id': 'https://mfl.football/#organization' },
+	},
+	faqJsonLd(faqs),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: 'MFL all-play standings', path: PATH },
+	]),
+];
+
+const title = report
+	? `${report.leagueName} ${report.year} All-Play Standings | MFL.football`
+	: 'MFL All-Play Standings and Luck Report: Free Tool for Any MyFantasyLeague League';
+const description = report
+	? `All-play standings and luck for ${report.leagueName}, ${report.year}: who the schedule helped and who it robbed.`
+	: 'Free all-play standings and luck report for any MyFantasyLeague (MFL) league. Paste your league ID to see who the schedule helped and who it robbed.';
+---
+
+<MarketingShell title={title} description={description} canonicalPath={PATH} jsonLd={isReport ? [] : jsonLd}>
+	<article class="ap">
+		<header class="ap-hero">
+			<p class="ap-eyebrow">Free tool · Formerly {FORMER_BRAND}</p>
+			{report ? (
+				<>
+					<h1>{report.leagueName}: {report.year} all-play standings</h1>
+					<p class="ap-answer">
+						If every team had played every other team every week, here is how {report.leagueName} would stand,
+						and how much the schedule helped or hurt each team. Through week {report.weeks[report.weeks.length - 1]} of the regular season.
+					</p>
+				</>
+			) : (
+				<>
+					<h1>MFL all-play standings and luck report</h1>
+					<p class="ap-answer">
+						See how your MyFantasyLeague league would stand if every team played every other team every week, and
+						which teams the schedule helped or robbed. Free, for any public MFL league: paste your league ID.
+					</p>
+				</>
+			)}
+
+			<form class="ap-form" method="get" action={PATH}>
+				<label class="ap-field">
+					<span>MFL league ID or address</span>
+					<input name="league" inputmode="numeric" autocomplete="off" placeholder="12345" value={rawLeague ?? ''} required />
+				</label>
+				<label class="ap-field ap-field--year">
+					<span>Season</span>
+					<select name="year">
+						{YEARS.map((y) => <option value={y} selected={y === year}>{y}</option>)}
+					</select>
+				</label>
+				<button class="cta cta--primary" type="submit">Show standings</button>
+			</form>
+			{error && <p class="ap-error" role="alert">{error}</p>}
+		</header>
+
+		{report && (
+			<section class="ap-report" aria-label="All-play standings">
+				{luckiest && unluckiest && luckiest.id !== unluckiest.id && (
+					<div class="ap-callouts">
+						<p class="ap-callout"><span>Luckiest</span><strong>{luckiest.name}</strong> {formatLuck(luckiest.luck)} wins</p>
+						<p class="ap-callout"><span>Unluckiest</span><strong>{unluckiest.name}</strong> {formatLuck(unluckiest.luck)} wins</p>
+					</div>
+				)}
+				<table class="ui-table ap-table">
+					<thead>
+						<tr>
+							<th scope="col">#</th>
+							<th scope="col">Team</th>
+							<th scope="col">Record</th>
+							<th scope="col">All-play</th>
+							<th scope="col">Pct</th>
+							<th scope="col">Points</th>
+							<th scope="col">Luck</th>
+						</tr>
+					</thead>
+					<tbody>
+						{report.rows.map((r, i) => (
+							<tr>
+								<td data-label="Rank" class="ap-rank">{i + 1}</td>
+								<th scope="row" class="ap-team"><span class="ap-rank-inline">{i + 1}.</span> {r.name}</th>
+								<td data-label="Record">{r.record}</td>
+								<td data-label="All-play">{r.allPlayRecord}</td>
+								<td data-label="Pct">{formatPct(r.allPlayPct)}</td>
+								<td data-label="Points">{r.pointsFor.toFixed(2)}</td>
+								<td data-label="Luck" class:list={['ap-luck', { 'ap-luck--up': r.luck >= 0.5, 'ap-luck--down': r.luck <= -0.5 }]}>
+									{formatLuck(r.luck)}
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+				<div class="ap-share">
+					<button type="button" class="cta cta--ghost" data-copy-link>Copy link to share</button>
+					<span class="ap-share__status" data-copy-status role="status" aria-live="polite"></span>
+				</div>
+				<p class="ap-note">Regular-season weeks {report.weeks[0]}–{report.weeks[report.weeks.length - 1]}, finished games only. Luck = real wins minus the wins the all-play rate predicts.</p>
+			</section>
+		)}
+
+		<section class="ap-block" aria-labelledby="ap-more">
+			<h2 id="ap-more">Want this for every season?</h2>
+			<p>
+				MFL.football builds a full <a href="/mfl-league-history">MFL league history</a> site: champions, all-time records,
+				head-to-head rivalries and a trophy case for every franchise. Or give your league its own
+				<a href="/custom-mfl-league-website">custom MFL league website</a> with all-play standings built in.
+			</p>
+		</section>
+
+		<section class="ap-block" aria-labelledby="ap-faq">
+			<h2 id="ap-faq">Questions</h2>
+			<dl class="ap-faq">
+				{faqs.map((f) => (
+					<div>
+						<dt>{f.q}</dt>
+						<dd>{f.a}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+	</article>
+</MarketingShell>
+
+<script>
+	// Delegated from `document`: the shell has no ClientRouter, but a delegated
+	// listener is the house pattern and never binds a stale node.
+	document.addEventListener('click', async (e) => {
+		const btn = (e.target as HTMLElement | null)?.closest('[data-copy-link]');
+		if (!btn) return;
+		const status = document.querySelector<HTMLElement>('[data-copy-status]');
+		const url = window.location.href;
+		try {
+			if (navigator.share) {
+				await navigator.share({ title: document.title, url });
+				return;
+			}
+			await navigator.clipboard.writeText(url);
+			if (status) status.textContent = 'Link copied';
+		} catch {
+			if (status) status.textContent = url;
+		}
+	});
+</script>
+
+<style>
+	.ap-hero {
+		max-width: 46rem;
+		padding: 3.5rem 0 0;
+	}
+
+	.ap-eyebrow {
+		margin: 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--brand-red);
+	}
+
+	.ap-hero h1 {
+		margin: 0.75rem 0 1.25rem;
+		font-size: var(--font-size-3xl);
+		line-height: 1;
+		text-transform: uppercase;
+		text-wrap: balance;
+	}
+
+	.ap-answer {
+		margin: 0 0 1.5rem;
+		font-size: var(--font-size-lg);
+		line-height: 1.5;
+	}
+
+	.ap-form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.75rem;
+	}
+
+	.ap-field {
+		display: grid;
+		gap: 0.3rem;
+		flex: 1 1 14rem;
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+	}
+
+	.ap-field--year {
+		flex: 0 0 7rem;
+	}
+
+	.ap-field input,
+	.ap-field select {
+		min-height: 2.75rem;
+		padding: 0 0.75rem;
+		border: 1px solid var(--primary-content-border-color);
+		border-radius: 10px;
+		background: var(--primary-content-bg-color);
+		color: inherit;
+		font: inherit;
+		font-weight: 400;
+	}
+
+	.ap-error {
+		margin: 1rem 0 0;
+		padding: 0.75rem 1rem;
+		border-left: 3px solid var(--brand-red);
+		background: color-mix(in srgb, var(--brand-red) 8%, transparent);
+	}
+
+	.ap-report {
+		padding-top: 2.5rem;
+	}
+
+	.ap-callouts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.ap-callout {
+		display: grid;
+		gap: 0.2rem;
+		margin: 0;
+		padding: 1rem 1.25rem;
+		border: 1px solid var(--primary-content-border-color);
+		border-radius: 14px;
+		background: var(--primary-content-bg-color);
+	}
+
+	.ap-callout span {
+		font-size: var(--font-size-2xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--color-gray-500);
+	}
+
+	.ap-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--font-size-sm);
+	}
+
+	.ap-table th,
+	.ap-table td {
+		padding: 0.6rem 0.5rem;
+		border-bottom: 1px solid var(--primary-content-border-color);
+		text-align: right;
+	}
+
+	.ap-table .ap-team,
+	.ap-table thead th:nth-child(2) {
+		text-align: left;
+	}
+
+	.ap-rank,
+	.ap-rank-inline {
+		color: var(--color-gray-500);
+	}
+
+	/* The rank rides in the team cell on phones, where the # column hides. */
+	.ap-rank-inline {
+		display: none;
+	}
+
+	.ap-luck--up {
+		color: var(--color-success-dark);
+		font-weight: 700;
+	}
+
+	.ap-luck--down {
+		color: var(--brand-red);
+		font-weight: 700;
+	}
+
+	.ap-share {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1.25rem;
+	}
+
+	.ap-share__status {
+		font-size: var(--font-size-sm);
+		color: var(--color-gray-500);
+		overflow-wrap: anywhere;
+	}
+
+	.ap-note {
+		margin: 0.75rem 0 0;
+		font-size: var(--font-size-xs);
+		color: var(--color-gray-500);
+	}
+
+	.ap-block {
+		max-width: 46rem;
+		padding-top: 3rem;
+		line-height: 1.55;
+	}
+
+	.ap-block h2 {
+		margin: 0 0 1rem;
+		font-size: var(--font-size-2xl);
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.ap-block a {
+		font-weight: 700;
+		text-decoration: underline;
+	}
+
+	.ap-faq {
+		display: grid;
+		gap: 1rem;
+		margin: 0;
+	}
+
+	.ap-faq dt {
+		font-weight: 700;
+	}
+
+	.ap-faq dd {
+		margin: 0.35rem 0 0;
+		color: var(--color-gray-600);
+	}
+
+	/* Phones: one card per team, the name on top and every value labeled. */
+	@media (max-width: 760px) {
+		.ap-hero {
+			padding-top: 2rem;
+		}
+
+		.ap-table thead {
+			display: none;
+		}
+
+		.ap-table,
+		.ap-table tbody {
+			display: block;
+		}
+
+		.ap-table tr {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 0.5rem 0.75rem;
+			margin-bottom: 0.75rem;
+			padding: 0.9rem 1rem;
+			border: 1px solid var(--primary-content-border-color);
+			border-radius: 14px;
+			background: var(--primary-content-bg-color);
+		}
+
+		.ap-table th,
+		.ap-table td {
+			padding: 0;
+			border: 0;
+			text-align: left;
+		}
+
+		.ap-table .ap-rank {
+			display: none;
+		}
+
+		.ap-rank-inline {
+			display: inline;
+		}
+
+		.ap-table .ap-team {
+			grid-column: 1 / -1;
+			font-size: var(--font-size-base);
+		}
+
+		.ap-table td::before {
+			content: attr(data-label);
+			display: block;
+			font-size: var(--font-size-2xs);
+			font-weight: 700;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--color-gray-500);
+		}
+	}
+</style>

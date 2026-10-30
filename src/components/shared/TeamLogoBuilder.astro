@@ -1,0 +1,445 @@
+---
+/**
+ * The team logo prompt builder's form: name, idea, style cards, two or three
+ * team colors, the
+ * kind of art, then the prompt with Copy and Open buttons. Two pages render
+ * it: MFL Live's `/live/team-logo` (inside the app) and the public free tool
+ * `/fantasy-football-logo-maker` (mfl.football's marketing shell). Every word
+ * of the prompt comes from `src/utils/team-logo-prompt.ts`, which the client
+ * script imports, so both pages and the app's `/api/mfl-live/logo-prompt`
+ * write the same text.
+ *
+ * Its colors are local `--tlogo-*` tokens that read the league theme when the
+ * page has one (MFL Live sets `data-league="mfl"`) and fall back to the
+ * marketing shell's own themed tokens when it does not (SplashLayout sets no
+ * league), so neither page shows an unthemed fallback in dark mode.
+ *
+ * Anything on the page carrying `data-logo-use` (a JSON choice) fills the
+ * form with that choice when tapped: the free tool's example logos do this.
+ */
+import {
+	DEFAULT_LOGO_CHOICE,
+	DEFAULT_LOGO_COLOR_COUNT,
+	LOGO_COLOR_COUNTS,
+	LOGO_COLOR_SUGGESTIONS,
+	LOGO_COLOR_TRIOS,
+	LOGO_COLORS,
+	LOGO_KINDS,
+	LOGO_STYLES,
+} from '../../utils/team-logo-prompt';
+
+export interface Props {
+	/** The signed-in owner's teams, for the name field's suggestions. */
+	teams?: Array<{ name: string; league: string }>;
+	/** The name the field opens with. */
+	initialName?: string;
+}
+
+const { teams = [], initialName = '' } = Astro.props as Props;
+---
+
+<div class="tlogo" data-team-logo>
+	<div class="tlogo__field">
+		<label class="tlogo__label" for="tlogo-name">Team name</label>
+		<input id="tlogo-name" class="tlogo__input" type="text" maxlength="60" value={initialName} list="tlogo-teams" placeholder="Your team name" />
+		{teams.length > 1 && (
+			<datalist id="tlogo-teams">
+				{teams.map((t) => <option value={t.name}>{t.league}</option>)}
+			</datalist>
+		)}
+	</div>
+
+	<div class="tlogo__field">
+		<label class="tlogo__label" for="tlogo-idea">Mascot or idea</label>
+		<input id="tlogo-idea" class="tlogo__input" type="text" maxlength="120" placeholder="a charging boar with a football" aria-describedby="tlogo-idea-tip" />
+		<p class="tlogo__tip" id="tlogo-idea-tip">
+			Tip: your team name can be as silly as you like, but pick something real you can picture for the mascot,
+			like an animal or an object. That gives the cleanest, most professional-looking logo. One stylized letter,
+			like an M, or two letters joined into one symbol works too; a whole word doesn&rsquo;t, because no one can
+			read it once the logo is small.
+		</p>
+	</div>
+
+	<div class="tlogo__field">
+		<span class="tlogo__label" id="tlogo-style-label">Style</span>
+		<div class="tlogo__styles" role="group" aria-labelledby="tlogo-style-label" data-group="style">
+			{LOGO_STYLES.map((s) => (
+				<button type="button" class="tlogo__style" data-value={s.id} aria-pressed={(s.id === DEFAULT_LOGO_CHOICE.style) ? 'true' : 'false'}>
+					{s.image && <img class="tlogo__art" src={s.image} alt="" width="88" height="88" loading="lazy" />}
+					<span class="tlogo__style-name">{s.label}</span>
+					<span class="tlogo__style-hint">{s.hint}</span>
+				</button>
+			))}
+		</div>
+	</div>
+
+	<div class="tlogo__field">
+		<span class="tlogo__label" id="tlogo-count-label">How many team colors</span>
+		<div class="ui-pills" role="group" aria-labelledby="tlogo-count-label" data-group="count">
+			{LOGO_COLOR_COUNTS.map((n) => (
+				<button type="button" class="ui-pill" data-value={String(n)} aria-pressed={(n === DEFAULT_LOGO_COLOR_COUNT) ? 'true' : 'false'}>{n} colors</button>
+			))}
+		</div>
+	</div>
+
+	<div class="tlogo__field">
+		<span class="tlogo__label" id="tlogo-suggest-label">Team colors that work well together</span>
+		<div class="tlogo__chips" role="group" aria-labelledby="tlogo-suggest-label" data-suggestions>
+			{LOGO_COLOR_SUGGESTIONS.map((sg) => (
+				<button
+					type="button"
+					class="tlogo__swatch tlogo__swatch--pair"
+					style={`--a:${sg.hexes[0]};--b:${sg.hexes[1]}`}
+					data-suggest={sg.hexes.join(',')}
+					data-count="2"
+					aria-label={sg.label}
+					title={sg.label}
+					aria-pressed="false"
+				></button>
+			))}
+			{LOGO_COLOR_TRIOS.map((sg) => (
+				<button
+					type="button"
+					class="tlogo__swatch tlogo__swatch--trio"
+					style={`--a:${sg.hexes[0]};--b:${sg.hexes[1]};--c:${sg.hexes[2]}`}
+					data-suggest={sg.hexes.join(',')}
+					data-count="3"
+					aria-label={sg.label}
+					title={sg.label}
+					aria-pressed="false"
+					hidden
+				></button>
+			))}
+		</div>
+	</div>
+
+	<div class="tlogo__field">
+		<span class="tlogo__label" id="tlogo-color-label">Or pick your own · up to <span data-max>{DEFAULT_LOGO_COLOR_COUNT}</span></span>
+		<div class="tlogo__chips" role="group" aria-labelledby="tlogo-color-label" data-colors>
+			{LOGO_COLORS.map((c) => (
+				<button
+					type="button"
+					class="tlogo__swatch"
+					style={`--swatch:${c.hex}`}
+					data-hex={c.hex}
+					aria-label={c.name}
+					title={c.name}
+					aria-pressed={((DEFAULT_LOGO_CHOICE.colors as readonly string[]).includes(c.hex)) ? 'true' : 'false'}
+				></button>
+			))}
+			<label class="tlogo__swatch tlogo__swatch--own" title="Pick your own color">
+				<input type="color" id="tlogo-own" value="#7A1F2B" aria-label="Pick your own color" />
+			</label>
+		</div>
+		<p class="tlogo__picked" data-picked aria-live="polite"></p>
+		<p class="tlogo__note" data-color-note aria-live="polite"></p>
+	</div>
+
+	<div class="tlogo__field">
+		<span class="tlogo__label" id="tlogo-kind-label">Make</span>
+		<div class="ui-pills" role="group" aria-labelledby="tlogo-kind-label" data-group="kind">
+			{LOGO_KINDS.map((k) => (
+				<button type="button" class="ui-pill" data-value={k.id} aria-pressed={(k.id === DEFAULT_LOGO_CHOICE.kind) ? 'true' : 'false'}>{k.label}</button>
+			))}
+		</div>
+	</div>
+
+	<p class="tlogo__warning" data-warning hidden></p>
+	<pre class="tlogo__prompt" data-prompt></pre>
+	<div class="tlogo__actions">
+		<button type="button" class="cta cta--primary" data-copy>Copy prompt</button>
+		<a class="cta cta--ghost" href="https://chatgpt.com/" target="_blank" rel="noopener">Open ChatGPT</a>
+		<a class="cta cta--ghost" href="https://gemini.google.com/app" target="_blank" rel="noopener">Open Gemini</a>
+		<span class="tlogo__copied" data-copied aria-live="polite"></span>
+	</div>
+</div>
+
+<script>
+	import { buildTeamLogoPrompt, LOGO_COLORS, LOGO_MAX_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
+	import type { MflLiveAppLogoChoice, MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
+
+	function init() {
+		const found = document.querySelector<HTMLElement>('[data-team-logo]');
+		if (!found || found.dataset.ready) return;
+		const root: HTMLElement = found;
+		root.dataset.ready = '1';
+
+		const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+		const name = $<HTMLInputElement>('#tlogo-name');
+		const idea = $<HTMLInputElement>('#tlogo-idea');
+		const own = $<HTMLInputElement>('#tlogo-own');
+		let colors: string[] = Array.from(root.querySelectorAll<HTMLElement>('[data-hex][aria-pressed="true"]')).map((b) => b.dataset.hex!);
+
+		const picked = (group: string) =>
+			root.querySelector<HTMLElement>(`[data-group="${group}"] [aria-pressed="true"]`)?.dataset.value ?? '';
+		const press = (group: string, value: string) =>
+			root.querySelectorAll<HTMLElement>(`[data-group="${group}"] [data-value]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === value)));
+		const colorName = (hex: string) => LOGO_COLORS.find((c) => c.hex === hex)?.name ?? hex;
+		// The "2 colors / 3 colors" choice: how many the grid holds before a new
+		// tap swaps the last one, and which ready-made sets show.
+		const maxColors = () => Number(picked('count')) || 2;
+
+		function render() {
+			root.querySelectorAll<HTMLElement>('[data-hex]').forEach((b) => b.setAttribute('aria-pressed', String(colors.includes(b.dataset.hex!))));
+			const max = maxColors();
+			$('[data-max]').textContent = String(max);
+			root.querySelectorAll<HTMLElement>('[data-suggest]').forEach((b) => (b.hidden = Number(b.dataset.count) !== max));
+			$('[data-picked]').textContent = colors.length
+				? `Picked: ${colors.map(colorName).join(', ')}. Tap a color again to remove it, or another to swap the last one.`
+				: 'No colors picked, so the prompt uses red.';
+			$('[data-picked]').textContent += ' The logo can always use white and black as well.';
+			const built = buildTeamLogoPrompt(
+				{ teamName: name.value, idea: idea.value, style: picked('style'), colors, kind: picked('kind') as MflLiveAppLogoKind },
+				'',
+			);
+			$('[data-prompt]').textContent = built.prompt;
+			const note = $<HTMLElement>('[data-color-note]');
+			note.dataset.tone = built.colorNote.tone;
+			note.textContent = built.colorNote.text;
+			root.querySelectorAll<HTMLElement>('[data-suggest]').forEach((b) =>
+				b.setAttribute('aria-pressed', String(b.dataset.suggest === colors.join(','))),
+			);
+			const warning = $<HTMLElement>('[data-warning]');
+			warning.hidden = !built.warning;
+			warning.textContent = built.warning ?? '';
+			$('[data-copied]').textContent = '';
+		}
+
+		function toggle(hex: string) {
+			const max = maxColors();
+			if (colors.includes(hex)) colors = colors.filter((h) => h !== hex);
+			else if (colors.length < max) colors = [...colors, hex];
+			// Full (say, after tapping a ready-made set): the new color replaces the
+			// last, so the grid never locks up. The first stays the main color.
+			else colors = [...colors.slice(0, max - 1), hex];
+			render();
+		}
+
+		root.querySelectorAll<HTMLElement>('[data-group]').forEach((group) => {
+			group.addEventListener('click', (e) => {
+				const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-value]');
+				if (!btn) return;
+				group.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+				// Going from 3 colors to 2 drops the third.
+				if (group.dataset.group === 'count') colors = colors.slice(0, maxColors());
+				render();
+			});
+		});
+		$('[data-suggestions]').addEventListener('click', (e) => {
+			const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-suggest]');
+			if (!btn) return;
+			colors = btn.dataset.suggest!.split(',');
+			render();
+		});
+		$('[data-colors]').addEventListener('click', (e) => {
+			const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-hex]');
+			if (btn) toggle(btn.dataset.hex!);
+		});
+		own.addEventListener('change', () => {
+			const hex = normalizeHex(own.value);
+			if (hex) toggle(hex);
+		});
+		name.addEventListener('input', render);
+		idea.addEventListener('input', render);
+
+		$('[data-copy]').addEventListener('click', () => {
+			const text = $('[data-prompt]').textContent ?? '';
+			const done = (msg: string) => ($('[data-copied]').textContent = msg);
+			navigator.clipboard?.writeText(text).then(
+				() => done('Copied'),
+				() => done('Select the prompt and copy it'),
+			) ?? done('Select the prompt and copy it');
+		});
+
+		// An example elsewhere on the page hands over its choices. Bound on this
+		// root's own event, so it dies with the root on a page swap.
+		root.addEventListener('tlogo:use', (e) => {
+			const choice = (e as CustomEvent<Partial<MflLiveAppLogoChoice>>).detail;
+			name.value = choice.teamName ?? '';
+			idea.value = choice.idea ?? '';
+			if (choice.style) press('style', choice.style);
+			if (choice.kind) press('kind', choice.kind);
+			if (choice.colors?.length) {
+				colors = choice.colors.slice(0, LOGO_MAX_COLORS);
+				press('count', colors.length >= 3 ? '3' : '2');
+			}
+			render();
+			root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		});
+
+		render();
+	}
+
+	// Delegated once from `document` at module scope: the listener asks for the
+	// CURRENT root on every tap, so it never holds a node a swap replaced.
+	document.addEventListener('click', (e) => {
+		const use = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-logo-use]');
+		if (!use) return;
+		let choice: unknown;
+		try {
+			choice = JSON.parse(use.dataset.logoUse ?? '');
+		} catch {
+			return;
+		}
+		document.querySelector('[data-team-logo]')?.dispatchEvent(new CustomEvent('tlogo:use', { detail: choice }));
+	});
+	document.addEventListener('astro:page-load', init);
+	init();
+</script>
+
+<style>
+	.tlogo {
+		/* The league theme when the page has one (MFL Live), else the
+		   marketing shell's themed tokens. */
+		--tlogo-accent: var(--league-accent, var(--brand-red));
+		--tlogo-text: var(--page-text, var(--brand-ink));
+		--tlogo-muted: var(--content-text-muted, var(--color-gray-500));
+		--tlogo-soft: var(--color-text-secondary, var(--color-gray-600));
+		--tlogo-border: var(--color-border-subtle, var(--primary-content-border-color));
+		--tlogo-surface: var(--color-surface-3, var(--primary-content-bg-color));
+		scroll-margin-top: 1rem;
+	}
+	.tlogo__field {
+		display: grid;
+		gap: 0.5rem;
+		margin-bottom: 1.1rem;
+	}
+	.tlogo__label {
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--tlogo-muted);
+	}
+	.tlogo__input {
+		font: inherit;
+		padding: 0.6rem 0.75rem;
+		border-radius: 10px;
+		border: 1px solid var(--tlogo-border);
+		background: var(--tlogo-surface);
+		color: var(--tlogo-text);
+	}
+	.tlogo__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.tlogo__swatch {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 10px;
+		border: 1px solid var(--tlogo-border);
+		background: var(--swatch);
+		cursor: pointer;
+		padding: 0;
+		position: relative;
+	}
+	.tlogo__swatch[aria-pressed='true'] {
+		outline: 3px solid var(--tlogo-accent);
+		outline-offset: 2px;
+	}
+	.tlogo__swatch--own {
+		background: conic-gradient(#c8102e, #ffd100, #00843d, #1d4ed8, #4c1d95, #c8102e);
+		overflow: hidden;
+	}
+	.tlogo__swatch--own input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		width: 100%;
+		height: 100%;
+		cursor: pointer;
+	}
+	.tlogo__picked,
+	.tlogo__tip,
+	.tlogo__warning,
+	.tlogo__copied {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--tlogo-soft);
+	}
+	/* The style picker: a card per style, its example logo (once there is one) above its name. */
+	.tlogo__styles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+		gap: 0.6rem;
+	}
+	.tlogo__style {
+		display: grid;
+		justify-items: center;
+		align-content: start;
+		gap: 0.3rem;
+		padding: 0.75rem 0.6rem;
+		border-radius: 12px;
+		border: 1px solid var(--tlogo-border);
+		background: var(--tlogo-surface);
+		color: var(--tlogo-text);
+		font: inherit;
+		text-align: center;
+		cursor: pointer;
+	}
+	.tlogo__style[aria-pressed='true'] {
+		outline: 3px solid var(--tlogo-accent);
+		outline-offset: 1px;
+	}
+	.tlogo__art {
+		display: block;
+		width: 5.5rem;
+		height: 5.5rem;
+		object-fit: contain;
+	}
+	.tlogo__style-name {
+		font-weight: 700;
+		font-size: var(--font-size-sm);
+	}
+	.tlogo__style-hint {
+		font-size: var(--font-size-xs);
+		color: var(--tlogo-soft);
+		line-height: 1.35;
+	}
+	/* A ready-made trio: one square in three diagonal bands. */
+	.tlogo__swatch--trio {
+		background: linear-gradient(135deg, var(--a) 0 36%, var(--b) 36% 64%, var(--c) 64%);
+	}
+	.tlogo__swatch[hidden] {
+		display: none;
+	}
+	/* A ready-made pair: one square, split corner to corner. */
+	.tlogo__swatch--pair {
+		background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
+	}
+	.tlogo__note {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--tlogo-soft);
+	}
+	.tlogo__note[data-tone='good'] {
+		color: var(--color-success);
+	}
+	.tlogo__note[data-tone='weak'] {
+		color: var(--color-warning);
+	}
+	/* A real player or club spotted in the name: a friendly heads-up, not an error. */
+	.tlogo__warning {
+		color: var(--tlogo-text);
+		margin-bottom: 0.75rem;
+	}
+	.tlogo__prompt {
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-size: var(--font-size-sm);
+		line-height: 1.5;
+		padding: 0.9rem;
+		border-radius: 12px;
+		border: 1px solid var(--tlogo-border);
+		background: var(--tlogo-surface);
+		color: var(--tlogo-text);
+		margin: 0 0 1rem;
+	}
+	.tlogo__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		align-items: center;
+	}
+</style>

@@ -3,7 +3,7 @@
  * MFL Football app.
  *
  * The app does not make images. It helps an owner write a prompt for an AI
- * image tool they already use (ChatGPT, Gemini) or an SVG for Claude, wrapped
+ * image tool they already use (ChatGPT, Gemini), wrapped
  * in our logo rules so the result works at our sizes and stays an original
  * mark. Every word of the prompt is the SERVER's (`src/utils/team-logo-prompt.ts`);
  * the app shows the choices it is sent and the prompt it gets back.
@@ -12,7 +12,7 @@
  * the server's builder is typed against it.
  */
 
-export type MflLiveAppLogoKind = 'icon' | 'banner' | 'svg';
+export type MflLiveAppLogoKind = 'icon' | 'banner';
 
 /** One tappable choice: a style or a kind of artwork. */
 export interface MflLiveAppLogoOption<Id extends string = string> {

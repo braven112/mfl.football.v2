@@ -1,0 +1,306 @@
+---
+/**
+ * One service page, rendered from src/data/mfl-services.ts. The order is
+ * deliberate for search and AI answer tools: the H1 carries the phrase people
+ * search for, the first paragraph answers "what is this?" on its own, and the
+ * FAQ is plain visible text marked up as FAQPage, so a tool that quotes one
+ * answer quotes the whole answer.
+ */
+import MarketingShell from './MarketingShell.astro';
+import { ALL_LEAGUES, crossHostLeagueHref } from '../../../config/leagues';
+import { SERVICES, FORMER_BRAND, type Service } from '../../../data/mfl-services';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, serviceJsonLd } from '../../../utils/structured-data';
+
+export interface Props {
+	service: Service;
+}
+
+const { service } = Astro.props as Props;
+
+// The leagues the homepage advertises (src/pages/index.astro): full-management
+// leagues their owners have agreed to show. They are the live examples.
+const exampleLeagues = ALL_LEAGUES.filter((l) => !l.bestBall && l.advertiseOnSharedHost !== false);
+const examples = service.examplePaths.flatMap((ex) =>
+	exampleLeagues.map((league) => ({
+		label: ex.label,
+		body: ex.body,
+		league: league.name,
+		href: crossHostLeagueHref(Astro.url.hostname, `/${league.slug}${ex.suffix}`),
+	})),
+);
+
+const others = SERVICES.filter((s) => s.slug !== service.slug);
+
+const jsonLd = [
+	organizationJsonLd(),
+	serviceJsonLd(service),
+	faqJsonLd(service.faqs),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: service.eyebrow, path: service.path },
+	]),
+];
+const isExternal = (href: string) => /^https?:/.test(href);
+---
+
+<MarketingShell title={service.title} description={service.description} canonicalPath={service.path} jsonLd={jsonLd}>
+	<article class="svc">
+		<header class="svc-hero">
+			<p class="svc-eyebrow">{service.eyebrow} <span class="svc-former">· Formerly {FORMER_BRAND}</span></p>
+			<h1>{service.h1}</h1>
+			<p class="svc-answer">{service.answer}</p>
+			<p class="svc-lede">{service.lede}</p>
+			<div class="svc-ctas">
+				{service.cta.kind === 'interest' ? (
+					<button type="button" class="cta cta--primary" data-interest={service.cta.product} data-interest-name={service.cta.name}>
+						{service.cta.label}
+					</button>
+				) : (
+					<a class="cta cta--primary" href={service.cta.href}>{service.cta.label}</a>
+				)}
+				{service.secondary && (
+					<a class="cta cta--ghost" href={service.secondary.href} rel={isExternal(service.secondary.href) ? 'noopener' : undefined}>
+						{service.secondary.label}
+					</a>
+				)}
+			</div>
+		</header>
+
+		<section class="svc-block" aria-labelledby="svc-what">
+			<h2 id="svc-what">What you get</h2>
+			<ul class="svc-features">
+				{service.features.map((f) => (
+					<li>
+						<h3>{f.title}</h3>
+						<p>{f.body}</p>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		{examples.length > 0 && (
+			<section class="svc-block" aria-labelledby="svc-live">
+				<h2 id="svc-live">See it live</h2>
+				<p class="svc-sub">Real MFL leagues running on MFL.football today. Tap through; nothing to sign up for.</p>
+				<ul class="svc-examples">
+					{examples.map((ex) => (
+						<li>
+							<a class="svc-example" href={ex.href}>
+								<span class="svc-example__league">{ex.league}</span>
+								<span class="svc-example__label">{ex.label}</span>
+								<span class="svc-example__body">{ex.body}</span>
+								<span class="svc-example__more">Open →</span>
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
+		)}
+
+		<section class="svc-block" aria-labelledby="svc-faq">
+			<h2 id="svc-faq">Questions</h2>
+			<dl class="svc-faq">
+				{service.faqs.map((f) => (
+					<div>
+						<dt>{f.q}</dt>
+						<dd>{f.a}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+
+		<section class="svc-block" aria-labelledby="svc-more">
+			<h2 id="svc-more">More for MFL leagues</h2>
+			<ul class="svc-others">
+				{others.map((s) => (
+					<li>
+						<a class="svc-other" href={s.path}>
+							<span class="svc-other__name">{s.eyebrow}</span>
+							<span>{s.description}</span>
+						</a>
+					</li>
+				))}
+				<li>
+					<a class="svc-other" href="/compare">
+						<span class="svc-other__name">How MFL.football compares</span>
+						<span>Next to free MFL scripts, MFLHistory.com and MFL’s default skins.</span>
+					</a>
+				</li>
+			</ul>
+		</section>
+	</article>
+</MarketingShell>
+
+<style>
+	.svc-hero {
+		max-width: 46rem;
+		padding: 3.5rem 0 1rem;
+	}
+
+	.svc-eyebrow {
+		margin: 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--brand-red);
+	}
+
+	.svc-former {
+		color: var(--color-gray-500);
+	}
+
+	.svc-hero h1 {
+		margin: 0.75rem 0 1.25rem;
+		font-size: var(--font-size-3xl);
+		line-height: 1;
+		text-transform: uppercase;
+		text-wrap: balance;
+	}
+
+	.svc-answer {
+		margin: 0 0 1rem;
+		font-size: var(--font-size-lg);
+		line-height: 1.5;
+	}
+
+	.svc-lede {
+		margin: 0 0 1.75rem;
+		color: var(--color-gray-600);
+	}
+
+	.svc-ctas {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.svc-block {
+		padding-top: 3rem;
+	}
+
+	.svc-block h2 {
+		margin: 0 0 1.25rem;
+		font-size: var(--font-size-2xl);
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.svc-sub {
+		margin: -0.5rem 0 1.25rem;
+		color: var(--color-gray-600);
+	}
+
+	.svc-features,
+	.svc-examples,
+	.svc-others {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.svc-features li,
+	.svc-example,
+	.svc-other {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding: 1.25rem;
+		border: var(--style-card-border, 1px solid var(--primary-content-border-color));
+		box-shadow: var(--style-card-shadow, none);
+		border-radius: 16px;
+		background: var(--primary-content-bg-color);
+		color: inherit;
+	}
+
+	/* The linked cards fill their grid cell; the li is only a wrapper. */
+	.svc-examples li,
+	.svc-others li {
+		display: flex;
+	}
+
+	.svc-example,
+	.svc-other {
+		flex: 1;
+	}
+
+	.svc-features h3 {
+		margin: 0;
+		font-size: var(--font-size-base);
+	}
+
+	.svc-features p,
+	.svc-example__body,
+	.svc-other span:last-child {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-gray-600);
+	}
+
+	.svc-example,
+	.svc-other {
+		transition: transform var(--transition-fast), border-color var(--transition-fast);
+	}
+
+	.svc-example:hover,
+	.svc-other:hover {
+		transform: translateY(-2px);
+		border-color: var(--color-gray-500);
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.svc-example__league {
+		font-size: var(--font-size-2xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--color-gray-500);
+	}
+
+	.svc-example__label,
+	.svc-other__name {
+		font-weight: 700;
+	}
+
+	.svc-example__more {
+		margin-top: auto;
+		padding-top: 0.4rem;
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--brand-red);
+	}
+
+	.svc-faq {
+		display: grid;
+		gap: 1rem;
+		max-width: 46rem;
+		margin: 0;
+	}
+
+	.svc-faq dt {
+		font-weight: 700;
+	}
+
+	.svc-faq dd {
+		margin: 0.35rem 0 0;
+		color: var(--color-gray-600);
+		line-height: 1.55;
+	}
+
+	@media (max-width: 760px) {
+		.svc-hero {
+			padding-top: 2rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.svc-example,
+		.svc-other {
+			transition: none;
+		}
+	}
+</style>

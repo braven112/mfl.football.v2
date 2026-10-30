@@ -1,0 +1,136 @@
+---
+/**
+ * /about — who MFL.football is, and that it is MFL Addons under a new name.
+ * The page exists so the old brand's reputation has one clear place to land:
+ * search engines and AI answer tools read "formerly MFL Addons" here and in
+ * the Organization JSON-LD (alternateName), and mfladdons.com points here.
+ *
+ * Shared host only: a league apex rewrites /about to its own league's About
+ * page, which is a different page entirely.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import { ABOUT_FAQS, FORMER_BRAND, FORMER_DOMAIN, SERVICES } from '../data/mfl-services';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const jsonLd = [
+  organizationJsonLd(),
+  websiteJsonLd(),
+  faqJsonLd(ABOUT_FAQS),
+  breadcrumbJsonLd([
+    { name: 'MFL.football', path: '/' },
+    { name: 'About', path: '/about' },
+  ]),
+];
+---
+
+<MarketingShell
+  title={`About MFL.football (formerly ${FORMER_BRAND})`}
+  description={`MFL.football is the new home of ${FORMER_BRAND}: skins, commissioner tools, league history and custom websites for MyFantasyLeague leagues.`}
+  canonicalPath="/about"
+  jsonLd={jsonLd}
+>
+  <article class="about">
+    <p class="about__eyebrow">About</p>
+    <h1>{FORMER_BRAND} is now MFL.football</h1>
+    <p class="about__answer">
+      MFL.football is the new home of {FORMER_BRAND}. The same builder who made skins, tools and league sites for
+      MyFantasyLeague commissioners as {FORMER_BRAND} now builds them here, and {FORMER_DOMAIN} points to mfl.football.
+    </p>
+    <p>
+      MFL.football is independent and is not part of MyFantasyLeague. It is built on MFL’s public API, so your league keeps
+      running on MFL while MFL.football adds what MFL does not: a site on your own domain, automation for the
+      commissioner’s chores, and a history that never forgets a season.
+    </p>
+    <p>
+      It started with two leagues of our own, The League (since 2007) and the AFL (since 2003), and every feature is built
+      and tested there first, through real seasons, before any other league gets it.
+    </p>
+
+    <h2>What MFL.football offers</h2>
+    <ul class="about__list">
+      {SERVICES.map((s) => (
+        <li><a href={s.path}>{s.eyebrow}</a>: {s.description}</li>
+      ))}
+      <li><a href="/live">Live scores</a>: every MFL league you play in, scored live on one screen. Free, with a Pro upgrade.</li>
+    </ul>
+
+    <h2>Questions</h2>
+    <dl class="about__faq">
+      {ABOUT_FAQS.map((f) => (
+        <div>
+          <dt>{f.q}</dt>
+          <dd>{f.a}</dd>
+        </div>
+      ))}
+    </dl>
+  </article>
+</MarketingShell>
+
+<style>
+  .about {
+    max-width: 46rem;
+    padding: 3.5rem 0 0;
+    line-height: 1.6;
+  }
+
+  .about__eyebrow {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand-red);
+  }
+
+  .about h1 {
+    margin: 0.75rem 0 1.25rem;
+    font-size: var(--font-size-3xl);
+    line-height: 1;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .about__answer {
+    font-size: var(--font-size-lg);
+  }
+
+  .about h2 {
+    margin: 2.5rem 0 1rem;
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .about__list {
+    display: grid;
+    gap: 0.6rem;
+    padding-left: 1.2rem;
+  }
+
+  .about__list a {
+    font-weight: 700;
+  }
+
+  .about__faq {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+  }
+
+  .about__faq dt {
+    font-weight: 700;
+  }
+
+  .about__faq dd {
+    margin: 0.35rem 0 0;
+    color: var(--color-gray-600);
+  }
+
+  @media (max-width: 760px) {
+    .about {
+      padding-top: 2rem;
+    }
+  }
+</style>
