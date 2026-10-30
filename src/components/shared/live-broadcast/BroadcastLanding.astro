@@ -22,6 +22,15 @@
  * the top layer ignores its ancestors' transforms, so the board leaves the
  * frame at full size. Nothing is mounted twice.
  *
+ * ── THE TV HOME (`variant="tv"`) ────────────────────────────────────────
+ * A paired TV skips all of that (owner's call, 2026-10-30): it opens straight
+ * to the full-screen board, and the leagues, the guides and the TV's own
+ * settings live in a drawer on its right edge. Press OK on the hands-free
+ * board (or the edge tab) to open it; Back, Left or Escape closes it. The
+ * league cards are the SAME list as the page's, so the in-place switching
+ * below serves both; only the frame around them differs. It opens by itself
+ * the first time a TV lands here, so a new owner sees where everything is.
+ *
  * No layout of its own and no cookie writes: the route owns both
  * (`Astro.cookies.set()` from a component throws after the headers commit).
  */
@@ -29,6 +38,7 @@ import type { AssembledBoard } from '../../../utils/broadcast-board';
 import type { LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { PassSummary } from '../../../utils/broadcast-tv-pairing';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { isTvApp, tvGuideLinks } from '../../../utils/broadcast-tv-home';
 import {
   broadcastHref,
   defaultLeagueSelection,
@@ -46,9 +56,12 @@ interface Props {
   tvs: PassSummary[];
   /** This host, for "go to <host>/tv". */
   host: string;
+  /** `tv`: the paired TV's home — the full board, with everything else in a drawer. */
+  variant?: 'page' | 'tv';
 }
 
-const { viewer, board, pageData, failed, week, explicitWeek, sound, tvs, host } = Astro.props;
+const { viewer, board, pageData, failed, week, explicitWeek, sound, tvs, host, variant = 'page' } = Astro.props;
+const tvHome = variant === 'tv';
 
 const PATH = '/live/broadcast';
 const weekForHref = explicitWeek ? week : null;
@@ -113,12 +126,45 @@ const leagueCards = (board?.leagues ?? []).map((league) => {
   };
 });
 
+// The drawer's count reads "3 of 4 leagues", and the edge tab carries it too.
+const onCount = enabled.length;
+const leagueWord = (n: number) => (n === 1 ? 'league' : 'leagues');
+const guides = tvHome
+  ? tvGuideLinks(
+      [
+        ...(board?.leagues ?? []).filter((l) => enabled.includes(l.id)),
+        ...(board?.leagues ?? []),
+      ].flatMap((l) => (l.registered?.slug ? [l.registered.slug] : [])),
+      host.replace(/:\d+$/, ''),
+    )
+  : [];
+// The score overlay is the app's alone: a browser cannot draw over another app.
+const inTvApp = tvHome && isTvApp(Astro.request.headers.get('user-agent'));
+
 const boardHref = `${PATH}?view=board${explicitWeek ? `&week=${week}` : ''}`;
 const fmtDate = (ms: number) =>
   new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 ---
 
-<div class="bcl">
+<div class:list={['bcl', { 'bcl--tv': tvHome }]} data-bcl-tv-home={tvHome ? '' : undefined}>
+  {tvHome ? (
+    <Fragment>
+      {/* The board itself, edge to edge. `data-bcl-viewport` is what the
+          in-place league switch looks for, here as in the page's preview. */}
+      <div class="bcl-tvboard" data-bcl-viewport>
+        <slot name="board" />
+      </div>
+      <button
+        type="button"
+        class="bcl-edge"
+        data-bcl-drawer-open
+        aria-controls="bcl-drawer"
+        aria-expanded="false"
+      >
+        <span data-bcl-tab-label>{onCount} {leagueWord(onCount)} · Guides</span>
+      </button>
+    </Fragment>
+  ) : (
   <section class="bcl-hero" aria-labelledby="bcl-title">
     <div class="bcl-hero__copy">
       <p class="bcl-eyebrow">
@@ -225,13 +271,32 @@ const fmtDate = (ms: number) =>
       )}
     </div>
   </section>
+  )}
 
+  <div
+    class={tvHome ? 'bcl-drawer' : 'bcl-flow'}
+    id={tvHome ? 'bcl-drawer' : undefined}
+    data-bcl-drawer={tvHome ? '' : undefined}
+    role={tvHome ? 'dialog' : undefined}
+    aria-label={tvHome ? 'Leagues and guides' : undefined}
+  >
   {board && leagueCards.length > 0 && (
     <section class="bcl-section" aria-labelledby="bcl-leagues-title">
-      <header class="bcl-section__head">
-        <h2 id="bcl-leagues-title">On this broadcast</h2>
-        <p>Tap a league to put it on the board or take it off.</p>
-      </header>
+      {tvHome ? (
+        <header class="bcl-section__head">
+          <p class="bcl-drawer__label">On the board</p>
+          <h2 id="bcl-leagues-title" class="bcl-count">
+            <span data-bcl-count>{onCount}</span>
+            <small>of {leagueCards.length} {leagueWord(leagueCards.length)}</small>
+          </h2>
+          <p>Press OK on a league to put it on the board or take it off.</p>
+        </header>
+      ) : (
+        <header class="bcl-section__head">
+          <h2 id="bcl-leagues-title">On this broadcast</h2>
+          <p>Tap a league to put it on the board or take it off.</p>
+        </header>
+      )}
       <ul
         class="bcl-leagues"
         data-bcl-leagues
@@ -294,6 +359,51 @@ const fmtDate = (ms: number) =>
     </section>
   )}
 
+    {tvHome && (
+      <Fragment>
+        {guides.length > 0 && (
+          <section class="bcl-drawer__group" aria-labelledby="bcl-guides-title">
+            <p id="bcl-guides-title" class="bcl-drawer__label">Guides</p>
+            <ul class="bcl-guides">
+              {guides.map((g) => (
+                <li>
+                  <a class="bcl-guide" href={g.href}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5zM4 21.5A2.5 2.5 0 0 1 6.5 19H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
+                    <span>{g.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {inTvApp && (
+          <p class="bcl-drawer__note">
+            <strong>Score overlay:</strong> press Back on the board, then pick where to show your scores over the game.
+          </p>
+        )}
+        <div class="bcl-drawer__foot">
+          <button
+            type="button"
+            class="cta cta--ghost bcl-sound"
+            data-bcl-sound
+            data-on={sound ? 'true' : 'false'}
+            aria-pressed={sound ? 'true' : 'false'}
+          >
+            <svg class="bcl-sound__on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            <svg class="bcl-sound__off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            <span data-bcl-sound-label>{sound ? 'Sound on' : 'Sound off'}</span>
+          </button>
+          {viewer?.via === 'tv' && (
+            <button type="button" class="cta cta--ghost bcl-tv__btn" data-bcl-unpair-self>Unpair this TV</button>
+          )}
+        </div>
+        <p class="bcl-drawer__hint"><kbd>Back</kbd> returns to the board</p>
+      </Fragment>
+    )}
+  </div>
+
+  {!tvHome && (
+  <Fragment>
   <section class="bcl-section bcl-tv" aria-labelledby="bcl-tv-title">
     <div class="bcl-tv__pitch">
       <h2 id="bcl-tv-title">Put it on a TV</h2>
@@ -360,6 +470,8 @@ const fmtDate = (ms: number) =>
       <p>Runs all day without a touch, with burn-in protection and dimming built in.</p>
     </div>
   </section>
+  </Fragment>
+  )}
 </div>
 
 {/* Sized before first paint, so the frame never flashes at the wrong size.
@@ -393,6 +505,7 @@ const fmtDate = (ms: number) =>
     broadcastHref,
     toggleLeagueSelection,
   } from '../../../utils/broadcast-selection';
+  import { pushQuietEntry, restoreUnderQuietEntry, type QuietEntry } from '../../../utils/quiet-history';
 
   type FsElement = Element & {
     webkitRequestFullscreen?: () => Promise<void> | void;
@@ -640,6 +753,7 @@ const fmtDate = (ms: number) =>
     // the new set, and a reload must too.
     writeLeagueCookie(href);
     history.replaceState(history.state, '', href);
+    if (drawerOpen()) drawerHref = href;
     let html: string;
     try {
       const res = await fetch(href, {
@@ -674,6 +788,7 @@ const fmtDate = (ms: number) =>
     else swapBoard(next);
     const on = Array.isArray(data?.enabled) ? (data.enabled as string[]) : null;
     loaded = new Set(on ?? enabledCards());
+    paintCount();
     initLeagueToggles();
   }
 
@@ -681,6 +796,15 @@ const fmtDate = (ms: number) =>
     return Array.from(document.querySelectorAll<HTMLElement>('[data-bcl-leagues] [data-league-id].is-on')).map(
       (c) => c.dataset.leagueId!,
     );
+  }
+
+  /** The TV home's count, in the drawer and on the edge tab, from the cards as they now stand. */
+  function paintCount() {
+    const n = enabledCards().length;
+    const count = document.querySelector('[data-bcl-count]');
+    if (count) count.textContent = String(n);
+    const tab = document.querySelector('[data-bcl-tab-label]');
+    if (tab) tab.textContent = `${n} ${n === 1 ? 'league' : 'leagues'} · Guides`;
   }
 
   function initLeagueToggles() {
@@ -703,6 +827,7 @@ const fmtDate = (ms: number) =>
       const week = list.dataset.week ? Number(list.dataset.week) : null;
       const adding = !card.classList.contains('is-on');
       paintCard(card, adding);
+      paintCount();
       if (!adding) {
         // Off the board on the tap. `selection` is null when the set is back
         // to the defaults, so the board is told the cards' own answer.
@@ -727,8 +852,209 @@ const fmtDate = (ms: number) =>
     document.querySelector<HTMLElement>('.bcl-screen__hit')?.focus({ preventScroll: true });
   }
 
+  /**
+   * The TV home's drawer.
+   *
+   * The board owns the remote while the drawer is shut: its D-pad turns pages
+   * and highlights games, and leaves OK unclaimed on the hands-free board —
+   * so OK, when nothing else took it, is what opens the drawer. While it is
+   * open the drawer owns EVERY key (captured ahead of the board), moving focus
+   * itself rather than trusting a TV browser's own arrow navigation.
+   *
+   * Back: the app hands the TV's Back key to the WebView's history, never to
+   * the page, so an open drawer holds a history entry of its own and Back pops
+   * that. With the drawer shut and no entry left, Back reaches the app's own
+   * menu (the score overlay) as before. The entry is a QUIET one
+   * (`quiet-history.ts`), or the page router re-renders the page on that Back.
+   */
+  const DRAWER_SEEN_KEY = 'bc_tv_drawer_seen';
+  let drawerEntry = false;
+  let swallowDrawerPop = false;
+  /** The drawer's own history entry, while it is on top. */
+  let drawerQuiet: QuietEntry | null = null;
+  /**
+   * The newest league-selection URL written while the drawer was open. A
+   * switch rewrites the DRAWER's entry, which closing pops; the entry under
+   * it must take this URL with it, or a reload brings the old set back.
+   */
+  let drawerHref: string | null = null;
+  /** The TV home this bookkeeping belongs to. */
+  let drawerHome: HTMLElement | null = null;
+  let tabIdleTimer: number | undefined;
+
+  const drawerEl = () => document.querySelector<HTMLElement>('[data-bcl-drawer]');
+  const drawerOpen = () => drawerEl()?.dataset.open === 'true';
+
+  function drawerFocusables(): HTMLElement[] {
+    const drawer = drawerEl();
+    if (!drawer) return [];
+    return Array.from(drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')).filter(
+      (el) => el.offsetParent !== null,
+    );
+  }
+
+  function setDrawer(open: boolean, via: 'key' | 'back' = 'key') {
+    const drawer = drawerEl();
+    if (!drawer || drawerOpen() === open) return;
+    drawer.dataset.open = open ? 'true' : 'false';
+    document.querySelector('[data-bcl-drawer-open]')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.querySelector('[data-bcl-tv-home]')?.toggleAttribute('data-drawer-open', open);
+    if (open) {
+      drawerHref = null;
+      try {
+        drawerQuiet = pushQuietEntry({ bclDrawer: true });
+        drawerEntry = true;
+      } catch {
+        /* no history: Left and Escape still close it */
+      }
+      const first = drawerFocusables()[0];
+      first?.focus({ preventScroll: true });
+      try {
+        localStorage.setItem(DRAWER_SEEN_KEY, '1');
+      } catch {
+        /* private storage: it just opens by itself again next time */
+      }
+    } else {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      if (drawerEntry && via !== 'back') {
+        // Shut by a key rather than Back: drop the entry quietly.
+        swallowDrawerPop = true;
+        history.back();
+      }
+      drawerEntry = false;
+      wakeTab();
+    }
+  }
+
+  /** The edge tab fades after a while untouched, so it never sits bright on a burn-in-prone screen. */
+  function wakeTab() {
+    const home = document.querySelector<HTMLElement>('[data-bcl-tv-home]');
+    if (!home) return;
+    home.dataset.tabIdle = 'false';
+    window.clearTimeout(tabIdleTimer);
+    tabIdleTimer = window.setTimeout(() => {
+      home.dataset.tabIdle = 'true';
+    }, 8000);
+  }
+
+  function initDrawer() {
+    const home = document.querySelector<HTMLElement>('[data-bcl-tv-home]');
+    if (!home) return;
+    // This init runs at load AND on the router's first `astro:page-load`, for
+    // the same page. Only a NEW page starts the drawer's bookkeeping over; the
+    // second call must not disown a drawer the first one just opened.
+    if (home === drawerHome) return;
+    drawerHome = home;
+    drawerEntry = false;
+    drawerHref = null;
+    const tab = document.querySelector<HTMLElement>('[data-bcl-drawer-open]');
+    if (tab) tab.onclick = () => setDrawer(true);
+    wakeTab();
+    let seen = true;
+    try {
+      seen = localStorage.getItem(DRAWER_SEEN_KEY) === '1';
+    } catch {
+      /* storage refused: treat as seen rather than open it on every visit */
+    }
+    if (!seen) setDrawer(true);
+  }
+
+  const BACK_KEYS = new Set(['Escape', 'Backspace', 'GoBack', 'BrowserBack']);
+
+  // Capture: ahead of the board's own D-pad, which listens on window too.
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (!drawerOpen()) return;
+      e.stopPropagation();
+      if (BACK_KEYS.has(e.key) || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setDrawer(false);
+        return;
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const items = drawerFocusables();
+        if (items.length === 0) return;
+        const at = items.indexOf(document.activeElement as HTMLElement);
+        const next = at < 0 ? 0 : Math.min(items.length - 1, Math.max(0, at + (e.key === 'ArrowDown' ? 1 : -1)));
+        items[next].focus({ preventScroll: false });
+        return;
+      }
+      if (e.key === 'ArrowRight') e.preventDefault();
+      // OK falls through to the focused card or link, which is its own press.
+    },
+    { capture: true },
+  );
+
+  /**
+   * OK opens the drawer on KEYUP, judged by its keydown. By keyup the board
+   * has had its turn (an OK that featured a game was claimed with
+   * `preventDefault`), and the press is over: opening on keydown moved focus
+   * onto the first league card in time for the same press to toggle it.
+   */
+  let okDown: KeyboardEvent | null = null;
+  window.addEventListener('keydown', (e) => {
+    if (!document.querySelector('[data-bcl-tv-home]')) return;
+    wakeTab();
+    if (e.key === 'Enter' && !e.repeat) okDown = drawerOpen() ? null : e;
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key !== 'Enter') return;
+    const down = okDown;
+    okDown = null;
+    if (!down || down.defaultPrevented || drawerOpen()) return;
+    if (!document.querySelector('[data-bcl-tv-home]')) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && !active.closest('[data-bcl-viewport]')) return;
+    // The remote is steering the board (its own history entry is on top):
+    // OK there belongs to the board, and Back steps out of steering first.
+    if ((history.state as { lbcSteer?: boolean } | null)?.lbcSteer) return;
+    setDrawer(true);
+  });
+
+  window.addEventListener(
+    'popstate',
+    (e) => {
+      if (swallowDrawerPop) {
+        swallowDrawerPop = false;
+        e.stopImmediatePropagation();
+        restoreParkedState();
+        return;
+      }
+      // Left the page through a guide link (a soft navigation keeps this
+      // script alive): that Back belongs to the router, not to the drawer.
+      if (!drawerEntry || !drawerOpen()) {
+        drawerEntry = false;
+        return;
+      }
+      // Ours alone: the board's own Back listener (added after this one)
+      // would otherwise take the same pop as the end of its steering.
+      e.stopImmediatePropagation();
+      drawerEntry = false;
+      restoreParkedState();
+      setDrawer(false, 'back');
+    },
+    { capture: true },
+  );
+
+  function restoreParkedState() {
+    restoreUnderQuietEntry(drawerQuiet, drawerHref ?? undefined);
+    drawerQuiet = null;
+    drawerHref = null;
+  }
+
+  // A click on the board beside an open drawer closes it.
+  document.addEventListener('click', (e) => {
+    if (!drawerOpen()) return;
+    const target = e.target as Element | null;
+    if (target?.closest('[data-bcl-drawer], [data-bcl-drawer-open]')) return;
+    setDrawer(false);
+  });
+
   function initBroadcastLanding() {
     if (!document.querySelector('.bcl')) return;
+    initDrawer();
     sizePreview();
     initFullscreen();
     focusPreview();
@@ -737,6 +1063,7 @@ const fmtDate = (ms: number) =>
     // A fresh page: its board was rendered with exactly the cards that are on.
     pendingBoard = {};
     loaded = new Set(enabledCards());
+    paintCount();
     initLeagueToggles();
   }
 
@@ -1418,6 +1745,255 @@ const fmtDate = (ms: number) =>
       bottom: 0.6rem;
       padding: 0.5rem 0.95rem;
       font-size: var(--font-size-sm);
+    }
+  }
+  /* ── The TV home (`variant="tv"`) ─────────────────────────────────────
+     The board fills the screen; the drawer slides over its right third.
+     Both are dark in EITHER site theme, because the board is: the drawer
+     redefines the page tokens its cards read rather than restyling them. */
+  .bcl--tv {
+    max-width: none;
+    margin: 0;
+    position: relative;
+  }
+
+  .bcl-flow {
+    display: contents;
+  }
+
+  .bcl-tvboard :global(.lbc) {
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .bcl-edge {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    z-index: 20;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    padding: 1.1em 0.55em;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-right: 0;
+    border-radius: 0.6em 0 0 0.6em;
+    background: rgba(8, 13, 22, 0.88);
+    color: #ebebeb;
+    font: 700 clamp(12px, 1.05vw, 18px) / 1 var(--font-display);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity var(--transition-slow);
+  }
+
+  .bcl--tv[data-tab-idle='true'] .bcl-edge:not(:focus-visible) {
+    opacity: 0.3;
+  }
+
+  .bcl--tv[data-drawer-open] .bcl-edge {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .bcl-edge:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
+  .bcl-drawer {
+    --card-bg: #121c2e;
+    --color-text-primary: #ebebeb;
+    --color-text-secondary: rgba(255, 255, 255, 0.68);
+    --primary-link-default-text-color: #ebebeb;
+    --cta-fill: #16a34a;
+
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    width: clamp(18rem, 31vw, 34rem);
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.2rem 1.2rem 1rem;
+    font-size: var(--font-size-sm);
+    background: rgba(8, 13, 22, 0.96);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-xl);
+    color: var(--color-text-primary);
+    /* Slides in; leaves at once (no visibility delay to time), which on a
+       TV reads as the remote's Back doing exactly what it says. */
+    transform: translateX(100%);
+    visibility: hidden;
+  }
+
+  .bcl-drawer[data-open='true'] {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--transition-base);
+  }
+
+  /* The board behind an open drawer steps back, still live. */
+  .bcl--tv[data-drawer-open] .bcl-tvboard {
+    filter: brightness(0.55);
+    transition: filter var(--transition-base);
+  }
+
+  .bcl-drawer .bcl-section {
+    margin: 0;
+  }
+
+  .bcl-drawer .bcl-section__head {
+    margin-bottom: 0.8rem;
+  }
+
+  .bcl-drawer .bcl-section__head p {
+    font-size: var(--font-size-xs);
+  }
+
+  .bcl-drawer__label {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .bcl-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+  }
+
+  .bcl-count small {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: none;
+    color: var(--color-text-secondary);
+  }
+
+  .bcl-drawer .bcl-leagues {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55em;
+  }
+
+  .bcl-drawer .bcl-league {
+    padding: 0.5em 0.75em;
+    gap: 0.7em;
+  }
+
+  .bcl-drawer .bcl-league__mark,
+  .bcl-drawer .bcl-league__mark img {
+    width: 1.9em;
+    height: 1.9em;
+  }
+
+  .bcl-drawer .bcl-league__text span {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Always the on-dark cut: the drawer is dark in either theme. */
+  .bcl-drawer .bcl-logo-light {
+    display: none;
+  }
+
+  .bcl-drawer .bcl-logo-dark {
+    display: block;
+  }
+
+  .bcl-drawer a:focus-visible,
+  .bcl-drawer button:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
+  .bcl-drawer__group {
+    display: grid;
+    gap: 0.55em;
+  }
+
+  .bcl-guides {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55em;
+  }
+
+  .bcl-guide {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    padding: 0.55em 0.75em;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--color-text-primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .bcl-guide:is(:hover, :focus) {
+    color: var(--color-text-primary);
+    text-decoration: none;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .bcl-guide svg {
+    width: 1.3em;
+    height: 1.3em;
+    flex: none;
+    color: #fbbf24;
+  }
+
+  .bcl-drawer__note {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .bcl-drawer__note strong {
+    color: var(--color-text-primary);
+  }
+
+  .bcl-drawer__foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6em;
+    margin-top: auto;
+  }
+
+  .bcl-drawer__foot .bcl-sound,
+  .bcl-drawer__foot .bcl-tv__btn {
+    margin: 0;
+    padding: 0.6em 1em;
+    font-size: var(--font-size-xs);
+  }
+
+  .bcl-drawer__hint {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .bcl-drawer__hint kbd {
+    padding: 0.1em 0.45em;
+    border-radius: 0.3em;
+    background: rgba(255, 255, 255, 0.14);
+    font: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bcl-drawer,
+    .bcl-drawer[data-open='true'],
+    .bcl-edge {
+      transition: none;
     }
   }
 </style>

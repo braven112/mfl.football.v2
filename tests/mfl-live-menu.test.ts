@@ -208,11 +208,16 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(menu).toContain("{tvApp ? 'Sign in with your phone' : 'Sign in with MyFantasyLeague'}");
   });
 
-  it('gives a paired TV the landing, and a bare board if it falls back to one', () => {
-    // Owner's call (Oct 2026): a TV opens the landing, preview focused for OK.
+  it('gives a paired TV the full board with its drawer, bare, and everyone else the landing', () => {
+    // Owner's call (2026-10-30, replacing Oct 2026's "a TV opens the
+    // landing"): a paired TV opens straight to the full board, with leagues
+    // and guides in a drawer. Phones and computers keep the landing, preview
+    // focused for OK.
     const page = read('src/pages/live/broadcast/index.astro');
     expect(page).not.toMatch(/Astro\.redirect\(/);
-    expect(page).toContain('bare={pairedTv && boardOnly && Boolean(pageData)}');
+    expect(page).toContain('const tvHome = pairedTv && !boardOnly && Boolean(pageData);');
+    expect(page).toContain('bare={pairedTv && Boolean(pageData) && (boardOnly || tvHome)}');
+    expect(page).toContain("variant={tvHome ? 'tv' : 'page'}");
     expect(read(LAYOUT)).toMatch(/\{!bare && \(\s*<header class="mfl-bar">/);
     expect(read('src/components/shared/live-broadcast/BroadcastLanding.astro')).toMatch(
       /function initBroadcastLanding\(\)[\s\S]{0,200}focusPreview\(\);/,
