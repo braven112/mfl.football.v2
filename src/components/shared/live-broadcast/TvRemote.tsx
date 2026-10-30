@@ -68,6 +68,10 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
         <p className="tvr__empty-body">
           Open MFL Football on your TV, or go to mfl.football/tv in the TV's browser, then scan the code it shows.
         </p>
+        <p className="tvr__empty-body">
+          Already paired one? A TV belongs to the team you were signed in as when you paired it, so sign in as that
+          team, or pair it again here.
+        </p>
         <a className="cta cta--primary" href="/live/broadcast/pair">
           Pair a TV
         </a>
