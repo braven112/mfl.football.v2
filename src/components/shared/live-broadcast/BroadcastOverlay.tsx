@@ -22,6 +22,13 @@
  * The app talks to this page through `window.__mflOverlay` (`setMode`,
  * `setEdge`, `step`, `move`, `select`), because the keys reach the APP's window, not the
  * page; the page answers through `window.MflOverlayHost` (`watch`, `hide`).
+ *
+ * The owner's phone steers it too, through the board's TV remote: while a
+ * show plays every key belongs to the show, so the phone is the only way to
+ * open the lineups or move the strip mid-game. Its commands arrive on the
+ * poll (and a one-second check while the phone has the remote open) and go
+ * to the app as `lineups` and `moveTo`; on a build without them they do
+ * nothing, since the app's window, not the page, sets the overlay's size.
  * Arrow keys and Enter are also read here so the page can be checked in a
  * desktop browser.
  *
@@ -31,6 +38,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
+import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import {
   detectBigPlays,
@@ -60,7 +68,7 @@ const POLL_TIMEOUT_MS = 12_000;
 const RELOAD_MS = 3 * 60 * 60_000;
 /** A page that could not read the leagues at all tries again this soon. */
 const RETRY_MS = 60_000;
-/** How long the bar says how to open the panel, the first time it shows. */
+/** How long the bar says how to move or turn it off (the main app's Back menu), the first time it shows. */
 const BAR_HINT_MS = 12_000;
 /** How long the ticker shows each of the owner's games before the next. */
 const ROTATE_MS = 8_000;
@@ -68,6 +76,9 @@ const ROTATE_MS = 8_000;
 const ALERT_MS = 7_000;
 /** How long a starter stays lit up in the expanded lineups after a big play. */
 const JUST_SCORED_MS = 90_000;
+/** While the phone has the remote open, how often to check for its next press. */
+const REMOTE_CHECK_MS = 1000;
+const REMOTE_CHECK_TIMEOUT_MS = 4000;
 /** The app's own mark, light on dark: the overlay is always dark. */
 const LOGO_SRC = '/assets/mfl-live/icon-v2.svg';
 
@@ -80,6 +91,8 @@ interface OverlayHost {
   move: (delta: number) => void;
   /** OK on the highlighted Watch row. */
   select: () => void;
+  /** The lineups are open from the phone: the TV's remote is still the show's. */
+  setPassive?: (passive: boolean) => void;
 }
 
 declare global {
@@ -94,6 +107,13 @@ declare global {
       watch?: (query: string) => void;
       /** Close the overlay. */
       hide?: () => void;
+      /**
+       * Open (true) or close the lineups for the phone remote, without taking
+       * the TV's remote from the show. Absent before the phone remote.
+       */
+      lineups?: (show: boolean) => void;
+      /** Move the strip to `'top'` or `'bottom'`. Absent before the phone remote. */
+      moveTo?: (edge: string) => void;
     };
   }
 }
@@ -133,6 +153,12 @@ export default function BroadcastOverlay({
   const [meta, setMeta] = useState<Record<string, PlayerMeta>>(data?.playerMeta ?? {});
   const [stale, setStale] = useState(false);
   const [barHint, setBarHint] = useState(true);
+  const [passive, setPassive] = useState(false);
+  const [remote, setRemote] = useState<RemoteState | null>(null);
+  const takeRemote = useCallback((next: RemoteState | undefined) => {
+    if (!next || typeof next.seq !== 'number') return;
+    setRemote((prev) => (prev && prev.seq === next.seq && prev.active === next.active ? prev : next));
+  }, []);
 
   const games = useMemo<OverlayGame[]>(
     () => (data && poll ? overlayGames(data.panels, poll, meta) : []),
@@ -178,6 +204,7 @@ export default function BroadcastOverlay({
       step: (delta) => step(delta > 0 ? 1 : -1),
       move,
       select,
+      setPassive: (next) => setPassive(!!next),
     };
     return () => {
       delete window.__mflOverlay;
@@ -282,6 +309,7 @@ export default function BroadcastOverlay({
         if (!res.ok || body?.ok === false) throw new Error('poll not ok');
         if (cancelled) return;
         setPoll(body);
+        takeRemote(body.remote);
         if (body.playerMeta) setMeta((prev) => ({ ...prev, ...body.playerMeta }));
         setStale(false);
       } catch {
@@ -294,7 +322,51 @@ export default function BroadcastOverlay({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [data]);
+  }, [data, takeRemote]);
+
+  // The phone remote. Each command is parsed again here and applied once, by
+  // its sequence number; the first one this page sees is an old press, so it
+  // only sets the mark.
+  const lastRemoteSeq = useRef<number | null>(null);
+  useEffect(() => {
+    if (!remote) return;
+    const first = lastRemoteSeq.current === null;
+    if (!first && remote.seq <= (lastRemoteSeq.current ?? 0)) return;
+    lastRemoteSeq.current = remote.seq;
+    const cmd = parseRemoteCommand(remote.command);
+    if (first || !cmd) return;
+    const host = window.MflOverlayHost;
+    if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
+    else if (cmd.kind === 'overlay') {
+      if (cmd.action === 'lineups') host?.lineups?.(true);
+      else if (cmd.action === 'ticker') host?.lineups?.(false);
+      else host?.moveTo?.(cmd.action);
+    }
+  }, [remote, step]);
+
+  const remoteActive = !!remote?.active && !!data && !data.demo;
+  useEffect(() => {
+    if (!remoteActive) return;
+    let stopped = false;
+    let timer = 0;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/broadcast-tv/remote-poll', {
+          signal: AbortSignal.timeout(REMOTE_CHECK_TIMEOUT_MS),
+          headers: { accept: 'application/json' },
+        });
+        if (res.ok && !stopped) takeRemote((await res.json()) as RemoteState);
+      } catch {
+        /* the next check, or the poll, carries it */
+      }
+      if (!stopped) timer = window.setTimeout(check, REMOTE_CHECK_MS);
+    };
+    timer = window.setTimeout(check, REMOTE_CHECK_MS);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [remoteActive, takeRemote]);
 
   if (!data) {
     return (
@@ -326,7 +398,7 @@ export default function BroadcastOverlay({
           count={games.length}
           week={data.week}
           alert={alert}
-          focused={mode === 'expanded'}
+          focused={mode === 'expanded' && !passive}
           hint={mode === 'bar' && barHint}
         />
         {mode === 'expanded' && (
@@ -350,13 +422,20 @@ export default function BroadcastOverlay({
               <XpLineup side={current.mine} slate={poll?.games ?? []} lit={justScored} />
               <XpLineup side={current.opponent} slate={poll?.games ?? []} lit={{}} />
             </div>
-            <footer className="bov__keys bov__xp-keys">
-              {games.length > 1 && <span>◀ ▶ Matchups</span>}
-              <span>▲ ▼ Top or bottom</span>
-              <span>OK Watch a game</span>
-              <span>BACK Back to the game</span>
-              {stale && <span className="bov__stale">Reconnecting</span>}
-            </footer>
+            {passive ? (
+              <footer className="bov__keys bov__xp-keys">
+                <span>Opened from your phone · Hide lineups or Next game there</span>
+                {stale && <span className="bov__stale">Reconnecting</span>}
+              </footer>
+            ) : (
+              <footer className="bov__keys bov__xp-keys">
+                {games.length > 1 && <span>◀ ▶ Matchups</span>}
+                <span>▲ ▼ Top or bottom</span>
+                <span>OK Watch a game</span>
+                <span>BACK Back to the game</span>
+                {stale && <span className="bov__stale">Reconnecting</span>}
+              </footer>
+            )}
           </section>
         )}
       </div>
@@ -487,7 +566,7 @@ function Ticker({
           {game.opponent.abbrev}
         </span>
         {hint ? (
-          <span className="bov__now-proj">Open Score overlay again to expand</span>
+          <span className="bov__now-proj">Move or turn off: MFL Football › Back</span>
         ) : game.readable && (
           <span className="bov__now-proj">
             Proj {onePlace(game.mine.projectedFinal)} – {onePlace(game.opponent.projectedFinal)}

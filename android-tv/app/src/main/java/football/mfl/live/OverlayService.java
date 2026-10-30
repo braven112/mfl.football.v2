@@ -76,6 +76,8 @@ public class OverlayService extends Service {
     private static final String CHANNEL_ID = "overlay";
     private static final int NOTIFICATION_ID = 1;
     private static final long PANEL_IDLE_MS = 30_000;
+    /** Lineups opened from the phone close on their own after this long. */
+    private static final long PHONE_LINEUPS_MS = 120_000;
     private static final long RETRY_MS = 60_000;
     private static final String UA_SUFFIX = " MFLLiveTV/" + BuildConfig.VERSION_NAME;
 
@@ -97,6 +99,11 @@ public class OverlayService extends Service {
     private KeyFrame root;
     private WebView webView;
     private String mode = MODE_BAR;
+    /**
+     * The lineups are open because the phone asked: shown, but the window
+     * stays unfocusable, so every key still reaches the show underneath.
+     */
+    private boolean passive;
     private String edge = EDGE_TOP;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -261,6 +268,7 @@ public class OverlayService extends Service {
     private void setMode(String next) {
         if (root == null) return;
         mode = next;
+        passive = false;
         handler.removeCallbacks(idleToBar);
         windowManager.updateViewLayout(root, layoutFor(next));
         pushModeToPage();
@@ -270,12 +278,27 @@ public class OverlayService extends Service {
         }
     }
 
+    /** The phone remote's Show lineups: the expanded view, without the TV's remote. */
+    private void showLineupsPassively() {
+        if (root == null) return;
+        if (MODE_EXPANDED.equals(mode) && !passive) return; // already open, and steered by the TV remote
+        mode = MODE_EXPANDED;
+        passive = true;
+        handler.removeCallbacks(idleToBar);
+        windowManager.updateViewLayout(root, layoutFor(mode));
+        pushModeToPage();
+        handler.postDelayed(idleToBar, PHONE_LINEUPS_MS);
+    }
+
     private void pushModeToPage() {
         if (webView == null) return;
         webView.evaluateJavascript(
                 "window.__mflOverlay && window.__mflOverlay.setMode('" + mode + "')", null);
         webView.evaluateJavascript(
                 "window.__mflOverlay && window.__mflOverlay.setEdge && window.__mflOverlay.setEdge('" + edge + "')",
+                null);
+        webView.evaluateJavascript(
+                "window.__mflOverlay && window.__mflOverlay.setPassive && window.__mflOverlay.setPassive(" + passive + ")",
                 null);
     }
 
@@ -339,8 +362,9 @@ public class OverlayService extends Service {
 
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        if (bar) {
-            // The bar is for looking at only; every key stays with the game.
+        if (bar || passive) {
+            // The bar, and lineups the phone opened, are for looking at only;
+            // every key stays with the game.
             flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                     | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
         }
@@ -460,6 +484,22 @@ public class OverlayService extends Service {
         @JavascriptInterface
         public void hide() {
             handler.post(OverlayService.this::stopSelf);
+        }
+
+        /** The phone remote: open (true) or close the lineups, leaving the TV's remote with the show. */
+        @JavascriptInterface
+        public void lineups(boolean show) {
+            handler.post(() -> {
+                if (show) showLineupsPassively();
+                else if (!MODE_BAR.equals(mode)) setMode(MODE_BAR);
+            });
+        }
+
+        /** The phone remote: the strip to the top or the bottom. */
+        @JavascriptInterface
+        public void moveTo(String where) {
+            String next = EDGE_BOTTOM.equals(where) ? EDGE_BOTTOM : EDGE_TOP;
+            handler.post(() -> setEdge(next));
         }
     }
 
