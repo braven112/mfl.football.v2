@@ -136,15 +136,13 @@ export function ownerSides(
   panels: readonly BroadcastLeaguePanel[],
   poll: BroadcastPollResponse,
   meta: Record<string, PlayerMeta>,
-): { mine: OverlaySide }[] {
+): { mine: Pick<OverlaySide, 'lineup'> }[] {
   const scores = new Map(poll.leagues.map((league) => [league.leagueId, league]));
-  const sides: { mine: OverlaySide }[] = [];
+  const sides: { mine: Pick<OverlaySide, 'lineup'> }[] = [];
   for (const panel of panels) {
     const players = scores.get(panel.leagueId)?.teams[panel.franchiseId]?.players;
     if (!players) continue;
-    sides.push({
-      mine: { name: '', abbrev: '', swatch: '', live: 0, projectedFinal: 0, lineup: lineupFor(players, meta) },
-    });
+    sides.push({ mine: { lineup: lineupFor(players, meta) } });
   }
   return sides;
 }
@@ -276,7 +274,7 @@ const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0] ?? name
  * to watch screen reads the same list, uncapped (`limit` Infinity).
  */
 export function overlayWatchList(
-  games: readonly Pick<OverlayGame, 'mine'>[],
+  games: readonly { mine: Pick<OverlaySide, 'lineup'> }[],
   slate: readonly NflGame[],
   limit: number = WATCH_LIMIT,
 ): WatchGame[] {
