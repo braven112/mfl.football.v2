@@ -1322,7 +1322,7 @@ export default function LiveBroadcast({ pageData }: Props) {
   // every render. No remote in the rehearsal: it would be a real command to a
   // real TV from a fake board.
   const remoteButton = useMemo(
-    () => (data.demo ? undefined : <BroadcastRemote panels={data.panels} />),
+    () => (data.demo ? undefined : <BroadcastRemote />),
     [data.demo, data.panels],
   );
 

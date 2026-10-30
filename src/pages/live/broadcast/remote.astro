@@ -1,0 +1,44 @@
+---
+/**
+ * MFL Live — remote mode: the whole phone screen as a remote for the owner's
+ * paired TV. Opened from the board's TV remote button; on an iPhone it can be
+ * added to the home screen and opened like an app. The Android phone app
+ * draws the same buttons natively (apps/mobile TvRemoteScreen).
+ *
+ * Signed-in owners only: the remote only reaches TVs paired from this owner
+ * (`/api/broadcast-tv/remote` checks the pass against the session).
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import TvRemote, { type TvRemoteLeague } from '../../../components/shared/live-broadcast/TvRemote';
+import { getMflLiveUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { discoverBoardLeagues } from '../../../utils/cross-league-live';
+import { BROADCAST_LEAGUE_COOKIE, resolveBroadcastLeagues } from '../../../utils/broadcast-selection';
+import '../../../styles/mfl-live.css';
+import '../../../styles/tv-remote.css';
+
+export const prerender = false;
+
+const user = getMflLiveUser(Astro.request);
+if (!user) {
+  return Astro.redirect(mflLoginUrl(Astro.url.pathname + Astro.url.search), 302);
+}
+
+// The leagues this owner's board watches: the ones the TV can be told to focus.
+let leagues: TvRemoteLeague[] = [];
+try {
+  const all = await discoverBoardLeagues(user);
+  const { enabled } = resolveBroadcastLeagues(null, Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null, all);
+  leagues = all.filter((l) => enabled.includes(l.id)).map((l) => ({ id: l.id, name: l.name }));
+} catch {
+  leagues = [];
+}
+---
+
+<MflAppLayout title="TV remote — MFL Football" description="Use your phone as a remote for MFL Football on your TV.">
+  <section class="tvr-page" aria-labelledby="tvr-title">
+    <a class="tvr-page__back" href="/live/broadcast">&larr; Broadcast</a>
+    <h1 id="tvr-title" class="tvr-page__title">TV remote</h1>
+    <TvRemote client:load leagues={leagues} />
+  </section>
+</MflAppLayout>
