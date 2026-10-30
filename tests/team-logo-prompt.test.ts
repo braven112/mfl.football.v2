@@ -16,7 +16,6 @@ import {
   pickLogoColors,
 } from '../src/utils/team-logo-prompt';
 import { AI_PROMPT } from '../src/utils/brand-asset-specs';
-import { logoStyleArt, teamInitials } from '../src/utils/team-logo-style-art';
 import { contrastRatio } from '../src/utils/team-color-contrast';
 
 describe('team logo prompt builder', () => {
@@ -124,18 +123,8 @@ describe('team logo prompt builder', () => {
     expect(new Set(LOGO_COLORS.map((c) => c.hex)).size).toBe(LOGO_COLORS.length);
   });
 
-  it('draws a sample sketch for every style, in the picked colors', () => {
-    expect(teamInitials('Pacific Pigskins')).toBe('PP');
-    expect(teamInitials('Smokane')).toBe('S');
-    expect(teamInitials('  ')).toBe('MT');
-    for (const style of LOGO_STYLES) {
-      expect(style.hint, style.id).toBeTruthy();
-      const svg = logoStyleArt(style.id, ['#13294B', '#FFB81C', '#C8102E'], 'Pacific Pigskins');
-      expect(svg, style.id).toMatch(/^<svg [^>]*viewBox="0 0 100 100"/);
-      expect(svg, style.id).toContain('#13294B');
-    }
-    expect(logoStyleArt('crest', ['#13294B'], 'Pacific Pigskins')).toContain('>PP<');
-    expect(logoStyleArt('badge', ['#13294B'], '<b>&')).not.toContain('<b>');
+  it('every style has a plain-words hint for its card', () => {
+    for (const style of LOGO_STYLES) expect(style.hint, style.id).toBeTruthy();
   });
 
   it('the Brand Book prompt is the builder icon prompt with placeholders', () => {

@@ -26,7 +26,6 @@ import {
 	LOGO_KINDS,
 	LOGO_STYLES,
 } from '../../utils/team-logo-prompt';
-import { logoStyleArt } from '../../utils/team-logo-style-art';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -66,13 +65,12 @@ const firstName = teams[0]?.name ?? '';
 			<div class="tlogo__styles" role="group" aria-labelledby="tlogo-style-label" data-group="style">
 				{LOGO_STYLES.map((s) => (
 					<button type="button" class="tlogo__style" data-value={s.id} aria-pressed={(s.id === DEFAULT_LOGO_CHOICE.style) ? 'true' : 'false'}>
-						<span class="tlogo__art" data-art={s.id} set:html={logoStyleArt(s.id, [...DEFAULT_LOGO_CHOICE.colors], firstName)} />
+						{s.image && <img class="tlogo__art" src={s.image} alt="" width="88" height="88" loading="lazy" />}
 						<span class="tlogo__style-name">{s.label}</span>
 						<span class="tlogo__style-hint">{s.hint}</span>
 					</button>
 				))}
 			</div>
-			<p class="tlogo__hint">Quick sketches in your colors, to show each style. Your AI draws the real logo.</p>
 		</div>
 
 		<div class="tlogo__field">
@@ -160,8 +158,7 @@ const firstName = teams[0]?.name ?? '';
 
 <script>
 	import { buildTeamLogoPrompt, LOGO_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
-	import { logoStyleArt } from '../../utils/team-logo-style-art';
-	import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
+		import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
 
 	function init() {
 		const found = document.querySelector<HTMLElement>('[data-team-logo]');
@@ -181,7 +178,6 @@ const firstName = teams[0]?.name ?? '';
 		// The "2 colors / 3 colors" choice: how many the grid holds before a new
 		// tap swaps the last one, and which ready-made sets show.
 		const maxColors = () => Number(picked('count')) || 2;
-		let drawn = '';
 
 		function render() {
 			root.querySelectorAll<HTMLElement>('[data-hex]').forEach((b) => b.setAttribute('aria-pressed', String(colors.includes(b.dataset.hex!))));
@@ -197,14 +193,6 @@ const firstName = teams[0]?.name ?? '';
 				'',
 			);
 			$('[data-prompt]').textContent = built.prompt;
-			// Redraw the style sketches only when what they show has changed.
-			const key = `${colors.join()}|${built.choice.teamName}`;
-			if (key !== drawn) {
-				drawn = key;
-				root.querySelectorAll<HTMLElement>('[data-art]').forEach((art) => {
-					art.innerHTML = logoStyleArt(art.dataset.art!, colors, name.value || 'My Team');
-				});
-			}
 			const note = $<HTMLElement>('[data-color-note]');
 			note.dataset.tone = built.colorNote.tone;
 			note.textContent = built.colorNote.text;
@@ -328,7 +316,7 @@ const firstName = teams[0]?.name ?? '';
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 	}
-	/* The style picker: a card per style, its sketch above its name. */
+	/* The style picker: a card per style, its example logo (once there is one) above its name. */
 	.tlogo__styles {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
@@ -356,24 +344,16 @@ const firstName = teams[0]?.name ?? '';
 		display: block;
 		width: 5.5rem;
 		height: 5.5rem;
-	}
-	.tlogo__art :global(svg) {
-		display: block;
-		width: 100%;
-		height: 100%;
+		object-fit: contain;
 	}
 	.tlogo__style-name {
 		font-weight: 700;
 		font-size: var(--font-size-sm);
 	}
-	.tlogo__style-hint,
-	.tlogo__hint {
+	.tlogo__style-hint {
 		font-size: var(--font-size-xs);
 		color: var(--color-text-secondary);
 		line-height: 1.35;
-	}
-	.tlogo__hint {
-		margin: 0;
 	}
 	/* A ready-made trio: one square in three diagonal bands. */
 	.tlogo__swatch--trio {

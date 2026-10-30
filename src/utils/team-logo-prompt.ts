@@ -30,11 +30,13 @@ import { NFL_TEAM_NAMES } from './nfl-logo';
 import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
 
 /**
- * `hint` is the one line under each style's sample sketch on the website
- * (`team-logo-style-art.ts` draws the sketch), saying in plain words what the
- * label means.
+ * `hint` is the one line on each style's card, saying in plain words what the
+ * label means. `image` is an example logo in that style, shown above the name
+ * on the website: Brandon is making these (2026-10-30); until one is set the
+ * card shows its name and hint alone. Put the files in
+ * `public/assets/team-logo-styles/` and name them here.
  */
-export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string; hint: string }> = [
+export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string; hint: string; image?: string }> = [
   { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest', hint: 'A shield with your initials, old-school varsity' },
   { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head', hint: 'A mascot head in sharp, simple shapes' },
   { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials', hint: 'Your initials, big and bold, no picture' },
