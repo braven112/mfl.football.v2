@@ -55,13 +55,16 @@ COLORS = {
 # the header logo sits on the red header, so its shield knits green
 LOGO_COLORS = {'theleague': {'#1c497c': GREEN, '#13365d': DKGREEN, '#2e8743': RED}}
 
+# TheLeague's official championship pennants (scripts/build-theleague-award-badges.mjs)
+TL_AWARDS = ('league-champion', 'northwest-champion', 'southwest-champion', 'central-champion', 'east-champion')
 AWARDS = ('al-north', 'al-south', 'nl-east', 'nl-west', 'afl-championship', 'premier-league',
           'dleague-champion', 'al-champion', 'nl-champion', 'afl-cup')
 # navSlug -> [(source asset, dest file, patch band motif, or None for a bare knit)]
 MARKS = {
     'theleague': [('/assets/logos/theleague-logo.svg', 'logo.png', None)]
                  + [(f'/assets/theleague/division-badges/{d}.svg', f'division-badges/{d}.png', None)
-                    for d in ('northwest', 'southwest', 'central', 'east')],
+                    for d in ('northwest', 'southwest', 'central', 'east')]
+                 + [(f'/assets/theleague/awards/{a}.svg', f'awards/{a}.png', None) for a in TL_AWARDS],
     'afl': [('/assets/logos/afl-logo.svg', 'logo.png', None),
             ('/assets/afl/conferences/al.svg', 'conferences/al.png', None),
             ('/assets/afl/conferences/nl.svg', 'conferences/nl.png', None),
@@ -71,8 +74,11 @@ MARKS = {
 }
 # every served cut of a mark -> its patch (dark cuts swap to the same patch)
 SWAPS = {
-    'theleague': {f'/assets/theleague/division-badges/{d}.svg': f'division-badges/{d}.png'
-                  for d in ('northwest', 'southwest', 'central', 'east')},
+    'theleague': {
+        **{f'/assets/theleague/division-badges/{d}.svg': f'division-badges/{d}.png'
+           for d in ('northwest', 'southwest', 'central', 'east')},
+        **{f'/assets/theleague/awards/{a}.svg': f'awards/{a}.png' for a in TL_AWARDS},
+    },
     'afl': {
         **{f'/assets/afl/{p}{cut}.svg': f'{p}.png'
            for p in ('conferences/al', 'conferences/nl', 'premier', 'dleague') for cut in ('', '-dark')},
@@ -90,6 +96,7 @@ FONT = {
     'E': ['XXXX', 'X...', 'X...', 'XXX.', 'X...', 'X...', 'XXXX'],
     'H': ['X..X', 'X..X', 'X..X', 'XXXX', 'X..X', 'X..X', 'X..X'],
     'I': ['XXX', '.X.', '.X.', '.X.', '.X.', '.X.', 'XXX'],
+    'L': ['X...', 'X...', 'X...', 'X...', 'X...', 'X...', 'XXXX'],
     'M': ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
     'N': ['X..X', 'XX.X', 'XX.X', 'X.XX', 'X.XX', 'X..X', 'X..X'],
     'O': ['.XX.', 'X..X', 'X..X', 'X..X', 'X..X', 'X..X', '.XX.'],
@@ -105,9 +112,13 @@ LABELS = {
     'al-north': ('NORTH', 130, 219, CREAM), 'al-south': ('SOUTH', 130, 219, CREAM),
     'nl-east': ('EAST', 130, 219, CREAM), 'nl-west': ('WEST', 130, 219, CREAM),
     'al-champion': ('CHAMPION', 130, 219, DKGREEN), 'nl-champion': ('CHAMPION', 130, 219, DKGREEN),
+    'northwest-champion': ('NORTHWEST', 130, 218, CREAM), 'southwest-champion': ('SOUTHWEST', 130, 218, CREAM),
+    'central-champion': ('CENTRAL', 130, 218, CREAM), 'east-champion': ('EAST', 130, 218, CREAM),
 }
 # stitches down the longer side; the shields get more so their word fits
 STITCHES = {a: 64 for a in LABELS}
+# a nine-letter division name needs a wider ribbon of stitches
+STITCHES.update({a: 84 for a in TL_AWARDS if a != 'league-champion'})
 KEEP_TEXT = re.compile(r'<text\b[^>]*>\s*(AL|NL)\s*</text>')
 TEXT = re.compile(r'<text\b.*?</text>', re.S)
 
