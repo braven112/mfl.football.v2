@@ -546,6 +546,14 @@
       "area": "live-scoring",
       "league": "afl",
       "guide": "/guides/tv-score-overlay"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "bug-fix",
+      "summary": "On the Broadcast page, switching a league on or off now updates the board in place: no page reload, and your TV remote stays on the league you pressed.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }
