@@ -28,7 +28,9 @@ beforeEach(() => {
     },
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const back = () => {
   at -= 1;
