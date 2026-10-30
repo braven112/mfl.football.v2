@@ -48,6 +48,7 @@ import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
   detectBigPlays,
@@ -757,7 +758,7 @@ function BigPlay({
   // the team logo instead.
   const [photoFailed, setPhotoFailed] = useState(false);
   const photo = meta?.headshot ?? '';
-  const headshot = !photoFailed && photo.includes('espncdn.com/i/headshots/') ? photo : '';
+  const headshot = !photoFailed && isEspnCdnUrl(photo) ? photo : '';
   return (
     <div className="bov__play" key={alert.key} role="status">
       <div className="bov__box">
