@@ -14,7 +14,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayAction } from '../../../utils/broadcast-remote-commands';
-import { tvLabel, usePairedTvs, useTvRemote } from './useTvRemote';
+import { tvLabel, usePairedTvs, useTvRemote, type PairedTv } from './useTvRemote';
 
 export interface TvRemoteLeague {
   id: string;
@@ -24,6 +24,8 @@ export interface TvRemoteLeague {
 interface Props {
   /** The leagues the owner's board watches — the ones a TV can focus. */
   leagues: readonly TvRemoteLeague[];
+  /** The paired TVs, when already known; otherwise they are fetched. */
+  tvs?: PairedTv[];
 }
 
 type Edge = 'top' | 'bottom';
@@ -48,8 +50,8 @@ function usePageVisible(): boolean {
   return visible;
 }
 
-export default function TvRemote({ leagues }: Props) {
-  const tvs = usePairedTvs();
+export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
+  const tvs = usePairedTvs(knownTvs);
   const [tvId, setTvId] = useState<string | null>(null);
   const [size, setSize] = useState<'small' | 'quarter' | null>(null);
   const [corner, setCorner] = useState<string | null>(null);

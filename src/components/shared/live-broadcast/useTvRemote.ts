@@ -18,10 +18,14 @@ export interface PairedTv {
 const KEEPALIVE_MS = 90_000;
 const NOTE_MS = 2500;
 
-/** The owner's paired TVs; `null` until the first answer arrives. */
-export function usePairedTvs(): PairedTv[] | null {
-  const [tvs, setTvs] = useState<PairedTv[] | null>(null);
+/**
+ * The owner's paired TVs; `null` until the first answer arrives. `known`
+ * skips the fetch (a story, which has no server to ask).
+ */
+export function usePairedTvs(known?: PairedTv[]): PairedTv[] | null {
+  const [tvs, setTvs] = useState<PairedTv[] | null>(known ?? null);
   useEffect(() => {
+    if (known) return;
     let cancelled = false;
     (async () => {
       try {
@@ -35,7 +39,7 @@ export function usePairedTvs(): PairedTv[] | null {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [known]);
   return tvs;
 }
 
