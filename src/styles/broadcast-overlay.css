@@ -574,6 +574,23 @@ body.bov-doc {
   line-height: 1;
 }
 
+.bov__play-body .bov__kick {
+  display: inline-block;
+}
+
+.bov__play-in {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  margin-top: calc(var(--u) * 0.8);
+  font-size: calc(var(--u) * 1.2);
+  color: #e3e8ee;
+}
+
+.bov__play-in .bov__lg {
+  height: calc(var(--u) * 2.2);
+}
+
 .bov__play-what {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: calc(var(--u) * 1.5);

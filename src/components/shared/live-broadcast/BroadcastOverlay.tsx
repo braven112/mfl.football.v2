@@ -46,7 +46,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
-import { getNFLTeamLogo, normalizeTeamCode } from '../../../utils/nfl-logo';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { isEspnCdnUrl } from '../../../utils/espn-cdn';
+import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
   detectBigPlays,
   formatChance,
@@ -462,7 +465,19 @@ export default function BroadcastOverlay({
             stale={stale}
           />
         ) : alert ? (
-          <BigPlay key={alert.key} alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
+          <BigPlay
+            key={alert.key}
+            alert={alert}
+            game={alertGame}
+            logo={logoFor(alertGame)}
+            leagues={games.filter(
+              (g, i) =>
+                (g.leagueName === alert.leagueName || alert.alsoIn.includes(g.leagueName)) &&
+                games.findIndex((o) => o.leagueName === g.leagueName) === i,
+            )}
+            logoFor={logoFor}
+            meta={meta[alert.playerId]}
+          />
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} position={at} count={games.length} focused={false} />
@@ -726,17 +741,24 @@ function BigPlay({
   alert,
   game,
   logo,
+  leagues,
+  logoFor,
   meta,
 }: {
   alert: BigPlayAlert;
   game: OverlayGame;
   logo: string;
+  /** Every league he starts in for this owner, one game each. */
+  leagues: OverlayGame[];
+  logoFor: (game: OverlayGame) => string;
   meta: PlayerMeta | undefined;
 }) {
-  // A photo URL can exist and still fail to load; the team logo stands in.
+  // Only ESPN's cut-out headshot reads on the team-color tile; anything else
+  // (MFL's old thumbnails, a placeholder) or a photo that fails to load shows
+  // the team logo instead.
   const [photoFailed, setPhotoFailed] = useState(false);
-  const headshot = photoFailed ? '' : (meta?.headshot ?? '');
-  const what = [alert.text, ...alert.alsoIn.map((l) => `also ${l}`)].filter(Boolean).join(' · ');
+  const photo = meta?.headshot ?? '';
+  const headshot = !photoFailed && isEspnCdnUrl(photo) ? photo : '';
   return (
     <div className="bov__play" key={alert.key} role="status">
       <div className="bov__box">
@@ -744,15 +766,29 @@ function BigPlay({
       </div>
       <div className="bov__play-body">
         {headshot ? (
-          <img className="bov__shot" src={headshot} alt="" onError={() => setPhotoFailed(true)} />
+          <img
+            className="bov__shot"
+            src={headshot}
+            alt=""
+            style={{ background: getPlayerAvatarBackground(alert.nflTeam) }}
+            onError={() => setPhotoFailed(true)}
+          />
         ) : (
-          <img className="bov__shot bov__shot--team" src={getNFLTeamLogo(alert.nflTeam, 'dark')} alt="" />
+          <img className="bov__shot bov__shot--team" src={nflLogoUrl(alert.nflTeam, 'dark')} alt="" />
         )}
         <div>
           <span className="bov__kick">Big play</span>
           <p className="bov__play-who">{alert.playerName}</p>
-          {what && <p className="bov__play-what">{what}</p>}
+          {alert.text && <p className="bov__play-what">{alert.text}</p>}
           <span className="bov__gain">+{onePlace(alert.gained)}</span>
+          {leagues.length > 1 && (
+            <p className="bov__play-in">
+              Counts in
+              {leagues.map((g) => (
+                <LeagueMark key={g.leagueId} game={g} logo={logoFor(g)} />
+              ))}
+            </p>
+          )}
         </div>
       </div>
     </div>
