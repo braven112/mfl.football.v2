@@ -128,6 +128,26 @@ function sideFor(
 }
 
 /**
+ * The viewer's own side in every league, opponent or not. The Where to watch
+ * screen reads this rather than `overlayGames`: a fantasy bye, or a league
+ * with no head-to-head matchups, still has starters playing NFL games.
+ */
+export function ownerSides(
+  panels: readonly BroadcastLeaguePanel[],
+  poll: BroadcastPollResponse,
+  meta: Record<string, PlayerMeta>,
+): { mine: Pick<OverlaySide, 'lineup'> }[] {
+  const scores = new Map(poll.leagues.map((league) => [league.leagueId, league]));
+  const sides: { mine: Pick<OverlaySide, 'lineup'> }[] = [];
+  for (const panel of panels) {
+    const players = scores.get(panel.leagueId)?.teams[panel.franchiseId]?.players;
+    if (!players) continue;
+    sides.push({ mine: { lineup: lineupFor(players, meta) } });
+  }
+  return sides;
+}
+
+/**
  * Every game with an opponent, in board order: league by league, then each
  * league's matchups (a doubleheader is two games). A bye has nothing to put
  * on screen over a football game, so it is left out.
@@ -210,6 +230,8 @@ export interface WatchGame {
   live: boolean;
   /** ESPN's clock or kickoff, "8:12 - 3rd", "Sun 1:00 PM ET". */
   detail: string;
+  /** Kickoff as ESPN dates it (ISO); the Where to watch screen groups by its day. */
+  kickoff: string;
   /** The viewer's starters in this game, last names, in lineup order. */
   players: string[];
   /**
@@ -248,9 +270,14 @@ const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0] ?? name
  * order. A finished game has nothing left to watch and is left out.
  *
  * Starters only, the viewer's side only (the owner's call, Oct 2026): this
- * row answers "where are my guys", not "where is the opponent's".
+ * row answers "where are my guys", not "where is the opponent's". The Where
+ * to watch screen reads the same list, uncapped (`limit` Infinity).
  */
-export function overlayWatchList(games: readonly OverlayGame[], slate: readonly NflGame[]): WatchGame[] {
+export function overlayWatchList(
+  games: readonly { mine: Pick<OverlaySide, 'lineup'> }[],
+  slate: readonly NflGame[],
+  limit: number = WATCH_LIMIT,
+): WatchGame[] {
   const byTeam = new Map<string, string[]>();
   const seen = new Set<string>();
   for (const game of games) {
@@ -278,13 +305,14 @@ export function overlayWatchList(games: readonly OverlayGame[], slate: readonly 
       network,
       live: game.state === 'in',
       detail: game.shortDetail,
+      kickoff: game.date,
       players,
       regional: REGIONAL_NETWORKS.has(network.toUpperCase()) && isSundayAfternoon(game.date),
       at: Date.parse(game.date) || 0,
     });
   }
   rows.sort((a, b) => Number(b.live) - Number(a.live) || a.at - b.at);
-  return rows.slice(0, WATCH_LIMIT).map(({ at: _at, ...row }) => row);
+  return rows.slice(0, limit).map(({ at: _at, ...row }) => row);
 }
 
 /**

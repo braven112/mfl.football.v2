@@ -6,7 +6,8 @@
  * TV in someone's living room could do whatever the owner's session can:
  * lineups, trades, the lot. So the reader (`getBroadcastViewer`) and the raw
  * pass read (`readPass`) are allowed in exactly the files below, each of which
- * only READS (Live standings joined the Broadcast in Oct 2026, owner's call).
+ * only READS (Live standings joined the Broadcast in Oct 2026, owner's call;
+ * so did Where to watch, which lists the NFL games the owner's starters are in).
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -40,6 +41,7 @@ describe('TV pass scope', () => {
         'src/pages/api/live-standings.ts',
         'src/pages/live/broadcast/index.astro',
         'src/pages/live/broadcast/overlay.astro',
+        'src/pages/live/broadcast/watch.astro',
         'src/pages/live/standings.astro',
         'src/utils/broadcast-viewer.ts',
       ].sort(),
