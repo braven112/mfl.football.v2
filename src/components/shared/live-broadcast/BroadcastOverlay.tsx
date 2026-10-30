@@ -3,10 +3,16 @@
  *
  * Three views of the same games, and the TV app picks which:
  *
- *  - the BAR: the ticker strip, one line at the top or bottom of the screen
- *    (the owner picks, to dodge the network's own graphics). It rotates
- *    through the owner's games and announces his own starters' big plays. It
- *    never takes the remote, so YouTube TV keeps it;
+ *  - the BAR: a small score box in a corner of the screen (the owner picks
+ *    which, to dodge the network's own graphics): the league's logo, both
+ *    clubs' crests and scores, and a win bar split by the board's win
+ *    chance. It rotates through the owner's games. A big play by one of his
+ *    own starters grows the box into the quarter of the screen around it.
+ *    At the QUARTER size (the phone's choice, for a YouTube TV multiview's
+ *    spare quarter) it fills that quarter with both lineups instead. It never
+ *    takes the remote, so YouTube TV keeps it. The app's window is that
+ *    quarter of the screen; on app builds before the corner layout it was a
+ *    band across the screen, and the box sits at the band's right end;
  *  - EXPANDED: the strip opened into both starting lineups of one game, with
  *    whoever just scored lit up. The app holds the remote: Left/Right steps
  *    through the games, Up/Down moves the strip to the top or bottom, OK opens
@@ -20,15 +26,16 @@
  * list ends with "Hide overlay", which closes the overlay altogether.
  *
  * The app talks to this page through `window.__mflOverlay` (`setMode`,
- * `setEdge`, `step`, `move`, `select`), because the keys reach the APP's window, not the
- * page; the page answers through `window.MflOverlayHost` (`watch`, `hide`).
+ * `setEdge`, `setSide`, `setSize`, `step`, `move`, `select`), because the keys
+ * reach the APP's window, not the page; the page answers through
+ * `window.MflOverlayHost` (`watch`, `hide`, `setSize`, `moveTo`).
  *
  * The owner's phone steers it too, through the board's TV remote: while a
  * show plays every key belongs to the show, so the phone is the only way to
- * open the lineups or move the strip mid-game. Its commands arrive on the
- * poll (and a one-second check while the phone has the remote open) and go
- * to the app as `lineups` and `moveTo`; on a build without them they do
- * nothing, since the app's window, not the page, sets the overlay's size.
+ * resize or move the box mid-game. Its commands arrive on the poll (and a
+ * one-second check while the phone has the remote open) and go to the app as
+ * `setSize` and `moveTo`; on a build without them they do nothing, since the
+ * app's window, not the page, decides where the overlay can draw.
  * Arrow keys and Enter are also read here so the page can be checked in a
  * desktop browser.
  *
@@ -39,11 +46,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getNFLTeamLogo, normalizeTeamCode } from '../../../utils/nfl-logo';
 import {
   detectBigPlays,
   formatChance,
+  leagueShortName,
+  overlayColumnFrom,
   overlayEdgeFrom,
+  overlaySizeFrom,
+  winBarShare,
   moveWatch,
   overlayGames,
   overlayWatchList,
@@ -51,10 +62,12 @@ import {
   overlayModeFrom,
   stepOverlay,
   type BigPlayAlert,
+  type OverlayColumn,
   type OverlayEdge,
   type OverlayGame,
   type OverlayMode,
   type OverlaySide,
+  type OverlaySize,
   type WatchGame,
 } from '../../../utils/broadcast-overlay';
 
@@ -68,10 +81,12 @@ const POLL_TIMEOUT_MS = 12_000;
 const RELOAD_MS = 3 * 60 * 60_000;
 /** A page that could not read the leagues at all tries again this soon. */
 const RETRY_MS = 60_000;
-/** How long the bar says how to move or turn it off (the main app's Back menu), the first time it shows. */
+/** How long the corner box says how to move or turn it off, the first time it shows. */
 const BAR_HINT_MS = 12_000;
 /** How long the ticker shows each of the owner's games before the next. */
 const ROTATE_MS = 8_000;
+/** The quarter view has a whole matchup to read, so it stays longer on each. */
+const ROTATE_QUARTER_MS = 20_000;
 /** How long a big-play banner covers the ticker. */
 const ALERT_MS = 7_000;
 /** How long a starter stays lit up in the expanded lineups after a big play. */
@@ -79,8 +94,6 @@ const JUST_SCORED_MS = 90_000;
 /** While the phone has the remote open, how often to check for its next press. */
 const REMOTE_CHECK_MS = 1000;
 const REMOTE_CHECK_TIMEOUT_MS = 4000;
-/** The app's own mark, light on dark: the overlay is always dark. */
-const LOGO_SRC = '/assets/mfl-live/icon-v2.svg';
 
 interface OverlayHost {
   setMode: (mode: OverlayMode) => void;
@@ -91,8 +104,10 @@ interface OverlayHost {
   move: (delta: number) => void;
   /** OK on the highlighted Watch row. */
   select: () => void;
-  /** The lineups are open from the phone: the TV's remote is still the show's. */
-  setPassive?: (passive: boolean) => void;
+  /** Which side the app has put the corner window on. */
+  setSide?: (side: OverlayColumn) => void;
+  /** The corner box's size, as the phone last set it. */
+  setSize?: (size: OverlaySize) => void;
 }
 
 declare global {
@@ -107,13 +122,14 @@ declare global {
       watch?: (query: string) => void;
       /** Close the overlay. */
       hide?: () => void;
-      /**
-       * Open (true) or close the lineups for the phone remote, without taking
-       * the TV's remote from the show. Absent before the phone remote.
-       */
-      lineups?: (show: boolean) => void;
-      /** Move the strip to `'top'` or `'bottom'`. Absent before the phone remote. */
-      moveTo?: (edge: string) => void;
+      /** `'corner'` once the bar's window is a quarter of the screen; absent before. */
+      layout?: () => string;
+      side?: () => string;
+      size?: () => string;
+      /** The phone remote's Small / Quarter. Absent before the corner layout. */
+      setSize?: (size: string) => void;
+      /** The corner to `'top'`, `'bottom'`, `'left'` or `'right'`. Absent before the corner layout. */
+      moveTo?: (where: string) => void;
     };
   }
 }
@@ -126,6 +142,13 @@ interface Props {
   mode?: string | null;
   /** `?edge=`, the app's hint for the first paint. */
   edge?: string | null;
+  /** `?side=` and `?size=`, the corner app's hints for the first paint. */
+  side?: string | null;
+  size?: string | null;
+  /** `?layout=corner`: the app's window is a quarter of the screen. */
+  layout?: string | null;
+  /** Each registry league's on-dark logo, by MFL league id; other leagues are named instead. */
+  leagueLogos?: Record<string, string>;
   /** The owner's answer on /live/settings; decides how a regional game is labeled. */
   sundayTicket?: boolean;
 }
@@ -138,6 +161,10 @@ export default function BroadcastOverlay({
   signedIn,
   mode: initialMode,
   edge: initialEdge,
+  side: initialSide,
+  size: initialSize,
+  layout,
+  leagueLogos = {},
   sundayTicket = false,
 }: Props) {
   const data = useMemo<LiveBroadcastPageData | null>(
@@ -146,6 +173,11 @@ export default function BroadcastOverlay({
   );
   const [mode, setMode] = useState<OverlayMode>(overlayModeFrom(initialMode));
   const [edge, setEdge] = useState<OverlayEdge>(overlayEdgeFrom(initialEdge));
+  const [side, setSide] = useState<OverlayColumn>(overlayColumnFrom(initialSide));
+  const [size, setSize] = useState<OverlaySize>(overlaySizeFrom(initialSize));
+  const [corner, setCorner] = useState(layout === 'corner');
+  const cornerRef = useRef(corner);
+  cornerRef.current = corner;
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const [index, setIndex] = useState(0);
@@ -153,7 +185,6 @@ export default function BroadcastOverlay({
   const [meta, setMeta] = useState<Record<string, PlayerMeta>>(data?.playerMeta ?? {});
   const [stale, setStale] = useState(false);
   const [barHint, setBarHint] = useState(true);
-  const [passive, setPassive] = useState(false);
   const [remote, setRemote] = useState<RemoteState | null>(null);
   const takeRemote = useCallback((next: RemoteState | undefined) => {
     if (!next || typeof next.seq !== 'number') return;
@@ -198,13 +229,19 @@ export default function BroadcastOverlay({
     if (hostMode) setMode(overlayModeFrom(hostMode));
     const hostEdge = window.MflOverlayHost?.edge?.();
     if (hostEdge) setEdge(overlayEdgeFrom(hostEdge));
+    if (window.MflOverlayHost?.layout?.() === 'corner') setCorner(true);
+    const hostSide = window.MflOverlayHost?.side?.();
+    if (hostSide) setSide(overlayColumnFrom(hostSide));
+    const hostSize = window.MflOverlayHost?.size?.();
+    if (hostSize) setSize(overlaySizeFrom(hostSize));
     window.__mflOverlay = {
       setMode: (next) => setMode(overlayModeFrom(next)),
       setEdge: (next) => setEdge(overlayEdgeFrom(next)),
+      setSide: (next) => setSide(overlayColumnFrom(next)),
+      setSize: (next) => setSize(overlaySizeFrom(next)),
       step: (delta) => step(delta > 0 ? 1 : -1),
       move,
       select,
-      setPassive: (next) => setPassive(!!next),
     };
     return () => {
       delete window.__mflOverlay;
@@ -233,11 +270,15 @@ export default function BroadcastOverlay({
 
   // The ticker rotates through the owner's games; expanded and the panel leave
   // that to Left/Right.
+  const quarter = corner && size === 'quarter';
   useEffect(() => {
     if (mode !== 'bar' || games.length < 2) return;
-    const t = window.setInterval(() => setIndex((i) => stepOverlay(i, 1, countRef.current)), ROTATE_MS);
+    const t = window.setInterval(
+      () => setIndex((i) => stepOverlay(i, 1, countRef.current)),
+      quarter ? ROTATE_QUARTER_MS : ROTATE_MS,
+    );
     return () => window.clearInterval(t);
-  }, [mode, games.length]);
+  }, [mode, games.length, quarter]);
 
   // Big plays: each poll is measured against the highest score each starter
   // has shown, so the first poll only sets baselines.
@@ -338,9 +379,20 @@ export default function BroadcastOverlay({
     const host = window.MflOverlayHost;
     if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
     else if (cmd.kind === 'overlay') {
-      if (cmd.action === 'lineups') host?.lineups?.(true);
-      else if (cmd.action === 'ticker') host?.lineups?.(false);
-      else host?.moveTo?.(cmd.action);
+      // Only the corner app can resize or move sideways: an older build's
+      // moveTo reads anything but 'bottom' as 'top'.
+      if (!cornerRef.current) {
+        if (cmd.action === 'top' || cmd.action === 'bottom') host?.moveTo?.(cmd.action);
+        return;
+      }
+      if (cmd.action === 'quarter' || cmd.action === 'small') {
+        setSize(cmd.action);
+        host?.setSize?.(cmd.action);
+      } else {
+        if (cmd.action === 'left' || cmd.action === 'right') setSide(cmd.action);
+        else setEdge(cmd.action);
+        host?.moveTo?.(cmd.action);
+      }
     }
   }, [remote, step]);
 
@@ -368,22 +420,55 @@ export default function BroadcastOverlay({
     };
   }, [remoteActive, takeRemote]);
 
-  if (!data) {
+  const note = !data
+    ? signedIn
+      ? 'Can’t reach your leagues right now. Trying again in a minute.'
+      : 'Open MFL Football on this TV to sign it in, then start the overlay again.'
+    : games.length === 0
+      ? 'No games this week.'
+      : null;
+  if (note) {
+    if (mode === 'panel') {
+      return (
+        <div className="bov bov--panel">
+          <p className="bov__note">{note}</p>
+        </div>
+      );
+    }
     return (
-      <div className={`bov bov--${mode}`}>
-        <p className="bov__note">
-          {signedIn
-            ? 'Can’t reach your leagues right now. Trying again in a minute.'
-            : 'Open MFL Football on this TV to sign it in, then start the overlay again.'}
-        </p>
+      <div className={corner && mode === 'bar' ? 'bov bov--corner' : 'bov bov--strip'} data-edge={edge} data-side={side}>
+        <p className="bov__box bov__note">{note}</p>
       </div>
     );
   }
+  if (!data) return null;
 
-  if (games.length === 0) {
+  const logoFor = (game: OverlayGame) => leagueLogos[game.leagueId] ?? '';
+
+  if (mode === 'bar' && corner) {
+    const at = Math.min(index, games.length - 1);
+    const current = games[at];
+    const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
-      <div className={`bov bov--${mode}`}>
-        <p className="bov__note">No games this week.</p>
+      <div className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
+        {quarter ? (
+          <Quarter
+            game={current}
+            others={games.filter((g) => g.key !== current.key).slice(0, 3)}
+            week={data.week}
+            slate={poll?.games ?? []}
+            lit={justScored}
+            logoFor={logoFor}
+            stale={stale}
+          />
+        ) : alert ? (
+          <BigPlay alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
+        ) : (
+          <>
+            <Ticker game={current} logo={logoFor(current)} position={at} count={games.length} focused={false} />
+            {barHint && <p className="bov__tip">Move, resize or turn off: your phone’s TV remote, or MFL Football › Back</p>}
+          </>
+        )}
       </div>
     );
   }
@@ -394,12 +479,11 @@ export default function BroadcastOverlay({
       <div className={`bov bov--strip bov--${mode}`} data-edge={edge} data-stale={stale || undefined}>
         <Ticker
           game={current}
+          logo={logoFor(current)}
           position={Math.min(index, games.length - 1)}
           count={games.length}
-          week={data.week}
           alert={alert}
-          focused={mode === 'expanded' && !passive}
-          hint={mode === 'bar' && barHint}
+          focused={mode === 'expanded'}
         />
         {mode === 'expanded' && (
           <section className="bov__xp">
@@ -422,20 +506,13 @@ export default function BroadcastOverlay({
               <XpLineup side={current.mine} slate={poll?.games ?? []} lit={justScored} />
               <XpLineup side={current.opponent} slate={poll?.games ?? []} lit={{}} />
             </div>
-            {passive ? (
-              <footer className="bov__keys bov__xp-keys">
-                <span>Opened from your phone · Hide lineups or Next game there</span>
-                {stale && <span className="bov__stale">Reconnecting</span>}
-              </footer>
-            ) : (
-              <footer className="bov__keys bov__xp-keys">
-                {games.length > 1 && <span>◀ ▶ Matchups</span>}
-                <span>▲ ▼ Top or bottom</span>
-                <span>OK Watch a game</span>
-                <span>BACK Back to the game</span>
-                {stale && <span className="bov__stale">Reconnecting</span>}
-              </footer>
-            )}
+            <footer className="bov__keys bov__xp-keys">
+              {games.length > 1 && <span>◀ ▶ Matchups</span>}
+              <span>▲ ▼ Top or bottom</span>
+              <span>OK Watch a game</span>
+              <span>BACK Back to the game</span>
+              {stale && <span className="bov__stale">Reconnecting</span>}
+            </footer>
           </section>
         )}
       </div>
@@ -530,74 +607,236 @@ function Lineup({ side }: { side: OverlaySide }) {
   );
 }
 
-/** The one line that stays on screen: the logo, one of the owner's games, and big plays sliding over it. */
-function Ticker({
-  game,
-  position,
-  count,
-  week,
-  alert,
-  focused,
-  hint,
-}: {
-  game: OverlayGame;
-  position: number;
-  count: number;
-  week: number;
-  alert: BigPlayAlert | undefined;
-  focused: boolean;
-  /** The first few seconds: how to open it up, in place of the projections. */
-  hint: boolean;
-}) {
+/** The league's on-dark logo, or its short name when it has none. */
+function LeagueMark({ game, logo }: { game: OverlayGame; logo: string }) {
+  return logo ? (
+    <img className="bov__lg" src={logo} alt={game.leagueName} />
+  ) : (
+    <span className="bov__lg-text" title={game.leagueName}>
+      {leagueShortName(game.leagueName)}
+    </span>
+  );
+}
+
+/** A club's on-dark crest, or its abbreviation in a disc of its colour. */
+function Crest({ side }: { side: OverlaySide }) {
+  if (!side.icon) {
+    return (
+      <span className="bov__crest bov__crest--text" style={{ ['--bov-team' as string]: side.swatch }} aria-label={side.name}>
+        {side.abbrev.slice(0, 3)}
+      </span>
+    );
+  }
+  return (
+    <img
+      className="bov__crest"
+      src={side.icon}
+      alt={side.name}
+      data-stroke={side.iconStroke ? true : undefined}
+      style={side.iconStroke ? { ['--bov-stroke' as string]: side.iconStroke } : undefined}
+    />
+  );
+}
+
+/** The viewer's colour for their win chance, the opponent's for the rest. */
+function WinBar({ game }: { game: OverlayGame }) {
+  const share = winBarShare(game.winChance);
+  return (
+    <span
+      className="bov__wp"
+      role="img"
+      aria-label={`Win chance ${formatChance(game.winChance)}`}
+      style={{ ['--bov-me' as string]: game.mine.swatch, ['--bov-them' as string]: game.opponent.swatch }}
+    >
+      <i style={{ width: `${share}%` }} />
+    </span>
+  );
+}
+
+/** League, both crests and scores, and the win bar: the box's one line. */
+function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
   const mineLead = game.readable && game.mine.live > game.opponent.live;
   const theirLead = game.readable && game.opponent.live > game.mine.live;
   return (
-    <div className="bov__strip" data-focused={focused || undefined}>
-      <img className="bov__logo" src={LOGO_SRC} alt="MFL Football" />
-      <div className="bov__now" key={game.key}>
-        <span className="bov__now-league">{game.leagueName}</span>
-        <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.mine.swatch }}>
-          {game.mine.abbrev}
+    <span className="bov__row" key={game.key}>
+      <LeagueMark game={game} logo={logo} />
+      <span className="bov__sep" aria-hidden="true" />
+      <Crest side={game.mine} />
+      <b className="bov__num" data-lead={mineLead || undefined}>
+        {game.readable ? onePlace(game.mine.live) : '–'}
+      </b>
+      {game.readable && <WinBar game={game} />}
+      <b className="bov__num" data-lead={theirLead || undefined}>
+        {game.readable ? onePlace(game.opponent.live) : '–'}
+      </b>
+      <Crest side={game.opponent} />
+    </span>
+  );
+}
+
+/**
+ * The box that stays on screen: one of the owner's games at a time. On a
+ * window with no room to grow (a strip, or the expanded view) a big play
+ * takes its line for a few seconds.
+ */
+function Ticker({
+  game,
+  logo,
+  position,
+  count,
+  alert,
+  focused,
+}: {
+  game: OverlayGame;
+  logo: string;
+  position: number;
+  count: number;
+  alert?: BigPlayAlert;
+  focused: boolean;
+}) {
+  return (
+    <div className="bov__box" data-focused={focused || undefined}>
+      {alert ? (
+        <span className="bov__flash" key={alert.key} role="status">
+          <span className="bov__kick">Big play</span>
+          <span className="bov__flash-who">{alert.playerName}</span>
+          <span className="bov__gain">+{onePlace(alert.gained)}</span>
         </span>
-        <b data-lead={mineLead || undefined}>{game.readable ? onePlace(game.mine.live) : '–'}</b>
-        <span className="bov__chip-dash">–</span>
-        <b data-lead={theirLead || undefined}>{game.readable ? onePlace(game.opponent.live) : '–'}</b>
-        <span className="bov__chip-team" style={{ ['--bov-team' as string]: game.opponent.swatch }}>
-          {game.opponent.abbrev}
+      ) : (
+        <ScoreRow game={game} logo={logo} />
+      )}
+      {count > 1 && (
+        <span className="bov__pips" aria-hidden="true">
+          {Array.from({ length: count }, (_, i) => (
+            <i key={i} data-on={i === position || undefined} />
+          ))}
         </span>
-        {hint ? (
-          <span className="bov__now-proj">Move or turn off: MFL Football › Back</span>
-        ) : game.readable && (
-          <span className="bov__now-proj">
-            Proj {onePlace(game.mine.projectedFinal)} – {onePlace(game.opponent.projectedFinal)}
-          </span>
-        )}
-        {game.readable && <span className="bov__chip-chance">{formatChance(game.winChance)}</span>}
-      </div>
-      <span className="bov__week">
-        {count > 1 && (
-          <span className="bov__pips" aria-hidden="true">
-            {Array.from({ length: count }, (_, i) => (
-              <i key={i} data-on={i === position || undefined} />
-            ))}
-          </span>
-        )}
-        Wk {week}
-      </span>
-      {alert && (
-        <div className="bov__alert" key={alert.key} role="status">
-          <span className="bov__alert-tag">Big play</span>
-          <span className="bov__alert-who">{alert.playerName}</span>
-          <span className="bov__alert-what">
-            {[alert.text, `for ${alert.teamName}`, ...alert.alsoIn.map((l) => `also ${l}`)].filter(Boolean).join(' · ')}
-          </span>
-          <span className="bov__alert-pts">+{onePlace(alert.gained)}</span>
-          <span className="bov__alert-now">
-            {alert.mineAbbrev} {onePlace(alert.mineLive)} – {onePlace(alert.opponentLive)} {alert.opponentAbbrev}
-          </span>
-        </div>
       )}
     </div>
+  );
+}
+
+/** A starter's big play: the box grows into its quarter of the screen around the player. */
+function BigPlay({
+  alert,
+  game,
+  logo,
+  meta,
+}: {
+  alert: BigPlayAlert;
+  game: OverlayGame;
+  logo: string;
+  meta: PlayerMeta | undefined;
+}) {
+  const headshot = meta?.headshot ?? '';
+  const what = [alert.text, ...alert.alsoIn.map((l) => `also ${l}`)].filter(Boolean).join(' · ');
+  return (
+    <div className="bov__play" key={alert.key} role="status">
+      <div className="bov__box">
+        <ScoreRow game={game} logo={logo} />
+      </div>
+      <div className="bov__play-body">
+        {headshot ? (
+          <img className="bov__shot" src={headshot} alt="" />
+        ) : (
+          <img className="bov__shot bov__shot--team" src={getNFLTeamLogo(alert.nflTeam, 'dark')} alt="" />
+        )}
+        <div>
+          <span className="bov__kick">Big play</span>
+          <p className="bov__play-who">{alert.playerName}</p>
+          {what && <p className="bov__play-what">{what}</p>}
+          <span className="bov__gain">+{onePlace(alert.gained)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The QUARTER size: the whole corner, for the multiview quarter nobody is
+ * watching. One matchup with both lineups, the owner's other games along the
+ * bottom. A big play lights its row rather than opening a pop-out.
+ */
+function Quarter({
+  game,
+  others,
+  week,
+  slate,
+  lit,
+  logoFor,
+  stale,
+}: {
+  game: OverlayGame;
+  others: OverlayGame[];
+  week: number;
+  slate: readonly NflGame[];
+  lit: Record<string, number>;
+  logoFor: (game: OverlayGame) => string;
+  stale: boolean;
+}) {
+  const playing = [...game.mine.lineup, ...game.opponent.lineup].filter((p) => gameNote(p.nflTeam, slate).live).length;
+  const mineLead = game.readable && game.mine.live > game.opponent.live;
+  const theirLead = game.readable && game.opponent.live > game.mine.live;
+  return (
+    <section className="bov__q" key={game.key}>
+      <header className="bov__q-head">
+        <LeagueMark game={game} logo={logoFor(game)} />
+        <span>Week {week}</span>
+        {playing > 0 && <span className="bov__q-live">{playing} playing</span>}
+      </header>
+      <div className="bov__q-score">
+        <Crest side={game.mine} />
+        <b className="bov__num" data-lead={mineLead || undefined}>
+          {game.readable ? onePlace(game.mine.live) : '–'}
+        </b>
+        {game.readable ? <WinBar game={game} /> : <span />}
+        <b className="bov__num bov__num--end" data-lead={theirLead || undefined}>
+          {game.readable ? onePlace(game.opponent.live) : '–'}
+        </b>
+        <Crest side={game.opponent} />
+      </div>
+      <div className="bov__q-cols">
+        <QuarterLineup side={game.mine} slate={slate} lit={lit} />
+        <QuarterLineup side={game.opponent} slate={slate} lit={{}} />
+      </div>
+      {(others.length > 0 || stale) && (
+        <footer className="bov__q-foot">
+          {others.map((other) => (
+            <span className="bov__mini" key={other.key}>
+              <LeagueMark game={other} logo={logoFor(other)} />
+              <Crest side={other.mine} />
+              {other.readable ? onePlace(other.mine.live) : '–'}
+              {other.readable && <WinBar game={other} />}
+              {other.readable ? onePlace(other.opponent.live) : '–'}
+              <Crest side={other.opponent} />
+            </span>
+          ))}
+          {stale && <span className="bov__stale">Reconnecting</span>}
+        </footer>
+      )}
+    </section>
+  );
+}
+
+function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonly NflGame[]; lit: Record<string, number> }) {
+  return (
+    <ol className="bov__q-lineup">
+      {side.lineup.map((player) => {
+        const note = gameNote(player.nflTeam, slate);
+        return (
+          <li
+            key={player.id}
+            data-live={note.live || undefined}
+            data-done={note.done || undefined}
+            data-lit={lit[player.id] ? true : undefined}
+          >
+            <span className="bov__pos">{player.position}</span>
+            <span className="bov__name">{player.name}</span>
+            <b>{note.started ? onePlace(player.live) : '–'}</b>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -616,12 +855,22 @@ function XpSide({ side, readable, lead, end = false }: { side: OverlaySide; read
   );
 }
 
-/** ESPN's clock for the player's NFL game ("8:12 - 3rd"), "Final", or its kickoff. */
-function gameNote(nflTeam: string, slate: readonly NflGame[]): { text: string; live: boolean } {
-  if (!nflTeam) return { text: '', live: false };
+interface GameNote {
+  /** ESPN's clock for the player's NFL game ("8:12 - 3rd"), "Final", or its kickoff. */
+  text: string;
+  live: boolean;
+  /** His game is over. */
+  done: boolean;
+  /** His game has kicked off (or he has no game to wait for). */
+  started: boolean;
+}
+
+function gameNote(nflTeam: string, slate: readonly NflGame[]): GameNote {
+  const none = { text: '', live: false, done: false, started: true };
+  if (!nflTeam) return none;
   const game = slate.find((g) => normalizeTeamCode(g.away.code) === nflTeam || normalizeTeamCode(g.home.code) === nflTeam);
-  if (!game) return { text: '', live: false };
-  return { text: game.shortDetail, live: game.state === 'in' };
+  if (!game) return none;
+  return { text: game.shortDetail, live: game.state === 'in', done: game.state === 'post', started: game.state !== 'pre' };
 }
 
 function XpLineup({ side, slate, lit }: { side: OverlaySide; slate: readonly NflGame[]; lit: Record<string, number> }) {

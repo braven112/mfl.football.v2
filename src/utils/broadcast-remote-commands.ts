@@ -11,14 +11,15 @@ export type RemoteCommand =
   | { kind: 'sound'; on: boolean }
   | { kind: 'reset' }
   /**
-   * The score overlay drawn over another app (the TV app's ticker): open or
-   * close its lineups, or move it to an edge. The TV's remote belongs to the
-   * show underneath, so the phone is the only way to steer it mid-game.
+   * The score overlay drawn over another app (the TV app's corner box): the
+   * small box or a whole quarter of the screen, and which corner. The TV's
+   * remote belongs to the show underneath, so the phone is the only way to
+   * steer it mid-game.
    */
   | { kind: 'overlay'; action: OverlayAction };
 
-export type OverlayAction = 'lineups' | 'ticker' | 'top' | 'bottom';
-const OVERLAY_ACTIONS: readonly OverlayAction[] = ['lineups', 'ticker', 'top', 'bottom'];
+export type OverlayAction = 'small' | 'quarter' | 'top' | 'bottom' | 'left' | 'right';
+const OVERLAY_ACTIONS: readonly OverlayAction[] = ['small', 'quarter', 'top', 'bottom', 'left', 'right'];
 
 /** What the TV reads: is a remote active, and the latest command if any. */
 export interface RemoteState {

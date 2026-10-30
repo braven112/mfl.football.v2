@@ -28,6 +28,20 @@ export type OverlayMode = 'panel' | 'bar' | 'expanded';
 /** Which screen edge the strip sits on; the owner moves it to dodge the network's own graphics. */
 export type OverlayEdge = 'top' | 'bottom';
 
+/**
+ * Which side of the screen the corner box sits on. Only app builds whose
+ * window is a quarter of the screen (`layout() === 'corner'`) can move it;
+ * on older builds the box sits at the right end of the full-width strip.
+ */
+export type OverlayColumn = 'left' | 'right';
+
+/**
+ * How much of its corner the box takes: `small` is the one-line ticker, and
+ * `quarter` fills the whole quarter of the screen with both lineups (for a
+ * YouTube TV multiview, where three games take the other three quarters).
+ */
+export type OverlaySize = 'small' | 'quarter';
+
 export interface OverlayPlayer {
   id: string;
   name: string;
@@ -43,6 +57,10 @@ export interface OverlaySide {
   name: string;
   abbrev: string;
   swatch: string;
+  /** The board's small crest; the board is dark, so this is the on-dark cut. '' when the club has none. */
+  icon: string;
+  /** Outline for `icon`, set only when that art is a light cut. */
+  iconStroke?: string;
   live: number;
   projectedFinal: number;
   lineup: OverlayPlayer[];
@@ -50,6 +68,7 @@ export interface OverlaySide {
 
 export interface OverlayGame {
   key: string;
+  leagueId: string;
   leagueName: string;
   mine: OverlaySide;
   opponent: OverlaySide;
@@ -100,6 +119,8 @@ function sideFor(
     name: team.name,
     abbrev: team.abbrev,
     swatch: team.swatch,
+    icon: team.iconSmall,
+    ...(team.iconSmallStroke ? { iconStroke: team.iconSmallStroke } : {}),
     live: score?.live ?? 0,
     projectedFinal: score?.projectedFinal ?? 0,
     lineup: score ? lineupFor(score.players, meta) : [],
@@ -124,6 +145,7 @@ export function overlayGames(
       if (!matchup.opponent) continue;
       games.push({
         key: `${panel.leagueId}:${matchup.index}`,
+        leagueId: panel.leagueId,
         leagueName: panel.leagueName,
         mine: sideFor(matchup.mine, score?.teams[matchup.mine.franchiseId], meta),
         opponent: sideFor(matchup.opponent, score?.teams[matchup.opponent.franchiseId], meta),
@@ -133,6 +155,39 @@ export function overlayGames(
     }
   }
   return games;
+}
+
+/** `?side=` or the app's answer; anything else is the right, where the corner box first shipped. */
+export function overlayColumnFrom(raw: string | null | undefined): OverlayColumn {
+  return raw === 'left' ? 'left' : 'right';
+}
+
+export function overlaySizeFrom(raw: string | null | undefined): OverlaySize {
+  return raw === 'quarter' ? 'quarter' : 'small';
+}
+
+/**
+ * The viewer's share of the win bar, 0-100. It is the board's own win chance,
+ * so a settled game fills the bar with one colour and the loser's disappears.
+ */
+export function winBarShare(chance: number): number {
+  if (!Number.isFinite(chance)) return 50;
+  return Math.min(100, Math.max(0, chance * 100));
+}
+
+/**
+ * A league with no logo of its own (one this site does not run) is named in
+ * its place: its initials, or a short name as it is. "Best Ball 2026" → "BB26".
+ */
+export function leagueShortName(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  if (words.length === 1) return words[0].slice(0, 6).toUpperCase();
+  return words
+    .map((w) => (/^\d+$/.test(w) ? w.slice(-2) : w[0]))
+    .join('')
+    .slice(0, 5)
+    .toUpperCase();
 }
 
 /** "99.2%". Only a settled game prints 100% or 0%; rounding never gets there. */

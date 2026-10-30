@@ -55,10 +55,12 @@ describe('the command list is closed', () => {
       'sound:off',
       'reset',
       'pin-league:13522',
-      'overlay:lineups',
-      'overlay:ticker',
+      'overlay:small',
+      'overlay:quarter',
       'overlay:top',
       'overlay:bottom',
+      'overlay:left',
+      'overlay:right',
     ]) {
       const parsed = parseRemoteCommand(raw);
       expect(parsed).not.toBeNull();
@@ -80,7 +82,9 @@ describe('the command list is closed', () => {
       'overlay:',
       'overlay:panel',
       'overlay:hide',
-      'overlay:lineups ',
+      'overlay:quarter ',
+      'overlay:lineups',
+      'overlay:ticker',
       'OVERLAY:TOP',
       '<script>',
       'open',
