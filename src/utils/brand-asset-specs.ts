@@ -175,6 +175,22 @@ export const STORED_SIZES: ReadonlyArray<readonly [string, number, number]> = [
 ];
 
 /**
+ * The files one crest is cut into, in pixels. The logo resizer
+ * (`src/data/logo-platform-sizes.ts`) reads these rather than copying them, and
+ * the test pins them to `STORED_SIZES`, so the resizer cannot hand out an MFL
+ * size the site does not store.
+ */
+export const CREST_OUTPUTS = {
+  crest: 1024,
+  cardIcon: 100,
+  groupMe: 400,
+  banner: { width: 950, height: 158 },
+  bannerRetina: { width: 1900, height: 316 },
+  appIcon: 512,
+  favicons: [16, 32, 180, 512],
+} as const;
+
+/**
  * Copy-paste starting point for an AI image tool. `[brackets]` are the owner's to fill.
  * The same sentence the logo prompt builder writes (`team-logo-prompt.ts`), so the
  * two can never drift.

@@ -21,6 +21,7 @@ export function sharedHostSitemapEntries(): SitemapEntry[] {
 		...SERVICES.map((s) => ({ path: s.path, changefreq: 'monthly' as const, priority: 0.9 })),
 		{ path: '/mfl-all-play-standings', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/fantasy-football-logo-maker', changefreq: 'monthly', priority: 0.8 },
+		{ path: '/fantasy-football-logo-resizer', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/compare', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/about', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/live', changefreq: 'weekly', priority: 0.8 },

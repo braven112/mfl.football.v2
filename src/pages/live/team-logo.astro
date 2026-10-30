@@ -14,7 +14,8 @@
  * The owner's teams pre-fill the name. Signed out, the page still works with
  * a typed name; nothing here needs the session except that list and the
  * Owner Suite Pro tracer below it (`LogoTracer`), which turns the finished
- * PNG into an SVG.
+ * PNG into an SVG. Between them sits the free logo resizer (`LogoResizer`),
+ * which cuts the finished PNG into every platform's size in the browser.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import TeamLogoBuilder from '../../components/shared/TeamLogoBuilder.astro';
@@ -23,6 +24,7 @@ import { listOwnerLeagues } from '../../utils/live/owner-league';
 import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import LogoTracer from '../../components/shared/live/LogoTracer.astro';
+import LogoResizer from '../../components/shared/LogoResizer.astro';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -41,6 +43,15 @@ const firstName = teams[0]?.name ?? '';
 			Pick a look and we&rsquo;ll write the prompt. Paste it into ChatGPT or Gemini to make the picture.
 		</p>
 		<TeamLogoBuilder teams={teams} initialName={firstName} />
+		<div class="mls-resize">
+			<LogoResizer title="Got your logo? Drop it here for every size" pageHref="/fantasy-football-logo-resizer" />
+		</div>
 		<LogoTracer pro={hasMflLivePro(user)} signInHref={user ? undefined : mflLoginUrl('/live/team-logo')} />
 	</section>
 </MflAppLayout>
+
+<style>
+	.mls-resize {
+		margin: 2rem 0;
+	}
+</style>

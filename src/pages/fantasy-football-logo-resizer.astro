@@ -1,0 +1,235 @@
+---
+/**
+ * /fantasy-football-logo-resizer — the free logo resizer, public and
+ * indexable, for any fantasy football player on any site (Brandon,
+ * 2026-10-30). Step two of the free logo maker: drop in the logo ChatGPT or
+ * Gemini made and download every size each platform wants.
+ *
+ * It runs entirely in the browser (`LogoResizer`): no AI, no upload, no API
+ * route. The same component sits under the prompt on
+ * `/fantasy-football-logo-maker` and MFL Live's `/live/team-logo`; this page
+ * exists so search engines have a page that answers "fantasy football logo
+ * size" and "resize team logo" on its own.
+ *
+ * The FAQ answers are built from `src/data/logo-platform-sizes.ts`, so an
+ * answer can never name a size the tool does not make.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import LogoResizer from '../components/shared/LogoResizer.astro';
+import { FORMER_BRAND, type Faq } from '../data/mfl-services';
+import { ALL_LOGO_OUTPUTS, LOGO_PLATFORMS, SAFE_SQUARE } from '../data/logo-platform-sizes';
+import { CREST_OUTPUTS } from '../utils/brand-asset-specs';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const PATH = '/fantasy-football-logo-resizer';
+const out = (id: string) => ALL_LOGO_OUTPUTS.find((o) => o.id === id)!;
+const px = (id: string) => `${out(id).width} × ${out(id).height} pixels`;
+const unpublished = LOGO_PLATFORMS.find((p) => p.id === 'fantasy')!.outputs.map((o) => o.label.replace(/ team (logo|avatar)$/, ''));
+
+const faqs: Faq[] = [
+	{ q: 'What size should a fantasy football logo be?', a: `Make it a ${CREST_OUTPUTS.crest} × ${CREST_OUTPUTS.crest} pixel square PNG with a transparent background. Every fantasy site accepts a square, and this tool cuts that one file into every smaller size: ${SAFE_SQUARE} × ${SAFE_SQUARE} for team logos, down to 16 × 16 for a browser tab.` },
+	{ q: 'What size is a Sleeper team avatar?', a: `Sleeper does not publish a size. Use a ${px('sleeper')} square PNG; Sleeper shows it as a small circle, so keep the logo centered.` },
+	{ q: 'What size is an ESPN fantasy team logo?', a: `ESPN does not publish a size. Use a ${px('espn')} square PNG. ESPN only lets you upload your own logo in a private league.` },
+	{ q: 'What size is a Yahoo fantasy team logo?', a: `Yahoo does not publish a size. Use a ${px('yahoo')} square PNG.` },
+	{ q: 'Which fantasy sites publish a logo size?', a: `None of the big ones do: ${unpublished.join(', ')} all leave it unsaid. A ${SAFE_SQUARE} × ${SAFE_SQUARE} square works on every one of them.` },
+	{ q: 'What size is a MyFantasyLeague team icon and banner?', a: `On MFL.football league sites a team icon shows at ${CREST_OUTPUTS.cardIcon} × ${CREST_OUTPUTS.cardIcon} pixels and a banner at ${CREST_OUTPUTS.banner.width} × ${CREST_OUTPUTS.banner.height}, or ${CREST_OUTPUTS.bannerRetina.width} × ${CREST_OUTPUTS.bannerRetina.height} for sharp screens. On MFL itself, paste the image address into your franchise Icon or Logo field.` },
+	{ q: 'What size is a Discord server icon?', a: `Discord does not publish one; a ${px('discord-server')} square works. Discord asks for avatars of at least 200 × 200 pixels and crops them to a circle.` },
+	{ q: 'What size is an X (Twitter) profile picture?', a: `X recommends ${px('x')}, under 2 MB, in JPG, PNG or GIF.` },
+	{ q: 'What size is a Slack profile photo?', a: `Slack takes a square from 512 × 512 up to 1024 × 1024 pixels. This tool makes the ${px('slack')} version.` },
+	{ q: 'What size should a logo be for a shirt or trophy?', a: `Send the print shop the biggest file you have and ask what it needs. The ${px('print')} file covers about 10 inches at 300 dpi; for big prints, ask for an SVG.` },
+	{ q: 'Is my logo uploaded anywhere?', a: 'No. Your logo never leaves your device: it is resized in your browser with no upload, no account and no AI.' },
+	{ q: 'Is the logo resizer free?', a: `Yes, free with no account, for any fantasy team on any site. It is made by MFL.football, formerly ${FORMER_BRAND}.` },
+];
+
+const jsonLd = [
+	organizationJsonLd(),
+	{
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: 'Free Fantasy Football Logo Resizer',
+		url: `https://mfl.football${PATH}`,
+		applicationCategory: 'DesignApplication',
+		operatingSystem: 'Any',
+		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+		description: 'Free in-browser tool that resizes one team logo into every size Sleeper, ESPN, Yahoo, MFL, Discord, GroupMe, Slack and social profiles use. Nothing is uploaded.',
+		publisher: { '@id': 'https://mfl.football/#organization' },
+	},
+	faqJsonLd(faqs),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: 'Fantasy football logo maker', path: '/fantasy-football-logo-maker' },
+		{ name: 'Logo resizer', path: PATH },
+	]),
+];
+---
+
+<MarketingShell
+	title="Free Fantasy Football Logo Resizer: Every Size for Sleeper, ESPN, Yahoo and More"
+	description="Resize your fantasy football team logo for Sleeper, ESPN, Yahoo, MFL, Discord, GroupMe and more, free. Runs in your browser; nothing is uploaded."
+	canonicalPath={PATH}
+	jsonLd={jsonLd}
+	ogImage="/assets/logo-maker/examples.png"
+>
+	<article class="lr">
+		<header class="lr-hero">
+			<p class="lr-eyebrow">Free tool · Formerly {FORMER_BRAND}</p>
+			<h1>Fantasy football logo resizer</h1>
+			<p class="lr-answer">
+				One logo in, every size out. Drop in your team logo and download the right file for Sleeper, ESPN, Yahoo,
+				MyFantasyLeague, Discord, GroupMe, Slack, X and more. Free, no account, and your logo never leaves your device.
+			</p>
+		</header>
+
+		<section class="ui-card lr-card" aria-label="Logo resizer">
+			<LogoResizer />
+		</section>
+
+		<section class="lr-block" aria-labelledby="lr-need">
+			<h2 id="lr-need">Need a logo first?</h2>
+			<p>
+				The <a href="/fantasy-football-logo-maker">free fantasy football logo maker</a> writes the prompt: pick a style
+				and your team colors, paste it into ChatGPT or Gemini, then bring the picture back here.
+			</p>
+		</section>
+
+		<section class="lr-block" aria-labelledby="lr-sizes">
+			<h2 id="lr-sizes">Logo sizes by site</h2>
+			{LOGO_PLATFORMS.map((p) => (
+				<div class="lr-table">
+					<h3>{p.name}</h3>
+					<dl>
+						{p.outputs.map((o) => (
+							<div>
+								<dt>{o.label}</dt>
+								<dd>{o.width} × {o.height}{o.published ? '' : ' (no published size)'}</dd>
+							</div>
+						))}
+					</dl>
+				</div>
+			))}
+		</section>
+
+		<section class="lr-block" aria-labelledby="lr-faq">
+			<h2 id="lr-faq">Questions</h2>
+			<dl class="lr-faq">
+				{faqs.map((f) => (
+					<div>
+						<dt>{f.q}</dt>
+						<dd>{f.a}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+	</article>
+</MarketingShell>
+
+<style>
+	.lr-hero {
+		max-width: 46rem;
+		padding: 3.5rem 0 1.5rem;
+	}
+
+	.lr-eyebrow {
+		margin: 0;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--brand-red);
+	}
+
+	.lr-hero h1 {
+		margin: 0.75rem 0 1.25rem;
+		font-size: var(--font-size-3xl);
+		line-height: 1;
+		text-transform: uppercase;
+		text-wrap: balance;
+	}
+
+	.lr-answer {
+		margin: 0;
+		font-size: var(--font-size-lg);
+		line-height: 1.5;
+	}
+
+	/* The kit (ui-card) owns the outline; the splash has no --card-bg. */
+	.lr-card {
+		max-width: 60rem;
+		padding: 1.25rem;
+		background: var(--primary-content-bg-color);
+	}
+
+	.lr-block {
+		max-width: 46rem;
+		padding-top: 3rem;
+		line-height: 1.55;
+	}
+
+	.lr-block h2 {
+		margin: 0 0 1rem;
+		font-size: var(--font-size-2xl);
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.lr-block a {
+		font-weight: 700;
+		text-decoration: underline;
+	}
+
+	.lr-table h3 {
+		margin: 1.25rem 0 0.5rem;
+		font-size: var(--font-size-lg);
+	}
+
+	.lr-table dl {
+		display: grid;
+		gap: 0.25rem;
+		margin: 0;
+	}
+
+	.lr-table dl > div {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.35rem 0;
+		border-bottom: 1px solid var(--primary-content-border-color);
+	}
+
+	.lr-table dt {
+		font-weight: 600;
+	}
+
+	.lr-table dd {
+		margin: 0;
+		text-align: right;
+		color: var(--color-gray-600);
+	}
+
+	.lr-faq {
+		display: grid;
+		gap: 1rem;
+		margin: 0;
+	}
+
+	.lr-faq dt {
+		font-weight: 700;
+	}
+
+	.lr-faq dd {
+		margin: 0.35rem 0 0;
+		color: var(--color-gray-600);
+	}
+
+	@media (max-width: 760px) {
+		.lr-hero {
+			padding-top: 2rem;
+		}
+
+		.lr-card {
+			padding: 1rem;
+		}
+	}
+</style>

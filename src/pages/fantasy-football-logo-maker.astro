@@ -12,9 +12,13 @@
  * Importing your own MFL teams is the paid upgrade (Brandon, 2026-10-29); it
  * is not on sale yet, so its button is the "I'm interested" door. Tracing the
  * finished PNG into an SVG is Pro too (same day), on `/live/team-logo`.
+ *
+ * Under the builder sits the free logo resizer (`LogoResizer`, Brandon
+ * 2026-10-30), which also has its own page, `/fantasy-football-logo-resizer`.
  */
 import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
 import TeamLogoBuilder from '../components/shared/TeamLogoBuilder.astro';
+import LogoResizer from '../components/shared/LogoResizer.astro';
 import { FORMER_BRAND, type Faq } from '../data/mfl-services';
 import { LOGO_MAKER_EXAMPLES } from '../data/logo-maker-examples';
 import { LOGO_STYLES } from '../utils/team-logo-prompt';
@@ -31,7 +35,7 @@ const faqs: Faq[] = [
 	{ q: 'How do I make a fantasy football logo with AI?', a: 'Type your team name and a mascot idea, pick a style and up to two team colors, then copy the prompt. Paste it into ChatGPT or Gemini, ask for a few tries, and keep the one that still reads when it is tiny.' },
 	{ q: 'What makes a fantasy football logo look professional?', a: 'A mascot you can picture. Your team name can be a joke or a pun, but give the logo a real animal or object to draw, like a rhino or a viking helmet. A pun is hard to draw; a rhino is not. Then keep it to one or two team colors plus white and black.' },
 	{ q: 'Why does the tool write a prompt instead of making the picture?', a: 'You already have a better image maker than we could run: ChatGPT and Gemini are free to try. The prompt carries the rules a good team logo needs, so whichever one you use gets them right.' },
-	{ q: 'What size should a fantasy football logo be?', a: 'A square logo at 1024 × 1024 pixels on a transparent background covers every fantasy site. Banners are 1900 × 316. The prompt asks for these sizes, and for a design that still reads when shrunk to 40 pixels.' },
+	{ q: 'What size should a fantasy football logo be?', a: 'A square logo at 1024 × 1024 pixels on a transparent background covers every fantasy site. Banners are 1900 × 316. The prompt asks for these sizes, and the free logo resizer on this page turns that one file into every size Sleeper, ESPN, Yahoo, Discord and the rest want.' },
 	{ q: 'Why would I want my logo as an SVG?', a: 'A PNG is a grid of dots that gets blurry when you make it bigger. An SVG is drawn from shapes, so it stays sharp at any size: print shops want one for shirts and jerseys, engravers and sticker makers cut from one, and it blows up to banner size with clean edges. Owner Suite Pro traces your finished PNG into an SVG.' },
 	{ q: 'Can I use an NFL team’s logo for my fantasy team?', a: 'No. NFL, college and pro logos are trademarks. Every prompt asks for an original design, and the tool warns you when your team name matches an NFL club so you ask for new art instead.' },
 	{ q: 'How do I put the logo on my MyFantasyLeague team?', a: 'On MFL, open your franchise settings and paste the image address into the Icon (square) or Logo (banner) field. MFL links to an image hosted on the web, so upload the file somewhere public first.' },
@@ -77,6 +81,10 @@ const jsonLd = [
 
 		<section class="ui-card lm-card" aria-label="Logo prompt builder">
 			<TeamLogoBuilder />
+		</section>
+
+		<section class="ui-card lm-card lm-resize" aria-label="Logo resizer">
+			<LogoResizer title="Got your logo? Drop it here for every size" pageHref="/fantasy-football-logo-resizer" />
 		</section>
 
 		{LOGO_MAKER_EXAMPLES.length > 0 && (
@@ -185,6 +193,10 @@ const jsonLd = [
 		max-width: 46rem;
 		padding: 1.25rem;
 		background: var(--primary-content-bg-color);
+	}
+
+	.lm-resize {
+		margin-top: 1.5rem;
 	}
 
 	.lm-block {

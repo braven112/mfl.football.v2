@@ -1,0 +1,585 @@
+---
+/**
+ * The free logo resizer: drop in one logo (usually the 1024 × 1024 PNG from
+ * ChatGPT or Gemini) and download every size each platform wants. Three
+ * places render it (Brandon, 2026-10-30, "both"): its own public page
+ * `/fantasy-football-logo-resizer`, and under the prompt on the free logo
+ * maker and on MFL Live's `/live/team-logo`.
+ *
+ * No AI, no upload, no server call: the image is read with
+ * `createImageBitmap` and drawn on canvases in the browser, so the page can
+ * honestly say the logo never leaves the device. The sizes are data
+ * (`src/data/logo-platform-sizes.ts`); the fit, step-down and banner math is
+ * `src/utils/logo-resize.ts`; "Download all" is a store-only zip
+ * (`src/utils/zip-store.ts`), with no library.
+ *
+ * Colors are local `--lrs-*` tokens that read the league theme when the page
+ * has one (MFL Live) and fall back to the marketing shell's themed tokens when
+ * it does not, the same way `TeamLogoBuilder` does.
+ */
+import { LOGO_PLATFORMS } from '../../data/logo-platform-sizes';
+
+export interface Props {
+	/** A heading for the section. Leave it out on a page whose own h1 says it. */
+	title?: string;
+	/** Link to the resizer's own page (from the logo maker pages). */
+	pageHref?: string;
+}
+
+const { title, pageHref } = Astro.props as Props;
+const sizeText = (w: number, h: number) => `${w} × ${h}`;
+/** The widest a preview is drawn, in CSS pixels; anything bigger is shown smaller. Banners get more room so the name stays legible. */
+const previewCap = (layout: string) => (layout === 'banner' ? 320 : 160);
+---
+
+<div class="lrs" data-logo-resizer>
+	{title && <h2 class="lrs__title">{title}</h2>}
+	<p class="lrs__lede">
+		Drop in your finished logo and get every size your fantasy site, group chat and social profiles want, ready to download.
+	</p>
+
+	<div class="lrs__drop" data-drop>
+		<input class="lrs__file" id="lrs-file" type="file" accept="image/png,image/jpeg,image/webp" data-file />
+		<p class="lrs__drop-text">Drop your logo here, or paste it.</p>
+		<label class="cta cta--primary" for="lrs-file">Choose a file</label>
+		<p class="lrs__hint">PNG, JPG or WebP. A 1024 × 1024 PNG with a transparent background works best.</p>
+	</div>
+	<p class="lrs__private">
+		<strong>Your logo never leaves your device.</strong> It is resized right here in your browser: nothing is uploaded, and no AI is used.
+	</p>
+	<p class="lrs__error" data-error role="alert" hidden></p>
+
+	<div class="lrs__work" data-work hidden>
+		<div class="lrs__source">
+			<img class="lrs__source-img" data-source-img alt="Your logo" />
+			<div>
+				<p class="lrs__source-size" data-source-size></p>
+				<ul class="lrs__warnings" data-warnings></ul>
+			</div>
+		</div>
+
+		<div class="lrs__options">
+			<div class="lrs__field">
+				<span class="lrs__label" id="lrs-bg-label">Background</span>
+				<div class="ui-pills" role="group" aria-labelledby="lrs-bg-label" data-group="bg">
+					<button type="button" class="ui-pill" data-value="transparent" aria-pressed="true">Transparent</button>
+					<button type="button" class="ui-pill" data-value="color" aria-pressed="false">Color</button>
+				</div>
+			</div>
+			<div class="lrs__field">
+				<label class="lrs__label" for="lrs-color">Background color</label>
+				<input class="lrs__color" id="lrs-color" type="color" value="#ffffff" data-color />
+				<p class="lrs__tip">Used everywhere when Color is on, and always for JPGs, app icons and banners.</p>
+			</div>
+			<div class="lrs__field">
+				<span class="lrs__label" id="lrs-format-label">Save as</span>
+				<div class="ui-pills" role="group" aria-labelledby="lrs-format-label" data-group="format">
+					<button type="button" class="ui-pill" data-value="png" aria-pressed="true">PNG</button>
+					<button type="button" class="ui-pill" data-value="jpg" aria-pressed="false">JPG</button>
+				</div>
+				<p class="lrs__tip">JPG has no transparency, so it fills the background color. Use it only where a site won’t take a PNG.</p>
+			</div>
+			<div class="lrs__field">
+				<label class="lrs__label" for="lrs-name">Team name on the banner (optional)</label>
+				<input class="lrs__input" id="lrs-name" type="text" maxlength="40" placeholder="Leave empty for the logo alone" data-name />
+			</div>
+			<div class="lrs__field">
+				<span class="lrs__label" id="lrs-ground-label">Preview on</span>
+				<div class="ui-pills" role="group" aria-labelledby="lrs-ground-label" data-group="ground">
+					<button type="button" class="ui-pill" data-value="light" aria-pressed="true">Light</button>
+					<button type="button" class="ui-pill" data-value="dark" aria-pressed="false">Dark</button>
+				</div>
+				<p class="lrs__tip">Check the dark one: a logo with black edges can vanish in dark mode.</p>
+			</div>
+		</div>
+
+		<div class="lrs__actions">
+			<button type="button" class="cta cta--primary" data-zip>Download all (.zip)</button>
+			<span class="lrs__status" data-status aria-live="polite"></span>
+		</div>
+
+		{LOGO_PLATFORMS.map((p) => (
+			<section class="lrs__group" aria-labelledby={`lrs-g-${p.id}`}>
+				<h3 class="lrs__group-name" id={`lrs-g-${p.id}`}>{p.name}</h3>
+				<p class="lrs__tip">{p.blurb}</p>
+				<ul class="lrs__grid" role="list">
+					{p.outputs.map((o) => (
+						<li class="lrs__tile" data-layout={o.layout}>
+							<div class="lrs__art" data-ground="light">
+								<canvas
+									class="lrs__canvas"
+									data-out={o.id}
+									width={o.width}
+									height={o.height}
+									style={`width: ${o.width}px; max-width: min(100%, ${previewCap(o.layout)}px)`}
+									role="img"
+									aria-label={`${o.label}, ${sizeText(o.width, o.height)}`}
+								></canvas>
+							</div>
+							<p class="lrs__out-label">{o.label}</p>
+							<p class="lrs__out-size">
+								{sizeText(o.width, o.height)}
+								{o.width > previewCap(o.layout) && <span class="lrs__shrunk"> · shown smaller</span>}
+							</p>
+							<button type="button" class="cta cta--ghost lrs__dl" data-download={o.id}>Download</button>
+						</li>
+					))}
+				</ul>
+			</section>
+		))}
+	</div>
+
+	{pageHref && (
+		<p class="lrs__more">
+			More on sizes for each site: <a class="cta-link" href={pageHref}>the free logo resizer</a>.
+		</p>
+	)}
+</div>
+
+<script>
+	import { ALL_LOGO_OUTPUTS, type LogoOutput } from '../../data/logo-platform-sizes';
+	import { bannerLayout, containRect, downscaleSteps, inkFor, inputWarnings, outputFileName } from '../../utils/logo-resize';
+	import { buildZip } from '../../utils/zip-store';
+
+	const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp'];
+
+	/** The live resizer's loader, so the paste listener below can reach it. */
+	const loaders = new WeakMap<HTMLElement, (file: File) => void>();
+
+	function init() {
+		const found = document.querySelector<HTMLElement>('[data-logo-resizer]');
+		if (!found || found.dataset.ready) return;
+		const root: HTMLElement = found;
+		root.dataset.ready = '1';
+
+		const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+		const fileInput = $<HTMLInputElement>('[data-file]');
+		const drop = $<HTMLElement>('[data-drop]');
+		const error = $<HTMLElement>('[data-error]');
+		const work = $<HTMLElement>('[data-work]');
+		const colorInput = $<HTMLInputElement>('[data-color]');
+		const nameInput = $<HTMLInputElement>('[data-name]');
+		const status = $<HTMLElement>('[data-status]');
+
+		let source: ImageBitmap | null = null;
+		let sourceUrl = '';
+		/** Step-downs already drawn for this source, keyed `WxH`: many files share a size. */
+		let scaled = new Map<string, HTMLCanvasElement>();
+
+		const picked = (group: string) =>
+			root.querySelector<HTMLElement>(`[data-group="${group}"] [aria-pressed="true"]`)?.dataset.value ?? '';
+
+		function showError(msg: string) {
+			error.textContent = msg;
+			error.hidden = !msg;
+		}
+
+		/** The source drawn at `w × h`, halving on the way down so small icons stay crisp. */
+		function scaledTo(w: number, h: number): CanvasImageSource {
+			const key = `${w}x${h}`;
+			const hit = scaled.get(key);
+			if (hit) return hit;
+			let cur: CanvasImageSource = source!;
+			let cw = source!.width;
+			let ch = source!.height;
+			let out: HTMLCanvasElement | null = null;
+			for (const [sw, sh] of downscaleSteps(cw, ch, w, h)) {
+				const c = document.createElement('canvas');
+				c.width = sw;
+				c.height = sh;
+				const ctx = c.getContext('2d')!;
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = 'high';
+				ctx.drawImage(cur, 0, 0, cw, ch, 0, 0, sw, sh);
+				cur = out = c;
+				cw = sw;
+				ch = sh;
+			}
+			scaled.set(key, out!);
+			return out!;
+		}
+
+		function draw(o: LogoOutput, canvas: HTMLCanvasElement) {
+			if (!source) return;
+			const ctx = canvas.getContext('2d')!;
+			ctx.clearRect(0, 0, o.width, o.height);
+			const format = picked('format');
+			const color = colorInput.value;
+			const fill = o.solid || format === 'jpg' || picked('bg') === 'color' ? color : null;
+			if (fill) {
+				ctx.fillStyle = fill;
+				ctx.fillRect(0, 0, o.width, o.height);
+			}
+			const name = nameInput.value.trim();
+			if (o.layout === 'banner') {
+				const b = bannerLayout(source.width, source.height, o.width, o.height, Boolean(name));
+				ctx.drawImage(scaledTo(b.logo.w, b.logo.h), b.logo.x, b.logo.y, b.logo.w, b.logo.h);
+				if (b.text) {
+					const family = getComputedStyle(root).fontFamily || 'system-ui, sans-serif';
+					ctx.font = `800 ${b.text.fontSize}px ${family}`;
+					ctx.textBaseline = 'middle';
+					ctx.fillStyle = inkFor(fill ?? '#ffffff');
+					ctx.fillText(name, b.text.x, b.text.y, b.text.maxWidth);
+				}
+			} else {
+				const r = containRect(source.width, source.height, o.width, o.height);
+				ctx.drawImage(scaledTo(r.w, r.h), r.x, r.y, r.w, r.h);
+			}
+		}
+
+		function renderAll() {
+			for (const o of ALL_LOGO_OUTPUTS) {
+				const canvas = root.querySelector<HTMLCanvasElement>(`[data-out="${o.id}"]`);
+				if (canvas) draw(o, canvas);
+			}
+			status.textContent = '';
+		}
+
+		async function load(file: File) {
+			showError('');
+			if (!ACCEPTED.includes(file.type)) {
+				showError('That file isn’t a PNG, JPG or WebP image. Try saving your logo as a PNG.');
+				return;
+			}
+			let bitmap: ImageBitmap;
+			try {
+				bitmap = await createImageBitmap(file);
+			} catch {
+				showError('That image couldn’t be read. Try saving it again as a PNG.');
+				return;
+			}
+			source?.close();
+			source = bitmap;
+			scaled = new Map();
+			if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+			sourceUrl = URL.createObjectURL(file);
+			$<HTMLImageElement>('[data-source-img]').src = sourceUrl;
+			$('[data-source-size]').textContent = `Your logo: ${bitmap.width} × ${bitmap.height}`;
+			const list = $('[data-warnings]');
+			list.replaceChildren(
+				...inputWarnings(bitmap.width, bitmap.height).map((w) => {
+					const li = document.createElement('li');
+					li.textContent = w;
+					return li;
+				}),
+			);
+			work.hidden = false;
+			renderAll();
+		}
+		loaders.set(root, load);
+
+		function toBlob(o: LogoOutput): Promise<{ name: string; blob: Blob }> {
+			const canvas = root.querySelector<HTMLCanvasElement>(`[data-out="${o.id}"]`)!;
+			const format = picked('format') === 'jpg' ? 'jpg' : o.format;
+			const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+			return new Promise((resolve, reject) =>
+				canvas.toBlob((blob) => (blob ? resolve({ name: outputFileName(o.file, format), blob }) : reject(new Error('empty'))), mime, 0.92),
+			);
+		}
+
+		function save(blob: Blob, name: string) {
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(blob);
+			a.download = name;
+			document.body.append(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+		}
+
+		fileInput.addEventListener('change', () => {
+			const file = fileInput.files?.[0];
+			if (file) load(file);
+			fileInput.value = '';
+		});
+		drop.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			drop.dataset.over = '1';
+		});
+		drop.addEventListener('dragleave', () => delete drop.dataset.over);
+		drop.addEventListener('drop', (e) => {
+			e.preventDefault();
+			delete drop.dataset.over;
+			const file = e.dataTransfer?.files?.[0];
+			if (file) load(file);
+		});
+
+		root.querySelectorAll<HTMLElement>('[data-group]').forEach((group) => {
+			group.addEventListener('click', (e) => {
+				const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-value]');
+				if (!btn) return;
+				group.querySelectorAll('[data-value]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+				if (group.dataset.group === 'ground') {
+					root.querySelectorAll<HTMLElement>('[data-ground]').forEach((a) => (a.dataset.ground = btn.dataset.value));
+					return;
+				}
+				renderAll();
+			});
+		});
+		colorInput.addEventListener('input', renderAll);
+		nameInput.addEventListener('input', renderAll);
+
+		root.addEventListener('click', async (e) => {
+			const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-download]');
+			if (!btn || !source) return;
+			const o = ALL_LOGO_OUTPUTS.find((x) => x.id === btn.dataset.download);
+			if (!o) return;
+			const { name, blob } = await toBlob(o);
+			save(blob, name);
+		});
+
+		$('[data-zip]').addEventListener('click', async () => {
+			if (!source) return;
+			status.textContent = 'Building your zip…';
+			try {
+				const files = await Promise.all(ALL_LOGO_OUTPUTS.map(toBlob));
+				const entries = await Promise.all(
+					files.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })),
+				);
+				const slug = nameInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+				save(new Blob([buildZip(entries)], { type: 'application/zip' }), `${slug || 'team'}-logos.zip`);
+				status.textContent = `${entries.length} files zipped.`;
+			} catch {
+				status.textContent = 'The zip couldn’t be built. Download the files one at a time instead.';
+			}
+		});
+	}
+
+	// Paste works anywhere on the page. Delegated once from `document` and
+	// asks for the CURRENT resizer each time, so it never holds a swapped node.
+	document.addEventListener('paste', (e) => {
+		const root = document.querySelector<HTMLElement>('[data-logo-resizer]');
+		const load = root && loaders.get(root);
+		if (!load) return;
+		const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
+		if (!file) return;
+		e.preventDefault();
+		load(file);
+		root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	});
+	document.addEventListener('astro:page-load', init);
+	init();
+</script>
+
+<style>
+	.lrs {
+		/* The league theme when the page has one (MFL Live), else the
+		   marketing shell's themed tokens. */
+		--lrs-accent: var(--league-accent, var(--brand-red));
+		--lrs-text: var(--page-text, var(--brand-ink));
+		--lrs-muted: var(--content-text-muted, var(--color-gray-500));
+		--lrs-soft: var(--color-text-secondary, var(--color-gray-600));
+		--lrs-border: var(--color-border-subtle, var(--primary-content-border-color));
+		--lrs-surface: var(--color-surface-3, var(--primary-content-bg-color));
+		scroll-margin-top: 1rem;
+	}
+	.lrs__title {
+		margin: 0 0 0.5rem;
+	}
+	.lrs__lede {
+		margin: 0 0 1rem;
+	}
+	.lrs__drop {
+		display: grid;
+		justify-items: center;
+		gap: 0.6rem;
+		padding: 1.5rem 1rem;
+		border: 2px dashed var(--lrs-border);
+		border-radius: 14px;
+		background: var(--lrs-surface);
+		color: var(--lrs-text);
+		text-align: center;
+	}
+	.lrs__drop[data-over] {
+		border-color: var(--lrs-accent);
+	}
+	/* Visually hidden, still reachable: the label is the button. */
+	.lrs__file {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.lrs__file:focus-visible + .lrs__drop-text + .cta {
+		outline: 3px solid var(--lrs-accent);
+		outline-offset: 2px;
+	}
+	.lrs__drop-text {
+		margin: 0;
+		font-weight: 700;
+	}
+	.lrs__hint,
+	.lrs__tip,
+	.lrs__status,
+	.lrs__out-size,
+	.lrs__more {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--lrs-soft);
+	}
+	.lrs__private {
+		margin: 0.75rem 0 0;
+		font-size: var(--font-size-sm);
+		color: var(--lrs-text);
+	}
+	.lrs__error {
+		margin: 0.75rem 0 0;
+		color: var(--color-warning);
+	}
+	.lrs__work {
+		margin-top: 1.25rem;
+	}
+	.lrs__source {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+	.lrs__source-img {
+		width: 5rem;
+		height: 5rem;
+		object-fit: contain;
+		border-radius: 10px;
+		border: 1px solid var(--lrs-border);
+		background: var(--lrs-surface);
+		flex: none;
+	}
+	.lrs__source-size {
+		margin: 0;
+		font-weight: 700;
+	}
+	.lrs__warnings {
+		margin: 0.35rem 0 0;
+		padding-left: 1.1rem;
+		font-size: var(--font-size-sm);
+		color: var(--color-warning);
+	}
+	.lrs__options {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+	.lrs__field {
+		display: grid;
+		gap: 0.45rem;
+		align-content: start;
+	}
+	.lrs__label {
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--lrs-muted);
+	}
+	.lrs__input {
+		font: inherit;
+		padding: 0.6rem 0.75rem;
+		border-radius: 10px;
+		border: 1px solid var(--lrs-border);
+		background: var(--lrs-surface);
+		color: var(--lrs-text);
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+	.lrs__color {
+		width: 3rem;
+		height: 2.5rem;
+		padding: 0;
+		border: 1px solid var(--lrs-border);
+		border-radius: 10px;
+		background: none;
+		cursor: pointer;
+	}
+	.lrs__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+	.lrs__group {
+		padding-top: 1.25rem;
+	}
+	.lrs__group-name {
+		margin: 0 0 0.25rem;
+		font-size: var(--font-size-lg);
+	}
+	.lrs__grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin: 0.75rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	/* A fixed tile so a row lines up: the preview cap plus the art's padding. */
+	.lrs__tile {
+		display: grid;
+		gap: 0.25rem;
+		align-content: start;
+		justify-items: start;
+		width: calc(160px + 1.5rem + 2px);
+		min-width: 0;
+	}
+	/* min(): on a phone the banner tile is the full row, never wider. */
+	.lrs__tile[data-layout='banner'] {
+		width: min(100%, calc(320px + 1.5rem + 2px));
+	}
+	/* The preview ground is a choice, not the theme: the same two grounds in
+	   both themes, so a viewer can check the logo on each. */
+	.lrs__art {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		min-height: 5rem;
+		padding: 0.75rem;
+		border-radius: 10px;
+		border: 1px solid var(--lrs-border);
+		box-sizing: border-box;
+	}
+	.lrs__art[data-ground='light'] {
+		background: #ffffff;
+	}
+	.lrs__art[data-ground='dark'] {
+		background: #121212;
+	}
+	/* Real size up to the preview cap (set inline per file); bigger files
+	   shrink to fit. */
+	.lrs__canvas {
+		display: block;
+		height: auto;
+	}
+	.lrs__out-label {
+		margin: 0.25rem 0 0;
+		font-weight: 700;
+		font-size: var(--font-size-sm);
+		color: var(--lrs-text);
+	}
+	.lrs__dl {
+		margin-top: 0.25rem;
+	}
+	.lrs__more {
+		margin-top: 1.25rem;
+	}
+	@media (max-width: 760px) {
+		.lrs__options {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.lrs__actions .cta {
+			width: 100%;
+		}
+		/* Two squares a row on a phone, so the list stays short. */
+		.lrs__tile {
+			width: calc(50% - 0.375rem);
+		}
+		.lrs__tile[data-layout='banner'] {
+			width: 100%;
+		}
+		.lrs__dl {
+			width: 100%;
+		}
+	}
+</style>
