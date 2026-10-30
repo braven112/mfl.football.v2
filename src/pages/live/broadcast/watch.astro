@@ -1,0 +1,101 @@
+---
+/**
+ * MFL Live — Where to watch. `/live/broadcast/watch`.
+ *
+ * The NFL games the owner's starters are in this week, the channel each is on
+ * where the owner lives, and the app on the TV that opens it. Built for the
+ * Google TV app, whose bridge (`window.MflTvHost`) lists the TV's apps and
+ * opens one; in a browser, or an app build before the bridge, the same rows
+ * show the channel with nothing to launch. See `src/utils/where-to-watch.ts`.
+ *
+ * Read-only, like the board it hangs off: a signed-in owner or a TV holding
+ * the watch-only pass (`getBroadcastViewer`, tests/broadcast-tv-pass-scope).
+ *
+ * The country is the owner's own choice on /preferences when they made one,
+ * else where the connection says they are. READ only: nothing here writes a
+ * preference cookie, so it is safe to resolve in the route or anywhere.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import WhereToWatch from '../../../components/shared/live-broadcast/WhereToWatch';
+import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
+import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
+import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { getTvSettings } from '../../../utils/mfl-live-tv-settings';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { watchCountry } from '../../../utils/where-to-watch';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import '../../../styles/where-to-watch.css';
+
+export const prerender = false;
+
+const PATH = '/live/broadcast/watch';
+const viewer = await getBroadcastViewer(Astro.request);
+const pairedTv = viewer?.via === 'tv';
+
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const year = getCurrentSeasonYear(testDate);
+const weekParam = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
+const week =
+  Number.isFinite(weekParam) && weekParam >= 1 && weekParam <= 25
+    ? weekParam
+    : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
+
+let pageData: string | null = null;
+let failed = false;
+const [tvSettings, clock] = await Promise.all([
+  getTvSettings(viewer?.user),
+  readViewerClock(Astro.cookies, viewer?.user),
+]);
+const country = watchCountry(
+  clock.explicit ? clock.prefs.country : null,
+  Astro.request.headers.get('x-vercel-ip-country'),
+);
+
+if (viewer) {
+  try {
+    const board = await assembleBroadcastBoard({
+      user: viewer.user,
+      leaguesParam: Astro.url.searchParams.get('leagues'),
+      leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      week,
+      year,
+    });
+    pageData = JSON.stringify(toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname }));
+  } catch {
+    failed = true;
+  }
+}
+
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<MflAppLayout
+  title={`Where to watch — Week ${week} — MFL Football`}
+  description="The NFL games your starters are in, and how to watch each one."
+  pairedTvOwner={pairedTv ? (viewer?.user.name ?? null) : null}
+  bare={pairedTv}
+>
+  {viewer && pageData ? (
+    <WhereToWatch
+      client:load
+      pageData={pageData}
+      country={country}
+      sundayTicket={tvSettings.sundayTicket}
+      tv={pairedTv}
+    />
+  ) : (
+    <section class="wtw wtw--empty">
+      <h1 class="wtw__title">Where to watch</h1>
+      {viewer && failed ? (
+        <p>We couldn&rsquo;t read your leagues from MyFantasyLeague just now. Refreshing usually sorts it.</p>
+      ) : (
+        <Fragment>
+          <p>Sign in to see the NFL games your starters are in, and how to watch each one.</p>
+          <a class="cta cta--primary" href={mflLoginUrl(PATH)}>Sign in with MyFantasyLeague</a>
+        </Fragment>
+      )}
+    </section>
+  )}
+</MflAppLayout>
