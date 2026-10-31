@@ -64,7 +64,8 @@ export const hashBytes = (buf) => crypto.createHash('sha256').update(buf).digest
 
 const isMflUrl = (url) => {
   try {
-    return new URL(url).hostname.endsWith('myfantasyleague.com');
+    const host = new URL(url).hostname;
+    return host === 'myfantasyleague.com' || host.endsWith('.myfantasyleague.com');
   } catch {
     return false;
   }
@@ -218,7 +219,13 @@ export async function syncLeagueBranding({
   for (const { franchiseId, buf } of icons) {
     const abs = path.join(root, 'public', generatedIconPath(league.slug, franchiseId));
     const out = await squareIcon(buf);
-    if (fs.existsSync(abs) && fs.readFileSync(abs).equals(out)) continue;
+    // Write unless identical. A missing file reads as null; no exists-then-write
+    // window for the file to change in.
+    let current = null;
+    try {
+      current = fs.readFileSync(abs);
+    } catch {}
+    if (current?.equals(out)) continue;
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, out);
   }
