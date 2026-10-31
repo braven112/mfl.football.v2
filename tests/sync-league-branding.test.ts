@@ -41,8 +41,18 @@ describe('planTeamSync — first run (no mflSync yet)', () => {
   it('leaves an unchanged team alone but records what MFL said', () => {
     const plan = planTeamSync(seeded(), { name: 'Stoners' }, { slug: SLUG, art: art() });
     expect(plan.changes).toEqual([]);
-    expect(plan.writeIcon).toBe(false);
-    expect(plan.team.mflSync).toEqual({ name: 'Stoners', artHash: 'aaaa', colorPrimary: '#111111', colorSecondary: '#eeeeee' });
+    expect(plan.team.mflSync).toEqual({
+      name: 'Stoners',
+      artHash: 'aaaa',
+      colorPrimary: '#111111',
+      colorSecondary: '#eeeeee',
+      derived: { nameMedium: 'Stoners', nameShort: 'Stoners', abbrev: 'STONE' },
+    });
+  });
+
+  it('regenerates the icon anyway: a same-name re-upload can keep its colours', () => {
+    const plan = planTeamSync(seeded(), { name: 'Stoners' }, { slug: SLUG, art: art() });
+    expect(plan.writeIcon).toBe(true);
   });
 
   it('picks up new art under a new URL, with its colours', () => {
@@ -125,5 +135,44 @@ describe('planTeamSync — a run after a failed art read', () => {
     });
     expect(plan.writeIcon).toBe(true);
     expect(plan.team.colorPrimary).toBe('#336699');
+  });
+});
+
+describe('planTeamSync — commissioner edits survive', () => {
+  const synced = (over: Record<string, unknown> = {}) =>
+    seeded({
+      mflSync: {
+        name: 'Stoners',
+        artHash: 'aaaa',
+        colorPrimary: '#111111',
+        colorSecondary: '#eeeeee',
+        derived: { nameMedium: 'Stoners', nameShort: 'Stoners', abbrev: 'STONE' },
+      },
+      ...over,
+    });
+
+  it('edit, quiet sync, then new art: the hand-picked colour stays', () => {
+    const edited = synced({ colorPrimary: '#ff0000', color: '#ff0000' });
+    const quiet = planTeamSync(edited, { name: 'Stoners' }, { slug: SLUG, art: art() });
+    expect(quiet.team.mflSync.colorPrimary).toBe('#111111');
+    const changed = planTeamSync(quiet.team, { name: 'Stoners' }, {
+      slug: SLUG,
+      art: art({ hash: 'bbbb', colors: { primary: '#336699', secondary: '#ffcc00' } }),
+    });
+    expect(changed.writeIcon).toBe(true);
+    expect(changed.team.colorPrimary).toBe('#ff0000');
+  });
+
+  it('an MFL rename keeps a hand-set short name', () => {
+    const plan = planTeamSync(synced({ nameShort: 'Rocks' }), { name: 'Stonecutters', abbrev: 'STC' }, { slug: SLUG, art: art() });
+    expect(plan.team.name).toBe('Stonecutters');
+    expect(plan.team.nameShort).toBe('Rocks');
+    expect(plan.team.nameMedium).toBe('Stonecutters');
+  });
+
+  it('an MFL rename counts toward the rollover stop even when a hand-set name blocks it', () => {
+    const plan = planTeamSync(synced({ name: 'Rolling Stones' }), { name: 'Stonecutters' }, { slug: SLUG, art: art() });
+    expect(plan.renamed).toBe(false);
+    expect(plan.mflRenamed).toBe(true);
   });
 });
