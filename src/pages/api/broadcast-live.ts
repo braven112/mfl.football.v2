@@ -80,13 +80,14 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   // app before pairing) resolves as 'session', and gating on that left every
   // such TV deaf to the phone (Brandon, Oct 2026). The record is keyed by the
   // cookie's own hash, so a pass can only ever read what was sent to it.
-  const passToken = readTvPassToken(request);
-  const remote: Promise<RemoteState | undefined> = passToken && passToken.length <= 128
-    ? (async () => {
-        const store = await getPairingStore();
-        return store ? readRemoteState(store, passHashOfToken(passToken)) : undefined;
-      })().catch(() => undefined)
-    : Promise.resolve(undefined);
+  // Parsed inside the caught promise: a malformed cookie must cost only the
+  // remote state, never the scores.
+  const remote: Promise<RemoteState | undefined> = (async () => {
+    const passToken = readTvPassToken(request);
+    if (!passToken || passToken.length > 128) return undefined;
+    const store = await getPairingStore();
+    return store ? readRemoteState(store, passHashOfToken(passToken)) : undefined;
+  })().catch(() => undefined);
 
   try {
     const board = await assembleBroadcastBoard({
