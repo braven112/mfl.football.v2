@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-29T23:01:39.619Z"
+    "fetchedAt": "2026-10-31T00:06:16.425Z"
   },
   "players": [
     {
@@ -309,8 +309,8 @@
           "TE"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Neck",
         "gsisId": null
       },
       "nflverse": {
@@ -494,7 +494,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -532,10 +532,6 @@
         {
           "id": "17477",
           "name": "Coleman, Jonah"
-        },
-        {
-          "id": "17068",
-          "name": "Harvey, RJ"
         }
       ]
     },
@@ -1125,8 +1121,8 @@
           "QB"
         ],
         "experience": 8,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0034796"
       },
       "nflverse": {
@@ -1837,29 +1833,30 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Chuba Hubbard",
         "team": "CAR",
         "position": "RB",
-        "offenseSnaps": 34,
-        "offenseSnapPct": 0.61,
+        "offenseSnaps": 67,
+        "offenseSnapPct": 0.92,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "HubbCh01",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": null
     },
     {
@@ -3074,12 +3071,12 @@
           "name": "Douglas, Demario"
         },
         {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
           "id": "17269",
           "name": "Chism, Efton"
+        },
+        {
+          "id": "17134",
+          "name": "Williams, Kyle"
         },
         {
           "id": "13289",
@@ -3313,7 +3310,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 11,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -3842,12 +3839,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Knee",
         "gsisId": null
       },
@@ -3879,6 +3876,10 @@
         {
           "id": "17477",
           "name": "Coleman, Jonah"
+        },
+        {
+          "id": "14800",
+          "name": "Dobbins, J.K."
         }
       ]
     },
@@ -4464,28 +4465,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "John Metchie",
         "team": "CAR",
         "position": "WR",
-        "offenseSnaps": 26,
-        "offenseSnapPct": 0.46,
+        "offenseSnaps": 33,
+        "offenseSnapPct": 0.45,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "MetcJo00",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": [
         {
           "id": "17071",
@@ -6601,8 +6603,8 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Concussion",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -6668,8 +6670,8 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Knee",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -6943,7 +6945,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -6978,10 +6980,6 @@
       },
       "gamesPlayed": 7,
       "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        },
         {
           "id": "13163",
           "name": "Godwin, Chris"
@@ -7101,8 +7099,8 @@
           "TE"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -7169,7 +7167,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -7210,10 +7208,6 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
-        },
-        {
-          "id": "17134",
-          "name": "Williams, Kyle"
         }
       ]
     },
@@ -8165,8 +8159,8 @@
           "TE"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Hamstring",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -8467,7 +8461,7 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Ribs",
         "gsisId": null
       },
@@ -8578,16 +8572,16 @@
           "name": "Smith, DeVonta"
         },
         {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
-        },
-        {
           "id": "17499",
           "name": "Lemon, Makai"
         },
         {
           "id": "17333",
           "name": "Cooper, Darius"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
         }
       ]
     },
@@ -8629,7 +8623,7 @@
           "RB"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Knee",
         "gsisId": null
       },
@@ -8702,8 +8696,8 @@
           "RB"
         ],
         "experience": 9,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Undisclosed",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0033293"
       },
       "nflverse": {
@@ -8846,16 +8840,16 @@
       "gamesPlayed": 6,
       "depthChartAhead": [
         {
-          "id": "17497",
-          "name": "Tate, Carnell"
-        },
-        {
           "id": "15757",
           "name": "Robinson, Wan'Dale"
         },
         {
           "id": "17073",
           "name": "Ayomanor, Elic"
+        },
+        {
+          "id": "17497",
+          "name": "Tate, Carnell"
         }
       ]
     },
@@ -9171,7 +9165,7 @@
           "WR"
         ],
         "experience": 5,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
@@ -9342,12 +9336,12 @@
           "name": "Douglas, Demario"
         },
         {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
           "id": "17269",
           "name": "Chism, Efton"
+        },
+        {
+          "id": "17134",
+          "name": "Williams, Kyle"
         }
       ]
     },
@@ -9460,7 +9454,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -9498,10 +9492,6 @@
         {
           "id": "15282",
           "name": "Smith, DeVonta"
-        },
-        {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
         },
         {
           "id": "17499",
@@ -9920,8 +9910,8 @@
           "QB"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Back",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -10185,29 +10175,30 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Bryce Young",
         "team": "CAR",
         "position": "QB",
-        "offenseSnaps": 43,
-        "offenseSnapPct": 0.77,
+        "offenseSnaps": 73,
+        "offenseSnapPct": 1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "YounBr01",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": null
     },
     {
@@ -10610,7 +10601,7 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Ryan Fitzgerald",
         "team": "CAR",
@@ -10619,20 +10610,21 @@
         "offenseSnapPct": 0,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 5,
-        "stSnapPct": 0.21,
+        "stSnaps": 8,
+        "stSnapPct": 0.31,
         "pfrPlayerId": "FitzRy01",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": null
     },
     {
@@ -11196,8 +11188,8 @@
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -11406,7 +11398,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -11444,6 +11436,10 @@
         {
           "id": "16185",
           "name": "Smith-Njigba, Jaxon"
+        },
+        {
+          "id": "13164",
+          "name": "Kupp, Cooper"
         }
       ]
     },
@@ -12193,8 +12189,8 @@
           "TE"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -12256,13 +12252,13 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Concussion",
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Foot",
         "gsisId": null
       },
       "nflverse": {
@@ -12289,7 +12285,24 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13163",
+          "name": "Godwin, Chris"
+        },
+        {
+          "id": "17520",
+          "name": "Hurst, Ted"
+        },
+        {
+          "id": "17079",
+          "name": "Johnson, Tez"
+        },
+        {
+          "id": "16628",
+          "name": "McMillan, Jalen"
+        }
+      ]
     },
     {
       "id": "16214",
@@ -12466,8 +12479,8 @@
           "RB"
         ],
         "experience": 8,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Back",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0034844"
       },
       "nflverse": {
@@ -13135,7 +13148,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -13170,10 +13183,6 @@
       },
       "gamesPlayed": 7,
       "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        },
         {
           "id": "13163",
           "name": "Godwin, Chris"
@@ -13213,7 +13222,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -13243,10 +13252,6 @@
       },
       "gamesPlayed": 2,
       "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        },
         {
           "id": "13163",
           "name": "Godwin, Chris"
@@ -14166,19 +14171,19 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "MarShawn Lloyd",
         "team": "GB",
         "position": "RB",
-        "offenseSnaps": 24,
-        "offenseSnapPct": 0.36,
+        "offenseSnaps": 11,
+        "offenseSnapPct": 0.16,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "LloyMa00",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -14186,10 +14191,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": [
         {
           "id": "14073",
@@ -14235,8 +14241,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Hamstring",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -14440,7 +14446,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -14482,6 +14488,10 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
+        },
+        {
+          "id": "17269",
+          "name": "Chism, Efton"
         }
       ]
     },
@@ -15151,7 +15161,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -15381,7 +15391,7 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Quadriceps",
         "gsisId": null
       },
@@ -15949,13 +15959,13 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": null,
@@ -16077,7 +16087,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -16111,12 +16121,7 @@
         ]
       },
       "gamesPlayed": 7,
-      "depthChartAhead": [
-        {
-          "id": "17081",
-          "name": "Egbuka, Emeka"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17220",
@@ -16208,29 +16213,30 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Tetairoa McMillan",
         "team": "CAR",
         "position": "WR",
-        "offenseSnaps": 38,
-        "offenseSnapPct": 0.68,
+        "offenseSnaps": 65,
+        "offenseSnapPct": 0.89,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "McMiTe00",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": null
     },
     {
@@ -16256,7 +16262,7 @@
         "id": "11646",
         "fullName": "Jalen Coker",
         "team": "CAR",
-        "age": 24,
+        "age": 25,
         "height": "75",
         "weight": "215",
         "number": 18,
@@ -16276,28 +16282,29 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Jalen Coker",
         "team": "CAR",
         "position": "WR",
-        "offenseSnaps": 37,
-        "offenseSnapPct": 0.66,
+        "offenseSnaps": 63,
+        "offenseSnapPct": 0.86,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "CokeJa01",
-        "gamesPlayed": 5,
+        "gamesPlayed": 6,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 5,
+      "gamesPlayed": 6,
       "depthChartAhead": [
         {
           "id": "17071",
@@ -16815,7 +16822,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -16825,25 +16832,26 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Trevor Etienne",
         "team": "CAR",
         "position": "RB",
-        "offenseSnaps": 17,
-        "offenseSnapPct": 0.3,
+        "offenseSnaps": 5,
+        "offenseSnapPct": 0.07,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 8,
-        "stSnapPct": 0.33,
+        "stSnapPct": 0.31,
         "pfrPlayerId": "EtieTr01",
-        "gamesPlayed": 2,
+        "gamesPlayed": 3,
         "gamesPlayedWeeks": [
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 2,
+      "gamesPlayed": 3,
       "depthChartAhead": [
         {
           "id": "15261",
@@ -17093,7 +17101,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -17127,12 +17135,7 @@
         ]
       },
       "gamesPlayed": 7,
-      "depthChartAhead": [
-        {
-          "id": "17497",
-          "name": "Tate, Carnell"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "0519",
@@ -17400,7 +17403,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -17435,10 +17438,6 @@
       },
       "gamesPlayed": 7,
       "depthChartAhead": [
-        {
-          "id": "17497",
-          "name": "Tate, Carnell"
-        },
         {
           "id": "15757",
           "name": "Robinson, Wan'Dale"
@@ -17722,19 +17721,19 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Tucker Kraft",
         "team": "GB",
         "position": "TE",
-        "offenseSnaps": 59,
+        "offenseSnaps": 61,
         "offenseSnapPct": 0.88,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "KrafTu00",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -17742,10 +17741,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": null
     },
     {
@@ -18355,7 +18355,7 @@
       "id": "13066",
       "name": "Raymond, Kalif",
       "position": "WR",
-      "salary": 700000,
+      "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
@@ -18559,7 +18559,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -18950,8 +18950,8 @@
           "RB"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Toe",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -19204,8 +19204,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Illness",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -19394,24 +19394,24 @@
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Shoulder",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Matthew Golden",
         "team": "GB",
         "position": "WR",
-        "offenseSnaps": 57,
-        "offenseSnapPct": 0.85,
+        "offenseSnaps": 59,
+        "offenseSnapPct": 0.86,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "GoldMa02",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -19419,10 +19419,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": [
         {
           "id": "15789",
@@ -19954,29 +19955,30 @@
         "gsisId": "00-0031610"
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Darren Waller",
         "team": "CAR",
         "position": "TE",
-        "offenseSnaps": 25,
-        "offenseSnapPct": 0.45,
+        "offenseSnaps": 45,
+        "offenseSnapPct": 0.62,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "WallDa01",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": null
     },
     {
@@ -20270,19 +20272,19 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Jordan Love",
         "team": "GB",
         "position": "QB",
-        "offenseSnaps": 67,
+        "offenseSnaps": 69,
         "offenseSnapPct": 1,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "LoveJo03",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -20290,10 +20292,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": null
     },
     {
@@ -20670,16 +20673,16 @@
       "gamesPlayed": 7,
       "depthChartAhead": [
         {
-          "id": "17497",
-          "name": "Tate, Carnell"
-        },
-        {
           "id": "15757",
           "name": "Robinson, Wan'Dale"
         },
         {
           "id": "17073",
           "name": "Ayomanor, Elic"
+        },
+        {
+          "id": "17497",
+          "name": "Tate, Carnell"
         },
         {
           "id": "13629",
@@ -20902,12 +20905,12 @@
           "name": "Smith-Njigba, Jaxon"
         },
         {
-          "id": "16080",
-          "name": "Shaheed, Rashid"
-        },
-        {
           "id": "13164",
           "name": "Kupp, Cooper"
+        },
+        {
+          "id": "16080",
+          "name": "Shaheed, Rashid"
         }
       ]
     },
@@ -21086,8 +21089,8 @@
           "TE"
         ],
         "experience": 13,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ankle",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0030506"
       },
       "nflverse": {
@@ -21274,24 +21277,24 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Christian Watson",
         "team": "GB",
         "position": "WR",
-        "offenseSnaps": 54,
-        "offenseSnapPct": 0.81,
+        "offenseSnaps": 34,
+        "offenseSnapPct": 0.49,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "WatsCh00",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -21299,10 +21302,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": null
     },
     {
@@ -21848,8 +21852,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ribs",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -22054,7 +22058,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -22092,10 +22096,6 @@
         {
           "id": "16185",
           "name": "Smith-Njigba, Jaxon"
-        },
-        {
-          "id": "16080",
-          "name": "Shaheed, Rashid"
         }
       ]
     },
@@ -22422,8 +22422,8 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Back",
         "gsisId": null
       },
       "nflverse": {
@@ -22811,24 +22811,25 @@
         "gsisId": " 00-0035700"
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Josh Jacobs",
         "team": "GB",
         "position": "RB",
-        "offenseSnaps": 35,
-        "offenseSnapPct": 0.52,
+        "offenseSnaps": 49,
+        "offenseSnapPct": 0.71,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "JacoJo01",
-        "gamesPlayed": 1,
+        "gamesPlayed": 2,
         "gamesPlayedWeeks": [
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 1,
+      "gamesPlayed": 2,
       "depthChartAhead": null
     },
     {
@@ -22949,7 +22950,7 @@
       "id": "14057",
       "name": "Lock, Drew",
       "position": "QB",
-      "salary": 450000,
+      "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
@@ -23383,12 +23384,12 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Shoulder",
         "gsisId": null
       },
@@ -23417,7 +23418,16 @@
         ]
       },
       "gamesPlayed": 7,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15757",
+          "name": "Robinson, Wan'Dale"
+        },
+        {
+          "id": "17073",
+          "name": "Ayomanor, Elic"
+        }
+      ]
     },
     {
       "id": "16190",
@@ -24359,7 +24369,7 @@
         "id": "2307",
         "fullName": "Marcus Mariota",
         "team": "WAS",
-        "age": 32,
+        "age": 33,
         "height": "76",
         "weight": "222",
         "number": 8,
@@ -24439,12 +24449,12 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 4,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
@@ -24651,12 +24661,12 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Ankle",
         "gsisId": null
       },
@@ -24688,6 +24698,14 @@
         {
           "id": "15282",
           "name": "Smith, DeVonta"
+        },
+        {
+          "id": "17499",
+          "name": "Lemon, Makai"
+        },
+        {
+          "id": "17333",
+          "name": "Cooper, Darius"
         }
       ]
     },
@@ -25797,8 +25815,8 @@
           "TE"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Groin",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -26252,29 +26270,30 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Tommy Tremble",
         "team": "CAR",
         "position": "TE",
-        "offenseSnaps": 27,
-        "offenseSnapPct": 0.48,
+        "offenseSnaps": 44,
+        "offenseSnapPct": 0.6,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 8,
-        "stSnapPct": 0.33,
+        "stSnaps": 3,
+        "stSnapPct": 0.12,
         "pfrPlayerId": "TremTo00",
-        "gamesPlayed": 6,
+        "gamesPlayed": 7,
         "gamesPlayedWeeks": [
           1,
           2,
           3,
           4,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 6,
+      "gamesPlayed": 7,
       "depthChartAhead": [
         {
           "id": "12263",
@@ -26398,7 +26417,7 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 7,
+        "week": 8,
         "season": "2026",
         "player": "Trey Smack",
         "team": "GB",
@@ -26408,9 +26427,9 @@
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 9,
-        "stSnapPct": 0.43,
+        "stSnapPct": 0.35,
         "pfrPlayerId": "SmacTr00",
-        "gamesPlayed": 7,
+        "gamesPlayed": 8,
         "gamesPlayedWeeks": [
           1,
           2,
@@ -26418,10 +26437,11 @@
           4,
           5,
           6,
-          7
+          7,
+          8
         ]
       },
-      "gamesPlayed": 7,
+      "gamesPlayed": 8,
       "depthChartAhead": null
     },
     {
@@ -26830,7 +26850,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -26904,7 +26924,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -26942,10 +26962,6 @@
         {
           "id": "15282",
           "name": "Smith, DeVonta"
-        },
-        {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
         }
       ]
     }
