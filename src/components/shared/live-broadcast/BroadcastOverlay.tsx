@@ -372,8 +372,10 @@ export default function BroadcastOverlay({
   }, [data, takeRemote]);
 
   // The phone remote. Each command is parsed again here and applied once, by
-  // its sequence number; the first one this page sees is an old press, so it
-  // only sets the mark.
+  // its sequence number. On first sight only a size or corner carries over
+  // (they name a state, so applying one twice is harmless): a press made
+  // before this page's first poll would otherwise be lost, and a page turn
+  // from minutes ago must not replay.
   const lastRemoteSeq = useRef<number | null>(null);
   useEffect(() => {
     if (!remote) return;
@@ -381,7 +383,7 @@ export default function BroadcastOverlay({
     if (!first && remote.seq <= (lastRemoteSeq.current ?? 0)) return;
     lastRemoteSeq.current = remote.seq;
     const cmd = parseRemoteCommand(remote.command);
-    if (first || !cmd) return;
+    if (!cmd || (first && cmd.kind !== 'overlay')) return;
     const host = window.MflOverlayHost;
     if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
     else if (cmd.kind === 'overlay') {
