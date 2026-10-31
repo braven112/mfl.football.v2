@@ -149,13 +149,13 @@ export function dominantColors(rgba) {
 /** Square icon size. Small on purpose: 99 of these live in the repo. */
 export const ICON_SIZE = 128;
 
-async function fetchImage(url) {
+export async function fetchImage(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }
 
-async function colorsFromImage(buf) {
+export async function colorsFromImage(buf) {
   const { data } = await sharp(buf).resize(64, 64, { fit: 'inside' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   return dominantColors(data);
 }
@@ -166,11 +166,11 @@ async function colorsFromImage(buf) {
  * wordmark sit in the middle of it, so the centre crop is the best
  * no-human-involved guess. `attention` would chase busy background detail.
  */
-async function squareIcon(buf) {
+export async function squareIcon(buf) {
   return sharp(buf).resize(ICON_SIZE, ICON_SIZE, { fit: 'cover', position: 'centre' }).webp({ quality: 82 }).toBuffer();
 }
 
-function arrayOf(v) {
+export function arrayOf(v) {
   return Array.isArray(v) ? v : v ? [v] : [];
 }
 
