@@ -75,15 +75,18 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
 
   // A paired TV also learns, on this same poll, whether its owner's phone has
   // the remote open (docs/plans/broadcast-handheld.md, Phase 4). One read of
-  // one key, for a TV only; a signed-in viewer's poll never carries it.
-  const remote: Promise<RemoteState | undefined> =
-    viewer.via === 'tv'
-      ? (async () => {
-          const token = readTvPassToken(request);
-          const store = token ? await getPairingStore() : null;
-          return token && store ? readRemoteState(store, passHashOfToken(token)) : undefined;
-        })().catch(() => undefined)
-      : Promise.resolve(undefined);
+  // one key, for any request carrying a TV pass. NOT gated on `via === 'tv'`:
+  // a TV that also holds an owner session (signed in on the TV, or in the TV
+  // app before pairing) resolves as 'session', and gating on that left every
+  // such TV deaf to the phone (Brandon, Oct 2026). The record is keyed by the
+  // cookie's own hash, so a pass can only ever read what was sent to it.
+  const passToken = readTvPassToken(request);
+  const remote: Promise<RemoteState | undefined> = passToken && passToken.length <= 128
+    ? (async () => {
+        const store = await getPairingStore();
+        return store ? readRemoteState(store, passHashOfToken(passToken)) : undefined;
+      })().catch(() => undefined)
+    : Promise.resolve(undefined);
 
   try {
     const board = await assembleBroadcastBoard({

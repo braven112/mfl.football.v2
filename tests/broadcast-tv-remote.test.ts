@@ -202,3 +202,13 @@ describe('who may send, who may read', () => {
     }
   });
 });
+
+describe('who hears the remote', () => {
+  it('reads the remote for any request carrying a TV pass, not only a pass-resolved viewer', () => {
+    // A TV that also holds an owner session resolves as `via: 'session'`;
+    // gating the remote on `via === 'tv'` left every such TV deaf to the phone.
+    const src = readFileSync(join(process.cwd(), 'src/pages/api/broadcast-live.ts'), 'utf8');
+    expect(src).toMatch(/readTvPassToken\(request\)/);
+    expect(src).not.toMatch(/via === 'tv'\s*\?\s*\(async/);
+  });
+});
