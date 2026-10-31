@@ -34,6 +34,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
+          # The branch TIP when this run starts, not the SHA it was queued at:
+          # behind a branding edit in the shared queue, the event SHA is the
+          # pre-edit config (same reason as branding-edit.yml).
+          ref: ${{ github.ref_name }}
 
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup

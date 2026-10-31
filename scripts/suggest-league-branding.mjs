@@ -27,6 +27,7 @@
  * MFL would silently throw their work away.
  */
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -149,6 +150,13 @@ export function dominantColors(rgba) {
 /** Square icon size. Small on purpose: 99 of these live in the repo. */
 export const ICON_SIZE = 128;
 
+/**
+ * Fingerprint of a franchise's MFL art (banner + icon bytes). The seed and
+ * scripts/sync-league-branding.mjs must hash identically, or the first sync
+ * after a seed reads every logo as changed.
+ */
+export const hashBytes = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 16);
+
 export async function fetchImage(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -214,15 +222,20 @@ async function main() {
     const art = f.logo || f.icon || null;
     let colors = null;
     let icon = null;
+    let artHash = null;
     try {
       const buf = art ? await fetchImage(art) : null;
       if (buf) {
         colors = await colorsFromImage(buf);
+        // MFL's square `icon` when it has one, the same source and hash the
+        // daily sync uses (scripts/sync-league-branding.mjs).
+        const iconBuf = f.icon && f.icon !== art ? await fetchImage(f.icon) : buf;
+        artHash = hashBytes(Buffer.concat([buf, iconBuf]));
         if (opts.write) {
           const rel = `assets/${league.slug}/icons/${f.id}.webp`;
           const abs = path.join(ROOT, 'public', rel);
           fs.mkdirSync(path.dirname(abs), { recursive: true });
-          fs.writeFileSync(abs, await squareIcon(buf));
+          fs.writeFileSync(abs, await squareIcon(iconBuf));
           icon = `/${rel}`;
         }
       }
@@ -245,6 +258,14 @@ async function main() {
       ...(icon ? { icon, iconCroppedFromBanner: true } : {}),
       // The MFL art itself is the banner: it is already banner-shaped.
       ...(art ? { banner: art } : {}),
+      // What MFL said at seed time, so the daily sync can tell an MFL change
+      // from a commissioner's edit (scripts/sync-league-branding.mjs).
+      mflSync: {
+        name: names.name,
+        ...(artHash ? { artHash } : {}),
+        ...(colors ? { colorPrimary: colors.primary, colorSecondary: colors.secondary } : {}),
+        derived: { nameMedium: names.nameMedium, nameShort: names.nameShort, abbrev: names.abbrev },
+      },
     });
   }
 

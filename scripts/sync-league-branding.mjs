@@ -30,9 +30,11 @@
  *   - name: only when MFL's name moved AND ours still equals MFL's old one. The
  *     old name is kept as an alias, as a branding-editor rename does.
  *
- * The first run has no `mflSync` yet, so it treats the seeded config as what
- * MFL said: art counts as changed when the banner URL moved or the colours
- * derived from today's art differ from the stored ones.
+ * The seed script writes `mflSync` too, so a league edited before its first
+ * sync keeps its edits. A config seeded before that (Archie's) has none, and
+ * its first run treats the seeded values as what MFL said: art counts as
+ * changed when the banner URL moved or the colours derived from today's art
+ * differ from the stored ones, and every generated icon is regenerated.
  *
  * ## The rollover stop
  *
@@ -44,13 +46,20 @@
  * A run that found nothing writes nothing — every commit is a production build.
  */
 
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES, getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
-import { arrayOf, cleanName, colorsFromImage, fetchImage, squareIcon, suggestNames } from './suggest-league-branding.mjs';
+import {
+  arrayOf,
+  cleanName,
+  colorsFromImage,
+  fetchImage,
+  hashBytes,
+  squareIcon,
+  suggestNames,
+} from './suggest-league-branding.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -60,7 +69,7 @@ export const MAX_RENAMES_SHARE = 0.25;
 /** The icon path the seed script writes, and the only icon this may replace. */
 export const generatedIconPath = (slug, franchiseId) => `/assets/${slug}/icons/${franchiseId}.webp`;
 
-export const hashBytes = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 16);
+export { hashBytes };
 
 const isMflUrl = (url) => {
   try {
@@ -79,65 +88,82 @@ const isMflUrl = (url) => {
  * @param {{ slug: string, art: null | { bannerUrl: string, hash: string,
  *   colors: { primary: string, secondary: string } | null } }} opts
  *   `art` is null when MFL has none or it could not be read — the logo is then left alone.
- * @returns {{ team: Record<string, any>, changes: string[], writeIcon: boolean, renamed: boolean }}
+ * @returns {{ team: Record<string, any>, changes: string[], writeIcon: boolean, renamed: boolean,
+ *   mflRenamed: boolean }}  `mflRenamed` counts toward the rollover stop even when a hand-set name blocks the rename.
  */
 export function planTeamSync(team, franchise, { slug, art }) {
   const prev = team.mflSync ?? {};
-  const firstRun = !team.mflSync;
   const next = { ...team };
   const changes = [];
-  let writeIcon = false;
   let renamed = false;
 
   // ── Name ────────────────────────────────────────────────────────────────
+  // Each short form is compared with what the rule derived LAST time, not
+  // with the full name: the editor edits nameMedium / nameShort / abbrev on
+  // their own, and an MFL rename must not undo one of those. A config synced
+  // before `derived` was recorded falls back to its current values (seeded,
+  // unedited).
   const mflName = cleanName(franchise.name);
   const baseline = prev.name ?? team.name;
-  if (mflName && mflName !== baseline && team.name === baseline) {
-    const names = suggestNames(franchise.name, franchise.abbrev);
+  const mflRenamed = !!mflName && mflName !== baseline;
+  const names = mflName ? suggestNames(franchise.name, franchise.abbrev) : null;
+  const prevDerived = prev.derived ?? { nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev };
+  if (mflRenamed && names && team.name === baseline) {
     next.name = names.name;
-    next.nameMedium = names.nameMedium;
-    next.nameShort = names.nameShort;
-    next.abbrev = names.abbrev;
+    for (const key of ['nameMedium', 'nameShort', 'abbrev']) {
+      if (team[key] === prevDerived[key]) next[key] = names[key];
+    }
     next.aliases = [...new Set([...(team.aliases ?? []), team.name, ...names.aliases])].filter((a) => a && a !== names.name);
     changes.push(`name ${team.name} → ${names.name}`);
     renamed = true;
   }
 
   // ── Logo + colours ──────────────────────────────────────────────────────
+  // `mflSync.colorPrimary/Secondary` are the colours DERIVED from MFL's art,
+  // never the config's: a hand-picked colour must not become the baseline a
+  // later art change compares against.
   const ownsIcon = team.icon === generatedIconPath(slug, team.franchiseId);
-  let syncArt = {};
+  const noArtYet = prev.artHash === undefined;
+  const sameColors = (a, b) => !!a && !!b && a.primary === b.primary && a.secondary === b.secondary;
+  const current = { primary: team.colorPrimary, secondary: team.colorSecondary };
+  let writeIcon = false;
+  let syncArt = { artHash: prev.artHash, colorPrimary: prev.colorPrimary, colorSecondary: prev.colorSecondary };
   if (art && ownsIcon) {
-    const storedColors = { primary: team.colorPrimary, secondary: team.colorSecondary };
-    const sameColors = (c) => !!c && c.primary === storedColors.primary && c.secondary === storedColors.secondary;
-    const artChanged = firstRun
-      ? art.bannerUrl !== team.banner || (art.colors !== null && !sameColors(art.colors))
+    const artChanged = noArtYet
+      ? art.bannerUrl !== team.banner || (art.colors !== null && !sameColors(art.colors, current))
       : art.hash !== prev.artHash;
+    // With no hash on record the file may predate a same-name re-upload, so
+    // it is always regenerated; the byte compare at write time skips a no-op.
+    writeIcon = artChanged || noArtYet;
 
     if (artChanged) {
-      writeIcon = true;
       changes.push('logo');
       if (!team.banner || isMflUrl(team.banner)) next.banner = art.bannerUrl;
-      // No art recorded yet (first run, or the last read failed): the colours
-      // are still the seed's, so they follow the art.
-      const colorsAreAuto =
-        prev.artHash === undefined ||
-        (team.colorPrimary === prev.colorPrimary && team.colorSecondary === prev.colorSecondary);
-      if (art.colors && colorsAreAuto && !sameColors(art.colors)) {
+      const lastDerived = prev.colorPrimary ? { primary: prev.colorPrimary, secondary: prev.colorSecondary } : null;
+      // No baseline yet: the colours are still the seed's, so they follow the art.
+      const colorsAreAuto = lastDerived ? sameColors(current, lastDerived) : noArtYet;
+      if (art.colors && colorsAreAuto && !sameColors(art.colors, current)) {
         if (!team.color || team.color === team.colorPrimary) next.color = art.colors.primary;
         next.colorPrimary = art.colors.primary;
         next.colorSecondary = art.colors.secondary;
         changes.push('colors');
       }
     }
-    syncArt = { artHash: art.hash, colorPrimary: next.colorPrimary, colorSecondary: next.colorSecondary };
-  } else {
-    syncArt = { artHash: prev.artHash, colorPrimary: prev.colorPrimary, colorSecondary: prev.colorSecondary };
+    syncArt = {
+      artHash: art.hash,
+      colorPrimary: art.colors?.primary ?? prev.colorPrimary,
+      colorSecondary: art.colors?.secondary ?? prev.colorSecondary,
+    };
   }
 
   next.mflSync = Object.fromEntries(
-    Object.entries({ name: mflName || prev.name, ...syncArt }).filter(([, v]) => v !== undefined),
+    Object.entries({
+      name: mflName || prev.name,
+      ...syncArt,
+      derived: names ? { nameMedium: names.nameMedium, nameShort: names.nameShort, abbrev: names.abbrev } : prev.derived,
+    }).filter(([, v]) => v !== undefined),
   );
-  return { team: next, changes, writeIcon, renamed };
+  return { team: next, changes, writeIcon, renamed, mflRenamed };
 }
 
 /**
@@ -195,7 +221,7 @@ export async function syncLeagueBranding({
       }
     }
     const plan = planTeamSync(team, f, { slug: league.slug, art });
-    if (plan.renamed) renames += 1;
+    if (plan.mflRenamed) renames += 1;
     if (plan.writeIcon && iconBuf) icons.push({ franchiseId: team.franchiseId, buf: iconBuf });
     if (plan.changes.length) report.push(`  ${team.franchiseId} ${plan.team.name}: ${plan.changes.join(', ')}`);
     teams.push(plan.team);
@@ -204,7 +230,7 @@ export async function syncLeagueBranding({
   const limit = Math.max(3, Math.ceil(teams.length * MAX_RENAMES_SHARE));
   if (renames > limit) {
     throw new Error(
-      `${slug}: ${renames} of ${teams.length} teams renamed at once — that looks like a franchise renumbering, ` +
+      `${slug}: ${renames} of ${teams.length} teams renamed on MFL at once — that looks like a franchise renumbering, ` +
         'not owners renaming. Nothing written; re-seed the branding by hand.',
     );
   }
