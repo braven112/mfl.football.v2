@@ -176,8 +176,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
           src={preview?.ownerCrest}
           {...(preview?.ownerCrest ? {} : { style: 'display: none;' })}
         />
-        <span class="pdm-owner__label">Rostered by</span>
+        <span class="pdm-owner__label" id="pdm-owner-label">Rostered by</span>
         <span class="pdm-owner__name" id="pdm-owner-name">{preview?.ownerName}</span>
+        <!-- Your-player chip (after Yahoo's "In your RB slot"): when the strip's
+             franchise is the VIEWER's own, the label turns to "Your player"
+             and this says which bucket he sits in. Painted with the claim
+             context (paintClaim), the one place the viewer's roster is known. -->
+        <span class="pdm-owner__chip" id="pdm-owner-chip" hidden></span>
       </div>
 
       <!-- Watch + Claim. Both are per-player decisions the viewer makes from
@@ -266,7 +271,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
       <div class="pdm-panel" id="pdm-panel-summary" data-panel="summary" {...panelAttrs('summary')}>
       <!-- Key Metrics -->
-      <div class:list={['pdm-metrics', previewRank && !hideContract && 'pdm-metrics--4']} id="pdm-metrics">
+      <div class="pdm-metrics" id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
           <span class="pdm-metric__value" id="metric-points-value">{t(preview?.points)}</span>
           <span class="pdm-metric__label" id="metric-points-label">{preview?.pointsLabel ?? 'Points'}</span>
@@ -274,6 +279,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
         <div class="pdm-metric" id="metric-card-ppg">
           <span class="pdm-metric__value" id="metric-ppg-value">{t(preview?.ppg)}</span>
           <span class="pdm-metric__label">Per Game</span>
+        </div>
+        <!-- Pos Rank — his season rank at his position by total points
+             ("RB 19"), from the Season Results payload (WeekEntry.pr). Hidden
+             when that payload has no entry for him. -->
+        <div class="pdm-metric" id="metric-card-posrank" hidden>
+          <span class="pdm-metric__value" id="metric-posrank-value">&mdash;</span>
+          <span class="pdm-metric__label">Pos Rank</span>
         </div>
         {!hideContract && (
           <div class="pdm-metric" id="metric-card-contract">
@@ -390,22 +402,41 @@ const spriteUrl = spriteUrlFor(Astro.url);
             <thead>
               <tr>
                 <th class="wr-wk">Wk</th>
+                <!-- The opponent cell carries its rank vs his position
+                     ("at KC 25th"), colored by difficulty. It replaced two
+                     columns, Avg vs and Rank vs, that pushed the table
+                     sideways on a phone. -->
+                <th class="wr-opp" id="wr-opp-header">Opp<span class="wr-hdr-long"> (rank vs <span id="wr-rank-pos">pos</span>)</span></th>
                 <th class="wr-pts">Pts</th>
-                <th class="wr-opp">Opp<span class="wr-hdr-long">onent</span></th>
-                <th class="wr-avg" id="wr-avg-header">Avg<span class="wr-hdr-long"> vs <span id="wr-avg-pos">Opp</span></span></th>
-                <th class="wr-rank" id="wr-rank-header">Rank<span class="wr-hdr-long"> vs <span id="wr-rank-pos">Opp</span></span></th>
                 <th class="wr-status">Status</th>
               </tr>
             </thead>
             <tbody id="weekly-results-body"></tbody>
             <tfoot id="weekly-results-foot" style="display: none;">
               <tr>
-                <td class="wr-wk"><strong>Total</strong></td>
+                <td class="wr-wk" colspan="2"><strong>Total</strong></td>
                 <td class="wr-pts" id="weekly-results-total"><strong>&mdash;</strong></td>
-                <td colspan="4"></td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
+        </div>
+        <!-- What the colors mean. Two keys, because two things are colored:
+             the points cell against HIS OWN average, and the opponent against
+             every defense's record vs his position. Each key hides when
+             nothing on screen uses it (see the weekly render). -->
+        <div class="wr-legend" id="weekly-results-legend">
+          <p class="wr-legend__row" id="wr-legend-points">
+            <span class="wr-legend__title">Pts vs his average</span>
+            <span class="wr-legend__key"><span class="wr-swatch wr-swatch--better" aria-hidden="true"></span>Better</span>
+            <span class="wr-legend__key"><span class="wr-swatch wr-swatch--typical" aria-hidden="true"></span>Typical</span>
+            <span class="wr-legend__key"><span class="wr-swatch wr-swatch--worse" aria-hidden="true"></span>Worse</span>
+          </p>
+          <p class="wr-legend__row" id="wr-legend-matchup">
+            <span class="wr-legend__title">Matchup</span>
+            <span class="wr-legend__key wr-opp-easy">Easy (1st&ndash;8th)</span>
+            <span class="wr-legend__key wr-opp-hard">Tough (25th&ndash;32nd)</span>
+          </p>
         </div>
       </div>
       </div>
@@ -665,6 +696,21 @@ const spriteUrl = spriteUrlFor(Astro.url);
     flex-shrink: 0;
   }
 
+  .pdm-owner__chip {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full, 9999px);
+    color: var(--color-gray-900, #111827);
+    background: color-mix(in srgb, var(--pdm-owner-hue, #64748b) 22%, transparent);
+    white-space: nowrap;
+  }
+  .pdm-owner__chip[hidden] { display: none; }
+
   .pdm-owner__name {
     font-size: var(--font-size-sm);
     font-weight: 700;
@@ -802,9 +848,13 @@ const spriteUrl = spriteUrlFor(Astro.url);
   /* ================================================================
      Key Metrics Strip
      ================================================================ */
+  /* One row of equal tiles, however many are showing (3 to 5: Points, Per
+     Game, Pos Rank, Contract, My Rank each hide independently). Auto columns
+     rather than a fixed count, so a hidden tile never leaves a gap. */
   .pdm-metrics {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 0.625rem;
     margin-bottom: 1.75rem;
   }
@@ -942,11 +992,26 @@ const spriteUrl = spriteUrlFor(Astro.url);
     min-width: 4rem;
   }
 
-  .weekly-results-table :global(.wr-avg),
-  .weekly-results-table :global(.wr-rank) {
-    text-align: center;
+  /* The opponent's rank vs his position, inside the opponent cell. */
+  .weekly-results-table :global(.wr-opp-rank) {
+    font-size: var(--font-size-2xs);
     font-variant-numeric: tabular-nums;
   }
+
+  /* Points shaded against HIS OWN average (season-results-cells.ts). The tint
+     sits on a pill inside the cell, not the cell, so neighboring weeks stay
+     separate blocks. color-mix over a semantic token keeps the text its normal
+     color in both themes; only the wash changes. */
+  .weekly-results-table :global(.wr-pts__val) {
+    display: inline-block;
+    min-width: 3.25rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    text-align: right;
+  }
+  .weekly-results-table :global(.wr-pts--better .wr-pts__val) { background: color-mix(in srgb, var(--color-success, #10b981) 22%, transparent); }
+  .weekly-results-table :global(.wr-pts--typical .wr-pts__val) { background: color-mix(in srgb, var(--content-text-muted, #6b7280) 14%, transparent); }
+  .weekly-results-table :global(.wr-pts--worse .wr-pts__val) { background: color-mix(in srgb, var(--color-error, #dc2626) 18%, transparent); }
 
   .weekly-results-table :global(.wr-status) {
     font-size: var(--font-size-2xs);
@@ -954,8 +1019,43 @@ const spriteUrl = spriteUrlFor(Astro.url);
     text-align: center;
   }
 
-  .weekly-results-table :global(.wr-rank-easy) { color: var(--color-success-dark, #059669); font-weight: 600; }
-  .weekly-results-table :global(.wr-rank-hard) { color: var(--color-error, #dc2626); font-weight: 600; }
+  /* Matchup difficulty colors the whole opponent cell, Yahoo-style. Both
+     tokens flip to their bright variants in tokens-dark.css. */
+  /* `tr td.` outranks the muted .wr-empty-row rule below, so an UPCOMING
+     week keeps its matchup color — that is the row the color is for. */
+  .weekly-results-table :global(tr td.wr-opp-easy) { color: var(--color-success-dark, #059669); font-weight: 600; }
+  .weekly-results-table :global(tr td.wr-opp-hard) { color: var(--color-error, #dc2626); font-weight: 600; }
+
+  /* The key under the table. */
+  .wr-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.6rem;
+    font-size: var(--font-size-2xs);
+    color: var(--content-text-muted, #6b7280);
+  }
+  .wr-legend[hidden], .wr-legend__row[hidden] { display: none; }
+  .wr-legend__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+  }
+  .wr-legend__title { font-weight: 600; }
+  .wr-legend__key { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .wr-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+  }
+  .wr-swatch--better { background: color-mix(in srgb, var(--color-success, #10b981) 45%, transparent); }
+  .wr-swatch--typical { background: color-mix(in srgb, var(--content-text-muted, #6b7280) 30%, transparent); }
+  .wr-swatch--worse { background: color-mix(in srgb, var(--color-error, #dc2626) 40%, transparent); }
+  .wr-legend .wr-opp-easy { color: var(--color-success-dark, #059669); font-weight: 600; }
+  .wr-legend .wr-opp-hard { color: var(--color-error, #dc2626); font-weight: 600; }
 
   /* Unplayed and bye weeks are muted with --content-text-muted, never a gray
      step or a low opacity: dark themes map gray-300 to a navy a shade off the
@@ -1000,16 +1100,16 @@ const spriteUrl = spriteUrlFor(Astro.url);
     text-align: center;
   }
 
-  /* A league with no committed fantasyPointsAllowed.json has nothing to put in
-     these two columns — the AFL had none at all, so they rendered as a pair of
-     permanently blank headers. Hidden as a unit rather than per row: a column
-     that is empty for every week of every player is not a column. */
-  .weekly-results-table.wr-no-opp-stats thead th.wr-avg,
-  .weekly-results-table.wr-no-opp-stats thead th.wr-rank,
-  .weekly-results-table.wr-no-opp-stats :global(td.wr-avg),
-  .weekly-results-table.wr-no-opp-stats :global(td.wr-rank) {
+  /* A league with no committed fantasyPointsAllowed.json has no opponent rank
+     to show — the AFL once had none at all. The opponent cell then just names
+     the opponent, and the header stops promising a rank it cannot give. */
+  .weekly-results-table.wr-no-opp-stats thead th.wr-opp .wr-hdr-long {
     display: none;
   }
+
+  .weekly-results-table thead th.wr-pts { text-align: right; padding-right: 0.9rem; }
+  /* Line the total up with the pills' right edge above it. */
+  .weekly-results-table :global(tfoot td.wr-pts) { padding-right: 0.9rem; }
 
   .weekly-results-table :global(.wr-badge--starter) { background: #2563eb; }
   .weekly-results-table :global(.wr-badge--nonstarter) { background: #9333ea; }
@@ -1322,7 +1422,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     outline-offset: 2px;
   }
 
-  .pdm-metrics--4 { grid-template-columns: repeat(4, 1fr); }
 
   .pdm-gamelog-empty {
     margin: 0;
@@ -1642,11 +1741,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
       font-size: var(--font-size-2xs);
     }
 
-    .weekly-results-table :global(.wr-avg) { display: none; }
-    #wr-avg-header { display: none; }
+    /* The pill's right edge on a phone: 0.3rem cell + 0.4rem pill padding. */
+    .weekly-results-table thead th.wr-pts,
+    .weekly-results-table :global(tfoot td.wr-pts) { padding-right: 0.7rem; }
 
-    /* Phone: short headers ("Opp", "Rank") so the table fits the sheet
-       instead of scrolling sideways with "Rank vs QB" cut off. */
+    /* Phone: short headers ("Opp") so the table fits the sheet instead of
+       scrolling sideways. */
     .weekly-results-table .wr-hdr-long {
       /* Visually hidden, not display:none — a screen reader still hears
          "Rank vs QB", not a bare "Rank". */
@@ -1678,6 +1778,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   // The repo's one exported HTML escaper (src/utils/player-cell-html.ts) —
   // franchise names come straight from MFL and land in innerHTML here.
   import { escapeHtml } from '../../utils/player-cell-html';
+  import { matchupTier, ordinal, pointsTier, seasonAverage } from '../../utils/season-results-cells';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
   import { rememberPendingClaim } from '../../utils/claim-resume';
@@ -1686,7 +1787,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
   // reads the right bucket. A blanket reset on `astro:page-load` fired on the
   // same dispatch as WatchListBridge's warm-up and threw away a fetch that was
   // already in flight, whose late `.then` then repopulated what it had cleared.
-  import { loadClaimContext, offerFor, markClaimed, tradeTargetFor } from '../../utils/player-claim-client';
+  import { loadClaimContext, offerFor, markClaimed, tradeTargetFor, ownSlotFor } from '../../utils/player-claim-client';
   import { buildTradeBuilderPath } from '../../utils/trade-builder-link';
   import { activeRankingsScope } from '../../utils/rankings-scope';
   import { resolveLeaguePath, pathHasLeaguePrefix } from '../../utils/nav-utils';
@@ -1986,6 +2087,22 @@ const spriteUrl = spriteUrlFor(Astro.url);
         }
       }
 
+      // ── Your player ──
+      // Same paint pass, same context: the strip names the franchise from the
+      // PAGE's payload, and only when that franchise is the viewer's own does
+      // it turn into "Your player" (+ IR / taxi squad). Comparing against the
+      // strip's own franchise rather than "is he anywhere on my roster" keeps
+      // the AFL honest: browsing the other conference's copy of a player you
+      // also roster still names that conference's owner, as it should.
+      const ownerLabel = document.getElementById('pdm-owner-label');
+      const ownerChip = document.getElementById('pdm-owner-chip');
+      const own = claimPlayer?.id ? ownSlotFor(claimPlayer.id, claimPlayer.franchiseId) : null;
+      if (ownerLabel) ownerLabel.textContent = own ? 'Your player' : 'Rostered by';
+      if (ownerChip) {
+        ownerChip.textContent = own === 'ir' ? 'On IR' : own === 'taxi' ? 'Taxi squad' : own === 'active' ? 'Active roster' : '';
+        ownerChip.hidden = !own;
+      }
+
       // The row exists only for the buttons in it.
       if (actionsRow) {
         actionsRow.hidden =
@@ -2189,7 +2306,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     const moreBody = document.getElementById('pdm-more-body');
     const salaryBody = document.getElementById('pdm-salary-body');
     const rankCard = document.getElementById('metric-card-rank');
-    const metricsGrid = document.getElementById('pdm-metrics');
     const gamelogEmpty = document.getElementById('pdm-gamelog-empty');
     const contentEl = document.querySelector<HTMLElement>('.player-details-modal__content');
 
@@ -2330,7 +2446,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
       const rank = typeof data.myRank === 'string' ? data.myRank.trim() : '';
       if (rankCard) rankCard.hidden = !rank;
-      if (metricsGrid) metricsGrid.classList.toggle('pdm-metrics--4', !!rank && !!document.getElementById('metric-card-contract'));
       setTextById('metric-rank-value', rank);
     };
 
@@ -2806,7 +2921,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
       var weeklyBody = document.getElementById('weekly-results-body');
       var weeklyFoot = document.getElementById('weekly-results-foot');
       var weeklyTotal = document.getElementById('weekly-results-total');
-      var avgHeader = document.getElementById('wr-avg-pos');
       var rankHeader = document.getElementById('wr-rank-pos');
 
       if (weeklySection && weeklyBody) {
@@ -2844,20 +2958,38 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
           var pos = (playerData.position || '').toUpperCase();
           var displayPos = ['SWR', 'LWR', 'RWR'].indexOf(pos) >= 0 ? 'WR' : pos;
-          if (avgHeader) avgHeader.textContent = displayPos;
-          if (rankHeader) rankHeader.textContent = displayPos;
+          if (rankHeader) rankHeader.textContent = displayPos || 'pos';
 
           var html = '';
           var totalPts = 0;
           var gamesPlayed = 0;
+          // His own average, for shading each week (season-results-cells.ts).
+          // Computed up front: every row is compared to the SAME number.
+          var weekPoints = playerWeeks.map(function (wk: { p: number | null }) { return wk.p; });
+          var seasonAvg = seasonAverage(weekPoints);
+          var scoredWeeks = weekPoints.filter(function (p: number | null) { return p !== null; }).length;
+          var anyPointsTier = false;
+          var anyMatchup = false;
 
           for (var i = 0; i < playerWeeks.length; i++) {
             var w = playerWeeks[i];
             var isBye = w.st === 'BYE';
-            var ptsStr = w.p !== null ? w.p.toFixed(2) : '';
-            var oppStr = w.opp || (isBye ? 'Bye' : '');
-            var avgStr = w.avg !== null ? w.avg.toFixed(1) : '';
-            var rankStr = w.rank !== null ? String(w.rank) : '';
+            var ptsStr = w.p !== null ? w.p.toFixed(2) : (isBye ? '' : '\u2014');
+            // Opponent and its rank vs his position in ONE cell: "at KC 25th",
+            // colored easy / tough. The defense's average allowed rides in the
+            // title, since it no longer has a column of its own.
+            var tier = isBye ? null : matchupTier(w.rank);
+            if (tier === 'easy' || tier === 'hard') anyMatchup = true;
+            var oppStr = isBye ? 'Bye' : escapeHtml(w.opp || '');
+            if (!isBye && w.opp && w.rank !== null) {
+              oppStr += ' <span class="wr-opp-rank">' + ordinal(w.rank) + '</span>';
+            }
+            var oppTitle = !isBye && w.avg !== null
+              ? ' title="Allows ' + w.avg.toFixed(1) + ' pts a game to ' + escapeHtml(displayPos) + 's' +
+                (w.rank !== null ? ' (' + ordinal(w.rank) + ' most)' : '') + '"'
+              : '';
+            var ptsTier = pointsTier(w.p, seasonAvg, scoredWeeks);
+            if (ptsTier) anyPointsTier = true;
 
             // Badge colors/border ring live in scoped CSS (.wr-badge*) so
             // dark mode can retint them — the ring must match the card
@@ -2896,11 +3028,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
               statusStr = w.st;
             }
 
-            var rankClass = 'wr-rank';
-            if (w.rank !== null) {
-              if (w.rank <= 8) rankClass += ' wr-rank-easy';
-              else if (w.rank >= 25) rankClass += ' wr-rank-hard';
-            }
+            var oppClass = 'wr-opp' + (tier === 'easy' ? ' wr-opp-easy' : tier === 'hard' ? ' wr-opp-hard' : '');
+            var ptsClass = 'wr-pts' + (ptsTier ? ' wr-pts--' + ptsTier : '');
 
             var statusClass = w.st === 'S' ? 'wr-starter' : w.st === 'NS' ? 'wr-nonstarter' : '';
             var rowClass = isBye ? 'wr-bye-row' : (w.p === null && !isBye ? 'wr-empty-row' : '');
@@ -2912,25 +3041,37 @@ const spriteUrl = spriteUrlFor(Astro.url);
 
             html += '<tr class="' + rowClass + '">' +
               '<td class="wr-wk">' + w.w + '</td>' +
-              '<td class="wr-pts">' + ptsStr + '</td>' +
-              '<td class="wr-opp">' + oppStr + '</td>' +
-              '<td class="wr-avg">' + avgStr + '</td>' +
-              '<td class="' + rankClass + '">' + rankStr + '</td>' +
+              '<td class="' + oppClass + '"' + oppTitle + '>' + oppStr + '</td>' +
+              '<td class="' + ptsClass + '"><span class="wr-pts__val">' + ptsStr + '</span></td>' +
               '<td class="wr-status ' + statusClass + '">' + statusStr + '</td>' +
               '</tr>';
           }
 
           weeklyBody.innerHTML = html;
 
-          // Drop the two opponent-strength columns when this league has no
-          // points-allowed data for them (see .wr-no-opp-stats). Decided from
-          // the rendered rows, so it follows the data rather than a league flag.
+          // A league with no points-allowed data (see .wr-no-opp-stats) shows
+          // the opponent alone: the header stops promising a rank, and the
+          // matchup key goes. Decided from the rendered rows, so it follows the
+          // data rather than a league flag.
           var weeklyTable = document.getElementById('weekly-results-table');
-          if (weeklyTable) {
-            var hasOppStats = playerWeeks.some(
-              function (wk: { avg: number | null; rank: number | null }) { return wk.avg !== null || wk.rank !== null; },
-            );
-            weeklyTable.classList.toggle('wr-no-opp-stats', !hasOppStats);
+          var hasOppStats = playerWeeks.some(
+            function (wk: { avg: number | null; rank: number | null }) { return wk.avg !== null || wk.rank !== null; },
+          );
+          if (weeklyTable) weeklyTable.classList.toggle('wr-no-opp-stats', !hasOppStats);
+          var legendPoints = document.getElementById('wr-legend-points');
+          var legendMatchup = document.getElementById('wr-legend-matchup');
+          var legendWrap = document.getElementById('weekly-results-legend');
+          if (legendPoints) legendPoints.hidden = !anyPointsTier;
+          if (legendMatchup) legendMatchup.hidden = !(hasOppStats && anyMatchup);
+          if (legendWrap) legendWrap.hidden = !anyPointsTier && !(hasOppStats && anyMatchup);
+
+          // Pos Rank tile: his season rank at his position, carried on week 1
+          // (WeekEntry.pr in weekly-player-results.ts).
+          var posRank = playerWeeks[0] && typeof playerWeeks[0].pr === 'number' ? playerWeeks[0].pr : null;
+          var posRankCard = document.getElementById('metric-card-posrank');
+          if (posRankCard) {
+            posRankCard.hidden = posRank === null || !displayPos;
+            setText('metric-posrank-value', posRank !== null ? displayPos + ' ' + posRank : '\u2014');
           }
 
           if (weeklyFoot && weeklyTotal && gamesPlayed > 0) {
@@ -2950,6 +3091,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
           weeklySection.style.display = 'none';
           weeklyBody.innerHTML = '';
           if (weeklyFoot) weeklyFoot.style.display = 'none';
+          var posRankCardNone = document.getElementById('metric-card-posrank');
+          if (posRankCardNone) posRankCardNone.hidden = true;
         }
       }
 
