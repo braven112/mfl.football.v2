@@ -6129,6 +6129,35 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
+
+    /**
+     * The years the TABLE's salary columns hold. A season payload keys its
+     * salaries from its own season, so a past season's first column is that
+     * year, not this league year (user, 2026-11-01: "label them in the correct
+     * year"). `salaryYears` stays this league year's — the cap card and the
+     * contract tools are about now.
+     */
+    const tableYears = (): number[] => {
+      const season = parseInt(String(currentSeason), 10);
+      const offset = Number.isFinite(season) ? season - salaryYears[0] : 0;
+      return salaryYears.map((year: number) => year + offset);
+    };
+
+    /** Point the salary-year headings (roster + dead money tables) at `tableYears()`. */
+    const relabelSalaryYears = () => {
+      const years = tableYears();
+      years.forEach((year, index) => {
+        document
+          .querySelectorAll<HTMLElement>(
+            `.roster-page[data-league="theleague"] th[data-sort-key="salary_${index}"], .roster-page[data-league="theleague"] th[data-column="dm-year${index + 1}"]`,
+          )
+          .forEach((th) => {
+            const label = th.firstChild;
+            if (label && label.nodeType === Node.TEXT_NODE) label.textContent = th.dataset.sortKey ? `${year} ` : String(year);
+            else th.prepend(document.createTextNode(`${year} `));
+          });
+      });
+    };
     const hiddenColumns = new Set();
 
 
@@ -6598,8 +6627,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 value = adj.futurePenalty;
               // data-label carries the year for the phone card's second line
               // (rosters-mobile.css), where the header row is hidden.
-              if (!value) return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" style="text-align:right"></td>`;
-              return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" class="deadmoney-row__amount">${_capSpaceFmt.format(
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}" data-label="${tableYears()[yearIdx]}" style="text-align:right"></td>`;
+              return `<td data-column="dm-year${yearIdx + 1}" data-label="${tableYears()[yearIdx]}" class="deadmoney-row__amount">${_capSpaceFmt.format(
                 value
               )}</td>`;
             })
@@ -6874,7 +6903,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               }
 
               const toAttr = (isFirstYearUfa && hasOptionWindow) ? ` data-player-id="${player.id}"` : '';
-              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}"${toAttr}>${value}</td>`;
+              return `<td data-label="${tableYears()[index] ?? year}" data-column="${columnKey}" class="${cellClass}"${toAttr}>${value}</td>`;
             })
             .join('');
 
@@ -7159,7 +7188,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           const phoneRow = player as any;
           const phoneLineSpans = buildPhoneLineSpans({
             contractYears: effectiveYears,
-            firstYear: salaryYears[0],
+            firstYear: tableYears()[0],
             contractInfo: phoneRow.contractInfo,
             kickoffIso: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.date : null,
             kickoffZone: config.kickoffClock?.zone,
@@ -9952,6 +9981,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const updateView = () => {
       clearSecondaryWarmup();
       const viewVersion = ++latestViewVersion;
+      // Before the sort chips and any row render: both read their year from the headings.
+      relabelSalaryYears();
       resetSort();
       const { seasonData, teamData } = getTeamData();
       // Simulated moves apply through the same two rules the phone surfaces
@@ -10374,7 +10405,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           tradeBait: !!payload.tradeBait,
           displayTag: payload.displayTag || 'active',
         },
-        salaryYears,
+        salaryYears: tableYears(),
         yearCells: liftYearCells(row, salaryYears.length),
         totalRemaining: data.totalRemaining ?? null,
         thisWeek: liftThisWeek(row),
