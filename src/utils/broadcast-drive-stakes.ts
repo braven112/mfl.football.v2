@@ -86,8 +86,9 @@ export function scoreEventFor(position: string): ScoreEvent | null {
  *
  * Every rule that names the event counts (a league may pay a base TD and a
  * separate bonus on the same code), evaluated at one touchdown — or, for a
- * field goal, at one kick of `RED_ZONE_FG_YARDS`. No matching rule, or no
- * published rules at all, falls back to the standard value.
+ * field goal, at one kick of `RED_ZONE_FG_YARDS`. No rule for the event, or no
+ * published rules at all, falls back to the standard value; a rule that pays
+ * 0 (or less) is kept as published.
  */
 export function scoreValue(
   rules: readonly PositionRuleSet[] | null | undefined,
@@ -110,49 +111,80 @@ export function scoreValue(
       points += rule.kind === 'per' ? Math.floor(value / rule.every) * rule.points : rule.points;
     }
   }
-  return matched && points > 0 ? points : event.fallback;
+  // A published rule is the league's answer even when it pays nothing for
+  // one score; only a league with no rule for the event gets the standard.
+  return matched ? points : event.fallback;
 }
 
 /**
- * The stake for one red-zone player in one league, or null when there is no
- * matchup it can move (a bye, a feed that could not be read, a position that
- * is not on the field for this drive).
+ * The stake for one red-zone player in each matchup he can move, or [] when
+ * there is none (a bye, a feed that could not be read, a position that is not
+ * on the field for this drive).
  *
- * The viewer's own player can sit in two matchups in a doubleheader week; the
- * one he moves most is the one reported.
+ * His score is added to EVERY team in the matchup that starts him: an AFL
+ * player is routinely rostered in both conferences, and when he starts for
+ * both sides his touchdown moves both totals and the margin not at all.
+ *
+ * `before` is recomputed from the same projected finals and the same model
+ * as `after`, never read from the board's bar. On the live board the two are
+ * identical (`scoreLeague` computes exactly this); a caller with its own curve
+ * (the demo) would otherwise compare two models and could show a viewer's own
+ * touchdown lowering his chance.
  */
-export function stakeFor(
-  player: Pick<RedZoneAlert['players'][number], 'side' | 'franchiseId' | 'position'>,
+export function stakesFor(
+  player: Pick<RedZoneAlert['players'][number], 'side' | 'franchiseId' | 'position' | 'playerId'>,
   score: BroadcastLeagueScore | undefined,
   viewer: StakeViewer | undefined,
   rules: readonly PositionRuleSet[] | null | undefined,
-): DriveStake | null {
-  if (!score?.ok || !viewer) return null;
+): DriveStake[] {
+  if (!score?.ok || !viewer) return [];
   const points = scoreValue(rules, player.position);
-  if (points === null) return null;
+  if (points === null) return [];
 
   const mine = score.teams[viewer.franchiseId];
-  if (!mine) return null;
+  if (!mine) return [];
+  const starts = (team: BroadcastLeagueScore['teams'][string]) =>
+    (team.players ?? []).some((row) => row.id === player.playerId);
 
-  let best: DriveStake | null = null;
+  const out: DriveStake[] = [];
   viewer.opponentIds.forEach((opponentId, matchupIndex) => {
-    if (player.side === 'opponent' && opponentId !== player.franchiseId) return;
     const theirs = score.teams[opponentId];
-    const before = score.winProbability[matchupIndex];
-    if (!theirs || typeof before !== 'number') return;
+    if (!theirs) return;
+    // Rows are the authority on who he starts for; the alert's side is the
+    // fallback for a payload that carries no rows.
+    const rowsKnown = (mine.players?.length ?? 0) > 0 || (theirs.players?.length ?? 0) > 0;
+    const forMine = rowsKnown ? starts(mine) : player.side === 'mine';
+    const forTheirs = rowsKnown
+      ? starts(theirs)
+      : player.side === 'opponent' && opponentId === player.franchiseId;
+    if (!forMine && !forTheirs) return;
+
     const remaining = mine.remainingPoints + theirs.remainingPoints;
-    const after =
-      player.side === 'mine'
-        ? winProbability(mine.projectedFinal + points, theirs.projectedFinal, remaining)
-        : winProbability(mine.projectedFinal, theirs.projectedFinal + points, remaining);
-    if (!best || Math.abs(after - before) > Math.abs(best.after - best.before)) {
-      best = { matchupIndex, before, after, points };
-    }
+    const before = winProbability(mine.projectedFinal, theirs.projectedFinal, remaining);
+    const after = winProbability(
+      mine.projectedFinal + (forMine ? points : 0),
+      theirs.projectedFinal + (forTheirs ? points : 0),
+      remaining,
+    );
+    out.push({ matchupIndex, before, after, points });
   });
+  return out;
+}
+
+/** The matchup a player moves most: the one the board's card shows. */
+export function biggestStake(stakes: readonly DriveStake[]): DriveStake | null {
+  let best: DriveStake | null = null;
+  for (const s of stakes) {
+    if (!best || Math.abs(s.after - s.before) > Math.abs(best.after - best.before)) best = s;
+  }
   return best;
 }
 
-/** Every red-zone player with the stake of his drive attached, where one exists. */
+/**
+ * Every red-zone player with his drive's stakes attached: `stakes` for each
+ * matchup he moves (the overlay shows the one its box is on), `stake` for the
+ * biggest of them (the board's card).
+ */
 export function attachDriveStakes(
   alerts: readonly RedZoneAlert[],
   scores: readonly BroadcastLeagueScore[],
@@ -164,8 +196,9 @@ export function attachDriveStakes(
   return alerts.map((alert) => ({
     ...alert,
     players: alert.players.map((p) => {
-      const stake = stakeFor(p, scoreBy.get(p.leagueId), viewerBy.get(p.leagueId), rulesByLeague.get(p.leagueId));
-      return stake ? { ...p, stake } : p;
+      const stakes = stakesFor(p, scoreBy.get(p.leagueId), viewerBy.get(p.leagueId), rulesByLeague.get(p.leagueId));
+      const stake = biggestStake(stakes);
+      return stake ? { ...p, stake, stakes } : p;
     }),
   }));
 }

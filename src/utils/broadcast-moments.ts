@@ -433,8 +433,10 @@ export interface RedZoneAlert {
      * opponent's player rather than guess which matchup he is in.
      */
     franchiseId?: string;
-    /** What his scoring on this drive would do to the viewer's win chance (`attachDriveStakes`). */
+    /** What his scoring on this drive would do to the viewer's win chance, in the matchup he moves most (`attachDriveStakes`). */
     stake?: DriveStake;
+    /** The same, for every matchup he moves: a doubleheader has two. */
+    stakes?: DriveStake[];
   }[];
 }
 

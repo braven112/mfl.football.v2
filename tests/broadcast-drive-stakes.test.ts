@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   attachDriveStakes,
+  biggestStake,
   rankedStakes,
   scoreValue,
-  stakeFor,
+  stakesFor,
   stakeSwing,
 } from '../src/utils/broadcast-drive-stakes';
 import { overlayStake } from '../src/utils/broadcast-overlay';
@@ -78,35 +79,60 @@ describe('scoreValue', () => {
     // No rule names a receiving TD for a WR here: standard value, never 0.
     expect(scoreValue(rules, 'WR')).toBe(6);
   });
+
+  it('keeps a published rule that pays nothing for one score, rather than the standard', () => {
+    const rules: PositionRuleSet[] = [
+      { positions: ['RB'], rules: [{ event: ['#R'], lo: 2, hi: 99, kind: 'flat', points: 10, every: 1 }] },
+    ];
+    expect(scoreValue(rules, 'RB')).toBe(0);
+  });
 });
 
-describe('stakeFor', () => {
+const best = (...args: Parameters<typeof stakesFor>) => biggestStake(stakesFor(...args));
+const me = { side: 'mine' as const, franchiseId: '0001', position: 'RB', playerId: '2' };
+
+describe('stakesFor', () => {
   it("raises the viewer's chance when his own player scores", () => {
-    const stake = stakeFor({ side: 'mine', franchiseId: '0001', position: 'RB' }, score(), viewer, null);
+    const stake = best(me, score(), viewer, null);
     expect(stake).not.toBeNull();
     expect(stake!.after).toBeGreaterThan(stake!.before);
     expect(stake!.points).toBe(6);
   });
 
-  it("reports the doubleheader matchup the viewer's player moves most", () => {
-    const s = score();
-    const stake = stakeFor({ side: 'mine', franchiseId: '0001', position: 'RB' }, s, viewer, null)!;
-    const swings = [0, 1].map((i) => {
-      const theirs = s.teams[viewer.opponentIds[i]];
-      const mine = s.teams['0001'];
-      return winProbability(mine.projectedFinal + 6, theirs.projectedFinal, mine.remainingPoints + theirs.remainingPoints) - s.winProbability[i];
-    });
-    expect(stake.matchupIndex).toBe(swings[0] > swings[1] ? 0 : 1);
+  it("prices every matchup of a doubleheader, and the biggest is the board's", () => {
+    const all = stakesFor(me, score(), viewer, null);
+    expect(all.map((s) => s.matchupIndex)).toEqual([0, 1]);
+    const swings = all.map((s) => s.after - s.before);
+    expect(biggestStake(all)!.matchupIndex).toBe(swings[0] > swings[1] ? 0 : 1);
   });
 
   it("lowers the chance for an opponent's player, and only in his own matchup", () => {
-    const stake = stakeFor({ side: 'opponent', franchiseId: '0003', position: 'WR' }, score(), viewer, null);
-    expect(stake?.matchupIndex).toBe(1);
-    expect(stake!.after).toBeLessThan(stake!.before);
+    const all = stakesFor({ side: 'opponent', franchiseId: '0003', position: 'WR', playerId: '9' }, score(), viewer, null);
+    expect(all.map((s) => s.matchupIndex)).toEqual([1]);
+    expect(all[0].after).toBeLessThan(all[0].before);
+  });
+
+  it('moves nothing when he starts for both sides of an AFL matchup', () => {
+    const row = { id: '2' } as BroadcastTeamScore['players'][number];
+    const s = score();
+    s.teams['0001'] = { ...s.teams['0001'], players: [row] };
+    s.teams['0002'] = { ...s.teams['0002'], players: [row] };
+    const [first] = stakesFor(me, s, viewer, null);
+    expect(first.matchupIndex).toBe(0);
+    expect(first.after).toBeCloseTo(first.before, 10);
+  });
+
+  it("measures `before` with the same model as `after`, whatever curve the caller's bar used", () => {
+    // The demo draws its bar with its own soft curve; a stake read off that bar
+    // could show the viewer's own touchdown LOWERING his chance.
+    const s = score({ winProbability: [0.99, 0.99] });
+    for (const stake of stakesFor(me, s, viewer, null)) {
+      expect(stake.after).toBeGreaterThan(stake.before);
+    }
   });
 
   it('prices nothing for a league whose feed could not be read', () => {
-    expect(stakeFor({ side: 'mine', franchiseId: '0001', position: 'RB' }, score({ ok: false }), viewer, null)).toBeNull();
+    expect(stakesFor(me, score({ ok: false }), viewer, null)).toEqual([]);
   });
 });
 
@@ -153,5 +179,11 @@ describe('attachDriveStakes, rankedStakes and the overlay tab', () => {
       swing: 15,
     });
     expect(overlayStake(alerts, { key: 'L2:1', leagueId: 'L2' })).toBeNull();
+  });
+
+  it('keeps a doubleheader player on both games as the box rotates', () => {
+    const [priced] = attachDriveStakes([alert([{}])], [score()], [viewer], new Map());
+    expect(overlayStake([priced], { key: 'L1:0', leagueId: 'L1' })).not.toBeNull();
+    expect(overlayStake([priced], { key: 'L1:1', leagueId: 'L1' })).not.toBeNull();
   });
 });

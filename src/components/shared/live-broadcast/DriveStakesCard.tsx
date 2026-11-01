@@ -8,8 +8,10 @@
  * (`attachDriveStakes`); this only draws them.
  *
  * Like the banner it is a persistent STATE with one entrance and no further
- * motion, and it is not a live region: the island's announcer already speaks
- * the drive's start and end once each.
+ * motion. It is NOT a live region (re-announcing every poll would compete
+ * with the reveal announcer), but unlike the banner it is not hidden either:
+ * the announcer speaks only the players' names, so the stakes themselves
+ * must stay readable for anyone who navigates to them.
  */
 
 import { memo } from 'react';
@@ -36,7 +38,7 @@ function DriveStakesCard({ alerts }: Props) {
   const pronoun = players.size === 1 ? 'he scores' : 'they score';
 
   return (
-    <aside className="lbc__stakes" aria-hidden="true">
+    <aside className="lbc__stakes" aria-label="Drive stakes">
       <p className="lbc__stakes-kick">If {pronoun}</p>
       {players.size === 1 && <p className="lbc__stakes-who">{rows[0].playerName}</p>}
       <p className="lbc__stakes-sum">{summary(helps, hurts)}</p>

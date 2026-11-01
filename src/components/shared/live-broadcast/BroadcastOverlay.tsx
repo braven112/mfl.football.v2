@@ -709,13 +709,14 @@ function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
 /**
  * The red tab under the corner box while a red-zone drive could move this
  * game: who has the ball, and the viewer's win chance if he scores. It sits
- * where the first-run tip sits, so it waits for the tip to go.
+ * where the first-run tip sits, so it waits for the tip to go. Readable but
+ * not live: it changes every poll during a drive.
  */
 function StakeTab({ stake }: { stake: OverlayStake | null }) {
   if (!stake) return null;
   const up = stake.swing > 0;
   return (
-    <div className="bov__rz" data-dir={up ? 'up' : 'down'} aria-hidden="true">
+    <div className="bov__rz" data-dir={up ? 'up' : 'down'}>
       <span className="bov__rz-line">
         <span className="bov__rz-tag">Red zone</span>
         <b className="bov__rz-who">{stake.playerName}</b>

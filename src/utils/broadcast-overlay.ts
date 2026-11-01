@@ -16,7 +16,7 @@ import { normalizeUsNetwork } from './broadcast-channels';
 import { getNFLTeamName, normalizeTeamCode } from './nfl-logo';
 import type { NflGame } from '../types/live-scoring';
 import { isMomentFresh, momentTime, type BroadcastMoment, type RedZoneAlert } from './broadcast-moments';
-import { rankedStakes, stakeSwing } from './broadcast-drive-stakes';
+import { stakeSwing, type DriveStake } from './broadcast-drive-stakes';
 
 /**
  * `bar` is the always-on ticker strip and never takes the remote; `expanded`
@@ -473,17 +473,23 @@ export function overlayStake(
 ): OverlayStake | null {
   if (!alerts?.length) return null;
   const matchupIndex = Number(game.key.split(':').pop());
-  const best = rankedStakes(alerts).find(
-    (p) => p.leagueId === game.leagueId && p.stake.matchupIndex === matchupIndex,
-  );
+  let best: (RedZoneAlert['players'][number] & { team: string; at: DriveStake }) | null = null;
+  for (const alert of alerts) {
+    for (const p of alert.players) {
+      if (p.leagueId !== game.leagueId) continue;
+      const at = (p.stakes ?? (p.stake ? [p.stake] : [])).find((s) => s.matchupIndex === matchupIndex);
+      if (!at || stakeSwing(at) === 0) continue;
+      if (!best || Math.abs(stakeSwing(at)) > Math.abs(stakeSwing(best.at))) best = { ...p, team: alert.team, at };
+    }
+  }
   if (!best) return null;
-  const alert = alerts.find((a) => a.team === best.team);
+  const alert = alerts.find((a) => a.team === best!.team);
   return {
     playerName: best.playerName,
     team: best.team,
     downDistance: alert?.downDistance ?? '',
-    before: best.stake.before,
-    after: best.stake.after,
-    swing: stakeSwing(best.stake),
+    before: best.at.before,
+    after: best.at.after,
+    swing: stakeSwing(best.at),
   };
 }
