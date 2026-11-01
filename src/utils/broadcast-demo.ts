@@ -32,6 +32,7 @@ import type {
 } from '../types/live-broadcast';
 import type { LivePlayerRow, NflGame, PlayerMeta } from '../types/live-scoring';
 import type { BroadcastMoment, MomentKind, RedZoneAlert } from './broadcast-moments';
+import { attachDriveStakes } from './broadcast-drive-stakes';
 
 /** One loop of the rehearsal. */
 export const DEMO_PERIOD_MS = 10 * 60_000;
@@ -252,6 +253,7 @@ export function demoPollAt(input: DemoPollInput): BroadcastPollResponse {
           playerId: who.id,
           playerName: who.name,
           position: who.position,
+          franchiseId: panel.franchiseId,
         }],
       });
     }
@@ -270,13 +272,21 @@ export function demoPollAt(input: DemoPollInput): BroadcastPollResponse {
       : null,
   }));
 
+  // Priced exactly as a real drive is, from the demo's own scores, so the
+  // stakes card and the overlay's red tab rehearse with the rest of the board.
+  const stakeViewers = panels.map((panel) => ({
+    leagueId: panel.leagueId,
+    franchiseId: panel.franchiseId,
+    opponentIds: panel.matchups.map((m) => m.opponent?.franchiseId ?? ''),
+  }));
+
   return {
     ok: true,
     week: base.week,
     fetchedAt: new Date(now).toISOString(),
     leagues,
     moments,
-    redZone,
+    redZone: attachDriveStakes(redZone, leagues, stakeViewers, new Map()),
     games,
   };
 }

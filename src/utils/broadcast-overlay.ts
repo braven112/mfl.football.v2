@@ -15,7 +15,8 @@ import { projectPlayerFinal } from './live-win-probability';
 import { normalizeUsNetwork } from './broadcast-channels';
 import { getNFLTeamName, normalizeTeamCode } from './nfl-logo';
 import type { NflGame } from '../types/live-scoring';
-import { isMomentFresh, momentTime, type BroadcastMoment } from './broadcast-moments';
+import { isMomentFresh, momentTime, type BroadcastMoment, type RedZoneAlert } from './broadcast-moments';
+import { rankedStakes, stakeSwing } from './broadcast-drive-stakes';
 
 /**
  * `bar` is the always-on ticker strip and never takes the remote; `expanded`
@@ -446,4 +447,43 @@ function playText(moments: readonly BroadcastMoment[], playerId: string, now: nu
     if (!best || (momentTime(m) ?? 0) > (momentTime(best) ?? 0)) best = m;
   }
   return best?.text ?? '';
+}
+
+/** What the corner box's red tab says about one game during a red-zone drive. */
+export interface OverlayStake {
+  playerName: string;
+  /** The NFL team with the ball, canonical code. */
+  team: string;
+  downDistance: string;
+  before: number;
+  after: number;
+  /** Signed win-chance points for the viewer: +14 helps, −9 hurts. */
+  swing: number;
+}
+
+/**
+ * The biggest drive stake on THIS game, or null when no red-zone drive moves
+ * it. Keyed to the game's own matchup, so a doubleheader's two games each show
+ * their own stake, and the tab rotates with the box rather than on a clock of
+ * its own.
+ */
+export function overlayStake(
+  alerts: readonly RedZoneAlert[] | undefined,
+  game: Pick<OverlayGame, 'key' | 'leagueId'>,
+): OverlayStake | null {
+  if (!alerts?.length) return null;
+  const matchupIndex = Number(game.key.split(':').pop());
+  const best = rankedStakes(alerts).find(
+    (p) => p.leagueId === game.leagueId && p.stake.matchupIndex === matchupIndex,
+  );
+  if (!best) return null;
+  const alert = alerts.find((a) => a.team === best.team);
+  return {
+    playerName: best.playerName,
+    team: best.team,
+    downDistance: alert?.downDistance ?? '',
+    before: best.stake.before,
+    after: best.stake.after,
+    swing: stakeSwing(best.stake),
+  };
 }

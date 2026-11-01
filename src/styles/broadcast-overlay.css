@@ -492,6 +492,90 @@ body.bov-doc {
   left: calc(var(--u) * 3.2);
 }
 
+/* The red-zone stake tab: where the first-run tip sits, just past the box,
+   and only once the tip has gone. */
+.bov--corner > .bov__rz {
+  position: absolute;
+}
+
+.bov--corner[data-edge='top'] > .bov__rz {
+  top: calc(var(--u) * 8.4);
+}
+
+.bov--corner[data-edge='bottom'] > .bov__rz {
+  bottom: calc(var(--u) * 8.4);
+}
+
+.bov--corner[data-side='right'] > .bov__rz {
+  right: calc(var(--u) * 3.2);
+}
+
+.bov--corner[data-side='left'] > .bov__rz {
+  left: calc(var(--u) * 3.2);
+}
+
+.bov__rz {
+  --bov-stake-up: #86efac;
+  --bov-stake-down: #fcd34d;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.35);
+  padding: calc(var(--u) * 0.55) calc(var(--u) * 0.9);
+  border-radius: calc(var(--u) * 0.6);
+  background: #991b1b;
+  color: var(--bov-text);
+  font-family: 'sans-serif-condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  font-size: calc(var(--u) * 1.15);
+  white-space: nowrap;
+  animation: bov-in 0.45s ease;
+}
+
+.bov__rz-line {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.6);
+}
+
+.bov__rz-tag {
+  padding: 0 calc(var(--u) * 0.5);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: calc(var(--u) * 0.8);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bov__rz-dd,
+.bov__rz-if {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.bov__rz-dd,
+.bov__rz-swing {
+  margin-left: auto;
+}
+
+.bov__rz-swing {
+  padding: 0 calc(var(--u) * 0.45);
+  border-radius: calc(var(--u) * 0.35);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.bov__rz[data-dir='up'] .bov__rz-swing {
+  color: var(--bov-stake-up);
+}
+
+.bov__rz[data-dir='down'] .bov__rz-swing {
+  color: var(--bov-stake-down);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bov__rz {
+    animation: none;
+  }
+}
+
 /* How to move it, for the first few seconds, just past the box. */
 .bov--corner[data-edge='top'] > .bov__tip {
   top: calc(var(--u) * 8.4);

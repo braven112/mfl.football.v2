@@ -19,6 +19,9 @@ import { isHomeLeague, resolveBroadcastLeagues } from './broadcast-selection';
 import { findOwnerMatchups, scoreLeague, toLeagueViewer } from './broadcast-live-source';
 import { discoverBoardLeagues, readCrossLeagueLive } from './cross-league-live';
 import { buildBroadcastMoments, selectRedZoneAlerts } from './broadcast-moments';
+import { attachDriveStakes } from './broadcast-drive-stakes';
+import { loadLeagueScoringRules } from './live/scoring-rules-source';
+import type { PositionRuleSet } from './live/scoring-rules';
 import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import {
@@ -433,6 +436,9 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   const plays = detail?.plays ?? [];
   const games = scoreboard.games ?? [];
 
+  const redZoneAlerts = selectRedZoneAlerts(games, viewers, playerMeta);
+  const rulesByLeague = await rulesForStakes(redZoneAlerts.flatMap((a) => a.players.map((p) => p.leagueId)), String(year));
+
   const poll: BroadcastPollResponse = {
     // The board is `ok` when the assembler ran. An individual league's failure
     // rides on that league's own flag — one dead feed is not an outage.
@@ -441,7 +447,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     fetchedAt: new Date().toISOString(),
     leagues: leagueScores,
     moments: buildBroadcastMoments(plays, viewers, playerMeta),
-    redZone: selectRedZoneAlerts(games, viewers, playerMeta),
+    redZone: attachDriveStakes(redZoneAlerts, leagueScores, viewers, rulesByLeague),
     games,
     statLines: ownStatLines(mineIds, detail?.boxScore),
   };
@@ -451,6 +457,43 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   const defenseFaces = mode === 'full' ? buildBroadcastDefenseFaces(playerMeta) : {};
 
   return { leagues, enabled, panels, playerMeta, defenseFaces, poll };
+}
+
+/**
+ * How long a red-zone poll waits on MFL for a league's scoring rules before
+ * pricing the drive at standard values. Rules are cached for hours once read,
+ * but a FAILED read is never cached, so without a budget an MFL outage would
+ * add its whole timeout to every poll for the length of every drive.
+ */
+const STAKES_RULES_BUDGET_MS = 1_500;
+
+/**
+ * Scoring rules for the leagues in a red-zone drive, read only when there is
+ * one. A league whose read fails or runs past the budget maps to null, which
+ * `scoreValue` prices at standard touchdown values rather than not at all.
+ */
+async function rulesForStakes(
+  leagueIds: readonly string[],
+  year: string,
+): Promise<Map<string, readonly PositionRuleSet[] | null>> {
+  const ids = [...new Set(leagueIds)];
+  const out = new Map<string, readonly PositionRuleSet[] | null>();
+  if (ids.length === 0) return out;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), STAKES_RULES_BUDGET_MS);
+  });
+  try {
+    await Promise.all(
+      ids.map(async (id) => {
+        const read = await Promise.race([loadLeagueScoringRules(id, year).catch(() => null), timeout]);
+        out.set(id, read?.ok ? read.rules : null);
+      }),
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  return out;
 }
 
 /**

@@ -61,6 +61,12 @@
   --lbc-alert: #fbbf24;
   --lbc-redzone: #991b1b;
   --lbc-redzone-hi: #dc2626;
+  /* Drive stakes: the viewer's own player scoring (up) or an opponent's (down).
+     Told apart by lightness and an arrow as well as hue. */
+  --lbc-stake-up: #4ade80;
+  --lbc-stake-down: #fbbf24;
+  --lbc-stake-now: #94a3b8;
+  --lbc-stake-track: #334155;
 
   /* ── Properties the ISLAND writes inline, declared here with their defaults.
      Declaring them is not decoration: `design-token-guard` reads CSS only, so
@@ -923,6 +929,125 @@
   flex: none;
   color: rgba(255, 255, 255, 0.88);
   font-weight: 600;
+}
+
+/* ── Drive stakes card ─────────────────────────────────────────────────────
+   Hangs under the red-zone banner on the right for the length of the drive.
+   Same contract as the banner: one entrance, then it holds still. */
+
+.lbc__stakes {
+  position: absolute;
+  top: calc(var(--lbc-header-h) + 6.5vh + 1.2vh);
+  right: 1vw;
+  z-index: 3;
+  width: 30vw;
+  box-sizing: border-box;
+  padding: 1.6vh 1.2vw 1.8vh;
+  border-radius: 1.4vh;
+  background: var(--lbc-panel);
+  border: 1px solid var(--lbc-hairline);
+  color: var(--lbc-text);
+  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
+  animation: lbc-stakes-in 400ms ease-out;
+}
+
+@keyframes lbc-stakes-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lbc__stakes p {
+  margin: 0;
+}
+
+.lbc__stakes-kick {
+  font-size: max(1.8vh, 0.6rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lbc-text-faint);
+}
+
+.lbc__stakes-who {
+  font-size: max(4vh, 1.1rem);
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc__stakes-sum {
+  margin-top: 0.4vh !important;
+  font-size: max(2.2vh, 0.7rem);
+  color: var(--lbc-text-dim);
+}
+
+.lbc__stakes-rows {
+  list-style: none;
+  margin: 1.6vh 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.lbc__stakes-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: 0.7vh;
+  column-gap: 0.8vw;
+  font-size: max(2.4vh, 0.75rem);
+}
+
+.lbc__stakes-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbc__stakes-note {
+  color: var(--lbc-text-faint);
+}
+
+.lbc__stakes-swing {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lbc__stakes-row[data-dir='up'] .lbc__stakes-swing {
+  color: var(--lbc-stake-up);
+}
+
+.lbc__stakes-row[data-dir='down'] .lbc__stakes-swing {
+  color: var(--lbc-stake-down);
+}
+
+.lbc__stakes-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  height: 1.3vh;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--lbc-stake-track);
+}
+
+.lbc__stakes-now {
+  background: var(--lbc-stake-now);
+}
+
+.lbc__stakes-row[data-dir='up'] .lbc__stakes-delta {
+  background: var(--lbc-stake-up);
+}
+
+/* Striped as well as amber, so a loss never reads by colour alone. */
+.lbc__stakes-row[data-dir='down'] .lbc__stakes-delta {
+  background: repeating-linear-gradient(45deg, var(--lbc-stake-down) 0 0.5vh, #78350f 0.5vh 1vh);
+}
+
+.lbc__stakes-more {
+  margin-top: 1.2vh !important;
+  font-size: max(2vh, 0.65rem);
+  color: var(--lbc-text-faint);
 }
 
 /* ── Player strip ──────────────────────────────────────────────────────────
@@ -2041,6 +2166,7 @@
   .lbc-reveal,
   .lbc-third,
   .lbc__redzone,
+  .lbc__stakes,
   .lbc__dot.is-live {
     transition: none;
     animation: none;

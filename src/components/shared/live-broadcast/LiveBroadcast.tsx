@@ -37,6 +37,7 @@ import BroadcastScreensaver, { type SaverScene } from './BroadcastScreensaver';
 import MomentTakeover from './MomentTakeover';
 import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
+import DriveStakesCard from './DriveStakesCard';
 import HandheldBoard from './HandheldBoard';
 import BroadcastRemote from './BroadcastRemote';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
@@ -1435,6 +1436,7 @@ export default function LiveBroadcast({ pageData }: Props) {
       )}
 
       <RedZoneBanner alerts={poll.redZone} />
+      <DriveStakesCard alerts={poll.redZone} />
 
       {/* No Leagues / Sound / Fullscreen chips. They lived here, at the
           bottom-left, and shipped visible on a real television three times

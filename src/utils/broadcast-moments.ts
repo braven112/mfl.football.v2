@@ -25,6 +25,7 @@
 import type { LiveScoringPlay, NflGame, PlayerMeta } from '../types/live-scoring';
 import { formatPlayClock } from './live-scoring-view';
 import { normalizeTeamCode } from './nfl';
+import type { DriveStake } from './broadcast-drive-stakes';
 
 /**
  * How old a play may be and still be worth taking the screen for.
@@ -426,6 +427,14 @@ export interface RedZoneAlert {
     playerId: string;
     playerName: string;
     position: string;
+    /**
+     * The franchise he starts for: the viewer's own, or the opponent's. Absent
+     * on alerts built before drive stakes, which then price no stake for an
+     * opponent's player rather than guess which matchup he is in.
+     */
+    franchiseId?: string;
+    /** What his scoring on this drive would do to the viewer's win chance (`attachDriveStakes`). */
+    stake?: DriveStake;
   }[];
 }
 
@@ -487,6 +496,7 @@ export function selectRedZoneAlerts(
           playerId: row.id,
           playerName: who.name,
           position: who.position,
+          franchiseId: fid,
         });
       }
     }

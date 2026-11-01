@@ -63,8 +63,10 @@ import {
   overlayWatchList,
   watchNote,
   overlayModeFrom,
+  overlayStake,
   stepOverlay,
   type BigPlayAlert,
+  type OverlayStake,
   type OverlayColumn,
   type OverlayEdge,
   type OverlayGame,
@@ -488,7 +490,11 @@ export default function BroadcastOverlay({
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} focused={false} />
-            {barHint && <p className="bov__tip">Move, resize or turn off: your phone’s TV remote, or MFL Football › Back</p>}
+            {barHint ? (
+              <p className="bov__tip">Move, resize or turn off: your phone’s TV remote, or MFL Football › Back</p>
+            ) : (
+              <StakeTab stake={overlayStake(poll?.redZone, current)} />
+            )}
           </>
         )}
       </div>
@@ -697,6 +703,34 @@ function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
       </b>
       <Crest side={game.opponent} />
     </span>
+  );
+}
+
+/**
+ * The red tab under the corner box while a red-zone drive could move this
+ * game: who has the ball, and the viewer's win chance if he scores. It sits
+ * where the first-run tip sits, so it waits for the tip to go.
+ */
+function StakeTab({ stake }: { stake: OverlayStake | null }) {
+  if (!stake) return null;
+  const up = stake.swing > 0;
+  return (
+    <div className="bov__rz" data-dir={up ? 'up' : 'down'} aria-hidden="true">
+      <span className="bov__rz-line">
+        <span className="bov__rz-tag">Red zone</span>
+        <b className="bov__rz-who">{stake.playerName}</b>
+        {stake.downDistance && <span className="bov__rz-dd">{stake.team} · {stake.downDistance}</span>}
+      </span>
+      <span className="bov__rz-line">
+        <span className="bov__rz-if">If he scores</span>
+        <span>
+          {Math.round(stake.before * 100)}% → <b>{Math.round(stake.after * 100)}%</b>
+        </span>
+        <b className="bov__rz-swing">
+          {up ? '▲' : '▼'} {Math.abs(stake.swing)}
+        </b>
+      </span>
+    </div>
   );
 }
 
