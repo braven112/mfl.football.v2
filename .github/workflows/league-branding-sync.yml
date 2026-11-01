@@ -1,0 +1,62 @@
+name: League Branding Sync
+
+# Pulls new team logos and names from MFL into each package league's branding
+# config (scripts/sync-league-branding.mjs). Owners upload art on
+# MyFantasyLeague.com, and the config was otherwise a one-time seed, so
+# Archie's showed every team's old logo for weeks.
+#
+# Daily: owners change art over weeks, not minutes, and a run that finds no
+# change writes nothing, so a quiet day costs no build. It never replaces an
+# icon, colour or name a commissioner set in the branding editor.
+#
+# To pause this job, comment out the cron line below (feature flags live in
+# code, not GitHub variables — see CLAUDE.md).
+
+on:
+  schedule:
+    # 6:20 AM PT (1:20 PM UTC), daily.
+    - cron: "20 13 * * *"
+  workflow_dispatch:
+
+concurrency:
+  # Shares the branding-edit queue: both write the same config file.
+  group: branding-edit
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync-branding:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          # The branch TIP when this run starts, not the SHA it was queued at:
+          # behind a branding edit in the shared queue, the event SHA is the
+          # pre-edit config (same reason as branding-edit.yml).
+          ref: ${{ github.ref_name }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Sync branding from MFL
+        run: node ./scripts/sync-league-branding.mjs
+
+      # A new crest changes its dark-mode legibility, and
+      # tests/crest-dark-stroke.test.ts fails when this manifest drifts from
+      # the committed art.
+      - name: Re-measure crest contrast
+        run: node ./scripts/measure-crest-contrast.mjs
+
+      - name: Commit and push updates
+        uses: ./.github/actions/commit-push
+        with:
+          check-paths: 'data public/assets src/data/crest-dark-stroke-manifest.json'
+          add-paths: 'data public/assets src/data/crest-dark-stroke-manifest.json'
+          commit-message: 'chore: sync league branding from MFL'
+          no-changes-message: 'No branding changes on MFL.'
+          git-user-name: 'Branding Sync Bot'
+          pull-rebase: 'true'
