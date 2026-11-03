@@ -64,8 +64,8 @@ const CHOSEN_TV_KEY = 'mfl.tvRemote.tv';
 /**
  * Which TV the remote talks to before anyone picks: the one this phone last
  * chose, if it is still paired, else the NEWEST pairing. The list is oldest
- * first, and defaulting to its head sent every press to a TV that had since
- * been paired again and no longer listened (Brandon, Nov 2026).
+ * first, and defaulting to its head sent every press to a pass left behind
+ * when a TV was paired again without its old cookie (Brandon, Nov 2026).
  */
 export function defaultTvId(tvs: readonly PairedTv[], remembered: string | null): string | null {
   if (remembered && tvs.some((t) => t.id === remembered)) return remembered;

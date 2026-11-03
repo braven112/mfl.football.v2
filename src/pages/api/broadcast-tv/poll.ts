@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { pollPairing, PASS_TTL_S, revokePassByToken, TV_PASS_COOKIE } from '../../../utils/broadcast-tv-pairing';
+import { pollPairing, PASS_TTL_S, TV_PASS_COOKIE } from '../../../utils/broadcast-tv-pairing';
 import { getPairingStore } from '../../../utils/broadcast-tv-store';
 
 export const prerender = false;
@@ -32,17 +32,6 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
 
   const result = await pollPairing(store, deviceCode);
   if (result.status !== 'approved') return json({ status: result.status });
-
-  // A TV pairing AGAIN retires the pass it already held. Left alive, the old
-  // pass stays on the owner's TV list as a second "Android TV" that no screen
-  // listens to any more, and the phone remote, which picked the oldest TV,
-  // sent every press to it (Brandon, Nov 2026: only the overlay's own
-  // rotation seemed to answer). Best effort: a failure here must never cost
-  // the TV the pass it just collected.
-  const previous = cookies.get(TV_PASS_COOKIE)?.value;
-  if (previous && previous !== result.passToken && previous.length <= 128) {
-    await revokePassByToken(store, previous).catch(() => undefined);
-  }
 
   cookies.set(TV_PASS_COOKIE, result.passToken, {
     path: '/',

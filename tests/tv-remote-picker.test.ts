@@ -1,10 +1,11 @@
 /**
  * Which paired TV the phone remote talks to, and how the picker names them.
  *
- * Re-pairing a TV used to leave its old pass on the owner's list, and the
+ * A TV paired again without its old cookie (app data cleared, reinstalled)
+ * leaves its old pass on the owner's list, and the
  * remote defaulted to the OLDEST entry, so every press went to a pass no
- * screen listened to (Brandon, Nov 2026). The TV's pairing route now retires
- * the old pass; these pin the remote's half: newest by default, a phone's own
+ * screen listened to (Brandon, Nov 2026). These pin the remote's fix:
+ * newest by default, a phone's own
  * choice kept while that TV is still paired, and duplicates told apart.
  */
 import { describe, it, expect } from 'vitest';
