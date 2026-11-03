@@ -145,7 +145,10 @@ describe('views', () => {
       matchup(side('A', 90, 90), side('D', 70, 70), 1),
     ];
     const a = projectStandings(rows, dh, 'live').find((r) => r.franchiseId === 'A')!;
-    expect(a).toMatchObject({ wins: 6, losses: 0, pointsFor: 580 });
+    // Two wins, but ONE weekly score: MFL's own `pf` counts a doubleheader
+    // week once (AFL 2026: 0015's pf is exactly the sum of its weekly scores
+    // across seven weeks and nine games).
+    expect(a).toMatchObject({ wins: 6, losses: 0, pointsFor: 490 });
   });
 });
 
@@ -178,8 +181,9 @@ describe('never counts a week twice', () => {
     ];
     const half = rows.map((r) => ({ ...r, weekGamesCounted: r.franchiseId === 'A' ? 1 : 0 }));
     const a = projectStandings(half, dh, 'live').find((r) => r.franchiseId === 'A')!;
-    // Only the live loss to D is added; the counted win over C is not repeated.
-    expect(a).toMatchObject({ wins: 4, losses: 1, pointsFor: 450 });
+    // Only the live loss to D is added; the counted win over C is not repeated,
+    // and nor is the week's score, which MFL's pf already holds.
+    expect(a).toMatchObject({ wins: 4, losses: 1, pointsFor: 400 });
   });
 
   it('unknown count with a doubleheader: the finished half is never added', () => {

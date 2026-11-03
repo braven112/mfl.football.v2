@@ -1717,6 +1717,91 @@ button.lv-card:focus-visible {
   letter-spacing: 0.04em;
 }
 
+/* ── Sectioned standings (the AFL: tiers, then divisions) ─────────────── */
+.lv-sections {
+  gap: var(--spacing-md);
+}
+.lv-sections__intro {
+  margin: 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+.lv-sections__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.lv-sections__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+/* One column on a phone, two once each table has room for its four columns. */
+.lv-sections__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-md);
+}
+@media (min-width: 900px) {
+  .lv-sections__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.lv-sections__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--page-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+.lv-sections__logo {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  flex: none;
+}
+.lv-sections__note {
+  display: block;
+  margin-top: 0.4rem;
+  font-weight: var(--font-weight-normal);
+}
+.lv-sections__missing .lv-standings__caption {
+  margin: 0;
+}
+/* A zone marker: a stripe on the position AND its name in words. */
+.lv-standings__row--zone .lv-standings__rank {
+  border-left: 3px solid var(--lv-zone);
+}
+.lv-standings__row--up {
+  --lv-zone: var(--color-success);
+}
+.lv-standings__row--down {
+  --lv-zone: var(--color-error);
+}
+.lv-standings__row--danger {
+  --lv-zone: var(--color-warning);
+}
+.lv-standings__row--rename {
+  --lv-zone: var(--content-text-muted);
+}
+.lv-standings__label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lv-standings__zone {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  /* Muted text, not the zone hue: amber and green at this size fail AA on
+     white. The colour lives on the stripe; the words carry the meaning. */
+  color: var(--content-text-muted);
+}
+
 /* ── Top scorers ──────────────────────────────────────────────────────── */
 .lv-leaders {
   display: grid;

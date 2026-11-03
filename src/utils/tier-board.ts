@@ -50,7 +50,12 @@ export function tierPrizes(leagueSlug: string, tier: string): string[] {
 
 type Zone = { zone: NonNullable<GroupRow['zone']>; label: string };
 
-function zoneFor(rank: number, count: number, opts: TierBoardOptions): Zone | null {
+/**
+ * The marker a tier POSITION carries — relegation, promotion and the rest.
+ * Exported for the live board's Standings tab (`utils/live/afl-live-standings.ts`),
+ * which re-ranks a tier live and must move a team into a zone with its rank.
+ */
+export function tierZoneFor(rank: number, count: number, opts: TierBoardOptions): Zone | null {
   const { movement, tier, promotionCutoff } = opts;
   if (movement) {
     if (movement.promote > 0 && rank <= movement.promote) return { zone: 'up', label: 'Moves up' };
@@ -88,7 +93,7 @@ export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): Group
     const rank = i + 1;
     // A medal tier's paid ranks are their own band, "In the money".
     const zone: Zone | null =
-      zoneFor(rank, teams.length, opts) ?? (medalCount && prizes[i] ? { zone: 'money', label: 'In the money' } : null);
+      tierZoneFor(rank, teams.length, opts) ?? (medalCount && prizes[i] ? { zone: 'money', label: 'In the money' } : null);
     // A zone's label goes above its first row only.
     const startsZone = zone && zone.label !== previousZone;
     previousZone = zone?.label ?? null;
