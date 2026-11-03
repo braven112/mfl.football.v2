@@ -14,7 +14,15 @@
  */
 import { useEffect, useState } from 'react';
 import type { OverlayAction, OverlayCorner } from '../../../utils/broadcast-remote-commands';
-import { tvLabel, usePairedTvs, useTvRemote, type PairedTv } from './useTvRemote';
+import {
+  defaultTvId,
+  readChosenTv,
+  rememberChosenTv,
+  tvLabel,
+  usePairedTvs,
+  useTvRemote,
+  type PairedTv,
+} from './useTvRemote';
 
 export interface TvRemoteLeague {
   id: string;
@@ -50,11 +58,13 @@ function usePageVisible(): boolean {
 export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
   const tvs = usePairedTvs(knownTvs);
   const [tvId, setTvId] = useState<string | null>(null);
+  const [remembered, setRemembered] = useState<string | null>(null);
+  useEffect(() => setRemembered(readChosenTv()), []);
   const [size, setSize] = useState<'small' | 'quarter' | null>(null);
   const [corner, setCorner] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const visible = usePageVisible();
-  const activeId = tvId ?? tvs?.[0]?.id ?? null;
+  const activeId = tvId ?? (tvs ? defaultTvId(tvs, remembered) : null);
   const { send, note } = useTvRemote(activeId, visible);
 
   if (tvs === null) {
@@ -92,7 +102,10 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
               type="button"
               className="tvr__choice"
               aria-pressed={tv.id === activeId}
-              onClick={() => setTvId(tv.id)}
+              onClick={() => {
+                setTvId(tv.id);
+                rememberChosenTv(tv.id);
+              }}
             >
               {tvLabel(tvs, tv)}
             </button>

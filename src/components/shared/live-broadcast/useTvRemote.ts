@@ -44,12 +44,48 @@ export function usePairedTvs(known?: PairedTv[]): PairedTv[] | null {
 }
 
 /**
- * Two TVs of one kind ("Fire TV", "Fire TV") read as a choice between
- * nothing, so a repeated name is numbered in pairing order.
+ * Two TVs of one kind ("Android TV", "Android TV") read as a choice between
+ * nothing, so a repeated name says when it was paired: the newest pairing is
+ * the one a re-paired TV is listening on. Two paired the same day fall back
+ * to a number in pairing order.
  */
 export function tvLabel(tvs: readonly PairedTv[], tv: PairedTv): string {
   const same = tvs.filter((t) => t.device === tv.device);
-  return same.length > 1 ? `${tv.device} ${same.indexOf(tv) + 1}` : tv.device;
+  if (same.length < 2) return tv.device;
+  const day = (t: PairedTv) =>
+    new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const sameDay = same.filter((t) => day(t) === day(tv));
+  const when = `paired ${day(tv)}`;
+  return sameDay.length > 1 ? `${tv.device} ${same.indexOf(tv) + 1}, ${when}` : `${tv.device}, ${when}`;
+}
+
+const CHOSEN_TV_KEY = 'mfl.tvRemote.tv';
+
+/**
+ * Which TV the remote talks to before anyone picks: the one this phone last
+ * chose, if it is still paired, else the NEWEST pairing. The list is oldest
+ * first, and defaulting to its head sent every press to a pass left behind
+ * when a TV was paired again without its old cookie (Brandon, Nov 2026).
+ */
+export function defaultTvId(tvs: readonly PairedTv[], remembered: string | null): string | null {
+  if (remembered && tvs.some((t) => t.id === remembered)) return remembered;
+  return tvs.length ? tvs[tvs.length - 1].id : null;
+}
+
+export function readChosenTv(): string | null {
+  try {
+    return window.localStorage.getItem(CHOSEN_TV_KEY);
+  } catch (_err) {
+    return null;
+  }
+}
+
+export function rememberChosenTv(id: string): void {
+  try {
+    window.localStorage.setItem(CHOSEN_TV_KEY, id);
+  } catch (_err) {
+    /* a per-phone convenience only */
+  }
 }
 
 export function useTvRemote(tvId: string | null, open: boolean) {
