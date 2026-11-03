@@ -2,6 +2,14 @@
 
 Learnings from the 2026-07 root landing-page redesign (league split hero + cross-league What's New).
 
+## 2026-11-03 - The splash sells league websites; leagues are hand-picked EXAMPLES
+
+**Context:** Brandon asked for a cleanup with one goal: visitors should know MFL.football primarily sells website services. The page used to lead with free skins. It mentioned live scores four times, carried seven "coming soon" cards, and closed with a cross-league What's New feed in which every rollup article appeared twice, once per league.
+
+**Insight:** The order is now hero (custom league websites, formerly MFL Addons), services (League Package, then League Hub, Full History and Contest Package, with add-ons as one line), a live example, ONE live-scores band, and a short free-tools row. The example leagues are not "every advertised league". They are the leagues Brandon picks to show a buyer: `siteExample` in `src/data/league-showcase.ts` (The League only for now; he explicitly excluded the AFL), layered on `showcaseLeagues()` so the best-ball and `advertiseOnSharedHost` rules still apply. What's New and `whats-new-cross-league.ts` were removed: league news means nothing to a prospect.
+
+**Evidence:** `src/pages/index.astro`, `siteExampleLeagues()`, `tests/shared-host-league-hiding.test.ts` (the splash block).
+
 ## 2026-07-04 - Cross-league What's New must compose the choke point, not re-read the JSON
 
 **Context:** The splash page shows the latest 6 entries merged from both leagues.

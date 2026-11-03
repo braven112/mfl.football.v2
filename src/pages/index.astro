@@ -1,146 +1,47 @@
 ---
 import SplashLayout from '../layouts/SplashLayout.astro';
-import { ALL_LEAGUES, crossHostLeagueHref } from '../config/leagues';
+import { crossHostLeagueHref } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
-import { getLatestWhatsNewAcrossLeagues } from '../utils/whats-new-cross-league';
 import ProductInterest from '../components/shared/ProductInterest.astro';
 import { MFL_LIVE_PRO_PRICE, type ProductSlug } from '../data/products';
-import { mflLiveIncludedNames } from '../data/league-showcase';
+import { mflLiveIncludedNames, siteExampleLeagues } from '../data/league-showcase';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
 import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
-interface PanelMeta {
-  logo: string;
-  /** On-dark variant (white fills) — the panels are dark gradients in both themes */
-  logoDark: string;
-  estYear: number;
-  stats: string;
-}
+// ── What this page is for ─────────────────────────────────────────────────
+// MFL.football SELLS LEAGUE WEBSITES first (Brandon, Nov 2026): the hero, the
+// services and a live example come before anything free. The free tools are a
+// short row near the bottom, and live scores has ONE band rather than a nav
+// link, a free card, a band and a product card.
 
-// Presentational-only data; ids/slugs/names come from the league registry.
-// A league with no entry here (any launched league, until it is advertised and
-// given its own line) gets a panel built from its registry logo: see panelFor.
-const PANEL_META: Partial<Record<CanonicalLeagueSlug, PanelMeta>> = {
-  theleague: {
-    logo: '/assets/logos/theleague-logo.svg',
-    logoDark: '/assets/logos/theleague-logo-dark.svg',
-    estYear: 2007,
-    stats: '16 Teams · 1 Conference · 3 Draft Rounds',
-  },
-  'afl-fantasy': {
-    logo: '/assets/logos/afl-logo.svg',
-    logoDark: '/assets/logos/afl-logo-dark.svg',
-    estYear: 2003,
-    stats: '24 Teams · 2 Conferences · 9 Draft Rounds',
-  },
-  'best-ball-1': {
-    logo: '/assets/logos/bestball-logo.svg',
-    logoDark: '/assets/logos/bestball-logo-dark.svg',
-    estYear: 2026,
-    stats: '12 Teams · Best Ball · 25-Round Draft',
-  },
-  keeper: {
-    logo: '/assets/logos/keeper-logo.svg',
-    logoDark: '/assets/logos/keeper-logo-dark.svg',
-    estYear: 2020,
-    stats: '12 Teams · Keepers · No Salary Cap',
-  },
-  archies: {
-    logo: '/assets/logos/archies-head.webp',
-    logoDark: '/assets/logos/archies-head.webp',
-    estYear: 2021,
-    stats: '99 Teams · 9 Divisions · Redraft',
-  },
+// The example section. Hand-picked through `siteExample` in league-showcase.ts
+// (Brandon chooses which leagues a buyer is sent to: The League only, for
+// now), and still under showcaseLeagues' rules, so a best-ball league or an
+// unlisted package league can never be one.
+const examples = siteExampleLeagues();
+
+// The logo cuts each example panel draws. The panel follows the theme, so it
+// wants both; a league with no entry falls back to its registry logo.
+const EXAMPLE_LOGOS: Partial<Record<CanonicalLeagueSlug, { light: string; dark: string }>> = {
+  theleague: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
 };
-
-function panelFor(league: (typeof ALL_LEAGUES)[number]): PanelMeta {
-  return (
-    PANEL_META[league.slug] ?? {
-      logo: league.logo.light,
-      logoDark: league.logo.dark,
-      estYear: new Date().getFullYear(),
-      stats: '',
-    }
-  );
-}
-
-const CHIP_LABELS: Record<string, string> = {
-  theleague: 'The League',
-  afl: 'AFL',
-  bb1: 'Best Ball #1',
-  archies: "Archie's",
-};
-
-/**
- * Which leagues the front door ADVERTISES.
- *
- * Derived from the registry's `bestBall` flag — the same derivation
- * `BOTH_LEAGUES` uses for the weekly changelog — and never a slug list, so a
- * best-ball sister league added later is dropped from here automatically, and
- * a fourth full-management league appears automatically.
- *
- * ── THIS IS A PRESENTATION RULE AND MUST NOT BECOME A ROUTING ONE ─────────
- * Best Ball #1 declares `domains: []`: the shared host's path prefix is the
- * ONLY address it has, so hiding it at the ROUTE level would remove it from
- * the internet rather than send it somewhere else — which is exactly what
- * `resolveSharedHostHiddenLeague` refuses to do, and what the 'never hides a
- * league that has nowhere else to be' guard exists to keep refusing.
- *
- * So this list governs the splash and nothing else. `/best-ball-1/*` is still
- * served here, and the league switcher in the nav on both league sites still
- * offers it (`buildSwitchUrl` sends it to SHARED_APP_ORIGIN, since it has no
- * apex to link to), which is what keeps it reachable now that the front door
- * no longer names it. Pinned in tests/shared-host-league-hiding.test.ts.
- *
- * PANEL_META, CHIP_LABELS and the `.chip--bb1` rule are all deliberately left
- * complete rather than pruned as dead: PANEL_META is keyed by every canonical
- * slug, and keeping the other two means re-advertising a league is this one
- * filter and nothing else. Pruning them would make it a multi-file change that
- * silently ships an unstyled chip.
- */
-// A package league (archies) is listed only once its owner says so — a client
-// league is not automatically an advertisement for the site. The registry's
-// `advertiseOnSharedHost: false` keeps it off the splash; it is still served
-// at its own path.
-const splashLeagues = ALL_LEAGUES.filter(
-  (league) => !league.bestBall && league.advertiseOnSharedHost !== false,
-);
-const advertisedNavSlugs = new Set(splashLeagues.map((league) => league.navSlug));
-
-const leagueCount = splashLeagues.length;
-
-// Same list, so the feed cannot advertise a league the panels above do not.
-// Scoping the SLICES (rather than filtering afterwards) is what keeps a
-// best-ball-only article out of the pool entirely instead of letting it
-// occupy one of the six slots and then be dropped.
-const entries = getLatestWhatsNewAcrossLeagues(
-  6,
-  splashLeagues.map((league) => league.navSlug),
-);
 
 // This splash renders on every NON-league host: the shared app host, and also
-// localhost and Vercel previews. On the shared host TheLeague and the AFL are
-// not served — `/theleague` 404s there — so their panels and the What's New
-// cards (whose detailPath is itself a league path) must leave for the league's
+// localhost and Vercel previews. On the shared host TheLeague is not served —
+// `/theleague` 404s there — so an example panel must leave for the league's
 // own domain rather than link to something this host refuses.
 //
 // `crossHostLeagueHref` decides that per host rather than unconditionally,
 // which is the load-bearing part: absolute links everywhere would send a
 // preview build's visitor to PRODUCTION theleague.us on the first click, so
-// the branch under test becomes undrivable past its front page. It also leaves
-// Best Ball #1 alone — that league has no apex, and a relative path is the
-// honest link when you are already on the only host serving it.
+// the branch under test becomes undrivable past its front page.
 const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
 
-// ── The storefront ─────────────────────────────────────────────────────────
-// MFL.football is the brand; this page says what is free, what MFL Live is,
-// and what the paid products cost. Nothing paid is on sale yet
-// (`PRODUCT_PAGES_PUBLIC` is false and /products 404s for the public), so
-// every paid button — and the free League History page, which ships with
-// Full History — is a "coming soon" door (ProductInterest): it counts the
-// click and offers to email the visitor at launch. The one exception is MFL
-// Live's own sign-in, which is real for the leagues that have Pro included.
+// Nothing paid is on sale yet (`PRODUCT_PAGES_PUBLIC` is false and /products
+// 404s for the public), so every "I'm interested" button is a coming-soon door
+// (ProductInterest): it counts the click and offers to email the visitor at
+// launch. Each service also links its public service page, which is real.
 const seasonYear = getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined);
 const proPrice = `$${MFL_LIVE_PRO_PRICE.season}`;
 const includedNames = mflLiveIncludedNames();
@@ -149,53 +50,40 @@ const includedList =
     ? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
     : (includedNames[0] ?? '');
 
-// Prices: only MFL Live Pro's is public (Brandon, Oct 2026). Every other
-// product shows what it does, not what it costs, until its price is ready to
-// announce — a card without `price` simply leaves the line out.
-interface PaidCard {
+// Only MFL Live Pro's price is public (Brandon, Oct 2026); every service here
+// shows what it does, not what it costs.
+interface ServiceCard {
   slug: ProductSlug;
   name: string;
   who: string;
-  price?: string;
-  per?: string;
   body: string;
-  /** Shown in the dialog under "coming soon", when the door needs a word more. */
-  note?: string;
+  /** Its public service page (src/data/mfl-services.ts), when it has one. */
+  learnMore?: string;
 }
 
-const PAID: PaidCard[] = [
+const servicePath = (slug: (typeof SERVICES)[number]['slug']) =>
+  SERVICES.find((s) => s.slug === slug)?.path;
+
+const MORE_SERVICES: ServiceCard[] = [
   {
-    slug: 'owner-suite',
-    name: 'Live scores Pro',
-    who: 'For any MFL owner',
-    price: proPrice,
-    per: `/ season · or $${MFL_LIVE_PRO_PRICE.month}/month`,
-    body: 'The Broadcast for your TV, live and projected standings, full boards and game-day alerts.',
-    note: `Owners in ${includedList} already have Pro this season: sign in to live scores.`,
+    slug: 'league-hub',
+    name: 'League Hub',
+    who: 'For a commissioner who wants a real site',
+    body: 'A branded site on your own domain with the draft hub, an AI league reporter, push alerts and more.',
+    learnMore: servicePath('league-website'),
   },
   {
     slug: 'league-history',
     name: 'Full History',
     who: 'For any MFL, Sleeper or Yahoo league',
     body: 'Every season back to your first: standings, playoffs, owner pages, rivalries and records.',
-  },
-  {
-    slug: 'league-hub',
-    name: 'League Hub',
-    who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with the draft hub, an AI league reporter, push alerts and more.',
+    learnMore: servicePath('league-history'),
   },
   {
     slug: 'contest-package',
     name: 'Contest Package',
     who: 'For organizers running many leagues',
     body: 'One competition across dozens or hundreds of MFL leagues.',
-  },
-  {
-    slug: 'add-ons',
-    name: 'Add-ons',
-    who: 'For League Hub and League Package leagues',
-    body: 'Side games, custom standings, prizes, contracts and large-league support.',
   },
 ];
 
@@ -209,13 +97,16 @@ const AUTOMATED = [
   'Contracts, the salary cap and extensions tracked',
   'Rules questions answered from your constitution',
   'League news, trades and recaps written for you',
-  'Weekly power rankings and an owners’ poll',
+  'Weekly power rankings',
   'News and reminders posted to your group chat',
 ];
+
+const commissionerToolsPath = servicePath('commissioner-tools');
+const skinsPath = servicePath('skins') ?? '/instructions#skin';
 ---
 <SplashLayout
-  title="MFL.football — skins, live scoring and league sites for MyFantasyLeague"
-  description={`MFL.football (formerly ${FORMER_BRAND}): free MFL skins and live scores, commissioner automation, league history and custom websites for MyFantasyLeague leagues.`}
+  title="MFL.football: custom league websites for MyFantasyLeague"
+  description={`MFL.football (formerly ${FORMER_BRAND}) builds and runs custom websites for MyFantasyLeague leagues: commissioner automation, league history, live scores and free MFL skins.`}
   canonicalPath="/"
   ogImage="/assets/home/league-site.webp"
   jsonLd={[organizationJsonLd(), websiteJsonLd()]}
@@ -228,25 +119,26 @@ const AUTOMATED = [
     </a>
     <nav class="top__links" aria-label="Sections">
       <a href="#services">Services</a>
-      <a href="#free">Free tools</a>
+      <a href="#examples">Example</a>
       <a class="top__live" href="/live">Live scores</a>
-      <a href="#products">Products</a>
-      <a href="#leagues">Leagues</a>
+      <a href="#free">Free tools</a>
     </nav>
     <a class="cta cta--ghost top__signin" href="/login">Sign in</a>
   </header>
 
   <section class="hero">
     <div>
-      <p class="eyebrow">For MyFantasyLeague leagues · Formerly {FORMER_BRAND}</p>
-      <h1>Make your MFL league look like a pro league.</h1>
+      <p class="eyebrow">Formerly {FORMER_BRAND} · For MyFantasyLeague leagues</p>
+      <h1>Custom websites for your MFL league.</h1>
       <p class="lede">
-        Free skins and templates for any MyFantasyLeague site, live scoring for every league you play in,
-        and full league sites when you're ready for more.
+        We build your league a branded site on its own domain, then run it for you: reminders, the draft,
+        dues, league history and news, handled so the commissioner does not have to.
       </p>
       <div class="hero__ctas">
-        <a class="cta cta--primary" href="/instructions">Get the free skin</a>
-        <a class="cta cta--ghost" href="#products">See all products</a>
+        <a class="cta cta--primary" href="#services">See our services</a>
+        {examples[0] && (
+          <a class="cta cta--ghost" href={hrefFromHere(`/${examples[0].slug}`)}>See a live league site</a>
+        )}
       </div>
     </div>
     <figure class="shot">
@@ -257,91 +149,11 @@ const AUTOMATED = [
 
   <section class="block" id="services" aria-labelledby="services-h">
     <div class="block__head">
-      <div><h2 id="services-h">What we do for MFL leagues</h2></div>
-      <p>Four ways to make a MyFantasyLeague league better, from a free skin to a site that runs itself.</p>
+      <div><h2 id="services-h">League websites</h2></div>
+      <p>Launching soon. Tap “I'm interested” on any service and we'll email you when it opens.</p>
     </div>
-    <div class="free-grid">
-      {SERVICES.map((s) => (
-        <a class="card" href={s.path}>
-          <h3>{s.eyebrow}</h3>
-          <p>{s.description}</p>
-          <span class="card__more">Learn more →</span>
-        </a>
-      ))}
-    </div>
-  </section>
-
-  <section class="block" id="free" aria-labelledby="free-h">
-    <div class="block__head">
-      <div><span class="tag tag--free">Free</span><h2 id="free-h">Start free</h2></div>
-      <p>Everything here costs nothing. Use it as long as you like.</p>
-    </div>
-    <div class="free-grid">
-      <a class="card" href="/instructions#skin">
-        <span class="tag tag--free">Free</span>
-        <h3>MFL skin</h3>
-        <p>Light and dark themes for your league's MyFantasyLeague pages.</p>
-        <span class="card__more">Get the skin →</span>
-      </a>
-      <a class="card" href="/instructions#homepage">
-        <span class="tag tag--free">Free</span>
-        <h3>Template builder</h3>
-        <p>A homepage, header and footer for MFL, with step-by-step install.</p>
-        <span class="card__more">Build a template →</span>
-      </a>
-      <a class="card" href="/live">
-        <span class="tag tag--free">Free</span>
-        <h3>Live scores</h3>
-        <p>Live scores for every MFL league you play in, on one screen.</p>
-        <span class="card__up">Upgrade: <b>Pro {proPrice}/season</b></span>
-        <span class="card__more">Open live scores →</span>
-      </a>
-      <a class="card" href="/mfl-all-play-standings">
-        <span class="tag tag--free">Free</span>
-        <h3>All-play standings</h3>
-        <p>Paste any MFL league ID: all-play standings and who the schedule helped or robbed.</p>
-        <span class="card__more">Run the report →</span>
-      </a>
-      <button type="button" class="card" data-interest="league-history" data-interest-name="The League History page">
-        <span class="tag tag--soon">Free · Coming soon</span>
-        <h3>League History page</h3>
-        <p>Your league's champions and a trophy case for every franchise.</p>
-        <span class="card__up">Upgrade: <b>Full History</b></span>
-        <span class="card__more">I'm interested →</span>
-      </button>
-    </div>
-  </section>
-
-  <section class="live" aria-labelledby="live-h">
-    <div class="live__copy">
-      <span class="live__kicker">New this season</span>
-      <h2 id="live-h">Live scores</h2>
-      <p>
-        Every MFL league you own, scored live on one board. Put it on the TV, watch the standings move,
-        and get pinged when a game gets close.
-      </p>
-      <p class="live__price">
-        <s>{proPrice}</s><strong>Free</strong>
-        <span>for {includedList} owners through the {seasonYear} season</span>
-      </p>
-      <a class="cta cta--primary live__cta" href="/live">See live scores →</a>
-    </div>
-    <img class="live__img" src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" loading="lazy" alt="A field goal takes over the TV on the live scores Broadcast" />
-  </section>
-
-  <section class="block" id="products" aria-labelledby="products-h">
-    <div class="block__head">
-      <div><span class="tag tag--paid">When you want more</span><h2 id="products-h">Products</h2></div>
-      <p>From one owner's game day to a fully custom league site. Coming soon: tap one to tell us you want it.</p>
-    </div>
-    <button
-      type="button"
-      class="auto"
-      data-interest="league-package"
-      data-interest-name="League Package"
-      data-interest-note="Anything a commissioner does by hand, our system handles: a one-time setup fee, then an automation fee to run your league."
-    >
-      <span class="auto__copy">
+    <div class="auto">
+      <div class="auto__copy">
         <span class="plan__who">Our biggest package · for a league that wants it all handled</span>
         <h3>League Package</h3>
         <span class="auto__lede">Anything the commissioner does manually, our system handles.</span>
@@ -351,69 +163,105 @@ const AUTOMATED = [
           <span><b>Setup fee</b> We build your league's site and features once.</span>
           <span><b>Automation fee</b> We run your league from then on.</span>
         </span>
-        <span class="card__more">Coming soon · I'm interested →</span>
-      </span>
+        <span class="acts">
+          <button
+            type="button"
+            class="cta cta--primary"
+            data-interest="league-package"
+            data-interest-name="League Package"
+            data-interest-note="Anything a commissioner does by hand, our system handles: a one-time setup fee, then an automation fee to run your league."
+          >I'm interested</button>
+          {commissionerToolsPath && <a class="cta-link" href={commissionerToolsPath}>What it automates</a>}
+        </span>
+      </div>
       <ul class="auto__list">
         {AUTOMATED.map((line) => <li>{line}</li>)}
       </ul>
-    </button>
+    </div>
     <div class="paid">
-      {PAID.map((p) => (
-        <button
-          type="button"
-          class="plan"
-          data-interest={p.slug}
-          data-interest-name={p.name}
-          data-interest-note={p.note}
-        >
+      {MORE_SERVICES.map((p) => (
+        <div class="plan">
           <span class="plan__who">{p.who}</span>
           <h3>{p.name}</h3>
-          {p.price && <span class="plan__price">{p.price} <small>{p.per}</small></span>}
           <p>{p.body}</p>
-          <span class="card__more">Coming soon · I'm interested →</span>
-        </button>
+          <span class="acts">
+            <button type="button" class="cta cta--ghost" data-interest={p.slug} data-interest-name={p.name}>I'm interested</button>
+            {p.learnMore && <a class="cta-link" href={p.learnMore}>Learn more</a>}
+          </span>
+        </div>
       ))}
     </div>
+    <p class="addons">
+      <b>Add-ons</b> for League Hub and League Package leagues: side games, custom standings, prizes, contracts and large-league support.
+      <button type="button" class="cta-link" data-interest="add-ons" data-interest-name="Add-ons">I'm interested</button>
+    </p>
   </section>
 
-  {/* The panels: one per advertised league, through hrefFromHere (see above). */}
-  <section class="block" id="leagues" aria-labelledby="leagues-h">
-    <div class="block__head"><h2 id="leagues-h">Leagues on MFL.football</h2></div>
-    <div class="hero-leagues" style={`--panel-count: ${leagueCount}`}>
-      {splashLeagues.map((league) => {
-        const meta = panelFor(league);
-        return (
-          <a class="panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
-            <img class="panel__logo panel__logo--light" src={meta.logo} alt="" />
-            <img class="panel__logo panel__logo--dark" src={meta.logoDark} alt="" />
-            <span>
-              <span class="panel__name">{league.name}</span>
-              <span class="panel__meta">{meta.stats} · since {meta.estYear}</span>
-            </span>
-          </a>
-        );
-      })}
+  {examples.length > 0 && (
+    <section class="block" id="examples" aria-labelledby="examples-h">
+      <div class="block__head">
+        <div><h2 id="examples-h">See one running</h2></div>
+        <p>Every feature above runs on {examples.length === 1 ? 'this league' : 'these leagues'} today.</p>
+      </div>
+      <div class="examples" style={`--panel-count: ${examples.length}`}>
+        {examples.map((league) => {
+          const logo = EXAMPLE_LOGOS[league.slug] ?? league.logo;
+          const host = league.domains?.[0];
+          return (
+            <a class="panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
+              <img class="panel__logo panel__logo--light" src={logo.light} alt="" />
+              <img class="panel__logo panel__logo--dark" src={logo.dark} alt="" />
+              <span>
+                <span class="panel__name">{league.name}</span>
+                <span class="panel__meta">{league.showcase.teams} teams · {league.showcase.format} · since {league.showcase.estYear}</span>
+              </span>
+              <span class="panel__go">{host ? `Visit ${host}` : 'Visit the site'} →</span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  <section class="live" aria-labelledby="live-h">
+    <div class="live__copy">
+      <span class="live__kicker">For any MFL owner</span>
+      <h2 id="live-h">Live scores</h2>
+      <p>
+        Every MFL league you own, scored live on one board, free. Pro adds the Broadcast for your TV,
+        projected standings and game-day alerts for {proPrice} a season.
+      </p>
+      <p class="live__price">
+        <s>{proPrice}</s><strong>Free</strong>
+        <span>Pro for {includedList} owners through the {seasonYear} season</span>
+      </p>
+      <a class="cta cta--primary live__cta" href="/live">Open live scores →</a>
     </div>
+    <img class="live__img" src="/assets/mfl-live/landing-takeover.webp" width="1440" height="810" loading="lazy" alt="A field goal takes over the TV on the live scores Broadcast" />
   </section>
 
-  <section class="block whats-new" aria-labelledby="whats-new-heading">
-    <h2 id="whats-new-heading" class="section-title">What's new on the league sites</h2>
-    <ul class="wn-grid">
-      {entries.map((entry) => (
-        <li>
-          <a class="wn-card" href={hrefFromHere(entry.detailPath)}>
-            <span class="wn-meta">
-              {entry.leagues.filter((slug) => advertisedNavSlugs.has(slug)).map((slug) => (
-                <span class={`chip chip--${slug}`}>{CHIP_LABELS[slug] ?? slug}</span>
-              ))}
-              <time datetime={entry.date}>{entry.formattedDate}</time>
-            </span>
-            <h3>{entry.title}</h3>
-            <p>{entry.summary}</p>
-          </a>
-        </li>
-      ))}
-    </ul>
+  <section class="block" id="free" aria-labelledby="free-h">
+    <div class="block__head">
+      <div><span class="tag tag--free">Free</span><h2 id="free-h">Free tools</h2></div>
+      <p>No account, no cost.</p>
+    </div>
+    <div class="free-grid">
+      <a class="card" href={skinsPath}>
+        <h3>MFL skin</h3>
+        <p>Light and dark themes for your league's MyFantasyLeague pages.</p>
+        <span class="card__more">Get the skin →</span>
+      </a>
+      <a class="card" href="/instructions#homepage">
+        <h3>Template builder</h3>
+        <p>A homepage, header and footer for MFL, with step-by-step install.</p>
+        <span class="card__more">Build a template →</span>
+      </a>
+      <a class="card" href="/mfl-all-play-standings">
+        <h3>All-play standings</h3>
+        <p>Paste any MFL league ID: all-play standings and who the schedule helped or robbed.</p>
+        <span class="card__more">Run the report →</span>
+      </a>
+    </div>
   </section>
 
   <footer class="foot">
@@ -430,7 +278,6 @@ const AUTOMATED = [
   <ProductInterest />
   </div>
 </SplashLayout>
-
 <style>
   /* MFL.football's brand is red and black, in BOTH themes. The splash layout's
      default theme would paint this page navy (CTAs, headings) in light and
@@ -633,7 +480,8 @@ const AUTOMATED = [
     color: var(--color-gray-600);
   }
 
-  /* Cards are links or fake-door buttons; both reset to the same box. */
+  /* Free-tool cards are links; service cards (.plan) are boxes holding two
+     actions, so only .card gets the pointer and the lift. */
   .card,
   .plan {
     display: flex;
@@ -647,20 +495,21 @@ const AUTOMATED = [
     color: inherit;
     font: inherit;
     text-align: left;
+  }
+
+  .card {
     cursor: pointer;
     transition: transform var(--transition-fast), border-color var(--transition-fast);
   }
 
-  .card:hover,
-  .plan:hover {
+  .card:hover {
     transform: translateY(-2px);
     border-color: var(--color-gray-500);
     text-decoration: none;
     color: inherit;
   }
 
-  .card:focus-visible,
-  .plan:focus-visible {
+  .card:focus-visible {
     outline: 2px solid var(--secondary-color);
     outline-offset: 3px;
   }
@@ -699,7 +548,7 @@ const AUTOMATED = [
 
   .free-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
 
@@ -798,26 +647,12 @@ const AUTOMATED = [
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem 2.5rem;
-    width: 100%;
     margin-bottom: 1rem;
     padding: 1.75rem;
     border: 1px solid var(--primary-link-default-text-color);
     border-radius: 16px;
     background: var(--primary-content-bg-color);
     color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: transform var(--transition-fast);
-  }
-
-  .auto:hover {
-    transform: translateY(-2px);
-  }
-
-  .auto:focus-visible {
-    outline: 2px solid var(--secondary-color);
-    outline-offset: 3px;
   }
 
   .auto__copy {
@@ -906,11 +741,36 @@ const AUTOMATED = [
     color: var(--color-gray-500);
   }
 
-  /* ---------- Leagues ---------- */
+  /* ---------- Services: actions and add-ons ---------- */
 
-  .hero-leagues {
+  .acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    margin-top: auto;
+    padding-top: 0.6rem;
+  }
+
+  .addons {
+    margin: 1rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+  }
+
+  .addons b {
+    color: var(--primary-link-default-text-color);
+  }
+
+  .addons .cta-link {
+    margin-left: 0.4rem;
+  }
+
+  /* ---------- Example leagues ---------- */
+
+  .examples {
     display: grid;
-    grid-template-columns: repeat(var(--panel-count, 3), 1fr);
+    grid-template-columns: repeat(min(var(--panel-count, 1), 2), 1fr);
     gap: 1rem;
   }
 
@@ -960,105 +820,12 @@ const AUTOMATED = [
     color: var(--color-gray-500);
   }
 
-  /* ---------- What's New ---------- */
-
-  .section-title {
-    margin: 0 0 1.25rem;
-    padding-left: var(--style-section-rule-gap, 0.625rem);
-    border-left: var(--style-section-rule, 2px solid var(--secondary-color));
-    background: var(--style-section-mark, none);
-    padding-bottom: var(--style-section-mark-pad, 0);
-    font-family: var(--style-section-font, inherit);
-    font-style: var(--style-section-style, inherit);
-    font-size: var(--style-section-size, var(--font-size-xs));
-    font-weight: 700;
-    letter-spacing: var(--style-section-tracking, 0.06em);
-    text-transform: uppercase;
-  }
-
-  .wn-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .wn-grid li {
-    display: flex;
-  }
-
-  .wn-card {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.1rem;
-    border: var(--style-card-border, 1px solid var(--primary-content-border-color));
-    box-shadow: var(--style-card-shadow, none);
-    border-radius: 12px;
-    background: var(--primary-content-bg-color);
-    color: inherit;
-  }
-
-  .wn-card:hover {
-    border-color: var(--color-gray-500);
-    text-decoration: none;
-  }
-
-  .wn-card:focus-visible {
-    outline: 2px solid var(--secondary-color);
-    outline-offset: 3px;
-  }
-
-  .wn-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: var(--font-size-3xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .wn-meta time {
-    color: var(--color-gray-500);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .chip {
-    padding: 0.15rem 0.45rem;
-    border-radius: 3px;
-    font-weight: 700;
-    color: var(--color-white);
-  }
-
-  .chip--theleague {
-    background: #1c497c;
-  }
-
-  .chip--afl {
-    background: #c41e3a;
-  }
-
-  .chip--bb1 {
-    background: #0e8a5f;
-  }
-
-  .chip--archies {
-    background: #1d3a6e;
-  }
-
-  .wn-card h3 {
-    margin: 0;
-    font-size: var(--font-size-base);
-  }
-
-  .wn-card p {
-    margin: 0;
+  .panel__go {
+    margin-left: auto;
     font-size: var(--font-size-sm);
-    line-height: 1.45;
-    color: var(--color-gray-600);
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--secondary-color);
   }
 
   .foot {
@@ -1074,14 +841,6 @@ const AUTOMATED = [
 
   /* ---------- Responsive & motion ---------- */
 
-  @media (max-width: 1000px) {
-    .free-grid,
-    .wn-grid,
-    .paid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
   @media (max-width: 760px) {
     .top__links {
       display: none;
@@ -1096,9 +855,17 @@ const AUTOMATED = [
     .auto,
     .free-grid,
     .paid,
-    .wn-grid,
-    .hero-leagues {
+    .examples {
       grid-template-columns: 1fr;
+    }
+
+    .panel {
+      flex-wrap: wrap;
+    }
+
+    .panel__go {
+      margin-left: 0;
+      flex-basis: 100%;
     }
 
     .hero {
@@ -1122,9 +889,7 @@ const AUTOMATED = [
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .auto,
-    .card,
-    .plan {
+    .card {
       transition: none;
     }
   }
