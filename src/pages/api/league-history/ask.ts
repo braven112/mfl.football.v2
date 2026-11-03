@@ -23,7 +23,7 @@ import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
 import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
-import { hasLeagueHistoryProduct, loadLeagueHistoryDataset } from '../../../utils/league-history/datasets';
+import { hasLeagueHistoryProduct, loadLeagueCompetitions, loadLeagueHistoryDataset } from '../../../utils/league-history/datasets';
 
 export const prerender = false;
 
@@ -82,8 +82,12 @@ export const POST: APIRoute = async ({ request }) => {
 	let result;
 	try {
 		// Only the league asked about, per request (utils/league-history/datasets).
-		const ds: AskData | null = await loadLeagueHistoryDataset(league.dataPath);
-		if (!ds) return json({ error: 'Unknown league.' }, 404);
+		const [loaded, competitions] = await Promise.all([
+			loadLeagueHistoryDataset(league.dataPath),
+			loadLeagueCompetitions(league.dataPath, league.configPath),
+		]);
+		if (!loaded) return json({ error: 'Unknown league.' }, 404);
+		const ds: AskData = { ...loaded, competitions };
 		result = await askHistory(league.slug, ds, question, { turns, asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)) });
 	} catch (e) {
 		console.error('[league-history/ask] failed:', e);

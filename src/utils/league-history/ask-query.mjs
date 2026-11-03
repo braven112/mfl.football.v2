@@ -27,9 +27,20 @@
 import { indexDataset } from './records.mjs';
 import { PLAYER_DEFAULT_COLUMNS, PLAYER_FIELDS, PLAYER_UNITS, preparePlayers } from './ask-players.mjs';
 import { MOVE_DEFAULT_COLUMNS, MOVE_FIELDS, MOVE_UNITS, prepareMoves } from './ask-moves.mjs';
+import {
+  COMPETITION_DEFAULT_COLUMNS,
+  COMPETITION_FIELDS,
+  COMPETITION_SCOPES,
+  COMPETITION_UNITS,
+  COMPETITION_UNIT_WORDS,
+  competitionOwnerRows,
+  inCompetition,
+  prepareCompetitions,
+  describeCompetitions as describeCompetitionsOf,
+} from './ask-competitions.mjs';
 
 export const TEAM_UNITS = ['seasons', 'games', 'owners'];
-export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...COMPETITION_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -106,6 +117,7 @@ export const FIELDS = {
   },
   ...PLAYER_FIELDS,
   ...MOVE_FIELDS,
+  ...COMPETITION_FIELDS,
 };
 
 const OPS = {
@@ -144,6 +156,12 @@ export function querySchema() {
         type: 'integer',
         minimum: 1,
         description: 'seasons only: count just the first N regular-season games (e.g. 10 for "started 9-1"). Omit for the whole regular season.',
+      },
+      competition: {
+        type: 'string',
+        enum: COMPETITION_SCOPES,
+        description:
+          'competition units only: which all-play table to count. "Premier League", "D-League", "AFL Cup", "tiers" (both tiers, the Premier League / D-League era) or "all" (default). For competitionOwners it decides which seasons and titles go into each owner\'s totals.',
       },
       years: {
         type: 'object',
@@ -199,6 +217,7 @@ const DEFAULT_COLUMNS = {
   owners: ['owner', 'seasons', 'w', 'l', 'titles', 'playoffApps'],
   ...PLAYER_DEFAULT_COLUMNS,
   ...MOVE_DEFAULT_COLUMNS,
+  ...COMPETITION_DEFAULT_COLUMNS,
 };
 
 /**
@@ -424,7 +443,8 @@ export function normalizeQuery(q) {
     if (fields[q.chart].type !== 'number') throw new QueryError(`chart: ${q.chart} is not a number`);
     chart = q.chart;
   }
-  return { unit, throughGames, years, where, sort, limit, columns, summarize, chart };
+  const competition = COMPETITION_UNITS.includes(unit) && COMPETITION_SCOPES.includes(q.competition) && q.competition !== 'all' ? q.competition : null;
+  return { unit, throughGames, competition, years, where, sort, limit, columns, summarize, chart };
 }
 
 /**
@@ -439,7 +459,7 @@ export function normalizeQuery(q) {
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
- * @param {{ players?: any, moves?: any }} [extra] league-history-players.json (player units) and league-history-moves.json (trades, pickups, drafts, auctions)
+ * @param {{ players?: any, moves?: any, competitions?: any }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions) and the all-play competition's sources (ask-competitions.mjs)
  * @returns {QueryResult}
  */
 export function runQuery(ds, rawQuery, extra = {}) {
@@ -447,12 +467,19 @@ export function runQuery(ds, rawQuery, extra = {}) {
   const p = prepare(ds);
   const isPlayer = PLAYER_UNITS.includes(q.unit);
   const isMove = MOVE_UNITS.includes(q.unit);
+  const isCompetition = COMPETITION_UNITS.includes(q.unit);
+  if (isCompetition && !extra.competitions) throw new QueryError('This league has no all-play side competition on record.');
   if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
   if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
   const pp = (isPlayer || isMove) && extra.players ? preparePlayers(p, extra.players) : null;
   const pm = isMove ? prepareMoves(p, pp, extra.moves) : null;
+  const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
-    q.unit === 'seasons'
+    q.unit === 'competitionOwners'
+      ? competitionOwnerRows(pc, p.latestHoldings, q.competition, (y) => inYears(y, q.years))
+      : isCompetition
+        ? pc[q.unit].filter((r) => inCompetition(r, q.competition))
+        : q.unit === 'seasons'
       ? seasonRows(p, q.throughGames)
       : q.unit === 'owners'
         ? ownerRows(p, q.years)
@@ -461,7 +488,7 @@ export function runQuery(ds, rawQuery, extra = {}) {
           : isMove
             ? pm[q.unit]
             : pp[q.unit];
-  if (q.unit !== 'owners' && q.unit !== 'playerCareers') rows = rows.filter((r) => inYears(r.year, q.years));
+  if (q.unit !== 'owners' && q.unit !== 'playerCareers' && q.unit !== 'competitionOwners') rows = rows.filter((r) => inYears(r.year, q.years));
   const filtersOn = (f) => q.where.some((c) => c.field === f);
   // Consolation games count nowhere unless asked for by name (records.mjs).
   if (q.unit === 'games' && !filtersOn('kind')) rows = rows.filter((r) => r.kind !== 'consolation');
@@ -634,7 +661,25 @@ const cmp = (a, b) => {
   return String(a).localeCompare(String(b));
 };
 
+/** The competition units' rows, once per (dataset, sources) pair. */
+const competitionCache = new WeakMap();
+function competitionsOf(ds, data) {
+  let byDs = competitionCache.get(data);
+  if (!byDs) competitionCache.set(data, (byDs = new WeakMap()));
+  if (!byDs.has(ds)) byDs.set(ds, prepareCompetitions(prepare(ds), data, dataAsOf(ds)));
+  return byDs.get(ds);
+}
+
+/**
+ * The competition's history for the model's prompt (ask-competitions.mjs
+ * describeCompetitions), or '' for a league without one.
+ */
+export function competitionStory(ds, data) {
+  return data ? describeCompetitionsOf(competitionsOf(ds, data), data.tierCompetition) : '';
+}
+
 const UNIT_WORDS = {
+  ...COMPETITION_UNIT_WORDS,
   seasons: 'team-seasons',
   games: 'team-games',
   owners: 'owners',
@@ -651,6 +696,7 @@ const UNIT_WORDS = {
 export function describeQuery(q) {
   const parts = [UNIT_WORDS[q.unit][0].toUpperCase() + UNIT_WORDS[q.unit].slice(1)];
   if (q.throughGames) parts.push(`first ${q.throughGames} regular-season games`);
+  if (q.competition) parts.push(q.competition === 'tiers' ? 'Premier League and D-League' : q.competition);
   else if (q.unit === 'seasons') parts.push('regular season');
   if (q.years) {
     const { from, to } = q.years;

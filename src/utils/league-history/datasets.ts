@@ -12,7 +12,7 @@
  * build derives for it. A league with only `league-history.json` (rivalry
  * lines, owner pages) does not.
  */
-import { hasLeagueData, loadLeagueData } from '../league-data';
+import { hasLeagueData, listLeagueData, loadLeagueData } from '../league-data';
 
 export interface LeagueHistoryPaths {
 	/** league-history.json */
@@ -54,4 +54,34 @@ export async function loadLeagueHistoryDataset(
 		loadLeagueData(paths.moves),
 	]);
 	return history && players && moves ? { history, players, moves } : null;
+}
+
+/**
+ * The sources of the league's all-play side competition (Ask the History's
+ * competition units, ask-competitions.mjs), or null when the league has none.
+ * A league has one when its config declares `tierCompetition.firstSeason` and
+ * its dataPath records the tiers in `tier-history.json`: data, never a slug.
+ */
+export async function loadLeagueCompetitions(
+	dataPath: string,
+	configPath: string | undefined,
+): Promise<{ tierCompetition: any; tierHistory: any; awards: any; weekly: Record<string, any> } | null> {
+	const tierPath = `${dataPath}/tier-history.json`;
+	if (!configPath || !hasLeagueData(tierPath)) return null;
+	const [config, tierHistory, awards] = await Promise.all([
+		loadLeagueData<any>(configPath),
+		loadLeagueData<any>(tierPath),
+		loadLeagueData<any>(`${dataPath}/awards-history.json`),
+	]);
+	const tierCompetition = config?.tierCompetition;
+	const first = Number(tierCompetition?.firstSeason);
+	if (!Number.isInteger(first) || !tierHistory?.seasons) return null;
+	const files = listLeagueData(`${dataPath}/mfl-feeds/*/weekly-results.json`).filter((p) => {
+		const year = Number(p.split('/').at(-2));
+		return Number.isInteger(year) && year >= first;
+	});
+	const loaded = await Promise.all(files.map(async (p) => [p.split('/').at(-2)!, await loadLeagueData<any>(p)] as const));
+	const weekly: Record<string, any> = {};
+	for (const [year, value] of loaded) if (value) weekly[year] = value;
+	return { tierCompetition, tierHistory, awards, weekly };
 }
