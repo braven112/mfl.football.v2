@@ -21,7 +21,7 @@ names in them no longer exist. Read them as history, not as a map.
 that reads `panel.leaders` on a league board sees nothing and renders nothing,
 silently: the Halloween header's Monster of the Week card shipped invisible on
 TheLeague for exactly this reason. Read `panel.leaders ?? buildLeaders(panel)`
-(`haunted-stats.ts`) rather than trusting the field to exist.
+(`week-stats.ts`) rather than trusting the field to exist.
 
 Also: the board's open matchup is island STATE (`setSelected({leagueId,
 pairing})`), not a route, so anything that "links to a matchup" is a button

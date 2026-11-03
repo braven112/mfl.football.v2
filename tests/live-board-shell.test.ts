@@ -188,7 +188,10 @@ describe('a panel leads with the viewer’s matchup, then the closest game', () 
   });
 
   it('renders every matchup exactly once across the two rows', () => {
-    const html = render({ board: board({ panels: [panel({ matchups: three })] }) });
+    const full = render({ board: board({ panels: [panel({ matchups: three })] }) });
+    // From the first matchup row on: the header's Nail-Biter card names a
+    // pairing too, and it is a pointer to a matchup, not a second copy of it.
+    const html = full.slice(full.indexOf('lv-cards'));
     for (const fid of ['0001', '0002', '0003', '0004', '0005', '0006']) {
       expect(html.match(new RegExp(`Team ${fid}<`, 'g')) ?? []).toHaveLength(1);
     }
