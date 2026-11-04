@@ -112,6 +112,13 @@ export interface LvStandingsTableProps {
   recordLabel?: string;
   /** The record column's screen-reader name, when the header is an abbreviation. */
   recordTitle?: string;
+  /**
+   * A column before the record, for a table that ranks on something else
+   * (Archie's MAD POWER 99 ranks on Victory Points).
+   */
+  leadColumn?: { label: string; title?: string; value: (row: LvStandingsTableRow) => string };
+  /** Show this many rows, with the rest behind a "Show all" button. */
+  collapseAfter?: number;
 }
 
 /**
@@ -125,7 +132,16 @@ export function LvStandingsTable({
   caption: captionText,
   recordLabel = 'W-L',
   recordTitle,
+  leadColumn,
+  collapseAfter,
 }: LvStandingsTableProps): JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const collapsible = collapseAfter !== undefined && rows.length > collapseAfter;
+  // The viewer's own row is never hidden: a collapsed table still shows it.
+  const shown =
+    collapsible && !expanded
+      ? rows.filter((row, i) => i < collapseAfter! || row.isViewer)
+      : rows;
   return (
       <div className="lv-standings">
         <table className="ui-table lv-standings__table">
@@ -136,12 +152,15 @@ export function LvStandingsTable({
             <tr>
               <th scope="col" className="lv-standings__rank">#</th>
               <th scope="col">Team</th>
+              {leadColumn && (
+                <th scope="col" className="lv-standings__num" title={leadColumn.title}>{leadColumn.label}</th>
+              )}
               <th scope="col" className="lv-standings__num" title={recordTitle}>{recordLabel}</th>
               <th scope="col" className="lv-standings__num">PF</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {shown.map((row) => (
               <tr
                 key={row.franchiseId}
                 className={[
@@ -179,12 +198,23 @@ export function LvStandingsTable({
                       separate it from the stripe above it. */}
                   {row.isViewer && <span className="lv-standings__you">You</span>}
                 </th>
+                {leadColumn && <td className="lv-standings__num">{leadColumn.value(row)}</td>}
                 <td className="lv-standings__num">{record(row)}</td>
                 <td className="lv-standings__num">{fmt(row.pointsFor)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {collapsible && (
+          <button
+            type="button"
+            className="cta-link lv-standings__more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? `Show top ${collapseAfter}` : `Show all ${rows.length}`}
+          </button>
+        )}
       </div>
   );
 }

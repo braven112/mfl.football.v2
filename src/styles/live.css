@@ -1749,6 +1749,16 @@ button.lv-card:focus-visible {
   .lv-sections__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* A group of one table (Archie's MAD POWER 99) takes the full width. */
+  .lv-sections__grid > :only-child {
+    grid-column: 1 / -1;
+  }
+}
+/* A long table's "Show all" — a text CTA under the last row. */
+.lv-standings__more {
+  display: flex;
+  margin: var(--spacing-sm) auto 0;
+  font-size: var(--font-size-sm);
 }
 .lv-sections__heading {
   display: flex;

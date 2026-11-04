@@ -327,6 +327,11 @@ export interface LiveStandingsRow {
    * never added twice. See `utils/live/standings-projection`.
    */
   weekGamesCounted?: number | null;
+  /**
+   * MFL's Victory Points, where the league keeps them (Archie's ranks on
+   * them). Absent where the export carries no `vp` column.
+   */
+  victoryPoints?: number;
 }
 
 /** A marker on one standings position — promotion, relegation and the like. */
@@ -346,7 +351,7 @@ export interface LiveStandingsZone {
 export interface LiveStandingsSection {
   id: string;
   title: string;
-  basis: 'record' | 'all-play';
+  basis: 'record' | 'all-play' | 'mad';
   /** The section's franchises in their OFFICIAL order (the Final view). */
   franchiseIds: string[];
   /**
@@ -357,6 +362,27 @@ export interface LiveStandingsSection {
   zones?: (LiveStandingsZone | null)[];
   /** A light and a dark mark for the section heading. */
   logo?: { src: string; darkSrc: string };
+  /**
+   * `mad` only: the league's playoff seeding (Archie's MAD POWER 99) and each
+   * franchise's division. `franchiseIds` is then MFL's whole-league feed
+   * order, which is what the seeding is taken from.
+   */
+  seeding?: { divisionLeaders: number; runnersUp: number; wildCards: number };
+  divisionOf?: Record<string, string>;
+  /** Show this many rows, with the rest behind a "show all" button. */
+  collapseAfter?: number;
+}
+
+/** How a league awards Victory Points — MFL's `victoryPoints*` settings. */
+export interface LiveVictoryPointRules {
+  win: number;
+  loss: number;
+  tie: number;
+  /**
+   * Weekly scoring buckets, best first: "3 2 1" splits the week's scores
+   * into thirds worth 3, 2 and 1. Empty when the league has none.
+   */
+  buckets: number[];
 }
 
 export interface LiveStandingsSectionGroup {
@@ -391,6 +417,8 @@ export interface LiveStandingsSections {
   groups: LiveStandingsSectionGroup[];
   /** Null when the all-play read failed; the all-play tables then say so. */
   allPlay: LiveAllPlayBase | null;
+  /** The league's Victory Point rules, for `mad` sections. */
+  victoryPoints?: LiveVictoryPointRules;
 }
 
 /**

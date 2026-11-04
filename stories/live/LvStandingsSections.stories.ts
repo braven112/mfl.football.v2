@@ -6,9 +6,11 @@ import { LIVE_MATCHUP, LIVE_STANDINGS } from '../fixtures/live-kit';
 import { allModes, themeModes } from '../../.storybook/modes';
 
 /**
- * A Standings tab cut into tables under one Live / Projected / Final switch —
- * the AFL live board's: its Premier League and D-League on all-play, then its
- * divisions on head-to-head (`utils/live/afl-live-standings.ts`).
+ * A Standings tab cut into tables under one Live / Projected / Final switch.
+ * The main stories are the AFL live board's: its Premier League and D-League
+ * on all-play, then its divisions on head-to-head. TheLeague draws divisions
+ * only, and Archie's draws MAD POWER 99 (`MadPower99`);
+ * `utils/live/league-live-standings.ts` decides which.
  *
  * The zones belong to the POSITION: in the Live view the viewer (Pigskins)
  * outscores the field and climbs out of the D-League's relegation-style zone,
@@ -95,3 +97,34 @@ export const AllPlayMissing = {
 
 /** The standings read failed. Never an empty table. */
 export const Unavailable = { args: { rows: null, sections: SECTIONS, leagueName: 'AFL' } };
+
+/**
+ * Archie's MAD POWER 99 shape: one table of the whole league in playoff seed
+ * order on Victory Points, collapsed after the seeds with a "Show all".
+ */
+const MAD_ROWS = LIVE_STANDINGS.map((row, i) => ({ ...row, victoryPoints: 30 - i * 2 }));
+const MAD: LiveStandingsSections = {
+  groups: [
+    {
+      id: 'mad',
+      title: 'MAD POWER 99',
+      sections: [
+        {
+          id: 'mad-power-99',
+          title: 'Playoff seeding',
+          basis: 'mad',
+          franchiseIds: MAD_ROWS.map((r) => r.franchiseId),
+          seeding: { divisionLeaders: 2, runnersUp: 1, wildCards: 1 },
+          divisionOf: Object.fromEntries(MAD_ROWS.map((r, i) => [r.franchiseId, i % 2 ? 'East' : 'West'])),
+          collapseAfter: 4,
+        },
+      ],
+    },
+  ],
+  allPlay: null,
+  victoryPoints: { win: 2, loss: 0, tie: 1, buckets: [3, 2, 1] },
+};
+
+export const MadPower99 = {
+  args: { rows: MAD_ROWS, sections: MAD, leagueName: "Archie's", matchups: [LIVE_MATCHUP] },
+};
