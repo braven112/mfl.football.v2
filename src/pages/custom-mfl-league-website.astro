@@ -1,0 +1,14 @@
+---
+/**
+ * /custom-mfl-league-website — a public service page on the shared host, indexable on purpose.
+ * Content: src/data/mfl-services.ts. On a league apex the middleware rewrites
+ * this path under the league's prefix, where no route claims it, so it 404s
+ * there: it belongs to mfl.football alone.
+ */
+import ServicePage from '../components/shared/marketing/ServicePage.astro';
+import { findService } from '../data/mfl-services';
+
+export const prerender = false;
+---
+
+<ServicePage service={findService('league-website')} />

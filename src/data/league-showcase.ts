@@ -15,10 +15,16 @@ export interface ShowcaseMeta {
 	teams: number;
 	/** One short phrase about how the league plays. */
 	format: string;
+	/**
+	 * Shown on the homepage as a live example of a site we built. Hand-picked
+	 * by the site owner, not derived: a league can be listed (`showcaseLeagues`)
+	 * without being the example a buyer is sent to.
+	 */
+	siteExample?: boolean;
 }
 
 const SHOWCASE: Partial<Record<CanonicalLeagueSlug, ShowcaseMeta>> = {
-	theleague: { short: 'The League', estYear: 2007, teams: 16, format: 'Dynasty · contracts and salary cap' },
+	theleague: { short: 'The League', estYear: 2007, teams: 16, format: 'Dynasty · contracts and salary cap', siteExample: true },
 	'afl-fantasy': { short: 'AFL', estYear: 2003, teams: 24, format: 'Two conferences · keepers' },
 	archies: { short: "Archie's", estYear: 2021, teams: 99, format: 'Nine divisions · redraft' },
 };
@@ -35,6 +41,15 @@ export function showcaseLeagues(): ShowcaseLeague[] {
 	return ALL_LEAGUES.filter((l) => !l.bestBall && l.advertiseOnSharedHost !== false && SHOWCASE[l.slug]).map(
 		(l) => ({ ...l, showcase: SHOWCASE[l.slug]! }),
 	);
+}
+
+/**
+ * The leagues the homepage holds up as examples of a site we built: listed
+ * leagues (the rules above still apply) whose entry says `siteExample`.
+ * Adding the next example is that one field.
+ */
+export function siteExampleLeagues(): ShowcaseLeague[] {
+	return showcaseLeagues().filter((l) => l.showcase.siteExample);
 }
 
 /**
