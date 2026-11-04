@@ -1,72 +1,70 @@
 {
-  "version": "1.0",
   "encoding": "utf-8",
+  "version": "1.0",
   "league": {
-    "victoryPointsWin": "2",
-    "rostersPerPlayer": "1",
-    "fantasyPoolEndWeek": "18",
-    "usesContractYear": "0",
     "victoryPointsStartWeek": "1",
+    "usesContractYear": "0",
     "bestLineup": "No",
-    "bbidFCFSCharge": "0",
     "bbidSeasonLimit": "100",
+    "bbidFCFSCharge": "0",
+    "rostersPerPlayer": "1",
+    "victoryPointsWin": "2",
+    "fantasyPoolEndWeek": "18",
+    "survivorPoolStartWeek": "1",
+    "survivorPoolEndWeek": "18",
+    "mobileAlerts": "0012,0033,0021,0089,0092,0054,0016,0083,0085,0023,0007,0095,0029,",
+    "baseURL": "https://www48.myfantasyleague.com",
     "currentWaiverType": "BBID_FCFS",
     "nflPoolStartWeek": "1",
     "draftPlayerPool": "Both",
-    "survivorPoolStartWeek": "1",
-    "survivorPoolEndWeek": "18",
-    "baseURL": "https://www48.myfantasyleague.com",
-    "mobileAlerts": "0012,0033,0021,0089,0092,0054,0016,0083,0085,0023,0007,0095,0029,",
-    "name": "Archie's Fantasy Football League",
-    "nflPoolType": "",
-    "nflPoolEndWeek": "18",
-    "bbidConditional": "No",
-    "victoryPointsBuckets": "3 2 1",
     "startWeek": "1",
     "keeperType": "none",
     "victoryPointsLoss": "0",
-    "bbidIncrement": "0.01",
     "rosterSize": "14",
-    "fantasyPoolStartWeek": "1",
+    "bbidIncrement": "0.01",
+    "name": "Archie's Fantasy Football League",
+    "nflPoolType": "",
+    "nflPoolEndWeek": "18",
+    "victoryPointsBuckets": "3 2 1",
+    "bbidConditional": "No",
+    "draftLimitHours": "1:00",
+    "id": "10105",
+    "precision": "2",
+    "loadRosters": "live_draft",
+    "draftTimer": "ON",
     "history": {
       "league": [
         {
-          "url": "https://www48.myfantasyleague.com/2026/home/10105",
-          "year": "2026"
+          "year": "2026",
+          "url": "https://www48.myfantasyleague.com/2026/home/10105"
         },
         {
-          "year": "2021",
-          "url": "https://www44.myfantasyleague.com/2021/home/10105"
+          "url": "https://www44.myfantasyleague.com/2021/home/10105",
+          "year": "2021"
         },
         {
           "year": "2022",
           "url": "https://www48.myfantasyleague.com/2022/home/10105"
         },
         {
-          "year": "2023",
-          "url": "https://www48.myfantasyleague.com/2023/home/10105"
+          "url": "https://www48.myfantasyleague.com/2023/home/10105",
+          "year": "2023"
         },
         {
-          "year": "2024",
-          "url": "https://www48.myfantasyleague.com/2024/home/10105"
+          "url": "https://www48.myfantasyleague.com/2024/home/10105",
+          "year": "2024"
         },
         {
-          "year": "2025",
-          "url": "https://www48.myfantasyleague.com/2025/home/10105"
+          "url": "https://www48.myfantasyleague.com/2025/home/10105",
+          "year": "2025"
         }
       ]
     },
+    "fantasyPoolStartWeek": "1",
     "lockout": "No",
     "bbidTiebreaker": "SORT",
     "partialLineupAllowed": "NO",
     "playerLimitUnit": "DIVISION",
-    "id": "10105",
-    "draftLimitHours": "1:00",
-    "precision": "2",
-    "loadRosters": "live_draft",
-    "draftTimer": "ON",
-    "maxWaiverRounds": "4",
-    "taxiSquad": "0",
     "defaultTradeExpirationDays": "3",
     "starters": {
       "position": [
@@ -83,8 +81,8 @@
           "limit": "1-5"
         },
         {
-          "limit": "1-5",
-          "name": "TE"
+          "name": "TE",
+          "limit": "1-5"
         },
         {
           "name": "Def",
@@ -104,52 +102,57 @@
           "id": "01"
         },
         {
-          "id": "02",
-          "name": "Dan Marino Division "
+          "name": "Dan Marino Division ",
+          "id": "02"
         },
         {
           "name": "Tom Brady Division ",
           "id": "03"
         },
         {
-          "id": "04",
-          "name": "Joe Montana Division "
+          "name": "Joe Montana Division ",
+          "id": "04"
         },
         {
-          "name": "Walter Payton Division ",
-          "id": "05"
+          "id": "05",
+          "name": "Walter Payton Division "
         },
         {
-          "name": "Lawrence Taylor Division ",
-          "id": "06"
+          "id": "06",
+          "name": "Lawrence Taylor Division "
         },
         {
           "id": "07",
           "name": "John Elway Division "
         },
         {
-          "id": "08",
-          "name": "Jim Brown Division"
+          "name": "Jim Brown Division",
+          "id": "08"
         }
       ],
       "count": "9"
     },
+    "maxWaiverRounds": "4",
+    "taxiSquad": "0",
     "fantasyPoolType": "",
     "usesSalaries": "0",
     "victoryPointsTie": "1",
+    "lastRegularSeasonWeek": "18",
+    "injuredReserve": "1",
+    "standingsSort": "VICTORY_POINTS,PTS,H2H,",
     "rosterLimits": {
       "position": [
         {
-          "name": "QB",
-          "limit": "0-3"
-        },
-        {
-          "name": "RB",
-          "limit": "0-6"
+          "limit": "0-3",
+          "name": "QB"
         },
         {
           "limit": "0-6",
-          "name": "WR"
+          "name": "RB"
+        },
+        {
+          "name": "WR",
+          "limit": "0-6"
         },
         {
           "limit": "0-6",
@@ -161,24 +164,22 @@
         }
       ]
     },
-    "standingsSort": "VICTORY_POINTS,PTS,H2H,",
     "h2h": "YES",
-    "lastRegularSeasonWeek": "18",
-    "injuredReserve": "1",
+    "endWeek": "18",
+    "survivorPool": "Yes",
     "draft_kind": "live",
     "victoryPointsEndWeek": "18",
     "franchises": {
-      "count": "99",
       "franchise": [
         {
+          "bbidAvailableBalance": "33.89",
           "waiverSortOrder": "16",
           "name": "Rhinos",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0001.jpg",
-          "bbidAvailableBalance": "33.89",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0001.jpg",
-          "abbrev": "Rhinos",
           "id": "0001",
-          "division": "01"
+          "division": "01",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0001.jpg",
+          "abbrev": "Rhinos"
         },
         {
           "abbrev": "Freeze",
@@ -191,44 +192,44 @@
           "bbidAvailableBalance": "100.00"
         },
         {
+          "name": "Goats ",
+          "waiverSortOrder": "74",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0003.png",
+          "bbidAvailableBalance": "70.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0003.png",
           "abbrev": "Goats",
-          "division": "04",
           "id": "0003",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0003.png",
-          "waiverSortOrder": "74",
-          "name": "Goats ",
-          "bbidAvailableBalance": "70.00"
+          "division": "04"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0004.png",
-          "abbrev": "Waves",
-          "division": "00",
-          "id": "0004",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0004.png",
           "name": "Waves",
           "waiverSortOrder": "23",
-          "bbidAvailableBalance": "70.00"
+          "bbidAvailableBalance": "70.00",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0004.png",
+          "abbrev": "Waves",
+          "division": "00",
+          "id": "0004"
         },
         {
+          "abbrev": "Lions",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0005.jpg",
           "id": "0005",
           "division": "03",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0005.jpg",
-          "abbrev": "Lions",
-          "bbidAvailableBalance": "65.50",
-          "name": "Lions",
           "waiverSortOrder": "31",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0005.jpg"
+          "name": "Lions",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0005.jpg",
+          "bbidAvailableBalance": "65.50"
         },
         {
-          "id": "0006",
-          "division": "04",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0006.png",
-          "abbrev": "Chickens",
-          "bbidAvailableBalance": "35.00",
           "waiverSortOrder": "98",
           "name": "Chickens",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0006.png"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0006.png",
+          "bbidAvailableBalance": "35.00",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0006.png",
+          "abbrev": "Chickens",
+          "id": "0006",
+          "division": "04"
         },
         {
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0007.png",
@@ -243,42 +244,42 @@
         {
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0008.png",
           "abbrev": "Mafia",
-          "id": "0008",
           "division": "03",
-          "waiverSortOrder": "70",
-          "name": "Mafia",
+          "id": "0008",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0008.png",
+          "name": "Mafia",
+          "waiverSortOrder": "70",
           "bbidAvailableBalance": "51.10"
         },
         {
-          "bbidAvailableBalance": "100.00",
-          "waiverSortOrder": "33",
-          "name": "Highlanders",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0009.png",
-          "id": "0009",
-          "division": "06",
+          "name": "Highlanders",
+          "waiverSortOrder": "33",
+          "bbidAvailableBalance": "100.00",
+          "abbrev": "Highlanders",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0009.png",
-          "abbrev": "Highlanders"
+          "division": "06",
+          "id": "0009"
         },
         {
-          "bbidAvailableBalance": "55.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0010.png",
-          "name": "Eagles",
-          "waiverSortOrder": "29",
           "division": "05",
           "id": "0010",
+          "abbrev": "Eagles",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0010.png",
-          "abbrev": "Eagles"
+          "bbidAvailableBalance": "55.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0010.png",
+          "waiverSortOrder": "29",
+          "name": "Eagles"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0011.png",
-          "abbrev": "Dragons",
-          "division": "07",
-          "id": "0011",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0011.png",
-          "name": "Dragons ",
+          "bbidAvailableBalance": "32.00",
           "waiverSortOrder": "37",
-          "bbidAvailableBalance": "32.00"
+          "name": "Dragons ",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0011.png",
+          "id": "0011",
+          "division": "07",
+          "abbrev": "Dragons",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0011.png"
         },
         {
           "bbidAvailableBalance": "54.25",
@@ -287,58 +288,58 @@
           "waiverSortOrder": "79",
           "division": "01",
           "id": "0012",
-          "abbrev": "Tigers",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0012.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0012.png",
+          "abbrev": "Tigers"
         },
         {
           "bbidAvailableBalance": "75.27",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0013.jpg",
           "waiverSortOrder": "24",
           "name": "Jackalopes ",
-          "division": "00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0013.jpg",
           "id": "0013",
-          "abbrev": "Jackalopes",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0013.jpg"
+          "division": "00",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0013.jpg",
+          "abbrev": "Jackalopes"
         },
         {
-          "id": "0014",
-          "division": "00",
-          "abbrev": "Tombstoners",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0014.png",
-          "bbidAvailableBalance": "0.00",
           "waiverSortOrder": "94",
           "name": "Tombstones",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0014.png"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0014.png",
+          "bbidAvailableBalance": "0.00",
+          "abbrev": "Tombstoners",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0014.png",
+          "id": "0014",
+          "division": "00"
         },
         {
-          "abbrev": "Magnums",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0015.png",
           "id": "0015",
           "division": "02",
-          "name": "Magnums",
+          "abbrev": "Magnums",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0015.png",
+          "bbidAvailableBalance": "100.00",
           "waiverSortOrder": "14",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0015.png",
-          "bbidAvailableBalance": "100.00"
+          "name": "Magnums",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0015.png"
         },
         {
-          "bbidAvailableBalance": "32.22",
-          "name": "Apes",
-          "waiverSortOrder": "51",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0016.png",
           "id": "0016",
           "division": "01",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0016.png",
-          "abbrev": "Apes"
+          "abbrev": "Apes",
+          "bbidAvailableBalance": "32.22",
+          "waiverSortOrder": "51",
+          "name": "Apes",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0016.png"
         },
         {
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0017.png",
-          "waiverSortOrder": "19",
-          "name": "Sioux",
-          "bbidAvailableBalance": "7.99",
+          "id": "0017",
+          "division": "04",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0017.png",
           "abbrev": "Sioux",
-          "division": "04",
-          "id": "0017"
+          "bbidAvailableBalance": "7.99",
+          "name": "Sioux",
+          "waiverSortOrder": "19",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0017.png"
         },
         {
           "abbrev": "Foxes",
@@ -351,578 +352,578 @@
           "bbidAvailableBalance": "11.95"
         },
         {
-          "waiverSortOrder": "34",
-          "name": "Hitmen",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0019.png",
-          "bbidAvailableBalance": "100.00",
+          "id": "0019",
+          "division": "03",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0019.png",
           "abbrev": "Hitmen",
-          "id": "0019",
-          "division": "03"
+          "bbidAvailableBalance": "100.00",
+          "waiverSortOrder": "34",
+          "name": "Hitmen",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0019.png"
         },
         {
-          "abbrev": "Razorbacks",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0020.png",
-          "id": "0020",
-          "division": "00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0020.png",
           "name": "Razerbacks",
           "waiverSortOrder": "96",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0020.png",
-          "bbidAvailableBalance": "53.90"
+          "bbidAvailableBalance": "53.90",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0020.png",
+          "abbrev": "Razorbacks",
+          "division": "00",
+          "id": "0020"
         },
         {
-          "bbidAvailableBalance": "100.00",
-          "waiverSortOrder": "48",
-          "name": "MudDogs",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0021.png",
-          "id": "0021",
           "division": "01",
+          "id": "0021",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0021.png",
-          "abbrev": "MudDogs"
+          "abbrev": "MudDogs",
+          "bbidAvailableBalance": "100.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0021.png",
+          "name": "MudDogs",
+          "waiverSortOrder": "48"
         },
         {
           "name": "Wolverines",
           "waiverSortOrder": "69",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0022.png",
           "bbidAvailableBalance": "64.75",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0022.png",
           "abbrev": "Wolverines",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0022.png",
           "id": "0022",
           "division": "00"
         },
         {
-          "division": "05",
-          "id": "0023",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0023.png",
           "abbrev": "Stonecutters",
-          "bbidAvailableBalance": "34.63",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0023.png",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0023.png",
+          "id": "0023",
+          "division": "05",
+          "name": "Stonecutters ",
           "waiverSortOrder": "44",
-          "name": "Stonecutters "
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0023.png",
+          "bbidAvailableBalance": "34.63"
         },
         {
-          "waiverSortOrder": "59",
-          "name": "Banditos",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0024.png",
-          "bbidAvailableBalance": "55.00",
-          "abbrev": "Banditos",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0024.png",
+          "abbrev": "Banditos",
+          "division": "00",
           "id": "0024",
-          "division": "00"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0024.png",
+          "name": "Banditos",
+          "waiverSortOrder": "59",
+          "bbidAvailableBalance": "55.00"
         },
         {
-          "bbidAvailableBalance": "7.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0025.png",
-          "waiverSortOrder": "20",
-          "name": "Geese ",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0025.png",
+          "abbrev": "Geese",
           "division": "04",
           "id": "0025",
-          "abbrev": "Geese",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0025.png"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0025.png",
+          "name": "Geese ",
+          "waiverSortOrder": "20",
+          "bbidAvailableBalance": "7.00"
         },
         {
-          "bbidAvailableBalance": "95.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0026.png",
-          "waiverSortOrder": "42",
-          "name": "Sandmen",
-          "division": "01",
-          "id": "0026",
+          "abbrev": "Sandmen",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0026.png",
-          "abbrev": "Sandmen"
+          "id": "0026",
+          "division": "01",
+          "name": "Sandmen",
+          "waiverSortOrder": "42",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0026.png",
+          "bbidAvailableBalance": "95.00"
         },
         {
-          "bbidAvailableBalance": "7.10",
-          "name": "Assassins",
-          "waiverSortOrder": "72",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0027.jpg",
+          "abbrev": "Assassins",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0027.jpg",
           "id": "0027",
           "division": "02",
-          "abbrev": "Assassins",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0027.jpg"
+          "waiverSortOrder": "72",
+          "name": "Assassins",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0027.jpg",
+          "bbidAvailableBalance": "7.10"
         },
         {
+          "bbidAvailableBalance": "99.23",
+          "name": "WhoopAss",
+          "waiverSortOrder": "1",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0028.jpg",
           "id": "0028",
           "division": "07",
           "abbrev": "WhoopAss",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0028.jpg",
-          "bbidAvailableBalance": "99.23",
-          "waiverSortOrder": "1",
-          "name": "WhoopAss",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0028.jpg"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0028.jpg"
         },
         {
-          "bbidAvailableBalance": "89.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0029.png",
           "name": "Invaders ",
           "waiverSortOrder": "78",
-          "division": "03",
-          "id": "0029",
+          "bbidAvailableBalance": "89.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0029.png",
-          "abbrev": "Invaders "
+          "abbrev": "Invaders ",
+          "division": "03",
+          "id": "0029"
         },
         {
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0030.png",
-          "waiverSortOrder": "82",
-          "name": "Badgers ",
-          "bbidAvailableBalance": "99.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0030.png",
           "abbrev": "Badgers",
+          "id": "0030",
           "division": "08",
-          "id": "0030"
+          "name": "Badgers ",
+          "waiverSortOrder": "82",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0030.png",
+          "bbidAvailableBalance": "99.00"
         },
         {
+          "division": "07",
+          "id": "0031",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0031.png",
+          "abbrev": "Devils ",
           "bbidAvailableBalance": "0.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0031.png",
           "name": "Devils ",
-          "waiverSortOrder": "46",
-          "division": "07",
-          "id": "0031",
-          "abbrev": "Devils ",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0031.png"
+          "waiverSortOrder": "46"
         },
         {
-          "bbidAvailableBalance": "81.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0032.png",
           "waiverSortOrder": "4",
           "name": "Bears",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0032.png",
-          "id": "0032",
-          "division": "08",
+          "bbidAvailableBalance": "81.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0032.png",
-          "abbrev": "Bears"
+          "abbrev": "Bears",
+          "division": "08",
+          "id": "0032"
         },
         {
-          "id": "0033",
           "division": "07",
-          "abbrev": "Yetis",
+          "id": "0033",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0033.png",
+          "abbrev": "Yetis",
           "bbidAvailableBalance": "44.09",
-          "waiverSortOrder": "81",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0033.png",
           "name": "Yeti's",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0033.png"
+          "waiverSortOrder": "81"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0034.png",
-          "abbrev": "Killers",
           "id": "0034",
           "division": "03",
-          "waiverSortOrder": "10",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0034.png",
+          "abbrev": "Killers",
+          "bbidAvailableBalance": "81.00",
           "name": "Killers",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0034.png",
-          "bbidAvailableBalance": "81.00"
+          "waiverSortOrder": "10",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0034.png"
         },
         {
-          "id": "0035",
-          "division": "03",
           "abbrev": "Chargers",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0035.png",
-          "bbidAvailableBalance": "41.00",
-          "name": "Chargers ",
+          "division": "03",
+          "id": "0035",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0035.png",
           "waiverSortOrder": "73",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0035.png"
+          "name": "Chargers ",
+          "bbidAvailableBalance": "41.00"
         },
         {
-          "abbrev": "Plague",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0036.png",
-          "division": "02",
+          "abbrev": "Plague",
           "id": "0036",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0036.png",
-          "name": "Plague ",
+          "division": "02",
           "waiverSortOrder": "47",
+          "name": "Plague ",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0036.png",
           "bbidAvailableBalance": "84.00"
         },
         {
-          "bbidAvailableBalance": "52.29",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0037.png",
-          "name": "Saints",
-          "waiverSortOrder": "18",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0037.png",
+          "abbrev": "Saints",
           "division": "06",
           "id": "0037",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0037.png",
-          "abbrev": "Saints"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0037.png",
+          "waiverSortOrder": "18",
+          "name": "Saints",
+          "bbidAvailableBalance": "52.29"
         },
         {
-          "id": "0038",
           "division": "05",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0038.png",
+          "id": "0038",
           "abbrev": "SnakeEyes",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0038.png",
           "bbidAvailableBalance": "9.90",
-          "name": "SnakeEyes",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0038.png",
           "waiverSortOrder": "43",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0038.png"
+          "name": "SnakeEyes"
         },
         {
-          "id": "0039",
-          "division": "02",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0039.png",
+          "name": "Monkeys",
+          "waiverSortOrder": "97",
+          "bbidAvailableBalance": "100.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0039.png",
           "abbrev": "Monkeys",
-          "bbidAvailableBalance": "100.00",
-          "waiverSortOrder": "97",
-          "name": "Monkeys",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0039.png"
+          "division": "02",
+          "id": "0039"
         },
         {
-          "division": "04",
-          "id": "0040",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0040.jpg",
-          "abbrev": "RailRoaders",
           "bbidAvailableBalance": "56.11",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0040.jpg",
+          "name": "RailRoaders",
           "waiverSortOrder": "67",
-          "name": "RailRoaders"
-        },
-        {
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0041.jpg",
-          "waiverSortOrder": "32",
-          "name": "Hydras ",
-          "bbidAvailableBalance": "80.00",
-          "abbrev": "Hydras",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0041.jpg",
           "division": "04",
-          "id": "0041"
+          "id": "0040",
+          "abbrev": "RailRoaders",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0040.jpg"
         },
         {
-          "division": "05",
-          "id": "0042",
-          "abbrev": "Dawgs",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0042.png",
+          "bbidAvailableBalance": "80.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0041.jpg",
+          "name": "Hydras ",
+          "waiverSortOrder": "32",
+          "division": "04",
+          "id": "0041",
+          "abbrev": "Hydras",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0041.jpg"
+        },
+        {
           "bbidAvailableBalance": "16.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0042.png",
           "waiverSortOrder": "66",
-          "name": "Dawgs "
-        },
-        {
+          "name": "Dawgs ",
           "division": "05",
-          "id": "0043",
-          "abbrev": "Deadly",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0043.png",
-          "bbidAvailableBalance": "100.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0043.png",
-          "waiverSortOrder": "90",
-          "name": "Deadly"
+          "id": "0042",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0042.png",
+          "abbrev": "Dawgs"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0044.png",
-          "abbrev": "Demons",
-          "id": "0044",
-          "division": "06",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0043.png",
+          "abbrev": "Deadly",
+          "id": "0043",
+          "division": "05",
+          "waiverSortOrder": "90",
+          "name": "Deadly",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0043.png",
+          "bbidAvailableBalance": "100.00"
+        },
+        {
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0044.png",
           "name": "Demons ",
           "waiverSortOrder": "83",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0044.png",
-          "bbidAvailableBalance": "5.50"
+          "bbidAvailableBalance": "5.50",
+          "abbrev": "Demons",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0044.png",
+          "division": "06",
+          "id": "0044"
         },
         {
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0045.png",
           "abbrev": "Roos",
-          "id": "0045",
           "division": "08",
+          "id": "0045",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0045.png",
           "waiverSortOrder": "64",
           "name": "Roos",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0045.png",
           "bbidAvailableBalance": "68.00"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0046.png",
-          "abbrev": "Stingers",
-          "id": "0046",
           "division": "02",
-          "name": "Stingers",
-          "waiverSortOrder": "63",
+          "id": "0046",
+          "abbrev": "Stingers",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0046.png",
+          "bbidAvailableBalance": "14.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0046.png",
-          "bbidAvailableBalance": "14.00"
+          "name": "Stingers",
+          "waiverSortOrder": "63"
         },
         {
+          "id": "0047",
+          "division": "07",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0047.png",
           "abbrev": "Vikings",
-          "division": "07",
-          "id": "0047",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0047.png",
+          "bbidAvailableBalance": "0.00",
           "waiverSortOrder": "8",
           "name": "Vikings",
-          "bbidAvailableBalance": "0.00"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0047.png"
         },
         {
-          "division": "01",
-          "id": "0048",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0048.png",
-          "abbrev": "SeaBirds",
-          "bbidAvailableBalance": "100.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0048.png",
+          "name": "SeaBirds",
           "waiverSortOrder": "15",
-          "name": "SeaBirds"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0048.png",
+          "bbidAvailableBalance": "100.00",
+          "abbrev": "SeaBirds",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0048.png",
+          "id": "0048",
+          "division": "01"
         },
         {
-          "abbrev": "Rams",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0049.png",
-          "division": "07",
-          "id": "0049",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0049.png",
-          "name": "Rams",
+          "bbidAvailableBalance": "40.00",
           "waiverSortOrder": "77",
-          "bbidAvailableBalance": "40.00"
+          "name": "Rams",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0049.png",
+          "id": "0049",
+          "division": "07",
+          "abbrev": "Rams",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0049.png"
         },
         {
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0050.png",
+          "waiverSortOrder": "53",
+          "name": "Hawks",
+          "bbidAvailableBalance": "85.73",
           "abbrev": "Hawks",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0050.png",
-          "id": "0050",
           "division": "05",
-          "name": "Hawks",
-          "waiverSortOrder": "53",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0050.png",
-          "bbidAvailableBalance": "85.73"
+          "id": "0050"
         },
         {
-          "name": "Gladiators",
-          "waiverSortOrder": "65",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0051.png",
-          "bbidAvailableBalance": "39.06",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0051.png",
           "abbrev": "Gladiators",
+          "division": "01",
           "id": "0051",
-          "division": "01"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0051.png",
+          "name": "Gladiators",
+          "waiverSortOrder": "65",
+          "bbidAvailableBalance": "39.06"
         },
         {
           "abbrev": "KungFu",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0052.png",
           "id": "0052",
           "division": "08",
-          "name": "Kung Fu",
           "waiverSortOrder": "52",
+          "name": "Kung Fu",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0052.png",
           "bbidAvailableBalance": "74.00"
         },
         {
           "bbidAvailableBalance": "35.59",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0053.png",
           "waiverSortOrder": "26",
           "name": "Snappers",
-          "division": "04",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0053.png",
           "id": "0053",
-          "abbrev": "Snappers",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0053.png"
+          "division": "04",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0053.png",
+          "abbrev": "Snappers"
         },
         {
-          "division": "01",
-          "id": "0054",
+          "waiverSortOrder": "27",
+          "name": "Troopers",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0054.png",
+          "bbidAvailableBalance": "99.58",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0054.png",
           "abbrev": "Troopers",
-          "bbidAvailableBalance": "99.58",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0054.png",
-          "waiverSortOrder": "27",
-          "name": "Troopers"
+          "id": "0054",
+          "division": "01"
         },
         {
-          "bbidAvailableBalance": "100.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0055.png",
           "name": "Mammoth",
           "waiverSortOrder": "6",
-          "division": "08",
-          "id": "0055",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0055.png",
+          "bbidAvailableBalance": "100.00",
           "abbrev": "Mammoths",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0055.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0055.png",
+          "id": "0055",
+          "division": "08"
         },
         {
-          "id": "0056",
-          "division": "06",
-          "abbrev": "Nemesis",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0056.png",
-          "bbidAvailableBalance": "71.95",
-          "name": "Nemesis ",
+          "abbrev": "Nemesis",
+          "division": "06",
+          "id": "0056",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0056.png",
           "waiverSortOrder": "89",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0056.png"
+          "name": "Nemesis ",
+          "bbidAvailableBalance": "71.95"
         },
         {
-          "abbrev": "Hurricanes",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0057.png",
-          "id": "0057",
           "division": "01",
-          "name": "Hurricanes ",
-          "waiverSortOrder": "88",
+          "id": "0057",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0057.png",
+          "abbrev": "Hurricanes",
+          "bbidAvailableBalance": "52.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0057.png",
-          "bbidAvailableBalance": "52.00"
+          "waiverSortOrder": "88",
+          "name": "Hurricanes "
         },
         {
-          "id": "0058",
-          "division": "07",
-          "abbrev": "Monsters",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0058.png",
-          "bbidAvailableBalance": "55.02",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0058.png",
           "waiverSortOrder": "93",
           "name": "Monsters ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0058.png"
+          "bbidAvailableBalance": "55.02",
+          "abbrev": "Monsters",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0058.png",
+          "division": "07",
+          "id": "0058"
         },
         {
+          "id": "0059",
+          "division": "06",
+          "abbrev": "Bandits",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0059.png",
           "bbidAvailableBalance": "64.50",
           "waiverSortOrder": "21",
           "name": "Bandits ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0059.png",
-          "id": "0059",
-          "division": "06",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0059.png",
-          "abbrev": "Bandits"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0059.png"
         },
         {
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0060.png",
+          "waiverSortOrder": "75",
+          "name": "SaltyDogs",
+          "bbidAvailableBalance": "69.00",
           "abbrev": "SaltyDogs",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0060.png",
           "division": "06",
-          "id": "0060",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0060.png",
-          "name": "SaltyDogs",
-          "waiverSortOrder": "75",
-          "bbidAvailableBalance": "69.00"
+          "id": "0060"
         },
         {
-          "waiverSortOrder": "5",
-          "name": "Vipers",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0061.jpg",
-          "bbidAvailableBalance": "6.25",
+          "division": "06",
+          "id": "0061",
           "abbrev": "Vipers",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0061.jpg",
-          "id": "0061",
-          "division": "06"
+          "bbidAvailableBalance": "6.25",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0061.jpg",
+          "waiverSortOrder": "5",
+          "name": "Vipers"
         },
         {
-          "bbidAvailableBalance": "10.00",
-          "waiverSortOrder": "85",
-          "name": "XMen",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0062.png",
           "id": "0062",
           "division": "06",
           "abbrev": "XMen",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0062.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0062.png",
+          "bbidAvailableBalance": "10.00",
+          "waiverSortOrder": "85",
+          "name": "XMen",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0062.png"
         },
         {
           "abbrev": "Veterans",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0063.png",
-          "division": "00",
           "id": "0063",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0063.png",
+          "division": "00",
           "name": "Veterans ",
           "waiverSortOrder": "30",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0063.png",
           "bbidAvailableBalance": "1.00"
         },
         {
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0064.png",
-          "name": "Celtics ",
-          "waiverSortOrder": "58",
           "bbidAvailableBalance": "77.00",
-          "abbrev": "Celtics",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0064.png",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0064.png",
+          "waiverSortOrder": "58",
+          "name": "Celtics ",
           "division": "04",
-          "id": "0064"
+          "id": "0064",
+          "abbrev": "Celtics",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0064.png"
         },
         {
-          "id": "0065",
-          "division": "08",
-          "abbrev": "Chupacbras",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0065.png",
-          "bbidAvailableBalance": "97.00",
           "waiverSortOrder": "3",
           "name": "Chupacabras",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0065.png"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0065.png",
+          "bbidAvailableBalance": "97.00",
+          "abbrev": "Chupacbras",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0065.png",
+          "id": "0065",
+          "division": "08"
         },
         {
           "bbidAvailableBalance": "98.85",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0066.png",
           "name": "Tikis",
           "waiverSortOrder": "35",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0066.png",
-          "id": "0066",
           "division": "08",
-          "abbrev": "Tikis",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0066.png"
+          "id": "0066",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0066.png",
+          "abbrev": "Tikis"
         },
         {
-          "bbidAvailableBalance": "100.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0067.png",
           "waiverSortOrder": "49",
           "name": "Scorpions",
-          "division": "04",
-          "id": "0067",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0067.png",
+          "bbidAvailableBalance": "100.00",
           "abbrev": "Scorpions",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0067.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0067.png",
+          "id": "0067",
+          "division": "04"
         },
         {
-          "division": "02",
-          "id": "0068",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0068.png",
-          "abbrev": "Jacks",
           "bbidAvailableBalance": "1.00",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0068.png",
+          "waiverSortOrder": "54",
           "name": "Lumberjacks",
-          "waiverSortOrder": "54"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0068.png",
+          "id": "0068",
+          "division": "02",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0068.png",
+          "abbrev": "Jacks"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0069.png",
-          "abbrev": "Cellmates",
+          "bbidAvailableBalance": "55.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0069.png",
+          "name": "Cellmates",
+          "waiverSortOrder": "87",
           "division": "05",
           "id": "0069",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0069.png",
-          "waiverSortOrder": "87",
-          "name": "Cellmates",
-          "bbidAvailableBalance": "55.00"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0069.png",
+          "abbrev": "Cellmates"
         },
         {
           "id": "0070",
           "division": "05",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0070.png",
           "abbrev": "Admirals",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0070.png",
           "bbidAvailableBalance": "76.00",
-          "name": "Admirals",
           "waiverSortOrder": "38",
+          "name": "Admirals",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0070.png"
         },
         {
-          "bbidAvailableBalance": "1.82",
-          "waiverSortOrder": "91",
-          "name": "Outlaws ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0071.png",
+          "abbrev": "Outlaws",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0071.png",
           "id": "0071",
           "division": "05",
-          "abbrev": "Outlaws",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0071.png"
+          "name": "Outlaws ",
+          "waiverSortOrder": "91",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0071.png",
+          "bbidAvailableBalance": "1.82"
         },
         {
-          "id": "0072",
-          "division": "06",
           "abbrev": "Battalion",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0072.png",
-          "bbidAvailableBalance": "0.00",
-          "name": "Battalion ",
+          "id": "0072",
+          "division": "06",
           "waiverSortOrder": "62",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0072.png"
+          "name": "Battalion ",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0072.png",
+          "bbidAvailableBalance": "0.00"
         },
         {
-          "bbidAvailableBalance": "2.27",
-          "waiverSortOrder": "68",
-          "name": "Nomads ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0073.png",
-          "id": "0073",
-          "division": "02",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0073.png",
-          "abbrev": "Nomads"
+          "abbrev": "Nomads",
+          "division": "02",
+          "id": "0073",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0073.png",
+          "name": "Nomads ",
+          "waiverSortOrder": "68",
+          "bbidAvailableBalance": "2.27"
         },
         {
-          "id": "0074",
           "division": "05",
-          "abbrev": "Ducks",
+          "id": "0074",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0074.jpg",
+          "abbrev": "Ducks",
           "bbidAvailableBalance": "61.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0074.jpg",
           "name": "Ducks",
-          "waiverSortOrder": "12",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0074.jpg"
+          "waiverSortOrder": "12"
         },
         {
-          "waiverSortOrder": "92",
-          "name": "Barracudas ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0075.png",
-          "bbidAvailableBalance": "1.37",
-          "abbrev": "Barracudas",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0075.png",
           "id": "0075",
-          "division": "02"
+          "division": "02",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0075.png",
+          "abbrev": "Barracudas",
+          "bbidAvailableBalance": "1.37",
+          "name": "Barracudas ",
+          "waiverSortOrder": "92",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0075.png"
         },
         {
-          "waiverSortOrder": "13",
           "name": "Islanders",
+          "waiverSortOrder": "13",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0076.png",
           "bbidAvailableBalance": "38.70",
           "abbrev": "Islanders",
@@ -931,154 +932,154 @@
           "division": "05"
         },
         {
+          "bbidAvailableBalance": "38.00",
           "name": "Spiders",
           "waiverSortOrder": "71",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0077.png",
-          "bbidAvailableBalance": "38.00",
-          "abbrev": "Spiders",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0077.png",
           "id": "0077",
-          "division": "08"
+          "division": "08",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0077.png",
+          "abbrev": "Spiders"
         },
         {
-          "bbidAvailableBalance": "21.50",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0078.png",
-          "waiverSortOrder": "28",
           "name": "Luchadors ",
-          "division": "07",
-          "id": "0078",
+          "waiverSortOrder": "28",
+          "bbidAvailableBalance": "21.50",
           "abbrev": "Luchadors",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0078.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0078.png",
+          "division": "07",
+          "id": "0078"
         },
         {
-          "bbidAvailableBalance": "0.00",
-          "waiverSortOrder": "11",
-          "name": "Pirates",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0079.png",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0079.png",
+          "abbrev": "Pirates",
           "id": "0079",
           "division": "00",
-          "abbrev": "Pirates",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0079.png"
+          "name": "Pirates",
+          "waiverSortOrder": "11",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0079.png",
+          "bbidAvailableBalance": "0.00"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0080.png",
-          "abbrev": "Bombers",
           "division": "03",
           "id": "0080",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0080.png",
+          "abbrev": "Bombers",
+          "bbidAvailableBalance": "95.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0080.png",
           "name": "Bombers",
-          "waiverSortOrder": "80",
-          "bbidAvailableBalance": "95.00"
+          "waiverSortOrder": "80"
         },
         {
-          "abbrev": "Nordics",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0081.png",
-          "division": "04",
-          "id": "0081",
+          "bbidAvailableBalance": "99.00",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0081.png",
           "waiverSortOrder": "17",
           "name": "Nordics",
-          "bbidAvailableBalance": "99.00"
+          "division": "04",
+          "id": "0081",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0081.png",
+          "abbrev": "Nordics"
         },
         {
+          "bbidAvailableBalance": "34.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0082.jpg",
           "name": "Beasts",
           "waiverSortOrder": "39",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0082.jpg",
-          "bbidAvailableBalance": "34.00",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0082.jpg",
-          "abbrev": "Beasts",
+          "division": "03",
           "id": "0082",
-          "division": "03"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0082.jpg",
+          "abbrev": "Beasts"
         },
         {
-          "name": "Kraken",
-          "waiverSortOrder": "84",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0083.png",
-          "bbidAvailableBalance": "12.00",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0083.png",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0083.jpg",
           "abbrev": "Kraken",
+          "division": "08",
           "id": "0083",
-          "division": "08"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0083.jpg",
+          "waiverSortOrder": "84",
+          "name": "Kraken",
+          "bbidAvailableBalance": "12.00"
         },
         {
           "id": "0084",
           "division": "02",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0084.png",
           "abbrev": "Maddogs",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0084.png",
           "bbidAvailableBalance": "77.00",
-          "name": "Maddogs",
           "waiverSortOrder": "50",
+          "name": "Maddogs",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0084.png"
         },
         {
           "bbidAvailableBalance": "73.00",
-          "waiverSortOrder": "7",
           "name": "Lobstahs",
+          "waiverSortOrder": "7",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0085.png",
           "id": "0085",
           "division": "06",
-          "abbrev": "Lobstahs",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0085.png"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0085.png",
+          "abbrev": "Lobstahs"
         },
         {
-          "id": "0086",
-          "division": "00",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0086.png",
-          "abbrev": "Bearcats",
           "bbidAvailableBalance": "100.00",
           "waiverSortOrder": "41",
           "name": "BearCats ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0086.png"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0086.png",
+          "id": "0086",
+          "division": "00",
+          "abbrev": "Bearcats",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0086.png"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0087.png",
-          "abbrev": "Hoosiers",
+          "bbidAvailableBalance": "59.75",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0087.png",
+          "name": "Hoosiers",
+          "waiverSortOrder": "99",
           "division": "06",
           "id": "0087",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0087.png",
-          "waiverSortOrder": "99",
-          "name": "Hoosiers",
-          "bbidAvailableBalance": "59.75"
+          "abbrev": "Hoosiers",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0087.png"
         },
         {
+          "division": "01",
+          "id": "0088",
+          "abbrev": "Bruisers",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0088.png",
+          "bbidAvailableBalance": "38.36",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0088.png",
           "waiverSortOrder": "22",
-          "name": "Bruisers ",
-          "bbidAvailableBalance": "38.36",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0088.png",
-          "abbrev": "Bruisers",
-          "division": "01",
-          "id": "0088"
+          "name": "Bruisers "
         },
         {
-          "waiverSortOrder": "36",
-          "name": "Terminators",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0089.png",
-          "bbidAvailableBalance": "100.00",
-          "abbrev": "Terminators",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0089.png",
+          "division": "03",
           "id": "0089",
-          "division": "03"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0089.png",
+          "abbrev": "Terminators",
+          "bbidAvailableBalance": "100.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0089.png",
+          "waiverSortOrder": "36",
+          "name": "Terminators"
         },
         {
+          "bbidAvailableBalance": "44.40",
           "name": "Phantoms ",
           "waiverSortOrder": "57",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0090.png",
-          "bbidAvailableBalance": "44.40",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0090.png",
-          "abbrev": "Phantoms",
           "id": "0090",
-          "division": "02"
+          "division": "02",
+          "abbrev": "Phantoms",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0090.png"
         },
         {
-          "bbidAvailableBalance": "100.00",
+          "abbrev": "Crushers",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0091.png",
+          "division": "08",
+          "id": "0091",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0091.png",
           "name": "Crushers",
           "waiverSortOrder": "95",
-          "division": "08",
-          "id": "0091",
-          "abbrev": "Crushers",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0091.png"
+          "bbidAvailableBalance": "100.00"
         },
         {
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0092.png",
@@ -1086,39 +1087,39 @@
           "division": "03",
           "id": "0092",
           "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0092.png",
-          "name": "Wizards",
           "waiverSortOrder": "45",
+          "name": "Wizards",
           "bbidAvailableBalance": "67.30"
         },
         {
+          "bbidAvailableBalance": "100.00",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0093.png",
           "name": "Apache",
           "waiverSortOrder": "61",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0093.png",
-          "bbidAvailableBalance": "100.00",
-          "abbrev": "Apache",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0093.png",
+          "division": "08",
           "id": "0093",
-          "division": "08"
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0093.png",
+          "abbrev": "Apache"
         },
         {
+          "bbidAvailableBalance": "100.00",
+          "waiverSortOrder": "9",
+          "name": "Roughnecks",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0094.png",
           "id": "0094",
           "division": "00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0094.png",
-          "abbrev": "Roughnecks",
-          "bbidAvailableBalance": "100.00",
-          "name": "Roughnecks",
-          "waiverSortOrder": "9",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0094.png"
+          "abbrev": "Roughnecks"
         },
         {
-          "waiverSortOrder": "40",
-          "name": "Moose ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0095.png",
-          "bbidAvailableBalance": "100.00",
-          "abbrev": "Moose",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0095.png",
+          "abbrev": "Moose",
+          "division": "00",
           "id": "0095",
-          "division": "00"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0095.png",
+          "name": "Moose ",
+          "waiverSortOrder": "40",
+          "bbidAvailableBalance": "100.00"
         },
         {
           "bbidAvailableBalance": "98.00",
@@ -1127,32 +1128,32 @@
           "name": "Hippos ",
           "division": "02",
           "id": "0096",
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0096.png",
-          "abbrev": "Hippos"
+          "abbrev": "Hippos",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0096.png"
         },
         {
-          "name": "KitKats",
-          "waiverSortOrder": "86",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0097.png",
-          "bbidAvailableBalance": "36.00",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0097.png",
           "abbrev": "KitKats",
+          "division": "01",
           "id": "0097",
-          "division": "01"
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0097.png",
+          "waiverSortOrder": "86",
+          "name": "KitKats",
+          "bbidAvailableBalance": "36.00"
         },
         {
-          "id": "0098",
-          "division": "03",
+          "name": "Rafters ",
+          "waiverSortOrder": "25",
+          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0098.png",
+          "bbidAvailableBalance": "0.00",
           "abbrev": "Rafters",
           "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0098.png",
-          "bbidAvailableBalance": "0.00",
-          "waiverSortOrder": "25",
-          "name": "Rafters ",
-          "logo": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_logo0098.png"
+          "id": "0098",
+          "division": "03"
         },
         {
-          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0099.png",
           "abbrev": "Jockeys",
+          "icon": "https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0099.png",
           "division": "07",
           "stadium": "Saratoga Race Course",
           "id": "0099",
@@ -1161,9 +1162,8 @@
           "name": "Jockeys",
           "bbidAvailableBalance": "64.00"
         }
-      ]
-    },
-    "endWeek": "18",
-    "survivorPool": "Yes"
+      ],
+      "count": "99"
+    }
   }
 }
