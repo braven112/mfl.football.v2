@@ -114,8 +114,13 @@ const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"'
  * the page and on the champion card.
  */
 export function cleanMflName(raw: unknown): string {
-	return String(raw ?? '')
-		.replace(/<[^>]*>/g, '')
+	// Strip tags until none are left, so a nested `<<b>b>` cannot reassemble one.
+	let text = String(raw ?? '');
+	for (let prev = ''; prev !== text; ) {
+		prev = text;
+		text = text.replace(/<[^>]*>/g, '');
+	}
+	return text
 		.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, code: string) => {
 			if (code[0] === '#') {
 				const n = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : Number(code.slice(1));
@@ -123,6 +128,9 @@ export function cleanMflName(raw: unknown): string {
 			}
 			return ENTITIES[code.toLowerCase()] ?? m;
 		})
+		// A name is plain text: no angle bracket survives, whether left over
+		// from broken markup or decoded from `&lt;`.
+		.replace(/[<>]/g, '')
 		.replace(/\s+/g, ' ')
 		.trim();
 }

@@ -389,6 +389,12 @@ describe('cleanMflName', () => {
 		expect(cleanMflName('  Tom &amp; Jerry&#39;s  ')).toBe("Tom & Jerry's");
 	});
 
+	it('leaves no tag behind, nested or encoded', () => {
+		expect(cleanMflName('<<script>script>alert(1)<</script>/script>')).toBe('scriptalert(1)/script');
+		expect(cleanMflName('&lt;script&gt;Hawks')).toBe('scriptHawks');
+		expect(cleanMflName('Bears < Packers')).toBe('Bears Packers');
+	});
+
 	it('is what parseFranchises and parseLeagueName return', () => {
 		const exp = { league: { name: '<b>Big</b> League', franchises: { franchise: [{ id: '0003', name: '<i>Fleece</i> City' }] } } };
 		expect(parseLeagueName(exp)).toBe('Big League');
