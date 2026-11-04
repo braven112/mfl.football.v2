@@ -42,7 +42,7 @@ const fakeRedis = {
 
 vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => fakeRedis }));
 
-const { advanceMflHistory, effectiveSeasons, readMflHistory, readOverrides, seasonsToCrawl, writeOverride, listMflHistories, SEASONS_PER_STEP } =
+const { advanceMflHistory, effectiveSeasons, readMflHistory, readOverrides, seasonsToCrawl, writeOverride, listMflHistories, SEASONS_PER_STEP, CRAWL_VERSION } =
 	await import('../src/utils/league-history/store');
 const { MflRetryLater } = await import('../src/utils/league-history/mfl-crawl');
 
@@ -60,6 +60,7 @@ function fakeMfl(opts: { throttleOnCall?: number } = {}) {
 		if (req.type === 'playoffBracket') {
 			return req.year === 2026 ? fixture('theleague-2026-bracket-1-unplayed') : fixture('theleague-2024-bracket-1');
 		}
+		if (req.type === 'weeklyResults') return { allWeeklyResults: { weeklyResults: [] } };
 		throw new Error(`unexpected ${req.type}`);
 	};
 	return { fetchExport, calls: () => calls };
@@ -132,6 +133,38 @@ describe('seasonsToCrawl', () => {
 		const record = (await readMflHistory('13522'))!;
 		expect(seasonsToCrawl(record, t0 + 60_000)).toEqual([]);
 		expect(seasonsToCrawl(record, t0 + 7 * 3600_000).map((s) => s.year)).toEqual([2026]);
+	});
+});
+
+describe('keeping a built league current', () => {
+	const build = async (leagueYear: number, now: number) => {
+		const mfl = fakeMfl();
+		const d = { ...deps(mfl.fetchExport, now), leagueYear };
+		let r = await advanceMflHistory('13522', d);
+		while (r.status !== 'done' && r.status !== 'not-found') r = await advanceMflHistory('13522', d);
+		return r;
+	};
+
+	it('re-reads a season an older crawl version stored', async () => {
+		const t0 = Date.parse('2026-10-04T12:00:00Z');
+		await build(2026, t0);
+		const key = 'league-history:mfl:13522';
+		const stored = mem.get(key) as { seasons: Record<string, { crawlVersion?: number }> };
+		expect(stored.seasons['2010'].crawlVersion).toBe(CRAWL_VERSION);
+		delete stored.seasons['2010'].crawlVersion;
+		expect(seasonsToCrawl((await readMflHistory('13522'))!, t0 + 60_000).map((s) => s.year)).toEqual([2010]);
+	});
+
+	it('adds the season MFL opened after the league was built', async () => {
+		// Built in October 2026; by March 2027 MFL has opened the 2027 league.
+		const t0 = Date.parse('2026-10-04T12:00:00Z');
+		await build(2026, t0);
+		expect((await readMflHistory('13522'))!.chain.at(-1)?.year).toBe(2026);
+		const r = await build(2027, Date.parse('2027-03-01T12:00:00Z'));
+		expect(r.status).toBe('done');
+		const record = (await readMflHistory('13522'))!;
+		expect(record.chain.at(-1)?.year).toBe(2027);
+		expect(record.seasons['2027']).toBeDefined();
 	});
 });
 

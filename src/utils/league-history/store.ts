@@ -30,6 +30,8 @@ import { crawlMflSeason, MflRetryLater, planMflLeague, type FetchExport } from '
 export interface StoredSeason extends SeasonChampion {
 	franchises: SeasonFranchise[];
 	crawledAt: string;
+	/** The `CRAWL_VERSION` that read it; absent = 1. */
+	crawlVersion?: number;
 }
 
 export interface StoredLeagueHistory {
@@ -41,6 +43,8 @@ export interface StoredLeagueHistory {
 	seasons: Record<string, StoredSeason>;
 	createdAt: string;
 	updatedAt: string;
+	/** When `extendChain` last asked MFL for seasons newer than the chain. */
+	chainCheckedAt?: string;
 }
 
 export interface ChampionOverride {
@@ -56,6 +60,13 @@ const LOCK = (id: string) => `league-history:lock:mfl:${id}`;
 const INDEX = 'league-history:index';
 
 export const SEASONS_PER_STEP = 3;
+/**
+ * Bump when the champion rules change in a way that can change an answer
+ * already stored: every season read by an older version is read again on the
+ * league's next build step. 2 (2026-11): conference brackets no longer count
+ * as the title, and seeds-only finals are read from the games.
+ */
+export const CRAWL_VERSION = 2;
 const RECHECK_MS = 6 * 60 * 60 * 1000;
 
 export function isMflLeagueId(value: string): boolean {
@@ -91,7 +102,7 @@ export function seasonsToCrawl(record: StoredLeagueHistory, now: number): MflSea
 	const newest = Math.max(...record.chain.map((s) => s.year));
 	return record.chain.filter((ref) => {
 		const stored = record.seasons[String(ref.year)];
-		if (!stored) return true;
+		if (!stored || (stored.crawlVersion ?? 1) < CRAWL_VERSION) return true;
 		if (stored.method !== 'unknown' || ref.year < newest - 1) return false;
 		return now - Date.parse(stored.crawledAt) > RECHECK_MS;
 	});
@@ -147,13 +158,22 @@ export async function advanceMflHistory(
 			};
 			await redis.set(KEY(leagueId), record);
 			await redis.zadd(INDEX, { score: now(), member: `mfl:${leagueId}` });
+		} else {
+			await extendChain(record, leagueId, deps, now);
 		}
 
 		const todo = seasonsToCrawl(record, now()).slice(0, SEASONS_PER_STEP);
 		for (const ref of todo) {
 			try {
-				const { result, franchises } = await crawlMflSeason(ref, deps.fetchExport);
-				record.seasons[String(ref.year)] = { ...result, franchises, crawledAt: new Date(now()).toISOString() };
+				const { result, franchises } = await crawlMflSeason(ref, deps.fetchExport, {
+					finished: ref.year < deps.leagueYear,
+				});
+				record.seasons[String(ref.year)] = {
+					...result,
+					franchises,
+					crawledAt: new Date(now()).toISOString(),
+					crawlVersion: CRAWL_VERSION,
+				};
 			} catch (err) {
 				if (!(err instanceof MflRetryLater)) throw err;
 				await saveRecord(record, now);
@@ -175,6 +195,38 @@ export async function advanceMflHistory(
 		};
 	} finally {
 		await redis.del(LOCK(leagueId));
+	}
+}
+
+/**
+ * Add the seasons MFL has opened since the league was first read. The chain
+ * is planned once, so without this a league built in November never gained
+ * its next season: the page stopped at the year it was built. Asked at most
+ * every six hours, and only while the current MFL year is newer than the
+ * newest season held; a failed ask changes nothing.
+ */
+async function extendChain(
+	record: StoredLeagueHistory,
+	leagueId: string,
+	deps: { fetchExport: FetchExport; leagueYear: number },
+	now: () => number,
+): Promise<void> {
+	const newest = Math.max(...record.chain.map((s) => s.year));
+	if (deps.leagueYear <= newest) return;
+	const asked = Date.parse(record.chainCheckedAt ?? record.createdAt);
+	if (now() - asked <= RECHECK_MS) return;
+	record.chainCheckedAt = new Date(now()).toISOString();
+	try {
+		const plan = await planMflLeague(leagueId, deps.leagueYear, deps.fetchExport);
+		const known = new Set(record.chain.map((s) => s.year));
+		const added = plan.seasons.filter((s) => !known.has(s.year));
+		if (added.length > 0) {
+			record.chain = [...record.chain, ...added].sort((a, b) => a.year - b.year);
+			record.name = plan.name;
+			record.latestNames = plan.latestNames;
+		}
+	} catch {
+		// MFL busy or the league gone: keep what we have, ask again later.
 	}
 }
 
