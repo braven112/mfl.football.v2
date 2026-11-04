@@ -6,10 +6,11 @@
  *    MFL's league order and never re-sorted, as on the Standings page.
  *  - **The AFL's Premier League and D-League** first, on all-play. The AFL's
  *    own competition (`./afl-live-standings.ts`); no other league gets them.
- *  - **Archie's MAD POWER 99** in place of divisions: the whole league in
- *    playoff seed order on Victory Points (`standingsSeeding.kind === 'mad'`
- *    in the registry). Archie's own competition, so it is not offered to any
- *    other league "in case" (standings rules doc, rule 1c).
+ *  - **Archie's MAD POWER 99**: the whole league in playoff seed order on
+ *    Victory Points (`standingsSeeding.kind === 'mad'` in the registry), then
+ *    only the viewer's OWN division (nine tables of eleven is too many).
+ *    Archie's own competition, so it is not offered to any other league
+ *    "in case" (standings rules doc, rule 1c).
  *  - **No divisions** (a best-ball league): one league table, the board's
  *    original single-table tab.
  *
@@ -108,6 +109,17 @@ export function buildDivisionSections(input: {
   const mine = sections.findIndex((s) => s.id === `division-${viewerDivision}`);
   if (mine > 0) sections.unshift(...sections.splice(mine, 1));
   return sections;
+}
+
+/** Only the viewer's own division table — none when signed out. */
+export function buildOwnDivisionSection(input: {
+  order: readonly string[];
+  config: LeagueConfigShape;
+  viewerFranchiseId: string | null;
+}): LiveStandingsSection[] {
+  const { viewerFranchiseId } = input;
+  if (!viewerFranchiseId) return [];
+  return buildDivisionSections(input).filter((s) => s.franchiseIds.includes(viewerFranchiseId));
 }
 
 /** Archie's whole league in MAD POWER 99 seed order. */
@@ -282,6 +294,10 @@ export async function readLiveStandings(input: {
         title: 'MAD POWER 99',
         sections: [buildMadSection({ order, config, seeding })],
       });
+      // Nine divisions of eleven is too much to scroll past, so only the
+      // viewer's own (Brandon, 2026-11-04). Signed out, there is none to show.
+      const own = buildOwnDivisionSection({ order, config, viewerFranchiseId });
+      if (own.length) groups.push({ id: 'divisions', title: 'Your division', sections: own });
     } else {
       const divisions = buildDivisionSections({ order, config, viewerFranchiseId });
       if (divisions.length) groups.push({ id: 'divisions', title: 'Divisions', sections: divisions });

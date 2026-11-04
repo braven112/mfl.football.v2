@@ -19,6 +19,7 @@ import { buildAllPlayBase, buildTierSections } from '../src/utils/live/afl-live-
 import {
   buildDivisionSections,
   buildMadSection,
+  buildOwnDivisionSection,
   fillPointsFor,
   parseVictoryPointRules,
 } from '../src/utils/live/league-live-standings';
@@ -271,6 +272,16 @@ describe('division tables, every league', () => {
       viewerFranchiseId: null,
     });
     expect(sections.map((s) => [s.title, s.franchiseIds])).toEqual([['Barry Sanders Division', ['0001', '0002']]]);
+  });
+
+  it("Archie's: only the viewer's own division, none signed out", () => {
+    const config = {
+      divisions: [{ name: 'A' }, { name: 'B' }],
+      teams: ids.map((franchiseId, i) => ({ franchiseId, division: i % 2 ? 'B' : 'A' })),
+    };
+    const own = buildOwnDivisionSection({ order: ids, config, viewerFranchiseId: '0002' });
+    expect(own.map((s) => s.title)).toEqual(['B']);
+    expect(buildOwnDivisionSection({ order: ids, config, viewerFranchiseId: null })).toEqual([]);
   });
 
   it('no divisions declared (best ball): no tables, so the single league table', () => {
