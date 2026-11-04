@@ -40,6 +40,17 @@ export interface WeekEntry {
    * TheLeague never has two and pays no payload for the field.
    */
   o?: WeekOwner[];
+  /**
+   * The player's SEASON rank at his position by total points (1 = most),
+   * present on the FIRST entry of his array only.
+   *
+   * A player-level value riding on week 1 rather than a second island: every
+   * page that ships this payload filters it to the players it can open, and a
+   * separate rank map would need the same filter wired into each of them. On
+   * week 1 it travels with the player for free, and costs one field per
+   * player instead of one per week.
+   */
+  pr?: number;
 }
 
 export interface WeeklyResultsPayload {
@@ -261,6 +272,7 @@ export function buildWeeklyPlayerResults(
   // invisible: no lineup row, no key, no payload entry, and a modal that hides
   // its Season Results table.
   const payload: WeeklyResultsPayload = {};
+  const seasonTotals: Array<{ id: string; pos: string; total: number }> = [];
 
   const playerIds = new Set<string>(playerWeekData.keys());
   if (playerWeekScores) {
@@ -369,16 +381,23 @@ export function buildWeeklyPlayerResults(
           fi: '',
         });
       } else {
-        // Player not on any roster this week and not a bye — either a gap week
-        // or a week whose schedule we don't have. Null rather than "at ??":
-        // an unknown week must not invent an opponent.
+        // Player not on any roster this week and not a bye — an UPCOMING week,
+        // a gap week, or a week whose schedule we don't have. Null rather than
+        // "at ??": an unknown week must not invent an opponent.
+        //
+        // The opponent's strength is filled in whenever the opponent is known.
+        // It is a property of the NFL matchup, exactly as in the branches above,
+        // and on an upcoming week it is the whole point of the row: the modal's
+        // game log doubles as the rest-of-season schedule, colored by how soft
+        // or tough each defense is against his position.
+        const oppStats = oppCode ? fpa[oppCode]?.[info.position] : null;
         weeks.push({
           w,
           p: null,
           opp: oppLabel,
           home: teamSchedule?.isHome ?? false,
-          avg: null,
-          rank: null,
+          avg: oppStats?.avg ?? null,
+          rank: oppStats?.rank ?? null,
           st: '',
           fn: '',
           fi: '',
@@ -390,8 +409,49 @@ export function buildWeeklyPlayerResults(
     const hasScores = weeks.some(w => w.p !== null);
     if (hasScores) {
       payload[playerId] = weeks;
+      seasonTotals.push({ id: playerId, pos: info.position, total: weeks.reduce((sum, wk) => sum + (wk.p ?? 0), 0) });
     }
   }
 
+  // Season position rank (RB 19), carried on week 1 only — see WeekEntry.pr.
+  // Ranked across the WHOLE scored pool before any page filters the payload
+  // down to its own players, so a roster page that ships 25 players still
+  // says where each one sits among every RB in the league's scoring.
+  const ranks = rankByPosition(seasonTotals);
+  for (const [id, rank] of ranks) {
+    const first = payload[id]?.[0];
+    if (first) first.pr = rank;
+  }
+
   return payload;
+}
+
+/**
+ * Competition ranking (1, 2, 2, 4) of season totals within each position.
+ * Exported for tests.
+ */
+export function rankByPosition(
+  totals: Array<{ id: string; pos: string; total: number }>
+): Map<string, number> {
+  const byPos = new Map<string, Array<{ id: string; total: number }>>();
+  for (const t of totals) {
+    if (!t.pos) continue;
+    const list = byPos.get(t.pos) ?? [];
+    list.push({ id: t.id, total: Math.round(t.total * 100) / 100 });
+    byPos.set(t.pos, list);
+  }
+  const out = new Map<string, number>();
+  for (const list of byPos.values()) {
+    list.sort((a, b) => b.total - a.total);
+    let rank = 0;
+    let prev: number | null = null;
+    list.forEach((entry, i) => {
+      if (entry.total !== prev) {
+        rank = i + 1;
+        prev = entry.total;
+      }
+      out.set(entry.id, rank);
+    });
+  }
+  return out;
 }
