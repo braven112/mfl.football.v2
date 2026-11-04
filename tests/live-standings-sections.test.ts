@@ -1,21 +1,28 @@
 /**
- * The AFL live board's sectioned Standings tab: tiers on all-play, divisions
- * on head-to-head, one Live / Projected / Final switch.
+ * Every live board's sectioned Standings tab: divisions on head-to-head, the
+ * AFL's tiers on all-play, Archie's MAD POWER 99 on Victory Points, one
+ * Live / Projected / Final switch.
  *
- * `src/utils/live/standings-sections.ts` (the views) and
- * `src/utils/live/afl-live-standings.ts` (which tables, and the all-play base).
+ * `src/utils/live/standings-sections.ts` (the views),
+ * `src/utils/live/league-live-standings.ts` (which tables each league gets) and
+ * `src/utils/live/afl-live-standings.ts` (the tiers and their all-play base).
  */
 import { describe, it, expect } from 'vitest';
 import {
   projectAllPlaySection,
+  projectMadSection,
   projectRecordSection,
   weekScores,
+  weekVictoryPoints,
 } from '../src/utils/live/standings-sections';
+import { buildAllPlayBase, buildTierSections } from '../src/utils/live/afl-live-standings';
 import {
-  buildAflStandingsSections,
-  buildAllPlayBase,
-  readAflLiveStandings,
-} from '../src/utils/live/afl-live-standings';
+  buildDivisionSections,
+  buildMadSection,
+  buildOwnDivisionSection,
+  fillPointsFor,
+  parseVictoryPointRules,
+} from '../src/utils/live/league-live-standings';
 import type {
   LiveAllPlayBase,
   LiveMatchup,
@@ -191,47 +198,208 @@ describe('the AFL all-play base', () => {
   });
 });
 
-describe('the AFL tables', () => {
+describe('the AFL tiers', () => {
   const ids = Array.from({ length: 24 }, (_, i) => String(i + 1).padStart(4, '0'));
   const feedRows = ids.map((id) => ({ id, pwr: '0' }));
-  const conferences = [
-    { name: 'American League', code: '00', divisions: ['North', 'South'] },
-    { name: 'National League', code: '01', divisions: ['East', 'West'] },
-  ];
-  const divisions = ['North', 'South', 'East', 'West'];
-  const teams = ids.map((franchiseId, i) => ({ franchiseId, division: divisions[i % 4] }));
   const membership = Object.fromEntries(ids.map((id, i) => [id, i < 12 ? 'Premier League' : 'D-League']));
   const allPlay: LiveAllPlayBase = {
     records: Object.fromEntries(ids.map((id, i) => [id, { wins: 100 - i, losses: i, ties: 0, pointsFor: 0 }])),
     weekCounted: false,
     weekInCompetition: true,
   };
-  const built = buildAflStandingsSections({
+  const tiers = buildTierSections({
     feedRows,
-    config: { teams, conferences },
-    tierMembership: membership,
+    teamTier: (id) => membership[id],
     allPlay,
-    viewerFranchiseId: '0004', // West
     leagueSlug: 'afl-fantasy',
   });
 
-  it('tiers first, then divisions with the viewer’s own first', () => {
-    expect(built.groups.map((g) => g.id)).toEqual(['tiers', 'divisions']);
-    expect(built.groups[0].sections.map((s) => s.title)).toEqual(['Premier League', 'D-League']);
-    expect(built.groups[1].sections.map((s) => s.title)).toEqual(['NL West', 'AL North', 'AL South', 'NL East']);
+  it('Premier League, then D-League', () => {
+    expect(tiers.map((s) => s.title)).toEqual(['Premier League', 'D-League']);
   });
 
   it("the constitution's zones on each tier", () => {
-    const [premier, dleague] = built.groups[0].sections;
+    const [premier, dleague] = tiers;
     const labels = (s: LiveStandingsSection) => s.zones!.map((z) => z?.label ?? null);
     expect(labels(premier).slice(8)).toEqual(['Relegation playoff', 'Relegation playoff', 'Relegated', 'Relegated']);
     expect(labels(dleague).slice(0, 4)).toEqual(['Promoted', 'Promoted', 'Promotion playoff', 'Promotion playoff']);
     expect(labels(dleague)[11]).toBe('Name change');
   });
+});
 
-  it('every other league keeps its board unchanged', async () => {
-    await expect(
-      readAflLiveStandings({ slug: 'theleague', year: 2026, week: 9, viewerFranchiseId: null }),
-    ).resolves.toBeUndefined();
+describe('division tables, every league', () => {
+  const ids = Array.from({ length: 16 }, (_, i) => String(i + 1).padStart(4, '0'));
+
+  it('the AFL: conference-prefixed, the viewer’s own first', () => {
+    const divisions = ['North', 'South', 'East', 'West'];
+    const sections = buildDivisionSections({
+      order: ids,
+      config: {
+        teams: ids.map((franchiseId, i) => ({ franchiseId, division: divisions[i % 4] })),
+        conferences: [
+          { name: 'American League', code: '00', divisions: ['North', 'South'] },
+          { name: 'National League', code: '01', divisions: ['East', 'West'] },
+        ],
+      },
+      viewerFranchiseId: '0004', // West
+    });
+    expect(sections.map((s) => s.title)).toEqual(['NL West', 'AL North', 'AL South', 'NL East']);
+  });
+
+  it("TheLeague: plain string divisions, MFL's order kept inside each", () => {
+    const divisions = ['Northwest', 'Southwest', 'Central', 'East'];
+    const order = ids.slice().reverse();
+    const sections = buildDivisionSections({
+      order,
+      config: { divisions, teams: ids.map((franchiseId, i) => ({ franchiseId, division: divisions[i % 4] })) },
+      viewerFranchiseId: null,
+    });
+    expect(sections.map((s) => s.title)).toEqual(divisions);
+    expect(sections[0].franchiseIds).toEqual(['0013', '0009', '0005', '0001']);
+    expect(sections.every((s) => s.basis === 'record')).toBe(true);
+  });
+
+  it("Archie's-shaped object divisions read by name", () => {
+    const sections = buildDivisionSections({
+      order: ids.slice(0, 2),
+      config: {
+        divisions: [{ id: '00', name: 'Barry Sanders Division' }],
+        teams: [
+          { franchiseId: '0001', division: 'Barry Sanders Division' },
+          { franchiseId: '0002', division: 'Barry Sanders Division' },
+        ],
+      },
+      viewerFranchiseId: null,
+    });
+    expect(sections.map((s) => [s.title, s.franchiseIds])).toEqual([['Barry Sanders Division', ['0001', '0002']]]);
+  });
+
+  it("Archie's: only the viewer's own division, none signed out", () => {
+    const config = {
+      divisions: [{ name: 'A' }, { name: 'B' }],
+      teams: ids.map((franchiseId, i) => ({ franchiseId, division: i % 2 ? 'B' : 'A' })),
+    };
+    const own = buildOwnDivisionSection({ order: ids, config, viewerFranchiseId: '0002' });
+    expect(own.map((s) => s.title)).toEqual(['B']);
+    expect(buildOwnDivisionSection({ order: ids, config, viewerFranchiseId: null })).toEqual([]);
+  });
+
+  it('no divisions declared (best ball): no tables, so the single league table', () => {
+    expect(buildDivisionSections({ order: ids, config: { teams: [] }, viewerFranchiseId: null })).toEqual([]);
+  });
+});
+
+describe("Archie's MAD POWER 99", () => {
+  // Two divisions of three; one leader and one runner-up seeded each, one wild card.
+  const ids = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'];
+  const divisionOf: Record<string, string> = { M1: 'X', M2: 'Y', M3: 'X', M4: 'Y', M5: 'X', M6: 'Y' };
+  const vp = [40, 38, 30, 28, 20, 18];
+  const madRows = ids.map((id, i) => ({ ...row(id, i + 1, 0, 0, 1000 - i * 10), victoryPoints: vp[i] }));
+  const madById = new Map(madRows.map((r) => [r.franchiseId, r]));
+  const section = buildMadSection({
+    order: ids,
+    config: { teams: ids.map((franchiseId) => ({ franchiseId, division: divisionOf[franchiseId] })) },
+    seeding: { divisionLeaders: 2, runnersUp: 2, wildCards: 1 },
+  });
+  const rules = { win: 2, loss: 0, tie: 1, buckets: [3, 2, 1] };
+
+  it('Final seeds MFL’s order: leaders, runners-up, wild card, field', () => {
+    const view = projectMadSection(madById, section, rules, [], 'final');
+    expect(view.rows.map((r) => r.franchiseId)).toEqual(['M1', 'M2', 'M3', 'M4', 'M5', 'M6']);
+    expect(view.rows.map((r) => r.zone?.label ?? null)).toEqual([
+      'Division leader',
+      'Division leader',
+      'Runner-up',
+      'Runner-up',
+      'Wild card',
+      null,
+    ]);
+    expect(view.addsWeek).toBe(false);
+  });
+
+  it('collapses after the seeds plus a few, never on a short table', () => {
+    expect(section.collapseAfter).toBeUndefined(); // 5 seeds + 3 > 6 teams
+    const big = buildMadSection({
+      order: Array.from({ length: 99 }, (_, i) => `${i}`),
+      config: { teams: [] },
+      seeding: { divisionLeaders: 9, runnersUp: 9, wildCards: 12 },
+    });
+    expect(big.collapseAfter).toBe(33);
+  });
+
+  it('Live adds per-game VP plus the weekly bucket, then re-seeds', () => {
+    // M5 beats M1 and tops the week; M6 beats M2; M3 beats M4.
+    const board = [
+      matchup(side('M5', 150), side('M1', 60)),
+      matchup(side('M6', 140), side('M2', 50), 1),
+      matchup(side('M3', 100), side('M4', 90), 2),
+    ];
+    const week = weekVictoryPoints(madById, rules, board, 'live')!;
+    expect(week.get('M5')).toEqual({ vp: 2 + 3, points: 150 });
+    expect(week.get('M2')).toEqual({ vp: 0 + 1, points: 50 });
+    const view = projectMadSection(madById, section, rules, board, 'live');
+    // M1 40+0+1, M3 30+2+2, M5 18+... — X's order holds.
+    const byId = new Map(view.rows.map((r) => [r.franchiseId, r]));
+    expect(byId.get('M1')!.victoryPoints).toBe(41);
+    expect(byId.get('M3')!.victoryPoints).toBe(34);
+    expect(byId.get('M5')!.victoryPoints).toBe(25);
+    // Y: M2 38+0+1, M4 28+0+2, M6 18+2+2 — its order holds too.
+    expect(view.rows.map((r) => r.franchiseId)).toEqual(['M1', 'M2', 'M3', 'M4', 'M5', 'M6']);
+    expect(view.addsWeek).toBe(true);
+  });
+
+  it('a team that takes its division live moves into the leaders and says so', () => {
+    // M2 sits on 29: M4 (28+2+3=33) beats it head-to-head and passes it
+    // (29+0+1=30) for Y's lead.
+    const close = new Map(madById);
+    close.set('M2', { ...madById.get('M2')!, victoryPoints: 29 });
+    const board = [
+      matchup(side('M4', 150), side('M2', 50)),
+      matchup(side('M1', 140), side('M3', 60), 1),
+      matchup(side('M5', 100), side('M6', 90), 2),
+    ];
+    const view = projectMadSection(close, section, rules, board, 'live');
+    const m4 = view.rows.find((r) => r.franchiseId === 'M4')!;
+    expect(m4.zone?.label).toBe('Division leader');
+    expect(m4.rank).toBe(2);
+    expect(m4.officialRank).toBe(4);
+    expect(m4.move).toBe(2);
+  });
+
+  it('never adds a week MFL already counted', () => {
+    const counted = new Map([...madById].map(([id, r]) => [id, { ...r, weekGamesCounted: 1 }]));
+    const board = [matchup(side('M5', 150, 150, 0), side('M1', 60, 60, 0))];
+    expect(weekVictoryPoints(counted, rules, board, 'live')).toBeNull();
+  });
+
+  it("reads the rules from MFL's league settings", () => {
+    expect(
+      parseVictoryPointRules({
+        league: { victoryPointsWin: '2', victoryPointsLoss: '0', victoryPointsTie: '1', victoryPointsBuckets: '3 2 1' },
+      }),
+    ).toEqual(rules);
+    expect(parseVictoryPointRules({ league: {} })).toBeUndefined();
+  });
+});
+
+describe('Points For where the public export hides it', () => {
+  it("takes the snapshot's pf for an unchanged record, else avgpf × weeks", () => {
+    const committed = [
+      { id: '0001', h2hw: '14', h2hl: '2', h2ht: '0', pf: '1216.11', avgpf: '152.0' },
+      { id: '0002', h2hw: '12', h2hl: '4', h2ht: '0', pf: '1403.20', avgpf: '175.4' },
+    ];
+    const live = [
+      { id: '0001', h2hw: '14', h2hl: '2', h2ht: '0', avgpf: '152.0' },
+      // One more week (two games) than the snapshot.
+      { id: '0002', h2hw: '14', h2hl: '4', h2ht: '0', avgpf: '170.0' },
+    ];
+    const filled = fillPointsFor(live, committed);
+    expect(filled[0].pf).toBe('1216.11');
+    expect(filled[1].pf).toBe('1530.00');
+  });
+
+  it('leaves a feed that carries pf alone', () => {
+    const live = [{ id: '0001', pf: '10' }];
+    expect(fillPointsFor(live, [])).toBe(live);
   });
 });

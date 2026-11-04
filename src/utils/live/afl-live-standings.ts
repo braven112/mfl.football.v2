@@ -1,76 +1,35 @@
 /**
- * The AFL live board's Standings tab: the Premier League and D-League, live,
- * then every division, live.
+ * The AFL's own part of the live Standings tab: the Premier League and
+ * D-League, ranked live on all-play.
  *
  * The AFL's OWN competition (docs/claude/rules/standings-brackets-draft-order.md
  * rule 1c) — no other league has tiers — so its rules live here and reach the
  * shared board only as data: which franchises a table holds, in what official
- * order, and which positions carry a marker. The board draws any sectioned tab
- * the same way (`LvStandingsSections`).
+ * order, and which positions carry a marker. Every league's tab is assembled
+ * in `./league-live-standings.ts`, which calls in here for the AFL.
  *
- * ── WHERE EACH NUMBER COMES FROM ──────────────────────────────────────────
- *  - Records, points and order: MFL's `leagueStandings`, read LIVE through the
- *    standings pages' own refresh (`getStandingsFeedWithLiveRefresh`: public,
- *    60 s cache, committed snapshot on any failure). No owner cookie — a
- *    signed-out visitor gets the tab too.
  *  - The tiers' all-play base: MFL's own `all_play_wlt` column, which is
  *    current to the last week MFL has processed. The committed
  *    `weekly-results.json` lags the sync (on 2026-11-03 it stopped at week 7
  *    while MFL had week 8), so it only FILLS weeks MFL's column no longer
  *    carries — the tier competition runs to week 17, past the week-14 end of
  *    MFL's regular season.
- *  - Divisions and tiers: the league config and `tier-history.json`, the
- *    same sources the Standings page groups with.
- *
- * Divisions are filtered out of MFL's league order and never re-sorted, as on
- * the Standings page. The tiers are ranked on all-play (then points, then
- * Power Rank), the order the Standings page's tier tables use.
+ *  - Membership: `tier-history.json`, the Standings page's source. Ranked on
+ *    all-play, then points, then Power Rank — the Standings page's order.
  *
  * SERVER-SIDE ONLY.
  */
 
-import type {
-  LiveAllPlayBase,
-  LiveAllPlayRecord,
-  LiveMatchup,
-  LiveStandingsRow,
-  LiveStandingsSection,
-  LiveStandingsSectionGroup,
-  LiveStandingsSections,
-} from '../../types/live';
-import { getLeagueBySlug } from '../../config/leagues';
-import { getLeagueConfig } from '../league-config';
-import { leagueFeedPath, loadLeagueData } from '../league-data';
-import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../live-standings';
-import { parsePriorGameCounts } from '../mfl-schedule-pairings';
+import type { LiveAllPlayBase, LiveAllPlayRecord, LiveStandingsSection } from '../../types/live';
 import { allPlayWeek } from '../game-results.mjs';
 import { resolveTierCutoffWeek } from '../all-play.mjs';
 import { getTierLogo, getTierLogoDark, getTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../afl-tier';
 import { tierZoneFor } from '../tier-board';
-import { decorateStandings, markWeekCounted, parseStandingsFeedRows } from './standings';
 
-/** The one league this tab is for. */
-export const AFL_LIVE_STANDINGS_SLUG = 'afl-fantasy';
+/** The one league whose tab carries tiers. */
+export const AFL_TIERS_SLUG = 'afl-fantasy';
 
-export interface AflLiveStandings {
-  standings: LiveStandingsRow[] | null;
-  standingsSections?: LiveStandingsSections;
-}
-
-interface ConfigTeam {
-  franchiseId: string;
-  division?: string;
-  conference?: string;
-  tier?: string;
-}
-
-interface AflConfig {
-  teams?: ConfigTeam[];
-  conferences?: Array<{ name: string; code: string; divisions: string[] }>;
-  tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> };
-}
-
-const asArray = <T>(v: unknown): T[] => (Array.isArray(v) ? v : v ? [v as T] : []);
+export { getTierMembership, resolveTierCutoffWeek };
 
 function num(value: unknown): number {
   const parsed = Number.parseFloat(`${value ?? ''}`.replace(/[$,]/g, ''));
@@ -79,14 +38,6 @@ function num(value: unknown): number {
 
 const pad = (id: unknown) => `${id ?? ''}`.trim().padStart(4, '0');
 
-/** "American League" → "AL". */
-function conferenceShort(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
-}
 
 /**
  * Each franchise's all-play record from MFL's own column, plus the number of
@@ -160,27 +111,21 @@ function pct(r: LiveAllPlayRecord): number {
 }
 
 /**
- * The Standings tab's tables for the AFL: tiers first, then divisions with
- * the viewer's own first.
+ * The Premier League and D-League tables, each in its official all-play order
+ * with the constitution's zones on its positions.
  */
-export function buildAflStandingsSections(input: {
+export function buildTierSections(input: {
   feedRows: readonly Record<string, unknown>[];
-  config: AflConfig;
-  tierMembership: Record<string, string> | null;
+  teamTier: (franchiseId: string) => string | undefined;
   allPlay: LiveAllPlayBase | null;
-  viewerFranchiseId: string | null;
   leagueSlug: string;
-}): LiveStandingsSections {
-  const { feedRows, config, tierMembership, allPlay, viewerFranchiseId, leagueSlug } = input;
+}): LiveStandingsSection[] {
+  const { feedRows, teamTier, allPlay, leagueSlug } = input;
   const order = feedRows.map((r) => pad(r.id)).filter((id) => id !== '0000');
   const position = new Map(order.map((id, i) => [id, i]));
   const pwr = new Map(feedRows.map((r) => [pad(r.id), num(r.pwr)]));
-  const teams = new Map((config.teams ?? []).map((t) => [t.franchiseId, t]));
-
-  // ── Tiers ──
-  const tierOf = (id: string) => tierMembership?.[id] ?? teams.get(id)?.tier;
-  const tierSections: LiveStandingsSection[] = [PREMIER_LEAGUE, D_LEAGUE].flatMap((tier) => {
-    const ids = order.filter((id) => tierOf(id) === tier);
+  return [PREMIER_LEAGUE, D_LEAGUE].flatMap((tier) => {
+    const ids = order.filter((id) => teamTier(id) === tier);
     if (ids.length === 0) return [];
     const record = (id: string) => allPlay?.records[id];
     const sorted = ids.slice().sort((a, b) => {
@@ -207,136 +152,5 @@ export function buildAflStandingsSections(input: {
         logo: { src: getTierLogo(tier), darkSrc: getTierLogoDark(tier) },
       },
     ];
-  });
-
-  // ── Divisions ──
-  const viewerDivision = viewerFranchiseId ? teams.get(viewerFranchiseId)?.division : undefined;
-  const divisionSections: LiveStandingsSection[] = [];
-  for (const conference of config.conferences ?? []) {
-    for (const division of conference.divisions) {
-      const ids = order.filter((id) => teams.get(id)?.division === division);
-      if (ids.length === 0) continue;
-      divisionSections.push({
-        id: `division-${division}`,
-        title: `${conferenceShort(conference.name)} ${division}`,
-        basis: 'record',
-        franchiseIds: ids,
-      });
-    }
-  }
-  const mine = divisionSections.findIndex((s) => s.id === `division-${viewerDivision}`);
-  if (mine > 0) divisionSections.unshift(...divisionSections.splice(mine, 1));
-
-  const groups: LiveStandingsSectionGroup[] = [];
-  if (tierSections.length) {
-    groups.push({ id: 'tiers', title: 'Premier League & D-League', sections: tierSections });
-  }
-  if (divisionSections.length) {
-    groups.push({ id: 'divisions', title: 'Divisions', sections: divisionSections });
-  }
-  return { groups, allPlay };
-}
-
-/**
- * Read everything the AFL's Standings tab needs. `undefined` for any other
- * league, whose board keeps no Standings tab. Never throws: a failed
- * standings read is `standings: null`, which the tab renders as "couldn't
- * read the standings" rather than as an empty table.
- */
-export async function readAflLiveStandings(input: {
-  slug: string;
-  year: number;
-  week: number;
-  viewerFranchiseId: string | null;
-}): Promise<AflLiveStandings | undefined> {
-  const { slug, year, week, viewerFranchiseId } = input;
-  if (slug !== AFL_LIVE_STANDINGS_SLUG) return undefined;
-  const league = getLeagueBySlug(slug);
-  if (!league) return undefined;
-
-  try {
-    const path = (file: string) => leagueFeedPath(league.dataPath, year, file);
-    const [committed, schedule, weeklyResults] = await Promise.all([
-      loadLeagueData(path('standings.json')).catch(() => null),
-      loadLeagueData(path('schedule.json')).catch(() => null),
-      loadLeagueData(path('weekly-results.json')).catch(() => null),
-    ]);
-    const { feed } = await getStandingsFeedWithLiveRefresh({
-      league,
-      year,
-      committedFeed: (committed ?? undefined) as StandingsFeed | undefined,
-    });
-    const feedRows = asArray<Record<string, unknown>>(feed?.leagueStandings?.franchise);
-    if (feedRows.length === 0) return { standings: null };
-
-    const rows = markWeekCounted(
-      decorateStandings(parseStandingsFeedRows(feedRows), {
-        league: {
-          id: league.id,
-          name: league.name,
-          franchiseId: '',
-          franchiseName: '',
-          registered: league,
-          host: null,
-          isSession: false,
-        },
-        year,
-        mflUserCookie: '',
-        viewerFranchiseId,
-      }),
-      schedule ? parsePriorGameCounts(schedule, week) : null,
-    );
-
-    const standings = rows;
-
-    const config = getLeagueConfig(slug) as AflConfig;
-    const cutoffWeek = resolveTierCutoffWeek(config.tierCompetition, year) ?? 17;
-    const allPlay = buildAllPlayBase({
-      feedRows,
-      weeklyResults: (weeklyResults ?? null) as WeeklyResults | null,
-      boardWeek: week,
-      cutoffWeek,
-    });
-
-    return {
-      standings,
-      standingsSections: buildAflStandingsSections({
-        feedRows,
-        config,
-        tierMembership: getTierMembership(year),
-        allPlay,
-        viewerFranchiseId,
-        leagueSlug: slug,
-      }),
-    };
-  } catch {
-    return { standings: null };
-  }
-}
-
-/**
- * The board's own identities on the standings rows, so the Standings tab wears
- * the same (possibly Throwback) crest and name as the Scores tab beside it.
- * Applied once both reads have landed — they run side by side.
- */
-export function withBoardIdentities(
-  rows: LiveStandingsRow[] | null,
-  matchups: readonly LiveMatchup[],
-): LiveStandingsRow[] | null {
-  if (rows === null) return null;
-  const sides = new Map(matchups.flatMap((m) => m.sides).map((s) => [s.franchiseId, s]));
-  return rows.map((row) => {
-    const side = sides.get(row.franchiseId);
-    return side
-      ? {
-          ...row,
-          name: side.name,
-          nameShort: side.nameShort,
-          initials: side.initials,
-          icon: side.icon,
-          iconAlt: side.iconAlt,
-          rung: side.rung,
-        }
-      : row;
   });
 }

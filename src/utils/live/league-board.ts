@@ -36,7 +36,7 @@ import {
 } from '../../data/live-scoring-sample';
 import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
-import { readAflLiveStandings, withBoardIdentities } from './afl-live-standings';
+import { readLiveStandings, withBoardIdentities } from './league-live-standings';
 
 export interface AssembleLeagueBoardInput {
   slug: CanonicalLeagueSlug;
@@ -182,24 +182,24 @@ async function assembleUngrouped(
 
   let board: LiveBoard | null = null;
   if (!isSample) {
-    // The AFL's Standings tab (tiers + divisions), read beside the scores. It
-    // may never cost them: any failure inside is a `null` table, not a throw.
-    // `undefined` for every other league, which keeps its board unchanged.
-    const [read, aflStandings] = await Promise.all([
+    // The Standings tab (divisions, the AFL's tiers, Archie's MAD POWER 99),
+    // read beside the scores. It may never cost them: any failure inside is a
+    // `null` table, not a throw (`league-live-standings.ts`).
+    const [read, liveStandings] = await Promise.all([
       readLeagueLive({ slug, week, year, viewerFranchiseId, identityOverrides }),
-      readAflLiveStandings({ slug, year, week, viewerFranchiseId }).catch(() => undefined),
+      readLiveStandings({ slug, year, week, viewerFranchiseId }).catch(() => undefined),
     ]);
     board = read;
-    if (aflStandings && board.panels.length === 1) {
+    if (liveStandings && board.panels.length === 1) {
       const panel = board.panels[0];
       board = {
         ...board,
         panels: [
           {
             ...panel,
-            standings: withBoardIdentities(aflStandings.standings, panel.matchups),
-            ...(aflStandings.standingsSections
-              ? { standingsSections: aflStandings.standingsSections }
+            standings: withBoardIdentities(liveStandings.standings, panel.matchups),
+            ...(liveStandings.standingsSections
+              ? { standingsSections: liveStandings.standingsSections }
               : {}),
           },
         ],

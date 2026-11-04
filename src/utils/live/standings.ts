@@ -132,6 +132,7 @@ export function parseStandingsFeedRows(feedRows: readonly unknown[]): LiveStandi
       rung: 'text',
       ...record(row),
       pointsFor: num(row.pf),
+      ...(row.vp !== undefined && row.vp !== '' ? { victoryPoints: num(row.vp) } : {}),
       isViewer: false,
     });
   });
