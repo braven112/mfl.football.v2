@@ -140,7 +140,9 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
         ).toBe(match?.divisionName ?? null);
       }
     }
-    expect(checked, 'no division titles to check').toBeGreaterThan(0);
+    // A league in its first season has crowned no division yet (Sandbox, Nov 2026).
+    const crowned = (history.yearSummaries ?? []).some((y: any) => (y.divisionWinners ?? []).length > 0);
+    if (crowned) expect(checked, 'no division titles to check').toBeGreaterThan(0);
   });
 
   it('puts no season under two owners unless they are declared co-owners', () => {
@@ -584,6 +586,11 @@ describe('no duplicate team name across owner records', () => {
       // yet. Revisit — and merge into the earlier record if it is one person —
       // once owner names arrive through commissioner access.
       seabirds: 'unconfirmed: 0100 (2023-24) and 0048 (2025-) — revisit with owner names',
+    },
+    sandbox: {
+      // The demo league's placeholder MFL names: 0009 "Lions" and 0010 "LIONS" are two
+      // different teams in the same 2026 season, not one owner split in two.
+      lions: 'two teams in one season (0009 Lions, 0010 LIONS) — placeholder names on MFL',
     },
   };
 

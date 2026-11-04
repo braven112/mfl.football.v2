@@ -1,0 +1,339 @@
+{
+  "$comment": "Sandbox (MFL 39163). Branding SUGGESTED from MFL by scripts/suggest-league-branding.mjs — names by rule, colours from each MFL icon. The commissioner edits it from here; do not regenerate over edits.",
+  "leagueId": "39163",
+  "name": "Sandbox",
+  "structure": "divisions",
+  "divisions": [
+    {
+      "id": "00",
+      "name": "AMERICAN"
+    },
+    {
+      "id": "01",
+      "name": "NATIONAL"
+    }
+  ],
+  "loaderLines": [
+    "Loading the league…"
+  ],
+  "teams": [
+    {
+      "franchiseId": "0001",
+      "name": "Chiefs",
+      "nameMedium": "Chiefs",
+      "nameShort": "Chiefs",
+      "abbrev": "CHIEF",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#4b5563",
+      "colorPrimary": "#4b5563",
+      "colorSecondary": "#e5e7eb",
+      "banner": "https://rmiuadurellunapf.public.blob.vercel-storage.com/KC.png",
+      "mflSync": {
+        "name": "Chiefs",
+        "derived": {
+          "nameMedium": "Chiefs",
+          "nameShort": "Chiefs",
+          "abbrev": "CHIEF"
+        }
+      }
+    },
+    {
+      "franchiseId": "0002",
+      "name": "Broncos",
+      "nameMedium": "Broncos",
+      "nameShort": "Broncos",
+      "abbrev": "BRONC",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#053464",
+      "colorPrimary": "#053464",
+      "colorSecondary": "#fe571c",
+      "icon": "/assets/sandbox/icons/0002.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0002.png",
+      "mflSync": {
+        "name": "Broncos",
+        "artHash": "9832109a7c2adbcd",
+        "colorPrimary": "#053464",
+        "colorSecondary": "#fe571c",
+        "derived": {
+          "nameMedium": "Broncos",
+          "nameShort": "Broncos",
+          "abbrev": "BRONC"
+        }
+      }
+    },
+    {
+      "franchiseId": "0003",
+      "name": "Bills",
+      "nameMedium": "Bills",
+      "nameShort": "Bills",
+      "abbrev": "BILLS",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#a52645",
+      "colorPrimary": "#a52645",
+      "colorSecondary": "#f6b69e",
+      "icon": "/assets/sandbox/icons/0003.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0002.png",
+      "mflSync": {
+        "name": "Bills",
+        "artHash": "edd3b9ef99c4134a",
+        "colorPrimary": "#a52645",
+        "colorSecondary": "#f6b69e",
+        "derived": {
+          "nameMedium": "Bills",
+          "nameShort": "Bills",
+          "abbrev": "BILLS"
+        }
+      }
+    },
+    {
+      "franchiseId": "0004",
+      "name": "Patriots",
+      "nameMedium": "Patriots",
+      "nameShort": "Patriots",
+      "abbrev": "PATRI",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#133595",
+      "colorPrimary": "#133595",
+      "colorSecondary": "#d9a17e",
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0004.png",
+      "mflSync": {
+        "name": "Patriots",
+        "colorPrimary": "#133595",
+        "colorSecondary": "#d9a17e",
+        "derived": {
+          "nameMedium": "Patriots",
+          "nameShort": "Patriots",
+          "abbrev": "PATRI"
+        }
+      }
+    },
+    {
+      "franchiseId": "0005",
+      "name": "Ravens",
+      "nameMedium": "Ravens",
+      "nameShort": "Ravens",
+      "abbrev": "RAVEN",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#885834",
+      "colorPrimary": "#885834",
+      "colorSecondary": "#1c116d",
+      "icon": "/assets/sandbox/icons/0005.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0005.png",
+      "mflSync": {
+        "name": "Ravens",
+        "artHash": "0fdb0eeec19f7e44",
+        "colorPrimary": "#885834",
+        "colorSecondary": "#1c116d",
+        "derived": {
+          "nameMedium": "Ravens",
+          "nameShort": "Ravens",
+          "abbrev": "RAVEN"
+        }
+      }
+    },
+    {
+      "franchiseId": "0006",
+      "name": "TEXANS",
+      "nameMedium": "TEXANS",
+      "nameShort": "TEXANS",
+      "abbrev": "CHARG",
+      "aliases": [],
+      "division": "AMERICAN",
+      "divisionId": "00",
+      "color": "#0d2a85",
+      "colorPrimary": "#0d2a85",
+      "colorSecondary": "#f5b8a7",
+      "icon": "/assets/sandbox/icons/0006.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0006.png",
+      "mflSync": {
+        "name": "TEXANS",
+        "artHash": "9da5e3d13dd64aa6",
+        "colorPrimary": "#0d2a85",
+        "colorSecondary": "#f5b8a7",
+        "derived": {
+          "nameMedium": "TEXANS",
+          "nameShort": "TEXANS",
+          "abbrev": "CHARG"
+        }
+      }
+    },
+    {
+      "franchiseId": "0007",
+      "name": "Franchise 7",
+      "nameMedium": "Franchise 7",
+      "nameShort": "7",
+      "abbrev": "RAMS",
+      "aliases": [
+        "7"
+      ],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#e4a87b",
+      "colorPrimary": "#e4a87b",
+      "colorSecondary": "#132443",
+      "icon": "/assets/sandbox/icons/0007.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0007.png",
+      "mflSync": {
+        "name": "Franchise 7",
+        "artHash": "a2a57eb4dfc16485",
+        "colorPrimary": "#e4a87b",
+        "colorSecondary": "#132443",
+        "derived": {
+          "nameMedium": "Franchise 7",
+          "nameShort": "7",
+          "abbrev": "RAMS"
+        }
+      }
+    },
+    {
+      "franchiseId": "0008",
+      "name": "Seahawks",
+      "nameMedium": "Seahawks",
+      "nameShort": "Seahawks",
+      "abbrev": "SEATT",
+      "aliases": [],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#a52746",
+      "colorPrimary": "#a52746",
+      "colorSecondary": "#f6b69e",
+      "icon": "/assets/sandbox/icons/0008.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0008.png",
+      "mflSync": {
+        "name": "Seahawks",
+        "artHash": "71e4256b44ed2422",
+        "colorPrimary": "#a52746",
+        "colorSecondary": "#f6b69e",
+        "derived": {
+          "nameMedium": "Seahawks",
+          "nameShort": "Seahawks",
+          "abbrev": "SEATT"
+        }
+      }
+    },
+    {
+      "franchiseId": "0009",
+      "name": "Lions",
+      "nameMedium": "Lions",
+      "nameShort": "Lions",
+      "abbrev": "EAGLE",
+      "aliases": [],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#c9764a",
+      "colorPrimary": "#c9764a",
+      "colorSecondary": "#241709",
+      "icon": "/assets/sandbox/icons/0009.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0009.png",
+      "mflSync": {
+        "name": "Lions",
+        "artHash": "d6a70dd5059972c7",
+        "colorPrimary": "#c9764a",
+        "colorSecondary": "#241709",
+        "derived": {
+          "nameMedium": "Lions",
+          "nameShort": "Lions",
+          "abbrev": "EAGLE"
+        }
+      }
+    },
+    {
+      "franchiseId": "0010",
+      "name": "LIONS",
+      "nameMedium": "LIONS",
+      "nameShort": "LIONS",
+      "abbrev": "DET",
+      "aliases": [],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#0176b7",
+      "colorPrimary": "#0176b7",
+      "colorSecondary": "#0b3c56",
+      "icon": "/assets/sandbox/icons/0010.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0010.png",
+      "mflSync": {
+        "name": "LIONS",
+        "artHash": "9769cd7906f5ca03",
+        "colorPrimary": "#0176b7",
+        "colorSecondary": "#0b3c56",
+        "derived": {
+          "nameMedium": "LIONS",
+          "nameShort": "LIONS",
+          "abbrev": "DET"
+        }
+      }
+    },
+    {
+      "franchiseId": "0011",
+      "name": "Bears",
+      "nameMedium": "Bears",
+      "nameShort": "Bears",
+      "abbrev": "CHI",
+      "aliases": [],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#e6bb47",
+      "colorPrimary": "#e6bb47",
+      "colorSecondary": "#240b4d",
+      "icon": "/assets/sandbox/icons/0011.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2023/70558_franchise_logo0011.png",
+      "mflSync": {
+        "name": "Bears",
+        "artHash": "0c06c87d2d854f4c",
+        "colorPrimary": "#e6bb47",
+        "colorSecondary": "#240b4d",
+        "derived": {
+          "nameMedium": "Bears",
+          "nameShort": "Bears",
+          "abbrev": "CHI"
+        }
+      }
+    },
+    {
+      "franchiseId": "0012",
+      "name": "SF",
+      "nameMedium": "SF",
+      "nameShort": "SF",
+      "abbrev": "SF",
+      "aliases": [],
+      "division": "NATIONAL",
+      "divisionId": "01",
+      "color": "#a90101",
+      "colorPrimary": "#a90101",
+      "colorSecondary": "#c24848",
+      "icon": "/assets/sandbox/icons/0012.webp",
+      "iconCroppedFromBanner": true,
+      "banner": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0012.png",
+      "mflSync": {
+        "name": "SF",
+        "artHash": "ff3de066c569e7e6",
+        "colorPrimary": "#a90101",
+        "colorSecondary": "#c24848",
+        "derived": {
+          "nameMedium": "SF",
+          "nameShort": "SF",
+          "abbrev": "SF"
+        }
+      }
+    }
+  ]
+}

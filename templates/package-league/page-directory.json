@@ -33,7 +33,7 @@
     "title": "__LEAGUE_SHORT__ League Home",
     "description": "League home for __LEAGUE_NAME__ — latest news, recent transactions and the division leaders",
     "path": "/__LEAGUE_SLUG__",
-    "icon": "football",
+    "icon": "home",
     "category": "popular",
     "tags": [
       "home",
@@ -84,7 +84,7 @@
     "title": "Playoffs (__LEAGUE_SHORT__)",
     "description": "__LEAGUE_SHORT__ playoff brackets — every matchup, seed and score, live during the playoffs",
     "path": "/__LEAGUE_SLUG__/playoffs",
-    "icon": "trophy",
+    "icon": "playoff",
     "category": "popular",
     "tags": [
       "playoffs",
@@ -109,7 +109,7 @@
     "title": "Rosters (__LEAGUE_SHORT__)",
     "description": "Every team's roster in __LEAGUE_SHORT__ league, one team at a time, grouped by position",
     "path": "/__LEAGUE_SLUG__/rosters",
-    "icon": "users",
+    "icon": "roster",
     "category": "my-team",
     "tags": [
       "rosters",
@@ -134,7 +134,7 @@
     "title": "Franchises (__LEAGUE_SHORT__)",
     "description": "Every __LEAGUE_SHORT__ club's all-time record, seasons, points, rivals, trade ledger and name history",
     "path": "/__LEAGUE_SLUG__/franchises",
-    "icon": "users",
+    "icon": "shield",
     "category": "reports",
     "tags": [
       "franchises",
@@ -159,7 +159,7 @@
     "title": "Transactions (__LEAGUE_SHORT__)",
     "description": "Every add, drop, waiver claim and trade in __LEAGUE_SHORT__ league this season",
     "path": "/__LEAGUE_SLUG__/transactions",
-    "icon": "activity",
+    "icon": "transactions-2",
     "category": "reports",
     "tags": [
       "transactions",
@@ -185,7 +185,7 @@
     "title": "Free Agents (__LEAGUE_SHORT__)",
     "description": "Who is available in your division — each of __LEAGUE_SHORT__ nine divisions has its own player pool — with points, projections, ADP and how many divisions hold each player",
     "path": "/__LEAGUE_SLUG__/free-agents",
-    "icon": "user-plus",
+    "icon": "binoculars",
     "category": "my-team",
     "tags": [
       "free agents",
@@ -209,7 +209,7 @@
     "title": "Live Scoring (__LEAGUE_SHORT__)",
     "description": "Real-time __LEAGUE_SHORT__ scoreboard — your two games first, then every matchup by division, with live points, projected finals, win probability, NFL game clocks, red-zone alerts and a scoring-play ticker",
     "path": "/__LEAGUE_SLUG__/live-scoring",
-    "icon": "goals",
+    "icon": "live-score",
     "category": "popular",
     "tags": [
       "live scoring",
@@ -306,7 +306,7 @@
     "title": "The Pecking Order (__LEAGUE_SHORT__)",
     "description": "__LEAGUE_SHORT__ Tuesday power rankings: all 99 teams ranked, the top 25 written up, weekly awards and every division in pecking order",
     "path": "/__LEAGUE_SLUG__/pecking-order",
-    "icon": "rank",
+    "icon": "pecking-order",
     "category": "reports",
     "tags": [
       "pecking order",
@@ -334,7 +334,7 @@
     "title": "Team Brands (__LEAGUE_SHORT__)",
     "description": "Every __LEAGUE_SHORT__ team's names, colours and marks in one place",
     "path": "/__LEAGUE_SLUG__/brand",
-    "icon": "star",
+    "icon": "artboard",
     "category": "info",
     "tags": [
       "brand",
@@ -386,7 +386,7 @@
     "title": "What's New (__LEAGUE_SHORT__)",
     "description": "New features, improvements and updates for __LEAGUE_NAME__",
     "path": "/__LEAGUE_SLUG__/whats-new",
-    "icon": "star",
+    "icon": "sparkle",
     "category": "info",
     "tags": [
       "what's new",
@@ -410,7 +410,7 @@
     "title": "Owner Activity (__LEAGUE_SHORT__)",
     "description": "Private to site admins: when each __LEAGUE_SHORT__ owner was last on the site or MFL, daily page views, the most-visited pages and the app-vs-browser split",
     "path": "/__LEAGUE_SLUG__/activity",
-    "icon": "activity",
+    "icon": "pulse",
     "category": "reports",
     "tags": [
       "activity",
@@ -490,7 +490,7 @@
     "title": "Rules",
     "description": "__LEAGUE_SHORT__'s rulebook and the league's settings on MFL: roster limits, lineups, waivers, trades, draft and scoring.",
     "path": "/__LEAGUE_SLUG__/rules",
-    "icon": "gavel",
+    "icon": "scroll",
     "category": "info",
     "tags": [
       "__LEAGUE_SLUG__",
@@ -516,7 +516,7 @@
     "title": "Ask Roger",
     "description": "Ask Roger, the AI rules expert, any __LEAGUE_SHORT__ rules question — he answers from the rulebook first and the league's MFL settings where it is silent.",
     "path": "/__LEAGUE_SLUG__/rules-chat",
-    "icon": "gavel",
+    "icon": "whistle",
     "category": "info",
     "tags": [
       "__LEAGUE_SLUG__",

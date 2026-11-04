@@ -296,6 +296,155 @@
       ]
     },
     {
+      "id": "sandbox",
+      "label": "League",
+      "leagueOnly": "sandbox",
+      "phaseOrder": {
+        "inSeason": 1,
+        "offSeason": 1
+      },
+      "defaultOpen": "always",
+      "links": [
+        {
+          "id": "sandbox-standings",
+          "label": "Standings",
+          "icon": "standings",
+          "path": "/standings",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Division standings, victory points first"
+        },
+        {
+          "id": "sandbox-playoffs",
+          "label": "Playoffs",
+          "icon": "playoff",
+          "path": "/playoffs",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Playoff brackets with live scores"
+        },
+        {
+          "id": "sandbox-rosters",
+          "label": "Rosters",
+          "icon": "roster",
+          "path": "/rosters",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Every team's roster, one team at a time"
+        },
+        {
+          "id": "sandbox-franchises",
+          "label": "Franchises",
+          "icon": "shield",
+          "path": "/franchises",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Every club's all-time record, rivals and trades"
+        },
+        {
+          "id": "sandbox-transactions",
+          "label": "Transactions",
+          "icon": "transactions-2",
+          "path": "/transactions",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Every add, drop and trade this season"
+        },
+        {
+          "id": "sandbox-live-scoring",
+          "label": "Live Scoring",
+          "icon": "live-score",
+          "path": "/live-scoring",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Your two games first, then every matchup by division"
+        },
+        {
+          "id": "sandbox-lineup",
+          "label": "Set Lineup",
+          "icon": "lineup",
+          "path": "/lineup",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Set your starting lineup"
+        },
+        {
+          "id": "sandbox-news",
+          "label": "League News",
+          "icon": "news",
+          "path": "/news",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "The league's news feed"
+        },
+        {
+          "id": "sandbox-pecking-order",
+          "label": "The Pecking Order",
+          "icon": "pecking-order",
+          "path": "/pecking-order",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Weekly power rankings, every Tuesday"
+        },
+        {
+          "id": "sandbox-free-agents",
+          "label": "Free Agents",
+          "icon": "binoculars",
+          "path": "/free-agents",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Who is available in your division"
+        },
+        {
+          "id": "sandbox-import-rankings",
+          "label": "Import Rankings",
+          "icon": "clipboard",
+          "path": "/import-rankings",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Build your own player rankings for the Free Agents page"
+        },
+        {
+          "id": "sandbox-brand",
+          "label": "Team Brands",
+          "icon": "artboard",
+          "path": "/brand",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Every team's name, colours and marks"
+        },
+        {
+          "id": "sandbox-rules",
+          "label": "Rules",
+          "icon": "scroll",
+          "path": "/rules",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "The rulebook and the league's MFL settings"
+        },
+        {
+          "id": "sandbox-ask-roger",
+          "label": "Ask Roger",
+          "icon": "whistle",
+          "path": "/rules-chat",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Ask the AI rules expert a rules question"
+        },
+        {
+          "id": "sandbox-owner-activity",
+          "label": "Owner Activity",
+          "icon": "pulse",
+          "path": "/activity",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "visibility": "admin",
+          "platformAdminOnly": true,
+          "description": "Private to site admins: who has been around, and what they read"
+        }
+      ]
+    },
+    {
       "id": "news-updates",
       "label": "News & Updates",
       "phaseOrder": {

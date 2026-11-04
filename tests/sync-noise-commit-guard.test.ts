@@ -207,6 +207,12 @@ describe('held rosters and transactions are read live', () => {
     'src/pages/afl-fantasy/transactions.astro': 'src/components/shared/transactions/TransactionsPage.astro',
     'src/pages/archies/transactions.astro': 'src/components/shared/transactions/TransactionsPage.astro',
     'src/pages/archies/free-agents.astro': 'src/components/shared/free-agents/FreeAgentsPage.astro',
+    // Sandbox: the same package-league routes as Archie's (templates/package-league).
+    'src/pages/sandbox/rosters.astro': 'src/components/shared/rosters/RostersPage.astro',
+    'src/pages/sandbox/front-office/trade-builder.astro': 'src/components/shared/trade-builder/TradeBuilderPage.astro',
+    'src/pages/sandbox/index.astro': 'src/components/shared/package-league/PackageLeagueHome.astro',
+    'src/pages/sandbox/transactions.astro': 'src/components/shared/transactions/TransactionsPage.astro',
+    'src/pages/sandbox/free-agents.astro': 'src/components/shared/free-agents/FreeAgentsPage.astro',
   };
   // The plan's "a day's lag is fine" readers, plus files that read nothing themselves.
   const DAY_LAG_OK = new Set([
@@ -215,6 +221,7 @@ describe('held rosters and transactions are read live', () => {
     'src/pages/theleague/activity.astro', // activity's move fallback
     'src/pages/afl-fantasy/activity.astro',
     'src/pages/archies/activity.astro',
+    'src/pages/sandbox/activity.astro',
     'src/pages/best-ball-1/activity.astro',
     'src/utils/rosters/roster-page-feeds.ts', // a lookup over globs its callers overlay
     'src/utils/mfl-transactions-cache.ts', // the live cache itself

@@ -231,9 +231,16 @@ describe('the division picker is offered to a declared-divisions league only', (
     expect(new Set(all).size).toBe(99);
   });
 
+  it('Sandbox: two divisions of six, every franchise in exactly one', () => {
+    const groups = groupsFor('sandbox')!;
+    expect(groups.map((g) => g.franchiseIds.length)).toEqual([6, 6]);
+    expect(new Set(groups.flatMap((g) => g.franchiseIds)).size).toBe(12);
+  });
+
   it('every other league renders exactly as before — no groups at all', () => {
     for (const league of ALL_LEAGUES) {
-      if (league.slug === 'archies') continue;
+      // Package leagues launched with divisions declare them (scripts/suggest-league-branding.mjs).
+      if (league.slug === 'archies' || league.slug === 'sandbox') continue;
       expect(groupsFor(league.slug), league.slug).toBeUndefined();
     }
   });

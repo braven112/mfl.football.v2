@@ -75,6 +75,18 @@ const NAMED_FOR_THE_CLUB = new Set([
   'archies:Saints',
   'archies:Vikings',
   'archies:Rams',
+  // Sandbox (39163), the demo league: its twelve teams ARE NFL clubs on MFL, so a
+  // match is the point, and as a registered league it draws its own marks anyway.
+  'sandbox:Chiefs',
+  'sandbox:Broncos',
+  'sandbox:Bills',
+  'sandbox:Patriots',
+  'sandbox:Ravens',
+  'sandbox:TEXANS',
+  'sandbox:Seahawks',
+  'sandbox:Lions',
+  'sandbox:LIONS',
+  'sandbox:Bears',
 ]);
 const isNamedForTheClub = (f: { league: string; name: string }) =>
   NAMED_FOR_THE_CLUB.has(`${f.league}:${f.name}`);
@@ -141,7 +153,8 @@ describe('NFL name match — only the FULL name is a valid input', () => {
       .filter((v): v is string => typeof v === 'string' && matchNflTeamName(v) !== null);
     // Not asserted empty — it CANNOT be, and pretending otherwise would hide
     // the hazard. Asserted small and known, so a new one shows up as a diff.
-    expect(new Set(shortHits.map((s) => s.toLowerCase()))).toEqual(new Set(['saints']));
+    // 'rams': Sandbox's placeholder "Franchise 7" carries the abbrev RAMS on MFL.
+    expect(new Set(shortHits.map((s) => s.toLowerCase()))).toEqual(new Set(['saints', 'rams']));
   });
 });
 

@@ -92,7 +92,13 @@ export const DESTINATIONS = {
   rosters: { path: '/rosters', label: 'the rosters', leagues: withPackageLeagues('/rosters') },
   transactions: { path: '/transactions', label: 'the transaction log', leagues: withPackageLeagues('/transactions') },
   players: { path: '/players', label: 'the free agent board', leagues: BOTH },
-  playoffs: { path: '/playoffs', label: 'the playoff bracket', leagues: BOTH },
+  // Every package league with the Playoffs box ticked: its route exists from launch, and the
+  // page shows the moment MFL's brackets arrive (package-leagues.md § Playoffs).
+  playoffs: {
+    path: '/playoffs',
+    label: 'the playoff bracket',
+    leagues: [...BOTH, ...PACKAGE_LEAGUES.filter((l) => l.features?.playoffs).map((l) => l.slug)],
+  },
   'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: withPackageLeagues('/live-scoring') },
   'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
   lineup: { path: '/lineup', label: 'your lineup', leagues: withPackageLeagues('/lineup') },
@@ -106,8 +112,8 @@ export const DESTINATIONS = {
   'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: withPackageLeagues('/front-office/trade-builder') },
   'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: withPackageLeagues('/import-rankings') },
   'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
-  rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
-  'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: BOTH },
+  rules: { path: '/rules', label: 'the constitution', leagues: withPackageLeagues('/rules') },
+  'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: withPackageLeagues('/rules-chat') },
   'schefter-tip': { path: '/schefter/tip', label: 'the rumor mill tip line', leagues: BOTH },
   'whats-new': { path: '/whats-new', label: "What's New", leagues: withPackageLeagues('/whats-new') },
   notifications: { path: '/notifications', label: 'push notifications', leagues: BOTH },
