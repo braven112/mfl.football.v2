@@ -41,9 +41,9 @@ describe('today’s leagues per job', () => {
     'league-history': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'schedule-draw': ['theleague', 'afl-fantasy'],
     'pecking-order': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
-    'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies'],
+    'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-release': ['theleague', 'afl-fantasy'],
-    'article:matchup-preview': ['theleague', 'afl-fantasy'],
+    'article:matchup-preview': ['theleague', 'afl-fantasy', 'sandbox'],
     'article:weekly': ['theleague'],
   };
 

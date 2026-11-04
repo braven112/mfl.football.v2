@@ -87,7 +87,7 @@ const withPackageLeagues = (path) => [
 export const DESTINATIONS = {
   // ── What articles are usually ABOUT ──
   'schedule-release': { path: '/schedule-release', label: 'the schedule release page', leagues: BOTH },
-  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: [...BOTH, 'archies'] },
+  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: [...BOTH, 'archies', 'sandbox'] },
   standings: { path: '/standings', label: 'the standings', leagues: withPackageLeagues('/standings') },
   rosters: { path: '/rosters', label: 'the rosters', leagues: withPackageLeagues('/rosters') },
   transactions: { path: '/transactions', label: 'the transaction log', leagues: withPackageLeagues('/transactions') },

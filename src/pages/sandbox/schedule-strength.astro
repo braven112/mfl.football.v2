@@ -1,0 +1,74 @@
+---
+/**
+ * The Gauntlet — Sandbox's schedule-strength dashboard.
+ * Data: data/sandbox/derived/schedule-strength-<year>-w<NN>.json, written
+ * weekly by scripts/compute-schedule-strength.mjs (Wednesday cron + prebuild).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
+import GauntletDashboard from '../../components/shared/schedule-strength/GauntletDashboard.astro';
+import { resolveGauntletViewLazy, resolveGauntletViewerTeam, type GauntletDerived } from '../../utils/schedule-strength';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getLeaguePersona } from '../../utils/persona-server';
+import { personaLabels } from '../../utils/persona.mjs';
+import sandboxConfig from '../../../data/sandbox/sandbox.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+
+// Weekly issues are retained forever (published articles point at them), so
+// only the selected year's latest file is read per request, through the
+// league-data loader — a glob would compile every issue into the function.
+const { dataPath } = getLeagueBySlug('sandbox')!;
+const files: Record<string, () => Promise<GauntletDerived>> = Object.fromEntries(
+  listLeagueData(`${dataPath}/derived/schedule-strength-*.json`).map((p) => [
+    p,
+    () => loadLeagueData<GauntletDerived>(p) as Promise<GauntletDerived>,
+  ]),
+);
+
+const view = await resolveGauntletViewLazy({
+  files,
+  teams: sandboxConfig.teams,
+  baseUrl: '/sandbox',
+  pagePath: '/sandbox/schedule-strength',
+  requestedYear: Astro.url.searchParams.get('year'),
+});
+
+const myTeamId = resolveGauntletViewerTeam('sandbox', Astro.cookies, Astro.request);
+
+const byline = personaLabels(await getLeaguePersona('sandbox')).column;
+
+const title = view.data
+  ? `The Gauntlet · ${view.seasonComplete ? `${view.year} Final` : `Week ${view.data.week}`} Schedule Strength`
+  : 'The Gauntlet · Schedule Strength';
+---
+
+<TheLeagueLayout title={title}>
+  <div class="gauntlet-page">
+    <Breadcrumbs items={[
+      { label: 'Sandbox', href: '/sandbox' },
+      { label: 'Schedule Strength' },
+    ]} />
+    <GauntletDashboard
+      columnName={view.data?.columnName ?? 'The Gauntlet'}
+      byline={byline}
+      week={view.data?.week ?? 0}
+      year={view.year ?? getCurrentSeasonYear()}
+      runIn={view.runIn}
+      played={view.played}
+      scheduleLuck={view.scheduleLuck}
+      heatMapFranchises={view.heatMapFranchises}
+      heatMapWeeks={view.heatMapWeeks}
+      trapWeeks={view.trapWeeks}
+      yearOptions={view.yearOptions}
+      seasonComplete={view.seasonComplete}
+      scheduleSwap={view.scheduleSwap}
+      scheduleSwapThroughWeek={view.scheduleSwapThroughWeek}
+      myTeamId={myTeamId}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .gauntlet-page { min-height: 60vh; }
+</style>

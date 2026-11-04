@@ -871,8 +871,8 @@ export const LEAGUES = {
       brandingEditor: true,
     },
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
-    /** No weekly Schefter articles until chosen: each type links pages a package league may not have. */
-    articleTypes: [],
+    /** Brandon (Nov 2026): the Saturday Matchup Preview and The Gauntlet, so the demo's front page has headlines. */
+    articleTypes: ['matchup-preview', 'schedule-strength'],
   },
 };
 

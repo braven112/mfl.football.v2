@@ -118,8 +118,11 @@ const { model, cardsTitle, overlays, wireHref } = Astro.props;
     .fp__top,
     .fp__bottom:not(.fp__bottom--solo) { grid-template-columns: minmax(0, 1fr) 300px; }
   }
+  /* Same selector as the 1024px rule: a bare .fp__bottom loses to its
+     :not() (one more class of specificity), which kept the 300px column on
+     phones and squeezed The Race into a sliver beside the wire. */
   @container (max-width: 880px) {
     .fp__top,
-    .fp__bottom { grid-template-columns: 1fr; }
+    .fp__bottom:not(.fp__bottom--solo) { grid-template-columns: 1fr; }
   }
 </style>

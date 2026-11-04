@@ -441,6 +441,15 @@
           "visibility": "admin",
           "platformAdminOnly": true,
           "description": "Private to site admins: who has been around, and what they read"
+        },
+        {
+          "id": "sandbox-gauntlet",
+          "label": "The Gauntlet",
+          "icon": "graph-up-arrow",
+          "path": "/schedule-strength",
+          "external": false,
+          "leagueOnly": "sandbox",
+          "description": "Strength of schedule, updated every Wednesday"
         }
       ]
     },
