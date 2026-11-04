@@ -89,7 +89,8 @@ const isMflUrl = (url) => {
  *   colors: { primary: string, secondary: string } | null } }} opts
  *   `art` is null when MFL has none or it could not be read — the logo is then left alone.
  * @returns {{ team: Record<string, any>, changes: string[], writeIcon: boolean, renamed: boolean,
- *   mflRenamed: boolean }}  `mflRenamed` counts toward the rollover stop even when a hand-set name blocks the rename.
+ *   mflRenamed: boolean }}  `mflRenamed` counts toward the rollover stop even when a hand-set name blocks the rename,
+ *   but not when MFL's new name is the one we already carry.
  */
 export function planTeamSync(team, franchise, { slug, art }) {
   const prev = team.mflSync ?? {};
@@ -105,7 +106,11 @@ export function planTeamSync(team, franchise, { slug, art }) {
   // unedited).
   const mflName = cleanName(franchise.name);
   const baseline = prev.name ?? team.name;
-  const mflRenamed = !!mflName && mflName !== baseline;
+  // MFL catching up to a name we already carry (the commissioner renamed it
+  // here first, then on MFL) is convergence, not a stranger's name: it must
+  // not count toward the rollover stop, or renaming a handful of teams on MFL
+  // to match this site trips it and leaves the league stuck failing.
+  const mflRenamed = !!mflName && mflName !== baseline && mflName !== team.name;
   const names = mflName ? suggestNames(franchise.name, franchise.abbrev) : null;
   const prevDerived = prev.derived ?? { nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev };
   if (mflRenamed && names && team.name === baseline) {

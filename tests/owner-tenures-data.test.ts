@@ -587,11 +587,6 @@ describe('no duplicate team name across owner records', () => {
       // once owner names arrive through commissioner access.
       seabirds: 'unconfirmed: 0100 (2023-24) and 0048 (2025-) — revisit with owner names',
     },
-    sandbox: {
-      // The demo league's placeholder MFL names: 0009 "Lions" and 0010 "LIONS" are two
-      // different teams in the same 2026 season, not one owner split in two.
-      lions: 'two teams in one season (0009 Lions, 0010 LIONS) — placeholder names on MFL',
-    },
   };
 
   for (const league of ALL_LEAGUES as any[]) {
