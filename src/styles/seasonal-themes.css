@@ -44,7 +44,7 @@ html[data-season='halloween'] .stb-seedchip--wild_card {
 
 /* Live Scoring header: the title, week picker and live pill sit over a haunted
    house on a hill, with Monster of the Week and Scariest Game cards along the
-   bottom (LvHauntedStats). Scoped to .lv-page, the league boards' frame, so
+   bottom (LvWeekStats). Scoped to .lv-page, the league boards' frame, so
    /live and the broadcast board keep their own headers. The scene is drawn
    wide and fitted to the header's HEIGHT, anchored right: a phone sees the
    house and the edge of the moon, a desktop sees the hills run off left. */
@@ -180,59 +180,39 @@ html[data-season='halloween'] .lv-head > :not(.lv-haunt-scene) {
   .lv-haunt-scene__window { display: none; }
 }
 
-.lv-haunt {
-  align-self: end;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: var(--spacing-sm);
-  max-width: 34rem;
+/* The header's stat cards (LvWeekStats) over a seasonal scene. Their layout
+   and year-round look live in live.css; over the haunted house and the cabin
+   they become dark glass so they read against the night sky in either theme.
+   Halloween's cards wear its ember border; Christmas's a frost one. */
+html:is([data-season='halloween'], [data-season='christmas']) .lv-head {
+  /* An implicit `auto` column sizes to the cards' two-across min-content and
+     pushes the second card off the sheet; a 0-floored column wraps them. */
+  grid-template-columns: minmax(0, 1fr);
 }
-.lv-haunt__card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-  padding: 0.75rem 0.875rem;
+html:is([data-season='halloween'], [data-season='christmas']) .lv-head .lv-wstats {
+  align-self: end;
+}
+html:is([data-season='halloween'], [data-season='christmas']) .lv-wstats__card {
   background: rgb(8 7 10 / 0.82);
   border: 1px solid #3b2d22;
-  border-radius: 12px;
+  box-shadow: none;
 }
-/* The Scariest Game card opens its matchup: a button that keeps the card's
-   look, with the border warming to the accent on hover and focus. */
-.lv-haunt__card--link {
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--transition-fast);
+html[data-season='christmas'] .lv-wstats__card {
+  background: rgb(9 14 28 / 0.82);
+  border-color: #2c3b5a;
 }
-.lv-haunt__card--link:hover,
-.lv-haunt__card--link:focus-visible {
+/* Candy red (#c8102e) is under 3:1 on the night sky, so the label lightens. */
+html[data-season='christmas'] .lv-wstats__label {
+  color: #ff9aa5;
+}
+html:is([data-season='halloween'], [data-season='christmas']) .lv-wstats__card--link:is(:hover, :focus-visible) {
   border-color: var(--color-primary);
 }
-.lv-haunt__card--link:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+html:is([data-season='halloween'], [data-season='christmas']) .lv-wstats__main {
+  color: #f4efe8;
 }
-/* Before kickoff: the same card, quieter, until the week has an answer. */
-.lv-haunt__card--waiting .lv-haunt__main {
-  color: var(--content-text-muted, #bdb4a8);
-}
-.lv-haunt__label {
-  font-size: var(--font-size-2xs);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-primary);
-}
-.lv-haunt__main {
-  font-weight: 600;
-  color: var(--color-text-primary);
-  overflow-wrap: anywhere;
-}
-.lv-haunt__sub {
-  font-size: var(--font-size-xs);
-  color: var(--content-text-muted, #bdb4a8);
+html:is([data-season='halloween'], [data-season='christmas']) :is(.lv-wstats__sub, .lv-wstats__card--waiting .lv-wstats__main) {
+  color: #bdb4a8;
 }
 
 /* MFL Live (/live): the same haunted scene at the top of the signed-in board

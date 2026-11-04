@@ -45,7 +45,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { allClubs, clubBrand, inkOn, type ClubBrand } from '../../../utils/nfl-marks';
-import { clubRosterHolders } from '../../../utils/nfl-club-rosters';
+import { clubRosterHolders, preloadClubRosterHolders } from '../../../utils/nfl-club-rosters';
 
 interface Props {
   /**
@@ -74,6 +74,13 @@ const band = club.grounds.find((g) => g.ground === 'band');
 const light = club.grounds.find((g) => g.ground === 'light');
 const dark = club.grounds.find((g) => g.ground === 'dark');
 
+// clubRosterHolders is sync over preloaded data (players.json is not shipped
+// inside the function). A failed preload is an empty roster panel, not a 500.
+if (leagueSlug) {
+  await preloadClubRosterHolders(leagueSlug).catch((err) =>
+    console.error('[brand] club roster preload failed:', err),
+  );
+}
 const { year, holders } = leagueSlug
   ? clubRosterHolders(club.code, leagueSlug)
   : { year: null, holders: [] };

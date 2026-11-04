@@ -1,17 +1,17 @@
 /**
  * Server-side data assembly for the AFL draft broadcast board.
  *
- * Reads with `fs` rather than `import.meta.glob` for the same reason
- * `afl-draft-slot.ts` does: the page is SSR, and globbing these feeds would
- * compile every season of every feed into the server bundle to use one.
+ * Reads through the league-data loader (src/utils/league-data.ts — the
+ * store, in production) rather than `import.meta.glob`: the page is SSR, and
+ * globbing these feeds would compile every season of every feed into the
+ * server bundle to use one. The page awaits {@link preloadDraftBroadcast}
+ * first, so the sync helpers below are served from memory.
  *
  * Everything here runs at request time and ships with the page. The TV must
  * never depend on a client fetch landing mid-reveal — if the network drops
  * between polls the board keeps rendering the last state correctly.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { DraftRoomPick } from '../types/draft-room';
 import type {
   BroadcastDefenseFace,
@@ -27,13 +27,27 @@ import { usesCollegeOrigin } from './pick-reveal';
 import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
 import collegeLogos from '../data/college-logos.json';
 import { liveRostersFeed } from './rosters/live-rosters-feed';
+import { leagueFeedPath, loadLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 function readJson(relPath: string): any {
-  try {
-    return JSON.parse(readFileSync(join(process.cwd(), relPath), 'utf-8'));
-  } catch {
-    return null;
+  return readLeagueDataSync(relPath);
+}
+
+/**
+ * Load everything this module's sync readers can ask for on a board for
+ * `year`: that season's projections, injuries, rosters and board, the bye
+ * calendar, and the boards of the seasons `findRehearsalYear` walks back over.
+ * A page replaying a rehearsal year preloads that year too.
+ */
+export function preloadDraftBroadcast(dataPath: string, year: number): Promise<void> {
+  const paths = ['data/nfl/bye-weeks.json'];
+  for (const f of ['projectedScores.json', 'injuries.json', 'rosters.json', 'draftResults.json']) {
+    paths.push(leagueFeedPath(dataPath, year, f));
   }
+  for (let y = year - 1; y >= year - REHEARSAL_LOOKBACK_YEARS; y--) {
+    paths.push(leagueFeedPath(dataPath, y, 'draftResults.json'));
+  }
+  return preloadLeagueData(paths);
 }
 
 /** MFL returns single-element lists as a bare object; normalize both. */
@@ -320,7 +334,7 @@ export async function loadRostersFeed(
   year: number,
   { liveYear, leagueId }: { liveYear: number; leagueId: string }
 ): Promise<any> {
-  const committed = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  const committed = await loadLeagueData(leagueFeedPath(dataPath, year, 'rosters.json')).catch(() => null);
   return year === liveYear ? liveRostersFeed(committed, year, leagueId) : committed;
 }
 

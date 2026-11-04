@@ -49,6 +49,7 @@ import { resolveSeasonPreview, SEASON_PREVIEW_COOKIE, SEASON_PREVIEW_PARAM } fro
 import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
+import { preloadRequestLeagueData } from './utils/request-league-data';
 
 // The custom-site demo's MFL stand-in. `__DEMO_BUILD__` is a compile-time
 // constant (astro.config.ts `vite.define`), so every other build sees
@@ -158,6 +159,12 @@ const handle: MiddlewareHandler = async (context, next) => {
       return stamp(await context.rewrite(new URL(demo.rewrite + context.url.search, context.url)));
     }
   }
+
+  // League data the site-wide SYNC helpers read (player identity for the
+  // current seasons) comes from the store in production, so it is loaded
+  // before any route runs. Cached per warm instance: after the first request
+  // this is a few map lookups. Never throws. See src/utils/request-league-data.ts.
+  await preloadRequestLeagueData(context.isPrerendered ? undefined : context.url);
 
   const hostname = context.url.hostname;
   const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);

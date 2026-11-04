@@ -2,8 +2,8 @@
 /**
  * The Pecking Order (AFL) — landing page.
  *
- * Thin wrapper over the shared landing component: globs this league's issue
- * JSON (the glob has to be a literal in the page) and hands it over. Which
+ * Thin wrapper over the shared landing component: reads this league's issue
+ * JSON (through the league-data loader) and hands it over. Which
  * state the page renders — live issue vs. preseason preview — is decided in
  * PeckingOrderLanding, so both leagues stay in step.
  * Permalink to a specific issue lives at /afl-fantasy/pecking-order/[year]/[week].
@@ -14,11 +14,15 @@ import PeckingOrderLanding from '../../../components/shared/PeckingOrderLanding.
 import { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
 import { resolvePeckingOrderLanding } from '../../../utils/pecking-order-landing';
 import { getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
-const issueFiles = import.meta.glob<PeckingOrderData>(
-  '../../../../data/afl-fantasy/pecking-order/*.json',
-  { eager: true, import: 'default' }
-);
+const issuePaths = listLeagueData(`${getLeagueBySlug('afl-fantasy')!.dataPath}/pecking-order/*.json`);
+const issueData = await Promise.all(issuePaths.map((p) => loadLeagueData<PeckingOrderData>(p)));
+const issueFiles: Record<string, PeckingOrderData> = {};
+issuePaths.forEach((p, i) => {
+  if (issueData[i] != null) issueFiles[p] = issueData[i]!;
+});
 
 const issues = Object.entries(issueFiles)
   .map(([file, data]) => {

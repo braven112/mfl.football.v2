@@ -5,23 +5,25 @@
  * Shared implementation lives in
  * components/shared/division-strength/DivisionStrengthPage.
  *
- * The derived file is imported HERE because static import specifiers can't be
- * runtime variables, and importing both leagues' files in the shared component
- * would ship the other league's report on every render of either route.
+ * The derived file is read HERE, through the league-data loader
+ * (src/utils/league-data.ts), so the shared component never names a league's
+ * data path and the 1.6 MB report is not bundled into the server function.
  *
  * The redirect also lives HERE, and must: `Astro.redirect()` only redirects
  * from a PAGE. Returned from a component's frontmatter it merely stops
  * rendering that component and the response is still a 200 with a blank body.
  */
 import DivisionStrengthPage from '../../components/shared/division-strength/DivisionStrengthPage.astro';
-import divisionData from '../../../data/afl-fantasy/derived/division-strength.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadLeagueData } from '../../utils/league-data';
 import { resolveDivisionStrengthView } from '../../utils/division-strength-view';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import type { DivisionStrengthFile } from '../../types/division-strength';
 
 export const prerender = false;
 
-const data = divisionData as unknown as DivisionStrengthFile;
+const league = getLeagueBySlug('afl-fantasy')!;
+const data = (await loadLeagueData(`${league.dataPath}/derived/division-strength.json`)) as unknown as DivisionStrengthFile;
 const basePath = resolveLeaguePath(
   '/afl-fantasy/division-strength',
   Astro.locals.hideLeaguePrefix ?? false

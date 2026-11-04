@@ -27,9 +27,8 @@
  *    call; player identity already has one in `getPlayerMap`.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { isLeagueDataLoaded, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 /** One player in a franchise's submitted lineup for a week. */
 export interface LineupStarter {
@@ -175,15 +174,27 @@ export function loadWeeklyResultsFeedFromDisk(slug: CanonicalLeagueSlug, leagueY
   // page that already SSRs nine MFL calls.
   const cacheKey = `${slug}:${leagueYear}`;
   if (weeklyResultsFeedCache.has(cacheKey)) return weeklyResultsFeedCache.get(cacheKey) ?? null;
-  try {
-    const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'weekly-results-raw.json');
-    const parsed = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
-    weeklyResultsFeedCache.set(cacheKey, parsed);
-    return parsed;
-  } catch {
-    weeklyResultsFeedCache.set(cacheKey, null);
-    return null;
-  }
+  const file = lineupFeedPath(league.dataPath, leagueYear, 'weekly-results-raw.json');
+  const parsed = readLeagueDataSync<any>(file);
+  if (isLeagueDataLoaded(file)) weeklyResultsFeedCache.set(cacheKey, parsed);
+  return parsed;
+}
+
+const lineupFeedPath = (dataPath: string, leagueYear: number, file: string) =>
+  `${dataPath}/mfl-feeds/${leagueYear}/${file}`;
+
+/**
+ * Load the committed feeds `loadWeeklyResultsFeedFromDisk` and
+ * `loadRostersFeedFromDisk` read, so their sync reads are served from memory
+ * (league data lives in the store in production — src/utils/league-data.ts).
+ */
+export async function preloadLineupFeeds(slug: CanonicalLeagueSlug, leagueYear: number): Promise<void> {
+  const league = getLeagueBySlug(slug);
+  if (!league) return;
+  await preloadLeagueData([
+    lineupFeedPath(league.dataPath, leagueYear, 'weekly-results-raw.json'),
+    lineupFeedPath(league.dataPath, leagueYear, 'rosters.json'),
+  ]);
 }
 
 /**
@@ -324,16 +335,11 @@ export function loadRostersFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: n
   // request is wasted work on a page that already SSRs nine MFL calls.
   const cacheKey = `${slug}:${leagueYear}`;
   if (rostersFeedCache.has(cacheKey)) return rostersFeedCache.get(cacheKey) ?? null;
-  try {
-    const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'rosters.json');
-    const raw = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
-    const parsed = hasFranchises(raw) ? raw : null;
-    rostersFeedCache.set(cacheKey, parsed);
-    return parsed;
-  } catch {
-    rostersFeedCache.set(cacheKey, null);
-    return null;
-  }
+  const file = lineupFeedPath(league.dataPath, leagueYear, 'rosters.json');
+  const raw = readLeagueDataSync<any>(file);
+  const parsed = hasFranchises(raw) ? raw : null;
+  if (isLeagueDataLoaded(file)) rostersFeedCache.set(cacheKey, parsed);
+  return parsed;
 }
 
 /**

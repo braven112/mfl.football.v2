@@ -17,7 +17,6 @@
  */
 import FranchisePage from '../../../components/shared/franchises/FranchisePage.astro';
 import HistoryFranchisePage from '../../../components/shared/league-history/HistoryFranchisePage.astro';
-import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
 import { franchiseList } from '../../../utils/league-history/franchise.mjs';
 import AflFranchiseTrophies from '../../../components/afl-fantasy/AflFranchiseTrophies.astro';
 import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHometown.astro';
@@ -25,18 +24,26 @@ import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { aflRafterHonors, getCurrentOwnerSince } from '../../../utils/afl-awards';
-import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
-import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
-import keeperHistory from '../../../../data/afl-fantasy/derived/keeper-history.json';
 import AflKeeperHistory from '../../../components/afl-fantasy/AflKeeperHistory.astro';
-import pickTradeData from '../../../../data/afl-fantasy/derived/pick-trades.json';
 import AflPickTrades from '../../../components/afl-fantasy/AflPickTrades.astro';
 import { franchisePickTrades } from '../../../utils/league-history/pick-trades.mjs';
 import { recordBook } from '../../../utils/league-history/records.mjs';
 import { franchiseKeepers } from '../../../utils/league-history/keepers.mjs';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { loadLeagueData } from '../../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [historyData, franchiseHistory, ownerTenures, keeperHistory, pickTradeData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/franchise-history.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/owner-tenures.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/keeper-history.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/pick-trades.json`),
+]);
 
 export const prerender = false;
 

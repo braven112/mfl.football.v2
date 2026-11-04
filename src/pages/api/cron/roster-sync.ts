@@ -40,37 +40,39 @@ import type { APIRoute } from 'astro';
 import { dispatchWorkflow } from '../../../utils/workflow-dispatch';
 import { syncCadenceDecision } from '../../../utils/sync-cadence';
 import type { MflCalendarEvent } from '../../../utils/waiver-window';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 /**
  * Every league's calendar and NFL schedule, so the cadence can see a waiver run
  * or a kickoff in EITHER league (see sync-cadence.ts § "Both leagues").
  *
- * `import.meta.glob`, never a static import: these are cron-generated files, and
- * a static specifier hard-fails the build for every league that does not have
- * one yet (CLAUDE.md / storage-and-build.md). The `*` covers the league
- * directories so no slug is hardcoded, and the year filter keeps twenty seasons
- * of feeds out of the serverless bundle.
+ * Read through the league-data loader per request (cached while the instance
+ * is warm), never a static import or a glob: these are cron-generated files, a
+ * static specifier hard-fails the build for every league that does not have one
+ * yet (CLAUDE.md / storage-and-build.md), and a glob compiles every league's
+ * feeds into the function. The `*` covers the league directories so no slug is
+ * hardcoded, and the current-era filter keeps it to the seasons that matter.
  */
-const calendarModules = import.meta.glob(
-  '../../../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true },
-);
-const scheduleModules = import.meta.glob(
-  '../../../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule.json',
-  { eager: true },
-);
+const CURRENT_ERA_FEED = /\/mfl-feeds\/20(?:2[5-9]|[3-9]\d)\//;
 
-const calendars: MflCalendarEvent[][] = Object.values(calendarModules)
-  .map((m) => (m as any)?.default)
-  .filter((events): events is MflCalendarEvent[] => Array.isArray(events));
+async function loadCurrentEra(file: string): Promise<unknown[]> {
+  const paths = listLeagueData(`data/*/mfl-feeds/*/${file}`).filter((p) => CURRENT_ERA_FEED.test(p));
+  return Promise.all(paths.map((p) => loadLeagueData(p)));
+}
 
-/** Flatten every league's matchup list down to the kickoff instants. */
-const kickoffs: string[] = Object.values(scheduleModules).flatMap((m) => {
-  const matchups = (m as any)?.default?.nflSchedule?.matchup;
-  return Array.isArray(matchups)
-    ? matchups.map((g: any) => g?.kickoff).filter(Boolean)
-    : [];
-});
+async function loadCadenceInputs(): Promise<{ calendars: MflCalendarEvent[][]; kickoffs: string[] }> {
+  const [calendarFeeds, scheduleFeeds] = await Promise.all([
+    loadCurrentEra('calendar.json'),
+    loadCurrentEra('nflSchedule.json'),
+  ]);
+  const calendars = calendarFeeds.filter((events): events is MflCalendarEvent[] => Array.isArray(events));
+  // Flatten every league's matchup list down to the kickoff instants.
+  const kickoffs: string[] = scheduleFeeds.flatMap((data) => {
+    const matchups = (data as any)?.nflSchedule?.matchup;
+    return Array.isArray(matchups) ? matchups.map((g: any) => g?.kickoff).filter(Boolean) : [];
+  });
+  return { calendars, kickoffs };
+}
 
 export const GET: APIRoute = async ({ request }) => {
   // Verify the request is from Vercel Cron.
@@ -111,7 +113,7 @@ export const GET: APIRoute = async ({ request }) => {
   //
   // Checked BEFORE the token and outbound guards deliberately — most ticks skip,
   // and a skip needs no credentials to decide.
-  const cadence = syncCadenceDecision(new Date(), { calendars, kickoffs });
+  const cadence = syncCadenceDecision(new Date(), await loadCadenceInputs());
   if (!cadence.dispatch) {
     return new Response(
       JSON.stringify({ skipped: true, ...cadence }),

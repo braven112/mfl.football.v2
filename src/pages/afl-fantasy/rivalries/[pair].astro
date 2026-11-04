@@ -10,12 +10,20 @@
  */
 import HistoryRivalryPage from '../../../components/shared/league-history/HistoryRivalryPage.astro';
 import RivalryTrades from '../../../components/shared/rivalries/RivalryTrades.astro';
-import historyData from '../../../../data/afl-fantasy/derived/league-history.json';
-import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { describeCoverageGap } from '../../../utils/rivalries';
 import { rivalryPairRoute } from '../../../utils/league-history/rivalry-route';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [historyData, franchiseHistory] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+  loadLeagueData<any>(`${AFL_DERIVED}/franchise-history.json`),
+]);
 
 export const prerender = false;
 

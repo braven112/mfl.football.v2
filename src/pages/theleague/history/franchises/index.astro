@@ -9,10 +9,16 @@
  * (utils/league-history/access.ts).
  */
 import HistoryFranchisesPage from '../../../../components/shared/league-history/HistoryFranchisesPage.astro';
-import historyData from '../../../../../data/theleague/derived/league-history.json';
 import { getAuthUser } from '../../../../utils/auth';
 import { mflLoginUrl } from '../../../../utils/mfl-login-redirect';
 import { canViewLeagueHistory } from '../../../../utils/league-history/access';
+import { loadLeagueData } from '../../../../utils/league-data';
+import { getLeagueBySlug } from '../../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const historyData: any = await loadLeagueData(`${THELEAGUE_DATA}/derived/league-history.json`);
 
 export const prerender = false;
 

@@ -211,6 +211,16 @@ export interface LivePanel {
    */
   standings?: LiveStandingsRow[] | null;
   /**
+   * The Standings tab cut into several tables — today only the AFL's live
+   * board (`utils/live/afl-live-standings.ts`): its Premier League and
+   * D-League on all-play, then its divisions on head-to-head.
+   *
+   * Every row still comes from `standings` above; a section only names WHICH
+   * franchises it holds and in what official order. `undefined` keeps the
+   * single-table tab every other board draws, byte for byte.
+   */
+  standingsSections?: LiveStandingsSections;
+  /**
    * The week's top scorers, teams and individuals.
    *
    * DERIVED from `matchups`, never fetched — the snapshot already carries
@@ -317,6 +327,98 @@ export interface LiveStandingsRow {
    * never added twice. See `utils/live/standings-projection`.
    */
   weekGamesCounted?: number | null;
+  /**
+   * MFL's Victory Points, where the league keeps them (Archie's ranks on
+   * them). Absent where the export carries no `vp` column.
+   */
+  victoryPoints?: number;
+}
+
+/** A marker on one standings position — promotion, relegation and the like. */
+export interface LiveStandingsZone {
+  tone: 'up' | 'down' | 'danger' | 'rename';
+  label: string;
+}
+
+/**
+ * One table on a sectioned Standings tab.
+ *
+ * `record` tables (divisions) rank on the head-to-head record, the same maths
+ * as the single table. `all-play` tables (tiers) rank on every team's score
+ * against every other team's that week; see
+ * `utils/live/all-play-projection.ts`.
+ */
+export interface LiveStandingsSection {
+  id: string;
+  title: string;
+  basis: 'record' | 'all-play' | 'mad';
+  /** The section's franchises in their OFFICIAL order (the Final view). */
+  franchiseIds: string[];
+  /**
+   * Position markers, index 0 = first place. They belong to the POSITION, not
+   * the team: a live re-rank that moves a team into 11th moves it into the
+   * relegation zone, which is the whole point of watching it live.
+   */
+  zones?: (LiveStandingsZone | null)[];
+  /** A light and a dark mark for the section heading. */
+  logo?: { src: string; darkSrc: string };
+  /**
+   * `mad` only: the league's playoff seeding (Archie's MAD POWER 99) and each
+   * franchise's division. `franchiseIds` is then MFL's whole-league feed
+   * order, which is what the seeding is taken from.
+   */
+  seeding?: { divisionLeaders: number; runnersUp: number; wildCards: number };
+  divisionOf?: Record<string, string>;
+  /** Show this many rows, with the rest behind a "show all" button. */
+  collapseAfter?: number;
+}
+
+/** How a league awards Victory Points — MFL's `victoryPoints*` settings. */
+export interface LiveVictoryPointRules {
+  win: number;
+  loss: number;
+  tie: number;
+  /**
+   * Weekly scoring buckets, best first: "3 2 1" splits the week's scores
+   * into thirds worth 3, 2 and 1. Empty when the league has none.
+   */
+  buckets: number[];
+}
+
+export interface LiveStandingsSectionGroup {
+  id: string;
+  title: string;
+  sections: LiveStandingsSection[];
+}
+
+/** One franchise's all-play record. */
+export interface LiveAllPlayRecord {
+  wins: number;
+  losses: number;
+  ties: number;
+  pointsFor: number;
+}
+
+/**
+ * The all-play record every `all-play` section starts from.
+ *
+ * `records` holds the completed weeks only. `weekCounted` says the board's own
+ * week is ALREADY inside them (MFL folded it in before the next kickoff), so
+ * Live and Projected must not add it a second time. `weekInCompetition` is
+ * false once the board's week is past the competition's last week.
+ */
+export interface LiveAllPlayBase {
+  records: Record<string, LiveAllPlayRecord>;
+  weekCounted: boolean;
+  weekInCompetition: boolean;
+}
+
+export interface LiveStandingsSections {
+  groups: LiveStandingsSectionGroup[];
+  /** Null when the all-play read failed; the all-play tables then say so. */
+  allPlay: LiveAllPlayBase | null;
+  /** The league's Victory Point rules, for `mad` sections. */
+  victoryPoints?: LiveVictoryPointRules;
 }
 
 /**

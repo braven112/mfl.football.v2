@@ -24,31 +24,35 @@
 import type { APIRoute } from 'astro';
 import { dispatchWorkflow } from '../../../utils/workflow-dispatch';
 import { lineupCheckDecision } from '../../../utils/sync-cadence';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+
+/** The current-era (2025+) seasons the old `20{2[5-9],[3-9][0-9]}` glob matched. */
+const CURRENT_ERA_FEED = /\/mfl-feeds\/20(?:2[5-9]|[3-9]\d)\//;
 
 /**
- * `import.meta.glob`, never a static import — cron-generated files, see the
- * same note in api/cron/schefter-scan.ts. The FULL schedule rather than the
- * current-week one, so a kickoff is visible however long ago MFL's own week
- * pointer last moved.
+ * Every kickoff instant across leagues and weeks, de-duplicated. The FULL
+ * schedule rather than the current-week one, so a kickoff is visible however
+ * long ago MFL's own week pointer last moved. Cron-generated files, read
+ * through the league-data loader (see the same note in api/cron/schefter-scan.ts).
  */
-const scheduleModules = import.meta.glob(
-  '../../../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
-  { eager: true },
-);
-
-/** Every kickoff instant across leagues and weeks, de-duplicated. */
-const kickoffs: string[] = [
-  ...new Set(
-    Object.values(scheduleModules).flatMap((m) => {
-      const weeks = (m as any)?.default?.fullNflSchedule?.nflSchedule;
-      if (!Array.isArray(weeks)) return [];
-      return weeks.flatMap((w: any) => {
-        const matchups = Array.isArray(w?.matchup) ? w.matchup : w?.matchup ? [w.matchup] : [];
-        return matchups.map((g: any) => g?.kickoff).filter(Boolean);
-      });
-    }),
-  ),
-];
+async function loadKickoffs(): Promise<string[]> {
+  const paths = listLeagueData('data/*/mfl-feeds/*/nflSchedule-full.json').filter((p) =>
+    CURRENT_ERA_FEED.test(p),
+  );
+  const schedules = await Promise.all(paths.map((p) => loadLeagueData<any>(p)));
+  return [
+    ...new Set(
+      schedules.flatMap((data) => {
+        const weeks = data?.fullNflSchedule?.nflSchedule;
+        if (!Array.isArray(weeks)) return [];
+        return weeks.flatMap((w: any) => {
+          const matchups = Array.isArray(w?.matchup) ? w.matchup : w?.matchup ? [w.matchup] : [];
+          return matchups.map((g: any) => g?.kickoff).filter(Boolean);
+        });
+      }),
+    ),
+  ];
+}
 
 export const GET: APIRoute = async ({ request }) => {
   // Fail CLOSED on an unconfigured secret — see api/cron/schefter-scan.ts.
@@ -63,7 +67,7 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const decision = lineupCheckDecision(new Date(), kickoffs);
+  const decision = lineupCheckDecision(new Date(), await loadKickoffs());
   if (!decision.dispatch) {
     return new Response(
       JSON.stringify({ skipped: true, ...decision }),

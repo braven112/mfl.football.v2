@@ -38,7 +38,7 @@
 import type { CanonicalLeagueSlug } from '../../config/leagues';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../league-year';
-import { projectionsForWeek, readLeagueFeed } from '../sunday-ticket-sources';
+import { preloadLeagueFeeds, projectionsForWeek, readLeagueFeed } from '../sunday-ticket-sources';
 import { buildMflExportUrl } from '../mfl-url';
 import { resolveHost } from '../live-scoring-source';
 
@@ -97,10 +97,9 @@ export async function loadLeagueWeekProjections(
 
   // The disk feed is keyed by the LEAGUE year. Using the season year here is
   // the quiet half of this bug — see the header.
-  const committed = projectionsForWeek(
-    readLeagueFeed(league, getLeagueYearForSlug(slug), 'projectedScores.json'),
-    week,
-  );
+  const leagueYear = getLeagueYearForSlug(slug);
+  await preloadLeagueFeeds(league, leagueYear, ['projectedScores.json']);
+  const committed = projectionsForWeek(readLeagueFeed(league, leagueYear, 'projectedScores.json'), week);
   if (committed.size > 0) return committed;
 
   // Empty means the committed copy is for a DIFFERENT week, or the sync has

@@ -9,8 +9,8 @@
  * (src/utils/playoff-bracket-index.mjs); until then it is a 404 and its nav
  * link is hidden.
  *
- * Kept in the route: the globs (a static import specifier cannot be a runtime
- * variable) and the year redirect (`Astro.redirect()` only redirects from a page).
+ * Kept in the route: the feed maps (read through the league-data loader) and
+ * the year redirect (`Astro.redirect()` only redirects from a page).
  */
 import PlayoffsPage from '../../components/shared/playoffs/PlayoffsPage.astro';
 import config from '../../../data/__LEAGUE_SLUG__/__LEAGUE_SLUG__.config.json';
@@ -26,15 +26,21 @@ import {
   loadSeasonBrackets,
   weeklyScoresFor,
 } from '../../utils/playoff-bracket-views';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
 if (!packageRouteHasData(league, 'playoffs.astro')) return Astro.rewrite('/_not-found');
 
-const bracketFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/playoff-brackets.json');
-const standingsFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/standings.json');
-const weeklyResultsFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/weekly-results.json');
+/** A lazy-glob-shaped map over the league-data loader (never a glob: that compiles the data into the function). */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const bracketFeeds = lazy(`${league.dataPath}/mfl-feeds/*/playoff-brackets.json`);
+const standingsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/standings.json`);
+const weeklyResultsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/weekly-results.json`);
 
 // Seasons with real MFL brackets, newest first.
 const candidateYears = Object.keys(bracketFeeds)

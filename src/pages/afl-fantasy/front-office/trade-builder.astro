@@ -2,30 +2,55 @@
 /**
  * Trade Builder (AFL) — thin route wrapper over the shared trade builder
  * (src/components/shared/trade-builder/TradeBuilderPage.astro), which Archie's
- * renders too. The literal globs stay here: a static import specifier cannot
- * be a runtime variable.
+ * renders too. The feed reads stay here, so the shared page never names a
+ * league's data path.
  */
 import TradeBuilderPage from '../../../components/shared/trade-builder/TradeBuilderPage.astro';
 import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getAllTeams, getConferenceShort, type ConferenceId } from '../../../utils/afl-conference';
 import aflLeagueConfig from '../../../../data/afl-fantasy/afl.config.json';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { rosterYears } from '../../../utils/rosters/roster-page-feeds';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('afl-fantasy')!;
 
-const feeds = {
-  rosters: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true }),
-  // Year-filtered (2025+): the bare glob baked ~22 MB of historical
-  // players.json into the server chunk (tests/current-era-feed-globs.test.ts).
-  players: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+// Feeds come through the league-data loader (src/utils/league-data.ts), not
+// eager globs. The shared page renders the newest season with roster data, so
+// every season's rosters.json is read to find it and only that season's other
+// feeds are read. Each entry keeps the `{ [path]: { default } }` shape the
+// shared page's `feedForYear` expects.
+const FEEDS_DIR = `${league.dataPath}/mfl-feeds`;
+async function loadFeedEntries(paths: string[]): Promise<Record<string, { default: unknown }>> {
+  const values = await Promise.all(paths.map((p) => loadLeagueData(p)));
+  const out: Record<string, { default: unknown }> = {};
+  paths.forEach((p, i) => {
+    if (values[i] != null) out[p] = { default: values[i] };
+  });
+  return out;
+}
+
+const rostersFeeds = await loadFeedEntries(listLeagueData(`${FEEDS_DIR}/*/rosters.json`));
+const year = rosterYears(rostersFeeds)[0];
+const yearFeed = (file: string) => (year ? [`${FEEDS_DIR}/${year}/${file}`] : []);
+const [players, adp, picks, tradeBait, tradeBaitByFranchise] = await Promise.all([
+  loadFeedEntries(yearFeed('players.json')),
   // A keeper league values players on the DYNASTY board.
-  adp: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true }),
+  loadFeedEntries(yearFeed('adp-dynasty.json')),
+  loadFeedEntries(yearFeed('futureDraftPicks.json')),
+  loadFeedEntries(yearFeed('tradeBait.json')),
+  loadFeedEntries(yearFeed('tradeBait-by-franchise.json')),
+]);
+const feeds = {
+  rosters: rostersFeeds,
+  players,
+  adp,
   adpFile: 'adp-dynasty.json',
-  picks: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
-  tradeBait: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true }),
-  tradeBaitByFranchise: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
+  picks,
+  tradeBait,
+  tradeBaitByFranchise,
 };
 
 const poolShort = Object.fromEntries(

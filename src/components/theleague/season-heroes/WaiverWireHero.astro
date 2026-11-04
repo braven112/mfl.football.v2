@@ -39,6 +39,7 @@ import { unknownWaiverCopy, waiverClaimsHeroView } from '../../../utils/waiver-c
 import type { EventHeroView } from '../../../utils/league-hero/types';
 import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
 import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
 import PlayerCell from '../../shared/PlayerCell.astro';
 import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -93,10 +94,13 @@ const year = getCurrentSeasonYear(referenceDate);
 let projData: any, playersData: any, rostersData: any;
 if (!compositeView) {
   try {
+    // Through the loader (Blob in production), not a templated import(): Vite
+    // compiles every season a templated import could match into the bundle.
+    const feed = (file: string) => loadLeagueData<any>(leagueFeedPath(getLeagueBySlug('theleague')!.dataPath, year, file));
     [projData, playersData, rostersData] = await Promise.all([
-      import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
-      import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
-      import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+      feed('projectedScores.json'),
+      feed('players.json'),
+      feed('rosters.json'),
     ]);
   } catch {
     projData = null;

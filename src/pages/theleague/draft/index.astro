@@ -14,6 +14,7 @@ import DraftHubPage from '../../../components/shared/draft-hub/DraftHubPage.astr
 import leagueConfigData from '../../../data/theleague.config.json';
 import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 import { resolveConfigForYear } from '../../../utils/team-names';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { buildDraftHubProps } from '../../../utils/draft-hub-data';
@@ -27,10 +28,17 @@ const league = getLeagueBySlug('theleague')!;
 const user = getAuthUser(Astro.request);
 const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
 
+// Lazy `{ path: () => data }` maps — the shape the old lazy globs had — read
+// through the league-data loader, never bundled into the function.
+const lazyFeeds = (file: string) =>
+  Object.fromEntries(
+    listLeagueData(`${league.dataPath}/mfl-feeds/*/${file}`).map((path) => [path, () => loadLeagueData(path)]),
+  );
+
 const props = await buildDraftHubProps({
-  draftFeeds: import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json'),
-  calendarFeeds: import.meta.glob('../../../../data/theleague/mfl-feeds/*/calendar.json'),
-  futurePickFeeds: import.meta.glob('../../../../data/theleague/mfl-feeds/*/futureDraftPicks.json'),
+  draftFeeds: lazyFeeds('draftResults.json'),
+  calendarFeeds: lazyFeeds('calendar.json'),
+  futurePickFeeds: lazyFeeds('futureDraftPicks.json'),
   // Per-league rollover, NOT TheLeague's clock: the AFL flips June 1 and
   // TheLeague Feb 14, so using the latter would put the AFL hub on the wrong
   // season's calendar, future picks and team config for ~3.5 months a year.

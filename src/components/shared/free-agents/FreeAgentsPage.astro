@@ -30,7 +30,8 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../PlayerDetailsModal.astro';
-import { loadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
+import { loadWeeklyPlayerResults, preloadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug, leagueClock, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../../constants/roster-constants';
@@ -171,10 +172,11 @@ const freeAgentsData = snapshotProp as FaSnapshot & Record<string, any>;
 // rather than the derived snapshot — and it MUST, because which season these
 // columns show is a request-time question (`resolveSnapCounts` switches at
 // kickoff) and the snapshot freezes at deploy time.
-const snapCountModules = import.meta.glob(
-  '../../../../data/nfl/snap-counts-*.json',
-  { eager: true }
-);
+// Read through the league-data loader (never a glob, which compiles every
+// season into the serverless function), keyed by path as the resolver expects.
+const snapCountPaths = listLeagueData('data/nfl/snap-counts-*.json');
+const snapCountData = await Promise.all(snapCountPaths.map((p) => loadLeagueData(p)));
+const snapCountModules = Object.fromEntries(snapCountPaths.map((p, i) => [p, snapCountData[i]]));
 // `?testDate=` so /rollover-check can see the kickoff switch here too, and so
 // this page and TheLeague's — forked siblings calling one shared resolver —
 // cannot disagree about which instant they are asking about. Today it reaches
@@ -240,6 +242,12 @@ const statsSeasonYear = freeAgentsData.statsSeasonYear;
 // table and the column that opened it can never name different years. Read off
 // the committed feeds at request time (see weekly-player-results-feed.ts) — no
 // eager glob, so the SSR-slim property this page was refactored for holds.
+// Sync build over preloaded feeds: players.json and weekly-results-raw.json are
+// not shipped inside the function. A failed preload leaves the modal's Season
+// Results empty rather than failing the page.
+await preloadWeeklyPlayerResults(league.dataPath, statsSeasonYear).catch((err) =>
+  console.error('[free-agents] Season Results preload failed:', err),
+);
 const weeklyPlayerResults = loadWeeklyPlayerResults(league.dataPath, statsSeasonYear);
 
 const hasAdp = freeAgentsData.hasAdp;

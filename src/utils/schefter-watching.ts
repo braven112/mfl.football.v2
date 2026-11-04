@@ -19,14 +19,13 @@
  * never to a failed page.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { LeagueDefinition } from '../config/leagues';
 import type { SchefterPost } from '../types/schefter';
 import { getWatchedPlayerIds } from './watch-list-store';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { getPlayerMap } from './player-map';
 import { postPlayerIds } from './schefter-player-tagger.mjs';
+import { leagueFeedPath, loadLeagueData } from './league-data';
 
 /** Is this post about anyone in the set? Reads structural AND prose-matched ids. */
 export function postMentionsAny(post: SchefterPost, ids: Set<string>): boolean {
@@ -127,10 +126,9 @@ export interface WatchHit {
 }
 
 /** Player ids on a franchise's roster from the committed MFL feed. */
-function rosterIdsFromFeed(league: LeagueDefinition, year: number, franchiseId: string): Set<string> {
+async function rosterIdsFromFeed(league: LeagueDefinition, year: number, franchiseId: string): Promise<Set<string>> {
   try {
-    const file = join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), 'rosters.json');
-    const raw = JSON.parse(readFileSync(file, 'utf8'));
+    const raw = await loadLeagueData<any>(leagueFeedPath(league.dataPath, year, 'rosters.json'));
     const franchises = raw?.rosters?.franchise;
     const list = Array.isArray(franchises) ? franchises : franchises ? [franchises] : [];
     const mine = list.find((f: { id?: string }) => String(f?.id) === franchiseId);

@@ -11,11 +11,18 @@ import OwnerMapPage from '../../components/shared/owner-map/OwnerMapPage.astro';
 import { franchiseIdForLeague, getAuthUser, isAuthorizedForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
 import { readHometowns } from '../../utils/owner-hometowns';
 import { getLeagueBySlug } from '../../config/leagues';
-import ownerData from '../../../data/theleague/derived/owner-tenures.json';
-import history from '../../../data/theleague/derived/franchise-history.json';
-import historyData from '../../../data/theleague/derived/league-history.json';
 import type { OwnerTenuresFile } from '../../types/owner-tenures';
 import type { OwnerMapHistory } from '../../utils/owner-map';
+import { loadLeagueData } from '../../utils/league-data';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const [ownerData, history, historyData] = (await Promise.all([
+  loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`),
+  loadLeagueData(`${THELEAGUE_DATA}/derived/franchise-history.json`),
+  loadLeagueData(`${THELEAGUE_DATA}/derived/league-history.json`),
+])) as [any, any, any];
 
 export const prerender = false;
 const LEAGUE = getLeagueBySlug('theleague')!;

@@ -679,3 +679,22 @@ still render the old `LiveBroadcastPage`.
   call it — `tests/broadcast-tv-pass-scope.test.ts` pins that.
 - A dead pass is cleared by the board route, not by `/tv`, so the two pages
   cannot bounce a revoked TV between them.
+
+## 2026-10-28 — Fire TV: the same app, an APK for the Amazon Appstore
+
+- Fire TV (the Fire OS models) runs the Google TV app unchanged:
+  `leanback` and `touchscreen` are already `required="false"` and nothing uses
+  Google Play services. Amazon takes an **APK, not a bundle**, so
+  `android-tv.yml` now also runs `assembleRelease` when the upload key is
+  configured and uploads it as the `mfl-live-tv-release-apk` artifact. It is
+  signed with the same upload key as the Play bundle and shares its
+  `versionCode` (the run number), which both stores require to rise.
+- Submitting is manual, in the Amazon Appstore Developer Console: target only
+  the Fire OS devices (the Vega OS sticks cannot run Android apps), 1920x1080
+  screenshots, the existing privacy policy, then review.
+- The score overlay is the one unproven part on Fire TV. Fire OS may hide the
+  "display over other apps" screen; `OverlayActivity.openOverlaySettings`
+  already catches the missing screen rather than crashing. The Watch list's
+  YouTube TV hand-off names the Google TV package
+  (`com.google.android.youtube.tvunplugged`), which may differ on Fire TV.
+  Test both on a real Fire TV before relying on them.

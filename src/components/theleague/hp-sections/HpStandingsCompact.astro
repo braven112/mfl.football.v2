@@ -11,6 +11,7 @@ import { getContextualRows } from '../../../utils/homepage-dashboard';
 import { getLeagueStandings } from '../../../utils/standings';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
 import TeamIconCell from '../../shared/TeamIconCell.astro';
+import { theleagueDivisionChampionBadge } from '../../../utils/theleague-awards';
 import config from '../../../data/theleague.config.json';
 
 interface Props {
@@ -56,6 +57,9 @@ interface StandingRow {
   capSpace: number;
   isUser: boolean;
   icon?: string;
+  /** The division champion shield for a division leader (seeds 1-4): the title in play, not yet won. */
+  divisionBadge?: string | null;
+  divisionLabel?: string;
 }
 
 let rows: StandingRow[] = [];
@@ -88,6 +92,9 @@ if (hasGamesPlayed) {
       capSpace: capMap.get(t.id) ?? 0,
       isUser: t.id === userFranchiseId,
       icon: team?.icon,
+      // MFL's first row of each division is its leader, seeded 1-4
+      divisionBadge: (t.seed ?? idx + 1) <= 4 ? theleagueDivisionChampionBadge(t.division) : null,
+      divisionLabel: `${t.division} division leader`,
     };
   });
 } else {
@@ -211,6 +218,16 @@ const formatCap = (v: number) => {
             <td class="hp-standings__td hp-standings__td--rank">{row.rank}</td>
             <td class="hp-standings__td hp-standings__td--team">
               <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
+              {row.divisionBadge && (
+                <img
+                  class="hp-standings__div-badge"
+                  src={row.divisionBadge}
+                  alt={row.divisionLabel}
+                  width="22"
+                  height="28"
+                  loading="lazy"
+                />
+              )}
             </td>
             {hasGamesPlayed && (
               <td class="hp-standings__td hp-standings__td--record">{row.record}</td>
@@ -351,6 +368,14 @@ const formatCap = (v: number) => {
     gap: 0.5rem;
     font-weight: 500;
     color: var(--color-gray-800, #1f2937);
+  }
+
+  /* The division champion shield beside a division leader, smaller than the
+     crest; the art carries its own white edge, so it reads on either card. */
+  .hp-standings__div-badge {
+    flex-shrink: 0;
+    width: auto;
+    height: 1.75rem;
   }
 
   .hp-standings__td--record {

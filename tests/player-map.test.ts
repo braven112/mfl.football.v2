@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 
-// Mock fs before importing the module
+// Mock fs before importing the module. player-map reads through the
+// league-data loader, whose disk path checks existsSync before reading.
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
   readdirSync: vi.fn(),
+  existsSync: vi.fn(() => true),
 }));
 
 const mockReadFileSync = vi.mocked(readFileSync);

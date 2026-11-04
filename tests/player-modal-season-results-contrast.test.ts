@@ -11,7 +11,8 @@ import { resolve } from 'node:path';
  * so the table's text floor is the semantic `--content-text-muted`. On a
  * phone it also scrolled sideways with "Rank vs QB" cut off: below 640px the
  * long half of each header is visually hidden (still read aloud) and the
- * opponent column drops its min-width.
+ * opponent column drops its min-width. Since Nov 2026 the opponent's rank sits
+ * inside the opponent cell, so the Avg vs / Rank vs columns are gone entirely.
  *
  * The rest of the card had the same flaw (follow-up #1289): its labels,
  * section titles and descriptions used raw gray-400/500. gray-400 is only
@@ -68,7 +69,11 @@ describe('Season Results table stays readable', () => {
   });
 
   it('shortens its headers on a phone so the table does not scroll sideways', () => {
-    expect(SRC).toMatch(/<th class="wr-rank" id="wr-rank-header">Rank<span class="wr-hdr-long">/);
+    // The opponent column carries the matchup rank inside it (Nov 2026); its
+    // long header half "(rank vs RB)" is the part a phone hides.
+    expect(SRC).toMatch(/<th class="wr-opp" id="wr-opp-header">Opp<span class="wr-hdr-long">/);
+    // The two columns that made it scroll sideways must not come back.
+    expect(SRC).not.toMatch(/<th class="wr-(avg|rank)"/);
     const phone = mediaBlock('@media (max-width: 640px)');
     const hide = phone.match(/\.weekly-results-table \.wr-hdr-long\s*\{([^}]*)\}/);
     expect(hide, 'header-shortening rule must live inside the phone media query').toBeTruthy();

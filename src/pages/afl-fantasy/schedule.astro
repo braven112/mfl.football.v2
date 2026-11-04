@@ -19,19 +19,29 @@ import SchedulePage from '../../components/shared/schedule/SchedulePage.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { franchiseIdForLeague, getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
-const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', {
-  eager: true,
-  import: 'default',
-});
-const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
-  eager: true,
-  import: 'default',
-});
-
 const league = getLeagueBySlug('afl-fantasy')!;
+
+// Every season's schedule (the year picker offers each season that has games)
+// and standings, read through the league-data loader (src/utils/league-data.ts)
+// instead of being bundled into the server function. Keyed by path, the shape
+// the shared page reads its years from.
+async function loadEverySeason(file: string): Promise<Record<string, unknown>> {
+  const paths = listLeagueData(`${league.dataPath}/mfl-feeds/*/${file}`);
+  const values = await Promise.all(paths.map((p) => loadLeagueData(p)));
+  const out: Record<string, unknown> = {};
+  paths.forEach((p, i) => {
+    if (values[i] != null) out[p] = values[i];
+  });
+  return out;
+}
+const [scheduleFeeds, standingsFeeds] = await Promise.all([
+  loadEverySeason('schedule.json'),
+  loadEverySeason('standings.json'),
+]);
 const viewerFranchiseId = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
 ---
 

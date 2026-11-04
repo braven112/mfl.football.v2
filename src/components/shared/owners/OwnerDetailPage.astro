@@ -101,12 +101,14 @@ const trophies = [
 ].filter(Boolean) as { label: string; detail: string }[];
 
 /**
- * The league's own award badges — `totals.awards` is the AFL's award ledger
+ * The league's own awards — `totals.awards` is the AFL's award ledger
  * placed on whoever held the winning slot that season, so a departed owner's
  * 2007 division title shows here and nowhere else. One chip per award type,
- * in trophy-room order, wearing the same branded art as the franchise page's
- * trophy case; the years go in the tooltip like every other chip. Empty for
- * a league with no award ledger, so TheLeague's page renders exactly as before.
+ * in trophy-room order; the years go in the tooltip like every other chip.
+ * Text only: these are titles WON, and a won title's art is its pennant in the
+ * Rafters on this same page, never the league-wide badge (Brandon, Oct
+ * 2026; tests/championship-mark-rule.test.ts). Empty for a league with no
+ * award ledger, so TheLeague's page renders exactly as before.
  */
 // Loaded only when there is something to render: the award module carries the
 // AFL's ledger and config, and TheLeague's owner pages (empty `awards`) should
@@ -118,7 +120,6 @@ const awardChips = (awards: OwnerAward[]) =>
     if (years.length === 0) return [];
     return [{
       label: years.length === 1 ? type.label : `${type.label} ×${years.length}`,
-      badge: awardMeta!.getAwardBadge(type.slug),
       title: `${type.label}: ${years.join(', ')}`,
     }];
   });
@@ -280,7 +281,7 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
       {careerAwardChips.length > 0 && (
         <div class="trophy-chips trophy-chips--awards">
           {careerAwardChips.map((chip) => (
-            <span class="era-award" title={chip.title}><img class="era-award-badge" src={chip.badge} alt="" width="16" height="16" loading="lazy" />{chip.label}</span>
+            <span class="era-award" title={chip.title}>{chip.label}</span>
           ))}
         </div>
       )}
@@ -576,12 +577,6 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
     cursor: help;
   }
   .trophy-chips--awards { margin-top: 0.5rem; }
-  .era-award-badge {
-    width: 1rem;
-    height: 1rem;
-    vertical-align: -0.2em;
-    margin-right: 0.25rem;
-  }
 
   .tenures { margin-bottom: 2rem; }
 

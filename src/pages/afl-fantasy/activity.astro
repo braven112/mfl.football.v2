@@ -2,9 +2,10 @@
 /**
  * Owner Activity (AFL) — thin route wrapper.
  *
- * The page is components/shared/OwnerActivityPage; the gate and the globs stay
- * here (Astro.rewrite only works from a page, and a static import specifier
- * can't be a runtime variable). Private by default:
+ * The page is components/shared/OwnerActivityPage; the gate and the feed maps
+ * stay here (Astro.rewrite only works from a page, and the shared page never
+ * names a league's data path). The maps are lazy and read through the
+ * league-data loader (src/utils/league-data.ts). Private by default:
  * src/utils/owner-activity-access.ts.
  */
 import OwnerActivityPage from '../../components/shared/OwnerActivityPage.astro';
@@ -13,6 +14,8 @@ import { resolveOwnerActivityAccess } from '../../utils/owner-activity-access';
 import { loginUrlForRequest, forbiddenPathFor } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueContext } from '../../utils/league-context';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
@@ -22,8 +25,12 @@ const access = await resolveOwnerActivityAccess(getAuthUser(Astro.request), leag
 if (access.kind === 'login') return Astro.redirect(loginUrlForRequest(Astro, league));
 if (access.kind === 'forbidden') return Astro.rewrite(forbiddenPathFor(league, 'admin'));
 
-const transactionFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json');
-const lastVisitFiles = import.meta.glob('../../../data/afl-fantasy/owner-last-visit.json');
+const lazyFeeds = (paths: string[]): LazyFeedGlob =>
+  Object.fromEntries(paths.map((p) => [p, () => loadLeagueData(p)]));
+// This route's own data, whatever host the request came in on.
+const dataPath = getLeagueBySlug('afl-fantasy')!.dataPath;
+const transactionFeeds = lazyFeeds(listLeagueData(`${dataPath}/mfl-feeds/*/transactions.json`));
+const lastVisitFiles = lazyFeeds(listLeagueData(`${dataPath}/owner-last-visit.json`));
 ---
 
 <OwnerActivityPage

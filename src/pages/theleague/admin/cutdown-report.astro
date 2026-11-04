@@ -20,8 +20,6 @@
  * never be linked from a public surface before the deadline.
  * SECURITY: never reads autocut:cred:* keys; no credential material here.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../../components/shared/PlayerCell.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
@@ -35,6 +33,7 @@ import { getAugustCutdownDate, parseTransactions } from '../../../utils/contract
 import { TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
 import { selectAutoMoves } from '../../../utils/august-cut-selection';
 import { getPlayerMap } from '../../../utils/player-map';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
 import { chooseTeamName } from '../../../utils/team-names';
 import { DEFAULT_LEAGUE, getLeagueBySlug } from '../../../config/leagues';
 import leagueConfig from '../../../data/theleague.config.json';
@@ -62,15 +61,16 @@ const now = new Date();
 
 const toArray = (value: any): any[] =>
   Array.isArray(value) ? value : value === null || value === undefined ? [] : [value];
-function readJsonFile(relativePath: string): any {
+// League data is read through the loader (Blob in production): some of these
+// feeds no longer ship inside the function. Missing or unreadable → null.
+async function readJsonFile(relativePath: string): Promise<any> {
   try {
-    const filePath = path.join(process.cwd(), relativePath);
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return await loadLeagueData<any>(relativePath);
   } catch {
     return null;
   }
 }
+const feed = (file: string) => leagueFeedPath(DEFAULT_LEAGUE.dataPath, year, file);
 
 // ---------------------------------------------------------------------------
 // Reads: Redis first, committed report file as fallback
@@ -92,7 +92,7 @@ if (redis) {
 }
 if (!snapshot) {
   // Committed permanent record (may not exist yet — pre-first-run).
-  const report = readJsonFile(path.join(DEFAULT_LEAGUE.dataPath, 'august-cuts', `${year}-report.json`));
+  const report = await readJsonFile(`${DEFAULT_LEAGUE.dataPath}/august-cuts/${year}-report.json`);
   if (report && typeof report === 'object' && report.franchises) {
     snapshot = report;
     snapshotSource = 'file';
@@ -125,7 +125,7 @@ if (redis) {
 // for over-limit franchises the deadline job hasn't snapshotted yet (pure
 // roster math — no owner credential needed).
 const rosterData = await liveRostersFeed(
-  readJsonFile(path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'rosters.json')),
+  await readJsonFile(feed('rosters.json')),
   year,
   DEFAULT_LEAGUE.id,
 );
@@ -150,9 +150,7 @@ for (const fr of toArray(rosterData?.rosters?.franchise)) {
 // "not computed" rather than computing an unordered guess or 500-ing.
 // The committed feed is a once-a-day snapshot, so the last 3 days come live
 // from MFL on top of it (null without Redis — the snapshot alone).
-const transactionsData = readJsonFile(
-  path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'transactions.json'),
-);
+const transactionsData = await readJsonFile(feed('transactions.json'));
 const recentTransactions = transactionsData
   ? await getCachedRecentTransactions(String(year), DEFAULT_LEAGUE.id)
   : null;
@@ -178,12 +176,8 @@ for (const txn of parsedTransactions ?? []) {
 // spots before anyone is cut). Missing feeds → empty list → the live slate
 // degrades to pure cut behavior rather than failing the page.
 const rookiePriority = buildRookiePriorityFromFeeds({
-  playersFeed: readJsonFile(
-    path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'players.json'),
-  ),
-  draftResultsFeed: readJsonFile(
-    path.join(DEFAULT_LEAGUE.dataPath, 'mfl-feeds', String(year), 'draftResults.json'),
-  ),
+  playersFeed: await readJsonFile(feed('players.json')),
+  draftResultsFeed: await readJsonFile(feed('draftResults.json')),
 });
 
 // Live slate computation requires both feeds: the roster (activeRoster + the

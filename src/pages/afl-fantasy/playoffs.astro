@@ -15,7 +15,6 @@ import AflPlayoffPrizes from '../../components/afl-fantasy/AflPlayoffPrizes.astr
 import { getConferenceStandings } from '../../utils/standings';
 import { formatRecord, type SeededTeam } from '../../utils/playoffs';
 import {
-  bracketFeedForYear,
   bracketWeeks,
   buildBracketViews,
   loadSeasonBrackets,
@@ -35,7 +34,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
-import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import { buildBracketKindResolver } from '../../utils/afl-bracket-kind.mjs';
 
 export const prerender = false;
@@ -74,21 +73,12 @@ const preferredTeamId = resolveAFLTeamSelection({
 
 const AFL_LEAGUE = getLeagueBySlug('afl-fantasy')!;
 
-const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const bracketFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/playoff-brackets.json', {
-  eager: true,
-});
-// Per-season division/conference structure — see applySeasonStructure below.
-const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
-  eager: true,
-});
-const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
-  eager: true,
-});
+// Feeds are read through the league-data loader (src/utils/league-data.ts),
+// for the selected season only, rather than bundled for every season.
+const FEEDS_DIR = `${AFL_LEAGUE.dataPath}/mfl-feeds`;
+const feedPath = (year: number, file: string) => `${FEEDS_DIR}/${year}/${file}`;
 
-const availableYears = Object.keys(standingsFeeds)
+const availableYears = listLeagueData(`${FEEDS_DIR}/*/standings.json`)
   .map(path => {
     const match = path.match(/\/(\d{4})\/standings\.json$/);
     return match ? parseInt(match[1], 10) : null;
@@ -111,7 +101,16 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
 }
 
-const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
+const [standingsFile, bracketFeed, seasonLeagueFeed, weeklyResultsFeed, reconstructedBracketsFile] = await Promise.all([
+  loadLeagueData(feedPath(selectedYear, 'standings.json')),
+  loadLeagueData<any>(feedPath(selectedYear, 'playoff-brackets.json')),
+  // Per-season division/conference structure — see applySeasonStructure below.
+  loadLeagueData(feedPath(selectedYear, 'league.json')),
+  loadLeagueData(feedPath(selectedYear, 'weekly-results.json')),
+  loadLeagueData<any>(`${AFL_LEAGUE.dataPath}/derived/reconstructed-playoff-brackets.json`),
+]);
+
+const selectedFeed = (standingsFile ?? undefined) as
   | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 
@@ -140,9 +139,7 @@ if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
 // this, seeding an archived season groups it by today's map — 12 conference
 // seasons between 2003 and 2016 seeded differently than the standings page for
 // the same year, which is a self-contradiction, not just a cosmetic drift.
-const seasonStructure = extractSeasonStructure(
-  leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
-);
+const seasonStructure = extractSeasonStructure(seasonLeagueFeed);
 const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
 
 // Get conference standings for both conferences. MFL's feed order is the
@@ -267,7 +264,6 @@ if (preferredTeamId) {
   }
 }
 
-const bracketFeed = bracketFeedForYear(bracketFeeds, selectedYear);
 const bracketMetasFromFeed = bracketFeed?.playoffBrackets?.playoffBracket || [];
 // Brackets rebuilt from schedule.json for seasons MFL only ever gave seeds for
 // (2003-2023). Advisory, never a substitute for real MFL data — see
@@ -298,7 +294,7 @@ const bracketKind = buildBracketKindResolver(bracketMetasFromFeed as any[], brac
 
 const weeksNeeded = bracketWeeks(sortedBrackets);
 const weeklyScores = weeklyScoresFor(
-  weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`],
+  weeklyResultsFeed,
   weeksNeeded
 );
 

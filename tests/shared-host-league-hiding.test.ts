@@ -9,6 +9,7 @@ import {
 } from '../src/config/leagues';
 import { crossHostLeagueHref } from '../src/config/leagues';
 import { getLeagueSwitchTargets } from '../src/utils/nav-utils';
+import { siteExampleLeagues } from '../src/data/league-showcase';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -212,11 +213,15 @@ describe('nothing on the shared host links into a hidden league', () => {
     }
   });
 
-  it('both splash link surfaces go through it — the panels AND the cards', () => {
+  it('every splash link into a league goes through it — the example panels and the hero button', () => {
+    // The What's New cards left the splash in Nov 2026; the example panels and
+    // the hero's "See a live league site" button are the league links now.
     const src = read('src/pages/index.astro');
     expect(src).toContain('crossHostLeagueHref');
     expect(src).toMatch(/href=\{hrefFromHere\(`\/\$\{league\.slug\}`\)\}/);
-    expect(src).toMatch(/href=\{hrefFromHere\(entry\.detailPath\)\}/);
+    expect(src).toMatch(/href=\{hrefFromHere\(`\/\$\{examples\[0\]\.slug\}`\)\}/);
+    expect(src, 'a bare league path 404s on the shared host')
+      .not.toMatch(/href=\{`\/\$\{(league|examples\[0\])\.slug\}`\}/);
   });
 
   it('the switcher shares that helper rather than re-deciding it', () => {
@@ -292,34 +297,31 @@ describe('the splash advertises only the full-management leagues', () => {
     expect(ALL_LEAGUES.some((l) => !l.bestBall), 'a full-management league exists').toBe(true);
   });
 
-  it('derives the advertised set from registry flags rather than listing slugs', () => {
-    // Same derivation BOTH_LEAGUES uses for the changelog. A slug list reads
-    // identically today and diverges the day a league is added — the failure
-    // this file's opening docblock describes, arrived at from a new direction.
-    // `advertiseOnSharedHost: false` keeps a package league (archies) off the
-    // splash until the site owner lists it.
-    expect(src).toMatch(/ALL_LEAGUES\.filter\(\s*\(league\) => !league\.bestBall && league\.advertiseOnSharedHost !== false/);
+  it('takes its example leagues from the showcase, which applies the registry flags', () => {
+    // Nov 2026: the splash stopped listing every advertised league and shows
+    // hand-picked EXAMPLES of a site we built (Brandon: The League only, for
+    // now; not the AFL). The pick is `siteExample` in league-showcase.ts, and
+    // it sits ON TOP of showcaseLeagues, so best-ball and unlisted package
+    // leagues stay excluded however the pick changes.
+    expect(src).toContain('const examples = siteExampleLeagues()');
+    const showcase = read('src/data/league-showcase.ts');
+    expect(showcase).toMatch(/showcaseLeagues\(\)\.filter\(\(l\) => l\.showcase\.siteExample\)/);
+    expect(showcase).toMatch(/!l\.bestBall && l\.advertiseOnSharedHost !== false/);
   });
 
-  it('renders the panels from that set, not from ALL_LEAGUES', () => {
-    // The one-character regression: restoring `ALL_LEAGUES.map` in the markup
-    // puts the panel back while every other assertion here still passes.
-    expect(src).toMatch(/\{splashLeagues\.map\(\(league\) => \{/);
+  it('never makes a best-ball or unlisted league an example', () => {
+    const picked = siteExampleLeagues();
+    expect(picked.length, 'the splash needs at least one example').toBeGreaterThan(0);
+    for (const league of picked) {
+      expect(league.bestBall, `${league.name} is best ball`).toBeFalsy();
+      expect(league.advertiseOnSharedHost, `${league.name} is unlisted`).not.toBe(false);
+    }
+  });
+
+  it('renders the panels from the examples, not from ALL_LEAGUES', () => {
+    expect(src).toMatch(/\{examples\.map\(\(league\) => \{/);
     expect(src, 'the panels must not iterate the full registry')
       .not.toMatch(/\{ALL_LEAGUES\.map\(\(league\) => \{/);
-  });
-
-  it('counts the headline from the advertised set, not the registry', () => {
-    // "Three Leagues. One Home." over two panels is the visible half of
-    // forgetting that these are now two different numbers.
-    expect(src).toContain('const leagueCount = splashLeagues.length');
-  });
-
-  it('scopes the What’s New feed to the same set', () => {
-    // A card for a league the page offers no way into, linking to a league
-    // prefix the splash no longer names.
-    expect(src).toMatch(/getLatestWhatsNewAcrossLeagues\(\s*6,\s*splashLeagues\.map/);
-    expect(src).toContain('advertisedNavSlugs.has(slug)');
   });
 
   /**

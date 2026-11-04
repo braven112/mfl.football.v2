@@ -4,10 +4,8 @@
  *
  * Shared implementation lives in components/shared/schedule/SchedulePage.
  *
- * The feeds and the config are imported HERE because a static import specifier
- * can't be a runtime variable, and globbing both leagues' feeds inside the
- * shared component would ship the other league's season on every render of
- * either route.
+ * The feeds and the config are read HERE so the shared component stays
+ * league-neutral and never reads the other league's seasons.
  *
  * The viewer's franchise is resolved here too: `franchiseIdForLeague` is the
  * one answer to "is this visitor an owner HERE" — both leagues have a
@@ -19,19 +17,24 @@ import SchedulePage from '../../components/shared/schedule/SchedulePage.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { franchiseIdForLeague, getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
 
-const scheduleFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/schedule.json', {
-  eager: true,
-  import: 'default',
-});
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-  import: 'default',
-});
-
 const league = getLeagueBySlug('theleague')!;
+
+// SchedulePage picks the season from every year's schedule (the newest one
+// with games), so every season is read — through the league-data loader,
+// never bundled into the function — and handed over in the `{ path: data }`
+// shape the old eager globs had.
+const loadAll = async (pattern: string): Promise<Record<string, unknown>> =>
+  Object.fromEntries(
+    await Promise.all(listLeagueData(pattern).map(async (path) => [path, await loadLeagueData(path)] as const)),
+  );
+const [scheduleFeeds, standingsFeeds] = await Promise.all([
+  loadAll(`${league.dataPath}/mfl-feeds/*/schedule.json`),
+  loadAll(`${league.dataPath}/mfl-feeds/*/standings.json`),
+]);
 const viewerFranchiseId = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
 ---
 

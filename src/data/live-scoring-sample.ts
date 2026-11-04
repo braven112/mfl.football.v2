@@ -30,9 +30,8 @@
  * the team-color gradient via the row onError).
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { getPlayer } from '../utils/player-map';
+import { getPlayer, preloadPlayerIdentity } from '../utils/player-map';
+import { leagueFeedPath, listLeagueData, preloadLeagueData, readLeagueDataSync } from '../utils/league-data';
 import { normalizeTeamCode } from '../utils/nfl-logo';
 import { DEFAULT_LEAGUE_SLUG, getLeagueBySlug } from '../config/leagues';
 import type {
@@ -90,13 +89,59 @@ const posRank = (pos: string | undefined): number => {
   return i === -1 ? POSITION_ORDER.length : i;
 };
 
-const readJson = (path: string): any => {
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8'));
-  } catch {
-    return null;
+/**
+ * League data, read through src/utils/league-data.ts (the store, in
+ * production). The builders below are sync; their caller awaits
+ * {@link preloadLiveScoringSample} / {@link preloadCurrentRosterSample} first.
+ */
+const readJson = (path: string): any => readLeagueDataSync(path);
+
+/** Feed years on file for a league, newest first. */
+function feedYears(dataPath: string): number[] {
+  return listLeagueData(leagueFeedPath(dataPath, '*', 'league.json'))
+    .map((p) => Number(p.split('/').at(-2)))
+    .filter((y) => Number.isInteger(y))
+    .sort((a, b) => b - a);
+}
+
+/**
+ * How many of the newest seasons {@link getLiveScoringSample} is preloaded
+ * for. The last completed regular season is the current one or the one
+ * before — or the one before THAT while a freshly created league year's
+ * directory sits ahead of an in-progress season. A season further back is not
+ * preloaded, and weekly-results-raw.json is not shipped inside the function,
+ * so the scan cannot reach it in production.
+ */
+const SAMPLE_SEASONS_PRELOADED = 3;
+
+/** Load what {@link getLiveScoringSample} reads for `slug`. */
+export async function preloadLiveScoringSample(opts: { slug?: string } = {}): Promise<void> {
+  const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
+  if (!league) return;
+  const years = feedYears(league.dataPath).slice(0, SAMPLE_SEASONS_PRELOADED);
+  const paths: string[] = [];
+  for (const year of years) {
+    for (const f of ['league.json', 'weekly-results-raw.json', 'nflSchedule.json']) {
+      paths.push(leagueFeedPath(league.dataPath, year, f));
+    }
+    paths.push(`src/data/mfl-player-salaries-${year}.json`);
   }
-};
+  await Promise.all([preloadLeagueData(paths), preloadPlayerIdentity(years)]);
+}
+
+/** Load what {@link getCurrentRosterSample} reads for this league-year. */
+export async function preloadCurrentRosterSample(opts: { slug?: string; year: number }): Promise<void> {
+  const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
+  if (!league) return;
+  await Promise.all([
+    preloadLeagueData(
+      ['rosters.json', 'schedule.json', 'adp-redraft.json', 'league.json', 'nflSchedule.json'].map((f) =>
+        leagueFeedPath(league.dataPath, opts.year, f),
+      ),
+    ),
+    preloadPlayerIdentity([opts.year]),
+  ]);
+}
 
 /** MFL feeds often return a lone object where a list is possible. */
 const asArray = <T>(x: T | T[] | undefined | null): T[] =>
@@ -195,21 +240,11 @@ interface FinalWeek {
  * skips a not-yet-started upcoming season whose weekly-results are still stubs.
  */
 function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
-  const feedsDir = join(process.cwd(), dataPath, 'mfl-feeds');
-  let years: number[] = [];
-  try {
-    years = readdirSync(feedsDir)
-      .filter((name) => /^\d{4}$/.test(name))
-      .map(Number)
-      .sort((a, b) => b - a); // newest first
-  } catch {
-    return null;
-  }
+  const years = feedYears(dataPath); // newest first
 
   for (const year of years) {
-    const yearDir = join(feedsDir, String(year));
-    const league = readJson(join(yearDir, 'league.json'))?.league;
-    const raw = readJson(join(yearDir, 'weekly-results-raw.json'));
+    const league = readJson(leagueFeedPath(dataPath, year, 'league.json'))?.league;
+    const raw = readJson(leagueFeedPath(dataPath, year, 'weekly-results-raw.json'));
     if (!league || !Array.isArray(raw)) continue;
 
     const week = parseInt(league.lastRegularSeasonWeek, 10);
@@ -291,7 +326,7 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
  * covers every team, so this is defensive only.
  */
 function buildFallbackLineup(year: number, fid: string, week: number): StarterSeed[] {
-  const salaries = readJson(join(process.cwd(), 'src/data', `mfl-player-salaries-${year}.json`));
+  const salaries = readJson(`src/data/mfl-player-salaries-${year}.json`);
   const list = asArray<any>(salaries?.players).filter(
     (p) => p?.franchiseId === fid && posRank(p.position) < POSITION_ORDER.length,
   );
@@ -343,7 +378,7 @@ function buildGamePhases(dataPath: string, year: number, week: number): {
 } {
   const byTeam = new Map<string, GamePhase>();
   const rawGames: RawGame[] = [];
-  const data = readJson(join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'nflSchedule.json'));
+  const data = readJson(leagueFeedPath(dataPath, year, 'nflSchedule.json'));
   const wk = asArray<any>(data?.fullNflSchedule?.nflSchedule).find(
     (w) => parseInt(w.week, 10) === week,
   );
@@ -682,9 +717,9 @@ export function getCurrentRosterSample(opts: { slug?: string; year: number }): L
   };
   if (!league) return empty;
 
-  const dir = join(process.cwd(), league.dataPath, 'mfl-feeds', String(opts.year));
-  const rosters = readJson(join(dir, 'rosters.json'))?.rosters?.franchise;
-  const schedule = readJson(join(dir, 'schedule.json'))?.schedule;
+  const feed = (file: string) => readJson(leagueFeedPath(league.dataPath, opts.year, file));
+  const rosters = feed('rosters.json')?.rosters?.franchise;
+  const schedule = feed('schedule.json')?.schedule;
   if (!rosters || !schedule) return empty;
 
   // Week 1's real pairings. Both leagues play doubleheaders, so this is one
@@ -701,11 +736,11 @@ export function getCurrentRosterSample(opts: { slug?: string; year: number }): L
   // Rank by redraft ADP so a franchise's best players start, rather than
   // whatever order MFL happened to return its roster in.
   const adpRank = new Map<string, number>();
-  for (const row of asArray<any>(readJson(join(dir, 'adp-redraft.json'))?.adp?.player)) {
+  for (const row of asArray<any>(feed('adp-redraft.json')?.adp?.player)) {
     if (row?.id) adpRank.set(String(row.id), Number(row.averagePick) || Number.MAX_SAFE_INTEGER);
   }
 
-  const starterSlots = resolveStarterSlots(readJson(join(dir, 'league.json'))?.league);
+  const starterSlots = resolveStarterSlots(feed('league.json')?.league);
 
   const players: Record<string, LivePlayerRow[]> = {};
   const bench: Record<string, LivePlayerRow[]> = {};

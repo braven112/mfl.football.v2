@@ -11,14 +11,18 @@ import { resolveGauntletViewLazy, resolveGauntletViewerTeam, type GauntletDerive
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeaguePersona } from '../../utils/persona-server';
 import { personaLabels } from '../../utils/persona.mjs';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
-// Lazy glob: weekly issues are retained forever (published articles point at
-// them), so only the selected year's latest file is imported per request —
-// an eager glob would bundle every archived issue into the server chunk.
-const files = import.meta.glob<GauntletDerived>(
-  '../../../data/afl-fantasy/derived/schedule-strength-*.json',
-  { import: 'default' }
+// Lazy map, read through the league-data loader (src/utils/league-data.ts):
+// weekly issues are retained forever (published articles point at them), so
+// only the selected year's latest file is read per request.
+const files: Record<string, () => Promise<GauntletDerived>> = Object.fromEntries(
+  listLeagueData(`${getLeagueBySlug('afl-fantasy')!.dataPath}/derived/schedule-strength-*.json`).map((p) => [
+    p,
+    () => loadLeagueData<GauntletDerived>(p) as Promise<GauntletDerived>,
+  ])
 );
 
 const view = await resolveGauntletViewLazy({

@@ -21,7 +21,7 @@ import {
   isMockWindowOpen,
   type MockGateCopy,
 } from './afl-mock-draft';
-import { buildDraftPlayers, isDraftablePosition } from './build-draft-players';
+import { buildDraftPlayers, isDraftablePosition, preloadDraftPlayers } from './build-draft-players';
 import { getConferenceShort, getTeam, type ConferenceId } from './afl-conference';
 import { getCurrentLeagueYear } from './league-year';
 import { queueScope } from './draft-queue-storage';
@@ -138,6 +138,7 @@ export async function resolveAflMock(input: {
   // different person — so an AFL id could only ever unlock it by collision.
   const needsPool = input.needsPool || isMockWindowOpen(context.window);
   const keep = new Set(input.keepPlayerIds ?? []);
+  if (needsPool) await preloadDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' });
   const players = needsPool
     ? availablePlayers(
         buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' }),

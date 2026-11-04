@@ -17,10 +17,9 @@
  * ```
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { normalizeTeamCode } from './nfl-logo';
-import type { CanonicalLeagueSlug } from '../config/leagues';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { isLeagueDataLoaded, listLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
 import {
   getCollegeHeadshot,
   getPlayerHeadshot,
@@ -85,30 +84,59 @@ let collegeIdMap: Record<string, { espnCollegeId?: string }> | null = null;
  */
 let nflIdBackfill: Record<string, string> | null = null;
 
+/**
+ * Every file this module reads lives in league data, which is read through
+ * src/utils/league-data.ts rather than off disk: these helpers are sync and
+ * called from ~50 places, so the files are PRELOADED — the hot set (current
+ * seasons, the unions, the id maps) by `src/middleware.ts` on every request,
+ * anything else by the caller through {@link preloadPlayerIdentity}. A year
+ * nobody preloaded still resolves (see `readLeagueDataSync`) but is logged
+ * and, once players.json leaves the function, reads back empty in
+ * production.
+ */
+const identityDataPath = (): string => getLeagueBySlug('theleague')!.dataPath;
+const collegeIdsPath = () => `${identityDataPath()}/espn-college-ids.json`;
+const nflIdBackfillPath = () => `${identityDataPath()}/derived/espn-nfl-id-backfill.json`;
+const playersFeedPath = (year: number) => `${identityDataPath()}/mfl-feeds/${year}/players.json`;
+const unionPath = (leagueSlug: string) => `data/${leagueSlug}/derived/player-identity-union.json`;
+
+/**
+ * The files `getPlayerMap(year)` / `getGlobalPlayerMap()` read, for the given
+ * league years. Every league's identity union is included (they are small and
+ * the global map is asked for by slug).
+ */
+export function playerIdentityPaths(years: Iterable<number>): string[] {
+  return [
+    collegeIdsPath(),
+    nflIdBackfillPath(),
+    ...[...new Set(years)].map(playersFeedPath),
+    ...listLeagueData('data/*/derived/player-identity-union.json'),
+  ];
+}
+
+/** Load what `getPlayerMap(year)` needs for `years`, so the sync call is served from memory. */
+export function preloadPlayerIdentity(years: Iterable<number>): Promise<void> {
+  return preloadLeagueData(playerIdentityPaths(years));
+}
+
 function loadCollegeIds(): Record<string, { espnCollegeId?: string }> {
   if (collegeIdMap) return collegeIdMap;
-  try {
-    const filePath = join(process.cwd(), 'data/theleague/espn-college-ids.json');
-    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    collegeIdMap = raw.players || {};
-  } catch {
-    collegeIdMap = {};
-  }
-  return collegeIdMap!;
+  const raw = readLeagueDataSync<{ players?: Record<string, { espnCollegeId?: string }> }>(collegeIdsPath());
+  const loaded = isLeagueDataLoaded(collegeIdsPath());
+  const ids = raw?.players || {};
+  if (loaded) collegeIdMap = ids;
+  return ids;
 }
 
 function loadNflIdBackfill(): Record<string, string> {
   if (nflIdBackfill) return nflIdBackfill;
-  try {
-    const filePath = join(process.cwd(), 'data/theleague/derived/espn-nfl-id-backfill.json');
-    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    nflIdBackfill = raw.ids || {};
-  } catch {
-    // Artifact missing (fresh clone before prebuild) — degrade to MFL's own
-    // ids rather than throwing. Coverage drops; nothing else breaks.
-    nflIdBackfill = {};
-  }
-  return nflIdBackfill!;
+  // Artifact missing (fresh clone before prebuild) — degrade to MFL's own
+  // ids rather than throwing. Coverage drops; nothing else breaks.
+  const raw = readLeagueDataSync<{ ids?: Record<string, string> }>(nflIdBackfillPath());
+  const loaded = isLeagueDataLoaded(nflIdBackfillPath());
+  const ids = raw?.ids || {};
+  if (loaded) nflIdBackfill = ids;
+  return ids;
 }
 
 /**
@@ -197,22 +225,22 @@ export function getPlayerMap(year: number): Map<string, PlayerIdentity> {
 
   const playerMap = new Map<string, PlayerIdentity>();
 
-  try {
-    const filePath = join(process.cwd(), `data/theleague/mfl-feeds/${year}/players.json`);
-    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    const players: Array<Record<string, string>> = raw?.players?.player || [];
-    const collegeIds = loadCollegeIds();
-    const backfill = loadNflIdBackfill();
+  // Feed file missing for this year — empty map.
+  const path = playersFeedPath(year);
+  const raw = readLeagueDataSync<any>(path);
+  const loaded = isLeagueDataLoaded(path);
+  const players: Array<Record<string, string>> = raw?.players?.player || [];
+  const collegeIds = loadCollegeIds();
+  const backfill = loadNflIdBackfill();
 
-    for (const p of players) {
-      const identity = toIdentity(p, collegeIds, backfill);
-      if (identity) playerMap.set(identity.mflId, identity);
-    }
-  } catch {
-    // Feed file missing for this year — return empty map
+  for (const p of players) {
+    const identity = toIdentity(p, collegeIds, backfill);
+    if (identity) playerMap.set(identity.mflId, identity);
   }
 
-  cache.set(year, playerMap);
+  // A year whose file could not be read (not preloaded, and not on disk) is
+  // not cached: the next request that preloads it must get the real map.
+  if (loaded) cache.set(year, playerMap);
   return playerMap;
 }
 
@@ -270,25 +298,20 @@ export function getGlobalPlayerMap(
   if (cached) return cached;
 
   const merged = new Map<string, PlayerIdentity>();
-  try {
-    const filePath = join(
-      process.cwd(),
-      `data/${leagueSlug}/derived/player-identity-union.json`
-    );
-    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    const collegeIds = loadCollegeIds();
-    const backfill = loadNflIdBackfill();
+  // Union artifact missing — an empty map, matching the previous behaviour
+  // when the feeds directory was absent.
+  const path = unionPath(leagueSlug);
+  const raw = readLeagueDataSync<any>(path);
+  const loaded = isLeagueDataLoaded(path);
+  const collegeIds = loadCollegeIds();
+  const backfill = loadNflIdBackfill();
 
-    for (const p of (raw?.players || []) as Array<Record<string, string>>) {
-      const identity = toIdentity(p, collegeIds, backfill);
-      if (identity) merged.set(identity.mflId, identity);
-    }
-  } catch {
-    // Union artifact missing — return an empty map, matching the previous
-    // behaviour when the feeds directory was absent.
+  for (const p of (raw?.players || []) as Array<Record<string, string>>) {
+    const identity = toIdentity(p, collegeIds, backfill);
+    if (identity) merged.set(identity.mflId, identity);
   }
 
-  globalMapCache.set(leagueSlug, merged);
+  if (loaded) globalMapCache.set(leagueSlug, merged);
   return merged;
 }
 

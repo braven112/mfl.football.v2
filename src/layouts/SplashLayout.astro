@@ -15,6 +15,7 @@ import SpeedInsights from '@vercel/speed-insights/astro';
 import { getThemePreference } from '../utils/theme-preference';
 import ThemeScript from '../components/shared/ThemeScript.astro';
 import { isSharedAppHost } from '../config/leagues';
+import { canonicalUrl, jsonLdScript, type JsonLd } from '../utils/structured-data';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
@@ -36,9 +37,23 @@ import '../styles/pill.css';
 
 export interface Props {
 	title: string;
+	/** Meta description, also used for the social card. */
+	description?: string;
+	/**
+	 * This page's path on the canonical origin. Emits rel=canonical and the
+	 * social card's URL, so a copy reached through v2.mfl.football or a
+	 * preview still credits mfl.football (src/utils/structured-data.ts).
+	 */
+	canonicalPath?: string;
+	/** Social card image, a site path. */
+	ogImage?: string;
+	/** schema.org JSON-LD blocks for the page. */
+	jsonLd?: JsonLd[];
 }
 
-const { title } = Astro.props as Props;
+const { title, description, canonicalPath, ogImage, jsonLd = [] } = Astro.props as Props;
+const canonical = canonicalPath ? canonicalUrl(canonicalPath) : null;
+const ogImageUrl = ogImage ? canonicalUrl(ogImage) : null;
 
 // Resolve theme preference (server-side). 'auto' renders no class — the
 // pre-paint ThemeScript resolves it against prefers-color-scheme.
@@ -108,6 +123,16 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
+		{description && <meta name="description" content={description} />}
+		{canonical && <link rel="canonical" href={canonical} />}
+		<meta property="og:site_name" content="MFL.football" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		{description && <meta property="og:description" content={description} />}
+		{canonical && <meta property="og:url" content={canonical} />}
+		{ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+		<meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+		{jsonLd.map((block) => <script is:inline type="application/ld+json" set:html={jsonLdScript(block)} />)}
 	</head>
 	<body>
 		<StagingBanner />

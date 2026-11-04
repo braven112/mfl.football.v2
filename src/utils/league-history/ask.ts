@@ -18,7 +18,7 @@
  */
 import { SONNET_MODEL, responseText } from '../claude-models.mjs';
 import { getLeagueBySlug } from '../../config/leagues';
-import { QueryError, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
+import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
 
@@ -92,6 +92,8 @@ export interface AskData {
   players?: any;
   /** league-history-moves.json: trades, pickups, draft picks, auction wins */
   moves?: any;
+  /** The all-play side competition's sources (datasets.ts loadLeagueCompetitions), for a league that runs one. */
+  competitions?: any;
 }
 
 interface AnthropicLike {
@@ -299,7 +301,23 @@ function conversationBlock(turns: AskTurn[]): string {
   return `<conversation>\nThe question below follows up on these earlier answers. Read "they", "them", "that team", "what about…" against them, and re-run the queries you need: an earlier answer is context, not a result you can quote numbers from.\n${lines.join('\n')}\n</conversation>\n\n`;
 }
 
-function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any): string {
+/**
+ * The prompt's lines about the league's all-play side competition (the AFL's
+ * Premier League / D-League and the AFL Cup). Without them the model took
+ * "Premier League" for the soccer one (Brandon, 2026-11-03).
+ */
+function competitionBlock(ds: any, competitions: any): string {
+  const story = competitions ? competitionStory(ds, competitions) : '';
+  if (!story) return '- This league has no all-play side competition (no Premier League, D-League or AFL Cup); say so if asked.';
+  return `- The all-play competition uses the competition units: competitionSeasons (one row per team-season, its all-play record, its rank in its own table, promoted/relegated), competitionOwners (each owner's totals over the seasons in "competition" and "years") and competitionTitles (every title, the AFL Cup knockout winners included). The ordinary seasons and owners units are the head-to-head season and know nothing about it.
+- "Premier League record", "best in the Premier League", "all-play record" and the like mean the all-play record in this competition, never head-to-head wins. Read "best Premier League record of all time" as the best all-play record since the Premier League and D-League began: competitionOwners with competition "tiers", sorted by winPct; say that is the window, and add how they did in Premier League seasons alone (competition "Premier League") when it changes the answer. "D-League record" alone is competition "D-League"; "AFL Cup" is competition "AFL Cup".
+- "Titles" and "championships" in this competition come from competitionTitles or competitionOwners.titles; "won the Premier League" means champion = true. The AFL Cup's knockout seasons have a winner and no all-play record; say so when asked about their games.
+<competition>
+${story}
+</competition>`;
+}
+
+function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
   const current = Object.values(latest?.teams ?? {})
@@ -323,6 +341,7 @@ How to work:
 - Use the exact names from results. Match names with contains when the asker uses a nickname or part of a name.
 - ${players ? `Player questions use the player units: every rostered player's score each week, starter or bench. A player's points count for the team that started him. ${describeMissingWeeks(players.missingWeeks) ? `${describeMissingWeeks(players.missingWeeks)}; say so when a player answer could be missing those weeks.` : 'Every final week has player scores.'}` : 'There are no player stats for this league; say so if asked.'}
 - ${moves ? `Roster moves use the move units: trades (one row per side, with what the players each side got scored for it the rest of that season), pickups (waiver claims and free agents), draftPicks${moves.auctions?.length ? ', auctions (salary auction wins)' : ''}. "Best trade/pickup/pick" means the most points the player(s) scored for the team that got them unless the question says otherwise; say which measure you used. Contract lengths are not on record${moves.auctions?.length ? '; auction salaries are' : ''}.` : 'There are no trade, draft or pickup records for this league; say so if asked.'}
+${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
 - Keep queries few and focused; then call answer once, with a headline when one stat sums the answer up and two or three followUps.
@@ -366,7 +385,7 @@ export async function askHistory(
       model: SONNET_MODEL,
       max_tokens: 6000,
       output_config: { effort: 'medium' },
-      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves), cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions), cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
     });
@@ -404,7 +423,7 @@ export async function askHistory(
           if (use.name !== RUN_QUERY_TOOL.name) {
             return { type: 'tool_result', tool_use_id: use.id, content: 'Unknown tool.', is_error: true };
           }
-          const result = runQuery(ds, use.input ?? {}, { players: data.players, moves: data.moves });
+          const result = runQuery(ds, use.input ?? {}, { players: data.players, moves: data.moves, competitions: data.competitions });
           const { query: _q, ...table } = result;
           results.push(table as AskTable);
           steps.push(result.description);

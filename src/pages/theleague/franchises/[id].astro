@@ -17,10 +17,18 @@
 import HistoryFranchisePage from '../../../components/shared/league-history/HistoryFranchisePage.astro';
 import TheLeagueFranchiseExtras from '../../../components/theleague/franchises/TheLeagueFranchiseExtras.astro';
 import FranchiseHometown from '../../../components/shared/owner-map/FranchiseHometown.astro';
-import historyData from '../../../../data/theleague/derived/league-history.json';
-import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { franchiseList } from '../../../utils/league-history/franchise.mjs';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const [historyData, franchiseHistory] = (await Promise.all([
+  loadLeagueData(`${THELEAGUE_DATA}/derived/league-history.json`),
+  loadLeagueData(`${THELEAGUE_DATA}/derived/franchise-history.json`),
+])) as [any, any];
 
 export const prerender = false;
 

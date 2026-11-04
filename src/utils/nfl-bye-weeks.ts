@@ -10,20 +10,17 @@
  *
  * Refresh with `node scripts/fetch-nfl-bye-weeks.mjs`.
  */
-import fs from 'node:fs';
-import path from 'node:path';
+import { readLeagueDataSync } from './league-data';
 
-const FILE = 'data/nfl/bye-weeks.json';
+/**
+ * League data, through src/utils/league-data.ts. Sync because its callers
+ * are; the file is in the hot set src/middleware.ts preloads on every request
+ * (src/utils/request-league-data.ts).
+ */
+export const BYE_WEEKS_FILE = 'data/nfl/bye-weeks.json';
 
-const readFile = (): Record<string, Record<string, number>> => {
-  try {
-    const file = path.join(process.cwd(), FILE);
-    if (!fs.existsSync(file)) return {};
-    return JSON.parse(fs.readFileSync(file, 'utf8'))?.seasons ?? {};
-  } catch {
-    return {};
-  }
-};
+const readFile = (): Record<string, Record<string, number>> =>
+  readLeagueDataSync<{ seasons?: Record<string, Record<string, number>> }>(BYE_WEEKS_FILE)?.seasons ?? {};
 
 /** Seasons we hold an NFL bye calendar for, newest first. */
 export function schedulableSeasons(): number[] {

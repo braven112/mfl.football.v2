@@ -6,8 +6,8 @@
  * ADP ranks, or scouting blurbs.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { getLeagueBySlug } from '../config/leagues';
+import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 import type { DraftRoomPlayer } from '../types/draft-room';
 import { normalizePlayerName } from './player-name-matching';
 
@@ -67,18 +67,31 @@ const adpCaches = new Map<string, Map<string, any>>();
  */
 export type AdpSource = 'dynasty' | 'redraft';
 
+// League data, read through src/utils/league-data.ts (the store, in
+// production); callers await {@link preloadDraftPlayerEnrichment} first.
+const theleagueDataPath = () => getLeagueBySlug('theleague')!.dataPath;
+const rspIdMapPath = () => `${theleagueDataPath()}/rsp-player-ids.json`;
+const rspSourcePath = (leagueYear: number) => `data/fantasy-expert/sources/rsp/${leagueYear}-pre-draft.json`;
+const adpPath = (leagueYear: number, source: AdpSource) =>
+  leagueFeedPath(theleagueDataPath(), leagueYear, `adp-${source}.json`);
+
+/** Load what `enrichDraftPlayers(…, leagueYear, options)` reads. */
+export function preloadDraftPlayerEnrichment(
+  leagueYear: number,
+  options: { includeRsp?: boolean; adpSource?: AdpSource } = {},
+): Promise<void> {
+  const paths = [adpPath(leagueYear, options.adpSource ?? 'dynasty')];
+  if (options.includeRsp) paths.push(rspIdMapPath(), rspSourcePath(leagueYear));
+  return preloadLeagueData(paths);
+}
+
 function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   const cached = rspCaches.get(leagueYear);
   if (cached) return cached;
   const result = new Map<string, RspPlayer>();
   try {
-    const idMapPath = join(process.cwd(), 'data/theleague/rsp-player-ids.json');
-    const rspPath = join(
-      process.cwd(),
-      `data/fantasy-expert/sources/rsp/${leagueYear}-pre-draft.json`
-    );
-    const idMap: RspIdMap = JSON.parse(readFileSync(idMapPath, 'utf-8')).players || {};
-    const rspData = JSON.parse(readFileSync(rspPath, 'utf-8'));
+    const idMap: RspIdMap = readLeagueDataSync<any>(rspIdMapPath())!.players || {};
+    const rspData = readLeagueDataSync<any>(rspSourcePath(leagueYear))!;
     const players: RspPlayer[] = rspData.players || [];
 
     // Build name → mflId map for fuzzy matching (normalized)
@@ -94,7 +107,9 @@ function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   } catch {
     // RSP data unavailable — enrichment will be a no-op
   }
-  rspCaches.set(leagueYear, result);
+  if (isLeagueDataLoaded(rspIdMapPath()) && isLeagueDataLoaded(rspSourcePath(leagueYear))) {
+    rspCaches.set(leagueYear, result);
+  }
   return result;
 }
 
@@ -104,12 +119,7 @@ function loadAdp(leagueYear: number, source: AdpSource): Map<string, any> {
   if (cached) return cached;
   const result = new Map<string, any>();
   try {
-    const raw = JSON.parse(
-      readFileSync(
-        join(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/adp-${source}.json`),
-        'utf-8'
-      )
-    );
+    const raw = readLeagueDataSync<any>(adpPath(leagueYear, source));
     const list = raw?.adp?.player;
     const arr = Array.isArray(list) ? list : list ? [list] : [];
     for (const p of arr) {
@@ -118,7 +128,7 @@ function loadAdp(leagueYear: number, source: AdpSource): Map<string, any> {
   } catch {
     // ADP data unavailable
   }
-  adpCaches.set(key, result);
+  if (isLeagueDataLoaded(adpPath(leagueYear, source))) adpCaches.set(key, result);
   return result;
 }
 

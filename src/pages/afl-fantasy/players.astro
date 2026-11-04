@@ -3,18 +3,25 @@
  * AFL Free Agents — thin route over the shared page every duplicate-player
  * league renders (src/components/shared/free-agents/FreeAgentsPage.astro).
  *
- * What stays here, and why: the snapshot import and the feed globs, because a
- * static import specifier cannot be a runtime variable; and the conference
- * crests, which only the AFL has.
+ * What stays here, and why: the snapshot read and the feed globs, so the
+ * shared page never names a league's data path; and the conference crests,
+ * which only the AFL has.
  *
  * SSR, not prerendered: apex routing (www.afl-fantasy.com/players) rewrites
  * only to routes registered in the SSR function. The snapshot is the ~0.4 MB
- * output of scripts/compute-free-agents.mjs, not 24 years of feeds, so the
- * function stays small (see the SSR note in the shared page).
+ * output of scripts/compute-free-agents.mjs, not 24 years of feeds, and is
+ * read through the league-data loader (src/utils/league-data.ts) rather than
+ * bundled into the function.
  */
 import FreeAgentsPage, { type PoolLogo } from '../../components/shared/free-agents/FreeAgentsPage.astro';
-import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { isValidConferenceId, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadLeagueData } from '../../utils/league-data';
+
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [freeAgentsData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/free-agents.json`),
+]);
 
 // league.json and calendar.json are ~12 KB each, so era-filtered eager globs
 // cost nothing (tests/current-era-feed-globs.test.ts is about players.json).

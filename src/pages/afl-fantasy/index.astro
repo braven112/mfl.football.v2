@@ -54,7 +54,7 @@ import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
 import { chooseTeamName } from '../../utils/team-names';
-import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
+import { loadAflDraftSlot, preloadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import {
@@ -69,7 +69,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
-import aflTopPlayers from '../../../data/afl-fantasy/derived/top-players.json';
+import { getLeagueData, loadLeagueData, preloadLeagueData } from '../../utils/league-data';
 import type { TopPlayersFile } from '../../types/top-players';
 import { liveRostersFeed } from '../../utils/rosters/live-rosters-feed';
 
@@ -165,13 +165,18 @@ const timeline = getAflWhatsNextTimeline(effectiveDate);
 const aflWhatsNew = getWhatsNewEntriesForLeague('afl');
 
 // ── Standings + roster data ─────────────────────────────────────────────────
-const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
-const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
-const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true });
-
-function getModule(mod: any) {
-  return mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-}
+// Read through the league-data loader (src/utils/league-data.ts) rather than
+// eager globs over every season: the walk-backs below look at six years at
+// most, so those are preloaded and then read synchronously.
+const FEEDS_DIR = `${AFL.dataPath}/mfl-feeds`;
+const feedPath = (year: number, file: string) => `${FEEDS_DIR}/${year}/${file}`;
+const seasonFeed = <T,>(year: number, file: string) => getLeagueData<T>(feedPath(year, file)) ?? undefined;
+/** `preferred` and the five years before it, newest first. */
+const walkBackYears = (preferred: number) => Array.from({ length: 6 }, (_, i) => preferred - i);
+await preloadLeagueData([
+  ...walkBackYears(getCurrentSeasonYear(effectiveDate)).map((y) => feedPath(y, 'standings.json')),
+  ...walkBackYears(getAflLeagueYear(effectiveDate)).map((y) => feedPath(y, 'rosters.json')),
+]);
 
 // The season this page DISPLAYS, which is not always the season being PLAYED.
 // MFL creates the new year at kickoff and leaves it empty until games are
@@ -182,9 +187,9 @@ function getModule(mod: any) {
 // below, which is computed from the same clock but never walks back.
 function resolveSeasonYearWithData(): number {
   const preferred = getCurrentSeasonYear(effectiveDate);
-  for (let y = preferred; y >= preferred - 5; y--) {
-    const feed = getModule(standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/standings.json`]) as { leagueStandings?: { franchise: any[] } } | undefined;
-    if (feed?.leagueStandings?.franchise?.length) return y;
+  for (const y of walkBackYears(preferred)) {
+    const standings = seasonFeed<{ leagueStandings?: { franchise: any[] } }>(y, 'standings.json');
+    if (standings?.leagueStandings?.franchise?.length) return y;
   }
   return preferred;
 }
@@ -204,9 +209,8 @@ const seasonYear = resolveSeasonYearWithData();
  */
 function resolveRosterYearWithData(): number {
   const preferred = getAflLeagueYear(effectiveDate);
-  for (let y = preferred; y >= preferred - 5; y--) {
-    const feed = getModule(rosterFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/rosters.json`]) as { rosters?: { franchise?: any | any[] } } | undefined;
-    const franchises = feed?.rosters?.franchise;
+  for (const y of walkBackYears(preferred)) {
+    const franchises = seasonFeed<{ rosters?: { franchise?: any | any[] } }>(y, 'rosters.json')?.rosters?.franchise;
     if (Array.isArray(franchises) ? franchises.length : franchises) return y;
   }
   return preferred;
@@ -215,16 +219,12 @@ function resolveRosterYearWithData(): number {
 const aflLeagueYear = getAflLeagueYear(effectiveDate);
 const rosterYear = resolveRosterYearWithData();
 
-function pickFeed(feeds: Record<string, unknown>, suffix: string, year = seasonYear) {
-  return getModule(feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${suffix}`]);
-}
-
-const standingsFeed = pickFeed(standingsFeeds, 'standings.json') as { leagueStandings?: { franchise: any[] } } | undefined;
+const standingsFeed = seasonFeed(seasonYear, 'standings.json') as { leagueStandings?: { franchise: any[] } } | undefined;
 const standingsFranchises: any[] = standingsFeed?.leagueStandings?.franchise ?? [];
 
 // Roster count for the user's team, from the current league year — live, since
 // the committed copy is a once-a-day snapshot (scripts/lib/held-sync-files.mjs).
-const committedRostersFeed = pickFeed(rosterFeeds, 'rosters.json', rosterYear) as { rosters?: { franchise: any | any[] } } | undefined;
+const committedRostersFeed = seasonFeed(rosterYear, 'rosters.json') as { rosters?: { franchise: any | any[] } } | undefined;
 const rostersFeed = userFranchiseId && rosterYear === aflLeagueYear
   ? await liveRostersFeed(committedRostersFeed, rosterYear, AFL.id)
   : committedRostersFeed;
@@ -240,7 +240,7 @@ const rosterCount = userRosterEntry?.player
 // the prop; nothing filled it, so it read "TBD" all season. `findNextGame`
 // skips played weeks, so a doubleheader week resolves to the first game still
 // to play rather than to the week's last one.
-const scheduleWeeks = parseWeeklySchedule(pickFeed(scheduleFeeds, 'schedule.json'));
+const scheduleWeeks = parseWeeklySchedule((await loadLeagueData(feedPath(seasonYear, 'schedule.json'))) ?? undefined);
 const nextGame = userFranchiseId
   ? findNextGame(franchiseSchedule(scheduleWeeks, userFranchiseId), getCurrentNFLWeek(effectiveDate, seasonYear) ?? 1)
   : null;
@@ -340,6 +340,13 @@ const myTeamWeek = inSeasonVariant && userFranchiseId
 // render "—": AFL has no MFL keeper construct, so there was no count to pass.
 // Resolved only for the offseason card that shows it, and only for a signed-in
 // / team-selected viewer — the draft tier reads feeds off disk.
+// loadAflDraftSlot is sync over preloaded feeds (weekly-results-raw.json is
+// not shipped inside the function), so load them before it runs.
+if (!inSeasonVariant && userFranchiseId) {
+  await preloadAflDraftSlot(effectiveDate).catch((err) =>
+    console.error('[afl home] draft slot preload failed:', err),
+  );
+}
 const spotlight = !inSeasonVariant && userFranchiseId
   ? await resolveAflTeamSpotlight({
       franchiseId: userFranchiseId,
@@ -421,6 +428,7 @@ if (!aflMondaySpotlight && heroState.kind === 'regular-season' && heroState.game
 
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels('afl-fantasy');
+const aflTopPlayers = await loadLeagueData<TopPlayersFile>(`${AFL.dataPath}/derived/top-players.json`);
 ---
 
 <LeagueHomePage

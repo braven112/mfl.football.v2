@@ -211,7 +211,13 @@ export const buildHistoricalContext = (years) => {
     const playersFeed = indexPlayersFeed(loadFeedJson(year, 'players.json'));
     if (playersFeed) playersFeedBySeason[year] = playersFeed;
 
-    const rosterIndex = indexRosterFeed(loadFeedJson(year, 'rosters.json'));
+    // MFL's export for an old season lost every player whose contract has
+    // since expired; the rebuilt end-of-season roster puts them back
+    // (scripts/compute-season-end-rosters.mjs). Absent for a season the
+    // export still covers.
+    const rosterIndex = indexRosterFeed(
+      loadFeedJson(year, 'rosters-season-end.json') ?? loadFeedJson(year, 'rosters.json')
+    );
     if (rosterIndex) liveRosterDataByPlayerId[year] = rosterIndex;
 
     const leagueMeta = buildSeasonLeagueMeta(loadFeedJson(year, 'league.json'));

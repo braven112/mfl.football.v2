@@ -14,7 +14,18 @@ import {
   resolveWeeklyHighScores,
 } from '../src/utils/accounting-payouts.mjs';
 import { LEAGUES } from '../src/config/leagues';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { loadPayoutSeasonData } from '../src/utils/accounting-season-data';
+
+/** The committed feeds, off disk (the module takes its reader injected). */
+const readFromDisk = (repoPath: string): unknown => {
+  try {
+    return JSON.parse(readFileSync(join(process.cwd(), repoPath), 'utf8'));
+  } catch {
+    return null;
+  }
+};
 
 /** A bracket whose final is decided on points. */
 const bracket = (homeId: string, homePts: number, awayId: string, awayPts: number) => ({
@@ -248,7 +259,7 @@ describe('2025 season, real feeds', () => {
     const plan = planPayouts({
       year: 2025,
       payouts: league.payouts!,
-      data: loadPayoutSeasonData(league, 2025),
+      data: loadPayoutSeasonData(league, 2025, readFromDisk),
     });
     expect(plan.unresolved).toEqual([]);
     // The constitution says "approximately $712" — the derived plan lands on it.
@@ -261,7 +272,7 @@ describe('2025 season, real feeds', () => {
     const plan = planPayouts({
       year: 2025,
       payouts: league.payouts!,
-      data: loadPayoutSeasonData(league, 2025),
+      data: loadPayoutSeasonData(league, 2025, readFromDisk),
     });
     expect(plan.unresolved).toEqual([]);
 
@@ -281,7 +292,7 @@ describe('2025 season, real feeds', () => {
     const plan = planPayouts({
       year: 2025,
       payouts: league.payouts!,
-      data: loadPayoutSeasonData(league, 2025),
+      data: loadPayoutSeasonData(league, 2025, readFromDisk),
     });
     const byKey = Object.fromEntries(
       plan.lines.map((line: any) => [line.key, { id: line.franchiseId, amount: line.amount }])

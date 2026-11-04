@@ -27,6 +27,7 @@ import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrlFor } from '../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import EmptyState from '../../components/shared/states/EmptyState.astro';
 
 export const prerender = false;
@@ -36,22 +37,13 @@ const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || `https://${THELEAGUE.mflHost}`;
 const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || THELEAGUE.id;
 
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const bracketFallbackFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/playoff-brackets.json', {
-  eager: true,
-});
-const weeklyResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/weekly-results.json', {
-  eager: true,
-});
-// Per-season division alignment — seeds 1-4 go to division winners, so an
-// archived year grouped by today's map assigns the wrong seeds entirely.
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json', {
-  eager: true,
-});
+// Feeds are read through the league-data loader, never bundled into the
+// function. The season list comes from the standings files that exist; only
+// the selected season's files are read (below, once the year is validated).
+const FEED_ROOT = `${THELEAGUE.dataPath}/mfl-feeds`;
+const feedPath = (year: number, file: string) => `${FEED_ROOT}/${year}/${file}`;
 
-const availableYears = Object.keys(standingsFeeds)
+const availableYears = listLeagueData(`${FEED_ROOT}/*/standings.json`)
   .map(path => {
     const match = path.match(/\/(\d{4})\/standings\.json$/);
     return match ? parseInt(match[1], 10) : null;
@@ -75,7 +67,22 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`/theleague/playoffs?year=${defaultYear}`);
 }
 
-const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
+// The selected season's feeds, in the `{ path: data }` shape of the old eager
+// globs. Per-season division alignment comes from league.json — seeds 1-4 go
+// to division winners, so an archived year grouped by today's map assigns the
+// wrong seeds entirely.
+const loadFeedYear = async (file: string): Promise<Record<string, unknown>> => {
+  const data = await loadLeagueData(feedPath(selectedYear, file));
+  return data != null ? { [feedPath(selectedYear, file)]: data } : {};
+};
+const [standingsFeeds, bracketFallbackFeeds, weeklyResultsFeeds, leagueFeeds] = await Promise.all([
+  loadFeedYear('standings.json'),
+  loadFeedYear('playoff-brackets.json'),
+  loadFeedYear('weekly-results.json'),
+  loadFeedYear('league.json'),
+]);
+
+const selectedFeed = standingsFeeds[feedPath(selectedYear, 'standings.json')] as
   | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 
@@ -89,7 +96,7 @@ const franchises = selectedFeed.leagueStandings.franchise;
 // then re-align divisions to that season's own league.json.
 const leagueConfig = applyHistoricalDivisions(
   resolveConfigForYear(leagueConfigRaw, selectedYear),
-  leagueFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/league.json`]
+  leagueFeeds[feedPath(selectedYear, 'league.json')]
 );
 
 // preserveFeedOrder: MFL's row order is the league's official standings order,
@@ -231,7 +238,7 @@ const weeksNeeded = Array.from(
 const weeklyResultsEntries = await Promise.all(
   weeksNeeded.map(async week => {
     // Prefer cached weekly results if available for this year
-    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedKey = feedPath(selectedYear, 'weekly-results.json');
     const cachedFeed = weeklyResultsFeeds[cachedKey] as
       | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
       | undefined;
@@ -530,7 +537,7 @@ const weeklyHighs = await Promise.all(
   Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
     const week = idx + 1;
     // Use cached weekly results if available; otherwise mark as missing
-    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedKey = feedPath(selectedYear, 'weekly-results.json');
     const cachedFeed = weeklyResultsFeeds[cachedKey] as
       | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
       | undefined;

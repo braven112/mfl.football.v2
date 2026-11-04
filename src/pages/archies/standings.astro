@@ -4,8 +4,9 @@
  * TheLeague renders (the owner's rule: a package league gets the real page,
  * never a lite look-alike).
  *
- * Kept in the route: the globs (a static import specifier cannot be a runtime
- * variable) and the bad-year redirect (a component cannot redirect).
+ * Kept in the route: the feed maps (read through the league-data loader, never
+ * globbed — storage-and-build.md § "League data lives in Blob") and the
+ * bad-year redirect (a component cannot redirect).
  */
 import StandingsPage from '../../components/shared/standings/StandingsPage.astro';
 import config from '../../../data/archies/archies.config.json';
@@ -20,16 +21,22 @@ import {
   loadStandingsSeason,
   parseStandingsView,
 } from '../../utils/standings-page';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('archies')!;
-const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
-const fetchMetaFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/fetch.meta.json');
+/** A lazy-glob-shaped map over the league-data loader (never a glob: that compiles the data into the function). */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const standingsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/standings.json`);
+const fetchMetaFeeds = lazy(`${league.dataPath}/mfl-feeds/*/fetch.meta.json`);
 // Archie's export has no all-play, PA, streak or division record; they are
 // derived from these (utils/standings-derived.ts).
-const weeklyResultsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/weekly-results.json');
-const scheduleFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json');
+const weeklyResultsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/weekly-results.json`);
+const scheduleFeeds = lazy(`${league.dataPath}/mfl-feeds/*/schedule.json`);
 
 const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
 if (!season.valid) {

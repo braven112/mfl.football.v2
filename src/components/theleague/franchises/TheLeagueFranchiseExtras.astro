@@ -14,7 +14,6 @@
  * sections are the CURRENT owner's, matching the page's default view.
  */
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
 import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import { franchiseSlug } from '../../../utils/franchise-marks';
@@ -22,8 +21,17 @@ import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/fra
 import { canonicalRivalryPair } from '../../../utils/rivalries';
 import EraSeasonTable from '../../shared/franchises/EraSeasonTable.astro';
 import PreviousOwners from '../../shared/franchises/PreviousOwners.astro';
-import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const [franchiseHistory, ownerTenures] = (await Promise.all([
+  loadLeagueData(`${THELEAGUE_DATA}/derived/franchise-history.json`),
+  loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`),
+])) as [any, any];
 
 interface Props {
   part: 'hero' | 'sections';

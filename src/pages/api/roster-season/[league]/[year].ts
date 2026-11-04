@@ -25,32 +25,23 @@
 
 import type { APIRoute } from 'astro';
 import { getLeagueBySlug } from '../../../../config/leagues';
+import { loadLeagueData } from '../../../../utils/league-data';
 
 export const prerender = false;
 
-/**
- * Registry-driven, not hardcoded: adding a league's derived payloads is a
- * data-only change (drop the file in, the glob picks it up). Eager because the
- * payloads are static JSON and Vite would otherwise re-resolve per request.
- */
-const derivedModules = import.meta.glob<{ default: unknown }>(
-  '../../../../../data/*/derived/roster-season-payloads.json',
-  { eager: true },
-);
-
-/** `.../data/<slug>/derived/roster-season-payloads.json` -> `<slug>` */
-function slugFromPath(path: string): string | null {
-  return path.match(/\/data\/([^/]+)\/derived\//)?.[1] ?? null;
-}
-
 type SeasonPayload = Record<string, unknown>;
 
-const seasonsByLeague: Record<string, Record<string, SeasonPayload>> = {};
-for (const [path, mod] of Object.entries(derivedModules)) {
-  const slug = slugFromPath(path);
-  if (!slug) continue;
-  const data = (mod as { default?: { seasons?: Record<string, SeasonPayload> } })?.default;
-  if (data?.seasons) seasonsByLeague[slug] = data.seasons;
+/**
+ * Registry-driven, not hardcoded: adding a league's derived payloads is a
+ * data-only change (drop the file into `<dataPath>/derived/`). Read through the
+ * league-data loader, never a glob: the file is ~11 MB and was compiled into
+ * the function. The loader keeps it in memory while the instance is warm.
+ */
+async function seasonsFor(dataPath: string): Promise<Record<string, SeasonPayload> | null> {
+  const data = await loadLeagueData<{ seasons?: Record<string, SeasonPayload> }>(
+    `${dataPath}/derived/roster-season-payloads.json`,
+  );
+  return data?.seasons ?? null;
 }
 
 function json(data: unknown, status: number, cache: string): Response {
@@ -68,7 +59,8 @@ const CACHE_MISS = 'no-store';
 export const GET: APIRoute = async ({ params }) => {
   const { league, year } = params;
 
-  if (!league || !getLeagueBySlug(league)) {
+  const def = league ? getLeagueBySlug(league) : null;
+  if (!def) {
     return json({ error: 'Unknown league' }, 404, CACHE_MISS);
   }
   // Reject anything that isn't a plain 4-digit year before it reaches a lookup.
@@ -76,7 +68,7 @@ export const GET: APIRoute = async ({ params }) => {
     return json({ error: 'Invalid season' }, 400, CACHE_MISS);
   }
 
-  const seasons = seasonsByLeague[league];
+  const seasons = await seasonsFor(def.dataPath);
   const payload = seasons?.[year];
   if (!payload) {
     // Either the league has no derived payloads or the season is one the page

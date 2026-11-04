@@ -27,8 +27,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import fs from 'node:fs';
-import path from 'node:path';
+import { getLeagueData, preloadLeagueData } from '../../utils/league-data';
 import { getAuthUser } from '../../utils/auth';
 import { json, JSON_HEADERS_NO_STORE } from '../../utils/api-response';
 import { getLeagueById, type LeagueDefinition } from '../../config/leagues';
@@ -64,15 +63,24 @@ const MFL_API_HOST = 'api.myfantasyleague.com';
 /** How long a computed badge is reused for the same franchise. */
 const CACHE_TTL_SEC = 90;
 
-/** Repo root, for reading committed mfl-feeds. */
-const ROOT = process.cwd();
+/** Repo-relative path of a committed MFL feed. */
+function feedPath(league: LeagueDefinition, year: number, filename: string): string {
+  return `${league.dataPath}/mfl-feeds/${year}/${filename}`;
+}
 
-/** Read a committed MFL feed, or null. Never throws. */
+/**
+ * Load committed MFL feeds through the league-data loader (Blob in production,
+ * disk locally) so `readFeed` can read them synchronously. Never throws: an
+ * unreadable feed reads as missing.
+ */
+async function preloadFeeds(league: LeagueDefinition, year: number, filenames: string[]): Promise<void> {
+  await preloadLeagueData(filenames.map((f) => feedPath(league, year, f))).catch(() => {});
+}
+
+/** Read a committed MFL feed preloaded by `preloadFeeds`, or null. Never throws. */
 function readFeed(league: LeagueDefinition, year: number, filename: string): unknown | null {
   try {
-    return JSON.parse(
-      fs.readFileSync(path.join(ROOT, league.dataPath, 'mfl-feeds', String(year), filename), 'utf8'),
-    );
+    return getLeagueData(feedPath(league, year, filename));
   } catch {
     return null;
   }
@@ -154,6 +162,7 @@ async function countLineup(
   year: number,
   franchiseId: string,
 ): Promise<number> {
+  await preloadFeeds(league, year, ['nflSchedule.json']);
   const nflSchedule = readFeed(league, year, 'nflSchedule.json');
   if (!isLineupBadgeWindow(nflSchedule)) return 0;
 
@@ -168,6 +177,7 @@ async function countLineup(
   );
   if (lineups.length === 0) return 0;
 
+  await preloadFeeds(league, year, ['players.json', 'league.json', 'injuries.json']);
   const players = readFeed(league, year, 'players.json');
   const leagueJson = readFeed(league, year, 'league.json');
   // Live: the sync holds injuries.json out of most commits (held-sync-files.mjs).

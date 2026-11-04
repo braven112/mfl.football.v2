@@ -39,6 +39,7 @@ import {
 } from '../../utils/sleeper/live';
 import {
 	loadMflPlayerIndex,
+	preloadMflPlayerIndex,
 	loadSleeperPlayerMap,
 	searchMflPlayers,
 	suggestMflPlayers,
@@ -138,6 +139,8 @@ if (authUser && sleeperLink && sleeperLeaguesOn.length) {
 			readViewerSleeperPlayers(sleeperLeaguesOn),
 			readGlobalFixes(),
 			readMyFixes(sleeperViewerKey(authUser)),
+			// loadMflPlayerIndex below is sync over this (players.json is not shipped in the function).
+			preloadMflPlayerIndex(year).catch(() => undefined),
 		]);
 		const index = loadMflPlayerIndex(year);
 		const find = Astro.url.searchParams.get('find') ?? '';

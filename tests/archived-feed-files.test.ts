@@ -191,7 +191,7 @@ describe('archivedFeedFiles', () => {
     // A helper existing is not the same as the config calling it — the whole
     // saving is in astro.config.ts passing it to excludeFiles.
     const config = readFileSync(join(__dirname, '..', 'astro.config.ts'), 'utf-8');
-    expect(config).toMatch(/excludeFiles:\s*archivedFeedFiles\(\)/);
+    expect(config).toMatch(/excludeFiles:\s*\[\.\.\.archivedFeedFiles\(\)/);
   });
 });
 

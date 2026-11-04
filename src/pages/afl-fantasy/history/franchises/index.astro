@@ -9,10 +9,18 @@
  * (utils/league-history/access.ts).
  */
 import HistoryFranchisesPage from '../../../../components/shared/league-history/HistoryFranchisesPage.astro';
-import historyData from '../../../../../data/afl-fantasy/derived/league-history.json';
 import { getAuthUser } from '../../../../utils/auth';
 import { mflLoginUrl } from '../../../../utils/mfl-login-redirect';
 import { canViewLeagueHistory } from '../../../../utils/league-history/access';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { loadLeagueData } from '../../../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [historyData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+]);
 
 export const prerender = false;
 

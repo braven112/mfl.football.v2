@@ -5,8 +5,9 @@
  * schedule and standings, so it resolves its data here rather than from the
  * route: the layout serves every page and no route can hand it a glob.
  *
- * The globs are league-wildcards because a shared component cannot name a
- * league; each page's own globs already bundle the same files. A league with
+ * The feeds are read through the league-data loader for THIS league only —
+ * never a glob, which compiled every league's schedules into the serverless
+ * function (storage-and-build.md § "League data lives in Blob"). A league with
  * no config or no schedule yet renders nothing.
  */
 import ScoreStrip from './ScoreStrip.astro';
@@ -23,6 +24,7 @@ import { buildScoreStrip, type ParsedWeek } from '../../../utils/front-page';
 import { frontTeamArt } from '../../../utils/front-page-art';
 import { franchiseSlug, leagueHasBrandBook } from '../../../utils/franchise-marks';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 interface Props {
   leagueSlug: string;
@@ -32,17 +34,19 @@ interface Props {
 const { leagueSlug, hideLeaguePrefix } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 
-const ALL_SCHEDULES = import.meta.glob('../../../../data/*/mfl-feeds/*/schedule.json');
-const ALL_STANDINGS = import.meta.glob('../../../../data/*/mfl-feeds/*/standings.json');
-const ALL_CONFIGS = import.meta.glob('../../../../data/*/*.config.json');
-const forLeague = (glob: LazyFeedGlob): LazyFeedGlob =>
-  Object.fromEntries(Object.entries(glob).filter(([path]) => path.includes(`/data/${leagueSlug}/`)));
+/** This league's files matching `pattern` (under its data dir), shaped like a lazy glob. */
+const forLeague = (pattern: string): LazyFeedGlob =>
+  league
+    ? Object.fromEntries(
+        listLeagueData(`${league.dataPath}/${pattern}`).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]),
+      )
+    : {};
 
 let strip = null as ReturnType<typeof buildScoreStrip>;
 const teams: Record<string, FrontTeamArt> = {};
 let allHref: string | null = null;
 
-const configLoader = Object.entries(forLeague(ALL_CONFIGS))[0]?.[1];
+const configLoader = Object.entries(forLeague('*.config.json'))[0]?.[1];
 const config = configLoader
   ? (unwrapFeedModule(await configLoader().catch(() => null)) as { teams?: PackageTeam[]; divisions?: PackageDivision[] } | null)
   : null;
@@ -52,8 +56,8 @@ if (league && config?.teams?.length) {
   const base = `/${league.slug}`;
   const now = parseTestDate(Astro.url.searchParams.get('testDate')) ?? new Date();
   const seasonYear = getCurrentSeasonYear(now);
-  const schedules = forLeague(ALL_SCHEDULES);
-  const standings = forLeague(ALL_STANDINGS);
+  const schedules = forLeague('mfl-feeds/*/schedule.json');
+  const standings = forLeague('mfl-feeds/*/standings.json');
   const scheduleYear = resolveSeason(null, seasonsFromGlob(schedules), seasonYear);
   const standingYear = resolveSeason(null, seasonsFromGlob(standings), seasonYear);
   const [scheduleFeed, standingsFeed] = await Promise.all([

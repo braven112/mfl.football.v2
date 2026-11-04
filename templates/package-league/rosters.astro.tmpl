@@ -10,7 +10,7 @@
  * team switcher groups the 99 clubs by division (viewer's own first) and the
  * header standing ranks a club inside its division.
  *
- * The globs, the empty-year redirect and the page's link set live here, for
+ * The feed loads, the empty-year redirect and the page's link set live here, for
  * the reasons given in the AFL's route.
  */
 import RostersPage from '../../components/shared/rosters/RostersPage.astro';
@@ -25,6 +25,7 @@ import {
   rosterYearIsRenderable,
   rosterYears,
 } from '../../utils/rosters/roster-page-feeds';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import config from '../../../data/__LEAGUE_SLUG__/__LEAGUE_SLUG__.config.json';
 
 export const prerender = false;
@@ -33,31 +34,38 @@ const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const r = (p: string) => resolveLeaguePath(p, hide);
 
-const feeds = {
-  rosters: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/rosters.json', { eager: true }),
-  // Megafiles carry the current-era year filter (tests/current-era-feed-globs.test.ts).
-  players: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
-  ytdScores: import.meta.glob(
-    '../../../data/__LEAGUE_SLUG__/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
-    { eager: true }
-  ),
-  tradeBait: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/tradeBait.json', { eager: true }),
-  tradeBaitByFranchise: import.meta.glob(
-    '../../../data/__LEAGUE_SLUG__/mfl-feeds/*/tradeBait-by-franchise.json',
-    { eager: true }
-  ),
-  futurePicks: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
-  schedule: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
-  standings: import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
-};
-const leagueFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/league.json', {
-  eager: true,
-  import: 'default',
-});
+// League data is read through the loader, not globbed: a glob compiles every
+// season's feeds into the one serverless function (storage-and-build.md
+// § "League data lives in Blob"). Every season's rosters.json is loaded to
+// learn which years have a roster; the rest is loaded for the selected year
+// only, keyed by repo path — the shape `feedForYear` reads.
+const feedDir = `${league.dataPath}/mfl-feeds`;
+const yearOfPath = (p: string) => Number(p.split('/').at(-2));
+const loadFeeds = async (paths: string[]) =>
+  Object.fromEntries(await Promise.all(paths.map(async (p) => [p, await loadLeagueData(p)] as const)));
+// The megafiles stayed current-era only while they were globbed; keep that
+// window so a past season still redirects exactly as before.
+const CURRENT_ERA_FLOOR = 2025;
+const forYear = (file: string, year: number, floor = 0) =>
+  year >= floor ? listLeagueData(`${feedDir}/*/${file}`).filter((p) => yearOfPath(p) === year) : [];
 
+const rosters = await loadFeeds(listLeagueData(`${feedDir}/*/rosters.json`));
 const leagueYear = getLeagueYearForSlug(league.slug);
-const availableYears = rosterYears(feeds.rosters);
+const availableYears = rosterYears(rosters);
 const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, leagueYear);
+
+const [players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedule, standings, leagueFeeds] =
+  await Promise.all([
+    loadFeeds(forYear('players.json', selectedYear, CURRENT_ERA_FLOOR)),
+    loadFeeds(forYear('playerScores-ytd.json', selectedYear, CURRENT_ERA_FLOOR)),
+    loadFeeds(forYear('tradeBait.json', selectedYear)),
+    loadFeeds(forYear('tradeBait-by-franchise.json', selectedYear)),
+    loadFeeds(forYear('futureDraftPicks.json', selectedYear)),
+    loadFeeds(forYear('schedule.json', selectedYear)),
+    loadFeeds(forYear('standings.json', selectedYear)),
+    loadFeeds(forYear('league.json', selectedYear)),
+  ]);
+const feeds = { rosters, players, ytdScores, tradeBait, tradeBaitByFranchise, futurePicks, schedule, standings };
 
 if (!rosterYearIsRenderable(feeds.rosters, feeds.players, selectedYear)) {
   return Astro.redirect(r(`/${league.slug}/rosters?year=${availableYears[0] ?? leagueYear}`));

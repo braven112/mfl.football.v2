@@ -218,7 +218,6 @@ describe('held rosters and transactions are read live', () => {
     'src/pages/best-ball-1/activity.astro',
     'src/utils/rosters/roster-page-feeds.ts', // a lookup over globs its callers overlay
     'src/utils/mfl-transactions-cache.ts', // the live cache itself
-    'src/utils/demo-mfl-standin.ts', // the demo build, which never syncs
     'src/data/live-scoring-sample.ts', // a frozen sample season
   ]);
   const FEEDS: Array<[string, RegExp, RegExp]> = [

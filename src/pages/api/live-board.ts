@@ -24,6 +24,8 @@ import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
 import { readMflLiveSelection } from '../../utils/mfl-live-selection-store';
 import { mflLiveAppCadence, toMflLiveAppBoard } from '../../utils/live/mfl-live-app-view';
 
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+
 export const prerender = false;
 
 const NO_STORE = {
@@ -31,28 +33,41 @@ const NO_STORE = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
 };
 
+/** The current-era (2025+) seasons the old `20{2[5-9],[3-9][0-9]}` glob matched. */
+const CURRENT_ERA_FEED = /\/mfl-feeds\/20(?:2[5-9]|[3-9]\d)\//;
+
 /**
- * Every kickoff MFL has published, for the app's poll hint. `import.meta.glob`
- * of the FULL schedule, as in api/cron/lineup-check.ts: cron-generated files,
- * and a kickoff stays visible however long ago MFL's week pointer moved. Any
- * league's copy is the same NFL schedule, so the de-duplicated union is fine.
+ * Every kickoff MFL has published, for the app's poll hint. The FULL schedule,
+ * as in api/cron/lineup-check.ts: cron-generated files, and a kickoff stays
+ * visible however long ago MFL's week pointer moved. Any league's copy is the
+ * same NFL schedule, so the de-duplicated union is fine. Read through the
+ * league-data loader (cached while the instance is warm), never a glob that
+ * compiles every league's schedule into the function; a failed read is no
+ * poll hint rather than a failed board.
  */
-const scheduleModules = import.meta.glob(
-  '../../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
-  { eager: true },
-);
-const kickoffs: string[] = [
-  ...new Set(
-    Object.values(scheduleModules).flatMap((m) => {
-      const weeks = (m as any)?.default?.fullNflSchedule?.nflSchedule;
-      if (!Array.isArray(weeks)) return [];
-      return weeks.flatMap((w: any) => {
-        const matchups = Array.isArray(w?.matchup) ? w.matchup : w?.matchup ? [w.matchup] : [];
-        return matchups.map((g: any) => g?.kickoff).filter(Boolean);
-      });
-    }),
-  ),
-];
+async function loadKickoffs(): Promise<string[]> {
+  try {
+    const paths = listLeagueData('data/*/mfl-feeds/*/nflSchedule-full.json').filter((p) =>
+      CURRENT_ERA_FEED.test(p),
+    );
+    const schedules = await Promise.all(paths.map((p) => loadLeagueData<any>(p)));
+    return [
+      ...new Set(
+        schedules.flatMap((data) => {
+          const weeks = data?.fullNflSchedule?.nflSchedule;
+          if (!Array.isArray(weeks)) return [];
+          return weeks.flatMap((w: any) => {
+            const matchups = Array.isArray(w?.matchup) ? w.matchup : w?.matchup ? [w.matchup] : [];
+            return matchups.map((g: any) => g?.kickoff).filter(Boolean);
+          });
+        }),
+      ),
+    ];
+  } catch (err) {
+    console.error('[live-board] could not read the NFL schedule:', err);
+    return [];
+  }
+}
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const user = getMflLiveUser(request);
@@ -69,6 +84,8 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   // healthy league. `null` here means "no NFL week is running", which the
   // board renders as its own state rather than as a failed read.
   const mflOnly = url.searchParams.get('source') === 'mfl';
+  // Only the MFL Live app's view carries the poll hint.
+  const kickoffs = mflOnly ? await loadKickoffs() : [];
   const currentWeek = getCurrentNFLWeek(new Date());
   const requested = Number.parseInt(url.searchParams.get('week') ?? '', 10);
   const week = Number.isFinite(requested) && requested > 0 ? requested : currentWeek;

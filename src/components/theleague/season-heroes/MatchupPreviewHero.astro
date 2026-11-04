@@ -9,6 +9,8 @@
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
 import { normalizeTeamCode, getNFLTeamLogo } from '../../../utils/nfl-logo';
 import {
   castBestScoredModel,
@@ -46,11 +48,14 @@ const year = getCurrentSeasonYear();
 
 let scheduleData: any, projData: any, playersData: any, rostersData: any;
 try {
+  // Through the loader (Blob in production), not a templated import(): Vite
+  // compiles every season a templated import could match into the bundle.
+  const feed = (file: string) => loadLeagueData<any>(leagueFeedPath(getLeagueBySlug('theleague')!.dataPath, year, file));
   [scheduleData, projData, playersData, rostersData] = await Promise.all([
-    import(`../../../../data/theleague/mfl-feeds/${year}/nflSchedule.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+    feed('nflSchedule.json'),
+    feed('projectedScores.json'),
+    feed('players.json'),
+    feed('rosters.json'),
   ]);
 } catch {
   scheduleData = null;

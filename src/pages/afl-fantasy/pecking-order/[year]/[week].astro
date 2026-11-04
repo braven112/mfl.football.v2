@@ -21,6 +21,8 @@ import Breadcrumbs from '../../../../components/shared/Breadcrumbs.astro';
 import PeckingOrderPermalink from '../../../../components/shared/PeckingOrderPermalink.astro';
 import { type PeckingOrderData } from '../../../../components/shared/PeckingOrderIssue.astro';
 import NotFound from '../../../404.astro';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../../utils/league-data';
 
 interface Entry { year: number; week: number; data: PeckingOrderData }
 
@@ -33,12 +35,10 @@ const parseIssues = (files: Record<string, PeckingOrderData>): Entry[] =>
     })
     .filter((x): x is Entry => x !== null);
 
-const allIssues: Entry[] = parseIssues(
-  import.meta.glob<PeckingOrderData>(
-    '../../../../../data/afl-fantasy/pecking-order/*.json',
-    { eager: true, import: 'default' }
-  )
-);
+// Every issue (the permalink lists them), read via src/utils/league-data.ts.
+const issuePaths = listLeagueData(`${getLeagueBySlug('afl-fantasy')!.dataPath}/pecking-order/*.json`);
+const issueData = await Promise.all(issuePaths.map((p) => loadLeagueData<PeckingOrderData>(p)));
+const allIssues: Entry[] = parseIssues(Object.fromEntries(issuePaths.flatMap((p, i) => (issueData[i] ? [[p, issueData[i]!]] : []))));
 
 const year = Number(Astro.params.year);
 const week = Number(Astro.params.week);

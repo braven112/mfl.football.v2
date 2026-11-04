@@ -12,7 +12,7 @@ import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
 import { getAuthUser, franchiseIdForLeague } from '../../../../utils/auth';
 import { loginUrlForRequest } from '../../../../utils/login-redirect';
-import { buildDraftPlayers } from '../../../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../../utils/franchise-brand';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../../../types/draft-room';
 import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../../config/leagues';
@@ -26,7 +26,7 @@ const user = getAuthUser(Astro.request);
 if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
 
 const leagueYear = getCurrentLeagueYear();
-
+await preloadDraftPlayers(leagueYear, { viewerFranchiseId: user.franchiseId }); // buildDraftPlayers reads it sync; players.json is not in the function
 // Brand colors drive the pick-reveal splash (drafting franchise tints it).
 const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
   const brand = getFranchiseBrand(team.franchiseId);

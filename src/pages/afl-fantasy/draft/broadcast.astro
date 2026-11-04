@@ -38,7 +38,7 @@ import DraftBroadcastIsland from '../../../components/shared/draft-broadcast/Dra
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
-import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../../utils/build-draft-players';
 import {
   assignBoardRanks,
   buildConferenceBoard,
@@ -50,8 +50,10 @@ import {
   loadConferenceKeepers,
   loadFranchiseHoldings,
   loadRostersFeed,
+  preloadDraftBroadcast,
   trimToDraftable,
 } from '../../../utils/draft-broadcast-server';
+import { getLeagueData, leagueFeedPath } from '../../../utils/league-data';
 import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
 import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../../utils/broadcast-crest';
 import { resolveWarmDepth } from '../../../utils/draft-broadcast-images';
@@ -62,8 +64,6 @@ import type {
   DraftBroadcastPageData,
 } from '../../../types/draft-broadcast';
 import type { DraftRoomTeam } from '../../../types/draft-room';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import '../../../styles/draft-broadcast.css';
 
 export const prerender = false;
@@ -79,6 +79,16 @@ const yearParam = Astro.url.searchParams.get('year');
 const parsedYear = yearParam ? parseInt(yearParam, 10) : NaN;
 const leagueYear = Number.isFinite(parsedYear) ? parsedYear : defaultYear;
 
+// The sync helpers below (board, enrichment, keepers, rehearsal lookup, the
+// player pool) read league data from memory, so load it first — through the
+// loader, since some of it (players.json) is not shipped in the function.
+// `defaultYear` too: findRehearsalYear walks back from it, not from leagueYear.
+await Promise.all([
+  preloadDraftBroadcast(league.dataPath, leagueYear),
+  defaultYear !== leagueYear ? preloadDraftBroadcast(league.dataPath, defaultYear) : null,
+  preloadDraftPlayers(leagueYear, { adpSource: 'redraft' }),
+]);
+
 // ── Which conference is on the TV ──
 const conferences: BroadcastConference[] = (aflConfig.conferences ?? []).map((c: any) => ({
   code: c.code,
@@ -90,20 +100,9 @@ const conference =
   conferences.find((c) => c.code === requestedCode) ?? conferences[0];
 
 // ── Board skeleton (all 108 slots, filled or not) ──
-// fs rather than import.meta.glob: globbing would compile every season of
-// draftResults into the server bundle to serve one. Same call as
-// afl-draft-slot.ts makes for the same reason.
-let draftResultsRaw: any = null;
-try {
-  draftResultsRaw = JSON.parse(
-    readFileSync(
-      join(process.cwd(), `${league.dataPath}/mfl-feeds/${leagueYear}/draftResults.json`),
-      'utf-8'
-    )
-  );
-} catch {
-  draftResultsRaw = null;
-}
+// Through the loader (preloaded above) rather than import.meta.glob: globbing
+// would compile every season of draftResults into the server bundle to serve one.
+let draftResultsRaw: any = getLeagueData(leagueFeedPath(league.dataPath, leagueYear, 'draftResults.json'));
 
 // ── Which draft this board is WATCHING ──
 // Its own, unless `?mflLeague=` points it at another MFL league's live draft —

@@ -301,11 +301,23 @@ describe('the phone sort chips (idea B)', () => {
     expect(CSS).toMatch(/^\.rsim-bar,\s*\.rr-chips,\s*\.rr-ph \{\s*display: none;/m);
   });
 
-  it('My Rank is an icon on a phone, named for what it opens', () => {
-    expect(PAGE).toContain('<MyRankEditor league="theleague" accessibleName="My Rank sources" />');
-    const editor = fs.readFileSync(path.join(process.cwd(), 'src/components/shared/rankings/MyRankEditor.astro'), 'utf8');
-    expect(editor).toContain('aria-label={accessibleName}');
-    expect(editor).toContain('<span class="mre-trigger__label">{label}</span>');
+  // Year + My Rank sit behind one sliders button on a phone, in BOTH
+  // leagues (user, 2026-10-29): one shared control, named for what it opens.
+  it('Year and My Rank share one sliders button on a phone, in every league', () => {
+    const shared = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/shared/rosters/RostersPage.astro'),
+      'utf8',
+    );
+    expect(PAGE).toContain('<RosterOptions');
+    expect(PAGE).toContain('selectId="rosterSeasonSelect"');
+    expect(shared).toContain('<RosterOptions');
+    expect(shared).toContain('selectId="year-select"');
+    const options = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/shared/rosters/RosterOptions.astro'),
+      'utf8',
+    );
+    expect(options).toContain('aria-label="Roster options: year and My Rank sources"');
+    expect(options).toContain('<MyRankEditor league={rankingsLeague} />');
   });
 });
 

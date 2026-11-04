@@ -1,14 +1,23 @@
 ---
 /**
- * Archie's — full calendar. Thin route wrapper: the literal globs live here
- * (static import specifiers cannot be runtime variables).
+ * Archie's — full calendar. Thin route wrapper: the feed maps are built
+ * here, through the league-data loader (storage-and-build.md § "League data
+ * lives in Blob").
  */
 import PackageCalendarPage from '../../components/shared/package-league/PackageCalendarPage.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
-const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
-const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
+const league = getLeagueBySlug('archies')!;
+/** A lazy-glob-shaped map over the league-data loader (never a glob: that compiles the data into the function). */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const calendarFeeds = lazy(`${league.dataPath}/mfl-feeds/*/calendar.json`);
+const playoffFeeds = lazy(`${league.dataPath}/mfl-feeds/*/playoff-brackets.json`);
 ---
 
 <PackageCalendarPage leagueSlug="archies" calendarFeeds={calendarFeeds} playoffFeeds={playoffFeeds} />

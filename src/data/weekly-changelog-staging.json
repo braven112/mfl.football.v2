@@ -337,6 +337,14 @@
       "league": "archies"
     },
     {
+      "date": "2026-11-03",
+      "type": "enhancement",
+      "summary": "Ask the History now knows the Premier League, D-League and AFL Cup: ask for all-play records, titles, promotions and relegations.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
       "date": "2026-10-26",
       "type": "bug-fix",
       "summary": "Franchise page head-to-head rows now match the rivalry page they link to, and every win-loss bar in the list is the same width.",
@@ -574,6 +582,14 @@
       "guide": "/guides/tv-app"
     },
     {
+      "date": "2026-10-28",
+      "type": "enhancement",
+      "summary": "TheLeague has official championship pennants: each division leader on the homepage standings wears its division shield, and the champion's medallion hangs in the footer.",
+      "impact": "user",
+      "area": "standings",
+      "league": "theleague"
+    },
+    {
       "date": "2026-10-30",
       "type": "new-feature",
       "summary": "Remote mode: the MFL Football TV app on an Android phone, or mfl.football/live/broadcast/remote on any phone, steers your TV's score box with big buttons.",
@@ -622,6 +638,70 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "enhancement",
+      "summary": "Live Scoring now names a Player of the Week and the week's Nail-Biter, the closest game, every week. Holidays rename them.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "enhancement",
+      "summary": "Live Scoring now names a Player of the Week and the week's Nail-Biter, the closest game, every week. Holidays rename them.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "archies"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "style-tweak",
+      "summary": "Card borders in dark mode are softer, so panels sit quietly on the page instead of outlining every box.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-11-01",
+      "type": "enhancement",
+      "summary": "The player card's game log now colors each opponent by matchup, shades each week against the player's own average, and adds a Pos Rank tile.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "new-feature",
+      "summary": "Live Scoring has a Standings tab: the Premier League, D-League and every division, updated live as games are played.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "bug-fix",
+      "summary": "Past seasons on Rosters now show every player who finished the year on each team, and the Year picker sits behind the sliders button on a phone (new on TheLeague's page).",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-11-04",
+      "type": "new-feature",
+      "summary": "Live Scoring has a Standings tab: every division, updated live as games are played.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-11-04",
+      "type": "new-feature",
+      "summary": "Live Scoring has a Standings tab: MAD POWER 99 playoff seeding on Victory Points, updated live as games are played.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "archies"
     }
   ]
 }

@@ -10,8 +10,6 @@
  */
 
 import type { APIRoute } from 'astro';
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueYearForMflId, getCurrentLeagueYear } from '../../../utils/league-year';
 import type { MockRankingSource } from '../../../types/draft-room';
@@ -23,7 +21,8 @@ import {
 import { isDraftablePosition } from '../../../utils/build-draft-players';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
-import { DEFAULT_LEAGUE_ID, getLeagueBySlug, getLeagueById } from '../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG, getLeagueBySlug, getLeagueById } from '../../../config/leagues';
+import { loadLeagueData } from '../../../utils/league-data';
 import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
 import { buildAflMockContext } from '../../../utils/afl-mock-draft-data';
 import { AFL_MOCK_ROUNDS, isMockWindowOpen } from '../../../utils/afl-mock-draft';
@@ -164,6 +163,9 @@ export const POST: APIRoute = async ({ request }) => {
     // stale-year directory between Feb 14 and June 1 if we used its own
     // clock for file lookups. Session metadata keeps the league's clock.
     const feedYearStr = String(getCurrentLeagueYear());
+    // The draft-results and players feeds below were always the default
+    // league's (players.json is MFL's whole catalogue, the same in every league).
+    const defaultLeagueDataPath = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.dataPath;
 
     // ADP is the one feed that must come from the DRAFTING league's own
     // directory: MFL's ADP export is filtered by that league's scoring, roster
@@ -200,16 +202,12 @@ export const POST: APIRoute = async ({ request }) => {
     } else if (isBestBall) {
       franchiseOrder = (bb1Config.teams ?? []).map((t: any) => t.franchiseId as string);
     } else try {
-      const draftResultsFeeds = import.meta.glob(
-        '../../../../data/theleague/mfl-feeds/*/draftResults.json',
-        { eager: true },
+      // The default league's feed, read through the league-data loader (only
+      // the year in hand), never a glob over every season.
+      const data = await loadLeagueData<any>(
+        `${defaultLeagueDataPath}/mfl-feeds/${feedYearStr}/draftResults.json`,
       );
-      const draftResultsKey = Object.keys(draftResultsFeeds).find(
-        (path) => path.includes(`/${feedYearStr}/`),
-      );
-      if (draftResultsKey) {
-        const mod = draftResultsFeeds[draftResultsKey] as any;
-        const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+      if (data) {
         const picks = data?.draftResults?.draftUnit?.draftPick;
         const pickArray: any[] = picks ? (Array.isArray(picks) ? picks : [picks]) : [];
 
@@ -259,17 +257,11 @@ export const POST: APIRoute = async ({ request }) => {
     // KTC, FBG) give us names, so we match them back to MFL IDs here.
     // Year-filtered (2025+): only the current league year is read below.
     // tests/current-era-feed-globs.test.ts guards it.
-    const playersFeeds = import.meta.glob(
-      '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
-      { eager: true },
-    );
-    const playersKey = Object.keys(playersFeeds).find(
-      (p) => p.includes(`/${feedYearStr}/`),
-    );
-    const playersMod = playersKey ? (playersFeeds[playersKey] as any) : null;
-    const playersData = playersMod && typeof playersMod === 'object' && 'default' in playersMod
-      ? playersMod.default
-      : playersMod;
+    // Read through the league-data loader: one season's ~1.4 MB file, instead
+    // of every current-era season compiled into the function.
+    const playersData = await loadLeagueData<any>(
+      `${defaultLeagueDataPath}/mfl-feeds/${feedYearStr}/players.json`,
+    ).catch(() => null);
     const allPlayersRaw = playersData?.players?.player;
     const allPlayers: any[] = allPlayersRaw
       ? (Array.isArray(allPlayersRaw) ? allPlayersRaw : [allPlayersRaw])
@@ -327,11 +319,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Each AI team can be assigned a different source so mock drafts produce
     // realistic board variance. RSP is intentionally omitted: it's licensed
     // content gated to franchise 0001 and must never drive a CPU team.
-    const loadJsonFile = (relPath: string): any => {
+    const loadJsonFile = async (relPath: string): Promise<any> => {
       try {
-        const abs = join(process.cwd(), relPath);
-        if (!existsSync(abs)) return null;
-        return JSON.parse(readFileSync(abs, 'utf-8'));
+        return await loadLeagueData(relPath);
       } catch (err) {
         console.warn(`[mock-draft/create] Could not read ${relPath}:`, (err as Error).message);
         return null;
@@ -385,7 +375,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // MFL dynasty ADP (local feed, filter to rookies)
     {
-      const dynasty = loadJsonFile(
+      const dynasty = await loadJsonFile(
         `${adpDataPath}/mfl-feeds/${adpYearStr}/adp-dynasty.json`,
       );
       const raw = dynasty?.adp?.player;
@@ -405,7 +395,7 @@ export const POST: APIRoute = async ({ request }) => {
     // seasonal redrafts, so this is their PRIMARY board (dynasty ADP
     // overrates youth/longevity for a one-season roster).
     if (isBestBall || isAfl) {
-      const redraft = loadJsonFile(
+      const redraft = await loadJsonFile(
         `${adpDataPath}/mfl-feeds/${adpYearStr}/adp-redraft.json`,
       );
       const raw = redraft?.adp?.player;
@@ -423,7 +413,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Sleeper (cached) — a rookie board; useless against a full startup pool
     if (!isBestBall && !isAfl) {
-      const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${feedYearStr}.json`);
+      const sleeper = await loadJsonFile(`data/adp/sleeper-rookies-${feedYearStr}.json`);
       if (sleeper?.players?.length) {
         const ids = (sleeper.players as any[])
           .map((p) =>
@@ -437,7 +427,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // KTC (cached, 1QB) — also a rookie board; skip for best-ball and AFL mocks
     if (!isBestBall && !isAfl) {
-      const ktc = loadJsonFile(`data/adp/ktc-rookies-${feedYearStr}.json`);
+      const ktc = await loadJsonFile(`data/adp/ktc-rookies-${feedYearStr}.json`);
       if (ktc?.players?.length) {
         const ids = (ktc.players as any[])
           .map((p) =>

@@ -205,6 +205,29 @@ export function tradeTargetFor(
 }
 
 /**
+ * Which of the viewer's roster buckets this player sits in, or null when he is
+ * not the viewer's — the player modal's "Your player" chip.
+ *
+ * `shownFranchiseId` is the franchise the modal's owner strip names (from the
+ * page's payload). The answer is non-null only when THAT franchise is the
+ * viewer's own: in the AFL the same NFL player is rostered once per
+ * conference, and calling the other conference's copy "your player" would
+ * contradict the strip it sits in. Null too for a signed-out viewer or a
+ * degraded read, whose roster is empty.
+ */
+export function ownSlotFor(
+  playerId: string | null | undefined,
+  shownFranchiseId: string | null | undefined,
+): 'active' | 'ir' | 'taxi' | null {
+  const state = states.get(activeRankingsScope());
+  const ctx = state?.context;
+  if (!playerId || !ctx?.franchiseId || !shownFranchiseId) return null;
+  if (String(shownFranchiseId) !== String(ctx.franchiseId)) return null;
+  const mine = ctx.roster?.find((p) => p.id === String(playerId));
+  return mine ? mine.slot : null;
+}
+
+/**
  * Drop a player out of the claimable set after a successful claim, so the
  * button does not keep offering someone the viewer just added. Cheaper and
  * more honest than re-fetching: MFL's rosters export lags its own writes.

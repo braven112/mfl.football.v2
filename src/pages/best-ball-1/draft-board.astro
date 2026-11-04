@@ -14,7 +14,7 @@ import BestBallCrest from '../../components/best-ball/BestBallCrest.astro';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
-import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from '../../utils/build-draft-players';
 import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
 
 export const prerender = false;
@@ -34,6 +34,8 @@ const teamsById = new Map<string, { name: string; abbrev: string; colorPrimary?:
 const madePicks = (session?.picks ?? []).filter((p) => p.playerId);
 const playersById = new Map<string, { name: string; position: string; nflTeam: string }>();
 if (madePicks.length > 0) {
+  // Sync over preloaded data: players.json is not shipped inside the function.
+  await preloadDraftPlayers(getCurrentLeagueYear(), { enrich: false });
   for (const p of buildDraftPlayers(getCurrentLeagueYear(), { enrich: false })) {
     playersById.set(p.id, { name: p.name, position: p.position, nflTeam: p.nflTeam });
   }

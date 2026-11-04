@@ -8,9 +8,17 @@
  */
 import OwnerDetailPage from '../../../components/shared/owners/OwnerDetailPage.astro';
 import { resolveOwnerDetail } from '../../../utils/owner-detail';
-import ownerData from '../../../../data/theleague/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
-import historyData from '../../../../data/theleague/derived/league-history.json';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// Read through the league-data loader, never bundled into the function
+// (src/utils/league-data.ts).
+const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
+const [ownerData, historyData] = (await Promise.all([
+  loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`),
+  loadLeagueData(`${THELEAGUE_DATA}/derived/league-history.json`),
+])) as [any, any];
 
 export const prerender = false;
 

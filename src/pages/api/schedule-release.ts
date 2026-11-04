@@ -15,8 +15,6 @@
  * back `WW,AAAA,HHHH` text for the commissioner to paste.
  */
 import type { APIRoute } from 'astro';
-import fs from 'node:fs';
-import path from 'node:path';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
@@ -34,52 +32,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
-
-const readFeed = (dataPath: string, year: number, feed: string): any => {
-  try {
-    const file = path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), `${feed}.json`);
-    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
-  } catch {
-    return null;
-  }
-};
-
-const readChampionship = (dataPath: string, year: number): any => {
-  try {
-    const file = path.join(process.cwd(), dataPath, 'championship-history.json');
-    if (!fs.existsSync(file)) return null;
-    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const all = raw?.championships ?? raw;
-    return Object.values(all).find((c: any) => Number(c?.year) === year) ?? null;
-  } catch {
-    return null;
-  }
-};
-
-const asArray = (v: any): any[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
-
-/** Franchise/division/conference shape, and the display names the page needs. */
-const seasonShape = (leagueJson: any) => {
-  const meta = leagueJson?.league;
-  if (!meta) return null;
-  const divisionName: Record<string, string> = {};
-  const divisionConference: Record<string, string> = {};
-  for (const d of asArray(meta.divisions?.division)) {
-    divisionName[d.id] = d.name;
-    divisionConference[d.id] = d.conference;
-  }
-  const name: Record<string, string> = {};
-  const divisionOf: Record<string, string> = {};
-  const conferenceOf: Record<string, string> = {};
-  for (const f of asArray(meta.franchises?.franchise)) {
-    // MFL stores a few franchise names with stray leading space.
-    name[f.id] = String(f.name ?? '').trim();
-    divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
-    conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
-  }
-  return { meta, name, divisionOf, conferenceOf, lastWeek: Number(meta.lastRegularSeasonWeek) };
-};
-
 
 /**
  * Old-school brands for the Throwback Week marquee pick, or null.

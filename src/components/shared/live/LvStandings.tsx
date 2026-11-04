@@ -21,8 +21,8 @@
  * row that moved says where it officially sits. The maths, and why a finished
  * week is never counted twice, live in `utils/live/standings-projection.ts`.
  */
-import { useMemo, useState, type JSX } from 'react';
-import type { LiveMatchup, LiveStandingsRow } from '../../../types/live';
+import { useMemo, useState, type JSX, type ReactNode } from 'react';
+import type { LiveMatchup, LiveStandingsRow, LiveStandingsZone } from '../../../types/live';
 import {
   DEFAULT_STANDINGS_MODE,
   initialStandingsMode,
@@ -99,6 +99,126 @@ function record(row: LiveStandingsRow): string {
     : `${row.wins}-${row.losses}`;
 }
 
+export interface LvStandingsTableRow extends ProjectedStandingsRow {
+  /** A marker on the position this row holds — sectioned tables only. */
+  zone?: LiveStandingsZone | null;
+}
+
+export interface LvStandingsTableProps {
+  rows: readonly LvStandingsTableRow[];
+  /** The table's caption; a sectioned tab names its table here. */
+  caption: ReactNode;
+  /** The record column's header. "W-L" unless the table ranks on all-play. */
+  recordLabel?: string;
+  /** The record column's screen-reader name, when the header is an abbreviation. */
+  recordTitle?: string;
+  /**
+   * A column before the record, for a table that ranks on something else
+   * (Archie's MAD POWER 99 ranks on Victory Points).
+   */
+  leadColumn?: { label: string; title?: string; value: (row: LvStandingsTableRow) => string };
+  /** Show this many rows, with the rest behind a "Show all" button. */
+  collapseAfter?: number;
+}
+
+/**
+ * The table itself, drawn from rows that are already in their view's order.
+ * Shared by the single-table tab above and the sectioned one
+ * (`LvStandingsSections`), so a division or a tier looks exactly like the
+ * league table does.
+ */
+export function LvStandingsTable({
+  rows,
+  caption: captionText,
+  recordLabel = 'W-L',
+  recordTitle,
+  leadColumn,
+  collapseAfter,
+}: LvStandingsTableProps): JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const collapsible = collapseAfter !== undefined && rows.length > collapseAfter;
+  // The viewer's own row is never hidden: a collapsed table still shows it.
+  const shown =
+    collapsible && !expanded
+      ? rows.filter((row, i) => i < collapseAfter! || row.isViewer)
+      : rows;
+  return (
+      <div className="lv-standings">
+        <table className="ui-table lv-standings__table">
+          <caption className="lv-standings__caption">
+            {captionText}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" className="lv-standings__rank">#</th>
+              <th scope="col">Team</th>
+              {leadColumn && (
+                <th scope="col" className="lv-standings__num" title={leadColumn.title}>{leadColumn.label}</th>
+              )}
+              <th scope="col" className="lv-standings__num" title={recordTitle}>{recordLabel}</th>
+              <th scope="col" className="lv-standings__num">PF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((row) => (
+              <tr
+                key={row.franchiseId}
+                className={[
+                  'lv-standings__row',
+                  row.isViewer ? 'lv-standings__row--you' : '',
+                  row.zone ? `lv-standings__row--zone lv-standings__row--${row.zone.tone}` : '',
+                ].filter(Boolean).join(' ')}
+              >
+                <td className="lv-standings__rank">
+                  {row.rank}
+                  <Move row={row} />
+                </td>
+                <th scope="row" className="lv-standings__team">
+                  <LvMark
+                    icon={row.icon}
+                    alt={row.iconAlt}
+                    initials={row.initials}
+                    crop={row.rung === 'mfl'}
+                    classes={{ wrap: 'lv-standings__crest', crop: 'lv-standings__crest--crop', text: 'lv-standings__initials' }}
+                  />
+                  {row.zone ? (
+                    // The zone is said in words under the name, never by the
+                    // stripe alone — same reason the "You" tag exists.
+                    <span className="lv-standings__label">
+                      <span className="lv-standings__name">{row.nameShort || row.name}</span>
+                      <span className={`lv-standings__zone lv-standings__zone--${row.zone.tone}`}>
+                        {row.zone.label}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="lv-standings__name">{row.nameShort || row.name}</span>
+                  )}
+                  {/* Not colour alone: the row tints AND says so, because a tint
+                      is invisible to a screen reader and to anyone who cannot
+                      separate it from the stripe above it. */}
+                  {row.isViewer && <span className="lv-standings__you">You</span>}
+                </th>
+                {leadColumn && <td className="lv-standings__num">{leadColumn.value(row)}</td>}
+                <td className="lv-standings__num">{record(row)}</td>
+                <td className="lv-standings__num">{fmt(row.pointsFor)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {collapsible && (
+          <button
+            type="button"
+            className="cta-link lv-standings__more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? `Show top ${collapseAfter}` : `Show all ${rows.length}`}
+          </button>
+        )}
+      </div>
+  );
+}
+
 export default function LvStandings({
   rows,
   leagueName,
@@ -139,50 +259,10 @@ export default function LvStandings({
           proLocked={proLocked}
         />
       )}
-      <div className="lv-standings">
-        <table className="ui-table lv-standings__table">
-          <caption className="lv-standings__caption">
-            {caption(mode, leagueName, view.some((r) => r.includesWeek))}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col" className="lv-standings__rank">#</th>
-              <th scope="col">Team</th>
-              <th scope="col" className="lv-standings__num">W-L</th>
-              <th scope="col" className="lv-standings__num">PF</th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.map((row) => (
-              <tr
-                key={row.franchiseId}
-                className={row.isViewer ? 'lv-standings__row lv-standings__row--you' : 'lv-standings__row'}
-              >
-                <td className="lv-standings__rank">
-                  {row.rank}
-                  <Move row={row} />
-                </td>
-                <th scope="row" className="lv-standings__team">
-                  <LvMark
-                    icon={row.icon}
-                    alt={row.iconAlt}
-                    initials={row.initials}
-                    crop={row.rung === 'mfl'}
-                    classes={{ wrap: 'lv-standings__crest', crop: 'lv-standings__crest--crop', text: 'lv-standings__initials' }}
-                  />
-                  <span className="lv-standings__name">{row.nameShort || row.name}</span>
-                  {/* Not colour alone: the row tints AND says so, because a tint
-                      is invisible to a screen reader and to anyone who cannot
-                      separate it from the stripe above it. */}
-                  {row.isViewer && <span className="lv-standings__you">You</span>}
-                </th>
-                <td className="lv-standings__num">{record(row)}</td>
-                <td className="lv-standings__num">{fmt(row.pointsFor)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <LvStandingsTable
+        rows={view}
+        caption={caption(mode, leagueName, view.some((r) => r.includesWeek))}
+      />
     </div>
   );
 }

@@ -8,7 +8,15 @@
  * inside (canAskLeagueHistory).
  */
 import HistoryAskPage from '../../../../components/shared/league-history/HistoryAskPage.astro';
-import historyData from '../../../../../data/afl-fantasy/derived/league-history.json';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { loadLeagueData } from '../../../../utils/league-data';
+
+// Derived history files, read through the league-data loader
+// (src/utils/league-data.ts) instead of being bundled into the function.
+const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const [historyData] = await Promise.all([
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+]);
 
 export const prerender = false;
 ---

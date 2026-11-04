@@ -1,33 +1,41 @@
 ---
 /**
  * Archie's Fantasy Football League — home. Thin route wrapper over the shared
- * package-league homepage. Globs live here: a static import specifier cannot
- * be a runtime variable, and cron-written feeds must never be static imports
- * (docs/claude/rules/storage-and-build.md). The Schefter feed is read live
- * from Redis (getSchefterFeedIfAny).
+ * package-league homepage. Feeds are read through the league-data loader, never
+ * globbed or imported: either would compile every season into the serverless
+ * function (docs/claude/rules/storage-and-build.md § "League data lives in
+ * Blob"). The Schefter feed is read live from Redis (getSchefterFeedIfAny).
  */
 import PackageLeagueHome from '../../components/shared/package-league/PackageLeagueHome.astro';
 import config from '../../../data/archies/archies.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getSchefterFeedIfAny } from '../../utils/schefter-league-data';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
 
 export const prerender = false;
 
-const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
-const transactionFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/transactions.json');
-const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json');
-const scheduleFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json');
-const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
+const league = getLeagueBySlug('archies')!;
+const feedDir = `${league.dataPath}/mfl-feeds`;
+/** A lazy-glob-shaped map over the loader: the keys say which seasons exist, only what is read is fetched. */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const standingsFeeds = lazy(`${feedDir}/*/standings.json`);
+const transactionFeeds = lazy(`${feedDir}/*/transactions.json`);
+const leagueFeeds = lazy(`${feedDir}/*/league.json`);
+const scheduleFeeds = lazy(`${feedDir}/*/schedule.json`);
+const rosterFeeds = lazy(`${feedDir}/*/rosters.json`);
 // Absent until the sync account belongs to the league (the export is
 // owner/commissioner-gated); the calendar falls back to derived dates.
-const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
-const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
+const calendarFeeds = lazy(`${feedDir}/*/calendar.json`);
+const playoffFeeds = lazy(`${feedDir}/*/playoff-brackets.json`);
 // The Primetime front page's extra reads (registry `siteTheme`); unused by the Editorial homepage.
-const historyFeeds = import.meta.glob('../../../data/archies/derived/league-history.json');
-const ytdScoreFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playerScores-ytd.json');
-const peckingOrderIssues = import.meta.glob<any>('../../../data/archies/pecking-order/*.json', { eager: true, import: 'default' });
+const historyFeeds = lazy(`${league.dataPath}/derived/league-history.json`);
+const ytdScoreFeeds = lazy(`${feedDir}/*/playerScores-ytd.json`);
+const peckingOrderIssues = lazy(`${league.dataPath}/pecking-order/*.json`);
 
-const posts = (await getSchefterFeedIfAny(getLeagueBySlug('archies')!))?.posts ?? [];
+const posts = (await getSchefterFeedIfAny(league))?.posts ?? [];
 ---
 
 <PackageLeagueHome

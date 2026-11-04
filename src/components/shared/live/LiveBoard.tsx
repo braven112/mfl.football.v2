@@ -30,6 +30,7 @@ import LvFeedStatus from './LvFeedStatus';
 import LvStaleNotice from './LvStaleNotice';
 import LvWeekPicker from './LvWeekPicker';
 import LvStandings from './LvStandings';
+import LvStandingsSections from './LvStandingsSections';
 import { isMatchupFinal } from '../../../utils/live/standings-projection';
 import LvLeaders from './LvLeaders';
 import LvGroupPicker from './LvGroupPicker';
@@ -54,10 +55,10 @@ import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboar
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
 import { PLAYER_FIX_HREF } from '../../../utils/sleeper/ids';
-import LvHauntedStats from './LvHauntedStats';
+import LvWeekStats from './LvWeekStats';
 import LvHauntedScene from './LvHauntedScene';
 import LvCabinScene from './LvCabinScene';
-import { hauntedStats } from '../../../utils/live/haunted-stats';
+import { weekStats } from '../../../utils/live/week-stats';
 import { overlayPanel, type OverlayMemory } from '../../../utils/live/espn-overlay';
 import { useLeagueRules } from './rules-cache';
 
@@ -113,9 +114,10 @@ export interface LiveBoardProps {
   /** Page heading. */
   title?: string;
   /**
-   * The seasonal theme open for this page, or omitted. `'halloween'` adds the
-   * header's Monster of the Week and Scariest Game cards and the haunted
-   * house's moving parts; `'christmas'` adds the snowed-in cabin's. The scene
+   * The seasonal theme open for this page, or omitted. It renames the header's
+   * two stat cards (LvWeekStats: Player of the Week and Nail-Biter year-round)
+   * and adds its scene's moving parts: `'halloween'` the haunted house's,
+   * `'christmas'` the snowed-in cabin's. The scene
    * behind them is CSS keyed on <html data-season> (seasonal-themes.css).
    */
   season?: string;
@@ -515,8 +517,10 @@ export default function LiveBoard({
 
   // From the panels AS DRAWN, like the leaders strip, so the header cards
   // describe the same moment as the scores under them.
-  const haunted =
-    season === 'halloween' ? hauntedStats(panelViews.map((v) => v.panel), board.playerMeta) : null;
+  // Year-round (Player of the Week, Nail-Biter); a seasonal theme only
+  // renames them. Not before the season: there is no week to have a star.
+  const stats = preSeason ? null : weekStats(panelViews.map((v) => v.panel), board.playerMeta);
+  const haunted = season === 'halloween';
   // Every score on the board, in one string: when it changes, the haunted
   // house (LvHauntedScene) or the snowed-in cabin (LvCabinScene) stirs.
   const scenePulse = haunted || season === 'christmas'
@@ -687,10 +691,11 @@ export default function LiveBoard({
           {!hideWeekPicker && <LvWeekPicker week={board.week} onSelect={onSelectWeek} />}
           {pill}
         </div>
-        {haunted && (
-          <LvHauntedStats
-            stats={haunted}
-            onOpenScariest={(game) => {
+        {stats && (
+          <LvWeekStats
+            stats={stats}
+            season={season}
+            onOpenClosest={(game) => {
               boardScrollY.current = window.scrollY;
               setSelected({ leagueId: game.leagueId, pairing: game.pairing });
             }}
@@ -764,6 +769,15 @@ export default function LiveBoard({
         />
         </ScorePrecisionContext.Provider>
         </>
+      ) : activeTab === 'standings' && soloPanel && soloPanel.standingsSections ? (
+        // A league that cuts its standings into tables (the AFL: tiers, then
+        // divisions). League sites only, so never Pro-locked.
+        <LvStandingsSections
+          rows={soloPanel.standings ?? null}
+          sections={soloPanel.standingsSections}
+          leagueName={soloPanel.leagueName}
+          matchups={soloPanel.matchups}
+        />
       ) : activeTab === 'standings' && soloPanel ? (
         <LvStandings
           rows={soloPanel.standings ?? null}

@@ -26,7 +26,7 @@ import {
   type ConferenceId,
 } from './afl-conference';
 import { buildMflLiveDraftUrl, buildMflOptionUrl, MFL_EMAIL_DRAFT_OPTION } from './mfl-url';
-import { buildDraftPlayers } from './build-draft-players';
+import { buildDraftPlayers, preloadDraftPlayers } from './build-draft-players';
 import { buildDraftRoomData, resolveRoomConference, type EagerFeedGlob } from './draft-room-data';
 import { getCurrentLeagueYear } from './league-year';
 import type { DraftRoomPageData, DraftRoomTeam } from '../types/draft-room';
@@ -151,8 +151,11 @@ export function resolveAflRoom(input: {
  * The globs are still built in the route (a static import specifier can't be
  * a runtime variable) and handed in; everything done with them is here, which
  * is what keeps that route thin beside TheLeague's.
+ *
+ * Async because the player pool is built synchronously over preloaded data
+ * (players.json is not shipped inside the function), so it loads that first.
  */
-export function buildAflRoomPageData(input: {
+export async function buildAflRoomPageData(input: {
   room: AflRoomSelection;
   leagueYear: number;
   leagueId: string;
@@ -161,7 +164,8 @@ export function buildAflRoomPageData(input: {
   draftResultsFeeds: EagerFeedGlob;
   leagueFeeds: EagerFeedGlob;
   partyHost: string;
-}): DraftRoomPageData {
+}): Promise<DraftRoomPageData> {
+  await preloadDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' });
   return buildDraftRoomData({
     leagueYear: input.leagueYear,
     draftResultsFeeds: input.draftResultsFeeds,

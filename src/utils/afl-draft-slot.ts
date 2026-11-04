@@ -26,8 +26,6 @@
  * three newest seasons stay reachable at request time by design — see
  * `scripts/lib/archived-feed-files.mjs`.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 
 import {
   buildHeadToHeadFromRaw,
@@ -37,6 +35,7 @@ import {
 } from './afl-draft-utils';
 import { getAflLeagueYear, getTestDateFromUrl } from './league-year';
 import { getLeagueBySlug } from '../config/leagues';
+import { hasLeagueData, leagueFeedPath, loadLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { isAflDraftWindowOpen, type AflDraftSlot } from './afl-team-spotlight';
 import type { StandingsFranchise } from '../types/standings';
 // Static import, not an fs read through the registry's `configPath`: the config
@@ -258,8 +257,7 @@ export function resolveAflDraftSlotFrom(
 // ── Feed loading ────────────────────────────────────────────────────────────
 
 function feedPath(year: number, file: string): string {
-  const dataPath = getLeagueBySlug('afl-fantasy')!.dataPath;
-  return path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), file);
+  return leagueFeedPath(getLeagueBySlug('afl-fantasy')!.dataPath, year, file);
 }
 
 /**
@@ -281,19 +279,43 @@ function feedPath(year: number, file: string): string {
  */
 const feedCache = new Map<string, unknown>();
 
+/**
+ * League data, read through src/utils/league-data.ts (the store, in
+ * production); the page awaits {@link preloadAflDraftSlot} first. A feed that
+ * exists but was not readable (not preloaded) is NOT cached, so the request
+ * that does preload is not served the miss.
+ */
 function readJson<T>(file: string): T | null {
   if (feedCache.has(file)) return feedCache.get(file) as T | null;
-  let parsed: T | null;
-  try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
-  } catch {
-    // A feed that does not exist yet is a normal state, not an error: the
-    // board is absent until MFL seeds it, and playoff brackets are absent
-    // until the postseason runs.
-    parsed = null;
-  }
-  feedCache.set(file, parsed);
+  // A feed that does not exist yet is a normal state, not an error: the
+  // board is absent until MFL seeds it, and playoff brackets are absent
+  // until the postseason runs.
+  const parsed = readLeagueDataSync<T>(file);
+  if (parsed !== null || !hasLeagueData(file)) feedCache.set(file, parsed);
   return parsed;
+}
+
+/**
+ * Load what {@link loadAflDraftSlot} will read for this date. The board always
+ * (it decides the window); the prior season's standings, brackets and ~1.6 MB
+ * of weekly results only while the window can be open.
+ */
+export async function preloadAflDraftSlot(referenceDate?: Date): Promise<void> {
+  const ref = referenceDate ?? getTestDateFromUrl() ?? new Date();
+  const draftYear = getAflLeagueYear(ref);
+  const board = await loadLeagueData(feedPath(draftYear, 'draftResults.json')).catch(() => null);
+  const anyConferenceOpen = Object.keys(CONFERENCE_UNIT).some((conferenceId) =>
+    isAflDraftWindowOpen({
+      aflLeagueYear: draftYear,
+      calendarYear: ref.getFullYear(),
+      conferenceDraftComplete: isConferenceDraftComplete(board, conferenceId),
+    }),
+  );
+  if (!anyConferenceOpen) return;
+  const standingsYear = draftYear - 1;
+  await preloadLeagueData(
+    ['standings.json', 'playoff-brackets.json', 'weekly-results-raw.json'].map((f) => feedPath(standingsYear, f)),
+  );
 }
 
 export interface AflDraftSlotOptions {

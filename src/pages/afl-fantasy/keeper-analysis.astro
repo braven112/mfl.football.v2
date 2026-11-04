@@ -32,6 +32,8 @@ import {
   type WeeklyResultsRaw,
 } from '../../utils/afl-keeper-analysis';
 import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueData, listLeagueData, loadLeagueData, preloadLeagueData } from '../../utils/league-data';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { formatForViewer } from '../../utils/viewer-clock';
 
@@ -40,49 +42,38 @@ export const prerender = false;
 const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
-// Committed MFL feeds, baked at build time (refreshed by roster-sync cron).
+// Committed MFL feeds (refreshed by roster-sync cron), read through the
+// league-data loader (src/utils/league-data.ts) rather than bundled into the
+// server function.
 //
-// ONE glob for every per-season feed this page reads — add a new feed by
-// adding its basename to the brace list, never by adding another
-// import.meta.glob call. Vite requires a literal pattern, so a repeated
-// year filter can't be factored into a shared constant; keeping the filter
-// to a single occurrence is the next best thing.
-//
-// That year filter is load-bearing: it matches 2024-2099, the keeper era
-// only (AFL_KEEPER_ERA_FIRST_PREV_YEAR), while AFL feeds go back to 2003.
-// A bare */ glob bakes ~55MB of pre-keeper-era JSON into the server bundle
-// and pushes the Vercel function past its 250MB uncompressed limit; the era
-// filter keeps it to ~7MB. tests/afl-keeper-feed-globs.test.ts fails the
-// build if any feed glob on this page loses the filter.
-const seasonFeeds = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,fetch.meta}.json',
-  { eager: true }
-);
-// Post-deadline July roster snapshots (16th-31st): between the keeper cut
-// deadline and the draft the roster IS the keeper class, so the first
-// all-at-7 snapshot is the official list. ~260KB/year — no bundle concern.
-// Separate from seasonFeeds only because it lives a directory deeper and is
-// keyed by snapshot date rather than by (year, filename).
-const keeperSnapshotFeeds = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/roster-history/rosters-*-07-{1[6-9],[2-3][0-9]}.json',
-  { eager: true }
+// Keeper era only: AFL_KEEPER_ERA_FIRST_PREV_YEAR (2024) on, while AFL feeds
+// go back to 2003. A season before it reads as absent, exactly as when this
+// page globbed 2024-2099.
+const FEEDS_DIR = `${getLeagueBySlug('afl-fantasy')!.dataPath}/mfl-feeds`;
+const SEASON_FILES = ['rosters.json', 'players.json', 'draftResults.json', 'weekly-results-raw.json', 'fetch.meta.json'];
+const inKeeperEra = (year: number) => year >= AFL_KEEPER_ERA_FIRST_PREV_YEAR;
+const feedPath = (year: number, file: string) => `${FEEDS_DIR}/${year}/${file}`;
+const seasonOfPath = (path: string) => parseInt(path.match(/\/(\d{4})\//)?.[1] ?? '', 10);
+
+// Points seasons with a weekly-results-raw feed: what the cycle list and the
+// default year are computed from, so those (and the roster season before
+// each) are read up front; the selected season's other feeds after.
+const pointsSeasons = listLeagueData(`${FEEDS_DIR}/*/weekly-results-raw.json`)
+  .map(seasonOfPath)
+  .filter(inKeeperEra);
+await preloadLeagueData(
+  pointsSeasons.flatMap((y) => [
+    feedPath(y, 'weekly-results-raw.json'),
+    ...(inKeeperEra(y - 1) ? [feedPath(y - 1, 'rosters.json')] : []),
+  ])
 );
 
-// Eager JSON glob modules expose the parsed JSON as `default` (plus named
-// top-level keys); unwrap to the plain object.
-const feed = <T,>(year: number, file: string): T | undefined => {
-  const mod = seasonFeeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
-    | { default?: T }
-    | undefined;
-  return (mod?.default ?? mod) as T | undefined;
-};
+const feed = <T,>(year: number, file: string): T | undefined =>
+  inKeeperEra(year) ? (getLeagueData<T>(feedPath(year, file)) ?? undefined) : undefined;
 
 // Cycles: points season Y where (Y-1) rosters + (Y) weekly results exist,
 // within the keeper era. Auto-grows as new seasons' feeds land.
-const availableYears = Object.keys(seasonFeeds)
-  .map((path) => path.match(/\/(\d{4})\/weekly-results-raw\.json$/)?.[1])
-  .filter((y): y is string => !!y)
-  .map((y) => parseInt(y, 10))
+const availableYears = pointsSeasons
   .filter(
     (y) =>
       y - 1 >= AFL_KEEPER_ERA_FIRST_PREV_YEAR &&
@@ -110,12 +101,25 @@ if (hasCycles && !availableYears.includes(selectedYear)) {
 }
 const prevYear = selectedYear - 1;
 
-// Keeper snapshots for the selected points season, dated from the glob keys.
-const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
-  .map(([path, mod]) => {
+// Every feed of the selected season and the roster season before it.
+await preloadLeagueData(
+  [selectedYear, prevYear].filter(inKeeperEra).flatMap((y) => SEASON_FILES.map((f) => feedPath(y, f)))
+);
+
+// Post-deadline July roster snapshots (16th-31st) for the selected points
+// season: between the keeper cut deadline and the draft the roster IS the
+// keeper class, so the first all-at-7 snapshot is the official list.
+const snapshotPaths = inKeeperEra(selectedYear)
+  ? listLeagueData(`${FEEDS_DIR}/${selectedYear}/roster-history/rosters-*.json`).filter((path) =>
+      /\/rosters-\d{4}-07-(1[6-9]|[23]\d)\.json$/.test(path)
+    )
+  : [];
+const snapshotFiles = await Promise.all(snapshotPaths.map((path) => loadLeagueData<MflRostersFeed>(path)));
+const keeperSnapshots = snapshotPaths
+  .map((path, i) => {
     const match = path.match(new RegExp(`/${selectedYear}/roster-history/rosters-(\\d{4}-\\d{2}-\\d{2})\\.json$`));
-    if (!match) return null;
-    const rosters = ((mod as { default?: MflRostersFeed })?.default ?? mod) as MflRostersFeed;
+    const rosters = snapshotFiles[i];
+    if (!match || !rosters) return null;
     return { date: match[1], rosters };
   })
   .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);

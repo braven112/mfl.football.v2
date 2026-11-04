@@ -12,8 +12,8 @@
  * keeps a copy from coming back here.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { getLeagueBySlug } from '../config/leagues';
+import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 export interface PositionFpa {
   rank: number; // 1 (worst defense) to 32 (best defense)
@@ -29,31 +29,29 @@ export interface FpaData {
 
 const fpaCache = new Map<number, FpaData | null>();
 
+const fpaPath = (year: number) =>
+  leagueFeedPath(getLeagueBySlug('theleague')!.dataPath, year, 'fantasyPointsAllowed.json');
+
+/** Load what {@link loadFantasyPointsAllowed} reads (league data lives in the store in production). */
+export function preloadFantasyPointsAllowed(year: number): Promise<void> {
+  return preloadLeagueData([fpaPath(year)]);
+}
+
 /**
- * Load FPA data for a season from the committed JSON file. Cached per year
- * so we only hit disk once. Returns null when the file doesn't exist (early
- * in a season, missing snapshot).
+ * Load FPA data for a season from the committed JSON file, through
+ * src/utils/league-data.ts. Cached per year. Returns null when the file
+ * doesn't exist (early in a season, missing snapshot).
  */
 export function loadFantasyPointsAllowed(year: number): FpaData | null {
   if (fpaCache.has(year)) return fpaCache.get(year) ?? null;
 
-  const path = resolve(
-    process.cwd(),
-    `data/theleague/mfl-feeds/${year}/fantasyPointsAllowed.json`
-  );
-  try {
-    const raw = readFileSync(path, 'utf-8');
-    const parsed = JSON.parse(raw);
-    const result: FpaData = {
-      byTeam: parsed.fantasyPointsAllowed ?? {},
-      completedWeeks: parsed.completedWeeks,
-    };
-    fpaCache.set(year, result);
-    return result;
-  } catch {
-    fpaCache.set(year, null);
-    return null;
-  }
+  const path = fpaPath(year);
+  const parsed = readLeagueDataSync<any>(path);
+  const result: FpaData | null = parsed
+    ? { byTeam: parsed.fantasyPointsAllowed ?? {}, completedWeeks: parsed.completedWeeks }
+    : null;
+  if (result || isLeagueDataLoaded(path)) fpaCache.set(year, result);
+  return result;
 }
 
 /**

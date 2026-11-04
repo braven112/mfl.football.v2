@@ -3,8 +3,9 @@
  * One news article (archies) — thin route: finds the post (active feed, then
  * the per-year archives) and redirects to the news index when it is missing.
  * The body is the shared SchefterArticlePage. The lookup and redirect stay
- * here: `Astro.redirect()` only works from a page, and these globs are
- * static specifiers.
+ * here: `Astro.redirect()` only works from a page. The gauntlet issues and the
+ * archives are read through the league-data loader, never globbed (a glob
+ * compiles every file into the serverless function).
  */
 import SchefterArticlePage from '../../../components/shared/SchefterArticlePage.astro';
 import config from '../../../../data/archies/archies.config.json';
@@ -12,19 +13,19 @@ import type { SchefterPost } from '../../../types/schefter';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
 export const prerender = false;
 
-const gauntletFiles = import.meta.glob<GauntletDerived>('../../../../data/archies/derived/schedule-strength-*.json', {
-  import: 'default',
-});
-const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
-  '../../../../data/archies/schefter-archive/*.json',
-  { import: 'default' },
-);
+const league = getLeagueBySlug('archies')!;
+/** Path → loader of the parsed file: the shape of a lazy `import: 'default'` glob. */
+const lazy = <T,>(pattern: string): Record<string, () => Promise<T>> =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData<T>(p) as Promise<T>]));
+const gauntletFiles = lazy<GauntletDerived>(`${league.dataPath}/derived/schedule-strength-*.json`);
+const archiveFiles = lazy<{ posts?: SchefterPost[] } | SchefterPost[]>(`${league.dataPath}/schefter-archive/*.json`);
 
 // The live feed (Redis), then the archives. Null for a league with no feed yet.
-const feedData = await getSchefterFeedIfAny(getLeagueBySlug('archies')!);
+const feedData = await getSchefterFeedIfAny(league);
 
 const { id } = Astro.params;
 const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;

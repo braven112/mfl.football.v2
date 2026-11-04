@@ -2,10 +2,16 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import RelatedReports from '../../../components/theleague/RelatedReports.astro';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
 
-const summaryModules = import.meta.glob(
-  '../../../data/mfl-salary-averages-*.json',
-  { eager: true }
+// Every season's averages are charted, so all are read — through the
+// league-data loader, never bundled into the function.
+const summaryModules: Record<string, unknown> = Object.fromEntries(
+  await Promise.all(
+    listLeagueData('src/data/mfl-salary-averages-*.json').map(
+      async (path) => [path, await loadLeagueData(path)] as const,
+    ),
+  ),
 );
 
 const getModuleData = (mod) =>

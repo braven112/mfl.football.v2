@@ -6,8 +6,6 @@
  * Runs server-side only (SSR).
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import type { HeroState } from '../types/hero-state';
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
@@ -16,7 +14,9 @@ import { nflKickoff, nflWeekFor } from './nfl-week-starts.mjs';
 import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { LEAGUES as REGISTRY } from '../config/leagues-data.mjs';
 import { isEspnCdnUrl } from './espn-cdn';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 /**
  * Looks up a league's data path, or throws a clear, specific error instead
@@ -39,14 +39,59 @@ const THELEAGUE_DATA_PATH = requireDataPath('theleague');
 
 // ── JSON Data Loaders ──
 
+/**
+ * League data, read through src/utils/league-data.ts (the store, in
+ * production). These helpers are sync and called from many hero components,
+ * so a caller awaits {@link preloadOffseasonHeroData} for the years it renders
+ * first; an unpreloaded read still resolves where the file ships with the
+ * function, and logs.
+ */
 function readJsonFile(relativePath: string): any {
-  try {
-    const filePath = path.join(process.cwd(), relativePath);
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
-  }
+  return readLeagueDataSync(relativePath);
+}
+
+/** Every per-year feed the helpers in this module read. */
+const HERO_FEEDS = [
+  'rosters.json',
+  'nflSchedule.json',
+  'playerScores.json',
+  'adp-dynasty.json',
+  'tradeBait.json',
+  'projectedScores.json',
+  'transactions.json',
+  'draftResults.json',
+  'players.json',
+  'playoff-brackets.json',
+];
+
+/** What the league-hero casting and recap helpers read (`resolveLeagueHomeHero`). */
+export const HERO_CASTING_FEEDS = [
+  'rosters.json',
+  'nflSchedule.json',
+  'playerScores.json',
+  'adp-dynasty.json',
+  'tradeBait.json',
+  'projectedScores.json',
+];
+
+/** What `getOwnersByPlayer` / `getRosteredPlayerIds` read. */
+export const OWNERSHIP_FEEDS = ['rosters.json'];
+
+/**
+ * Load the feeds this module's sync helpers read for `league` in `years`
+ * (plus TheLeague's config), so they are served from memory. `files` narrows
+ * it to the feeds a caller actually uses.
+ */
+export function preloadOffseasonHeroData(
+  league: CanonicalLeagueSlug,
+  years: Iterable<number>,
+  files: readonly string[] = HERO_FEEDS,
+): Promise<void> {
+  const dataPath = requireDataPath(league);
+  // getFranchiseMap's config, from the registry.
+  const paths: string[] = [REGISTRY.theleague.configPath];
+  for (const year of new Set(years)) for (const f of files) paths.push(leagueFeedPath(dataPath, year, f));
+  return preloadLeagueData(paths);
 }
 
 /**
@@ -1258,6 +1303,17 @@ function getFranchiseMap(): Map<string, FranchiseConfig> {
  * Only loads data for the currently active phase.
  */
 export async function enrichHeroState(state: HeroState): Promise<HeroState> {
+  // The enrichers below are sync; load just what the active phase reads.
+  const refYear = state.metadata.referenceDate.getFullYear();
+  switch (state.phase) {
+    case 'champion-crowned':
+      await preloadOffseasonHeroData('theleague', [refYear, refYear - 1, refYear - 2], ['playoff-brackets.json']);
+      break;
+    case 'tagged-showcase':
+    case 'cut-watch':
+      await preloadOffseasonHeroData('theleague', [refYear]);
+      break;
+  }
   switch (state.phase) {
     case 'champion-crowned':
       return enrichChampion(state);

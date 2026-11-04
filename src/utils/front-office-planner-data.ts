@@ -28,14 +28,12 @@
  * page pure helpers (getCollegeAssets, the salary-averages row shape) are
  * copied — the same helpers rosters.astro itself has never extracted.
  */
-import fs from 'node:fs';
-import path from 'node:path';
-
 import { getActiveTeams, getCurrentIconPath, getCurrentBannerPath } from './league-assets';
 import leagueAssets from '../data/theleague.assets.json';
 import collegeLogos from '../data/college-logos.json';
 import espnCollegeIds from '../../data/theleague/espn-college-ids.json';
-import { getPlayerMap } from './player-map';
+import { getPlayerMap, preloadPlayerIdentity } from './player-map';
+import { leagueFeedPath, loadLeagueData } from './league-data';
 import { getPlayerHeadshot, divisionOrder } from '../constants/roster-constants';
 import { getCachedRosters } from './mfl-roster-cache';
 import { getCachedRecentTransactions, mergeTransactionRows } from './mfl-transactions-cache';
@@ -82,28 +80,18 @@ import {
 
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
-// ---- small fs-based feed loaders (mirrors rosters.astro's loadFeedJson —
-// this repo's established idiom for "just the current year", no glob) ----
+// ---- small feed loaders: just the years the panel shows, no glob. League
+// data, read through src/utils/league-data.ts (the store, in production). ----
 
-const loadFeedJson = (year: string | number, filename: string): any => {
-  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
-  try {
-    if (fs.existsSync(feedPath)) return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-  } catch {
-    // Missing/malformed feed — caller treats as absent.
-  }
-  return null;
-};
+const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague')!.dataPath;
 
-const loadSrcDataJson = (filename: string): any => {
-  const filePath = path.resolve(process.cwd(), `src/data/${filename}`);
-  try {
-    if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    // Missing/malformed file — caller treats as absent.
-  }
-  return null;
-};
+// Missing/malformed feed — caller treats as absent.
+const loadFeedJson = (year: string | number, filename: string): Promise<any> =>
+  loadLeagueData(leagueFeedPath(THELEAGUE_DATA_PATH, year, filename)).catch(() => null);
+
+// Missing/malformed file — caller treats as absent.
+const loadSrcDataJson = (filename: string): Promise<any> =>
+  loadLeagueData(`src/data/${filename}`).catch(() => null);
 
 const collegeLogosNormalized = Object.fromEntries(
   Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data]),
@@ -277,12 +265,18 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   // math, neutral/empty for everything display-only (odds, injuries, weekly
   // scores, trend weeks). Same "neutral live-only inputs" pattern the
   // historical-season prebuild script already uses for every OTHER season. ----
-  const playersData = loadFeedJson(leagueYearStr, 'players.json');
-  const rostersData = loadFeedJson(leagueYearStr, 'rosters.json');
-  const leagueData = loadFeedJson(leagueYearStr, 'league.json');
-  const salaryAdjustmentsData = loadFeedJson(leagueYearStr, 'salaryAdjustments.json');
-  const projectedScoresData = loadFeedJson(leagueYearStr, 'projectedScores.json');
-  const rawSalaryData = loadSrcDataJson(`mfl-player-salaries-${leagueYearStr}.json`);
+  const [playersData, rostersData, leagueData, salaryAdjustmentsData, projectedScoresData, rawSalaryData] =
+    await Promise.all([
+      loadFeedJson(leagueYearStr, 'players.json'),
+      loadFeedJson(leagueYearStr, 'rosters.json'),
+      loadFeedJson(leagueYearStr, 'league.json'),
+      loadFeedJson(leagueYearStr, 'salaryAdjustments.json'),
+      loadFeedJson(leagueYearStr, 'projectedScores.json'),
+      loadSrcDataJson(`mfl-player-salaries-${leagueYearStr}.json`),
+      // getPlayerMap(leagueYear) below is sync; the middleware preloads the
+      // current years, this covers a `?testDate=` that moved them.
+      preloadPlayerIdentity([leagueYear]),
+    ]);
 
   const playersFeedBySeason: Record<string, any> = {
     [leagueYearStr]: indexPlayersFeed(playersData) ?? {},
@@ -336,9 +330,9 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   const capLimit = seasonData.metadata?.capLimit ?? SALARY_CAP;
 
   // ---- extension salary averages (Extensions section) ----
-  const currentYearAverages = loadSrcDataJson(`mfl-salary-averages-${leagueYearStr}.json`);
+  const currentYearAverages = await loadSrcDataJson(`mfl-salary-averages-${leagueYearStr}.json`);
   const priorYearStr = String(leagueYear - 1);
-  const priorYearAverages = loadSrcDataJson(`mfl-salary-averages-${priorYearStr}.json`);
+  const priorYearAverages = await loadSrcDataJson(`mfl-salary-averages-${priorYearStr}.json`);
   const extensionSeason = String(
     getFrozenSalaryAveragesYear({ [`mfl-salary-averages-${leagueYearStr}.json`]: currentYearAverages }, (d) => d),
   );
@@ -371,7 +365,7 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   // file itself answers it. `data/<league>/mfl-feeds/<year>/playerScores-ytd.json`
   // is fresher than this and would be the better source, but switching to it
   // is a change both pages must make together or they diverge.
-  const priorSalaryData = loadSrcDataJson(`mfl-player-salaries-${priorYearStr}.json`);
+  const priorSalaryData = await loadSrcDataJson(`mfl-player-salaries-${priorYearStr}.json`);
   const priorPointsById = new Map<string, number>();
   for (const p of (priorSalaryData?.players ?? []) as any[]) {
     const pts = Number(p?.points) || 0;
@@ -520,13 +514,13 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   // that was PLAYED, not the roster-management clock. ----
   const draftSeasonYear = getCurrentSeasonYear();
   const draftNextYear = draftSeasonYear + 1;
-  const standingsData = loadFeedJson(draftSeasonYear, 'standings.json');
-  const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
-  const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
+  const standingsData = await loadFeedJson(draftSeasonYear, 'standings.json');
+  const bracketData = await loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
+  const draftResultsData = await loadFeedJson(draftNextYear, 'draftResults.json');
   // In season that is the league year, whose committed feed is a once-a-day
   // snapshot (scripts/lib/held-sync-files.mjs): the last 3 days come live, so a
   // pick traded today shows up in the draft assets.
-  const committedTransactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+  const committedTransactionsData = await loadFeedJson(draftSeasonYear, 'transactions.json');
   const transactionsData = committedTransactionsData && draftSeasonYear === leagueYear
     ? { transactions: { transaction: mergeTransactionRows(
         [committedTransactionsData.transactions?.transaction ?? []].flat(),

@@ -170,7 +170,10 @@ export function projectStandings(
       wins: row.wins + tally('W'),
       losses: row.losses + tally('L'),
       ties: row.ties + tally('T'),
-      pointsFor: row.pointsFor + toAdd.reduce((sum, g) => sum + g.points, 0),
+      // Points ONCE per week, not once per game: an AFL doubleheader is two
+      // games on one weekly score, and MFL's own `pf` counts that score once.
+      // A week MFL has already folded in (any game counted) carries it already.
+      pointsFor: row.pointsFor + (counted ? 0 : toAdd[0].points),
       officialRank: row.rank,
       move: 0,
       includesWeek: true,

@@ -96,3 +96,6 @@ test-results/
 # Forum archive: members-only league content, never committed (repo is public)
 *forum-archive*.json
 thelea45_forum*.sql
+
+# League data manifest: written by scripts/publish-league-data.mjs at build time.
+src/generated/league-data-manifest.json

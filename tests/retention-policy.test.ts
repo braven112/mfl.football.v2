@@ -2,11 +2,11 @@
  * Retention policy — the rules deciding which daily roster snapshots and
  * What's New entries survive pruning (scripts/lib/retention-policy.mjs).
  *
- * The load-bearing bit is the July keeper window: the AFL keeper page globs
- * `roster-history/rosters-*-07-{1[6-9],[2-3][0-9]}.json` and those files are
- * the official keeper record, so the policy must retain every date that glob
- * matches — the last test derives the expectation from the page's actual
- * glob pattern so the two files cannot drift apart silently.
+ * The load-bearing bit is the July keeper window: the AFL keeper page reads
+ * `roster-history/rosters-YYYY-07-{16..31}.json` and those files are the
+ * official keeper record, so the policy must retain every date the page keeps
+ * — the last test derives the expectation from the page's actual filter so
+ * the two files cannot drift apart silently.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -57,23 +57,21 @@ describe('shouldRetainSnapshot', () => {
   });
 });
 
-describe('policy stays in sync with the AFL keeper page glob', () => {
-  it('retains exactly the July dates the keeper-analysis glob matches', () => {
+describe('policy stays in sync with the AFL keeper page snapshot filter', () => {
+  it('retains exactly the July dates the keeper-analysis filter keeps', () => {
     const source = readFileSync(
       resolve(process.cwd(), 'src/pages/afl-fantasy/keeper-analysis.astro'),
       'utf8'
     );
-    const globMatch = source.match(/roster-history\/rosters-\*-07-(\{[^}]+\})\.json/);
-    expect(globMatch, 'keeper-analysis.astro no longer globs July roster snapshots — update the retention policy').toBeTruthy();
+    // The page lists the season's snapshots through the league-data loader and
+    // keeps July days matching `rosters-\d{4}-07-(<days>)\.json`.
+    const filterMatch = source.match(/rosters-\\d\{4\}-07-\(([^)]+)\)\\\.json/);
+    expect(filterMatch, 'keeper-analysis.astro no longer filters July roster snapshots — update the retention policy').toBeTruthy();
 
-    // Expand the day brace ({1[6-9],[2-3][0-9]}) into the concrete day list.
-    const dayPattern = globMatch![1]
-      .replace(/[{}]/g, '')
-      .split(',')
-      .map((alt) => new RegExp(`^${alt.replace(/\[([^\]]+)\]/g, '[$1]')}$`));
+    const dayPattern = new RegExp(`^(?:${filterMatch![1]})$`);
     for (let day = 1; day <= 31; day++) {
       const dd = String(day).padStart(2, '0');
-      const globMatches = dayPattern.some((re) => re.test(dd));
+      const globMatches = dayPattern.test(dd);
       expect(
         isKeeperWindowDate(`2026-07-${dd}`),
         `policy and keeper glob disagree on July ${dd}`

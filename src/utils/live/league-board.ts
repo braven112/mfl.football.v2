@@ -28,9 +28,15 @@ import { getLeagueConfigStructure, getLeagueTeamConfigs } from '../league-team-b
 import { buildPanelGroups } from './board-groups';
 import { getLeagueYearForSlug } from '../league-year';
 import { applyThrowbackToBoard, type ThrowbackPreview } from '../throwback-live-scoring';
-import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
+import {
+  getCurrentRosterSample,
+  getLiveScoringSample,
+  preloadCurrentRosterSample,
+  preloadLiveScoringSample,
+} from '../../data/live-scoring-sample';
 import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
+import { readLiveStandings, withBoardIdentities } from './league-live-standings';
 
 export interface AssembleLeagueBoardInput {
   slug: CanonicalLeagueSlug;
@@ -176,7 +182,29 @@ async function assembleUngrouped(
 
   let board: LiveBoard | null = null;
   if (!isSample) {
-    board = await readLeagueLive({ slug, week, year, viewerFranchiseId, identityOverrides });
+    // The Standings tab (divisions, the AFL's tiers, Archie's MAD POWER 99),
+    // read beside the scores. It may never cost them: any failure inside is a
+    // `null` table, not a throw (`league-live-standings.ts`).
+    const [read, liveStandings] = await Promise.all([
+      readLeagueLive({ slug, week, year, viewerFranchiseId, identityOverrides }),
+      readLiveStandings({ slug, year, week, viewerFranchiseId }).catch(() => undefined),
+    ]);
+    board = read;
+    if (liveStandings && board.panels.length === 1) {
+      const panel = board.panels[0];
+      board = {
+        ...board,
+        panels: [
+          {
+            ...panel,
+            standings: withBoardIdentities(liveStandings.standings, panel.matchups),
+            ...(liveStandings.standingsSections
+              ? { standingsSections: liveStandings.standingsSections }
+              : {}),
+          },
+        ],
+      };
+    }
     // An empty-but-HEALTHY feed is the offseason. `ok` is the whole guard: a
     // failed read also yields no matchups.
     if (sample && demoParam !== '0' && board.ok && board.panels[0].matchups.length === 0) {
@@ -193,6 +221,7 @@ async function assembleUngrouped(
   // the AFL June 1), and the roster replay reads THAT year off disk — so it is
   // the per-league clock, never the season one.
   const rosterYear = getLeagueYearForSlug(slug);
+  await (isRosterSample ? preloadCurrentRosterSample({ slug, year: rosterYear }) : preloadLiveScoringSample({ slug }));
   const replay = isRosterSample
     ? getCurrentRosterSample({ slug, year: rosterYear })
     : getLiveScoringSample({ slug, doubleheader: searchParams.get('dh') === '1' });

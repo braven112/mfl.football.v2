@@ -21,8 +21,6 @@
  *   owner-only read. Rendering another owner's board would draw an empty
  *   planner backed by a 403.
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import { getAllTeams, type AflFamilySlug } from './afl-conference';
 import { getLeagueBySlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
@@ -31,7 +29,8 @@ import type { FrontOfficeDraftChipGroup } from './front-office-planner-data';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { getCachedTradeBait } from './mfl-trade-bait-cache';
 import { parseTradeBaitByFranchise } from './trade-bait';
-import { buildKeeperPlannerStats } from './afl-keeper-planner-stats';
+import { buildKeeperPlannerStats, preloadKeeperPlannerStats } from './afl-keeper-planner-stats';
+import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { calculateAge } from './age-utils';
 import {
   buildRosterAnalytics,
@@ -43,15 +42,12 @@ import {
 } from './roster-analytics';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/shared/keepers/KeeperPlanner.astro';
 
-const loadFeedJson = (leagueYearStr: string, filename: string, dataPath: string): any => {
-  const feedPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${leagueYearStr}/${filename}`);
-  try {
-    if (fs.existsSync(feedPath)) return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-  } catch {
-    // Missing/malformed feed — caller treats as absent.
-  }
-  return null;
-};
+// Missing/malformed feed — caller treats as absent. League data, preloaded
+// by `buildAflFrontOfficeData` (src/utils/league-data.ts).
+const loadFeedJson = (leagueYearStr: string, filename: string, dataPath: string): any =>
+  readLeagueDataSync(leagueFeedPath(dataPath, leagueYearStr, filename));
+
+const PANEL_FEEDS = ['players.json', 'rosters.json', 'futureDraftPicks.json'];
 
 /**
  * The analytics row type moved to `roster-analytics.ts` as `AnalyticsPlayer`
@@ -90,6 +86,10 @@ export async function buildAflFrontOfficeData(args: {
   const leagueYear = getLeagueYearForSlug(leagueSlug);
   const leagueYearStr = String(leagueYear);
   const isOwnTeam = !!viewerFranchiseId && viewerFranchiseId === selectedTeamId;
+  await Promise.all([
+    preloadLeagueData(PANEL_FEEDS.map((f) => leagueFeedPath(dataPath, leagueYearStr, f))),
+    isOwnTeam ? preloadKeeperPlannerStats(leagueYear, dataPath) : null,
+  ]);
 
   const allTeams = getAllTeams(leagueSlug);
   const teamsList: FrontOfficeTeamSummary[] = allTeams.map((t) => ({

@@ -95,15 +95,13 @@ import { buildDraftAssets } from '../../utils/rosters/draft-assets';
 import { resolveEligibility } from '../../utils/rosters/eligibility';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
-import fs from 'fs';
-import path from 'path';
 import {
   getTheLeaguePreference,
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { parsePlayerWeekScores } from '../../utils/player-week-scores.mjs';
@@ -136,12 +134,11 @@ import {
   annotateTierDividers as annotateTierDividersCore,
   annotateActiveStriping as annotateActiveStripingCore,
 } from '../../utils/roster-utils';
-// Precomputed payloads for every historical season (see
-// scripts/compute-roster-season-payloads.mjs); the shared builder computes
-// the current league/season years live at request time.
-import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
+// Historical season payloads are loaded per request below (loadLeagueData).
+import { loadLeagueData } from '../../utils/league-data';
+import { loadFeedGlob } from '../../utils/rosters/loaded-feed-glob';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
-import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import RosterOptions from '../../components/shared/rosters/RosterOptions.astro';
 import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
@@ -169,44 +166,71 @@ const currentSeasonYearStr = String(getCurrentSeasonYear());
 // weeklyResultsRawData is loaded below with other season-specific feeds
 // playerScoresMap is computed after the feed loading block
 
-// Current-era globs only (2025+, see tests/current-era-feed-globs.test.ts).
-// Historical seasons are served from the precomputed derived payloads
-// (data/theleague/derived/roster-season-payloads.json, built by
-// scripts/compute-roster-season-payloads.mjs during prebuild) — bundling all
-// ~20 seasons of feeds here cost 30+ MB of server chunk per cold start.
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-20{2[5-9],[3-9][0-9]}.json', {
-  eager: true,
-});
-const salaryAveragesModules = import.meta.glob('../../data/mfl-salary-averages-*.json', {
-  eager: true,
-});
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
-  {
-    eager: true,
-  }
-);
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json', {
-  eager: true,
-});
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/standings.json', {
-  eager: true,
-});
-// The roster header's gameday bar. Keyed by the LEAGUE year, like every feed
-// directory here — it rolls in February, not at Labor Day.
-const headerScheduleFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/schedule.json',
-  { eager: true, import: 'default' }
-);
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', {
-  eager: true,
-});
-const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', {
-  eager: true,
-});
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', {
-  eager: true,
-});
+// Current-era feeds only (2025+). Historical seasons are served from the
+// precomputed derived payloads (data/theleague/derived/roster-season-payloads.json,
+// built by scripts/compute-roster-season-payloads.mjs during prebuild).
+//
+// Read through the league-data loader, NOT `import.meta.glob`: an eager glob
+// compiled every matched file into this page's server chunk (~5 MB of feeds,
+// plus the 11 MB derived file below), and the whole site is one Vercel
+// function with a 250 MB ceiling (src/utils/league-data.ts). `loadFeedGlob`
+// hands back the glob's own shape — same relative keys, `{ default }` values —
+// so nothing below this block changed.
+const PAGE_DIR = 'src/pages/theleague';
+const TL_DATA_PATH = getLeagueBySlug('theleague')!.dataPath;
+/** The 2025+ era the old globs' `20{2[5-9],[3-9][0-9]}` year segment matched. */
+const CURRENT_ERA_YEAR = /^20(?:2[5-9]|[3-9]\d)$/;
+const isCurrentEraFeed = (repoPath: string) => CURRENT_ERA_YEAR.test(repoPath.split('/').at(-2) ?? '');
+const loadCurrentEraFeeds = (file: string, importDefault = false) =>
+  loadFeedGlob(`${TL_DATA_PATH}/mfl-feeds/*/${file}`, {
+    relativeTo: PAGE_DIR,
+    keep: isCurrentEraFeed,
+    importDefault,
+  });
+const [
+  rosterModules,
+  salaryAveragesModules,
+  salaryAdjustmentFeeds,
+  leagueFeeds,
+  standingsFeeds,
+  // The roster header's gameday bar. Keyed by the LEAGUE year, like every feed
+  // directory here — it rolls in February, not at Labor Day.
+  headerScheduleFeeds,
+  playersFeeds,
+  rostersFeeds,
+  transactionsFeeds,
+  derivedRosterSeasonPayloads,
+] = await Promise.all([
+  loadFeedGlob('src/data/mfl-player-salaries-*.json', {
+    relativeTo: PAGE_DIR,
+    keep: (p) => CURRENT_ERA_YEAR.test(p.match(/mfl-player-salaries-(\d{4})\.json$/)?.[1] ?? ''),
+  }),
+  loadFeedGlob('src/data/mfl-salary-averages-*.json', { relativeTo: PAGE_DIR }),
+  loadCurrentEraFeeds('salaryAdjustments.json'),
+  loadCurrentEraFeeds('league.json'),
+  loadCurrentEraFeeds('standings.json'),
+  loadCurrentEraFeeds('schedule.json', true),
+  loadCurrentEraFeeds('players.json'),
+  loadCurrentEraFeeds('rosters.json'),
+  loadCurrentEraFeeds('transactions.json'),
+  // Precomputed payloads for every historical season (see
+  // scripts/compute-roster-season-payloads.mjs); the shared builder computes
+  // the current league/season years live at request time. Loaded whole: the
+  // server render reads every season's keys and team ids (seasonOptions,
+  // knownTeamIds) plus the previous season's points, and the loader keeps it
+  // in memory for as long as the instance is warm.
+  loadLeagueData<{ seasons?: Record<string, any> }>(`${TL_DATA_PATH}/derived/roster-season-payloads.json`),
+]);
+// getPlayerMap(year) is sync and served from memory. The middleware preloads
+// only today's league and season years; this page also asks for every
+// current-era season it holds feeds for (dead-money enrichment, the season
+// payloads), and players.json is not shipped inside the function — so a year
+// nobody preloaded would come back as an empty identity map in production.
+await preloadPlayerIdentity(
+  [...Object.keys(playersFeeds), ...Object.keys(salaryAdjustmentFeeds)]
+    .map((p) => Number(p.match(/mfl-feeds\/(\d{4})\//)?.[1]))
+    .filter((y) => Number.isInteger(y)),
+).catch((err) => console.error('[rosters] player identity preload failed:', err));
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -220,13 +244,15 @@ const extractFeedSeason = (filepath) => {
   return match ? match[1] : null;
 };
 
-// Load season-specific feed data using fs — avoids globbing massive JSON files
-const loadFeedJson = (year: string | number, filename: string) => {
-  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
+// Load one season's feed file through the league-data loader. The loader
+// caches the parsed file for every request on a warm instance, so this hands
+// back a COPY: these feeds were read fresh off disk per request before, and a
+// consumer that mutates one must never leak into the next render.
+const loadFeedJson = async (year: string | number, filename: string): Promise<any> => {
+  const feedPath = `${TL_DATA_PATH}/mfl-feeds/${year}/${filename}`;
   try {
-    if (fs.existsSync(feedPath)) {
-      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-    }
+    const data = await loadLeagueData(feedPath);
+    return data == null ? null : structuredClone(data);
   } catch (e) {
     console.warn(`⚠️ Failed to load feed ${feedPath}:`, e);
   }
@@ -275,20 +301,22 @@ const fetchLiveTradeBait = async (yr: string): Promise<string[] | null> => {
 // Fetch live trade bait for the current league year (where writes happen)
 const liveTradeBait = await fetchLiveTradeBait(currentLeagueYearStr);
 
-feedYears.forEach((yr) => {
+for (const yr of feedYears) {
+  const [tb, ps, wr, fpa] = await Promise.all([
+    yr === currentLeagueYearStr && liveTradeBait ? null : loadFeedJson(yr, 'tradeBait.json'),
+    loadFeedJson(yr, 'projectedScores.json'),
+    loadFeedJson(yr, 'weekly-results-raw.json'),
+    loadFeedJson(yr, 'fantasyPointsAllowed.json'),
+  ]);
   if (yr === currentLeagueYearStr && liveTradeBait) {
     tradeBaitBySeason[yr] = new Set(liveTradeBait);
-  } else {
-    const tb = loadFeedJson(yr, 'tradeBait.json');
-    if (tb) tradeBaitBySeason[yr] = new Set(tb);
+  } else if (tb) {
+    tradeBaitBySeason[yr] = new Set(tb);
   }
-  const ps = loadFeedJson(yr, 'projectedScores.json');
   if (ps) projectedScoresBySeason[yr] = ps;
-  const wr = loadFeedJson(yr, 'weekly-results-raw.json');
   if (wr) weeklyResultsRawBySeason[yr] = wr;
-  const fpa = loadFeedJson(yr, 'fantasyPointsAllowed.json');
   if (fpa) fantasyPointsAllowedBySeason[yr] = fpa;
-});
+}
 
 // ONE season for every stat column on this page: the most recent one whose
 // week 1 has kicked off (src/utils/stats-season.mjs). NOT currentSeasonYear,
@@ -305,7 +333,7 @@ const statsSeasonYear = resolveStatsSeasonYear();
 const statsSeasonYearStr = String(statsSeasonYear);
 const weeklyResultsRawData =
   weeklyResultsRawBySeason[statsSeasonYearStr]
-  ?? loadFeedJson(statsSeasonYearStr, 'weekly-results-raw.json')
+  ?? (await loadFeedJson(statsSeasonYearStr, 'weekly-results-raw.json'))
   ?? {};
 // The RATE pair's input (Trend, Avg) — never the season total: this feed
 // records a player only for weeks a roster held him, and a doubleheader lists
@@ -315,7 +343,7 @@ const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum
 // The total is MFL's own, from the same full-pool source and parser the Free
 // Agents points column reads.
 const ytdPointsByPlayer = parseYtdPlayerScores(
-  loadFeedJson(statsSeasonYearStr, 'playerScores-ytd.json'),
+  await loadFeedJson(statsSeasonYearStr, 'playerScores-ytd.json'),
 );
 
 // Build weekly player results for the modal's Season Results table.
@@ -334,17 +362,17 @@ const modalWeeklyResultsRaw = weeklyResultsRawBySeason[currentSeasonYearStr] ?? 
 // synced in the offseason and have the full shape in nflSchedule.json, so the
 // fallback is what keeps them working.
 const nflScheduleData =
-  loadFeedJson(currentSeasonYearStr, 'nflSchedule-full.json') ??
-  loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
-const leagueJsonData = loadFeedJson(currentSeasonYearStr, 'league.json');
-const playersJsonData = loadFeedJson(currentSeasonYearStr, 'players.json');
+  (await loadFeedJson(currentSeasonYearStr, 'nflSchedule-full.json')) ??
+  (await loadFeedJson(currentSeasonYearStr, 'nflSchedule.json'));
+const leagueJsonData = await loadFeedJson(currentSeasonYearStr, 'league.json');
+const playersJsonData = await loadFeedJson(currentSeasonYearStr, 'players.json');
 // Per-week points for the WHOLE player pool. `modalWeeklyResultsRaw` is MFL's
 // weeklyResults export, which lists a franchise's ACTIVE LINEUP — so a
 // practice-squad, injured-reserve or free-agent player has no row in it at all
 // and the modal hid its Season Results table for them entirely. Same season as
 // everything else feeding this table, for the reason above.
 const playerWeekScores = parsePlayerWeekScores(
-  loadFeedJson(currentSeasonYearStr, 'playerScores-by-week.json'),
+  await loadFeedJson(currentSeasonYearStr, 'playerScores-by-week.json'),
 );
 const weeklyPlayerResults = (nflScheduleData && modalWeeklyResultsRaw && Array.isArray(modalWeeklyResultsRaw))
   ? buildWeeklyPlayerResults(
@@ -737,7 +765,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) =>
 // between derived-file regenerations. Live computation wins whenever a
 // season is one of the current years (a stale derived entry for a current
 // year is overwritten below).
-const derivedSeasonPayloads = derivedRosterSeasonPayloads.seasons ?? {};
+const derivedSeasonPayloads = derivedRosterSeasonPayloads?.seasons ?? {};
 const newestDerivedSeason = Math.max(
   0,
   ...Object.keys(derivedSeasonPayloads).map(Number).filter(Number.isFinite)
@@ -1006,7 +1034,7 @@ const draftSeasonYear = getCurrentSeasonYear();
 const draftNextYear = draftSeasonYear + 1;
 
 // Get last fetched timestamp from meta file
-const fetchMeta = loadFeedJson(currentLeagueYear, 'fetch.meta.json');
+const fetchMeta = await loadFeedJson(currentLeagueYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 // Load standings and bracket data for draft predictions (from the season that was played)
 const standingsKey = Object.keys(standingsFeeds).find(
@@ -1014,15 +1042,15 @@ const standingsKey = Object.keys(standingsFeeds).find(
 );
 const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
 
-const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
+const bracketData = await loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
 
 // Load draft results from next year to show actual picks with trades
-const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
+const draftResultsData = await loadFeedJson(draftNextYear, 'draftResults.json');
 
 // Load transactions from season year to extract trade information. In season
 // that is the league year, whose committed feed is a once-a-day snapshot
 // (scripts/lib/held-sync-files.mjs), so a pick traded today comes live.
-const committedTransactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+const committedTransactionsData = await loadFeedJson(draftSeasonYear, 'transactions.json');
 const transactionsData = committedTransactionsData && draftSeasonYear === currentLeagueYear
   ? { transactions: { transaction: mergeTransactionRows(
       [committedTransactionsData.transactions?.transaction ?? []].flat(),
@@ -1533,7 +1561,7 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
   // already excludes trades (ACQUISITION_TYPES only) — plan decision #9.
   // The committed feed is a once-a-day snapshot (scripts/lib/held-sync-files.mjs),
   // so the last 3 days come live from MFL on top of it.
-  const rawTxFeed = loadFeedJson(currentLeagueYear, 'transactions.json');
+  const rawTxFeed = await loadFeedJson(currentLeagueYear, 'transactions.json');
   const rawTxList = rawTxFeed?.transactions?.transaction ?? [];
   const autocutAcquisitions = parseTransactions(
     mergeTransactionRows(
@@ -1560,8 +1588,9 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
       if (entry.franchiseId === authUser.franchiseId) ownRosterIds.add(pid);
     }
   } else {
+    const ownRostersFeed = await loadFeedJson(currentLeagueYear, 'rosters.json');
     for (const fr of (() => {
-      const feed = loadFeedJson(currentLeagueYear, 'rosters.json');
+      const feed = ownRostersFeed;
       const list = feed?.rosters?.franchise;
       return Array.isArray(list) ? list : list ? [list] : [];
     })()) {
@@ -1571,8 +1600,8 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
     }
   }
   const autocutRookieIds = buildRookiePriorityFromFeeds({
-    playersFeed: loadFeedJson(currentLeagueYear, 'players.json'),
-    draftResultsFeed: loadFeedJson(currentLeagueYear, 'draftResults.json'),
+    playersFeed: await loadFeedJson(currentLeagueYear, 'players.json'),
+    draftResultsFeed: await loadFeedJson(currentLeagueYear, 'draftResults.json'),
   }).filter((pid) => ownRosterIds.has(pid));
 
   const deadlineLabel = `${autocutDeadline.toLocaleDateString('en-US', {
@@ -1898,7 +1927,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       />
       <div class="roster-table-card">
         <div class="roster-controls">
-          <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
           <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
 
           <button class="clear-all-tags-btn" id="clearAllTagsBtn" data-sim-clear style="display: none;" title="Clear all contract actions">
@@ -1934,9 +1962,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           {/* Below the mode toggle, not above it: .mode-toggle has a negative
               top margin so it can ride up beside the team card, which means it
               covers anything stacked above it in this column. */}
-          {/* On a phone the trigger is an icon (sliders) at the end of the
-              GM | Coach row, so its name says what it opens. */}
-          <MyRankEditor league="theleague" accessibleName="My Rank sources" />
+          {/* Year picker + My Rank sources, the same control every league's
+              Rosters page carries: inline on desktop, behind one sliders
+              button at the end of the GM | Coach row on a phone. Older
+              seasons load on demand (/api/roster-season), and `?year=` deep
+              links to one (read by the page script on load). */}
+          <RosterOptions
+            years={seasonOptions}
+            selectedYear={defaultSeason}
+            selectId="rosterSeasonSelect"
+            rankingsLeague="theleague"
+          />
 
           {/* Phone only (idea B, user 2026-09-26): one scrolling row of sort
               chips for the mode on screen. Empty here — the page script builds
@@ -2297,6 +2333,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                   } else if (isFutureUfa) {
                     displayValue = '—';
                     cellClass += ' salary-cell--future-ufa';
+                  } else if ((player as any).salaryUnknown) {
+                    // A past season's player MFL no longer lists, whose
+                    // contract no record kept (scripts/lib/season-end-rosters.mjs).
+                    displayValue = '—';
+                    cellClass += ' salary-cell--unknown';
                   } else {
                     // Apply 10% annual salary escalation for multi-year contracts
                     const baseSalary = player.salary ?? 0;
@@ -2749,10 +2790,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     margin-bottom: .5rem;
   }
 
-/* Hide roster-controls (now empty except hidden inputs) */
-.roster-controls {
-  display: none;
-}
 
   /* View Container */
   .view-container {
@@ -3514,7 +3551,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     color: var(--badge-error-text, #fca5a5);
   }
 
-  :global(.salary-cell--future-ufa) {
+  :global(.salary-cell--future-ufa),
+  :global(.salary-cell--unknown) {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
     font-weight: 400;
@@ -4191,7 +4229,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     }
   }
 
-  /* The My Rank pill shares .roster-controls with .mode-toggle, which lays out
+  /* The Year / My Rank options share .roster-controls with .mode-toggle, which lays out
      with `order` and rides up on a negative top margin — so a sibling that
      doesn't opt into the ordering renders first and gets covered by it.
      The wrapper is given a real display here (it is display: contents by
@@ -4202,7 +4240,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
      with a max-width query it would leave fractional widths (640.5px) matching
      neither branch, and the pill would fall back to order 0 — ahead of the
      toggle, and covered by it. */
-  .roster-controls :global(.mre-trigger-wrap) {
+  .roster-controls :global(.roster-options) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4214,7 +4252,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   /* .roster-controls becomes a column here — same breakpoint the page's own
      rule uses, so the two can never disagree about which shape it is. */
   @media (max-width: 640px) {
-    .roster-controls :global(.mre-trigger-wrap) {
+    .roster-controls :global(.roster-options) {
       order: 3;
       margin-right: 0;
     }
@@ -4850,11 +4888,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   // NOTE: there is deliberately NO background prefetch of the remaining
   // seasons. An earlier revision warmed all 18 frozen seasons on idle, which
-  // pulled back 7.09 MB — the entire payload this page just stopped shipping —
-  // to populate a cache nothing can read: `rosterSeasonSelect` is a HIDDEN
-  // input with no visible control bound to it, so `currentSeason` never leaves
-  // `defaultSeason` for a real visitor. If a season picker is ever added, warm
-  // seasons from ITS interaction (hover/open), never unconditionally on load.
+  // pulled back 7.09 MB — the entire payload this page just stopped shipping.
+  // The Year picker (`rosterSeasonSelect`) fetches the one season it is set
+  // to; if warming is ever wanted, warm from ITS interaction (hover/open),
+  // never unconditionally on load.
 
   /** Resolve league path — strips /theleague prefix on theleague.us */
   function resolveLeaguePath(path) {
@@ -6006,7 +6043,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // the last client-side dependency on having every season in memory, which
     // is what allows historical seasons to be fetched on demand.
 
-    const seasonSelect = document.getElementById('rosterSeasonSelect');
+    const seasonSelect = document.querySelector<HTMLSelectElement>('#rosterSeasonSelect');
     // A hidden <input>, not a <select> — it is the page's record of which
     // club is on screen, read by the parity harness and written by every
     // path that switches team. Typed, because `getElementById` returns a bare
@@ -6092,6 +6129,35 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
+
+    /**
+     * The years the TABLE's salary columns hold. A season payload keys its
+     * salaries from its own season, so a past season's first column is that
+     * year, not this league year (user, 2026-11-01: "label them in the correct
+     * year"). `salaryYears` stays this league year's — the cap card and the
+     * contract tools are about now.
+     */
+    const tableYears = (): number[] => {
+      const season = parseInt(String(currentSeason), 10);
+      const offset = Number.isFinite(season) ? season - salaryYears[0] : 0;
+      return salaryYears.map((year: number) => year + offset);
+    };
+
+    /** Point the salary-year headings (roster + dead money tables) at `tableYears()`. */
+    const relabelSalaryYears = () => {
+      const years = tableYears();
+      years.forEach((year, index) => {
+        document
+          .querySelectorAll<HTMLElement>(
+            `.roster-page[data-league="theleague"] th[data-sort-key="salary_${index}"], .roster-page[data-league="theleague"] th[data-column="dm-year${index + 1}"]`,
+          )
+          .forEach((th) => {
+            const label = th.firstChild;
+            if (label && label.nodeType === Node.TEXT_NODE) label.textContent = th.dataset.sortKey ? `${year} ` : String(year);
+            else th.prepend(document.createTextNode(`${year} `));
+          });
+      });
+    };
     const hiddenColumns = new Set();
 
 
@@ -6561,8 +6627,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 value = adj.futurePenalty;
               // data-label carries the year for the phone card's second line
               // (rosters-mobile.css), where the header row is hidden.
-              if (!value) return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" style="text-align:right"></td>`;
-              return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" class="deadmoney-row__amount">${_capSpaceFmt.format(
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}" data-label="${tableYears()[yearIdx]}" style="text-align:right"></td>`;
+              return `<td data-column="dm-year${yearIdx + 1}" data-label="${tableYears()[yearIdx]}" class="deadmoney-row__amount">${_capSpaceFmt.format(
                 value
               )}</td>`;
             })
@@ -6816,6 +6882,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               } else if (isFutureUfa) {
                 value = '—';
                 cellClass += ' salary-cell--future-ufa';
+              } else if ((player as any).salaryUnknown && !action) {
+                // Contract lost with the season (scripts/lib/season-end-rosters.mjs).
+                value = '—';
+                cellClass += ' salary-cell--unknown';
               } else {
                 const originalYears = parseInt(player.contractYears, 10) || 0;
                 const isDeclaredYear = declaredYears && index >= originalYears;
@@ -6833,7 +6903,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               }
 
               const toAttr = (isFirstYearUfa && hasOptionWindow) ? ` data-player-id="${player.id}"` : '';
-              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}"${toAttr}>${value}</td>`;
+              return `<td data-label="${tableYears()[index] ?? year}" data-column="${columnKey}" class="${cellClass}"${toAttr}>${value}</td>`;
             })
             .join('');
 
@@ -7118,7 +7188,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           const phoneRow = player as any;
           const phoneLineSpans = buildPhoneLineSpans({
             contractYears: effectiveYears,
-            firstYear: salaryYears[0],
+            firstYear: tableYears()[0],
             contractInfo: phoneRow.contractInfo,
             kickoffIso: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.date : null,
             kickoffZone: config.kickoffClock?.zone,
@@ -9911,6 +9981,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const updateView = () => {
       clearSecondaryWarmup();
       const viewVersion = ++latestViewVersion;
+      // Before the sort chips and any row render: both read their year from the headings.
+      relabelSalaryYears();
       resetSort();
       const { seasonData, teamData } = getTeamData();
       // Simulated moves apply through the same two rules the phone surfaces
@@ -9981,8 +10053,26 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // Painted from THIS pass's numbers plus an unsimulated baseline computed
       // here too — never read back from a DOM cell — so they cannot disagree
       // with the footer above them.
-      const simBaseRows = buildDisplayRows(teamData);
-      const simBaseDead = aggregateDeadMoney(seasonData, currentTeam);
+      //
+      // They are labeled with THIS league year, so they always read the
+      // default season: a past season picked in the Year menu must not repaint
+      // "2026 cap space" with 2015's books (user, 2026-10-29). Same rule as the
+      // header's cap space above.
+      const capSeasonData =
+        currentSeason === defaultSeason ? null : seasons[defaultSeason] ?? initialSeasonDataConfig ?? null;
+      const capTeamData = capSeasonData
+        ? capSeasonData.teams?.[currentTeam] ?? { players: [], practiceSquad: [], injuredReserve: [] }
+        : teamData;
+      const capRows = capSeasonData ? applySimActionsToRows(buildDisplayRows(capTeamData), contractActions) : rows;
+      const capDead = capSeasonData
+        ? addSimDeadMoney(
+            aggregateDeadMoney(capSeasonData, currentTeam),
+            contractActions,
+            new Set(capRows.map((p: any) => String(p.id)))
+          )
+        : deadMoney;
+      const simBaseRows = buildDisplayRows(capTeamData);
+      const simBaseDead = aggregateDeadMoney(capSeasonData ?? seasonData, currentTeam);
       const simChargesFor = (r: SimRow[], acts: SimActions) =>
         calculateCapChargesWithActions(r, {
           salaryYears,
@@ -10003,14 +10093,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         }),
         capByYear: buildCapByYear({
           years: salaryYears,
-          capLimit: capLimitForSeason,
-          charges: capCharges,
-          dead: deadMoney,
+          capLimit: capSeasonData ? Number(capSeasonData.metadata?.capLimit ?? capLimit ?? 0) : capLimitForSeason,
+          charges: capSeasonData ? calculateCapCharges(capRows) : capCharges,
+          dead: capDead,
           baseCharges: simChargesFor(simBaseRows, {}),
           baseDead: simBaseDead,
         }),
         // A simulated cut or trade leaves the roster, so its salary leaves the bar.
-        buckets: calculateBucketCaps(withoutSimRemoved(rows, contractActions)),
+        buckets: calculateBucketCaps(withoutSimRemoved(capRows, contractActions)),
       });
 
       // Cutdown Plan panel tracks every view change (team switch, roster
@@ -10089,6 +10179,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       });
     });
 
+    // Keep the address on the season shown, so a shared link opens it.
+    const syncSeasonParam = (season) => {
+      const url = new URL(window.location.href);
+      if (season === config.defaultSeason) url.searchParams.delete('year');
+      else url.searchParams.set('year', season);
+      history.replaceState(history.state, '', url);
+    };
+
     seasonSelect?.addEventListener('change', async (event) => {
       const season = event.target.value;
 
@@ -10100,6 +10198,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         seasonRequestToken += 1;
         currentSeason = season;
         updateView();
+        syncSeasonParam(season);
         return;
       }
 
@@ -10120,7 +10219,25 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
       currentSeason = season;
       updateView();
+      syncSeasonParam(season);
     });
+
+    // `?year=` opens a past season: pick it and let the handler above fetch
+    // and render it. An unknown year is ignored and the page stays current.
+    // Compared with THIS init's `currentSeason`, not the select: the page
+    // inits twice on a first load (direct call + astro:page-load), and the
+    // second pass starts back on the default season with the select already
+    // showing the requested one.
+    const requestedSeason = new URL(window.location.href).searchParams.get('year');
+    if (
+      seasonSelect &&
+      requestedSeason &&
+      requestedSeason !== currentSeason &&
+      Array.from(seasonSelect.options).some((option) => option.value === requestedSeason)
+    ) {
+      seasonSelect.value = requestedSeason;
+      seasonSelect.dispatchEvent(new Event('change'));
+    }
 
     teamSelect?.addEventListener('change', (event) => {
       currentTeam = event.target.value;
@@ -10288,7 +10405,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           tradeBait: !!payload.tradeBait,
           displayTag: payload.displayTag || 'active',
         },
-        salaryYears,
+        salaryYears: tableYears(),
         yearCells: liftYearCells(row, salaryYears.length),
         totalRemaining: data.totalRemaining ?? null,
         thisWeek: liftThisWeek(row),

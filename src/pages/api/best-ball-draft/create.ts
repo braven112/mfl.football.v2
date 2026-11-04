@@ -24,8 +24,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { loadLeagueData } from '../../../utils/league-data';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../../utils/league-year';
 import { isAdminFranchise } from '../../../config/nav-config';
@@ -142,17 +141,15 @@ export const POST: APIRoute = async ({ request }) => {
     // lives under the default league's data dir (single copy on purpose —
     // best-ball leagues don't duplicate the 229 KB catalog).
     const defaultLeague = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!;
-    const loadJsonFile = (relPath: string): any => {
+    const loadJsonFile = async (relPath: string): Promise<any> => {
       try {
-        const abs = join(process.cwd(), relPath);
-        if (!existsSync(abs)) return null;
-        return JSON.parse(readFileSync(abs, 'utf-8'));
+        return await loadLeagueData(relPath);
       } catch {
         return null;
       }
     };
 
-    const playersData = loadJsonFile(`${defaultLeague.dataPath}/mfl-feeds/${feedYearStr}/players.json`);
+    const playersData = await loadJsonFile(`${defaultLeague.dataPath}/mfl-feeds/${feedYearStr}/players.json`);
     const rawPlayers = playersData?.players?.player;
     const allPlayers: any[] = rawPlayers ? (Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]) : [];
     const draftPool = allPlayers.filter((p: any) => isDraftablePosition(p.position || ''));
@@ -171,8 +168,8 @@ export const POST: APIRoute = async ({ request }) => {
     // last resort. Rookie-mock sources (Sleeper/KTC rookie boards, my-rank)
     // don't apply to a 25-round veteran draft.
     const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
-    const buildAdpList = (feedKey: 'adp-redraft' | 'adp-dynasty'): string[] | null => {
-      const feed = loadJsonFile(
+    const buildAdpList = async (feedKey: 'adp-redraft' | 'adp-dynasty'): Promise<string[] | null> => {
+      const feed = await loadJsonFile(
         `${defaultLeague.dataPath}/mfl-feeds/${feedYearStr}/${feedKey}.json`,
       );
       const raw = feed?.adp?.player;
@@ -187,9 +184,9 @@ export const POST: APIRoute = async ({ request }) => {
       const tail = draftPool.filter((p: any) => !covered.has(p.id)).map((p: any) => p.id as string);
       return ordered.concat(tail);
     };
-    const redraftList = buildAdpList('adp-redraft');
+    const redraftList = await buildAdpList('adp-redraft');
     if (redraftList) rankedLists['mfl-redraft'] = redraftList;
-    const dynastyList = buildAdpList('adp-dynasty');
+    const dynastyList = await buildAdpList('adp-dynasty');
     if (dynastyList) rankedLists['mfl-dynasty'] = dynastyList;
     rankedLists.random = shuffle(draftPool.map((p: any) => p.id as string));
     const defaultRankingSource: MockRankingSource = rankedLists['mfl-redraft']

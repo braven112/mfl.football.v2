@@ -277,6 +277,71 @@ html.dark .lv-matchup {
   text-wrap: balance;
 }
 
+/*
+ * The header's two stat cards (LvWeekStats): Player of the Week and Nail-Biter,
+ * every week of the season. A full row under the title and picker, two across
+ * on a phone, in the board's own card tokens so they follow light/dark and the
+ * site style the way the matchup cards do. A seasonal scene re-skins them
+ * (seasonal-themes.css); only their NAMES change in the component.
+ */
+.lv-wstats {
+  flex-basis: 100%;
+  display: grid;
+  /* 8.5rem keeps two across inside Christmas's inset header on a 390px phone. */
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
+  gap: var(--spacing-sm);
+  max-width: 34rem;
+}
+.lv-wstats__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  border: var(--style-card-border, 1px solid var(--card-border));
+  box-shadow: var(--style-card-shadow, none);
+  border-radius: var(--radius-md);
+  background: var(--card-surface);
+  color: var(--page-text);
+}
+/* The Nail-Biter opens its matchup: a button that keeps the card's look, with
+   the border warming to the accent on hover and focus. */
+.lv-wstats__card--link {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.lv-wstats__card--link:hover,
+.lv-wstats__card--link:focus-visible {
+  border-color: var(--color-primary);
+}
+.lv-wstats__card--link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.lv-wstats__label {
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.lv-wstats__main {
+  font-weight: 600;
+  color: var(--page-text);
+  overflow-wrap: anywhere;
+}
+/* Before kickoff: the same card, quieter, until the week has an answer. */
+.lv-wstats__sub,
+.lv-wstats__card--waiting .lv-wstats__main {
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+.lv-wstats__card--waiting .lv-wstats__main {
+  font-size: inherit;
+}
+
 /**
  * The bundled-sample badge.
  *
@@ -1650,6 +1715,101 @@ button.lv-card:focus-visible {
   font-size: 0.6rem;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
+}
+
+/* ── Sectioned standings (the AFL: tiers, then divisions) ─────────────── */
+.lv-sections {
+  gap: var(--spacing-md);
+}
+.lv-sections__intro {
+  margin: 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+.lv-sections__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.lv-sections__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+/* One column on a phone, two once each table has room for its four columns. */
+.lv-sections__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-md);
+}
+@media (min-width: 900px) {
+  .lv-sections__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* A group of one table (Archie's MAD POWER 99) takes the full width. */
+  .lv-sections__grid > :only-child {
+    grid-column: 1 / -1;
+  }
+}
+/* A long table's "Show all" — a text CTA under the last row. */
+.lv-standings__more {
+  display: flex;
+  margin: var(--spacing-sm) auto 0;
+  font-size: var(--font-size-sm);
+}
+.lv-sections__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--page-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+.lv-sections__logo {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  flex: none;
+}
+.lv-sections__note {
+  display: block;
+  margin-top: 0.4rem;
+  font-weight: var(--font-weight-normal);
+}
+.lv-sections__missing .lv-standings__caption {
+  margin: 0;
+}
+/* A zone marker: a stripe on the position AND its name in words. */
+.lv-standings__row--zone .lv-standings__rank {
+  border-left: 3px solid var(--lv-zone);
+}
+.lv-standings__row--up {
+  --lv-zone: var(--color-success);
+}
+.lv-standings__row--down {
+  --lv-zone: var(--color-error);
+}
+.lv-standings__row--danger {
+  --lv-zone: var(--color-warning);
+}
+.lv-standings__row--rename {
+  --lv-zone: var(--content-text-muted);
+}
+.lv-standings__label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lv-standings__zone {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  /* Muted text, not the zone hue: amber and green at this size fail AA on
+     white. The colour lives on the stripe; the words carry the meaning. */
+  color: var(--content-text-muted);
 }
 
 /* ── Top scorers ──────────────────────────────────────────────────────── */
