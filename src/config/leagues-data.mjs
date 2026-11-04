@@ -817,6 +817,31 @@ export const LEAGUES = {
     optInNav: true,
     pageKit: 'package',
     peckingOrder: { topN: 25 },
+    /**
+     * News only (Brandon, Nov 2026: Schefter and the other reporters are the
+     * feature the demo exists to show). The scanner's NFL lanes — ESPN
+     * contributors, NFL Wire, injuries, odds — need no league activity, so a
+     * demo whose visitors never write to MFL still gets a full feed. Every
+     * chat lane is off: Sandbox has no GroupMe, and none of these env vars is
+     * set, so nothing can post anywhere but the feed.
+     */
+    schefter: {
+      eventsPath: 'data/sandbox/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_SANDBOX_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_SANDBOX_ROGER_BOT_ID',
+        groupId: 'GROUPME_SANDBOX_GROUP_ID',
+        rogerSender: 'GROUPME_SANDBOX_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        tradeBait: false,
+        eventReminders: false,
+        directGroupMe: false,
+        tradeOfferRumors: false,
+        groupmeListen: false,
+        rogerReplies: false,
+      },
+    },
     officialClock: {
       id: 'PT',
       zone: 'America/Los_Angeles',
