@@ -327,6 +327,8 @@ export function describeCompetitions(pc, tierCompetition) {
   const combined = tierCompetition.combinedTableName || 'Combined table';
   const combinedYears = years(combined);
   const premierYears = years('Premier League');
+  // How many of the combined table went up: the next season's Premier League, same owners.
+  const seedSize = (y) => seasons.filter((s) => s.year === y && s.nextTier === 'Premier League').length;
   const knockout = pc.competitionTitles.filter((t) => t.format === 'knockout');
   const cutoffs = Object.entries(tierCompetition.cutoffWeekByYear ?? {})
     .map(([y, w]) => `${y} ended at Week ${w}`)
@@ -334,7 +336,7 @@ export function describeCompetitions(pc, tierCompetition) {
   const lines = [
     `This league runs an all-play side competition next to its head-to-head season: every week each team plays every other team, so a week is worth one all-play win for each team outscored. It runs Weeks 1-${tierCompetition.cutoffWeek ?? 17}${cutoffs ? ` (${cutoffs})` : ''}. It is this league's own competition, nothing to do with soccer or any other league.`,
     knockout.length || combinedYears.length
-      ? `${combined}: ${knockout.length ? `a knockout in ${knockout.map((t) => t.year).join(' and ')} (only its winners are on record, no games)` : ''}${knockout.length && combinedYears.length ? ', then ' : ''}${combinedYears.length ? `one combined all-play table of every team in ${span(combinedYears)}` : ''}. ${combinedYears.length ? `${span(combinedYears)} was the last ${combined}; its top half formed the first Premier League.` : ''}`
+      ? `${combined}: ${knockout.length ? `a knockout in ${knockout.map((t) => t.year).join(' and ')} (only its winners are on record, no games)` : ''}${knockout.length && combinedYears.length ? ', then ' : ''}${combinedYears.length ? `one combined all-play table of every team in ${span(combinedYears)}` : ''}. ${combinedYears.length ? `${span(combinedYears)} was the last ${combined} and the first all-play season; its top ${seedSize(combinedYears.at(-1))} entered the first Premier League and the rest started in the D-League.` : ''}`
       : '',
     premierYears.length
       ? `Premier League and D-League: from ${premierYears[0]} the all-play table is split into two tiers. The Premier League's top ${PREMIER_PAID} are paid, its bottom teams are relegated and the D-League's top teams promoted; new owners start in the D-League. Both tiers play one league-wide all-play schedule, so records from either tier compare directly.`

@@ -719,8 +719,8 @@ async function main() {
       '"tier-history"), superseding the legacy hand-entered ' +
       '"manual:tier-champion" rows. Still HAND-ENTERED from the official League ' +
       'Awards table (source "manual:league-awards" / "manual:champion-history") ' +
-      'and NEVER clobbered by a re-run: the AFL Cup (2015 knockout, 2016 ' +
-      'all-play, and 2017 — the Cup’s last season, an all-play table ' +
+      'and NEVER clobbered by a re-run: the AFL Cup (2015 and 2016 knockouts, ' +
+      'and 2017 — the Cup’s last season, an all-play table ' +
       'decided at its week-16 cutoff, won by Smokane FC and confirmed against ' +
       'the season’s payout records), pre-2016 League Champions, and select ' +
       'pre-2016 conference champions. A null franchiseId means the winner is a defunct/pre-2016 ' +

@@ -103,7 +103,7 @@ describe('the prompt', () => {
     const system = JSON.stringify(seen[0].system);
     expect(system).toContain('nothing to do with soccer');
     expect(system).toContain('from 2018 the all-play table is split');
-    expect(system).toContain('2017 was the last AFL Cup');
+    expect(system).toContain('2017 was the last AFL Cup and the first all-play season; its top 12 entered the first Premier League and the rest started in the D-League');
     expect(system).toContain('competitionOwners');
     expect(competitionStory(afl, comp)).toContain('2015 AFL Cup');
   });
