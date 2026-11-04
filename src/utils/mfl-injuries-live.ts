@@ -9,7 +9,7 @@
  * Redis's copy when it is at least as fresh as the copy on disk, else disk.
  *
  * Pages use loadLiveInjuryMap (./mfl-injuries-live-map.ts). It lives apart
- * because it needs the globbed bundle in mfl-injuries.ts, and this module is
+ * because it reads the committed feeds through the league-data loader, and this module is
  * reached from the homepages' story graph (via my-team-week.ts), which must
  * not import cron-written feeds (a snapshot must never read live data).
  */

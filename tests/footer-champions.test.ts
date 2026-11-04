@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import {
   getFooterChampions,
   getFooterDraftStatus,
@@ -22,20 +22,23 @@ import { AWARD_TYPES, type AwardSlug } from '../src/utils/afl-awards';
 describe('getFooterChampions — AFL per-team sweeps', () => {
   // Pinned to a settled historical season so the test doesn't drift with the
   // real calendar; getFooterChampions() itself resolves the live year.
-  const spotlights2024 = getFooterChampions('afl-fantasy');
+  let spotlights2024: Awaited<ReturnType<typeof getFooterChampions>> = [];
+  beforeAll(async () => {
+    spotlights2024 = await getFooterChampions('afl-fantasy');
+  });
 
-  it('returns at least one champion for AFL', () => {
+  it('returns at least one champion for AFL', async () => {
     expect(spotlights2024.length).toBeGreaterThan(0);
   });
 
-  it('gives every card at least one major (gold-tier) title', () => {
-    for (const s of getFooterChampions('afl-fantasy')) {
+  it('gives every card at least one major (gold-tier) title', async () => {
+    for (const s of (await getFooterChampions('afl-fantasy'))) {
       expect(s.titles.some((t) => t.major)).toBe(true);
     }
   });
 
-  it('orders majors first within a card', () => {
-    for (const s of getFooterChampions('afl-fantasy')) {
+  it('orders majors first within a card', async () => {
+    for (const s of (await getFooterChampions('afl-fantasy'))) {
       const firstNonMajor = s.titles.findIndex((t) => !t.major);
       if (firstNonMajor === -1) continue;
       // No major may appear after the first non-major.
@@ -43,34 +46,34 @@ describe('getFooterChampions — AFL per-team sweeps', () => {
     }
   });
 
-  it('leads the band with the biggest haul', () => {
-    const counts = getFooterChampions('afl-fantasy').map((s) => s.titles.length);
+  it('leads the band with the biggest haul', async () => {
+    const counts = (await getFooterChampions('afl-fantasy')).map((s) => s.titles.length);
     expect([...counts].sort((a, b) => b - a)).toEqual(counts);
   });
 
-  it('never lists a consolation title (NIT / D-League) on a card', () => {
-    const labels = getFooterChampions('afl-fantasy').flatMap((s) =>
+  it('never lists a consolation title (NIT / D-League) on a card', async () => {
+    const labels = (await getFooterChampions('afl-fantasy')).flatMap((s) =>
       s.titles.map((t) => t.label)
     );
     expect(labels).not.toContain('NIT Champion');
     expect(labels).not.toContain('D-League Champion');
   });
 
-  it('gives each champion a distinct team', () => {
-    const teams = getFooterChampions('afl-fantasy').map((s) => s.team);
+  it('gives each champion a distinct team', async () => {
+    const teams = (await getFooterChampions('afl-fantasy')).map((s) => s.team);
     expect(new Set(teams).size).toBe(teams.length);
   });
 
-  it('points every card at a route inside its own league', () => {
-    for (const s of getFooterChampions('afl-fantasy')) {
+  it('points every card at a route inside its own league', async () => {
+    for (const s of (await getFooterChampions('afl-fantasy'))) {
       expect(s.href.startsWith('/afl-fantasy/')).toBe(true);
     }
   });
 });
 
 describe('getFooterChampions — TheLeague', () => {
-  it('returns a single champion card', () => {
-    const spotlights = getFooterChampions('theleague');
+  it('returns a single champion card', async () => {
+    const spotlights = (await getFooterChampions('theleague'));
     expect(spotlights.length).toBeLessThanOrEqual(1);
     for (const s of spotlights) {
       expect(s.titles).toHaveLength(1);
@@ -80,26 +83,26 @@ describe('getFooterChampions — TheLeague', () => {
 });
 
 describe('draft-only leagues', () => {
-  it('best-ball has no champions band', () => {
+  it('best-ball has no champions band', async () => {
     expect(leagueHasChampionBand('best-ball-1')).toBe(false);
     expect(leagueHasChampionBand('theleague')).toBe(true);
     expect(leagueHasChampionBand('afl-fantasy')).toBe(true);
   });
 
-  it('getFooterChampions fails closed for best-ball', () => {
+  it('getFooterChampions fails closed for best-ball', async () => {
     // Callers gate on leagueHasChampionBand(), but the helper must not fall
     // through to TheLeague's brackets and hand back a champion behind a dead
     // /best-ball-1/playoffs link.
-    expect(getFooterChampions('best-ball-1')).toEqual([]);
+    expect(await getFooterChampions('best-ball-1')).toEqual([]);
   });
 
-  it('best-ball gets a draft-status card instead', () => {
+  it('best-ball gets a draft-status card instead', async () => {
     const draft = getFooterDraftStatus('best-ball-1');
     expect(draft).not.toBeNull();
     expect(draft?.href).toBe('/best-ball-1/draft-room');
   });
 
-  it('full-management leagues get no draft-status card', () => {
+  it('full-management leagues get no draft-status card', async () => {
     expect(getFooterDraftStatus('theleague')).toBeNull();
     expect(getFooterDraftStatus('afl-fantasy')).toBeNull();
   });
@@ -139,17 +142,17 @@ const sizeOfCardContaining = (year: number, slug: string) =>
   cardsFor(year).find((c) => c.includes(slug))?.length ?? 0;
 
 describe('what counts as a Double or Treble', () => {
-  it('AFL Championship + division is a Double (2024 Balls Deep)', () => {
+  it('AFL Championship + division is a Double (2024 Balls Deep)', async () => {
     const card = cardsFor(2024).find((c) => c.includes('afl-championship'))!;
     expect(card.sort()).toEqual(['afl-championship', 'nl-east']);
   });
 
-  it('Premier League + division is a Double (2019 Smokane FC)', () => {
+  it('Premier League + division is a Double (2019 Smokane FC)', async () => {
     const card = cardsFor(2019).find((c) => c.includes('premier-league'))!;
     expect(card.sort()).toEqual(['al-north', 'premier-league']);
   });
 
-  it('two gold titles plus the division make a Treble (2023 Drunk Indians)', () => {
+  it('two gold titles plus the division make a Treble (2023 Drunk Indians)', async () => {
     // Championship + Premier League were always theirs; the al-north title
     // joined on 2026-08-11 when division titles were re-derived from MFL's
     // official standings order (Drunk Indians 11-6 topped Fullybaked 10-7).
@@ -157,13 +160,13 @@ describe('what counts as a Double or Treble', () => {
     expect(card.sort()).toEqual(['afl-championship', 'al-north', 'premier-league']);
   });
 
-  it('the retired AFL Cup still counts in historical seasons (2016)', () => {
+  it('the retired AFL Cup still counts in historical seasons (2016)', async () => {
     // The Cup was replaced by the Premier League, so it can never appear in a
     // current-season card — but the trophy history must still read correctly.
     expect(sizeOfCardContaining(2016, 'afl-cup')).toBe(2);
   });
 
-  it('the Cup and the Premier League never share a season', () => {
+  it('the Cup and the Premier League never share a season', async () => {
     // They are the same slot in different eras, which is why the modern
     // ceiling is a Treble: only two gold awards can ever coexist.
     const seasons = (awardsHistory as any).seasons;
@@ -173,20 +176,20 @@ describe('what counts as a Double or Treble', () => {
     }
   });
 
-  it('no season can produce more than a Treble under the modern awards', () => {
+  it('no season can produce more than a Treble under the modern awards', async () => {
     for (const s of (awardsHistory as any).seasons) {
       if (!s.awards?.['premier-league']) continue; // modern era only
       for (const card of cardsFor(s.year)) expect(card.length).toBeLessThanOrEqual(3);
     }
   });
 
-  it('the conference title never inflates a Championship card (2025 is a Treble)', () => {
+  it('the conference title never inflates a Championship card (2025 is a Treble)', async () => {
     const card = cardsFor(2025).find((c) => c.includes('afl-championship'))!;
     expect(card).not.toContain('nl-champion');
     expect(card).toHaveLength(3);
   });
 
-  it('a division title alone earns no card at all', () => {
+  it('a division title alone earns no card at all', async () => {
     // Every card must carry at least one gold title.
     for (const year of [2025, 2024, 2023, 2022, 2021]) {
       for (const card of cardsFor(year)) {
@@ -195,16 +198,16 @@ describe('what counts as a Double or Treble', () => {
     }
   });
 
-  it('consolation titles never count (2024 Drunk Indians is not a Double)', () => {
+  it('consolation titles never count (2024 Drunk Indians is not a Double)', async () => {
     // Premier League + NIT: the NIT is silver, so this stays a single title.
     expect(sizeOfCardContaining(2024, 'premier-league')).toBe(1);
   });
 });
 
 describe('team names on champion cards', () => {
-  it('keeps the full name for alt text and a capped one for the visible chip', () => {
+  it('keeps the full name for alt text and a capped one for the visible chip', async () => {
     for (const slug of ['theleague', 'afl-fantasy'] as const) {
-      for (const s of getFooterChampions(slug)) {
+      for (const s of (await getFooterChampions(slug))) {
         expect(s.team.length).toBeGreaterThan(0);
         expect(s.teamDisplay.length).toBeGreaterThan(0);
         // MAX_TEAM_NAME_LENGTH is 15; the chip must respect it, alt need not.

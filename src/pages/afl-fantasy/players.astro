@@ -17,22 +17,20 @@ import FreeAgentsPage, { type PoolLogo } from '../../components/shared/free-agen
 import { isValidConferenceId, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadLeagueData } from '../../utils/league-data';
+import { eagerFeedModules } from '../../utils/league-feed-modules';
 
-const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
+const AFL_LEAGUE = getLeagueBySlug('afl-fantasy')!;
+const AFL_DERIVED = `${AFL_LEAGUE.dataPath}/derived`;
 const [freeAgentsData] = await Promise.all([
   loadLeagueData<any>(`${AFL_DERIVED}/free-agents.json`),
 ]);
 
-// league.json and calendar.json are ~12 KB each, so era-filtered eager globs
-// cost nothing (tests/current-era-feed-globs.test.ts is about players.json).
-const leagueModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
-  { eager: true }
-);
-const calendarModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
+// league.json and calendar.json through the loader, never a glob: the roster
+// sync publishes them without a build.
+const [leagueModules, calendarModules] = await Promise.all([
+  eagerFeedModules(AFL_LEAGUE.dataPath, 'league.json'),
+  eagerFeedModules(AFL_LEAGUE.dataPath, 'calendar.json'),
+]);
 
 // The crests exist only for the two real conference ids, so a feed that grew
 // a third still falls back to its name rather than requesting a 404 image.

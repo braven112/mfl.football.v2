@@ -26,7 +26,7 @@ const [ownerTenures] = await Promise.all([
   loadLeagueData<any>(`${AFL_DERIVED}/owner-tenures.json`),
 ]);
 
-const { byFranchise, yearsCovered } = getAflCareerStats();
+const { byFranchise, yearsCovered } = await getAflCareerStats();
 const firstYear = yearsCovered[0];
 const lastYear = yearsCovered[yearsCovered.length - 1];
 

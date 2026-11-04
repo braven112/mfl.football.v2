@@ -3,9 +3,9 @@
  *
  * Built from the league's committed MFL feeds — players.json for names,
  * rosters.json for who holds each player, league.json for team names — and
- * served as a prerendered file (src/pages/api/player-search/[league].json.ts),
- * so it is exactly as fresh as the build-baked pages around it and costs no
- * function call or MFL request per search.
+ * served as a CDN-cached file (src/pages/api/player-search/[league].json.ts):
+ * one function call per league every five minutes at most, and no MFL request
+ * per search.
  *
  * Only positions this league actually rosters are listed (players.json is
  * every player MFL knows, defensive linemen and punters included), and a

@@ -17,6 +17,7 @@ import {
   preloadLeagueData,
 } from '../src/utils/league-data';
 import baseline from './fixtures/league-data-import-baseline.json';
+import { bundledDataReads } from '../scripts/lib/bundled-data-reads.mjs';
 
 /**
  * League data moves out of the Vercel function into Blob, read through
@@ -53,21 +54,6 @@ const SCRIPT_ONLY_MODULES: Record<string, string> = {
 const SOURCE_GLOBS = "'src/**/*.astro' 'src/**/*.ts' 'src/**/*.tsx' 'src/**/*.mjs' 'src/**/*.js'";
 const sources = (): string[] =>
   execSync(`git ls-files ${SOURCE_GLOBS}`, { encoding: 'utf8' }).split('\n').filter(Boolean);
-
-/** Specifiers that compile data into the bundle: globs over data paths and JSON imports. */
-const GLOB_RE = /import\.meta\.glob(?:<[^>]*>)?\(\s*(\[[^\]]*\]|'[^']*'|"[^"]*"|`[^`]*`)/g;
-const STATIC_IMPORT_RE = /(?:^|\n)\s*import\s+[^'"`;]*?from\s+['"]([^'"]+\.json)['"]/g;
-// `typeof import('…json')` is a type and erased at build, so it is not a read.
-const DYNAMIC_IMPORT_RE = /(?<!typeof\s+)\bimport\(\s*['"]([^'"]+\.json)['"]\s*\)/g;
-const isDataPath = (spec: string) => /(^|\/)data\//.test(spec);
-
-export function bundledDataReads(text: string): string[] {
-  const out: string[] = [];
-  for (const m of text.matchAll(GLOB_RE)) if (isDataPath(m[1])) out.push(m[1]);
-  for (const m of text.matchAll(STATIC_IMPORT_RE)) if (isDataPath(m[1])) out.push(m[1]);
-  for (const m of text.matchAll(DYNAMIC_IMPORT_RE)) if (isDataPath(m[1])) out.push(m[1]);
-  return out;
-}
 
 function currentCounts(): Record<string, number> {
   const counts: Record<string, number> = {};

@@ -56,7 +56,7 @@ const columns = getFooterColumns(slug, franchiseId);
 const deepCuts = getDeepCuts(slug, columns);
 
 const showBand = leagueHasChampionBand(slug);
-const champions = showBand ? getFooterChampions(slug) : [];
+const champions = showBand ? await getFooterChampions(slug) : [];
 const draftStatus = showBand ? null : getFooterDraftStatus(slug);
 
 /**

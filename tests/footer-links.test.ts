@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
@@ -64,9 +64,9 @@ function routeExists(pathname: string): boolean {
 }
 
 /** Every href the footer renders for a league, as the browser would see it. */
-function renderedHrefs(
+async function renderedHrefs(
   slug: CanonicalLeagueSlug,
-): Array<{ label: string; href: string }> {
+): Promise<Array<{ label: string; href: string }>> {
   const nav = NAV_SLUG[slug];
   const columns = getFooterColumns(slug);
   const out: Array<{ label: string; href: string }> = [];
@@ -95,7 +95,7 @@ function renderedHrefs(
       label: "Trophy Case",
       href: resolveDirectoryHref("/franchises", nav),
     });
-    for (const champ of getFooterChampions(slug)) {
+    for (const champ of await getFooterChampions(slug)) {
       out.push({ label: `Champion › ${champ.team}`, href: champ.href });
     }
   }
@@ -112,7 +112,10 @@ function renderedHrefs(
 describe("every footer link resolves to a real route", () => {
   for (const slug of LEAGUES) {
     describe(slug, () => {
-      const hrefs = renderedHrefs(slug);
+      let hrefs: Array<{ label: string; href: string }> = [];
+      beforeAll(async () => {
+        hrefs = await renderedHrefs(slug);
+      });
 
       it("renders at least one link", () => {
         expect(hrefs.length).toBeGreaterThan(0);

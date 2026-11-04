@@ -15,7 +15,7 @@
  * The index is the same one the /search page renders
  * (src/utils/page-search-index.ts), fetched from /api/page-search the first
  * time the panel opens and kept for the rest of the browser session. Players
- * come from a prerendered file per league (/api/player-search/<league>.json),
+ * come from a CDN-cached file per league (/api/player-search/<league>.json),
  * fetched on the first keystroke.
  *
  * Header.astro renders the glass (`[data-header-search-toggle]`) and this

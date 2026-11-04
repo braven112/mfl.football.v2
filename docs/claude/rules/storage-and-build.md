@@ -121,6 +121,15 @@ capped.
 - Guard: `tests/league-data-store.test.ts` — a shrink-only per-file count of
   bundled data reads (`tests/fixtures/league-data-import-baseline.json`), and
   no raw reader of an excluded file.
+- **A file the roster sync writes is NEVER bundled, not even once**
+  (`syncPublishedPatterns`, `scripts/lib/sync-published.mjs`: every syncing
+  league's `mfl-feeds/**` and `derived/**`, the salary files, the off-season
+  odds snapshot). Syncs are moving to publishing straight to the store with no
+  build (Nov 2026 plan), and a compiled-in copy would keep serving the last
+  deploy's data. Nothing that reads one may be prerendered or memoized for the
+  life of an instance either — the player-search index went from prerendered to
+  CDN-cached (`s-maxage=300`) for that reason. Guard:
+  `tests/sync-published-reads.test.ts`.
 
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline
