@@ -95,6 +95,49 @@ function record(row: Record<string, unknown>): { wins: number; losses: number; t
   return { wins: num(w), losses: num(l), ties: num(t) };
 }
 
+/**
+ * MFL's `leagueStandings.franchise` rows as `LiveStandingsRow`s, in MFL's
+ * order. Identity is left blank for `decorateStandings` to fill.
+ *
+ * Shared by the owner-cookie read above and by the AFL's live board, which
+ * reads the same export publicly (`utils/live/afl-live-standings.ts`) — one
+ * parser, so the two can never disagree about a record.
+ */
+export function parseStandingsFeedRows(feedRows: readonly unknown[]): LiveStandingsRow[] {
+  const rows: LiveStandingsRow[] = [];
+  feedRows.forEach((entry) => {
+    const row = (entry ?? {}) as Record<string, unknown>;
+    const franchiseId = `${row.id ?? ''}`.trim().padStart(4, '0');
+    if (!franchiseId || franchiseId === '0000') return;
+    rows.push({
+      franchiseId,
+      // The FEED's position among the rows we kept, 1-based.
+      //
+      // `rows.length + 1`, NOT the forEach index: the loop drops malformed
+      // rows (blank or `0000` franchise id, which no real franchise has), and
+      // an index-derived rank leaves a gap — a `#` column reading 1, 2, 4, 5
+      // with no missing row on screen to explain it.
+      //
+      // This is still MFL's ORDER and not a ranking of our own. Nothing here
+      // sorts, and nothing derives a position from the columns; the rows are
+      // simply numbered in the sequence MFL sent them. See the header.
+      rank: rows.length + 1,
+      // Filled by `decorateStandings`, which runs on a cache hit too so a
+      // name that arrived late is not frozen into the cached rows.
+      name: `${row.fname ?? ''}`.trim(),
+      nameShort: '',
+      initials: '',
+      icon: '',
+      iconAlt: '',
+      rung: 'text',
+      ...record(row),
+      pointsFor: num(row.pf),
+      isViewer: false,
+    });
+  });
+  return rows;
+}
+
 export interface ReadLeagueStandingsInput {
   league: BoardLeague;
   /** SEASON year — standings are results-shaped. */
@@ -169,37 +212,7 @@ export async function readLeagueStandings(
       return hit ? decorateStandings(hit.rows, input) : null;
     }
 
-    const rows: LiveStandingsRow[] = [];
-    feedRows.forEach((entry) => {
-      const row = (entry ?? {}) as Record<string, unknown>;
-      const franchiseId = `${row.id ?? ''}`.trim().padStart(4, '0');
-      if (!franchiseId || franchiseId === '0000') return;
-      rows.push({
-        franchiseId,
-        // The FEED's position among the rows we kept, 1-based.
-        //
-        // `rows.length + 1`, NOT the forEach index: the loop drops malformed
-        // rows (blank or `0000` franchise id, which no real franchise has), and
-        // an index-derived rank leaves a gap — a `#` column reading 1, 2, 4, 5
-        // with no missing row on screen to explain it.
-        //
-        // This is still MFL's ORDER and not a ranking of our own. Nothing here
-        // sorts, and nothing derives a position from the columns; the rows are
-        // simply numbered in the sequence MFL sent them. See the header.
-        rank: rows.length + 1,
-        // Filled by `decorateStandings`, which runs on a cache hit too so a
-        // name that arrived late is not frozen into the cached rows.
-        name: `${row.fname ?? ''}`.trim(),
-        nameShort: '',
-        initials: '',
-        icon: '',
-        iconAlt: '',
-        rung: 'text',
-        ...record(row),
-        pointsFor: num(row.pf),
-        isViewer: false,
-      });
-    });
+    const rows = parseStandingsFeedRows(feedRows);
 
     if (rows.length === 0) {
       failureAtMs.set(key, now());

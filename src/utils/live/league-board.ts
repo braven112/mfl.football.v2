@@ -36,6 +36,7 @@ import {
 } from '../../data/live-scoring-sample';
 import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
+import { readAflLiveStandings, withBoardIdentities } from './afl-live-standings';
 
 export interface AssembleLeagueBoardInput {
   slug: CanonicalLeagueSlug;
@@ -181,7 +182,29 @@ async function assembleUngrouped(
 
   let board: LiveBoard | null = null;
   if (!isSample) {
-    board = await readLeagueLive({ slug, week, year, viewerFranchiseId, identityOverrides });
+    // The AFL's Standings tab (tiers + divisions), read beside the scores. It
+    // may never cost them: any failure inside is a `null` table, not a throw.
+    // `undefined` for every other league, which keeps its board unchanged.
+    const [read, aflStandings] = await Promise.all([
+      readLeagueLive({ slug, week, year, viewerFranchiseId, identityOverrides }),
+      readAflLiveStandings({ slug, year, week, viewerFranchiseId }).catch(() => undefined),
+    ]);
+    board = read;
+    if (aflStandings && board.panels.length === 1) {
+      const panel = board.panels[0];
+      board = {
+        ...board,
+        panels: [
+          {
+            ...panel,
+            standings: withBoardIdentities(aflStandings.standings, panel.matchups),
+            ...(aflStandings.standingsSections
+              ? { standingsSections: aflStandings.standingsSections }
+              : {}),
+          },
+        ],
+      };
+    }
     // An empty-but-HEALTHY feed is the offseason. `ok` is the whole guard: a
     // failed read also yields no matchups.
     if (sample && demoParam !== '0' && board.ok && board.panels[0].matchups.length === 0) {

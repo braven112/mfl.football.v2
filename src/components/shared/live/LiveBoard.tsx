@@ -30,6 +30,7 @@ import LvFeedStatus from './LvFeedStatus';
 import LvStaleNotice from './LvStaleNotice';
 import LvWeekPicker from './LvWeekPicker';
 import LvStandings from './LvStandings';
+import LvStandingsSections from './LvStandingsSections';
 import { isMatchupFinal } from '../../../utils/live/standings-projection';
 import LvLeaders from './LvLeaders';
 import LvGroupPicker from './LvGroupPicker';
@@ -768,6 +769,15 @@ export default function LiveBoard({
         />
         </ScorePrecisionContext.Provider>
         </>
+      ) : activeTab === 'standings' && soloPanel && soloPanel.standingsSections ? (
+        // A league that cuts its standings into tables (the AFL: tiers, then
+        // divisions). League sites only, so never Pro-locked.
+        <LvStandingsSections
+          rows={soloPanel.standings ?? null}
+          sections={soloPanel.standingsSections}
+          leagueName={soloPanel.leagueName}
+          matchups={soloPanel.matchups}
+        />
       ) : activeTab === 'standings' && soloPanel ? (
         <LvStandings
           rows={soloPanel.standings ?? null}
