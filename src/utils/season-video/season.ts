@@ -9,44 +9,67 @@
  * team-level exports: league, leagueStandings, playoffBrackets,
  * playoffBracket and schedule.
  *
- * Which video a season makes (`pickVideoKind`): the champion gets the
- * champion video, the last-place team gets the last-place video (princess or
- * poop), and everyone else gets the season recap. The visitor can override
- * it.
+ * Which story a season suggests (`pickVideoKind`): the champion gets the
+ * champion video, the last-place team the last-place one, a season still
+ * being played the mid-season report, and everyone else the season recap.
+ * The visitor can pick any story and any look instead.
  *
  * Pure: tests/season-video.test.ts drives it with TheLeague's recorded 2025
  * feeds, the season the original Computer Jocks video was cut from.
  */
 import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champions';
 
-export type SeasonVideoKind = 'champion' | 'recap' | 'last';
+/**
+ * Two separate choices (Brandon, 2026-11-05: "I want to have all of the
+ * options available"): the STORY is what the video says, the LOOK is how it
+ * looks. Any story wears any look, and any team in the league can be the
+ * subject, because the video is a trash-talk tool as much as a keepsake: a
+ * 9–2 team can be called mid, a champion can get the poop look.
+ */
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'mid' | 'last';
+export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop';
+/** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
 export type ChampionStyle = 'trophy' | 'bling' | 'retro';
 
-/** A look the owner can pick on the style step, per video. */
+/** A story the owner can pick, in picker order. */
+export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
+	{ id: 'champion', name: '🏆 Champion' },
+	{ id: 'recap', name: 'Season recap' },
+	{ id: 'midseason', name: '📝 Mid-season report' },
+	{ id: 'mid', name: '😐 Master of mediocrity' },
+	{ id: 'last', name: 'Last place' },
+];
+
+/** A look the owner can pick on the style step. */
 export interface VideoStyleOption {
-	id: string;
+	id: VideoLook;
 	name: string;
 	icon: string;
 	/** CSS background for the picker tile. */
 	swatch: string;
 }
 
-const TROPHY_ROOM: VideoStyleOption = { id: 'trophy', name: 'Trophy Room', icon: '🏆', swatch: 'linear-gradient(135deg, #0b1a33 40%, #c9a24a)' };
+/** Every look, in picker order. Every story can wear every one. */
+export const VIDEO_LOOKS: readonly VideoStyleOption[] = [
+	{ id: 'trophy', name: 'Trophy Room', icon: '🏆', swatch: 'linear-gradient(135deg, #0b1a33 40%, #c9a24a)' },
+	{ id: 'bling', name: 'Bling', icon: '💎', swatch: 'linear-gradient(135deg, #0a0a0a 45%, #f5c542)' },
+	{ id: 'retro', name: 'Retro', icon: '📼', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)' },
+	{ id: 'princess', name: 'Princess', icon: '👑', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
+	{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
+];
 
-/** The styles each video offers, first one the default. A video with one style shows no picker. */
-export const VIDEO_STYLES: Record<SeasonVideoKind, readonly VideoStyleOption[]> = {
-	champion: [
-		TROPHY_ROOM,
-		{ id: 'bling', name: 'Bling', icon: '💎', swatch: 'linear-gradient(135deg, #0a0a0a 45%, #f5c542)' },
-		{ id: 'retro', name: 'Retro', icon: '📼', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)' },
-	],
-	recap: [TROPHY_ROOM],
-	last: [
-		{ id: 'princess', name: 'Princess', icon: '👑', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
-		{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
-	],
-};
+/** The look a story starts in, until the owner picks one. */
+export function defaultLook(kind: SeasonVideoKind): VideoLook {
+	return kind === 'last' ? 'princess' : 'trophy';
+}
+
+/** The look a saved video was made in, including one saved before looks were split out. */
+export function lookOf(v: { kind: SeasonVideoKind; look?: VideoLook; theme?: LastPlaceTheme; style?: ChampionStyle }): VideoLook {
+	if (v.look) return v.look;
+	if (v.kind === 'last') return v.theme ?? 'princess';
+	return v.style ?? 'trophy';
+}
 
 /** How the season ended for this team. */
 export type SeasonOutcome = 'champion' | 'runner-up' | 'playoffs' | 'missed';
@@ -94,8 +117,16 @@ export interface SeasonFacts {
 	worstGame?: SeasonGame | null;
 }
 
-/** The video a season makes before the visitor overrides it. */
-export function pickVideoKind(facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'>): SeasonVideoKind {
+/**
+ * The story a season suggests before the visitor overrides it. A season still
+ * in its regular season (`complete` false, no playoff games yet) suggests the
+ * mid-season report.
+ */
+export function pickVideoKind(
+	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
+	complete = true,
+): SeasonVideoKind {
+	if (!complete && (facts.playoffs?.length ?? 0) === 0) return 'midseason';
 	if (facts.outcome === 'champion') return 'champion';
 	if (facts.finish && facts.teams && facts.finish >= facts.teams) return 'last';
 	return 'recap';

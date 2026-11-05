@@ -295,7 +295,7 @@ export async function loadSleeperSeason(input: {
 	return {
 		ok: true,
 		facts,
-		kind: pickVideoKind(facts),
+		kind: pickVideoKind(facts, result.complete),
 		rosterId,
 		teams: rankRosters(rs).map((r) => ({ id: r.roster_id, name: teamName(users as LeagueUser[], r) })),
 		complete: result.complete,

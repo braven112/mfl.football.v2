@@ -26,7 +26,7 @@ import { canUseHistoryProduct } from '../utils/league-history/access';
 import { listOwnerLeagues } from '../utils/live/owner-league';
 import { sharedHostLoginUrl } from '../utils/login-redirect';
 import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
-import { SEASON_OUTCOMES, VIDEO_STYLES } from '../utils/season-video/season';
+import { SEASON_OUTCOMES, VIDEO_LOOKS, VIDEO_STORIES } from '../utils/season-video/season';
 import { ESPN_FIRST_SEASON, currentEspnSeason } from '../utils/season-video/espn-source';
 import '../styles/mfl-live.css';
 
@@ -51,20 +51,17 @@ const MUSIC = [
 	{ id: 'none', label: 'No music' },
 ];
 const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
-const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
-	.filter((kind) => VIDEO_STYLES[kind].length > 1)
-	.map((kind) => ({ kind, label: `${kind} style`, styles: VIDEO_STYLES[kind] }));
 ---
 
 <MflAppLayout
 	title="Make your fantasy football season video — MFL Football"
-	description="Free: turn your fantasy football season into a vertical video for TikTok, Reels, Shorts and X. Champion, season recap or last place."
+	description="Free: turn any fantasy football team's season into a vertical video for TikTok, Reels, Shorts and X. Champion, mid-season report, master of mediocrity or last place."
 >
 	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
 		<p class="mls__lede">
-			Champion, last place or anywhere in between. A free vertical video of your fantasy season, ready for TikTok,
-			Reels, Shorts and X.
+			Champion, last place or anywhere in between, for your team or any rival you want to roast, at the end of the
+			season or the middle of it. A free vertical video, ready for TikTok, Reels, Shorts, X and the group chat.
 		</p>
 
 		<ol class="svid__steps" data-steps>
@@ -114,7 +111,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 								<p class="svid__note"><strong>Commissioner?</strong> Skip this for everyone: in ESPN’s League Manager, open Basic Settings and turn on “Make league viewable to public”. Then your league ID is all anyone needs. It’s also easier on a computer.</p>
 							</div>
 							<div data-espn-picks hidden>
-								<label class="svid__label" for="svid-espn-team">Your team</label>
+								<label class="svid__label" for="svid-espn-team">Team (yours, or anyone’s you want to roast)</label>
 								<select id="svid-espn-team" class="svid__input" data-espn-team></select>
 							</div>
 							<p class="svid__note" data-espn-status aria-live="polite">Public leagues fill in right away. Private ones take one copy and paste.</p>
@@ -131,7 +128,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 									<select id="svid-sleeper-league" class="svid__input" data-sleeper-league></select>
 								</div>
 								<div>
-									<label class="svid__label" for="svid-sleeper-team">Team</label>
+									<label class="svid__label" for="svid-sleeper-team">Team (yours, or anyone’s)</label>
 									<select id="svid-sleeper-team" class="svid__input" data-sleeper-team disabled></select>
 								</div>
 							</div>
@@ -150,7 +147,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 										<select id="svid-year" class="svid__input" data-year-select disabled><option>Loading…</option></select>
 									</div>
 									<div>
-										<label class="svid__label" for="svid-team">Team</label>
+										<label class="svid__label" for="svid-team">Team (yours, or anyone’s)</label>
 										<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
 									</div>
 								</div>
@@ -280,23 +277,24 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				</section>
 
 				<section class="ui-card svid__card" data-step="3" aria-labelledby="svid-step3" hidden>
-					<h2 class="svid__heading" id="svid-step3">Pick your style</h2>
-					<div class="ui-pills" role="group" aria-label="Video" data-group="kind">
-						<button type="button" class="ui-pill" data-value="champion" aria-pressed="false">🏆 Champion</button>
-						<button type="button" class="ui-pill" data-value="recap" aria-pressed="true">Season recap</button>
-						<button type="button" class="ui-pill" data-value="last" aria-pressed="false">Last place</button>
+					<h2 class="svid__heading" id="svid-step3">Pick your story and look</h2>
+					<span class="svid__label">Story</span>
+					<div class="ui-pills" role="group" aria-label="Story" data-group="kind">
+						{VIDEO_STORIES.map((st) => (
+							<button type="button" class="ui-pill" data-value={st.id} aria-pressed={st.id === 'recap' ? 'true' : 'false'}>{st.name}</button>
+						))}
 					</div>
 					<p class="svid__note" data-kind-note aria-live="polite"></p>
-					{STYLE_SETS.map((set) => (
-						<div class="svid__styles" role="group" aria-label={set.label} data-group={`style-${set.kind}`} data-style-set={set.kind} hidden>
-							{set.styles.map((s, i) => (
-								<button type="button" class="svid__style" data-value={s.id} aria-pressed={i === 0 ? 'true' : 'false'}>
-									<span class="svid__swatch" style={`background:${s.swatch}`}>{s.icon}</span>
-									<span class="svid__style-name">{s.name}</span>
-								</button>
-							))}
-						</div>
-					))}
+					<span class="svid__label">Look</span>
+					<div class="svid__styles" role="group" aria-label="Look" data-group="look">
+						{VIDEO_LOOKS.map((l, i) => (
+							<button type="button" class="svid__style" data-value={l.id} aria-pressed={i === 0 ? 'true' : 'false'}>
+								<span class="svid__swatch" style={`background:${l.swatch}`}>{l.icon}</span>
+								<span class="svid__style-name">{l.name}</span>
+							</button>
+						))}
+					</div>
+					<p class="svid__note">Any story, any look. Call a champion a princess if you like.</p>
 					<span class="svid__label">Music</span>
 					<div class="ui-pills" role="group" aria-label="Music" data-group="music">
 						{MUSIC.map((m, i) => (
@@ -361,7 +359,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 
 <script>
 	import { buildStory } from '../utils/season-video/story';
-	import { pickVideoKind, type ChampionStyle, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type LastPlaceTheme } from '../utils/season-video/season';
+	import { defaultLook, pickVideoKind, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
 	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
@@ -386,6 +384,10 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		/** Logos MFL gave us, kept on the games they came with. */
 		const oppLogoByName = new Map<string, string>();
 		let autoKind: SeasonVideoKind = 'recap';
+		/** False while the season the form came from is still being played. */
+		let seasonComplete = true;
+		/** Whether the owner picked a look themselves; until then it follows the story. */
+		let lookChosen = false;
 		let busy = false;
 
 		// ── pills ──
@@ -397,7 +399,9 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			);
 		root.querySelectorAll<HTMLElement>('[data-group] [data-value]').forEach((b) =>
 			b.addEventListener('click', () => {
-				press(b.closest<HTMLElement>('[data-group]')!.dataset.group!, b.dataset.value!);
+				const group = b.closest<HTMLElement>('[data-group]')!.dataset.group!;
+				press(group, b.dataset.value!);
+				if (group === 'look') lookChosen = true;
 				refresh();
 			}),
 		);
@@ -644,9 +648,17 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		// ── video choice ──
 		function kindNote(kind: SeasonVideoKind) {
 			const auto = kind === autoKind;
-			const names = { champion: 'the champion video', recap: 'the season recap', last: 'the last-place video' };
-			$('[data-kind-note]').textContent = auto ? `Picked from your finish: ${names[kind]}.` : `You picked ${names[kind]}. We'd have picked ${names[autoKind]}.`;
-			root.querySelectorAll<HTMLElement>('[data-style-set]').forEach((el) => (el.hidden = el.dataset.styleSet !== kind));
+			const names: Record<SeasonVideoKind, string> = {
+				champion: 'the champion video',
+				recap: 'the season recap',
+				midseason: 'the mid-season report',
+				mid: 'master of mediocrity',
+				last: 'the last-place video',
+			};
+			$('[data-kind-note]').textContent = auto
+				? `Picked from the season: ${names[kind]}.`
+				: `You picked ${names[kind]}. The season says ${names[autoKind]}, but it’s your call.`;
+			if (!lookChosen) press('look', defaultLook(kind));
 		}
 
 		let lastAuto: SeasonVideoKind | null = null;
@@ -654,7 +666,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			const facts = readFacts();
 			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed';
 			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
-			autoKind = pickVideoKind(facts);
+			autoKind = pickVideoKind(facts, seasonComplete);
 			// Follow the facts until the owner picks for themselves.
 			if (lastAuto === null || picked('kind') === lastAuto) press('kind', autoKind);
 			lastAuto = autoKind;
@@ -680,8 +692,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		const story = (facts: SeasonFacts) =>
 			buildStory(facts, {
 			kind: picked('kind') as SeasonVideoKind,
-			theme: (picked('style-last') || 'princess') as LastPlaceTheme,
-			style: (picked('style-champion') || 'trophy') as ChampionStyle,
+			look: (picked('look') || 'trophy') as VideoLook,
 		});
 
 		/** A still of the title card while nothing plays. */
@@ -738,8 +749,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				...videoSource,
 				facts: { ...facts, teamLogo },
 				kind: picked('kind') as SeasonVideoKind,
-				theme: (picked('style-last') || 'princess') as LastPlaceTheme,
-				style: (picked('style-champion') || 'trophy') as ChampionStyle,
+				look: (picked('look') || 'trophy') as VideoLook,
 				music: picked('music') || 'none',
 				madeAt: new Date().toISOString(),
 			});
@@ -757,6 +767,12 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			$<HTMLButtonElement>('[data-make]').hidden = true;
 			warning.textContent = 'This browser can’t record video. Try Chrome, Edge or Safari.';
 		}
+
+		/** What to say about a season that is still being played. */
+		const inProgressNote = (f: SeasonFacts) =>
+			f.playoffs.length === 0
+				? `The ${f.season} season is still going, so this is the story so far. Pick any team to roast.`
+				: `The ${f.season} playoffs aren’t finished yet, so the ending may change.`;
 
 		// ── MFL ──
 		const leagueSel = root.querySelector<HTMLSelectElement>('[data-league-select]');
@@ -780,12 +796,13 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				teamSel.replaceChildren(...body.franchises.map((f) => new Option(f.name, f.id, false, f.id === body.franchiseId)));
 				yearSel.disabled = teamSel.disabled = false;
 				lastAuto = null;
+				seasonComplete = body.complete;
 				fillForm(body.facts);
 				videoSource = { source: 'mfl', leagueId: leagueSel.value };
 				if (!body.facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				status.textContent = body.complete
 					? `Filled in from MFL. Change anything that looks off.`
-					: `The ${body.facts.season} playoffs aren’t finished yet, so the ending may change.`;
+					: inProgressNote(body.facts);
 				refresh();
 			} catch {
 				status.textContent = 'MFL isn’t answering right now. Try again, or add yours by hand.';
@@ -855,13 +872,14 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				sTeam.replaceChildren(...teams.map((t) => new Option(t.name, String(t.id), false, t.id === body.rosterId)));
 				sTeam.disabled = false;
 				lastAuto = null;
+				seasonComplete = body.complete !== false;
 				const facts = body.facts as SeasonFacts;
 				fillForm(facts);
 				videoSource = { source: 'sleeper', leagueId: sLeague.value };
 				if (!facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				sStatus.textContent = body.complete
 					? 'Filled in from Sleeper. Change anything that looks off.'
-					: `The ${facts.season} playoffs aren’t finished yet, so the ending may change.`;
+					: inProgressNote(facts);
 				refresh();
 			} catch {
 				sStatus.textContent = 'Sleeper isn’t answering right now. Try again, or add yours by hand.';
@@ -905,6 +923,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				return;
 			}
 			lastAuto = null;
+			seasonComplete = body.complete !== false;
 			const facts = body.facts as SeasonFacts;
 			fillForm(facts);
 			videoSource = { source: 'espn', leagueId: String(body.leagueId || espnRead?.leagueId || '') || null };
@@ -912,7 +931,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			ePrivate.hidden = true;
 			eStatus.textContent = body.complete
 				? 'Filled in from ESPN. Change anything that looks off.'
-				: `The ${facts.season} playoffs aren’t finished yet, so the ending may change.`;
+				: inProgressNote(facts);
 			refresh();
 		}
 		async function findEspn() {
