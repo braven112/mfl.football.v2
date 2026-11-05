@@ -59,6 +59,29 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			<div class="svid__form">
 				<fieldset class="svid__card">
 					<legend class="svid__legend">1. Your season</legend>
+					<div class="ui-pills" role="group" aria-label="Where your league is" data-group="source">
+						<button type="button" class="ui-pill" data-value="mfl" aria-pressed="true">MFL</button>
+						<button type="button" class="ui-pill" data-value="sleeper" aria-pressed="false">Sleeper</button>
+					</div>
+					<div class="svid__panel" data-source-panel="sleeper" hidden>
+						<label class="svid__label" for="svid-sleeper-name">Sleeper username</label>
+						<div class="svid__inline">
+							<input id="svid-sleeper-name" class="svid__input" maxlength="40" autocomplete="off" placeholder="your_username" data-sleeper-name />
+							<button type="button" class="cta cta--primary" data-sleeper-find>Find my leagues</button>
+						</div>
+						<div class="svid__row" data-sleeper-picks hidden>
+							<div>
+								<label class="svid__label" for="svid-sleeper-league">League</label>
+								<select id="svid-sleeper-league" class="svid__input" data-sleeper-league></select>
+							</div>
+							<div>
+								<label class="svid__label" for="svid-sleeper-team">Team</label>
+								<select id="svid-sleeper-team" class="svid__input" data-sleeper-team disabled></select>
+							</div>
+						</div>
+						<p class="svid__note" data-sleeper-status aria-live="polite">No sign-in needed. We only read your league’s public results.</p>
+					</div>
+					<div class="svid__panel" data-source-panel="mfl">
 					{signedIn && leagues.length > 0 ? (
 						<div class="svid__source">
 							<label class="svid__label" for="svid-league">League</label>
@@ -85,6 +108,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 							<p class="svid__note">Or type your season in below. Works for any league on any site.</p>
 						</div>
 					)}
+					</div>
 				</fieldset>
 
 				<fieldset class="svid__card">
@@ -436,6 +460,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		function refresh() {
 			const facts = readFacts();
 			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed';
+			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
 			autoKind = pickVideoKind(facts);
 			// Follow the facts until the owner picks for themselves.
 			if (lastAuto === null || picked('kind') === lastAuto) press('kind', autoKind);
@@ -568,6 +593,84 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		yearSel?.addEventListener('change', () => void pull({ year: yearSel.value, franchise: teamSel?.value }));
 		teamSel?.addEventListener('change', () => void pull({ year: yearSel?.value, franchise: teamSel.value }));
 
+		// ── Sleeper ──
+		const sName = $<HTMLInputElement>('[data-sleeper-name]');
+		const sLeague = $<HTMLSelectElement>('[data-sleeper-league]');
+		const sTeam = $<HTMLSelectElement>('[data-sleeper-team]');
+		const sStatus = $<HTMLElement>('[data-sleeper-status]');
+		let sleeperUserId: string | null = null;
+		try {
+			sName.value = localStorage.getItem('seasonVideo.sleeperUser') ?? '';
+		} catch {
+			/* storage blocked: the field just starts empty */
+		}
+		async function sleeperJson(q: URLSearchParams) {
+			const res = await fetch(`/api/season-video-sleeper?${q}`);
+			return (await res.json()) as Record<string, unknown> & { ok: boolean; message?: string };
+		}
+		async function findSleeper() {
+			const username = sName.value.trim();
+			if (!username) return;
+			sStatus.textContent = 'Looking up your Sleeper leagues…';
+			try {
+				const body = await sleeperJson(new URLSearchParams({ username }));
+				if (!body.ok) {
+					sStatus.textContent = body.message ?? 'Sleeper didn’t find that username.';
+					return;
+				}
+				try {
+					localStorage.setItem('seasonVideo.sleeperUser', username);
+				} catch {
+					/* fine */
+				}
+				sleeperUserId = String(body.userId);
+				const rows = body.leagues as { id: string; name: string; season: number; status: string }[];
+				if (!rows.length) {
+					sStatus.textContent = 'No Sleeper football leagues in the last two seasons.';
+					return;
+				}
+				sLeague.replaceChildren(
+					...rows.map((l) => new Option(`${l.name} · ${l.season}${l.status === 'complete' ? '' : ' (in progress)'}`, l.id)),
+				);
+				$<HTMLElement>('[data-sleeper-picks]').hidden = false;
+				await pullSleeper();
+			} catch {
+				sStatus.textContent = 'Sleeper isn’t answering right now. Try again, or type it in below.';
+			}
+		}
+		async function pullSleeper(roster?: string) {
+			sStatus.textContent = 'Filling in your season from Sleeper…';
+			const q = new URLSearchParams({ league: sLeague.value });
+			if (sleeperUserId) q.set('user', sleeperUserId);
+			if (roster) q.set('roster', roster);
+			try {
+				const body = await sleeperJson(q);
+				if (!body.ok) {
+					sStatus.textContent = body.message ?? 'Sleeper didn’t return this league.';
+					return;
+				}
+				const teams = body.teams as { id: number; name: string }[];
+				sTeam.replaceChildren(...teams.map((t) => new Option(t.name, String(t.id), false, t.id === body.rosterId)));
+				sTeam.disabled = false;
+				lastAuto = null;
+				const facts = body.facts as SeasonFacts;
+				fillForm(facts);
+				if (!facts.teamLogo) void setLogo(null);
+				sStatus.textContent = body.complete
+					? 'Filled in from Sleeper. Change anything that looks off.'
+					: `The ${facts.season} playoffs aren’t finished yet, so the ending may change.`;
+				refresh();
+			} catch {
+				sStatus.textContent = 'Sleeper isn’t answering right now. Try again, or type it in below.';
+			}
+		}
+		$('[data-sleeper-find]').addEventListener('click', () => void findSleeper());
+		sName.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') void findSleeper();
+		});
+		sLeague.addEventListener('change', () => void pullSleeper());
+		sTeam.addEventListener('change', () => void pullSleeper(sTeam.value));
+
 		void loadBrand().then(() => refresh());
 		if (leagueSel) void pull();
 		else refresh();
@@ -649,6 +752,17 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	}
 	.svid__warn:empty {
 		display: none;
+	}
+	.svid__panel {
+		display: grid;
+		gap: 0.6rem;
+	}
+	.svid__inline {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.svid__inline .svid__input {
+		flex: 1;
 	}
 	.svid__signin {
 		display: grid;

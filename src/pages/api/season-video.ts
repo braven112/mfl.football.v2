@@ -14,25 +14,10 @@
 import type { APIRoute } from 'astro';
 import { appJson, requireOwnerLeague } from '../../utils/live/owner-league';
 import { mflFetch } from '../../utils/mfl-fetch';
-import { validatePublicUrl } from '../../utils/url-guard';
-import { exportPath, loadMflSeason, MAX_LOGO_BYTES, type FetchLogo, type FetchMflExport } from '../../utils/season-video/mfl-source';
+import { fetchLogoAsDataUrl } from '../../utils/season-video/fetch-logo';
+import { exportPath, loadMflSeason, type FetchMflExport } from '../../utils/season-video/mfl-source';
 
 export const prerender = false;
-
-const LOGO_TIMEOUT_MS = 4000;
-
-const fetchLogo: FetchLogo = async (url) => {
-	if (await validatePublicUrl(url)) return null;
-	const res = await fetch(url, { signal: AbortSignal.timeout(LOGO_TIMEOUT_MS), redirect: 'follow' });
-	if (!res.ok) return null;
-	const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
-	if (!/^image\/(png|jpeg|jpg|gif|webp|svg\+xml)$/.test(type)) return null;
-	const declared = Number(res.headers.get('content-length') ?? 0);
-	if (declared > MAX_LOGO_BYTES) return null;
-	const buf = Buffer.from(await res.arrayBuffer());
-	if (buf.byteLength > MAX_LOGO_BYTES) return null;
-	return `data:${type};base64,${buf.toString('base64')}`;
-};
 
 export const GET: APIRoute = async ({ request, url }) => {
 	const gate = await requireOwnerLeague(request, url.searchParams.get('league'));
@@ -57,7 +42,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 			year: Number.isInteger(yearParam) && yearParam > 1998 ? yearParam : null,
 			franchiseId: url.searchParams.get('franchise'),
 			fetchExport,
-			fetchLogo,
+			fetchLogo: fetchLogoAsDataUrl,
 		});
 		return appJson(out, out.ok ? 200 : 404);
 	} catch {
