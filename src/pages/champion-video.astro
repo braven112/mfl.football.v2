@@ -13,8 +13,9 @@
  * in. Either way every fact is an editable field, and nothing but team-level
  * numbers is used: no player data on the free tier.
  *
- * A logo is required. No logo: we send them to the free logo maker
- * (/team-logo) first.
+ * A logo is required. No logo: "Make my logo" opens the logo builder in a
+ * dialog on this page (Brandon, 2026-11-05: they must not have to leave), and
+ * its Upload button lands them back on the upload.
  *
  * The video is drawn and recorded in the visitor's own browser
  * (src/utils/season-video/), so it costs no server rendering.
@@ -23,6 +24,7 @@ import MflAppLayout from '../layouts/MflAppLayout.astro';
 import { getMflLiveUser } from '../utils/auth';
 import { listOwnerLeagues } from '../utils/live/owner-league';
 import { sharedHostLoginUrl } from '../utils/login-redirect';
+import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
 import { SEASON_OUTCOMES, VIDEO_STYLES } from '../utils/season-video/season';
 import '../styles/mfl-live.css';
 
@@ -32,6 +34,7 @@ const user = getMflLiveUser(Astro.request);
 const owned = user ? await listOwnerLeagues(user).catch(() => null) : null;
 const leagues = owned?.ok ? owned.leagues.map((l) => ({ id: l.leagueId, name: l.leagueName, team: l.franchiseName })) : [];
 const signedIn = Boolean(user);
+const logoTeams = owned?.ok ? owned.leagues.map((l) => ({ name: l.franchiseName, league: l.leagueName })) : [];
 const lastYear = new Date().getFullYear() - 1;
 
 const MUSIC = [
@@ -138,9 +141,9 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 					<div class="svid__make-logo" data-make-logo>
 						<div>
 							<strong>No logo yet?</strong>
-							<p class="svid__note">Make one free in a couple of minutes. It opens in a new tab, so you won’t lose anything here.</p>
+							<p class="svid__note">Make one free in a couple of minutes, right here.</p>
 						</div>
-						<a class="cta cta--primary" href="/team-logo" target="_blank" rel="noopener">Make my logo</a>
+						<button type="button" class="cta cta--primary" data-open-logo-maker>Make my logo</button>
 					</div>
 
 					<details class="svid__more">
@@ -282,6 +285,24 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			</div>
 		</div>
 	</section>
+
+	<!-- Outside [data-season-video]: the builder has its own [data-group] pills. -->
+	<dialog class="ui-modal svid-logo" data-logo-dialog aria-labelledby="svid-logo-title">
+		<div class="svid-logo__head">
+			<h2 class="svid-logo__title" id="svid-logo-title">Make your logo</h2>
+			<button type="button" class="svid-logo__close" data-logo-dialog-close aria-label="Close">×</button>
+		</div>
+		<ol class="svid-logo__how">
+			<li><strong>Pick a look.</strong> We write the prompt for you.</li>
+			<li><strong>Copy it into ChatGPT or Gemini</strong> and save the picture it makes.</li>
+			<li><strong>Come back and upload it.</strong> This page keeps everything you entered.</li>
+		</ol>
+		<TeamLogoBuilder teams={logoTeams} />
+		<div class="svid-logo__foot">
+			<span>Got your picture?</span>
+			<button type="button" class="cta cta--primary" data-logo-dialog-upload>Upload my logo</button>
+		</div>
+	</dialog>
 </MflAppLayout>
 
 <template id="svid-game-template">
@@ -530,6 +551,28 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			void useFile(e.dataTransfer?.files?.[0]);
 		});
 		$('[data-logo-remove]').addEventListener('click', () => void setLogo(null));
+
+		// The logo builder, in a dialog so nobody leaves the page to use it.
+		const dialog = document.querySelector<HTMLDialogElement>('[data-logo-dialog]');
+		$('[data-open-logo-maker]').addEventListener('click', () => {
+			if (!dialog) return;
+			const builder = dialog.querySelector<HTMLElement>('[data-team-logo]');
+			const name = dialog.querySelector<HTMLInputElement>('#tlogo-name');
+			const ours = (field('teamName') as HTMLInputElement).value.trim();
+			if (builder && name && ours && !name.value.trim()) {
+				name.value = ours;
+				builder.dispatchEvent(new Event('team-logo:refresh'));
+			}
+			dialog.showModal();
+		});
+		dialog?.querySelector('[data-logo-dialog-close]')?.addEventListener('click', () => dialog.close());
+		dialog?.addEventListener('click', (e) => {
+			if (e.target === dialog) dialog.close();
+		});
+		dialog?.querySelector('[data-logo-dialog-upload]')?.addEventListener('click', () => {
+			dialog.close();
+			logoInput.click();
+		});
 
 		// A link is fetched by our server: a picture from another site would
 		// taint the canvas and the browser would refuse to record it.
@@ -1033,6 +1076,60 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		padding: 0.8rem 0.9rem;
 		border-radius: 12px;
 		border: 1px solid var(--league-accent);
+	}
+	.svid-logo {
+		width: min(44rem, calc(100vw - 1rem));
+		max-height: calc(100dvh - 1rem);
+		padding: 0;
+	}
+	.svid-logo__head {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.9rem 1rem 0.6rem;
+		background: var(--card-surface);
+	}
+	.svid-logo__title {
+		margin: 0;
+		font-size: var(--font-size-xl);
+	}
+	.svid-logo__close {
+		border: 0;
+		background: none;
+		color: var(--page-text);
+		font-size: var(--font-size-xl);
+		line-height: 1;
+		cursor: pointer;
+		padding: 0.2rem 0.5rem;
+	}
+	.svid-logo__how {
+		margin: 0 1rem 1rem;
+		padding-left: 1.2rem;
+		display: grid;
+		gap: 0.25rem;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.svid-logo__how strong {
+		color: var(--page-text);
+	}
+	.svid-logo :global(.tlogo) {
+		padding: 0 1rem;
+	}
+	.svid-logo__foot {
+		position: sticky;
+		bottom: 0;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.7rem;
+		padding: 0.8rem 1rem;
+		background: var(--card-surface);
+		border-top: 1px solid var(--color-border-subtle);
+		font-weight: 700;
 	}
 	.svid__make-logo .cta {
 		flex: none;
