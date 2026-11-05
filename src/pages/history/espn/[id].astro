@@ -1,0 +1,235 @@
+---
+/**
+ * /history/espn/<leagueId> — an ESPN league's free History page, where the
+ * season video hands its owner (Brandon, 2026-11-05: "the purpose of the
+ * video is to drive history adoption").
+ *
+ * What it shows:
+ *  - The owner's video, re-drawn from what they made in this browser
+ *    (`readLastVideo`, src/utils/season-video/player.ts). The video is never
+ *    uploaded, so a visitor who did not make it sees an invitation instead.
+ *  - Every season we hold for the league, with its champion: the seasons
+ *    the video maker read (public by id, or pasted by the owner) and any the
+ *    ESPN history import collected, one store (src/utils/espn-history.ts).
+ *    The champion is ESPN's own final rank 1 (`summarizeSeason`), so a
+ *    season still being played reads "In progress".
+ *  - Full History's features, visible and locked: the history data is for
+ *    History customers, the video is free.
+ *
+ * Gated by `canUseHistoryProduct`, the same switch as every History page:
+ * the video's link here and this page launch WITH History.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { canUseHistoryProduct } from '../../../utils/league-history/access';
+import { ESPN_LEAGUE_ID, readSeasonSummaries, sortStandings } from '../../../utils/espn-history';
+import '../../../styles/league-history.css';
+
+export const prerender = false;
+
+const leagueId = Astro.params.id ?? '';
+const authUser = getAuthUser(Astro.request);
+if (!canUseHistoryProduct(authUser)) {
+	if (!authUser) return Astro.redirect(mflLoginUrl(`/history/espn/${encodeURIComponent(leagueId)}`));
+	return Astro.rewrite('/_not-found');
+}
+if (!ESPN_LEAGUE_ID.test(leagueId)) return Astro.rewrite('/_not-found');
+Astro.response.headers.set('X-Robots-Tag', 'noindex');
+
+const summaries = await readSeasonSummaries(leagueId).catch(() => []);
+const name = summaries.find((s) => s.leagueName)?.leagueName ?? `ESPN league ${leagueId}`;
+const seasons = summaries.map((s) => {
+	const ranked = sortStandings(s.teams);
+	const champion = s.championTeamId !== null ? s.teams.find((t) => t.id === s.championTeamId) : undefined;
+	const runnerUp = champion ? s.teams.find((t) => t.finalRank === 2) : undefined;
+	return { year: s.seasonId, champion: champion?.name ?? null, runnerUp: runnerUp?.name ?? null, teams: ranked.length };
+});
+
+const LOCKED = [
+	{ title: 'Franchise story video', body: 'Your team’s whole run in one video: every season, every title, every rival.' },
+	{ title: 'Every season', body: 'All of your league’s seasons on ESPN, not just this one, with final tables and playoffs.' },
+	{ title: 'Records', body: 'All-time records, highest scores, longest streaks.' },
+	{ title: 'Rivalries', body: 'Every head-to-head game between any two teams.' },
+	{ title: 'Owners and eras', body: 'Each owner across every team they ran; every name and logo a team wore.' },
+];
+---
+
+<MflAppLayout title={`${name} — League History`} description={`${name}'s champions, on League History.`}>
+	<div class="lh" data-espn-history data-league={leagueId}>
+		<a class="lh__back" href="/history">&larr; League History</a>
+		<header class="lh__section">
+			<p class="lh__eyebrow">League History · ESPN</p>
+			<h1 class="lh__title">{name}</h1>
+			<p class="lh__lede">
+				{seasons.length
+					? `${seasons.length} ${seasons.length === 1 ? 'season' : 'seasons'} on record so far.`
+					: 'Make your season video and your league’s history starts here.'}
+			</p>
+		</header>
+
+		<section class="ui-card lh__section lh-video" aria-labelledby="lh-video" data-video-card hidden>
+			<div class="lh-video__stage">
+				<canvas class="lh-video__canvas" width="1080" height="1920" data-canvas aria-label="Your season video"></canvas>
+			</div>
+			<div class="lh-video__side">
+				<h2 class="lh__h2" id="lh-video">Your season video</h2>
+				<p class="lh__muted" data-video-caption></p>
+				<div class="lh-video__actions">
+					<button type="button" class="cta cta--primary" data-play>Play</button>
+					<a class="cta cta--ghost" href="/champion-video">Make another</a>
+				</div>
+				<p class="lh__muted">This is one season. Full History turns your whole run into the next video.</p>
+			</div>
+		</section>
+
+		<section class="ui-card lh__section lh-invite" data-video-invite>
+			<h2 class="lh__h2">Make your season video</h2>
+			<p class="lh__muted">Free, in three steps: your logo, your stats, your style. Ready for TikTok, Reels and Shorts.</p>
+			<a class="cta cta--primary" href="/champion-video">Make my video</a>
+		</section>
+
+		{seasons.length > 0 && (
+			<section class="lh__section" aria-labelledby="lh-champions">
+				<h2 class="lh__h2" id="lh-champions">Champions</h2>
+				<div class="lh__table-wrap">
+					<table class="ui-table lh__table">
+						<thead>
+							<tr>
+								<th scope="col">Season</th>
+								<th scope="col">Champion</th>
+							</tr>
+						</thead>
+						<tbody>
+							{seasons.map((s) => (
+								<tr>
+									<th scope="row" class="lh__year">{s.year}</th>
+									<td>
+										{s.champion ? (
+											<span class="lh__champ">{s.champion}</span>
+										) : (
+											<span class="lh__undecided">In progress</span>
+										)}
+										{s.runnerUp && <span class="lh__runner">Runner-up: {s.runnerUp}</span>}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</section>
+		)}
+
+		<section class="lh__section" aria-labelledby="lh-full">
+			<h2 class="lh__h2" id="lh-full">Full History</h2>
+			<p class="lh__muted">The rest of your league's story, with Full History.</p>
+			<ul class="lh__locked">
+				{LOCKED.map((l) => (
+					<li class="lh__locked-item"><strong>🔒 {l.title}</strong>{l.body}</li>
+				))}
+			</ul>
+		</section>
+	</div>
+</MflAppLayout>
+
+<script>
+	import { buildStory } from '../../../utils/season-video/story';
+	import { drawFrame, type Img } from '../../../utils/season-video/draw';
+	import { playStory } from '../../../utils/season-video/record';
+	import { formatRecord } from '../../../utils/season-video/season';
+	import { loadAssets, loadImage, readLastVideo } from '../../../utils/season-video/player';
+
+	async function init() {
+		// The gate names its league: a ClientRouter swap between two league pages keeps this listener.
+		const found = document.querySelector<HTMLElement>('[data-espn-history][data-league]');
+		if (!found || found.dataset.ready) return;
+		const root: HTMLElement = found;
+		root.dataset.ready = '1';
+		const last = readLastVideo('espn', root.dataset.league ?? '');
+		if (!last) return;
+		root.querySelector<HTMLElement>('[data-video-invite]')!.hidden = true;
+		root.querySelector<HTMLElement>('[data-video-card]')!.hidden = false;
+		const { facts } = last;
+		root.querySelector('[data-video-caption]')!.textContent = `${facts.teamName} · ${facts.season} · ${formatRecord(facts)}`;
+
+		const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+		const ctx = canvas.getContext('2d')!;
+		const team: Img | null = facts.teamLogo ? await loadImage(facts.teamLogo) : null;
+		const assets = await loadAssets(facts, team, new Map());
+		const scenes = buildStory(facts, { kind: last.kind, theme: last.theme, style: last.style });
+		drawFrame(ctx, scenes, 1.2, assets, facts.teamName);
+
+		const play = root.querySelector<HTMLButtonElement>('[data-play]')!;
+		play.addEventListener('click', async () => {
+			play.disabled = true;
+			try {
+				await playStory({
+					canvas,
+					scenes,
+					assets,
+					teamName: facts.teamName,
+					musicUrl: last.music && last.music !== 'none' ? `/assets/season-video/music/${last.music}.mp3` : null,
+					record: false,
+				});
+			} finally {
+				play.disabled = false;
+				play.textContent = 'Play again';
+			}
+		});
+	}
+
+	document.addEventListener('astro:page-load', () => void init());
+	void init();
+</script>
+
+<style>
+	.lh-video,
+	.lh-invite {
+		padding: 1rem 1.25rem;
+	}
+	.lh-video {
+		display: grid;
+		grid-template-columns: minmax(0, 14rem) 1fr;
+		gap: 1.25rem;
+		align-items: center;
+	}
+	.lh-video__stage {
+		aspect-ratio: 9 / 16;
+		border-radius: var(--radius-md);
+		overflow: hidden;
+	}
+	.lh-video__canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+	.lh-video__side {
+		display: grid;
+		gap: 0.6rem;
+	}
+	.lh-video__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.lh-invite {
+		display: grid;
+		gap: 0.6rem;
+		justify-items: start;
+	}
+	.lh-invite .lh__h2 {
+		margin: 0;
+	}
+	[hidden] {
+		display: none !important;
+	}
+	@media (max-width: 560px) {
+		.lh-video {
+			grid-template-columns: 1fr;
+		}
+		.lh-video__stage {
+			max-width: 16rem;
+			margin: 0 auto;
+		}
+	}
+</style>
