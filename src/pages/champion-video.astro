@@ -285,7 +285,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	function loadBrand() {
 		brand ??= Promise.all([
 			loadSvg('/assets/logos/mfl-football-mark-dark.svg', 640),
-			loadSvg('/assets/logos/mfl-football-wordmark-dark.svg', 1720),
+			loadSvg('/assets/logos/mfl-football-wordtype-dark.svg', 1520),
 			new FontFace('SVCond', 'url(/assets/fonts/UFCSans-CondensedBold.woff2)', { weight: '700' })
 				.load()
 				.then((f) => (document.fonts as unknown as Set<FontFace>).add(f))

@@ -30,7 +30,7 @@ export interface DrawAssets {
 	team: Img | null;
 	/** Opponent logos keyed by the game's `oppLogo` string. */
 	opponents: Map<string, Img>;
-	/** The MFL.football mark and wordmark (dark-ground cuts). */
+	/** The MFL.football mark, and the wordmark's lettering alone (dark-ground cuts): the end card shows the mark once. */
 	mark: Img | null;
 	wordmark: Img | null;
 }
@@ -346,7 +346,7 @@ function drawEnd(ctx: Ctx, s: SceneOf<'end'>, p: number, a: DrawAssets) {
 		ctx.drawImage(a.mark, CX - size / 2, 720 - size / 2, size, size);
 	}
 	if (a.wordmark) {
-		const w = 860;
+		const w = 760;
 		const h = (w * a.wordmark.height) / a.wordmark.width;
 		ctx.drawImage(a.wordmark, CX - w / 2, 960 - h / 2, w, h);
 	} else display(ctx, 'MFL.football', 990, 160, pal.ink);
