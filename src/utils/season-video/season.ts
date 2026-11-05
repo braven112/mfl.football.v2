@@ -21,6 +21,32 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
 
 export type SeasonVideoKind = 'champion' | 'recap' | 'last';
 export type LastPlaceTheme = 'princess' | 'poop';
+export type ChampionStyle = 'trophy' | 'bling' | 'retro';
+
+/** A look the owner can pick on the style step, per video. */
+export interface VideoStyleOption {
+	id: string;
+	name: string;
+	icon: string;
+	/** CSS background for the picker tile. */
+	swatch: string;
+}
+
+const TROPHY_ROOM: VideoStyleOption = { id: 'trophy', name: 'Trophy Room', icon: '🏆', swatch: 'linear-gradient(135deg, #0b1a33 40%, #c9a24a)' };
+
+/** The styles each video offers, first one the default. A video with one style shows no picker. */
+export const VIDEO_STYLES: Record<SeasonVideoKind, readonly VideoStyleOption[]> = {
+	champion: [
+		TROPHY_ROOM,
+		{ id: 'bling', name: 'Bling', icon: '💎', swatch: 'linear-gradient(135deg, #0a0a0a 45%, #f5c542)' },
+		{ id: 'retro', name: 'Retro', icon: '📼', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)' },
+	],
+	recap: [TROPHY_ROOM],
+	last: [
+		{ id: 'princess', name: 'Princess', icon: '👑', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
+		{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
+	],
+};
 
 /** How the season ended for this team. */
 export type SeasonOutcome = 'champion' | 'runner-up' | 'playoffs' | 'missed';

@@ -4,8 +4,9 @@
  * (tests/season-video.test.ts) and the canvas renderer (draw.ts) only draws.
  *
  * Three videos (Brandon, 2026-11-05):
- *  - champion: Trophy Room dark-and-gold, every playoff game, the final, the
- *    crown with confetti.
+ *  - champion: every playoff game, the final, the crown. Three looks to pick
+ *    from: Trophy Room (navy and gold, confetti), Bling (black and gold,
+ *    money rain) and Retro (a 70s trading card: cream, orange and brown).
  *  - recap: everyone between first and last, same look, ending on how far
  *    they got.
  *  - last: the last-place team, as a princess or a poop video.
@@ -15,7 +16,7 @@
  * (`MAX_STORY_SECONDS`): a long playoff run shortens its game cards first,
  * then drops the statement-game card.
  */
-import type { LastPlaceTheme, SeasonFacts, SeasonGame, SeasonVideoKind } from './season';
+import type { ChampionStyle, LastPlaceTheme, SeasonFacts, SeasonGame, SeasonVideoKind } from './season';
 import { formatPoints, formatScore, ordinal } from './season';
 
 export const MAX_STORY_SECONDS = 50;
@@ -29,7 +30,7 @@ export interface Palette {
 	bad: string;
 }
 
-export type CrownEffect = 'confetti' | 'sparkles' | 'poop' | 'none';
+export type CrownEffect = 'confetti' | 'retro' | 'money' | 'sparkles' | 'poop' | 'none';
 
 interface SceneBase {
 	duration: number;
@@ -79,6 +80,74 @@ const POOP = {
 	mustard: { bg: '#b8892f', ink: '#24170b', muted: '#4a3417', accent: '#24170b', good: '#24170b', bad: '#6b1d0c' },
 	mud: { bg: '#3d2a17', ink: '#f5e6c8', muted: '#cbb491', accent: '#d9a441', good: '#a8c66c', bad: '#e2794f' },
 } satisfies Record<string, Palette>;
+
+const BLING = {
+	black: { bg: '#0a0a0a', ink: '#ffffff', muted: '#d9cfae', accent: '#f5c542', good: '#7ee08a', bad: '#ff6b5e' },
+	onyx: { bg: '#1c1a17', ink: '#ffffff', muted: '#d9cfae', accent: '#f5c542', good: '#7ee08a', bad: '#ff8f85' },
+	green: { bg: '#0f3d2e', ink: '#ffffff', muted: '#cfe6d8', accent: '#f5c542', good: '#9ff0ad', bad: '#ffb4ab' },
+	gold: { bg: '#d4a017', ink: '#0a0a0a', muted: '#3a2c0a', accent: '#0a0a0a', good: '#0a0a0a', bad: '#7a1f12' },
+} satisfies Record<string, Palette>;
+
+const RETRO = {
+	cream: { bg: '#f3e6c8', ink: '#3b2314', muted: '#7a5a3c', accent: '#d1601a', good: '#2a7f7a', bad: '#b8321a' },
+	orange: { bg: '#e2711d', ink: '#fff8e8', muted: '#ffe2c2', accent: '#3b2314', good: '#fff8e8', bad: '#3b2314' },
+	brown: { bg: '#5a3a22', ink: '#fff8e8', muted: '#e6cfae', accent: '#f2b134', good: '#9fd8c8', bad: '#ffab85' },
+	teal: { bg: '#2a7f7a', ink: '#fff8e8', muted: '#d5efe9', accent: '#f2b134', good: '#fff8e8', bad: '#ffcf9e' },
+	mustard: { bg: '#f2b134', ink: '#3b2314', muted: '#5a3a22', accent: '#3b2314', good: '#3b2314', bad: '#8a2a12' },
+} satisfies Record<string, Palette>;
+
+/** One champion look: its cards' colours and the words that go with them. */
+interface ChampionLook {
+	title: Palette;
+	games: Palette[];
+	best: Palette;
+	final: Palette;
+	crown: Palette;
+	headline: [string, string];
+	sub: string;
+	crownLine: string;
+	effect: CrownEffect;
+	badge: string;
+}
+
+const CHAMPION_LOOKS: Record<ChampionStyle, ChampionLook> = {
+	trophy: {
+		title: TROPHY.navy,
+		games: [TROPHY.blue, TROPHY.plum, TROPHY.slate],
+		best: TROPHY.gold,
+		final: TROPHY.navy,
+		crown: TROPHY.navy,
+		headline: ['TITLE', 'RUN'],
+		sub: 'Your season, wrapped.',
+		crownLine: 'Bragging rights, secured.',
+		effect: 'confetti',
+		badge: '🏆',
+	},
+	bling: {
+		title: BLING.black,
+		games: [BLING.green, BLING.onyx, BLING.black],
+		best: BLING.gold,
+		final: BLING.black,
+		crown: BLING.black,
+		headline: ['GOLD', 'STANDARD'],
+		sub: 'Your season, dripped out.',
+		crownLine: 'Paid in full. Pay up, league.',
+		effect: 'money',
+		badge: '💎',
+	},
+	retro: {
+		title: RETRO.cream,
+		games: [RETRO.orange, RETRO.teal, RETRO.brown],
+		best: RETRO.mustard,
+		final: RETRO.brown,
+		crown: RETRO.cream,
+		headline: ['HALL OF', 'FAME'],
+		sub: 'A season worth framing.',
+		crownLine: 'A classic. Frame this one.',
+		effect: 'retro',
+		badge: '🏆',
+	},
+};
 
 /** The end card is the brand's, whatever the video: dark navy and gold. */
 export const END_PALETTE: Palette = TROPHY.navy;
@@ -148,16 +217,17 @@ function gamesScenes(f: SeasonFacts, palettes: Palette[], finalPalette: Palette)
 
 // ── the three stories ─────────────────────────────────────────────────────
 
-function championStory(f: SeasonFacts): Scene[] {
+function championStory(f: SeasonFacts, style: ChampionStyle): Scene[] {
+	const look = CHAMPION_LOOKS[style] ?? CHAMPION_LOOKS.trophy;
 	const scenes: Scene[] = [
-		{ type: 'title', duration: 4, palette: TROPHY.navy, kicker: `${f.leagueName} · ${f.season}`, headline: ['TITLE', 'RUN'], sub: `${f.teamName}. Your season, wrapped.` },
-		recordScene(f, TROPHY.navy),
+		{ type: 'title', duration: 4, palette: look.title, kicker: `${f.leagueName} · ${f.season}`, headline: look.headline, sub: `${f.teamName}. ${look.sub}` },
+		recordScene(f, look.title),
 	];
 	if (f.bestGame) {
-		scenes.push({ type: 'game', duration: 5.5, palette: TROPHY.gold, kicker: `${f.bestGame.label} · Statement game`, game: f.bestGame, won: won(f.bestGame), line: bestGameLine(f.bestGame), bars: true });
+		scenes.push({ type: 'game', duration: 5.5, palette: look.best, kicker: `${f.bestGame.label} · Statement game`, game: f.bestGame, won: won(f.bestGame), line: bestGameLine(f.bestGame), bars: true });
 	}
-	scenes.push(...gamesScenes(f, [TROPHY.blue, TROPHY.plum, TROPHY.slate], TROPHY.navy));
-	scenes.push({ type: 'crown', duration: 7, palette: TROPHY.navy, kicker: `${f.season} Champions of ${f.leagueName}`, name: f.teamName, line: 'Bragging rights, secured.', effect: 'confetti', badge: '🏆' });
+	scenes.push(...gamesScenes(f, look.games, look.final));
+	scenes.push({ type: 'crown', duration: 7, palette: look.crown, kicker: `${f.season} Champions of ${f.leagueName}`, name: f.teamName, line: look.crownLine, effect: look.effect, badge: look.badge });
 	scenes.push(endScene());
 	return scenes;
 }
@@ -249,6 +319,8 @@ function lastStory(f: SeasonFacts, theme: LastPlaceTheme): Scene[] {
 export interface StoryOptions {
 	kind: SeasonVideoKind;
 	theme: LastPlaceTheme;
+	/** The champion video's look. Trophy Room when left out. */
+	style?: ChampionStyle;
 }
 
 export function storyDuration(scenes: readonly Scene[]): number {
@@ -258,7 +330,7 @@ export function storyDuration(scenes: readonly Scene[]): number {
 /** The storyboard for one season, fitted to the music bed. */
 export function buildStory(facts: SeasonFacts, opts: StoryOptions): Scene[] {
 	let scenes =
-		opts.kind === 'champion' ? championStory(facts) : opts.kind === 'last' ? lastStory(facts, opts.theme) : recapStory(facts);
+		opts.kind === 'champion' ? championStory(facts, opts.style ?? 'trophy') : opts.kind === 'last' ? lastStory(facts, opts.theme) : recapStory(facts);
 
 	// Too long for the bed: shorten the playoff game cards, down to 3.5 s each…
 	const over = () => storyDuration(scenes) - MAX_STORY_SECONDS;

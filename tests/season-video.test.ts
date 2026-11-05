@@ -220,3 +220,27 @@ describe('sharedHostLoginUrl', () => {
 		expect(sharedHostLoginUrl('/login')).toBe('/login');
 	});
 });
+
+describe('sniffImageType', () => {
+	it('reads the real type from the bytes, whatever the label said', async () => {
+		const { sniffImageType } = await import('../src/utils/season-video/fetch-logo');
+		expect(sniffImageType(new Uint8Array([0xff, 0xd8, 0xff, 0xe1]))).toBe('image/jpeg');
+		expect(sniffImageType(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d]))).toBe('image/png');
+		expect(sniffImageType(new Uint8Array([0x3c, 0x73, 0x76, 0x67]))).toBeNull();
+	});
+});
+
+describe('champion styles', () => {
+	it('each look changes the colours and the words, and Trophy Room is the default', async () => {
+		const { buildStory } = await import('../src/utils/season-video/story');
+		const { VIDEO_STYLES } = await import('../src/utils/season-video/season');
+		const f = { leagueName: 'L', season: 2025, teamName: 'T', wins: 10, losses: 4, ties: 0, pointsFor: 1500, finish: 1, teams: 12, outcome: 'champion' as const, playoffs: [] };
+		const crown = (style?: 'trophy' | 'bling' | 'retro') =>
+			buildStory(f, { kind: 'champion', theme: 'princess', style }).find((s) => s.type === 'crown')!;
+		expect(VIDEO_STYLES.champion.map((s) => s.id)).toEqual(['trophy', 'bling', 'retro']);
+		expect(crown()).toEqual(crown('trophy'));
+		const looks = (['trophy', 'bling', 'retro'] as const).map((s) => crown(s));
+		expect(new Set(looks.map((s) => s.palette.bg)).size).toBe(3);
+		expect(looks.map((s) => (s as { effect: string }).effect)).toEqual(['confetti', 'money', 'retro']);
+	});
+});

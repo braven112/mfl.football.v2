@@ -365,8 +365,8 @@ function hexAlpha(hex: string, alpha: number): string {
 
 function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 	if (effect === 'none') return;
-	if (effect === 'confetti') {
-		const cols = ['#e8c46a', '#2e8b57', '#ffffff', '#8ee59c'];
+	if (effect === 'confetti' || effect === 'retro') {
+		const cols = effect === 'retro' ? ['#e2711d', '#f2b134', '#2a7f7a', '#f3e6c8'] : ['#e8c46a', '#2e8b57', '#ffffff', '#8ee59c'];
 		for (let i = 0; i < 80; i++) {
 			const q = p - (0.3 + rnd(i) * 1.5);
 			if (q < 0) continue;
@@ -382,7 +382,8 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		}
 		return;
 	}
-	const glyphs = effect === 'poop' ? ['💩', '🪰', '💩', '🧻'] : ['✨', '💖', '👑', '✨', '🌸'];
+	const glyphs =
+		effect === 'poop' ? ['💩', '🪰', '💩', '🧻'] : effect === 'money' ? ['💵', '💸', '💰', '💎', '💵'] : ['✨', '💖', '👑', '✨', '🌸'];
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	for (let i = 0; i < 34; i++) {
@@ -391,7 +392,7 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		const size = 56 + rnd(i + 7) * 60;
 		ctx.font = `${Math.round(size)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
 		ctx.save();
-		if (effect === 'poop') {
+		if (effect === 'poop' || effect === 'money') {
 			// Falls, tumbling.
 			const x = rnd(i + 100) * VIDEO_WIDTH;
 			const y = -80 + q * (300 + rnd(i + 200) * 260);
