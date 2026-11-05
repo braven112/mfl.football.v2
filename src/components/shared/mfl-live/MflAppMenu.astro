@@ -103,6 +103,7 @@ const boardLinks: { href: string; label: string; icon: string }[] = pairedTv
 	: [
 			...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
 			...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
+			...(showAnalytics ? [{ href: '/live/video-ideas', label: 'Video ideas', icon: 'idea' }] : []),
 			...(showProducts ? [{ href: '/products', label: 'Products', icon: 'tag' }] : []),
 		];
 
@@ -181,6 +182,12 @@ const showSignIn = !signedIn && !pairedTv && !isCurrent(signInHref.split('?')[0]
 									<rect x="3" y="5" width="18" height="12" rx="2" />
 									<path d="M8 21h8" />
 									<path d="M12 17v4" />
+								</Fragment>
+							) : link.icon === 'idea' ? (
+								<Fragment>
+									<path d="M9 18h6" />
+									<path d="M10 21h4" />
+									<path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2.2h5c.1-1 .5-1.7 1.1-2.2A6 6 0 0 0 12 3z" />
 								</Fragment>
 							) : link.icon === 'shield' ? (
 								<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z" />

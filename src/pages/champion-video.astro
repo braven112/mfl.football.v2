@@ -38,6 +38,8 @@ const leagues = owned?.ok ? owned.leagues.map((l) => ({ id: l.leagueId, name: l.
 const signedIn = Boolean(user);
 /** The video's History link launches WITH History (Brandon, 2026-11-05): same switch, same seat until then. */
 const historyOpen = canUseHistoryProduct(getAuthUser(Astro.request));
+// The email box shows only once Kit is wired up (KIT_API_KEY), so the video can launch without it.
+const optInOpen = !!process.env.KIT_API_KEY;
 const logoTeams = owned?.ok ? owned.leagues.map((l) => ({ name: l.franchiseName, league: l.leagueName })) : [];
 const lastYear = new Date().getFullYear() - 1;
 const espnLatest = currentEspnSeason(new Date());
@@ -57,7 +59,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	title="Make your fantasy football season video — MFL Football"
 	description="Free: turn any fantasy football team's season into a vertical video for TikTok, Reels, Shorts and X. Champion, mid-season report, master of mediocrity or last place."
 >
-	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined}>
+	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined} data-optin-open={optInOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
 		<p class="mls__lede">
 			Champion, last place or anywhere in between, for your team or any rival you want to roast, at the end of the
@@ -335,6 +337,19 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					</label>
 					<input class="svid__honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" data-optin-website />
 					<p class="svid__note" data-optin-status aria-live="polite">Optional. Your video is yours either way.</p>
+				</form>
+				<form class="svid__optin" data-idea hidden novalidate>
+					<p class="svid__optin-title">Got an idea for the next video?</p>
+					<p class="svid__note">A story, a look, a stat you wish it showed, or something that bugged you. We read every one.</p>
+					<label class="svid__label" for="svid-idea-text">Your idea</label>
+					<textarea id="svid-idea-text" class="svid__input svid__textarea" rows="3" maxlength="1000" placeholder="Make one for the team that lost the most close games…" data-idea-text></textarea>
+					<label class="svid__label" for="svid-idea-email">Email, if you’d like a reply (optional)</label>
+					<div class="svid__inline">
+						<input id="svid-idea-email" class="svid__input" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="you@example.com" data-idea-email />
+						<button type="submit" class="cta cta--primary" data-idea-go>Send idea</button>
+					</div>
+					<input class="svid__honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" data-idea-website />
+					<p class="svid__note" data-idea-status aria-live="polite">We only use your email to answer this idea.</p>
 				</form>
 				<p class="svid__note">Keep this tab open while it records. It takes as long as the video.</p>
 			</div>
@@ -761,7 +776,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			share.onclick = () => navigator.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' }).catch(() => undefined);
 			$<HTMLElement>('[data-done]').hidden = false;
 			const optin = $<HTMLFormElement>('[data-optin]');
-			if (optin.dataset.sent !== '1') optin.hidden = false;
+			if (root.dataset.optinOpen && optin.dataset.sent !== '1') optin.hidden = false;
+			$<HTMLFormElement>('[data-idea]').hidden = false;
 			saveLastVideo({
 				...videoSource,
 				facts: { ...facts, teamLogo },
@@ -819,6 +835,44 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					optin.dataset.sent = '1';
 					const done = body.preview ? 'Test site: that worked, but only the live site adds you to the list.' : 'You’re in. We’ll email you when the next one drops.';
 					optin.replaceChildren(Object.assign(document.createElement('p'), { className: 'svid__note', textContent: done }));
+					return;
+				}
+				status.textContent = body.message ?? 'That didn’t go through. Try again in a bit.';
+			} catch {
+				status.textContent = 'That didn’t go through. Try again in a bit.';
+			} finally {
+				go.disabled = false;
+			}
+		});
+
+		// ── "Got an idea?" box: kept for the admin list at /live/video-ideas ──
+		const idea = $<HTMLFormElement>('[data-idea]');
+		idea.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const status = $<HTMLElement>('[data-idea-status]');
+			const textBox = $<HTMLTextAreaElement>('[data-idea-text]');
+			const text = textBox.value.trim();
+			if (text.length < 3) return void (status.textContent = 'Type your idea first.');
+			const go = $<HTMLButtonElement>('[data-idea-go]');
+			go.disabled = true;
+			status.textContent = 'Sending…';
+			try {
+				const res = await fetch('/api/season-video-idea', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						text,
+						email: $<HTMLInputElement>('[data-idea-email]').value.trim(),
+						kind: picked('kind') || null,
+						look: picked('look') || null,
+						platform: videoSource.source,
+						website: $<HTMLInputElement>('[data-idea-website]').value,
+					}),
+				});
+				const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+				if (body.ok) {
+					textBox.value = '';
+					status.textContent = 'Got it, thanks. Send another anytime.';
 					return;
 				}
 				status.textContent = body.message ?? 'That didn’t go through. Try again in a bit.';
@@ -1501,6 +1555,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		padding: 1rem;
 		border: 1px solid var(--color-border-subtle);
 		border-radius: 0.75rem;
+	}
+	.svid__textarea {
+		resize: vertical;
+		min-height: 4.5rem;
+		font: inherit;
 	}
 	.svid__optin-title {
 		margin: 0;

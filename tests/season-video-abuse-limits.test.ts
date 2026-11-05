@@ -72,7 +72,7 @@ describe('ESPN save caps', () => {
 });
 
 describe('wiring', () => {
-	it.each(['season-video-sleeper', 'season-video-espn', 'season-video-logo', 'season-video-email'])('/api/%s goes through allowSeasonVideoCall', (name) => {
+	it.each(['season-video-sleeper', 'season-video-espn', 'season-video-logo', 'season-video-email', 'season-video-idea'])('/api/%s goes through allowSeasonVideoCall', (name) => {
 		const src = readFileSync(`src/pages/api/${name}.ts`, 'utf8');
 		expect(src).toContain(`allowSeasonVideoCall(request, '${name}')`);
 		expect(src).not.toMatch(/getClientIdentity\(request\)\.client/);
