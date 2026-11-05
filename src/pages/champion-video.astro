@@ -105,12 +105,13 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 								<ol class="svid__private-steps">
 									<li>Sign in at espn.com in this browser.</li>
 									<li><a class="cta-link" href="#" target="_blank" rel="noopener noreferrer" data-espn-link>Open your league’s data</a>. It’s a page of text.</li>
-									<li>Select all of it, copy it, and paste it here.</li>
+									<li>Select all of it, copy it, and paste it here. <span class="svid__hint">On a phone: press and hold the text, tap Select All, then Copy.</span></li>
 								</ol>
 								<label class="svid__label" for="svid-espn-paste">Paste here</label>
 								<textarea id="svid-espn-paste" class="svid__input svid__paste" rows="4" spellcheck="false" placeholder='{"gameId":1,...' data-espn-paste></textarea>
 								<button type="button" class="cta cta--primary" data-espn-use>Use my league</button>
 								<p class="svid__note">We never ask for your ESPN password. Your browser reads the league and you hand us the results.</p>
+								<p class="svid__note"><strong>Commissioner?</strong> Skip this for everyone: in ESPN’s League Manager, open Basic Settings and turn on “Make league viewable to public”. Then your league ID is all anyone needs. It’s also easier on a computer.</p>
 							</div>
 							<div data-espn-picks hidden>
 								<label class="svid__label" for="svid-espn-team">Your team</label>
@@ -1100,6 +1101,11 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		padding-left: 1.25rem;
 		display: grid;
 		gap: 0.25rem;
+	}
+	.svid__hint {
+		display: block;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
 	}
 	.svid__private .cta {
 		justify-self: start;
