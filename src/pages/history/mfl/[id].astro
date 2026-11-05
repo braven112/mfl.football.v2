@@ -38,8 +38,9 @@ if (!canUseHistoryProduct(authUser)) {
 }
 if (!isMflLeagueId(leagueId)) return Astro.rewrite('/_not-found');
 
-const canFix = canFixLeagueHistory(authUser);
 const record = await readMflHistory(leagueId);
+// A league on our platform is fixed in its own championship file, not here.
+const canFix = canFixLeagueHistory(authUser) && record?.source !== 'site';
 const overrides = record ? await readOverrides(leagueId) : {};
 const seasons = record ? effectiveSeasons(record, overrides) : [];
 const trophies = record ? trophyCase(seasons).filter((t) => t.titles.length > 0) : [];

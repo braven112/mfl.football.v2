@@ -41,6 +41,14 @@ const fakeRedis = {
 };
 
 vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => fakeRedis }));
+// These tests exercise the CRAWL using TheLeague's recorded MFL feeds, so the
+// registry short-circuit (a registry league reads its own site's history and
+// is never crawled; tests/league-history-registry-source.test.ts) is switched
+// off here to let 13522 stand in for an outside league.
+vi.mock('../src/utils/league-history/registry-source', () => ({
+	registryLeagueFor: () => null,
+	readRegistryHistory: async () => null,
+}));
 
 const { advanceMflHistory, effectiveSeasons, readMflHistory, readOverrides, seasonsToCrawl, writeOverride, listMflHistories, SEASONS_PER_STEP, CRAWL_VERSION } =
 	await import('../src/utils/league-history/store');

@@ -26,6 +26,7 @@ import {
 	type SeasonFranchise,
 } from './mfl-champions';
 import { crawlMflSeason, MflRetryLater, planMflLeague, type FetchExport } from './mfl-crawl';
+import { readRegistryHistory, registryLeagueFor } from './registry-source';
 
 export interface StoredSeason extends SeasonChampion {
 	franchises: SeasonFranchise[];
@@ -36,6 +37,8 @@ export interface StoredSeason extends SeasonChampion {
 
 export interface StoredLeagueHistory {
 	platform: 'mfl';
+	/** 'site' = a league on our platform, read from its own compiled history (registry-source.ts); never crawled or stored. */
+	source?: 'site';
 	leagueId: string;
 	name: string;
 	chain: MflSeasonRef[];
@@ -75,12 +78,16 @@ export function isMflLeagueId(value: string): boolean {
 
 export async function readMflHistory(leagueId: string): Promise<StoredLeagueHistory | null> {
 	if (!isMflLeagueId(leagueId)) return null;
+	// A league on our platform answers from its own site's history, never the crawl.
+	if (registryLeagueFor(leagueId)) return readRegistryHistory(leagueId);
 	const redis = await getRedis();
 	if (!redis) return null;
 	return (await redis.get<StoredLeagueHistory>(KEY(leagueId))) ?? null;
 }
 
 export async function readOverrides(leagueId: string): Promise<Record<string, ChampionOverride>> {
+	// A registry league's champions are fixed in its own championship-history.json, not here.
+	if (registryLeagueFor(leagueId)) return {};
 	const redis = await getRedis();
 	if (!redis || !isMflLeagueId(leagueId)) return {};
 	return (await redis.hgetall<ChampionOverride>(OVERRIDES(leagueId))) ?? {};
@@ -99,6 +106,7 @@ export async function listMflHistories(limit = 50): Promise<{ leagueId: string; 
 
 /** Seasons this step should (re)fetch, oldest first. */
 export function seasonsToCrawl(record: StoredLeagueHistory, now: number): MflSeasonRef[] {
+	if (record.source === 'site') return [];
 	const newest = Math.max(...record.chain.map((s) => s.year));
 	return record.chain.filter((ref) => {
 		const stored = record.seasons[String(ref.year)];
@@ -122,6 +130,12 @@ export async function advanceMflHistory(
 	leagueId: string,
 	deps: { fetchExport: FetchExport; leagueYear: number; now?: () => number },
 ): Promise<AdvanceResult> {
+	// A league on our platform is never crawled: its record is the site's own history.
+	const site = registryLeagueFor(leagueId) ? await readRegistryHistory(leagueId) : null;
+	if (site) {
+		const built = Object.keys(site.seasons).length;
+		return { status: 'done', name: site.name, built, total: built };
+	}
 	const redis = await getRedis();
 	if (!redis) return { status: 'no-storage', message: 'History storage is unavailable right now.' };
 	const now = deps.now ?? Date.now;
