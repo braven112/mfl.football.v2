@@ -113,7 +113,7 @@ asking.
 
 ## Open before launch
 
-- ~~The product name.~~ Decided 2026-11-05: **League History** (platform-neutral: MFL, ESPN, Sleeper, Yahoo; avoids confusion with MFLHistory.com). The card footer already says it.
+- The product name. "League History" was picked 2026-11-05, then reopened the same day: leaguehistory.app (League History, LLC; Yahoo, Sleeper, ESPN; $15 one-time per league) already uses it. The card footer still says "League History" until a name is chosen.
 - ~~MFL's answer on commercial use of its API.~~ Cleared 2026-11-05: Brandon confirmed MFL is OK with it.
 - Link previews: chat apps fetch the card without a session, so cards unfurl
   only once the pages are public.
