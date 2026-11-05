@@ -13,8 +13,7 @@
  */
 import type { APIRoute } from 'astro';
 import { fetchSleeperUser, normalizeSleeperUsername, sleeperGet } from '../../utils/sleeper/client';
-import { getClientIdentity } from '../../utils/client-ip';
-import { checkRateLimit } from '../../utils/rate-limit';
+import { allowSeasonVideoCall } from '../../utils/season-video/abuse-limits';
 import { fetchLogoAsDataUrl } from '../../utils/season-video/fetch-logo';
 import { listSleeperLeagues, loadSleeperSeason } from '../../utils/season-video/sleeper-source';
 
@@ -27,9 +26,7 @@ const json = (body: unknown, status = 200) =>
 	});
 
 export const GET: APIRoute = async ({ request, url }) => {
-	const who = getClientIdentity(request).client ?? 'unknown';
-	const limit = await checkRateLimit('season-video-sleeper', who, 60, 3600);
-	if (!limit.allowed) return json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
+	if (!(await allowSeasonVideoCall(request, 'season-video-sleeper'))) return json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
 
 	const get = (path: string) => sleeperGet(path);
 	const league = url.searchParams.get('league');

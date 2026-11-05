@@ -13,12 +13,12 @@
  * Every season read is also SAVED, raw, into the ESPN history store
  * (`storeEspnUpload`) — the video is League History's on-ramp (Brandon,
  * 2026-11-05), so a later Full History build starts from what the owner
- * already gave us instead of asking again. Saving is best-effort: a storage
- * failure never costs the owner their video.
+ * already gave us instead of asking again. Saving is best-effort and capped
+ * (per league, per caller and site-wide per day, and by size), so a bot cannot
+ * fill Redis through it; a refused or failed save never costs the owner their video.
  */
 import type { APIRoute } from 'astro';
-import { getClientIdentity } from '../../utils/client-ip';
-import { checkRateLimit } from '../../utils/rate-limit';
+import { allowEspnSave, allowSeasonVideoCall } from '../../utils/season-video/abuse-limits';
 import { storeEspnUpload } from '../../utils/espn-history';
 import { fetchLogoAsDataUrl } from '../../utils/season-video/fetch-logo';
 import {
@@ -54,9 +54,10 @@ const teamParam = (v: unknown): number | null => {
 	return Number.isInteger(n) && n > 0 && n < 1000 ? n : null;
 };
 
-/** Keep what we read for League History. Never throws. */
-async function save(leagueId: string, text: string): Promise<void> {
+/** Keep what we read for League History, inside the Redis caps (abuse-limits.ts). Never throws. */
+async function save(request: Request, leagueId: string, text: string): Promise<void> {
 	try {
+		if (!(await allowEspnSave(request, leagueId, text.length))) return;
 		await storeEspnUpload(leagueId, text);
 	} catch {
 		/* storage down: the owner still gets their video */
@@ -64,9 +65,7 @@ async function save(leagueId: string, text: string): Promise<void> {
 }
 
 async function limited(request: Request): Promise<Response | null> {
-	const who = getClientIdentity(request).client ?? 'unknown';
-	const limit = await checkRateLimit('season-video-espn', who, 60, 3600);
-	return limit.allowed ? null : json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
+	return (await allowSeasonVideoCall(request, 'season-video-espn')) ? null : json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
 }
 
 export const GET: APIRoute = async ({ request, url }) => {
@@ -86,7 +85,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 		},
 		fetchLogo: fetchLogoAsDataUrl,
 	});
-	if (out.ok && fetched) await save(leagueId, fetched);
+	if (out.ok && fetched) await save(request, leagueId, fetched);
 	const status = out.ok ? 200 : out.error === 'espn-unavailable' ? 503 : out.error === 'private' ? 403 : 404;
 	return json(out, status);
 };
@@ -109,6 +108,6 @@ export const POST: APIRoute = async ({ request }) => {
 	if (!read.ok) return json(read, 400);
 	const teamId = teamParam(body.team);
 	// Save once, on the first read of a paste; a team change re-sends the same text.
-	if (teamId === null) await save(leagueId, text);
+	if (teamId === null) await save(request, leagueId, text);
 	return json(await buildEspnVideo(read.raw, teamId, fetchLogoAsDataUrl));
 };

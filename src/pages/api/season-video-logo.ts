@@ -6,11 +6,10 @@
  * another site taints that canvas so it can't be recorded. So a pasted link
  * is fetched server-side, through `fetchLogoAsDataUrl` (public URLs only via
  * `validatePublicUrl`, image types only, size-capped). Public and
- * unauthenticated, so it is rate-limited per client.
+ * unauthenticated, so it is rate-limited (src/utils/season-video/abuse-limits.ts).
  */
 import type { APIRoute } from 'astro';
-import { getClientIdentity } from '../../utils/client-ip';
-import { checkRateLimit } from '../../utils/rate-limit';
+import { allowSeasonVideoCall } from '../../utils/season-video/abuse-limits';
 import { fetchLogoAsDataUrl } from '../../utils/season-video/fetch-logo';
 
 export const prerender = false;
@@ -22,9 +21,7 @@ const json = (body: unknown, status = 200) =>
 	});
 
 export const GET: APIRoute = async ({ request, url }) => {
-	const who = getClientIdentity(request).client ?? 'unknown';
-	const limit = await checkRateLimit('season-video-logo', who, 30, 3600);
-	if (!limit.allowed) return json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
+	if (!(await allowSeasonVideoCall(request, 'season-video-logo'))) return json({ ok: false, error: 'rate-limited', message: 'Too many tries. Wait a bit and try again.' }, 429);
 
 	const raw = (url.searchParams.get('url') ?? '').trim();
 	let target: URL;
