@@ -64,7 +64,7 @@ const LOCKED = [
 	title={record ? `${record.name} — League History` : 'League History'}
 	description={record ? `Every ${record.name} champion since ${firstYear}.` : 'Every champion your league has crowned.'}
 >
-	<div class="lh">
+	<div class="lh" data-history-funnel="mfl" data-league-id={leagueId}>
 		<a class="lh__back" href="/history">&larr; League History</a>
 
 		{!record ? (
@@ -179,3 +179,16 @@ const LOCKED = [
 		)}
 	</div>
 </MflAppLayout>
+
+<script>
+	import { trackFunnel } from '../../../utils/history-funnel-client';
+
+	// One count per page arrival. `document` survives ClientRouter swaps, so the
+	// gate asks the swapped-in page's own root, and marks it once counted.
+	document.addEventListener('astro:page-load', () => {
+		const root = document.querySelector<HTMLElement>('[data-history-funnel="mfl"]');
+		if (!root || root.dataset.funnelCounted) return;
+		root.dataset.funnelCounted = '1';
+		trackFunnel('history_view', 'mfl');
+	});
+</script>
