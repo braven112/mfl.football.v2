@@ -150,5 +150,8 @@ export async function playStory(opts: PlayOptions): Promise<Blob | null> {
 		: Promise.resolve(null);
 	const blob = await done;
 	await ac?.close().catch(() => undefined);
-	return blob;
+	if (!blob) return null;
+	// A recording has no length in its header until it is remuxed (finalize.ts).
+	const { finalizeRecording } = await import('./finalize');
+	return finalizeRecording(blob);
 }
