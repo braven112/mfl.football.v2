@@ -1,6 +1,6 @@
 /**
  * Season video — limits on its public, unauthenticated endpoints
- * (/api/season-video-sleeper, -espn, -logo).
+ * (/api/season-video-sleeper, -espn, -logo, -email).
  *
  * The video is drawn in the visitor's browser, so a real person costs us a
  * page load and a lookup or two. The things worth limiting are a BOT driving
@@ -32,6 +32,8 @@ export const SEASON_VIDEO_LIMITS = {
 	'season-video-sleeper': { perClient: 60, perHop: 120 },
 	'season-video-espn': { perClient: 60, perHop: 120 },
 	'season-video-logo': { perClient: 30, perHop: 60 },
+	// The opt-in box: a person signs up once; anything past a handful is a bot.
+	'season-video-email': { perClient: 5, perHop: 10 },
 } as const;
 
 export type SeasonVideoScope = keyof typeof SEASON_VIDEO_LIMITS;
@@ -70,4 +72,14 @@ export async function allowEspnSave(request: Request, leagueId: string, chars: n
 	if (!(await checkRateLimit('espn-save-league', leagueId, ESPN_SAVES_PER_LEAGUE_PER_DAY, DAY)).allowed) return false;
 	if (nearestHop && !(await checkRateLimit('espn-save-hop', nearestHop, ESPN_SAVES_PER_CALLER_PER_DAY, DAY)).allowed) return false;
 	return (await checkRateLimit('espn-save-all', 'all', ESPN_SAVES_PER_DAY, DAY)).allowed;
+}
+
+// ── the opt-in email box (Kit) ────────────────────────────────────────────
+
+/** Sign-ups accepted per day site-wide: Kit prices by subscriber, so this caps what a bot can cost. */
+export const EMAIL_OPTINS_PER_DAY = 500;
+
+/** Whether one more opt-in may reach Kit today. Consumes one. */
+export async function allowEmailOptIn(): Promise<boolean> {
+	return (await checkRateLimit('season-video-email-all', 'all', EMAIL_OPTINS_PER_DAY, DAY)).allowed;
 }

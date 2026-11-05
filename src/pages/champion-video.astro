@@ -321,6 +321,21 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					<button type="button" class="cta cta--ghost" data-share hidden>Share</button>
 					<a class="cta cta--ghost" data-history-link hidden>See your league on League History</a>
 				</div>
+				<form class="svid__optin" data-optin hidden novalidate>
+					<p class="svid__optin-title">Want the next one first?</p>
+					<p class="svid__note">Mid-season trash talk, new looks and new stories. An email when they drop, nothing else.</p>
+					<label class="svid__label" for="svid-optin-email">Email</label>
+					<div class="svid__inline">
+						<input id="svid-optin-email" class="svid__input" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="you@example.com" data-optin-email />
+						<button type="submit" class="cta cta--primary" data-optin-go>Keep me posted</button>
+					</div>
+					<label class="svid__consent">
+						<input type="checkbox" data-optin-consent />
+						<span>Yes, MFL Football can email me about season videos and League History. Unsubscribe anytime.</span>
+					</label>
+					<input class="svid__honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" data-optin-website />
+					<p class="svid__note" data-optin-status aria-live="polite">Optional. Your video is yours either way.</p>
+				</form>
 				<p class="svid__note">Keep this tab open while it records. It takes as long as the video.</p>
 			</div>
 		</div>
@@ -745,6 +760,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			share.hidden = !(navigator.canShare?.({ files: [file] }) ?? false);
 			share.onclick = () => navigator.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' }).catch(() => undefined);
 			$<HTMLElement>('[data-done]').hidden = false;
+			const optin = $<HTMLFormElement>('[data-optin]');
+			if (optin.dataset.sent !== '1') optin.hidden = false;
 			saveLastVideo({
 				...videoSource,
 				facts: { ...facts, teamLogo },
@@ -773,6 +790,44 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			f.playoffs.length === 0
 				? `The ${f.season} season is still going, so this is the story so far. Pick any team to roast.`
 				: `The ${f.season} playoffs aren’t finished yet, so the ending may change.`;
+
+		// ── opt-in email (Kit), never required ──
+		const optin = $<HTMLFormElement>('[data-optin]');
+		optin.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const status = $<HTMLElement>('[data-optin-status]');
+			const email = $<HTMLInputElement>('[data-optin-email]').value.trim();
+			const consent = $<HTMLInputElement>('[data-optin-consent]').checked;
+			if (!email) return void (status.textContent = 'Add your email first.');
+			if (!consent) return void (status.textContent = 'Tick the box so we know it’s OK to email you.');
+			const go = $<HTMLButtonElement>('[data-optin-go]');
+			go.disabled = true;
+			status.textContent = 'Signing you up…';
+			try {
+				const res = await fetch('/api/season-video-email', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						email,
+						consent,
+						platform: videoSource.source === 'manual' ? null : videoSource.source,
+						website: $<HTMLInputElement>('[data-optin-website]').value,
+					}),
+				});
+				const body = (await res.json().catch(() => ({}))) as { ok?: boolean; preview?: boolean; message?: string };
+				if (body.ok) {
+					optin.dataset.sent = '1';
+					const done = body.preview ? 'Test site: that worked, but only the live site adds you to the list.' : 'You’re in. We’ll email you when the next one drops.';
+					optin.replaceChildren(Object.assign(document.createElement('p'), { className: 'svid__note', textContent: done }));
+					return;
+				}
+				status.textContent = body.message ?? 'That didn’t go through. Try again in a bit.';
+			} catch {
+				status.textContent = 'That didn’t go through. Try again in a bit.';
+			} finally {
+				go.disabled = false;
+			}
+		});
 
 		// ── MFL ──
 		const leagueSel = root.querySelector<HTMLSelectElement>('[data-league-select]');
@@ -1439,6 +1494,34 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		background: var(--league-accent);
 	}
 	.svid__actions,
+	.svid__optin {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		padding: 1rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.75rem;
+	}
+	.svid__optin-title {
+		margin: 0;
+		font-weight: 700;
+	}
+	.svid__consent {
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+		font-size: var(--font-size-sm);
+	}
+	.svid__consent input {
+		margin-top: 0.2rem;
+	}
+	.svid__honeypot {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+	}
 	.svid__done {
 		display: flex;
 		flex-wrap: wrap;
