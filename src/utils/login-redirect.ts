@@ -135,6 +135,19 @@ export function sameOriginPath(requested: string | null | undefined): string | n
   return requested;
 }
 
+/**
+ * The shared host's own sign-in (mfl.football/login, the MFL app's), with a
+ * return path. Not league-scoped: that page signs into MFL as a whole and
+ * accepts any same-origin path (`resolveMflLoginRedirect`), so this checks
+ * only that. Used by public pages on the shared host, such as the season video
+ * maker, that offer "sign in to fill this in".
+ */
+export function sharedHostLoginUrl(returnTo: string | null | undefined): string {
+  const safe = sameOriginPath(returnTo);
+  if (!safe || stripQuery(safe) === '/login') return '/login';
+  return `/login?${RETURN_PARAM}=${encodeURIComponent(safe)}`;
+}
+
 /** Where a gate sends someone when there is no usable return path. */
 export function loginFallbackPath(league: LeagueDefinition): string {
   return `/${league.slug}`;

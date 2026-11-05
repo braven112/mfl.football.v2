@@ -1,0 +1,772 @@
+---
+/**
+ * mfl.football/champion-video — make your season video, free.
+ *
+ * Free tier (Brandon, 2026-11-05): marketed as a championship video, open to
+ * every team. The champion gets the champion video, the last-place team a
+ * princess or poop video, and everyone else a season recap; the owner can
+ * switch. A Spotify Wrapped-style vertical video for TikTok, Shorts, Reels
+ * and X, ending on a prominent MFL Football end card.
+ *
+ * Signed in with MFL, the season fills in from the owner's own league
+ * (`/api/season-video`). Signed out, or for any other platform, they type it
+ * in. Either way every fact is an editable field, and nothing but team-level
+ * numbers is used: no player data on the free tier.
+ *
+ * A logo is required. No logo: we send them to the free logo maker
+ * (/team-logo) first.
+ *
+ * The video is drawn and recorded in the visitor's own browser
+ * (src/utils/season-video/), so it costs no server rendering.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { getMflLiveUser } from '../utils/auth';
+import { listOwnerLeagues } from '../utils/live/owner-league';
+import { sharedHostLoginUrl } from '../utils/login-redirect';
+import { SEASON_OUTCOMES } from '../utils/season-video/season';
+import '../styles/mfl-live.css';
+
+export const prerender = false;
+
+const user = getMflLiveUser(Astro.request);
+const owned = user ? await listOwnerLeagues(user).catch(() => null) : null;
+const leagues = owned?.ok ? owned.leagues.map((l) => ({ id: l.leagueId, name: l.leagueName, team: l.franchiseName })) : [];
+const signedIn = Boolean(user);
+const lastYear = new Date().getFullYear() - 1;
+
+const MUSIC = [
+	{ id: 'hiphop', label: 'Hip hop' },
+	{ id: 'techno', label: 'Techno' },
+	{ id: 'rock', label: 'Rock' },
+	{ id: 'country', label: 'Country' },
+	{ id: 'none', label: 'No music' },
+];
+const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
+---
+
+<MflAppLayout
+	title="Make your fantasy football season video — MFL Football"
+	description="Free: turn your fantasy football season into a vertical video for TikTok, Reels, Shorts and X. Champion, season recap or last place."
+>
+	<section class="mls svid" data-season-video>
+		<h1 class="mls__title">Make your season video</h1>
+		<p class="mls__lede">
+			Champion, last place or anywhere in between. A free vertical video of your fantasy season, ready for TikTok,
+			Reels, Shorts and X.
+		</p>
+
+		<div class="svid__layout">
+			<div class="svid__form">
+				<fieldset class="svid__card">
+					<legend class="svid__legend">1. Your season</legend>
+					{signedIn && leagues.length > 0 ? (
+						<div class="svid__source">
+							<label class="svid__label" for="svid-league">League</label>
+							<select id="svid-league" class="svid__input" data-league-select>
+								{leagues.map((l) => <option value={l.id}>{l.name} · {l.team}</option>)}
+							</select>
+							<div class="svid__row">
+								<div>
+									<label class="svid__label" for="svid-year">Season</label>
+									<select id="svid-year" class="svid__input" data-year-select disabled><option>Loading…</option></select>
+								</div>
+								<div>
+									<label class="svid__label" for="svid-team">Team</label>
+									<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
+								</div>
+							</div>
+							<p class="svid__note" data-source-status aria-live="polite">Filling in your season from MFL…</p>
+						</div>
+					) : signedIn ? (
+						<p class="svid__note">We couldn’t find your MFL teams right now. Type your season in below.</p>
+					) : (
+						<div class="svid__signin">
+							<a class="cta cta--primary" href={sharedHostLoginUrl('/champion-video')}>Sign in with MFL to fill it in</a>
+							<p class="svid__note">Or type your season in below. Works for any league on any site.</p>
+						</div>
+					)}
+				</fieldset>
+
+				<fieldset class="svid__card">
+					<legend class="svid__legend">2. Check the details</legend>
+					<div class="svid__row">
+						<div>
+							<label class="svid__label" for="svid-name">Team name</label>
+							<input id="svid-name" class="svid__input" maxlength="40" data-f="teamName" placeholder="Computer Jocks" />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-league-name">League name</label>
+							<input id="svid-league-name" class="svid__input" maxlength="40" data-f="leagueName" placeholder="The League" />
+						</div>
+					</div>
+
+					<div class="svid__logo">
+						<img class="svid__logo-preview" data-logo-preview alt="" hidden />
+						<div class="svid__logo-copy">
+							<label class="svid__label" for="svid-logo">Team logo</label>
+							<input id="svid-logo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-logo-input />
+							<p class="svid__note" data-logo-note>
+								No logo yet? <a href="/team-logo" target="_blank" rel="noopener">Make one free with our logo maker</a>, then
+								come back and upload it.
+							</p>
+						</div>
+					</div>
+
+					<div class="svid__row svid__row--4">
+						<div>
+							<label class="svid__label" for="svid-season">Season</label>
+							<input id="svid-season" class="svid__input" type="number" min="1990" max="2100" data-f="season" value={lastYear} />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-wins">Wins</label>
+							<input id="svid-wins" class="svid__input" type="number" min="0" max="30" data-f="wins" value="0" />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-losses">Losses</label>
+							<input id="svid-losses" class="svid__input" type="number" min="0" max="30" data-f="losses" value="0" />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-ties">Ties</label>
+							<input id="svid-ties" class="svid__input" type="number" min="0" max="30" data-f="ties" value="0" />
+						</div>
+					</div>
+					<div class="svid__row svid__row--3">
+						<div>
+							<label class="svid__label" for="svid-points">Total points</label>
+							<input id="svid-points" class="svid__input" type="number" min="0" step="0.01" data-f="pointsFor" value="0" />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-finish">Finished</label>
+							<input id="svid-finish" class="svid__input" type="number" min="1" max="40" data-f="finish" placeholder="4" />
+						</div>
+						<div>
+							<label class="svid__label" for="svid-teams">Out of (teams)</label>
+							<input id="svid-teams" class="svid__input" type="number" min="2" max="40" data-f="teams" placeholder="12" />
+						</div>
+					</div>
+
+					<label class="svid__label" for="svid-outcome">How the season ended</label>
+					<select id="svid-outcome" class="svid__input" data-f="outcome">
+						{SEASON_OUTCOMES.map((o) => <option value={o.id} selected={o.id === 'missed'}>{o.label}</option>)}
+					</select>
+
+					<div class="svid__games" data-playoffs-wrap>
+						<span class="svid__label">Playoff games, in order</span>
+						<div data-playoffs></div>
+						<button type="button" class="cta cta--ghost" data-add-game>Add a playoff game</button>
+					</div>
+
+					<details class="svid__extras">
+						<summary>Best game and worst game (optional)</summary>
+						<div class="svid__game-row" data-extra="bestGame">
+							<span class="svid__extra-label">Best</span>
+							<input class="svid__input" data-g="label" placeholder="Week 11" maxlength="20" />
+							<input class="svid__input" data-g="oppName" placeholder="Opponent" maxlength="40" />
+							<input class="svid__input" data-g="score" type="number" step="0.01" placeholder="You" />
+							<input class="svid__input" data-g="oppScore" type="number" step="0.01" placeholder="Them" />
+						</div>
+						<div class="svid__game-row" data-extra="worstGame">
+							<span class="svid__extra-label">Worst</span>
+							<input class="svid__input" data-g="label" placeholder="Week 6" maxlength="20" />
+							<input class="svid__input" data-g="oppName" placeholder="Opponent" maxlength="40" />
+							<input class="svid__input" data-g="score" type="number" step="0.01" placeholder="You" />
+							<input class="svid__input" data-g="oppScore" type="number" step="0.01" placeholder="Them" />
+						</div>
+					</details>
+				</fieldset>
+
+				<fieldset class="svid__card">
+					<legend class="svid__legend">3. Pick your video</legend>
+					<div class="ui-pills" role="group" aria-label="Video" data-group="kind">
+						<button type="button" class="ui-pill" data-value="champion" aria-pressed="false">🏆 Champion</button>
+						<button type="button" class="ui-pill" data-value="recap" aria-pressed="true">Season recap</button>
+						<button type="button" class="ui-pill" data-value="last" aria-pressed="false">Last place</button>
+					</div>
+					<p class="svid__note" data-kind-note aria-live="polite"></p>
+					<div class="svid__theme" data-theme-wrap hidden>
+						<span class="svid__label">Last-place theme</span>
+						<div class="ui-pills" role="group" aria-label="Last-place theme" data-group="theme">
+							<button type="button" class="ui-pill" data-value="princess" aria-pressed="true">👑 Princess</button>
+							<button type="button" class="ui-pill" data-value="poop" aria-pressed="false">💩 Poop</button>
+						</div>
+					</div>
+					<span class="svid__label">Music</span>
+					<div class="ui-pills" role="group" aria-label="Music" data-group="music">
+						{MUSIC.map((m, i) => (
+							<button type="button" class="ui-pill" data-value={m.id} aria-pressed={i === 0 ? 'true' : 'false'}>{m.label}</button>
+						))}
+					</div>
+				</fieldset>
+			</div>
+
+			<div class="svid__stage">
+				<canvas class="svid__canvas" width="1080" height="1920" data-canvas aria-label="Video preview"></canvas>
+				<div class="svid__progress" data-progress hidden><span></span></div>
+				<p class="svid__note svid__warn" data-warning aria-live="polite"></p>
+				<div class="svid__actions">
+					<button type="button" class="cta cta--ghost" data-preview>Play preview</button>
+					<button type="button" class="cta cta--primary" data-make>Make my video</button>
+				</div>
+				<div class="svid__done" data-done hidden>
+					<a class="cta cta--primary" data-download download>Download video</a>
+					<button type="button" class="cta cta--ghost" data-share hidden>Share</button>
+				</div>
+				<p class="svid__note">Keep this tab open while it records. It takes as long as the video.</p>
+			</div>
+		</div>
+	</section>
+</MflAppLayout>
+
+<template id="svid-game-template">
+	<div class="svid__game-row" data-game>
+		<select class="svid__input" data-g="label" aria-label="Round">
+			{ROUNDS.map((r) => <option value={r}>{r}</option>)}
+		</select>
+		<input class="svid__input" data-g="oppName" placeholder="Opponent" maxlength="40" aria-label="Opponent" />
+		<input class="svid__input" data-g="score" type="number" step="0.01" placeholder="You" aria-label="Your score" />
+		<input class="svid__input" data-g="oppScore" type="number" step="0.01" placeholder="Them" aria-label="Their score" />
+		<button type="button" class="svid__remove" data-remove aria-label="Remove game">×</button>
+	</div>
+</template>
+
+<script>
+	import { buildStory } from '../utils/season-video/story';
+	import { pickVideoKind, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type LastPlaceTheme } from '../utils/season-video/season';
+	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
+	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
+	import type { SeasonVideoResponse } from '../utils/season-video/mfl-source';
+
+	const loadImage = (src: string): Promise<Img | null> =>
+		new Promise((resolve) => {
+			const img = new Image();
+			img.onload = () => resolve(img);
+			img.onerror = () => resolve(null);
+			img.src = src;
+		});
+
+	/** Our own SVG, given a pixel size so every browser will draw it on a canvas. */
+	async function loadSvg(url: string, width: number): Promise<Img | null> {
+		try {
+			const text = await (await fetch(url)).text();
+			const vb = /viewBox="([\d.\s-]+)"/.exec(text)?.[1].trim().split(/\s+/).map(Number);
+			const ratio = vb && vb[2] && vb[3] ? vb[3] / vb[2] : 1;
+			const sized = text.replace('<svg ', `<svg width="${width}" height="${Math.round(width * ratio)}" `);
+			return loadImage(URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' })));
+		} catch {
+			return null;
+		}
+	}
+
+	let brand: Promise<[Img | null, Img | null, unknown]> | null = null;
+	function loadBrand() {
+		brand ??= Promise.all([
+			loadSvg('/assets/logos/mfl-football-mark-dark.svg', 640),
+			loadSvg('/assets/logos/mfl-football-wordmark-dark.svg', 1720),
+			new FontFace('SVCond', 'url(/assets/fonts/UFCSans-CondensedBold.woff2)', { weight: '700' })
+				.load()
+				.then((f) => (document.fonts as unknown as Set<FontFace>).add(f))
+				.catch(() => undefined),
+		]);
+		return brand;
+	}
+
+	function init() {
+		const found = document.querySelector<HTMLElement>('[data-season-video]');
+		if (!found || found.dataset.ready) return;
+		const root: HTMLElement = found;
+		root.dataset.ready = '1';
+		const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+		const canvas = $<HTMLCanvasElement>('[data-canvas]');
+		const ctx = canvas.getContext('2d')!;
+		const warning = $<HTMLElement>('[data-warning]');
+		const playoffs = $<HTMLElement>('[data-playoffs]');
+		const template = document.getElementById('svid-game-template') as HTMLTemplateElement;
+
+		let teamLogo: string | null = null;
+		let teamImg: Img | null = null;
+		const oppImgs = new Map<string, Img>();
+		/** Logos MFL gave us, kept on the games they came with. */
+		const oppLogoByName = new Map<string, string>();
+		let autoKind: SeasonVideoKind = 'recap';
+		let busy = false;
+
+		// ── pills ──
+		const picked = (group: string) =>
+			root.querySelector<HTMLElement>(`[data-group="${group}"] [aria-pressed="true"]`)?.dataset.value ?? '';
+		const press = (group: string, value: string) =>
+			root.querySelectorAll<HTMLElement>(`[data-group="${group}"] [data-value]`).forEach((b) =>
+				b.setAttribute('aria-pressed', b.dataset.value === value ? 'true' : 'false'),
+			);
+		root.querySelectorAll<HTMLElement>('[data-group] [data-value]').forEach((b) =>
+			b.addEventListener('click', () => {
+				press(b.closest<HTMLElement>('[data-group]')!.dataset.group!, b.dataset.value!);
+				refresh();
+			}),
+		);
+
+		// ── form ⇄ facts ──
+		const field = (name: string) => root.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-f="${name}"]`)!;
+		const numOf = (el: HTMLInputElement | HTMLSelectElement | null) => {
+			const n = Number(el?.value);
+			return Number.isFinite(n) ? n : 0;
+		};
+		const readGame = (row: Element): SeasonGame | null => {
+			const g = (k: string) => row.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-g="${k}"]`);
+			const oppName = g('oppName')?.value.trim() ?? '';
+			const score = g('score')?.value ?? '';
+			const oppScore = g('oppScore')?.value ?? '';
+			if (!oppName || score === '' || oppScore === '') return null;
+			return {
+				label: g('label')?.value.trim() || 'Playoffs',
+				oppName,
+				score: Number(score),
+				oppScore: Number(oppScore),
+				oppLogo: oppLogoByName.get(oppName) ?? null,
+			};
+		};
+
+		function addGameRow(game?: Partial<SeasonGame>) {
+			const row = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+			const set = (k: string, v: unknown) => {
+				const el = row.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-g="${k}"]`);
+				if (el && v !== undefined && v !== null) el.value = String(v);
+			};
+			set('label', game?.label ?? (playoffs.children.length === 0 ? 'Quarterfinal' : 'Semifinal'));
+			set('oppName', game?.oppName);
+			set('score', game?.score);
+			set('oppScore', game?.oppScore);
+			row.querySelector('[data-remove]')!.addEventListener('click', () => {
+				row.remove();
+				refresh();
+			});
+			row.addEventListener('input', refresh);
+			playoffs.appendChild(row);
+		}
+		$('[data-add-game]').addEventListener('click', () => {
+			addGameRow();
+			refresh();
+		});
+
+		function readFacts(): SeasonFacts {
+			const finish = numOf(field('finish') as HTMLInputElement) || null;
+			const teams = numOf(field('teams') as HTMLInputElement) || null;
+			const outcome = field('outcome').value as SeasonFacts['outcome'];
+			const extra = (k: string) => {
+				const row = root.querySelector(`[data-extra="${k}"]`);
+				return row ? readGame(row) : null;
+			};
+			return {
+				teamName: field('teamName').value.trim() || 'My Team',
+				leagueName: field('leagueName').value.trim() || 'My League',
+				season: numOf(field('season')) || new Date().getFullYear() - 1,
+				teamLogo,
+				wins: numOf(field('wins')),
+				losses: numOf(field('losses')),
+				ties: numOf(field('ties')),
+				pointsFor: numOf(field('pointsFor')),
+				finish,
+				teams,
+				outcome,
+				playoffs: outcome === 'missed' ? [] : Array.from(playoffs.querySelectorAll('[data-game]')).map(readGame).filter((g): g is SeasonGame => !!g),
+				bestGame: extra('bestGame'),
+				worstGame: extra('worstGame'),
+			};
+		}
+
+		function fillForm(f: SeasonFacts) {
+			const set = (k: string, v: unknown) => {
+				field(k).value = v === null || v === undefined ? '' : String(v);
+			};
+			(['teamName', 'leagueName', 'season', 'wins', 'losses', 'ties', 'finish', 'teams', 'outcome'] as const).forEach((k) => set(k, f[k]));
+			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
+			playoffs.replaceChildren();
+			oppLogoByName.clear();
+			const remember = (g?: SeasonGame | null) => g?.oppLogo && oppLogoByName.set(g.oppName, g.oppLogo);
+			f.playoffs.forEach((g) => {
+				remember(g);
+				addGameRow(g);
+			});
+			for (const k of ['bestGame', 'worstGame'] as const) {
+				const g = f[k];
+				remember(g);
+				const row = root.querySelector(`[data-extra="${k}"]`)!;
+				row.querySelectorAll<HTMLInputElement>('[data-g]').forEach((el) => {
+					const v = g ? (g as unknown as Record<string, unknown>)[el.dataset.g!] : '';
+					el.value = v === undefined || v === null ? '' : String(v);
+				});
+			}
+			if (f.teamLogo) void setLogo(f.teamLogo);
+		}
+
+		async function setLogo(src: string | null) {
+			teamLogo = src;
+			teamImg = src ? await loadImage(src) : null;
+			const preview = $<HTMLImageElement>('[data-logo-preview]');
+			preview.hidden = !teamImg;
+			if (teamImg && src) preview.src = src;
+			refresh();
+		}
+
+		// Uploads are scaled down to 800px so the page stays light.
+		$<HTMLInputElement>('[data-logo-input]').addEventListener('change', async (e) => {
+			const file = (e.target as HTMLInputElement).files?.[0];
+			if (!file) return;
+			try {
+				const bmp = await createImageBitmap(file);
+				const scale = Math.min(1, 800 / Math.max(bmp.width, bmp.height));
+				const c = document.createElement('canvas');
+				c.width = Math.round(bmp.width * scale);
+				c.height = Math.round(bmp.height * scale);
+				c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+				await setLogo(c.toDataURL('image/png'));
+			} catch {
+				warning.textContent = 'That file didn’t open as an image. Try a PNG or JPG.';
+			}
+		});
+
+		// ── video choice ──
+		function kindNote(kind: SeasonVideoKind) {
+			const auto = kind === autoKind;
+			const names = { champion: 'the champion video', recap: 'the season recap', last: 'the last-place video' };
+			$('[data-kind-note]').textContent = auto ? `Picked from your finish: ${names[kind]}.` : `You picked ${names[kind]}. We'd have picked ${names[autoKind]}.`;
+			$<HTMLElement>('[data-theme-wrap]').hidden = kind !== 'last';
+		}
+
+		let lastAuto: SeasonVideoKind | null = null;
+		function refresh() {
+			const facts = readFacts();
+			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed';
+			autoKind = pickVideoKind(facts);
+			// Follow the facts until the owner picks for themselves.
+			if (lastAuto === null || picked('kind') === lastAuto) press('kind', autoKind);
+			lastAuto = autoKind;
+			kindNote(picked('kind') as SeasonVideoKind);
+			$<HTMLButtonElement>('[data-make]').disabled = busy || !teamLogo;
+			$<HTMLButtonElement>('[data-preview]').disabled = busy;
+			if (!busy) {
+				warning.innerHTML = teamLogo
+					? ''
+					: 'Upload your team logo to make the video. No logo? <a href="/team-logo" target="_blank" rel="noopener">Make one free</a>.';
+				void still();
+			}
+		}
+		root.addEventListener('input', (e) => {
+			if ((e.target as HTMLElement).closest('[data-f], [data-extra]')) refresh();
+		});
+		root.addEventListener('change', (e) => {
+			if ((e.target as HTMLElement).matches('select[data-f]')) refresh();
+		});
+
+		async function assets(facts: SeasonFacts): Promise<DrawAssets> {
+			const [mark, wordmark] = await loadBrand();
+			const logos = [...facts.playoffs, facts.bestGame, facts.worstGame].map((g) => g?.oppLogo).filter((x): x is string => !!x);
+			await Promise.all(
+				logos.filter((l) => !oppImgs.has(l)).map(async (l) => {
+					const img = await loadImage(l);
+					if (img) oppImgs.set(l, img);
+				}),
+			);
+			return { team: teamImg, opponents: oppImgs, mark, wordmark };
+		}
+
+		const story = (facts: SeasonFacts) =>
+			buildStory(facts, { kind: picked('kind') as SeasonVideoKind, theme: (picked('theme') || 'princess') as LastPlaceTheme });
+
+		/** A still of the title card while nothing plays. */
+		async function still() {
+			const facts = readFacts();
+			const a = await assets(facts);
+			if (busy) return;
+			drawFrame(ctx, story(facts), 1.2, a, facts.teamName);
+		}
+
+		const progress = $<HTMLElement>('[data-progress]');
+		async function play(record: boolean) {
+			if (busy) return;
+			busy = true;
+			refresh();
+			$<HTMLElement>('[data-done]').hidden = true;
+			progress.hidden = false;
+			const facts = readFacts();
+			const music = picked('music');
+			try {
+				const blob = await playStory({
+					canvas,
+					scenes: story(facts),
+					assets: await assets(facts),
+					teamName: facts.teamName,
+					musicUrl: music && music !== 'none' ? `/assets/season-video/music/${music}.mp3` : null,
+					record,
+					onProgress: (f) => ((progress.firstElementChild as HTMLElement).style.width = `${Math.round(f * 100)}%`),
+				});
+				if (blob) offer(blob, facts);
+			} catch (err) {
+				warning.textContent = (err as Error).message || 'Something went wrong making the video.';
+			} finally {
+				busy = false;
+				progress.hidden = true;
+				refresh();
+			}
+		}
+
+		function offer(blob: Blob, facts: SeasonFacts) {
+			const ext = fileExtension(blob.type);
+			const slug = `${facts.teamName}-${facts.season}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+			const name = `${slug || 'season'}-video.${ext}`;
+			const link = $<HTMLAnchorElement>('[data-download]');
+			if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
+			link.href = URL.createObjectURL(blob);
+			link.download = name;
+			const file = new File([blob], name, { type: blob.type });
+			const share = $<HTMLButtonElement>('[data-share]');
+			share.hidden = !(navigator.canShare?.({ files: [file] }) ?? false);
+			share.onclick = () => navigator.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' }).catch(() => undefined);
+			$<HTMLElement>('[data-done]').hidden = false;
+			if (ext === 'webm') warning.textContent = 'This browser saves WebM. For TikTok or Instagram, open this page in Chrome, Edge or Safari to get an MP4.';
+		}
+
+		$('[data-preview]').addEventListener('click', () => void play(false));
+		$('[data-make]').addEventListener('click', () => void play(true));
+		if (!pickVideoMime()) {
+			$<HTMLButtonElement>('[data-make]').hidden = true;
+			warning.textContent = 'This browser can’t record video. Try Chrome, Edge or Safari.';
+		}
+
+		// ── MFL ──
+		const leagueSel = root.querySelector<HTMLSelectElement>('[data-league-select]');
+		const yearSel = root.querySelector<HTMLSelectElement>('[data-year-select]');
+		const teamSel = root.querySelector<HTMLSelectElement>('[data-team-select]');
+		const status = root.querySelector<HTMLElement>('[data-source-status]');
+		async function pull(params: { year?: string; franchise?: string } = {}) {
+			if (!leagueSel || !yearSel || !teamSel || !status) return;
+			status.textContent = 'Filling in your season from MFL…';
+			const q = new URLSearchParams({ league: leagueSel.value });
+			if (params.year) q.set('year', params.year);
+			if (params.franchise) q.set('franchise', params.franchise);
+			try {
+				const res = await fetch(`/api/season-video?${q}`, { credentials: 'same-origin' });
+				const body = (await res.json()) as SeasonVideoResponse | { ok: false; message?: string };
+				if (!body.ok) {
+					status.textContent = body.message ?? 'MFL didn’t return this season. Type it in below.';
+					return;
+				}
+				yearSel.replaceChildren(...body.years.map((y) => new Option(String(y), String(y), false, y === body.facts.season)));
+				teamSel.replaceChildren(...body.franchises.map((f) => new Option(f.name, f.id, false, f.id === body.franchiseId)));
+				yearSel.disabled = teamSel.disabled = false;
+				lastAuto = null;
+				fillForm(body.facts);
+				if (!body.facts.teamLogo) void setLogo(null);
+				status.textContent = body.complete
+					? `Filled in from MFL. Change anything that looks off.`
+					: `The ${body.facts.season} playoffs aren’t finished yet, so the ending may change.`;
+				refresh();
+			} catch {
+				status.textContent = 'MFL isn’t answering right now. Try again, or type it in below.';
+			}
+		}
+		leagueSel?.addEventListener('change', () => void pull());
+		yearSel?.addEventListener('change', () => void pull({ year: yearSel.value, franchise: teamSel?.value }));
+		teamSel?.addEventListener('change', () => void pull({ year: yearSel?.value, franchise: teamSel.value }));
+
+		void loadBrand().then(() => refresh());
+		if (leagueSel) void pull();
+		else refresh();
+	}
+
+	document.addEventListener('astro:page-load', init);
+	init();
+</script>
+
+<style>
+	.svid [hidden] {
+		display: none !important;
+	}
+	.svid {
+		max-width: 66rem;
+	}
+	.svid__layout {
+		display: grid;
+		gap: 1.5rem;
+	}
+	@media (min-width: 900px) {
+		.svid__layout {
+			grid-template-columns: minmax(0, 1fr) 340px;
+			align-items: start;
+		}
+		.svid__stage {
+			position: sticky;
+			top: 1rem;
+		}
+	}
+	.svid__card {
+		border: var(--style-card-border, 1px solid var(--color-border-subtle));
+		border-radius: 14px;
+		padding: 1rem 1rem 1.1rem;
+		margin: 0 0 1rem;
+		display: grid;
+		gap: 0.6rem;
+		min-width: 0;
+	}
+	.svid__legend {
+		font-weight: 800;
+		padding: 0 0.4rem;
+	}
+	.svid__label {
+		display: block;
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--content-text-muted);
+		margin-bottom: 0.3rem;
+	}
+	.svid__input {
+		font: inherit;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.55rem 0.7rem;
+		border-radius: 10px;
+		border: 1px solid var(--color-border-subtle);
+		background: var(--color-surface-3);
+		color: var(--page-text);
+		min-width: 0;
+	}
+	.svid__row {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.6rem;
+	}
+	.svid__row--3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	.svid__row--4 {
+		grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr));
+	}
+	.svid__note {
+		margin: 0;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.svid__warn:empty {
+		display: none;
+	}
+	.svid__signin {
+		display: grid;
+		gap: 0.5rem;
+		justify-items: start;
+	}
+	.svid__logo {
+		display: flex;
+		gap: 0.9rem;
+		align-items: center;
+	}
+	.svid__logo-preview {
+		width: 72px;
+		height: 72px;
+		border-radius: 50%;
+		object-fit: contain;
+		background: #000;
+		flex: none;
+	}
+	.svid__logo-copy {
+		display: grid;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+	.svid__games {
+		display: grid;
+		gap: 0.5rem;
+		justify-items: start;
+	}
+	.svid__games > div {
+		display: grid;
+		gap: 0.5rem;
+		width: 100%;
+	}
+	.svid__game-row {
+		display: grid;
+		grid-template-columns: 9.5rem minmax(0, 1fr) 6rem 6rem 2rem;
+		gap: 0.4rem;
+		align-items: center;
+		width: 100%;
+	}
+	.svid__extras .svid__game-row {
+		grid-template-columns: 3.5rem 7rem minmax(0, 1fr) 6rem 6rem;
+		margin-top: 0.5rem;
+	}
+	.svid__extra-label {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.svid__remove {
+		border: 0;
+		background: none;
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-xl);
+		cursor: pointer;
+		padding: 0 0.3rem;
+	}
+	.svid__extras summary {
+		cursor: pointer;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.svid__theme {
+		display: grid;
+		gap: 0.3rem;
+	}
+	.svid__stage {
+		display: grid;
+		gap: 0.7rem;
+		justify-items: center;
+	}
+	.svid__canvas {
+		width: 100%;
+		max-width: 340px;
+		aspect-ratio: 9 / 16;
+		height: auto;
+		border-radius: 18px;
+		background: #0b1420;
+		box-shadow: var(--shadow-lg);
+	}
+	.svid__progress {
+		width: 100%;
+		max-width: 340px;
+		height: 6px;
+		border-radius: 3px;
+		background: var(--color-surface-3);
+		overflow: hidden;
+	}
+	.svid__progress span {
+		display: block;
+		height: 100%;
+		width: 0;
+		background: var(--league-accent);
+	}
+	.svid__actions,
+	.svid__done {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		justify-content: center;
+	}
+	@media (max-width: 520px) {
+		.svid__row--4 {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.svid__game-row {
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2rem;
+		}
+		/* Round, then opponent, each full width; the two scores and × share a line. */
+		.svid__game-row [data-g='label'],
+		.svid__game-row [data-g='oppName'] {
+			grid-column: 1 / -1;
+		}
+		.svid__extras .svid__game-row {
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		}
+		.svid__extra-label {
+			grid-column: 1 / -1;
+		}
+	}
+</style>
