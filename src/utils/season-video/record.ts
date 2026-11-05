@@ -36,6 +36,8 @@ export function pickVideoMime(): string | null {
 export const fileExtension = (mime: string) => (mime.startsWith('video/mp4') ? 'mp4' : 'webm');
 
 const FADE_OUT_S = 1.5;
+/** Video bitrate for the recorded file. Was 8 Mbps (~40 MB for 40 s). */
+export const VIDEO_BITS_PER_SECOND = 3_000_000;
 
 export interface PlayOptions {
 	canvas: HTMLCanvasElement;
@@ -113,7 +115,10 @@ export async function playStory(opts: PlayOptions): Promise<Blob | null> {
 		if (!mime) throw new Error('This browser cannot record video.');
 		const stream = canvas.captureStream(30);
 		audioStream?.getAudioTracks().forEach((t) => stream.addTrack(t));
-		recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 160_000 });
+		// ~3 Mbps keeps a 40-second video near 15 MB, under GroupMe's ~50 MB and
+		// iMessage/RCS's ~100 MB; the cards are flat colour, so it stays sharp
+		// (Brandon, 2026-11-05: smaller file, he tests the quality).
+		recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: VIDEO_BITS_PER_SECOND, audioBitsPerSecond: 128_000 });
 		recorder.ondataavailable = (e) => {
 			if (e.data && e.data.size > 0) chunks.push(e.data);
 		};
