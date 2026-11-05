@@ -21,11 +21,13 @@
  * (src/utils/season-video/), so it costs no server rendering.
  */
 import MflAppLayout from '../layouts/MflAppLayout.astro';
-import { getMflLiveUser } from '../utils/auth';
+import { getAuthUser, getMflLiveUser } from '../utils/auth';
+import { canUseHistoryProduct } from '../utils/league-history/access';
 import { listOwnerLeagues } from '../utils/live/owner-league';
 import { sharedHostLoginUrl } from '../utils/login-redirect';
 import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
 import { SEASON_OUTCOMES, VIDEO_STYLES } from '../utils/season-video/season';
+import { ESPN_FIRST_SEASON, currentEspnSeason } from '../utils/season-video/espn-source';
 import '../styles/mfl-live.css';
 
 export const prerender = false;
@@ -34,8 +36,12 @@ const user = getMflLiveUser(Astro.request);
 const owned = user ? await listOwnerLeagues(user).catch(() => null) : null;
 const leagues = owned?.ok ? owned.leagues.map((l) => ({ id: l.leagueId, name: l.leagueName, team: l.franchiseName })) : [];
 const signedIn = Boolean(user);
+/** The video's History link launches WITH History (Brandon, 2026-11-05): same switch, same seat until then. */
+const historyOpen = canUseHistoryProduct(getAuthUser(Astro.request));
 const logoTeams = owned?.ok ? owned.leagues.map((l) => ({ name: l.franchiseName, league: l.leagueName })) : [];
 const lastYear = new Date().getFullYear() - 1;
+const espnLatest = currentEspnSeason(new Date());
+const espnSeasons = Array.from({ length: espnLatest - ESPN_FIRST_SEASON + 1 }, (_, i) => espnLatest - i);
 
 const MUSIC = [
 	{ id: 'hiphop', label: 'Hip hop' },
@@ -54,7 +60,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 	title="Make your fantasy football season video — MFL Football"
 	description="Free: turn your fantasy football season into a vertical video for TikTok, Reels, Shorts and X. Champion, season recap or last place."
 >
-	<section class="mls svid" data-season-video>
+	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
 		<p class="mls__lede">
 			Champion, last place or anywhere in between. A free vertical video of your fantasy season, ready for TikTok,
@@ -73,10 +79,44 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 					<h2 class="svid__heading" id="svid-step1">Add your logo and team name</h2>
 
 					<details class="svid__fill" data-fill open={signedIn ? true : undefined}>
-						<summary><strong>Play on MFL or Sleeper?</strong> Fill in your logo, name and stats in one go.</summary>
+						<summary><strong>Play on MFL, Sleeper or ESPN?</strong> Fill in your logo, name and stats in one go.</summary>
 						<div class="ui-pills" role="group" aria-label="Where your league is" data-group="source">
 							<button type="button" class="ui-pill" data-value="mfl" aria-pressed="true">MFL</button>
 							<button type="button" class="ui-pill" data-value="sleeper" aria-pressed="false">Sleeper</button>
+							<button type="button" class="ui-pill" data-value="espn" aria-pressed="false">ESPN</button>
+						</div>
+						<div class="svid__panel" data-source-panel="espn" hidden>
+							<div class="svid__row">
+								<div>
+									<label class="svid__label" for="svid-espn-league">ESPN league ID or league link</label>
+									<input id="svid-espn-league" class="svid__input" maxlength="300" autocomplete="off" inputmode="url" placeholder="12345678" data-espn-league />
+								</div>
+								<div>
+									<label class="svid__label" for="svid-espn-season">Season</label>
+									<select id="svid-espn-season" class="svid__input" data-espn-season>
+										{espnSeasons.map((y) => <option value={String(y)}>{y}</option>)}
+									</select>
+								</div>
+							</div>
+							<button type="button" class="cta cta--primary" data-espn-find>Find my league</button>
+							<p class="svid__note">Your league ID is the number after <code>leagueId=</code> in your ESPN league’s address.</p>
+							<div class="svid__private" data-espn-private hidden>
+								<p class="svid__private-lede"><strong>Your league is private,</strong> so ESPN only shows it to its members. Three quick steps:</p>
+								<ol class="svid__private-steps">
+									<li>Sign in at espn.com in this browser.</li>
+									<li><a class="cta-link" href="#" target="_blank" rel="noopener noreferrer" data-espn-link>Open your league’s data</a>. It’s a page of text.</li>
+									<li>Select all of it, copy it, and paste it here.</li>
+								</ol>
+								<label class="svid__label" for="svid-espn-paste">Paste here</label>
+								<textarea id="svid-espn-paste" class="svid__input svid__paste" rows="4" spellcheck="false" placeholder='{"gameId":1,...' data-espn-paste></textarea>
+								<button type="button" class="cta cta--primary" data-espn-use>Use my league</button>
+								<p class="svid__note">We never ask for your ESPN password. Your browser reads the league and you hand us the results.</p>
+							</div>
+							<div data-espn-picks hidden>
+								<label class="svid__label" for="svid-espn-team">Your team</label>
+								<select id="svid-espn-team" class="svid__input" data-espn-team></select>
+							</div>
+							<p class="svid__note" data-espn-status aria-live="polite">Public leagues fill in right away. Private ones take one copy and paste.</p>
 						</div>
 						<div class="svid__panel" data-source-panel="sleeper" hidden>
 							<label class="svid__label" for="svid-sleeper-name">Sleeper username</label>
@@ -280,6 +320,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				<div class="svid__done" data-done hidden>
 					<a class="cta cta--primary" data-download download>Download video</a>
 					<button type="button" class="cta cta--ghost" data-share hidden>Share</button>
+					<a class="cta cta--ghost" data-history-link hidden>See your league on League History</a>
 				</div>
 				<p class="svid__note">Keep this tab open while it records. It takes as long as the video.</p>
 			</div>
@@ -321,42 +362,10 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 	import { buildStory } from '../utils/season-video/story';
 	import { pickVideoKind, type ChampionStyle, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type LastPlaceTheme } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
+	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
 	import type { SeasonVideoResponse } from '../utils/season-video/mfl-source';
-
-	const loadImage = (src: string): Promise<Img | null> =>
-		new Promise((resolve) => {
-			const img = new Image();
-			img.onload = () => resolve(img);
-			img.onerror = () => resolve(null);
-			img.src = src;
-		});
-
-	/** Our own SVG, given a pixel size so every browser will draw it on a canvas. */
-	async function loadSvg(url: string, width: number): Promise<Img | null> {
-		try {
-			const text = await (await fetch(url)).text();
-			const vb = /viewBox="([\d.\s-]+)"/.exec(text)?.[1].trim().split(/\s+/).map(Number);
-			const ratio = vb && vb[2] && vb[3] ? vb[3] / vb[2] : 1;
-			const sized = text.replace('<svg ', `<svg width="${width}" height="${Math.round(width * ratio)}" `);
-			return loadImage(URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' })));
-		} catch {
-			return null;
-		}
-	}
-
-	let brand: Promise<[Img | null, Img | null, unknown]> | null = null;
-	function loadBrand() {
-		brand ??= Promise.all([
-			loadSvg('/assets/logos/mfl-football-mark-dark.svg', 640),
-			loadSvg('/assets/logos/mfl-football-wordtype-dark.svg', 1520),
-			new FontFace('SVCond', 'url(/assets/fonts/UFCSans-CondensedBold.woff2)', { weight: '700' })
-				.load()
-				.then((f) => (document.fonts as unknown as Set<FontFace>).add(f))
-				.catch(() => undefined),
-		]);
-		return brand;
-	}
+	import { espnVideoUrl, parseEspnLeagueInput } from '../utils/season-video/espn-source';
 
 	function init() {
 		const found = document.querySelector<HTMLElement>('[data-season-video]');
@@ -663,17 +672,9 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			if ((e.target as HTMLElement).matches('select[data-f]')) refresh();
 		});
 
-		async function assets(facts: SeasonFacts): Promise<DrawAssets> {
-			const [mark, wordmark] = await loadBrand();
-			const logos = [...facts.playoffs, facts.bestGame, facts.worstGame].map((g) => g?.oppLogo).filter((x): x is string => !!x);
-			await Promise.all(
-				logos.filter((l) => !oppImgs.has(l)).map(async (l) => {
-					const img = await loadImage(l);
-					if (img) oppImgs.set(l, img);
-				}),
-			);
-			return { team: teamImg, opponents: oppImgs, mark, wordmark };
-		}
+		const assets = (facts: SeasonFacts): Promise<DrawAssets> => loadAssets(facts, teamImg, oppImgs);
+		/** Where the facts on the form last came from, for the History handoff. */
+		let videoSource: { source: VideoSource; leagueId: string | null } = { source: 'manual', leagueId: null };
 
 		const story = (facts: SeasonFacts) =>
 			buildStory(facts, {
@@ -732,6 +733,20 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 			share.hidden = !(navigator.canShare?.({ files: [file] }) ?? false);
 			share.onclick = () => navigator.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' }).catch(() => undefined);
 			$<HTMLElement>('[data-done]').hidden = false;
+			saveLastVideo({
+				...videoSource,
+				facts: { ...facts, teamLogo },
+				kind: picked('kind') as SeasonVideoKind,
+				theme: (picked('style-last') || 'princess') as LastPlaceTheme,
+				style: (picked('style-champion') || 'trophy') as ChampionStyle,
+				music: picked('music') || 'none',
+				madeAt: new Date().toISOString(),
+			});
+			// League History is the point of the video (Brandon, 2026-11-05); it shows once History is open.
+			const history = $<HTMLAnchorElement>('[data-history-link]');
+			const path = root.dataset.history ? historyPath(videoSource.source, videoSource.leagueId) : null;
+			history.hidden = !path;
+			if (path) history.href = path;
 			if (ext === 'webm') warning.textContent = 'This browser saves WebM. For TikTok or Instagram, open this page in Chrome, Edge or Safari to get an MP4.';
 		}
 
@@ -765,6 +780,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				yearSel.disabled = teamSel.disabled = false;
 				lastAuto = null;
 				fillForm(body.facts);
+				videoSource = { source: 'mfl', leagueId: leagueSel.value };
 				if (!body.facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				status.textContent = body.complete
 					? `Filled in from MFL. Change anything that looks off.`
@@ -840,6 +856,7 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 				lastAuto = null;
 				const facts = body.facts as SeasonFacts;
 				fillForm(facts);
+				videoSource = { source: 'sleeper', leagueId: sLeague.value };
 				if (!facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				sStatus.textContent = body.complete
 					? 'Filled in from Sleeper. Change anything that looks off.'
@@ -855,6 +872,131 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 		});
 		sLeague.addEventListener('change', () => void pullSleeper());
 		sTeam.addEventListener('change', () => void pullSleeper(sTeam.value));
+
+		// ── ESPN ── public leagues by id; private ones by the owner's own paste.
+		const eLeague = $<HTMLInputElement>('[data-espn-league]');
+		const eSeason = $<HTMLSelectElement>('[data-espn-season]');
+		const eTeam = $<HTMLSelectElement>('[data-espn-team]');
+		const eStatus = $<HTMLElement>('[data-espn-status]');
+		const ePrivate = $<HTMLElement>('[data-espn-private]');
+		const ePaste = $<HTMLTextAreaElement>('[data-espn-paste]');
+		const eLink = $<HTMLAnchorElement>('[data-espn-link]');
+		/** Where the current ESPN season came from: the server read it (public), or the owner pasted it. */
+		let espnRead: { leagueId: string; season: number; pasted: string | null } | null = null;
+		try {
+			eLeague.value = localStorage.getItem('seasonVideo.espnLeague') ?? '';
+		} catch {
+			/* storage blocked */
+		}
+		type EspnBody = Record<string, unknown> & { ok: boolean; message?: string; error?: string };
+		function showEspn(body: EspnBody, how: 'public' | 'pasted') {
+			const teams = body.teams as { id: number; name: string }[];
+			const picked = body.teamId as number | null;
+			eTeam.replaceChildren(
+				...(picked === null ? [new Option('Pick your team', '', true, true)] : []),
+				...teams.map((t) => new Option(t.name, String(t.id), false, t.id === picked)),
+			);
+			$<HTMLElement>('[data-espn-picks]').hidden = false;
+			ePrivate.hidden = how === 'public';
+			if (picked === null || !body.facts) {
+				eStatus.textContent = 'Found your league. Now pick your team.';
+				eTeam.focus();
+				return;
+			}
+			lastAuto = null;
+			const facts = body.facts as SeasonFacts;
+			fillForm(facts);
+			videoSource = { source: 'espn', leagueId: String(body.leagueId || espnRead?.leagueId || '') || null };
+			if (!facts.teamLogo && logoFrom === 'league') void setLogo(null);
+			ePrivate.hidden = true;
+			eStatus.textContent = body.complete
+				? 'Filled in from ESPN. Change anything that looks off.'
+				: `The ${facts.season} playoffs aren’t finished yet, so the ending may change.`;
+			refresh();
+		}
+		async function findEspn() {
+			const parsed = parseEspnLeagueInput(eLeague.value);
+			if (!parsed) {
+				eStatus.textContent = 'Enter the number after leagueId= in your ESPN league’s address, or paste the whole address.';
+				return;
+			}
+			if (parsed.season && Array.from(eSeason.options).some((o) => o.value === String(parsed.season))) eSeason.value = String(parsed.season);
+			const season = Number(eSeason.value);
+			eLeague.value = parsed.leagueId;
+			try {
+				localStorage.setItem('seasonVideo.espnLeague', parsed.leagueId);
+			} catch {
+				/* fine */
+			}
+			espnRead = { leagueId: parsed.leagueId, season, pasted: null };
+			$<HTMLElement>('[data-espn-picks]').hidden = true;
+			eStatus.textContent = 'Looking up your ESPN league…';
+			try {
+				const res = await fetch(`/api/season-video-espn?${new URLSearchParams({ league: parsed.leagueId, season: String(season) })}`);
+				const body = (await res.json()) as EspnBody;
+				if (body.ok) return showEspn(body, 'public');
+				if (body.error === 'private' || body.error === 'espn-unavailable') {
+					// ESPN may also refuse a server outright; the owner's own browser can still read it.
+					eLink.href = espnVideoUrl(parsed.leagueId, season);
+					ePrivate.hidden = false;
+					eStatus.textContent =
+						body.error === 'private' ? 'Almost there. Follow the three steps above.' : 'ESPN didn’t answer us, but you can still read it yourself with the steps above.';
+					return;
+				}
+				eStatus.textContent = body.message ?? 'ESPN didn’t return this league.';
+			} catch {
+				eStatus.textContent = 'ESPN isn’t answering right now. Try again, or add yours by hand.';
+			}
+		}
+		async function postEspn(team?: string) {
+			if (!espnRead?.pasted) return;
+			eStatus.textContent = 'Reading your ESPN league…';
+			try {
+				const res = await fetch('/api/season-video-espn', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ league: espnRead.leagueId, text: espnRead.pasted, team: team ? Number(team) : undefined }),
+				});
+				const body = (await res.json()) as EspnBody;
+				if (!body.ok) {
+					eStatus.textContent = body.message ?? 'That didn’t work. Copy everything the link shows and try again.';
+					return;
+				}
+				showEspn(body, 'pasted');
+			} catch {
+				eStatus.textContent = 'That didn’t go through. Try again in a moment.';
+			}
+		}
+		async function pullEspnTeam(team: string) {
+			if (!espnRead || !team) return;
+			if (espnRead.pasted) return postEspn(team);
+			eStatus.textContent = 'Filling in your season from ESPN…';
+			try {
+				const q = new URLSearchParams({ league: espnRead.leagueId, season: String(espnRead.season), team });
+				const body = (await (await fetch(`/api/season-video-espn?${q}`)).json()) as EspnBody;
+				if (body.ok) showEspn(body, 'public');
+				else eStatus.textContent = body.message ?? 'ESPN didn’t return this league.';
+			} catch {
+				eStatus.textContent = 'ESPN isn’t answering right now. Try again, or add yours by hand.';
+			}
+		}
+		$('[data-espn-find]').addEventListener('click', () => void findEspn());
+		eLeague.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') void findEspn();
+		});
+		eSeason.addEventListener('change', () => {
+			if (espnRead) void findEspn();
+		});
+		$('[data-espn-use]').addEventListener('click', () => {
+			const parsed = parseEspnLeagueInput(eLeague.value);
+			if (!parsed) {
+				eStatus.textContent = 'Enter your ESPN league ID above first.';
+				return;
+			}
+			espnRead = { leagueId: parsed.leagueId, season: Number(eSeason.value), pasted: ePaste.value };
+			void postEspn();
+		});
+		eTeam.addEventListener('change', () => void pullEspnTeam(eTeam.value));
 
 		void loadBrand().then(() => refresh());
 		if (leagueSel) void pull();
@@ -939,6 +1081,33 @@ const STYLE_SETS = (Object.keys(VIDEO_STYLES) as (keyof typeof VIDEO_STYLES)[])
 	.svid__panel {
 		display: grid;
 		gap: 0.6rem;
+	}
+	.svid__panel > .cta {
+		justify-self: start;
+	}
+	.svid__private {
+		display: grid;
+		gap: 0.5rem;
+		padding: 0.75rem;
+		border-radius: 10px;
+		border: 1px dashed var(--color-border-subtle);
+	}
+	.svid__private-lede,
+	.svid__private-steps {
+		margin: 0;
+	}
+	.svid__private-steps {
+		padding-left: 1.25rem;
+		display: grid;
+		gap: 0.25rem;
+	}
+	.svid__private .cta {
+		justify-self: start;
+	}
+	.svid__paste {
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: var(--font-size-xs);
+		resize: vertical;
 	}
 	.svid__inline {
 		display: flex;
