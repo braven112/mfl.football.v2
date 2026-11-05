@@ -13,9 +13,9 @@
  * The owner's teams pre-fill the name. Signed out, the page still works with
  * a typed name; nothing here needs the session except that list.
  */
-import MflAppLayout from '../../layouts/MflAppLayout.astro';
-import { getMflLiveUser } from '../../utils/auth';
-import { listOwnerLeagues } from '../../utils/live/owner-league';
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { getMflLiveUser } from '../utils/auth';
+import { listOwnerLeagues } from '../utils/live/owner-league';
 import {
 	DEFAULT_LOGO_CHOICE,
 	DEFAULT_LOGO_COLOR_COUNT,
@@ -25,8 +25,8 @@ import {
 	LOGO_COLORS,
 	LOGO_KINDS,
 	LOGO_STYLES,
-} from '../../utils/team-logo-prompt';
-import '../../styles/mfl-live.css';
+} from '../utils/team-logo-prompt';
+import '../styles/mfl-live.css';
 
 export const prerender = false;
 
@@ -157,8 +157,8 @@ const firstName = teams[0]?.name ?? '';
 </MflAppLayout>
 
 <script>
-	import { buildTeamLogoPrompt, LOGO_COLORS, normalizeHex } from '../../utils/team-logo-prompt';
-		import type { MflLiveAppLogoKind } from '../../../packages/shared-types/src/mfl-live-app-logo';
+	import { buildTeamLogoPrompt, LOGO_COLORS, normalizeHex } from '../utils/team-logo-prompt';
+		import type { MflLiveAppLogoKind } from '../../packages/shared-types/src/mfl-live-app-logo';
 
 	function init() {
 		const found = document.querySelector<HTMLElement>('[data-team-logo]');
