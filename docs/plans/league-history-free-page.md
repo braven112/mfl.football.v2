@@ -114,7 +114,7 @@ asking.
 ## Open before launch
 
 - The product name (the card's footer says only "League History").
-- MFL's answer on commercial use of its API.
+- ~~MFL's answer on commercial use of its API.~~ Cleared 2026-11-05: Brandon confirmed MFL is OK with it.
 - Link previews: chat apps fetch the card without a session, so cards unfurl
   only once the pages are public.
 - Rate limits fail OPEN when Redis is down (`checkRateLimit`). The build
