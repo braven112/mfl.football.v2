@@ -14,6 +14,7 @@ import type { APIRoute } from 'astro';
 import { allowEmailOptIn, allowSeasonVideoCall } from '../../utils/season-video/abuse-limits';
 import { outboundAllowed } from '../../utils/deploy-environment';
 import { kitFetcher, normalizeEmail, platformOf, subscribeToKit } from '../../utils/season-video/kit-optin';
+import { recordFunnel } from '../../utils/history-funnel';
 
 export const prerender = false;
 
@@ -42,7 +43,10 @@ export const POST: APIRoute = async ({ request }) => {
 	if (!apiKey) return json({ ok: false, message: 'Email sign-up isn’t switched on yet. Your video is all yours either way.' }, 503);
 	if (!(await allowEmailOptIn())) return json({ ok: false, message: 'Sign-ups are busy right now. Try again tomorrow.' }, 429);
 	try {
-		const ok = await subscribeToKit(kitFetcher(apiKey), email, platformOf(body.platform));
+		const platform = platformOf(body.platform);
+		const ok = await subscribeToKit(kitFetcher(apiKey), email, platform);
+		// Counted for the funnel on Site Insights; a count that fails never fails the sign-up.
+		if (ok) await recordFunnel('email_optin', platform ?? 'manual').catch(() => false);
 		return ok ? json({ ok: true }) : json({ ok: false, message: 'That address didn’t go through. Check it and try again.' }, 400);
 	} catch {
 		return json({ ok: false, message: 'Our email list isn’t answering. Try again in a bit.' }, 503);

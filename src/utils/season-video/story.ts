@@ -301,6 +301,8 @@ function recapEnding(f: SeasonFacts): { name: string; line: string } {
 			return { name: 'PLAYOFF TEAM', line: `A playoff run in ${f.leagueName}. Run it back.` };
 		case 'champion':
 			return { name: 'CHAMPIONS', line: `${f.season} champions of ${f.leagueName}.` };
+		case 'in-progress':
+			return { name: 'TO BE CONTINUED', line: 'The season isn’t over yet.' };
 		default:
 			return {
 				name: f.finish ? `${ordinal(f.finish).toUpperCase()} PLACE` : 'NEXT YEAR',
@@ -365,6 +367,71 @@ function midseasonStory(f: SeasonFacts, look: VideoLook): Scene[] {
 	}
 	scenes.push(perWeekScene(f, L.stat, 'Halfway there. Make it count.'));
 	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: 'Mid-season grade', name: `GRADE: ${report.grade}`, line: report.line, effect: quietEffect(L, report.grade === 'A'), badge: '📝' });
+	scenes.push(endScene());
+	return scenes;
+}
+
+const TIGER_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
+	sub: {
+		default: 'Scary on paper. Only on paper.',
+		bling: 'Looks expensive. Isn’t.',
+		retro: 'A collector’s item. Mint condition, never tested.',
+		princess: 'A tiger in a tiara. Still a kitten.',
+		poop: 'Looks scary. Smells like fear.',
+	},
+	crownLine: {
+		default: 'All roar. No bite.',
+		bling: 'Counterfeit. Check the stitching.',
+		retro: 'They don’t make ’em like this. Thankfully.',
+		princess: 'Here, kitty kitty.',
+		poop: 'Flushed when it counted.',
+	},
+};
+
+/** Where those points sit in the league, and whether the record outran them. */
+function tigerPoints(f: SeasonFacts): { rank: number; teams: number; lucky: boolean } | null {
+	if (!f.pointsRank || !f.teams) return null;
+	// A record better than the points behind it: the schedule did the work.
+	return { rank: f.pointsRank, teams: f.teams, lucky: !!f.finish && f.pointsRank > f.finish };
+}
+
+/** The game that ended it: the last playoff loss, when the season ended in one. */
+function tigerExit(f: SeasonFacts): SeasonGame | null {
+	const last = f.playoffs[f.playoffs.length - 1];
+	return last && !won(last) && f.outcome !== 'champion' ? last : null;
+}
+
+function tigerStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const pts = tigerPoints(f);
+	const exit = tigerExit(f);
+	const recordLine = f.wins > f.losses ? 'Looks scary. Look closer.' : 'Not even scary on paper.';
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: ['PAPER', 'TIGER'], sub: `${f.teamName}. ${byLook(TIGER_WORDS.sub, look)}` },
+		recordScene(f, L.record, recordLine, f.outcome === 'in-progress' ? 'So far' : 'Regular season'),
+	];
+	// Pick the angle the data makes true: a record the points don't back up,
+	// a playoff exit, or at least the week the paper tore (Brandon, 2026-11-06).
+	if (pts?.lucky) {
+		scenes.push({
+			type: 'stat',
+			duration: 5,
+			palette: L.stat,
+			kicker: 'Points scored · league rank',
+			big: { kind: 'number', value: pts.rank, decimals: 0 },
+			line: `${ordinal(pts.rank)} of ${pts.teams} in points. The schedule did the work.`,
+		});
+	} else {
+		scenes.push(perWeekScene(f, L.stat, 'Not as scary as the record says.'));
+	}
+	if (f.worstGame) {
+		const g = f.worstGame;
+		scenes.push(lowScene(g, L.low, 'The paper tore', won(g) ? `Won with ${formatScore(g.score)}. Lucky, not good.` : `${g.oppName} won by ${formatScore(margin(g))}. Paper tiger.`));
+	}
+	if (exit) {
+		scenes.push(lowScene(exit, L.low, 'Then the playoffs happened', `${exit.oppName} called the bluff.`));
+	}
+	scenes.push({ type: 'crown', duration: 7, palette: L.crown, kicker: `${f.leagueName} · Paper Tiger`, name: f.teamName, line: byLook(TIGER_WORDS.crownLine, look), effect: quietEffect(L, false), badge: '🐯' });
 	scenes.push(endScene());
 	return scenes;
 }
@@ -466,6 +533,7 @@ const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook) => Scen
 	champion: championStory,
 	recap: recapStory,
 	midseason: midseasonStory,
+	tiger: tigerStory,
 	mid: midStory,
 	last: lastStory,
 };

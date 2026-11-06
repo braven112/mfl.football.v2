@@ -29,7 +29,7 @@
  * Pure parsing (tests/season-video-espn.test.ts); `loadEspnSeason` is the only
  * network part and takes its fetcher as an argument.
  */
-import { pickVideoKind, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
+import { pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
 
 const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
@@ -189,6 +189,7 @@ export function fromEspn(raw: EspnSeasonRaw, teamId: number): EspnSeasonResult |
 	const seed = seedOf(me);
 	const madeIt = playoffs.length > 0 || (playoffTeams > 0 && seed !== null && seed <= playoffTeams && periods.length > 0);
 	let outcome: SeasonFacts['outcome'] = madeIt ? 'playoffs' : 'missed';
+	if (!complete && !madeIt) outcome = 'in-progress';
 	if (complete && final && sideOf(final)) outcome = championId === teamId ? 'champion' : 'runner-up';
 	else if (complete && championId === teamId) outcome = 'champion';
 
@@ -221,6 +222,7 @@ export function fromEspn(raw: EspnSeasonRaw, teamId: number): EspnSeasonResult |
 			losses: num(overall?.losses),
 			ties: num(overall?.ties),
 			pointsFor: round2(pf(me)),
+			pointsRank: pointsRankOf(pf(me), ranked.map(pf)),
 			finish: finish || null,
 			teams: ranked.length || null,
 			seed: seed !== null && playoffTeams > 0 && seed <= playoffTeams ? seed : null,

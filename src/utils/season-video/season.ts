@@ -26,7 +26,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * subject, because the video is a trash-talk tool as much as a keepsake: a
  * 9–2 team can be called mid, a champion can get the poop look.
  */
-export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'mid' | 'last';
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'tiger' | 'mid' | 'last';
 export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
@@ -37,6 +37,7 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 	{ id: 'champion', name: '🏆 Champion' },
 	{ id: 'recap', name: 'Season recap' },
 	{ id: 'midseason', name: '📝 Mid-season report' },
+	{ id: 'tiger', name: '🐯 Paper tiger' },
 	{ id: 'mid', name: '😐 Master of mediocrity' },
 	{ id: 'last', name: 'Last place' },
 ];
@@ -72,9 +73,10 @@ export function lookOf(v: { kind: SeasonVideoKind; look?: VideoLook; theme?: Las
 }
 
 /** How the season ended for this team. */
-export type SeasonOutcome = 'champion' | 'runner-up' | 'playoffs' | 'missed';
+export type SeasonOutcome = 'in-progress' | 'champion' | 'runner-up' | 'playoffs' | 'missed';
 
 export const SEASON_OUTCOMES: readonly { id: SeasonOutcome; label: string }[] = [
+	{ id: 'in-progress', label: 'Still being played' },
 	{ id: 'champion', label: 'Won the championship' },
 	{ id: 'runner-up', label: 'Lost in the championship' },
 	{ id: 'playoffs', label: 'Made the playoffs, lost before the final' },
@@ -103,6 +105,8 @@ export interface SeasonFacts {
 	losses: number;
 	ties: number;
 	pointsFor: number;
+	/** Where those points rank in the league, 1 = most. Feeds the paper-tiger story. */
+	pointsRank?: number | null;
 	/** Regular-season finish, 1-based, in MFL's own standings order. */
 	finish: number | null;
 	teams: number | null;
@@ -126,10 +130,16 @@ export function pickVideoKind(
 	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
 	complete = true,
 ): SeasonVideoKind {
-	if (!complete && (facts.playoffs?.length ?? 0) === 0) return 'midseason';
+	if (facts.outcome === 'in-progress' || (!complete && (facts.playoffs?.length ?? 0) === 0)) return 'midseason';
 	if (facts.outcome === 'champion') return 'champion';
 	if (facts.finish && facts.teams && facts.finish >= facts.teams) return 'last';
 	return 'recap';
+}
+
+/** Where a points total ranks among the league's, 1 = most; ties share the better rank. */
+export function pointsRankOf(points: number, league: readonly number[]): number | null {
+	if (!league.length) return null;
+	return 1 + league.filter((p) => p > points).length;
 }
 
 /** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th, 21st. */
@@ -352,7 +362,7 @@ export function fromMflExports(x: MflSeasonExports): MflSeasonResult | null {
 		opponents.push(oppId);
 	}
 
-	let outcome: SeasonOutcome = playoffs.length ? 'playoffs' : 'missed';
+	let outcome: SeasonOutcome = playoffs.length ? 'playoffs' : complete ? 'missed' : 'in-progress';
 	const last = playoffs[playoffs.length - 1];
 	if (complete && last?.label === 'The Final') outcome = last.score > last.oppScore ? 'champion' : 'runner-up';
 
@@ -376,6 +386,7 @@ export function fromMflExports(x: MflSeasonExports): MflSeasonResult | null {
 			losses: row.losses,
 			ties: row.ties,
 			pointsFor: row.pointsFor,
+			pointsRank: pointsRankOf(row.pointsFor, standings.map((r) => r.pointsFor)),
 			finish: idx + 1,
 			teams: standings.length,
 			seed,

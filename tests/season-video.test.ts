@@ -12,6 +12,7 @@ import {
 	fromMflExports,
 	ordinal,
 	pickVideoKind,
+	pointsRankOf,
 	roundLabel,
 	type SeasonFacts,
 } from '../src/utils/season-video/season';
@@ -131,7 +132,7 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	const STORIES = ['champion', 'recap', 'midseason', 'mid', 'last'] as const;
+	const STORIES = ['champion', 'recap', 'midseason', 'tiger', 'mid', 'last'] as const;
 	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
@@ -293,5 +294,27 @@ describe('looks', () => {
 		expect(looks.map((s) => (s as { effect: string }).effect)).toEqual(['confetti', 'money', 'retro', 'sparkles', 'poop']);
 		expect(defaultLook('last')).toBe('princess');
 		expect(defaultLook('mid')).toBe('trophy');
+	});
+});
+
+describe('paper tiger', () => {
+	const text = (s: unknown) => JSON.stringify(s);
+	it('calls out a record the points do not back up', () => {
+		const scenes = buildStory({ ...base, outcome: 'in-progress', playoffs: [], finish: 2, pointsRank: 9, worstGame: { label: 'Week 3', score: 71.2, oppName: 'Dark Magicians', oppScore: 140 } }, { kind: 'tiger', look: 'trophy' });
+		expect(text(scenes)).toContain('PAPER');
+		expect(text(scenes)).toContain('9th of 16 in points. The schedule did the work.');
+		expect(text(scenes)).not.toContain('Then the playoffs happened');
+	});
+	it('roasts the playoff exit when the season ended in one', () => {
+		const scenes = buildStory({ ...base, outcome: 'playoffs', pointsRank: 1, playoffs: [{ label: 'Quarterfinal', score: 90, oppName: 'Bring the Pain', oppScore: 120 }] }, { kind: 'tiger', look: 'poop' });
+		expect(text(scenes)).toContain('Then the playoffs happened');
+		expect(text(scenes)).not.toContain('The schedule did the work');
+	});
+	it('ranks points with ties sharing the better rank', () => {
+		expect(pointsRankOf(100, [120, 100, 100, 80])).toBe(2);
+		expect(pointsRankOf(80, [])).toBeNull();
+	});
+	it('a season still being played suggests the mid-season report', () => {
+		expect(pickVideoKind({ outcome: 'in-progress', finish: 3, teams: 12 })).toBe('midseason');
 	});
 });

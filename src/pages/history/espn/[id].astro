@@ -138,6 +138,7 @@ const LOCKED = [
 	import { playStory } from '../../../utils/season-video/record';
 	import { formatRecord } from '../../../utils/season-video/season';
 	import { loadAssets, loadImage, readLastVideo } from '../../../utils/season-video/player';
+	import { trackFunnel } from '../../../utils/history-funnel-client';
 
 	async function init() {
 		// The gate names its league: a ClientRouter swap between two league pages keeps this listener.
@@ -145,6 +146,7 @@ const LOCKED = [
 		if (!found || found.dataset.ready) return;
 		const root: HTMLElement = found;
 		root.dataset.ready = '1';
+		trackFunnel('history_view', 'espn');
 		const last = readLastVideo('espn', root.dataset.league ?? '');
 		if (!last) return;
 		root.querySelector<HTMLElement>('[data-video-invite]')!.hidden = true;
