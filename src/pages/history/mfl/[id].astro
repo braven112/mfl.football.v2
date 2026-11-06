@@ -38,8 +38,9 @@ if (!canUseHistoryProduct(authUser)) {
 }
 if (!isMflLeagueId(leagueId)) return Astro.rewrite('/_not-found');
 
-const canFix = canFixLeagueHistory(authUser);
 const record = await readMflHistory(leagueId);
+// A league on our platform is fixed in its own championship file, not here.
+const canFix = canFixLeagueHistory(authUser) && record?.source !== 'site';
 const overrides = record ? await readOverrides(leagueId) : {};
 const seasons = record ? effectiveSeasons(record, overrides) : [];
 const trophies = record ? trophyCase(seasons).filter((t) => t.titles.length > 0) : [];
@@ -47,6 +48,14 @@ const unfinished = record ? seasonsToCrawl(record, Date.now()).length > 0 : true
 const decided = seasons.filter((s) => s.champion).length;
 const firstYear = record ? Math.min(...record.chain.map((s) => s.year)) : null;
 const inProgress = getCurrentSeasonYear();
+
+// Link preview: the most recent champion's card, so a shared link unfurls
+// with the trophy. Resolved against this request's own URL, never an origin
+// glued to a path.
+const latestChampion = [...seasons].sort((a, b) => b.year - a.year).find((s) => s.champion);
+const ogImage = latestChampion
+	? new URL(`/api/og/league-history/mfl/${leagueId}/${latestChampion.year}.png`, Astro.url).href
+	: undefined;
 
 const methodTag = (method: string) =>
 	method === 'override' ? 'set by admin' : null;
@@ -62,8 +71,9 @@ const LOCKED = [
 <MflAppLayout
 	title={record ? `${record.name} — League History` : 'League History'}
 	description={record ? `Every ${record.name} champion since ${firstYear}.` : 'Every champion your league has crowned.'}
+	ogImage={ogImage}
 >
-	<div class="lh">
+	<div class="lh" data-history-funnel="mfl" data-league-id={leagueId}>
 		<a class="lh__back" href="/history">&larr; League History</a>
 
 		{!record ? (
@@ -178,3 +188,16 @@ const LOCKED = [
 		)}
 	</div>
 </MflAppLayout>
+
+<script>
+	import { trackFunnel } from '../../../utils/history-funnel-client';
+
+	// One count per page arrival. `document` survives ClientRouter swaps, so the
+	// gate asks the swapped-in page's own root, and marks it once counted.
+	document.addEventListener('astro:page-load', () => {
+		const root = document.querySelector<HTMLElement>('[data-history-funnel="mfl"]');
+		if (!root || root.dataset.funnelCounted) return;
+		root.dataset.funnelCounted = '1';
+		trackFunnel('history_view', 'mfl');
+	});
+</script>

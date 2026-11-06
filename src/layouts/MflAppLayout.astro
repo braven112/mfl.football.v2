@@ -121,9 +121,15 @@ export interface Props {
 	 * splash. Shared host only, like the app's.
 	 */
 	remoteManifest?: boolean;
+	/**
+	 * A link-preview image (absolute URL). When set, the page also carries
+	 * Open Graph and Twitter card tags so a shared link unfurls in chat apps.
+	 * Only public, shareable pages pass it (the League History pages).
+	 */
+	ogImage?: string;
 }
 
-const { title, description, pairedTvOwner = null, bare = false, remoteManifest = false } = Astro.props as Props;
+const { title, description, pairedTvOwner = null, bare = false, remoteManifest = false, ogImage } = Astro.props as Props;
 
 // 'auto' renders no class — the pre-paint ThemeScript resolves it against
 // prefers-color-scheme before first paint.
@@ -205,6 +211,16 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="apple-mobile-web-app-title" content="MFL Football" />
 		<meta name="generator" content={Astro.generator} />
 		{description && <meta name="description" content={description} />}
+		{ogImage && (
+			<Fragment>
+				<meta property="og:type" content="website" />
+				<meta property="og:title" content={title} />
+				{description && <meta property="og:description" content={description} />}
+				<meta property="og:image" content={ogImage} />
+				<meta property="og:url" content={Astro.url.href} />
+				<meta name="twitter:card" content="summary_large_image" />
+			</Fragment>
+		)}
 		<Font cssVariable="--font-vend-sans" />
 		{/* Both dark-mark swaps, because this board draws BOTH kinds of crest.
 		    NflLogoDarkStyles covers rung 2 of the identity ladder (a franchise

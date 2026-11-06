@@ -30,6 +30,9 @@ export const POST: APIRoute = async ({ request }) => {
 	if (!isMflLeagueId(leagueId) || !Number.isInteger(year)) return json({ ok: false, message: 'Bad league or year.' }, 400);
 
 	const record = await readMflHistory(leagueId);
+	if (record?.source === 'site') {
+		return json({ ok: false, message: "This league's champions come from its own site. Fix them in its championship-history.json." }, 409);
+	}
 	const season = record?.seasons[String(year)];
 	if (!record || !record.chain.some((s) => s.year === year)) return json({ ok: false, message: 'Unknown season.' }, 404);
 

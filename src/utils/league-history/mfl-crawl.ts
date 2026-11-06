@@ -15,13 +15,17 @@
  *  - A bounded timeout, so one slow host cannot hold a request open.
  */
 import {
+	bracketNeedsGames,
+	bracketTeams,
 	championFromBracket,
+	championFromGames,
 	isMflHost,
+	laterBrackets,
 	mflErrorText,
 	parseFranchises,
 	parseLeagueName,
 	parseSeasonChain,
-	pickChampionshipBracketId,
+	rankChampionshipBrackets,
 	type MflSeasonRef,
 	type SeasonChampion,
 	type SeasonFranchise,
@@ -132,8 +136,19 @@ export async function planMflLeague(leagueId: string, year: number, fetchExport:
  * brackets, and the championship bracket. A season with no brackets is
  * unknown; nothing else is inferred (mfl-champions.ts, "HOW A CHAMPION IS
  * DECIDED").
+ *
+ * `finished` says the season is over (its year is before the current MFL
+ * league year, so its Super Bowl has been played). Only then does the crawl
+ * go past the first-ranked bracket's own export: it reads a seeds-only final
+ * from the recorded games (`championFromGames`), and moves to the next-ranked
+ * bracket while one cannot name a winner. A season still being played keeps
+ * to the bracket MFL has filled in, so a live score is never read as a final.
  */
-export async function crawlMflSeason(ref: MflSeasonRef, fetchExport: FetchExport): Promise<CrawledSeason> {
+export async function crawlMflSeason(
+	ref: MflSeasonRef,
+	fetchExport: FetchExport,
+	opts: { finished?: boolean } = {},
+): Promise<CrawledSeason> {
 	const base = { host: ref.host, year: ref.year, leagueId: ref.leagueId };
 	const leagueBody = await fetchExport({ ...base, type: 'league' });
 	const leagueErr = mflErrorText(leagueBody);
@@ -148,19 +163,76 @@ export async function crawlMflSeason(ref: MflSeasonRef, fetchExport: FetchExport
 	const done = (result: SeasonChampion): CrawledSeason => ({ result, franchises: list });
 
 	const brackets = await fetchExport({ ...base, type: 'playoffBrackets' });
-	const bracketId = mflErrorText(brackets) ? null : pickChampionshipBracketId(brackets);
-	if (bracketId) {
-		const bracket = await fetchExport({ ...base, type: 'playoffBracket', bracketId });
-		const err = mflErrorText(bracket);
-		if (err) return done({ year: ref.year, method: 'unknown', champion: null, runnerUp: null, note: `MFL: ${err}` });
-		return done(championFromBracket(ref.year, bracket, franchises));
+	const ranked = mflErrorText(brackets) ? [] : rankChampionshipBrackets(brackets);
+	if (ranked.length === 0) {
+		return done({
+			year: ref.year,
+			method: 'unknown',
+			champion: null,
+			runnerUp: null,
+			note: 'MFL has no playoff bracket for this season',
+		});
 	}
 
-	return done({
-		year: ref.year,
-		method: 'unknown',
-		champion: null,
-		runnerUp: null,
-		note: 'MFL has no playoff bracket for this season',
-	});
+	let weekly: unknown;
+	const read = new Map<string, { bracket: unknown; result: SeasonChampion }>();
+	const readBracket = async (bracketId: string) => {
+		const cached = read.get(bracketId);
+		if (cached) return cached;
+		const bracket = await fetchExport({ ...base, type: 'playoffBracket', bracketId });
+		const err = mflErrorText(bracket);
+		let result: SeasonChampion = err
+			? { year: ref.year, method: 'unknown', champion: null, runnerUp: null, note: `MFL: ${err}` }
+			: championFromBracket(ref.year, bracket, franchises);
+		if (!err && result.method === 'unknown' && opts.finished && bracketNeedsGames(bracket)) {
+			weekly ??= await fetchExport({ ...base, type: 'weeklyResults' });
+			if (!mflErrorText(weekly)) result = championFromGames(ref.year, bracket, weekly, franchises);
+		}
+		const entry = { bracket: err ? null : bracket, result };
+		read.set(bracketId, entry);
+		return entry;
+	};
+
+	let first: SeasonChampion | null = null;
+	for (const bracketId of ranked.slice(0, opts.finished ? MAX_BRACKETS_TRIED : 1)) {
+		const { result } = await readBracket(bracketId);
+		if (result.method !== 'unknown') return done(await playOn(bracketId, result));
+		first ??= result;
+	}
+	return done(first!);
+
+	/**
+	 * A bracket's champion who plays on in a later bracket won a division or
+	 * conference, not the league: follow them (`laterBrackets`). If that later
+	 * bracket cannot name a winner yet, neither can the season.
+	 */
+	async function playOn(fromId: string, result: SeasonChampion): Promise<SeasonChampion> {
+		let at = fromId;
+		for (let hop = 0; hop < MAX_BRACKETS_TRIED; hop++) {
+			let moved = false;
+			for (const laterId of laterBrackets(brackets, at).slice(0, 2)) {
+				const later = await readBracket(laterId);
+				const champ = result.champion!.id;
+				// A seeds-only bracket names its teams only through the final read from the games.
+				const inIt =
+					!!later.bracket &&
+					(bracketTeams(later.bracket).has(champ) ||
+						later.result.champion?.id === champ ||
+						later.result.runnerUp?.id === champ);
+				if (!inIt) continue;
+				if (later.result.method === 'unknown') {
+					return { ...later.result, note: `the title bracket cannot name a winner yet (${later.result.note})` };
+				}
+				result = later.result;
+				at = laterId;
+				moved = true;
+				break;
+			}
+			if (!moved) break;
+		}
+		return result;
+	}
 }
+
+/** A finished season reads at most this many candidate title brackets. */
+const MAX_BRACKETS_TRIED = 3;

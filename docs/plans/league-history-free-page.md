@@ -33,8 +33,26 @@ shareable champion card per season, and locked previews of what Full History
    one that **finishes last**. Both rules came from a live check:
    - the AFL's 16-team "NIT Championship" finishes after the real title game;
    - the AFL's AL and NL "Championship" brackets feed its AFL Championship.
+   - (2026-11-04, a live run over five other public leagues) a bracket for
+     PART of the league (AFC/NFC, AL/NL, Conf, Div, NIT) and a "Pride"
+     consolation are never the title while a whole-league bracket exists.
+     Without that, a 32-team league's "Conf 1" (bracket 1) was its champion
+     every season, and a bracket 1 titled "Mountain div. champ" beat the
+     league's own championship.
 3. **The final.** The last round must hold one game with both teams and both
-   scores, and the scores must differ. Otherwise the season is unknown.
+   scores, and the scores must differ. `SEED1`-style placeholder ids and blank
+   points are "not set", never a tie. Otherwise the season is unknown.
+   For a FINISHED season (year before the current MFL league year) two more
+   reads, never for the season being played (a live score is not a final):
+   - **Seeds-only brackets are read from the games.** MFL exports many
+     leagues' brackets as seeds and `winner_of_game` refs with no teams or
+     points (one 25-season league, every season). `finalFromGames` walks down
+     from each game played in the final's week through `weeklyResults` and
+     decides only when exactly one champion and runner-up fit the whole
+     bracket. A tied earlier round may go either way; a tied final stays
+     unknown.
+   - **The next-ranked bracket** is read while one cannot name a winner (a
+     league can leave a bracket it set up and never played), up to three.
 4. **Nothing else is inferred.** A season with no playoff bracket on MFL is
    unknown. First in the standings is never assumed to be the champion:
    leagues crown champions in ways MFL does not record (Archie's runs its own
@@ -67,7 +85,11 @@ is Full History's owners-and-eras work.
 A build is **steps**: a 20-season league is ~60 MFL requests, too many for one
 serverless call. `POST /api/league-history/mfl/build` reads 3 seasons a call
 and the page calls it until `done`.
-- A finished season is never fetched again.
+- A finished season is never fetched again, unless it was read by an older
+  `CRAWL_VERSION` (bump it when a rule change can change a stored answer).
+- The season chain is planned once, then extended: while the current MFL
+  year is newer than the newest season held, a step asks MFL again at most
+  every six hours, so a league built in November gains next season.
 - An undecided season in the latest two years is re-checked at most every
   six hours.
 - A throttled MFL answer (429, 5xx, a non-JSON 200) stores nothing and says
@@ -91,8 +113,8 @@ asking.
 
 ## Open before launch
 
-- The product name (the card's footer says only "League History").
-- MFL's answer on commercial use of its API.
+- The product name. "League History" was picked 2026-11-05, then reopened the same day: leaguehistory.app (League History, LLC; Yahoo, Sleeper, ESPN; $15 one-time per league) already uses it. The card footer still says "League History" until a name is chosen.
+- ~~MFL's answer on commercial use of its API.~~ Cleared 2026-11-05: Brandon confirmed MFL is OK with it.
 - Link previews: chat apps fetch the card without a session, so cards unfurl
   only once the pages are public.
 - Rate limits fail OPEN when Redis is down (`checkRateLimit`). The build
