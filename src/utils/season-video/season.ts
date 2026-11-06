@@ -319,6 +319,42 @@ export function pickVideoKind(
 	return 'recap';
 }
 
+/** What the video is about: one week, or the whole season. */
+export type VideoSpan = 'week' | 'season';
+/** The vibe the owner picks on the style step; the story inside it is the data's call. */
+export type VideoVibe = 'facts' | 'brag' | 'mid' | 'roast';
+
+/**
+ * The style step's groups (Brandon, 2026-11-06): pick a vibe, then only its
+ * looks show. Champion and the mid-season report are both "Facts". A week
+ * can only be bragged about or roasted.
+ */
+export const VIDEO_VIBES: readonly { id: VideoVibe; name: string; icon: string; looks: readonly VideoLook[]; spans: readonly VideoSpan[] }[] = [
+	{ id: 'facts', name: 'Facts', icon: '🏆', looks: ['trophy', 'bling', 'retro'], spans: ['season'] },
+	{ id: 'brag', name: 'Brag', icon: '💪', looks: ['bombs', 'flex', 'riot', 'goat'], spans: ['week', 'season'] },
+	{ id: 'mid', name: 'Mid', icon: '😐', looks: ['snail', 'potato'], spans: ['season'] },
+	{ id: 'roast', name: 'Roast', icon: '🔥', looks: ['poop', 'princess', 'clown', 'jackass', 'dumpster', 'crybaby'], spans: ['week', 'season'] },
+];
+
+/**
+ * The story for a span and vibe, picked from the data so the video stays
+ * true. Season roast: last place if they finished last, else paper tiger
+ * (Brandon, 2026-11-06: "let the data pick").
+ */
+export function storyFor(
+	span: VideoSpan,
+	vibe: VideoVibe,
+	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
+	complete = true,
+): SeasonVideoKind {
+	if (span === 'week') return vibe === 'brag' ? 'beatdown' : 'weekly';
+	if (vibe === 'mid') return 'mid';
+	if (vibe === 'roast') return facts.finish && facts.teams && facts.finish >= facts.teams ? 'last' : 'tiger';
+	const told = pickVideoKind(facts, complete);
+	// Facts and brag never call a team last; that's the roast's job.
+	return told === 'last' ? 'recap' : told;
+}
+
 /** Where a points total ranks among the league's, 1 = most; ties share the better rank. */
 export function pointsRankOf(points: number, league: readonly number[]): number | null {
 	if (!league.length) return null;

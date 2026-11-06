@@ -356,6 +356,29 @@ describe('paper tiger', () => {
 	});
 });
 
+describe('week or season, then a vibe', () => {
+	it('puts every look in exactly one vibe, Clown with the roasts', async () => {
+		const { VIDEO_LOOKS, VIDEO_VIBES } = await import('../src/utils/season-video/season');
+		const all = VIDEO_VIBES.flatMap((v) => v.looks);
+		expect([...all].sort()).toEqual(VIDEO_LOOKS.map((l) => l.id).sort());
+		expect(VIDEO_VIBES.find((v) => v.looks.includes('clown'))?.id).toBe('roast');
+	});
+	it('lets the data pick the story', async () => {
+		const { storyFor } = await import('../src/utils/season-video/season');
+		const last = { outcome: 'missed' as const, finish: 12, teams: 12, playoffs: [] };
+		const champ = { outcome: 'champion' as const, finish: 1, teams: 12, playoffs: [base.playoffs[0]] };
+		const going = { outcome: 'in-progress' as const, finish: 3, teams: 12, playoffs: [] };
+		expect(storyFor('week', 'roast', going, false)).toBe('weekly');
+		expect(storyFor('week', 'brag', going, false)).toBe('beatdown');
+		expect(storyFor('season', 'roast', last)).toBe('last');
+		expect(storyFor('season', 'roast', champ)).toBe('tiger');
+		expect(storyFor('season', 'facts', champ)).toBe('champion');
+		expect(storyFor('season', 'facts', going, false)).toBe('midseason');
+		expect(storyFor('season', 'facts', last)).toBe('recap');
+		expect(storyFor('season', 'mid', going, false)).toBe('mid');
+	});
+});
+
 describe('best and worst starter', () => {
 	const people: Record<string, { name: string; pos: string }> = {
 		q1: { name: 'Q One', pos: 'QB' }, q2: { name: 'Q Two', pos: 'QB' }, q3: { name: 'Q Three', pos: 'QB' },
