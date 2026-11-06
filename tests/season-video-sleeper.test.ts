@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { formatRecord, pickVideoKind } from '../src/utils/season-video/season';
-import { fromSleeper, listSleeperLeagues, loadSleeperSeason, rankRosters, roundWeeks } from '../src/utils/season-video/sleeper-source';
+import { fromSleeper, listSleeperLeagues, loadSleeperSeason, rankRosters, roundWeeks, sleeperWeekStarters } from '../src/utils/season-video/sleeper-source';
 
 const roster = (id: number, owner: string, wins: number, losses: number, fpts: number, dec = 0) => ({
 	roster_id: id,
@@ -121,6 +121,33 @@ describe('loadSleeperSeason', () => {
 		expect(out.facts.teamName).toBe('Bravo Six');
 		expect(Buffer.from(out.facts.teamLogo!.split(',')[1], 'base64').toString()).toBe('https://sleepercdn.com/uploads/bravo.png');
 		expect(out.teams).toHaveLength(4);
+	});
+
+	it('names each week’s best and worst starter from the matchups', async () => {
+		// Week 1 with lineups: every roster starts a QB and a TE ('0' is an empty slot).
+		const lineups = [
+			{ roster_id: 1, matchup_id: 1, points: 150.2, starters: ['q1', 't1', '0'], starters_points: [40, 2, 0] },
+			{ roster_id: 2, matchup_id: 1, points: 100, starters: ['q2', 't2'], starters_points: [20, 10] },
+			{ roster_id: 3, matchup_id: 2, points: 90, starters: ['q3', 't3'], starters_points: [15, 9] },
+			{ roster_id: 4, matchup_id: 2, points: 70.5, starters: ['q4', 't4'], starters_points: [12, 8] },
+		];
+		const withLineups = async (path: string) => (path.endsWith('/matchups/1') ? lineups : get(path));
+		const map = Object.fromEntries(
+			['1', '2', '3', '4'].flatMap((n) => [
+				[`q${n}`, { mfl: '', name: `QB ${n}`, position: 'QB', team: '' }],
+				[`t${n}`, { mfl: '', name: `TE ${n}`, position: 'TE', team: '' }],
+			]),
+		);
+		expect(sleeperWeekStarters(new Map([[1, lineups]]), 15).get(1)).toHaveLength(8);
+		const out = await loadSleeperSeason({ leagueId: '123456789', userId: 'u1', get: withLineups, fetchLogo: async () => null, players: async () => map });
+		if (!out.ok) throw new Error(out.message);
+		const w1 = out.facts.weeks!.find((w) => w.week === 1)!;
+		expect(w1.worst).toEqual({ name: 'TE 1', pos: 'TE', pts: 2, avg: 7.3 });
+		expect(w1.best).toEqual({ name: 'QB 1', pos: 'QB', pts: 40, avg: 21.8 });
+		// Without the player map the weeks are as before.
+		const plain = await loadSleeperSeason({ leagueId: '123456789', userId: 'u1', get: withLineups, fetchLogo: async () => null });
+		if (!plain.ok) throw new Error(plain.message);
+		expect(plain.facts.weeks!.find((w) => w.week === 1)!.worst).toBeUndefined();
 	});
 
 	it('refuses an id that is not a Sleeper league id', async () => {

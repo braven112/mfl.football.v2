@@ -149,6 +149,117 @@ export interface WeekLine {
 	teams: number;
 	/** All-play: how the score would have done against every other team that week. */
 	allPlay: { wins: number; losses: number; ties: number };
+	/** This team's best and worst starter that week, from the league's own lineups. */
+	best?: StarterLine | null;
+	worst?: StarterLine | null;
+}
+
+/**
+ * One starter's week. Player data from the league platform itself (MFL,
+ * Sleeper), which every league has: Brandon, 2026-11-06, "If it's provided
+ * by MFL or Sleeper or on the ESPN, then we can provide it."
+ */
+export interface StarterLine {
+	name: string;
+	/** MFL's position words: QB RB WR TE PK Def (or an IDP position). */
+	pos: string;
+	pts: number;
+	/** The league's average at that position that week, when enough teams started one. */
+	avg: number | null;
+}
+
+/** One starter in one lineup that week. */
+export interface WeekStarter {
+	team: string;
+	id: string;
+	pts: number;
+}
+
+/** A position average needs this many starters behind it to mean anything. */
+const MIN_POSITION_SAMPLE = 3;
+
+/**
+ * The team's best and worst starter, judged against the league's average at
+ * the same position that week: a tight end's 1.2 is worse than a kicker's 3,
+ * and a 30-point running back beats a 32-point quarterback when quarterbacks
+ * averaged 25. A starter the league data cannot name is left out. With no
+ * usable averages it falls back to raw points.
+ */
+export function pickStandouts(
+	league: readonly WeekStarter[],
+	team: string,
+	who: (id: string) => { name: string; pos: string } | null,
+): { best: StarterLine | null; worst: StarterLine | null } {
+	const byPos = new Map<string, number[]>();
+	const seen = new Set<string>();
+	const mine: StarterLine[] = [];
+	for (const s of league) {
+		// A doubleheader week lists the same lineup twice.
+		const key = `${s.team}:${s.id}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		const p = who(s.id);
+		if (!p?.pos) continue;
+		(byPos.get(p.pos) ?? byPos.set(p.pos, []).get(p.pos)!).push(s.pts);
+		if (s.team === team && p.name) mine.push({ name: p.name, pos: p.pos, pts: Math.round(s.pts * 100) / 100, avg: null });
+	}
+	for (const m of mine) {
+		const all = byPos.get(m.pos) ?? [];
+		if (all.length >= MIN_POSITION_SAMPLE) m.avg = Math.round((all.reduce((a, b) => a + b, 0) / all.length) * 10) / 10;
+	}
+	if (mine.length === 0) return { best: null, worst: null };
+	const rated = mine.some((m) => m.avg !== null) ? mine.filter((m) => m.avg !== null) : mine;
+	const gap = (m: StarterLine) => m.pts - (m.avg ?? 0);
+	const sorted = [...rated].sort((a, b) => gap(a) - gap(b) || a.pts - b.pts);
+	return { worst: sorted[0], best: sorted[sorted.length - 1] };
+}
+
+/** Week lines with each week's best and worst starter filled in, where the league data has that week's lineups. */
+export function attachStandouts(
+	weeks: readonly WeekLine[],
+	starters: ReadonlyMap<number, readonly WeekStarter[]>,
+	team: string,
+	who: (id: string) => { name: string; pos: string } | null,
+): WeekLine[] {
+	return weeks.map((w) => {
+		const list = starters.get(w.week);
+		if (!list?.length) return w;
+		const { best, worst } = pickStandouts(list, team, who);
+		return best || worst ? { ...w, best, worst } : w;
+	});
+}
+
+/** The position as the video prints it: K for MFL's PK, DEF for its Def. */
+export function positionLabel(pos: string): string {
+	return pos === 'PK' ? 'K' : pos === 'Def' ? 'DEF' : pos.toUpperCase();
+}
+
+/**
+ * Every week's starters from an MFL `weeklyResults` export (one week, or
+ * `W=YTD`'s `allWeeklyResults`). Only players MFL marks `starter`.
+ */
+export function parseMflWeekStarters(body: unknown): Map<number, WeekStarter[]> {
+	const root = (body as { allWeeklyResults?: { weeklyResults?: unknown } })?.allWeeklyResults ?? body;
+	const raw = (root as { weeklyResults?: unknown })?.weeklyResults;
+	const weeks = asArray(raw as { week?: string; matchup?: unknown; franchise?: unknown }[]);
+	const out = new Map<number, WeekStarter[]>();
+	for (const w of weeks) {
+		const week = num(w?.week);
+		if (!week) continue;
+		const list: WeekStarter[] = [];
+		const sides = [
+			...asArray(w?.matchup as { franchise?: unknown }[]).flatMap((m) => asArray(m?.franchise as unknown[])),
+			...asArray(w?.franchise as unknown[]),
+		] as { id?: string; player?: unknown }[];
+		for (const side of sides) {
+			if (!side?.id) continue;
+			for (const p of asArray(side.player as { id?: string; status?: string; score?: string }[])) {
+				if (p?.status === 'starter' && p.id && p.score !== undefined && p.score !== '') list.push({ team: pad(side.id), id: String(p.id), pts: num(p.score) });
+			}
+		}
+		if (list.length) out.set(week, list);
+	}
+	return out;
 }
 
 /**
