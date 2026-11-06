@@ -24,7 +24,7 @@
  * SERVER ONLY (network); the parsing is pure and tested in
  * tests/season-video-sleeper.test.ts.
  */
-import { pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
+import { buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
 
 export type SleeperGet = (path: string) => Promise<unknown>;
@@ -172,6 +172,14 @@ export function fromSleeper(x: SleeperSeasonInput): SleeperSeasonResult | null {
 	}
 	const toGame = (g: (typeof regular)[number] | undefined): SeasonGame | null =>
 		g ? { label: `Week ${g.week}`, score: g.score, oppName: nameOf(g.oppId), oppScore: g.oppScore, oppId: String(g.oppId) } : null;
+	const leagueScores = new Map<number, number[]>();
+	for (const g of regular) {
+		const entries = x.matchups.get(g.week) ?? [];
+		leagueScores.set(
+			g.week,
+			entries.filter((e) => (e as Matchup & { matchup_id?: number | null }).matchup_id != null).map((e) => score(e)),
+		);
+	}
 	const best = [...regular].sort((a, b) => b.score - a.score)[0];
 	const worst = [...regular].sort((a, b) => a.score - b.score)[0];
 	if (best) opponents.push(best.oppId);
@@ -195,6 +203,11 @@ export function fromSleeper(x: SleeperSeasonInput): SleeperSeasonResult | null {
 			playoffs,
 			bestGame: toGame(best),
 			worstGame: toGame(worst),
+			weeks: buildWeekLines(
+				regular.map((g) => ({ ...g, oppId: String(g.oppId) })),
+				leagueScores,
+				(id) => nameOf(Number(id)),
+			),
 		},
 		logoIds: { team: x.rosterId, opponents: [...new Set(opponents)] },
 		complete,

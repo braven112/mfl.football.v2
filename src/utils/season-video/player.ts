@@ -74,6 +74,8 @@ export interface LastVideo {
 	facts: SeasonFacts;
 	kind: SeasonVideoKind;
 	look?: VideoLook;
+	/** The weekly roast's week. */
+	week?: number;
 	/** Saved before looks were split from stories; read through `lookOf`. */
 	theme?: LastPlaceTheme;
 	style?: ChampionStyle;

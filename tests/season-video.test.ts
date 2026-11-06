@@ -13,6 +13,8 @@ import {
 	ordinal,
 	pickVideoKind,
 	pointsRankOf,
+	buildWeekLines,
+	seasonAllPlay,
 	roundLabel,
 	type SeasonFacts,
 } from '../src/utils/season-video/season';
@@ -46,6 +48,9 @@ describe('fromMflExports', () => {
 		expect(formatRecord(r.facts)).toBe('13–5');
 		expect(r.facts.outcome).toBe('champion');
 		expect(r.facts.seed).toBe(6);
+		// Every regular-season week, ranked against the league's scores that week.
+		expect(r.facts.weeks?.length).toBeGreaterThan(10);
+		expect(r.facts.weeks!.every((w) => w.week < 15 && w.rank >= 1 && w.rank <= w.teams && w.teams === 16)).toBe(true);
 		expect(r.facts.playoffs.map((g) => [g.label, g.score, g.oppScore])).toEqual([
 			['Quarterfinal', 125.6, 110.13],
 			['Semifinal', 110.35, 81.69],
@@ -132,7 +137,7 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	const STORIES = ['champion', 'recap', 'midseason', 'tiger', 'mid', 'last'] as const;
+	const STORIES = ['champion', 'recap', 'midseason', 'weekly', 'tiger', 'mid', 'last'] as const;
 	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
@@ -316,5 +321,40 @@ describe('paper tiger', () => {
 	});
 	it('a season still being played suggests the mid-season report', () => {
 		expect(pickVideoKind({ outcome: 'in-progress', finish: 3, teams: 12 })).toBe('midseason');
+	});
+});
+
+describe('weekly roast', () => {
+	const scores = new Map([
+		[1, [80, 120, 100, 90]],
+		[2, [150, 60, 110, 70]],
+	]);
+	const weeks = buildWeekLines(
+		[
+			{ week: 2, score: 60, oppId: '0002', oppScore: 150 },
+			{ week: 1, score: 120, oppId: '0003', oppScore: 80 },
+		],
+		scores,
+		(id) => `Team ${id}`,
+	);
+	it('ranks each week against the league and keeps an all-play record', () => {
+		expect(weeks.map((w) => w.week)).toEqual([1, 2]);
+		expect(weeks[1]).toMatchObject({ rank: 4, teams: 4, allPlay: { wins: 0, losses: 3, ties: 0 }, oppName: 'Team 0002' });
+		expect(seasonAllPlay(weeks)).toEqual({ wins: 3, losses: 3, ties: 0 });
+	});
+	it('roasts the week asked for, and the latest by default', () => {
+		const f = { ...base, outcome: 'in-progress' as const, playoffs: [], weeks };
+		const latest = JSON.stringify(buildStory(f, { kind: 'weekly', look: 'trophy' }));
+		expect(latest).toContain('Week 2');
+		expect(latest).toContain('Dead last');
+		expect(latest).toContain('Would have lost to all 3');
+		expect(latest).toContain('3–3'); // season all-play tile
+		const wk1 = JSON.stringify(buildStory(f, { kind: 'weekly', look: 'poop', week: 1 }));
+		expect(wk1).toContain('Week 1');
+		expect(wk1).not.toContain('Dead last');
+	});
+	it('falls back to the worst game when the season was typed in', () => {
+		const scenes = buildStory({ ...base, worstGame: { label: 'Week 7', score: 61, oppName: 'Bring the Pain', oppScore: 140 } }, { kind: 'weekly', look: 'retro' });
+		expect(JSON.stringify(scenes)).toContain('Week 7');
 	});
 });

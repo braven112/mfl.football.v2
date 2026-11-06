@@ -290,6 +290,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						))}
 					</div>
 					<p class="svid__note" data-kind-note aria-live="polite"></p>
+					<div data-week-wrap hidden>
+						<label class="svid__label" for="svid-week">Which week</label>
+						<select id="svid-week" class="svid__input" data-week></select>
+					</div>
 					<span class="svid__label">Look</span>
 					<div class="svid__styles" role="group" aria-label="Look" data-group="look">
 						{VIDEO_LOOKS.map((l, i) => (
@@ -392,7 +396,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 <script>
 	import { buildStory } from '../utils/season-video/story';
-	import { defaultLook, pickVideoKind, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from '../utils/season-video/season';
+	import { defaultLook, pickVideoKind, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook, type WeekLine } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
 	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
@@ -413,6 +417,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const template = document.getElementById('svid-game-template') as HTMLTemplateElement;
 
 		let teamLogo: string | null = null;
+		/** The league's week-by-week lines from the last pull; typed-in seasons have none. */
+		let sourceWeeks: WeekLine[] = [];
 		let teamImg: Img | null = null;
 		const oppImgs = new Map<string, Img>();
 		/** Logos MFL gave us, kept on the games they came with. */
@@ -507,6 +513,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				playoffs: outcome === 'missed' || outcome === 'in-progress' ? [] : Array.from(playoffs.querySelectorAll('[data-game]')).map(readGame).filter((g): g is SeasonGame => !!g),
 				bestGame: extra('bestGame'),
 				worstGame: extra('worstGame'),
+				weeks: sourceWeeks,
 			};
 		}
 
@@ -516,6 +523,16 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			};
 			(['teamName', 'leagueName', 'season', 'wins', 'losses', 'ties', 'finish', 'teams', 'outcome', 'pointsRank'] as const).forEach((k) => set(k, f[k]));
 			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
+			sourceWeeks = f.weeks ?? [];
+			const weekSel = $<HTMLSelectElement>('[data-week]');
+			weekSel.replaceChildren(
+				...[...sourceWeeks].reverse().map((w) =>
+					Object.assign(document.createElement('option'), {
+						value: String(w.week),
+						textContent: `Week ${w.week}: ${w.score} vs ${w.oppName} ${w.oppScore} (${w.rank} of ${w.teams})`,
+					}),
+				),
+			);
 			playoffs.replaceChildren();
 			oppLogoByName.clear();
 			const remember = (g?: SeasonGame | null) => g?.oppLogo && oppLogoByName.set(g.oppName, g.oppLogo);
@@ -687,6 +704,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				champion: 'the champion video',
 				recap: 'the season recap',
 				midseason: 'the mid-season report',
+				weekly: 'the weekly roast',
 				tiger: 'the paper tiger',
 				mid: 'master of mediocrity',
 				last: 'the last-place video',
@@ -694,6 +712,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			$('[data-kind-note]').textContent = auto
 				? `Picked from the season: ${names[kind]}.`
 				: `You picked ${names[kind]}. The season says ${names[autoKind]}, but it’s your call.`;
+			if (kind === 'weekly' && !sourceWeeks.length) $('[data-kind-note]').textContent = 'Pull your league from MFL, Sleeper or ESPN in step 2 to pick a week. Until then it roasts their worst game.';
+			$<HTMLElement>('[data-week-wrap]').hidden = kind !== 'weekly' || !sourceWeeks.length;
 			if (!lookChosen) press('look', defaultLook(kind));
 		}
 
@@ -718,7 +738,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			if ((e.target as HTMLElement).closest('[data-f], [data-extra]')) refresh();
 		});
 		root.addEventListener('change', (e) => {
-			if ((e.target as HTMLElement).matches('select[data-f]')) refresh();
+			if ((e.target as HTMLElement).matches('select[data-f], select[data-week]')) refresh();
 		});
 
 		const assets = (facts: SeasonFacts): Promise<DrawAssets> => loadAssets(facts, teamImg, oppImgs);
@@ -729,7 +749,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			buildStory(facts, {
 			kind: picked('kind') as SeasonVideoKind,
 			look: (picked('look') || 'trophy') as VideoLook,
+			week: chosenWeek(),
 		});
+		function chosenWeek(): number | undefined {
+			return Number($<HTMLSelectElement>('[data-week]').value) || undefined;
+		}
 
 		/** A still of the title card while nothing plays. */
 		async function still() {
@@ -795,6 +819,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				facts: { ...facts, teamLogo },
 				kind: picked('kind') as SeasonVideoKind,
 				look: (picked('look') || 'trophy') as VideoLook,
+				week: chosenWeek(),
 				music: picked('music') || 'none',
 				madeAt: new Date().toISOString(),
 			});

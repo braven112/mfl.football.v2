@@ -26,7 +26,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * subject, because the video is a trash-talk tool as much as a keepsake: a
  * 9–2 team can be called mid, a champion can get the poop look.
  */
-export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'tiger' | 'mid' | 'last';
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'tiger' | 'mid' | 'last';
 export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
@@ -37,6 +37,7 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 	{ id: 'champion', name: '🏆 Champion' },
 	{ id: 'recap', name: 'Season recap' },
 	{ id: 'midseason', name: '📝 Mid-season report' },
+	{ id: 'weekly', name: '🤡 Weekly roast' },
 	{ id: 'tiger', name: '🐯 Paper tiger' },
 	{ id: 'mid', name: '😐 Master of mediocrity' },
 	{ id: 'last', name: 'Last place' },
@@ -119,6 +120,64 @@ export interface SeasonFacts {
 	bestGame?: SeasonGame | null;
 	/** Lowest regular-season score, for the last-place video. */
 	worstGame?: SeasonGame | null;
+	/** Every played regular-season week, with where it ranked in the league that week. Feeds the weekly roast. */
+	weeks?: WeekLine[];
+}
+
+/** One regular-season week for one team, set against every score in the league that week. */
+export interface WeekLine {
+	week: number;
+	score: number;
+	oppName: string;
+	oppScore: number;
+	oppId?: string;
+	/** That week's score among the league's, 1 = most; ties share the better rank. */
+	rank: number;
+	teams: number;
+	/** All-play: how the score would have done against every other team that week. */
+	allPlay: { wins: number; losses: number; ties: number };
+}
+
+/**
+ * Week lines from this team's games and every team's score each week. A week
+ * whose league scores are missing still gets a line, ranked against itself.
+ */
+export function buildWeekLines(
+	games: readonly { week: number; score: number; oppId: string; oppScore: number }[],
+	leagueScores: ReadonlyMap<number, readonly number[]>,
+	nameOf: (id: string) => string,
+): WeekLine[] {
+	// One line per week: a doubleheader week is one score, shown against its first opponent.
+	const byWeek = new Map<number, (typeof games)[number]>();
+	for (const g of games) if (!byWeek.has(g.week)) byWeek.set(g.week, g);
+	return [...byWeek.values()]
+		.sort((a, b) => a.week - b.week)
+		.map((g) => {
+			const all = leagueScores.get(g.week)?.length ? [...leagueScores.get(g.week)!] : [g.score, g.oppScore];
+			// Everyone else that week: drop one copy of our own score.
+			const mine = all.indexOf(g.score);
+			const others = mine >= 0 ? [...all.slice(0, mine), ...all.slice(mine + 1)] : all;
+			const r2 = (n: number) => Math.round(n * 100) / 100;
+			return {
+				week: g.week,
+				score: r2(g.score),
+				oppName: nameOf(g.oppId),
+				oppScore: r2(g.oppScore),
+				oppId: g.oppId,
+				rank: 1 + others.filter((s) => s > g.score).length,
+				teams: others.length + 1,
+				allPlay: {
+					wins: others.filter((s) => s < g.score).length,
+					losses: others.filter((s) => s > g.score).length,
+					ties: others.filter((s) => s === g.score).length,
+				},
+			};
+		});
+}
+
+/** The whole season's all-play record, summed from its weeks. */
+export function seasonAllPlay(weeks: readonly WeekLine[]): { wins: number; losses: number; ties: number } {
+	return weeks.reduce((t, w) => ({ wins: t.wins + w.allPlay.wins, losses: t.losses + w.allPlay.losses, ties: t.ties + w.allPlay.ties }), { wins: 0, losses: 0, ties: 0 });
 }
 
 /**
@@ -299,6 +358,26 @@ function parseScheduleGames(scheduleExport: unknown, franchiseId: string): Sched
 	return out;
 }
 
+/** Every franchise's score each week from `TYPE=schedule`, played games only. */
+function parseScheduleScores(scheduleExport: unknown): Map<number, number[]> {
+	const weeks = asArray(
+		(scheduleExport as { schedule?: { weeklySchedule?: unknown } })?.schedule?.weeklySchedule as { week?: string; matchup?: unknown }[],
+	);
+	const out = new Map<number, number[]>();
+	for (const w of weeks) {
+		const week = num(w?.week);
+		// One score per franchise: a doubleheader week lists each franchise twice.
+		const scores = new Map<string, number>();
+		for (const m of asArray(w?.matchup as { franchise?: unknown }[])) {
+			for (const side of asArray(m?.franchise as Record<string, string>[])) {
+				if (side?.score !== undefined && side.score !== '') scores.set(pad(side.id), num(side.score));
+			}
+		}
+		if (scores.size) out.set(week, [...scores.values()]);
+	}
+	return out;
+}
+
 export interface MflSeasonExports {
 	leagueName: string;
 	season: number;
@@ -394,6 +473,7 @@ export function fromMflExports(x: MflSeasonExports): MflSeasonResult | null {
 			playoffs,
 			bestGame: toGame(best),
 			worstGame: toGame(worst),
+			weeks: buildWeekLines(regular, parseScheduleScores(x.schedule), nameOf),
 		},
 		logoIds: { team: x.franchiseId, opponents: [...new Set(opponents)] },
 		franchises,

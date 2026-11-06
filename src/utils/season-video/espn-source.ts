@@ -29,7 +29,7 @@
  * Pure parsing (tests/season-video-espn.test.ts); `loadEspnSeason` is the only
  * network part and takes its fetcher as an argument.
  */
-import { pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
+import { buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
 
 const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
@@ -211,6 +211,15 @@ export function fromEspn(raw: EspnSeasonRaw, teamId: number): EspnSeasonResult |
 	if (best) opponents.push(best.oppId);
 	if (worst) opponents.push(worst.oppId);
 
+	const leagueScores = new Map<number, number[]>();
+	for (const m of schedule) {
+		if (isPlayoff(m, regularWeeks) || typeof m.away?.teamId !== 'number') continue;
+		const a = num(m.home?.totalPoints);
+		const b = num(m.away?.totalPoints);
+		if (a === 0 && b === 0) continue;
+		const week = m.matchupPeriodId as number;
+		leagueScores.set(week, [...(leagueScores.get(week) ?? []), a, b]);
+	}
 	const overall = me.record?.overall;
 	return {
 		facts: {
@@ -230,6 +239,11 @@ export function fromEspn(raw: EspnSeasonRaw, teamId: number): EspnSeasonResult |
 			playoffs,
 			bestGame: toGame(best),
 			worstGame: toGame(worst),
+			weeks: buildWeekLines(
+				regular.map((g) => ({ ...g, oppId: String(g.oppId) })),
+				leagueScores,
+				(id) => nameOf(Number(id)),
+			),
 		},
 		logoIds: { team: teamId, opponents: [...new Set(opponents)] },
 		complete,
