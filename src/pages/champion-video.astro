@@ -9,9 +9,13 @@
  * and X, ending on a prominent MFL Football end card.
  *
  * Signed in with MFL, the season fills in from the owner's own league
- * (`/api/season-video`). Signed out, or for any other platform, they type it
- * in. Either way every fact is an editable field, and nothing but team-level
- * numbers is used: no player data on the free tier.
+ * (`/api/season-video`); Sleeper and ESPN fill in without a sign-in. Or they
+ * type it in. Every fact stays editable.
+ *
+ * Three steps, as little text as possible (Brandon, 2026-11-06: "very, very
+ * clean"): Team (any team, not just yours), Week or season, then Style: a
+ * vibe (Facts, Brag, Mid, Roast) that reveals only its own looks. The story
+ * is the data's call (`storyFor`), so the video stays true.
  *
  * A logo is required. No logo: "Make my logo" opens the logo builder in a
  * dialog on this page (Brandon, 2026-11-05: they must not have to leave), and
@@ -26,7 +30,7 @@ import { canUseHistoryProduct } from '../utils/league-history/access';
 import { listOwnerLeagues } from '../utils/live/owner-league';
 import { sharedHostLoginUrl } from '../utils/login-redirect';
 import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
-import { SEASON_OUTCOMES, VIDEO_LOOKS, VIDEO_STORIES } from '../utils/season-video/season';
+import { SEASON_OUTCOMES, VIDEO_LOOKS, VIDEO_VIBES } from '../utils/season-video/season';
 import { ESPN_FIRST_SEASON, currentEspnSeason } from '../utils/season-video/espn-source';
 import '../styles/mfl-live.css';
 
@@ -61,24 +65,21 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 >
 	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined} data-optin-open={optInOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
-		<p class="mls__lede">
-			Champion, last place or anywhere in between, for your team or any rival you want to roast, at the end of the
-			season or the middle of it. A free vertical video, ready for TikTok, Reels, Shorts, X and the group chat.
-		</p>
+		<p class="mls__lede">Brag, roast or tell it straight. Free, for any team.</p>
 
 		<ol class="svid__steps" data-steps>
-			<li><button type="button" class="svid__step" data-step-tab="1" aria-current="step"><span>1</span> Your team</button></li>
-			<li><button type="button" class="svid__step" data-step-tab="2"><span>2</span> Your stats</button></li>
-			<li><button type="button" class="svid__step" data-step-tab="3"><span>3</span> Your style</button></li>
+			<li><button type="button" class="svid__step" data-step-tab="1" aria-current="step"><span>1</span> Team</button></li>
+			<li><button type="button" class="svid__step" data-step-tab="2"><span>2</span> When</button></li>
+			<li><button type="button" class="svid__step" data-step-tab="3"><span>3</span> Style</button></li>
 		</ol>
 
 		<div class="svid__layout">
 			<div class="svid__form">
 				<section class="ui-card svid__card" data-step="1" aria-labelledby="svid-step1">
-					<h2 class="svid__heading" id="svid-step1">Add your logo and team name</h2>
+					<h2 class="svid__heading visually-hidden" id="svid-step1">Team</h2>
 
 					<details class="svid__fill" data-fill open={signedIn ? true : undefined}>
-						<summary><strong>Play on MFL, Sleeper or ESPN?</strong> Fill in your logo, name and stats in one go.</summary>
+						<summary><strong>Fill it in from your league</strong></summary>
 						<div class="ui-pills" role="group" aria-label="Where your league is" data-group="source">
 							<button type="button" class="ui-pill" data-value="mfl" aria-pressed="true">MFL</button>
 							<button type="button" class="ui-pill" data-value="sleeper" aria-pressed="false">Sleeper</button>
@@ -98,7 +99,6 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 								</div>
 							</div>
 							<button type="button" class="cta cta--primary" data-espn-find>Find my league</button>
-							<p class="svid__note">Your league ID is the number after <code>leagueId=</code> in your ESPN league’s address.</p>
 							<div class="svid__private" data-espn-private hidden>
 								<p class="svid__private-lede"><strong>Your league is private,</strong> so ESPN only shows it to its members. Three quick steps:</p>
 								<ol class="svid__private-steps">
@@ -113,10 +113,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 								<p class="svid__note"><strong>Commissioner?</strong> Skip this for everyone: in ESPN’s League Manager, open Basic Settings and turn on “Make league viewable to public”. Then your league ID is all anyone needs. It’s also easier on a computer.</p>
 							</div>
 							<div data-espn-picks hidden>
-								<label class="svid__label" for="svid-espn-team">Team (yours, or anyone’s you want to roast)</label>
+								<label class="svid__label" for="svid-espn-team">Team</label>
 								<select id="svid-espn-team" class="svid__input" data-espn-team></select>
 							</div>
-							<p class="svid__note" data-espn-status aria-live="polite">Public leagues fill in right away. Private ones take one copy and paste.</p>
+							<p class="svid__note" data-espn-status aria-live="polite"></p>
 						</div>
 						<div class="svid__panel" data-source-panel="sleeper" hidden>
 							<label class="svid__label" for="svid-sleeper-name">Sleeper username</label>
@@ -130,11 +130,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 									<select id="svid-sleeper-league" class="svid__input" data-sleeper-league></select>
 								</div>
 								<div>
-									<label class="svid__label" for="svid-sleeper-team">Team (yours, or anyone’s)</label>
+									<label class="svid__label" for="svid-sleeper-team">Team</label>
 									<select id="svid-sleeper-team" class="svid__input" data-sleeper-team disabled></select>
 								</div>
 							</div>
-							<p class="svid__note" data-sleeper-status aria-live="polite">No sign-in needed. We only read your league’s public results.</p>
+							<p class="svid__note" data-sleeper-status aria-live="polite">No sign-in needed.</p>
 						</div>
 						<div class="svid__panel" data-source-panel="mfl">
 						{signedIn && leagues.length > 0 ? (
@@ -143,20 +143,12 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 								<select id="svid-league" class="svid__input" data-league-select>
 									{leagues.map((l) => <option value={l.id}>{l.name} · {l.team}</option>)}
 								</select>
-								<div class="svid__row">
-									<div>
-										<label class="svid__label" for="svid-year">Season</label>
-										<select id="svid-year" class="svid__input" data-year-select disabled><option>Loading…</option></select>
-									</div>
-									<div>
-										<label class="svid__label" for="svid-team">Team (yours, or anyone’s)</label>
-										<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
-									</div>
-								</div>
-								<p class="svid__note" data-source-status aria-live="polite">Filling in your season from MFL…</p>
+								<label class="svid__label" for="svid-team">Team</label>
+								<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
+								<p class="svid__note" data-source-status aria-live="polite">Filling in from MFL…</p>
 							</div>
 						) : signedIn ? (
-							<p class="svid__note">We couldn’t find your MFL teams right now. Add yours by hand instead.</p>
+							<p class="svid__note">We couldn’t find your MFL teams right now.</p>
 						) : (
 							<div class="svid__signin">
 								<a class="cta cta--primary" href={sharedHostLoginUrl('/champion-video')}>Sign in with MFL to fill it in</a>
@@ -172,26 +164,23 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 							<span class="svid__drop-icon" data-logo-icon>+</span>
 						</span>
 						<span class="svid__drop-copy">
-							<strong data-logo-title>Upload your logo</strong>
-							<span class="svid__note" data-logo-sub>Tap to pick a file, or drop it here. PNG or JPG, square works best.</span>
+							<strong data-logo-title>Upload a logo</strong>
+							<span class="svid__note" data-logo-sub>PNG or JPG</span>
 						</span>
 					</label>
 					<button type="button" class="cta-link svid__logo-remove" data-logo-remove hidden>Remove this logo</button>
 					<label class="svid__consent" data-logo-frame-wrap hidden>
 						<input type="checkbox" data-logo-circle checked />
-						<span>Put my logo in a circle. Untick it for a logo that’s already cut out, like a transparent PNG.</span>
+						<span>Circle</span>
 					</label>
 
 					<div class="svid__make-logo" data-make-logo>
-						<div>
-							<strong>No logo yet?</strong>
-							<p class="svid__note">Make one free in a couple of minutes, right here.</p>
-						</div>
-						<button type="button" class="cta cta--primary" data-open-logo-maker>Make my logo</button>
+						<strong>No logo?</strong>
+						<button type="button" class="cta cta--primary" data-open-logo-maker>Make one</button>
 					</div>
 
 					<details class="svid__more">
-						<summary>Have a link to your logo instead?</summary>
+						<summary>Use a link</summary>
 						<div class="svid__inline">
 							<input class="svid__input" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://…/logo.png" aria-label="Logo link" data-logo-url />
 							<button type="button" class="cta cta--ghost" data-logo-url-go>Use link</button>
@@ -206,14 +195,30 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 					<div class="svid__nav">
 						<span></span>
-						<button type="button" class="cta cta--primary" data-next="2">Next: your stats</button>
+						<button type="button" class="cta cta--primary" data-next="2">Next</button>
 					</div>
 				</section>
 
 				<section class="ui-card svid__card" data-step="2" aria-labelledby="svid-step2" hidden>
-					<h2 class="svid__heading" id="svid-step2">Add your stats</h2>
+					<h2 class="svid__heading visually-hidden" id="svid-step2">Week or season</h2>
+					<div class="ui-pills svid__big-pills" role="group" aria-label="Week or season" data-group="span">
+						<button type="button" class="ui-pill" data-value="week" aria-pressed="false">This week</button>
+						<button type="button" class="ui-pill" data-value="season" aria-pressed="true">The season</button>
+					</div>
+					<div data-week-wrap hidden>
+						<label class="svid__label" for="svid-week">Week</label>
+						<select id="svid-week" class="svid__input" data-week></select>
+					</div>
+					<p class="svid__note" data-week-none hidden>Fill in from your league in step 1 to pick a week.</p>
+					{signedIn && leagues.length > 0 && (
+						<div data-year-wrap>
+							<label class="svid__label" for="svid-year">Season</label>
+							<select id="svid-year" class="svid__input" data-year-select disabled><option>Loading…</option></select>
+						</div>
+					)}
 
-
+					<details class="svid__more svid__numbers">
+						<summary>Edit the numbers</summary>
 					<div class="svid__row svid__row--4">
 						<div>
 							<label class="svid__label" for="svid-season">Season</label>
@@ -247,7 +252,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						</div>
 					</div>
 
-					<label class="svid__label" for="svid-points-rank">Rank in points scored (1 = most, optional)</label>
+					<label class="svid__label" for="svid-points-rank">Points rank (1 = most)</label>
 					<input id="svid-points-rank" class="svid__input" type="number" min="1" max="40" data-f="pointsRank" placeholder="7" />
 
 					<label class="svid__label" for="svid-outcome">Where the season stands</label>
@@ -262,7 +267,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					</div>
 
 					<details class="svid__more">
-						<summary>Best game and worst game (optional)</summary>
+						<summary>Best and worst game</summary>
 						<div class="svid__game-row" data-extra="bestGame">
 							<span class="svid__extra-label">Best</span>
 							<input class="svid__input" data-g="label" placeholder="Week 11" maxlength="20" />
@@ -278,36 +283,34 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 							<input class="svid__input" data-g="oppScore" type="number" step="0.01" placeholder="Them" />
 						</div>
 					</details>
+					</details>
 
 					<div class="svid__nav">
 						<button type="button" class="cta cta--ghost" data-next="1">Back</button>
-						<button type="button" class="cta cta--primary" data-next="3">Next: pick your style</button>
+						<button type="button" class="cta cta--primary" data-next="3">Next</button>
 					</div>
 				</section>
 
 				<section class="ui-card svid__card" data-step="3" aria-labelledby="svid-step3" hidden>
-					<h2 class="svid__heading" id="svid-step3">Pick your story and look</h2>
-					<span class="svid__label">Story</span>
-					<div class="ui-pills" role="group" aria-label="Story" data-group="kind">
-						{VIDEO_STORIES.map((st) => (
-							<button type="button" class="ui-pill" data-value={st.id} aria-pressed={st.id === 'recap' ? 'true' : 'false'}>{st.name}</button>
+					<h2 class="svid__heading visually-hidden" id="svid-step3">Style</h2>
+					<div class="ui-pills svid__big-pills" role="group" aria-label="Vibe" data-group="vibe">
+						{VIDEO_VIBES.map((v) => (
+							<button type="button" class="ui-pill" data-value={v.id} data-spans={v.spans.join(' ')} aria-pressed={v.id === 'facts' ? 'true' : 'false'}>{v.icon} {v.name}</button>
 						))}
 					</div>
-					<p class="svid__note" data-kind-note aria-live="polite"></p>
-					<div data-week-wrap hidden>
-						<label class="svid__label" for="svid-week">Which week</label>
-						<select id="svid-week" class="svid__input" data-week></select>
-					</div>
-					<span class="svid__label">Look</span>
 					<div class="svid__styles" role="group" aria-label="Look" data-group="look">
-						{VIDEO_LOOKS.map((l, i) => (
-							<button type="button" class="svid__style" data-value={l.id} aria-pressed={i === 0 ? 'true' : 'false'}>
-								<span class="svid__swatch" style={`background:${l.swatch}`}>{l.icon}</span>
-								<span class="svid__style-name">{l.name}</span>
-							</button>
-						))}
+						{VIDEO_VIBES.flatMap((v) =>
+							v.looks.map((id, i) => {
+								const l = VIDEO_LOOKS.find((x) => x.id === id)!;
+								return (
+									<button type="button" class="svid__style" data-value={l.id} data-vibe={v.id} hidden={v.id !== 'facts'} aria-pressed={v.id === 'facts' && i === 0 ? 'true' : 'false'}>
+										<span class="svid__swatch" style={`background:${l.swatch}`}>{l.icon}</span>
+										<span class="svid__style-name">{l.name}</span>
+									</button>
+								);
+							}),
+						)}
 					</div>
-					<p class="svid__note">Any story, any look. Call a champion a princess if you like.</p>
 					<span class="svid__label">Music</span>
 					<div class="ui-pills" role="group" aria-label="Music" data-group="music">
 						{MUSIC.map((m, i) => (
@@ -362,7 +365,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					<input class="svid__honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" data-idea-website />
 					<p class="svid__note" data-idea-status aria-live="polite">We only use your email to answer this idea.</p>
 				</form>
-				<p class="svid__note">Keep this tab open while it records. It takes as long as the video.</p>
+				<p class="svid__note">Keep this tab open while it records.</p>
 			</div>
 		</div>
 	</section>
@@ -400,7 +403,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 <script>
 	import { buildStory } from '../utils/season-video/story';
-	import { defaultLook, pickVideoKind, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook, type WeekLine } from '../utils/season-video/season';
+	import { VIDEO_VIBES, storyFor, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook, type VideoSpan, type VideoVibe, type WeekLine } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
 	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
@@ -427,11 +430,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const oppImgs = new Map<string, Img>();
 		/** Logos MFL gave us, kept on the games they came with. */
 		const oppLogoByName = new Map<string, string>();
-		let autoKind: SeasonVideoKind = 'recap';
 		/** False while the season the form came from is still being played. */
 		let seasonComplete = true;
-		/** Whether the owner picked a look themselves; until then it follows the story. */
-		let lookChosen = false;
+		/** Whether the owner picked week or season themselves; until then a season in progress opens on the week. */
+		let spanChosen = false;
 		let busy = false;
 
 		// ── pills ──
@@ -445,7 +447,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			b.addEventListener('click', () => {
 				const group = b.closest<HTMLElement>('[data-group]')!.dataset.group!;
 				press(group, b.dataset.value!);
-				if (group === 'look') lookChosen = true;
+				if (group === 'span') spanChosen = true;
 				refresh();
 			}),
 		);
@@ -529,12 +531,14 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			(['teamName', 'leagueName', 'season', 'wins', 'losses', 'ties', 'finish', 'teams', 'outcome', 'pointsRank'] as const).forEach((k) => set(k, f[k]));
 			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
 			sourceWeeks = f.weeks ?? [];
+			// A season still being played opens on its latest week: the weekly roast is what brings people back.
+			if (!spanChosen) press('span', !seasonComplete && sourceWeeks.length ? 'week' : 'season');
 			const weekSel = $<HTMLSelectElement>('[data-week]');
 			weekSel.replaceChildren(
 				...[...sourceWeeks].reverse().map((w) =>
 					Object.assign(document.createElement('option'), {
 						value: String(w.week),
-						textContent: `Week ${w.week}: ${w.score} vs ${w.oppName} ${w.oppScore} (${w.rank} of ${w.teams})`,
+						textContent: `Week ${w.week} · ${w.score}–${w.oppScore}`,
 					}),
 				),
 			);
@@ -703,39 +707,35 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		);
 		showStep(1);
 
-		// ── video choice ──
-		function kindNote(kind: SeasonVideoKind) {
-			const auto = kind === autoKind;
-			const names: Record<SeasonVideoKind, string> = {
-				champion: 'the champion video',
-				recap: 'the season recap',
-				midseason: 'the mid-season report',
-				weekly: 'the weekly roast',
-				beatdown: 'the beatdown',
-				tiger: 'the paper tiger',
-				mid: 'master of mediocrity',
-				last: 'the last-place video',
-			};
-			$('[data-kind-note]').textContent = auto
-				? `Picked from the season: ${names[kind]}.`
-				: `You picked ${names[kind]}. The season says ${names[autoKind]}, but it’s your call.`;
-			const weekly = kind === 'weekly' || kind === 'beatdown';
-			if (weekly && !sourceWeeks.length)
-				$('[data-kind-note]').textContent = `Pull your league from MFL, Sleeper or ESPN in step 2 to pick a week. Until then it uses their ${kind === 'weekly' ? 'worst' : 'best'} game.`;
+		// ── video choice: week or season, then a vibe that shows only its looks ──
+		const span = () => (picked('span') || 'season') as VideoSpan;
+		/** The story is the data's call, so the video stays true. */
+		const currentKind = (): SeasonVideoKind => storyFor(span(), (picked('vibe') || 'facts') as VideoVibe, readFacts(), seasonComplete);
+		function syncChoices() {
+			const weekly = span() === 'week';
 			$<HTMLElement>('[data-week-wrap]').hidden = !weekly || !sourceWeeks.length;
-			if (!lookChosen) press('look', defaultLook(kind));
+			$<HTMLElement>('[data-week-none]').hidden = !weekly || sourceWeeks.length > 0;
+			const yearWrap = root.querySelector<HTMLElement>('[data-year-wrap]');
+			if (yearWrap) yearWrap.hidden = (picked('source') || 'mfl') !== 'mfl';
+			// Only the vibes this span can tell; a week is a brag or a roast.
+			const vibes = root.querySelectorAll<HTMLElement>('[data-group="vibe"] [data-value]');
+			vibes.forEach((b) => (b.hidden = !(b.dataset.spans ?? '').split(' ').includes(span())));
+			if (root.querySelector<HTMLElement>('[data-group="vibe"] [aria-pressed="true"]')?.hidden) {
+				press('vibe', Array.from(vibes).find((b) => !b.hidden)?.dataset.value ?? 'roast');
+			}
+			const vibe = picked('vibe');
+			const looks = root.querySelectorAll<HTMLElement>('[data-group="look"] [data-value]');
+			looks.forEach((b) => (b.hidden = b.dataset.vibe !== vibe));
+			if (!VIDEO_VIBES.find((v) => v.id === vibe)?.looks.includes(picked('look') as VideoLook)) {
+				press('look', VIDEO_VIBES.find((v) => v.id === vibe)?.looks[0] ?? 'trophy');
+			}
 		}
 
-		let lastAuto: SeasonVideoKind | null = null;
 		function refresh() {
 			const facts = readFacts();
 			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed' || facts.outcome === 'in-progress';
 			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
-			autoKind = pickVideoKind(facts, seasonComplete);
-			// Follow the facts until the owner picks for themselves.
-			if (lastAuto === null || picked('kind') === lastAuto) press('kind', autoKind);
-			lastAuto = autoKind;
-			kindNote(picked('kind') as SeasonVideoKind);
+			syncChoices();
 			$<HTMLButtonElement>('[data-make]').disabled = busy || !teamLogo;
 			$<HTMLButtonElement>('[data-preview]').disabled = busy;
 			if (!busy) {
@@ -756,12 +756,12 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 		const story = (facts: SeasonFacts) =>
 			buildStory(facts, {
-			kind: picked('kind') as SeasonVideoKind,
+			kind: currentKind(),
 			look: (picked('look') || 'trophy') as VideoLook,
 			week: chosenWeek(),
 		});
 		function chosenWeek(): number | undefined {
-			return Number($<HTMLSelectElement>('[data-week]').value) || undefined;
+			return span() === 'week' ? Number($<HTMLSelectElement>('[data-week]').value) || undefined : undefined;
 		}
 
 		/** A still of the title card while nothing plays. */
@@ -826,7 +826,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			saveLastVideo({
 				...videoSource,
 				facts: { ...facts, teamLogo },
-				kind: picked('kind') as SeasonVideoKind,
+				kind: currentKind(),
 				look: (picked('look') || 'trophy') as VideoLook,
 				week: chosenWeek(),
 				music: picked('music') || 'none',
@@ -851,8 +851,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		/** What to say about a season that is still being played. */
 		const inProgressNote = (f: SeasonFacts) =>
 			f.playoffs.length === 0
-				? `The ${f.season} season is still going, so this is the story so far. Pick any team to roast.`
-				: `The ${f.season} playoffs aren’t finished yet, so the ending may change.`;
+				? `${f.season} is still going: the story so far.`
+				: `The ${f.season} playoffs aren’t over yet.`;
 
 		// ── opt-in email (Kit), never required ──
 		const optin = $<HTMLFormElement>('[data-optin]');
@@ -910,7 +910,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					body: JSON.stringify({
 						text,
 						email: $<HTMLInputElement>('[data-idea-email]').value.trim(),
-						kind: picked('kind') || null,
+						kind: currentKind(),
 						look: picked('look') || null,
 						platform: videoSource.source,
 						website: $<HTMLInputElement>('[data-idea-website]').value,
@@ -951,13 +951,12 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				yearSel.replaceChildren(...body.years.map((y) => new Option(String(y), String(y), false, y === body.facts.season)));
 				teamSel.replaceChildren(...body.franchises.map((f) => new Option(f.name, f.id, false, f.id === body.franchiseId)));
 				yearSel.disabled = teamSel.disabled = false;
-				lastAuto = null;
 				seasonComplete = body.complete;
 				fillForm(body.facts);
 				videoSource = { source: 'mfl', leagueId: leagueSel.value };
 				if (!body.facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				status.textContent = body.complete
-					? `Filled in from MFL. Change anything that looks off.`
+					? 'Filled in from MFL.'
 					: inProgressNote(body.facts);
 				refresh();
 			} catch {
@@ -1027,14 +1026,13 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				const teams = body.teams as { id: number; name: string }[];
 				sTeam.replaceChildren(...teams.map((t) => new Option(t.name, String(t.id), false, t.id === body.rosterId)));
 				sTeam.disabled = false;
-				lastAuto = null;
 				seasonComplete = body.complete !== false;
 				const facts = body.facts as SeasonFacts;
 				fillForm(facts);
 				videoSource = { source: 'sleeper', leagueId: sLeague.value };
 				if (!facts.teamLogo && logoFrom === 'league') void setLogo(null);
 				sStatus.textContent = body.complete
-					? 'Filled in from Sleeper. Change anything that looks off.'
+					? 'Filled in from Sleeper.'
 					: inProgressNote(facts);
 				refresh();
 			} catch {
@@ -1078,7 +1076,6 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				eTeam.focus();
 				return;
 			}
-			lastAuto = null;
 			seasonComplete = body.complete !== false;
 			const facts = body.facts as SeasonFacts;
 			fillForm(facts);
@@ -1086,7 +1083,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			if (!facts.teamLogo && logoFrom === 'league') void setLogo(null);
 			ePrivate.hidden = true;
 			eStatus.textContent = body.complete
-				? 'Filled in from ESPN. Change anything that looks off.'
+				? 'Filled in from ESPN.'
 				: inProgressNote(facts);
 			refresh();
 		}
@@ -1186,6 +1183,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 <style>
 	.svid [hidden] {
 		display: none !important;
+	}
+	.svid__big-pills .ui-pill {
+		font-size: 1.05rem;
+		padding: 0.6rem 1.1rem;
 	}
 	.svid {
 		max-width: 66rem;
