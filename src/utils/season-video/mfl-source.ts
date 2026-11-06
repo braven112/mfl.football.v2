@@ -5,9 +5,12 @@
  * works the same as a public one, and only for a league the owner's account
  * lists (the endpoint checks that with `requireOwnerLeague` first).
  *
- * Which season: the newest one the league has finished. An MFL league
- * renews into the new year in February, long before that year's games, so
- * "this league year" is usually a season not played yet; the league
+ * Which season: the newest one with a game played, finished or not. A week
+ * video is about this season, and defaulting to the last FINISHED one put
+ * last year's 11–7 on a 9–2 team's week video (Brandon, 2026-11-06). An MFL
+ * league renews into the new year in February, long before that year's
+ * games, so from February to kickoff the newest season has no games yet and
+ * the one before it is the default. The league
  * export's history chain (`parseSeasonChain`) names every earlier year's id
  * and host, and querying an old year with today's id would read a different
  * league. The visitor can ask for any year in that chain.
@@ -125,7 +128,7 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 	const years = chain.map((s) => s.year).sort((a, b) => b - a);
 	const leagueName = parseLeagueName(head) || league.leagueName;
 
-	// The requested year, else the newest season with its final played.
+	// The requested year, else the newest season with a game played.
 	const wanted = input.year && years.includes(input.year) ? [input.year] : years.slice(0, 2);
 	const franchiseId = /^\d{4}$/.test(input.franchiseId ?? '') ? input.franchiseId! : league.franchiseId;
 
@@ -134,7 +137,8 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 		const ref = chain.find((s) => s.year === y)!;
 		const read = await readSeason(ref, leagueName, franchiseId, fetchExport);
 		chosen = read;
-		if (read.result?.complete || input.year) break;
+		const f = read.result?.facts;
+		if (input.year || (f && f.wins + f.losses + f.ties > 0)) break;
 	}
 	const result = chosen?.result;
 	if (!result) {
