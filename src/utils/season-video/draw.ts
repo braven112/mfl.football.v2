@@ -383,7 +383,15 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		return;
 	}
 	const glyphs =
-		effect === 'poop' ? ['💩', '🪰', '💩', '🧻'] : effect === 'money' ? ['💵', '💸', '💰', '💎', '💵'] : ['✨', '💖', '👑', '✨', '🌸'];
+		effect === 'poop'
+			? ['💩', '🪰', '💩', '🧻']
+			: effect === 'money'
+				? ['💵', '💸', '💰', '💎', '💵']
+				: effect === 'clown'
+					? ['🤡', '🎈', '🎪', '🤡', '🔴']
+					: effect === 'jackass'
+						? ['🫏', '🥕', '🫏', '💥']
+						: ['✨', '💖', '👑', '✨', '🌸'];
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	for (let i = 0; i < 34; i++) {
@@ -392,7 +400,7 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		const size = 56 + rnd(i + 7) * 60;
 		ctx.font = `${Math.round(size)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
 		ctx.save();
-		if (effect === 'poop' || effect === 'money') {
+		if (effect === 'poop' || effect === 'money' || effect === 'clown' || effect === 'jackass') {
 			// Falls, tumbling.
 			const x = rnd(i + 100) * VIDEO_WIDTH;
 			const y = -80 + q * (300 + rnd(i + 200) * 260);
