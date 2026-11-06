@@ -413,7 +413,7 @@ export function parseMflFranchises(leagueExport: unknown): MflFranchiseInfo[] {
 		.filter((f) => f.id !== '0000');
 }
 
-interface StandingRow {
+export interface StandingRow {
 	id: string;
 	wins: number;
 	losses: number;
@@ -448,7 +448,7 @@ interface BracketGame {
 	awaySeed: number | null;
 }
 
-function parseBracketGames(bracketExport: unknown): { games: BracketGame[]; weeks: number[] } {
+export function parseBracketGames(bracketExport: unknown): { games: BracketGame[]; weeks: number[] } {
 	const rounds = asArray(
 		(bracketExport as { playoffBracket?: { playoffRound?: unknown } })?.playoffBracket?.playoffRound as {
 			week?: string;
@@ -513,6 +513,23 @@ function parseScheduleGames(scheduleExport: unknown, franchiseId: string): Sched
 			if (!mine || !theirs) continue;
 			if (mine.score === undefined || mine.score === '' || theirs.score === undefined || theirs.score === '') continue;
 			out.push({ week, score: num(mine.score), oppId: pad(theirs.id), oppScore: num(theirs.score) });
+		}
+	}
+	return out;
+}
+
+/** Every played game in `TYPE=schedule`, both sides. */
+export function parseScheduleAll(scheduleExport: unknown): { week: number; a: string; aScore: number; b: string; bScore: number }[] {
+	const weeks = asArray(
+		(scheduleExport as { schedule?: { weeklySchedule?: unknown } })?.schedule?.weeklySchedule as { week?: string; matchup?: unknown }[],
+	);
+	const out: { week: number; a: string; aScore: number; b: string; bScore: number }[] = [];
+	for (const w of weeks) {
+		const week = num(w?.week);
+		for (const m of asArray(w?.matchup as { franchise?: unknown }[])) {
+			const [x, y] = asArray(m?.franchise as Record<string, string>[]);
+			if (!x || !y || x.score === undefined || x.score === '' || y.score === undefined || y.score === '') continue;
+			out.push({ week, a: pad(x.id), aScore: num(x.score), b: pad(y.id), bScore: num(y.score) });
 		}
 	}
 	return out;

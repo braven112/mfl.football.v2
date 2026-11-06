@@ -35,6 +35,8 @@ export interface DrawAssets {
 	wordmark: Img | null;
 	/** False draws the team logo without its circle. Left out, the circle. */
 	teamCircle?: boolean;
+	/** A league recap's logos, by team id. */
+	logos?: Map<string, Img>;
 }
 
 const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -188,7 +190,7 @@ type SceneOf<T extends Scene['type']> = Extract<Scene, { type: T }>;
 
 function drawTitle(ctx: Ctx, s: SceneOf<'title'>, p: number, a: DrawAssets, teamName: string) {
 	const pal = s.palette;
-	crest(ctx, a.team, teamName, CX, 430, 110, pal, pal.accent, a.teamCircle !== false);
+	if (!s.noCrest) crest(ctx, a.team, teamName, CX, 430, 110, pal, pal.accent, a.teamCircle !== false);
 	kicker(ctx, s.kicker, 640, pal.accent);
 	const sc = 1 + (1 - easeOut(p / 0.35)) * 0.25;
 	ctx.save();
@@ -347,6 +349,33 @@ function drawCrown(ctx: Ctx, s: SceneOf<'crown'>, p: number, a: DrawAssets, team
 	paragraph(ctx, s.line, 1110 + lines.length * size * 0.95, 48, pal.muted);
 }
 
+/** A league recap's award: the badge, the team's crest, its name and its numbers. */
+function drawAward(ctx: Ctx, s: SceneOf<'award'>, p: number, a: DrawAssets) {
+	const pal = s.palette;
+	if (s.effect) drawEffect(ctx, s.effect, p);
+	kicker(ctx, s.kicker, 400, pal.accent);
+	const sc = 0.6 + 0.4 * easeOut(p / 0.5);
+	ctx.save();
+	ctx.translate(CX, 720);
+	ctx.scale(sc, sc);
+	ctx.translate(-CX, -720);
+	crest(ctx, a.logos?.get(s.teamId) ?? null, s.name, CX, 720, 200, pal, pal.accent);
+	ctx.restore();
+	const b = easeOut((p - 0.4) / 0.4);
+	ctx.save();
+	ctx.globalAlpha *= b;
+	ctx.font = `120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.fillText(s.badge, CX + 175, 540 - (1 - b) * 60);
+	ctx.restore();
+	const name = s.name.toUpperCase();
+	const size = fit(ctx, name, MAX_W, 130, 80, 'display');
+	const lines = ctx.measureText(name).width > MAX_W ? wrap(ctx, name, MAX_W).slice(0, 2) : [name];
+	lines.forEach((l, i) => centered(ctx, l, 1060 + i * size * 0.95, pal.ink));
+	paragraph(ctx, s.value, 1090 + lines.length * size * 0.95, 48, pal.muted);
+}
+
 function drawEnd(ctx: Ctx, s: SceneOf<'end'>, p: number, a: DrawAssets) {
 	const pal = s.palette;
 	kicker(ctx, s.kicker, 480, pal.muted);
@@ -485,6 +514,9 @@ export function drawFrame(ctx: Ctx, scenes: readonly Scene[], t: number, assets:
 			break;
 		case 'end':
 			drawEnd(ctx, scene, p, assets);
+			break;
+		case 'award':
+			drawAward(ctx, scene, p, assets);
 			break;
 	}
 	ctx.restore();

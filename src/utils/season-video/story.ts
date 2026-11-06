@@ -19,6 +19,7 @@
  * then drops the statement-game card.
  */
 import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
+import type { Award, LeagueFacts } from './league-recap';
 import { formatPoints, formatRecord, formatScore, ordinal, positionLabel, seasonAllPlay, type StarterLine, type WeekLine } from './season';
 
 export const MAX_STORY_SECONDS = 50;
@@ -61,7 +62,7 @@ export type BigNumber =
 	| { kind: 'number'; value: number; decimals: number };
 
 export type Scene =
-	| (SceneBase & { type: 'title'; headline: [string, string]; sub: string })
+	| (SceneBase & { type: 'title'; headline: [string, string]; sub: string; noCrest?: boolean })
 	| (SceneBase & {
 			type: 'stat';
 			big: BigNumber;
@@ -71,7 +72,9 @@ export type Scene =
 	| (SceneBase & { type: 'game'; game: SeasonGame; won: boolean; line: string; bars: boolean })
 	| (SceneBase & { type: 'final'; game: SeasonGame; won: boolean; line: string; teamName: string })
 	| (SceneBase & { type: 'crown'; name: string; line: string; effect: CrownEffect; badge?: string })
-	| (SceneBase & { type: 'end'; line: string });
+	| (SceneBase & { type: 'end'; line: string })
+	/** A league recap's award: one team, its logo by team id (`DrawAssets.logos`). */
+	| (SceneBase & { type: 'award'; name: string; teamId: string; value: string; badge: string; effect?: CrownEffect });
 
 export type SceneType = Scene['type'];
 
@@ -1040,5 +1043,48 @@ export function buildStory(facts: SeasonFacts, opts: StoryOptions): Scene[] {
 		if (i < 0) break;
 		scenes = scenes.filter((_, j) => j !== i);
 	}
+	return scenes;
+}
+
+// ── the league recap ──────────────────────────────────────────────────────
+
+/**
+ * A league recap: a title card, one card per award, the end card. The
+ * champion closes it with the look's own effect. Award cards share what is
+ * left of the bed under MAX_STORY_SECONDS, never under 2.5 s each.
+ */
+export function leagueStory(
+	lf: Pick<LeagueFacts, 'leagueName' | 'season' | 'teams'>,
+	awards: readonly Award[],
+	look: VideoLook,
+	span: 'week' | 'season',
+	week: number | undefined,
+	inProgress: boolean,
+): Scene[] {
+	const L = LOOKS[look];
+	const label = span === 'week' ? `Week ${week ?? ''}`.trim() : String(lf.season);
+	const headline: [string, string] = span === 'week' ? [label.toUpperCase(), 'RECAP'] : inProgress ? ['SEASON', 'SO FAR'] : [label, 'RECAP'];
+	const fixed = 4 + 5 + (awards.some((a) => a.id === 'champion') ? 5 : 0);
+	const others = awards.filter((a) => a.id !== 'champion').length;
+	// Floored to a tenth so rounding never tips the total over the bed.
+	const each = others ? Math.max(2.5, Math.min(4, Math.floor(((MAX_STORY_SECONDS - fixed) / others) * 10) / 10)) : 4;
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: lf.leagueName, headline, sub: span === 'week' ? 'The good, the bad and the ugly.' : 'Every award. No mercy.', noCrest: true },
+	];
+	for (const a of awards) {
+		const champ = a.id === 'champion';
+		scenes.push({
+			type: 'award',
+			duration: champ ? 5 : each,
+			palette: champ ? L.crown : a.tone === 'good' ? L.best : L.low,
+			kicker: `${label} · ${a.title}`,
+			name: lf.teams.find((t) => t.id === a.teamId)?.name ?? '',
+			teamId: a.teamId,
+			value: a.value,
+			badge: a.badge,
+			...(champ ? { effect: L.effect } : {}),
+		});
+	}
+	scenes.push(endScene());
 	return scenes;
 }
