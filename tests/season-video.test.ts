@@ -15,6 +15,8 @@ import {
 	pointsRankOf,
 	buildWeekLines,
 	seasonAllPlay,
+	parseMflWeekStarters,
+	pickStandouts,
 	roundLabel,
 	type SeasonFacts,
 } from '../src/utils/season-video/season';
@@ -27,6 +29,10 @@ const league = read('league.json');
 const standings = read('standings.json');
 const brackets = read('playoff-brackets.json');
 const schedule = read('schedule.json');
+const weeklyRaw = read('weekly-results-raw.json') as { weeklyResults: unknown }[];
+// W=YTD's shape: every week under allWeeklyResults.
+const weeklyYtd = { allWeeklyResults: { weeklyResults: weeklyRaw.map((w) => w.weeklyResults) } };
+const players = read('players.json');
 
 const season = (franchiseId: string) =>
 	fromMflExports({
@@ -231,6 +237,11 @@ describe('loadMflSeason', () => {
 		if (req.type === 'leagueStandings') return standings;
 		if (req.type === 'playoffBrackets') return { playoffBrackets: brackets.playoffBrackets };
 		if (req.type === 'schedule') return schedule;
+		if (req.type === 'weeklyResults') return weeklyYtd;
+		if (req.type === 'players') {
+			const want = new Set(String((req as { players?: string }).players).split(','));
+			return { players: { player: players.players.player.filter((p: { id: string }) => want.has(p.id)) } };
+		}
 		const b = JSON.parse(JSON.stringify(brackets.brackets['1']));
 		if (!finalPlayed && req.year === year) {
 			const rounds = b.playoffBracket.playoffRound;
@@ -257,6 +268,27 @@ describe('loadMflSeason', () => {
 		expect(out.kind).toBe('champion');
 		expect(out.facts.teamLogo).toMatch(/^data:image\/png/);
 		expect(out.facts.playoffs.every((g) => g.oppLogo?.startsWith('data:'))).toBe(true);
+		// Each week names its best and worst starter, from the league's own lineups.
+		const w1 = out.facts.weeks?.[0];
+		expect(w1?.worst?.name).toMatch(/\w+ \w+/);
+		expect(w1?.best?.name).toMatch(/\w+ \w+/);
+		expect(w1!.best!.pts - (w1!.best!.avg ?? 0)).toBeGreaterThanOrEqual(w1!.worst!.pts - (w1!.worst!.avg ?? 0));
+	});
+
+	it('still makes the video when the lineups can’t be read', async () => {
+		const fetchAnswer = answers(2025, true);
+		const out = await loadMflSeason({
+			league: { ...owner, year: 2025 },
+			year: 2025,
+			fetchExport: async (req) => {
+				if (req.type === 'weeklyResults' || req.type === 'players') throw new Error('throttled');
+				return fetchAnswer(req);
+			},
+			fetchLogo: async () => null,
+		});
+		if (!out.ok) throw new Error(out.message);
+		expect(out.facts.weeks?.length).toBeGreaterThan(0);
+		expect(out.facts.weeks?.some((w) => w.best || w.worst)).toBe(false);
 	});
 
 	it('only ever asks MFL hosts', async () => {
@@ -321,6 +353,59 @@ describe('paper tiger', () => {
 	});
 	it('a season still being played suggests the mid-season report', () => {
 		expect(pickVideoKind({ outcome: 'in-progress', finish: 3, teams: 12 })).toBe('midseason');
+	});
+});
+
+describe('best and worst starter', () => {
+	const people: Record<string, { name: string; pos: string }> = {
+		q1: { name: 'Q One', pos: 'QB' }, q2: { name: 'Q Two', pos: 'QB' }, q3: { name: 'Q Three', pos: 'QB' },
+		t1: { name: 'T One', pos: 'TE' }, t2: { name: 'T Two', pos: 'TE' }, t3: { name: 'T Three', pos: 'TE' },
+		k1: { name: 'K One', pos: 'PK' },
+	};
+	const league = [
+		{ team: '0001', id: 'q1', pts: 30 },
+		{ team: '0001', id: 't1', pts: 1.2 },
+		{ team: '0001', id: 'k1', pts: 2 },
+		{ team: '0001', id: 'x9', pts: 0 }, // a player the league data can't name
+		{ team: '0002', id: 'q2', pts: 20 },
+		{ team: '0002', id: 't2', pts: 12 },
+		{ team: '0003', id: 'q3', pts: 10 },
+		{ team: '0003', id: 't3', pts: 10 },
+		{ team: '0001', id: 't1', pts: 1.2 }, // doubleheader: the same lineup twice
+	];
+	const who = (id: string) => people[id] ?? null;
+
+	it('judges each starter against the league at the same position', () => {
+		const { best, worst } = pickStandouts(league, '0001', who);
+		expect(worst).toEqual({ name: 'T One', pos: 'TE', pts: 1.2, avg: 7.7 });
+		expect(best).toMatchObject({ name: 'Q One', pos: 'QB', avg: 20 });
+	});
+	it('falls back to raw points when no position has enough starters', () => {
+		const { best, worst } = pickStandouts([{ team: '0001', id: 'q1', pts: 30 }, { team: '0001', id: 'k1', pts: 2 }], '0001', who);
+		expect(worst?.name).toBe('K One');
+		expect(best?.name).toBe('Q One');
+	});
+	it('reads MFL’s starters, one week or all of them', () => {
+		const one = parseMflWeekStarters(weeklyRaw[0]);
+		const all = parseMflWeekStarters(weeklyYtd);
+		expect([...one.keys()]).toEqual([1]);
+		expect(all.size).toBe(weeklyRaw.length);
+		expect(all.get(1)).toEqual(one.get(1));
+		expect(one.get(1)!.every((s) => /^\d{4}$/.test(s.team))).toBe(true);
+	});
+	it('roasts the worst start and brags about the best', () => {
+		const weeks = [{ week: 3, score: 70, oppName: 'Bravo', oppScore: 140, rank: 12, teams: 12, allPlay: { wins: 0, losses: 11, ties: 0 },
+			worst: { name: 'T One', pos: 'TE', pts: 1.2, avg: 9.8 }, best: { name: 'Q One', pos: 'QB', pts: 31.5, avg: 19.2 } }];
+		const f = { ...base, outcome: 'in-progress' as const, playoffs: [], weeks };
+		const roast = JSON.stringify(buildStory(f, { kind: 'weekly', look: 'clown' }));
+		expect(roast).toContain('Worst start · TE');
+		expect(roast).toContain('T One. TEs averaged 9.8.');
+		const brag = JSON.stringify(buildStory(f, { kind: 'beatdown', look: 'goat' }));
+		expect(brag).toContain('Best start · QB');
+		expect(brag).toContain('Q One. QBs averaged 19.2. Not this one.');
+		const kicker = JSON.stringify(buildStory({ ...f, weeks: [{ ...weeks[0], worst: { name: 'K One', pos: 'PK', pts: 0, avg: 8 } }] }, { kind: 'weekly', look: 'poop' }));
+		expect(kicker).toContain('Worst start · K');
+		expect(kicker).toContain('K One. Zero. Not a typo.');
 	});
 });
 

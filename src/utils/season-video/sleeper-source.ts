@@ -20,11 +20,14 @@
  *  - Logos: the team's own avatar (`metadata.avatar`, a full URL), else the
  *    owner's user avatar on Sleeper's CDN.
  *
- * Team-level data only; the matchups carry player points, which are never read.
+ * Each week's best and worst starter come from the matchups' own `starters`
+ * and `starters_points`, named through the shared Sleeper player map. League
+ * data, so free (Brandon, 2026-11-06).
  * SERVER ONLY (network); the parsing is pure and tested in
  * tests/season-video-sleeper.test.ts.
  */
-import { buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
+import { attachStandouts, buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type WeekStarter } from './season';
+import type { SleeperPlayerMap } from '../sleeper/players';
 import type { FetchLogo } from './mfl-source';
 
 export type SleeperGet = (path: string) => Promise<unknown>;
@@ -61,6 +64,26 @@ interface Matchup {
 	roster_id: number;
 	points?: number | null;
 	custom_points?: number | null;
+	starters?: (string | null)[] | null;
+	starters_points?: (number | null)[] | null;
+}
+
+/** Every regular-season week's starters, from the matchups. An empty slot ('0') is no one. */
+export function sleeperWeekStarters(matchups: ReadonlyMap<number, readonly Matchup[]>, playoffStart: number): Map<number, WeekStarter[]> {
+	const out = new Map<number, WeekStarter[]>();
+	for (const [week, entries] of matchups) {
+		if (week >= playoffStart) continue;
+		const list: WeekStarter[] = [];
+		for (const e of entries) {
+			const ids = Array.isArray(e.starters) ? e.starters : [];
+			const pts = Array.isArray(e.starters_points) ? e.starters_points : [];
+			ids.forEach((id, i) => {
+				if (id && id !== '0' && typeof pts[i] === 'number') list.push({ team: String(e.roster_id), id: String(id), pts: pts[i] as number });
+			});
+		}
+		if (list.length) out.set(week, list);
+	}
+	return out;
 }
 
 export interface SleeperSeasonInput {
@@ -252,6 +275,8 @@ export async function loadSleeperSeason(input: {
 	rosterId?: number | null;
 	get: SleeperGet;
 	fetchLogo: FetchLogo;
+	/** Sleeper player id → name and position, for the best and worst starter. Optional: without it the weeks carry neither. */
+	players?: () => Promise<SleeperPlayerMap>;
 }): Promise<SleeperVideoResponse | SleeperVideoError> {
 	const { leagueId, get } = input;
 	if (!LEAGUE_ID.test(leagueId)) return { ok: false, error: 'no-league', message: 'That isn’t a Sleeper league id.' };
@@ -299,8 +324,15 @@ export async function loadSleeperSeason(input: {
 		}),
 	);
 	const withLogo = <T extends { oppId?: string }>(g: T): T => ({ ...g, oppLogo: g.oppId ? logos.get(g.oppId) ?? null : null });
+	let standoutWeeks = result.facts.weeks;
+	if (input.players && standoutWeeks?.length) {
+		const map = await input.players().catch(() => ({}) as SleeperPlayerMap);
+		const who = (id: string) => (map[id] ? { name: map[id].name, pos: map[id].position } : null);
+		standoutWeeks = attachStandouts(standoutWeeks, sleeperWeekStarters(matchups, start), String(rosterId), who);
+	}
 	const facts: SeasonFacts = {
 		...result.facts,
+		weeks: standoutWeeks,
 		teamLogo: logos.get(String(rosterId)) ?? null,
 		playoffs: result.facts.playoffs.map(withLogo),
 		bestGame: result.facts.bestGame ? withLogo(result.facts.bestGame) : null,

@@ -9,13 +9,16 @@
  * Every Sleeper path is built here from validated parts (a username pattern,
  * digits-only ids), so nothing a visitor types reaches the URL raw. Public
  * and unauthenticated, so it is rate-limited per client: a season read fans
- * out to ~25 Sleeper requests.
+ * out to ~25 Sleeper requests. Starter names come from the shared, cached
+ * Sleeper player map (src/utils/sleeper/players.ts), never a fresh /players/nfl.
  */
 import type { APIRoute } from 'astro';
 import { fetchSleeperUser, normalizeSleeperUsername, sleeperGet } from '../../utils/sleeper/client';
 import { allowSeasonVideoCall } from '../../utils/season-video/abuse-limits';
 import { fetchLogoAsDataUrl } from '../../utils/season-video/fetch-logo';
 import { listSleeperLeagues, loadSleeperSeason } from '../../utils/season-video/sleeper-source';
+import { loadSleeperPlayerMap } from '../../utils/sleeper/players';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -39,6 +42,8 @@ export const GET: APIRoute = async ({ request, url }) => {
 			rosterId: Number.isInteger(roster) && roster > 0 && roster < 100 ? roster : null,
 			get,
 			fetchLogo: fetchLogoAsDataUrl,
+			// The year every other Sleeper reader uses, so they share one cached map.
+			players: () => loadSleeperPlayerMap(getCurrentLeagueYear()),
 		});
 		return json(out, out.ok ? 200 : out.error === 'sleeper-unavailable' ? 503 : 404);
 	}

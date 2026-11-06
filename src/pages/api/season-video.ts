@@ -4,7 +4,8 @@
  * The facts for a season video (/champion-video), read from MFL with the
  * signed-in owner's own cookie. Only a league the owner's account lists:
  * `requireOwnerLeague` checks that, so the id in the URL can narrow what the
- * session sees but never widen it. Team-level data only (free tier).
+ * session sees but never widen it. League data only: records, scores, and
+ * each week's starters (for the best and worst start).
  *
  * `franchise` lets the owner make a video for another team in the same
  * league (a league-mate's last-place season, say). It is checked against

@@ -19,7 +19,7 @@
  * then drops the statement-game card.
  */
 import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
-import { formatPoints, formatRecord, formatScore, ordinal, seasonAllPlay, type WeekLine } from './season';
+import { formatPoints, formatRecord, formatScore, ordinal, positionLabel, seasonAllPlay, type StarterLine, type WeekLine } from './season';
 
 export const MAX_STORY_SECONDS = 50;
 
@@ -636,6 +636,18 @@ function weekRankLine(w: WeekLine): string {
 	return `${of} Don’t let it go to your head.`;
 }
 
+/** The week's standout starter as a stat card: the worst one for a roast, the best for a brag. */
+function starterScene(p: StarterLine, label: string, palette: Palette, worst: boolean): Scene {
+	const pos = positionLabel(p.pos);
+	const avg = p.avg !== null ? `${pos}s averaged ${p.avg.toFixed(1)}.` : '';
+	const line = worst
+		? p.pts <= 0
+			? `${p.name}. Zero. Not a typo.`
+			: `${p.name}. ${avg || 'Started. Sadly.'}`.trim()
+		: `${p.name}. ${avg ? `${avg} Not this one.` : 'Carried the whole team.'}`;
+	return { type: 'stat', duration: 5, palette, kicker: `${label} · ${worst ? 'Worst start' : 'Best start'} · ${pos}`, big: { kind: 'number', value: p.pts, decimals: 2 }, line };
+}
+
 function weeklyStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[] {
 	const L = LOOKS[look];
 	const w = weekFor(f, weekNo);
@@ -655,6 +667,7 @@ function weeklyStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[] 
 				: `${game.oppName} won by ${formatScore(margin(game))}.`;
 		scenes.push(lowScene(game, L.low, won(game) ? 'Lucky' : 'Took the L', line));
 	}
+	if (w?.worst) scenes.push(starterScene(w.worst, label, L.record, true));
 	if (w) {
 		scenes.push({ type: 'stat', duration: 5, palette: L.stat, kicker: `${label} points · league rank`, big: { kind: 'number', value: w.rank, decimals: 0 }, line: weekRankLine(w) });
 		const beat = w.allPlay.wins;
@@ -752,6 +765,7 @@ function beatdownStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[
 			: `${formatScore(game.score)} points. ${game.oppName} got lucky.`;
 		scenes.push(bestScene(game, L.best, wonIt ? 'Beatdown' : 'Robbed', line));
 	}
+	if (w?.best) scenes.push(starterScene(w.best, label, L.record, false));
 	if (w) {
 		scenes.push({ type: 'stat', duration: 5, palette: L.stat, kicker: `${label} points · league rank`, big: { kind: 'number', value: w.rank, decimals: 0 }, line: bragRankLine(w, wonIt) });
 		const others = w.teams - 1;
