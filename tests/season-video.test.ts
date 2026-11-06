@@ -1,5 +1,5 @@
 /**
- * Season video generator (/champion-video): the facts read from MFL and the
+ * Season video generator (/video): the facts read from MFL and the
  * story built from them. Driven by TheLeague's recorded 2025 feeds, the
  * season the original Computer Jocks video was cut from, so the numbers
  * here are the ones that video showed.
@@ -364,7 +364,7 @@ describe('loadMflSeason', () => {
 describe('sharedHostLoginUrl', () => {
 	it('returns to a same-origin path, and never to anything else', async () => {
 		const { sharedHostLoginUrl } = await import('../src/utils/login-redirect');
-		expect(sharedHostLoginUrl('/champion-video')).toBe('/login?next=%2Fchampion-video');
+		expect(sharedHostLoginUrl('/video')).toBe('/login?next=%2Fvideo');
 		expect(sharedHostLoginUrl('https://evil.example')).toBe('/login');
 		expect(sharedHostLoginUrl('//evil.example')).toBe('/login');
 		expect(sharedHostLoginUrl('/login')).toBe('/login');

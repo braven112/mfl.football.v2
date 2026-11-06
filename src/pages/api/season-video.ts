@@ -1,7 +1,7 @@
 /**
  * GET /api/season-video?league=<MFL id>[&year=<season>][&franchise=<0001>]
  *
- * The facts for a season video (/champion-video), read from MFL with the
+ * The facts for a season video (/video), read from MFL with the
  * signed-in owner's own cookie. Only a league the owner's account lists:
  * `requireOwnerLeague` checks that, so the id in the URL can narrow what the
  * session sees but never widen it. League data only: records, scores, and

@@ -1,6 +1,6 @@
 /**
  * GET /api/season-video-sleeper — a Sleeper season for the video maker
- * (/champion-video). No sign-in: Sleeper's API is public and read-only, and
+ * (/video). No sign-in: Sleeper's API is public and read-only, and
  * the free tier asks as little as possible of an owner.
  *
  *   ?username=<sleeper username>                 → that user's leagues

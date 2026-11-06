@@ -1,6 +1,6 @@
 /**
  * Season video — the browser side shared by every page that plays a video:
- * the video maker (/champion-video) and the League History page it hands the
+ * the video maker (/video) and the League History page it hands the
  * owner to (/history/espn/<id>).
  *
  * BROWSER ONLY (Image, FontFace, localStorage).

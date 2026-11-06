@@ -153,7 +153,7 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/live/settings.astro',
 		'src/pages/team-logo.astro',
 		// The season video maker: lists the owner's own leagues to pick from.
-		'src/pages/champion-video.astro',
+		'src/pages/video.astro',
 		'src/pages/live/standings.astro',
 		'src/pages/live/league/[id].astro',
 		'src/pages/api/live-board.ts',

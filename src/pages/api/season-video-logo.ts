@@ -1,6 +1,6 @@
 /**
  * GET /api/season-video-logo?url=<image link> — a logo for the video maker
- * (/champion-video), fetched here and handed back as a data: URL.
+ * (/video), fetched here and handed back as a data: URL.
  *
  * The browser records the video from a canvas, and one picture loaded from
  * another site taints that canvas so it can't be recorded. So a pasted link
