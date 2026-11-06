@@ -113,6 +113,8 @@ export interface SeasonFacts {
 	teamName: string;
 	/** A data: or blob: URL. Required before rendering; null until uploaded. */
 	teamLogo?: string | null;
+	/** 'none' draws the team logo as it is, for a logo already cut out; the circle is the default. */
+	teamLogoFrame?: 'circle' | 'none';
 	wins: number;
 	losses: number;
 	ties: number;

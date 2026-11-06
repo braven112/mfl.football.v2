@@ -60,7 +60,7 @@ export async function loadAssets(facts: SeasonFacts, team: Img | null, cache: Ma
 			if (img) cache.set(l, img);
 		}),
 	);
-	return { team, opponents: cache, mark, wordmark };
+	return { team, opponents: cache, mark, wordmark, teamCircle: facts.teamLogoFrame !== 'none' };
 }
 
 // ── handoff to League History ─────────────────────────────────────────────

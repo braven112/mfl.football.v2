@@ -33,6 +33,8 @@ export interface DrawAssets {
 	/** The MFL.football mark, and the wordmark's lettering alone (dark-ground cuts): the end card shows the mark once. */
 	mark: Img | null;
 	wordmark: Img | null;
+	/** False draws the team logo without its circle. Left out, the circle. */
+	teamCircle?: boolean;
 }
 
 const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -128,7 +130,15 @@ function initials(name: string): string {
 	return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)).toUpperCase();
 }
 
-function crest(ctx: Ctx, img: Img | null, name: string, x: number, y: number, r: number, pal: Palette, ring?: string) {
+function crest(ctx: Ctx, img: Img | null, name: string, x: number, y: number, r: number, pal: Palette, ring?: string, circle = true) {
+	if (!circle && img && img.width && img.height) {
+		// A logo already cut out to its shape: drawn whole, no disc, no ring.
+		const scale = Math.min((2 * r) / img.width, (2 * r) / img.height);
+		const w = img.width * scale;
+		const h = img.height * scale;
+		ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
+		return;
+	}
 	ctx.save();
 	ctx.beginPath();
 	ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -178,7 +188,7 @@ type SceneOf<T extends Scene['type']> = Extract<Scene, { type: T }>;
 
 function drawTitle(ctx: Ctx, s: SceneOf<'title'>, p: number, a: DrawAssets, teamName: string) {
 	const pal = s.palette;
-	crest(ctx, a.team, teamName, CX, 430, 110, pal, pal.accent);
+	crest(ctx, a.team, teamName, CX, 430, 110, pal, pal.accent, a.teamCircle !== false);
 	kicker(ctx, s.kicker, 640, pal.accent);
 	const sc = 1 + (1 - easeOut(p / 0.35)) * 0.25;
 	ctx.save();
@@ -193,7 +203,7 @@ function drawTitle(ctx: Ctx, s: SceneOf<'title'>, p: number, a: DrawAssets, team
 
 function drawStat(ctx: Ctx, s: SceneOf<'stat'>, p: number, a: DrawAssets, teamName: string) {
 	const pal = s.palette;
-	crest(ctx, a.team, teamName, CX, 450, 110, pal, pal.accent);
+	crest(ctx, a.team, teamName, CX, 450, 110, pal, pal.accent, a.teamCircle !== false);
 	kicker(ctx, s.kicker, 650, pal.accent);
 	const k = easeOut((p - 0.3) / 1.4);
 	const big =
@@ -242,7 +252,7 @@ function drawGame(ctx: Ctx, s: SceneOf<'game'>, p: number, a: DrawAssets, teamNa
 		];
 		rows.forEach(([img, name, score, color], i) => {
 			const y = 940 + i * 120;
-			crest(ctx, img, name, 170, y + 40, 46, pal);
+			crest(ctx, img, name, 170, y + 40, 46, pal, undefined, i === 0 ? a.teamCircle !== false : true);
 			ctx.save();
 			ctx.globalAlpha *= i === 0 ? 1 : 0.4;
 			roundRect(ctx, 240, y + 12, Math.max(56, 680 * (score / top) * k), 56, 28);
@@ -257,7 +267,7 @@ function drawGame(ctx: Ctx, s: SceneOf<'game'>, p: number, a: DrawAssets, teamNa
 	const fade = easeOut((p - 2.2) / 0.5);
 	ctx.save();
 	ctx.globalAlpha *= s.won ? 1 : 1 - 0.65 * fade;
-	crest(ctx, a.team, teamName, CX - 230, 1010, 90, pal, s.won ? pal.good : undefined);
+	crest(ctx, a.team, teamName, CX - 230, 1010, 90, pal, s.won ? pal.good : undefined, a.teamCircle !== false);
 	ctx.restore();
 	font(ctx, 60, 'display');
 	centered(ctx, 'VS', 1032, pal.muted);
@@ -283,7 +293,7 @@ function drawFinal(ctx: Ctx, s: SceneOf<'final'>, p: number, a: DrawAssets) {
 		const x = CX + (i === 0 ? -215 : 215);
 		ctx.save();
 		ctx.globalAlpha *= isWinner ? 1 : 1 - 0.55 * reveal;
-		crest(ctx, img, name, x, 690, 130, pal, isWinner && reveal > 0.5 ? pal.accent : undefined);
+		crest(ctx, img, name, x, 690, 130, pal, isWinner && reveal > 0.5 ? pal.accent : undefined, i === 0 ? a.teamCircle !== false : true);
 		const sc = isWinner ? 1 + 0.12 * reveal : 1;
 		ctx.translate(x, 960);
 		ctx.scale(sc, sc);
@@ -318,7 +328,7 @@ function drawCrown(ctx: Ctx, s: SceneOf<'crown'>, p: number, a: DrawAssets, team
 	ctx.fillStyle = hexAlpha(pal.accent, 0.16);
 	ctx.fill();
 	ctx.translate(-CX, -720);
-	crest(ctx, a.team, teamName, CX, 720, 200, pal, pal.accent);
+	crest(ctx, a.team, teamName, CX, 720, 200, pal, pal.accent, a.teamCircle !== false);
 	ctx.restore();
 	if (s.badge) {
 		const b = easeOut((p - 0.5) / 0.5);

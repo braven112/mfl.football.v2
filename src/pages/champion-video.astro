@@ -177,6 +177,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						</span>
 					</label>
 					<button type="button" class="cta-link svid__logo-remove" data-logo-remove hidden>Remove this logo</button>
+					<label class="svid__consent" data-logo-frame-wrap hidden>
+						<input type="checkbox" data-logo-circle checked />
+						<span>Put my logo in a circle. Untick it for a logo that’s already cut out, like a transparent PNG.</span>
+					</label>
 
 					<div class="svid__make-logo" data-make-logo>
 						<div>
@@ -502,6 +506,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				leagueName: field('leagueName').value.trim() || 'My League',
 				season: numOf(field('season')) || new Date().getFullYear() - 1,
 				teamLogo,
+				teamLogoFrame: $<HTMLInputElement>('[data-logo-circle]').checked ? 'circle' : 'none',
 				wins: numOf(field('wins')),
 				losses: numOf(field('losses')),
 				ties: numOf(field('ties')),
@@ -570,6 +575,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			if (img && src) preview.src = src;
 			$<HTMLElement>('[data-logo-icon]').hidden = !!img;
 			$<HTMLElement>('[data-logo-remove]').hidden = !img;
+			$<HTMLElement>('[data-logo-frame-wrap]').hidden = !img;
 			$<HTMLElement>('[data-make-logo]').hidden = !!img;
 			$('[data-logo-title]').textContent = img ? 'Your logo is in' : 'Upload your logo';
 			$('[data-logo-sub]').textContent = img
@@ -738,7 +744,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			}
 		}
 		root.addEventListener('input', (e) => {
-			if ((e.target as HTMLElement).closest('[data-f], [data-extra]')) refresh();
+			if ((e.target as HTMLElement).closest('[data-f], [data-extra], [data-logo-circle]')) refresh();
 		});
 		root.addEventListener('change', (e) => {
 			if ((e.target as HTMLElement).matches('select[data-f], select[data-week]')) refresh();
