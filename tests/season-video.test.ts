@@ -251,9 +251,35 @@ describe('loadMflSeason', () => {
 	};
 	const owner = { leagueId: '13522', leagueName: 'The League', franchiseId: '0010', year: 2026, host: 'https://www49.myfantasyleague.com' };
 
-	it('falls back to last season while this one is still being played, with logos embedded', async () => {
+	it('opens on this season while it is being played (a week video is about this season)', async () => {
 		const seen: number[] = [];
 		const fetchAnswer = answers(2026, false);
+		const out = await loadMflSeason({
+			league: owner,
+			fetchExport: async (req) => {
+				if (req.type === 'leagueStandings') seen.push(req.year);
+				return fetchAnswer(req);
+			},
+			fetchLogo: async () => null,
+		});
+		if (!out.ok) throw new Error(out.message);
+		expect(seen).toEqual([2026]);
+		expect(out.facts.season).toBe(2026);
+		expect(out.complete).toBe(false);
+	});
+
+	it('falls back to last season before this one has a game, with logos embedded', async () => {
+		const seen: number[] = [];
+		const played = answers(2026, false);
+		// 2026 before kickoff: every team 0–0.
+		const fetchAnswer = (req: { type: string; year: number }) => {
+			if (req.type === 'leagueStandings' && req.year === 2026) {
+				const s = JSON.parse(JSON.stringify(standings));
+				for (const f of s.leagueStandings.franchise) Object.assign(f, { h2hw: '0', h2hl: '0', h2ht: '0', h2hwlt: '0-0-0', pf: '0' });
+				return s;
+			}
+			return played(req);
+		};
 		const out = await loadMflSeason({
 			league: owner,
 			fetchExport: async (req) => {
