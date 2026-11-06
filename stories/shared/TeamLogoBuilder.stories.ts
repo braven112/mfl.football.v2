@@ -4,7 +4,7 @@ import { themeModes } from '../../.storybook/modes';
 /**
  * The team logo builder: style, colors and kind in, an AI prompt out. It
  * renders on /team-logo and inside the season video's Make my logo dialog
- * (/champion-video), so a change here shows in both.
+ * (/video), so a change here shows in both.
  */
 export default {
 	title: 'Shared/TeamLogoBuilder',
