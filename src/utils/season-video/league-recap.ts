@@ -50,6 +50,8 @@ export interface LeagueFacts {
 	groupKind?: 'division' | 'conference' | null;
 	/** Null until the final is played. */
 	championId?: string | null;
+	/** True once a playoff game has points on the board: the video then opens on the end of the regular season. */
+	playoffsStarted?: boolean;
 	/** Week → team id → that team's best starter, judged against the league at his position. */
 	bestStarts?: Record<number, Record<string, StarterLine>>;
 	/** Trades and waiver/free agent moves, when the platform shares them. */
@@ -337,6 +339,7 @@ export function mflLeagueFacts(x: MflSeasonExports): LeagueFacts {
 		games: parseScheduleAll(x.schedule).filter((g) => g.week < firstPlayoffWeek),
 		groupKind: groups?.kind ?? null,
 		championId,
+		playoffsStarted: bracket.games.some((g) => (g.homePts ?? 0) > 0 || (g.awayPts ?? 0) > 0),
 	};
 }
 

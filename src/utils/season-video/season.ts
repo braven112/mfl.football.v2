@@ -322,16 +322,17 @@ export const SEASON_STAGES: readonly { id: SeasonStage; label: string }[] = [
 
 /**
  * The stage a season opens on (Brandon, 2026-11-06): NFL week 18 or later is
- * the season end, anything before it is mid-season. A league whose final has
- * been played is over whatever the week, and a past season is over. The end of
- * the regular season is the owner's pick, never a default.
+ * the season end, and so is a league whose final has been played or a past
+ * season. Before that, the end of the regular season once the league's
+ * playoffs have started (his pick on the decision card), else mid-season.
  *
  * `nfl` is the NFL season and week right now (`nflWeekFor`, server side).
  */
-export function defaultSeasonStage(season: number, nfl: { season: number; week: number }, complete: boolean): SeasonStage {
+export function defaultSeasonStage(season: number, nfl: { season: number; week: number }, complete: boolean, playoffsStarted = false): SeasonStage {
 	if (complete || season < nfl.season) return 'final';
 	if (season > nfl.season) return 'mid';
-	return nfl.week >= 18 ? 'final' : 'mid';
+	if (nfl.week >= 18) return 'final';
+	return playoffsStarted ? 'regular' : 'mid';
 }
 
 /**

@@ -294,6 +294,7 @@ export function espnLeagueFacts(raw: EspnSeasonRaw): LeagueFacts {
 		games: games.sort((a, b) => a.week - b.week),
 		groupKind: grouped ? 'division' : null,
 		championId: championId !== undefined ? String(championId) : null,
+		playoffsStarted: schedule.some((m) => isPlayoff(m, regularWeeks) && (num(m.home?.totalPoints) > 0 || num(m.away?.totalPoints) > 0)),
 		moves: espnMoves(teams),
 	};
 }
