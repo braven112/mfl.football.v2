@@ -28,6 +28,7 @@
  */
 import { attachStandouts, buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type WeekStarter } from './season';
 import type { SleeperPlayerMap } from '../sleeper/players';
+import { bestStartsByWeek, type LeagueFacts, type LeagueGame } from './league-recap';
 import type { FetchLogo } from './mfl-source';
 
 export type SleeperGet = (path: string) => Promise<unknown>;
@@ -43,7 +44,7 @@ interface Roster {
 	roster_id: number;
 	owner_id?: string | null;
 	co_owners?: string[] | null;
-	settings?: { wins?: number; losses?: number; ties?: number; fpts?: number; fpts_decimal?: number } | null;
+	settings?: { wins?: number; losses?: number; ties?: number; fpts?: number; fpts_decimal?: number; division?: number } | null;
 }
 interface LeagueUser {
 	user_id: string;
@@ -91,7 +92,9 @@ export interface SleeperSeasonInput {
 		name?: string;
 		season?: string | number;
 		status?: string;
-		settings?: { playoff_week_start?: number; playoff_round_type?: number; start_week?: number } | null;
+		settings?: { playoff_week_start?: number; playoff_round_type?: number; start_week?: number; divisions?: number } | null;
+		/** Division names: `division_1`, `division_2` … */
+		metadata?: Record<string, unknown> | null;
 	};
 	rosters: Roster[];
 	users: LeagueUser[];
@@ -136,6 +139,50 @@ export interface SleeperSeasonResult {
 	/** Roster ids whose avatars the facts reference (team first). */
 	logoIds: { team: number; opponents: number[] };
 	complete: boolean;
+}
+
+/** The whole league's season, for the league recap: standings order, regular-season games, divisions, champion. */
+export function sleeperLeagueFacts(x: Omit<SleeperSeasonInput, 'rosterId'>): LeagueFacts {
+	const start = Number(x.league.settings?.playoff_week_start) || 15;
+	const divisions = Number(x.league.settings?.divisions) || 0;
+	const divisionName = (n: number | undefined) => {
+		if (divisions < 2 || !n) return null;
+		const named = x.league.metadata?.[`division_${n}`];
+		return typeof named === 'string' && named.trim() ? named.trim() : `Division ${n}`;
+	};
+	const games: LeagueGame[] = [];
+	for (const [week, entries] of x.matchups) {
+		if (week >= start) continue;
+		const byMatch = new Map<number, Matchup[]>();
+		for (const e of entries) {
+			const id = (e as Matchup & { matchup_id?: number | null }).matchup_id;
+			if (id === null || id === undefined) continue;
+			byMatch.set(id, [...(byMatch.get(id) ?? []), e]);
+		}
+		for (const [, pair] of byMatch) {
+			if (pair.length !== 2 || (score(pair[0]) === 0 && score(pair[1]) === 0)) continue;
+			games.push({ week, a: String(pair[0].roster_id), aScore: score(pair[0]), b: String(pair[1].roster_id), bScore: score(pair[1]) });
+		}
+	}
+	const road = x.bracket.filter((m) => m && (m.p === undefined || m.p === null || m.p === 1));
+	const maxRound = road.reduce((n, m) => Math.max(n, m.r), 0);
+	const final = road.find((m) => m.p === 1) ?? road.find((m) => m.r === maxRound);
+	return {
+		leagueName: String(x.league.name ?? '').trim() || 'Sleeper league',
+		season: Number(x.league.season) || new Date().getFullYear() - 1,
+		teams: rankRosters(x.rosters).map((r) => ({
+			id: String(r.roster_id),
+			name: teamName(x.users, r),
+			wins: r.settings?.wins ?? 0,
+			losses: r.settings?.losses ?? 0,
+			ties: r.settings?.ties ?? 0,
+			pointsFor: Math.round(pts(r) * 100) / 100,
+			group: divisionName(r.settings?.division),
+		})),
+		games: games.sort((a, b) => a.week - b.week),
+		groupKind: divisions >= 2 ? 'division' : null,
+		championId: final?.w ? String(final.w) : null,
+	};
 }
 
 /** One roster's season from Sleeper's league, rosters, users, bracket and matchups. Null if the roster is not in the league. */
@@ -264,6 +311,8 @@ export interface SleeperVideoResponse {
 	rosterId: number;
 	teams: { id: number; name: string }[];
 	complete: boolean;
+	/** The whole league, for the league recap. */
+	league?: LeagueFacts | null;
 }
 
 export type SleeperVideoError = { ok: false; error: 'no-league' | 'not-in-league' | 'sleeper-unavailable'; message: string };
@@ -324,12 +373,26 @@ export async function loadSleeperSeason(input: {
 		}),
 	);
 	const withLogo = <T extends { oppId?: string }>(g: T): T => ({ ...g, oppLogo: g.oppId ? logos.get(g.oppId) ?? null : null });
+	const leagueFacts = sleeperLeagueFacts({ league: league as SleeperSeasonInput['league'], rosters: rs, users: users as LeagueUser[], bracket: Array.isArray(bracket) ? (bracket as BracketMatch[]) : [], matchups });
 	let standoutWeeks = result.facts.weeks;
-	if (input.players && standoutWeeks?.length) {
+	if (input.players) {
 		const map = await input.players().catch(() => ({}) as SleeperPlayerMap);
 		const who = (id: string) => (map[id] ? { name: map[id].name, pos: map[id].position } : null);
-		standoutWeeks = attachStandouts(standoutWeeks, sleeperWeekStarters(matchups, start), String(rosterId), who);
+		const starters = sleeperWeekStarters(matchups, start);
+		if (standoutWeeks?.length) standoutWeeks = attachStandouts(standoutWeeks, starters, String(rosterId), who);
+		leagueFacts.bestStarts = bestStartsByWeek(starters, who);
 	}
+	// Every roster's avatar, for the league recap.
+	await Promise.all(
+		rs.map(async (r) => {
+			const id = String(r.roster_id);
+			if (!logos.has(id)) {
+				const url = rosterAvatarUrl(users as LeagueUser[], r);
+				logos.set(id, url ? await input.fetchLogo(url).catch(() => null) : null);
+			}
+		}),
+	);
+	for (const t of leagueFacts.teams) t.logo = logos.get(t.id) ?? null;
 	const facts: SeasonFacts = {
 		...result.facts,
 		weeks: standoutWeeks,
@@ -345,5 +408,6 @@ export async function loadSleeperSeason(input: {
 		rosterId,
 		teams: rankRosters(rs).map((r) => ({ id: r.roster_id, name: teamName(users as LeagueUser[], r) })),
 		complete: result.complete,
+		league: leagueFacts,
 	};
 }

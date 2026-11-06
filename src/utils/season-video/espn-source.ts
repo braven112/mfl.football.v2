@@ -31,6 +31,7 @@
  */
 import { buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
+import type { LeagueFacts, LeagueGame } from './league-recap';
 
 const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
 /** ESPN serves seasons before this from a different endpoint (/leagueHistory) with a different shape. */
@@ -78,6 +79,7 @@ interface EspnTeam {
 	logo?: string;
 	playoffSeed?: number;
 	rankCalculatedFinal?: number;
+	divisionId?: number;
 	record?: { overall?: { wins?: number; losses?: number; ties?: number; pointsFor?: number } };
 }
 interface EspnSide {
@@ -98,7 +100,7 @@ export interface EspnSeasonRaw {
 	schedule?: EspnMatchup[];
 	settings?: {
 		name?: string;
-		scheduleSettings?: { matchupPeriodCount?: number; playoffTeamCount?: number };
+		scheduleSettings?: { matchupPeriodCount?: number; playoffTeamCount?: number; divisions?: { id?: number; name?: string }[] };
 	};
 	status?: { isActive?: boolean };
 }
@@ -250,6 +252,48 @@ export function fromEspn(raw: EspnSeasonRaw, teamId: number): EspnSeasonResult |
 	};
 }
 
+/** The whole league's season, for the league recap: standings order, regular-season games, divisions, champion. */
+export function espnLeagueFacts(raw: EspnSeasonRaw): LeagueFacts {
+	const teams = rankEspnTeams(raw.teams ?? []);
+	const regularWeeks = num(raw.settings?.scheduleSettings?.matchupPeriodCount);
+	const schedule = (raw.schedule ?? []).filter((m) => typeof m.home?.teamId === 'number' && typeof m.matchupPeriodId === 'number');
+	const games: LeagueGame[] = [];
+	for (const m of schedule) {
+		if (isPlayoff(m, regularWeeks) || typeof m.away?.teamId !== 'number') continue;
+		const a = num(m.home?.totalPoints);
+		const b = num(m.away?.totalPoints);
+		if (a === 0 && b === 0) continue;
+		games.push({ week: m.matchupPeriodId as number, a: String(m.home!.teamId), aScore: round2(a), b: String(m.away.teamId), bScore: round2(b) });
+	}
+	const bracket = schedule.filter((m) => isPlayoff(m, regularWeeks) && (m.playoffTierType ? m.playoffTierType === 'WINNERS_BRACKET' : true));
+	const lastPeriod = Math.max(0, ...bracket.map((m) => m.matchupPeriodId as number));
+	const finals = bracket.filter((m) => m.matchupPeriodId === lastPeriod && typeof m.away?.teamId === 'number');
+	const final = finals.length === 1 ? finals[0] : undefined;
+	const championId =
+		final && (final.winner === 'HOME' || final.winner === 'AWAY')
+			? (final.winner === 'HOME' ? final.home!.teamId : final.away!.teamId)
+			: teams.find((t) => t.rankCalculatedFinal === 1)?.id;
+	const divisions = raw.settings?.scheduleSettings?.divisions ?? [];
+	const divName = new Map(divisions.map((d) => [d.id, d.name?.trim() || `Division ${(d.id ?? 0) + 1}`]));
+	const grouped = divisions.length > 1;
+	return {
+		leagueName: raw.settings?.name?.trim() || 'ESPN league',
+		season: num(raw.seasonId) || new Date().getFullYear() - 1,
+		teams: teams.map((t) => ({
+			id: String(t.id),
+			name: espnTeamName(t),
+			wins: num(t.record?.overall?.wins),
+			losses: num(t.record?.overall?.losses),
+			ties: num(t.record?.overall?.ties),
+			pointsFor: round2(pf(t)),
+			group: grouped && typeof t.divisionId === 'number' ? (divName.get(t.divisionId) ?? null) : null,
+		})),
+		games: games.sort((a, b) => a.week - b.week),
+		groupKind: grouped ? 'division' : null,
+		championId: championId !== undefined ? String(championId) : null,
+	};
+}
+
 /** A team's logo URL as ESPN stores it, when it is one we can fetch. */
 export function espnLogoUrl(t: EspnTeam | undefined): string | null {
 	const logo = t?.logo?.trim();
@@ -304,6 +348,8 @@ export interface EspnVideoResponse {
 	facts: SeasonFacts | null;
 	kind: SeasonVideoKind | null;
 	complete: boolean;
+	/** The whole league, for the league recap: needs no team picked. */
+	league?: LeagueFacts | null;
 }
 
 /** One team's video facts (logos fetched as data: URLs) from a checked ESPN season. */
@@ -312,16 +358,19 @@ export async function buildEspnVideo(raw: EspnSeasonRaw, teamId: number | null, 
 	const list = teams.map((t) => ({ id: t.id as number, name: espnTeamName(t) }));
 	const base = { ok: true as const, leagueId: String(raw.id ?? ''), season: num(raw.seasonId), teams: list };
 	const result = teamId !== null ? fromEspn(raw, teamId) : null;
-	if (!result) return { ...base, teamId: null, facts: null, kind: null, complete: false };
 
-	const byId = new Map(teams.map((t) => [t.id as number, t]));
+	// Every team's logo: the league recap shows them all.
 	const logos = new Map<string, string | null>();
 	await Promise.all(
-		[result.logoIds.team, ...result.logoIds.opponents].map(async (id) => {
-			const url = espnLogoUrl(byId.get(id));
-			logos.set(String(id), url ? await fetchLogo(url).catch(() => null) : null);
+		teams.map(async (t) => {
+			const url = espnLogoUrl(t);
+			logos.set(String(t.id), url ? await fetchLogo(url).catch(() => null) : null);
 		}),
 	);
+	const league = espnLeagueFacts(raw);
+	for (const t of league.teams) t.logo = logos.get(t.id) ?? null;
+	if (!result) return { ...base, teamId: null, facts: null, kind: null, complete: league.championId !== null, league };
+
 	const withLogo = <T extends { oppId?: string }>(g: T): T => ({ ...g, oppLogo: g.oppId ? logos.get(g.oppId) ?? null : null });
 	const facts: SeasonFacts = {
 		...result.facts,
@@ -330,7 +379,7 @@ export async function buildEspnVideo(raw: EspnSeasonRaw, teamId: number | null, 
 		bestGame: result.facts.bestGame ? withLogo(result.facts.bestGame) : null,
 		worstGame: result.facts.worstGame ? withLogo(result.facts.worstGame) : null,
 	};
-	return { ...base, teamId, facts, kind: pickVideoKind(facts, result.complete), complete: result.complete };
+	return { ...base, teamId, facts, kind: pickVideoKind(facts, result.complete), complete: result.complete, league };
 }
 
 export type EspnGet = (url: string) => Promise<{ status: number; text: string } | null>;

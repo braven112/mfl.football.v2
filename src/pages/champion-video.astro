@@ -68,7 +68,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		<p class="mls__lede">Brag, roast or tell it straight. Free, for any team.</p>
 
 		<ol class="svid__steps" data-steps>
-			<li><button type="button" class="svid__step" data-step-tab="1" aria-current="step"><span>1</span> Team</button></li>
+			<li><button type="button" class="svid__step" data-step-tab="1" aria-current="step"><span>1</span> Who</button></li>
 			<li><button type="button" class="svid__step" data-step-tab="2"><span>2</span> When</button></li>
 			<li><button type="button" class="svid__step" data-step-tab="3"><span>3</span> Style</button></li>
 		</ol>
@@ -76,8 +76,13 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		<div class="svid__layout">
 			<div class="svid__form">
 				<section class="ui-card svid__card" data-step="1" aria-labelledby="svid-step1">
-					<h2 class="svid__heading visually-hidden" id="svid-step1">Team</h2>
+					<h2 class="svid__heading visually-hidden" id="svid-step1">The league or one team</h2>
+					<div class="ui-pills svid__big-pills" role="group" aria-label="The league or one team" data-group="mode">
+						<button type="button" class="ui-pill" data-value="league" aria-pressed="false">🏟️ The league</button>
+						<button type="button" class="ui-pill" data-value="team" aria-pressed="false">🎯 One team</button>
+					</div>
 
+					<div data-mode-body hidden>
 					<details class="svid__fill" data-fill open={signedIn ? true : undefined}>
 						<summary><strong>Fill it in from your league</strong></summary>
 						<div class="ui-pills" role="group" aria-label="Where your league is" data-group="source">
@@ -129,7 +134,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 									<label class="svid__label" for="svid-sleeper-league">League</label>
 									<select id="svid-sleeper-league" class="svid__input" data-sleeper-league></select>
 								</div>
-								<div>
+								<div data-team-only>
 									<label class="svid__label" for="svid-sleeper-team">Team</label>
 									<select id="svid-sleeper-team" class="svid__input" data-sleeper-team disabled></select>
 								</div>
@@ -143,8 +148,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 								<select id="svid-league" class="svid__input" data-league-select>
 									{leagues.map((l) => <option value={l.id}>{l.name} · {l.team}</option>)}
 								</select>
-								<label class="svid__label" for="svid-team">Team</label>
-								<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
+								<div data-team-only>
+									<label class="svid__label" for="svid-team">Team</label>
+									<select id="svid-team" class="svid__input" data-team-select disabled><option>Loading…</option></select>
+								</div>
 								<p class="svid__note" data-source-status aria-live="polite">Filling in from MFL…</p>
 							</div>
 						) : signedIn ? (
@@ -157,6 +164,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						</div>
 					</details>
 
+					<div data-team-only>
 					<label class="svid__drop" data-logo-drop>
 						<input class="svid__drop-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-logo-input />
 						<span class="svid__drop-face" aria-hidden="true">
@@ -190,12 +198,15 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 					<label class="svid__label" for="svid-name">Team name</label>
 					<input id="svid-name" class="svid__input svid__input--big" maxlength="40" data-f="teamName" placeholder="Computer Jocks" />
+					</div>
 					<label class="svid__label" for="svid-league-name">League name</label>
 					<input id="svid-league-name" class="svid__input" maxlength="40" data-f="leagueName" placeholder="The League" />
 
+					<p class="svid__note svid__warn" data-who-status aria-live="polite"></p>
 					<div class="svid__nav">
 						<span></span>
 						<button type="button" class="cta cta--primary" data-next="2">Next</button>
+					</div>
 					</div>
 				</section>
 
@@ -217,7 +228,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						</div>
 					)}
 
-					<details class="svid__more svid__numbers">
+					<details class="svid__more" data-awards-wrap hidden>
+						<summary>Change a winner</summary>
+						<div class="svid__awards" data-awards></div>
+					</details>
+					<details class="svid__more svid__numbers" data-team-only>
 						<summary>Edit the numbers</summary>
 					<div class="svid__row svid__row--4">
 						<div>
@@ -401,8 +416,17 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	</div>
 </template>
 
+<!-- Cloned per award, so it carries this page's scoped styles. -->
+<template id="svid-award-template">
+	<label class="svid__award">
+		<span data-award-title></span>
+		<select class="svid__input" data-award-pick></select>
+	</label>
+</template>
+
 <script>
-	import { buildStory } from '../utils/season-video/story';
+	import { buildStory, leagueStory } from '../utils/season-video/story';
+	import { leagueAwards, leagueWeeks, type AwardId, type LeagueFacts } from '../utils/season-video/league-recap';
 	import { VIDEO_VIBES, storyFor, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook, type VideoSpan, type VideoVibe, type WeekLine } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
 	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
@@ -424,6 +448,17 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const template = document.getElementById('svid-game-template') as HTMLTemplateElement;
 
 		let teamLogo: string | null = null;
+		/** The whole league from the last pull, for the league recap. */
+		let leagueFacts: LeagueFacts | null = null;
+		/** Awards the viewer gave to a different team than the data did. */
+		let overrides: Partial<Record<AwardId, string>> = {};
+		/** League logos, keyed by their data: URL. */
+		const leagueImgs = new Map<string, Img>();
+		const isLeague = () => picked('mode') === 'league';
+		function setLeague(lf: LeagueFacts | null | undefined) {
+			leagueFacts = lf ?? null;
+			overrides = {};
+		}
 		/** The league's week-by-week lines from the last pull; typed-in seasons have none. */
 		let sourceWeeks: WeekLine[] = [];
 		let teamImg: Img | null = null;
@@ -448,6 +483,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				const group = b.closest<HTMLElement>('[data-group]')!.dataset.group!;
 				press(group, b.dataset.value!);
 				if (group === 'span') spanChosen = true;
+				if (group === 'span' || group === 'mode') overrides = {};
+				if (group === 'mode') $<HTMLElement>('[data-mode-body]').hidden = false;
 				refresh();
 			}),
 		);
@@ -533,15 +570,6 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			sourceWeeks = f.weeks ?? [];
 			// A season still being played opens on its latest week: the weekly roast is what brings people back.
 			if (!spanChosen) press('span', !seasonComplete && sourceWeeks.length ? 'week' : 'season');
-			const weekSel = $<HTMLSelectElement>('[data-week]');
-			weekSel.replaceChildren(
-				...[...sourceWeeks].reverse().map((w) =>
-					Object.assign(document.createElement('option'), {
-						value: String(w.week),
-						textContent: `Week ${w.week} · ${w.score}–${w.oppScore}`,
-					}),
-				),
-			);
 			playoffs.replaceChildren();
 			oppLogoByName.clear();
 			const remember = (g?: SeasonGame | null) => g?.oppLogo && oppLogoByName.set(g.oppName, g.oppLogo);
@@ -686,6 +714,12 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		}
 		/** Step 1 needs a logo and a name before anything else makes sense. */
 		function stepOneReady(): boolean {
+			if (!picked('mode')) return false;
+			if (isLeague()) {
+				$<HTMLElement>('[data-who-status]').textContent = leagueFacts ? '' : 'Fill in from your league first.';
+				if (!leagueFacts) $<HTMLDetailsElement>('[data-fill]').open = true;
+				return !!leagueFacts;
+			}
 			if (!teamLogo) {
 				logoStatus.textContent = 'Add your logo first. No logo? Make one free with the button above.';
 				return false;
@@ -711,16 +745,71 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const span = () => (picked('span') || 'season') as VideoSpan;
 		/** The story is the data's call, so the video stays true. */
 		const currentKind = (): SeasonVideoKind => storyFor(span(), (picked('vibe') || 'facts') as VideoVibe, readFacts(), seasonComplete);
+		/** The league recap's awards, each with a picker to give it to a different team. */
+		let awardsKey = '';
+		function currentAwards() {
+			return leagueFacts ? leagueAwards(leagueFacts, span(), chosenWeek(), overrides) : [];
+		}
+		function renderAwards() {
+			const wrap = $<HTMLElement>('[data-awards-wrap]');
+			const awards = isLeague() ? currentAwards() : [];
+			wrap.hidden = awards.length === 0;
+			const key = awards.map((a) => `${a.id}=${a.teamId}`).join('|') + `|${leagueFacts?.season}|${leagueFacts?.leagueName}`;
+			if (key === awardsKey) return;
+			awardsKey = key;
+			const box = $<HTMLElement>('[data-awards]');
+			box.replaceChildren(
+				...awards.map((a) => {
+					const tpl = document.getElementById('svid-award-template') as HTMLTemplateElement;
+					const row = tpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
+					row.querySelector('[data-award-title]')!.textContent = `${a.badge} ${a.title}`;
+					const sel = row.querySelector<HTMLSelectElement>('[data-award-pick]')!;
+					sel.replaceChildren(...leagueFacts!.teams.map((t) => new Option(t.name, t.id, false, t.id === a.teamId)));
+					sel.addEventListener('change', () => {
+						if (sel.value === a.pickedId) delete overrides[a.id];
+						else overrides[a.id] = sel.value;
+						refresh();
+					});
+					return row;
+				}),
+			);
+		}
+
+		/** The weeks the week picker offers: the team's, or the league's. */
+		let weekKey = '';
+		function fillWeeks(): number {
+			const opts = isLeague()
+				? (leagueFacts ? leagueWeeks(leagueFacts) : []).map((w) => ({ value: w, label: `Week ${w}` }))
+				: sourceWeeks.map((w) => ({ value: w.week, label: `Week ${w.week} · ${w.score}–${w.oppScore}` }));
+			const key = opts.map((o) => o.label).join('|');
+			const sel = $<HTMLSelectElement>('[data-week]');
+			if (key !== weekKey) {
+				weekKey = key;
+				const was = sel.value;
+				sel.replaceChildren(...[...opts].reverse().map((o) => new Option(o.label, String(o.value), false, String(o.value) === was)));
+			}
+			return opts.length;
+		}
 		function syncChoices() {
+			const league = isLeague();
+			root.querySelectorAll<HTMLElement>('[data-team-only]').forEach((el) => (el.hidden = league));
+			// ESPN's team picker shows once a league is found, and never for the league recap.
+			const espnPicks = $<HTMLElement>('[data-espn-picks]');
+			if (league) espnPicks.hidden = true;
+			else if ($<HTMLSelectElement>('[data-espn-team]').options.length) espnPicks.hidden = false;
 			const weekly = span() === 'week';
-			$<HTMLElement>('[data-week-wrap]').hidden = !weekly || !sourceWeeks.length;
-			$<HTMLElement>('[data-week-none]').hidden = !weekly || sourceWeeks.length > 0;
+			const weekCount = fillWeeks();
+			$<HTMLElement>('[data-week-wrap]').hidden = !weekly || !weekCount;
+			$<HTMLElement>('[data-week-none]').hidden = !weekly || weekCount > 0;
+			renderAwards();
 			const yearWrap = root.querySelector<HTMLElement>('[data-year-wrap]');
 			if (yearWrap) yearWrap.hidden = (picked('source') || 'mfl') !== 'mfl';
 			// Only the vibes this span can tell; a week is a brag or a roast.
 			const vibes = root.querySelectorAll<HTMLElement>('[data-group="vibe"] [data-value]');
-			vibes.forEach((b) => (b.hidden = !(b.dataset.spans ?? '').split(' ').includes(span())));
-			if (root.querySelector<HTMLElement>('[data-group="vibe"] [aria-pressed="true"]')?.hidden) {
+			// A league recap tells it straight: no vibe to pick, the Facts looks.
+			vibes.forEach((b) => (b.hidden = league || !(b.dataset.spans ?? '').split(' ').includes(span())));
+			if (league) press('vibe', 'facts');
+			if (!league && root.querySelector<HTMLElement>('[data-group="vibe"] [aria-pressed="true"]')?.hidden) {
 				press('vibe', Array.from(vibes).find((b) => !b.hidden)?.dataset.value ?? 'roast');
 			}
 			const vibe = picked('vibe');
@@ -736,10 +825,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed' || facts.outcome === 'in-progress';
 			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
 			syncChoices();
-			$<HTMLButtonElement>('[data-make]').disabled = busy || !teamLogo;
+			const ready = isLeague() ? !!leagueFacts : !!teamLogo;
+			$<HTMLButtonElement>('[data-make]').disabled = busy || !ready;
 			$<HTMLButtonElement>('[data-preview]').disabled = busy;
 			if (!busy) {
-				warning.textContent = teamLogo ? '' : 'Add your logo in step 1 to make the video.';
+				warning.textContent = ready ? '' : isLeague() ? 'Fill in from your league in step 1.' : 'Add your logo in step 1 to make the video.';
 				void still();
 			}
 		}
@@ -750,16 +840,34 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			if ((e.target as HTMLElement).matches('select[data-f], select[data-week]')) refresh();
 		});
 
-		const assets = (facts: SeasonFacts): Promise<DrawAssets> => loadAssets(facts, teamImg, oppImgs);
+		async function assets(facts: SeasonFacts): Promise<DrawAssets> {
+			const base = await loadAssets(facts, teamImg, oppImgs);
+			if (!isLeague() || !leagueFacts) return base;
+			const logos = new Map<string, Img>();
+			await Promise.all(
+				leagueFacts.teams.map(async (t) => {
+					if (!t.logo) return;
+					if (!leagueImgs.has(t.logo)) {
+						const img = await loadImage(t.logo);
+						if (img) leagueImgs.set(t.logo, img);
+					}
+					const img = leagueImgs.get(t.logo);
+					if (img) logos.set(t.id, img);
+				}),
+			);
+			return { ...base, logos };
+		}
 		/** Where the facts on the form last came from, for the History handoff. */
 		let videoSource: { source: VideoSource; leagueId: string | null } = { source: 'manual', leagueId: null };
 
 		const story = (facts: SeasonFacts) =>
-			buildStory(facts, {
-			kind: currentKind(),
-			look: (picked('look') || 'trophy') as VideoLook,
-			week: chosenWeek(),
-		});
+			isLeague() && leagueFacts
+				? leagueStory(leagueFacts, currentAwards(), (picked('look') || 'trophy') as VideoLook, span(), chosenWeek() ?? leagueWeeks(leagueFacts).at(-1), !seasonComplete)
+				: buildStory(facts, {
+						kind: currentKind(),
+						look: (picked('look') || 'trophy') as VideoLook,
+						week: chosenWeek(),
+					});
 		function chosenWeek(): number | undefined {
 			return span() === 'week' ? Number($<HTMLSelectElement>('[data-week]').value) || undefined : undefined;
 		}
@@ -803,7 +911,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 		function offer(blob: Blob, facts: SeasonFacts) {
 			const ext = fileExtension(blob.type);
-			const slug = `${facts.teamName}-${facts.season}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+			const slug = `${isLeague() && leagueFacts ? leagueFacts.leagueName : facts.teamName}-${facts.season}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 			const name = `${slug || 'season'}-video.${ext}`;
 			const link = $<HTMLAnchorElement>('[data-download]');
 			if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
@@ -823,7 +931,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			const optin = $<HTMLFormElement>('[data-optin]');
 			if (root.dataset.optinOpen && optin.dataset.sent !== '1') optin.hidden = false;
 			$<HTMLFormElement>('[data-idea]').hidden = false;
-			saveLastVideo({
+			// The History handoff replays a team's video; a league recap isn't one.
+			if (!isLeague()) saveLastVideo({
 				...videoSource,
 				facts: { ...facts, teamLogo },
 				kind: currentKind(),
@@ -952,6 +1061,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				teamSel.replaceChildren(...body.franchises.map((f) => new Option(f.name, f.id, false, f.id === body.franchiseId)));
 				yearSel.disabled = teamSel.disabled = false;
 				seasonComplete = body.complete;
+				setLeague(body.league);
 				fillForm(body.facts);
 				videoSource = { source: 'mfl', leagueId: leagueSel.value };
 				if (!body.facts.teamLogo && logoFrom === 'league') void setLogo(null);
@@ -1027,6 +1137,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				sTeam.replaceChildren(...teams.map((t) => new Option(t.name, String(t.id), false, t.id === body.rosterId)));
 				sTeam.disabled = false;
 				seasonComplete = body.complete !== false;
+				setLeague(body.league as LeagueFacts | null);
 				const facts = body.facts as SeasonFacts;
 				fillForm(facts);
 				videoSource = { source: 'sleeper', leagueId: sLeague.value };
@@ -1069,8 +1180,19 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				...(picked === null ? [new Option('Pick your team', '', true, true)] : []),
 				...teams.map((t) => new Option(t.name, String(t.id), false, t.id === picked)),
 			);
-			$<HTMLElement>('[data-espn-picks]').hidden = false;
+			$<HTMLElement>('[data-espn-picks]').hidden = isLeague();
 			ePrivate.hidden = how === 'public';
+			setLeague(body.league as LeagueFacts | null);
+			videoSource = { source: 'espn', leagueId: String(body.leagueId || espnRead?.leagueId || '') || null };
+			if ((picked === null || !body.facts) && isLeague() && leagueFacts) {
+				// The league recap needs no team.
+				seasonComplete = body.complete !== false;
+				field('leagueName').value = leagueFacts.leagueName;
+				ePrivate.hidden = true;
+				eStatus.textContent = 'Filled in from ESPN.';
+				refresh();
+				return;
+			}
 			if (picked === null || !body.facts) {
 				eStatus.textContent = 'Found your league. Now pick your team.';
 				eTeam.focus();
@@ -1183,6 +1305,17 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 <style>
 	.svid [hidden] {
 		display: none !important;
+	}
+	.svid__awards {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 0.6rem;
+	}
+	.svid__award {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+		align-items: center;
+		gap: 0.6rem;
 	}
 	.svid__big-pills .ui-pill {
 		font-size: 1.05rem;

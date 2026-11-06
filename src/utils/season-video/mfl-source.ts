@@ -17,7 +17,8 @@
  */
 import { asArray, isMflHost, mflErrorText, parseLeagueName, parseSeasonChain, pickChampionshipBracketId, type MflSeasonRef } from '../league-history/mfl-champions';
 import { formatMflName } from '../player-name-matching';
-import { attachStandouts, fromMflExports, parseMflWeekStarters, pickVideoKind, type MflFranchiseInfo, type SeasonFacts, type SeasonVideoKind, type WeekLine } from './season';
+import { attachStandouts, fromMflExports, parseMflWeekStarters, pickVideoKind, type MflFranchiseInfo, type MflSeasonExports, type SeasonFacts, type SeasonVideoKind, type WeekStarter } from './season';
+import { bestStartsByWeek, mflLeagueFacts, type LeagueFacts } from './league-recap';
 
 export type ExportType = 'league' | 'leagueStandings' | 'playoffBrackets' | 'playoffBracket' | 'schedule' | 'weeklyResults' | 'players';
 
@@ -37,6 +38,8 @@ export interface SeasonVideoResponse {
 	franchises: { id: string; name: string }[];
 	/** False while that season's final has not been played. */
 	complete: boolean;
+	/** The whole league, for the league recap. */
+	league?: LeagueFacts | null;
 }
 
 export type SeasonVideoError = { ok: false; error: 'no-season' | 'not-in-season' | 'mfl-unavailable'; message: string };
@@ -76,20 +79,22 @@ async function readSeason(
 	]);
 	const champId = mflErrorText(brackets) ? null : pickChampionshipBracketId(brackets);
 	const championshipBracket = champId ? await fetchExport({ ...base, type: 'playoffBracket', bracketId: champId }) : null;
+	const exports: MflSeasonExports = {
+		leagueName: mflErrorText(league) ? leagueName : parseLeagueName(league),
+		season: ref.year,
+		franchiseId,
+		league,
+		standings,
+		brackets,
+		championshipBracket: championshipBracket && !mflErrorText(championshipBracket) ? championshipBracket : null,
+		schedule,
+	};
 	return {
 		league,
 		base,
+		exports,
 		weekly: weekly && !mflErrorText(weekly) ? weekly : null,
-		result: fromMflExports({
-			leagueName: mflErrorText(league) ? leagueName : parseLeagueName(league),
-			season: ref.year,
-			franchiseId,
-			league,
-			standings,
-			brackets,
-			championshipBracket: championshipBracket && !mflErrorText(championshipBracket) ? championshipBracket : null,
-			schedule,
-		}),
+		result: fromMflExports(exports),
 	};
 }
 
@@ -127,9 +132,8 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 		return { ok: false, error: 'not-in-season', message: 'That team isn’t in this season’s standings.' };
 	}
 
-	const weeks = chosen?.weekly && result.facts.weeks?.length
-		? await withStandouts(result.facts.weeks, chosen.weekly, franchiseId, chosen.base, fetchExport)
-		: result.facts.weeks;
+	const lineups = chosen?.weekly ? await readLineups(chosen.weekly, chosen.base, fetchExport) : null;
+	const weeks = lineups && result.facts.weeks?.length ? attachStandouts(result.facts.weeks, lineups.starters, franchiseId, lineups.who) : result.facts.weeks;
 
 	// Logos: the team's and every opponent the cards show.
 	const byId = new Map<string, MflFranchiseInfo>(result.franchises.map((f) => [f.id, f]));
@@ -142,6 +146,20 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 		}),
 	);
 	const withLogo = <T extends { oppId?: string }>(g: T): T => ({ ...g, oppLogo: g.oppId ? logos.get(g.oppId) ?? null : null });
+	// The whole league, for the league recap: every franchise gets its logo.
+	const leagueFacts = chosen ? mflLeagueFacts(chosen.exports) : null;
+	if (leagueFacts) {
+		await Promise.all(
+			leagueFacts.teams.map(async (t) => {
+				if (!logos.has(t.id)) {
+					const url = byId.get(t.id)?.icon;
+					logos.set(t.id, url ? await fetchLogo(url).catch(() => null) : null);
+				}
+				t.logo = logos.get(t.id) ?? null;
+			}),
+		);
+		if (lineups) leagueFacts.bestStarts = bestStartsByWeek(lineups.starters, lineups.who);
+	}
 	const facts: SeasonFacts = {
 		...result.facts,
 		weeks,
@@ -159,6 +177,7 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 		franchiseId,
 		franchises: result.franchises.map((f) => ({ id: f.id, name: f.name })),
 		complete: result.complete,
+		league: leagueFacts,
 	};
 }
 
@@ -166,22 +185,20 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 const PLAYERS_PER_CALL = 250;
 
 /**
- * Each week's best and worst starter for the team. Names and positions for
- * every starter in the league (the averages need the whole league's), read
- * from MFL's players export for that year. Any failure leaves the weeks as
- * they were.
+ * Every week's starters, with names and positions for every starter in the
+ * league (position averages need the whole league's), read from MFL's
+ * players export for that year. Null on any failure: the lineups only add
+ * the player cards, never the video.
  */
-async function withStandouts(
-	weeks: WeekLine[],
+async function readLineups(
 	weekly: unknown,
-	franchiseId: string,
 	base: { host: string; year: number; leagueId: string },
 	fetchExport: FetchMflExport,
-): Promise<WeekLine[]> {
+): Promise<{ starters: Map<number, WeekStarter[]>; who: (id: string) => { name: string; pos: string } | null } | null> {
 	try {
 		const starters = parseMflWeekStarters(weekly);
 		const ids = [...new Set([...starters.values()].flat().map((s) => s.id))].filter((id) => /^\d{1,6}$/.test(id));
-		if (ids.length === 0) return weeks;
+		if (ids.length === 0) return null;
 		const chunks: string[][] = [];
 		for (let i = 0; i < ids.length; i += PLAYERS_PER_CALL) chunks.push(ids.slice(i, i + PLAYERS_PER_CALL));
 		const bodies = await Promise.all(chunks.map((c) => fetchExport({ ...base, type: 'players', players: c.join(',') }).catch(() => null)));
@@ -191,9 +208,10 @@ async function withStandouts(
 				if (p?.id && p.name && p.position) people.set(String(p.id), { name: formatMflName(p.name), pos: p.position });
 			}
 		}
-		return attachStandouts(weeks, starters, franchiseId, (id) => people.get(id) ?? null);
+		if (people.size === 0) return null;
+		return { starters, who: (id) => people.get(id) ?? null };
 	} catch {
-		return weeks;
+		return null;
 	}
 }
 
