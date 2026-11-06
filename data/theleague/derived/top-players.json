@@ -5495,7 +5495,7 @@
       "id": "13718",
       "name": "Daniel Carlson",
       "position": "PK",
-      "team": "NOS",
+      "team": "FA",
       "espnId": "3051909",
       "owners": [],
       "weeks": {
@@ -7485,7 +7485,7 @@
       "id": "15589",
       "name": "Cody White",
       "position": "WR",
-      "team": "LVR",
+      "team": "FA",
       "espnId": "4241983",
       "owners": [],
       "weeks": {
@@ -7913,7 +7913,13 @@
       "position": "QB",
       "team": "MIN",
       "espnId": "2573079",
-      "owners": [],
+      "owners": [
+        {
+          "id": "0006",
+          "name": "The Music City Mafia",
+          "icon": "/assets/theleague/icons/music_city.png"
+        }
+      ],
       "weeks": {
         "1": 25.22,
         "2": 6.32
@@ -11857,7 +11863,7 @@
       "id": "16595",
       "name": "Audric Estime",
       "position": "RB",
-      "team": "FA",
+      "team": "NOS",
       "espnId": "4569682",
       "owners": [],
       "weeks": {
@@ -12301,10 +12307,10 @@
         "4": 1.02,
         "5": 0.03,
         "6": 1.9,
-        "8": 1.02
+        "8": 1.17
       },
-      "total": 6.1,
-      "avg": 0.87,
+      "total": 6.25,
+      "avg": 0.89,
       "games": 7,
       "best": 1.9,
       "rank": 455,
@@ -15945,13 +15951,7 @@
       "position": "QB",
       "team": "NOS",
       "espnId": "4426339",
-      "owners": [
-        {
-          "id": "0006",
-          "name": "The Music City Mafia",
-          "icon": "/assets/theleague/icons/music_city.png"
-        }
-      ],
+      "owners": [],
       "weeks": {
         "6": 0
       },
