@@ -30,7 +30,9 @@ import { canUseHistoryProduct } from '../utils/league-history/access';
 import { listOwnerLeagues } from '../utils/live/owner-league';
 import { sharedHostLoginUrl } from '../utils/login-redirect';
 import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
-import { SEASON_OUTCOMES, VIDEO_LOOKS, VIDEO_VIBES } from '../utils/season-video/season';
+import { SEASON_OUTCOMES, SEASON_STAGES, VIDEO_LOOKS, VIDEO_VIBES } from '../utils/season-video/season';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
+import { nflWeekFor } from '../utils/nfl-week-starts.mjs';
 import { ESPN_FIRST_SEASON, currentEspnSeason } from '../utils/season-video/espn-source';
 import '../styles/mfl-live.css';
 import { spriteUrlForSet } from '../utils/sprite-url';
@@ -51,6 +53,11 @@ const optInOpen = !!process.env.KIT_API_KEY;
 const logoTeams = owned?.ok ? owned.leagues.map((l) => ({ name: l.franchiseName, league: l.leagueName })) : [];
 const lastYear = new Date().getFullYear() - 1;
 const espnLatest = currentEspnSeason(new Date());
+// The NFL season and week right now pick the video's stage (`defaultSeasonStage`):
+// computed here so the NFL schedule stays out of the page's script.
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const nflSeason = getCurrentSeasonYear(now);
+const nflWeek = nflWeekFor(nflSeason, now);
 const espnSeasons = Array.from({ length: espnLatest - ESPN_FIRST_SEASON + 1 }, (_, i) => espnLatest - i);
 
 const MUSIC = [
@@ -67,7 +74,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	title="Make your fantasy football season video — MFL Football"
 	description="Free: turn any fantasy football team's season into a vertical video for TikTok, Reels, Shorts and X. Champion, mid-season report, master of mediocrity or last place."
 >
-	<section class="mls svid" data-season-video data-history={historyOpen ? '1' : undefined} data-optin-open={optInOpen ? '1' : undefined}>
+	<section class="mls svid" data-season-video data-nfl-season={nflSeason} data-nfl-week={nflWeek} data-history={historyOpen ? '1' : undefined} data-optin-open={optInOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
 		<p class="mls__lede">Brag, roast or tell it straight. Free, for any team.</p>
 
@@ -219,6 +226,9 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 					<div class="ui-pills svid__big-pills" role="group" aria-label="Week or season" data-group="span">
 						<button type="button" class="ui-pill" data-value="week" aria-pressed="false">This week</button>
 						<button type="button" class="ui-pill" data-value="season" aria-pressed="true">The season</button>
+					</div>
+					<div class="ui-pills" role="group" aria-label="Where the season stands" data-group="stage" data-stage-wrap>
+						{SEASON_STAGES.map((st) => <button type="button" class="ui-pill" data-value={st.id} aria-pressed={st.id === 'mid' ? 'true' : 'false'}>{st.label}</button>)}
 					</div>
 					<div data-week-wrap hidden>
 						<label class="svid__label" for="svid-week">Week</label>
@@ -431,7 +441,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 <script>
 	import { buildStory, leagueStory } from '../utils/season-video/story';
 	import { leagueAwards, leagueWeeks, type AwardId, type LeagueFacts } from '../utils/season-video/league-recap';
-	import { VIDEO_VIBES, storyFor, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook, type VideoSpan, type VideoVibe, type WeekLine } from '../utils/season-video/season';
+	import { VIDEO_VIBES, defaultSeasonStage, storyFor, type SeasonFacts, type SeasonStage, type SeasonGame, type SeasonVideoKind, type VideoLook, type VideoSpan, type VideoVibe, type WeekLine } from '../utils/season-video/season';
 	import { drawFrame, type DrawAssets, type Img } from '../utils/season-video/draw';
 	import { historyPath, loadAssets, loadBrand, loadImage, saveLastVideo, type VideoSource } from '../utils/season-video/player';
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
@@ -462,6 +472,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		function setLeague(lf: LeagueFacts | null | undefined) {
 			leagueFacts = lf ?? null;
 			overrides = {};
+			// A fresh pull opens on its own stage again.
+			stageChosen = false;
 		}
 		/** The league's week-by-week lines from the last pull; typed-in seasons have none. */
 		let sourceWeeks: WeekLine[] = [];
@@ -469,8 +481,14 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const oppImgs = new Map<string, Img>();
 		/** Logos MFL gave us, kept on the games they came with. */
 		const oppLogoByName = new Map<string, string>();
-		/** False while the season the form came from is still being played. */
-		let seasonComplete = true;
+		/** Whether the league's final has been played, from the last pull. A typed-in season leaves it to the calendar. */
+		let seasonComplete = false;
+		/** Whether the owner picked the stage themselves; until then it follows the NFL week (`defaultSeasonStage`). */
+		let stageChosen = false;
+		const nflNow = { season: Number(root.dataset.nflSeason) || new Date().getFullYear(), week: Number(root.dataset.nflWeek) || 0 };
+		const stage = () => (picked('stage') || 'mid') as SeasonStage;
+		/** The stage the data and the calendar suggest for the season on the form. */
+		const autoStage = () => defaultSeasonStage(isLeague() && leagueFacts ? leagueFacts.season : readFacts().season, nflNow, seasonComplete);
 		/** Whether the owner picked week or season themselves; until then a season in progress opens on the week. */
 		let spanChosen = false;
 		let busy = false;
@@ -487,6 +505,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				const group = b.closest<HTMLElement>('[data-group]')!.dataset.group!;
 				press(group, b.dataset.value!);
 				if (group === 'span') spanChosen = true;
+				if (group === 'stage') stageChosen = true;
 				if (group === 'span' || group === 'mode') overrides = {};
 				if (group === 'mode') $<HTMLElement>('[data-mode-body]').hidden = false;
 				refresh();
@@ -573,7 +592,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
 			sourceWeeks = f.weeks ?? [];
 			// A season still being played opens on its latest week: the weekly roast is what brings people back.
-			if (!spanChosen) press('span', !seasonComplete && sourceWeeks.length ? 'week' : 'season');
+			if (!spanChosen) press('span', autoStage() === 'mid' && sourceWeeks.length ? 'week' : 'season');
 			playoffs.replaceChildren();
 			oppLogoByName.clear();
 			const remember = (g?: SeasonGame | null) => g?.oppLogo && oppLogoByName.set(g.oppName, g.oppLogo);
@@ -748,11 +767,13 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		// ── video choice: week or season, then a vibe that shows only its looks ──
 		const span = () => (picked('span') || 'season') as VideoSpan;
 		/** The story is the data's call, so the video stays true. */
-		const currentKind = (): SeasonVideoKind => storyFor(span(), (picked('vibe') || 'facts') as VideoVibe, readFacts(), seasonComplete);
+		const currentKind = (): SeasonVideoKind => storyFor(span(), (picked('vibe') || 'facts') as VideoVibe, readFacts(), stage());
 		/** The league recap's awards, each with a picker to give it to a different team. */
 		let awardsKey = '';
 		function currentAwards() {
-			return leagueFacts ? leagueAwards(leagueFacts, span(), chosenWeek(), overrides) : [];
+			const all = leagueFacts ? leagueAwards(leagueFacts, span(), chosenWeek(), overrides) : [];
+			// Only the season end names a champion.
+			return span() === 'season' && stage() !== 'final' ? all.filter((a) => a.id !== 'champion') : all;
 		}
 		function renderAwards() {
 			const wrap = $<HTMLElement>('[data-awards-wrap]');
@@ -802,6 +823,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			if (league) espnPicks.hidden = true;
 			else if ($<HTMLSelectElement>('[data-espn-team]').options.length) espnPicks.hidden = false;
 			const weekly = span() === 'week';
+			if (!stageChosen) press('stage', autoStage());
+			$<HTMLElement>('[data-stage-wrap]').hidden = weekly;
 			const weekCount = fillWeeks();
 			$<HTMLElement>('[data-week-wrap]').hidden = !weekly || !weekCount;
 			$<HTMLElement>('[data-week-none]').hidden = !weekly || weekCount > 0;
@@ -868,7 +891,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 		const story = (facts: SeasonFacts) =>
 			isLeague() && leagueFacts
-				? leagueStory(leagueFacts, currentAwards(), (picked('look') || 'trophy') as VideoLook, span(), chosenWeek() ?? leagueWeeks(leagueFacts).at(-1), !seasonComplete)
+				? leagueStory(leagueFacts, currentAwards(), (picked('look') || 'trophy') as VideoLook, span(), chosenWeek() ?? leagueWeeks(leagueFacts).at(-1), stage())
 				: buildStory(facts, {
 						kind: currentKind(),
 						look: (picked('look') || 'trophy') as VideoLook,

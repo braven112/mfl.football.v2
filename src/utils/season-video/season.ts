@@ -26,7 +26,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * subject, because the video is a trash-talk tool as much as a keepsake: a
  * 9–2 team can be called mid, a champion can get the poop look.
  */
-export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'beatdown' | 'tiger' | 'mid' | 'last';
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'regular' | 'weekly' | 'beatdown' | 'tiger' | 'mid' | 'last';
 export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass' | 'dumpster' | 'crybaby' | 'snail' | 'potato' | 'bombs' | 'flex' | 'riot' | 'goat';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
@@ -37,6 +37,7 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 	{ id: 'champion', name: 'Champion' },
 	{ id: 'recap', name: 'Season recap' },
 	{ id: 'midseason', name: 'Mid-season report' },
+	{ id: 'regular', name: 'Regular season recap' },
 	{ id: 'weekly', name: 'Weekly roast' },
 	{ id: 'beatdown', name: 'Beatdown' },
 	{ id: 'tiger', name: 'Paper tiger' },
@@ -308,15 +309,45 @@ export function seasonAllPlay(weeks: readonly WeekLine[]): { wins: number; losse
 }
 
 /**
- * The story a season suggests before the visitor overrides it. A season still
- * in its regular season (`complete` false, no playoff games yet) suggests the
- * mid-season report.
+ * Where the season stands, for a season video (Brandon, 2026-11-06): the
+ * middle of it, the end of the regular season, or the end of it all.
+ */
+export type SeasonStage = 'mid' | 'regular' | 'final';
+
+export const SEASON_STAGES: readonly { id: SeasonStage; label: string }[] = [
+	{ id: 'mid', label: 'Mid-season' },
+	{ id: 'regular', label: 'End of regular season' },
+	{ id: 'final', label: 'Season end' },
+];
+
+/**
+ * The stage a season opens on (Brandon, 2026-11-06): NFL week 18 or later is
+ * the season end, anything before it is mid-season. A league whose final has
+ * been played is over whatever the week, and a past season is over. The end of
+ * the regular season is the owner's pick, never a default.
+ *
+ * `nfl` is the NFL season and week right now (`nflWeekFor`, server side).
+ */
+export function defaultSeasonStage(season: number, nfl: { season: number; week: number }, complete: boolean): SeasonStage {
+	if (complete || season < nfl.season) return 'final';
+	if (season > nfl.season) return 'mid';
+	return nfl.week >= 18 ? 'final' : 'mid';
+}
+
+/**
+ * The story a season suggests before the visitor overrides it. Mid-season
+ * suggests the mid-season report until the team has a playoff game (then the
+ * recap, since the playoffs have started); the end of the regular season
+ * suggests the regular season recap. A boolean is a source's own call (was the
+ * final played?): over, unless the facts still say "in progress".
  */
 export function pickVideoKind(
 	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
-	complete = true,
+	stage: SeasonStage | boolean = true,
 ): SeasonVideoKind {
-	if (facts.outcome === 'in-progress' || (!complete && (facts.playoffs?.length ?? 0) === 0)) return 'midseason';
+	const s: SeasonStage = typeof stage === 'boolean' ? (stage && facts.outcome !== 'in-progress' ? 'final' : 'mid') : stage;
+	if (s === 'regular') return 'regular';
+	if (s === 'mid' && (facts.playoffs?.length ?? 0) === 0) return 'midseason';
 	if (facts.outcome === 'champion') return 'champion';
 	if (facts.finish && facts.teams && facts.finish >= facts.teams) return 'last';
 	return 'recap';
@@ -348,12 +379,12 @@ export function storyFor(
 	span: VideoSpan,
 	vibe: VideoVibe,
 	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
-	complete = true,
+	stage: SeasonStage | boolean = true,
 ): SeasonVideoKind {
 	if (span === 'week') return vibe === 'brag' ? 'beatdown' : 'weekly';
 	if (vibe === 'mid') return 'mid';
 	if (vibe === 'roast') return facts.finish && facts.teams && facts.finish >= facts.teams ? 'last' : 'tiger';
-	const told = pickVideoKind(facts, complete);
+	const told = pickVideoKind(facts, stage);
 	// Facts and brag never call a team last; that's the roast's job.
 	return told === 'last' ? 'recap' : told;
 }

@@ -119,7 +119,7 @@ describe('season recap awards', () => {
 describe('league story', () => {
 	it('is a title, one card per award and the end card, within the bed', () => {
 		const awards = leagueAwards({ ...mfl }, 'season', undefined);
-		const scenes = leagueStory(mfl, awards, 'trophy', 'season', undefined, false);
+		const scenes = leagueStory(mfl, awards, 'trophy', 'season', undefined, 'final');
 		expect(scenes[0]).toMatchObject({ type: 'title', headline: ['2025', 'RECAP'], noCrest: true });
 		expect(scenes.filter((s) => s.type === 'award')).toHaveLength(awards.length);
 		expect(scenes.at(-1)?.type).toBe('end');
@@ -127,8 +127,17 @@ describe('league story', () => {
 		const champ = scenes.find((s) => s.type === 'award' && s.kicker.endsWith('Champion'));
 		expect(champ && 'effect' in champ && champ.effect).toBeTruthy();
 	});
+	it('mid-season and the regular season name no champion', () => {
+		const awards = leagueAwards({ ...mfl }, 'season', undefined);
+		const regular = leagueStory(mfl, awards, 'trophy', 'season', undefined, 'regular');
+		expect(regular[0]).toMatchObject({ headline: ['REGULAR', 'SEASON'] });
+		expect(regular.some((s) => s.type === 'award' && s.kicker.endsWith('Champion'))).toBe(false);
+		const mid = leagueStory(mfl, awards, 'trophy', 'season', undefined, 'mid');
+		expect(mid[0]).toMatchObject({ headline: ['SEASON', 'SO FAR'] });
+		expect(mid.some((s) => s.type === 'award' && s.kicker.endsWith('Champion'))).toBe(false);
+	});
 	it('names a week recap after its week', () => {
-		const scenes = leagueStory(small, leagueAwards(small, 'week', 2), 'bling', 'week', 2, true);
+		const scenes = leagueStory(small, leagueAwards(small, 'week', 2), 'bling', 'week', 2, 'mid');
 		expect(scenes[0]).toMatchObject({ headline: ['WEEK 2', 'RECAP'] });
 		expect(JSON.stringify(scenes)).toContain('"name":"Bravo"');
 	});
@@ -234,20 +243,20 @@ describe('trades in the league story', () => {
 	};
 	it('shows that week\'s trades just before the low score', () => {
 		expect(weekTrades(withTrades, undefined)).toHaveLength(1);
-		const scenes = leagueStory(withTrades, leagueAwards(withTrades, 'week', 2), 'bling', 'week', 2, true);
+		const scenes = leagueStory(withTrades, leagueAwards(withTrades, 'week', 2), 'bling', 'week', 2, 'mid');
 		const i = scenes.findIndex((s) => s.type === 'trade');
 		expect(scenes[i]).toMatchObject({ kicker: 'Week 2 · Trade', sides: [{ name: 'Alpha', gets: ['Q One'] }, { name: 'Bravo' }] });
 		expect(scenes[i + 1]).toMatchObject({ type: 'award', kicker: 'Week 2 · Low score' });
 	});
 	it('fits a week with a pile of trades inside the bed and says how many there were', () => {
 		const many = { ...withTrades, moves: { ...withTrades.moves, trades: Array.from({ length: 20 }, () => withTrades.moves.trades[0]) } };
-		const scenes = leagueStory(many, leagueAwards(many, 'week', 2), 'bling', 'week', 2, true);
+		const scenes = leagueStory(many, leagueAwards(many, 'week', 2), 'bling', 'week', 2, 'mid');
 		expect(storyDuration(scenes)).toBeLessThanOrEqual(MAX_STORY_SECONDS + 1e-9);
 		expect(scenes.find((s) => s.type === 'trade')?.kicker).toBe('Week 2 · Trade 1 of 20');
 	});
 	it('counts the season\'s moves just before the champion', () => {
 		const done = { ...withTrades, championId: 'a' };
-		const scenes = leagueStory(done, leagueAwards(done, 'season', undefined), 'trophy', 'season', undefined, false);
+		const scenes = leagueStory(done, leagueAwards(done, 'season', undefined), 'trophy', 'season', undefined, 'final');
 		const i = scenes.findIndex((s) => s.type === 'tally');
 		expect(scenes[i]).toMatchObject({ tiles: [{ value: 2, label: 'Trades' }, { value: 9 }], line: 'Most trades: Alpha (1). Most pickups: Alpha (6).' });
 		expect(scenes[i + 1]).toMatchObject({ type: 'award', kicker: '2026 · Champion' });
