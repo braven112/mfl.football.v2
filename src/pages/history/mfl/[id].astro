@@ -49,6 +49,14 @@ const decided = seasons.filter((s) => s.champion).length;
 const firstYear = record ? Math.min(...record.chain.map((s) => s.year)) : null;
 const inProgress = getCurrentSeasonYear();
 
+// Link preview: the most recent champion's card, so a shared link unfurls
+// with the trophy. Resolved against this request's own URL, never an origin
+// glued to a path.
+const latestChampion = [...seasons].sort((a, b) => b.year - a.year).find((s) => s.champion);
+const ogImage = latestChampion
+	? new URL(`/api/og/league-history/mfl/${leagueId}/${latestChampion.year}.png`, Astro.url).href
+	: undefined;
+
 const methodTag = (method: string) =>
 	method === 'override' ? 'set by admin' : null;
 
@@ -63,6 +71,7 @@ const LOCKED = [
 <MflAppLayout
 	title={record ? `${record.name} — League History` : 'League History'}
 	description={record ? `Every ${record.name} champion since ${firstYear}.` : 'Every champion your league has crowned.'}
+	ogImage={ogImage}
 >
 	<div class="lh" data-history-funnel="mfl" data-league-id={leagueId}>
 		<a class="lh__back" href="/history">&larr; League History</a>
