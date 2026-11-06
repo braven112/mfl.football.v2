@@ -1,5 +1,5 @@
 /**
- * /api/season-video-espn — an ESPN season for the video maker (/champion-video).
+ * /api/season-video-espn — an ESPN season for the video maker (/video).
  *
  *   GET  ?league=<id>&season=<year>[&team=<n>]  → a PUBLIC league, read here
  *   POST { league, text, team? }                → a PRIVATE league, pasted by

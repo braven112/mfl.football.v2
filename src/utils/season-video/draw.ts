@@ -473,7 +473,7 @@ function drawEnd(ctx: Ctx, s: SceneOf<'end'>, p: number, a: DrawAssets) {
 	ctx.save();
 	ctx.globalAlpha *= easeOut((p - 0.8) / 0.5);
 	paragraph(ctx, s.line, 1150, 46, pal.ink);
-	display(ctx, 'mfl.football/champion-video', 1290, 64, pal.accent);
+	display(ctx, 'mfl.football/video', 1290, 64, pal.accent);
 	ctx.restore();
 }
 
