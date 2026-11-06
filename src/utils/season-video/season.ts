@@ -34,13 +34,13 @@ export type ChampionStyle = 'trophy' | 'bling' | 'retro';
 
 /** A story the owner can pick, in picker order. */
 export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
-	{ id: 'champion', name: '🏆 Champion' },
+	{ id: 'champion', name: 'Champion' },
 	{ id: 'recap', name: 'Season recap' },
-	{ id: 'midseason', name: '📝 Mid-season report' },
-	{ id: 'weekly', name: '🤡 Weekly roast' },
-	{ id: 'beatdown', name: '💪 Beatdown' },
-	{ id: 'tiger', name: '🐯 Paper tiger' },
-	{ id: 'mid', name: '😐 Master of mediocrity' },
+	{ id: 'midseason', name: 'Mid-season report' },
+	{ id: 'weekly', name: 'Weekly roast' },
+	{ id: 'beatdown', name: 'Beatdown' },
+	{ id: 'tiger', name: 'Paper tiger' },
+	{ id: 'mid', name: 'Master of mediocrity' },
 	{ id: 'last', name: 'Last place' },
 ];
 
@@ -48,28 +48,31 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 export interface VideoStyleOption {
 	id: VideoLook;
 	name: string;
+	/** A sprite glyph id (without `icon-`) for the picker tile. Emoji stay in the video, never on the form. */
 	icon: string;
 	/** CSS background for the picker tile. */
 	swatch: string;
+	/** The icon's colour on that tile, when white would not read (a light swatch). */
+	ink?: string;
 }
 
 /** Every look, in picker order. Every story can wear every one. */
 export const VIDEO_LOOKS: readonly VideoStyleOption[] = [
-	{ id: 'trophy', name: 'Trophy Room', icon: '🏆', swatch: 'linear-gradient(135deg, #0b1a33 40%, #c9a24a)' },
-	{ id: 'bling', name: 'Bling', icon: '💎', swatch: 'linear-gradient(135deg, #0a0a0a 45%, #f5c542)' },
-	{ id: 'retro', name: 'Retro', icon: '📼', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)' },
-	{ id: 'princess', name: 'Princess', icon: '👑', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
-	{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
-	{ id: 'clown', name: 'Clown', icon: '🤡', swatch: 'linear-gradient(135deg, #e63946 33%, #ffd23f 33% 66%, #1d6fd8 66%)' },
-	{ id: 'jackass', name: 'Jackass', icon: '🫏', swatch: 'linear-gradient(135deg, #6b5a48, #c8b08a)' },
-	{ id: 'dumpster', name: 'Dumpster Fire', icon: '🔥', swatch: 'linear-gradient(135deg, #1f1f1f 40%, #d9480f)' },
-	{ id: 'crybaby', name: 'Crybaby', icon: '🍼', swatch: 'linear-gradient(135deg, #a8d8f0, #fff4e0)' },
-	{ id: 'snail', name: 'Snail', icon: '🐌', swatch: 'linear-gradient(135deg, #3d5a2a, #9bc53d)' },
-	{ id: 'potato', name: 'Couch Potato', icon: '🥔', swatch: 'linear-gradient(135deg, #5a4632, #c9a26b)' },
-	{ id: 'bombs', name: 'Bombs Away', icon: '💣', swatch: 'linear-gradient(135deg, #111111 40%, #ff7a00)' },
-	{ id: 'flex', name: 'Flex', icon: '💪', swatch: 'linear-gradient(135deg, #1c2530 40%, #c1121f)' },
-	{ id: 'riot', name: 'Running Riot', icon: '🚨', swatch: 'linear-gradient(135deg, #b80c0c 50%, #0b3fb8 50%)' },
-	{ id: 'goat', name: 'GOAT', icon: '🐐', swatch: 'linear-gradient(135deg, #2d1457 40%, #d4af37)' },
+	{ id: 'trophy', name: 'Trophy Room', icon: 'trophy', swatch: 'linear-gradient(135deg, #0b1a33 40%, #c9a24a)' },
+	{ id: 'bling', name: 'Bling', icon: 'gem', swatch: 'linear-gradient(135deg, #0a0a0a 45%, #f5c542)' },
+	{ id: 'retro', name: 'Retro', icon: 'cassette', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)', ink: '#3a2414' },
+	{ id: 'princess', name: 'Princess', icon: 'crown', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
+	{ id: 'poop', name: 'Poop', icon: 'toilet', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
+	{ id: 'clown', name: 'Clown', icon: 'clown', swatch: 'linear-gradient(135deg, #e63946 33%, #ffd23f 33% 66%, #1d6fd8 66%)' },
+	{ id: 'jackass', name: 'Jackass', icon: 'donkey', swatch: 'linear-gradient(135deg, #6b5a48, #c8b08a)' },
+	{ id: 'dumpster', name: 'Dumpster Fire', icon: 'trash', swatch: 'linear-gradient(135deg, #1f1f1f 40%, #d9480f)' },
+	{ id: 'crybaby', name: 'Crybaby', icon: 'bottle', swatch: 'linear-gradient(135deg, #a8d8f0, #fff4e0)', ink: '#1d3c52' },
+	{ id: 'snail', name: 'Snail', icon: 'snail', swatch: 'linear-gradient(135deg, #3d5a2a, #9bc53d)' },
+	{ id: 'potato', name: 'Couch Potato', icon: 'couch', swatch: 'linear-gradient(135deg, #5a4632, #c9a26b)' },
+	{ id: 'bombs', name: 'Bombs Away', icon: 'bomb', swatch: 'linear-gradient(135deg, #111111 40%, #ff7a00)' },
+	{ id: 'flex', name: 'Flex', icon: 'flex', swatch: 'linear-gradient(135deg, #1c2530 40%, #c1121f)' },
+	{ id: 'riot', name: 'Running Riot', icon: 'siren', swatch: 'linear-gradient(135deg, #b80c0c 50%, #0b3fb8 50%)' },
+	{ id: 'goat', name: 'GOAT', icon: 'goat', swatch: 'linear-gradient(135deg, #2d1457 40%, #d4af37)' },
 ];
 
 /** The look a story starts in, until the owner picks one. */
@@ -330,10 +333,10 @@ export type VideoVibe = 'facts' | 'brag' | 'mid' | 'roast';
  * can only be bragged about or roasted.
  */
 export const VIDEO_VIBES: readonly { id: VideoVibe; name: string; icon: string; looks: readonly VideoLook[]; spans: readonly VideoSpan[] }[] = [
-	{ id: 'facts', name: 'Facts', icon: '🏆', looks: ['trophy', 'bling', 'retro'], spans: ['season'] },
-	{ id: 'brag', name: 'Brag', icon: '💪', looks: ['bombs', 'flex', 'riot', 'goat'], spans: ['week', 'season'] },
-	{ id: 'mid', name: 'Mid', icon: '😐', looks: ['snail', 'potato'], spans: ['season'] },
-	{ id: 'roast', name: 'Roast', icon: '🔥', looks: ['poop', 'princess', 'clown', 'jackass', 'dumpster', 'crybaby'], spans: ['week', 'season'] },
+	{ id: 'facts', name: 'Facts', icon: 'trophy', looks: ['trophy', 'bling', 'retro'], spans: ['season'] },
+	{ id: 'brag', name: 'Brag', icon: 'sparkle', looks: ['bombs', 'flex', 'riot', 'goat'], spans: ['week', 'season'] },
+	{ id: 'mid', name: 'Mid', icon: 'meh', looks: ['snail', 'potato'], spans: ['season'] },
+	{ id: 'roast', name: 'Roast', icon: 'flame', looks: ['poop', 'princess', 'clown', 'jackass', 'dumpster', 'crybaby'], spans: ['week', 'season'] },
 ];
 
 /**
