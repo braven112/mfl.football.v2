@@ -39,6 +39,7 @@ describe('MFL league facts', () => {
 		expect(mfl.groupKind).toBe('division');
 		expect(leagueGroups(mfl)).toHaveLength(4);
 		expect(mfl.championId).toMatch(/^\d{4}$/);
+		expect(mfl.playoffsStarted).toBe(true);
 	});
 	it('keeps only regular-season games', () => {
 		const weeks = leagueWeeks(mfl);
@@ -161,6 +162,7 @@ describe('Sleeper and ESPN league facts', () => {
 		expect(lf.teams.map((t) => t.group)).toEqual(['North', 'South']);
 		expect(lf.games).toEqual([{ week: 1, a: '1', aScore: 100, b: '2', bScore: 80 }]);
 		expect(lf.championId).toBe('1');
+		expect(lf.playoffsStarted).toBe(true);
 	});
 	it('reads ESPN divisions, games and the champion', () => {
 		const lf = espnLeagueFacts({
@@ -178,6 +180,7 @@ describe('Sleeper and ESPN league facts', () => {
 		expect(lf.teams.map((t) => t.group)).toEqual(['East', 'West']);
 		expect(lf.games).toHaveLength(1);
 		expect(lf.championId).toBe('2');
+		expect(lf.playoffsStarted).toBe(true);
 	});
 });
 
