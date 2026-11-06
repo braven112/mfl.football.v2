@@ -259,8 +259,11 @@ describe('defaultSeasonStage', () => {
 		expect(defaultSeasonStage(2026, nfl(16), true)).toBe('final');
 		expect(defaultSeasonStage(2025, nfl(9), false)).toBe('final');
 	});
-	it('never opens on the end of the regular season', () => {
+	it('opens on the end of the regular season once the league\'s playoffs start, until week 18', () => {
 		for (let w = 0; w <= 22; w++) expect(defaultSeasonStage(2026, nfl(w), false)).not.toBe('regular');
+		expect(defaultSeasonStage(2026, nfl(15), false, true)).toBe('regular');
+		expect(defaultSeasonStage(2026, nfl(18), false, true)).toBe('final');
+		expect(defaultSeasonStage(2026, nfl(16), true, true)).toBe('final');
 	});
 });
 

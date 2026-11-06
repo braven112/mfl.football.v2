@@ -488,7 +488,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		const nflNow = { season: Number(root.dataset.nflSeason) || new Date().getFullYear(), week: Number(root.dataset.nflWeek) || 0 };
 		const stage = () => (picked('stage') || 'mid') as SeasonStage;
 		/** The stage the data and the calendar suggest for the season on the form. */
-		const autoStage = () => defaultSeasonStage(isLeague() && leagueFacts ? leagueFacts.season : readFacts().season, nflNow, seasonComplete);
+		const autoStage = () =>
+			defaultSeasonStage(isLeague() && leagueFacts ? leagueFacts.season : readFacts().season, nflNow, seasonComplete, !!leagueFacts?.playoffsStarted);
 		/** Whether the owner picked week or season themselves; until then a season in progress opens on the week. */
 		let spanChosen = false;
 		let busy = false;
@@ -592,7 +593,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
 			sourceWeeks = f.weeks ?? [];
 			// A season still being played opens on its latest week: the weekly roast is what brings people back.
-			if (!spanChosen) press('span', autoStage() === 'mid' && sourceWeeks.length ? 'week' : 'season');
+			if (!spanChosen) press('span', autoStage() !== 'final' && sourceWeeks.length ? 'week' : 'season');
 			playoffs.replaceChildren();
 			oppLogoByName.clear();
 			const remember = (g?: SeasonGame | null) => g?.oppLogo && oppLogoByName.set(g.oppName, g.oppLogo);

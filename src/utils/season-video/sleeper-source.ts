@@ -183,6 +183,7 @@ export function sleeperLeagueFacts(x: Omit<SleeperSeasonInput, 'rosterId'>): Lea
 		games: games.sort((a, b) => a.week - b.week),
 		groupKind: divisions >= 2 ? 'division' : null,
 		championId: final?.w ? String(final.w) : null,
+		playoffsStarted: [...x.matchups].some(([week, entries]) => week >= start && entries.some((e) => score(e) > 0)),
 	};
 }
 
