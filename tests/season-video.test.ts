@@ -138,7 +138,7 @@ const base: SeasonFacts = {
 
 describe('buildStory', () => {
 	const STORIES = ['champion', 'recap', 'midseason', 'weekly', 'tiger', 'mid', 'last'] as const;
-	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop'] as const;
+	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop', 'clown', 'jackass'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
 		for (const kind of STORIES) {
@@ -292,7 +292,7 @@ describe('looks', () => {
 		const { VIDEO_LOOKS, defaultLook } = await import('../src/utils/season-video/season');
 		const f = { leagueName: 'L', season: 2025, teamName: 'T', wins: 10, losses: 4, ties: 0, pointsFor: 1500, finish: 1, teams: 12, outcome: 'champion' as const, playoffs: [] };
 		const crown = (look?: 'trophy' | 'bling' | 'retro' | 'princess' | 'poop') => buildStory(f, { kind: 'champion', look }).find((s) => s.type === 'crown')!;
-		expect(VIDEO_LOOKS.map((s) => s.id)).toEqual(['trophy', 'bling', 'retro', 'princess', 'poop']);
+		expect(VIDEO_LOOKS.map((s) => s.id)).toEqual(['trophy', 'bling', 'retro', 'princess', 'poop', 'clown', 'jackass']);
 		expect(crown()).toEqual(crown('trophy'));
 		const looks = (['trophy', 'bling', 'retro', 'princess', 'poop'] as const).map((s) => crown(s));
 		expect(new Set(looks.map((s) => s.palette.bg)).size).toBe(5);

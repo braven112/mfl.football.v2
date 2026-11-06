@@ -27,7 +27,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * 9–2 team can be called mid, a champion can get the poop look.
  */
 export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'tiger' | 'mid' | 'last';
-export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop';
+export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
 export type ChampionStyle = 'trophy' | 'bling' | 'retro';
@@ -59,6 +59,8 @@ export const VIDEO_LOOKS: readonly VideoStyleOption[] = [
 	{ id: 'retro', name: 'Retro', icon: '📼', swatch: 'linear-gradient(135deg, #f3e6c8 35%, #e2711d 65%, #5a3a22)' },
 	{ id: 'princess', name: 'Princess', icon: '👑', swatch: 'linear-gradient(135deg, #ff8fc8, #b26bd6)' },
 	{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
+	{ id: 'clown', name: 'Clown', icon: '🤡', swatch: 'linear-gradient(135deg, #e63946 33%, #ffd23f 33% 66%, #1d6fd8 66%)' },
+	{ id: 'jackass', name: 'Jackass', icon: '🫏', swatch: 'linear-gradient(135deg, #6b5a48, #c8b08a)' },
 ];
 
 /** The look a story starts in, until the owner picks one. */

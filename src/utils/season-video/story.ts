@@ -32,7 +32,7 @@ export interface Palette {
 	bad: string;
 }
 
-export type CrownEffect = 'confetti' | 'retro' | 'money' | 'sparkles' | 'poop' | 'none';
+export type CrownEffect = 'confetti' | 'retro' | 'money' | 'sparkles' | 'poop' | 'clown' | 'jackass' | 'none';
 
 interface SceneBase {
 	duration: number;
@@ -96,6 +96,20 @@ const RETRO = {
 	brown: { bg: '#5a3a22', ink: '#fff8e8', muted: '#e6cfae', accent: '#f2b134', good: '#9fd8c8', bad: '#ffab85' },
 	teal: { bg: '#2a7f7a', ink: '#fff8e8', muted: '#d5efe9', accent: '#f2b134', good: '#fff8e8', bad: '#ffcf9e' },
 	mustard: { bg: '#f2b134', ink: '#3b2314', muted: '#5a3a22', accent: '#3b2314', good: '#3b2314', bad: '#8a2a12' },
+} satisfies Record<string, Palette>;
+
+const CLOWN = {
+	red: { bg: '#d62839', ink: '#ffffff', muted: '#ffd9dc', accent: '#ffd23f', good: '#ffffff', bad: '#ffd23f' },
+	yellow: { bg: '#ffd23f', ink: '#1b1b3a', muted: '#4a3d10', accent: '#d62839', good: '#1b6b3a', bad: '#b0101f' },
+	blue: { bg: '#1d6fd8', ink: '#ffffff', muted: '#d6e6fb', accent: '#ffd23f', good: '#b8f5c4', bad: '#ffd23f' },
+	night: { bg: '#1b1b3a', ink: '#ffffff', muted: '#d0d0ec', accent: '#ffd23f', good: '#8ee59c', bad: '#ff6b7a' },
+} satisfies Record<string, Palette>;
+
+const JACKASS = {
+	dust: { bg: '#3a3026', ink: '#f6ecd9', muted: '#cdbb9c', accent: '#e9a23b', good: '#b6d38a', bad: '#ff8f6b' },
+	hide: { bg: '#6b5a48', ink: '#ffffff', muted: '#eadcc4', accent: '#ffcf6b', good: '#cfe8a8', bad: '#ffb39a' },
+	hay: { bg: '#d9c08a', ink: '#2e2418', muted: '#5a4a30', accent: '#8a3b12', good: '#2f5f1f', bad: '#8a1f12' },
+	barn: { bg: '#7a2e1f', ink: '#fff2df', muted: '#f0cdb8', accent: '#ffcf6b', good: '#d8efb0', bad: '#ffcf6b' },
 } satisfies Record<string, Palette>;
 
 /** One look: every card's colours, the crown effect and the badge. */
@@ -172,6 +186,30 @@ const LOOKS: Record<VideoLook, Look> = {
 		crown: POOP.dark,
 		effect: 'poop',
 		badge: '💩',
+	},
+	clown: {
+		title: CLOWN.red,
+		record: CLOWN.night,
+		games: [CLOWN.blue, CLOWN.red, CLOWN.night],
+		best: CLOWN.yellow,
+		low: CLOWN.yellow,
+		stat: CLOWN.blue,
+		final: CLOWN.night,
+		crown: CLOWN.night,
+		effect: 'clown',
+		badge: '🤡',
+	},
+	jackass: {
+		title: JACKASS.dust,
+		record: JACKASS.hide,
+		games: [JACKASS.hide, JACKASS.barn, JACKASS.dust],
+		best: JACKASS.hay,
+		low: JACKASS.hay,
+		stat: JACKASS.barn,
+		final: JACKASS.dust,
+		crown: JACKASS.dust,
+		effect: 'jackass',
+		badge: '🫏',
 	},
 };
 
@@ -263,13 +301,15 @@ function lowScene(g: SeasonGame, palette: Palette, kicker: string, line: string)
 }
 
 const CHAMPION_WORDS: Record<'headline' | 'sub' | 'crownLine', ByLook<string | [string, string]>> = {
-	headline: { default: ['TITLE', 'RUN'], bling: ['GOLD', 'STANDARD'], retro: ['HALL OF', 'FAME'], princess: ['CROWN', 'JEWEL'], poop: ['HOLY', 'CRAP'] },
+	headline: { default: ['TITLE', 'RUN'], bling: ['GOLD', 'STANDARD'], retro: ['HALL OF', 'FAME'], princess: ['CROWN', 'JEWEL'], poop: ['HOLY', 'CRAP'], clown: ['CIRCUS', 'CHAMPS'], jackass: ['LUCKY', 'JACKASS'] },
 	sub: {
 		default: 'Your season, wrapped.',
 		bling: 'Your season, dripped out.',
 		retro: 'A season worth framing.',
 		princess: 'Your season, wrapped with a bow.',
 		poop: 'Champions. Somehow.',
+		clown: 'The whole league got clowned.',
+		jackass: 'Dumb luck is still luck.',
 	},
 	crownLine: {
 		default: 'Bragging rights, secured.',
@@ -277,6 +317,8 @@ const CHAMPION_WORDS: Record<'headline' | 'sub' | 'crownLine', ByLook<string | [
 		retro: 'A classic. Frame this one.',
 		princess: 'All hail the queen of the league.',
 		poop: 'Won ugly. Still counts.',
+		clown: 'Ringleader of the circus.',
+		jackass: 'Stubborn enough to win it all.',
 	},
 };
 
@@ -372,13 +414,15 @@ function midseasonStory(f: SeasonFacts, look: VideoLook): Scene[] {
 }
 
 const WEEKLY_WORDS: Record<'headline' | 'crownLine', ByLook<string | [string, string]>> = {
-	headline: { default: ['CLOWN OF', 'THE WEEK'], bling: ['BANKRUPT', 'THIS WEEK'], retro: ['WORST', 'IN SHOW'], princess: ['DRAMA', 'QUEEN'], poop: ['WEEKLY', 'STINKER'] },
+	headline: { default: ['CLOWN OF', 'THE WEEK'], bling: ['BANKRUPT', 'THIS WEEK'], retro: ['WORST', 'IN SHOW'], princess: ['DRAMA', 'QUEEN'], poop: ['WEEKLY', 'STINKER'], jackass: ['JACKASS OF', 'THE WEEK'] },
 	crownLine: {
 		default: 'Honk honk. See you next week.',
 		bling: 'Overdrawn. Again.',
 		retro: 'Vintage bad. Collect them all.',
 		princess: 'Off with their lineup.',
 		poop: 'Flush it and set a lineup.',
+		clown: 'Honk honk. Red nose, red numbers.',
+		jackass: 'Hee-haw. Set a real lineup.',
 	},
 };
 
@@ -455,6 +499,8 @@ const TIGER_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 		retro: 'A collector’s item. Mint condition, never tested.',
 		princess: 'A tiger in a tiara. Still a kitten.',
 		poop: 'Looks scary. Smells like fear.',
+		clown: 'Scary like a clown. Funny like one too.',
+		jackass: 'Dressed as a tiger. Still a jackass.',
 	},
 	crownLine: {
 		default: 'All roar. No bite.',
@@ -462,6 +508,8 @@ const TIGER_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 		retro: 'They don’t make ’em like this. Thankfully.',
 		princess: 'Here, kitty kitty.',
 		poop: 'Flushed when it counted.',
+		clown: 'Squirting flower. No teeth.',
+		jackass: 'Hee-haw. That’s not a roar.',
 	},
 };
 
@@ -520,6 +568,8 @@ const MID_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 		retro: 'A timeless classic of average.',
 		princess: 'Not a princess. Not a frog. Just… there.',
 		poop: 'Not a stinker. Not good either.',
+		clown: 'Not funny. Not good. Just a clown.',
+		jackass: 'Stubborn. Average. Proud of it.',
 	},
 	crownLine: {
 		default: 'A participation trophy for your participation.',
@@ -527,6 +577,8 @@ const MID_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 		retro: 'Middle of the pack since day one.',
 		princess: 'Lady-in-waiting. Forever waiting.',
 		poop: 'Not the worst thing in the bowl.',
+		clown: 'Middle seat at the circus.',
+		jackass: 'Half a horse. All jackass.',
 	},
 };
 
@@ -549,7 +601,7 @@ function midStory(f: SeasonFacts, look: VideoLook): Scene[] {
 }
 
 const LAST_WORDS: Record<'headline' | 'sub' | 'record' | 'perWeek' | 'kicker' | 'crownLine', ByLook<string | [string, string]>> = {
-	headline: { default: ['DEAD', 'LAST'], princess: ['A ROYAL', 'DISASTER'], poop: ['WHAT A', 'STINKER'], bling: ['BROKE', 'AND LAST'] },
+	headline: { default: ['DEAD', 'LAST'], princess: ['A ROYAL', 'DISASTER'], poop: ['WHAT A', 'STINKER'], bling: ['BROKE', 'AND LAST'], clown: ['FULL', 'CIRCUS'], jackass: ['DEAD LAST', 'JACKASS'] },
 	sub: {
 		default: 'Your season, wrapped. Barely.',
 		princess: 'Your season, wrapped with a bow.',
@@ -565,6 +617,8 @@ const LAST_WORDS: Record<'headline' | 'sub' | 'record' | 'perWeek' | 'kicker' | 
 		poop: 'Flush it. Next season starts now.',
 		bling: 'Repo man’s on the way.',
 		retro: 'A classic. A classic disaster.',
+		clown: 'The whole league is laughing. At you.',
+		jackass: 'Hee-haw. See you at the bottom.',
 	},
 };
 
@@ -590,7 +644,7 @@ function lastStory(f: SeasonFacts, look: VideoLook): Scene[] {
 		name: f.teamName,
 		line: w<string>('crownLine'),
 		effect: quietEffect(L, false),
-		badge: look === 'princess' || look === 'poop' ? L.badge : '🥄',
+		badge: look === 'princess' || look === 'poop' || look === 'clown' || look === 'jackass' ? L.badge : '🥄',
 	});
 	scenes.push(endScene());
 	return scenes;
