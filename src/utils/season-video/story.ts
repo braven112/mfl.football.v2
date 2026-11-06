@@ -18,7 +18,7 @@
  * (`MAX_STORY_SECONDS`): a long playoff run shortens its game cards first,
  * then drops the statement-game card.
  */
-import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
+import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonStage, type SeasonVideoKind, type VideoLook } from './season';
 import { busiest, weekTrades, type Award, type LeagueFacts, type LeagueMoves } from './league-recap';
 import { formatPoints, formatRecord, formatScore, ordinal, positionLabel, seasonAllPlay, type StarterLine, type WeekLine } from './season';
 
@@ -537,8 +537,7 @@ function recapEnding(f: SeasonFacts): { name: string; line: string } {
 			return { name: 'PLAYOFF TEAM', line: `A playoff run in ${f.leagueName}. Run it back.` };
 		case 'champion':
 			return { name: 'CHAMPIONS', line: `${f.season} champions of ${f.leagueName}.` };
-		case 'in-progress':
-			return { name: 'TO BE CONTINUED', line: 'The season isn’t over yet.' };
+		// The owner called the season over before the data did (Season end on the form): tell it by place.
 		default:
 			return {
 				name: f.finish ? `${ordinal(f.finish).toUpperCase()} PLACE` : 'NEXT YEAR',
@@ -563,6 +562,37 @@ function recapStory(f: SeasonFacts, look: VideoLook): Scene[] {
 	scenes.push(...gamesScenes(f, L.games, L.final));
 	const ending = recapEnding(f);
 	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: `${f.leagueName} · ${f.season}`, name: ending.name, line: ending.line, effect: quietEffect(L, f.outcome === 'champion') });
+	scenes.push(endScene());
+	return scenes;
+}
+
+/**
+ * The end of the regular season (Brandon, 2026-11-06): the record, the best
+ * and worst weeks, and where the team finished. No playoff games and no claim
+ * about how the season ends; that's the season-end video.
+ */
+function regularStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: ['REGULAR', 'SEASON'], sub: `${f.teamName}. The regular season, wrapped.` },
+		recordScene(f, L.record),
+	];
+	if (f.bestGame) scenes.push(bestScene(f.bestGame, L.best, 'Best week'));
+	if (f.worstGame) {
+		const g = f.worstGame;
+		scenes.push(lowScene(g, L.low, 'Worst week', won(g) ? `Won anyway. ${g.oppName} scored ${formatScore(g.oppScore)}.` : `${g.oppName} won by ${formatScore(margin(g))}.`));
+	}
+	const first = f.finish === 1;
+	const last = !!(f.finish && f.teams && f.finish >= f.teams);
+	scenes.push({
+		type: 'crown',
+		duration: 6,
+		palette: L.crown,
+		kicker: `${f.leagueName} · ${f.season} regular season`,
+		name: f.finish ? `${ordinal(f.finish).toUpperCase()} PLACE` : 'IN THE BOOKS',
+		line: first ? 'Top of the table. Now win it all.' : last ? 'Rock bottom. There’s always next year.' : 'The regular season is in the books.',
+		effect: quietEffect(L, first),
+	});
 	scenes.push(endScene());
 	return scenes;
 }
@@ -1018,6 +1048,7 @@ const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook, week?: 
 	champion: championStory,
 	recap: recapStory,
 	midseason: midseasonStory,
+	regular: regularStory,
 	weekly: weeklyStory,
 	beatdown: beatdownStory,
 	tiger: tigerStory,
@@ -1063,11 +1094,14 @@ export function leagueStory(
 	look: VideoLook,
 	span: 'week' | 'season',
 	week: number | undefined,
-	inProgress: boolean,
+	stage: SeasonStage,
 ): Scene[] {
 	const L = LOOKS[look];
 	const label = span === 'week' ? `Week ${week ?? ''}`.trim() : String(lf.season);
-	const headline: [string, string] = span === 'week' ? [label.toUpperCase(), 'RECAP'] : inProgress ? ['SEASON', 'SO FAR'] : [label, 'RECAP'];
+	const headline: [string, string] =
+		span === 'week' ? [label.toUpperCase(), 'RECAP'] : stage === 'mid' ? ['SEASON', 'SO FAR'] : stage === 'regular' ? ['REGULAR', 'SEASON'] : [label, 'RECAP'];
+	// A champion belongs to the season end; mid-season and the regular season name none.
+	if (span === 'season' && stage !== 'final') awards = awards.filter((a) => a.id !== 'champion');
 	const nameOf = (id: string) => lf.teams.find((t) => t.id === id)?.name ?? '';
 	const trades = span === 'week' ? weekTrades(lf, week) : [];
 	const tally = span === 'season' && lf.moves ? lf.moves : null;
