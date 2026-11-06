@@ -11,6 +11,7 @@ import {
 	formatRecord,
 	fromMflExports,
 	ordinal,
+	defaultSeasonStage,
 	pickVideoKind,
 	pointsRankOf,
 	buildWeekLines,
@@ -143,7 +144,7 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	const STORIES = ['champion', 'recap', 'midseason', 'weekly', 'beatdown', 'tiger', 'mid', 'last'] as const;
+	const STORIES = ['champion', 'recap', 'midseason', 'regular', 'weekly', 'beatdown', 'tiger', 'mid', 'last'] as const;
 	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop', 'clown', 'jackass', 'dumpster', 'crybaby', 'snail', 'potato', 'bombs', 'flex', 'riot', 'goat'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
@@ -155,6 +156,13 @@ describe('buildStory', () => {
 				expect(storyDuration(scenes)).toBeLessThanOrEqual(50);
 			}
 		}
+	});
+
+	it('the regular season recap names the finish and no playoff game', () => {
+		const scenes = buildStory(base, { kind: 'regular', look: 'trophy' });
+		expect(scenes[0]).toMatchObject({ type: 'title', headline: ['REGULAR', 'SEASON'] });
+		expect(scenes.some((s) => s.type === 'game' && !('bars' in s && s.bars) && /Final|Semifinal|Quarterfinal/.test(JSON.stringify(s)))).toBe(false);
+		expect(scenes.find((s) => s.type === 'crown')).toMatchObject({ name: `${ordinal(base.finish!).toUpperCase()} PLACE` });
 	});
 
 	it('the champion video plays every playoff game and crowns the team', () => {
@@ -228,6 +236,31 @@ describe('pickVideoKind', () => {
 		expect(pickVideoKind(f, false)).toBe('midseason');
 		expect(pickVideoKind(f, true)).toBe('recap');
 		expect(pickVideoKind({ ...f, playoffs: [base.playoffs[0]] }, false)).toBe('recap');
+	});
+	it('takes a stage: mid-season, end of the regular season, season end', () => {
+		const f = { outcome: 'in-progress' as const, finish: 4, teams: 12, playoffs: [] };
+		expect(pickVideoKind(f, 'mid')).toBe('midseason');
+		expect(pickVideoKind(f, 'regular')).toBe('regular');
+		// Season end before the data says so: the recap, told by place.
+		expect(pickVideoKind(f, 'final')).toBe('recap');
+		expect(pickVideoKind({ ...f, finish: 12 }, 'final')).toBe('last');
+	});
+});
+
+describe('defaultSeasonStage', () => {
+	const nfl = (week: number) => ({ season: 2026, week });
+	it('is mid-season before NFL week 18 and the season end from week 18 on (Brandon, 2026-11-06)', () => {
+		expect(defaultSeasonStage(2026, nfl(1), false)).toBe('mid');
+		expect(defaultSeasonStage(2026, nfl(17), false)).toBe('mid');
+		expect(defaultSeasonStage(2026, nfl(18), false)).toBe('final');
+		expect(defaultSeasonStage(2026, nfl(22), false)).toBe('final');
+	});
+	it('is the season end once the final is played, or for a past season', () => {
+		expect(defaultSeasonStage(2026, nfl(16), true)).toBe('final');
+		expect(defaultSeasonStage(2025, nfl(9), false)).toBe('final');
+	});
+	it('never opens on the end of the regular season', () => {
+		for (let w = 0; w <= 22; w++) expect(defaultSeasonStage(2026, nfl(w), false)).not.toBe('regular');
 	});
 });
 
