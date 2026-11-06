@@ -1,0 +1,40 @@
+---
+/**
+ * MFL Football — create a team logo, on the website.
+ *
+ * The builder itself is `TeamLogoBuilder` (also inside /champion-video's
+ * Make my logo dialog). The same builder as the app's Create team logo screen: the owner picks a
+ * style, two or three team colors (from the grid or any hex; the prompt offers
+ * white and black on top) and the kind of art,
+ * and copies a prompt into ChatGPT, Gemini or Claude. We make no images
+ * (decided with Brandon 2026-10-27). Every word of the prompt comes from
+ * `src/utils/team-logo-prompt.ts`, which the client script imports, so the
+ * site and the app's `/api/mfl-live/logo-prompt` write the same text.
+ *
+ * The owner's teams pre-fill the name. Signed out, the page still works with
+ * a typed name; nothing here needs the session except that list.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { getMflLiveUser } from '../utils/auth';
+import { listOwnerLeagues } from '../utils/live/owner-league';
+import TeamLogoBuilder from '../components/shared/mfl-live/TeamLogoBuilder.astro';
+import '../styles/mfl-live.css';
+
+export const prerender = false;
+
+const user = getMflLiveUser(Astro.request);
+const owned = user ? await listOwnerLeagues(user).catch(() => null) : null;
+const teams = owned?.ok ? owned.leagues.map((l) => ({ name: l.franchiseName, league: l.leagueName })) : [];
+---
+
+<MflAppLayout title="Create a team logo — MFL Football" description="Write an AI prompt for your fantasy team's logo">
+	<section class="mls tlogo-page">
+		<a class="mls__back" href="/live">&larr; Live</a>
+		<h1 class="mls__title">Create a team logo</h1>
+		<p class="mls__lede">
+			Pick a look and we&rsquo;ll write the prompt. Paste it into ChatGPT or Gemini to make the picture, or
+			into Claude for a vector logo.
+		</p>
+		<TeamLogoBuilder teams={teams} />
+	</section>
+</MflAppLayout>

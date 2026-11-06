@@ -18,6 +18,8 @@ import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { canUseHistoryProduct } from '../../../../utils/league-history/access';
 import { mflExportFetcher } from '../../../../utils/league-history/mfl-crawl';
 import { advanceMflHistory, isMflLeagueId, readMflHistory } from '../../../../utils/league-history/store';
+import { registryLeagueFor } from '../../../../utils/league-history/registry-source';
+import { recordImport } from '../../../../utils/history-funnel';
 
 export const prerender = false;
 
@@ -52,6 +54,15 @@ export const POST: APIRoute = async ({ request }) => {
 		fetchExport: mflExportFetcher,
 		leagueYear: getCurrentLeagueYear(),
 	});
+	// The funnel's import steps (and the client list) are written here, never by
+	// the browser. Our own leagues are not imports: their history is the site's.
+	if ((result.status === 'progress' || result.status === 'done') && !registryLeagueFor(leagueId)) {
+		await recordImport('mfl', leagueId, {
+			name: result.name,
+			seasons: result.built,
+			finished: result.status === 'done',
+		}).catch((err) => console.warn('[league-history/build] funnel write failed:', err));
+	}
 	const status = result.status === 'not-found' ? 404 : result.status === 'no-storage' ? 503 : 200;
 	return json({ leagueId, ...result }, status);
 };

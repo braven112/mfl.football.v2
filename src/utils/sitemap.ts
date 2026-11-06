@@ -23,6 +23,8 @@ export function sharedHostSitemapEntries(): SitemapEntry[] {
 		{ path: '/compare', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/about', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/live', changefreq: 'weekly', priority: 0.8 },
+		{ path: '/team-logo', changefreq: 'monthly', priority: 0.8 },
+		{ path: '/champion-video', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/instructions', changefreq: 'monthly', priority: 0.6 },
 		{ path: '/privacy', changefreq: 'yearly', priority: 0.2 },
 	];

@@ -16,6 +16,7 @@ const GATED = {
 	product: [
 		'src/pages/history/index.astro',
 		'src/pages/history/mfl/[id].astro',
+		'src/pages/history/espn/[id].astro',
 		'src/pages/api/league-history/mfl/build.ts',
 		'src/pages/api/og/league-history/mfl/[id]/[year].png.ts',
 	],

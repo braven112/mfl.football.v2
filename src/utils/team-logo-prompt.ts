@@ -1,5 +1,5 @@
 /**
- * The team logo prompt builder (MFL Football app and `/live/team-logo`).
+ * The team logo prompt builder (MFL Football app and `/team-logo`).
  *
  * We do not make images. An owner picks a style, one to three team colors and a
  * kind of art, and this writes the prompt they paste into the AI image tool
