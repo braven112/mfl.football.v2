@@ -314,7 +314,7 @@ export async function buildEspnVideo(raw: EspnSeasonRaw, teamId: number | null, 
 		bestGame: result.facts.bestGame ? withLogo(result.facts.bestGame) : null,
 		worstGame: result.facts.worstGame ? withLogo(result.facts.worstGame) : null,
 	};
-	return { ...base, teamId, facts, kind: pickVideoKind(facts), complete: result.complete };
+	return { ...base, teamId, facts, kind: pickVideoKind(facts, result.complete), complete: result.complete };
 }
 
 export type EspnGet = (url: string) => Promise<{ status: number; text: string } | null>;

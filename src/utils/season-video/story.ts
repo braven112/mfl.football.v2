@@ -3,20 +3,22 @@
  * what each one says and how long it holds. Pure, so the copy is tested
  * (tests/season-video.test.ts) and the canvas renderer (draw.ts) only draws.
  *
- * Three videos (Brandon, 2026-11-05):
- *  - champion: every playoff game, the final, the crown. Three looks to pick
- *    from: Trophy Room (navy and gold, confetti), Bling (black and gold,
- *    money rain) and Retro (a 70s trading card: cream, orange and brown).
- *  - recap: everyone between first and last, same look, ending on how far
- *    they got.
- *  - last: the last-place team, as a princess or a poop video.
- * Every one ends on the MFL Football end card, prominently branded.
+ * Two choices make a video (Brandon, 2026-11-05), and any pairing works:
+ *  - the STORY, what it says: champion, season recap, mid-season report,
+ *    master of mediocrity, last place;
+ *  - the LOOK, how it looks: Trophy Room (navy and gold, confetti), Bling
+ *    (black and gold, money rain), Retro (a 70s trading card), Princess and
+ *    Poop.
+ * A look owns the colours, the crown effect and the badge; a story owns the
+ * cards and the words, with a few lines that lean into the look they wear
+ * (a princess champion, a poop last place). Every one ends on the MFL
+ * Football end card, prominently branded.
  *
  * The music beds are 50 seconds, so a story never runs longer
  * (`MAX_STORY_SECONDS`): a long playoff run shortens its game cards first,
  * then drops the statement-game card.
  */
-import type { ChampionStyle, LastPlaceTheme, SeasonFacts, SeasonGame, SeasonVideoKind } from './season';
+import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
 import { formatPoints, formatScore, ordinal } from './season';
 
 export const MAX_STORY_SECONDS = 50;
@@ -96,58 +98,86 @@ const RETRO = {
 	mustard: { bg: '#f2b134', ink: '#3b2314', muted: '#5a3a22', accent: '#3b2314', good: '#3b2314', bad: '#8a2a12' },
 } satisfies Record<string, Palette>;
 
-/** One champion look: its cards' colours and the words that go with them. */
-interface ChampionLook {
+/** One look: every card's colours, the crown effect and the badge. */
+interface Look {
 	title: Palette;
+	record: Palette;
 	games: Palette[];
 	best: Palette;
+	low: Palette;
+	stat: Palette;
 	final: Palette;
 	crown: Palette;
-	headline: [string, string];
-	sub: string;
-	crownLine: string;
 	effect: CrownEffect;
 	badge: string;
 }
 
-const CHAMPION_LOOKS: Record<ChampionStyle, ChampionLook> = {
+const LOOKS: Record<VideoLook, Look> = {
 	trophy: {
 		title: TROPHY.navy,
+		record: TROPHY.navy,
 		games: [TROPHY.blue, TROPHY.plum, TROPHY.slate],
 		best: TROPHY.gold,
+		low: TROPHY.plum,
+		stat: TROPHY.blue,
 		final: TROPHY.navy,
 		crown: TROPHY.navy,
-		headline: ['TITLE', 'RUN'],
-		sub: 'Your season, wrapped.',
-		crownLine: 'Bragging rights, secured.',
 		effect: 'confetti',
 		badge: '🏆',
 	},
 	bling: {
 		title: BLING.black,
+		record: BLING.onyx,
 		games: [BLING.green, BLING.onyx, BLING.black],
 		best: BLING.gold,
+		low: BLING.green,
+		stat: BLING.onyx,
 		final: BLING.black,
 		crown: BLING.black,
-		headline: ['GOLD', 'STANDARD'],
-		sub: 'Your season, dripped out.',
-		crownLine: 'Paid in full. Pay up, league.',
 		effect: 'money',
 		badge: '💎',
 	},
 	retro: {
 		title: RETRO.cream,
+		record: RETRO.orange,
 		games: [RETRO.orange, RETRO.teal, RETRO.brown],
 		best: RETRO.mustard,
+		low: RETRO.teal,
+		stat: RETRO.brown,
 		final: RETRO.brown,
 		crown: RETRO.cream,
-		headline: ['HALL OF', 'FAME'],
-		sub: 'A season worth framing.',
-		crownLine: 'A classic. Frame this one.',
 		effect: 'retro',
 		badge: '🏆',
 	},
+	princess: {
+		title: PRINCESS.pink,
+		record: PRINCESS.plum,
+		games: [PRINCESS.pink, PRINCESS.lilac],
+		best: PRINCESS.blush,
+		low: PRINCESS.blush,
+		stat: PRINCESS.lilac,
+		final: PRINCESS.plum,
+		crown: PRINCESS.plum,
+		effect: 'sparkles',
+		badge: '👑',
+	},
+	poop: {
+		title: POOP.dark,
+		record: POOP.brown,
+		games: [POOP.brown, POOP.mud],
+		best: POOP.mustard,
+		low: POOP.mustard,
+		stat: POOP.mud,
+		final: POOP.dark,
+		crown: POOP.dark,
+		effect: 'poop',
+		badge: '💩',
+	},
 };
+
+/** Words that change with the look, for the stories that lean into it. */
+type ByLook<T> = Partial<Record<VideoLook, T>> & { default: T };
+const byLook = <T>(table: ByLook<T>, look: VideoLook): T => table[look] ?? table.default;
 
 /** The end card is the brand's, whatever the video: dark navy and gold. */
 export const END_PALETTE: Palette = TROPHY.navy;
@@ -183,7 +213,7 @@ function finishTile(f: SeasonFacts): { value: string; label: string } | null {
 	return null;
 }
 
-function recordScene(f: SeasonFacts, palette: Palette, line?: string): Scene {
+function recordScene(f: SeasonFacts, palette: Palette, line?: string, kicker = 'Regular season'): Scene {
 	const tiles = [{ value: formatPoints(f.pointsFor), label: 'Points' }];
 	const finish = finishTile(f);
 	if (finish) tiles.push(finish);
@@ -191,7 +221,7 @@ function recordScene(f: SeasonFacts, palette: Palette, line?: string): Scene {
 		type: 'stat',
 		duration: 5,
 		palette,
-		kicker: 'Regular season',
+		kicker,
 		big: { kind: 'record', wins: f.wins, losses: f.losses, ties: f.ties },
 		tiles,
 		...(line ? { line } : {}),
@@ -215,19 +245,50 @@ function gamesScenes(f: SeasonFacts, palettes: Palette[], finalPalette: Palette)
 	return out;
 }
 
-// ── the three stories ─────────────────────────────────────────────────────
+// ── the stories ───────────────────────────────────────────────────────────
 
-function championStory(f: SeasonFacts, style: ChampionStyle): Scene[] {
-	const look = CHAMPION_LOOKS[style] ?? CHAMPION_LOOKS.trophy;
+const gamesPlayed = (f: SeasonFacts) => f.wins + f.losses + f.ties;
+const perWeek = (f: SeasonFacts) => (gamesPlayed(f) > 0 ? f.pointsFor / gamesPlayed(f) : 0);
+
+function perWeekScene(f: SeasonFacts, palette: Palette, line: string): Scene {
+	return { type: 'stat', duration: 5, palette, kicker: 'Points per week', big: { kind: 'number', value: perWeek(f), decimals: 2 }, line };
+}
+
+function bestScene(g: SeasonGame, palette: Palette, kicker: string, line = bestGameLine(g)): Scene {
+	return { type: 'game', duration: 5.5, palette, kicker: `${g.label} · ${kicker}`, game: g, won: won(g), line, bars: true };
+}
+
+function lowScene(g: SeasonGame, palette: Palette, kicker: string, line: string): Scene {
+	return { type: 'game', duration: 5.5, palette, kicker: `${g.label} · ${kicker}`, game: g, won: won(g), line, bars: true };
+}
+
+const CHAMPION_WORDS: Record<'headline' | 'sub' | 'crownLine', ByLook<string | [string, string]>> = {
+	headline: { default: ['TITLE', 'RUN'], bling: ['GOLD', 'STANDARD'], retro: ['HALL OF', 'FAME'], princess: ['CROWN', 'JEWEL'], poop: ['HOLY', 'CRAP'] },
+	sub: {
+		default: 'Your season, wrapped.',
+		bling: 'Your season, dripped out.',
+		retro: 'A season worth framing.',
+		princess: 'Your season, wrapped with a bow.',
+		poop: 'Champions. Somehow.',
+	},
+	crownLine: {
+		default: 'Bragging rights, secured.',
+		bling: 'Paid in full. Pay up, league.',
+		retro: 'A classic. Frame this one.',
+		princess: 'All hail the queen of the league.',
+		poop: 'Won ugly. Still counts.',
+	},
+};
+
+function championStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
 	const scenes: Scene[] = [
-		{ type: 'title', duration: 4, palette: look.title, kicker: `${f.leagueName} · ${f.season}`, headline: look.headline, sub: `${f.teamName}. ${look.sub}` },
-		recordScene(f, look.title),
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: byLook(CHAMPION_WORDS.headline, look) as [string, string], sub: `${f.teamName}. ${byLook(CHAMPION_WORDS.sub, look)}` },
+		recordScene(f, L.record),
 	];
-	if (f.bestGame) {
-		scenes.push({ type: 'game', duration: 5.5, palette: look.best, kicker: `${f.bestGame.label} · Statement game`, game: f.bestGame, won: won(f.bestGame), line: bestGameLine(f.bestGame), bars: true });
-	}
-	scenes.push(...gamesScenes(f, look.games, look.final));
-	scenes.push({ type: 'crown', duration: 7, palette: look.crown, kicker: `${f.season} Champions of ${f.leagueName}`, name: f.teamName, line: look.crownLine, effect: look.effect, badge: look.badge });
+	if (f.bestGame) scenes.push(bestScene(f.bestGame, L.best, 'Statement game'));
+	scenes.push(...gamesScenes(f, L.games, L.final));
+	scenes.push({ type: 'crown', duration: 7, palette: L.crown, kicker: `${f.season} Champions of ${f.leagueName}`, name: f.teamName, line: byLook(CHAMPION_WORDS.crownLine, look) as string, effect: L.effect, badge: L.badge });
 	scenes.push(endScene());
 	return scenes;
 }
@@ -248,69 +309,144 @@ function recapEnding(f: SeasonFacts): { name: string; line: string } {
 	}
 }
 
-function recapStory(f: SeasonFacts): Scene[] {
+/** Celebratory effects belong to a celebration; other stories keep the look's mood without the party. */
+function quietEffect(L: Look, celebrate: boolean): CrownEffect {
+	if (celebrate) return L.effect;
+	return L.effect === 'confetti' || L.effect === 'retro' ? 'none' : L.effect;
+}
+
+function recapStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
 	const scenes: Scene[] = [
-		{ type: 'title', duration: 4, palette: TROPHY.navy, kicker: `${f.leagueName} · ${f.season}`, headline: ['SEASON', 'WRAPPED'], sub: `${f.teamName}. Your season, wrapped.` },
-		recordScene(f, TROPHY.navy),
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: ['SEASON', 'WRAPPED'], sub: `${f.teamName}. Your season, wrapped.` },
+		recordScene(f, L.record),
 	];
-	if (f.bestGame) {
-		scenes.push({ type: 'game', duration: 5.5, palette: TROPHY.gold, kicker: `${f.bestGame.label} · Best game`, game: f.bestGame, won: won(f.bestGame), line: bestGameLine(f.bestGame), bars: true });
-	}
-	scenes.push(...gamesScenes(f, [TROPHY.blue, TROPHY.plum, TROPHY.slate], TROPHY.slate));
+	if (f.bestGame) scenes.push(bestScene(f.bestGame, L.best, 'Best game'));
+	scenes.push(...gamesScenes(f, L.games, L.final));
 	const ending = recapEnding(f);
-	scenes.push({ type: 'crown', duration: 6, palette: TROPHY.navy, kicker: `${f.leagueName} · ${f.season}`, name: ending.name, line: ending.line, effect: f.outcome === 'champion' ? 'confetti' : 'none' });
+	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: `${f.leagueName} · ${f.season}`, name: ending.name, line: ending.line, effect: quietEffect(L, f.outcome === 'champion') });
 	scenes.push(endScene());
 	return scenes;
 }
 
-function lastStory(f: SeasonFacts, theme: LastPlaceTheme): Scene[] {
-	const p = theme === 'princess' ? PRINCESS : null;
-	const pal = (princess: Palette, poop: Palette) => (p ? princess : poop);
+/** A report-card grade from the record and, when known, the standings. */
+export function midseasonGrade(f: Pick<SeasonFacts, 'wins' | 'losses' | 'ties' | 'finish' | 'teams'>): { grade: string; line: string } {
 	const games = f.wins + f.losses + f.ties;
-	const perWeek = games > 0 ? f.pointsFor / games : 0;
+	const pct = games > 0 ? (f.wins + f.ties / 2) / games : 0.5;
+	// Where they sit in the table counts as much as the record.
+	const place = f.finish && f.teams && f.teams > 1 ? 1 - (f.finish - 1) / (f.teams - 1) : pct;
+	const score = (pct + place) / 2;
+	if (score >= 0.8) return { grade: 'A', line: 'Top of the class. Don’t get cocky.' };
+	if (score >= 0.6) return { grade: 'B', line: 'Solid work. Not done yet.' };
+	if (score >= 0.4) return { grade: 'C', line: 'Average. Must try harder.' };
+	if (score >= 0.2) return { grade: 'D', line: 'See me after class.' };
+	return { grade: 'F', line: 'Your parents have been notified.' };
+}
 
+function midseasonStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const report = midseasonGrade(f);
+	const week = gamesPlayed(f);
 	const scenes: Scene[] = [
 		{
 			type: 'title',
 			duration: 4,
-			palette: pal(PRINCESS.pink, POOP.dark),
-			kicker: `${f.leagueName} · ${f.season}`,
-			headline: p ? ['A ROYAL', 'DISASTER'] : ['WHAT A', 'STINKER'],
-			sub: p ? `${f.teamName}. Your season, wrapped with a bow.` : `${f.teamName}. Your season, flushed.`,
+			palette: L.title,
+			kicker: `${f.leagueName} · ${f.season}${week ? ` · ${week} games in` : ''}`,
+			headline: ['MID-SEASON', 'REPORT'],
+			sub: `${f.teamName}. Here’s how it’s going.`,
 		},
-		recordScene(f, pal(PRINCESS.plum, POOP.brown), p ? 'Dead last, but make it fabulous.' : 'Dead last. Hold your nose.'),
+		recordScene(f, L.record, report.line, 'So far'),
+	];
+	if (f.bestGame) scenes.push(bestScene(f.bestGame, L.best, 'Best week so far'));
+	if (f.worstGame) {
+		const g = f.worstGame;
+		scenes.push(lowScene(g, L.low, 'Worst week so far', won(g) ? `Won anyway. ${g.oppName} scored ${formatScore(g.oppScore)}.` : `${g.oppName} won by ${formatScore(margin(g))}. Yikes.`));
+	}
+	scenes.push(perWeekScene(f, L.stat, 'Halfway there. Make it count.'));
+	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: 'Mid-season grade', name: `GRADE: ${report.grade}`, line: report.line, effect: quietEffect(L, report.grade === 'A'), badge: '📝' });
+	scenes.push(endScene());
+	return scenes;
+}
+
+const MID_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
+	sub: {
+		default: 'Perfectly, painfully average.',
+		bling: 'All that drip. All that mid.',
+		retro: 'A timeless classic of average.',
+		princess: 'Not a princess. Not a frog. Just… there.',
+		poop: 'Not a stinker. Not good either.',
+	},
+	crownLine: {
+		default: 'A participation trophy for your participation.',
+		bling: 'Fake gold. Real mid.',
+		retro: 'Middle of the pack since day one.',
+		princess: 'Lady-in-waiting. Forever waiting.',
+		poop: 'Not the worst thing in the bowl.',
+	},
+};
+
+function midStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const even = f.wins === f.losses;
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: ['MASTER OF', 'MEDIOCRITY'], sub: `${f.teamName}. ${byLook(MID_WORDS.sub, look)}` },
+		recordScene(f, L.record, even ? 'Exactly .500. Of course it is.' : 'Not good. Not bad. Just mid.'),
+	];
+	if (f.bestGame) scenes.push(bestScene(f.bestGame, L.best, 'The one good week', 'Don’t get used to it.'));
+	scenes.push(perWeekScene(f, L.stat, 'Right in the middle. Again.'));
+	if (f.worstGame) {
+		const g = f.worstGame;
+		scenes.push(lowScene(g, L.low, 'And then this', won(g) ? 'Still won it. Mid luck.' : 'Back to normal.'));
+	}
+	scenes.push({ type: 'crown', duration: 7, palette: L.crown, kicker: `${f.leagueName} · Certified Mid`, name: f.teamName, line: byLook(MID_WORDS.crownLine, look), effect: quietEffect(L, false), badge: '🏅' });
+	scenes.push(endScene());
+	return scenes;
+}
+
+const LAST_WORDS: Record<'headline' | 'sub' | 'record' | 'perWeek' | 'kicker' | 'crownLine', ByLook<string | [string, string]>> = {
+	headline: { default: ['DEAD', 'LAST'], princess: ['A ROYAL', 'DISASTER'], poop: ['WHAT A', 'STINKER'], bling: ['BROKE', 'AND LAST'] },
+	sub: {
+		default: 'Your season, wrapped. Barely.',
+		princess: 'Your season, wrapped with a bow.',
+		poop: 'Your season, flushed.',
+		bling: 'All flash. No cash.',
+	},
+	record: { default: 'Dead last. Somebody had to be.', princess: 'Dead last, but make it fabulous.', poop: 'Dead last. Hold your nose.' },
+	perWeek: { default: 'Not enough. Not close.', princess: 'Dainty. Delicate. Not enough.', poop: 'Smells about right.' },
+	kicker: { default: 'Last Place', princess: 'Royal Highness of Last Place' },
+	crownLine: {
+		default: 'The only trophy you’re getting.',
+		princess: 'Long may you reign. Down here.',
+		poop: 'Flush it. Next season starts now.',
+		bling: 'Repo man’s on the way.',
+		retro: 'A classic. A classic disaster.',
+	},
+};
+
+function lastStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const w = <T>(k: keyof typeof LAST_WORDS) => byLook(LAST_WORDS[k], look) as T;
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: w<[string, string]>('headline'), sub: `${f.teamName}. ${w<string>('sub')}` },
+		recordScene(f, L.record, w<string>('record')),
 	];
 	if (f.worstGame) {
 		const g = f.worstGame;
-		scenes.push({
-			type: 'game',
-			duration: 5.5,
-			palette: pal(PRINCESS.blush, POOP.mustard),
-			kicker: `${g.label} · The low point`,
-			game: g,
-			won: won(g),
-			line: won(g) ? `Somehow that was a win. ${g.oppName} scored ${formatScore(g.oppScore)}.` : `${g.oppName} put up ${formatScore(g.oppScore)}. Ouch.`,
-			bars: true,
-		});
+		scenes.push(lowScene(g, L.low, 'The low point', won(g) ? `Somehow that was a win. ${g.oppName} scored ${formatScore(g.oppScore)}.` : `${g.oppName} put up ${formatScore(g.oppScore)}. Ouch.`));
 	}
-	scenes.push({
-		type: 'stat',
-		duration: 5,
-		palette: pal(PRINCESS.lilac, POOP.mud),
-		kicker: 'Points per week',
-		big: { kind: 'number', value: perWeek, decimals: 2 },
-		line: p ? 'Dainty. Delicate. Not enough.' : 'Smells about right.',
-	});
-	scenes.push(...gamesScenes(f, [pal(PRINCESS.pink, POOP.brown)], pal(PRINCESS.plum, POOP.dark)));
+	scenes.push(perWeekScene(f, L.stat, w<string>('perWeek')));
+	scenes.push(...gamesScenes(f, L.games, L.final));
+	const kicker = w<string>('kicker');
 	scenes.push({
 		type: 'crown',
 		duration: 7,
-		palette: pal(PRINCESS.plum, POOP.dark),
-		kicker: p ? 'Royal Highness of Last Place' : `${f.season} Last Place · ${f.leagueName}`,
+		palette: L.crown,
+		kicker: kicker === 'Last Place' ? `${f.season} Last Place · ${f.leagueName}` : kicker,
 		name: f.teamName,
-		line: p ? 'Long may you reign. Down here.' : 'Flush it. Next season starts now.',
-		effect: p ? 'sparkles' : 'poop',
-		badge: p ? '👑' : '💩',
+		line: w<string>('crownLine'),
+		effect: quietEffect(L, false),
+		badge: look === 'princess' || look === 'poop' ? L.badge : '🥄',
 	});
 	scenes.push(endScene());
 	return scenes;
@@ -318,10 +454,21 @@ function lastStory(f: SeasonFacts, theme: LastPlaceTheme): Scene[] {
 
 export interface StoryOptions {
 	kind: SeasonVideoKind;
-	theme: LastPlaceTheme;
-	/** The champion video's look. Trophy Room when left out. */
+	/** How it looks. Left out, a video saved before looks were split uses its old `theme`/`style`. */
+	look?: VideoLook;
+	/** @deprecated The last-place look before looks were split from stories. */
+	theme?: LastPlaceTheme;
+	/** @deprecated The champion look before looks were split from stories. */
 	style?: ChampionStyle;
 }
+
+const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook) => Scene[]> = {
+	champion: championStory,
+	recap: recapStory,
+	midseason: midseasonStory,
+	mid: midStory,
+	last: lastStory,
+};
 
 export function storyDuration(scenes: readonly Scene[]): number {
 	return scenes.reduce((sum, s) => sum + s.duration, 0);
@@ -329,8 +476,7 @@ export function storyDuration(scenes: readonly Scene[]): number {
 
 /** The storyboard for one season, fitted to the music bed. */
 export function buildStory(facts: SeasonFacts, opts: StoryOptions): Scene[] {
-	let scenes =
-		opts.kind === 'champion' ? championStory(facts, opts.style ?? 'trophy') : opts.kind === 'last' ? lastStory(facts, opts.theme) : recapStory(facts);
+	let scenes = (STORIES[opts.kind] ?? recapStory)(facts, lookOf(opts));
 
 	// Too long for the bed: shorten the playoff game cards, down to 3.5 s each…
 	const over = () => storyDuration(scenes) - MAX_STORY_SECONDS;

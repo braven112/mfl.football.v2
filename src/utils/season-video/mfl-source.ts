@@ -138,7 +138,7 @@ export async function loadMflSeason(input: LoadSeasonInput): Promise<SeasonVideo
 	return {
 		ok: true,
 		facts,
-		kind: pickVideoKind(facts),
+		kind: pickVideoKind(facts, result.complete),
 		years,
 		franchiseId,
 		franchises: result.franchises.map((f) => ({ id: f.id, name: f.name })),

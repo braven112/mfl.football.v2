@@ -1,0 +1,80 @@
+---
+/**
+ * Season video — the ideas people sent from the "Got an idea for the next
+ * video?" box on /champion-video (Brandon, 2026-11-05: "capture as many ideas
+ * and feedback as people have"). Newest first; `?format=csv` downloads them.
+ *
+ * Gated exactly like `/live/analytics` (`canViewSiteInsights`): one viewer.
+ * Not in the page directory, for the same reason analytics is not: search
+ * would show it to people it refuses. Storage: src/utils/season-video/ideas.ts.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewSiteInsights } from '../../utils/site-insights';
+import { ideasCsv, listIdeas } from '../../utils/season-video/ideas';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!authUser) return Astro.redirect(mflLoginUrl('/live/video-ideas'));
+if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
+
+const ideas = await listIdeas().catch(() => null);
+
+if (Astro.url.searchParams.get('format') === 'csv' && ideas) {
+	return new Response(ideasCsv(ideas), {
+		headers: {
+			'Content-Type': 'text/csv; charset=utf-8',
+			'Content-Disposition': 'attachment; filename="video-ideas.csv"',
+			'Cache-Control': 'private, no-store',
+		},
+	});
+}
+
+const when = (iso: string) =>
+	new Date(iso).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT';
+const context = (i: { kind: string | null; look: string | null; platform: string | null }) =>
+	[i.kind && `Story: ${i.kind}`, i.look && `Look: ${i.look}`, i.platform && `From: ${i.platform}`].filter(Boolean).join(' · ');
+---
+
+<MflAppLayout title="Video ideas — MFL Football" description="Ideas and feedback sent from the season video page">
+	<section class="mls">
+		<a class="mls__back" href="/live">&larr; Live board</a>
+		<h1 class="mls__title">Video ideas</h1>
+		<p class="mls__lede">
+			What people typed into “Got an idea for the next video?” after making a video, newest first.
+			{ideas && ideas.length > 0 && <a class="cta-link" href="/live/video-ideas?format=csv">Download as CSV</a>}
+		</p>
+
+		{ideas === null ? (
+			<p class="mls__lede">Couldn&rsquo;t read the ideas just now.</p>
+		) : ideas.length === 0 ? (
+			<p class="mls__lede">No ideas yet.</p>
+		) : (
+			<ul class="mls-fix__list">
+				{ideas.map((i) => (
+					<li class="mls-fix__item">
+						<span class="mls__id">
+							<span class="mls__name mls-idea__text">{i.text}</span>
+							<span class="mls__sub">{[when(i.at), context(i)].filter(Boolean).join(' · ')}</span>
+							{i.email && (
+								<span class="mls__sub">
+									<a href={`mailto:${i.email}`}>{i.email}</a>
+								</span>
+							)}
+						</span>
+					</li>
+				))}
+			</ul>
+		)}
+	</section>
+</MflAppLayout>
+
+<style>
+	.mls-idea__text {
+		white-space: pre-wrap;
+		font-weight: 400;
+	}
+</style>

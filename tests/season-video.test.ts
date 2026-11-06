@@ -131,17 +131,22 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	it('every video ends on the MFL Football end card', () => {
-		for (const kind of ['champion', 'recap', 'last'] as const) {
-			for (const theme of ['princess', 'poop'] as const) {
-				const scenes = buildStory(base, { kind, theme });
+	const STORIES = ['champion', 'recap', 'midseason', 'mid', 'last'] as const;
+	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop'] as const;
+
+	it('every story wears every look, and every one ends on the MFL Football end card', () => {
+		for (const kind of STORIES) {
+			for (const look of LOOKS) {
+				const scenes = buildStory(base, { kind, look });
 				expect(scenes[scenes.length - 1].type).toBe('end');
+				expect(scenes[0].type).toBe('title');
+				expect(storyDuration(scenes)).toBeLessThanOrEqual(50);
 			}
 		}
 	});
 
 	it('the champion video plays every playoff game and crowns the team', () => {
-		const scenes = buildStory(base, { kind: 'champion', theme: 'princess' });
+		const scenes = buildStory(base, { kind: 'champion', look: 'trophy' });
 		const types = scenes.map((s) => s.type);
 		// The statement game, then the quarterfinal; the final is its own card.
 		expect(scenes.filter((s) => s.type === 'game' && !s.bars)).toHaveLength(1);
@@ -150,22 +155,67 @@ describe('buildStory', () => {
 		expect(types).toContain('crown');
 	});
 
-	it('the last-place video wears the chosen theme', () => {
-		const princess = buildStory({ ...base, outcome: 'missed', finish: 16 }, { kind: 'last', theme: 'princess' });
-		const poop = buildStory({ ...base, outcome: 'missed', finish: 16 }, { kind: 'last', theme: 'poop' });
+	it('the look sets the colours and the crown effect, whatever the story', () => {
+		const last = { ...base, outcome: 'missed' as const, finish: 16 };
+		const princess = buildStory(last, { kind: 'last', look: 'princess' });
+		const poop = buildStory(last, { kind: 'last', look: 'poop' });
 		expect(princess[0].palette).not.toEqual(poop[0].palette);
 		expect(princess.find((s) => s.type === 'crown')?.effect).toBe('sparkles');
 		expect(poop.find((s) => s.type === 'crown')?.effect).toBe('poop');
+		// A champion can be called a princess, and a mid team can wear bling.
+		expect(buildStory(base, { kind: 'champion', look: 'princess' }).find((s) => s.type === 'crown')?.effect).toBe('sparkles');
+		expect(buildStory(base, { kind: 'mid', look: 'bling' })[0].palette.bg).toBe(buildStory(base, { kind: 'champion', look: 'bling' })[0].palette.bg);
+	});
+
+	it('the mid-season and mediocrity stories skip the playoffs and say what they are', () => {
+		for (const kind of ['midseason', 'mid'] as const) {
+			const scenes = buildStory(base, { kind, look: 'trophy' });
+			expect(scenes.some((s) => s.type === 'final')).toBe(false);
+		}
+		const mid = JSON.stringify(buildStory(base, { kind: 'mid', look: 'trophy' }));
+		expect(mid).toContain('MEDIOCRITY');
+		const report = buildStory(base, { kind: 'midseason', look: 'trophy' }).find((s) => s.type === 'crown');
+		expect(report && 'name' in report ? report.name : '').toMatch(/^GRADE: [ABCDF]$/);
+	});
+
+	it('only a celebration gets confetti', () => {
+		const crown = (kind: (typeof STORIES)[number]) => buildStory({ ...base, outcome: 'missed', finish: 8 }, { kind, look: 'trophy' }).find((s) => s.type === 'crown');
+		expect(buildStory(base, { kind: 'champion', look: 'trophy' }).find((s) => s.type === 'crown')?.effect).toBe('confetti');
+		for (const kind of ['mid', 'last', 'recap'] as const) expect(crown(kind)?.effect).toBe('none');
+	});
+
+	it('a video saved before looks were split still replays in its old look', () => {
+		const old = buildStory(base, { kind: 'last', theme: 'poop' });
+		expect(old).toEqual(buildStory(base, { kind: 'last', look: 'poop' }));
+		expect(buildStory(base, { kind: 'champion', style: 'bling' })).toEqual(buildStory(base, { kind: 'champion', look: 'bling' }));
 	});
 
 	it('fits the 50-second music bed even with a long playoff run', () => {
 		const many = { ...base, playoffs: Array.from({ length: 6 }, (_, i) => ({ ...base.playoffs[0], label: `Round ${i}` })) };
-		expect(storyDuration(buildStory(many, { kind: 'champion', theme: 'poop' }))).toBeLessThanOrEqual(50);
+		expect(storyDuration(buildStory(many, { kind: 'champion', look: 'poop' }))).toBeLessThanOrEqual(50);
 	});
 
 	it('never prints a player', () => {
-		const text = JSON.stringify(buildStory(base, { kind: 'champion', theme: 'poop' }));
-		expect(text).not.toMatch(/player/i);
+		for (const kind of STORIES) expect(JSON.stringify(buildStory(base, { kind, look: 'poop' }))).not.toMatch(/player/i);
+	});
+});
+
+describe('midseasonGrade', () => {
+	it('grades the record and the standings together', async () => {
+		const { midseasonGrade } = await import('../src/utils/season-video/story');
+		expect(midseasonGrade({ wins: 8, losses: 1, ties: 0, finish: 1, teams: 12 }).grade).toBe('A');
+		expect(midseasonGrade({ wins: 5, losses: 4, ties: 0, finish: 6, teams: 12 }).grade).toBe('C');
+		expect(midseasonGrade({ wins: 1, losses: 8, ties: 0, finish: 12, teams: 12 }).grade).toBe('F');
+		expect(midseasonGrade({ wins: 0, losses: 0, ties: 0, finish: null, teams: null }).grade).toBe('C');
+	});
+});
+
+describe('pickVideoKind', () => {
+	it('suggests the mid-season report while the regular season is still being played', () => {
+		const f = { outcome: 'missed' as const, finish: 4, teams: 12, playoffs: [] };
+		expect(pickVideoKind(f, false)).toBe('midseason');
+		expect(pickVideoKind(f, true)).toBe('recap');
+		expect(pickVideoKind({ ...f, playoffs: [base.playoffs[0]] }, false)).toBe('recap');
 	});
 });
 
@@ -230,17 +280,18 @@ describe('sniffImageType', () => {
 	});
 });
 
-describe('champion styles', () => {
+describe('looks', () => {
 	it('each look changes the colours and the words, and Trophy Room is the default', async () => {
 		const { buildStory } = await import('../src/utils/season-video/story');
-		const { VIDEO_STYLES } = await import('../src/utils/season-video/season');
+		const { VIDEO_LOOKS, defaultLook } = await import('../src/utils/season-video/season');
 		const f = { leagueName: 'L', season: 2025, teamName: 'T', wins: 10, losses: 4, ties: 0, pointsFor: 1500, finish: 1, teams: 12, outcome: 'champion' as const, playoffs: [] };
-		const crown = (style?: 'trophy' | 'bling' | 'retro') =>
-			buildStory(f, { kind: 'champion', theme: 'princess', style }).find((s) => s.type === 'crown')!;
-		expect(VIDEO_STYLES.champion.map((s) => s.id)).toEqual(['trophy', 'bling', 'retro']);
+		const crown = (look?: 'trophy' | 'bling' | 'retro' | 'princess' | 'poop') => buildStory(f, { kind: 'champion', look }).find((s) => s.type === 'crown')!;
+		expect(VIDEO_LOOKS.map((s) => s.id)).toEqual(['trophy', 'bling', 'retro', 'princess', 'poop']);
 		expect(crown()).toEqual(crown('trophy'));
-		const looks = (['trophy', 'bling', 'retro'] as const).map((s) => crown(s));
-		expect(new Set(looks.map((s) => s.palette.bg)).size).toBe(3);
-		expect(looks.map((s) => (s as { effect: string }).effect)).toEqual(['confetti', 'money', 'retro']);
+		const looks = (['trophy', 'bling', 'retro', 'princess', 'poop'] as const).map((s) => crown(s));
+		expect(new Set(looks.map((s) => s.palette.bg)).size).toBe(5);
+		expect(looks.map((s) => (s as { effect: string }).effect)).toEqual(['confetti', 'money', 'retro', 'sparkles', 'poop']);
+		expect(defaultLook('last')).toBe('princess');
+		expect(defaultLook('mid')).toBe('trophy');
 	});
 });

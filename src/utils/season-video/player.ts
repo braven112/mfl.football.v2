@@ -13,7 +13,7 @@
  * league's champions and an invitation to make a video).
  */
 import type { DrawAssets, Img } from './draw';
-import type { ChampionStyle, LastPlaceTheme, SeasonFacts, SeasonVideoKind } from './season';
+import type { ChampionStyle, LastPlaceTheme, SeasonFacts, SeasonVideoKind, VideoLook } from './season';
 
 export const loadImage = (src: string): Promise<Img | null> =>
 	new Promise((resolve) => {
@@ -73,8 +73,10 @@ export interface LastVideo {
 	leagueId: string | null;
 	facts: SeasonFacts;
 	kind: SeasonVideoKind;
-	theme: LastPlaceTheme;
-	style: ChampionStyle;
+	look?: VideoLook;
+	/** Saved before looks were split from stories; read through `lookOf`. */
+	theme?: LastPlaceTheme;
+	style?: ChampionStyle;
 	music: string;
 	madeAt: string;
 }
