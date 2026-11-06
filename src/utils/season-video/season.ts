@@ -27,7 +27,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * 9–2 team can be called mid, a champion can get the poop look.
  */
 export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'beatdown' | 'tiger' | 'mid' | 'last';
-export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass';
+export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass' | 'dumpster' | 'crybaby' | 'snail' | 'potato' | 'bombs' | 'flex' | 'riot' | 'goat';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
 export type ChampionStyle = 'trophy' | 'bling' | 'retro';
@@ -62,6 +62,14 @@ export const VIDEO_LOOKS: readonly VideoStyleOption[] = [
 	{ id: 'poop', name: 'Poop', icon: '💩', swatch: 'linear-gradient(135deg, #3b2a1a, #c9a227)' },
 	{ id: 'clown', name: 'Clown', icon: '🤡', swatch: 'linear-gradient(135deg, #e63946 33%, #ffd23f 33% 66%, #1d6fd8 66%)' },
 	{ id: 'jackass', name: 'Jackass', icon: '🫏', swatch: 'linear-gradient(135deg, #6b5a48, #c8b08a)' },
+	{ id: 'dumpster', name: 'Dumpster Fire', icon: '🔥', swatch: 'linear-gradient(135deg, #1f1f1f 40%, #d9480f)' },
+	{ id: 'crybaby', name: 'Crybaby', icon: '🍼', swatch: 'linear-gradient(135deg, #a8d8f0, #fff4e0)' },
+	{ id: 'snail', name: 'Snail', icon: '🐌', swatch: 'linear-gradient(135deg, #3d5a2a, #9bc53d)' },
+	{ id: 'potato', name: 'Couch Potato', icon: '🥔', swatch: 'linear-gradient(135deg, #5a4632, #c9a26b)' },
+	{ id: 'bombs', name: 'Bombs Away', icon: '💣', swatch: 'linear-gradient(135deg, #111111 40%, #ff7a00)' },
+	{ id: 'flex', name: 'Flex', icon: '💪', swatch: 'linear-gradient(135deg, #1c2530 40%, #c1121f)' },
+	{ id: 'riot', name: 'Running Riot', icon: '🚨', swatch: 'linear-gradient(135deg, #b80c0c 50%, #0b3fb8 50%)' },
+	{ id: 'goat', name: 'GOAT', icon: '🐐', swatch: 'linear-gradient(135deg, #2d1457 40%, #d4af37)' },
 ];
 
 /** The look a story starts in, until the owner picks one. */

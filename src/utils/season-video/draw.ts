@@ -363,6 +363,22 @@ function hexAlpha(hex: string, alpha: number): string {
 	return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
 
+/** Effects that rain emoji down the crown card, by look. Sparkles twinkle instead. */
+const FALLING: Partial<Record<CrownEffect, string[]>> = {
+	poop: ['💩', '🪰', '💩', '🧻'],
+	money: ['💵', '💸', '💰', '💎', '💵'],
+	clown: ['🤡', '🎈', '🎪', '🤡', '🔴'],
+	jackass: ['🫏', '🥕', '🫏', '💥'],
+	dumpster: ['🔥', '🗑️', '🔥', '💨'],
+	crybaby: ['🍼', '😭', '💧', '🧸'],
+	snail: ['🐌', '🐌', '🌿', '💤'],
+	potato: ['🥔', '📺', '🛋️', '🥔'],
+	bombs: ['💣', '💥', '🔥', '💣'],
+	flex: ['💪', '🏋️', '💪', '🔥'],
+	riot: ['🚨', '🔥', '⚡', '🚨'],
+	goat: ['🐐', '👑', '🏆', '🐐'],
+};
+
 function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 	if (effect === 'none') return;
 	if (effect === 'confetti' || effect === 'retro') {
@@ -382,16 +398,7 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		}
 		return;
 	}
-	const glyphs =
-		effect === 'poop'
-			? ['💩', '🪰', '💩', '🧻']
-			: effect === 'money'
-				? ['💵', '💸', '💰', '💎', '💵']
-				: effect === 'clown'
-					? ['🤡', '🎈', '🎪', '🤡', '🔴']
-					: effect === 'jackass'
-						? ['🫏', '🥕', '🫏', '💥']
-						: ['✨', '💖', '👑', '✨', '🌸'];
+	const glyphs = FALLING[effect] ?? ['✨', '💖', '👑', '✨', '🌸'];
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	for (let i = 0; i < 34; i++) {
@@ -400,7 +407,7 @@ function drawEffect(ctx: Ctx, effect: CrownEffect, p: number) {
 		const size = 56 + rnd(i + 7) * 60;
 		ctx.font = `${Math.round(size)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
 		ctx.save();
-		if (effect === 'poop' || effect === 'money' || effect === 'clown' || effect === 'jackass') {
+		if (FALLING[effect]) {
 			// Falls, tumbling.
 			const x = rnd(i + 100) * VIDEO_WIDTH;
 			const y = -80 + q * (300 + rnd(i + 200) * 260);
