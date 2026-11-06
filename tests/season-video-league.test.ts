@@ -11,6 +11,8 @@ import { allPlayRecords, leagueAwards, leagueGroups, leagueWeeks, mflGroups, mfl
 import { leagueStory, MAX_STORY_SECONDS, storyDuration } from '../src/utils/season-video/story';
 import { sleeperLeagueFacts } from '../src/utils/season-video/sleeper-source';
 import { espnLeagueFacts } from '../src/utils/season-video/espn-source';
+import { mflAssetLabel, mflMoves, mflTradePlayerIds, sleeperMoves } from '../src/utils/season-video/moves';
+import { busiest, weekTrades } from '../src/utils/season-video/league-recap';
 
 const dir = path.resolve(__dirname, '../data/theleague/mfl-feeds/2025');
 const read = (f: string) => JSON.parse(readFileSync(path.join(dir, f), 'utf8'));
@@ -167,5 +169,89 @@ describe('Sleeper and ESPN league facts', () => {
 		expect(lf.teams.map((t) => t.group)).toEqual(['East', 'West']);
 		expect(lf.games).toHaveLength(1);
 		expect(lf.championId).toBe('2');
+	});
+});
+
+describe('trades and waiver/free agent moves', () => {
+	const tx = read('transactions.json');
+	const moves = mflMoves(tx, 2025, (id) => `Player ${id}`)!;
+	it('counts the MFL year: every trade, and its waiver and free agent pickups (auctions are not counted)', () => {
+		expect(moves.tradeCount).toBe(18);
+		expect(moves.waiverMoves).toBe(188 + 45);
+		expect(busiest(moves, 'trades')?.count).toBeGreaterThan(1);
+		expect(mflTradePlayerIds(tx)).toContain('13630');
+	});
+	it('gives each side what the other gave up, in the NFL week it was made', () => {
+		// 2025-11-15: 0005 sent a 2026 3rd for 0011's player 13630.
+		const t = moves.trades!.find((x) => x.sides[0].teamId === '0005' && x.sides[1].teamId === '0011')!;
+		expect(t.week).toBe(11);
+		expect(t.sides).toEqual([
+			{ teamId: '0005', gets: ['Player 13630'] },
+			{ teamId: '0011', gets: ['2026 3rd-round pick'] },
+		]);
+		// Offseason trades belong to no week's recap.
+		expect(moves.trades!.filter((x) => x.week === 0).length).toBeGreaterThan(0);
+	});
+	it('spells out picks and blind-bid dollars', () => {
+		expect(mflAssetLabel('DP_0_11', 2025, () => null)).toBe('2025 pick 1.12');
+		expect(mflAssetLabel('FP_0009_2026_1', 2025, () => null)).toBe('2026 1st-round pick');
+		expect(mflAssetLabel('BB_12.5', 2025, () => null)).toBe('$12.50 in blind-bid dollars');
+		expect(mflAssetLabel('ZZ', 2025, () => null)).toBeNull();
+	});
+	it('reads Sleeper trades, picks and FAAB; only completed moves count', () => {
+		const m = sleeperMoves(
+			[
+				{ type: 'trade', status: 'complete', leg: 2, roster_ids: [1, 2], adds: { '4046': 1, '6794': 2 }, draft_picks: [{ season: '2026', round: 2, owner_id: 2, previous_owner_id: 1 }], waiver_budget: [{ sender: 2, receiver: 1, amount: 10 }] },
+				{ type: 'waiver', status: 'complete', leg: 2, roster_ids: [1] },
+				{ type: 'free_agent', status: 'complete', leg: 3, roster_ids: [2] },
+				{ type: 'free_agent', status: 'failed', leg: 3, roster_ids: [2] },
+			],
+			(id) => ({ '4046': 'Jalen Hurts' })[id] ?? null,
+		);
+		expect(m.tradeCount).toBe(1);
+		expect(m.waiverMoves).toBe(2);
+		expect(m.trades![0]).toEqual({ week: 2, sides: [{ teamId: '1', gets: ['Jalen Hurts', '$10 in FAAB'] }, { teamId: '2', gets: ['A player', '2026 2nd-round pick'] }] });
+	});
+	it('reads ESPN counts only: each trade is on both teams', () => {
+		const lf = espnLeagueFacts({ seasonId: 2025, teams: [{ id: 1, transactionCounter: { trades: 2, acquisitions: 30 } }, { id: 2, transactionCounter: { trades: 2, acquisitions: 12 } }] });
+		expect(lf.moves).toMatchObject({ trades: null, tradeCount: 2, waiverMoves: 42 });
+		expect(espnLeagueFacts({ seasonId: 2025, teams: [{ id: 1 }] }).moves).toBeNull();
+	});
+});
+
+describe('trades in the league story', () => {
+	const withTrades = {
+		...small,
+		moves: {
+			trades: [
+				{ week: 2, sides: [{ teamId: 'a', gets: ['Q One'] }, { teamId: 'b', gets: ['2027 1st-round pick'] }] },
+				{ week: 1, sides: [{ teamId: 'c', gets: ['T Two'] }, { teamId: 'd', gets: [] }] },
+			],
+			tradeCount: 2,
+			waiverMoves: 9,
+			byTeam: { a: { trades: 1, moves: 6 }, b: { trades: 1, moves: 3 } },
+		},
+	};
+	it('shows that week\'s trades just before the low score', () => {
+		expect(weekTrades(withTrades, undefined)).toHaveLength(1);
+		const scenes = leagueStory(withTrades, leagueAwards(withTrades, 'week', 2), 'bling', 'week', 2, true);
+		const i = scenes.findIndex((s) => s.type === 'trade');
+		expect(scenes[i]).toMatchObject({ kicker: 'Week 2 · Trade', sides: [{ name: 'Alpha', gets: ['Q One'] }, { name: 'Bravo' }] });
+		expect(scenes[i + 1]).toMatchObject({ type: 'award', kicker: 'Week 2 · Low score' });
+	});
+	it('fits a week with a pile of trades inside the bed and says how many there were', () => {
+		const many = { ...withTrades, moves: { ...withTrades.moves, trades: Array.from({ length: 20 }, () => withTrades.moves.trades[0]) } };
+		const scenes = leagueStory(many, leagueAwards(many, 'week', 2), 'bling', 'week', 2, true);
+		expect(storyDuration(scenes)).toBeLessThanOrEqual(MAX_STORY_SECONDS + 1e-9);
+		expect(scenes.find((s) => s.type === 'trade')?.kicker).toBe('Week 2 · Trade 1 of 20');
+	});
+	it('counts the season\'s moves just before the champion', () => {
+		const done = { ...withTrades, championId: 'a' };
+		const scenes = leagueStory(done, leagueAwards(done, 'season', undefined), 'trophy', 'season', undefined, false);
+		const i = scenes.findIndex((s) => s.type === 'tally');
+		expect(scenes[i]).toMatchObject({ tiles: [{ value: 2, label: 'Trades' }, { value: 9 }], line: 'Most trades: Alpha (1). Most pickups: Alpha (6).' });
+		expect(scenes[i + 1]).toMatchObject({ type: 'award', kicker: '2026 · Champion' });
+		expect(scenes.some((s) => s.type === 'trade')).toBe(false);
+		expect(storyDuration(scenes)).toBeLessThanOrEqual(MAX_STORY_SECONDS + 1e-9);
 	});
 });

@@ -52,6 +52,26 @@ export interface LeagueFacts {
 	championId?: string | null;
 	/** Week → team id → that team's best starter, judged against the league at his position. */
 	bestStarts?: Record<number, Record<string, StarterLine>>;
+	/** Trades and waiver/free agent moves, when the platform shares them. */
+	moves?: LeagueMoves | null;
+}
+
+/** One trade: each side and what it got. */
+export interface LeagueTrade {
+	/** The NFL week it was made in; 0 before the season's first game. */
+	week: number;
+	sides: { teamId: string; gets: string[] }[];
+}
+
+export interface LeagueMoves {
+	/** Every trade with what changed hands, or null when the platform only shares counts (ESPN). */
+	trades: LeagueTrade[] | null;
+	/** The season's trades, offseason included. */
+	tradeCount: number;
+	/** The season's waiver and free agent moves. */
+	waiverMoves: number;
+	/** Team → its own trades and waiver/free agent moves. */
+	byTeam: Record<string, { trades: number; moves: number }>;
 }
 
 export type AwardId =
@@ -239,6 +259,23 @@ export function leagueAwards(
 		make('champion', 'Champion', '🏆', 'good', lf.championId ?? undefined, (id) => `${lf.season} champions · ${record(id)}`),
 	);
 	return out.filter((a): a is Award => !!a);
+}
+
+/** The trades made in the recap's week (the latest played week by default). */
+export function weekTrades(lf: Pick<LeagueFacts, 'games' | 'moves'>, week: number | undefined): LeagueTrade[] {
+	const weeks = leagueWeeks(lf as LeagueFacts);
+	const w = week !== undefined && weeks.includes(week) ? week : weeks[weeks.length - 1];
+	if (w === undefined) return [];
+	return (lf.moves?.trades ?? []).filter((t) => t.week === w && t.sides.length >= 2);
+}
+
+/** The season's busiest team at one kind of move, or null when nobody made one. */
+export function busiest(moves: LeagueMoves, kind: 'trades' | 'moves'): { teamId: string; count: number } | null {
+	let best: { teamId: string; count: number } | null = null;
+	for (const [teamId, c] of Object.entries(moves.byTeam)) {
+		if (c[kind] > (best?.count ?? 0)) best = { teamId, count: c[kind] };
+	}
+	return best;
 }
 
 // ── MFL ───────────────────────────────────────────────────────────────────

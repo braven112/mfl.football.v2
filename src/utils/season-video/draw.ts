@@ -379,6 +379,84 @@ function drawAward(ctx: Ctx, s: SceneOf<'award'>, p: number, a: DrawAssets) {
 	paragraph(ctx, s.value, 1090 + lines.length * size * 0.95, 48, pal.muted);
 }
 
+function drawTrade(ctx: Ctx, s: SceneOf<'trade'>, p: number, a: DrawAssets) {
+	const pal = s.palette;
+	kicker(ctx, s.kicker, 400, pal.accent);
+	const sides = s.sides.slice(0, 3);
+	const n = sides.length;
+	const colW = MAX_W / n;
+	const r = n === 2 ? 125 : 95;
+	const crestY = 610;
+	const sc = 0.6 + 0.4 * easeOut(p / 0.5);
+	sides.forEach((side, i) => {
+		const x = CX - MAX_W / 2 + colW * (i + 0.5);
+		ctx.save();
+		ctx.translate(x, crestY);
+		ctx.scale(sc, sc);
+		ctx.translate(-x, -crestY);
+		crest(ctx, a.logos?.get(side.teamId) ?? null, side.name, x, crestY, r, pal, pal.accent);
+		ctx.restore();
+		const name = side.name.toUpperCase();
+		fit(ctx, name, colW - 30, 64, 34, 'display');
+		centered(ctx, name, crestY + r + 85, pal.ink, x);
+		ctx.save();
+		ctx.globalAlpha *= easeOut((p - 0.5) / 0.4);
+		font(ctx, 30, 'kicker');
+		centered(ctx, 'GETS', crestY + r + 150, pal.muted, x);
+		// Every asset, wrapped to the column; past eight lines the rest is counted.
+		font(ctx, n === 2 ? 38 : 32, 'text');
+		const lines: string[] = [];
+		side.gets.forEach((g, j) => {
+			const wrapped = wrap(ctx, g, colW - 30);
+			if (lines.length + wrapped.length > 8) {
+				if (!lines.at(-1)?.startsWith('+')) lines.push(`+${side.gets.length - j} more`);
+				return;
+			}
+			lines.push(...wrapped);
+		});
+		if (!side.gets.length) lines.push('Nothing');
+		lines.forEach((l, j) => centered(ctx, l, crestY + r + 215 + j * 50, pal.ink, x));
+		ctx.restore();
+	});
+	if (n === 2) {
+		const b = easeOut((p - 0.3) / 0.4);
+		ctx.save();
+		ctx.globalAlpha *= b;
+		ctx.font = `96px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText('🤝', CX, crestY);
+		ctx.restore();
+	}
+}
+
+function drawTally(ctx: Ctx, s: SceneOf<'tally'>, p: number) {
+	const pal = s.palette;
+	kicker(ctx, s.kicker, 400, pal.accent);
+	const k = easeOut((p - 0.2) / 1.2);
+	s.tiles.slice(0, 2).forEach((tile, i) => {
+		const y = 480 + i * 330;
+		ctx.save();
+		ctx.globalAlpha *= easeOut((p - i * 0.3) / 0.4);
+		roundRect(ctx, CX - MAX_W / 2, y, MAX_W, 290, 30);
+		ctx.fillStyle = 'rgba(255,255,255,0.08)';
+		ctx.fill();
+		ctx.lineWidth = 2;
+		ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+		ctx.stroke();
+		display(ctx, Math.round(tile.value * k).toLocaleString('en-US'), y + 165, 190, pal.accent);
+		font(ctx, 34, 'kicker');
+		centered(ctx, tile.label.toUpperCase(), y + 245, pal.muted);
+		ctx.restore();
+	});
+	if (s.line) {
+		ctx.save();
+		ctx.globalAlpha *= easeOut((p - 1) / 0.5);
+		paragraph(ctx, s.line, 1200, 44, pal.ink);
+		ctx.restore();
+	}
+}
+
 function drawEnd(ctx: Ctx, s: SceneOf<'end'>, p: number, a: DrawAssets) {
 	const pal = s.palette;
 	kicker(ctx, s.kicker, 480, pal.muted);
@@ -520,6 +598,12 @@ export function drawFrame(ctx: Ctx, scenes: readonly Scene[], t: number, assets:
 			break;
 		case 'award':
 			drawAward(ctx, scene, p, assets);
+			break;
+		case 'trade':
+			drawTrade(ctx, scene, p, assets);
+			break;
+		case 'tally':
+			drawTally(ctx, scene, p);
 			break;
 	}
 	ctx.restore();
