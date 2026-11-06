@@ -705,6 +705,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				recap: 'the season recap',
 				midseason: 'the mid-season report',
 				weekly: 'the weekly roast',
+				beatdown: 'the beatdown',
 				tiger: 'the paper tiger',
 				mid: 'master of mediocrity',
 				last: 'the last-place video',
@@ -712,8 +713,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			$('[data-kind-note]').textContent = auto
 				? `Picked from the season: ${names[kind]}.`
 				: `You picked ${names[kind]}. The season says ${names[autoKind]}, but it’s your call.`;
-			if (kind === 'weekly' && !sourceWeeks.length) $('[data-kind-note]').textContent = 'Pull your league from MFL, Sleeper or ESPN in step 2 to pick a week. Until then it roasts their worst game.';
-			$<HTMLElement>('[data-week-wrap]').hidden = kind !== 'weekly' || !sourceWeeks.length;
+			const weekly = kind === 'weekly' || kind === 'beatdown';
+			if (weekly && !sourceWeeks.length)
+				$('[data-kind-note]').textContent = `Pull your league from MFL, Sleeper or ESPN in step 2 to pick a week. Until then it uses their ${kind === 'weekly' ? 'worst' : 'best'} game.`;
+			$<HTMLElement>('[data-week-wrap]').hidden = !weekly || !sourceWeeks.length;
 			if (!lookChosen) press('look', defaultLook(kind));
 		}
 
