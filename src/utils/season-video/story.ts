@@ -19,7 +19,7 @@
  * then drops the statement-game card.
  */
 import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
-import type { Award, LeagueFacts } from './league-recap';
+import { busiest, weekTrades, type Award, type LeagueFacts, type LeagueMoves } from './league-recap';
 import { formatPoints, formatRecord, formatScore, ordinal, positionLabel, seasonAllPlay, type StarterLine, type WeekLine } from './season';
 
 export const MAX_STORY_SECONDS = 50;
@@ -74,7 +74,11 @@ export type Scene =
 	| (SceneBase & { type: 'crown'; name: string; line: string; effect: CrownEffect; badge?: string })
 	| (SceneBase & { type: 'end'; line: string })
 	/** A league recap's award: one team, its logo by team id (`DrawAssets.logos`). */
-	| (SceneBase & { type: 'award'; name: string; teamId: string; value: string; badge: string; effect?: CrownEffect });
+	| (SceneBase & { type: 'award'; name: string; teamId: string; value: string; badge: string; effect?: CrownEffect })
+	/** A league recap's trade: every side, its logo by team id, and what it got. */
+	| (SceneBase & { type: 'trade'; sides: { teamId: string; name: string; gets: string[] }[] })
+	/** A league recap's season counts: big numbers, no team. */
+	| (SceneBase & { type: 'tally'; tiles: { value: number; label: string }[]; line: string });
 
 export type SceneType = Scene['type'];
 
@@ -1054,7 +1058,7 @@ export function buildStory(facts: SeasonFacts, opts: StoryOptions): Scene[] {
  * left of the bed under MAX_STORY_SECONDS, never under 2.5 s each.
  */
 export function leagueStory(
-	lf: Pick<LeagueFacts, 'leagueName' | 'season' | 'teams'>,
+	lf: Pick<LeagueFacts, 'leagueName' | 'season' | 'teams' | 'games' | 'moves'>,
 	awards: readonly Award[],
 	look: VideoLook,
 	span: 'week' | 'season',
@@ -1064,27 +1068,72 @@ export function leagueStory(
 	const L = LOOKS[look];
 	const label = span === 'week' ? `Week ${week ?? ''}`.trim() : String(lf.season);
 	const headline: [string, string] = span === 'week' ? [label.toUpperCase(), 'RECAP'] : inProgress ? ['SEASON', 'SO FAR'] : [label, 'RECAP'];
-	const fixed = 4 + 5 + (awards.some((a) => a.id === 'champion') ? 5 : 0);
+	const nameOf = (id: string) => lf.teams.find((t) => t.id === id)?.name ?? '';
+	const trades = span === 'week' ? weekTrades(lf, week) : [];
+	const tally = span === 'season' && lf.moves ? lf.moves : null;
+	const fixed = 4 + 5 + (awards.some((a) => a.id === 'champion') ? 5 : 0) + (tally ? 4 : 0);
 	const others = awards.filter((a) => a.id !== 'champion').length;
-	// Floored to a tenth so rounding never tips the total over the bed.
-	const each = others ? Math.max(2.5, Math.min(4, Math.floor(((MAX_STORY_SECONDS - fixed) / others) * 10) / 10)) : 4;
+	// Floored to a tenth so rounding never tips the total over the bed. Trades
+	// get the longer cards (there is more to read); a week with more trades
+	// than the bed holds shows as many as fit, and each kicker says "of N".
+	const tenth = (x: number) => Math.floor(x * 10) / 10;
+	const budget = MAX_STORY_SECONDS - fixed;
+	const room = budget - others * 2.5;
+	const shown = Math.max(0, Math.min(trades.length, Math.floor(room / 3.5)));
+	const tradeEach = shown ? Math.max(3.5, Math.min(4.5, tenth(room / shown))) : 0;
+	const each = others ? Math.max(2.5, Math.min(4, tenth((budget - shown * tradeEach) / others))) : 4;
 	const scenes: Scene[] = [
 		{ type: 'title', duration: 4, palette: L.title, kicker: lf.leagueName, headline, sub: span === 'week' ? 'The good, the bad and the ugly.' : 'Every award. No mercy.', noCrest: true },
 	];
+	const tradeScenes: Scene[] = trades.slice(0, shown).map((t, i) => ({
+		type: 'trade',
+		duration: tradeEach,
+		palette: L.stat,
+		kicker: trades.length > 1 ? `${label} · Trade ${i + 1} of ${trades.length}` : `${label} · Trade`,
+		sides: t.sides.map((sd) => ({ teamId: sd.teamId, name: nameOf(sd.teamId), gets: sd.gets })),
+	}));
 	for (const a of awards) {
 		const champ = a.id === 'champion';
+		// The trades run just before the low score, so the week still ends on its roast.
+		if (a.id === 'low-score') scenes.push(...tradeScenes.splice(0));
+		if (champ && tally) scenes.push(tallyScene(tally, label, L.stat, nameOf));
 		scenes.push({
 			type: 'award',
 			duration: champ ? 5 : each,
 			palette: champ ? L.crown : a.tone === 'good' ? L.best : L.low,
 			kicker: `${label} · ${a.title}`,
-			name: lf.teams.find((t) => t.id === a.teamId)?.name ?? '',
+			name: nameOf(a.teamId),
 			teamId: a.teamId,
 			value: a.value,
 			badge: a.badge,
 			...(champ ? { effect: L.effect } : {}),
 		});
 	}
+	scenes.push(...tradeScenes);
+	if (tally && !awards.some((a) => a.id === 'champion')) scenes.push(tallyScene(tally, label, L.stat, nameOf));
 	scenes.push(endScene());
 	return scenes;
+}
+
+/** The season's trades and waiver/free agent moves, and who made the most of each. */
+function tallyScene(m: LeagueMoves, label: string, palette: Palette, nameOf: (id: string) => string): Scene {
+	const trader = busiest(m, 'trades');
+	const picker = busiest(m, 'moves');
+	const line = [
+		trader && nameOf(trader.teamId) ? `Most trades: ${nameOf(trader.teamId)} (${trader.count}).` : '',
+		picker && nameOf(picker.teamId) ? `Most pickups: ${nameOf(picker.teamId)} (${picker.count}).` : '',
+	]
+		.filter(Boolean)
+		.join(' ');
+	return {
+		type: 'tally',
+		duration: 4,
+		palette,
+		kicker: `${label} · Moves`,
+		tiles: [
+			{ value: m.tradeCount, label: m.tradeCount === 1 ? 'Trade' : 'Trades' },
+			{ value: m.waiverMoves, label: 'Waiver & free agent moves' },
+		],
+		line,
+	};
 }

@@ -30,6 +30,7 @@ import { attachStandouts, buildWeekLines, pickVideoKind, pointsRankOf, roundLabe
 import type { SleeperPlayerMap } from '../sleeper/players';
 import { bestStartsByWeek, type LeagueFacts, type LeagueGame } from './league-recap';
 import type { FetchLogo } from './mfl-source';
+import { sleeperMoves, type SleeperTransaction } from './moves';
 
 export type SleeperGet = (path: string) => Promise<unknown>;
 
@@ -348,7 +349,11 @@ export async function loadSleeperSeason(input: {
 	const firstWeek = Number(settings.start_week) || 1;
 	const lastWeek = start + 5; // up to three two-week rounds
 	const weeks = Array.from({ length: lastWeek - firstWeek + 1 }, (_, i) => firstWeek + i);
-	const weekly = await Promise.all(weeks.map((w) => get(`/league/${leagueId}/matchups/${w}`)));
+	const [weekly, txWeeks] = await Promise.all([
+		Promise.all(weeks.map((w) => get(`/league/${leagueId}/matchups/${w}`))),
+		// Trades and pickups only add the recap's trade cards and counts.
+		Promise.all(weeks.map((w) => get(`/league/${leagueId}/transactions/${w}`).catch(() => null))),
+	]);
 	const matchups = new Map<number, Matchup[]>();
 	weeks.forEach((w, i) => {
 		if (Array.isArray(weekly[i]) && (weekly[i] as unknown[]).length) matchups.set(w, weekly[i] as Matchup[]);
@@ -375,8 +380,10 @@ export async function loadSleeperSeason(input: {
 	const withLogo = <T extends { oppId?: string }>(g: T): T => ({ ...g, oppLogo: g.oppId ? logos.get(g.oppId) ?? null : null });
 	const leagueFacts = sleeperLeagueFacts({ league: league as SleeperSeasonInput['league'], rosters: rs, users: users as LeagueUser[], bracket: Array.isArray(bracket) ? (bracket as BracketMatch[]) : [], matchups });
 	let standoutWeeks = result.facts.weeks;
+	const map = input.players ? await input.players().catch(() => ({}) as SleeperPlayerMap) : ({} as SleeperPlayerMap);
+	const transactions = txWeeks.flatMap((x) => (Array.isArray(x) ? (x as SleeperTransaction[]) : []));
+	if (transactions.length) leagueFacts.moves = sleeperMoves(transactions, (id) => map[id]?.name ?? null);
 	if (input.players) {
-		const map = await input.players().catch(() => ({}) as SleeperPlayerMap);
 		const who = (id: string) => (map[id] ? { name: map[id].name, pos: map[id].position } : null);
 		const starters = sleeperWeekStarters(matchups, start);
 		if (standoutWeeks?.length) standoutWeeks = attachStandouts(standoutWeeks, starters, String(rosterId), who);

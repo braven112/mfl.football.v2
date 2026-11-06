@@ -32,6 +32,7 @@
 import { buildWeekLines, pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
 import type { LeagueFacts, LeagueGame } from './league-recap';
+import { espnMoves } from './moves';
 
 const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl';
 /** ESPN serves seasons before this from a different endpoint (/leagueHistory) with a different shape. */
@@ -80,6 +81,8 @@ interface EspnTeam {
 	playoffSeed?: number;
 	rankCalculatedFinal?: number;
 	divisionId?: number;
+	/** ESPN's own running counts of each team's moves (mTeam). */
+	transactionCounter?: { trades?: number; acquisitions?: number };
 	record?: { overall?: { wins?: number; losses?: number; ties?: number; pointsFor?: number } };
 }
 interface EspnSide {
@@ -291,6 +294,7 @@ export function espnLeagueFacts(raw: EspnSeasonRaw): LeagueFacts {
 		games: games.sort((a, b) => a.week - b.week),
 		groupKind: grouped ? 'division' : null,
 		championId: championId !== undefined ? String(championId) : null,
+		moves: espnMoves(teams),
 	};
 }
 
