@@ -34,6 +34,9 @@ import '../styles/modal.css';
 import '../styles/tabs.css';
 import '../styles/table.css';
 import '../styles/pill.css';
+// MFL.football's marketing look (Soft Premium). Opt-in: nothing changes
+// until a page wraps its content in `.sp`.
+import '../styles/soft-premium.css';
 
 export interface Props {
 	title: string;
@@ -122,6 +125,7 @@ const pageSpriteUrl = spriteUrlFor(Astro.url);
 		<meta name="apple-mobile-web-app-title" content="MFL Football" />
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
+		<Font cssVariable="--font-figtree" />
 		<title>{title}</title>
 		{description && <meta name="description" content={description} />}
 		{canonical && <link rel="canonical" href={canonical} />}

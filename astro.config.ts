@@ -136,5 +136,15 @@ export default defineConfig({
       subsets: ['latin'],
       fallbacks: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
     },
+    {
+      // MFL.football's own marketing face (src/styles/soft-premium.css).
+      // Loaded only by SplashLayout, so no league page pays for it.
+      provider: fontProviders.google(),
+      name: 'Figtree',
+      cssVariable: '--font-figtree',
+      weights: [400, 500, 600, 700, 800],
+      subsets: ['latin'],
+      fallbacks: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+    },
   ],
 });
