@@ -825,6 +825,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed' || facts.outcome === 'in-progress';
 			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
 			syncChoices();
+			// Circle off: the logo preview loses its black disc too, as in the video.
+			$<HTMLElement>('[data-logo-drop]').dataset.circle = teamLogo && !$<HTMLInputElement>('[data-logo-circle]').checked ? '0' : '1';
 			const ready = isLeague() ? !!leagueFacts : !!teamLogo;
 			$<HTMLButtonElement>('[data-make]').disabled = busy || !ready;
 			$<HTMLButtonElement>('[data-preview]').disabled = busy;
@@ -1533,6 +1535,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		place-items: center;
 		flex: none;
 		overflow: hidden;
+	}
+	.svid__drop[data-circle='0'] .svid__drop-face {
+		background: transparent;
+		border-radius: 0;
 	}
 	.svid__drop-preview {
 		width: 100%;

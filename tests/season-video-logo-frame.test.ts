@@ -35,11 +35,11 @@ const crown: Scene = {
 };
 const logo = { width: 400, height: 300 } as unknown as DrawAssets['team'];
 
-const crestArcs = (teamCircle?: boolean) => {
+const crestArcs = (teamCircle?: boolean, r = 200) => {
 	const { ctx, calls } = recorder();
 	drawFrame(ctx as never, [crown], 3, { team: logo, opponents: new Map(), mark: null, wordmark: null, teamCircle }, 'Team');
-	// The crest is drawn at radius 200 on the crown card.
-	return calls.filter((c) => c.name === 'arc' && c.args[2] === 200).length;
+	// The crest is drawn at radius 200 on the crown card, its halo at 236.
+	return calls.filter((c) => c.name === 'arc' && c.args[2] === r).length;
 };
 
 describe('team logo frame', () => {
@@ -48,5 +48,9 @@ describe('team logo frame', () => {
 	});
 	it('leaves it off for a logo that is already cut out', () => {
 		expect(crestArcs(false)).toBe(0);
+	});
+	it('draws no background behind it either: no halo without the circle', () => {
+		expect(crestArcs(true, 236)).toBeGreaterThan(0);
+		expect(crestArcs(false, 236)).toBe(0);
 	});
 });
