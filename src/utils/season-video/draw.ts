@@ -325,10 +325,13 @@ function drawCrown(ctx: Ctx, s: SceneOf<'crown'>, p: number, a: DrawAssets, team
 	ctx.save();
 	ctx.translate(CX, 720);
 	ctx.scale(sc, sc);
-	ctx.beginPath();
-	ctx.arc(0, 0, 236, 0, Math.PI * 2);
-	ctx.fillStyle = hexAlpha(pal.accent, 0.16);
-	ctx.fill();
+	// The halo is part of the circle: a logo drawn without one gets no background at all.
+	if (a.teamCircle !== false || !a.team) {
+		ctx.beginPath();
+		ctx.arc(0, 0, 236, 0, Math.PI * 2);
+		ctx.fillStyle = hexAlpha(pal.accent, 0.16);
+		ctx.fill();
+	}
 	ctx.translate(-CX, -720);
 	crest(ctx, a.team, teamName, CX, 720, 200, pal, pal.accent, a.teamCircle !== false);
 	ctx.restore();
