@@ -26,7 +26,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * subject, because the video is a trash-talk tool as much as a keepsake: a
  * 9–2 team can be called mid, a champion can get the poop look.
  */
-export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'tiger' | 'mid' | 'last';
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'weekly' | 'beatdown' | 'tiger' | 'mid' | 'last';
 export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
@@ -38,6 +38,7 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 	{ id: 'recap', name: 'Season recap' },
 	{ id: 'midseason', name: '📝 Mid-season report' },
 	{ id: 'weekly', name: '🤡 Weekly roast' },
+	{ id: 'beatdown', name: '💪 Beatdown' },
 	{ id: 'tiger', name: '🐯 Paper tiger' },
 	{ id: 'mid', name: '😐 Master of mediocrity' },
 	{ id: 'last', name: 'Last place' },

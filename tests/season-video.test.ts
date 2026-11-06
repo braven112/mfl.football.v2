@@ -137,7 +137,7 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	const STORIES = ['champion', 'recap', 'midseason', 'weekly', 'tiger', 'mid', 'last'] as const;
+	const STORIES = ['champion', 'recap', 'midseason', 'weekly', 'beatdown', 'tiger', 'mid', 'last'] as const;
 	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop', 'clown', 'jackass'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
@@ -356,5 +356,29 @@ describe('weekly roast', () => {
 	it('falls back to the worst game when the season was typed in', () => {
 		const scenes = buildStory({ ...base, worstGame: { label: 'Week 7', score: 61, oppName: 'Bring the Pain', oppScore: 140 } }, { kind: 'weekly', look: 'retro' });
 		expect(JSON.stringify(scenes)).toContain('Week 7');
+	});
+});
+
+describe('beatdown', () => {
+	const weeks = buildWeekLines(
+		[
+			{ week: 1, score: 150, oppId: '0002', oppScore: 80 },
+			{ week: 2, score: 90, oppId: '0003', oppScore: 100 },
+		],
+		new Map([
+			[1, [150, 80, 100, 90]],
+			[2, [90, 100, 120, 130]],
+		]),
+		(id) => `Team ${id}`,
+	);
+	const f = { ...base, outcome: 'in-progress' as const, playoffs: [], weeks };
+	it('brags about the week picked, only with what is true', () => {
+		const wk1 = JSON.stringify(buildStory(f, { kind: 'beatdown', look: 'trophy', week: 1 }));
+		expect(wk1).toContain('Beat Team 0002 by 70.00. A massacre.');
+		expect(wk1).toContain('Top score in the league');
+		expect(wk1).toContain('Would have beaten all 3');
+		const wk2 = JSON.stringify(buildStory(f, { kind: 'beatdown', look: 'clown', week: 2 }));
+		expect(wk2).toContain('Robbed');
+		expect(wk2).not.toContain('Top score');
 	});
 });

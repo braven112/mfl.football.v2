@@ -492,6 +492,86 @@ function weeklyStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[] 
 	return scenes;
 }
 
+const BEATDOWN_WORDS: Record<'headline' | 'crownLine', ByLook<string | [string, string]>> = {
+	headline: {
+		default: ['BEAT', 'DOWN'],
+		bling: ['MONEY', 'WEEK'],
+		retro: ['INSTANT', 'CLASSIC'],
+		princess: ['SLAY', 'QUEEN'],
+		poop: ['DROPPED', 'A BOMB'],
+		clown: ['CLOWNED', 'THEM'],
+		jackass: ['KICKED LIKE', 'A MULE'],
+	},
+	crownLine: {
+		default: 'Sit down. Take notes.',
+		bling: 'Cash it. Frame it. Brag about it.',
+		retro: 'One for the highlight reel.',
+		princess: 'Bow to your queen.',
+		poop: 'Left them in the bowl.',
+		clown: 'They were the joke this week.',
+		jackass: 'Hee-haw. Get kicked.',
+	},
+};
+
+/** A brag about one week's points rank that stays true however the week went. */
+function bragRankLine(w: WeekLine, wonIt: boolean): string {
+	const of = `${ordinal(w.rank)} of ${w.teams} this week.`;
+	if (w.rank === 1) return `${of} Top score in the league. Bow down.`;
+	if (w.rank <= w.teams / 2) return `${of} Top half. Everybody noticed.`;
+	return wonIt ? `${of} Didn’t need the best week. Just a better one.` : `${of} Rough one. The season says otherwise.`;
+}
+
+function beatdownStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[] {
+	const L = LOOKS[look];
+	const w = weekFor(f, weekNo);
+	// No week lines (typed in by hand): brag about the best game we know.
+	const game: SeasonGame | null = w
+		? { label: `Week ${w.week}`, score: w.score, oppName: w.oppName, oppScore: w.oppScore, oppId: w.oppId }
+		: (f.bestGame ?? null);
+	const label = game?.label ?? 'This week';
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${label}`, headline: byLook(BEATDOWN_WORDS.headline, look) as [string, string], sub: `${f.teamName}. ${label}, dominated.` },
+	];
+	const wonIt = !!game && won(game);
+	if (game) {
+		const line = wonIt
+			? margin(game) >= 40
+				? `Beat ${game.oppName} by ${formatScore(margin(game))}. A massacre.`
+				: `Beat ${game.oppName} by ${formatScore(margin(game))}.`
+			: `${formatScore(game.score)} points. ${game.oppName} got lucky.`;
+		scenes.push(bestScene(game, L.best, wonIt ? 'Beatdown' : 'Robbed', line));
+	}
+	if (w) {
+		scenes.push({ type: 'stat', duration: 5, palette: L.stat, kicker: `${label} points · league rank`, big: { kind: 'number', value: w.rank, decimals: 0 }, line: bragRankLine(w, wonIt) });
+		const others = w.teams - 1;
+		scenes.push({
+			type: 'stat',
+			duration: 5,
+			palette: L.record,
+			kicker: `${label} · against every team`,
+			big: { kind: 'record', ...w.allPlay },
+			line: w.allPlay.wins === others ? `Would have beaten all ${others}. Every single one.` : `Would have beaten ${w.allPlay.wins} of ${others}.`,
+		});
+	}
+	const tiles = [{ value: formatPoints(f.pointsFor), label: 'Points' }];
+	if (f.weeks?.length) {
+		const ap = seasonAllPlay(f.weeks);
+		tiles.push({ value: formatRecord(ap), label: 'All-play' });
+	}
+	scenes.push({
+		type: 'stat',
+		duration: 5,
+		palette: L.games[0],
+		kicker: f.outcome === 'in-progress' ? 'The season so far' : 'The season',
+		big: { kind: 'record', wins: f.wins, losses: f.losses, ties: f.ties },
+		line: f.wins >= f.losses ? 'And it’s not a one-off.' : 'The record lies. This week didn’t.',
+		tiles,
+	});
+	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: `${label} · ${f.leagueName}`, name: f.teamName, line: byLook(BEATDOWN_WORDS.crownLine, look) as string, effect: quietEffect(L, wonIt), badge: '💪' });
+	scenes.push(endScene());
+	return scenes;
+}
+
 const TIGER_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 	sub: {
 		default: 'Scary on paper. Only on paper.',
@@ -667,6 +747,7 @@ const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook, week?: 
 	recap: recapStory,
 	midseason: midseasonStory,
 	weekly: weeklyStory,
+	beatdown: beatdownStory,
 	tiger: tigerStory,
 	mid: midStory,
 	last: lastStory,
