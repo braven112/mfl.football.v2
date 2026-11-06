@@ -24,7 +24,7 @@
  * SERVER ONLY (network); the parsing is pure and tested in
  * tests/season-video-sleeper.test.ts.
  */
-import { pickVideoKind, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
+import { pickVideoKind, pointsRankOf, roundLabel, type SeasonFacts, type SeasonGame, type SeasonVideoKind } from './season';
 import type { FetchLogo } from './mfl-source';
 
 export type SleeperGet = (path: string) => Promise<unknown>;
@@ -153,7 +153,7 @@ export function fromSleeper(x: SleeperSeasonInput): SleeperSeasonResult | null {
 		opponents.push(oppId);
 	}
 
-	let outcome: SeasonFacts['outcome'] = playoffs.length ? 'playoffs' : 'missed';
+	let outcome: SeasonFacts['outcome'] = playoffs.length ? 'playoffs' : complete ? 'missed' : 'in-progress';
 	if (complete && final && (final.t1 === x.rosterId || final.t2 === x.rosterId)) {
 		outcome = final.w === x.rosterId ? 'champion' : 'runner-up';
 	}
@@ -187,6 +187,7 @@ export function fromSleeper(x: SleeperSeasonInput): SleeperSeasonResult | null {
 			losses: me.settings?.losses ?? 0,
 			ties: me.settings?.ties ?? 0,
 			pointsFor: Math.round(pts(me) * 100) / 100,
+			pointsRank: pointsRankOf(pts(me), ranked.map(pts)),
 			finish: ranked.indexOf(me) + 1,
 			teams: ranked.length,
 			seed: null,

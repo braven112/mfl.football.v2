@@ -243,9 +243,12 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 						</div>
 					</div>
 
-					<label class="svid__label" for="svid-outcome">How the season ended</label>
+					<label class="svid__label" for="svid-points-rank">Rank in points scored (1 = most, optional)</label>
+					<input id="svid-points-rank" class="svid__input" type="number" min="1" max="40" data-f="pointsRank" placeholder="7" />
+
+					<label class="svid__label" for="svid-outcome">Where the season stands</label>
 					<select id="svid-outcome" class="svid__input" data-f="outcome">
-						{SEASON_OUTCOMES.map((o) => <option value={o.id} selected={o.id === 'missed'}>{o.label}</option>)}
+						{SEASON_OUTCOMES.map((o) => <option value={o.id} selected={o.id === 'in-progress'}>{o.label}</option>)}
 					</select>
 
 					<div class="svid__games" data-playoffs-wrap>
@@ -395,6 +398,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	import { fileExtension, pickVideoMime, playStory } from '../utils/season-video/record';
 	import type { SeasonVideoResponse } from '../utils/season-video/mfl-source';
 	import { espnVideoUrl, parseEspnLeagueInput } from '../utils/season-video/espn-source';
+	import { trackFunnel } from '../utils/history-funnel-client';
 
 	function init() {
 		const found = document.querySelector<HTMLElement>('[data-season-video]');
@@ -496,10 +500,11 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				losses: numOf(field('losses')),
 				ties: numOf(field('ties')),
 				pointsFor: numOf(field('pointsFor')),
+				pointsRank: numOf(field('pointsRank')) || null,
 				finish,
 				teams,
 				outcome,
-				playoffs: outcome === 'missed' ? [] : Array.from(playoffs.querySelectorAll('[data-game]')).map(readGame).filter((g): g is SeasonGame => !!g),
+				playoffs: outcome === 'missed' || outcome === 'in-progress' ? [] : Array.from(playoffs.querySelectorAll('[data-game]')).map(readGame).filter((g): g is SeasonGame => !!g),
 				bestGame: extra('bestGame'),
 				worstGame: extra('worstGame'),
 			};
@@ -509,7 +514,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			const set = (k: string, v: unknown) => {
 				field(k).value = v === null || v === undefined ? '' : String(v);
 			};
-			(['teamName', 'leagueName', 'season', 'wins', 'losses', 'ties', 'finish', 'teams', 'outcome'] as const).forEach((k) => set(k, f[k]));
+			(['teamName', 'leagueName', 'season', 'wins', 'losses', 'ties', 'finish', 'teams', 'outcome', 'pointsRank'] as const).forEach((k) => set(k, f[k]));
 			set('pointsFor', Math.round(f.pointsFor * 100) / 100);
 			playoffs.replaceChildren();
 			oppLogoByName.clear();
@@ -682,6 +687,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				champion: 'the champion video',
 				recap: 'the season recap',
 				midseason: 'the mid-season report',
+				tiger: 'the paper tiger',
 				mid: 'master of mediocrity',
 				last: 'the last-place video',
 			};
@@ -694,7 +700,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		let lastAuto: SeasonVideoKind | null = null;
 		function refresh() {
 			const facts = readFacts();
-			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed';
+			$<HTMLElement>('[data-playoffs-wrap]').hidden = facts.outcome === 'missed' || facts.outcome === 'in-progress';
 			root.querySelectorAll<HTMLElement>('[data-source-panel]').forEach((p) => (p.hidden = p.dataset.sourcePanel !== (picked('source') || 'mfl')));
 			autoKind = pickVideoKind(facts, seasonComplete);
 			// Follow the facts until the owner picks for themselves.
@@ -773,7 +779,13 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			const file = new File([blob], name, { type: blob.type });
 			const share = $<HTMLButtonElement>('[data-share]');
 			share.hidden = !(navigator.canShare?.({ files: [file] }) ?? false);
-			share.onclick = () => navigator.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' }).catch(() => undefined);
+			share.onclick = () =>
+				navigator
+					.share({ files: [file], title: `${facts.teamName} · ${facts.season}`, text: 'Made free at mfl.football' })
+					.then(() => trackFunnel('video_shared', videoSource.source))
+					.catch(() => undefined);
+			link.onclick = () => trackFunnel('video_downloaded', videoSource.source);
+			trackFunnel('video_made', videoSource.source);
 			$<HTMLElement>('[data-done]').hidden = false;
 			const optin = $<HTMLFormElement>('[data-optin]');
 			if (root.dataset.optinOpen && optin.dataset.sent !== '1') optin.hidden = false;
@@ -791,6 +803,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 			const path = root.dataset.history ? historyPath(videoSource.source, videoSource.leagueId) : null;
 			history.hidden = !path;
 			if (path) history.href = path;
+			history.onclick = () => trackFunnel('history_link_click', videoSource.source);
 			if (ext === 'webm') warning.textContent = 'This browser saves WebM. For TikTok or Instagram, open this page in Chrome, Edge or Safari to get an MP4.';
 		}
 
