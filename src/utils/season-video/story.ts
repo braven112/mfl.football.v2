@@ -19,7 +19,7 @@
  * then drops the statement-game card.
  */
 import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonVideoKind, type VideoLook } from './season';
-import { formatPoints, formatScore, ordinal } from './season';
+import { formatPoints, formatRecord, formatScore, ordinal, seasonAllPlay, type WeekLine } from './season';
 
 export const MAX_STORY_SECONDS = 50;
 
@@ -371,6 +371,83 @@ function midseasonStory(f: SeasonFacts, look: VideoLook): Scene[] {
 	return scenes;
 }
 
+const WEEKLY_WORDS: Record<'headline' | 'crownLine', ByLook<string | [string, string]>> = {
+	headline: { default: ['CLOWN OF', 'THE WEEK'], bling: ['BANKRUPT', 'THIS WEEK'], retro: ['WORST', 'IN SHOW'], princess: ['DRAMA', 'QUEEN'], poop: ['WEEKLY', 'STINKER'] },
+	crownLine: {
+		default: 'Honk honk. See you next week.',
+		bling: 'Overdrawn. Again.',
+		retro: 'Vintage bad. Collect them all.',
+		princess: 'Off with their lineup.',
+		poop: 'Flush it and set a lineup.',
+	},
+};
+
+/** The week the roast is about: the one asked for, else the latest one played. */
+export function weekFor(f: SeasonFacts, week?: number): WeekLine | null {
+	const weeks = f.weeks ?? [];
+	return weeks.find((w) => w.week === week) ?? weeks[weeks.length - 1] ?? null;
+}
+
+/** A line about one week's points rank that stays true however the week went. */
+function weekRankLine(w: WeekLine): string {
+	const of = `${ordinal(w.rank)} of ${w.teams} this week.`;
+	if (w.rank === w.teams) return `${of} Dead last. Everybody saw it.`;
+	if (w.rank > w.teams / 2) return `${of} Bottom half, as usual.`;
+	if (w.rank === 1) return `${of} Enjoy it. It won’t last.`;
+	return `${of} Don’t let it go to your head.`;
+}
+
+function weeklyStory(f: SeasonFacts, look: VideoLook, weekNo?: number): Scene[] {
+	const L = LOOKS[look];
+	const w = weekFor(f, weekNo);
+	// No week lines (typed in by hand): fall back to the worst game we know.
+	const game: SeasonGame | null = w
+		? { label: `Week ${w.week}`, score: w.score, oppName: w.oppName, oppScore: w.oppScore, oppId: w.oppId }
+		: (f.worstGame ?? null);
+	const label = game?.label ?? 'This week';
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${label}`, headline: byLook(WEEKLY_WORDS.headline, look) as [string, string], sub: `${f.teamName}. ${label}, roasted.` },
+	];
+	if (game) {
+		const line = won(game)
+			? `Won. ${game.oppName} just had it worse.`
+			: margin(game) >= 40
+				? `${game.oppName} won by ${formatScore(margin(game))}. Not close.`
+				: `${game.oppName} won by ${formatScore(margin(game))}.`;
+		scenes.push(lowScene(game, L.low, won(game) ? 'Lucky' : 'Took the L', line));
+	}
+	if (w) {
+		scenes.push({ type: 'stat', duration: 5, palette: L.stat, kicker: `${label} points · league rank`, big: { kind: 'number', value: w.rank, decimals: 0 }, line: weekRankLine(w) });
+		const beat = w.allPlay.wins;
+		const others = w.teams - 1;
+		scenes.push({
+			type: 'stat',
+			duration: 5,
+			palette: L.record,
+			kicker: `${label} · against every team`,
+			big: { kind: 'record', ...w.allPlay },
+			line: beat === 0 ? `Would have lost to all ${others}. Every single one.` : beat < others / 2 ? `Would have lost to ${w.allPlay.losses} of ${others}.` : `Beat ${beat} of ${others}. Still a clown.`,
+		});
+	}
+	const tiles = [{ value: formatPoints(f.pointsFor), label: 'Points' }];
+	if (f.weeks?.length) {
+		const ap = seasonAllPlay(f.weeks);
+		tiles.push({ value: formatRecord(ap), label: 'All-play' });
+	}
+	scenes.push({
+		type: 'stat',
+		duration: 5,
+		palette: L.best,
+		kicker: f.outcome === 'in-progress' ? 'The season so far' : 'The season',
+		big: { kind: 'record', wins: f.wins, losses: f.losses, ties: f.ties },
+		line: f.wins > f.losses ? 'The record can’t save you this week.' : 'And it’s not just this week.',
+		tiles,
+	});
+	scenes.push({ type: 'crown', duration: 6, palette: L.crown, kicker: `${label} · ${f.leagueName}`, name: f.teamName, line: byLook(WEEKLY_WORDS.crownLine, look) as string, effect: quietEffect(L, false), badge: '🤡' });
+	scenes.push(endScene());
+	return scenes;
+}
+
 const TIGER_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 	sub: {
 		default: 'Scary on paper. Only on paper.',
@@ -527,12 +604,15 @@ export interface StoryOptions {
 	theme?: LastPlaceTheme;
 	/** @deprecated The champion look before looks were split from stories. */
 	style?: ChampionStyle;
+	/** The weekly roast's week; left out, the latest week played. */
+	week?: number;
 }
 
-const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook) => Scene[]> = {
+const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook, week?: number) => Scene[]> = {
 	champion: championStory,
 	recap: recapStory,
 	midseason: midseasonStory,
+	weekly: weeklyStory,
 	tiger: tigerStory,
 	mid: midStory,
 	last: lastStory,
@@ -544,7 +624,7 @@ export function storyDuration(scenes: readonly Scene[]): number {
 
 /** The storyboard for one season, fitted to the music bed. */
 export function buildStory(facts: SeasonFacts, opts: StoryOptions): Scene[] {
-	let scenes = (STORIES[opts.kind] ?? recapStory)(facts, lookOf(opts));
+	let scenes = (STORIES[opts.kind] ?? recapStory)(facts, lookOf(opts), opts.week);
 
 	// Too long for the bed: shorten the playoff game cards, down to 3.5 s each…
 	const over = () => storyDuration(scenes) - MAX_STORY_SECONDS;

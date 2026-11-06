@@ -49,6 +49,14 @@ describe('fromSleeper', () => {
 		expect(pickVideoKind(r.facts)).toBe('champion');
 	});
 
+	it('ranks each regular-season week against every roster that week', () => {
+		const r = fromSleeper({ league, rosters, users, bracket, matchups, rosterId: 3 })!;
+		expect(r.facts.weeks?.map((w) => [w.week, w.score, w.rank, w.allPlay.wins])).toEqual([
+			[1, 90, 3, 1],
+			[2, 120, 2, 2],
+		]);
+	});
+
 	it('the runner-up, with record and points from roster settings', () => {
 		const r = fromSleeper({ league, rosters, users, bracket, matchups, rosterId: 1 })!;
 		expect(r.facts.outcome).toBe('runner-up');

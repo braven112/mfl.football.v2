@@ -158,7 +158,7 @@ const LOCKED = [
 		const ctx = canvas.getContext('2d')!;
 		const team: Img | null = facts.teamLogo ? await loadImage(facts.teamLogo) : null;
 		const assets = await loadAssets(facts, team, new Map());
-		const scenes = buildStory(facts, { kind: last.kind, look: last.look, theme: last.theme, style: last.style });
+		const scenes = buildStory(facts, { kind: last.kind, look: last.look, theme: last.theme, style: last.style, week: last.week });
 		drawFrame(ctx, scenes, 1.2, assets, facts.teamName);
 
 		const play = root.querySelector<HTMLButtonElement>('[data-play]')!;
