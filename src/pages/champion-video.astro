@@ -1493,7 +1493,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	}
 	.svid__styles {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		/* Fifteen looks: as many columns as fit, three on a phone. */
+		grid-template-columns: repeat(auto-fill, minmax(min(6.5rem, 30%), 1fr));
 		gap: 0.5rem;
 	}
 	.svid__style {
