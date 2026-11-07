@@ -136,6 +136,19 @@ describe('all-play sections', () => {
     expect(weekScores(unplayed, 'live')).toBeNull();
   });
 
+  it('Live gives a team yet to play no all-play result, never a 0-0 tie', () => {
+    // A has played; B is on the board at 0 with every starter yet to kick off.
+    const NOT_STARTED = 3600;
+    const board = [
+      matchup(side('A', 30), side('C', 20)),
+      matchup(side('B', 0, 90, NOT_STARTED), side('D', 0, 80, NOT_STARTED), 1),
+    ];
+    const scores = weekScores(board, 'live')!;
+    expect([...scores.keys()].sort()).toEqual(['A', 'C']);
+    // Projected still counts everyone.
+    expect(weekScores(board, 'projected')!.size).toBe(4);
+  });
+
   it('a doubleheader is one weekly score, not two', () => {
     const dh = [matchup(side('A', 80), side('C', 50)), matchup(side('A', 80), side('D', 40), 1)];
     expect([...weekScores(dh, 'live')!]).toEqual([
