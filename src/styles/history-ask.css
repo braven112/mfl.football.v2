@@ -679,6 +679,13 @@
   border: 0;
   outline: none;
 }
+.hask .hask-input:focus,
+.hask .hask-input:focus-visible {
+  /* The site-wide input focus ring (polish.css) draws a square blue box
+     inside the round pill; the pill's own gold ring is the focus state. */
+  outline: none;
+  box-shadow: none;
+}
 .hask-send {
   display: inline-flex;
   flex: none;
@@ -750,6 +757,10 @@
   padding: 0 0.75rem;
   border: 1px solid var(--content-border);
   border-radius: 0.5rem;
+}
+.hask .hask-guest__row .hask-input:focus-visible {
+  border-color: var(--history-gold);
+  outline: 3px solid var(--history-gold-wash);
 }
 .hask-guest__consent {
   display: flex;
