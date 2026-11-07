@@ -24,7 +24,7 @@ import {
 } from './league-year';
 import { preloadPlayerIdentity } from './player-map';
 import { BYE_WEEKS_FILE } from './nfl-bye-weeks';
-import { preloadLeagueData } from './league-data';
+import { preloadLeagueData, refreshLeagueData } from './league-data';
 import { preloadWaiverSystem } from './waiver-system';
 
 /**
@@ -46,6 +46,10 @@ const WAIVER_LEAGUES = ['theleague', 'afl-fantasy'];
 export async function preloadRequestLeagueData(url?: URL): Promise<void> {
   try {
     const testDate = url ? getTestDateFromSearchParams(url.searchParams) : null;
+    // First see whether a data sync has moved the live pointer (at most one
+    // Redis read a minute per instance), so the preloads below read the
+    // current data rather than the deploy's.
+    await refreshLeagueData();
     await Promise.all([
       preloadPlayerIdentity(hotIdentityYears(undefined, testDate)),
       preloadLeagueData([BYE_WEEKS_FILE]),

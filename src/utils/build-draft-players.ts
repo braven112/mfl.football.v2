@@ -21,7 +21,7 @@ import {
   type AdpSource,
 } from './draft-player-enrichment';
 import { getLeagueBySlug } from '../config/leagues';
-import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { isLeagueDataLoaded, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 /**
  * Franchise IDs authorized to see licensed RSP (Rookie Scouting Portfolio) data.
@@ -92,6 +92,10 @@ const collegeIdsPath = () => `${theleagueDataPath()}/espn-college-ids.json`;
 const playersPath = (leagueYear: number) => leagueFeedPath(theleagueDataPath(), leagueYear, 'players.json');
 
 let collegeMapCache: Record<string, { espnCollegeId?: string }> | null = null;
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  collegeMapCache = null;
+});
 function loadCollegeMap(): Record<string, { espnCollegeId?: string }> {
   if (collegeMapCache) return collegeMapCache;
   const raw = readLeagueDataSync<any>(collegeIdsPath());

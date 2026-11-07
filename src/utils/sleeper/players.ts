@@ -39,7 +39,7 @@
 
 import { getRedis } from '../redis-client';
 import { getLeagueBySlug } from '../../config/leagues';
-import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from '../league-data';
+import { isLeagueDataLoaded, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from '../league-data';
 import { canonicalNflCode } from '../espn-game-detail';
 import { getPlayerMap, preloadPlayerIdentity } from '../player-map';
 import { formatMflName, normalizePlayerName } from '../player-name-matching';
@@ -243,6 +243,11 @@ export interface MflPlayerChoice {
 
 const FANTASY_POSITIONS = new Set(Object.values(POSITION).flatMap(mflPositionsFor));
 let indexMemory: { year: number; at: number; index: Map<string, MflPlayerChoice> } | null = null;
+// A data sync moved the live pointer: the joins below were built from the old feed.
+onLeagueDataChange(() => {
+  clearSleeperPlayerCache();
+  indexMemory = null;
+});
 
 /**
  * Every fantasy-position MFL player, by id — what a crowd fix may point at.

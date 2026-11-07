@@ -28,7 +28,7 @@
  */
 
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
-import { isLeagueDataLoaded, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { isLeagueDataLoaded, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 /** One player in a franchise's submitted lineup for a week. */
 export interface LineupStarter {
@@ -327,6 +327,11 @@ export function resolveWeekLineup(input: {
  * Returns the raw MFL payload so callers parse one shape either way.
  */
 const rostersFeedCache = new Map<string, any | null>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  weeklyResultsFeedCache.clear();
+  rostersFeedCache.clear();
+});
 
 export function loadRostersFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: number): any | null {
   const league = getLeagueBySlug(slug);

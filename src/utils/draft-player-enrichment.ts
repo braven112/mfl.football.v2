@@ -7,7 +7,7 @@
  */
 
 import { getLeagueBySlug } from '../config/leagues';
-import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { isLeagueDataLoaded, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import type { DraftRoomPlayer } from '../types/draft-room';
 import { normalizePlayerName } from './player-name-matching';
 
@@ -59,6 +59,11 @@ interface RspIdMap {
  */
 let rspCaches: Map<number, Map<string, RspPlayer>> = new Map();
 const adpCaches = new Map<string, Map<string, any>>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  rspCaches = new Map();
+  adpCaches.clear();
+});
 
 /**
  * Which MFL ADP feed to join. Dynasty is the default (TheLeague/AFL are
