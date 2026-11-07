@@ -22,6 +22,12 @@
  * a record saves as a share card (/api/og/league-history/record.png), and an
  * era pill reads the whole book over the last ten seasons.
  *
+ * Federation FFL ideas (Brandon, 2026-11-07): every row names the round,
+ * the opponent and what they scored, every season row says how that season
+ * finished, a row set in the latest season wears "New" ("New record" at #1),
+ * the Season boards add All-Play and luck, and an All-time standings view
+ * sorts every owner's record by any column (cards with sort pills on phones).
+ *
  * Zero client JS: era, category, scope, board and chart are all URL params
  * switched by links (pills filter the same leaderboard, so they are pills, not
  * tabs), and every view is bookmarkable. The charts are server-drawn SVG.
@@ -35,7 +41,15 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
-import { CATEGORIES, SCOPES, historyEras, paceSeries, recordBook } from '../../../utils/league-history/records.mjs';
+import {
+  CATEGORIES,
+  SCOPES,
+  STANDINGS_SORTS,
+  historyEras,
+  paceSeries,
+  recordBook,
+  sortStandings,
+} from '../../../utils/league-history/records.mjs';
 import { gapChart, historyChart, paceChart, seasonBarChart, spreadChart } from '../../../utils/league-history/record-charts.mjs';
 import '../../../styles/record-charts.css';
 
@@ -51,7 +65,27 @@ interface Row {
   year?: number;
   franchiseId?: string;
   opponentId?: string;
+  isNew?: boolean;
+  isNewRecord?: boolean;
   entity: { key: string; name: string; franchiseId: string | null; ownerSlug: string | null };
+}
+interface StandingsRow {
+  rank: number;
+  entity: { key: string; name: string; franchiseId: string | null; ownerSlug: string | null };
+  name: string;
+  team: string | null;
+  icon: string | null;
+  seasons: number;
+  span: string;
+  w: number;
+  l: number;
+  t: number;
+  pctDisplay: string;
+  pfDisplay: string;
+  titles: number;
+  finals: number;
+  playoffs: number;
+  bestDisplay: string;
 }
 interface Watch {
   name: string;
@@ -107,7 +141,7 @@ const eras = historyEras(data, league.historyEras ?? []);
 const era = eras.find((e) => e.id === params.get('era')) ?? eras[0];
 const book = recordBook(data, { from: era.from, keepers, picks });
 const facts = book.facts();
-const categories = book.categories as typeof CATEGORIES;
+const categories = book.categories as Array<(typeof CATEGORIES)[number] & { table?: boolean }>;
 const category = categories.find((c) => c.id === params.get('cat')) ?? categories[0];
 const scopeParam = params.get('scope') ?? 'all';
 const scope = category.scoped && SCOPES.includes(scopeParam) ? scopeParam : 'all';
@@ -162,7 +196,16 @@ const youOnBoard = !!board?.population.some((p) => mine(p[4] as string | null));
 const historyBySeason = !!board?.population.length && board.population.every((p) => p[1] != null);
 
 /** A view's URL, leaving defaults out so the plain page stays the plain URL. */
-const viewHref = (next: { cat?: string; scope?: string; board?: string; chart?: string; hash?: string; era?: string }) => {
+const viewHref = (next: {
+  cat?: string;
+  scope?: string;
+  board?: string;
+  chart?: string;
+  hash?: string;
+  era?: string;
+  sort?: string;
+  dir?: string;
+}) => {
   const q = new URLSearchParams();
   const eraId = next.era ?? era.id;
   if (eraId !== eras[0].id) q.set('era', eraId);
@@ -172,6 +215,8 @@ const viewHref = (next: { cat?: string; scope?: string; board?: string; chart?: 
   if (sc !== 'all') q.set('scope', sc);
   if (next.board) q.set('board', next.board);
   if (next.chart && next.chart !== CHARTS[0].id) q.set('chart', next.chart);
+  if (next.sort) q.set('sort', next.sort);
+  if (next.dir) q.set('dir', next.dir);
   const qs = q.toString();
   return `${qs ? `${r(BASE)}?${qs}` : r(BASE)}${next.hash ? `#${next.hash}` : ''}`;
 };
@@ -246,6 +291,59 @@ const shareHref = (() => {
   if (era.id !== eras[0].id) q.set('era', era.id);
   return `/api/og/league-history/record.png?${q}`;
 })();
+// All-time standings: sorted on the server by a URL param, like every other
+// view here. A tap on the sorted column reverses it, a second tap resets to the
+// default (the phone sort pills' rule, rosters/phone-sort.ts nextSort).
+const DEFAULT_SORT = STANDINGS_SORTS[0];
+const sortSpec = STANDINGS_SORTS.find((s) => s.key === params.get('sort')) ?? DEFAULT_SORT;
+const dirParam = params.get('dir');
+const sortDir: 'asc' | 'desc' = dirParam === 'asc' || dirParam === 'desc' ? dirParam : (sortSpec.dir as 'asc' | 'desc');
+const standings: StandingsRow[] = category.table
+  ? (sortStandings(book.standings(), sortSpec.key, sortDir) as StandingsRow[])
+  : [];
+const anyTies = standings.some((row) => row.t > 0);
+const sortHref = (key: string) => {
+  const spec = STANDINGS_SORTS.find((s) => s.key === key)!;
+  if (key !== sortSpec.key) return viewHref({ sort: key === DEFAULT_SORT.key ? undefined : key, hash: 'rb-standings' });
+  if (sortDir === spec.dir) {
+    return viewHref({ sort: key, dir: spec.dir === 'desc' ? 'asc' : 'desc', hash: 'rb-standings' });
+  }
+  return viewHref({ hash: 'rb-standings' });
+};
+const sortState = (key: string) => (key === sortSpec.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined);
+const arrow = (key: string) => (key === sortSpec.key ? (sortDir === 'asc' ? '↑' : '↓') : '');
+const STANDINGS_LABEL: Record<string, string> = {
+  w: 'Wins',
+  l: 'Losses',
+  pct: 'Win %',
+  seasons: 'Seasons',
+  pf: 'Points',
+  titles: 'Titles',
+  finals: 'Finals',
+  playoffs: 'Playoffs',
+  best: 'Best finish',
+};
+
+// Each row's cell text, keyed by column, and whether a column is the sorted one.
+const standingsView = standings.map((row) => ({
+  row,
+  values: {
+    w: row.w, pct: row.pctDisplay, l: row.l, t: row.t, seasons: row.seasons, pf: row.pfDisplay,
+    titles: row.titles || '–', finals: row.finals || '–', playoffs: row.playoffs || '–',
+  } as Record<string, string | number>,
+}));
+const cell = (key: string) => (key === sortSpec.key ? '' : undefined);
+
+// Table columns in reading order; T only when some owner has a tie.
+const COLUMNS = ['seasons', 'w', 'l', ...(anyTies ? ['t'] : []), 'pct', 'pf', 'titles', 'finals', 'playoffs'];
+const COLUMN_HEAD: Record<string, string> = {
+  seasons: 'Seasons', w: 'W', l: 'L', t: 'T', pct: 'Pct', pf: 'Pts', titles: 'Titles', finals: 'Finals', playoffs: 'Playoffs',
+};
+const SORTABLE = new Set(STANDINGS_SORTS.map((s) => s.key));
+// The phone's sort pills lead with what owners argue about.
+const PILL_ORDER = ['w', 'pct', 'titles', 'playoffs', 'finals', 'best', 'seasons', 'pf', 'l'];
+const sortPills = PILL_ORDER.map((k) => STANDINGS_SORTS.find((s) => s.key === k)!).filter(Boolean);
+
 const pageTitle = `Record Book · ${league.name}`;
 const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${facts.lastSeason}` : '';
 ---
@@ -315,6 +413,73 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       )}
     </nav>
 
+    {category.table ? (
+    <section class="rb-board rb-standings" id="rb-standings" aria-labelledby="rb-standings-title"
+      style={viewerFranchise ? `--rb-mine: ${teamAccentVar(viewerFranchise, 'var(--history-gold)')}` : undefined}>
+      <h2 class="rb-board__title" id="rb-standings-title">All-time standings</h2>
+      <p class="rb-board__note">
+        Regular season, every season{era.from ? ` since ${era.from}` : ''}. Titles, finals and playoff trips count finished seasons.
+      </p>
+      <ul class="ui-pills rb-pills rb-pills--sort" aria-label="Sort by">
+        {sortPills.map((s) => (
+          <li>
+            <a class="ui-pill" href={sortHref(s.key)} aria-current={s.key === sortSpec.key ? 'true' : undefined}>
+              {STANDINGS_LABEL[s.key]}{arrow(s.key) && <span aria-hidden="true"> {arrow(s.key)}</span>}
+              {s.key === sortSpec.key && <span class="visually-hidden">, sorted {sortState(s.key)}</span>}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <table class="ui-table rb-table">
+        <thead>
+          <tr>
+            <th scope="col" class="rb-table__rank">#</th>
+            <th scope="col" class="rb-table__who">Owner</th>
+            {COLUMNS.map((key) => (
+              <th scope="col" class="rb-table__num" aria-sort={sortState(key)} data-sorted={key === sortSpec.key ? '' : undefined}>
+                {SORTABLE.has(key) ? (
+                  <a href={sortHref(key)}>{COLUMN_HEAD[key]}{arrow(key) && <span aria-hidden="true">{arrow(key)}</span>}</a>
+                ) : (
+                  COLUMN_HEAD[key]
+                )}
+              </th>
+            ))}
+            <th scope="col" class="rb-table__best" aria-sort={sortState('best')} data-sorted={sortSpec.key === 'best' ? '' : undefined}>
+              <a href={sortHref('best')}>Best finish{arrow('best') && <span aria-hidden="true">{arrow('best')}</span>}</a>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {standingsView.map(({ row, values }) => (
+              <tr class:list={['rb-table__row', { 'rb-mine': mine(row.entity.key) }]}
+                style={`--rb-team: ${row.entity.franchiseId ? teamAccentVar(row.entity.franchiseId, 'var(--history-gold)') : 'var(--history-gold)'}`}>
+                <td class="rb-table__rank">{row.rank}</td>
+                <th scope="row" class="rb-table__who">
+                  <span class="rb-table__whobox">
+                  <span class="rb-table__phone-rank" aria-hidden="true">{row.rank}</span>
+                  {row.icon ? (
+                    <img class="rb-table__logo" src={row.icon} alt="" width="28" height="28" loading="lazy" />
+                  ) : (
+                    <span class="rb-table__logo rb-row__logo--blank" aria-hidden="true">{initials(row.name)}</span>
+                  )}
+                  <span class="rb-table__names">
+                    <span class="rb-table__name">
+                      {row.entity.ownerSlug ? <a href={r(`/owners/${row.entity.ownerSlug}`)}>{row.name}</a> : row.name}
+                    </span>
+                    <span class="rb-table__team">{[row.team, row.span].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  </span>
+                </th>
+                {COLUMNS.map((key) => (
+                  <td class="rb-table__num" data-label={STANDINGS_LABEL[key] ?? 'Ties'} data-sorted={cell(key)}>{values[key]}</td>
+                ))}
+                <td class="rb-table__best" data-label="Best finish" data-sorted={cell('best')}>{row.bestDisplay || '–'}</td>
+              </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+    ) : (
     <section
       class="rb-board"
       aria-labelledby="rb-board-title"
@@ -345,6 +510,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
         <div class="rb-layout">
           <article class:list={['rb-plaque', { 'rb-mine': mine(leader.entity.key) }]} style={`--rb-team: ${accent(leader)}`}>
             <p class="rb-plaque__label">{tiedAtTop > 1 ? `Record · shared by ${tiedAtTop}` : 'The record'}</p>
+            {leader.isNew && <p class="rb-new rb-new--record rb-plaque__new">{leader.isNewRecord ? 'New record' : 'New'}</p>}
             {leader.icon ? (
               <img class="rb-plaque__logo" src={leader.icon} alt="" width="88" height="88" loading="eager" />
             ) : (
@@ -420,6 +586,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
                     {ownerHref(row) ? <a href={ownerHref(row)}>{row.name}</a> : row.name}
                   </span>
                   <span class="rb-tile__context">{sub(row)}</span>
+                  {row.isNew && <span class:list={['rb-new', { 'rb-new--record': row.isNewRecord }]}>{row.isNewRecord ? 'New record' : 'New'}</span>}
                 </li>
               ))}
             </ol>
@@ -441,6 +608,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
                   <span class="rb-row__body">
                     <span class="rb-row__name">
                       {ownerHref(row) ? <a href={ownerHref(row)}>{row.name}</a> : row.name}
+                      {row.isNew && <span class:list={['rb-new', { 'rb-new--record': row.isNewRecord }]}>{row.isNewRecord ? 'New record' : 'New'}</span>}
                     </span>
                     <span class="rb-row__context">{sub(row)}</span>
                     <span class="rb-row__bar" aria-hidden="true"></span>
@@ -456,8 +624,9 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
         <p class="rb-empty">Nothing on this board yet.</p>
       )}
     </section>
+    )}
 
-    {paceCharts.length > 0 && (
+    {!category.table && paceCharts.length > 0 && (
       <section class="rb-pace" aria-labelledby="rb-pace-title">
         <p class="rb-pace__kicker">Record watch · {latestSeason?.y}</p>
         <h2 class="rb-pace__title" id="rb-pace-title">On pace</h2>
@@ -485,7 +654,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
       </section>
     )}
 
-    {others.length > 0 && (
+    {!category.table && others.length > 0 && (
       <section class="rb-more" aria-labelledby="rb-more-title">
         <h2 class="rb-more__title" id="rb-more-title">More {category.label.toLowerCase()} records</h2>
         <ul class="rb-more__grid">
@@ -495,6 +664,7 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
               <li>
                 <a class="rb-holder" href={viewHref({ scope, board: b.id })} style={`--rb-team: ${accent(top)}`}>
                   <span class="rb-holder__label">{b.title}</span>
+                  {top.isNewRecord && <span class="rb-new rb-new--record">New record</span>}
                   <span class="rb-holder__value">
                     {top.display}{top.unit && <small> {top.unit}</small>}
                   </span>
@@ -1055,6 +1225,200 @@ const span = facts.firstSeason && facts.lastSeason ? `${facts.firstSeason} to ${
   .rb-holder__context {
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
+  }
+
+  /* ── "New" badges (a row set in the latest season) ─────────────────────── */
+  /* A faint gold tint, never a dark chip (Brandon, 2026-11-04: highlights stay
+     super soft). "New record" adds only a soft gold edge. */
+  .rb-new {
+    display: inline-block;
+    margin-left: 0.375rem;
+    padding: 0.0625rem 0.4375rem;
+    vertical-align: 0.125em;
+    color: var(--page-text);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--history-gold) 16%, transparent);
+    border-radius: 999px;
+  }
+  .rb-new--record {
+    outline: 1px solid color-mix(in srgb, var(--history-gold) 45%, transparent);
+    outline-offset: -1px;
+  }
+  .rb-tile .rb-new,
+  .rb-holder .rb-new {
+    align-self: center;
+    margin: 0.25rem 0 0;
+  }
+  .rb-holder .rb-new {
+    align-self: flex-start;
+  }
+  .rb-plaque__new {
+    margin: 0.375rem auto 0 !important;
+  }
+
+  /* ── All-time standings ───────────────────────────────────────────────── */
+  .rb-pills--sort {
+    margin: 0 0 0.75rem;
+  }
+  .rb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .rb-table thead th {
+    padding: 0.5rem 0.375rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .rb-table thead a {
+    text-decoration: none;
+  }
+  .rb-table thead th.rb-table__who,
+  .rb-table thead th.rb-table__best {
+    text-align: left;
+  }
+  .rb-table td,
+  .rb-table tbody th {
+    padding: 0.5rem 0.375rem;
+    border-bottom: 1px solid var(--content-border);
+    font-weight: var(--font-weight-normal, 400);
+  }
+  .rb-table__num {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .rb-table__rank {
+    width: 1.75rem;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+    text-align: right;
+  }
+  .rb-table__who {
+    text-align: left;
+  }
+  .rb-table__whobox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 12rem;
+  }
+  .rb-table__logo {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+  .rb-table__names {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .rb-table__name {
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.2;
+  }
+  .rb-table__team {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    line-height: 1.3;
+  }
+  .rb-table__best {
+    font-size: var(--font-size-sm);
+  }
+  .rb-table__phone-rank {
+    display: none;
+  }
+  /* The sorted column, softly. */
+  .rb-table [data-sorted] {
+    background: color-mix(in srgb, var(--history-gold) 8%, transparent);
+  }
+  .rb-table thead [data-sorted] {
+    color: var(--page-text);
+  }
+  .rb-table__row.rb-mine > * {
+    background: color-mix(in srgb, var(--rb-mine, var(--history-gold)) 12%, transparent);
+  }
+
+  /* Phones: one card per owner, every value labeled (no sideways scroll,
+     Brandon 2026-10-23); the sort pills stand in for the headers. */
+  @media (max-width: 767px) {
+    .rb-table thead {
+      display: none;
+    }
+    .rb-table,
+    .rb-table tbody {
+      display: block;
+    }
+    .rb-table__row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.375rem 0.5rem;
+      margin-bottom: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      background: var(--content-bg);
+      border: var(--style-card-border, 1px solid var(--content-border));
+      border-left: 3px solid color-mix(in srgb, var(--rb-team) 60%, transparent);
+      border-radius: var(--radius-md, 12px);
+    }
+    .rb-table td,
+    .rb-table tbody th {
+      padding: 0;
+      border: 0;
+    }
+    .rb-table__row > .rb-table__rank {
+      display: none;
+    }
+    .rb-table tbody .rb-table__who {
+      grid-column: 1 / -1;
+    }
+    .rb-table__whobox {
+      min-width: 0;
+    }
+    .rb-table__phone-rank {
+      display: inline !important;
+      min-width: 1.25rem;
+      color: var(--history-gold);
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+    }
+    .rb-table td[data-label] {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 0.125rem 0.25rem;
+      text-align: left;
+      border-radius: var(--radius-sm, 6px);
+    }
+    .rb-table td[data-label]::before {
+      content: attr(data-label);
+      color: var(--content-text-muted);
+      font-size: var(--font-size-2xs);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .rb-table td.rb-table__best {
+      grid-column: 1 / -1;
+    }
+    .rb-table__row.rb-mine > * {
+      background: none;
+    }
+    .rb-table__row.rb-mine {
+      background: color-mix(in srgb, var(--rb-mine, var(--history-gold)) 10%, var(--content-bg));
+    }
+  }
+  @media (min-width: 768px) {
+    .rb-pills--sort {
+      display: none;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 959px) {
+    .rb-standings {
+      overflow-x: auto;
+    }
   }
 
   @media (min-width: 768px) {
