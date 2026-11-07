@@ -14,6 +14,7 @@ import { canViewLeagueHistory } from '../../../../utils/league-history/access';
 import { CATEGORIES, SCOPES, historyEras, recordBook } from '../../../../utils/league-history/records.mjs';
 import { logoDataUri, renderRecordCardPng, type RecordCardRow } from '../../../../utils/league-history/record-card';
 import { hasLeagueHistoryProduct, loadLeagueHistory } from '../../../../utils/league-history/datasets';
+import { guestMasker } from '../../../../utils/league-history/guest-mask';
 
 export const prerender = false;
 
@@ -22,7 +23,8 @@ const SCOPE_LABEL: Record<string, string> = { regular: 'Regular season', playoff
 const notFound = () => new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
 
 export const GET: APIRoute = async ({ url, request }) => {
-	if (!canViewLeagueHistory(getAuthUser(request))) return notFound();
+	const authUser = getAuthUser(request);
+	if (!canViewLeagueHistory(authUser)) return notFound();
 	const q = url.searchParams;
 	const slug = q.get('league') ?? '';
 	// The leagues with a Record Book, by canonical registry slug; only the one
@@ -46,6 +48,12 @@ export const GET: APIRoute = async ({ url, request }) => {
 	const board = boards.find((b) => b.id === q.get('board'));
 	if (!board?.rows.length) return notFound();
 
+	// A signed-out caller (a chat app unfurling the card, say) never gets a real
+	// owner name, like the pages themselves (guest-names.mjs).
+	const masker = authUser ? null : guestMasker(league.slug);
+	const mask = masker ? await masker.catch(() => null) : (s: string) => s;
+	if (!mask) return new Response('Unavailable', { status: 503, headers: { 'Cache-Control': 'no-store' } });
+
 	const qualifier = [SCOPE_LABEL[scope], era.from == null ? null : era.label].filter(Boolean).join(' · ') || null;
 	try {
 		const png = await renderRecordCardPng({
@@ -61,7 +69,7 @@ export const GET: APIRoute = async ({ url, request }) => {
 				value: r.value,
 				display: r.display,
 				context: r.context,
-				owner: r.owner,
+				owner: r.owner == null ? r.owner : mask(r.owner),
 				icon: r.icon,
 			})),
 		});

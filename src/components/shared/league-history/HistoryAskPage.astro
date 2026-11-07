@@ -14,7 +14,9 @@
  * asks straight away (the History home's suggestions).
  *
  * Reading is open like every history page; asking is for signed-in owners of
- * the league (canAskLeagueHistory).
+ * the league (canAskLeagueHistory), and, on the public demo league, for
+ * signed-out visitors too: 3 questions a day, 3 more for an email
+ * (guest-ask.ts), with every owner name masked (guest-names.mjs).
  */
 import '../../../styles/history-ask.css';
 import '../../../styles/record-charts.css';
@@ -27,6 +29,8 @@ import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { readAnswer } from '../../../utils/league-history/ask-store';
 import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
+import { canGuestAsk, GUEST_EMAIL_QUESTIONS, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
+import { SHARED_APP_ORIGIN } from '../../../config/leagues';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -38,10 +42,19 @@ const { leagueSlug, data } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
-const canAsk = canAskLeagueHistory(getAuthUser(Astro.request), league.id);
+const authUser = getAuthUser(Astro.request);
+const isOwner = canAskLeagueHistory(authUser, league.id);
+// The public demo: a signed-out visitor may ask too, a few a day.
+const guest = !authUser && canGuestAsk(league.slug);
+const canAsk = isOwner || guest;
+// "My team" means nothing to a guest.
+const starters = guest ? ASK_EXAMPLES.filter((q) => !/\bmy\b/i.test(q)) : ASK_EXAMPLES;
+const productUrl = `${SHARED_APP_ORIGIN}/history`;
 
 const after = Astro.url.searchParams.get('after') ?? '';
-const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
+const parentRead = after ? await readAnswer(league.slug, after).catch(() => null) : null;
+// A guest's conversation continues only from a guest answer (the server enforces it too).
+const parent = guest && parentRead && !parentRead.guest ? null : parentRead;
 const first = Astro.url.searchParams.get('q')?.trim().slice(0, 300) ?? '';
 // Starters sit in the intro until the first answer; then the dock carries follow-ups.
 const chips = parent?.followUps ?? [];
@@ -59,6 +72,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     data-after={parent?.id ?? ''}
     data-first={canAsk ? first : ''}
     data-turns={String(earlier.length + (parent ? 1 : 0))}
+    data-guest={guest ? 'true' : undefined}
   >
     <header class="hask-top">
       <a class="hask-icon" href={`${base}/history`} aria-label="Back to History">
@@ -76,11 +90,15 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     <div class="hask-thread" data-hask-thread>
       {!parent && (
         <div class="hask-intro" data-hask-intro>
-          <p class="hask-intro__kicker">Stats lookup</p>
+          <p class="hask-intro__kicker">{guest ? 'Try it on a real league' : 'Stats lookup'}</p>
           <p class="hask-intro__title">What do you want to know?</p>
-          <p class="hask-intro__lede">Games, seasons, players, trades and drafts. Every answer is counted from the league's own record, with the rows to prove it, and you can keep asking follow-ups.</p>
+          {guest ? (
+            <p class="hask-intro__lede">This is {league.name}, a real league with {span ? `every season from ${span}` : 'every season'} on record. Ask about its games, seasons, players, trades and drafts, and every answer is counted from the league's own record, with the rows to prove it. Owner names are hidden.</p>
+          ) : (
+            <p class="hask-intro__lede">Games, seasons, players, trades and drafts. Every answer is counted from the league's own record, with the rows to prove it, and you can keep asking follow-ups.</p>
+          )}
           <ul class="hask-starters" aria-label="Questions to start with">
-            {ASK_EXAMPLES.map((q) => (
+            {starters.map((q) => (
               <li>
                 <button class="hask-starter" type="button" data-hask-suggest disabled={!canAsk}>
                   <span>{q}</span>
@@ -112,6 +130,26 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
           <button class:list={['hask-suggest', { 'hask-suggest--lead': i === 0 }]} type="button" data-hask-suggest disabled={!canAsk}>{q}</button>
         ))}
       </div>
+      {guest && (
+        <div class="hask-guest" data-hask-guest>
+          <p class="hask-guest__count" data-hask-guest-count>{GUEST_FREE_QUESTIONS} free questions a day</p>
+          <form class="hask-guest__email" data-hask-guest-email hidden>
+            <p class="hask-guest__ask">Leave your email for {GUEST_EMAIL_QUESTIONS} more questions today.</p>
+            <div class="hask-guest__row">
+              <label class="visually-hidden" for={`hask-email-${league.slug}`}>Email</label>
+              <input id={`hask-email-${league.slug}`} class="hask-input" type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+              <button class="cta cta--primary" type="submit">Unlock</button>
+            </div>
+            <label class="hask-guest__consent"><input type="checkbox" name="consent" required /> OK to email me about League History</label>
+            <input class="visually-hidden" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          </form>
+          <div class="hask-guest__out" data-hask-guest-out hidden>
+            <p>Want this for your own league? Every question, every season, with your league's real names.</p>
+            <a class="cta cta--primary" href={productUrl}>Get Ask the History</a>
+          </div>
+          <p class="hask-guest__owner"><a class="cta-link" href={productUrl}>Get it for your league</a> · {league.name} owner? <a class="cta-link" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in</a></p>
+        </div>
+      )}
       {canAsk ? (
         <form class="hask-form" data-hask-form>
           <label class="visually-hidden" for={`hask-q-${league.slug}`}>{parent ? 'Ask a follow-up' : 'Your question'}</label>
@@ -187,7 +225,8 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ league: root.dataset.league, question, after: root.dataset.after || undefined }),
       });
-      const data = (await res.json().catch(() => ({}))) as ClientAnswer;
+      const data = (await res.json().catch(() => ({}))) as ClientAnswer & { guest?: GuestAllowance | null; needEmail?: boolean };
+      if (data.guest !== undefined) showGuest(root, data.guest ?? null, Boolean(data.needEmail));
       if (!res.ok || data.error) {
         turn.remove();
         status.textContent = data.error ?? 'Something went wrong. Try again.';
@@ -213,6 +252,58 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
       return false;
     } finally {
       delete root.dataset.busy;
+    }
+  }
+
+  interface GuestAllowance {
+    used: number;
+    limit: number;
+    hasEmail: boolean;
+  }
+
+  /** The guest counter, the email box once the free questions are gone, the pitch once all are. */
+  function showGuest(root: HTMLElement, a: GuestAllowance | null, needEmail = false) {
+    if (!root.dataset.guest || !a) return;
+    const left = Math.max(0, a.limit - a.used);
+    const count = root.querySelector<HTMLElement>('[data-hask-guest-count]');
+    if (count) count.textContent = left > 0 ? `${left} free ${left === 1 ? 'question' : 'questions'} left today` : 'No free questions left today';
+    const email = root.querySelector<HTMLFormElement>('[data-hask-guest-email]');
+    const out = root.querySelector<HTMLElement>('[data-hask-guest-out]');
+    const form = root.querySelector<HTMLFormElement>('[data-hask-form]');
+    const wantsEmail = left === 0 && !a.hasEmail;
+    if (email) email.hidden = !(wantsEmail || needEmail);
+    if (out) out.hidden = !(left === 0 && a.hasEmail);
+    if (form) form.hidden = left === 0;
+    root.querySelectorAll<HTMLButtonElement>('[data-hask-suggest]').forEach((b) => (b.disabled = left === 0));
+  }
+
+  async function unlock(root: HTMLElement, form: HTMLFormElement) {
+    const status = root.querySelector<HTMLElement>('[data-hask-status]');
+    const fd = new FormData(form);
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (button) button.disabled = true;
+    try {
+      const res = await fetch('/api/league-history/guest-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          league: root.dataset.league,
+          email: String(fd.get('email') ?? ''),
+          consent: fd.get('consent') === 'on',
+          website: String(fd.get('website') ?? ''),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; guest?: GuestAllowance | null };
+      if (!data.ok) {
+        if (status) status.textContent = data.message ?? 'That didn’t go through. Try again.';
+        return;
+      }
+      if (status) status.textContent = 'Thanks! You have more questions to ask.';
+      showGuest(root, data.guest ?? null);
+    } catch {
+      if (status) status.textContent = 'Lost the connection. Try again.';
+    } finally {
+      if (button) button.disabled = false;
     }
   }
 
@@ -250,6 +341,17 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
       const shareButton = target.closest<HTMLButtonElement>('[data-hask-share]');
       if (shareButton) void share(root, shareButton);
     });
+    const emailForm = root.querySelector<HTMLFormElement>('[data-hask-guest-email]');
+    emailForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void unlock(root, emailForm);
+    });
+    if (root.dataset.guest) {
+      void fetch(`/api/league-history/ask?league=${encodeURIComponent(root.dataset.league ?? '')}`)
+        .then((r) => r.json())
+        .then((d: { guest?: GuestAllowance | null }) => showGuest(root, d.guest ?? null))
+        .catch(() => {});
+    }
     if (root.dataset.first) void ask(root, root.dataset.first);
     else if (root.dataset.after) root.querySelector('.hask-turn:last-child')?.scrollIntoView({ block: 'start' });
   }

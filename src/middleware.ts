@@ -22,6 +22,9 @@
  *    theme for the browser session; `?theme=default` ends it. See
  *    src/utils/site-theme.ts.
  *
+ * 5. Owner names: signed-out visitors to TheLeague's history section see
+ *    stand-ins, never real owner names. See src/utils/league-history/guest-names.mjs.
+ *
  * Vercel 301 redirects in vercel.json still handle catching leaked /<slug>/*
  * links at the edge before this middleware runs.
  *
@@ -33,7 +36,7 @@ import './utils/ensure-pt-timezone';
 import './utils/ensure-demo-isolation';
 import { defineMiddleware } from 'astro:middleware';
 import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
-import { resolveSharedHostHiddenLeague } from './config/leagues';
+import { getLeagueBySlug, resolveSharedHostHiddenLeague } from './config/leagues';
 import {
   PUNCTUATION_REDIRECT_STATUS,
   resolvePunctuationRedirect,
@@ -43,13 +46,15 @@ import { isDemoOnlyPath, isDemoRefusedPath, resolveDemoPath, rewriteDemoHtml } f
 import { demoLeaguePaths } from './config/leagues-data.mjs';
 import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
-import { getAuthUser } from './utils/auth';
+import { franchiseIdForLeague, getAuthUser } from './utils/auth';
 import { resolveThemePreview, THEME_PREVIEW_COOKIE, THEME_PREVIEW_PARAM } from './utils/site-theme';
 import { resolveSeasonPreview, SEASON_PREVIEW_COOKIE, SEASON_PREVIEW_PARAM } from './config/seasonal-themes.mjs';
 import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
 import { preloadRequestLeagueData } from './utils/request-league-data';
+import { isGuestMaskedPath } from './utils/league-history/guest-names.mjs';
+import { maskHtmlResponse } from './utils/league-history/guest-mask';
 
 // The custom-site demo's MFL stand-in. `__DEMO_BUILD__` is a compile-time
 // constant (astro.config.ts `vite.define`), so every other build sees
@@ -218,13 +223,26 @@ const handle: MiddlewareHandler = async (context, next) => {
     return stamp(await context.rewrite(new URL('/_not-found', context.url)));
   }
 
-  if (!isLeagueHost) return stamp(await next());
+  // 5. Owner names: a signed-out visitor to TheLeague's history section sees
+  // every owner as a stand-in ("Bring The Pain Owner"), never a real name — it
+  // is the public Ask the History demo (src/utils/league-history/guest-names.mjs).
+  // Decided on the INTERNAL path, so the apex host and the prefixed path agree.
+  const guestMask = async (internalPath: string, response: Response): Promise<Response> => {
+    if (context.isPrerendered || !isGuestMaskedPath(internalPath)) return response;
+    const slug = internalPath.split('/')[1];
+    const league = getLeagueBySlug(slug);
+    // Real names are for that league's own signed-in owners only.
+    if (league && franchiseIdForLeague(getAuthUser(context.request), league.id)) return response;
+    return maskHtmlResponse(response, slug);
+  };
+
+  if (!isLeagueHost) return stamp(await guestMask(context.url.pathname, await next()));
 
   const rewrite = resolveLeagueRewrite(hostname, context.url.pathname);
-  if (!rewrite) return stamp(await next());
+  if (!rewrite) return stamp(await guestMask(context.url.pathname, await next()));
 
   const newUrl = new URL(rewrite.newPath + context.url.search, context.url);
-  return stamp(await context.rewrite(newUrl));
+  return stamp(await guestMask(rewrite.newPath, await context.rewrite(newUrl)));
 };
 
 /**

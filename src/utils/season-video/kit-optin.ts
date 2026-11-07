@@ -63,11 +63,11 @@ async function tagId(kit: KitFetch, name: string): Promise<number | null> {
 	return null;
 }
 
-/** Add an opted-in subscriber and tag them. True when Kit took the address. */
-export async function subscribeToKit(kit: KitFetch, email: string, platform: OptInPlatform | null): Promise<boolean> {
+/** Add an opted-in subscriber and tag them (`tag`: the box they signed up in; "Season video" by default). True when Kit took the address. */
+export async function subscribeToKit(kit: KitFetch, email: string, platform: OptInPlatform | null, tag: string = KIT_TAG): Promise<boolean> {
 	const sub = await kit('/subscribers', { method: 'POST', body: { email_address: email, state: 'active' } });
 	if (sub.status !== 200 && sub.status !== 201) return false;
-	const names = [KIT_TAG, ...(platform ? [PLATFORM_TAGS[platform]] : [])];
+	const names = [tag, ...(platform ? [PLATFORM_TAGS[platform]] : [])];
 	for (const name of names) {
 		const id = await tagId(kit, name);
 		if (id) await kit(`/tags/${id}/subscribers`, { method: 'POST', body: { email_address: email } });
