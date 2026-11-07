@@ -33,7 +33,7 @@ import { LIVE_HISTORY_LENGTH, buildOverlay, makePointer, planHydrate, planRollba
 import { BLOB_PREFIX, hashContent } from './lib/league-data-store.mjs';
 import { existingBlobs, upload } from './lib/league-data-blob.mjs';
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
-import { syncPublishedPatterns } from './lib/sync-published.mjs';
+import { isSyncPublishedStoreFile, syncPublishedPatterns } from './lib/sync-published.mjs';
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -159,10 +159,15 @@ async function hydrate(r) {
     return Buffer.from(await res.arrayBuffer());
   };
   const files = JSON.parse((await getJson(pointer.overlay)).toString()).files ?? {};
+  // Only paths this run itself would publish: a store file under today's sync
+  // patterns, relative and with no `..`, so whatever the overlay names can
+  // never write outside the data it owns.
+  const patterns = syncPublishedPatterns();
   const take = planHydrate(
     files,
     (p) => (existsSync(p) ? hashContent(readFileSync(p)) : null),
     changedInGit,
+    (p) => !p.split('/').includes('..') && isSyncPublishedStoreFile(p, patterns),
   );
   for (const { path, hash } of take) {
     const body = await getJson(hash);

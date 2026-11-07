@@ -268,6 +268,12 @@ describe('moving the pointer (scripts/league-data-pointer.mjs)', () => {
     ]);
   });
 
+  it('never writes a path the run would not publish itself', () => {
+    const files = { 'data/x/mfl-feeds/2026/a.json': h('1'), '../../etc/passwd': h('2'), 'data/x/b.json': 'nothex' };
+    const allowed = (p: string) => !p.split('/').includes('..') && globToRegExp(PATTERNS[0]).test(p);
+    expect(planHydrate(files, () => null, new Set(), allowed)).toEqual([{ path: 'data/x/mfl-feeds/2026/a.json', hash: h('1') }]);
+  });
+
   it('records what the next run needs to start from it', () => {
     const p = parsePointer(
       makePointer({ overlay: OVERLAY, patterns: PATTERNS, source: 'roster-sync', base: 'https://s.example/', gitBase: 'a'.repeat(40) }),

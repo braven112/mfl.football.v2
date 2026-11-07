@@ -53,11 +53,13 @@ export function makePointer({ overlay, patterns, source, now = new Date(), base,
  * @param {Record<string, string>} overlayFiles path → hash
  * @param {(path: string) => string | null} diskHash null when the file is absent
  * @param {Set<string>} changedInGit paths changed between gitBase and HEAD
+ * @param {(path: string) => boolean} [allowed] paths the run may write; any other is ignored
  * @returns {Array<{ path: string, hash: string }>}
  */
-export function planHydrate(overlayFiles, diskHash, changedInGit) {
+export function planHydrate(overlayFiles, diskHash, changedInGit, allowed = () => true) {
   const take = [];
   for (const [path, hash] of Object.entries(overlayFiles)) {
+    if (!allowed(path) || !/^[0-9a-f]{32}$/.test(String(hash))) continue;
     if (changedInGit.has(path)) continue;
     if (diskHash(path) !== hash) take.push({ path, hash });
   }
