@@ -35,7 +35,7 @@ export interface PlayerLink {
 
 import { matchPages } from './page-search-match';
 
-/** The prerendered player index for a league (src/pages/api/player-search/[league].json.ts). */
+/** The CDN-cached player index for a league (src/pages/api/player-search/[league].json.ts). */
 export const playerIndexUrl = (leagueSlug: string) =>
   `/api/player-search/${encodeURIComponent(leagueSlug)}.json`;
 

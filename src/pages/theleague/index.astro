@@ -79,7 +79,7 @@ import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 import TopPlayersPromo from '../../components/shared/hp-sections/TopPlayersPromo.astro';
-import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import { leagueFeedPath, listLeagueData, loadLeagueData } from '../../utils/league-data';
 import type { TopPlayersFile } from '../../types/top-players';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
@@ -204,19 +204,18 @@ const heroReferenceDate = effectiveDate ?? new Date();
 // From MFL's own calendar, never computed here. TheLeague's `WAIVER_BBID` runs
 // **Wed 7:00 PM PT**, not the 8pm the hero used to build by hand out of
 // server-local date arithmetic plus a hardcoded +7h offset — see the note in
-// WaiverWireHero.astro. Same glob shape as /players, which reads this feed.
-const tlCalendarModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
+// WaiverWireHero.astro. Read through the league-data loader, never bundled:
+// the roster sync publishes this feed without a build.
 // Keyed by TheLeague's MFL LEAGUE year (Feb 14 rollover), not the
 // season-results year (Labor Day): between those two dates the feed has
 // rolled while `getCurrentSeasonYear` still names last season, so this lookup
 // would read a stale calendar — or miss the file and fall through to
 // `unknown`. `/players` uses `getCurrentLeagueYear` for this same feed.
 const tlWaiverYear = getCurrentLeagueYear(heroReferenceDate);
-const tlCalendarEvents =
-  (Object.entries(tlCalendarModules).find(([path]) => path.includes(`/${tlWaiverYear}/`))?.[1] as any)?.default ?? [];
+const tlCalendarFeed = await loadLeagueData<unknown>(
+  leagueFeedPath(THELEAGUE.dataPath, tlWaiverYear, 'calendar.json'),
+).catch(() => null);
+const tlCalendarEvents: any[] = Array.isArray(tlCalendarFeed) ? tlCalendarFeed : [];
 const tlWaiverCopy = waiverDeadlineCopy(
   resolveWaiverWindow(tlCalendarEvents, heroReferenceDate, leagueClock(THELEAGUE.slug).zone),
   { now: heroReferenceDate, clock: viewerClock },

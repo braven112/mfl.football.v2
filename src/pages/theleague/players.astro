@@ -38,7 +38,7 @@ import nflByeWeeksFile from '../../../data/nfl/bye-weeks.json';
 import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
-import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import { leagueFeedPath, listLeagueData, loadLeagueData } from '../../utils/league-data';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { fetchDropLocks } from '../../utils/mfl-locked-players';
 import { waiverEventsLiveFirst } from '../../utils/live-waiver-calendar';
@@ -340,12 +340,12 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // synced by scripts/fetch-mfl-feeds.mjs — a lagging sync must not show the
 // wrong window's locks while the claim route, which reads live, decides
 // differently. `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
-const committedCalendarEvents =
-  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+// The committed copy is read through the league-data loader, never bundled:
+// the roster sync publishes it without a build.
+const committedCalendarFeed = await loadLeagueData<unknown>(
+  leagueFeedPath(theLeagueDef.dataPath, currentYear, 'calendar.json'),
+).catch(() => null);
+const committedCalendarEvents: any[] = Array.isArray(committedCalendarFeed) ? committedCalendarFeed : [];
 // Admin gate + claim context below read the same session.
 const authUser = getAuthUser(Astro.request);
 const [cachedRosterPlayers, calendarEvents] = await Promise.all([

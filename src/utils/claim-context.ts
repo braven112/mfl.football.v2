@@ -41,6 +41,7 @@ import { readBidRules, freeAgencyIsLeagueWide, poolOfFranchise, bidBalance, acti
 import { claimVerb, type ClaimContext } from './claim-context-shape';
 import { isAuctionSeason } from './auction-window';
 import type { AuthUser } from './auth';
+import { leagueFeedPath, loadLeagueData } from './league-data';
 
 // The wire shape and the verb rule live in claim-context-shape.ts, which the
 // browser half imports too — see the note there.
@@ -75,23 +76,15 @@ async function readLeaguePayload(year: number, leagueId: string, cookie: string)
 /**
  * The committed calendar feed, synced by scripts/fetch-mfl-feeds.mjs.
  *
- * One glob across every league's data directory rather than a literal per
- * league — a glob specifier cannot be a runtime variable, and the registry
- * (`league.dataPath`) is what picks the entry. Both free-agent pages read this
- * same file for the banner above the table, which is exactly why it is here:
- * without it, a live read that fails leaves the FORM saying "window unknown"
- * while the BANNER on the page behind it says waivers are open.
+ * Read through the league-data loader, never bundled: the sync publishes this
+ * file without a build, so a compiled-in copy would stay at whatever the last
+ * deploy saw. Both free-agent pages read this same file for the banner above
+ * the table, which is exactly why it is here: without it, a live read that
+ * fails leaves the FORM saying "window unknown" while the BANNER on the page
+ * behind it says waivers are open.
  */
-const calendarModules = import.meta.glob(
-  '../../data/*/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true },
-);
-
-function committedWaiverEvents(dataPath: string, year: number): unknown[] {
-  const hit = Object.entries(calendarModules).find(([path]) =>
-    path.includes(`/${dataPath}/mfl-feeds/${year}/`),
-  );
-  const events = (hit?.[1] as { default?: unknown })?.default;
+async function committedWaiverEvents(dataPath: string, year: number): Promise<unknown[]> {
+  const events = await loadLeagueData(leagueFeedPath(dataPath, year, 'calendar.json')).catch(() => null);
   return Array.isArray(events) ? events : [];
 }
 
@@ -178,7 +171,7 @@ export async function resolveOwnerClaimContext(
   // but it is owner-gated, so it is also the one that can come back empty for
   // reasons that have nothing to do with the league's schedule.
   const live = await readLiveWaiverEvents(year, leagueId, user.id);
-  const events = live ?? (owner.dataPath ? committedWaiverEvents(owner.dataPath, year) : []);
+  const events = live ?? (owner.dataPath ? await committedWaiverEvents(owner.dataPath, year) : []);
   const window = resolveWaiverWindow(events as never, new Date(), leagueClock(owner.slug).zone);
 
   // TheLeague replaces offseason free agency with a live auction on MFL. While

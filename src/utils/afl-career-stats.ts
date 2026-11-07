@@ -24,6 +24,10 @@
  *   `pointsMissingYears`.
  */
 import { attributeAwardYear } from './afl-awards';
+import { getLeagueBySlug } from '../config/leagues';
+import { listLeagueData, loadLeagueData } from './league-data';
+
+const AFL_DATA_PATH = getLeagueBySlug('afl-fantasy')!.dataPath;
 
 export interface AflCareerStats {
   wins: number;
@@ -54,24 +58,29 @@ interface StandingsFeed {
   leagueStandings?: { franchise?: StandingsRow[] };
 }
 
-const standingsFeeds = import.meta.glob<StandingsFeed>(
-  '../../data/afl-fantasy/mfl-feeds/*/standings.json',
-  { eager: true, import: 'default' }
-);
+/**
+ * Every season's standings, through the league-data loader. Never a glob: the
+ * roster sync publishes the current season's file without a build, so a
+ * compiled-in copy would freeze the running season at the last deploy.
+ */
+async function loadStandingsFeeds(): Promise<Array<[string, StandingsFeed | null]>> {
+  const paths = listLeagueData(`${AFL_DATA_PATH}/mfl-feeds/*/standings.json`);
+  return Promise.all(paths.map(async (p) => [p, await loadLeagueData<StandingsFeed>(p).catch(() => null)] as const));
+}
 
 const num = (v: string | undefined): number => {
   const n = Number.parseFloat(v ?? '');
   return Number.isFinite(n) ? n : 0;
 };
 
-function computeCareerStats(): {
+function computeCareerStats(standingsFeeds: Array<[string, StandingsFeed | null]>): {
   byFranchise: Map<string, AflCareerStats>;
   yearsCovered: number[];
 } {
   const byFranchise = new Map<string, AflCareerStats>();
   const yearsCovered = new Set<number>();
 
-  for (const [path, feed] of Object.entries(standingsFeeds)) {
+  for (const [path, feed] of standingsFeeds) {
     const year = Number.parseInt(path.match(/mfl-feeds\/(\d{4})\//)?.[1] ?? '', 10);
     if (!Number.isFinite(year)) continue;
     const rows = feed?.leagueStandings?.franchise ?? [];
@@ -124,9 +133,11 @@ function computeCareerStats(): {
   return { byFranchise, yearsCovered: [...yearsCovered].sort((a, b) => a - b) };
 }
 
-let cached: ReturnType<typeof computeCareerStats> | null = null;
-
-export function getAflCareerStats(): ReturnType<typeof computeCareerStats> {
-  if (!cached) cached = computeCareerStats();
-  return cached;
+/**
+ * Recomputed per call, not memoized: the loader already keeps the feeds in
+ * memory, folding ~24 small files is cheap, and a module-level memo would keep
+ * serving the standings from before a sync published new ones.
+ */
+export async function getAflCareerStats(): Promise<ReturnType<typeof computeCareerStats>> {
+  return computeCareerStats(await loadStandingsFeeds());
 }

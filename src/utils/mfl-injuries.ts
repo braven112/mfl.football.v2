@@ -33,66 +33,9 @@ export interface PlayerInjury {
 /** MFL player id → designation. Players with no designation are absent. */
 export type InjuryMap = Record<string, PlayerInjury>;
 
-/**
- * Eagerly globbed per league, because `import.meta.glob` needs a literal
- * pattern — a registry `dataPath` cannot be interpolated here. Adding a league
- * means adding its glob; `loadInjuryMap` returns {} for any slug with no entry,
- * so a league with no feed degrades to "no badges" rather than throwing.
- */
-const INJURY_FEEDS: Record<string, Record<string, unknown>> = {
-  theleague: import.meta.glob('../../data/theleague/mfl-feeds/*/injuries.json', {
-    eager: true,
-  }),
-  'afl-fantasy': import.meta.glob('../../data/afl-fantasy/mfl-feeds/*/injuries.json', {
-    eager: true,
-  }),
-  archies: import.meta.glob('../../data/archies/mfl-feeds/*/injuries.json', {
-    eager: true,
-  }),
-};
-
-/**
- * The injury map for a league, taken from the newest year present on disk.
- *
- * Total: an unknown slug, a missing feed or a malformed payload all yield an
- * empty map, so every caller's "no designation" path is the same path.
- *
- * @param slug Registry league slug ('theleague' | 'afl-fantasy' | …).
- */
-export function loadInjuryMap(slug: string): InjuryMap {
-  return newestBundledInjuries(slug).injuries;
-}
-
-/**
- * The bundled feed's newest year, its map and when the sync wrote it
- * ({ year: -1, injuries: {} } when there is none).
- */
-export function newestBundledInjuries(slug: string): { year: number; generatedAt?: string; injuries: InjuryMap } {
-  const feeds = INJURY_FEEDS[slug];
-  if (!feeds) return { year: -1, injuries: {} };
-
-  let newestYear = -1;
-  let newest: InjuryMap = {};
-  let generatedAt: string | undefined;
-
-  for (const [path, mod] of Object.entries(feeds)) {
-    const matched = path.match(/mfl-feeds\/(\d{4})\//);
-    const year = matched ? Number(matched[1]) : -1;
-    if (year <= newestYear) continue;
-
-    const data = (mod as { default?: unknown })?.default ?? mod;
-    const injuries = (data as { injuries?: unknown } | null)?.injuries;
-    if (!injuries || typeof injuries !== 'object') continue;
-
-    newestYear = year;
-    newest = injuries as InjuryMap;
-    const stamp = (data as { generatedAt?: unknown }).generatedAt;
-    generatedAt = typeof stamp === 'string' ? stamp : undefined;
-  }
-
-  return { year: newestYear, generatedAt, injuries: newest };
-}
-
+// The feed readers (the committed injuries.json and the live Redis copy) live
+// in mfl-injuries-live-map.ts, server-only. This module is imported by client
+// scripts for the badge helpers below, so it must never read league data.
 
 /**
  * The badge's visible text — the designation's first letter, in parentheses.
