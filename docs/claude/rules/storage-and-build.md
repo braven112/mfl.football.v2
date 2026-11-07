@@ -130,6 +130,26 @@ capped.
   life of an instance either — the player-search index went from prerendered to
   CDN-cached (`s-maxage=300`) for that reason. Guard:
   `tests/sync-published-reads.test.ts`.
+- **The roster sync publishes through the pointer and skips the build**
+  (phase 2). Each run: `league-data-pointer.mjs hydrate` (start from the live
+  files, git winning wherever it changed since the pointer's `gitBase`) →
+  fetch and derive → `publish` → `hold-sync-files.mjs`, which with the data
+  live holds every modified store file out of the commit, all or nothing,
+  except once a day or when something must commit anyway (a new file, a
+  deletion, a non-store file, `fetch.meta.json`) → commit marked
+  `[league-data: <overlay>]`, which `scripts/vercel-ignore-build.mjs`
+  (`liveDataOnly`) skips. A run whose hydrate or publish failed is unmarked
+  and holds nothing extra: it commits and builds exactly as before.
+  - **A derived file the sync recomputes must not carry a bare run clock**:
+    every run would be a new data version. Write it with
+    `writeJsonIfChanged(…, { ignoreKeys: ['generatedAt'] })`.
+  - **`derived/**` is the pointer's, including the files the daily history
+    chain commits.** Hydrate lets git win for them, so a chain commit goes
+    live on the next sync run — until then the overlay still serves the old
+    copy, even over a fresh build's.
+  - **A pointer nobody confirms for 36 h is ignored** (`LIVE_MAX_AGE_MS`): an
+    unchanged run still re-stamps `refreshedAt`, so this trips only when the
+    syncs stopped publishing, and then the deploys' own (git) data is newer.
 - **The live pointer decides which sync data a deploy reads**
   (`src/config/league-data-live.mjs`). Redis `league-data:live` names an
   overlay blob (`{ files: { path: hash } }`) and the globs it owns; every

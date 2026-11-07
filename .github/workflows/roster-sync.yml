@@ -60,6 +60,23 @@ jobs:
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
+      # Git keeps ONE data commit a day; between those the newest data lives in
+      # the league-data store behind the live pointer (src/config/league-data-live.mjs).
+      # Start from that, not from the last daily commit, or a file only some
+      # runs write (the ESPN backfill, the once-a-day feeds) would go back live
+      # as its older git copy. Git still wins for any file it changed since the
+      # pointer was published — a code change or another lane's commit.
+      # `hydrated` gates the publish step: a run that could not start from the
+      # live data commits and builds exactly as before phase 2.
+      - name: Start from the live league data
+        id: hydrate
+        continue-on-error: true
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node ./scripts/league-data-pointer.mjs hydrate
+
       # Single job, sequential loop over leagues rather than a
       # strategy.matrix: a matrix would spin up a separate job (and separate
       # checkout/install) per league, and this workflow ends with ONE shared
@@ -158,6 +175,18 @@ jobs:
           for SLUG in $TOP; do
             pnpm run compute:top-players --league="$SLUG"
           done
+          # The rest of what the build derives from these feeds, so the data
+          # the publish step makes live agrees with itself without a build:
+          # each league's player identity union, the free-agent snapshot,
+          # schedule strength and playoff performance. All write under
+          # data/<league>/derived/, which the pointer carries.
+          UNION=$(node ./scripts/league-jobs.mjs player-identity-union)
+          for SLUG in $UNION; do
+            pnpm run compute:player-identity-union --league="$SLUG"
+          done
+          pnpm run compute:free-agents
+          pnpm run compute:schedule-strength
+          pnpm run compute:playoff-performance
           # Rules as configured on MFL (Ask Roger's fallback), for every syncing
           # league. Written only when a setting changed, so it costs no commit.
           DIGEST=$(node ./scripts/league-jobs.mjs mfl-settings-digest)
@@ -248,6 +277,24 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         run: node ./scripts/push-gameday-alerts.mjs
 
+      # Publish this run's data to the league-data store and move the live
+      # pointer: every deploy serves it within a minute, with no build. Only
+      # after a hydrate that worked — publishing from a checkout that did NOT
+      # start from the live data would put older git copies back live. On
+      # success the commit below is marked, so scripts/vercel-ignore-build.mjs
+      # skips its build, and the hold step lets git keep one data commit a day.
+      # Any failure leaves `overlay` unset: the commit is unmarked, holds
+      # nothing extra and builds exactly as before.
+      - name: Publish live league data
+        id: publish
+        if: ${{ steps.hydrate.outputs.hydrated == 'true' }}
+        continue-on-error: true
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node ./scripts/league-data-pointer.mjs publish --source roster-sync
+
       # Injuries, TheLeague's salary copy, and the current league year's
       # rosters.json / transactions.json (with the top-players.json derived
       # from them above) change on most runs but are read live (or barely
@@ -261,13 +308,16 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          LEAGUE_DATA_PUBLISHED: ${{ steps.publish.outputs.overlay }}
         run: node ./scripts/hold-sync-files.mjs
 
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:
           add-paths: 'data/ src/data/'
-          commit-message: 'chore: sync rosters and playoff data'
+          # The marker tells scripts/vercel-ignore-build.mjs this data is
+          # already live through the pointer, so the commit needs no build.
+          commit-message: "chore: sync rosters and playoff data${{ steps.publish.outputs.overlay && format(' [league-data: {0}]', steps.publish.outputs.overlay) || '' }}"
           no-changes-message: 'No roster changes to commit.'
           git-user-name: 'Roster Sync Bot'
           pull-rebase: 'true'

@@ -70,6 +70,7 @@
  * "the overall #1 seed" is a different question there and needs its own model.
  */
 
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -533,8 +534,10 @@ const payload = {
   seasons,
 };
 
-fs.mkdirSync(path.dirname(OUT), { recursive: true });
-fs.writeFileSync(OUT, `${JSON.stringify(payload, null, 2)}\n`);
+// Unchanged apart from the clock → the file is left alone. The roster sync
+// runs this every pass and publishes the result live (league-data pointer), so
+// a fresh `generatedAt` alone would be a new data version on every run.
+writeJsonIfChanged(OUT, `${JSON.stringify(payload, null, 2)}\n`, { ignoreKeys: ['generatedAt'] });
 
 const { totals } = payload;
 const pct = (n) => (totals.seasons ? `${Math.round((100 * n) / totals.seasons)}%` : '—');

@@ -39,6 +39,7 @@ import {
   LIVE_POINTER_KEY,
   composeFiles,
   parsePointer,
+  pointerIsStale,
 } from '../config/league-data-live.mjs';
 
 interface Manifest {
@@ -365,7 +366,7 @@ function setLive(next: { overlay: string; manifest: Manifest } | null) {
   }
 }
 
-async function checkPointer(): Promise<void> {
+async function checkPointer(now: number): Promise<void> {
   const deploy = deployManifest();
   if (!deploy) return;
   let raw: unknown;
@@ -379,6 +380,9 @@ async function checkPointer(): Promise<void> {
   }
   const pointer = parsePointer(raw);
   if (!pointer) return setLive(null);
+  // No sync has confirmed it in a day and a half: the syncs stopped
+  // publishing, so the deploy's own (git) data is the fresher copy.
+  if (pointerIsStale(pointer, now)) return setLive(null);
   const builtSchema = deploy.schema ?? LEAGUE_DATA_SCHEMA;
   if (pointer.schema !== LEAGUE_DATA_SCHEMA || builtSchema !== LEAGUE_DATA_SCHEMA) {
     // Code and data disagree on layout: serve the deploy's own data.
@@ -413,7 +417,7 @@ export async function refreshLeagueData(now: number = Date.now()): Promise<void>
   if (refreshing) return refreshing;
   if (now - lastCheckedAt < LIVE_CHECK_INTERVAL_MS) return;
   lastCheckedAt = now;
-  refreshing = checkPointer().finally(() => {
+  refreshing = checkPointer(now).finally(() => {
     refreshing = null;
   });
   return refreshing;

@@ -68,7 +68,7 @@ export const FUNCTION_EXCLUDED = [
 ];
 
 /** Directories under the roots that are never league data the site reads. */
-const SKIP_DIRS = new Set(['perf-baseline', 'salary-history-archive', 'node_modules']);
+export const SKIP_DIRS = new Set(['perf-baseline', 'salary-history-archive', 'node_modules']);
 
 const toPosix = (p) => p.split(sep).join('/');
 

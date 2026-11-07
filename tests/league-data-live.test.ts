@@ -6,9 +6,11 @@ import { join } from 'node:path';
 import {
   LEAGUE_DATA_SCHEMA,
   LIVE_CHECK_INTERVAL_MS,
+  LIVE_MAX_AGE_MS,
   composeFiles,
   globToRegExp,
   parsePointer,
+  pointerIsStale,
 } from '../src/config/league-data-live.mjs';
 import {
   __setLeagueDataManifestForTests,
@@ -20,7 +22,7 @@ import {
   onLeagueDataChange,
   refreshLeagueData,
 } from '../src/utils/league-data';
-import { buildOverlay, makePointer, planRollback } from '../scripts/lib/league-data-live-ops.mjs';
+import { buildOverlay, makePointer, planHydrate, planRollback } from '../scripts/lib/league-data-live-ops.mjs';
 
 /**
  * The live league-data pointer (plan "Data syncs without a Vercel build",
@@ -216,6 +218,15 @@ describe('the loader under a live pointer', () => {
     expect(getLeagueData('data/x/mfl-feeds/2026/rosters.json')).toEqual({ v: 'deploy rosters' });
   });
 
+  it('ignores a pointer no sync has confirmed in a day and a half — the syncs stopped', async () => {
+    const at = Date.parse('2026-11-07T12:00:00.000Z');
+    __setLeaguePointerReaderForTests(async () => pointer({ refreshedAt: '2026-11-07T12:00:00.000Z' }));
+    await refreshLeagueData(at + LIVE_MAX_AGE_MS - 1);
+    expect(leagueDataVersion()).toBe(`live:${OVERLAY}`);
+    await refreshLeagueData(at + LIVE_MAX_AGE_MS + LIVE_CHECK_INTERVAL_MS);
+    expect(leagueDataVersion()).toBe('deploy');
+  });
+
   it('does nothing off disk (dev, tests)', async () => {
     __setLeagueDataManifestForTests(null);
     let reads = 0;
@@ -246,6 +257,30 @@ describe('moving the pointer (scripts/league-data-pointer.mjs)', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('a sync run starts from the live data, except where git moved on since', () => {
+    const files = { 'data/a.json': h('1'), 'data/b.json': h('2'), 'data/c.json': h('3'), 'data/d.json': h('4') };
+    const disk: Record<string, string> = { 'data/a.json': h('1'), 'data/b.json': h('9'), 'data/c.json': h('8') };
+    expect(planHydrate(files, (p: string) => disk[p] ?? null, new Set(['data/c.json']))).toEqual([
+      { path: 'data/b.json', hash: h('2') }, // the sync changed it since the daily commit
+      { path: 'data/d.json', hash: h('4') }, // a file only the live data has
+    ]);
+  });
+
+  it('never writes a path the run would not publish itself', () => {
+    const files = { 'data/x/mfl-feeds/2026/a.json': h('1'), '../../etc/passwd': h('2'), 'data/x/b.json': 'nothex' };
+    const allowed = (p: string) => !p.split('/').includes('..') && globToRegExp(PATTERNS[0]).test(p);
+    expect(planHydrate(files, () => null, new Set(), allowed)).toEqual([{ path: 'data/x/mfl-feeds/2026/a.json', hash: h('1') }]);
+  });
+
+  it('records what the next run needs to start from it', () => {
+    const p = parsePointer(
+      makePointer({ overlay: OVERLAY, patterns: PATTERNS, source: 'roster-sync', base: 'https://s.example/', gitBase: 'a'.repeat(40) }),
+    );
+    expect(p).toMatchObject({ base: 'https://s.example/', gitBase: 'a'.repeat(40), refreshedAt: p?.publishedAt });
+    expect(pointerIsStale(p!, Date.parse(p!.publishedAt) + LIVE_MAX_AGE_MS + 1)).toBe(true);
+    expect(pointerIsStale(p!, Date.parse(p!.publishedAt))).toBe(false);
   });
 
   it('a rollback goes back, and a second one goes further back rather than flipping forward', () => {
