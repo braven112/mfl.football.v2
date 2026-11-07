@@ -62,8 +62,12 @@ describe('askHistoryRow', () => {
     for (const slug of ['theleague', 'afl-fantasy'] as const) {
       const pages = await buildPageSearchIndex(slug, { isAdmin: false, hideLeaguePrefix: true });
       expect(askHistoryRow(pages, 'most titles ever', 1)?.href).toBe('/history/ask?q=most%20titles%20ever');
-      // And a plain "history" search opens on the ask page itself.
-      expect(matchPages(pages, 'history')[0].href).toBe('/history/ask');
+      // A plain "history" search opens on the History home, the section's
+      // front door (Brandon, 2026-11-07: "/history should be" the homepage
+      // of history, not the ask page), with the ask page close behind.
+      const top = matchPages(pages, 'history').map((p) => p.href);
+      expect(top[0]).toBe('/history');
+      expect(top.slice(0, 3)).toContain('/history/ask');
     }
   });
 });
