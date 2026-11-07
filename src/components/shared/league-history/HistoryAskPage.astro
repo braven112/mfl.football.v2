@@ -354,6 +354,10 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     }
     if (root.dataset.first) void ask(root, root.dataset.first);
     else if (root.dataset.after) root.querySelector('.hask-turn:last-child')?.scrollIntoView({ block: 'start' });
+    // Arriving fresh (the History home's ask bar), the visitor came to type:
+    // put the cursor in the box. Not with a question already on its way or
+    // an answer to read, where a phone keyboard would cover it.
+    else input?.focus({ preventScroll: true });
   }
 
   document.addEventListener('astro:page-load', init);
