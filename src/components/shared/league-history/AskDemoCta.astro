@@ -2,15 +2,16 @@
 /**
  * "Try Ask the History" — the mfl.football side of the public demo (Brandon,
  * 2026-11-07): the button lives on the League History pages and sends the
- * visitor to TheLeague's own site, where a signed-out visitor can ask a real
- * league's history a few questions (guest-ask.ts). Each click is counted in
+ * visitor to TheLeague's History home (never straight to the ask screen:
+ * "/history should be" the front door), where its ask bar lets a signed-out
+ * visitor ask a real league's history a few questions (guest-ask.ts). Each click is counted in
  * the History funnel (`ask_demo_click`).
  */
 import { getLeagueBySlug, leagueUrl } from '../../../config/leagues';
 import { GUEST_ASK_LEAGUES, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
 
 const demo = getLeagueBySlug(GUEST_ASK_LEAGUES[0] ?? '');
-const href = demo ? leagueUrl(demo, `/${demo.slug}/history/ask`) : null;
+const href = demo ? leagueUrl(demo, `/${demo.slug}/history`) : null;
 ---
 
 {demo && href && (
