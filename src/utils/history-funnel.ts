@@ -33,6 +33,10 @@ export const FUNNEL_EXTRAS = {
 	video_downloaded: { label: 'Videos downloaded', from: 'browser' },
 	video_shared: { label: 'Videos shared', from: 'browser' },
 	email_optin: { label: 'Email opt-ins', from: 'server' },
+	// The public Ask the History demo on TheLeague (guest-ask.ts).
+	ask_demo_click: { label: 'Clicked “try Ask the History”', from: 'browser' },
+	ask_demo_question: { label: 'Demo questions asked', from: 'server' },
+	ask_demo_email: { label: 'Demo emails left', from: 'server' },
 } as const;
 export type FunnelExtra = keyof typeof FUNNEL_EXTRAS;
 export type FunnelEvent = FunnelStep | FunnelExtra;
