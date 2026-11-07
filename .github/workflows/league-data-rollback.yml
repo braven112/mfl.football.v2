@@ -1,0 +1,58 @@
+name: Roll back league data
+
+# Undo a bad data sync without a deploy. Data syncs publish straight to the
+# league-data store and move a live pointer in Redis
+# (src/config/league-data-live.mjs); every server instance re-reads it within
+# a minute. This moves the pointer back, or removes it so each deploy serves
+# the data it was built with. A code rollback in Vercel does NOT roll the data
+# back — the pointer outlives deploys — so this is the data half.
+#
+# Run "history" first to see what each step back would land on.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'history = list, rollback = go back, clear = serve each deploy''s own data'
+        type: choice
+        options: [history, rollback, clear]
+        default: history
+      steps:
+        description: 'For rollback: how many publishes to go back (1 = the one before the current)'
+        type: string
+        default: '1'
+
+# Shared with every job that publishes the pointer, so a rollback never races
+# a sync's publish.
+concurrency:
+  group: league-data-pointer
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pointer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Move the pointer
+        env:
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          ACTION: ${{ inputs.action }}
+          STEPS: ${{ inputs.steps }}
+        run: |
+          set -e
+          if [ "$ACTION" = "rollback" ]; then
+            node scripts/league-data-pointer.mjs rollback --steps "$STEPS"
+          else
+            node scripts/league-data-pointer.mjs "$ACTION"
+          fi
+          node scripts/league-data-pointer.mjs history

@@ -35,7 +35,7 @@ import {
 } from './afl-draft-utils';
 import { getAflLeagueYear, getTestDateFromUrl } from './league-year';
 import { getLeagueBySlug } from '../config/leagues';
-import { hasLeagueData, leagueFeedPath, loadLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { hasLeagueData, leagueFeedPath, loadLeagueData, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { isAflDraftWindowOpen, type AflDraftSlot } from './afl-team-spotlight';
 import type { StandingsFranchise } from '../types/standings';
 // Static import, not an fs read through the registry's `configPath`: the config
@@ -278,6 +278,10 @@ function feedPath(year: number, file: string): string {
  * exist must not be re-`stat`'d on every request.
  */
 const feedCache = new Map<string, unknown>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  feedCache.clear();
+});
 
 /**
  * League data, read through src/utils/league-data.ts (the store, in

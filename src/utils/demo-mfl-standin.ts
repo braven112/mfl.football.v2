@@ -26,7 +26,7 @@ import { getRedis } from './redis-client';
 import { currentDemoContext } from './demo-request-context';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { LEAGUES } from '../config/leagues-data.mjs';
-import { loadLeagueData } from './league-data';
+import { loadLeagueData, onLeagueDataChange } from './league-data';
 
 /** MFL's default bid and add salary: the league minimum, as MFL writes it. */
 const MINIMUM_SALARY = String(LEAGUES.theleague.minimumSalary);
@@ -74,6 +74,10 @@ const standinLeague = new AsyncLocalStorage<StandinSlug>();
 const activeSlug = (): StandinSlug => standinLeague.getStore() ?? 'theleague';
 
 const baseCache = new Map<string, Promise<Json | null>>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  baseCache.clear();
+});
 
 function loadFeed(year: string, name: string): Promise<Json | null> {
   const slug = activeSlug();

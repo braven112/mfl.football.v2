@@ -130,6 +130,26 @@ capped.
   life of an instance either — the player-search index went from prerendered to
   CDN-cached (`s-maxage=300`) for that reason. Guard:
   `tests/sync-published-reads.test.ts`.
+- **The live pointer decides which sync data a deploy reads**
+  (`src/config/league-data-live.mjs`). Redis `league-data:live` names an
+  overlay blob (`{ files: { path: hash } }`) and the globs it owns; every
+  instance re-reads it at most once a minute (`refreshLeagueData`, called from
+  the request preload) and serves its own manifest with that slice swapped in.
+  Three consequences that bite:
+  - **A Vercel code rollback does NOT roll the data back** — the pointer
+    outlives deploys. Undo a bad sync with the "Roll back league data"
+    workflow (`scripts/league-data-pointer.mjs rollback`), or `clear` it so
+    each deploy serves what it was built with.
+  - **A helper that memoizes something built from league data must clear it
+    in `onLeagueDataChange`**, or it serves the pre-sync data until the
+    instance dies. `tests/league-data-live.test.ts` fails on a module that
+    reads league data, holds an empty module-level Map or a module `let`, and
+    does not register.
+  - **`LEAGUE_DATA_SCHEMA` is the contract between code and synced data.** A
+    pointer (or a deploy) carrying another number is ignored and the deploy
+    serves its own data. Bump it in the change that makes old and new code
+    read the same paths differently, so a sync can never get ahead of the
+    code. Demo deploys namespace Redis, so they never follow the pointer.
 
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline

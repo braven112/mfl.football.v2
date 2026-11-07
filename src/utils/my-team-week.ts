@@ -20,7 +20,7 @@
  * `unknown` and the card says nothing rather than "not set".
  */
 import type { LeagueDefinition } from '../config/leagues';
-import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from './schedule-data.mjs';
 import {
   extractLineupStarters,
@@ -147,6 +147,10 @@ const MY_TEAM_WEEK_FEEDS = ['schedule.json', 'standings.json'];
 const MY_TEAM_WEEK_OWNER_FEEDS = ['players.json', 'nflSchedule-full.json', 'injuries.json', 'league.json'];
 
 const playerIndexCache = new Map<string, Map<string, PlayerLike>>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  playerIndexCache.clear();
+});
 
 /** MFL player id → {name, position, team} with MFL's own team codes. Cached per league-year. */
 export function starterPlayerIndex(league: LeagueDefinition, leagueYear: number): Map<string, PlayerLike> {
