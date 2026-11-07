@@ -5,7 +5,7 @@
  * shared host only (`src/pages/brand/specs.astro`), so it can be handed to an
  * owner before their league has a site of its own.
  *
- * Kept deliberately short (Brandon, 2026-11-07): two sizes, the good-versus-busy
+ * Kept deliberately short (Brandon, 2026-11-07): the logo sizes, the good-versus-busy
  * example, and a link to the logo maker, which writes the AI prompt for them.
  * The spec data lives in `src/utils/brand-asset-specs.ts`, where a test pins
  * the stored sizes and templates.
@@ -14,9 +14,14 @@ import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import { ASSET_SPECS } from '../../../utils/brand-asset-specs';
 import '../../../styles/brand-book.css';
 
-/** The only two files the page asks for. */
-const SHOWN = ['crest', 'banner'] as const;
-const LABELS: Record<(typeof SHOWN)[number], string> = { crest: 'Team icon', banner: 'Team banner' };
+/** The only files the page asks for: the logos, plus the optional banner. */
+const SHOWN = ['crest', 'banner', 'league-logo', 'badges'] as const;
+const LABELS: Record<(typeof SHOWN)[number], string> = {
+  crest: 'Team icon',
+  banner: 'Team banner',
+  'league-logo': 'League logo',
+  badges: 'Conference and division logos',
+};
 const specs = SHOWN.flatMap((id) => {
   const s = ASSET_SPECS.find((x) => x.id === id);
   return s ? [{ ...s, label: LABELS[id] }] : [];
@@ -37,13 +42,13 @@ const SHRINK_EXAMPLES = [
 
 <MflAppLayout
   title="Logo and asset specs | MFL.football"
-  description="The team icon and banner sizes to send, and how to keep a logo crisp."
+  description="The team, league, conference and division logo sizes to send, and how to keep a logo crisp."
 >
   <main class="brand specs">
     <header class="brand__header">
       <p class="brand__eyebrow"><a href="/brand">Brand Book</a> &middot; Specs</p>
       <h1>Logo and asset specs</h1>
-      <p class="brand__lede">Your team icon is the one file we need. Send a transparent PNG or SVG at this size, and we shrink it to fit everywhere.</p>
+      <p class="brand__lede">Send each logo as a transparent PNG or SVG at these sizes. We shrink it to fit everywhere.</p>
       <p><a class="cta cta--primary" href="/team-logo">Make your logo with our logo maker</a></p>
     </header>
 
@@ -58,7 +63,8 @@ const SHRINK_EXAMPLES = [
                   {s.required ? 'Required' : 'Optional'}
                 </span>
               </div>
-              <p class="specs__size">{s.size} px</p>
+              <p class="specs__size">{s.size.includes('×') ? `${s.size} px` : s.size.replace(' on the long side', '')}</p>
+              {!s.size.includes('×') && <p class="specs__hint">on the longest side</p>}
               {s.template && (
                 <p class="specs__card-dl">
                   <a class="cb__dl" href={s.template.svg} download>Template (SVG)</a>
@@ -106,6 +112,11 @@ const SHRINK_EXAMPLES = [
     font-size: var(--font-size-xl, 1.25rem);
     font-weight: 700;
     color: var(--page-text, #111827);
+  }
+  .specs__hint {
+    margin: 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-gray-500, #6b7280);
   }
   .specs__example {
     margin: 0 0 1rem;
