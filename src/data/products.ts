@@ -16,6 +16,9 @@
  * with the products that include it.
  */
 
+import { getCurrentSeasonYear } from '../utils/league-year';
+import { nflWeekEndIsoDate, nflWeekStartInstant } from '../utils/nfl-week-starts.mjs';
+
 export type ProductSlug =
 	| 'owner-suite'
 	| 'league-history'
@@ -109,6 +112,12 @@ export interface Product {
 	features?: FeatureId[];
 	tiers?: TierTable;
 	sections: ProductSection[];
+	/**
+	 * A time-limited offer shown beside the price table, or null when none is
+	 * running at `now`. A function, not a string, so the page asks at request
+	 * time and the offer ends on its own.
+	 */
+	offer?: (now: Date) => string | null;
 }
 
 export const FEATURES: Feature[] = [
@@ -687,11 +696,27 @@ export const LEAGUE_PACKAGE_PRICING = {
 	logoDiscount: '$500',
 } as const;
 
+/**
+ * Sign up during a season and the rest of it is free (Brandon, 2026-11-07).
+ * The setup fee is still paid now and still covers the first FULL season; the
+ * free part is the season already under way. Open from the NFL week 1 kickoff
+ * to the end of week 17, the last fantasy championship week either league
+ * plays, so it disappears by itself and comes back next September.
+ */
+export function leaguePackageSeasonOffer(now: Date = new Date()): string | null {
+	const year = getCurrentSeasonYear(now);
+	const opens = nflWeekStartInstant(year, 1);
+	const closesIso = nflWeekEndIsoDate(year, 17);
+	const nowIso = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+	if (now < opens || nowIso > closesIso) return null;
+	return `Sign up before the ${year} season ends and your site is free for the rest of it. Your setup fee still covers your first full season.`;
+}
+
 const LEAGUE_PACKAGE: Product = {
 	slug: 'league-package',
 	kind: 'league',
 	name: 'League Package',
-	price: `From ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} setup + ${LEAGUE_PACKAGE_PRICING.renewal}`,
+	price: `From ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} for setup and your first year, then ${LEAGUE_PACKAGE_PRICING.renewal}`,
 	tagline: 'The full suite: your league’s site, with features built for how your league plays.',
 	buyer: 'A league that wants custom features built',
 	screenshot: shot('front-office-hub.jpg', 'The front office hub: contracts, cap tools and roster planning in one place.'),
@@ -702,7 +727,7 @@ const LEAGUE_PACKAGE: Product = {
 	buildsOn: ['owner-suite', 'league-history', 'add-ons', 'large-league', 'league-hub'],
 	tiers: {
 		heading: 'Pricing by league size',
-		columns: ['Setup', 'Renewal'],
+		columns: ['Setup and first year', 'Yearly renewal after'],
 		rows: [
 			{ label: '16 teams or fewer', values: ['$3,000', '$1,500/year'] },
 			{ label: '17–24 teams', values: ['$6,000', '$2,000/year'] },
@@ -711,8 +736,9 @@ const LEAGUE_PACKAGE: Product = {
 			{ label: '50–100 teams', values: ['Custom quote', '$4,000/year'] },
 			{ label: 'Over 100 teams', values: ['Custom quote', 'Quoted'] },
 		],
-		note: `Setup is charged once. The renewal pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
+		note: `The setup fee includes your first full season: hosting, automation and support. You pay nothing more until your first renewal, which pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
 	},
+	offer: leaguePackageSeasonOffer,
 	features: [
 		'branded-site',
 		'live-scoreboard',
@@ -758,8 +784,8 @@ const LEAGUE_PACKAGE: Product = {
 				'Software only: we never collect entry fees, hold funds or pay out prizes.',
 				'You own your league’s name, logos and content. We own the platform and every feature built on it; a feature built for you may be offered to other leagues without your branding.',
 				'The work is what the proposal lists; anything else is quoted before work starts.',
-				'50% at signing, 50% at launch. The first year runs 12 months from launch.',
-				`Renews on July 1 at ${LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}, covering the automation, hosting, support and Owner Suite Pro for every owner. Renewal prices are fixed for the second year.`,
+				'50% at signing, 50% at launch. The setup fee covers your first full season.',
+				`Your first renewal is July 1, before your second full season, at ${LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}, covering the automation, hosting, support and Owner Suite Pro for every owner. Renewal prices are fixed for the second year.`,
 			],
 		},
 	],

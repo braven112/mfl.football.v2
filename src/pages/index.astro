@@ -3,7 +3,7 @@ import SplashLayout from '../layouts/SplashLayout.astro';
 import { LEAGUES, crossHostLeagueHref } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import ProductInterest from '../components/shared/ProductInterest.astro';
-import { LEAGUE_PACKAGE_PRICING, MFL_LIVE_PRO_PRICE, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE, type ProductSlug } from '../data/products';
+import { LEAGUE_PACKAGE_PRICING, leaguePackageSeasonOffer, MFL_LIVE_PRO_PRICE, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE, type ProductSlug } from '../data/products';
 import { mflLiveIncludedNames, siteExampleLeagues } from '../data/league-showcase';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
 import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
@@ -43,6 +43,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 // (ProductInterest): it counts the click and offers to email the visitor at
 // launch. Each service also links its public service page, which is real.
 const seasonYear = getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined);
+const packageOffer = leaguePackageSeasonOffer(getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date());
 const proPrice = `$${MFL_LIVE_PRO_PRICE.season}`;
 const includedNames = mflLiveIncludedNames();
 const includedList =
@@ -267,19 +268,20 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
         <p>The thing your commissioner has always tracked by hand, run by our system every week. Plus your own site with every feature on the platform, and priority support. Every owner also gets MFL Football Pro: the live scoring app on their phone and the live Broadcast on their TV.</p>
         <ul class="pkg__fees">
           {LEAGUE_PACKAGE_PRICING.tiers.map((t) => (
-            <li><b>{t.setup}</b> <span>{t.setup === 'Custom quote' ? t.teams : `setup, ${t.teams.toLowerCase()}`}</span></li>
+            <li><b>{t.setup}</b> <span>{t.setup === 'Custom quote' ? t.teams : `setup and first year, ${t.teams.toLowerCase()}`}</span></li>
           ))}
         </ul>
         <p class="pkg__terms">
-          Then a yearly renewal that runs your league's automation: {LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}. Leagues of 16 or fewer that make their own logos save {LEAGUE_PACKAGE_PRICING.logoDiscount}.
+          From your second year, a yearly renewal that runs your league's automation: {LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}. Leagues of 16 or fewer that make their own logos save {LEAGUE_PACKAGE_PRICING.logoDiscount}.
         </p>
+        {packageOffer && <p class="pkg__terms pkg__offer">{packageOffer}</p>}
         <span class="sp-ctas">
           <button
             type="button"
             class="cta cta--primary"
             data-interest="league-package"
             data-interest-name="League Package"
-            data-interest-note={`Setup from ${LEAGUE_PACKAGE_PRICING.tiers[0].setup}, then from ${LEAGUE_PACKAGE_PRICING.renewal} to run your league. Over 24 teams, we quote it.`}
+            data-interest-note={`Setup and your first year from ${LEAGUE_PACKAGE_PRICING.tiers[0].setup}, then from ${LEAGUE_PACKAGE_PRICING.renewal} to run your league. Over 24 teams, we quote it.`}
           >I'm interested</button>
           {commissionerToolsPath && <a class="cta cta--ghost" href={commissionerToolsPath}>What it automates</a>}
         </span>
@@ -550,6 +552,9 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
 
   .pkg .pkg__terms {
     font-size: var(--sp-text-sm);
+  }
+  .pkg .pkg__offer {
+    font-weight: 600;
   }
 
   /* The headline feature: four day cards, then the three spotlight cards. */

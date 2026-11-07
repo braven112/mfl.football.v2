@@ -415,3 +415,9 @@ a.prd-shot:hover {
     width: 5rem;
   }
 }
+
+/* A time-limited offer beside the price table: the note's size, but the reader's eye should land on it. */
+.prd__offer {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
