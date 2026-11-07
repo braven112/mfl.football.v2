@@ -42,7 +42,7 @@ function arg(name, fallback) {
 
 function redis() {
   const config = getRedisConfig();
-  if (!config) throw new Error('No Upstash REST credentials (KV_REST_API_URL / KV_REST_API_TOKEN).');
+  if (!config) throw new Error('No Upstash REST credentials (UPSTASH_REDIS_REST_URL / _TOKEN or KV_REST_API_URL / _TOKEN).');
   return config;
 }
 
