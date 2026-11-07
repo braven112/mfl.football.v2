@@ -35,6 +35,8 @@
 import type { AwardSlug } from './afl-awards';
 import { getFranchiseTrophyCase } from './afl-awards';
 import { getAflCareerStats } from './afl-career-stats';
+import { getLeagueBySlug } from '../config/leagues';
+import { loadLeagueData } from './league-data';
 import { pageIcon } from './page-icon';
 
 export type AflSpotlightKind = 'draft' | 'title' | 'streak' | 'record';
@@ -364,20 +366,18 @@ export function resolveAflRecordSpotlight(
 
 /**
  * franchise-history.json is 2.7 MB and only the streak tier needs it, so it is
- * a dynamic import: the ~80% of franchises holding a trophy resolve at tier 2
- * and never load the chunk. Astro's SSR build splits it out and the franchise
- * detail page already imports the same JSON, so this adds no bundle weight.
- * A checkout without the computed file simply has no streak tier.
+ * loaded on demand through the league-data loader: the ~80% of franchises
+ * holding a trophy resolve at tier 2 and never read it. A checkout without the
+ * computed file simply has no streak tier.
  */
 async function loadPlayoffResults(
   franchiseId: string
 ): Promise<SeasonPlayoffResult[]> {
   try {
-    const mod = await import('../../data/afl-fantasy/derived/franchise-history.json');
-    const history = (mod.default ?? mod) as {
+    const history = (await loadLeagueData(`${getLeagueBySlug('afl-fantasy')!.dataPath}/derived/franchise-history.json`)) as {
       franchises?: Record<string, { yearByYear?: Array<Record<string, unknown>> }>;
-    };
-    const rows = history.franchises?.[franchiseId]?.yearByYear ?? [];
+    } | null;
+    const rows = history?.franchises?.[franchiseId]?.yearByYear ?? [];
     return rows
       .filter((r) => {
         // Skip seasons with no games — franchise-history carries a zeroed row
@@ -426,6 +426,6 @@ export async function resolveAflTeamSpotlight(
 
   return resolveAflRecordSpotlight(
     franchiseId,
-    getAflCareerStats().byFranchise.get(franchiseId)
+    (await getAflCareerStats()).byFranchise.get(franchiseId)
   );
 }

@@ -1,0 +1,26 @@
+---
+/**
+ * What's New detail (Sandbox) — thin route wrapper.
+ * Shared implementation lives in components/shared/whats-new/WhatsNewDetailPage.
+ * The league's own Schefter feed (live, from Redis) is read here and passed
+ * down, so the shared component never picks a league's feed itself.
+ */
+import WhatsNewDetailPage from '../../../components/shared/whats-new/WhatsNewDetailPage.astro';
+import { resolveWhatsNewDetail } from '../../../utils/whats-new-detail';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
+
+export const prerender = false;
+
+const result = resolveWhatsNewDetail(Astro, 'sandbox');
+if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
+const schefterFeed = await getSchefterFeedIfAny(getLeagueBySlug('sandbox')!);
+---
+
+<WhatsNewDetailPage
+  leagueSlug="sandbox"
+  entry={result.entry}
+  prev={result.prev}
+  next={result.next}
+  schefterPosts={schefterFeed?.posts ?? []}
+/>

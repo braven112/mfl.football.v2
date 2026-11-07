@@ -95,7 +95,7 @@ describe('a league that exists only in the registry', () => {
     const { getFooterChampions } = await import('../src/utils/footer-champions');
     const { getAdminFranchiseIds } = await import('../src/config/nav-config');
     const { leaguePushIcon, leaguePushBadge } = await import('../src/utils/push-notify-trade');
-    expect(getFooterChampions(PHANTOM_SLUG as never)).toEqual([]);
+    expect(await getFooterChampions(PHANTOM_SLUG as never)).toEqual([]);
     expect(getAdminFranchiseIds(PHANTOM_NAV as never)).toEqual([]);
     expect(leaguePushIcon(PHANTOM_NAV)).toBe('/assets/icons/pwa/icon-192.png');
     expect(leaguePushBadge(PHANTOM_NAV)).not.toMatch(/afl/);

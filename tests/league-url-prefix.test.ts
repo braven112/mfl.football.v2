@@ -44,7 +44,17 @@ function expectNoDoubledPrefix(text: string) {
 }
 
 describe('Schefter league table — absolute URLs are prefix-free and cookie-safe', () => {
-  for (const league of SCHEFTER_LEAGUES) {
+  // A path-only league (Sandbox, on the shared host) has no origin of its own:
+  // its prefix IS its address, so it must appear exactly once.
+  for (const league of SCHEFTER_LEAGUES.filter((l) => l.baseUrl === null)) {
+    it(`${league.slug}: a path-only league keeps its prefix exactly once`, () => {
+      const url = league.url(`/${league.registrySlug}/live-scoring`);
+      expect(url).toMatch(new RegExp(`^https://[^/]+/${league.registrySlug}/live-scoring$`));
+      expect(league.calendarUrl).toMatch(new RegExp(`^https://[^/]+/${league.registrySlug}/calendar$`));
+    });
+  }
+
+  for (const league of SCHEFTER_LEAGUES.filter((l) => l.baseUrl !== null)) {
     it(`${league.slug}: baseUrl / calendarUrl / url() drop the league prefix`, () => {
       expectNoDoubledPrefix(league.baseUrl);
       expectNoDoubledPrefix(league.calendarUrl);

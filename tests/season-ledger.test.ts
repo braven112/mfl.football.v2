@@ -86,7 +86,9 @@ describe.each(leagues)('$league.slug season ledger', ({ league, ledgerPath, hist
 
   it('actually carries orphaned rows — the whole point of the file', () => {
     const ledger = readJson(ledgerPath);
-    expect(ledger.orphanedRows).toBeGreaterThan(0);
+    // Orphans come from seasons MFL no longer names an owner for; a league whose
+    // only season is the current one (Sandbox, Nov 2026) has none yet.
+    if ((ledger.yearsCovered ?? []).length > 1) expect(ledger.orphanedRows).toBeGreaterThan(0);
   });
 
   it('has no duplicate (franchiseId, year) rows', () => {

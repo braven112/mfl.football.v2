@@ -75,6 +75,20 @@ const NAMED_FOR_THE_CLUB = new Set([
   'archies:Saints',
   'archies:Vikings',
   'archies:Rams',
+  // Sandbox (39163), the demo league: its twelve teams ARE NFL clubs on MFL, so a
+  // match is the point, and as a registered league it draws its own marks anyway.
+  'sandbox:Chiefs',
+  'sandbox:Broncos',
+  'sandbox:Bills',
+  'sandbox:Patriots',
+  'sandbox:Ravens',
+  'sandbox:Chargers',
+  'sandbox:Rams',
+  'sandbox:Seahawks',
+  'sandbox:Eagles',
+  'sandbox:Lions',
+  'sandbox:Bears',
+  'sandbox:49ers',
 ]);
 const isNamedForTheClub = (f: { league: string; name: string }) =>
   NAMED_FOR_THE_CLUB.has(`${f.league}:${f.name}`);

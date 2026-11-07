@@ -175,4 +175,15 @@ describe('planTeamSync — commissioner edits survive', () => {
     expect(plan.renamed).toBe(false);
     expect(plan.mflRenamed).toBe(true);
   });
+
+  it('MFL catching up to a name we already carry is not a rename', () => {
+    // The commissioner renamed the team here first (Sandbox, Nov 2026: twelve
+    // teams renamed to their NFL clubs), then on MFL. Counting that would trip
+    // the rollover stop and leave the league failing every run.
+    const plan = planTeamSync(synced({ name: 'Stonecutters' }), { name: 'Stonecutters' }, { slug: SLUG, art: art() });
+    expect(plan.renamed).toBe(false);
+    expect(plan.mflRenamed).toBe(false);
+    expect(plan.team.name).toBe('Stonecutters');
+    expect(plan.team.mflSync.name).toBe('Stonecutters');
+  });
 });

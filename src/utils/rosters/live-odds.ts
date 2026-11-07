@@ -14,7 +14,7 @@
  * failed fetch shows nothing rather than that snapshot — stale lines on a live
  * page are worse than none.
  */
-import liveOddsFallbackData from '../../data/nfl/live-odds.json';
+import { loadLeagueData } from '../league-data';
 import {
   loadLiveOdds,
   type GameOddsRecord,
@@ -37,8 +37,16 @@ export type GameOdds = GameOddsRecord;
 export type OddsByTeam = Record<string, GameOdds>;
 
 /** This week's odds and weather for a roster page, cached across requests. */
-export const loadLiveOddsData = (week: number): Promise<OddsByTeam> =>
-  loadLiveOdds(week, liveOddsFallbackData as unknown as OddsByTeam);
+/**
+ * The committed off-season snapshot, through the league-data loader rather than
+ * bundled: the roster sync writes it, and publishes without a build.
+ */
+const OFFSEASON_ODDS_FILE = 'src/data/nfl/live-odds.json';
+
+export const loadLiveOddsData = async (week: number): Promise<OddsByTeam> => {
+  const fallback = await loadLeagueData<OddsByTeam>(OFFSEASON_ODDS_FILE).catch(() => null);
+  return loadLiveOdds(week, fallback ?? undefined);
+};
 
 /** `?demo=true` — 16 invented matchups covering all 32 clubs, for coach mode. */
 export const generateDemoOddsData = (): OddsByTeam => {

@@ -164,6 +164,8 @@ function calendarYearVars(source: string): string[] {
   // glob (the package-league homepage's shape). Only that read: the same page
   // also reads this season's and next's calendars for What's Next, on purpose.
   for (const m of source.matchAll(/waiverCalendar:[^\n]*loadSeasonFeed\(\s*calendarFeeds\s*,\s*(\w+)\s*\)/g)) vars.push(m[1]);
+  // …or a direct loader read: leagueFeedPath(<league>.dataPath, <year>, 'calendar.json').
+  for (const m of source.matchAll(/leagueFeedPath\(\s*[\w.!]+\s*,\s*(\w+)\s*,\s*'calendar\.json'\s*\)/g)) vars.push(m[1]);
   for (const modulesVar of modulesVars) {
     // …then the entry picked out of THAT map, by year.
     const pick = new RegExp(

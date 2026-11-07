@@ -15,12 +15,18 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
 import MetricCard from '../../components/shared/MetricCard.astro';
-import performanceData from '../../../data/theleague/derived/playoff-performance.json';
+import { loadLeagueData } from '../../utils/league-data';
+import { getLeagueBySlug } from '../../config/leagues';
 import type { PlayoffPerformanceFile } from '../../types/playoff-performance';
 
 export const prerender = false;
 
-const data = performanceData as unknown as PlayoffPerformanceFile;
+// Through the league-data loader, never bundled: the sync recomputes this file
+// and publishes it without a build.
+const data = (await loadLeagueData<PlayoffPerformanceFile>(
+  `${getLeagueBySlug('theleague')!.dataPath}/derived/playoff-performance.json`,
+));
+if (!data) return Astro.rewrite('/_not-found');
 const { totals } = data;
 const seasons = [...data.seasons].sort((a, b) => b.year - a.year);
 

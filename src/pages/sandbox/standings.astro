@@ -1,0 +1,86 @@
+---
+/**
+ * Standings (sandbox) — thin route over the SAME shared standings page
+ * TheLeague renders (the owner's rule: a package league gets the real page,
+ * never a lite look-alike).
+ *
+ * Kept in the route: the feed maps (read through the league-data loader, never
+ * globbed — storage-and-build.md § "League data lives in Blob") and the
+ * bad-year redirect (a component cannot redirect).
+ */
+import StandingsPage from '../../components/shared/standings/StandingsPage.astro';
+import config from '../../../data/sandbox/sandbox.config.json';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
+import { franchiseSlug } from '../../utils/franchise-marks';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { fillDerivedStandings } from '../../utils/standings-derived';
+import {
+  chooseStandingsSeason,
+  loadStandingsSeason,
+  parseStandingsView,
+} from '../../utils/standings-page';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('sandbox')!;
+/** A lazy-glob-shaped map over the league-data loader (never a glob: that compiles the data into the function). */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const standingsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/standings.json`);
+const fetchMetaFeeds = lazy(`${league.dataPath}/mfl-feeds/*/fetch.meta.json`);
+// Sandbox export has no all-play, PA, streak or division record; they are
+// derived from these (utils/standings-derived.ts).
+const weeklyResultsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/weekly-results.json`);
+const scheduleFeeds = lazy(`${league.dataPath}/mfl-feeds/*/schedule.json`);
+
+const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
+if (!season.valid) {
+  return Astro.redirect(resolveLeaguePath(`/sandbox/standings?year=${season.defaultYear}`, Astro.locals.hideLeaguePrefix ?? false));
+}
+const { selectedYear } = season;
+
+const { franchises, lastFetched } = await loadStandingsSeason({
+  league,
+  year: selectedYear,
+  standingsFeeds,
+  fetchMetaFeeds,
+  // Every column from one sync, never live rows beside derived ones a week
+  // older — see loadStandingsSeason.
+  liveRefresh: false,
+});
+
+// The shared producers order divisions by NAME; the config lists them as {id, name}.
+const seasonConfig = { ...config, divisions: config.divisions.map((d) => d.name) };
+const divisionById = new Map(config.teams.map((t) => [t.franchiseId, t.division]));
+const rows = franchises
+  ? fillDerivedStandings(franchises, {
+      weeklyResults: (await loadSeasonFeed(weeklyResultsFeeds, selectedYear)) as never,
+      schedule: (await loadSeasonFeed(scheduleFeeds, selectedYear)) as never,
+      divisionOf: (id) => divisionById.get(id),
+    })
+  : [];
+
+// No franchise pages here: team links go to each club's brand page.
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const franchiseHrefs = Object.fromEntries(
+  config.teams.map((t) => [t.franchiseId, resolveLeaguePath(`/sandbox/brand/${franchiseSlug(t)}`, hide)])
+);
+---
+
+<StandingsPage
+  leagueSlug={league.slug}
+  title={`Standings ${selectedYear} | ${league.name}`}
+  franchises={rows}
+  config={seasonConfig}
+  selectedYear={selectedYear}
+  availableYears={season.availableYears}
+  view={parseStandingsView(Astro.url.searchParams.get('view'))}
+  preferredTeamId={franchiseIdForLeague(getAuthUser(Astro.request), league.id) ?? undefined}
+  lastFetched={lastFetched}
+  franchiseHrefs={franchiseHrefs}
+/>

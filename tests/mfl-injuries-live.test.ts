@@ -4,7 +4,6 @@
  * else the bundled feed — never an empty map because Redis was unreachable.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { loadInjuryMap } from '../src/utils/mfl-injuries';
 import {
   LIVE_INJURIES_TTL_MS,
   liveInjuriesKey,
@@ -12,7 +11,7 @@ import {
   loadLiveInjuryFeed,
   resetLiveInjuryMemo,
 } from '../src/utils/mfl-injuries-live';
-import { loadLiveInjuryMap } from '../src/utils/mfl-injuries-live-map';
+import { loadCommittedInjuryMap, loadLiveInjuryMap } from '../src/utils/mfl-injuries-live-map';
 
 const SLUG = 'theleague';
 const NOW = Date.parse('2026-10-16T12:00:00Z');
@@ -38,16 +37,16 @@ describe('loadLiveInjuryMap', () => {
 
   it('ignores a Redis copy from an older year than the bundle', async () => {
     const old = { year: 1999, injuries: { '1': { injuryStatus: 'Out' } } };
-    expect(await loadLiveInjuryMap(SLUG, client(old), NOW)).toEqual(loadInjuryMap(SLUG));
+    expect(await loadLiveInjuryMap(SLUG, client(old), NOW)).toEqual(await loadCommittedInjuryMap(SLUG));
   });
 
   it('falls back to the bundled feed with no Redis, no key, or a broken read', async () => {
-    expect(await loadLiveInjuryMap(SLUG, async () => null, NOW)).toEqual(loadInjuryMap(SLUG));
+    expect(await loadLiveInjuryMap(SLUG, async () => null, NOW)).toEqual(await loadCommittedInjuryMap(SLUG));
     resetLiveInjuryMemo();
-    expect(await loadLiveInjuryMap(SLUG, client(null), NOW)).toEqual(loadInjuryMap(SLUG));
+    expect(await loadLiveInjuryMap(SLUG, client(null), NOW)).toEqual(await loadCommittedInjuryMap(SLUG));
     resetLiveInjuryMemo();
     const broken = async () => ({ get: async () => { throw new Error('down'); } });
-    expect(await loadLiveInjuryMap(SLUG, broken, NOW)).toEqual(loadInjuryMap(SLUG));
+    expect(await loadLiveInjuryMap(SLUG, broken, NOW)).toEqual(await loadCommittedInjuryMap(SLUG));
   });
 
   it('reuses one read per instance for the memo window', async () => {

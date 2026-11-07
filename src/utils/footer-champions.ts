@@ -36,6 +36,7 @@ import { getLeagueBySlug } from '../config/leagues';
 import { getActiveTeams, getCurrentBannerPath } from './league-assets';
 import { extractLeagueChampion } from './toilet-bowl-utils';
 import { getCurrentSeasonYear } from './league-year';
+import { leagueFeedPath, loadLeagueData } from './league-data';
 import {
   AWARD_TYPES,
   attributeAwardYear,
@@ -191,17 +192,16 @@ function aflSpotlights(year: number, prefix: string): ChampionSpotlight[] {
   return spotlights.sort((a, b) => b.titles.length - a.titles.length);
 }
 
-const theleagueBrackets = import.meta.glob(
-  '../../data/theleague/mfl-feeds/*/playoff-brackets.json',
-  { eager: true }
-);
-
-const unwrap = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] {
-  const path = Object.keys(theleagueBrackets).find((p) => p.includes(`/${year}/`));
-  const bracket = path ? unwrap(theleagueBrackets[path]) : null;
+/**
+ * TheLeague's bracket feed for one season, through the league-data loader.
+ * Never a glob: the roster sync publishes the running season's bracket without
+ * a build, and the band must crown the champion the night the final settles.
+ */
+async function theleagueSpotlights(year: number, prefix: string): Promise<ChampionSpotlight[]> {
+  const dataPath = getLeagueBySlug('theleague')?.dataPath;
+  const bracket = dataPath
+    ? await loadLeagueData(leagueFeedPath(dataPath, year, 'playoff-brackets.json')).catch(() => null)
+    : null;
   const teamId = bracket ? extractLeagueChampion(bracket) : '';
   if (!teamId) return [];
 
@@ -230,12 +230,14 @@ function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] 
  * most of the calendar the "defending" champion is last season's.
  */
 /** Leagues whose champion feeds this module reads. */
-const SPOTLIGHTS_BY_LEAGUE: Partial<Record<CanonicalLeagueSlug, (year: number, prefix: string) => ChampionSpotlight[]>> = {
+const SPOTLIGHTS_BY_LEAGUE: Partial<
+  Record<CanonicalLeagueSlug, (year: number, prefix: string) => ChampionSpotlight[] | Promise<ChampionSpotlight[]>>
+> = {
   theleague: theleagueSpotlights,
   'afl-fantasy': aflSpotlights,
 };
 
-export function getFooterChampions(slug: CanonicalLeagueSlug): ChampionSpotlight[] {
+export async function getFooterChampions(slug: CanonicalLeagueSlug): Promise<ChampionSpotlight[]> {
   const league = getLeagueBySlug(slug);
   if (!league) return [];
   // Fail closed for draft-only leagues. Callers gate on leagueHasChampionBand(),
@@ -250,9 +252,9 @@ export function getFooterChampions(slug: CanonicalLeagueSlug): ChampionSpotlight
   // champion behind its own prefix.
   const spotlights = SPOTLIGHTS_BY_LEAGUE[slug];
   if (!spotlights) return [];
-  const resolve = (y: number): ChampionSpotlight[] => spotlights(y, prefix);
+  const resolve = async (y: number): Promise<ChampionSpotlight[]> => spotlights(y, prefix);
 
-  const current = resolve(year);
+  const current = await resolve(year);
   return current.length ? current : resolve(year - 1);
 }
 
