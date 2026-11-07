@@ -19,10 +19,10 @@
  * computed over completed weeks; remaining difficulty over scheduled weeks
  * >= N. Trends diff against the most recent earlier week's file. Weekly
  * files are retained forever — published articles reference their exact
- * week's file, and pages import { writeJsonIfChanged } from './lib/canonical-json.mjs';
-import the directory lazily (no bundle cost).
+ * week's file, and pages import the directory lazily (no bundle cost).
  */
 
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
