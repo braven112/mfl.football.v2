@@ -749,7 +749,7 @@ async function scanLeague(league) {
   console.log(`  Players loaded: ${players.size}`);
   console.log(`  Teams loaded: ${teams.size}`);
 
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  const leagueSlug = league.slug;
 
   // Filter new transactions
   const newTxns = transactions.filter(txn => {
@@ -987,7 +987,9 @@ async function scanLeague(league) {
   // directGroupMe leagues (AFL) already posted the drop to their own chat
   // above — staging a big-drop ping would double-post it. The staged lane
   // exists for leagues whose transactions do NOT direct-post (TheLeague).
-  if (!league.features?.directGroupMe) {
+  // A league with no Schefter bot (Sandbox, the demo) never stages one: the
+  // drain below routes every non-AFL entry through TheLeague's bot.
+  if (!league.features?.directGroupMe && league.groupMeSchefterBotId) {
     await enqueueBigDrops(newPosts, leagueSlug, now);
   }
   await flushPendingBigDrops(now);
@@ -2002,7 +2004,7 @@ async function scanEspn(league) {
   console.log(`  ESPN watermark: ${watermark}`);
 
   const watermarkDate = new Date(watermark);
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  const leagueSlug = league.slug;
   let allNewArticles = [];
 
   // Poll all ESPN contributors
@@ -2664,7 +2666,7 @@ async function scanNflWire(league) {
   console.log(`  NFL Wire watermark: ${watermark}`);
 
   const watermarkDate = new Date(watermark);
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  const leagueSlug = league.slug;
 
   try {
     // Load rostered player names for relevance scoring
@@ -2897,7 +2899,7 @@ async function scanInjuries(league) {
 
   const feed = await loadFeed(league.feedPath);
   const previousSnapshot = feed.lastInjurySnapshot ?? {};
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  const leagueSlug = league.slug;
 
   // Fetch current injury data from ESPN
   const currentInjuries = await fetchEspnInjuries();
@@ -3042,7 +3044,7 @@ async function scanOdds(league) {
 
   const feed = await loadFeed(league.feedPath);
   const lastWeek = feed.lastOddsWeek ?? 0;
-  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  const leagueSlug = league.slug;
 
   if (lastWeek >= currentWeek) {
     console.log(`  Already posted Week ${currentWeek} odds. Skipping.`);

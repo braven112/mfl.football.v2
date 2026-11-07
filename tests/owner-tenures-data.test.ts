@@ -140,7 +140,9 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
         ).toBe(match?.divisionName ?? null);
       }
     }
-    expect(checked, 'no division titles to check').toBeGreaterThan(0);
+    // A league in its first season has crowned no division yet (Sandbox, Nov 2026).
+    const crowned = (history.yearSummaries ?? []).some((y: any) => (y.divisionWinners ?? []).length > 0);
+    if (crowned) expect(checked, 'no division titles to check').toBeGreaterThan(0);
   });
 
   it('puts no season under two owners unless they are declared co-owners', () => {

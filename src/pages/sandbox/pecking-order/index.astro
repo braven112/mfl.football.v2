@@ -1,0 +1,72 @@
+---
+/**
+ * The Pecking Order (Sandbox) — landing page.
+ *
+ * Thin wrapper over the shared landing component: reads this league's issue
+ * JSON through the league-data loader (never a glob, which would compile every
+ * issue into the serverless function) and hands it over. Which
+ * state the page renders — live issue vs. preseason preview — is decided in
+ * PeckingOrderLanding, so both leagues stay in step.
+ * Permalink to a specific issue lives at /sandbox/pecking-order/[year]/[week].
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
+import PeckingOrderLanding from '../../../components/shared/PeckingOrderLanding.astro';
+import { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
+import { resolvePeckingOrderLanding } from '../../../utils/pecking-order-landing';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+
+const issuePaths = listLeagueData(`${getLeagueBySlug('sandbox')!.dataPath}/pecking-order/*.json`);
+const issueFiles: Record<string, PeckingOrderData> = Object.fromEntries(
+  (await Promise.all(issuePaths.map(async (p) => [p, await loadLeagueData<PeckingOrderData>(p)] as const))).filter(
+    (entry): entry is readonly [string, PeckingOrderData] => entry[1] !== null,
+  ),
+);
+
+const issues = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    if (!m) return null;
+    return {
+      year: parseInt(m[1], 10),
+      week: parseInt(m[2], 10),
+      data: data as PeckingOrderData,
+    };
+  })
+  .filter((x): x is { year: number; week: number; data: PeckingOrderData } => x !== null);
+
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so the preview
+// and live states can both be checked out of season.
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+
+// Resolved twice (here and in the component) rather than threaded through as a
+// prop: the title needs the state before the body renders, and the resolver is
+// pure sorting + a date compare.
+const { mode, latest } = resolvePeckingOrderLanding(issues, now);
+
+const title = mode === 'live' && latest
+  ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}`
+  : 'The Pecking Order — Weekly Power Rankings';
+---
+
+<TheLeagueLayout title={title}>
+  <div class="pr-page">
+    <Breadcrumbs items={[
+      { label: "Sandbox", href: '/sandbox' },
+      { label: 'The Pecking Order' },
+    ]} />
+
+    <PeckingOrderLanding
+      issues={issues}
+      league="sandbox"
+      basePath="/sandbox/pecking-order"
+      now={now}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+.pr-page { min-height: 60vh; }
+</style>

@@ -1,0 +1,55 @@
+---
+/**
+ * Sandbox — home. Thin route wrapper over the shared
+ * package-league homepage. Feeds are read through the league-data loader, never
+ * globbed or imported: either would compile every season into the serverless
+ * function (docs/claude/rules/storage-and-build.md § "League data lives in
+ * Blob"). The Schefter feed is read live from Redis (getSchefterFeedIfAny).
+ */
+import PackageLeagueHome from '../../components/shared/package-league/PackageLeagueHome.astro';
+import config from '../../../data/sandbox/sandbox.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getSchefterFeedIfAny } from '../../utils/schefter-league-data';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('sandbox')!;
+const feedDir = `${league.dataPath}/mfl-feeds`;
+/** A lazy-glob-shaped map over the loader: the keys say which seasons exist, only what is read is fetched. */
+const lazy = (pattern: string): LazyFeedGlob =>
+  Object.fromEntries(listLeagueData(pattern).map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
+
+const standingsFeeds = lazy(`${feedDir}/*/standings.json`);
+const transactionFeeds = lazy(`${feedDir}/*/transactions.json`);
+const leagueFeeds = lazy(`${feedDir}/*/league.json`);
+const scheduleFeeds = lazy(`${feedDir}/*/schedule.json`);
+const rosterFeeds = lazy(`${feedDir}/*/rosters.json`);
+// Absent until the sync account belongs to the league (the export is
+// owner/commissioner-gated); the calendar falls back to derived dates.
+const calendarFeeds = lazy(`${feedDir}/*/calendar.json`);
+const playoffFeeds = lazy(`${feedDir}/*/playoff-brackets.json`);
+// The Primetime front page's extra reads (registry `siteTheme`); unused by the Editorial homepage.
+const historyFeeds = lazy(`${league.dataPath}/derived/league-history.json`);
+const ytdScoreFeeds = lazy(`${feedDir}/*/playerScores-ytd.json`);
+const peckingOrderIssues = lazy(`${league.dataPath}/pecking-order/*.json`);
+
+const posts = (await getSchefterFeedIfAny(league))?.posts ?? [];
+---
+
+<PackageLeagueHome
+  leagueSlug="sandbox"
+  config={config}
+  standingsFeeds={standingsFeeds}
+  transactionFeeds={transactionFeeds}
+  leagueFeeds={leagueFeeds}
+  scheduleFeeds={scheduleFeeds}
+  rosterFeeds={rosterFeeds}
+  calendarFeeds={calendarFeeds}
+  playoffFeeds={playoffFeeds}
+  peckingOrderIssues={peckingOrderIssues}
+  posts={posts}
+  historyFeeds={historyFeeds}
+  ytdScoreFeeds={ytdScoreFeeds}
+/>

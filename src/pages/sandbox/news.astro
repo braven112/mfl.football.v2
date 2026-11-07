@@ -1,0 +1,47 @@
+---
+/**
+ * League news — Sandbox.
+ *
+ * Thin route wrapper over the shared page body
+ * (src/components/shared/SchefterNewsPage.astro). The feed is read live from
+ * Redis (getSchefterFeedIfAny); the committed file is only a daily snapshot.
+ *
+ * No tips lane (`schefterTips` is off), so the tip link is not offered; the
+ * league's chat is Slack, so there is no Group Chat tab either. The feed's
+ * weekly column is The Gauntlet.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import SchefterNewsPage from '../../components/shared/SchefterNewsPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { resolveSchefterNewsView } from '../../utils/schefter-news-view';
+import { getSchefterFeedIfAny } from '../../utils/schefter-league-data';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
+
+const authUser = getAuthUser(Astro.request);
+const league = getLeagueBySlug('sandbox')!;
+const feed: FeedType = (await getSchefterFeedIfAny(league)) ?? {
+  lastScanTimestamp: '',
+  lastProcessedMflTimestamp: '0',
+  posts: [],
+};
+
+const view = await resolveSchefterNewsView({
+  league,
+  feed,
+  authUser,
+  url: Astro.url,
+});
+---
+
+<TheLeagueLayout title="League News" og={view.og}>
+  <SchefterNewsPage
+    view={view}
+    isAuthenticated={!!authUser}
+    userId={authUser?.id}
+    schefterArticles={view.featuredArticles}
+    articleBasePath="/sandbox/news"
+  />
+</TheLeagueLayout>

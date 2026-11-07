@@ -1,0 +1,39 @@
+---
+/**
+ * Free agents (sandbox) — thin route over the shared Free Agents page, the
+ * same one the AFL renders (src/components/shared/free-agents/FreeAgentsPage.astro).
+ * Sandbox pools players by DIVISION, so the switcher is its nine divisions.
+ * The snapshot and feeds are read here, through the league-data loader — never
+ * a static import or glob, which would compile them into the serverless
+ * function (docs/claude/rules/storage-and-build.md § "League data lives in Blob").
+ */
+import FreeAgentsPage from '../../components/shared/free-agents/FreeAgentsPage.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadLeagueData } from '../../utils/league-data';
+import { eagerFeedModules, lazyFeedModules } from '../../utils/league-feed-modules';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('sandbox')!;
+const [freeAgentsData, leagueModules, calendarModules] = await Promise.all([
+  loadLeagueData<any>(`${league.dataPath}/derived/free-agents.json`),
+  eagerFeedModules(league.dataPath, 'league.json'),
+  eagerFeedModules(league.dataPath, 'calendar.json'),
+]);
+// Lazy: the page loads only the current league year's file, and only when it
+// renders in Primetime (position leaders, the market rail, the Opp column).
+const marketFeeds = {
+  transactions: lazyFeedModules(league.dataPath, 'transactions.json'),
+  schedule: lazyFeedModules(league.dataPath, 'nflSchedule-full.json'),
+};
+---
+
+<FreeAgentsPage
+  leagueSlug="sandbox"
+  snapshot={freeAgentsData}
+  leagueModules={leagueModules}
+  calendarModules={calendarModules}
+  title="Free Agents | Sandbox"
+  poolNoun="Division"
+  marketFeeds={marketFeeds}
+/>
