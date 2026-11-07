@@ -9,33 +9,22 @@
  */
 import FreeAgentsPage from '../../components/shared/free-agents/FreeAgentsPage.astro';
 import { getLeagueBySlug } from '../../config/leagues';
-import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import { loadLeagueData } from '../../utils/league-data';
+import { eagerFeedModules, lazyFeedModules } from '../../utils/league-feed-modules';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('sandbox')!;
-const feedDir = `${league.dataPath}/mfl-feeds`;
-// Current-era seasons only, as the globs these replaced were.
-const CURRENT_ERA_FLOOR = 2025;
-const currentEra = (file: string) =>
-  listLeagueData(`${feedDir}/*/${file}`).filter((p) => Number(p.split('/').at(-2)) >= CURRENT_ERA_FLOOR);
-/** Eager-glob-shaped `{ path: { default } }`, which is what the page reads. */
-const eager = async (paths: string[]) =>
-  Object.fromEntries(await Promise.all(paths.map(async (p) => [p, { default: await loadLeagueData(p) }] as const)));
-/** Lazy-glob-shaped: only the file the page asks for is fetched. */
-const lazy = (paths: string[]) =>
-  Object.fromEntries(paths.map((p) => [p, () => loadLeagueData(p).then((d) => ({ default: d }))]));
-
 const [freeAgentsData, leagueModules, calendarModules] = await Promise.all([
   loadLeagueData<any>(`${league.dataPath}/derived/free-agents.json`),
-  eager(currentEra('league.json')),
-  eager(currentEra('calendar.json')),
+  eagerFeedModules(league.dataPath, 'league.json'),
+  eagerFeedModules(league.dataPath, 'calendar.json'),
 ]);
 // Lazy: the page loads only the current league year's file, and only when it
 // renders in Primetime (position leaders, the market rail, the Opp column).
 const marketFeeds = {
-  transactions: lazy(currentEra('transactions.json')),
-  schedule: lazy(currentEra('nflSchedule-full.json')),
+  transactions: lazyFeedModules(league.dataPath, 'transactions.json'),
+  schedule: lazyFeedModules(league.dataPath, 'nflSchedule-full.json'),
 };
 ---
 
