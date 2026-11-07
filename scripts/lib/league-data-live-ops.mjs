@@ -26,11 +26,42 @@ export function buildOverlay(patterns, root = process.cwd()) {
 }
 
 /**
- * The pointer naming `overlay`.
- * @param {{ overlay: string, patterns: string[], source: string, now?: Date }} args
+ * The pointer naming `overlay`. `base` (the store's URL) and `gitBase` (the
+ * commit the files were built on) are for the next sync run's hydrate.
+ * @param {{ overlay: string, patterns: string[], source: string, now?: Date, base?: string, gitBase?: string }} args
  */
-export function makePointer({ overlay, patterns, source, now = new Date() }) {
-  return { schema: LEAGUE_DATA_SCHEMA, overlay, patterns, publishedAt: now.toISOString(), source };
+export function makePointer({ overlay, patterns, source, now = new Date(), base, gitBase }) {
+  const at = now.toISOString();
+  return {
+    schema: LEAGUE_DATA_SCHEMA,
+    overlay,
+    patterns,
+    publishedAt: at,
+    refreshedAt: at,
+    source,
+    ...(base ? { base } : {}),
+    ...(gitBase ? { gitBase } : {}),
+  };
+}
+
+/**
+ * Which overlay files a sync run should take from the store before it fetches,
+ * so it starts from the data the site is serving rather than the last daily
+ * commit. A file git changed since the pointer's `gitBase` is someone else's
+ * newer write (a code change, another lane's commit) and git keeps it; every
+ * other file whose content differs from the overlay is taken from the store.
+ * @param {Record<string, string>} overlayFiles path → hash
+ * @param {(path: string) => string | null} diskHash null when the file is absent
+ * @param {Set<string>} changedInGit paths changed between gitBase and HEAD
+ * @returns {Array<{ path: string, hash: string }>}
+ */
+export function planHydrate(overlayFiles, diskHash, changedInGit) {
+  const take = [];
+  for (const [path, hash] of Object.entries(overlayFiles)) {
+    if (changedInGit.has(path)) continue;
+    if (diskHash(path) !== hash) take.push({ path, hash });
+  }
+  return take.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 /**

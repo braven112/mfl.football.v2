@@ -12,6 +12,7 @@ import {
   isCurrentLeagueYear,
   modifiedPaths,
   planHeldFiles,
+  planLeagueDataHold,
   publishLiveFiles,
   SNAPSHOT_EVERY_MS,
 } from '../scripts/lib/held-sync-files.mjs';
@@ -174,5 +175,40 @@ describe('planHeldFiles', () => {
     const r = fakeRedis({}, { failOn: 'GET' });
     const plan = await planHeldFiles(heldChanges([SAL]), { redis: {}, published: true, command: r.command, nowMs: NOW });
     expect(plan).toEqual({ restore: [], commit: [SAL] });
+  });
+});
+
+describe('planLeagueDataHold (data live through the league-data pointer)', () => {
+  const ADP = 'data/theleague/mfl-feeds/2026/adp-redraft.json';
+  const META = 'data/theleague/mfl-feeds/2026/fetch.meta.json';
+  const isStoreFile = (p: string) => p.startsWith('data/') && p.endsWith('.json');
+  const plan = (porcelain: string, store: Record<string, string> = {}, published = true) => {
+    const { command } = fakeRedis(store);
+    return planLeagueDataHold(porcelain, { published, isStoreFile, redis: {}, command, nowMs: NOW });
+  };
+
+  it('holds every modified data file once today\'s snapshot is in', async () => {
+    const store = { 'mfl:held-sync:snapshot-at:league-data': String(NOW - 1000) };
+    expect(await plan(` M ${ADP}\n M ${STANDINGS}\n`, store)).toEqual([ADP, STANDINGS]);
+  });
+
+  it('lets the files through once a day', async () => {
+    const store = { 'mfl:held-sync:snapshot-at:league-data': String(NOW - SNAPSHOT_EVERY_MS) };
+    expect(await plan(` M ${ADP}\n`, store)).toEqual([]);
+    expect(store['mfl:held-sync:snapshot-at:league-data']).toBe(String(NOW));
+  });
+
+  it('lets everything ride along when something must commit anyway — all or nothing', async () => {
+    const store = { 'mfl:held-sync:snapshot-at:league-data': String(NOW - 1000) };
+    // The once-a-day feed stamp the next run reads from git.
+    expect(await plan(` M ${ADP}\n M ${META}\n`, store)).toEqual([]);
+    // A new file (a roster-history snapshot).
+    expect(await plan(` M ${ADP}\n?? data/theleague/mfl-feeds/2026/roster-history/rosters-2026-11-07.json\n`, store)).toEqual([]);
+    // A file the pointer does not carry.
+    expect(await plan(` M ${ADP}\n M data/sandbox/derived/rules-from-mfl.md\n`, store)).toEqual([]);
+  });
+
+  it('holds nothing when the publish did not happen', async () => {
+    expect(await plan(` M ${ADP}\n`, {}, false)).toEqual([]);
   });
 });

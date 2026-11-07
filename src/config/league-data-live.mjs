@@ -10,7 +10,8 @@
  * The pointer is ONE small Redis value:
  *
  *   { schema, overlay: '<hash>', patterns: ['data/theleague/mfl-feeds/**', …],
- *     publishedAt: ISO, source: 'roster-sync' | 'rollback' | … }
+ *     publishedAt: ISO, refreshedAt: ISO, source: 'roster-sync' | 'rollback' | …,
+ *     base: '<store URL>', gitBase: '<commit sha>' }
  *
  * `overlay` names a blob in the store (`league-data/<hash>.json`, content
  * hashed like every other file) holding `{ files: { path: hash } }` for every
@@ -41,6 +42,21 @@ export const LIVE_HISTORY_LENGTH = 50;
 /** How long one server instance trusts the pointer it last read. */
 export const LIVE_CHECK_INTERVAL_MS = 60_000;
 
+/**
+ * A pointer no sync has confirmed for this long is ignored, and every deploy
+ * serves the data it was built with. Each sync run re-stamps `refreshedAt`
+ * even when nothing changed, so this only trips when the syncs stopped
+ * publishing — and then git, which the deploys build from, is the fresher copy.
+ * Comfortably above the longest quiet stretch the sync cadence allows.
+ */
+export const LIVE_MAX_AGE_MS = 36 * 60 * 60 * 1000;
+
+/** Whether no sync has confirmed `pointer` within LIVE_MAX_AGE_MS of `now`. */
+export function pointerIsStale(pointer, now = Date.now()) {
+  const at = Date.parse(pointer.refreshedAt ?? pointer.publishedAt);
+  return Number.isFinite(at) && now - at > LIVE_MAX_AGE_MS;
+}
+
 /** A path glob as a RegExp: `*` is one path segment, `**` any depth. */
 export function globToRegExp(glob) {
   let re = '';
@@ -62,7 +78,7 @@ export function globToRegExp(glob) {
  * A parsed, usable pointer, or null. Upstash returns JSON values already
  * parsed; a value written as a string is parsed here.
  * @param {unknown} raw
- * @returns {{ schema: number, overlay: string, patterns: string[], publishedAt: string, source?: string } | null}
+ * @returns {{ schema: number, overlay: string, patterns: string[], publishedAt: string, source?: string, refreshedAt?: string, base?: string, gitBase?: string } | null}
  */
 export function parsePointer(raw) {
   let value = raw;
@@ -84,6 +100,12 @@ export function parsePointer(raw) {
     patterns: /** @type {string[]} */ (p.patterns),
     publishedAt: p.publishedAt,
     ...(typeof p.source === 'string' ? { source: p.source } : {}),
+    // Written by scripts/league-data-pointer.mjs for the next sync run, which
+    // starts from the live data: when it was last confirmed, the store's base
+    // URL, and the git commit the published files were built on.
+    ...(typeof p.refreshedAt === 'string' ? { refreshedAt: p.refreshedAt } : {}),
+    ...(typeof p.base === 'string' && /^https:\/\//.test(p.base) ? { base: p.base } : {}),
+    ...(typeof p.gitBase === 'string' && /^[0-9a-f]{40}$/.test(p.gitBase) ? { gitBase: p.gitBase } : {}),
   };
 }
 

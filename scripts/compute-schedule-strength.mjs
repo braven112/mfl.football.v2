@@ -19,7 +19,8 @@
  * computed over completed weeks; remaining difficulty over scheduled weeks
  * >= N. Trends diff against the most recent earlier week's file. Weekly
  * files are retained forever — published articles reference their exact
- * week's file, and pages import the directory lazily (no bundle cost).
+ * week's file, and pages import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import the directory lazily (no bundle cost).
  */
 
 import { promises as fs } from 'node:fs';
@@ -370,8 +371,8 @@ async function runLeague(slug, opts) {
     return result;
   }
 
-  await fs.mkdir(path.dirname(outPath), { recursive: true });
-  await fs.writeFile(outPath, JSON.stringify(result, null, 2));
+  // Unchanged apart from the clock → left alone (see compute-playoff-performance.mjs).
+  writeJsonIfChanged(outPath, result, { ignoreKeys: ['generatedAt'] });
   console.log(`  [${slug}] wrote ${path.relative(projectRoot, outPath)} (week ${week}, ${result.runIn.length} teams)`);
   // Deliberately NO pruning: every published Gauntlet article points at its
   // exact week's derived file forever (post.scheduleStrength), and trends

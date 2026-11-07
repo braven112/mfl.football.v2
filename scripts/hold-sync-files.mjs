@@ -8,7 +8,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getRedisConfig } from './lib/redis.mjs';
-import { currentInjuryFiles, heldChanges, modifiedPaths, planHeldFiles, publishLiveFiles } from './lib/held-sync-files.mjs';
+import {
+  currentInjuryFiles,
+  heldChanges,
+  modifiedPaths,
+  planHeldFiles,
+  planLeagueDataHold,
+  publishLiveFiles,
+} from './lib/held-sync-files.mjs';
+import { isSyncPublishedStoreFile, syncPublishedPatterns } from './lib/sync-published.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const git = (args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -27,4 +35,15 @@ if (!redis) {
   const changes = heldChanges(modifiedPaths(git(['status', '--porcelain', '--', 'data', 'src/data'])));
   const { restore } = await planHeldFiles(changes, { redis, published, log });
   if (restore.length) git(['checkout', '--', ...restore]);
+
+  // The data the run just made live through the league-data pointer
+  // (LEAGUE_DATA_PUBLISHED, set by the publish step) commits once a day.
+  const patterns = syncPublishedPatterns();
+  const restoreData = await planLeagueDataHold(git(['status', '--porcelain', '--untracked-files=all', '--', 'data', 'src/data']), {
+    published: !!process.env.LEAGUE_DATA_PUBLISHED,
+    isStoreFile: (p) => isSyncPublishedStoreFile(p, patterns),
+    redis,
+    log,
+  });
+  if (restoreData.length) git(['checkout', '--', ...restoreData]);
 }
