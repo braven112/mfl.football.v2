@@ -919,6 +919,67 @@ function tigerStory(f: SeasonFacts, look: VideoLook): Scene[] {
 	return scenes;
 }
 
+const ROAST_WORDS: Record<'headline' | 'sub' | 'crownLine', ByLook<string | [string, string]>> = {
+	headline: { default: ['SEASON', 'ROAST'], princess: ['A ROYAL', 'DISASTER'], poop: ['WHAT A', 'STINKER'], bling: ['ALL FLASH', 'NO CASH'], clown: ['FULL', 'CIRCUS'], jackass: ['TOTAL', 'JACKASS'], dumpster: ['DUMPSTER', 'FIRE'], crybaby: ['CRY', 'BABY'], snail: ['SLOW', 'AND BAD'], potato: ['COUCH', 'POTATO'], bombs: ['TOTAL', 'BOMB'], flex: ['NOTHING', 'TO FLEX'], riot: ['TOTAL', 'MELTDOWN'], goat: ['NOT THE', 'GOAT'] },
+	sub: {
+		default: 'Your season, roasted.',
+		princess: 'Your season, wrapped with a bow. A sad bow.',
+		poop: 'Your season, flushed.',
+		clown: 'The whole league came to watch.',
+		jackass: 'Stubborn. And bad.',
+		dumpster: 'Smoke everywhere. Nobody surprised.',
+		crybaby: 'Here comes the crying.',
+	},
+	crownLine: {
+		default: 'Better luck next year. You’ll need it.',
+		princess: 'Off with their crown.',
+		poop: 'Flush it. Start over.',
+		bling: 'Repo man’s on the way.',
+		retro: 'A classic. A classic mess.',
+		clown: 'Honk honk. That’s you.',
+		jackass: 'Hee-haw. Bad team.',
+		dumpster: 'Burned it all down.',
+		crybaby: 'Go ahead. Cry about it.',
+		snail: 'Still crawling.',
+		potato: 'Back to the couch.',
+		bombs: 'Bombed.',
+		flex: 'Nothing to see here.',
+		riot: 'The riot was in your lineup.',
+		goat: 'Baa. Bad team.',
+	},
+};
+
+/** A bad team, roasted for the season: not last, not a paper tiger, just bad. */
+function roastStory(f: SeasonFacts, look: VideoLook): Scene[] {
+	const L = LOOKS[look];
+	const w = <T>(k: keyof typeof ROAST_WORDS) => byLook(ROAST_WORDS[k], look) as T;
+	const exit = tigerExit(f);
+	const scenes: Scene[] = [
+		{ type: 'title', duration: 4, palette: L.title, kicker: `${f.leagueName} · ${f.season}`, headline: w<[string, string]>('headline'), sub: `${f.teamName}. ${w<string>('sub')}` },
+		recordScene(f, L.record, f.wins > f.losses ? 'The record lies. Watch.' : 'The record says it all.', f.outcome === 'in-progress' ? 'So far' : 'Regular season'),
+	];
+	if (f.worstGame) {
+		const g = f.worstGame;
+		scenes.push(lowScene(g, L.low, 'The low point', won(g) ? `Somehow that was a win. ${g.oppName} scored ${formatScore(g.oppScore)}.` : `${g.oppName} put up ${formatScore(g.oppScore)}. Ouch.`));
+	}
+	if (f.pointsRank && f.teams && f.pointsRank > f.teams / 2) {
+		scenes.push({
+			type: 'stat',
+			duration: 5,
+			palette: L.stat,
+			kicker: 'Points scored · league rank',
+			big: { kind: 'number', value: f.pointsRank, decimals: 0 },
+			line: `${ordinal(f.pointsRank)} of ${f.teams} in points.`,
+		});
+	} else {
+		scenes.push(perWeekScene(f, L.stat, 'Not enough. Not close.'));
+	}
+	if (exit) scenes.push(lowScene(exit, L.low, 'Then the playoffs happened', `${exit.oppName} ended it.`));
+	scenes.push({ type: 'crown', duration: 7, palette: L.crown, kicker: `${f.season} Season Roast · ${f.leagueName}`, name: f.teamName, line: w<string>('crownLine'), effect: quietEffect(L, false), badge: L.badge });
+	scenes.push(endScene());
+	return scenes;
+}
+
 const MID_WORDS: Record<'sub' | 'crownLine', ByLook<string>> = {
 	sub: {
 		default: 'Perfectly, painfully average.',
@@ -1052,6 +1113,7 @@ const STORIES: Record<SeasonVideoKind, (f: SeasonFacts, look: VideoLook, week?: 
 	weekly: weeklyStory,
 	beatdown: beatdownStory,
 	tiger: tigerStory,
+	roast: roastStory,
 	mid: midStory,
 	last: lastStory,
 };

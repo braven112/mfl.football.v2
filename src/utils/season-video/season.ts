@@ -26,7 +26,7 @@ import { asArray, pickChampionshipBracketId } from '../league-history/mfl-champi
  * subject, because the video is a trash-talk tool as much as a keepsake: a
  * 9–2 team can be called mid, a champion can get the poop look.
  */
-export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'regular' | 'weekly' | 'beatdown' | 'tiger' | 'mid' | 'last';
+export type SeasonVideoKind = 'champion' | 'recap' | 'midseason' | 'regular' | 'weekly' | 'beatdown' | 'tiger' | 'roast' | 'mid' | 'last';
 export type VideoLook = 'trophy' | 'bling' | 'retro' | 'princess' | 'poop' | 'clown' | 'jackass' | 'dumpster' | 'crybaby' | 'snail' | 'potato' | 'bombs' | 'flex' | 'riot' | 'goat';
 /** Saved before looks were split from stories (a LastVideo in localStorage). */
 export type LastPlaceTheme = 'princess' | 'poop';
@@ -41,6 +41,7 @@ export const VIDEO_STORIES: readonly { id: SeasonVideoKind; name: string }[] = [
 	{ id: 'weekly', name: 'Weekly roast' },
 	{ id: 'beatdown', name: 'Beatdown' },
 	{ id: 'tiger', name: 'Paper tiger' },
+	{ id: 'roast', name: 'Season roast' },
 	{ id: 'mid', name: 'Master of mediocrity' },
 	{ id: 'last', name: 'Last place' },
 ];
@@ -373,21 +374,35 @@ export const VIDEO_VIBES: readonly { id: VideoVibe; name: string; icon: string; 
 
 /**
  * The story for a span and vibe, picked from the data so the video stays
- * true. Season roast: last place if they finished last, else paper tiger
+ * true. Season roast: last place if they finished last, paper tiger for a
+ * winning record on bottom-half points, else the plain season roast
  * (Brandon, 2026-11-06: "let the data pick").
  */
 export function storyFor(
 	span: VideoSpan,
 	vibe: VideoVibe,
-	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & { playoffs?: readonly unknown[] },
+	facts: Pick<SeasonFacts, 'outcome' | 'finish' | 'teams'> & Partial<Pick<SeasonFacts, 'wins' | 'losses' | 'pointsRank'>> & { playoffs?: readonly unknown[] },
 	stage: SeasonStage | boolean = true,
 ): SeasonVideoKind {
 	if (span === 'week') return vibe === 'brag' ? 'beatdown' : 'weekly';
 	if (vibe === 'mid') return 'mid';
-	if (vibe === 'roast') return facts.finish && facts.teams && facts.finish >= facts.teams ? 'last' : 'tiger';
+	if (vibe === 'roast') {
+		if (facts.finish && facts.teams && facts.finish >= facts.teams) return 'last';
+		return isPaperTiger(facts) ? 'tiger' : 'roast';
+	}
 	const told = pickVideoKind(facts, stage);
 	// Facts and brag never call a team last; that's the roast's job.
 	return told === 'last' ? 'recap' : told;
+}
+
+/**
+ * A paper tiger is a GOOD record on a BAD team (Brandon, 2026-11-06): a
+ * winning record while the points sit in the league's bottom half. Anything
+ * else roasted for a season is just a bad team, and gets the season roast.
+ */
+export function isPaperTiger(f: Partial<Pick<SeasonFacts, 'wins' | 'losses' | 'pointsRank' | 'teams'>>): boolean {
+	if (!f.wins || f.losses == null || !f.pointsRank || !f.teams) return false;
+	return f.wins > f.losses && f.pointsRank > f.teams / 2;
 }
 
 /** Where a points total ranks among the league's, 1 = most; ties share the better rank. */

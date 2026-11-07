@@ -53,6 +53,9 @@ const ALLOWED_EXTERNAL_TOKENS = new Set<string>([
   // Vend Sans is provided by the font loader at runtime (see tokens.css
   // --font-family-base fallback chain).
   'font-vend-sans',
+  // Figtree, MFL.football's marketing face, from the same font loader
+  // (astro.config.ts fonts; src/styles/soft-premium.css).
+  'font-figtree',
 ]);
 
 // References are checked in stylesheets and Astro components; definitions are

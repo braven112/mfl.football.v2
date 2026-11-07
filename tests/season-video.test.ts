@@ -144,7 +144,7 @@ const base: SeasonFacts = {
 };
 
 describe('buildStory', () => {
-	const STORIES = ['champion', 'recap', 'midseason', 'regular', 'weekly', 'beatdown', 'tiger', 'mid', 'last'] as const;
+	const STORIES = ['champion', 'recap', 'midseason', 'regular', 'weekly', 'beatdown', 'tiger', 'roast', 'mid', 'last'] as const;
 	const LOOKS = ['trophy', 'bling', 'retro', 'princess', 'poop', 'clown', 'jackass', 'dumpster', 'crybaby', 'snail', 'potato', 'bombs', 'flex', 'riot', 'goat'] as const;
 
 	it('every story wears every look, and every one ends on the MFL Football end card', () => {
@@ -433,7 +433,11 @@ describe('week or season, then a vibe', () => {
 		expect(storyFor('week', 'roast', going, false)).toBe('weekly');
 		expect(storyFor('week', 'brag', going, false)).toBe('beatdown');
 		expect(storyFor('season', 'roast', last)).toBe('last');
-		expect(storyFor('season', 'roast', champ)).toBe('tiger');
+		// A paper tiger is a winning record on bottom-half points; any other bad team is a plain roast.
+		expect(storyFor('season', 'roast', { ...champ, wins: 9, losses: 5, pointsRank: 10 })).toBe('tiger');
+		expect(storyFor('season', 'roast', { ...going, wins: 4, losses: 9, pointsRank: 10 })).toBe('roast');
+		expect(storyFor('season', 'roast', { ...champ, wins: 11, losses: 3, pointsRank: 2 })).toBe('roast');
+		expect(storyFor('season', 'roast', champ)).toBe('roast');
 		expect(storyFor('season', 'facts', champ)).toBe('champion');
 		expect(storyFor('season', 'facts', going, false)).toBe('midseason');
 		expect(storyFor('season', 'facts', last)).toBe('recap');
