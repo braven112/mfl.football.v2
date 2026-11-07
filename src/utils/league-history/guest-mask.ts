@@ -8,12 +8,14 @@
  * whole point is that a stranger never sees a name.
  */
 import { getLeagueBySlug } from '../../config/leagues';
-import { loadLeagueData } from '../league-data';
+import { loadLeagueData, onLeagueDataChange } from '../league-data';
 import { GUEST_MASKED_LEAGUES, buildNameMasker, maskJson, ownerStandIns } from './guest-names.mjs';
 
 export type NameMasker = (text: string) => string;
 
 const maskers = new Map<string, Promise<NameMasker>>();
+// A new owner list (a live data update) rebuilds the masker on next use.
+onLeagueDataChange(() => maskers.clear());
 
 export function isGuestMaskedLeague(slug: string): boolean {
   return GUEST_MASKED_LEAGUES.includes(slug);
