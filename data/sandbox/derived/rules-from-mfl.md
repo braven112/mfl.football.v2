@@ -15,7 +15,7 @@
 - Best ball: MFL sets each lineup automatically to its best score
 
 ### Waivers and trades
-- Waivers: WAIVERS_FCFS
+- Waivers: first-come first-served (no waiver claims)
 - Trade offers expire after 7 days by default
 
 ### Draft and keepers
