@@ -1,0 +1,683 @@
+/* ==========================================================================
+   Soft Premium — MFL.football's own marketing look (the homepage and the
+   service pages that wear MarketingShell). Owner's pick, Nov 2026, from three
+   mocked directions: cool gray ground, big rounded white cards with a soft
+   shadow, one graphite "league card" as the signature object, and RED ONLY as
+   a small accent (the primary CTA, live dots, list bullets, the logo's ball).
+
+   ONE of each, repeated on every page, is the point of this file:
+     .sp-hero     the hero: eyebrow, h1, lede, CTAs on the left, a visual right
+     .sp-head     a section heading: eyebrow + h2, optional note on the right
+     .sp-card     THE card (worn with the kit's `ui-card`, which owns nothing
+                  this changes except the corner and shadow)
+     .sp-stats    the stat row
+     .sp-band     the dark band (a rounded graphite slab, dark in both themes)
+     .sp-lcard    the graphite league card
+   A page adds layout of its own; it never restyles one of these. A new
+   marketing page wraps its content in `.sp` and reuses them.
+
+   Scope: everything sits under `.sp`, and the page ground is painted only
+   when a `.sp` element is on the page (html:has(.sp)), so a league page that
+   shares a layout with these is untouched. Unscoped on purpose (imported in
+   SplashLayout's frontmatter) so a page and MarketingShell share one copy.
+
+   Tokens are --sp-*, defined here for both themes; never reach for a league
+   theme token inside these components.
+   ========================================================================== */
+
+:root {
+  --sp-bg: #eceef1;
+  --sp-bg-2: #f6f7f9;
+  --sp-surface: #ffffff;
+  --sp-surface-2: #f2f3f5;
+  --sp-ink: #121417;
+  --sp-muted: #5d626b;
+  --sp-line: #e3e5e9;
+  --sp-red: #c8102e;
+  --sp-red-hover: #a10d25;
+  --sp-on-red: #ffffff;
+  --sp-red-soft: rgba(200, 16, 46, 0.09);
+  --sp-band: #15171b;
+  --sp-band-ink: #f3f4f6;
+  --sp-band-muted: #a1a6ae;
+  --sp-band-line: #2b2e34;
+  --sp-lcard-1: #3a3e46;
+  --sp-lcard-2: #121417;
+  --sp-lcard-ink: #f5f6f7;
+  --sp-shadow: 0 24px 48px -28px rgba(18, 20, 23, 0.32), 0 2px 6px -2px rgba(18, 20, 23, 0.06);
+  --sp-glow: rgba(200, 16, 46, 0.05);
+  --sp-radius: 28px;
+  --sp-radius-sm: 18px;
+  --sp-font: var(--font-figtree), var(--font-family-base);
+  /* Soft Premium's type scale for small text (headings use clamp()). */
+  --sp-text-xs: 0.78rem;
+  --sp-text-sm: 0.875rem;
+  --sp-text-md: 0.93rem;
+  --sp-text-base: 1rem;
+  --sp-text-lg: 1.15rem;
+  --sp-text-xl: 1.35rem;
+  --sp-text-2xl: 1.7rem;
+  --sp-lcard-shadow: 0 40px 70px -32px rgba(10, 12, 16, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --sp-live-ring: 0 0 0 4px var(--sp-red-soft);
+}
+
+html.dark {
+  --sp-bg: #0e0f11;
+  --sp-bg-2: #121316;
+  --sp-surface: #181a1e;
+  --sp-surface-2: #1f2126;
+  --sp-ink: #f2f3f5;
+  --sp-muted: #a0a6ae;
+  --sp-line: #2a2d33;
+  --sp-red: #ff4d5e;
+  --sp-red-hover: #ff7380;
+  --sp-on-red: #111111;
+  --sp-red-soft: rgba(255, 77, 94, 0.13);
+  --sp-band: #1b1d21;
+  --sp-band-ink: #f2f3f5;
+  --sp-band-muted: #a0a6ae;
+  --sp-band-line: #30333a;
+  --sp-lcard-1: #393c44;
+  --sp-lcard-2: #17191c;
+  --sp-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+  --sp-glow: rgba(255, 77, 94, 0.04);
+}
+
+/* The ground. Painted on html so it runs edge to edge past the layout's
+   1232px main. */
+html:has(.sp) {
+  background:
+    radial-gradient(900px 520px at 88% -8%, var(--sp-bg-2), transparent 70%),
+    radial-gradient(760px 460px at -5% 28%, var(--sp-glow), transparent 70%),
+    var(--sp-bg);
+  background-color: var(--sp-bg);
+}
+
+.sp {
+  /* The shared CTA (src/styles/cta.css) reads these: red fill, near-white or
+     near-black ink, so every primary button on these pages is the one red. */
+  --cta-fill: var(--sp-red);
+  --cta-fill-hover: var(--sp-red-hover);
+  --on-cta-fill: var(--sp-on-red);
+  --btn-primary-border-hover: var(--sp-red);
+  --primary-link-default-text-color: var(--sp-ink);
+  --primary-link-hover-text-color: var(--sp-red);
+  --primary-link-focus-text-color: var(--sp-red);
+
+  color: var(--sp-ink);
+  font-family: var(--sp-font);
+  font-size: var(--sp-text-base);
+  line-height: 1.55;
+}
+
+.sp :is(h1, h2, h3) {
+  margin: 0;
+  color: var(--sp-ink);
+  font-family: var(--sp-font);
+  text-transform: none;
+  text-wrap: balance;
+}
+
+.sp h1 {
+  font-size: clamp(2.35rem, 6vw, 4.1rem);
+  line-height: 1.02;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.sp h2 {
+  font-size: clamp(1.65rem, 3.4vw, 2.5rem);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.022em;
+}
+
+.sp h3 {
+  font-size: var(--sp-text-lg);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sp p {
+  margin: 0;
+}
+
+/* Every CTA on these pages is a full pill. Shape only: colours stay with
+   cta.css and its variables. */
+.sp .cta {
+  border-radius: 999px;
+  padding: 0.8rem 1.35rem;
+  font-size: var(--sp-text-md);
+}
+
+.sp .cta--ghost {
+  --cta-ink: var(--sp-ink);
+  --cta-border: var(--sp-line);
+  --cta-bg: transparent;
+  --cta-bg-hover: var(--sp-surface-2);
+  --cta-border-hover: var(--sp-line);
+}
+
+/* Every Soft Premium surface sizes by its border box, so a padded card at
+   width: 100% never pokes past a phone's edge. */
+:is(.sp-hero, .sp-card, .sp-stat, .sp-band, .sp-lcard, .sp-grid, .sp-stats, .sp-top) {
+  box-sizing: border-box;
+}
+
+/* ── Eyebrow: small caps label with the red dot ─────────────────────────── */
+.sp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: var(--sp-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+}
+
+.sp-eyebrow::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sp-red);
+}
+
+.sp-lede {
+  max-width: 52ch;
+  font-size: clamp(1.02rem, 1.5vw, 1.14rem);
+  color: var(--sp-muted);
+}
+
+.sp-muted {
+  color: var(--sp-muted);
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────── */
+.sp-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+  padding-block: clamp(2.25rem, 6vw, 5.5rem);
+}
+
+.sp-hero--solo {
+  grid-template-columns: minmax(0, 46rem);
+}
+
+.sp-hero__copy {
+  display: grid;
+  gap: 1.35rem;
+  justify-items: start;
+  min-width: 0;
+}
+
+.sp-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.sp-hero__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}
+
+.sp-hero__facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sp-hero__facts li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.sp-hero__visual {
+  position: relative;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .sp-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Section ───────────────────────────────────────────────────────────── */
+.sp-section {
+  padding-block: clamp(2.5rem, 6vw, 4.75rem);
+}
+
+.sp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem 2.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.sp-head__title {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 40rem;
+}
+
+.sp-head__note {
+  max-width: 46ch;
+  color: var(--sp-muted);
+}
+
+/* ── THE card ──────────────────────────────────────────────────────────── */
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-grid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1000px) {
+  .sp-grid--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .sp-grid,
+  .sp-grid--4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Kit: ui-card supplies the ground (--card-bg); this card is white on the
+   gray page in light, so it sets its own surface, corner and shadow. */
+.sp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 1.6rem;
+  border: 0;
+  border-radius: var(--sp-radius);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow);
+  color: var(--sp-ink);
+  text-decoration: none;
+}
+
+.sp-card p {
+  font-size: var(--sp-text-md);
+  color: var(--sp-muted);
+}
+
+.sp-card__who {
+  font-size: var(--sp-text-xs);
+  font-weight: 600;
+  color: var(--sp-muted);
+}
+
+.sp-card__more {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  font-size: var(--sp-text-sm);
+  font-weight: 700;
+  color: var(--sp-ink);
+}
+
+.sp-card__more::after {
+  content: ' →';
+  color: var(--sp-red);
+}
+
+/* A linked card: the layouts' global a:hover would turn it red and underline
+   it, so the state is restated here (theming-and-assets.md § CTAs). */
+a.sp-card {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+a.sp-card:is(:hover, :focus-visible) {
+  color: var(--sp-ink);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+/* ── Stat row ──────────────────────────────────────────────────────────── */
+.sp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-stat {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow);
+}
+
+.sp-stat b {
+  font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-stat span {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}
+
+@media (max-width: 760px) {
+  .sp-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+/* ── Bullet list (red ring dots) ───────────────────────────────────────── */
+.sp-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--sp-text-md);
+}
+
+.sp-list li {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.sp-list li::before {
+  content: '';
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0.22rem;
+  border-radius: 50%;
+  border: 3px solid var(--sp-red-soft);
+  background: var(--sp-red);
+  background-clip: padding-box;
+  box-sizing: border-box;
+}
+
+/* ── Dark band: dark in BOTH themes, so its colours are band tokens ────── */
+.sp-band {
+  --primary-link-default-text-color: var(--sp-band-ink);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 5vw, 3.5rem);
+  align-items: center;
+  padding: clamp(1.75rem, 5vw, 3.5rem);
+  border-radius: calc(var(--sp-radius) + 4px);
+  background: var(--sp-band);
+  color: var(--sp-band-ink);
+}
+
+.sp-band--cta {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sp-band :is(h2, h3) {
+  color: var(--sp-band-ink);
+}
+
+.sp-band p,
+.sp-band .sp-eyebrow {
+  color: var(--sp-band-muted);
+}
+
+.sp-band__copy {
+  display: grid;
+  gap: 1.1rem;
+  justify-items: start;
+  min-width: 0;
+}
+
+.sp-band .cta--ghost {
+  --cta-ink: var(--sp-band-ink);
+  --cta-border: var(--sp-band-line);
+  --cta-bg-hover: var(--sp-band-line);
+  --cta-border-hover: var(--sp-band-line);
+}
+
+@media (max-width: 860px) {
+  .sp-band,
+  .sp-band--cta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── The graphite league card ──────────────────────────────────────────── */
+.sp-lcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 26rem;
+  aspect-ratio: 1.62;
+  padding: 1.5rem 1.6rem;
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(140deg, var(--sp-lcard-1), var(--sp-lcard-2));
+  box-shadow: var(--sp-lcard-shadow);
+  color: var(--sp-lcard-ink);
+  text-decoration: none;
+}
+
+a.sp-lcard:is(:hover, :focus-visible) {
+  color: var(--sp-lcard-ink);
+  text-decoration: none;
+}
+
+.sp-lcard__top,
+.sp-lcard__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sp-lcard__row {
+  align-items: flex-end;
+}
+
+.sp-lcard__name {
+  font-size: var(--sp-text-xl);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sp-lcard__meta,
+.sp-lcard__label {
+  font-size: var(--sp-text-xs);
+  opacity: 0.72;
+}
+
+.sp-lcard__host {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: var(--sp-text-md);
+  letter-spacing: 0.06em;
+  opacity: 0.92;
+}
+
+.sp-lcard__big {
+  font-size: var(--sp-text-xl);
+  font-weight: 750;
+}
+
+.sp-lcard__ball {
+  width: 1.9rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+.sp-lcard__ball path {
+  fill: var(--sp-red);
+  stroke: var(--sp-red);
+}
+
+/* ── Live dot ──────────────────────────────────────────────────────────── */
+.sp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sp-live::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sp-red);
+  box-shadow: var(--sp-live-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.sp-card {
+    transition: none;
+  }
+}
+
+/* ── Site header and footer (homepage and MarketingShell share them) ───── */
+.sp-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem 2rem;
+  padding-block: 0.6rem;
+}
+
+.sp-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.sp-brand img {
+  display: block;
+  width: auto;
+  height: 1.45rem;
+}
+
+.sp-brand .sp-brand__dark,
+html.dark .sp-brand .sp-brand__light {
+  display: none;
+}
+
+html.dark .sp-brand .sp-brand__dark {
+  display: block;
+}
+
+.sp-top__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.6rem;
+  font-size: var(--sp-text-sm);
+  font-weight: 550;
+}
+
+.sp-top__links a {
+  color: var(--sp-muted);
+  text-decoration: none;
+}
+
+.sp-top__links a:is(:hover, :focus-visible),
+.sp-top__links a[aria-current='page'] {
+  color: var(--sp-ink);
+  text-decoration: none;
+}
+
+.sp-top__live::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--sp-red);
+  vertical-align: 0.12em;
+}
+
+.sp-top__end {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.sp .sp-top .cta {
+  padding: 0.55rem 1rem;
+  font-size: var(--sp-text-sm);
+}
+
+@media (max-width: 760px) {
+  .sp-top {
+    flex-wrap: wrap;
+  }
+
+  .sp-top__links {
+    order: 3;
+    width: 100%;
+    gap: 0.35rem 1.1rem;
+    font-size: var(--sp-text-sm);
+  }
+}
+
+.sp-foot {
+  display: grid;
+  gap: 1rem;
+  margin-top: clamp(2.5rem, 6vw, 4.5rem);
+  padding-block: 2rem 1rem;
+  border-top: 1px solid var(--sp-line);
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}
+
+.sp-foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+}
+
+.sp-foot a {
+  color: var(--sp-muted);
+  text-decoration: none;
+}
+
+.sp-foot a:is(:hover, :focus-visible) {
+  color: var(--sp-ink);
+  text-decoration: none;
+}
