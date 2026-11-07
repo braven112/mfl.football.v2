@@ -41,17 +41,15 @@ describe('League History access', () => {
 		expect(canFixLeagueHistory(owner)).toBe(false);
 	});
 
-	it('keeps the any-league product admin-only until launch', () => {
-		// Flipping this is the launch: also add a page-directory entry for
-		// /history and make the league pages indexable, then update this test.
-		expect(LEAGUE_HISTORY_PUBLIC).toBe(false);
+	it('the any-league product is launched (2026-11-07)', () => {
+		expect(LEAGUE_HISTORY_PUBLIC).toBe(true);
 	});
 
-	it('the product refuses signed-out visitors and ordinary owners', () => {
-		expect(canUseHistoryProduct(null)).toBe(false);
+	it('the product is open to everyone, but fixing a champion is not', () => {
+		expect(canUseHistoryProduct(null)).toBe(true);
 		expect(canFixLeagueHistory(null)).toBe(false);
 		const owner = { id: 'u', name: 'n', franchiseId: '0005', leagueId: '00000', role: 'owner' } as const;
-		expect(canUseHistoryProduct(owner)).toBe(false);
+		expect(canUseHistoryProduct(owner)).toBe(true);
 		expect(canFixLeagueHistory(owner)).toBe(false);
 	});
 
@@ -60,10 +58,6 @@ describe('League History access', () => {
 		const seat = { id: 'u', name: 'n', franchiseId: '0001', leagueId: aflId, role: 'commissioner' } as const;
 		expect(canUseHistoryProduct(seat)).toBe(true);
 		expect(canFixLeagueHistory(seat)).toBe(false);
-		// The franchise and the league both count. (0001 is on the nav config's
-		// admin list, so isCommissionerOrAdmin admits it even without the role.)
-		expect(canUseHistoryProduct({ ...seat, franchiseId: '0002' })).toBe(false);
-		expect(canUseHistoryProduct({ ...seat, leagueId: '00000' })).toBe(false);
 	});
 
 	it.each(GATED.view)('%s checks canViewLeagueHistory', (file) => {

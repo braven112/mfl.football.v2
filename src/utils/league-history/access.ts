@@ -16,8 +16,8 @@ import { franchiseIdForLeague, isCommissionerOrAdmin, type AuthUser } from '../a
 import { getLeagueBySlug } from '../../config/leagues';
 import { canViewSiteInsights } from '../site-insights';
 
-/** Flip at launch. While false, only the site owner's seat sees the pages. */
-export const LEAGUE_HISTORY_PUBLIC = false;
+/** Launched 2026-11-07 (Brandon): the public Ask the History demo needs the Try it card seen. */
+export const LEAGUE_HISTORY_PUBLIC = true;
 
 /**
  * The same owner's seat in the AFL. Sessions are per domain, so on

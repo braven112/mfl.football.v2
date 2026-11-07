@@ -40,7 +40,9 @@ export const POST: APIRoute = async ({ request }) => {
 		return json({ status: 'bad-request', message: 'An MFL league id is 3 to 7 digits.' }, 400);
 	}
 
-	const who = getClientIdentity(request).client ?? 'unknown';
+	// Keyed on the hop a caller cannot forge (client-ip.ts): open to everyone
+	// since launch, and `client` trusts headers anyone can send.
+	const who = getClientIdentity(request).nearestHop ?? 'unknown';
 	const steps = await checkRateLimit('league-history-step', who, STEPS_PER_HOUR, 3600);
 	if (!steps.allowed) return json({ status: 'rate-limited', message: 'Too many requests. Try again later.' }, 429);
 	if (!(await readMflHistory(leagueId))) {
