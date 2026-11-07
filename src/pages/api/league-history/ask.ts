@@ -8,10 +8,15 @@
  * read back from the store (never from the request), so "what about in the
  * playoffs?" knows what it is about.
  *
- * Signed-in owners of that league only (canAskLeagueHistory), and the league
+ * Signed-in owners of that league (canAskLeagueHistory), and the league
  * comes from the URL the owner is on but must match the session, never just
  * the param. Rate-limited per franchise because every question spends Sonnet
- * tokens. The answer is computed from league-history.json by our own engine
+ * tokens.
+ *
+ * Signed-out visitors may ask the public demo league (guest-ask.ts): a few
+ * questions a day, counted per visitor and per address under a site-wide
+ * ceiling, against a dataset whose owner names are masked BEFORE the model
+ * sees it (guest-mask.ts). Their answers stay out of the league's own feed. The answer is computed from league-history.json by our own engine
  * (utils/league-history/ask-query.mjs), player questions from
  * league-history-players.json, and trades/drafts/pickups from
  * league-history-moves.json; see ask.ts.
@@ -24,6 +29,19 @@ import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
 import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
 import { hasLeagueHistoryProduct, loadLeagueCompetitions, loadLeagueHistoryDataset } from '../../../utils/league-history/datasets';
+import {
+	GUEST_REFUSALS,
+	canGuestAsk,
+	guestAllowance,
+	guestCookie,
+	guestIdFrom,
+	isCleanQuestion,
+	newGuestId,
+	spendGuestQuestion,
+	type GuestAllowance,
+} from '../../../utils/league-history/guest-ask';
+import { guestMasker, maskDataset, maskValue, type NameMasker } from '../../../utils/league-history/guest-mask';
+import { recordFunnel } from '../../../utils/history-funnel';
 
 export const prerender = false;
 
@@ -31,12 +49,93 @@ const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW = 3600;
 const MAX_QUESTION = 300;
 
-function json(data: unknown, status = 200): Response {
-	return new Response(JSON.stringify(data), {
-		status,
-		headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-	});
+function json(data: unknown, status = 200, setCookie?: string): Response {
+	const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+	if (setCookie) headers['Set-Cookie'] = setCookie;
+	return new Response(JSON.stringify(data), { status, headers });
 }
+
+/** A guest's dataset: every loaded file masked once per instance (each is the loader's cached object). */
+function maskAskData(ds: AskData, mask: NameMasker): AskData {
+	const m = <T,>(v: T): T => (v && typeof v === 'object' ? maskDataset(v as object, mask) : v) as T;
+	const c = ds.competitions;
+	return {
+		history: m(ds.history),
+		players: m(ds.players),
+		moves: m(ds.moves),
+		competitions: c
+			? { tierCompetition: m(c.tierCompetition), tierHistory: m(c.tierHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
+			: c,
+	};
+}
+
+/** GET → where a signed-out visitor stands today, for the ask screen's counter. */
+export const GET: APIRoute = async ({ request, url }) => {
+	const league = getLeagueBySlug(url.searchParams.get('league') ?? '');
+	if (!league || !canGuestAsk(league.slug)) return json({ error: 'Unknown league.' }, 404);
+	if (getAuthUser(request)) return json({ guest: null });
+	const allowance = await guestAllowance(league.slug, guestIdFrom(request)).catch(() => null);
+	return json({ guest: allowance });
+};
+
+/** A signed-out visitor's question, on the public demo league. */
+async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeof getLeagueBySlug>>, question: string, after: string): Promise<Response> {
+	if (!isCleanQuestion(question)) return json({ error: 'Keep it clean, and ask it another way.' }, 400);
+	const existing = guestIdFrom(request);
+	const id = existing ?? newGuestId();
+	const cookie = existing ? undefined : guestCookie(id, new URL(request.url).protocol === 'https:');
+	const masker = guestMasker(league.slug);
+	const mask = masker ? await masker.catch(() => null) : null;
+	if (!mask) return json({ error: GUEST_REFUSALS.unavailable }, 503, cookie);
+
+	const spend = await spendGuestQuestion(league.slug, id, request).catch(() => null);
+	if (!spend?.ok) {
+		const reason = spend?.reason ?? 'unavailable';
+		return json({ error: GUEST_REFUSALS[reason], guest: spend?.allowance ?? null, needEmail: reason === 'need-email' }, reason === 'unavailable' ? 503 : 429, cookie);
+	}
+	const allowance: GuestAllowance = spend.allowance;
+	const asker = `guest:${id}`;
+
+	// A guest continues only their own conversation: an owner's turns carry real names.
+	const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
+	const turns = parent?.guest && parent.askedBy.franchiseId === asker ? turnsAfter(parent) : [];
+
+	let result;
+	try {
+		const [loaded, competitions] = await Promise.all([
+			loadLeagueHistoryDataset(league.dataPath),
+			loadLeagueCompetitions(league.dataPath, league.configPath),
+		]);
+		if (!loaded) {
+			await spend.refund();
+			return json({ error: 'Unknown league.' }, 404, cookie);
+		}
+		const ds = maskAskData({ ...loaded, competitions }, mask);
+		result = maskValue(await askHistory(league.slug, ds, question, { turns, asker: null }), mask);
+	} catch (e) {
+		await spend.refund();
+		console.error('[league-history/ask] guest failed:', e);
+		return json({ error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.', guest: { ...allowance, used: allowance.used - 1 } }, 503, cookie);
+	}
+
+	let saved = null;
+	try {
+		saved = await saveAnswer({
+			league: league.slug,
+			question,
+			...result,
+			parent: turns.length ? parent!.id : null,
+			turns,
+			askedBy: { franchiseId: asker, name: null },
+			guest: true,
+		});
+	} catch (e) {
+		console.error('[league-history/ask] guest save failed:', e);
+	}
+	await recordFunnel('ask_demo_question', 'mfl', id).catch(() => false);
+	return json({ id: saved?.id ?? null, question, ...result, guest: allowance }, 200, cookie);
+}
+
 
 /** The asker's team in the latest season, so "my team" means something. */
 function askerOf(history: any, franchiseId: string | null): AskAsker | null {
@@ -66,11 +165,14 @@ export const POST: APIRoute = async ({ request }) => {
 	if (!league || !hasLeagueHistoryProduct(league.dataPath)) return json({ error: 'Unknown league.' }, 404);
 
 	const user = getAuthUser(request);
-	if (!user) return json({ error: 'Sign in to ask the history.' }, 401);
-	if (!canAskLeagueHistory(user, league.id)) return json({ error: `Asking is for ${league.name} owners.` }, 403);
-
 	if (question.length < 5) return json({ error: 'Ask a question first.' }, 400);
 	if (question.length > MAX_QUESTION) return json({ error: `Keep it under ${MAX_QUESTION} characters.` }, 400);
+
+	if (!user) {
+		if (canGuestAsk(league.slug)) return askAsGuest(request, league, question, after);
+		return json({ error: 'Sign in to ask the history.' }, 401);
+	}
+	if (!canAskLeagueHistory(user, league.id)) return json({ error: `Asking is for ${league.name} owners.` }, 403);
 
 	const limit = await checkRateLimit('history-ask', `${league.slug}:${user.franchiseId}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
 	if (!limit.allowed) return json({ error: 'That is a lot of questions for one hour. Try again later.' }, 429);

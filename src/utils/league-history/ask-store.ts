@@ -38,6 +38,12 @@ export interface SavedAnswer {
   parent?: string | null;
   turns?: AskTurn[];
   askedBy: { franchiseId: string; name: string | null };
+  /**
+   * Asked by a signed-out visitor through the public demo (guest-ask.ts).
+   * `askedBy.franchiseId` is then `guest:<visitor id>`. A guest answer never
+   * counts toward "The league is asking", and its page is kept out of search.
+   */
+  guest?: boolean;
   createdAt: string;
 }
 
@@ -108,6 +114,7 @@ async function noteInterest(saved: SavedAnswer, franchiseId: string, asked: bool
 
 /** Count a fresh answer toward "The league is asking". */
 export async function recordAsk(saved: SavedAnswer): Promise<void> {
+  if (saved.guest) return;
   await noteInterest(saved, saved.askedBy.franchiseId, true);
 }
 
@@ -126,7 +133,7 @@ export async function readAnswer(league: string, id: string): Promise<SavedAnswe
  * spoofable), and the list is meant to show what the league passed around.
  */
 export async function countAnswerOpen(saved: SavedAnswer, franchiseId: string | null): Promise<void> {
-  if (!franchiseId || franchiseId === saved.askedBy.franchiseId) return;
+  if (saved.guest || !franchiseId || franchiseId === saved.askedBy.franchiseId) return;
   const redis = await getRedis();
   if (!redis) return;
   const first = await redis.set(SEEN(saved.league, saved.id, franchiseId), 1, { ex: TTL_SECONDS, nx: true });

@@ -32,6 +32,7 @@
  * Runs BEFORE `pnpm install`, so it uses Node builtins only.
  */
 
+import { execFileSync } from 'child_process';
 import { realpathSync } from 'fs';
 import { pathToFileURL } from 'url';
 
@@ -68,6 +69,55 @@ export const DEMO_BRANCH = 'demo';
 const GITHUB_API = 'https://api.github.com';
 
 /**
+ * Skip the build for a commit that only carries data a sync already made live.
+ *
+ * The roster sync publishes its files to the league-data store and moves the
+ * live pointer (src/config/league-data-live.mjs) BEFORE it commits, and marks
+ * the commit with `[league-data: <overlay>]` only when that publish succeeded.
+ * Every running deploy picks the data up within a minute, so building it again
+ * buys nothing — and those commits were about half of all builds.
+ *
+ * A code constant, for the same reason as STAGING_BRANCH. Off = every such
+ * commit builds again, exactly as before phase 2.
+ */
+export const SKIP_LIVE_DATA_COMMITS = true;
+
+/** `git` in the build's checkout. Throws on any failure; callers fail open. */
+const realGit = (args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+
+/**
+ * Why this deployment needs no build, or null when it does.
+ *
+ * The range is everything since the branch's last SUCCESSFUL deployment
+ * (`VERCEL_GIT_PREVIOUS_SHA`), not just the tip: Vercel builds only the newest
+ * commit of a push, so a code commit landing in the same push as a sync commit
+ * must still force the build. Every commit in the range must carry the marker
+ * (merge commits aside — the staging merge-down is one, and the diff below
+ * still sees whatever it changed), and every changed file must be one the
+ * pointer carries: a code, config or Markdown change anywhere builds. Any git
+ * error, such as a shallow clone missing the previous deploy, is null: build.
+ */
+export async function liveDataOnly(env = process.env, git = realGit) {
+  try {
+    // Imported here, not at the top: a module that fails to load must cost
+    // only this skip, never the build decision (and the CLI tests run this
+    // file copied out of the repo on its own).
+    const { isSyncPublishedStoreFile, parseLeagueDataMarker } = await import('./lib/sync-published.mjs');
+    const range = env.VERCEL_GIT_PREVIOUS_SHA ? `${env.VERCEL_GIT_PREVIOUS_SHA}..HEAD` : 'HEAD^1..HEAD';
+    const bodies = git(['log', '--no-merges', '--format=%B%x00', range])
+      .split('\0')
+      .map((b) => b.trim())
+      .filter(Boolean);
+    if (!bodies.length || !bodies.every((b) => parseLeagueDataMarker(b))) return null;
+    const files = git(['diff', '--name-only', range]).split('\n').map((f) => f.trim()).filter(Boolean);
+    if (!files.length || !files.every((f) => isSyncPublishedStoreFile(f))) return null;
+    return `${bodies.length} sync commit(s), ${files.length} file(s), all live through the league-data pointer`;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Decide whether this deployment should build.
  *
  * Pure apart from the injected `fetchImpl`, so the decision table is testable
@@ -75,11 +125,19 @@ const GITHUB_API = 'https://api.github.com';
  *
  * @returns {Promise<{code: number, reason: string}>}
  */
-export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
+export async function decide(env = process.env, fetchImpl = globalThis.fetch, git = realGit) {
   const build = (reason) => ({ code: BUILD, reason });
   const skip = (reason) => ({ code: SKIP, reason });
 
-  // Production is never gated. Nothing about main's cadence is discretionary.
+  // Data a sync already made live — production or the staging merge-down that
+  // carries it. The only reason production ever skips.
+  const isAliasBranch = env.VERCEL_ENV === 'production' || env.VERCEL_GIT_COMMIT_REF === STAGING_BRANCH;
+  if (SKIP_LIVE_DATA_COMMITS && isAliasBranch && env.FORCE_PREVIEW_BUILD !== '1') {
+    const why = await liveDataOnly(env, git);
+    if (why) return skip(why);
+  }
+
+  // Production is otherwise never gated. Nothing about main's cadence is discretionary.
   if (env.VERCEL_ENV === 'production') return build('production deployment');
 
   // Explicit override, for a WIP branch you actively want a preview URL for.

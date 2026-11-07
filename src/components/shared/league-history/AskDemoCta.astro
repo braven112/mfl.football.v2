@@ -1,0 +1,75 @@
+---
+/**
+ * "Try Ask the History" — the mfl.football side of the public demo (Brandon,
+ * 2026-11-07): the button lives on the League History pages and sends the
+ * visitor to TheLeague's History home (never straight to the ask screen:
+ * "/history should be" the front door), where its ask bar lets a signed-out
+ * visitor ask a real league's history a few questions (guest-ask.ts). Each click is counted in
+ * the History funnel (`ask_demo_click`).
+ */
+import { getLeagueBySlug, leagueUrl } from '../../../config/leagues';
+import { GUEST_ASK_LEAGUES, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
+
+const demo = getLeagueBySlug(GUEST_ASK_LEAGUES[0] ?? '');
+const href = demo ? leagueUrl(demo, `/${demo.slug}/history`) : null;
+---
+
+{demo && href && (
+  <aside class="lh-try" data-ask-demo>
+    <div class="lh-try__text">
+      <p class="lh-try__kicker">Ask the History</p>
+      <p class="lh-try__title">Ask a real league anything</p>
+      <p class="lh-try__body">
+        Try it on {demo.name}: every game, season, trade and draft on record. {GUEST_FREE_QUESTIONS} free questions a day, no sign-up.
+      </p>
+    </div>
+    <a class="cta cta--primary" href={href} data-ask-demo-link>Try it</a>
+  </aside>
+)}
+
+<style>
+  .lh-try {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+  }
+  .lh-try__text {
+    flex: 1 1 16rem;
+  }
+  .lh-try p {
+    margin: 0;
+  }
+  .lh-try__kicker {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .lh-try__title {
+    color: var(--page-text);
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+  .lh-try__body {
+    color: var(--color-text-secondary);
+  }
+</style>
+
+<script>
+  import { trackFunnel } from '../../../utils/history-funnel-client';
+
+  // Bound once on `document` (it survives ClientRouter swaps); the click
+  // itself names the link, so there is no page to gate on.
+  document.addEventListener('click', (event) => {
+    const link = (event.target as HTMLElement | null)?.closest?.('[data-ask-demo-link]');
+    if (link) trackFunnel('ask_demo_click', 'mfl');
+  });
+</script>

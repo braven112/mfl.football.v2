@@ -130,6 +130,46 @@ capped.
   life of an instance either — the player-search index went from prerendered to
   CDN-cached (`s-maxage=300`) for that reason. Guard:
   `tests/sync-published-reads.test.ts`.
+- **The roster sync publishes through the pointer and skips the build**
+  (phase 2). Each run: `league-data-pointer.mjs hydrate` (start from the live
+  files, git winning wherever it changed since the pointer's `gitBase`) →
+  fetch and derive → `publish` → `hold-sync-files.mjs`, which with the data
+  live holds every modified store file out of the commit, all or nothing,
+  except once a day or when something must commit anyway (a new file, a
+  deletion, a non-store file, `fetch.meta.json`) → commit marked
+  `[league-data: <overlay>]`, which `scripts/vercel-ignore-build.mjs`
+  (`liveDataOnly`) skips. A run whose hydrate or publish failed is unmarked
+  and holds nothing extra: it commits and builds exactly as before.
+  - **A derived file the sync recomputes must not carry a bare run clock**:
+    every run would be a new data version. Write it with
+    `writeJsonIfChanged(…, { ignoreKeys: ['generatedAt'] })`.
+  - **`derived/**` is the pointer's, including the files the daily history
+    chain commits.** Hydrate lets git win for them, so a chain commit goes
+    live on the next sync run — until then the overlay still serves the old
+    copy, even over a fresh build's.
+  - **A pointer nobody confirms for 36 h is ignored** (`LIVE_MAX_AGE_MS`): an
+    unchanged run still re-stamps `refreshedAt`, so this trips only when the
+    syncs stopped publishing, and then the deploys' own (git) data is newer.
+- **The live pointer decides which sync data a deploy reads**
+  (`src/config/league-data-live.mjs`). Redis `league-data:live` names an
+  overlay blob (`{ files: { path: hash } }`) and the globs it owns; every
+  instance re-reads it at most once a minute (`refreshLeagueData`, called from
+  the request preload) and serves its own manifest with that slice swapped in.
+  Three consequences that bite:
+  - **A Vercel code rollback does NOT roll the data back** — the pointer
+    outlives deploys. Undo a bad sync with the "Roll back league data"
+    workflow (`scripts/league-data-pointer.mjs rollback`), or `clear` it so
+    each deploy serves what it was built with.
+  - **A helper that memoizes something built from league data must clear it
+    in `onLeagueDataChange`**, or it serves the pre-sync data until the
+    instance dies. `tests/league-data-live.test.ts` fails on a module that
+    reads league data, holds an empty module-level Map or a module `let`, and
+    does not register.
+  - **`LEAGUE_DATA_SCHEMA` is the contract between code and synced data.** A
+    pointer (or a deploy) carrying another number is ignored and the deploy
+    serves its own data. Bump it in the change that makes old and new code
+    read the same paths differently, so a sync can never get ahead of the
+    code. Demo deploys namespace Redis, so they never follow the pointer.
 
 `scripts/measure-baseline.mjs` prints the storage/churn health snapshot
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline

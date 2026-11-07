@@ -19,7 +19,7 @@
 
 import { normalizeTeamCode } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
-import { isLeagueDataLoaded, listLeagueData, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { isLeagueDataLoaded, listLeagueData, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import {
   getCollegeHeadshot,
   getPlayerHeadshot,
@@ -259,6 +259,13 @@ export function getPlayer(year: number, mflId: string): PlayerIdentity | undefin
 /** Per-league union caches. Keyed by league slug — the AFL has its own
  * artifact, and one shared cache would serve whichever league asked first. */
 const globalMapCache = new Map<string, Map<string, PlayerIdentity>>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  cache.clear();
+  globalMapCache.clear();
+  collegeIdMap = null;
+  nflIdBackfill = null;
+});
 
 /**
  * Union of every season's player map into one lookup, keyed by MFL ID.

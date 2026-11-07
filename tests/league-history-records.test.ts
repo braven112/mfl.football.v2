@@ -3,12 +3,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildHistoryDataset as buildDataset, holdingsBySeason } from '../src/utils/league-history/dataset.mjs';
 import {
+  allPlaySeasons as allPlay,
+  allTimeStandings as standingsOf,
   buildCategory as buildBoards,
   eraDataset,
   historyEras,
   indexDataset,
   recordBook,
   recordWatch as watchBoards,
+  sortStandings as sortRows,
 } from '../src/utils/league-history/records.mjs';
 
 interface Row { value: number; rank: number; entity: { key: string; name: string } }
@@ -174,6 +177,62 @@ describe('Record Book eras and record watch', () => {
     expect(w['most-wins']![0]).toMatchObject({ name: 'Team 0001', projected: 4, rank: 1, played: 2, full: 4 });
     // One game of four is not a quarter-season pace worth showing… (exactly 1/4 is).
     expect(w['most-points-season']!.map((x) => x.name)).not.toContain('Team 0004');
+  });
+});
+
+describe('Record Book rows tell the story (Federation FFL ideas)', () => {
+  type StoryRow = Row & { context: string; year?: number; isNew?: boolean; isNewRecord?: boolean };
+  const ix = indexDataset(ds);
+  const boardOf = (cat: string, id: string, scope = 'all') =>
+    (buildCategory(ix, cat, scope).find((b) => b.id === id)!.rows as StoryRow[]);
+
+  it('names the round, the opponent and their score on a game row', () => {
+    const top = boardOf('single-game', 'most-points', 'playoffs')[0]!;
+    expect(top.context).toBe('2020 · Title game vs Team 0002 (125.00)');
+    const regular = boardOf('single-game', 'fewest-points', 'regular').find((r) => r.value === 90)!;
+    expect(regular.context).toBe('2020 · Week 1 vs Team 0001 (150.00)');
+  });
+
+  it('ends a season row with how that season finished', () => {
+    const champ = boardOf('season', 'most-points-season').find((r) => r.year === 2020 && r.entity.key === 'own-a')!;
+    expect(champ.context.endsWith('· Champion')).toBe(true);
+  });
+
+  it('marks rows set in the latest season New, and a new #1 a new record', () => {
+    const rows = boardOf('single-game', 'most-points');
+    for (const r of rows) expect(r.isNew).toBe(r.year === 2021);
+    const top2021 = boardOf('season', 'best-record').find((r) => r.year === 2021 && r.rank === 1);
+    if (top2021) expect(top2021.isNewRecord).toBe(true);
+    expect(rows.filter((r) => r.isNewRecord).every((r) => r.rank === 1 && r.isNew)).toBe(true);
+  });
+
+  it('scores All-Play once per team-week, doubleheaders included', () => {
+    const ap = (allPlay as unknown as (ix: unknown) => Map<string, { w: number; l: number; t: number }>)(ix);
+    // Week 1: 150 > 100 > 90. Week 2: only 0002 (120) and 0003 (110) played.
+    expect(ap.get('2020|0001')).toEqual({ w: 2, l: 0, t: 0 });
+    expect(ap.get('2020|0002')).toEqual({ w: 2, l: 1, t: 0 });
+    expect(ap.get('2020|0003')).toEqual({ w: 0, l: 3, t: 0 });
+  });
+
+  it('measures luck as wins against the All-Play pace', () => {
+    // 0001 in 2020: 1-1 officially, a perfect All-Play over two games.
+    const unlucky = boardOf('season', 'unluckiest').find((r) => r.year === 2020 && r.entity.key === 'own-a')!;
+    expect(unlucky.value).toBeCloseTo(-1);
+  });
+
+  it('sorts the all-time standings by any column, ties by win percentage', () => {
+    type Standing = { name: string; titles: number; finals: number; seasons: number; rank: number; bestDisplay: string };
+    const rows = (standingsOf as unknown as (ix: unknown) => Standing[])(ix);
+    const sort = sortRows as unknown as (rows: Standing[], key: string, dir: string) => Standing[];
+    const byTitles = sort(rows, 'titles', 'desc');
+    expect(byTitles[0]!.name).toBe('Ann');
+    expect(byTitles[0]!.titles).toBe(2);
+    expect(byTitles[0]!.bestDisplay).toBe('Champion 2020, 2021');
+    expect(byTitles.map((r) => r.rank)).toEqual(byTitles.map((_, i) => i + 1));
+    const bea = rows.find((r) => r.name === 'Bea')!;
+    expect(bea.seasons).toBe(2);
+    expect(bea.finals).toBe(2);
+    expect(sort(rows, 'titles', 'asc').at(-1)!.name).toBe('Ann');
   });
 });
 

@@ -13,7 +13,7 @@
  */
 
 import { getLeagueBySlug } from '../config/leagues';
-import { isLeagueDataLoaded, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { isLeagueDataLoaded, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 
 export interface PositionFpa {
   rank: number; // 1 (worst defense) to 32 (best defense)
@@ -28,6 +28,10 @@ export interface FpaData {
 }
 
 const fpaCache = new Map<number, FpaData | null>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  fpaCache.clear();
+});
 
 const fpaPath = (year: number) =>
   leagueFeedPath(getLeagueBySlug('theleague')!.dataPath, year, 'fantasyPointsAllowed.json');

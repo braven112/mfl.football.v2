@@ -15,7 +15,7 @@ import { execFileSync } from 'child_process';
 import { mkdtempSync, copyFileSync, rmSync, realpathSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { decide, BUILD, SKIP, STAGING_BRANCH, DEMO_BRANCH } from '../scripts/vercel-ignore-build.mjs';
+import { decide, liveDataOnly, BUILD, SKIP, STAGING_BRANCH, DEMO_BRANCH } from '../scripts/vercel-ignore-build.mjs';
 
 /** Minimal preview env with everything the PR lookup needs. */
 const previewEnv = (overrides: Record<string, string> = {}) => ({
@@ -35,6 +35,11 @@ const stubFetch = (body: unknown, status = 200) =>
       json: async () => body,
     }) as unknown as Response;
 
+/** A git that fails every command, as a clone missing history would. */
+const noGit = () => {
+  throw new Error('no git');
+};
+
 /** A fetch stub that throws, as a network failure would. */
 const throwingFetch = (message: string) => async () => {
   throw new Error(message);
@@ -52,6 +57,7 @@ describe('decisions that never reach the network', () => {
     const { code } = await decide(
       { VERCEL_ENV: 'production' },
       stubFetch([]),
+      noGit,
     );
     expect(code).toBe(BUILD);
   });
@@ -242,5 +248,80 @@ describe('the CLI guard must not fail closed', () => {
       rmSync(link, { force: true });
       rmSync(real, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * Phase 2 of "Data syncs without a Vercel build": a commit that only carries
+ * data the roster sync already made live through the league-data pointer
+ * skips its build — on production and on the staging merge-down — and
+ * anything else in range builds.
+ */
+describe('commits whose data is already live', () => {
+  const OVERLAY = 'c'.repeat(32);
+  const MARKED = `chore: sync rosters and playoff data [league-data: ${OVERLAY}]`;
+  const ADP = 'data/theleague/mfl-feeds/2026/adp-redraft.json';
+
+  /** A git that answers `log` with these bodies and `diff` with these files. */
+  const fakeGit = (bodies: string[], files: string[], seen: string[][] = []) => (args: string[]) => {
+    seen.push(args);
+    if (args[0] === 'log') return bodies.map((b) => `${b}\0`).join('\n');
+    if (args[0] === 'diff') return files.join('\n');
+    throw new Error(`unexpected git ${args.join(' ')}`);
+  };
+
+  it('skips production for a marked commit that changes only live data', async () => {
+    const res = await decide({ VERCEL_ENV: 'production' }, stubFetch([]), fakeGit([MARKED], [ADP]));
+    expect(res.code).toBe(SKIP);
+  });
+
+  it('checks everything since the last successful deploy, not just the tip', async () => {
+    const seen: string[][] = [];
+    await liveDataOnly({ VERCEL_GIT_PREVIOUS_SHA: 'abc123' }, fakeGit([MARKED], [ADP], seen));
+    expect(seen.map((a) => a.at(-1))).toEqual(['abc123..HEAD', 'abc123..HEAD']);
+  });
+
+  it('builds when any commit in range is not marked — a code commit in the same push', async () => {
+    const res = await decide(
+      { VERCEL_ENV: 'production' },
+      stubFetch([]),
+      fakeGit([MARKED, 'Fix the standings page (#1700)'], [ADP]),
+    );
+    expect(res.code).toBe(BUILD);
+  });
+
+  it('builds when a changed file is not one the pointer carries', async () => {
+    for (const file of [
+      'src/pages/theleague/standings.astro',
+      'data/sandbox/derived/rules-from-mfl.md',
+      'data/theleague/config.json',
+    ]) {
+      const res = await decide({ VERCEL_ENV: 'production' }, stubFetch([]), fakeGit([MARKED], [ADP, file]));
+      expect(res.code, file).toBe(BUILD);
+    }
+  });
+
+  it('skips the staging merge-down that carries only marked commits', async () => {
+    const res = await decide(
+      previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH }),
+      stubFetch([]),
+      fakeGit([MARKED, MARKED], [ADP]),
+    );
+    expect(res.code).toBe(SKIP);
+  });
+
+  it('fails open: any git error, an empty range or FORCE_PREVIEW_BUILD builds', async () => {
+    expect((await decide({ VERCEL_ENV: 'production' }, stubFetch([]), noGit)).code).toBe(BUILD);
+    expect((await decide({ VERCEL_ENV: 'production' }, stubFetch([]), fakeGit([], []))).code).toBe(BUILD);
+    expect((await decide({ VERCEL_ENV: 'production' }, stubFetch([]), fakeGit([MARKED], []))).code).toBe(BUILD);
+    expect(
+      (await decide(previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH, FORCE_PREVIEW_BUILD: '1' }), stubFetch([]), fakeGit([MARKED], [ADP]))).code,
+    ).toBe(BUILD);
+  });
+
+  it('never applies to an ordinary branch — those are decided by their PR', async () => {
+    const res = await decide(previewEnv(), stubFetch([{ number: 9 }]), fakeGit([MARKED], [ADP]));
+    expect(res.code).toBe(BUILD);
+    expect(res.reason).toMatch(/PR #9/);
   });
 });

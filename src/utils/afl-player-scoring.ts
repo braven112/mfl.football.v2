@@ -45,7 +45,7 @@
  */
 
 import { getLeagueBySlug } from '../config/leagues';
-import { hasLeagueData, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { hasLeagueData, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { asArray as ensureArray } from './mfl-normalize';
 import { processWeeklyScores } from './coach-data';
 
@@ -83,6 +83,11 @@ export interface PlayerSeasonScoring {
 
 const seasonScoresCache = new Map<string, SeasonScores>();
 const projectionsCache = new Map<string, Map<string, number>>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  seasonScoresCache.clear();
+  projectionsCache.clear();
+});
 
 /**
  * One feed, through the league-data loader (the store, in production —

@@ -23,7 +23,7 @@
  * player × 17 week assembly on every page view.
  */
 
-import { hasLeagueData, leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { hasLeagueData, leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { buildWeeklyPlayerResults, type WeeklyResultsPayload } from './weekly-player-results';
 import { parsePlayerWeekScores } from './player-week-scores.mjs';
 
@@ -31,6 +31,10 @@ import { parsePlayerWeekScores } from './player-week-scores.mjs';
 const DEFAULT_END_WEEK = 17;
 
 const cache = new Map<string, WeeklyResultsPayload>();
+// A data sync moved the live pointer: drop what was built from the old data.
+onLeagueDataChange(() => {
+  cache.clear();
+});
 
 /** Every feed the payload is built from. */
 const FEEDS = [

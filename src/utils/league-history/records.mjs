@@ -22,6 +22,7 @@
  *   slot instead (a commissioner override, not yet wired to a setting).
  */
 
+import { allPlayWeek } from '../game-results.mjs';
 import { keeperBoards } from './keepers.mjs';
 import { pickBoards } from './pick-trades.mjs';
 
@@ -92,7 +93,63 @@ export function indexDataset(ds, { groupBy = 'owner' } = {}) {
   }
   teamGames.sort((a, b) => a.y - b.y || a.wk - b.wk);
 
-  return { ds, groupBy, team, entityOf, entity, games, teamGames, seasonByYear };
+  const rounds = playoffRounds(ds, games, team);
+  const roundOf = (g) => rounds.get(`${g.y}|${g.wk}|${g.wf}|${g.lf}`) ?? null;
+
+  return { ds, groupBy, team, entityOf, entity, games, teamGames, seasonByYear, roundOf };
+}
+
+/**
+ * The named rounds of each season's final four: the title game (the
+ * champion against the runner-up), each finalist's semifinal (their last
+ * playoff game before it) and the third-place game (the title week's game the
+ * third-place team played). Both leagues end in that four-team bracket; an
+ * earlier playoff game keeps its week number. Keyed `y|wk|winner|loser`.
+ */
+function playoffRounds(ds, games, team) {
+  const out = new Map();
+  const key = (g) => `${g.y}|${g.wk}|${g.wf}|${g.lf}`;
+  for (const s of ds.seasons) {
+    const finalists = Object.entries(s.teams).filter(([, t]) => t.r === 'C' || t.r === 'R').map(([f]) => f);
+    if (finalists.length !== 2) continue;
+    const playoff = games.filter((g) => g.y === s.y && g.kind === 'playoffs');
+    const isFinal = (g) => finalists.includes(g.wf) && finalists.includes(g.lf);
+    const title = playoff.filter(isFinal).sort((a, b) => b.wk - a.wk)[0];
+    if (!title) continue;
+    out.set(key(title), 'Title game');
+    for (const f of finalists) {
+      const semi = playoff
+        .filter((g) => g.wk < title.wk && (g.wf === f || g.lf === f))
+        .sort((a, b) => b.wk - a.wk)[0];
+      if (semi) out.set(key(semi), 'Semifinal');
+    }
+    for (const g of playoff) {
+      if (g.wk === title.wk && g !== title && (team(s.y, g.wf)?.r === '3' || team(s.y, g.lf)?.r === '3')) {
+        out.set(key(g), 'Third-place game');
+      }
+    }
+  }
+  return out;
+}
+
+const ordinal = (n) => {
+  const v = n % 100;
+  const suffix = v >= 11 && v <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
+  return `${n}${suffix}`;
+};
+
+/**
+ * How a finished season ended for one team, the way a record row says it:
+ * the title result when it had one, else the standings place ("9th of 12").
+ * Null for a season still being played.
+ */
+export function seasonFinish(ix, y, f) {
+  const s = ix.seasonByYear.get(y);
+  const t = s?.teams?.[f];
+  if (!s?.done || !t) return null;
+  if (t.r === 'C' || t.r === 'R' || t.r === '3') return resultLabel(t.r);
+  if (t.r === 'P') return 'Made playoffs';
+  return t.rk ? `${ordinal(t.rk)} of ${Object.keys(s.teams).length}` : null;
 }
 
 const inScope = (kind, scope) =>
@@ -147,11 +204,23 @@ function withPopulation(rows, population, asc) {
   return rows;
 }
 
+/** When a game was played: its named round, else its week. */
+function gameWhen(ix, g) {
+  const round = g.kind === 'playoffs' ? ix.roundOf(g) : null;
+  return round ?? (g.kind === 'playoffs' ? `Playoffs, Week ${g.wk}` : `Week ${g.wk}`);
+}
+
+/** `2024 · Semifinal vs Murphy Marauders (70.14)`: the opponent and what they scored. */
 function gameContext(ix, g, f) {
   const opp = f === g.wf ? g.lf : g.wf;
+  const oppScore = f === g.wf ? g.ls : g.ws;
   const oppName = ix.team(g.y, opp)?.n ?? opp;
-  const when = g.kind === 'playoffs' ? `Playoffs, Week ${g.wk}` : `Week ${g.wk}`;
-  return `${g.y} · ${when} vs ${oppName}`;
+  return `${g.y} · ${gameWhen(ix, g)} vs ${oppName} (${fmt2(oppScore)})`;
+}
+
+/** `2024 · Semifinal`, for a row that already names both teams and the score. */
+function gameDate(ix, g) {
+  return `${g.y} · ${gameWhen(ix, g)}`;
 }
 
 /** A row about one team in one season (single game or single season). */
@@ -217,11 +286,11 @@ function singleGameBoards(ix, scope) {
     const w = ix.team(g.y, g.wf);
     const l = ix.team(g.y, g.lf);
     return {
-      ...seasonRow(ix, g.y, g.wf, v, d, `${g.y} · ${g.kind === 'playoffs' ? 'Playoffs, ' : ''}Week ${g.wk}`),
+      ...seasonRow(ix, g.y, g.wf, v, d, gameDate(ix, g)),
       opponentId: g.lf,
       name: `${w?.n ?? g.wf} vs ${l?.n ?? g.lf}`,
       owner: null,
-      context: `${fmt2(g.ws)} to ${fmt2(g.ls)} · ${g.y} · ${g.kind === 'playoffs' ? 'Playoffs, ' : ''}Week ${g.wk}`,
+      context: `${fmt2(g.ws)} to ${fmt2(g.ls)} · ${gameDate(ix, g)}`,
     };
   };
   const score = (g) => g.s;
@@ -230,7 +299,7 @@ function singleGameBoards(ix, scope) {
   const scoreRow = (g) => row(g, g.f, g.s, fmt2(g.s));
   const marginRow = (g) => ({
     ...row(g, g.wf, margin(g), `+${fmt2(margin(g))}`),
-    context: `${fmt2(g.ws)} to ${fmt2(g.ls)} · ${gameContext(ix, g, g.wf)}`,
+    context: `${fmt2(g.ws)} to ${fmt2(g.ls)} · ${gameDate(ix, g)} vs ${ix.team(g.y, g.lf)?.n ?? g.lf}`,
   });
   const combinedRow = (g) => pairRow(g, combined(g), fmt2(combined(g)));
   const decided = gs.filter((g) => !g.tie);
@@ -292,6 +361,36 @@ function seasonStats(ix) {
   return stats;
 }
 
+/**
+ * Each team-season's regular-season All-Play record: every week, its score
+ * against every other team's score that week (game-results.mjs's allPlayWeek,
+ * the one comparison the live standings use). A team's weekly score counts
+ * once, so a doubleheader week is one week of All-Play, not two.
+ * @returns {Map<string, {w:number, l:number, t:number}>} keyed `y|f`
+ */
+export function allPlaySeasons(ix) {
+  const weeks = new Map();
+  for (const g of ix.teamGames) {
+    if (g.kind !== 'regular') continue;
+    const k = `${g.y}|${g.wk}`;
+    if (!weeks.has(k)) weeks.set(k, new Map());
+    weeks.get(k).set(g.f, g.s);
+  }
+  const out = new Map();
+  for (const [k, scores] of weeks) {
+    const y = k.split('|')[0];
+    for (const [f, rec] of allPlayWeek(scores)) {
+      const key = `${y}|${f}`;
+      if (!out.has(key)) out.set(key, { w: 0, l: 0, t: 0 });
+      const ap = out.get(key);
+      ap.w += rec.wins;
+      ap.l += rec.losses;
+      ap.t += rec.ties;
+    }
+  }
+  return out;
+}
+
 /** Longest run of `test` games in an ordered list; returns {length, from, to}. */
 function longestRun(list, test, { fromStart = false } = {}) {
   let run = 0;
@@ -325,10 +424,30 @@ function singleSeasonBoards(ix) {
   // streak running now is already real.
   const finished = played.filter((r) => r.done);
   const rec = (t) => `${t.w}-${t.l}${t.t ? `-${t.t}` : ''}`;
-  const sr = (r, v, d, ctx) => seasonRow(ix, r.y, r.f, v, d, `${r.y} · ${ctx}`);
+  // Every season row ends with how that season finished (Champion, 9th of 12).
+  const sr = (r, v, d, ctx) =>
+    seasonRow(ix, r.y, r.f, v, d, [r.y, ctx, seasonFinish(ix, r.y, r.f)].filter(Boolean).join(' · '));
   const wpct = (t) => (t.w + t.t * 0.5) / (t.w + t.l + t.t);
   // MFL's official points-for, else each scored week once.
   const pts = (r) => (r.t.pf > 0 ? r.t.pf : (r.st?.pf ?? 0));
+  // All-Play and luck (finished seasons). Luck is wins above the All-Play
+  // pace: the record a team would expect from its scores if it had played
+  // the whole league every week, scaled to the games it actually played.
+  const allPlay = allPlaySeasons(ix);
+  const apRows = finished
+    .map((r) => {
+      const ap = allPlay.get(`${r.y}|${r.f}`);
+      const n = ap ? ap.w + ap.l + ap.t : 0;
+      if (!n) return null;
+      const apPct = (ap.w + ap.t * 0.5) / n;
+      const games = r.t.w + r.t.l + r.t.t;
+      return { r, ap, apPct, luck: r.t.w + r.t.t * 0.5 - apPct * games };
+    })
+    .filter(Boolean);
+  const apRec = (ap) => `${ap.w}-${ap.l}${ap.t ? `-${ap.t}` : ''} All-Play`;
+  const signed = (n) => `${n >= 0 ? '+' : '−'}${fmt1(Math.abs(n))}`;
+  const apRow = (x) => sr(x.r, x.apPct, pct(x.apPct), `${apRec(x.ap)} · ${rec(x.r.t)}`);
+  const luckRow = (x) => ({ ...sr(x.r, x.luck, signed(x.luck), `${rec(x.r.t)} record · ${pct(x.apPct)} All-Play`), unit: 'wins' });
   const streakBoard = (test, opts) =>
     rankRows(
       played
@@ -354,6 +473,18 @@ function singleSeasonBoards(ix) {
         const v = (r.st.divW + r.st.divT * 0.5) / n;
         return sr(r, v, pct(v), `${r.st.divW}-${r.st.divL}${r.st.divT ? `-${r.st.divT}` : ''} in ${r.t.d ?? 'division'}`);
       })) },
+    { id: 'best-all-play', label: 'Best All-Play', title: 'Best All-Play record',
+      note: 'Every week, scored against every team in the league',
+      rows: rankRows(apRows.map(apRow)) },
+    { id: 'worst-all-play', label: 'Worst All-Play', title: 'Worst All-Play record',
+      note: 'Every week, scored against every team in the league',
+      rows: rankRows(apRows.map(apRow), { asc: true }) },
+    { id: 'luckiest', label: 'Luckiest', title: 'Luckiest season',
+      note: 'Most wins above the All-Play pace',
+      rows: rankRows(apRows.map(luckRow)) },
+    { id: 'unluckiest', label: 'Unluckiest', title: 'Unluckiest season',
+      note: 'Most wins below the All-Play pace',
+      rows: rankRows(apRows.map(luckRow), { asc: true }) },
     { id: 'high-point-weeks', label: 'Top-score weeks', title: 'Most weeks as the top scorer',
       rows: rankRows(finished.filter((r) => r.st?.highs).map((r) => sr(r, r.st.highs, fmt0(r.st.highs), `of ${r.st.weeks.size} weeks`))) },
     { id: 'season-win-streak', label: 'Win streak', title: 'Longest winning streak in a season',
@@ -524,6 +655,13 @@ export const CATEGORIES = [
   { id: 'milestones', label: 'Milestones', scoped: false },
 ];
 
+/**
+ * The all-time standings table (allTimeStandings), not a set of boards. Kept
+ * out of CATEGORIES so Ask the History and the share card, which read boards,
+ * never offer it.
+ */
+export const STANDINGS_CATEGORY = { id: 'standings', label: 'All-time standings', scoped: false, table: true };
+
 /** Shown only for a league with a keeper-history file (see keepers.mjs). */
 export const KEEPERS_CATEGORY = { id: 'keepers', label: 'Keepers', scoped: false };
 
@@ -543,11 +681,28 @@ export function buildCategory(ix, category, scope = 'all', { keepers = null, pic
       : category === PICKS_CATEGORY.id
         ? picks ? pickBoards(picks, ix, { from, rankRows }) : []
         : categoryBoards(ix, category, SCOPES.includes(scope) ? scope : 'all');
-  return boards.map((b) => ({
-    ...b,
-    asc: Boolean(b.rows.asc),
-    population: b.rows.population ?? [],
-  }));
+  const latest = latestSeasonYear(ix);
+  return boards.map((b) => {
+    // "New": a row set in the latest season (the one being played, or the
+    // one just finished until the next starts). A new #1 is a new record.
+    for (const row of b.rows) {
+      row.isNew = latest != null && row.year === latest;
+      row.isNewRecord = row.isNew && row.rank === 1;
+    }
+    return {
+      ...b,
+      asc: Boolean(b.rows.asc),
+      population: b.rows.population ?? [],
+    };
+  });
+}
+
+/** The latest season with any team in it: the one "New" badges belong to. */
+export function latestSeasonYear(ix) {
+  for (let i = ix.ds.seasons.length - 1; i >= 0; i--) {
+    if (Object.keys(ix.ds.seasons[i].teams ?? {}).length) return ix.ds.seasons[i].y;
+  }
+  return null;
 }
 
 function categoryBoards(ix, category, sc) {
@@ -565,6 +720,108 @@ function categoryBoards(ix, category, sc) {
     default:
       return [];
   }
+}
+
+// ── All-time standings ───────────────────────────────────────────────────────
+
+/** Best finish order: a title result beats any standings place. */
+const FINISH_ORDER = { C: 0, R: 1, 3: 2, P: 3 };
+
+/**
+ * The columns the standings table sorts by, and which way each starts. The
+ * first is the default: most wins, so a one-season owner with a hot year does
+ * not top the all-time table (winning percentage is one tap away).
+ */
+export const STANDINGS_SORTS = [
+  { key: 'w', label: 'W', dir: 'desc' },
+  { key: 'pct', label: 'Pct', dir: 'desc' },
+  { key: 'l', label: 'L', dir: 'desc' },
+  { key: 'seasons', label: 'Seasons', dir: 'desc' },
+  { key: 'pf', label: 'Points', dir: 'desc' },
+  { key: 'titles', label: 'Titles', dir: 'desc' },
+  { key: 'finals', label: 'Finals', dir: 'desc' },
+  { key: 'playoffs', label: 'Playoffs', dir: 'desc' },
+  { key: 'best', label: 'Best', dir: 'asc' },
+];
+
+/**
+ * Every owner's (or slot's) regular-season record over the whole book, one
+ * row each. W-L-T and points are MFL's official standings rows for every
+ * season played, the one in progress included; titles, finals and playoff
+ * trips count finished seasons. `best` is the best finish with every season
+ * it happened (a lower `bestRank` is better: title results first, then the
+ * standings place).
+ */
+export function allTimeStandings(ix) {
+  const rows = new Map();
+  for (const s of ix.ds.seasons) {
+    const n = Object.keys(s.teams).length;
+    for (const [f, t] of Object.entries(s.teams)) {
+      if (t.w + t.l + t.t === 0) continue;
+      const key = ix.entityOf(s.y, f);
+      if (!rows.has(key)) {
+        rows.set(key, { key, seasons: 0, w: 0, l: 0, t: 0, pf: 0, titles: 0, finals: 0, playoffs: 0, years: new Set(), best: null });
+      }
+      const row = rows.get(key);
+      row.seasons += 1;
+      row.w += t.w;
+      row.l += t.l;
+      row.t += t.t;
+      row.pf += t.pf ?? 0;
+      row.years.add(s.y);
+      if (!s.done) continue;
+      if (t.r === 'C') row.titles += 1;
+      if (t.r === 'C' || t.r === 'R') row.finals += 1;
+      if (MADE_PLAYOFFS.has(t.r)) row.playoffs += 1;
+      const rank = FINISH_ORDER[t.r] ?? (t.rk ? 10 + t.rk : 99);
+      const label = FINISH_ORDER[t.r] != null ? (t.r === 'P' ? 'Playoffs' : resultLabel(t.r)) : t.rk ? `${ordinal(t.rk)} of ${n}` : null;
+      if (!label) continue;
+      if (!row.best || rank < row.best.rank) row.best = { rank, label, years: [s.y] };
+      else if (rank === row.best.rank) row.best.years.push(s.y);
+    }
+  }
+  return [...rows.values()].map((row) => {
+    const e = ix.entity(row.key);
+    const gp = row.w + row.l + row.t;
+    return {
+      entity: e,
+      name: e.name,
+      team: e.team && e.team !== e.name ? e.team : null,
+      icon: e.icon,
+      seasons: row.seasons,
+      span: span(row.years),
+      w: row.w,
+      l: row.l,
+      t: row.t,
+      record: `${row.w}-${row.l}${row.t ? `-${row.t}` : ''}`,
+      pct: gp ? (row.w + row.t * 0.5) / gp : 0,
+      pctDisplay: gp ? pct((row.w + row.t * 0.5) / gp) : '',
+      pf: row.pf,
+      pfDisplay: fmt0(Math.round(row.pf)),
+      titles: row.titles,
+      finals: row.finals,
+      playoffs: row.playoffs,
+      best: row.best ? row.best.rank : 999,
+      bestDisplay: row.best ? `${row.best.label} ${row.best.years.join(', ')}` : '',
+    };
+  });
+}
+
+/**
+ * The standings sorted by one column. Ties fall back to winning percentage,
+ * then wins, then name, so the order is stable for every sort.
+ * @param {ReturnType<typeof allTimeStandings>} rows
+ * @param {string} key one of STANDINGS_SORTS
+ * @param {'asc'|'desc'} dir
+ */
+export function sortStandings(rows, key, dir) {
+  const sort = STANDINGS_SORTS.find((s) => s.key === key) ?? STANDINGS_SORTS[0];
+  const sign = dir === 'asc' ? 1 : -1;
+  const out = rows.slice().sort(
+    (a, b) =>
+      sign * (a[sort.key] - b[sort.key]) || b.pct - a.pct || b.w - a.w || a.name.localeCompare(b.name),
+  );
+  return out.map((row, i) => ({ ...row, rank: i + 1 }));
 }
 
 /** League-wide facts for the page header. */
@@ -766,6 +1023,7 @@ export function recordBook(ds, { groupBy = 'owner', from = null, keepers = null,
     const boards = new Map();
     let facts = null;
     let watch = null;
+    let standings = null;
     const category = (category, scope = 'all') => {
       const key = `${category}|${scope}`;
       if (!boards.has(key)) boards.set(key, buildCategory(ix, category, scope, { keepers, picks, from }));
@@ -773,8 +1031,14 @@ export function recordBook(ds, { groupBy = 'owner', from = null, keepers = null,
     };
     byView.set(viewKey, {
       ix,
-      categories: [...CATEGORIES, ...(keepers ? [KEEPERS_CATEGORY] : []), ...(picks ? [PICKS_CATEGORY] : [])],
+      categories: [
+        ...CATEGORIES,
+        STANDINGS_CATEGORY,
+        ...(keepers ? [KEEPERS_CATEGORY] : []),
+        ...(picks ? [PICKS_CATEGORY] : []),
+      ],
       facts: () => (facts ??= bookFacts(ix)),
+      standings: () => (standings ??= allTimeStandings(ix)),
       category,
       watch: () => (watch ??= recordWatch(ix, category('season'))),
     });

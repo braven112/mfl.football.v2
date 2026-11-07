@@ -15,55 +15,16 @@
  *     through the loader would have nothing to read, so the deploy fails here
  *     with the reason instead of shipping blank pages.
  */
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { BLOB_PREFIX, MANIFEST_PATH, hashStoreFiles } from './lib/league-data-store.mjs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { MANIFEST_PATH, hashStoreFiles } from './lib/league-data-store.mjs';
+import { existingBlobs, upload } from './lib/league-data-blob.mjs';
+import { LEAGUE_DATA_SCHEMA } from '../src/config/league-data-live.mjs';
 
 const MEASURE_BASE = 'measure://';
-const CONCURRENCY = 16;
-
-/** Every hash already in the store, and the store's base URL if any blob exists. */
-async function existingBlobs(list) {
-  const hashes = new Set();
-  let base = null;
-  let cursor;
-  do {
-    const page = await list({ prefix: BLOB_PREFIX, limit: 1000, cursor });
-    for (const b of page.blobs) {
-      const m = b.pathname.match(/([0-9a-f]{32})\.json$/);
-      if (m) hashes.add(m[1]);
-      if (!base) base = b.url.slice(0, b.url.length - b.pathname.length);
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
-  return { hashes, base };
-}
-
-async function upload(files, put) {
-  const queue = Object.entries(files);
-  let base = null;
-  let done = 0;
-  const worker = async () => {
-    for (let next = queue.shift(); next; next = queue.shift()) {
-      const [path, hash] = next;
-      const res = await put(`${BLOB_PREFIX}${hash}.json`, readFileSync(path), {
-        access: 'public',
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: 'application/json',
-        cacheControlMaxAge: 31536000,
-      });
-      base ??= res.url.slice(0, res.url.length - res.pathname.length);
-      done++;
-    }
-  };
-  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  return { base, uploaded: done };
-}
-
 function writeManifest(base, files) {
   mkdirSync(dirname(MANIFEST_PATH), { recursive: true });
-  writeFileSync(MANIFEST_PATH, JSON.stringify({ base, files }));
+  writeFileSync(MANIFEST_PATH, JSON.stringify({ schema: LEAGUE_DATA_SCHEMA, base, files }));
 }
 
 async function main() {

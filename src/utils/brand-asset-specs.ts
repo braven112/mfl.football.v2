@@ -74,7 +74,7 @@ export const ASSET_SPECS: AssetSpec[] = [
     id: 'banner',
     name: 'Team banner',
     owner: 'team',
-    required: true,
+    required: false,
     size: '1900 × 316',
     ratio: '6:1 wide',
     format: 'SVG best, else transparent PNG',

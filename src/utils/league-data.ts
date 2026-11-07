@@ -22,13 +22,31 @@
  *
  * Files are cached in memory for as long as the server instance stays warm,
  * so a busy page pays the fetch once, not per request.
+ *
+ * Data syncs can move what is read WITHOUT a deploy: the live pointer
+ * (src/config/league-data-live.mjs) swaps the sync's slice of the manifest for
+ * a newer one. The middleware calls `refreshLeagueData()` once per request; it
+ * checks the pointer at most once a minute per instance. Cache keys are the
+ * files' content hashes, so moved data is simply a different key, and helpers
+ * that memoize something built from league data clear it through
+ * `onLeagueDataChange`.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  LEAGUE_DATA_SCHEMA,
+  LIVE_CHECK_INTERVAL_MS,
+  LIVE_POINTER_KEY,
+  composeFiles,
+  parsePointer,
+  pointerIsStale,
+} from '../config/league-data-live.mjs';
 
 interface Manifest {
   base: string;
   files: Record<string, string>;
+  /** The data layout the deploy was built with (src/config/league-data-live.mjs). */
+  schema?: number;
 }
 
 const BLOB_PREFIX = 'league-data/';
@@ -44,7 +62,8 @@ const builtManifest: Manifest | null = Object.values(manifestModules)[0] ?? null
 
 let manifestOverride: Manifest | null | undefined;
 
-function activeManifest(): Manifest | null {
+/** The deploy's own manifest, or null when files are read off disk. */
+function deployManifest(): Manifest | null {
   if (manifestOverride !== undefined) return manifestOverride;
   if (import.meta.env.DEV) return null;
   // The CI measurement build writes a placeholder base and is never served.
@@ -52,13 +71,60 @@ function activeManifest(): Manifest | null {
   return builtManifest;
 }
 
-/** Parsed files, keyed by path. Holds the promise so concurrent reads share one fetch. */
+/**
+ * The live pointer's view: the deploy's manifest with the sync-owned slice
+ * swapped for the one a data sync published. Null while no usable pointer is
+ * in effect, so the deploy serves its own data.
+ */
+let live: { overlay: string; manifest: Manifest } | null = null;
+
+/** What every read goes through: the live view when there is one, else the deploy's. */
+function activeManifest(): Manifest | null {
+  const deploy = deployManifest();
+  if (!deploy) return null;
+  return live?.manifest ?? deploy;
+}
+
+/**
+ * Which data the reads resolve against right now: files off disk, the deploy's
+ * manifest alone, or that plus a live overlay. Changes exactly when
+ * `onLeagueDataChange` listeners fire.
+ */
+export function leagueDataVersion(): string {
+  if (!deployManifest()) return 'disk';
+  return live ? `live:${live.overlay}` : 'deploy';
+}
+
+/**
+ * Cache key for a path under the active manifest. Stored files are named by
+ * content, so the key is the HASH: when the pointer moves a path to new
+ * content, its key changes and the old value is simply no longer found —
+ * nothing to invalidate. A path the manifest lacks keys on the version, so a
+ * file a later pointer adds is not shadowed by an old miss.
+ */
+function cacheKey(path: string): string {
+  const manifest = activeManifest();
+  if (!manifest) return `disk:${path}`;
+  const hash = manifest.files[path];
+  return hash ? `h:${hash}` : `miss:${leagueDataVersion()}:${path}`;
+}
+
+/** Parsed files, keyed by cacheKey. Holds the promise so concurrent reads share one fetch. */
 const cache = new Map<string, Promise<unknown>>();
-/** Settled values, for the sync reader. */
+/** Settled values, keyed by cacheKey, for the sync reader. */
 const settled = new Map<string, unknown>();
+/**
+ * The last value settled for each PATH, whatever its version. A sync read in a
+ * request whose preload ran just before the pointer moved finds its file under
+ * the old key only; it gets that value (one version stale, for that request)
+ * rather than an error.
+ */
+const lastByPath = new Map<string, unknown>();
 
 /** Raw bytes per settled file, for the memory budget. */
 const sizes = new Map<string, number>();
+/** The path each settled key holds, so eviction can drop its by-path fallback. */
+const pathOfKey = new Map<string, string>();
 let cachedBytes = 0;
 
 /**
@@ -73,17 +139,23 @@ function evictFor(bytes: number) {
   for (const key of sizes.keys()) {
     if (cachedBytes + bytes <= MAX_CACHED_BYTES) break;
     cachedBytes -= sizes.get(key) ?? 0;
+    // The by-path fallback must not outlive the budget either.
+    const path = pathOfKey.get(key);
+    if (path !== undefined && lastByPath.get(path) === settled.get(key)) lastByPath.delete(path);
+    pathOfKey.delete(key);
     sizes.delete(key);
     cache.delete(key);
     settled.delete(key);
   }
 }
 
-function settle(key: string, value: unknown, bytes: number) {
+function settle(key: string, path: string, value: unknown, bytes: number) {
   evictFor(bytes);
   sizes.set(key, bytes);
+  pathOfKey.set(key, path);
   cachedBytes += bytes;
   settled.set(key, value);
+  lastByPath.set(path, value);
 }
 
 function normalize(path: string): string {
@@ -97,10 +169,8 @@ function readFromDisk(path: string): { value: unknown; bytes: number } {
   return { value: JSON.parse(text), bytes: text.length };
 }
 
-async function readFromStore(manifest: Manifest, path: string): Promise<{ value: unknown; bytes: number }> {
-  const hash = manifest.files[path];
-  if (!hash) return { value: null, bytes: 0 };
-  const url = `${manifest.base}${BLOB_PREFIX}${hash}.json`;
+async function readBlob(base: string, hash: string, label: string): Promise<{ value: unknown; bytes: number }> {
+  const url = `${base}${BLOB_PREFIX}${hash}.json`;
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -112,19 +182,26 @@ async function readFromStore(manifest: Manifest, path: string): Promise<{ value:
       lastError = err;
     }
   }
-  console.error(`[league-data] could not read ${path} from the store:`, lastError);
-  throw new Error(`League data unavailable: ${path}`);
+  console.error(`[league-data] could not read ${label} from the store:`, lastError);
+  throw new Error(`League data unavailable: ${label}`);
+}
+
+async function readFromStore(manifest: Manifest, path: string): Promise<{ value: unknown; bytes: number }> {
+  const hash = manifest.files[path];
+  if (!hash) return { value: null, bytes: 0 };
+  return readBlob(manifest.base, hash, path);
 }
 
 /** The parsed file, or null when it does not exist. */
 export function loadLeagueData<T = unknown>(path: string): Promise<T | null> {
-  const key = normalize(path);
+  const file = normalize(path);
+  const key = cacheKey(file);
   let p = cache.get(key);
   if (!p) {
     const manifest = activeManifest();
-    p = (manifest ? readFromStore(manifest, key) : Promise.resolve().then(() => readFromDisk(key))).then(
+    p = (manifest ? readFromStore(manifest, file) : Promise.resolve().then(() => readFromDisk(file))).then(
       ({ value, bytes }) => {
-        settle(key, value, bytes);
+        settle(key, file, value, bytes);
         return value;
       },
       (err) => {
@@ -144,13 +221,13 @@ export async function preloadLeagueData(paths: Iterable<string>): Promise<void> 
 
 /** Synchronous read of a file that was loaded or preloaded earlier. Throws if it was not. */
 export function getLeagueData<T = unknown>(path: string): T | null {
-  const key = normalize(path);
-  if (!settled.has(key)) {
-    throw new Error(
-      `getLeagueData('${key}') before it was loaded — await preloadLeagueData([...]) first (src/utils/league-data.ts).`,
-    );
-  }
-  return settled.get(key) as T | null;
+  const file = normalize(path);
+  const key = cacheKey(file);
+  if (settled.has(key)) return settled.get(key) as T | null;
+  if (lastByPath.has(file)) return lastByPath.get(file) as T | null;
+  throw new Error(
+    `getLeagueData('${file}') before it was loaded — await preloadLeagueData([...]) first (src/utils/league-data.ts).`,
+  );
 }
 
 /** `data/<league>/mfl-feeds/<year>/<file>` — one committed MFL feed, as a loader path. */
@@ -158,9 +235,9 @@ export function leagueFeedPath(dataPath: string, year: number | string, file: st
   return `${normalize(dataPath).replace(/\/+$/, '')}/mfl-feeds/${year}/${file}`;
 }
 
-/** Whether `path` has been loaded (or preloaded) and is still in memory. */
+/** Whether `path` has been loaded (or preloaded) at its current version and is still in memory. */
 export function isLeagueDataLoaded(path: string): boolean {
-  return settled.has(normalize(path));
+  return settled.has(cacheKey(normalize(path)));
 }
 
 const warnedUnloaded = new Set<string>();
@@ -180,22 +257,25 @@ const warnedUnloaded = new Set<string>();
  * would otherwise keep being served the miss.
  */
 export function readLeagueDataSync<T = unknown>(path: string): T | null {
-  const key = normalize(path);
+  const file = normalize(path);
+  const key = cacheKey(file);
   if (settled.has(key)) return settled.get(key) as T | null;
-  if (!warnedUnloaded.has(key) && import.meta.env.MODE !== 'test') {
-    warnedUnloaded.add(key);
+  if (lastByPath.has(file)) return lastByPath.get(file) as T | null;
+  if (!warnedUnloaded.has(file) && import.meta.env.MODE !== 'test') {
+    warnedUnloaded.add(file);
     console.warn(
-      `[league-data] ${key} read synchronously before it was preloaded — falling back to disk. ` +
+      `[league-data] ${file} read synchronously before it was preloaded — falling back to disk. ` +
         'Await the helper’s preload (or preloadLeagueData) first; an excluded file reads back null in production.',
     );
   }
   try {
-    const { value, bytes } = readFromDisk(key);
+    const { value, bytes } = readFromDisk(file);
     // A file that WAS on disk is the real thing: keep it, so the next sync
     // read is a lookup rather than another parse. A miss stays unsettled so
-    // a later preload can still fill it.
-    if (value !== null) {
-      settle(key, value, bytes);
+    // a later preload can still fill it. Under a live pointer the disk copy
+    // is the deploy's, not the sync's, so it is returned but never cached.
+    if (value !== null && !live) {
+      settle(key, file, value, bytes);
       cache.set(key, Promise.resolve(value));
     }
     return value as T | null;
@@ -244,11 +324,120 @@ export function listLeagueData(pattern: string): string[] {
   return found.filter((f) => existsSync(join(process.cwd(), f))).sort();
 }
 
+// ── The live pointer ────────────────────────────────────────────────────────
+
+type PointerReader = () => Promise<unknown>;
+
+async function readPointerFromRedis(): Promise<unknown> {
+  const { getRedis } = await import('./redis-client');
+  const redis = await getRedis();
+  if (!redis) return null;
+  return redis.get(LIVE_POINTER_KEY);
+}
+
+let pointerReader: PointerReader = readPointerFromRedis;
+let lastCheckedAt = -Infinity;
+let refreshing: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+/**
+ * Run `fn` whenever the live pointer moves (or stops applying). For helpers
+ * that memoize something BUILT from league data — a player index, a parsed
+ * feed — for the life of the instance: without this they keep serving the
+ * data from before the sync. tests/league-data-live.test.ts fails on a module
+ * that holds such a cache and does not register.
+ */
+export function onLeagueDataChange(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+function setLive(next: { overlay: string; manifest: Manifest } | null) {
+  if ((live?.overlay ?? null) === (next?.overlay ?? null)) return;
+  live = next;
+  for (const fn of listeners) {
+    try {
+      fn();
+    } catch (err) {
+      console.error('[league-data] a change listener failed:', err);
+    }
+  }
+}
+
+async function checkPointer(now: number): Promise<void> {
+  const deploy = deployManifest();
+  if (!deploy) return;
+  let raw: unknown;
+  try {
+    raw = await pointerReader();
+  } catch (err) {
+    // Redis down: keep whatever view we have. A stale pointer is still data a
+    // sync published; dropping to the deploy's copy would go further back.
+    console.error('[league-data] could not read the live pointer:', err);
+    return;
+  }
+  const pointer = parsePointer(raw);
+  if (!pointer) return setLive(null);
+  // No sync has confirmed it in a day and a half: the syncs stopped
+  // publishing, so the deploy's own (git) data is the fresher copy.
+  if (pointerIsStale(pointer, now)) return setLive(null);
+  const builtSchema = deploy.schema ?? LEAGUE_DATA_SCHEMA;
+  if (pointer.schema !== LEAGUE_DATA_SCHEMA || builtSchema !== LEAGUE_DATA_SCHEMA) {
+    // Code and data disagree on layout: serve the deploy's own data.
+    return setLive(null);
+  }
+  if (live?.overlay === pointer.overlay) return;
+  try {
+    const { value } = await readBlob(deploy.base, pointer.overlay, `live overlay ${pointer.overlay}`);
+    const files = (value as { files?: Record<string, string> } | null)?.files;
+    if (!files || typeof files !== 'object') throw new Error('overlay has no file map');
+    setLive({
+      overlay: pointer.overlay,
+      manifest: {
+        base: deploy.base,
+        schema: LEAGUE_DATA_SCHEMA,
+        files: composeFiles(deploy.files, files, pointer.patterns),
+      },
+    });
+  } catch (err) {
+    // Keep the current view; the next check retries.
+    console.error('[league-data] could not apply the live pointer:', err);
+  }
+}
+
+/**
+ * Check the live pointer if this instance has not in the last minute. Called
+ * once per request from the middleware, before anything preloads. Never
+ * throws, and concurrent requests share one check.
+ */
+export async function refreshLeagueData(now: number = Date.now()): Promise<void> {
+  if (!deployManifest()) return;
+  if (refreshing) return refreshing;
+  if (now - lastCheckedAt < LIVE_CHECK_INTERVAL_MS) return;
+  lastCheckedAt = now;
+  refreshing = checkPointer(now).finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
 /** Tests only: pretend a manifest was (or was not) built, and drop the cache. */
 export function __setLeagueDataManifestForTests(manifest: Manifest | null | undefined): void {
   manifestOverride = manifest;
+  live = null;
+  lastCheckedAt = -Infinity;
   cache.clear();
   settled.clear();
+  lastByPath.clear();
+  pathOfKey.clear();
   sizes.clear();
   cachedBytes = 0;
+}
+
+/** Tests only: where the live pointer is read from (null restores Redis). */
+export function __setLeaguePointerReaderForTests(reader: PointerReader | null): void {
+  pointerReader = reader ?? readPointerFromRedis;
+  lastCheckedAt = -Infinity;
 }

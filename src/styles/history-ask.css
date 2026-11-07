@@ -679,6 +679,13 @@
   border: 0;
   outline: none;
 }
+.hask .hask-input:focus,
+.hask .hask-input:focus-visible {
+  /* The site-wide input focus ring (polish.css) draws a square blue box
+     inside the round pill; the pill's own gold ring is the focus state. */
+  outline: none;
+  box-shadow: none;
+}
 .hask-send {
   display: inline-flex;
   flex: none;
@@ -704,4 +711,62 @@
   margin: 0 1rem;
   color: var(--content-text-muted);
   font-size: var(--font-size-sm);
+}
+
+/* The public demo (guest-ask.ts): the counter, the email box, the pitch. */
+.hask-form[hidden],
+.hask-guest [hidden] {
+  display: none !important;
+}
+.hask-guest {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  margin: 0 1rem 0.5rem;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+.hask-guest p {
+  margin: 0;
+}
+.hask-guest__count {
+  color: var(--page-text);
+  font-weight: 600;
+}
+.hask-guest__email,
+.hask-guest__out {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--history-gold);
+  border-radius: 0.75rem;
+}
+.hask-guest__ask,
+.hask-guest__out p {
+  color: var(--page-text);
+}
+.hask-guest__row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hask-guest__row .hask-input {
+  width: 100%;
+  padding: 0 0.75rem;
+  border: 1px solid var(--content-border);
+  border-radius: 0.5rem;
+}
+.hask .hask-guest__row .hask-input:focus-visible {
+  border-color: var(--history-gold);
+  outline: 3px solid var(--history-gold-wash);
+}
+.hask-guest__consent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hask-guest__out .cta {
+  justify-self: start;
 }

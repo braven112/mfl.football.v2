@@ -20,6 +20,7 @@
  * the video's link here and this page launch WITH History.
  */
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import AskDemoCta from '../../../components/shared/league-history/AskDemoCta.astro';
 import { getAuthUser } from '../../../utils/auth';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { canUseHistoryProduct } from '../../../utils/league-history/access';
@@ -128,6 +129,7 @@ const LOCKED = [
 					<li class="lh__locked-item"><strong>🔒 {l.title}</strong>{l.body}</li>
 				))}
 			</ul>
+			<AskDemoCta />
 		</section>
 	</div>
 </MflAppLayout>

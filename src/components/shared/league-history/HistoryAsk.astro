@@ -12,6 +12,7 @@ import type { LeagueDefinition } from '../../../config/leagues';
 import type { AskingTopic } from '../../../utils/league-history/ask-store';
 import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
 import { answerTeam } from '../../../utils/league-history/ask-render';
+import { getAuthUser } from '../../../utils/auth';
 
 interface Props {
   league: LeagueDefinition;
@@ -22,6 +23,8 @@ interface Props {
 
 const { league, base, asking = { week: 'this', topics: [] } } = Astro.props as Props;
 const askPage = `${base}/history/ask`;
+// "My team" means nothing to a signed-out visitor (the public demo asks as a guest).
+const examples = getAuthUser(Astro.request) ? ASK_EXAMPLES : ASK_EXAMPLES.filter((q) => !/\bmy\b/i.test(q));
 const [hot, ...rest] = asking.topics;
 const most = Math.max(1, ...asking.topics.map((t) => t.owners));
 const owners = (n: number) => `${n} ${n === 1 ? 'owner' : 'owners'}`;
@@ -39,7 +42,7 @@ const teamStyle = (t: AskingTopic) => {
     <span class="ha-bar__go">Ask</span>
   </a>
   <ul class="ha__examples" aria-label={`Questions to ask about ${league.name}`}>
-    {ASK_EXAMPLES.slice(0, 4).map((q) => (
+    {examples.slice(0, 4).map((q) => (
       <li><a class="ha__example" href={`${askPage}?q=${encodeURIComponent(q)}`}>{q}</a></li>
     ))}
   </ul>

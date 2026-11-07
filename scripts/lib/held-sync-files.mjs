@@ -201,3 +201,60 @@ export async function planHeldFiles(changes, { redis, published, command = redis
   }
   return { restore, commit };
 }
+
+/**
+ * Once the sync has published its data through the live league-data pointer
+ * (scripts/league-data-pointer.mjs), the site no longer reads any of its files
+ * from git, so git needs only a daily record of them (Brandon, 2026-11-04: one
+ * data commit a day). This is the hold for that: every tracked, modified file
+ * the pointer carries is put back to its committed copy, ALL OR NOTHING so the
+ * committed set always agrees with itself, unless
+ *   - the run has a change that must commit anyway (a new file, a deletion,
+ *     a file the pointer does not carry, or `fetch.meta.json` — the stamp the
+ *     next run's once-a-day feed check reads from git): then everything rides
+ *     along on that commit, which costs nothing more; or
+ *   - a day has passed since the last commit it let through.
+ * Not published (no token, an upload failed) → nothing is held, and the commit
+ * builds exactly as before.
+ *
+ * `porcelain` is `git status --porcelain` after the other held groups ran.
+ * Returns the paths to restore.
+ */
+export const LEAGUE_DATA_GROUP = 'league-data';
+
+const isFetchStamp = (p) => /\/fetch\.meta\.json$/.test(p);
+
+export async function planLeagueDataHold(
+  porcelain,
+  { published, isStoreFile, redis, command = redisCommand, nowMs = Date.now(), log = () => {} },
+) {
+  if (!published) return [];
+  const lines = porcelain.split('\n').filter((l) => l.trim());
+  const held = [];
+  const mustCommit = [];
+  for (const line of lines) {
+    const p = line.slice(3).trim();
+    const tracked = /^( M|M |MM)/.test(line);
+    if (tracked && isStoreFile(p) && !isFetchStamp(p)) held.push(p);
+    else mustCommit.push(p);
+  }
+  if (!held.length) return [];
+  if (mustCommit.length) {
+    log(`[held-sync] ${LEAGUE_DATA_GROUP}: ${mustCommit.length} change(s) must commit (${mustCommit[0]}…) — ${held.length} data file(s) ride along`);
+    return [];
+  }
+  try {
+    const key = snapshotKey(LEAGUE_DATA_GROUP);
+    const last = Number(await command(redis, ['GET', key])) || 0;
+    if (snapshotDue(last, nowMs)) {
+      await command(redis, ['SET', key, String(nowMs)]);
+      log(`[held-sync] ${LEAGUE_DATA_GROUP}: daily snapshot due — committing ${held.length} file(s)`);
+      return [];
+    }
+  } catch (err) {
+    log(`[held-sync] ${LEAGUE_DATA_GROUP}: ${err.message} — committing as before`);
+    return [];
+  }
+  log(`[held-sync] ${LEAGUE_DATA_GROUP}: live through the pointer — held ${held.length} file(s) out of the commit`);
+  return held;
+}

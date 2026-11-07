@@ -13,6 +13,7 @@
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import HistoryBuilder from '../../components/shared/league-history/HistoryBuilder.astro';
+import AskDemoCta from '../../components/shared/league-history/AskDemoCta.astro';
 import { getAuthUser } from '../../utils/auth';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import { canUseHistoryProduct } from '../../utils/league-history/access';
@@ -47,6 +48,10 @@ const leagues = await listMflHistories();
 				Your league id is the number at the end of your MFL league's address, for example
 				…/home/<strong>54321</strong>.
 			</p>
+		</section>
+
+		<section class="lh__section" aria-label="Try Ask the History">
+			<AskDemoCta />
 		</section>
 
 		{leagues.length > 0 && (
