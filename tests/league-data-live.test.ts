@@ -273,7 +273,7 @@ const NO_LISTENER_NEEDED: Record<string, string> = {
 describe('memoized league data drops with the pointer', () => {
   it('every module caching league data registers onLeagueDataChange', () => {
     const files = execSync(`git ls-files 'src/**/*.ts' 'src/**/*.mjs'`, { encoding: 'utf8' }).split('\n').filter(Boolean);
-    const memo = /^(?:let \w+|const \w+(?:: [^=]+)? = new (?:Map|Set)(?:<[^>]*(?:<[^>]*>[^>]*)*>)?\(\))/m;
+    const memo = /^(?:let \w+|const \w+(?:: [^=]+)? = new (?:Map|Set)(?:<[^()\n]*>)?\(\))/m;
     const offenders = files.filter((file) => {
       if (NO_LISTENER_NEEDED[file]) return false;
       const src = readFileSync(file, 'utf8');
