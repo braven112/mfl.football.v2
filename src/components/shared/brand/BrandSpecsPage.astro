@@ -43,7 +43,7 @@ const SHRINK_EXAMPLES = [
     <header class="brand__header">
       <p class="brand__eyebrow"><a href="/brand">Brand Book</a> &middot; Specs</p>
       <h1>Logo and asset specs</h1>
-      <p class="brand__lede">Send a transparent PNG or SVG at these sizes. We shrink it to fit everywhere.</p>
+      <p class="brand__lede">Your team icon is the one file we need. Send a transparent PNG or SVG at this size, and we shrink it to fit everywhere.</p>
       <p><a class="cta cta--primary" href="/team-logo">Make your logo with our logo maker</a></p>
     </header>
 
@@ -52,7 +52,12 @@ const SHRINK_EXAMPLES = [
         {
           specs.map((s) => (
             <li class="ui-card specs__card" id={s.id}>
-              <h3>{s.label}</h3>
+              <div class="specs__card-head">
+                <h3>{s.label}</h3>
+                <span class:list={['specs__tag', s.required ? 'is-required' : 'is-optional']}>
+                  {s.required ? 'Required' : 'Optional'}
+                </span>
+              </div>
               <p class="specs__size">{s.size} px</p>
               {s.template && (
                 <p class="specs__card-dl">
@@ -158,6 +163,29 @@ const SHRINK_EXAMPLES = [
   .specs__card {
     min-width: 0;
     padding: 0.9rem 1rem;
+  }
+  .specs__card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .specs__tag {
+    flex: none;
+    font-size: var(--font-size-2xs, 0.6875rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm, 4px);
+  }
+  .specs__tag.is-required {
+    background: var(--color-accent, #2563eb);
+    color: var(--on-color-accent, #fff);
+  }
+  .specs__tag.is-optional {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    color: var(--color-gray-500, #6b7280);
   }
   .specs__card-dl {
     display: flex;
