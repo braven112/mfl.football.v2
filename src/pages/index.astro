@@ -1,9 +1,9 @@
 ---
 import SplashLayout from '../layouts/SplashLayout.astro';
-import { crossHostLeagueHref } from '../config/leagues';
+import { LEAGUES, crossHostLeagueHref } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import ProductInterest from '../components/shared/ProductInterest.astro';
-import { MFL_LIVE_PRO_PRICE, type ProductSlug } from '../data/products';
+import { LEAGUE_PACKAGE_PRICING, MFL_LIVE_PRO_PRICE, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE, type ProductSlug } from '../data/products';
 import { mflLiveIncludedNames, siteExampleLeagues } from '../data/league-showcase';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
 import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
@@ -50,8 +50,9 @@ const includedList =
     ? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
     : (includedNames[0] ?? '');
 
-// Only MFL Live Pro's price is public (Brandon, Oct 2026); every service here
-// shows what it does, not what it costs.
+// Public prices: MFL Live Pro (Oct 2026), League Package, the site's top price,
+// and seasonal themes (Brandon, Nov 2026). Every other service here shows what
+// it does, not what it costs.
 interface ServiceCard {
   slug: ProductSlug;
   name: string;
@@ -69,7 +70,7 @@ const MORE_SERVICES: ServiceCard[] = [
     slug: 'league-hub',
     name: 'League Hub',
     who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with the draft hub, an AI league reporter, push alerts and more.',
+    body: 'A branded site on your own domain with a daily homepage, an AI league reporter, push alerts and more.',
     learnMore: servicePath('league-website'),
   },
   {
@@ -91,14 +92,60 @@ const MORE_SERVICES: ServiceCard[] = [
 // commissioner does by hand, the system does. Each line is a feature the
 // platform already runs for The League and the AFL (src/data/products.ts).
 const AUTOMATED = [
+  'Your custom side game or league rule, run every week',
   'Deadline and lineup reminders to every owner',
-  'Draft order, the draft room and results',
   'Dues and prize payouts written into MFL’s books',
   'Contracts, the salary cap and extensions tracked',
   'Rules questions answered from your constitution',
   'League news, trades and recaps written for you',
-  'Weekly power rankings',
+  'Two weekly columns: Pecking Order power rankings and The Gauntlet schedule strength, named however your league likes',
+  'Ask the History: any question about the league’s past',
+  'MFL Football Pro for every owner, on phone and TV',
   'News and reminders posted to your group chat',
+];
+
+// The headline feature (Brandon, 2026-11-04): a league homepage whose hero
+// changes with the calendar and leads with the one thing the league needs to
+// do next. Each card is a real rung of the hero ladder (src/utils/league-hero/).
+// No draft rung: draft features are worked out with each league, not sold.
+const HERO_DAYS = [
+  { when: 'Sunday morning', title: 'Your lineup has a hole', body: 'A starter is ruled out. You see it, and the fix, before kickoff.' },
+  { when: 'Waiver night', title: 'Claims close tonight', body: 'The free agents worth a claim, with the time left to file one.' },
+  { when: 'Monday', title: 'The week in one card', body: 'The week’s top performer, in the winning team’s colors.' },
+  { when: 'Deadline week', title: 'Three days to make a deal', body: 'The trade deadline, counted down, with the teams still buying.' },
+];
+
+// Features that come with every custom league, shown beside the daily hero.
+const SPOTLIGHT = [
+  { title: 'Ask the History', body: 'Owners ask who won in 2014 or the all-time record between two teams, and get the answer from the league’s own records.' },
+  { title: 'League news written for you', body: 'An AI reporter breaks every trade and signing and writes two weekly columns about your real teams: Pecking Order power rankings and The Gauntlet schedule strength. Rename them for your league.' },
+  { title: 'Rules answers', body: 'Owners ask a rules question and get the answer from your constitution, on the site or in the group chat.' },
+];
+
+// Proof for the number-one sell, the league's own rules automated (Brandon,
+// 2026-11-04): formats MFL cannot run, live on leagues we run. These are
+// links to one page each, not homepage examples, so neither league needs
+// siteExample (the AFL and Archie's are deliberately not showcased).
+const CUSTOM_RULE_EXAMPLES = [
+  {
+    league: LEAGUES['afl-fantasy'],
+    name: 'Premier League and D-League',
+    body: 'Two tiers with promotion and relegation every season, in the AFL.',
+  },
+  {
+    league: LEAGUES.archies,
+    name: 'MAD Power 99',
+    body: 'A 99-team playoff race on combined scores over weeks 15 to 17, in Archie’s League.',
+  },
+];
+
+// The same TheLeague standings page in each look it wears (Brandon,
+// 2026-11-04: show an example of everything we sell). Captured with
+// ?testDate= inside each window of src/config/seasonal-themes.mjs.
+const THEME_SHOTS = [
+  { label: 'Regular season', src: '/assets/home/theme-regular.webp', alt: 'TheLeague standings in its everyday blue and green, with each team’s own logo' },
+  { label: 'Halloween', src: '/assets/home/theme-halloween.webp', alt: 'The same standings in the Halloween theme: black and orange, a spooky headline face and every logo redrawn' },
+  { label: 'Christmas Week', src: '/assets/home/theme-christmas.webp', alt: 'The same standings in the Christmas theme: red, string lights and every logo redrawn as a knitted sweater patch' },
 ];
 
 const commissionerToolsPath = servicePath('commissioner-tools');
@@ -135,8 +182,8 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
       <p class="sp-eyebrow">Formerly {FORMER_BRAND} · For MyFantasyLeague</p>
       <h1>Custom websites for your MFL league.</h1>
       <p class="sp-lede">
-        We build your league a branded site on its own domain, then run it for you: reminders, the draft,
-        dues, league history and news, handled so the commissioner does not have to.
+        We build your league a branded site on its own domain, then run it for you: your custom side games and house rules automated,
+        a homepage built around today, reminders, dues, league history and news, handled so the commissioner does not have to.
       </p>
       <div class="sp-ctas">
         <a class="cta cta--primary" href="#services">See our services</a>
@@ -177,6 +224,33 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
     <li class="sp-stat"><b>0</b><span>Moves away from MyFantasyLeague</span></li>
   </ul>
 
+  <section class="sp-section" id="today" aria-labelledby="today-h">
+    <div class="sp-head">
+      <div class="sp-head__title">
+        <p class="sp-eyebrow">Every day of the year</p>
+        <h2 id="today-h">A homepage that knows what day it is</h2>
+      </div>
+      <p class="sp-head__note">Your league’s homepage leads with the most important thing your league needs to do today. Signed-in owners see it for their own team.</p>
+    </div>
+    <ol class="sp-grid sp-grid--4 days">
+      {HERO_DAYS.map((d) => (
+        <li class="ui-card sp-card">
+          <span class="sp-card__who">{d.when}</span>
+          <h3>{d.title}</h3>
+          <p>{d.body}</p>
+        </li>
+      ))}
+    </ol>
+    <ul class="sp-grid spot">
+      {SPOTLIGHT.map((f) => (
+        <li class="ui-card sp-card">
+          <h3>{f.title}</h3>
+          <p>{f.body}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
   <section class="sp-section" id="services" aria-labelledby="services-h">
     <div class="sp-head">
       <div class="sp-head__title">
@@ -189,12 +263,15 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
       <div class="pkg__copy">
         <span class="sp-card__who">Our biggest package · for a league that wants it all handled</span>
         <h3 class="pkg__name">League Package</h3>
-        <p class="pkg__lede">Anything the commissioner does manually, our system handles.</p>
-        <p>Your own site with every feature on the platform, custom features built for how your league plays, and priority support.</p>
-        {/* The pricing SHAPE, without amounts (Brandon, Oct 2026). */}
-        <p class="pkg__fees">
-          <span><b>Setup fee</b> We build your league's site and features once.</span>
-          <span><b>Automation fee</b> We run your league from then on.</span>
+        <p class="pkg__lede">Your league’s custom side game or house rule, automated.</p>
+        <p>The thing your commissioner has always tracked by hand, run by our system every week. Plus your own site with every feature on the platform, and priority support. Every owner also gets MFL Football Pro: the live scoring app on their phone and the live Broadcast on their TV.</p>
+        <ul class="pkg__fees">
+          {LEAGUE_PACKAGE_PRICING.tiers.map((t) => (
+            <li><b>{t.setup}</b> <span>{t.setup === 'Custom quote' ? t.teams : `setup, ${t.teams.toLowerCase()}`}</span></li>
+          ))}
+        </ul>
+        <p class="pkg__terms">
+          Then a yearly renewal that runs your league's automation: {LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}. Leagues of 16 or fewer that make their own logos save {LEAGUE_PACKAGE_PRICING.logoDiscount}.
         </p>
         <span class="sp-ctas">
           <button
@@ -202,13 +279,27 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
             class="cta cta--primary"
             data-interest="league-package"
             data-interest-name="League Package"
-            data-interest-note="Anything a commissioner does by hand, our system handles: a one-time setup fee, then an automation fee to run your league."
+            data-interest-note={`Setup from ${LEAGUE_PACKAGE_PRICING.tiers[0].setup}, then from ${LEAGUE_PACKAGE_PRICING.renewal} to run your league. Over 24 teams, we quote it.`}
           >I'm interested</button>
           {commissionerToolsPath && <a class="cta cta--ghost" href={commissionerToolsPath}>What it automates</a>}
         </span>
       </div>
       <ul class="sp-list pkg__list">
         {AUTOMATED.map((line) => <li>{line}</li>)}
+      </ul>
+    </div>
+    <div class="ui-card sp-card custom">
+      <div class="custom__copy">
+        <h3>The rules MFL can’t run, we run</h3>
+        <p>Side games, tiers with relegation, playoff formats and league formats MyFantasyLeague doesn’t support, built for your league and scored automatically every week.</p>
+      </div>
+      <ul class="custom__list">
+        {CUSTOM_RULE_EXAMPLES.map((ex) => (
+          <li>
+            <a class="cta-link" href={hrefFromHere(`/${ex.league.slug}/standings?view=league`)}>{ex.name}</a>
+            <span class="sp-muted">{ex.body}</span>
+          </li>
+        ))}
       </ul>
     </div>
     <ul class="sp-grid services">
@@ -224,6 +315,25 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
         </li>
       ))}
     </ul>
+    <div class="ui-card sp-card themes">
+      <div class="themes__copy">
+        <span class="sp-card__who">Add-on</span>
+        <h3>Seasonal themes</h3>
+        <p>
+          For a one-time {SEASONAL_THEME_PRICE} per theme, your site changes its look on its own through the year and changes back when the
+          week is over. It includes remaking {SEASONAL_THEME_INCLUDES}.
+        </p>
+        <a class="sp-card__more" href="/mfl-league-themes">See every logo before and after</a>
+      </div>
+      <div class="themes__shots">
+        {THEME_SHOTS.map((t) => (
+          <figure>
+            <img src={t.src} width="1200" height="560" loading="lazy" alt={t.alt} />
+            <figcaption>{t.label}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
     <p class="addons">
       <b>Add-ons</b> for League Hub and League Package leagues: side games, custom standings, prizes, contracts and large-league support.
       <button type="button" class="cta-link" data-interest="add-ons" data-interest-name="Add-ons">I'm interested</button>
@@ -415,12 +525,111 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
 
   .pkg__fees {
     display: grid;
-    gap: 0.4rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pkg__fees li {
+    display: grid;
+    gap: 0.15rem;
+    align-content: start;
+    padding: 0.8rem 0.9rem;
+    border-radius: var(--sp-radius-sm);
+    background: var(--sp-surface-2);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-muted);
   }
 
   .pkg__fees b {
-    margin-right: 0.35rem;
+    font-size: var(--sp-text-lg);
     color: var(--sp-ink);
+  }
+
+  .pkg .pkg__terms {
+    font-size: var(--sp-text-sm);
+  }
+
+  /* The headline feature: four day cards, then the three spotlight cards. */
+  .days {
+    margin-bottom: 1rem;
+  }
+
+  .days .sp-card__who {
+    color: var(--sp-red);
+  }
+
+  /* Custom rules: the copy beside its two live proof links. */
+  .custom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem 2rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .custom__list {
+    display: grid;
+    gap: 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .custom__list li {
+    display: grid;
+    gap: 0.2rem;
+    font-size: var(--sp-text-md);
+  }
+
+  /* Seasonal themes: the copy, then one league in each of its three looks. */
+  .themes {
+    margin-top: 1rem;
+  }
+
+  .themes__copy {
+    display: grid;
+    gap: 0.6rem;
+    max-width: 46rem;
+  }
+
+  .themes__copy .sp-card__more {
+    margin-top: 0;
+  }
+
+  .themes__shots {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .themes__shots figure {
+    margin: 0;
+  }
+
+  .themes__shots img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+  }
+
+  .themes__shots figcaption {
+    margin-top: 0.4rem;
+    font-size: var(--sp-text-sm);
+    font-weight: 600;
+    color: var(--sp-muted);
+  }
+
+  @media (max-width: 760px) {
+    .pkg__fees,
+    .custom,
+    .themes__shots {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .pkg__list {

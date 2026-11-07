@@ -40,6 +40,9 @@ const jsonLd = [
 		{ name: service.eyebrow, path: service.path },
 	]),
 ];
+// A picture-led page (the themes gallery) puts its images straight under the
+// hero and drops the lede, so the first scroll is images, not paragraphs.
+const hasLead = Astro.slots.has('lead');
 const isExternal = (href: string) => /^https?:/.test(href);
 
 // The hero's league card is the proof: the first league running this service,
@@ -60,7 +63,7 @@ const proof = exampleLeagues[0]
 				<p class="sp-eyebrow"><span>{service.eyebrow} <span class="svc-former">· Formerly {FORMER_BRAND}</span></span></p>
 				<h1>{service.h1}</h1>
 				<p class="svc-answer">{service.answer}</p>
-				<p class="sp-lede">{service.lede}</p>
+				{!hasLead && <p class="sp-lede">{service.lede}</p>}
 				<div class="sp-ctas">
 					{service.cta.kind === 'interest' ? (
 						<button type="button" class="cta cta--primary" data-interest={service.cta.product} data-interest-name={service.cta.name}>
@@ -96,6 +99,8 @@ const proof = exampleLeagues[0]
 			)}
 		</header>
 
+		{hasLead && <slot name="lead" />}
+
 		<section class="sp-section" aria-labelledby="svc-what">
 			<div class="sp-head">
 				<div class="sp-head__title">
@@ -112,6 +117,8 @@ const proof = exampleLeagues[0]
 				))}
 			</ul>
 		</section>
+
+		<slot />
 
 		{examples.length > 0 && (
 			<section class="sp-section" aria-labelledby="svc-live">

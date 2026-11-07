@@ -656,19 +656,63 @@ const CONTEST_PACKAGE: Product = {
 	],
 };
 
+/**
+ * League Package pricing (Brandon, 2026-11-04). This is the site's top price,
+ * so every other price reads as small beside it. Each tier is priced at 10x or
+ * more of its yearly AI cost. A league over 24 teams needs custom work on most
+ * pages, so it is quoted rather than listed. The homepage and the product page
+ * both read these values.
+ */
+/** One-time fee for one seasonal theme (Halloween, Christmas or a league's own event), logo remakes included. Brandon, 2026-11-05. */
+export const SEASONAL_THEME_PRICE = '$1,000';
+/** What that fee covers (Brandon, 2026-11-05). */
+export const SEASONAL_THEME_INCLUDES = 'up to 16 team logos plus 3 league or conference logos';
+
+export const LEAGUE_PACKAGE_PRICING = {
+	/** One-time setup by league size. */
+	tiers: [
+		{ teams: '16 teams or fewer', setup: '$3,000' },
+		{ teams: '17–24 teams', setup: '$6,000' },
+		{ teams: 'Over 24 teams', setup: 'Custom quote' },
+	],
+	/** Yearly renewal by league size; its bands differ from setup's (Brandon, 2026-11-05). */
+	renewals: [
+		{ teams: '16 or fewer', price: '$1,500' },
+		{ teams: '17–32', price: '$2,000' },
+		{ teams: '33–49', price: '$3,000' },
+		{ teams: '50–100', price: '$4,000' },
+	],
+	/** The smallest renewal, for "from" copy. */
+	renewal: '$1,500/year',
+	logoDiscount: '$500',
+} as const;
+
 const LEAGUE_PACKAGE: Product = {
 	slug: 'league-package',
 	kind: 'league',
 	name: 'League Package',
-	price: '$10,000 first year',
+	price: `From ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} setup + ${LEAGUE_PACKAGE_PRICING.renewal}`,
 	tagline: 'The full suite: your league’s site, with features built for how your league plays.',
 	buyer: 'A league that wants custom features built',
 	screenshot: shot('front-office-hub.jpg', 'The front office hub: contracts, cap tools and roster planning in one place.'),
 	summary: [
-		'League Package is everything on the platform, set up for your league, plus about $4,000 of features chosen for it. It is League Hub with custom work and priority support on top.',
+		'League Package is everything on the platform, set up and run for your league. It is League Hub with automation, custom work and priority support on top.',
 		'Each product before this one is part of it. Every owner gets Owner Suite Pro, the league gets Full History, and the custom budget comes from the add-on menu or is quoted to order. Large leagues get large-league support.',
 	],
 	buildsOn: ['owner-suite', 'league-history', 'add-ons', 'large-league', 'league-hub'],
+	tiers: {
+		heading: 'Pricing by league size',
+		columns: ['Setup', 'Renewal'],
+		rows: [
+			{ label: '16 teams or fewer', values: ['$3,000', '$1,500/year'] },
+			{ label: '17–24 teams', values: ['$6,000', '$2,000/year'] },
+			{ label: '25–32 teams', values: ['Custom quote', '$2,000/year'] },
+			{ label: '33–49 teams', values: ['Custom quote', '$3,000/year'] },
+			{ label: '50–100 teams', values: ['Custom quote', '$4,000/year'] },
+			{ label: 'Over 100 teams', values: ['Custom quote', 'Quoted'] },
+		],
+		note: `Setup is charged once. The renewal pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
+	},
 	features: [
 		'branded-site',
 		'live-scoreboard',
@@ -691,9 +735,10 @@ const LEAGUE_PACKAGE: Product = {
 			items: [
 				{ title: 'Launch and branding', price: 'Included', body: 'Your domain, logos and colors, light and dark themes, and your league’s history backfilled.' },
 				{ title: 'Everything in League Hub', price: 'Included', body: 'Every platform feature, Full History, and hosting and support for the first year.' },
-				{ title: 'Owner Suite Pro for every owner', price: 'Included', body: 'Worth $24 per owner per season.' },
-				{ title: 'Custom features', price: 'About $4,000', body: 'Chosen from the add-on menu or quoted to order, and agreed at the kickoff call.' },
-				{ title: 'Large-league support', price: 'When needed', body: 'For leagues over 32 teams or with several separate drafts, quoted with the package.' },
+				{ title: 'MFL Football Pro for every owner', price: 'Included', body: 'The live scoring app on every owner’s phone and the live Broadcast on their TV. Worth $24 per owner per season.' },
+				{ title: 'Franchise logos', price: 'Optional', body: `We design every franchise’s logo, or you make your own from our sizes and save ${LEAGUE_PACKAGE_PRICING.logoDiscount}.` },
+				{ title: 'Custom features', price: 'Quoted', body: 'Chosen from the add-on menu or quoted to order, and agreed at the kickoff call.' },
+				{ title: 'Leagues over 24 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
 				{ title: 'Priority support', price: 'Included', body: 'Your league comes first on game days and in the weekly release.' },
 			],
 		},
@@ -714,7 +759,7 @@ const LEAGUE_PACKAGE: Product = {
 				'You own your league’s name, logos and content. We own the platform and every feature built on it; a feature built for you may be offered to other leagues without your branding.',
 				'The work is what the proposal lists; anything else is quoted before work starts.',
 				'50% at signing, 50% at launch. The first year runs 12 months from launch.',
-				'Renews at $3,000 a year on July 1, covering hosting, support and Owner Suite Pro for every owner. Renewal prices are fixed for the second year.',
+				`Renews on July 1 at ${LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}, covering the automation, hosting, support and Owner Suite Pro for every owner. Renewal prices are fixed for the second year.`,
 			],
 		},
 	],
