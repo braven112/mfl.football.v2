@@ -18,12 +18,12 @@
  * studio analyst. Never a real reporter's name or catchphrase.
  */
 import { END_PALETTE, LOOKS, type Scene } from './story';
-import { NFL_TEAM_COLORS } from '../nfl-team-colors';
+import { getNflTeamColors, NFL_COLORS_FALLBACK } from '../nfl-team-colors';
 
 /** A club's two colours for the bars beside "QB · BUF" (colour only, never a logo); none for an unknown club. */
 const clubColors = (team: string): { colors?: [string, string] } => {
-	const c = NFL_TEAM_COLORS[team];
-	return c ? { colors: [c.primary, c.secondary] } : {};
+	const c = getNflTeamColors(team);
+	return c === NFL_COLORS_FALLBACK ? {} : { colors: [c.primary, c.secondary] };
 };
 
 /** The positions a recap names a boom at, in card order. */
