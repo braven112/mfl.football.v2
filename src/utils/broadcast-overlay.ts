@@ -48,6 +48,9 @@ export interface OverlayPlayer {
   position: string;
   /** Canonical NFL team code, '' when the player has no team. */
   nflTeam: string;
+  /** For the quarter view's player-cell face; '' / undefined when unknown. */
+  headshot?: string;
+  espnId?: string;
   live: number;
   /** Projected final for THIS player: live plus what his remaining clock is worth. */
   projected: number;
@@ -101,6 +104,8 @@ function lineupFor(rows: readonly LivePlayerRow[], meta: Record<string, PlayerMe
     name: meta[row.id]?.name ?? row.id,
     position: positionLabel(meta[row.id]?.position),
     nflTeam: normalizeTeamCode(meta[row.id]?.nflTeam ?? ''),
+    headshot: meta[row.id]?.headshot || undefined,
+    espnId: meta[row.id]?.espnId ?? undefined,
     live: Number.isFinite(row.live) ? row.live : 0,
     projected: projectPlayerFinal({
       live: Number.isFinite(row.live) ? row.live : 0,

@@ -48,6 +48,7 @@ import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
@@ -922,9 +923,6 @@ function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonl
     <ol className="bov__q-lineup">
       {side.lineup.map((player) => {
         const note = gameNote(player.nflTeam, slate);
-        // The club's full-colour cut for a dark ground, same-origin only
-        // (Brandon, Nov 8: the rows looked bare with nothing but the name).
-        const logo = player.nflTeam ? nflLogoUrl(player.nflTeam, 'dark') : '';
         return (
           <li
             key={player.id}
@@ -933,10 +931,21 @@ function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonl
             data-lit={lit[player.id] ? true : undefined}
           >
             <span className="bov__pos">{player.position}</span>
-            <span className="bov__name">
-              {logo && <img className="bov__q-team" src={logo} alt="" />}
-              {player.name}
-            </span>
+            {/* The site's player cell, sized to the row (Brandon, Nov 8: the
+                rows looked bare with nothing but the name). A defense gets
+                its crest, as everywhere else. */}
+            <BroadcastFace
+              player={{
+                id: player.id,
+                mflId: player.id,
+                position: player.position,
+                nflTeam: player.nflTeam,
+                headshot: player.headshot,
+                espnId: player.espnId,
+              }}
+              className="bov__q-face"
+            />
+            <span className="bov__name">{player.name}</span>
             <b>{note.started ? onePlace(player.live) : '–'}</b>
           </li>
         );
