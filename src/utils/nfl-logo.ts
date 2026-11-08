@@ -1,3 +1,5 @@
+import { NFL_TEAM_CODE_ALIASES } from '../../packages/shared-utils/src/nfl-team-colors';
+
 /**
  * NFL Team Logo Utilities
  * 
@@ -65,29 +67,8 @@ export const NFL_TEAM_NAMES: Record<string, string> = {
  * filename a page might render (e.g. `/assets/nfl-logos/WAS.svg`), not just the
  * canonical code — some roster builders render non-normalized codes.
  */
-export const TEAM_CODE_MAP: Record<string, string> = {
-  'WAS': 'WSH', // Washington
-  'JAC': 'JAX', // Jacksonville
-  'GBP': 'GB',  // Green Bay
-  'KCC': 'KC',  // Kansas City
-  'NEP': 'NE',  // New England
-  'NOS': 'NO',  // New Orleans
-  'SFO': 'SF',  // San Francisco
-  'TBB': 'TB',  // Tampa Bay
-  'LVR': 'LV',  // Las Vegas
-  'HST': 'HOU', // Houston
-  'BLT': 'BAL', // Baltimore
-  'CLV': 'CLE', // Cleveland
-  'ARZ': 'ARI', // Arizona
-  'OAK': 'LV',  // Oakland Raiders → Las Vegas
-  'SDC': 'LAC', // San Diego Chargers → LA Chargers
-  'SD':  'LAC', // San Diego Chargers (alt code)
-  'RAM': 'LAR', // Rams (historical MFL code)
-  'STL': 'LAR', // St. Louis Rams → LA Rams
-  'FA':  'NFL', // Free agent → NFL shield
-  'FA*': 'NFL', // Conditional free agent (MFL) → NFL shield
-  'UFA': 'NFL', // Unrestricted free agent → NFL shield
-};
+// The alias table itself lives in packages/shared-utils (shared with the phone app).
+export const TEAM_CODE_MAP: Record<string, string> = NFL_TEAM_CODE_ALIASES;
 
 /**
  * Normalize team codes from MFL format to ESPN/Standard format

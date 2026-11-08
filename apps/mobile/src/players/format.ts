@@ -1,4 +1,5 @@
 import type { MflLiveAppPlayersSort, MflLiveAppPlayerSummary } from '@mfl/shared-types/mfl-live-app-k';
+import { metaText, type MetaPart } from '../components/NflTeamStripe';
 
 /** "18.5", or a dash when MFL has no number. */
 export function stat(n: number | null, digits = 1): string {
@@ -9,9 +10,14 @@ export function pct(n: number | null): string {
   return n === null ? '–' : `${Math.round(n)}%`;
 }
 
+/** "RB · ATL · Bye 5", as parts so the club carries its color stripe. */
+export function playerParts(p: MflLiveAppPlayerSummary): MetaPart[] {
+  return [p.position, p.team ? { team: p.team } : null, p.bye ? `Bye ${p.bye}` : null];
+}
+
 /** "RB · ATL · Bye 5" */
 export function playerLine(p: MflLiveAppPlayerSummary): string {
-  return [p.position, p.team, p.bye ? `Bye ${p.bye}` : null].filter(Boolean).join(' · ');
+  return metaText(playerParts(p));
 }
 
 /** MFL's injury words, shortened to the badge owners know from MFL. */

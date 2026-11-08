@@ -27,6 +27,7 @@ import { useSession } from '../session-context';
 import type { RootStackParamList } from '../navigation/types';
 import { font, useTheme, type Theme } from '../theme';
 import { AuctionPanel } from './AuctionPanel';
+import { PlayerMetaLine, type MetaPart } from '../components/NflTeamStripe';
 
 type Tab = 'board' | 'players' | 'queue' | 'auction';
 const TABS: { key: Tab; label: string }[] = [
@@ -526,8 +527,8 @@ function ClockCard({ room, teamName, t }: { room: MflLiveAppDraftRoom; teamName:
   );
 }
 
-function playerLine(p: MflLiveAppDraftPlayer): string {
-  return [p.position, p.nflTeam, p.rookie ? 'Rookie' : ''].filter(Boolean).join(' · ');
+function playerParts(p: MflLiveAppDraftPlayer): MetaPart[] {
+  return [p.position, p.nflTeam ? { team: p.nflTeam } : null, p.rookie ? 'Rookie' : ''];
 }
 
 function SlotRow({
@@ -558,9 +559,12 @@ function SlotRow({
           {mine ? ' (you)' : ''}
         </Text>
         {slot.player ? (
-          <Text style={[styles.rowSub, { color: t.text }]} numberOfLines={1}>
-            {slot.player.name}  <Text style={{ color: t.muted }}>{playerLine(slot.player)}</Text>
-          </Text>
+          <View style={styles.pickLine}>
+            <Text style={[styles.rowSub, styles.pickName, { color: t.text }]} numberOfLines={1}>
+              {`${slot.player.name}  `}
+            </Text>
+            <PlayerMetaLine style={[styles.rowSub, { color: t.muted }]} parts={playerParts(slot.player)} />
+          </View>
         ) : (
           <Text style={[styles.rowSub, { color: t.muted }]}>
             {slot.skipped ? 'Skipped' : onClock ? 'On the clock' : '—'}
@@ -593,7 +597,7 @@ function PlayerRow({
         <Text style={[styles.rowTitle, { color: t.text }]} numberOfLines={1}>
           {player.name}
         </Text>
-        <Text style={[styles.rowSub, { color: t.muted }]}>{playerLine(player)}</Text>
+        <PlayerMetaLine style={[styles.rowSub, { color: t.muted }]} parts={playerParts(player)} />
       </View>
       {adp ? <Text style={[styles.adp, { color: t.muted }]}>ADP {adp}</Text> : null}
       {children}
@@ -701,6 +705,8 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { fontFamily: font.semibold, fontSize: 15 },
   rowSub: { fontFamily: font.regular, fontSize: 13 },
+  pickLine: { flexDirection: 'row', alignItems: 'center' },
+  pickName: { flexShrink: 1 },
   slotLabel: { fontFamily: font.semibold, fontSize: 14, minWidth: 40 },
   adp: { fontFamily: font.medium, fontSize: 12 },
   banner: { fontFamily: font.medium, fontSize: 14, borderWidth: 1, borderRadius: 10, padding: 10 },

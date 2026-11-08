@@ -16,6 +16,7 @@ import { SignedOutError } from '../api';
 import { useSession } from '../session-context';
 import { font, useTheme } from '../theme';
 import { fetchWaivers, formatMoney, submitClaims } from './api';
+import { PlayerMetaLine } from '../components/NflTeamStripe';
 
 /** The player being added. Only what the sheet shows; the server re-checks everything. */
 export interface AddDropTarget {
@@ -137,9 +138,10 @@ export function AddDropSheet({ leagueId, player, onClose, onDone }: Props) {
             {immediate ? 'Add' : context?.verb ?? 'Add'} {player?.name}
           </Text>
           {player?.position || player?.team ? (
-            <Text style={[styles.sub, { color: t.muted }]}>
-              {[player?.position, player?.team].filter(Boolean).join(' · ')}
-            </Text>
+            <PlayerMetaLine
+              style={[styles.sub, { color: t.muted }]}
+              parts={[player?.position, player?.team ? { team: player.team } : null]}
+            />
           ) : null}
 
           {!context && !loadError ? <ActivityIndicator color={t.accentText} style={styles.spinner} /> : null}

@@ -6,6 +6,7 @@ import type {
 } from '@mfl/shared-types/mfl-live-app-auction';
 import type { MflLiveAppDraftPlayer } from '@mfl/shared-types/mfl-live-app-draft';
 import { font, type Theme } from '../theme';
+import { PlayerMetaLine, type MetaPart } from '../components/NflTeamStripe';
 
 /** "$1.25M", "$425K", "$12": league money is whole dollars, from $1 to millions. */
 export function money(n: number): string {
@@ -19,8 +20,8 @@ function trim(v: number): string {
   return v.toFixed(2).replace(/\.?0+$/, '');
 }
 
-function playerLine(p: MflLiveAppDraftPlayer): string {
-  return [p.position, p.nflTeam, p.rookie ? 'Rookie' : ''].filter(Boolean).join(' · ');
+function playerParts(p: MflLiveAppDraftPlayer): MetaPart[] {
+  return [p.position, p.nflTeam ? { team: p.nflTeam } : null, p.rookie ? 'Rookie' : ''];
 }
 
 type Row = { kind: 'lot'; lot: MflLiveAppAuctionLot } | { kind: 'win'; win: MflLiveAppAuctionWin };
@@ -182,7 +183,7 @@ function LotRow({
         <Text style={[styles.rowTitle, { color: t.text }]} numberOfLines={1}>
           {lot.player.name}
         </Text>
-        <Text style={[styles.rowSub, { color: t.muted }]}>{playerLine(lot.player)}</Text>
+        <PlayerMetaLine style={[styles.rowSub, { color: t.muted }]} parts={playerParts(lot.player)} />
         <Text style={[styles.rowSub, { color: lot.mine ? t.win : lot.outbid ? t.accentText : t.muted }]} numberOfLines={1}>
           {lot.mine ? 'Your high bid' : lot.outbid ? `Outbid by ${teamName(lot.highBidder)}` : teamName(lot.highBidder)}
           {` · ${lot.bids} bid${lot.bids === 1 ? '' : 's'}`}
@@ -210,9 +211,10 @@ function WinRow({
         <Text style={[styles.rowTitle, { color: t.text }]} numberOfLines={1}>
           {win.player.name}
         </Text>
-        <Text style={[styles.rowSub, { color: win.mine ? t.accentText : t.muted }]} numberOfLines={1}>
-          {win.mine ? 'Won by you' : `Won by ${teamName(win.franchiseId)}`} · {playerLine(win.player)}
-        </Text>
+        <PlayerMetaLine
+          style={[styles.rowSub, { color: win.mine ? t.accentText : t.muted }]}
+          parts={[win.mine ? 'Won by you' : `Won by ${teamName(win.franchiseId)}`, ...playerParts(win.player)]}
+        />
       </View>
       <Text style={[styles.amount, { color: t.muted }]}>{money(win.amount)}</Text>
     </Pressable>

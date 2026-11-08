@@ -22,6 +22,7 @@ import { gameStateLabel, points, winSplit } from '../format';
 import { useSession } from '../session-context';
 import { font, useTheme, type Theme } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
+import { PlayerMetaLine } from '../components/NflTeamStripe';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SetLineup'>;
 
@@ -421,15 +422,16 @@ function PlayerLine({ t, player, week }: { t: Theme; player: MflLiveAppLineupPla
         <Text numberOfLines={1} style={[styles.name, { color: t.text }]}>
           {player.name}
         </Text>
-        <Text numberOfLines={1} style={[styles.sub, { color: t.muted }]}>
-          {player.position}
-          {player.nflTeam ? `  ·  ${player.nflTeam}` : ''}
-          {player.opponent ? ` ${player.opponent}` : ''}
-          {player.gameState && player.gameState !== 'not-started' ? `  ·  ${gameStateLabel(player.gameState)}` : ''}
-          {flag ? (
-            <Text style={{ color: player.out || player.isBye ? t.danger : t.accentText }}>{`  ·  ${flag}`}</Text>
-          ) : null}
-        </Text>
+        <PlayerMetaLine
+          style={[styles.sub, { color: t.muted }]}
+          separator="  ·  "
+          parts={[
+            player.position,
+            player.nflTeam ? { team: player.nflTeam, suffix: player.opponent ? ` ${player.opponent}` : '' } : null,
+            player.gameState && player.gameState !== 'not-started' ? gameStateLabel(player.gameState) : null,
+            flag ? { text: flag, style: { color: player.out || player.isBye ? t.danger : t.accentText } } : null,
+          ]}
+        />
       </View>
       <View style={styles.points}>
         <Text style={[styles.pointsMain, { color: started ? t.text : t.muted }]}>

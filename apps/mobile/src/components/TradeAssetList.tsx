@@ -1,10 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MflLiveAppTradeAsset } from '@mfl/shared-types/mfl-live-app-trades';
 import { font, useTheme } from '../theme';
+import { metaText, PlayerMetaLine, type MetaPart } from './NflTeamStripe';
+
+function assetParts(a: MflLiveAppTradeAsset): MetaPart[] {
+  return [a.position, a.nflTeam ? { team: a.nflTeam } : null];
+}
 
 /** "QB · BUF", or nothing for a pick or blind bid. */
 export function assetDetail(a: MflLiveAppTradeAsset): string {
-  return [a.position, a.nflTeam].filter(Boolean).join(' · ');
+  return metaText(assetParts(a));
 }
 
 /**
@@ -46,7 +51,7 @@ export function TradeAssetList({
             <Text numberOfLines={1} style={[styles.label, { color: t.text }]}>
               {a.label}
             </Text>
-            {detail ? <Text style={[styles.detail, { color: t.muted }]}>{detail}</Text> : null}
+            {detail ? <PlayerMetaLine style={[styles.detail, { color: t.muted }]} parts={assetParts(a)} /> : null}
           </>
         );
         return onToggle ? (

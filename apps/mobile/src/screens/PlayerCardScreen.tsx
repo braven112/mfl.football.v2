@@ -5,9 +5,10 @@ import type { MflLiveAppPlayerCardResponse } from '@mfl/shared-types/mfl-live-ap
 import { apiGet, SignedOutError } from '../api';
 import { useSession } from '../session-context';
 import { usePlayerAdd } from '../players/player-actions';
-import { ownerLine, pct, playerLine, stat } from '../players/format';
+import { ownerLine, pct, playerParts, stat } from '../players/format';
 import type { RootStackParamList } from '../navigation/types';
 import { font, useTheme, type Theme } from '../theme';
+import { PlayerMetaLine } from '../components/NflTeamStripe';
 
 /**
  * One player's card: status, bye, this week's projection, season points,
@@ -63,7 +64,7 @@ export function PlayerCardScreen({ route, navigation }: NativeStackScreenProps<R
       ) : (
         <>
           <Text style={s.name}>{p.name}</Text>
-          <Text style={s.line}>{playerLine(p)}</Text>
+          <PlayerMetaLine style={s.line} parts={playerParts(p)} />
           <Text style={[s.owner, { color: p.isFreeAgent ? t.win : t.muted }]}>{ownerLine(p)}</Text>
 
           {card.injuryDetail ? (
