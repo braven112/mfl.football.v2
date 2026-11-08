@@ -649,7 +649,8 @@ body.bov-doc {
   height: calc(var(--u) * 0.75);
   border-radius: 50%;
   flex: none;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-sizing: border-box;
 }
 
 .bov__q-score {
