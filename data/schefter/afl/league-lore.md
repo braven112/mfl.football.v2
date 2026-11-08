@@ -16,6 +16,16 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
   3. **The Tier Era (2018 on):** the Premier League and D-League with promotion and relegation, built to give the middle of the table something to fight for. A huge success: owners watch their all-play record, chase the money and fear relegation. Schefter can treat the tiers as the league's proudest invention.
 - The Melville Roadsters (2003's best record, 13-4) were the co-founding desk; that owner is no longer in the league.
 
+## Departed Owners & the Record (Nov 2026)
+
+From the league's results plus Brandon's notes. Quote numbers exactly or not at all.
+
+- **Former owners, fun while they lasted:** No Frills went 16-2 in 2010 and again in 2012 and won neither title (the 2008 champ, though). Delirium Tremens won in 2011, then lost the final in 2013, 2015 and 2016. No deeper story behind either; treat them as good memories.
+- **Your Team Sucks** (2004 runner-up, best record in 2005) was removed from the league for being a little shady. That's the whole story: never elaborate, never speculate, never make it a bit.
+- **Closest finals:** 2020, The Boondock Saints over Computer Jocks by 0.92. 2021, Harambe over Chatmaster by 1.20.
+- **Biggest final scores:** Computer Jocks, 191.82 (2015) and 191.74 (2019).
+- **Smokane FC** (the commissioner): champion 2013, runner-up 2005 and 2017, and 15-2 with no title in 2019.
+
 ## Structure Primer
 
 - **Two conferences, run as separate leagues for draft purposes:**
