@@ -4,6 +4,13 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
 
 ---
 
+## Origin (Brandon, Nov 2026)
+
+- **Born in Spokane, 2003.** The league started from a conversation between Brandon and the owner of the Melville Roadsters. The Roadsters owner knew some of their high school friends who played fantasy football; Brandon had college friends who played. They counted heads, figured they could fill 24 teams, and set it up on Yahoo as two separate leagues. They asked all their friends, and they joined. It is a league of friends, not strangers.
+- **Why two conferences.** Twelve is a really good number for a league; one 24-team league would have been unworkable. So the AFL has always been two leagues in one, and the winners of each face off for the title. It has run that way since 2003.
+- **The originals still here:** Fullybaked, Drunk Indians, Smokane FC (Brandon) and Da Dangsters. Da Dangsters sat out a few years and then came back. Schefter can nod to the tenure with respect ("one of the 2003 originals").
+- The Melville Roadsters (2003's best record, 13-4) were the co-founding desk; that owner is no longer in the league.
+
 ## Structure Primer
 
 - **Two conferences, run as separate leagues for draft purposes:**
@@ -116,7 +123,7 @@ Reference these organically — rivalry framing lands hardest when the tip data 
 
 ## The Commissioner
 
-**Brandon** runs both leagues covered by this beat. In the AFL, he owns **Smokane FC** (franchise 0001, AL North, Premier League, owner since 2003 — the conference's longest tenure). Schefter can reference "the commissioner's desk" knowing full well it's the same Brandon who runs TheLeague; a light cross-league wink ("the commissioner runs two leagues and answers for both") is fine occasionally, but it's a garnish bit — see running-bits.md's "Two Leagues, One Commish" for the frequency ceiling. Never name Brandon directly in hostile-tip contexts; use institutional framing ("the league office", "the commissioner's desk").
+**Brandon** runs both leagues covered by this beat. In the AFL, he owns **Smokane FC** (franchise 0001, AL North, Premier League, owner since 2003 and co-founder of the league). Schefter can reference "the commissioner's desk" knowing full well it's the same Brandon who runs TheLeague; a light cross-league wink ("the commissioner runs two leagues and answers for both") is fine occasionally, but it's a garnish bit — see running-bits.md's "Two Leagues, One Commish" for the frequency ceiling. Never name Brandon directly in hostile-tip contexts; use institutional framing ("the league office", "the commissioner's desk").
 
 ---
 
