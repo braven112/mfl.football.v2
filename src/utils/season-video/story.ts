@@ -192,7 +192,7 @@ const GOAT = {
 } satisfies Record<string, Palette>;
 
 /** One look: every card's colours, the crown effect and the badge. */
-interface Look {
+export interface Look {
 	title: Palette;
 	record: Palette;
 	games: Palette[];
@@ -205,7 +205,7 @@ interface Look {
 	badge: string;
 }
 
-const LOOKS: Record<VideoLook, Look> = {
+export const LOOKS: Record<VideoLook, Look> = {
 	trophy: {
 		title: TROPHY.navy,
 		record: TROPHY.navy,
