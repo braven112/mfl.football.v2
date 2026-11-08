@@ -710,6 +710,14 @@ body.bov-doc {
   color: var(--bov-muted);
 }
 
+.bov__q-team {
+  width: calc(var(--u) * 1.15);
+  height: calc(var(--u) * 1.15);
+  margin-right: calc(var(--u) * 0.4);
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .bov__q-lineup .bov__name {
   overflow: hidden;
   white-space: nowrap;

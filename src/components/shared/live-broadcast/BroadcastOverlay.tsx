@@ -922,6 +922,9 @@ function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonl
     <ol className="bov__q-lineup">
       {side.lineup.map((player) => {
         const note = gameNote(player.nflTeam, slate);
+        // The club's full-colour cut for a dark ground, same-origin only
+        // (Brandon, Nov 8: the rows looked bare with nothing but the name).
+        const logo = player.nflTeam ? nflLogoUrl(player.nflTeam, 'dark') : '';
         return (
           <li
             key={player.id}
@@ -930,7 +933,10 @@ function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonl
             data-lit={lit[player.id] ? true : undefined}
           >
             <span className="bov__pos">{player.position}</span>
-            <span className="bov__name">{player.name}</span>
+            <span className="bov__name">
+              {logo && <img className="bov__q-team" src={logo} alt="" />}
+              {player.name}
+            </span>
             <b>{note.started ? onePlace(player.live) : '–'}</b>
           </li>
         );
