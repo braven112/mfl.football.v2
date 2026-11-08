@@ -67,6 +67,7 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
     setRemembered(newest ? null : readChosenTv());
   }, []);
   const [size, setSize] = useState<'small' | 'quarter' | null>(null);
+  const [shownOnTv, setShownOnTv] = useState<boolean | null>(null);
   const [corner, setCorner] = useState<string | null>(null);
   // The league set being edited, per TV: null until touched, so it starts
   // from what that TV shows now.
@@ -138,6 +139,36 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
         <h2 id="tvr-overlay" className="tvr__heading">
           Score overlay
         </h2>
+        <div className="tvr__pair" role="group" aria-label="Overlay on or off">
+          <button
+            type="button"
+            className="tvr__big"
+            aria-pressed={shownOnTv === true}
+            onClick={() => {
+              setShownOnTv(true);
+              void send(overlay('show'), 'Overlay on');
+            }}
+          >
+            Overlay on
+          </button>
+          <button
+            type="button"
+            className="tvr__big"
+            aria-pressed={shownOnTv === false}
+            onClick={() => {
+              setShownOnTv(false);
+              void send(overlay('hide'), 'Overlay off');
+            }}
+          >
+            Overlay off
+          </button>
+        </div>
+        <p className="tvr__hint">
+          Off hides the scores and keeps the overlay ready. If you turned it off from the TV, start it again on the
+          TV.
+        </p>
+
+        <p className="tvr__sub">Size</p>
         <div className="tvr__pair" role="group" aria-label="Overlay size">
           <button
             type="button"

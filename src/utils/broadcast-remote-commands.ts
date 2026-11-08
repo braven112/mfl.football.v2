@@ -30,8 +30,26 @@ export type RemoteCommand =
  * TV with whichever arrived last.
  */
 export type OverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-export type OverlayAction = 'small' | 'quarter' | 'top' | 'bottom' | 'left' | 'right' | OverlayCorner;
+/**
+ * `hide` / `show` blank the overlay page and bring it back. The TV app's
+ * overlay service keeps running underneath (its window is see-through and
+ * never takes a touch), so `show` works without the TV's own remote. The
+ * Back menu's "Turn off" still ends the service, and only the TV can start
+ * it again.
+ */
+export type OverlayAction =
+  | 'small'
+  | 'quarter'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'hide'
+  | 'show'
+  | OverlayCorner;
 const OVERLAY_ACTIONS: readonly OverlayAction[] = [
+  'hide',
+  'show',
   'small',
   'quarter',
   'top',
