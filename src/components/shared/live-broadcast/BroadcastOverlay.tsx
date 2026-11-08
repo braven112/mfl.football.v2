@@ -48,6 +48,7 @@ import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
@@ -854,7 +855,11 @@ function Quarter({
   logoFor: (game: OverlayGame) => string;
   stale: boolean;
 }) {
-  const playing = [...game.mine.lineup, ...game.opponent.lineup].filter((p) => gameNote(p.nflTeam, slate).live).length;
+  // Split per team, never summed, as on /live's matchup cards: a total says
+  // how much football is on, never for WHOM (Brandon, Nov 8).
+  const playingFor = (side: OverlaySide) => side.lineup.filter((p) => gameNote(p.nflTeam, slate).live).length;
+  const minePlaying = playingFor(game.mine);
+  const theirPlaying = playingFor(game.opponent);
   const mineLead = game.readable && game.mine.live > game.opponent.live;
   const theirLead = game.readable && game.opponent.live > game.mine.live;
   return (
@@ -862,7 +867,22 @@ function Quarter({
       <header className="bov__q-head">
         <LeagueMark game={game} logo={logoFor(game)} />
         <span>Week {week}</span>
-        {playing > 0 && <span className="bov__q-live">{playing} playing</span>}
+        {minePlaying + theirPlaying > 0 && (
+          <span
+            className="bov__q-live"
+            aria-label={`${game.mine.name} ${minePlaying} playing, ${game.opponent.name} ${theirPlaying} playing`}
+          >
+            <span className="bov__q-n">
+              <i className="bov__q-dot" style={{ background: game.mine.swatch }} aria-hidden="true" />
+              {minePlaying}
+            </span>
+            <span className="bov__q-n">
+              <i className="bov__q-dot" style={{ background: game.opponent.swatch }} aria-hidden="true" />
+              {theirPlaying}
+            </span>
+            playing
+          </span>
+        )}
       </header>
       <div className="bov__q-score">
         <Crest side={game.mine} />
@@ -911,6 +931,20 @@ function QuarterLineup({ side, slate, lit }: { side: OverlaySide; slate: readonl
             data-lit={lit[player.id] ? true : undefined}
           >
             <span className="bov__pos">{player.position}</span>
+            {/* The site's player cell, sized to the row (Brandon, Nov 8: the
+                rows looked bare with nothing but the name). A defense gets
+                its crest, as everywhere else. */}
+            <BroadcastFace
+              player={{
+                id: player.id,
+                mflId: player.id,
+                position: player.position,
+                nflTeam: player.nflTeam,
+                headshot: player.headshot,
+                espnId: player.espnId,
+              }}
+              className="bov__q-face"
+            />
             <span className="bov__name">{player.name}</span>
             <b>{note.started ? onePlace(player.live) : '–'}</b>
           </li>
