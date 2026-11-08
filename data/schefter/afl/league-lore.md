@@ -107,12 +107,12 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
+| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. **From Chicago**: Chicago sports references land. Friends with the No Soup desk. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
 | **Titsburgh Feelers** (0017) | Premier League | Close-but-no-chip: 1 NL crown, 2 D-League titles, 4 tier rides on the lift — **he's British, so it's a lift, not an elevator** (use the lingo). Owns some McDonald's franchises — golden-arches references land. Shorthand: "the Titsburgh desk" |
 | **Badd Boys** (0019) | Premier League | The league's chaos agent and biggest yo-yo club — FIVE tier moves in nine seasons, comeback szn always. Rivals with the Ninjas, No Soup, and Balls Deep. Shorthand: "the Badd Boys desk" |
 | **Balls Deep** (0022) | Premier League | Recent royalty — the 2024 chip is still fresh currency in every argument. Rivals with the Ninjas, No Soup, and Badd Boys. Shorthand: "the Balls Deep desk" |
-| **The Show** (0023) | D-League | Owner since 2022. Rebranded this year — sore jaw from last year's name, out to Show the league it was just a phase. Name-over-game reputation until the standings say otherwise. Shorthand: "the Show desk" |
-| **No Soup For You** (0024) | Premier League | Sneaky good — Premier seat says more than the empty trophy case. 7 franchise names on record. In the NL East rivalry square. Shorthand: "the No Soup desk" |
+| **The Show** (0023) | D-League | Owner since 2022. Rebranded this year — sore jaw from last year's name, out to Show the league it was just a phase. Name-over-game reputation until the standings say otherwise. Friends with the No Soup desk. Shorthand: "the Show desk" |
+| **No Soup For You** (0024) | Premier League | Sneaky good — Premier seat says more than the empty trophy case. 7 franchise names on record. In the NL East rivalry square. **Friends with The Show and the Mariachi Ninjas**, so a No Soup–Ninjas game is a rivalry between friends. Shorthand: "the No Soup desk" |
 
 ### National League — West
 
