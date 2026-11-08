@@ -3,7 +3,7 @@ import SplashLayout from '../layouts/SplashLayout.astro';
 import { LEAGUES, crossHostLeagueHref } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import ProductInterest from '../components/shared/ProductInterest.astro';
-import { LEAGUE_PACKAGE_PRICING, leaguePackageSeasonOffer, MFL_LIVE_PRO_PRICE, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE, type ProductSlug } from '../data/products';
+import { LEAGUE_PACKAGE_PRICING, leaguePackageSeasonOffer, MFL_LIVE_PRO_PRICE, type ProductSlug } from '../data/products';
 import { mflLiveIncludedNames, siteExampleLeagues } from '../data/league-showcase';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../utils/league-year';
 import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
@@ -51,41 +51,42 @@ const includedList =
     ? `${includedNames.slice(0, -1).join(', ')} and ${includedNames[includedNames.length - 1]}`
     : (includedNames[0] ?? '');
 
-// Public prices: MFL Live Pro (Oct 2026), League Package, the site's top price,
-// and seasonal themes (Brandon, Nov 2026). Every other service here shows what
-// it does, not what it costs.
+// Public prices: MFL Live Pro (Oct 2026) and League Package, the site's top
+// price (Brandon, Nov 2026). Every other service here shows what it does, not
+// what it costs. Seasonal themes live only on their own page
+// (/mfl-league-themes): Brandon, 2026-11-08, "we don't need to be distracted".
 interface ServiceCard {
-  slug: ProductSlug;
+  /** The interest button's product, or none when the card only links out. */
+  slug?: ProductSlug;
+  /** The interest button's label. */
+  ask?: string;
   name: string;
   who: string;
   body: string;
-  /** Its public service page (src/data/mfl-services.ts), when it has one. */
+  /** Its public service page (src/data/mfl-services.ts), or a live page. */
   learnMore?: string;
+  learnMoreLabel?: string;
 }
 
 const servicePath = (slug: (typeof SERVICES)[number]['slug']) =>
   SERVICES.find((s) => s.slug === slug)?.path;
 
 const MORE_SERVICES: ServiceCard[] = [
-  {
-    slug: 'league-hub',
-    name: 'League Hub',
-    who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with a daily homepage, an AI league reporter, push alerts and more.',
-    learnMore: servicePath('league-website'),
-  },
-  {
-    slug: 'league-history',
-    name: 'Full History',
-    who: 'For any MFL, Sleeper or Yahoo league',
-    body: 'Every season back to your first: standings, playoffs, owner pages, rivalries and records.',
-    learnMore: servicePath('league-history'),
-  },
+  // We sell custom sites only (Brandon, 2026-11-08); League History is live
+  // and sold on its own page, so its card links there instead of asking.
   {
     slug: 'contest-package',
+    ask: 'Contact us',
     name: 'Contest Package',
     who: 'For organizers running many leagues',
-    body: 'One competition across dozens or hundreds of MFL leagues.',
+    body: 'A custom site for one competition across dozens or hundreds of MFL leagues, quoted to order.',
+  },
+  {
+    name: 'League History',
+    who: 'For any MFL, Sleeper or Yahoo league',
+    body: 'Every season back to your first: standings, playoffs, owner pages, rivalries and records.',
+    learnMore: '/history',
+    learnMoreLabel: 'See League History',
   },
 ];
 
@@ -140,14 +141,6 @@ const CUSTOM_RULE_EXAMPLES = [
   },
 ];
 
-// The same TheLeague standings page in each look it wears (Brandon,
-// 2026-11-04: show an example of everything we sell). Captured with
-// ?testDate= inside each window of src/config/seasonal-themes.mjs.
-const THEME_SHOTS = [
-  { label: 'Regular season', src: '/assets/home/theme-regular.webp', alt: 'TheLeague standings in its everyday blue and green, with each team’s own logo' },
-  { label: 'Halloween', src: '/assets/home/theme-halloween.webp', alt: 'The same standings in the Halloween theme: black and orange, a spooky headline face and every logo redrawn' },
-  { label: 'Christmas Week', src: '/assets/home/theme-christmas.webp', alt: 'The same standings in the Christmas theme: red, string lights and every logo redrawn as a knitted sweater patch' },
-];
 
 const commissionerToolsPath = servicePath('commissioner-tools');
 const skinsPath = servicePath('skins') ?? '/instructions#skin';
@@ -311,35 +304,12 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
           <h3>{p.name}</h3>
           <p>{p.body}</p>
           <span class="sp-ctas plan__acts">
-            <button type="button" class="cta cta--ghost" data-interest={p.slug} data-interest-name={p.name}>I'm interested</button>
-            {p.learnMore && <a class="cta-link" href={p.learnMore}>Learn more</a>}
+            {p.slug && <button type="button" class="cta cta--ghost" data-interest={p.slug} data-interest-name={p.name}>{p.ask ?? "I'm interested"}</button>}
+            {p.learnMore && <a class="cta-link" href={p.learnMore}>{p.learnMoreLabel ?? 'Learn more'}</a>}
           </span>
         </li>
       ))}
     </ul>
-    <div class="ui-card sp-card themes">
-      <div class="themes__copy">
-        <span class="sp-card__who">Add-on</span>
-        <h3>Seasonal themes</h3>
-        <p>
-          For a one-time {SEASONAL_THEME_PRICE} per theme, your site changes its look on its own through the year and changes back when the
-          week is over. It includes remaking {SEASONAL_THEME_INCLUDES}.
-        </p>
-        <a class="sp-card__more" href="/mfl-league-themes">See every logo before and after</a>
-      </div>
-      <div class="themes__shots">
-        {THEME_SHOTS.map((t) => (
-          <figure>
-            <img src={t.src} width="1200" height="560" loading="lazy" alt={t.alt} />
-            <figcaption>{t.label}</figcaption>
-          </figure>
-        ))}
-      </div>
-    </div>
-    <p class="addons">
-      <b>Add-ons</b> for League Hub and League Package leagues: side games, custom standings, prizes, contracts and large-league support.
-      <button type="button" class="cta-link" data-interest="add-ons" data-interest-name="Add-ons">I'm interested</button>
-    </p>
   </section>
 
   {examples.length > 0 && (
@@ -589,50 +559,9 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
     font-size: var(--sp-text-md);
   }
 
-  /* Seasonal themes: the copy, then one league in each of its three looks. */
-  .themes {
-    margin-top: 1rem;
-  }
-
-  .themes__copy {
-    display: grid;
-    gap: 0.6rem;
-    max-width: 46rem;
-  }
-
-  .themes__copy .sp-card__more {
-    margin-top: 0;
-  }
-
-  .themes__shots {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    margin-top: 0.5rem;
-  }
-
-  .themes__shots figure {
-    margin: 0;
-  }
-
-  .themes__shots img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 14px;
-  }
-
-  .themes__shots figcaption {
-    margin-top: 0.4rem;
-    font-size: var(--sp-text-sm);
-    font-weight: 600;
-    color: var(--sp-muted);
-  }
-
   @media (max-width: 760px) {
     .pkg__fees,
-    .custom,
-    .themes__shots {
+    .custom {
       grid-template-columns: minmax(0, 1fr);
     }
   }
@@ -653,20 +582,6 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
     align-items: center;
     margin-top: auto;
     padding-top: 0.35rem;
-  }
-
-  .addons {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.35rem 0.75rem;
-    margin-top: 1.25rem;
-    font-size: var(--sp-text-md);
-    color: var(--sp-muted);
-  }
-
-  .addons b {
-    color: var(--sp-ink);
   }
 
   .examples {

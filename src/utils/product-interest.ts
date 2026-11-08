@@ -16,7 +16,7 @@
  * no session, so every field name here comes from a closed list (the product
  * slug) or is validated (the id, the email) before it is written.
  */
-import { PRODUCTS, type ProductSlug } from '../data/products';
+import { OFF_LINEUP_PRODUCTS, PRODUCTS, type ProductSlug } from '../data/products';
 import { getRedis } from './redis-client';
 
 /**
@@ -36,7 +36,8 @@ export const INTEREST_ONLY = [
 export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];
 
 const INTEREST_ITEMS: ReadonlyArray<{ slug: InterestSlug; name: string }> = [
-	...PRODUCTS.map((p) => ({ slug: p.slug, name: p.name })),
+	// The lineup plus the products sold only on their own page (seasonal themes).
+	...[...PRODUCTS, ...OFF_LINEUP_PRODUCTS].map((p) => ({ slug: p.slug, name: p.name })),
 	...INTEREST_ONLY,
 ];
 

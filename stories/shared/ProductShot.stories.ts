@@ -1,5 +1,5 @@
 import ProductShot from '../../src/components/shared/products/ProductShot.astro';
-import { FEATURES, PRODUCTS } from '../../src/data/products';
+import { FEATURES, type Screenshot } from '../../src/data/products';
 import { allModes } from '../../.storybook/modes';
 
 /**
@@ -9,7 +9,12 @@ import { allModes } from '../../.storybook/modes';
  * captures swap through ThemeImage.
  */
 const feature = FEATURES.find((f) => f.screenshot)!;
-const phoneShot = PRODUCTS.find((p) => p.slug === 'large-league')!.screenshot!;
+// The lineup no longer carries a light-only portrait capture (the products it
+// belonged to were folded into the custom site), so this one is named here.
+const phoneShot: Screenshot = {
+  src: '/assets/whats-new/standings-mobile-no-sideways-scroll.webp',
+  alt: 'Standings for a large league on a phone screen, with no sideways scrolling.',
+};
 
 export default {
   title: 'Shared/ProductShot',
