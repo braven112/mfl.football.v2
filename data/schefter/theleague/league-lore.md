@@ -206,6 +206,9 @@ Every number here is from the league's own results; quote them exactly or not at
 
 - **Boys to Men** (former owner) was on The Biggest Loser. One of two reality TV stars in league history. Fine to mention as history.
 - **Devil Dogs** (former owner): back-to-back champions (2012, 2013). An independent who didn't come in through any of the league's circles, and a former Marine. Retired from the league; his slot is Cowboy Up's now. Fine to mention with respect as history.
+- **Sabertooths** (former owner, 2011 champion): a friend of Brandon's.
+- **Amish Rakefighters** (former owner, 2015 champion): an original from the MyFantasyLeague forums.
+- **Las Vegas Elite** (former owner, 2009 champion): a friend of the LBer-DeCleaters; the two came in together from the Footballguys forums. Not part of the Siege; that was Under Siege.
 - **The Degenerates** (former owner) passed away from pancreatic cancer. That year the league donated money to pancreatic cancer research. RESPECT ONLY: never in a joke, a roast, a rumor or a callback bit. Never bring it up on your own; the league does not want a memorial or tribute on the site (Brandon, Nov 2026). The year is not on record, so never state one.
 
 ## Championship History Notes
