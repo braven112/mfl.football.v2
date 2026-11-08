@@ -219,13 +219,14 @@ export function nflWeekVideo(f: NflWeekFacts): NflWeekVideo {
 	f.booms.forEach((b, i) =>
 		add(
 			{
-				type: 'award',
+				type: 'player',
 				duration: b.position === 'QB' ? 4.5 : 3.5,
 				palette: i % 2 ? brag.stat : brag.best,
 				kicker: `${label} · Top ${POSITION_WORD[b.position]}`,
+				points: b.points,
+				unit: 'PPR points',
 				name: b.name,
-				teamId: '',
-				value: `${formatPts(b.points)} PPR points${b.team ? ` · ${b.team}` : ''}`,
+				sub: [b.position, b.team].filter(Boolean).join(' · '),
 				badge: BOOM_BADGE[b.position],
 			},
 			boomVoice(b),
@@ -235,26 +236,28 @@ export function nflWeekVideo(f: NflWeekFacts): NflWeekVideo {
 		const b = f.bust;
 		add(
 			{
-				type: 'award',
+				type: 'player',
 				duration: 5,
 				palette: roast.low,
 				kicker: `${label} · Bust of the week`,
+				points: b.points,
+				unit: 'PPR points',
 				name: b.name,
-				teamId: '',
-				value: `${formatPts(b.points)} points. He was averaging ${formatPts(b.average)}.`,
+				sub: `He was averaging ${formatPts(b.average)}.`,
 				badge: '📉',
 			},
 			`Bust of the week. ${b.name}. Averaging ${formatPts(b.average)}, gave you ${formatPts(b.points)}. I've seen better production from a bye week.`,
 		);
 		add(
 			{
-				type: 'award',
+				type: 'player',
 				duration: 5,
 				palette: clown.crown,
 				kicker: 'Started him? We see you.',
+				points: b.points,
+				unit: 'PPR points',
 				name: b.name,
-				teamId: '',
-				value: 'Got a league mate who started him? Send them one of these.',
+				sub: 'Got a league mate who started him? Send them one of these.',
 				badge: '🤡',
 				effect: clown.effect,
 			},

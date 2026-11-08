@@ -75,13 +75,15 @@ describe('nflWeekVideo', () => {
 
 	it('opens on the hook, roasts the bust and ends on the video maker link', () => {
 		expect(v.scenes[0].type).toBe('title');
-		expect(v.scenes.some((s) => s.type === 'award' && s.badge === '🤡')).toBe(true);
+		expect(v.scenes.some((s) => s.type === 'player' && s.badge === '🤡')).toBe(true);
 		expect(v.scenes.at(-1)?.type).toBe('end');
 		expect(v.voice.at(-1)).toMatch(/slash video/);
 	});
 
-	it('draws no team logo: every player card has no team id', () => {
-		for (const s of v.scenes) if (s.type === 'award') expect(s.teamId).toBe('');
+	it('player cards carry no picture at all: the score is the hero (Brandon, 2026-11-08)', () => {
+		expect(v.scenes.some((s) => s.type === 'award')).toBe(false);
+		const players = v.scenes.filter((s) => s.type === 'player');
+		expect(players.length).toBeGreaterThanOrEqual(6);
 	});
 
 	it('scoreboard decimals', () => {
