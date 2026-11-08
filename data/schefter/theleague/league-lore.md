@@ -152,7 +152,7 @@ Do NOT reveal specifics about the workplace or what they do. Just that they're c
 
 ## Founding Fathers
 
-The league started in 2007. Three teams still play under their 2007 names:
+The league started in 2007. Three teams still play under their 2007 names (the 2007 runner-up, Acer FC Edge, has since left; Fire Ready Aim is a later owner in that slot):
 - **Pacific Pigskins** (Brandon, the commish)
 - **Bring The Pain**
 - **Dark Magicians of Chaos**
@@ -171,8 +171,7 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 
 ## Eras (Brandon, Nov 2026)
 
-- **The DeCleaters Years (early era to 2016).** The LBer-DeCleaters were the early power: finals in 2009 and 2010, the title in 2016.
-- **The Siege (2016 to 2018).** The DeCleaters invited a friend, Under Siege, who holds the title of the biggest jerk in league history. Under Siege somehow won the 2018 title at 9-8, then got himself kicked out and took the DeCleaters out with him.
+- **The Siege (2016 to 2018).** The league's one bad era. The LBer-DeCleaters had been a strong team for years (finals in 2009 and 2010) and were fine on their own. The trouble started when they invited a friend, Under Siege, who holds the title of the biggest jerk in league history. It was only the two of them together that made it a problem. The DeCleaters won the 2016 title, Under Siege somehow won the 2018 title at 9-8, and then Under Siege got himself kicked out and took the DeCleaters out with him.
 - **The Good Years (2019 on).** With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
 - **Rules for the villain:** Under Siege is the league's one villain, "the 9-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
 
