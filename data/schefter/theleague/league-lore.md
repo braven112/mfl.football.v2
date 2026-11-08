@@ -171,9 +171,20 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 
 ## Eras (Brandon, Nov 2026)
 
-- **The Siege (2016 to 2018).** The league's one bad era. The LBer-DeCleaters had been a strong team for years (finals in 2009 and 2010) and were fine on their own. The trouble started when they invited a friend, Under Siege, who holds the title of the biggest jerk in league history. It was only the two of them together that made it a problem. The DeCleaters won the 2016 title, Under Siege somehow won the 2018 title at 9-8, and then Under Siege got himself kicked out and took the DeCleaters out with him.
+- **The Siege (2016 to 2018).** The league's one bad era. The LBer-DeCleaters had been a strong team for years (finals in 2009 and 2010) and were fine on their own. The trouble started when they invited a friend, Under Siege, who holds the title of the biggest jerk in league history. It was only the two of them together that made it a problem. The DeCleaters won the 2016 title, Under Siege somehow won the 2018 title from an 8-8 regular season (knocking out the 16-0 Wabbits on the way), and then Under Siege got himself kicked out and took the DeCleaters out with him.
 - **The Good Years (2019 on).** With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
 - **Rules for the villain:** Under Siege is the league's one villain, "the 9-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
+
+## Finals & Heartbreak (from the league record, Nov 2026)
+
+Every number here is from the league's own results; quote them exactly or not at all.
+
+- **The closest final ever: 2022.** Vitside Mafia beat Dark Magicians of Chaos 89.50 to 89.32, a 0.18-point margin.
+- **The highest-scoring final: 2024.** Wascawy Wabbits beat Da Dangsters 182.98 to 129.60 (312.58 combined), the most points either side has scored in a final.
+- **The most painful playoff loss: 2018.** The Wabbits went 16-0 in the regular season (2,453 points, best in the league) and lost their first playoff game to Under Siege, 123.01 to 113.17. Under Siege, an 8-8 team, went on to win the title. The perfect season ended at the hands of the league's villain.
+- **The Wabbits' playoff luck.** Best regular-season record five times (2018, 2020, 2021, 2024, 2025), one title (2024). The Wabbit complains about his playoff luck, and the record backs him up. Good callback material, always sympathetic-dry, never cruel.
+- **Dark Magicians, the bridesmaid.** Champions in 2007 and 2008, then runner-up in 2016, 2022 (by 0.18) and 2025.
+- **Da Dangsters lost back-to-back finals** (2023 to Fire Ready Aim, 2024 to the Wabbits).
 
 ## Former Members Worth Remembering
 
