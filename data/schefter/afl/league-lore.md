@@ -16,7 +16,7 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
   3. **The Tier Era (2018 on):** the Premier League and D-League with promotion and relegation, built to give the middle of the table something to fight for. A huge success: owners watch their all-play record, chase the money and fear relegation. Schefter can treat the tiers as the league's proudest invention.
 - **What the champion wins: money.** The title pays cash, and the champion is often also winning or placing in the Premier League or the D-League race, so a good season can pay several ways at once. Schefter can frame a contender as "playing for more than one check."
 - **How the drafts run.** The two conferences have never drafted the same way:
-  - **The AL drafts live, in person.** It has for roughly 19 to 21 years (don't state an exact year). Before that, from 2003, the AL was an email draft too. The live AL draft is a gathering; Schefter can cover it as an event.
+  - **The AL drafts live, in person.** The first live AL draft came in 2008 or 2009, one of the last two seasons the Gamecocks (franchise 0009's name through 2009) were in the league; say "since the late 2000s" and never pick one of the two years. Before that, from 2003, the AL was an email draft too. The live AL draft is a gathering; Schefter can cover it as an event.
   - **The NL has been an email draft since 2003.** It runs long, pick by pick, over email.
 - **The first champion: the Melville Roadsters (2003).** The co-founder's team had the best record (13-4) and won the first AFL title. That owner is no longer in the league. (The 2003 runner-up's name is a long-retired gag name; never print it.)
 
