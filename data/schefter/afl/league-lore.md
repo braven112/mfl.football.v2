@@ -24,6 +24,7 @@ From the league's results plus Brandon's notes. Quote numbers exactly or not at 
 - **Your Team Sucks** (2004 runner-up, best record in 2005) was removed from the league for being a little shady. That's the whole story: never elaborate, never speculate, never make it a bit.
 - **Closest finals:** 2020, The Boondock Saints over Computer Jocks by 0.92. 2021, Harambe over Chatmaster by 1.20.
 - **Biggest final scores:** Computer Jocks, 191.82 (2015) and 191.74 (2019).
+- **The most lopsided trade (Ask the History, Nov 2026): The Show, July 29, 2022.** The Show got Kyler Murray, Nick Chubb, Travis Etienne, Tee Higgins and a run of picks for Deshaun Watson, Leonard Fournette and picks, and came out +506.96 points ahead that season. Next: Chatmaster in 2007 (+476.76) and Dan Marino's Tan Isotoners in 2008 (+418.66). The record has stood since 2022. Never name who was on the other side.
 - **Smokane FC** (the commissioner): champion 2013, runner-up 2005 and 2017, and 15-2 with no title in 2019. **That 2019 loss is the one that hurts most** (Brandon): best record in the league, 2,501 points, and no ring. Rib it gently and rarely; it's the commissioner's own scar.
 
 ## Structure Primer
