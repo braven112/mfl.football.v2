@@ -30,8 +30,10 @@ export interface TvRemoteLeague {
 }
 
 interface Props {
-  /** The leagues the owner's board watches — the ones a TV can focus. */
+  /** Every league the owner is in — the ones a TV can be told to show. */
   leagues: readonly TvRemoteLeague[];
+  /** The leagues a TV shows when nobody has picked (the full-management ones). */
+  defaults?: readonly string[];
   /** The paired TVs, when already known; otherwise they are fetched. */
   tvs?: PairedTv[];
 }
@@ -55,17 +57,28 @@ function usePageVisible(): boolean {
   return visible;
 }
 
-export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
+export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Props) {
   const tvs = usePairedTvs(knownTvs);
   const [tvId, setTvId] = useState<string | null>(null);
   const [remembered, setRemembered] = useState<string | null>(null);
-  useEffect(() => setRemembered(readChosenTv()), []);
+  useEffect(() => {
+    // Arriving from a fresh pairing: the TV just paired, not a remembered one.
+    const newest = new URLSearchParams(window.location.search).get('tv') === 'newest';
+    setRemembered(newest ? null : readChosenTv());
+  }, []);
   const [size, setSize] = useState<'small' | 'quarter' | null>(null);
   const [corner, setCorner] = useState<string | null>(null);
-  const [focus, setFocus] = useState<string | null>(null);
+  // The league set being edited, per TV: null until touched, so it starts
+  // from what that TV shows now.
+  const [picked, setPicked] = useState<Record<string, string[]>>({});
   const visible = usePageVisible();
   const activeId = tvId ?? (tvs ? defaultTvId(tvs, remembered) : null);
-  const { send, note } = useTvRemote(activeId, visible);
+  // A fresh pairing becomes this phone's TV from now on, not just this visit.
+  useEffect(() => {
+    if (!tvs?.length || new URLSearchParams(window.location.search).get('tv') !== 'newest') return;
+    rememberChosenTv(tvs[tvs.length - 1].id);
+  }, [tvs]);
+  const { send, sendLeagues, note } = useTvRemote(activeId, visible);
 
   if (tvs === null) {
     return <p className="tvr__status">Finding your TVs…</p>;
@@ -90,7 +103,15 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
   }
 
   const overlay = (action: OverlayAction) => ({ kind: 'overlay' as const, action });
-  const pinnable = leagues.filter((l) => /^\d{1,12}$/.test(l.id));
+  const pickable = leagues.filter((l) => /^\d{1,12}$/.test(l.id));
+  const activeTv = tvs.find((t) => t.id === activeId) ?? null;
+  const shown = activeId ? (picked[activeId] ?? tvShows(activeTv, pickable, defaults)) : [];
+  const toggle = (id: string) => {
+    if (!activeId) return;
+    const next = shown.includes(id) ? shown.filter((x) => x !== id) : [...shown, id];
+    // Board order, so the TV's panels keep their usual order.
+    setPicked((prev) => ({ ...prev, [activeId]: pickable.map((l) => l.id).filter((x) => next.includes(x)) }));
+  };
 
   return (
     <div className="tvr">
@@ -170,39 +191,40 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
         </button>
       </section>
 
-      <section className="tvr__group" aria-labelledby="tvr-board">
-        <h2 id="tvr-board" className="tvr__heading">
-          Full board
-        </h2>
-        {pinnable.length > 1 && (
-          <div className="tvr__choices" role="group" aria-label="Show on the TV">
-            <button
-              type="button"
-              className="tvr__choice"
-              aria-pressed={focus === null}
-              onClick={() => {
-                setFocus(null);
-                void send({ kind: 'reset' }, 'All leagues');
-              }}
-            >
-              All leagues
-            </button>
-            {pinnable.map((l) => (
+      {pickable.length > 1 && (
+        <section className="tvr__group" aria-labelledby="tvr-leagues">
+          <h2 id="tvr-leagues" className="tvr__heading">
+            Leagues on the TV
+          </h2>
+          <div className="tvr__choices" role="group" aria-label="Leagues on the TV">
+            {pickable.map((l) => (
               <button
                 key={l.id}
                 type="button"
                 className="tvr__choice"
-                aria-pressed={focus === l.id}
-                onClick={() => {
-                  setFocus(l.id);
-                  void send({ kind: 'pin-league', leagueId: l.id }, l.name);
-                }}
+                aria-pressed={shown.includes(l.id)}
+                onClick={() => toggle(l.id)}
               >
                 {l.name}
               </button>
             ))}
           </div>
-        )}
+          <button
+            type="button"
+            className="tvr__big tvr__big--wide"
+            disabled={shown.length === 0}
+            onClick={() => void sendLeagues(shown, `${shown.length} league${shown.length === 1 ? '' : 's'} on the TV`)}
+          >
+            Show these leagues
+          </button>
+          <p className="tvr__hint">For the full board and the score overlay. The TV reloads to show them.</p>
+        </section>
+      )}
+
+      <section className="tvr__group" aria-labelledby="tvr-board">
+        <h2 id="tvr-board" className="tvr__heading">
+          Full board
+        </h2>
         <div className="tvr__pair" role="group" aria-label="Player pages">
           <button type="button" className="tvr__big" onClick={() => void send({ kind: 'page', dir: 'prev' }, 'Previous page')}>
             ‹ Previous
@@ -230,4 +252,19 @@ export default function TvRemote({ leagues, tvs: knownTvs }: Props) {
       </p>
     </div>
   );
+}
+
+/**
+ * The leagues a TV shows now, as ids among the owner's leagues: its stored
+ * set when one survives, else the default set.
+ */
+export function tvShows(
+  tv: Pick<PairedTv, 'leagues'> | null,
+  leagues: readonly TvRemoteLeague[],
+  defaults: readonly string[],
+): string[] {
+  const ids = leagues.map((l) => l.id);
+  const stored = (tv?.leagues ?? '').split(',').filter((id) => ids.includes(id));
+  if (stored.length) return ids.filter((id) => stored.includes(id));
+  return ids.filter((id) => defaults.includes(id));
 }

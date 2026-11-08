@@ -17,7 +17,9 @@
  */
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import WhereToWatch from '../../../components/shared/live-broadcast/WhereToWatch';
-import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
+import { getBroadcastViewer, readTvPassToken } from '../../../utils/broadcast-viewer';
+import { getPairingStore } from '../../../utils/broadcast-tv-store';
+import { tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
 import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
@@ -58,7 +60,12 @@ if (viewer) {
     const board = await assembleBroadcastBoard({
       user: viewer.user,
       leaguesParam: Astro.url.searchParams.get('leagues'),
-      leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      leaguesCookie: await tvLeagueChoice(
+        readTvPassToken(Astro.request),
+        Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value,
+        viewer.pass?.leagues,
+        getPairingStore,
+      ),
       week,
       year,
     });

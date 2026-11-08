@@ -54,6 +54,7 @@ describe('the command list is closed', () => {
       'sound:on',
       'sound:off',
       'reset',
+      'leagues',
       'pin-league:13522',
       'overlay:small',
       'overlay:quarter',

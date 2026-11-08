@@ -385,7 +385,9 @@ export default function BroadcastOverlay({
     const cmd = parseRemoteCommand(remote.command);
     if (!cmd || (first && cmd.kind !== 'overlay')) return;
     const host = window.MflOverlayHost;
-    if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
+    // A new league set from the phone: the games are built server-side.
+    if (cmd.kind === 'leagues') window.location.reload();
+    else if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
     else if (cmd.kind === 'overlay') {
       // Only the corner app can resize or move sideways: an older build's
       // moveTo reads anything but 'bottom' as 'top'.

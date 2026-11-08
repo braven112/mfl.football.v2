@@ -14,7 +14,7 @@ import TvRemote, { type TvRemoteLeague } from '../../../components/shared/live-b
 import { getMflLiveUser } from '../../../utils/auth';
 import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
 import { discoverBoardLeagues } from '../../../utils/cross-league-live';
-import { BROADCAST_LEAGUE_COOKIE, resolveBroadcastLeagues } from '../../../utils/broadcast-selection';
+import { defaultLeagueSelection } from '../../../utils/broadcast-selection';
 import '../../../styles/mfl-live.css';
 import '../../../styles/tv-remote.css';
 
@@ -25,12 +25,15 @@ if (!user) {
   return Astro.redirect(mflLoginUrl(Astro.url.pathname + Astro.url.search), 302);
 }
 
-// The leagues this owner's board watches: the ones the TV can be told to focus.
+// Every league this owner is in: the TV can be told to show any set of them
+// (Brandon, Nov 2026: keep his test leagues off the board). The defaults are
+// what a TV shows before anyone picks.
 let leagues: TvRemoteLeague[] = [];
+let defaults: string[] = [];
 try {
   const all = await discoverBoardLeagues(user);
-  const { enabled } = resolveBroadcastLeagues(null, Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null, all);
-  leagues = all.filter((l) => enabled.includes(l.id)).map((l) => ({ id: l.id, name: l.name }));
+  leagues = all.map((l) => ({ id: l.id, name: l.name }));
+  defaults = defaultLeagueSelection(all);
 } catch {
   leagues = [];
 }
@@ -40,6 +43,6 @@ try {
   <section class="tvr-page" aria-labelledby="tvr-title">
     <a class="tvr-page__back" href="/live/broadcast">&larr; Broadcast</a>
     <h1 id="tvr-title" class="tvr-page__title">TV remote</h1>
-    <TvRemote client:load leagues={leagues} />
+    <TvRemote client:load leagues={leagues} defaults={defaults} />
   </section>
 </MflAppLayout>

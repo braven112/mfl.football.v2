@@ -318,6 +318,12 @@ export async function passHashForOwner(store: PairingStore, owner: string, id: s
   return (await store.get(passKeyFromHash(entry.hash))) ? entry.hash : null;
 }
 
+/** The pass behind one of THIS owner's TVs, by public id; null if it is not theirs or has expired. */
+export async function readOwnerPass(store: PairingStore, owner: string, id: string): Promise<TvPass | null> {
+  const hash = await passHashForOwner(store, owner, id);
+  return hash ? store.get<TvPass>(passKeyFromHash(hash)) : null;
+}
+
 /** The hash a TV's own cookie is stored under. Never the pass itself. */
 export function passHashOfToken(token: string): string {
   return sha(token);

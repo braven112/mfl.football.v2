@@ -23,7 +23,7 @@
  *
  * PURE over the pairing store, so it is unit-tested against a Map.
  */
-import { passHashForOwner, type PairingStore } from './broadcast-tv-pairing';
+import { passHashForOwner, passHashOfToken, PASS_TTL_S, readOwnerPass, type PairingStore } from './broadcast-tv-pairing';
 import {
   formatRemoteCommand,
   parseRemoteCommand,
@@ -94,4 +94,94 @@ export async function readRemoteState(
     // Validated again on the way out: a record is only ever a closed-list string.
     command: parseRemoteCommand(stored.command) ? stored.command : null,
   };
+}
+
+// ── Which leagues a TV shows, as its owner's phone last set them ──────────
+//
+//   bctv:leagues:<sha(token)>   "13522,19621"   PASS_TTL_S
+//
+// Stored beside the pass, not in it: the pass is written once at pairing,
+// and this changes whenever the owner wants (Brandon, Nov 2026: hide his
+// test leagues from the board). It outranks the TV's own cookie, because a
+// TV has no keyboard to pick with and the phone is where the choice is made.
+
+const leaguesKey = (passHash: string) => `bctv:leagues:${passHash}`;
+
+/** MFL league ids are digits only. */
+const LEAGUE_ID = /^\d{1,12}$/;
+
+/** The most leagues one set may name; a board holds far fewer. */
+export const MAX_REMOTE_LEAGUES = 24;
+
+/** League ids, MFL's digits only, deduplicated in the order given; null if none survive. */
+export function cleanLeagueIds(raw: unknown): string[] | null {
+  if (!Array.isArray(raw) || raw.length > MAX_REMOTE_LEAGUES) return null;
+  const seen = new Set<string>();
+  for (const id of raw) {
+    if (typeof id === 'string' && LEAGUE_ID.test(id)) seen.add(id);
+  }
+  return seen.size ? [...seen] : null;
+}
+
+/**
+ * The owner's phone setting the leagues one of their TVs shows, then telling
+ * the TV to reload. Ids the owner is not in are harmless: the board resolves
+ * the set against the owner's own leagues and drops anything else.
+ */
+export async function setRemoteLeagues(
+  store: PairingStore,
+  owner: string,
+  passId: string,
+  rawIds: unknown,
+  now: number = Date.now(),
+): Promise<SendResult> {
+  const ids = cleanLeagueIds(rawIds);
+  if (!ids) return 'invalid';
+  const hash = await passHashForOwner(store, owner, passId);
+  if (!hash) return 'not-found';
+  await store.set(leaguesKey(hash), ids.join(','), { ex: PASS_TTL_S });
+  return sendRemoteCommand(store, owner, passId, 'leagues', now);
+}
+
+/** The set a phone last gave the TV behind this pass hash, or null. */
+export async function readRemoteLeagues(store: PairingStore, passHash: string): Promise<string | null> {
+  const raw = await store.get<string>(leaguesKey(passHash));
+  if (typeof raw !== 'string') return null;
+  const ids = cleanLeagueIds(raw.split(','));
+  return ids ? ids.join(',') : null;
+}
+
+/**
+ * The league set a board render should start from, before `?leagues=`: the
+ * phone's choice for this TV, then the TV's own cookie, then the set the phone
+ * that paired it was watching. Only a request carrying a TV pass has a phone
+ * choice; a failed read costs only that choice, never the board.
+ */
+export async function tvLeagueChoice(
+  passToken: string | null,
+  cookie: string | null | undefined,
+  pairedWith: string | null | undefined,
+  getStore: () => Promise<PairingStore | null>,
+): Promise<string | null> {
+  if (passToken && passToken.length <= 128) {
+    try {
+      const store = await getStore();
+      const fromPhone = store ? await readRemoteLeagues(store, passHashOfToken(passToken)) : null;
+      if (fromPhone) return fromPhone;
+    } catch {
+      /* fall through to the TV's own choice */
+    }
+  }
+  return cookie ?? pairedWith ?? null;
+}
+
+/**
+ * The league set one of the owner's TVs shows now, for the remote's
+ * checkboxes: the phone's last choice, else the set it was paired with.
+ * Null means the default set (and also "not this owner's TV").
+ */
+export async function tvLeaguesForOwner(store: PairingStore, owner: string, passId: string): Promise<string | null> {
+  const hash = await passHashForOwner(store, owner, passId);
+  if (!hash) return null;
+  return (await readRemoteLeagues(store, hash)) ?? (await readOwnerPass(store, owner, passId))?.leagues ?? null;
 }
