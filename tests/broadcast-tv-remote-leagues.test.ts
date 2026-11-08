@@ -20,6 +20,7 @@ import {
   readRemoteLeagues,
   readRemoteState,
   setRemoteLeagues,
+  noteTvShown,
   tvLeagueChoice,
   tvLeaguesForOwner,
 } from '../src/utils/broadcast-tv-remote';
@@ -119,5 +120,55 @@ describe("the remote's checkboxes", () => {
   it('show the default set when the TV has none, or only leagues the owner left', () => {
     expect(tvShows({ leagues: null }, leagues, ['13522', '19621'])).toEqual(['13522', '19621']);
     expect(tvShows({ leagues: '99999' }, leagues, ['13522'])).toEqual(['13522']);
+  });
+});
+
+/**
+ * Upstash parses what it reads back: a stored "13522" returns as the NUMBER
+ * 13522. This store does the same, which the Map stand-in alone never did.
+ */
+function upstashLikeStore() {
+  const inner = memoryPairingStore();
+  return {
+    ...inner,
+    async get<T>(key: string) {
+      const raw = await inner.get<unknown>(key);
+      if (typeof raw !== 'string') return raw as T;
+      try {
+        return JSON.parse(raw) as T;
+      } catch {
+        return raw as T;
+      }
+    },
+  };
+}
+
+describe('Brandon, Nov 8: the leagues he picked never reached the TV', () => {
+  it('a one-league choice survives a store that parses numbers back', async () => {
+    const store = upstashLikeStore();
+    const tv = await pairTv(store, owner);
+    expect(await setRemoteLeagues(store, ownerKeyFor(owner), tv.id, ['13522'])).toBe('sent');
+    expect(await readRemoteLeagues(store, passHashOfToken(tv.token))).toBe('13522');
+    expect(await tvLeagueChoice(tv.token, '19621', null, async () => store)).toBe('13522');
+  });
+
+  it("the remote's checkboxes show what the TV last rendered, not the default", async () => {
+    const store = memoryPairingStore();
+    const tv = await pairTv(store, owner);
+    // The TV's own cookie picked test leagues; the server only learns it from the TV.
+    await noteTvShown(tv.token, ['13522', '19621', '77777'], async () => store);
+    expect(await tvLeaguesForOwner(store, ownerKeyFor(owner), tv.id)).toBe('13522,19621,77777');
+    // The phone's choice is what the TV renders next, so it wins.
+    await setRemoteLeagues(store, ownerKeyFor(owner), tv.id, ['13522']);
+    expect(await tvLeaguesForOwner(store, ownerKeyFor(owner), tv.id)).toBe('13522');
+  });
+
+  it('a report with no pass, or a failing store, does nothing', async () => {
+    await expect(noteTvShown(null, ['13522'], async () => memoryPairingStore())).resolves.toBeUndefined();
+    await expect(
+      noteTvShown('tok', ['13522'], async () => {
+        throw new Error('down');
+      }),
+    ).resolves.toBeUndefined();
   });
 });

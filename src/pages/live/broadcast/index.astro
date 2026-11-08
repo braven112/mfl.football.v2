@@ -32,7 +32,7 @@ import BroadcastLanding from '../../../components/shared/live-broadcast/Broadcas
 import LiveBroadcast from '../../../components/shared/live-broadcast/LiveBroadcast';
 import HandheldPrepaint from '../../../components/shared/live-broadcast/HandheldPrepaint.astro';
 import { getBroadcastViewer, readTvPassToken } from '../../../utils/broadcast-viewer';
-import { tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
+import { noteTvShown, tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
 import { rememberBroadcastChoices } from '../../../utils/broadcast-cookies';
 import { assembleBroadcastBoard, toPageData, type AssembledBoard } from '../../../utils/broadcast-board';
 import {
@@ -97,6 +97,7 @@ if (viewer) {
       week,
       year,
     });
+    await noteTvShown(readTvPassToken(Astro.request), board.enabled, getPairingStore);
   } catch {
     failed = true;
   }

@@ -162,6 +162,26 @@ interface Props {
 const points = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '0.00');
 const onePlace = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
+
+const HIDDEN_KEY = 'mfl.overlay.hidden';
+
+function readOverlayHidden(): boolean {
+  try {
+    return window.localStorage.getItem(HIDDEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberOverlayHidden(hidden: boolean): void {
+  try {
+    if (hidden) window.localStorage.setItem(HIDDEN_KEY, '1');
+    else window.localStorage.removeItem(HIDDEN_KEY);
+  } catch {
+    /* private storage: hidden until this page reloads */
+  }
+}
+
 export default function BroadcastOverlay({
   pageData,
   signedIn,
@@ -192,6 +212,11 @@ export default function BroadcastOverlay({
   const [stale, setStale] = useState(false);
   const [barHint, setBarHint] = useState(true);
   const [remote, setRemote] = useState<RemoteState | null>(null);
+  // Hidden from the phone remote. Remembered on this TV, so the page's own
+  // reloads (a new league set, a new build) keep it hidden until "show".
+  // Read after hydration: the server render cannot see this TV's storage.
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => setHidden(readOverlayHidden()), []);
   const takeRemote = useCallback((next: RemoteState | undefined) => {
     if (!next || typeof next.seq !== 'number') return;
     setRemote((prev) => (prev && prev.seq === next.seq && prev.active === next.active ? prev : next));
@@ -389,6 +414,12 @@ export default function BroadcastOverlay({
     if (cmd.kind === 'leagues') window.location.reload();
     else if (cmd.kind === 'page') step(cmd.dir === 'next' ? 1 : -1);
     else if (cmd.kind === 'overlay') {
+      if (cmd.action === 'hide' || cmd.action === 'show') {
+        const next = cmd.action === 'hide';
+        setHidden(next);
+        rememberOverlayHidden(next);
+        return;
+      }
       // Only the corner app can resize or move sideways: an older build's
       // moveTo reads anything but 'bottom' as 'top'.
       if (cmd.action === 'quarter' || cmd.action === 'small') {
@@ -433,6 +464,10 @@ export default function BroadcastOverlay({
       window.clearTimeout(timer);
     };
   }, [remoteActive, takeRemote]);
+
+  // After every hook. The overlay window stays up, see-through and
+  // untouchable, so the next poll can still bring the box back.
+  if (hidden) return null;
 
   const note = !data
     ? signedIn

@@ -12,7 +12,7 @@
  * What it cannot do, and says so: a browser grants full screen and starts
  * audio only after a tap ON that device, so the TV needs one touch of its own.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { OverlayAction, OverlayCorner } from '../../../utils/broadcast-remote-commands';
 import {
   defaultTvId,
@@ -67,6 +67,7 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
     setRemembered(newest ? null : readChosenTv());
   }, []);
   const [size, setSize] = useState<'small' | 'quarter' | null>(null);
+  const [shownOnTv, setShownOnTv] = useState<boolean | null>(null);
   const [corner, setCorner] = useState<string | null>(null);
   // The league set being edited, per TV: null until touched, so it starts
   // from what that TV shows now.
@@ -79,6 +80,11 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
     rememberChosenTv(tvs[tvs.length - 1].id);
   }, [tvs]);
   const { send, sendLeagues, note } = useTvRemote(activeId, visible);
+  // A tap on a league goes to the TV by itself, a moment later, so a few
+  // quick taps reload the TV once. There used to be a separate "Show these
+  // leagues" button, and a tap that looked done never reached the TV.
+  const leagueTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(leagueTimer.current), []);
 
   if (tvs === null) {
     return <p className="tvr__status">Finding your TVs…</p>;
@@ -109,8 +115,16 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
   const toggle = (id: string) => {
     if (!activeId) return;
     const next = shown.includes(id) ? shown.filter((x) => x !== id) : [...shown, id];
-    // Board order, so the TV's panels keep their usual order.
-    setPicked((prev) => ({ ...prev, [activeId]: pickable.map((l) => l.id).filter((x) => next.includes(x)) }));
+    // Board order, so the TV's panels keep their usual order. The last league
+    // stays on: an empty board is never what a tap means.
+    const ordered = pickable.map((l) => l.id).filter((x) => next.includes(x));
+    if (ordered.length === 0) return;
+    setPicked((prev) => ({ ...prev, [activeId]: ordered }));
+    window.clearTimeout(leagueTimer.current);
+    leagueTimer.current = window.setTimeout(
+      () => void sendLeagues(ordered, `${ordered.length} league${ordered.length === 1 ? '' : 's'} on the TV`),
+      LEAGUE_SEND_DELAY_MS,
+    );
   };
 
   return (
@@ -138,6 +152,36 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
         <h2 id="tvr-overlay" className="tvr__heading">
           Score overlay
         </h2>
+        <div className="tvr__pair" role="group" aria-label="Overlay on or off">
+          <button
+            type="button"
+            className="tvr__big"
+            aria-pressed={shownOnTv === true}
+            onClick={() => {
+              setShownOnTv(true);
+              void send(overlay('show'), 'Overlay on');
+            }}
+          >
+            Overlay on
+          </button>
+          <button
+            type="button"
+            className="tvr__big"
+            aria-pressed={shownOnTv === false}
+            onClick={() => {
+              setShownOnTv(false);
+              void send(overlay('hide'), 'Overlay off');
+            }}
+          >
+            Overlay off
+          </button>
+        </div>
+        <p className="tvr__hint">
+          Off hides the scores and keeps the overlay ready. If you turned it off from the TV, start it again on the
+          TV.
+        </p>
+
+        <p className="tvr__sub">Size</p>
         <div className="tvr__pair" role="group" aria-label="Overlay size">
           <button
             type="button"
@@ -209,15 +253,7 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            className="tvr__big tvr__big--wide"
-            disabled={shown.length === 0}
-            onClick={() => void sendLeagues(shown, `${shown.length} league${shown.length === 1 ? '' : 's'} on the TV`)}
-          >
-            Show these leagues
-          </button>
-          <p className="tvr__hint">For the full board and the score overlay. The TV reloads to show them.</p>
+          <p className="tvr__hint">Tap to add or remove a league. The board and the score overlay reload to match.</p>
         </section>
       )}
 
@@ -258,6 +294,9 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
  * The leagues a TV shows now, as ids among the owner's leagues: its stored
  * set when one survives, else the default set.
  */
+/** Long enough for a few quick taps to become one reload on the TV. */
+const LEAGUE_SEND_DELAY_MS = 1200;
+
 export function tvShows(
   tv: Pick<PairedTv, 'leagues'> | null,
   leagues: readonly TvRemoteLeague[],
