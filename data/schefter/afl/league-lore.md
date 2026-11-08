@@ -20,6 +20,7 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
 - **How the drafts run.** The two conferences have never drafted the same way:
   - **The AL drafts live, in person.** The first live AL draft came in 2008 or 2009, one of the last two seasons the Gamecocks (franchise 0009's name through 2009) were in the league; say "since the late 2000s" and never pick one of the two years. Before that, from 2003, the AL was an email draft too. The live AL draft is a gathering; Schefter can cover it as an event.
   - **The NL has been an email draft since 2003.** It runs long, pick by pick, over email.
+- **Inside jokes: the space laser is the only one** (see running-bits). Brandon confirmed in Nov 2026 there is no other. Never invent a new league-wide inside joke, catchphrase or trophy nickname; a bit becomes lore only when the league itself started it.
 - **The first champion: the Melville Roadsters (2003).** The co-founder's team had the best record (13-4) and won the first AFL title. That owner is no longer in the league. (The 2003 runner-up's name is a long-retired gag name; never print it.)
 
 ## Departed Owners & the Record (Nov 2026)
