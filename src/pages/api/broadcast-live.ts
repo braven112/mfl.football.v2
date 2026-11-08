@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getBroadcastViewer, readTvPassToken } from '../../utils/broadcast-viewer';
 import { passHashOfToken } from '../../utils/broadcast-tv-pairing';
 import { getPairingStore } from '../../utils/broadcast-tv-store';
-import { readRemoteState } from '../../utils/broadcast-tv-remote';
+import { readRemoteState, tvLeagueChoice } from '../../utils/broadcast-tv-remote';
 import type { RemoteState } from '../../utils/broadcast-remote-commands';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
@@ -95,7 +95,12 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       leaguesParam: url.searchParams.get('leagues'),
       // A TV's own choice first; failing that, the set the phone that paired
       // it was watching.
-      leaguesCookie: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      leaguesCookie: await tvLeagueChoice(
+        readTvPassToken(request),
+        cookies.get(BROADCAST_LEAGUE_COOKIE)?.value,
+        viewer.pass?.leagues,
+        getPairingStore,
+      ),
       week,
       year: getCurrentSeasonYear(testDate),
       // Only the numbers. Panel identity — colours, crests, name forms —

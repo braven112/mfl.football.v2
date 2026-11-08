@@ -12,6 +12,8 @@ export interface PairedTv {
   id: string;
   device: string;
   createdAt: number;
+  /** The leagues this TV shows now ("13522,19621"), or null for the default set. */
+  leagues?: string | null;
 }
 
 /** Re-announce an open remote well inside the TV's 3-minute listening window. */
@@ -88,17 +90,25 @@ export function rememberChosenTv(id: string): void {
   }
 }
 
+/** What the remote says after a press. */
+function noteFor(status: number, label: string): string {
+  if (status === 200) return `${label} — sent`;
+  if (status === 404) return 'That TV is no longer paired';
+  if (status === 429) return 'Too many presses, try again in a moment';
+  return 'Could not reach the TV';
+}
+
 export function useTvRemote(tvId: string | null, open: boolean) {
   const [note, setNote] = useState('');
 
   const post = useCallback(
-    async (command: string): Promise<number> => {
+    async (command: string, extra?: { leagues: readonly string[] }): Promise<number> => {
       if (!tvId) return 0;
       try {
         const res = await fetch('/api/broadcast-tv/remote', {
           method: 'POST',
           headers: { 'content-type': 'application/json', accept: 'application/json' },
-          body: JSON.stringify({ passId: tvId, command }),
+          body: JSON.stringify({ passId: tvId, command, ...extra }),
         });
         return res.status;
       } catch (_err) {
@@ -116,15 +126,15 @@ export function useTvRemote(tvId: string | null, open: boolean) {
         status = await post(formatRemoteCommand(command));
         if (status !== 200) break;
       }
-      setNote(
-        status === 200
-          ? `${label} — sent`
-          : status === 404
-            ? 'That TV is no longer paired'
-            : status === 429
-              ? 'Too many presses, try again in a moment'
-              : 'Could not reach the TV',
-      );
+      setNote(noteFor(status, label));
+    },
+    [post],
+  );
+
+  /** Set which leagues the TV shows; the TV reloads to take them. */
+  const sendLeagues = useCallback(
+    async (leagues: readonly string[], label: string) => {
+      setNote(noteFor(await post('leagues', { leagues }), label));
     },
     [post],
   );
@@ -143,5 +153,5 @@ export function useTvRemote(tvId: string | null, open: boolean) {
     return () => window.clearTimeout(id);
   }, [note]);
 
-  return { send, note };
+  return { send, sendLeagues, note };
 }
