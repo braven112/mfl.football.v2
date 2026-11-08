@@ -182,6 +182,7 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 - **Maverick's heist, May 15, 2017.** Maverick got Brian Hoyer, Alex Smith, DeMarco Murray, Pierre Garcon and T.Y. Hilton, and gave up Andrew Luck, Allen Hurns and others plus picks. The players Maverick received outscored the ones he gave up by 475.44 points that season, measured by rest-of-season points.
 - It is the record by a mile: 154.74 points clear of #2 (a Dark Magicians trade, +320.70), and it has stood since 2017.
 - Bring The Pain owns three of the top 10 trade wins and the Wabbits two, which fits the Wabbit's reputation as THE league trader.
+- **No trade has ever been vetoed** (as far as Brandon recalls, Nov 2026). Never invent a veto or a reversed trade.
 - Callback material (rare): "Somewhere, Maverick is still cashing the 2017 trade." Never name who was on the other side.
 
 ## How the League Runs (Brandon, Nov 2026)
