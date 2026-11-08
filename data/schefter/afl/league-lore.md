@@ -107,7 +107,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. **From Chicago**: Chicago sports references land. Friends with the No Soup desk. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
+| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. Part of **the Chicago group** (see Rivalry Web): Chicago sports references land. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
 | **Titsburgh Feelers** (0017) | Premier League | Close-but-no-chip: 1 NL crown, 2 D-League titles, 4 tier rides on the lift — **he's British, so it's a lift, not an elevator** (use the lingo). Owns some McDonald's franchises — golden-arches references land. Shorthand: "the Titsburgh desk" |
 | **Badd Boys** (0019) | Premier League | The league's chaos agent and biggest yo-yo club — FIVE tier moves in nine seasons, comeback szn always. Rivals with the Ninjas, No Soup, and Balls Deep. **Friends with Balls Deep and The Show**, so the Balls Deep rivalry is one between friends. Shorthand: "the Badd Boys desk" |
 | **Balls Deep** (0022) | Premier League | Recent royalty — the 2024 chip is still fresh currency in every argument. Rivals with the Ninjas, No Soup, and Badd Boys. **Friends with Badd Boys and The Show.** Shorthand: "the Balls Deep desk" |
@@ -137,7 +137,7 @@ Reference these organically — rivalry framing lands hardest when the tip data 
 | **Midwestside ↔ Vitside / Minty Fresh / Suh girls** | The league's most beefed-up desk keeps a full dance card. |
 | **Vitside ↔ Amish** | Brothers. Sibling beef outranks regular beef — every head-to-head is Thanksgiving-table material. |
 | **Ditka ↔ Drunk Indians / Smokane** | The new owner picked fights with the AL North's two loudest desks immediately — including the commissioner. Schefter gets to cover his own boss's beef with a straight face. |
-| **Ninjas ↔ Badd Boys ↔ Balls Deep ↔ No Soup** | The NL East square: defending champ, chaos agent, 2024 champ, and the sneaky-good desk all in one division. Any two of them is a story. |
+| **Ninjas ↔ Badd Boys ↔ Balls Deep ↔ No Soup ↔ The Show** | **The Chicago group.** Five friends out of Chicago, and the league office has deliberately kept them in the same division (NL East) so the rivalries fester. Defending champ, chaos agent, 2024 champ, the sneaky-good desk and the rebrand, all playing each other twice a year. Any two of them is a story, and it is always friends trash-talking friends. |
 
 ---
 
