@@ -106,6 +106,23 @@ export async function readRemoteState(
 // TV has no keyboard to pick with and the phone is where the choice is made.
 
 const leaguesKey = (passHash: string) => `bctv:leagues:${passHash}`;
+/** What the TV last rendered, reported by the TV's own page loads. */
+const shownKey = (passHash: string) => `bctv:shown:${passHash}`;
+
+/**
+ * Stored as a JSON array. Redis's client parses what it reads back, so a bare
+ * `"13522"` came back as the NUMBER 13522 and a one-league choice was
+ * silently dropped. Older comma strings still read.
+ */
+function readIdList(raw: unknown): string | null {
+  const parts = Array.isArray(raw)
+    ? raw.map(String)
+    : typeof raw === 'string' || typeof raw === 'number'
+      ? String(raw).split(',')
+      : null;
+  const ids = parts ? cleanLeagueIds(parts) : null;
+  return ids ? ids.join(',') : null;
+}
 
 /** MFL league ids are digits only. */
 const LEAGUE_ID = /^\d{1,12}$/;
@@ -139,16 +156,40 @@ export async function setRemoteLeagues(
   if (!ids) return 'invalid';
   const hash = await passHashForOwner(store, owner, passId);
   if (!hash) return 'not-found';
-  await store.set(leaguesKey(hash), ids.join(','), { ex: PASS_TTL_S });
+  await store.set(leaguesKey(hash), ids, { ex: PASS_TTL_S });
   return sendRemoteCommand(store, owner, passId, 'leagues', now);
 }
 
 /** The set a phone last gave the TV behind this pass hash, or null. */
 export async function readRemoteLeagues(store: PairingStore, passHash: string): Promise<string | null> {
-  const raw = await store.get<string>(leaguesKey(passHash));
-  if (typeof raw !== 'string') return null;
-  const ids = cleanLeagueIds(raw.split(','));
-  return ids ? ids.join(',') : null;
+  return readIdList(await store.get<unknown>(leaguesKey(passHash)));
+}
+
+/**
+ * A TV's page load reporting which leagues it actually rendered. The TV's
+ * own `bc_leagues` cookie (set from the board's picker on the TV) never
+ * reaches the server any other way, so without this the phone showed the
+ * DEFAULT set as "on the TV" while the TV showed something else. One read
+ * and at most one write per page load, never per poll; a failure costs only
+ * the report.
+ */
+export async function noteTvShown(
+  passToken: string | null,
+  enabled: readonly string[],
+  getStore: () => Promise<PairingStore | null>,
+): Promise<void> {
+  if (!passToken || passToken.length > 128) return;
+  const ids = cleanLeagueIds([...enabled]);
+  if (!ids) return;
+  try {
+    const store = await getStore();
+    if (!store) return;
+    const key = shownKey(passHashOfToken(passToken));
+    if (readIdList(await store.get<unknown>(key)) === ids.join(',')) return;
+    await store.set(key, ids, { ex: PASS_TTL_S });
+  } catch {
+    /* the report is a convenience for the remote's picker */
+  }
 }
 
 /**
@@ -177,11 +218,18 @@ export async function tvLeagueChoice(
 
 /**
  * The league set one of the owner's TVs shows now, for the remote's
- * checkboxes: the phone's last choice, else the set it was paired with.
+ * checkboxes: the phone's last choice (which the TV obeys over its own
+ * cookie), else what the TV last reported rendering, else the set it was
+ * paired with.
  * Null means the default set (and also "not this owner's TV").
  */
 export async function tvLeaguesForOwner(store: PairingStore, owner: string, passId: string): Promise<string | null> {
   const hash = await passHashForOwner(store, owner, passId);
   if (!hash) return null;
-  return (await readRemoteLeagues(store, hash)) ?? (await readOwnerPass(store, owner, passId))?.leagues ?? null;
+  return (
+    (await readRemoteLeagues(store, hash)) ??
+    readIdList(await store.get<unknown>(shownKey(hash))) ??
+    (await readOwnerPass(store, owner, passId))?.leagues ??
+    null
+  );
 }
