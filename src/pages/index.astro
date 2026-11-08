@@ -265,10 +265,10 @@ const skinsPath = servicePath('skins') ?? '/instructions#skin';
         <span class="sp-card__who">Our biggest package · for a league that wants it all handled</span>
         <h3 class="pkg__name">League Package</h3>
         <p class="pkg__lede">Your league’s custom side game or house rule, automated.</p>
-        <p>The thing your commissioner has always tracked by hand, run by our system every week. Plus your own site with every feature on the platform, and priority support. Every owner also gets MFL Football Pro: the live scoring app on their phone and the live Broadcast on their TV.</p>
+        <p>The thing your commissioner has always tracked by hand, run by our system every week. Plus your own site with every feature on the platform, and priority support. Every owner also gets MFL Football Pro: the live scoring app on their phone and the live Broadcast on their TV. Setup includes most league-specific standings, salary cap rules and side games.</p>
         <ul class="pkg__fees">
           {LEAGUE_PACKAGE_PRICING.tiers.map((t) => (
-            <li><b>{t.setup}</b> <span>{t.setup === 'Custom quote' ? t.teams : `setup and first year, ${t.teams.toLowerCase()}`}</span></li>
+            <li><b>{t.setup === 'Custom quote' ? t.setup : `Starts at ${t.setup}`}</b> <span>{t.setup === 'Custom quote' ? t.teams : `setup and first year, ${t.teams.toLowerCase()}`}</span></li>
           ))}
         </ul>
         <p class="pkg__terms">

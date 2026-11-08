@@ -716,7 +716,7 @@ const LEAGUE_PACKAGE: Product = {
 	slug: 'league-package',
 	kind: 'league',
 	name: 'League Package',
-	price: `From ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} for setup and your first year, then ${LEAGUE_PACKAGE_PRICING.renewal}`,
+	price: `Starts at ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} for setup and your first year, then ${LEAGUE_PACKAGE_PRICING.renewal}`,
 	tagline: 'The full suite: your league’s site, with features built for how your league plays.',
 	buyer: 'A league that wants custom features built',
 	screenshot: shot('front-office-hub.jpg', 'The front office hub: contracts, cap tools and roster planning in one place.'),
@@ -727,7 +727,7 @@ const LEAGUE_PACKAGE: Product = {
 	buildsOn: ['owner-suite', 'league-history', 'add-ons', 'large-league', 'league-hub'],
 	tiers: {
 		heading: 'Pricing by league size',
-		columns: ['Setup and first year', 'Yearly renewal after'],
+		columns: ['Setup and first year, starting at', 'Yearly renewal after'],
 		rows: [
 			{ label: '16 teams or fewer', values: ['$3,000', '$1,500/year'] },
 			{ label: '17–24 teams', values: ['$6,000', '$2,000/year'] },
@@ -736,7 +736,7 @@ const LEAGUE_PACKAGE: Product = {
 			{ label: '50–100 teams', values: ['Custom quote', '$4,000/year'] },
 			{ label: 'Over 100 teams', values: ['Custom quote', 'Quoted'] },
 		],
-		note: `The setup fee includes your first full season: hosting, automation and support. You pay nothing more until your first renewal, which pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
+		note: `Setup prices are starting prices, and they include most league-specific standings, salary cap rules and side games. The setup fee also includes your first full season: hosting, automation and support. You pay nothing more until your first renewal, which pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
 	},
 	offer: leaguePackageSeasonOffer,
 	features: [
@@ -763,7 +763,8 @@ const LEAGUE_PACKAGE: Product = {
 				{ title: 'Everything in League Hub', price: 'Included', body: 'Every platform feature, Full History, and hosting and support for the first year.' },
 				{ title: 'MFL Football Pro for every owner', price: 'Included', body: 'The live scoring app on every owner’s phone and the live Broadcast on their TV. Worth $24 per owner per season.' },
 				{ title: 'Franchise logos', price: 'Optional', body: `We design every franchise’s logo, or you make your own from our sizes and save ${LEAGUE_PACKAGE_PRICING.logoDiscount}.` },
-				{ title: 'Custom features', price: 'Quoted', body: 'Chosen from the add-on menu or quoted to order, and agreed at the kickoff call.' },
+				{ title: 'Your league’s own rules', price: 'Included', body: 'Most league-specific standings, salary cap rules and side games, agreed at the kickoff call.' },
+				{ title: 'Other custom features', price: 'Quoted', body: 'Anything beyond your standings, cap rules and side games, chosen from the add-on menu or quoted to order.' },
 				{ title: 'Leagues over 24 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
 				{ title: 'Priority support', price: 'Included', body: 'Your league comes first on game days and in the weekly release.' },
 			],
