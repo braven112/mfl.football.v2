@@ -48,7 +48,7 @@ const MUSIC = ['hiphop', 'techno', 'rock', 'country', 'none'];
 					{MUSIC.map((m) => <option value={m} selected={m === 'hiphop'}>{m === 'none' ? 'No music' : m}</option>)}
 				</select>
 			</label>
-			<label class="wr__check"><input type="checkbox" data-voice checked /> Voiceover</label>
+			<label class="wr__check"><input type="checkbox" data-voice /> Voiceover (needs ELEVENLABS_API_KEY)</label>
 		</div>
 
 		<p class="mls__lede" data-status>Loading the week…</p>
