@@ -47,9 +47,22 @@ describe('overlayPlayerLive', () => {
     expect(run([[0, 10, 10], [MIN, 10, 18], [2 * MIN, 19, 18]])).toEqual([10, 18, 19]);
   });
 
-  it('keeps an unitemized gap MFL scores beyond the box score', () => {
-    // MFL counts 2 points ESPN's line cannot see (first downs, say).
-    expect(run([[0, 12, 10], [MIN, 12, 16]])).toEqual([12, 18]);
+  it('keeps an unitemized gap MFL scores beyond the box score, once it has settled', () => {
+    // MFL counts 2 points ESPN's line cannot see (first downs, say). Seen once,
+    // the gap could be ESPN lagging, so ESPN's own number shows until the line
+    // has sat still; after that the bonus rides on top.
+    expect(run([[0, 12, 10], [MIN, 12, 16]])).toEqual([12, 16]);
+    expect(run([[0, 12, 10], [SETTLE_MS, 12, 10], [SETTLE_MS + MIN, 12, 16]])).toEqual([12, 12, 18]);
+  });
+
+  it('a board opened while ESPN lags MFL never counts the catch-up twice', () => {
+    // Opened mid-game: MFL already has a 15-point TD, ESPN's box score does
+    // not yet. When ESPN catches up the score is still MFL's 20, not 35.
+    expect(run([[0, 20, 5], [30_000, 20, 20], [60_000, 20, 20]])).toEqual([20, 20, 20]);
+    // Part-way caught up: never below MFL.
+    expect(run([[0, 20, 5], [30_000, 20, 12]])).toEqual([20, 20]);
+    // ESPN then genuinely moves ahead: its newer number shows.
+    expect(run([[0, 20, 5], [30_000, 20, 20], [60_000, 20, 26]])).toEqual([20, 20, 26]);
   });
 
   it('a board opened with ESPN already ahead shows the newer number at once', () => {
