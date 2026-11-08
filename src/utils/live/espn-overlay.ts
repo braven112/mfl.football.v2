@@ -26,6 +26,15 @@
  *  - A first sighting where ESPN is already ahead (gap below zero) starts from
  *    U = 0, so a board opened mid-drive shows the newer number at once instead
  *    of a "Not itemized" line below zero.
+ *  - A first sighting where MFL is AHEAD (gap above zero) is PROVISIONAL until
+ *    it settles. That gap is either a bonus the box score cannot see or ESPN's
+ *    box score lagging MFL, and one observation cannot tell them apart. Read as
+ *    a bonus, a lag is counted twice the moment ESPN catches up, for up to
+ *    SETTLE_MS per player — the likeliest cause of an owner's report (Nov 2026)
+ *    of a board opened mid-game reading 170-odd against MFL's 132.8, which a
+ *    refresh (a fresh first sighting, ESPN caught up) "fixed". Until
+ *    the gap is confirmed by a quiet line, the score is the larger of the two
+ *    feeds and never their sum.
  */
 import type { LivePlayerRow, PlayerBoxScore, PlayerMeta } from '../../types/live-scoring';
 import type { LiveMatchup, LivePanel, LiveTeam } from '../../types/live';
@@ -51,6 +60,11 @@ export interface PlayerBaseline {
   /** ESPN's itemized points at the last observation, and since when. */
   lastItemized: number;
   itemizedSince: number;
+  /**
+   * True while `u` is a first-sighting gap that has never settled. It may be
+   * ESPN lagging rather than a real bonus, so it is not added on top of ESPN.
+   */
+  provisional: boolean;
 }
 
 /** Keyed `leagueId:playerId` — same player, same rules, same answer. */
@@ -80,6 +94,7 @@ export function overlayPlayerLive({ key, mfl, itemized, now, memory }: OverlayPl
       baseMfl: mfl,
       lastItemized: itemized,
       itemizedSince: now,
+      provisional: gap > EPS,
     };
     memory.set(key, m);
   }
@@ -98,9 +113,13 @@ export function overlayPlayerLive({ key, mfl, itemized, now, memory }: OverlayPl
     m.u = mfl - itemized;
     m.baseItemized = itemized;
     m.baseMfl = mfl;
+    m.provisional = false;
   }
 
   if (same(itemized, m.baseItemized)) return mfl;
+  // An unconfirmed gap: ESPN's newer number when it is ahead, MFL's otherwise,
+  // and never ESPN plus a gap ESPN may be about to fill itself.
+  if (m.provisional) return Math.max(mfl, round2(itemized));
   const espn = round2(itemized + m.u);
   return same(mfl, m.baseMfl) ? espn : Math.max(mfl, espn);
 }

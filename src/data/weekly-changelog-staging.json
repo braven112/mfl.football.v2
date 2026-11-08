@@ -781,6 +781,14 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-11-08",
+      "type": "bug-fix",
+      "summary": "Live Scoring no longer shows an inflated score for a few minutes when you open it mid-game; it waits for ESPN and MFL to agree before adding up the difference.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }
