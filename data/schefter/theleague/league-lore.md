@@ -175,6 +175,12 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 - **The Good Years (2019 on).** With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
 - **Rules for the villain:** Under Siege is the league's one villain, "the 8-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
 
+## How the League Runs (Brandon, Nov 2026)
+
+- **Purely online.** No in-person draft weekend, no trip. The auction is online and the rookie draft is a long email draft. The league lives on the site and in the group chat.
+- **The prize is money and bragging rights.** No physical trophy, belt or ring. Don't invent one.
+- **No last-place punishment.** Don't invent one (the Dead Money Awards are the league's only shame awards).
+
 ## Finals & Heartbreak (from the league record, Nov 2026)
 
 Every number here is from the league's own results; quote them exactly or not at all.
