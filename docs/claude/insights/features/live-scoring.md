@@ -14,6 +14,24 @@ Their reasoning is still why the current code looks the way it does — the CSS
 rules in particular were harvested into the rewrite — but the file and symbol
 names in them no longer exist. Read them as history, not as a map.
 
+## 2026-11-08 - A first-sighting gap is not a bonus until it settles (ESPN overlay)
+
+Owner report: opening the board mid-game showed 170-odd where MFL had 132.8,
+and a refresh "fixed" it. Checked minutes later, the server board matched MFL (its feed and
+`scoreLeague` agree to the hundredth); the client's ESPN overlay
+(`src/utils/live/espn-overlay.ts`) is the layer that can add points.
+
+Its baseline `U = mfl - itemized` was taken on FIRST SIGHT and trusted as a
+bonus the box score cannot see. But a positive gap on first sight is just as
+often ESPN's box score LAGGING MFL (a process cache, a slow summary), and when
+ESPN catches up the overlay shows `itemized + U` — the same touchdown counted
+twice, for up to `SETTLE_MS` per player, more if the player keeps moving. A
+reload re-sights with ESPN caught up, which is why refreshing looked like a fix.
+
+Rule now: a first-sighting gap above zero is `provisional` and the score is
+`max(mfl, itemized)` — never their sum — until the line settles and the
+baseline is retaken. `tests/live-espn-overlay.test.ts` pins the lag case.
+
 ## 2026-10-19 - `panel.leaders` is filled on MFL Live ONLY (Halloween header, PR #1419)
 
 `buildLeaders` runs inside `mfl-league-board.ts`, so `/live` panels carry
