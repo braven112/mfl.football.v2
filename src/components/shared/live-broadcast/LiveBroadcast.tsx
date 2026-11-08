@@ -1147,6 +1147,11 @@ export default function LiveBroadcast({ pageData }: Props) {
           setPageIndex(0);
         }
         break;
+      case 'leagues':
+        // The phone stored a new league set for this TV; the panels are
+        // built server-side, so a reload is how the board takes it.
+        window.location.reload();
+        break;
       case 'reset':
         setPinned(null);
         setOutgoingKey(null);

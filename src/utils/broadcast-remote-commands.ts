@@ -11,6 +11,12 @@ export type RemoteCommand =
   | { kind: 'sound'; on: boolean }
   | { kind: 'reset' }
   /**
+   * The phone changed which leagues this TV shows. The set itself is stored
+   * beside the pass (`setRemoteLeagues`), never carried in the command; this
+   * only tells the TV to reload and read it.
+   */
+  | { kind: 'leagues' }
+  /**
    * The score overlay drawn over another app (the TV app's corner box): the
    * small box or a whole quarter of the screen, and which corner. The TV's
    * remote belongs to the show underneath, so the phone is the only way to
@@ -68,6 +74,8 @@ export function parseRemoteCommand(raw: unknown): RemoteCommand | null {
       return { kind: 'sound', on: false };
     case 'reset':
       return { kind: 'reset' };
+    case 'leagues':
+      return { kind: 'leagues' };
   }
   const o = /^overlay:(.+)$/.exec(raw);
   if (o && (OVERLAY_ACTIONS as readonly string[]).includes(o[1])) {
@@ -88,6 +96,8 @@ export function formatRemoteCommand(command: RemoteCommand): string {
       return `sound:${command.on ? 'on' : 'off'}`;
     case 'reset':
       return 'reset';
+    case 'leagues':
+      return 'leagues';
     case 'overlay':
       return `overlay:${command.action}`;
   }

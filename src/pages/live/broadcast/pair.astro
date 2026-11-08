@@ -165,8 +165,12 @@ const state: 'enter' | 'confirm' | 'expired' | 'used' | 'down' = !code
         const body = (await res.json()) as { result?: string };
         if (body.result === 'approved') {
           root.classList.add('is-done');
-          result.textContent = 'Done. Your TV is switching to the board now.';
+          result.textContent = 'Done. Your TV is switching to the board. Opening your remote…';
           button.textContent = 'Approved';
+          // Straight to the remote, so the phone that just paired the TV can
+          // steer it (Brandon, Nov 2026). `tv=newest` points it at the TV
+          // just paired rather than one this phone picked before.
+          window.setTimeout(() => window.location.assign('/live/broadcast/remote?tv=newest'), 1500);
           return;
         }
         result.textContent =

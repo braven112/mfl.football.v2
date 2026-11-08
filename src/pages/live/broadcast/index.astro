@@ -31,7 +31,8 @@ import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import BroadcastLanding from '../../../components/shared/live-broadcast/BroadcastLanding.astro';
 import LiveBroadcast from '../../../components/shared/live-broadcast/LiveBroadcast';
 import HandheldPrepaint from '../../../components/shared/live-broadcast/HandheldPrepaint.astro';
-import { getBroadcastViewer } from '../../../utils/broadcast-viewer';
+import { getBroadcastViewer, readTvPassToken } from '../../../utils/broadcast-viewer';
+import { tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
 import { rememberBroadcastChoices } from '../../../utils/broadcast-cookies';
 import { assembleBroadcastBoard, toPageData, type AssembledBoard } from '../../../utils/broadcast-board';
 import {
@@ -87,7 +88,12 @@ if (viewer) {
       user: viewer.user,
       leaguesParam: Astro.url.searchParams.get('leagues'),
       // A TV's own choice first, then the set the phone that paired it watched.
-      leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? viewer.pass?.leagues ?? null,
+      leaguesCookie: await tvLeagueChoice(
+        readTvPassToken(Astro.request),
+        Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value,
+        viewer.pass?.leagues,
+        getPairingStore,
+      ),
       week,
       year,
     });
