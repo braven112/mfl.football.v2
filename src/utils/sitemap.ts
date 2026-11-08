@@ -22,6 +22,7 @@ export function sharedHostSitemapEntries(): SitemapEntry[] {
 		{ path: '/mfl-all-play-standings', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/compare', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/about', changefreq: 'monthly', priority: 0.7 },
+		{ path: '/addons', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/live', changefreq: 'weekly', priority: 0.8 },
 		{ path: '/team-logo', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/video', changefreq: 'monthly', priority: 0.8 },
