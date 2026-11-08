@@ -175,6 +175,13 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 - **The Good Years (2019 on).** With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
 - **Rules for the villain:** Under Siege is the league's one villain, "the 8-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
 
+## The Most Lopsided Trade (Ask the History, Nov 2026)
+
+- **Maverick's heist, May 15, 2017.** Maverick got Brian Hoyer, Alex Smith, DeMarco Murray, Pierre Garcon and T.Y. Hilton, and gave up Andrew Luck, Allen Hurns and others plus picks. The players Maverick received outscored the ones he gave up by 475.44 points that season, measured by rest-of-season points.
+- It is the record by a mile: 154.74 points clear of #2 (a Dark Magicians trade, +320.70), and it has stood since 2017.
+- Bring The Pain owns three of the top 10 trade wins and the Wabbits two, which fits the Wabbit's reputation as THE league trader.
+- Callback material (rare): "Somewhere, Maverick is still cashing the 2017 trade." Never name who was on the other side.
+
 ## How the League Runs (Brandon, Nov 2026)
 
 - **Purely online.** No in-person draft weekend, no trip. The auction is online and the rookie draft is a long email draft. The league lives on the site and in the group chat.
