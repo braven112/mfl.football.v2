@@ -500,17 +500,10 @@ export default function BroadcastOverlay({
     const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
       <div className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
-        {quarter ? (
-          <Quarter
-            game={current}
-            others={games.filter((g) => g.key !== current.key).slice(0, 3)}
-            week={data.week}
-            slate={poll?.games ?? []}
-            lit={justScored}
-            logoFor={logoFor}
-            stale={stale}
-          />
-        ) : alert ? (
+        {/* A big play takes over in BOTH sizes. The quarter view used to keep
+            showing the matchup and only lit a dot beside the player, so a
+            touchdown went by unannounced (Brandon, Nov 8). */}
+        {alert ? (
           <BigPlay
             key={alert.key}
             alert={alert}
@@ -523,6 +516,16 @@ export default function BroadcastOverlay({
             )}
             logoFor={logoFor}
             meta={meta[alert.playerId]}
+          />
+        ) : quarter ? (
+          <Quarter
+            game={current}
+            others={games.filter((g) => g.key !== current.key).slice(0, 3)}
+            week={data.week}
+            slate={poll?.games ?? []}
+            lit={justScored}
+            logoFor={logoFor}
+            stale={stale}
           />
         ) : (
           <>
