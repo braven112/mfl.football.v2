@@ -18,7 +18,7 @@
 import BroadcastOverlay from '../../../components/shared/live-broadcast/BroadcastOverlay';
 import { getBroadcastViewer, readTvPassToken } from '../../../utils/broadcast-viewer';
 import { getPairingStore } from '../../../utils/broadcast-tv-store';
-import { tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
+import { noteTvShown, tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
 import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
@@ -59,6 +59,7 @@ if (viewer) {
       week,
       year,
     });
+    await noteTvShown(readTvPassToken(Astro.request), board.enabled, getPairingStore);
     const page = toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname });
     for (const panel of page.panels) {
       const logo = panel.slug ? getLeagueBySlug(panel.slug)?.logo.dark : undefined;

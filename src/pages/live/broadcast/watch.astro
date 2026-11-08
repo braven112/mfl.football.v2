@@ -19,7 +19,7 @@ import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import WhereToWatch from '../../../components/shared/live-broadcast/WhereToWatch';
 import { getBroadcastViewer, readTvPassToken } from '../../../utils/broadcast-viewer';
 import { getPairingStore } from '../../../utils/broadcast-tv-store';
-import { tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
+import { noteTvShown, tvLeagueChoice } from '../../../utils/broadcast-tv-remote';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
 import { BROADCAST_LEAGUE_COOKIE } from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
@@ -69,6 +69,7 @@ if (viewer) {
       week,
       year,
     });
+    await noteTvShown(readTvPassToken(Astro.request), board.enabled, getPairingStore);
     pageData = JSON.stringify(toPageData(board, { week, year, sound: false, pathname: Astro.url.pathname }));
   } catch {
     failed = true;
