@@ -22,7 +22,6 @@ import { canViewSiteInsights } from '../../utils/site-insights';
 import { listSubmissions } from '../../utils/league-story/submissions';
 import { STORY_SECTIONS } from '../../data/league-story-questions';
 import { createInvite, listInvites } from '../../utils/league-story/invites';
-import { SHARED_APP_ORIGIN } from '../../config/leagues';
 import '../../styles/mfl-live.css';
 
 export const prerender = false;
@@ -41,8 +40,12 @@ if (Astro.request.method === 'POST') {
   else inviteError = league.trim().length < 2 ? 'Type the league’s name first.' : 'Couldn’t make an invite just now. Try again.';
 }
 
+// The page's own origin, not SHARED_APP_ORIGIN: this page is served only on the
+// shared host, so its origin IS the shared host in production, and on a preview
+// or staging build the link opens the form that build actually has (a
+// production link 404s there until the form ships).
 function inviteLink(token: string): string {
-  const url = new URL('/league-story', SHARED_APP_ORIGIN);
+  const url = new URL('/league-story', Astro.url.origin);
   url.searchParams.set('invite', token);
   return url.href;
 }
