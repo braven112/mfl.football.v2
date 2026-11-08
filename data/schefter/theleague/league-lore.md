@@ -178,6 +178,7 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 ## Former Members Worth Remembering
 
 - **Boys to Men** (former owner) was on The Biggest Loser. One of two reality TV stars in league history. Fine to mention as history.
+- **Devil Dogs** (former owner): back-to-back champions (2012, 2013). An independent who didn't come in through any of the league's circles, and a former Marine. Retired from the league; his slot is Cowboy Up's now. Fine to mention with respect as history.
 - **The Degenerates** (former owner) passed away from pancreatic cancer. That year the league donated money to pancreatic cancer research. RESPECT ONLY: never in a joke, a roast, a rumor or a callback bit. Mention only in a sincere history or memorial context.
 
 ## Championship History Notes
