@@ -854,7 +854,11 @@ function Quarter({
   logoFor: (game: OverlayGame) => string;
   stale: boolean;
 }) {
-  const playing = [...game.mine.lineup, ...game.opponent.lineup].filter((p) => gameNote(p.nflTeam, slate).live).length;
+  // Split per team, never summed, as on /live's matchup cards: a total says
+  // how much football is on, never for WHOM (Brandon, Nov 8).
+  const playingFor = (side: OverlaySide) => side.lineup.filter((p) => gameNote(p.nflTeam, slate).live).length;
+  const minePlaying = playingFor(game.mine);
+  const theirPlaying = playingFor(game.opponent);
   const mineLead = game.readable && game.mine.live > game.opponent.live;
   const theirLead = game.readable && game.opponent.live > game.mine.live;
   return (
@@ -862,7 +866,22 @@ function Quarter({
       <header className="bov__q-head">
         <LeagueMark game={game} logo={logoFor(game)} />
         <span>Week {week}</span>
-        {playing > 0 && <span className="bov__q-live">{playing} playing</span>}
+        {minePlaying + theirPlaying > 0 && (
+          <span
+            className="bov__q-live"
+            aria-label={`${game.mine.name} ${minePlaying} playing, ${game.opponent.name} ${theirPlaying} playing`}
+          >
+            <span className="bov__q-n">
+              <i className="bov__q-dot" style={{ background: game.mine.swatch }} aria-hidden="true" />
+              {minePlaying}
+            </span>
+            <span className="bov__q-n">
+              <i className="bov__q-dot" style={{ background: game.opponent.swatch }} aria-hidden="true" />
+              {theirPlaying}
+            </span>
+            playing
+          </span>
+        )}
       </header>
       <div className="bov__q-score">
         <Crest side={game.mine} />

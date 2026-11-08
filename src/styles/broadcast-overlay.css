@@ -627,8 +627,29 @@ body.bov-doc {
 }
 
 .bov__q-live {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.6);
   margin-left: auto;
   color: var(--bov-gold);
+}
+
+/* One count per team, each behind a dot in that team's colour (the win bar's
+   colours), mine first, as on /live's matchup cards. */
+.bov__q-n {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.25);
+  color: var(--bov-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.bov__q-dot {
+  width: calc(var(--u) * 0.75);
+  height: calc(var(--u) * 0.75);
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .bov__q-score {
