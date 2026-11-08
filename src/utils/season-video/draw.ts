@@ -383,7 +383,28 @@ function drawPlayer(ctx: Ctx, s: SceneOf<'player'>, p: number) {
 	const size = fit(ctx, name, MAX_W, 140, 80, 'display');
 	const lines = ctx.measureText(name).width > MAX_W ? wrap(ctx, name, MAX_W).slice(0, 2) : [name];
 	lines.forEach((l, i) => centered(ctx, l, 1060 + i * size * 0.95, pal.accent));
-	paragraph(ctx, s.sub, 1090 + lines.length * size * 0.95, 46, pal.ink);
+	const subY = 1090 + lines.length * size * 0.95;
+	if (s.colors) {
+		// The club's two colours as two upright bars before "QB · BUF": colour, never a logo.
+		font(ctx, 46, 'text');
+		const w = ctx.measureText(s.sub).width;
+		const bar = 14;
+		const gap = 8;
+		const lead = bar * 2 + gap + 22;
+		const x0 = CX - (w + lead) / 2;
+		s.colors.forEach((c, i) => {
+			roundRect(ctx, x0 + i * (bar + gap), subY - 44, bar, 54, 4);
+			ctx.fillStyle = c;
+			ctx.fill();
+			ctx.lineWidth = 2;
+			ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+			ctx.stroke();
+		});
+		ctx.fillStyle = pal.ink;
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(s.sub, x0 + lead, subY);
+	} else paragraph(ctx, s.sub, subY, 46, pal.ink);
 	ctx.restore();
 }
 

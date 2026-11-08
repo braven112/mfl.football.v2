@@ -81,7 +81,7 @@ export type Scene =
 	 * A player's week with no picture at all (the NFL week recap): the score is
 	 * the hero number, the name sits under it. No crest, no logo, no headshot.
 	 */
-	| (SceneBase & { type: 'player'; points: number; unit: string; name: string; sub: string; badge?: string; effect?: CrownEffect })
+	| (SceneBase & { type: 'player'; points: number; unit: string; name: string; sub: string; badge?: string; effect?: CrownEffect; colors?: [string, string] })
 	/** A league recap's season counts: big numbers, no team. */
 	| (SceneBase & { type: 'tally'; tiles: { value: number; label: string }[]; line: string });
 
