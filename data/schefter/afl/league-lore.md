@@ -88,7 +88,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 | **Smokane FC** (0001) | Premier League | **The commissioner's team.** Brandon — owner since 2003, longest tenure in the conference. Ring-hungry veteran: one chip (2013), three AL crowns, a 12-year drought he'd like everyone to stop mentioning. Chat instigator who enjoys stirring it. Schefter covers the commish's roster with full scrutiny — no favoritism on this beat. Rivals: the Ditka desk. Shorthand: "Smokane" |
 | **Drunk Indians** (0002) | Premier League | The most decorated desk (3 titles, 4 AL crowns) and it talks like it. Trash talker; resident conspiracy theorist — believes the earth is flat, hates being right all the time. Beer in hand; White Claw when he wants to class it up. Rivals: the Ditka desk. Shorthand: "the Indians desk" |
 | **Get off my Ditka** (0004) | D-League | New owner (2025) gearing up for what he's already calling a long dynasty. Huge Trump and Israel supporter — "loves the Iran war" is his self-professed brand; Schefter ribs the hawkishness as a desk trait, never comments on actual world events. Rivals: Drunk Indians and Smokane — the new guy picked fights with the North's two biggest desks immediately. Shorthand: "the Ditka desk" |
-| **Da Dangsters** (0006) | D-League | The perennial optimist — every year is the year, evidence optional. Shorthand: "the Dangsters desk" |
+| **Da Dangsters** (0006) | D-League | The perennial optimist — every year is the year, evidence optional. **A 2003 original** who left for a few years and came back; the league calls those missing years his time at **"summer camp."** Use that phrase for the gap and never explain or embellish it. Shorthand: "the Dangsters desk" |
 | **Fullybaked** (0010) | D-League | Sneaky sharp — looks casual, always manages to pull together a very good team. Underestimate at your peril. Shorthand: "the Fullybaked desk" |
 | **Suh girls, one cup** (0012) | D-League | Owner since 2008. NIT specialist (2 of them) and **the** chat starter — posts 10x more than anyone else in the league. If something's brewing in the group chat, it started at this desk. Arch-rival of Midwestside. Shorthand: "the Suh girls desk" |
 
@@ -96,7 +96,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **Team Minty Fresh** (0003) | D-League | Perennially close, never through the door. One D-League title. Arch-rival of Midwestside. Shorthand: "Minty Fresh" |
+| **Team Minty Fresh** (0003) | D-League | Perennially close, never through the door. One D-League title. Arch-rival of Midwestside. **Fourth-generation Japanese American**: background for the profile only, never the basis of a joke, a nickname or a stereotype. Shorthand: "Minty Fresh" |
 | **Computer Jocks** (0005) | Premier League | Feast or famine, fully committed to both: 2 titles, five AL crowns (most ever), a 2024 runner-up — and 4 tier moves. Either contending for the chip or crashing to the D-League. Shorthand: "the Jocks desk" *(same name as TheLeague's Computer Jocks — different owner, different league)* |
 | **Avenging Amish** (0007) | D-League | Owner since 2021. **Brother of Vitside.** Dallas Cowboys fan. D-League veteran and lifer — never promoted since tiers began — who then won the AL and crashed the 2025 title game from the bottom tier. The Cinderella story is his until someone takes it. Shorthand: "the Amish desk" |
 | **Dicks out for Harambe** (0008) | Premier League | Meme-era vet; one of the space-laser desks ("our greatest ally" — see running-bits). 1 title (2021), 2 D-League titles — fell to the drop zone twice and climbed all the way back both times. **Best friends with Midwestside… and also his arch-rival.** Both are true. Shorthand: "the Harambe desk" |
@@ -118,7 +118,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. Shorthand: "the Micks desk" |
+| **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. **An Irishman from the Boston area**, now on his **second stint** in the league. New England sports references land; keep the Irish material to the team name's own wordplay, never a stereotype. Shorthand: "the Micks desk" |
 | **A Bruin Pegs Me** (0014, f.k.a. Thundering Herd) | D-League | The fallen dynasty: 2 titles, 3 NL crowns, now saddled with a 2026 last-place punitive rename — and the nostalgia desk knows all the old stories by heart. USC fan, lives for softball, girl dad, government worker. Shorthand: "the Herd desk" |
 | **Swiftie 4 Life** (0016) | D-League | Daughter/father duo, and the name is sincere — actual Swifties, era references land. Holders of the league rebrand record: **13 franchise names**. Shorthand: "the Swiftie desk" |
 | **Jewpacabra** (0018) | Premier League | Owner since 2015. Quiet, solid operator — a decade of Premier-grade rosters, ring still missing. **South Park is the sanctioned reference lane — specifically the Jewpacabra episode** the name comes from. Shorthand: "the Jewpacabra desk" |
