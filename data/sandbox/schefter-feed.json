@@ -2,6 +2,698 @@
   "$comment": "Sandbox news feed. Seeded 2026-11-04 with the NFL news lanes' posts (ESPN reporters, NFL Wire, odds) from the same window, so the demo does not open empty; the scanner keeps it current from here.",
   "posts": [
     {
+      "id": "wire_50411320",
+      "timestamp": "2026-11-07T21:25:23Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Vikings WR Jauan Jennings on rebuffing return to 49ers: 'I love where I'm at'",
+      "body": "Jauan Jennings said he rebuffed the chance to return to the 49ers via trade despite struggling to produce for the Vikings because \"I love where I'm at.\"",
+      "link": "https://www.espn.com/nfl/story/_/id/50411320/jennings-rebuffing-return-49ers-love-where-at",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14860"
+      ]
+    },
+    {
+      "id": "wire_50410541",
+      "timestamp": "2026-11-07T21:08:08Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Saints activate WR Jordyn Tyson, LT Kelvin Banks, cut RB Kendre Miller",
+      "body": "Saints rookie wide receiver Jordyn Tyson and left tackle Kelvin Banks Jr. have been activated from injured reserve ahead of Sunday's game against the Browns.",
+      "link": "https://www.espn.com/nfl/story/_/id/50410541/sources-saints-activate-wr-jordyn-tyson-lt-kelvin-banks",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17498",
+        "16171"
+      ]
+    },
+    {
+      "id": "sf_2026_matchup_preview_w09",
+      "timestamp": "2026-11-07T20:06:24.217Z",
+      "type": "article",
+      "category": "articles",
+      "tier": "standard",
+      "headline": "Week 9: Chargers Roll, Bills Need a Miracle",
+      "body": "Schefter breaks down all six Sandbox matchups for Week 9, from the unbeaten Chargers test against the 49ers to the Bills trying to snap a five-game skid. Picks, sleepers, and the NFL games that decide who wins.",
+      "franchiseIds": [],
+      "link": "/sandbox/news/sf_2026_matchup_preview_w09",
+      "linkLabel": "Read matchup preview",
+      "league": "sandbox",
+      "authorId": "claude",
+      "content": [
+        "<p>I'm told the Chargers at 8-0 against the 49ers at 3-5 is the one to circle, and I'm taking the unbeaten Chargers to keep rolling. Their projected 152.0 points against San Francisco's 141.7 tells the story, and Jaxon Smith-Njigba's 25.8 projection is a problem for anyone trying to slow them down. Money is nice, but championships are better, and the Chargers are playing for both. Check <a href=\"/sandbox/live-scoring\">the live scoreboard</a> Sunday to see if the 49ers can keep this one close.</p>",
+        "<p>Boom! The Eagles at 5-3 projected 149.7 against a Bills team at 1-7 with a projected 124.0, and League sources say Bills ownership is staring at a long year. Joe Burrow's 26.9 projection and Christian McCaffrey's 23.0 are too much for Malik Willis and Bijan Robinson to overcome. I'm also watching the Ravens-Bears game, where Chicago's projected 160.0 points should edge out Baltimore's 139.5. If you think your roster needs a shake-up before it's too late, <a href=\"/sandbox/standings\">the standings</a> will tell you exactly how deep the hole is.</p>",
+        "<p>Broadcast guide time: the NFL games that matter most this week. Bears QB Bryce Young and Ravens RB Chase Brown get national eyeballs, and Jordan Love's Packers game is must-watch for Chicago's fantasy owners. Chargers RB Chuba Hubbard's Panthers game and the Lions-Bills matchup with Josh Allen's 30.9 projection are the games to put on your screen. Check <a href=\"/sandbox/lineup\">your lineup</a> before kickoff, because one late swap can flip a matchup on its head.</p>"
+      ],
+      "matchupVisuals": {
+        "year": 2026,
+        "week": 9,
+        "gameOfWeek": null,
+        "matchups": [
+          {
+            "a": {
+              "franchiseId": "0003",
+              "wins": 1,
+              "losses": 7,
+              "ties": 0,
+              "streak": "L5",
+              "form": [
+                "L",
+                "L",
+                "W",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                161.1,
+                119.7,
+                142.1,
+                156.9,
+                148.6,
+                111,
+                122.7,
+                121
+              ],
+              "ppg": 135.4,
+              "allPlay": {
+                "wins": 27,
+                "losses": 61,
+                "ties": 0
+              },
+              "luck": -1.5
+            },
+            "b": {
+              "franchiseId": "0009",
+              "wins": 5,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "L",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                157.8,
+                162.1,
+                156.1,
+                177.3,
+                129.3,
+                109.1,
+                147.4,
+                159.3
+              ],
+              "ppg": 149.8,
+              "allPlay": {
+                "wins": 43,
+                "losses": 45,
+                "ties": 0
+              },
+              "luck": 1.1
+            },
+            "series": null
+          },
+          {
+            "a": {
+              "franchiseId": "0004",
+              "wins": 1,
+              "losses": 7,
+              "ties": 0,
+              "streak": "L7",
+              "form": [
+                "W",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                177.8,
+                141,
+                134,
+                121.9,
+                130.5,
+                121.9,
+                131.1,
+                134
+              ],
+              "ppg": 136.5,
+              "allPlay": {
+                "wins": 25,
+                "losses": 63,
+                "ties": 0
+              },
+              "luck": -1.3
+            },
+            "b": {
+              "franchiseId": "0010",
+              "wins": 4,
+              "losses": 4,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "L",
+                "W",
+                "W",
+                "L",
+                "W",
+                "L",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                160.6,
+                149.7,
+                181.5,
+                127.4,
+                158.7,
+                126.1,
+                145.9,
+                174.5
+              ],
+              "ppg": 153,
+              "allPlay": {
+                "wins": 52,
+                "losses": 36,
+                "ties": 0
+              },
+              "luck": -0.7
+            },
+            "series": null
+          },
+          {
+            "a": {
+              "franchiseId": "0005",
+              "wins": 4,
+              "losses": 4,
+              "ties": 0,
+              "streak": "L2",
+              "form": [
+                "L",
+                "W",
+                "L",
+                "W",
+                "W",
+                "W",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                129.6,
+                165.6,
+                116.6,
+                148.2,
+                143.8,
+                129.3,
+                109.7,
+                131.8
+              ],
+              "ppg": 134.3,
+              "allPlay": {
+                "wins": 27,
+                "losses": 61,
+                "ties": 0
+              },
+              "luck": 1.5
+            },
+            "b": {
+              "franchiseId": "0011",
+              "wins": 5,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "W",
+                "W",
+                "L",
+                "L",
+                "W",
+                "W",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                170.2,
+                160.7,
+                135.2,
+                147.3,
+                150.7,
+                143.7,
+                173.6,
+                146.3
+              ],
+              "ppg": 153.5,
+              "allPlay": {
+                "wins": 52,
+                "losses": 36,
+                "ties": 0
+              },
+              "luck": 0.3
+            },
+            "series": null
+          },
+          {
+            "a": {
+              "franchiseId": "0006",
+              "wins": 8,
+              "losses": 0,
+              "ties": 0,
+              "streak": "W8",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                194.6,
+                164.2,
+                173.9,
+                157.6,
+                188.3,
+                172,
+                159.8,
+                137.9
+              ],
+              "ppg": 168.5,
+              "allPlay": {
+                "wins": 70,
+                "losses": 18,
+                "ties": 0
+              },
+              "luck": 1.6
+            },
+            "b": {
+              "franchiseId": "0012",
+              "wins": 3,
+              "losses": 5,
+              "ties": 0,
+              "streak": "L2",
+              "form": [
+                "L",
+                "L",
+                "W",
+                "W",
+                "L",
+                "W",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                110.9,
+                146.6,
+                153.4,
+                117.2,
+                135,
+                133.7,
+                141.8,
+                100.5
+              ],
+              "ppg": 129.9,
+              "allPlay": {
+                "wins": 22,
+                "losses": 66,
+                "ties": 0
+              },
+              "luck": 1
+            },
+            "series": null
+          },
+          {
+            "a": {
+              "franchiseId": "0001",
+              "wins": 3,
+              "losses": 5,
+              "ties": 0,
+              "streak": "W2",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "W",
+                "L",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                142.1,
+                163.6,
+                161,
+                101.9,
+                168.5,
+                82.2,
+                135.7,
+                147.9
+              ],
+              "ppg": 137.9,
+              "allPlay": {
+                "wins": 38,
+                "losses": 50,
+                "ties": 0
+              },
+              "luck": -0.5
+            },
+            "b": {
+              "franchiseId": "0007",
+              "wins": 2,
+              "losses": 6,
+              "ties": 0,
+              "streak": "W2",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                137.6,
+                159.7,
+                179.8,
+                166.9,
+                145.1,
+                131.1,
+                177,
+                172.4
+              ],
+              "ppg": 158.7,
+              "allPlay": {
+                "wins": 56,
+                "losses": 32,
+                "ties": 0
+              },
+              "luck": -3.1
+            },
+            "series": null
+          },
+          {
+            "a": {
+              "franchiseId": "0002",
+              "wins": 7,
+              "losses": 1,
+              "ties": 0,
+              "streak": "W3",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                172.6,
+                146.8,
+                188.7,
+                208.5,
+                165,
+                175.4,
+                142.4,
+                162.4
+              ],
+              "ppg": 170.2,
+              "allPlay": {
+                "wins": 69,
+                "losses": 19,
+                "ties": 0
+              },
+              "luck": 0.7
+            },
+            "b": {
+              "franchiseId": "0008",
+              "wins": 5,
+              "losses": 3,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "W",
+                "L",
+                "L",
+                "W",
+                "W",
+                "W",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                163.5,
+                83.5,
+                125.4,
+                187,
+                145.7,
+                152.5,
+                147.3,
+                159.6
+              ],
+              "ppg": 145.6,
+              "allPlay": {
+                "wins": 47,
+                "losses": 41,
+                "ties": 0
+              },
+              "luck": 0.7
+            },
+            "series": null
+          }
+        ]
+      },
+      "namedPlayerIds": [
+        "15694",
+        "16161",
+        "16148",
+        "16181"
+      ]
+    },
+    {
+      "id": "wire_50409705",
+      "timestamp": "2026-11-07T19:18:22Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Browns QB Deshaun Watson out of concussion protocol",
+      "body": "Browns QB Deshaun Watson is out of the concussion protocol, but he is questionable. Shedeur Sanders will get the start against the Saints.",
+      "link": "https://www.espn.com/nfl/story/_/id/50409705/browns-qb-deshaun-watson-concussion-protocol",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13113",
+        "17031"
+      ]
+    },
+    {
+      "id": "wire_50403440",
+      "timestamp": "2026-11-07T15:38:18Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Colts in Daniel Jones trade talks as multiple teams call about QB, sources say",
+      "body": "The Colts have engaged in trade discussions with multiple teams involving quarterback Daniel Jones, sources told NFL Network and ESPN.",
+      "link": "https://www.espn.com/nfl/story/_/id/50403440/sources-colts-engaged-daniel-jones-trade-talks",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14059"
+      ]
+    },
+    {
+      "id": "wire_50392079",
+      "timestamp": "2026-11-07T14:31:38Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Fantasy football last-minute pickups: Kaelon Black and Malik Willis lead the way",
+      "body": "If injuries, bye weeks or tough matchups have you seeking lineup help, Matt Bowen lists potential options.",
+      "link": "https://www.espn.com/fantasy/football/story/_/id/50392079/fantasy-football-streamers-last-minute-pickups-week-9",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17485",
+        "15694"
+      ]
+    },
+    {
+      "id": "wire_50400748",
+      "timestamp": "2026-11-07T13:16:10Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Sources: Ravens not expected to deal RB Derrick Henry before NFL trade deadline",
+      "body": "Ravens running back Derrick Henry is not expected to be moved by the NFL trade deadline, league sources told ESPN.",
+      "link": "https://www.espn.com/nfl/story/_/id/50400748/sources-ravens-not-expected-trade-star-rb-derrick-henry",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "12626"
+      ]
+    },
+    {
+      "id": "wire_50389499",
+      "timestamp": "2026-11-07T11:37:27Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "2026 NFL trade deadline: Proposing deals for Tony Pollard, Riq Woolen, others",
+      "body": "Our NFL experts pitched trade offers they'd love to see get done before Tuesday's deadline, including moves for Tony Pollard, Riq Woolen, Jonathan Taylor and Jessie Bates III.",
+      "link": "https://www.espn.com/nfl/story/_/id/50389499/2026-nfl-trade-deadline-offers-experts-taylor-woolen-pollard",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14085",
+        "14802",
+        "13737"
+      ]
+    },
+    {
+      "id": "espn_4bc5e160e4684",
+      "timestamp": "2026-11-06T16:02:08.025Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Ravens-Cardinals trade for Jacoby Brissett is now official.\n\nPer sources:\n🏈Ravens receive: QB Jacoby Brissett and a 2027 5th-round pick.\n\n🏈Cardinals receive: a 2027 4th-round pick and a 2028 7th-round pick.",
+      "body": "Ravens-Cardinals trade for Jacoby Brissett is now official.\n\nPer sources:\n🏈Ravens receive: QB Jacoby Brissett and a 2027 5th-round pick.\n\n🏈Cardinals receive: a 2027 4th-round pick and a 2028...",
+      "link": "https://www.espn.com/contributor/adam-schefter/4bc5e160e4684",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "12616"
+      ]
+    },
+    {
+      "id": "espn_16cd052056284",
+      "timestamp": "2026-11-05T21:05:43.509Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Ravens officially placed QBs Lamar Jackson and Tyler Huntley on injured reserve. ",
+      "body": "Ravens officially placed QBs Lamar Jackson and Tyler Huntley on injured reserve. ",
+      "link": "https://www.espn.com/contributor/adam-schefter/16cd052056284",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13593",
+        "14789"
+      ]
+    },
+    {
+      "id": "espn_4ac7317c60b73",
+      "timestamp": "2026-11-05T18:24:59.241Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Just in: Vikings QB Carson Wentz will start Monday night’s game vs. the Buffalo Bills while Kyler Murray deals with what the team has called a “sore hamstring.”",
+      "body": "Just in: Vikings QB Carson Wentz will start Monday night’s game vs. the Buffalo Bills while Kyler Murray deals with what the team has called a “sore hamstring.”",
+      "link": "https://www.espn.com/contributor/adam-schefter/4ac7317c60b73",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "12610",
+        "14056"
+      ]
+    },
+    {
+      "id": "espn_8db199578eb4e",
+      "timestamp": "2026-11-04T19:45:13.69Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Trade: the Arizona Cardinals are finalizing a trade to send QB Jacoby Brissett to the Baltimore Ravens, per @RapSheet and me. Deal is expected to be completed this weekend.\n\nThe Ravens lost QB Lamar Jackson to a thumb injury, and his backup Tyler “Snoop” Huntley to turf toe.",
+      "body": "Trade: the Arizona Cardinals are finalizing a trade to send QB Jacoby Brissett to the Baltimore Ravens, per @RapSheet and me.",
+      "link": "https://www.espn.com/contributor/adam-schefter/8db199578eb4e",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "12616",
+        "13593"
+      ]
+    },
+    {
+      "id": "espn_af239ebf574c8",
+      "timestamp": "2026-11-04T19:44:12.713Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Trade: The Ravens are finalizing a trade for former Cardinals QB Jacoby Brissett, per me and Adam Schefter, filling the void left by the injuries to Lamar Jackson and Tyler “Snoop” Huntley.\n\nThe deal is expected to be completed this weekend.",
+      "body": "Trade: The Ravens are finalizing a trade for former Cardinals QB Jacoby Brissett, per me and Adam Schefter, filling the void left by the injuries to Lamar Jackson and Tyler “Snoop” Huntley.\n\nThe deal...",
+      "link": "https://www.espn.com/contributor/ian-rapoport/af239ebf574c8",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "12616",
+        "13593"
+      ]
+    },
+    {
+      "id": "espn_b87fa085c8976",
+      "timestamp": "2026-11-04T19:00:27.517Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "A QB change in Philadelphia: the Eagles are naming Joe Milton their starting QB and benching Tanner McKee for Sunday’s game vs. the Giants, per @mikegarafolo and me.",
+      "body": "A QB change in Philadelphia: the Eagles are naming Joe Milton their starting QB and benching Tanner McKee for Sunday’s game vs. the Giants, per @mikegarafolo and me.",
+      "link": "https://www.espn.com/contributor/adam-schefter/b87fa085c8976",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "16585",
+        "15702"
+      ]
+    },
+    {
+      "id": "espn_31794c5d90ff1",
+      "timestamp": "2026-11-04T18:49:36.663Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Seahawks QB Sam Darnold will be out Sunday vs. Arizona due to quad injury, per HC  Mike Macdonald.",
+      "body": "Seahawks QB Sam Darnold will be out Sunday vs. Arizona due to quad injury, per HC  Mike Macdonald.",
+      "link": "https://www.espn.com/contributor/adam-schefter/31794c5d90ff1",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13592"
+      ]
+    },
+    {
       "id": "wire_50378819",
       "timestamp": "2026-11-04T17:23:58Z",
       "type": "external",
@@ -12,7 +704,26 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13113"
+      ]
+    },
+    {
+      "id": "espn_b61409281419a",
+      "timestamp": "2026-11-04T17:11:19.006Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Jets WR Garrett Wilson is in the concussion protocol.",
+      "body": "Jets WR Garrett Wilson is in the concussion protocol.",
+      "link": "https://www.espn.com/contributor/adam-schefter/b61409281419a",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15753"
+      ]
     },
     {
       "id": "wire_50379880",
@@ -25,7 +736,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15797"
+      ]
     },
     {
       "id": "wire_50379879",
@@ -38,7 +752,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "16579"
+      ]
     },
     {
       "id": "wire_50379504",
@@ -64,7 +781,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15762"
+      ]
     },
     {
       "id": "wire_50378691",
@@ -77,7 +797,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14840"
+      ]
     },
     {
       "id": "wire_50379367",
@@ -90,7 +813,11 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17039",
+        "13592"
+      ]
     },
     {
       "id": "wire_50379398",
@@ -103,7 +830,11 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17051",
+        "15259"
+      ]
     },
     {
       "id": "wire_50379252",
@@ -155,33 +886,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "nfl-wire",
       "franchiseIds": [],
-      "league": "sandbox"
-    },
-    {
-      "id": "wire_50378717",
-      "timestamp": "2026-11-04T14:35:12Z",
-      "type": "external",
-      "tier": "standard",
-      "headline": "Jordan Love and his wife dress as blind refs for Halloween",
-      "body": "Jordan Love and his wife dress as blind refs for Halloween",
-      "link": "https://www.espn.com/video/clip/_/id/50378717/jordan-love-wife-dress-blind-refs-halloween",
-      "linkLabel": "Read on ESPN →",
-      "authorId": "nfl-wire",
-      "franchiseIds": [],
-      "league": "sandbox"
-    },
-    {
-      "id": "wire_50378573",
-      "timestamp": "2026-11-04T13:53:44Z",
-      "type": "external",
-      "tier": "standard",
-      "headline": "Nico Collins' Week 9 fantasy preview",
-      "body": "Nico Collins' Week 9 fantasy preview",
-      "link": "https://www.espn.com/video/clip/_/id/50378573/nico-collins-week-9-fantasy-preview",
-      "linkLabel": "Read on ESPN →",
-      "authorId": "nfl-wire",
-      "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17031"
+      ]
     },
     {
       "id": "espn_727e59e5f938c",
@@ -194,7 +902,26 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13113"
+      ]
+    },
+    {
+      "id": "wire_50378717",
+      "timestamp": "2026-11-04T14:35:12Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Jordan Love and his wife dress as blind refs for Halloween",
+      "body": "Jordan Love and his wife dress as blind refs for Halloween",
+      "link": "https://www.espn.com/video/clip/_/id/50378717/jordan-love-wife-dress-blind-refs-halloween",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14782"
+      ]
     },
     {
       "id": "espn_849f1e155a388",
@@ -207,7 +934,26 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14840"
+      ]
+    },
+    {
+      "id": "wire_50378573",
+      "timestamp": "2026-11-04T13:53:44Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Nico Collins' Week 9 fantasy preview",
+      "body": "Nico Collins' Week 9 fantasy preview",
+      "link": "https://www.espn.com/video/clip/_/id/50378573/nico-collins-week-9-fantasy-preview",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15290"
+      ]
     },
     {
       "id": "espn_8b1b28f36efe5",
@@ -220,7 +966,10 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "14777"
+      ]
     },
     {
       "id": "espn_fa3f0c67ae620",
@@ -233,7 +982,11 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "13593",
+        "17760"
+      ]
     },
     {
       "id": "espn_2c1419c685ce8",
@@ -246,7 +999,11 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "10703",
+        "7394"
+      ]
     },
     {
       "id": "espn_ff088b42f7ba7",
@@ -259,7 +1016,11 @@
       "linkLabel": "Read on ESPN →",
       "authorId": "adam-schefter",
       "franchiseIds": [],
-      "league": "sandbox"
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "10703",
+        "7394"
+      ]
     },
     {
       "id": "espn_8df906fbf5190",
@@ -4473,7 +5234,8 @@
       ]
     }
   ],
-  "lastEspnTimestamp": "2026-11-04T14:37:09.737Z",
-  "lastNflWireTimestamp": "2026-11-04T17:23:58.000Z",
-  "lastOddsWeek": 9
+  "lastEspnTimestamp": "2026-11-06T16:02:08.025Z",
+  "lastNflWireTimestamp": "2026-11-08T06:27:11.000Z",
+  "lastOddsWeek": 9,
+  "lastScanTimestamp": "2026-11-07T20:06:24.222Z"
 }
