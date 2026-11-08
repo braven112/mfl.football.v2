@@ -13,6 +13,7 @@ import { useActiveTeam } from '../active-team';
 import { TeamSwitcher } from '../components/TeamSwitcher';
 import { useSession } from '../session-context';
 import { font, useTheme, type Theme } from '../theme';
+import { PlayerMetaLine, type MetaPart } from '../components/NflTeamStripe';
 
 /**
  * Your team in the league picked in the header: the roster by slot with
@@ -240,7 +241,7 @@ function PlayerRow({
   onPress: () => void;
 }) {
   const byeNow = !!week && player.byeWeek === week;
-  const details = [player.nflTeam || 'FA', player.byeWeek ? `Bye ${player.byeWeek}` : null].filter(Boolean).join('  ·  ');
+  const details: MetaPart[] = [{ team: player.nflTeam || 'FA' }, player.byeWeek ? `Bye ${player.byeWeek}` : null];
   const contract = [
     player.salary !== undefined ? money(player.salary) : null,
     usesContracts && player.contractYears !== undefined ? `${player.contractYears} yr` : null,
@@ -271,9 +272,11 @@ function PlayerRow({
             <Text style={[styles.injury, { color: t.danger }]}>{injuryLabel(player.injury.status)}</Text>
           ) : null}
         </View>
-        <Text style={[styles.detail, { color: byeNow ? t.accentText : t.muted }]} numberOfLines={1}>
-          {byeNow ? `${details}  ·  on bye this week` : details}
-        </Text>
+        <PlayerMetaLine
+          style={[styles.detail, { color: byeNow ? t.accentText : t.muted }]}
+          separator="  ·  "
+          parts={byeNow ? [...details, 'on bye this week'] : details}
+        />
         {player.contractInfo ? (
           <Text style={[styles.detail, { color: t.muted }]} numberOfLines={1}>
             {player.contractInfo}
