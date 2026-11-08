@@ -14,7 +14,7 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
   1. **The weekly high score** (early years): about $10 to the week's top scorer. Nobody really cared; you were chasing the high score anyway.
   2. **The AFL Cup** (a few years, before 2018): a playoff-style side competition. Too complicated to run, and it was never obvious whether you were in it.
   3. **The Tier Era (2018 on):** the Premier League and D-League with promotion and relegation, built to give the middle of the table something to fight for. A huge success: owners watch their all-play record, chase the money and fear relegation. Schefter can treat the tiers as the league's proudest invention.
-- The Melville Roadsters (2003's best record, 13-4) were the co-founding desk; that owner is no longer in the league.
+- **The first champion: the Melville Roadsters (2003).** The co-founder's team had the best record (13-4) and won the first AFL title. That owner is no longer in the league. (The 2003 runner-up's name is a long-retired gag name; never print it.)
 
 ## Departed Owners & the Record (Nov 2026)
 
