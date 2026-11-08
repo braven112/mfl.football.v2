@@ -31,6 +31,8 @@ export interface LeagueStorySubmission {
   platform: string | null;
   answers: Record<string, string>;
   pasted: string | null;
+  /** The invite it came in on (src/utils/league-story/invites.ts). */
+  invite: string | null;
   at: string;
 }
 
@@ -56,6 +58,7 @@ export function cleanSubmission(
   input: { league?: unknown; name?: unknown; platform?: unknown; answers?: unknown; pasted?: unknown },
   email: string,
   now = new Date(),
+  invite: string | null = null,
 ): LeagueStorySubmission | null {
   const league = cleanText(input.league, MAX_SHORT_CHARS);
   if (league.length < 2) return null;
@@ -76,6 +79,7 @@ export function cleanSubmission(
     platform: cleanText(input.platform, MAX_SHORT_CHARS) || null,
     answers,
     pasted,
+    invite,
     at: now.toISOString(),
   };
 }

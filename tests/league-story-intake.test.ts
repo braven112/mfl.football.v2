@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { STORY_QUESTION_IDS, STORY_SECTIONS, storyAiPrompt } from '../src/data/league-story-questions';
 import { cleanSubmission, MAX_ANSWER_CHARS } from '../src/utils/league-story/submissions';
+import { isInviteTokenShape } from '../src/utils/league-story/invites';
 
 const now = new Date('2026-11-08T17:00:00Z');
 
@@ -38,6 +39,7 @@ describe('cleanSubmission', () => {
       platform: 'MyFantasyLeague',
       answers: { 'one-sentence': 'Purest form' },
       pasted: null,
+      invite: null,
       at: '2026-11-08T17:00:00.000Z',
     });
   });
@@ -56,7 +58,34 @@ describe('cleanSubmission', () => {
   });
 });
 
+describe('invites', () => {
+  it('only a 32-character base64url token is shaped like one of ours', () => {
+    expect(isInviteTokenShape('A'.repeat(32))).toBe(true);
+    expect(isInviteTokenShape('abc_DEF-123'.padEnd(32, 'x'))).toBe(true);
+    expect(isInviteTokenShape('A'.repeat(31))).toBe(false);
+    expect(isInviteTokenShape('../../etc/passwd'.padEnd(32, 'x'))).toBe(false);
+    expect(isInviteTokenShape(null)).toBe(false);
+  });
+});
+
 describe('wiring', () => {
+  it('the endpoint refuses a submission without a live invite, before anything is stored, and notifies after', () => {
+    const src = readFileSync('src/pages/api/league-story.ts', 'utf8');
+    const save = src.indexOf('saveSubmission(submission)');
+    expect(src.indexOf('getInvite(body.invite)')).toBeGreaterThan(-1);
+    expect(src.indexOf('if (!invite) return')).toBeLessThan(save);
+    expect(src.indexOf('notifyOwner(')).toBeGreaterThan(save);
+    expect(src).toContain("'ops-league-story'");
+  });
+  it('the form renders only for a live invite', () => {
+    const page = readFileSync('src/pages/league-story.astro', 'utf8');
+    expect(page).toContain("getInvite(Astro.url.searchParams.get('invite'))");
+    expect(page).toContain('{invite && (');
+  });
+  it('invites are made only behind the admin gate', () => {
+    const page = readFileSync('src/pages/live/league-stories.astro', 'utf8');
+    expect(page.indexOf('canViewSiteInsights(authUser)')).toBeLessThan(page.indexOf('createInvite('));
+  });
   it('the endpoint checks both caller limits, the honeypot, the email and the daily cap before it saves', () => {
     const src = readFileSync('src/pages/api/league-story.ts', 'utf8');
     const save = src.indexOf('saveSubmission(submission)');

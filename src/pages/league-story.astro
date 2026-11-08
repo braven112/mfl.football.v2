@@ -13,6 +13,11 @@
  * /live/league-stories. The questions live in
  * src/data/league-story-questions.ts, which also writes the AI prompt.
  *
+ * INVITE ONLY (Brandon, 2026-11-08: "I don't want random people to fill it
+ * out either. I need to ask them"): the form renders only for a live
+ * `?invite=` token made on /live/league-stories, and the endpoint refuses a
+ * submission without one. Anyone else sees what the step is and how to ask.
+ *
  * Shared host, no sign-in: a league fills this in before it has a site. The
  * page keeps an unsent draft in this browser (localStorage, best effort) so a
  * 30-minute form survives a closed tab.
@@ -20,10 +25,14 @@
 import MflAppLayout from '../layouts/MflAppLayout.astro';
 import { STORY_SECTIONS, storyAiPrompt } from '../data/league-story-questions';
 import { MAX_ANSWER_CHARS, MAX_PASTED_CHARS } from '../utils/league-story/submissions';
+import { getInvite } from '../utils/league-story/invites';
 import '../styles/mfl-live.css';
 
 export const prerender = false;
 
+const invite = await getInvite(Astro.url.searchParams.get('invite')).catch(() => null);
+// An invite link is a capability: keep it out of other sites' referrer logs.
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
 const aiPrompt = storyAiPrompt();
 const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker', 'Other'];
 ---
@@ -39,6 +48,17 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
       How it started, who the characters are, the final nobody has gotten over. Your site and your league&rsquo;s
       reporter tell that story back to your league all season.
     </p>
+    {!invite && (
+      <div class="ui-card lstory__card">
+        <h2 class="lstory__h2">This form is by invitation</h2>
+        <p class="lstory__note">
+          When your league signs up for a custom site, we send your commissioner a private link to this form. If you
+          have one, open it from that email. Lost it, or the link stopped working? Reply to our email and we&rsquo;ll
+          send a new one.
+        </p>
+      </div>
+    )}
+    {invite && (<>
     <ul class="lstory__tips">
       <li>About 30 minutes. Short answers are perfect: a name, a year and one sentence.</li>
       <li>Skip anything that doesn&rsquo;t fit. <strong>&ldquo;We don&rsquo;t have one&rdquo; is a great answer</strong>: it tells the reporter what not to make up.</li>
@@ -46,11 +66,11 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
       <li>Your answers are saved in this browser as you type, so you can come back later.</li>
     </ul>
 
-    <form class="lstory__form" novalidate data-story-form>
+    <form class="lstory__form" novalidate data-story-form data-invite={invite.token}>
       <div class="ui-card lstory__card" role="group" aria-labelledby="ls-about-title">
         <h2 class="lstory__h2" id="ls-about-title">About your league</h2>
         <label class="lstory__label" for="ls-league">League name</label>
-        <input id="ls-league" class="lstory__input" name="league" maxlength="120" required autocomplete="organization" />
+        <input id="ls-league" class="lstory__input" name="league" maxlength="120" required autocomplete="organization" value={invite.league} />
         <label class="lstory__label" for="ls-name">Your name</label>
         <input id="ls-name" class="lstory__input" name="name" maxlength="120" autocomplete="name" />
         <label class="lstory__label" for="ls-email">Email, so we can follow up</label>
@@ -128,11 +148,11 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
         <a href="/brand/specs">logo specs</a> or <a href="/team-logo">make a team logo</a>.
       </p>
     </div>
+    </>)}
   </section>
 </MflAppLayout>
 
 <script>
-  const DRAFT_KEY = 'league-story:draft';
 
   function init() {
     document.querySelectorAll<HTMLElement>('[data-league-story]').forEach(setup);
@@ -142,7 +162,10 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
     if (root.dataset.ready) return;
     root.dataset.ready = '1';
     const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
-    const form = $<HTMLFormElement>('[data-story-form]');
+    const form = root.querySelector<HTMLFormElement>('[data-story-form]');
+    if (!form) return; // no invite: nothing to wire
+    // One draft per invite, so two leagues on one computer never share one.
+    const DRAFT_KEY = `league-story:draft:${form.dataset.invite}`;
     const status = $<HTMLElement>('[data-status]');
     const fields = () => Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input[name], textarea, select'));
     const keyOf = (el: Element) => (el as HTMLElement).dataset.answer ?? (el as HTMLInputElement).name;
@@ -186,6 +209,7 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
         if (t.value.trim()) answers[t.dataset.answer!] = t.value.trim();
       });
       const body = {
+        invite: form.dataset.invite,
         league: value('league'),
         name: value('name'),
         email: value('email'),
