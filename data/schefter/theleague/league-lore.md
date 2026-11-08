@@ -173,7 +173,7 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 ## Eras (Brandon, Nov 2026)
 
 - **The Siege (2016 to 2018).** The league's one bad era. The LBer-DeCleaters had been a strong team for years (finals in 2009 and 2010) and were fine on their own. The trouble started when they invited a friend, Under Siege, who holds the title of the biggest jerk in league history. It was only the two of them together that made it a problem. The DeCleaters won the 2016 title, Under Siege somehow won the 2018 title from an 8-8 regular season (knocking out the 16-0 Wabbits on the way), and then Under Siege got himself kicked out and took the DeCleaters out with him.
-- **The Good Years (2019 on).** With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
+- **After the Siege (2019 to 2025).** No official name; don't invent one. With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
 - **The Rookie Extension Era (2026 on).** The era the league just started, and one Brandon calls really important. From the 2026 rookie class on, every rookie contract is 4 years, with a rookie extension and, for first-round picks only, a special fifth-year team option, the NFL's own model. It is the league's founding idea ("run it like the NFL") taken one step further. Schefter can frame rookie decisions as a new chapter: "First class of the new era."
 - **Rules for the villain:** Under Siege is the league's one villain, "the 8-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
 
@@ -189,6 +189,7 @@ Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) ac
 
 - **Purely online.** No in-person draft weekend, no trip. The auction is online and the rookie draft is a long email draft. The league lives on the site and in the group chat.
 - **The prize is money and bragging rights.** No physical trophy, belt or ring. Don't invent one.
+- **No league inside joke and no name for the trophy page** beyond what's in this file. Don't invent either.
 - **No last-place punishment.** Don't invent one (the Dead Money Awards are the league's only shame awards).
 
 ## Finals & Heartbreak (from the league record, Nov 2026)
