@@ -509,91 +509,75 @@ body.bov-doc {
   text-shadow: var(--bov-shadow);
 }
 
-/* A big play grows the box into the quarter: the score row stays on top,
-   and the player who scored fills the rest. */
-.bov__play {
-  width: calc(var(--u) * 44);
+/* A big play takes the score box over at the width it had (set inline from
+   the score row), so the box never grows: the round player cell, the name,
+   and the points. */
+.bov__playbox {
+  box-sizing: border-box;
+  animation: bov-in 0.45s ease;
+}
+
+.bov__playbox-face {
+  --player-avatar-size: calc(var(--u) * 3.4);
+  flex: none;
+  box-sizing: border-box;
+}
+
+.bov__playbox-who {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  border-radius: calc(var(--u) * 0.9);
-  background: var(--bov-box);
-  font-family: 'sans-serif-condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
-  text-shadow: var(--bov-shadow);
-  animation: bov-grow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.bov--corner[data-side='right'] > .bov__play {
-  transform-origin: top right;
-}
-
-@keyframes bov-grow {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-}
-
-.bov__play .bov__box {
-  background: none;
-  border-radius: 0;
-}
-
-.bov__play-body {
-  display: grid;
-  grid-template-columns: calc(var(--u) * 15) 1fr;
-  align-items: end;
-  gap: calc(var(--u) * 1.4);
-  padding: 0 calc(var(--u) * 1.4) calc(var(--u) * 1.4);
-}
-
-.bov__shot {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  object-position: 50% 15%;
-  border-radius: calc(var(--u) * 0.6);
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.bov__shot--team {
-  object-fit: contain;
-  padding: calc(var(--u) * 2);
-}
-
-.bov__play-who {
-  margin: calc(var(--u) * 0.8) 0 calc(var(--u) * 0.4);
-  font-size: calc(var(--u) * 3);
+  text-overflow: ellipsis;
+  font-size: calc(var(--u) * 1.9);
   font-weight: 800;
-  line-height: 1;
 }
 
-.bov__play-body .bov__kick {
-  display: inline-block;
+/* In the quarter it takes the whole quarter: the same panel, the player
+   instead of the lineups. */
+.bov__q.bov__qplay {
+  grid-template-rows: auto 1fr;
+  animation: bov-in 0.45s ease;
 }
 
-.bov__play-in {
+.bov__qplay-body {
   display: flex;
   align-items: center;
-  gap: calc(var(--u) * 0.8);
-  margin-top: calc(var(--u) * 0.8);
-  font-size: calc(var(--u) * 1.2);
-  color: #e3e8ee;
+  gap: calc(var(--u) * 2.4);
+  min-height: 0;
+  padding: 0 calc(var(--u) * 1);
 }
 
-.bov__play-in .bov__lg {
-  height: calc(var(--u) * 2.2);
+.bov__qplay-face {
+  --player-avatar-size: calc(var(--u) * 14);
+  flex: none;
+  box-sizing: border-box;
 }
 
-.bov__play-what {
+.bov__qplay-text {
+  min-width: 0;
+}
+
+.bov__qplay-who {
+  margin: 0 0 calc(var(--u) * 0.6);
+  font-size: calc(var(--u) * 3.4);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.bov__qplay-what {
+  margin: 0 0 calc(var(--u) * 0.8);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: calc(var(--u) * 1.5);
   line-height: 1.25;
   color: #e3e8ee;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.bov__play .bov__gain {
-  display: block;
-  margin-top: calc(var(--u) * 0.6);
-  font-size: calc(var(--u) * 5);
+.bov__qplay .bov__gain {
+  font-size: calc(var(--u) * 4.6);
   line-height: 1;
 }
 
@@ -916,7 +900,8 @@ body.bov-doc {
 @media (prefers-reduced-motion: reduce) {
   .bov__row,
   .bov__flash,
-  .bov__play {
+  .bov__playbox,
+  .bov__qplay {
     animation: none;
   }
 }
