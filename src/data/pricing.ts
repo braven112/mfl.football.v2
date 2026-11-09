@@ -49,6 +49,8 @@ export const installment = (year: number) => (year * (1 + INSTALLMENT_PREMIUM)) 
 
 export interface CustomSiteRow {
 	teams: string;
+	/** The band's top size, which the per-team price is figured at; null when open-ended. */
+	maxTeams: number | null;
 	/** First year (setup), or null when quoted. */
 	setup: number | null;
 	/** Every year after, or null when quoted. */
@@ -57,11 +59,13 @@ export interface CustomSiteRow {
 
 /**
  * Setup and renewal use different size bands (Brandon, 2026-11-05), so the
- * table is the union of both: setup is quoted over 24 teams, renewal over 100.
+ * table is the union of both: setup is quoted over 32 teams, renewal over 100.
+ * Each row also carries its per-team price, figured at the band's TOP size
+ * (the cheapest a team gets in that band), down to $3.33 at 100 teams.
  */
 const setupFor = (teams: number): number | null => {
 	if (teams <= 16) return parseDollars(LEAGUE_PACKAGE_PRICING.tiers[0].setup);
-	if (teams <= 24) return parseDollars(LEAGUE_PACKAGE_PRICING.tiers[1].setup);
+	if (teams <= 32) return parseDollars(LEAGUE_PACKAGE_PRICING.tiers[1].setup);
 	return null;
 };
 const renewalFor = (teams: number): number | null => {
@@ -72,12 +76,17 @@ const renewalFor = (teams: number): number | null => {
 
 export const CUSTOM_SITE_ROWS: CustomSiteRow[] = [
 	{ teams: '16 teams or fewer', at: 16 },
-	{ teams: '17–24 teams', at: 24 },
-	{ teams: '25–32 teams', at: 32 },
+	{ teams: '17–32 teams', at: 32 },
 	{ teams: '33–49 teams', at: 49 },
 	{ teams: '50–100 teams', at: 100 },
 	{ teams: 'Over 100 teams', at: 101 },
-].map(({ teams, at }) => ({ teams, setup: setupFor(at), renewal: renewalFor(at) }));
+].map(({ teams, at }) => ({ teams, maxTeams: at > 100 ? null : at, setup: setupFor(at), renewal: renewalFor(at) }));
+
+/** A yearly price per team per month at `teams` teams, to the cent. */
+export const perTeamMonth = (year: number, teams: number) => Math.round((year / 12 / teams) * 100) / 100;
+
+/** Per-team prices always show cents: "$3.33". */
+export const centsDollars = (n: number) => '$' + n.toFixed(2);
 
 /** The headline "starting at" numbers. */
 export const CUSTOM_FROM_SETUP = CUSTOM_SITE_ROWS[0].setup as number;

@@ -343,7 +343,7 @@ const CONTEST_PACKAGE: Product = {
 /**
  * League Package pricing (Brandon, 2026-11-04). This is the site's top price,
  * so every other price reads as small beside it. Each tier is priced at 10x or
- * more of its yearly AI cost. A league over 24 teams needs custom work on most
+ * more of its yearly AI cost. A league over 32 teams needs custom work on most
  * pages, so it is quoted rather than listed. The homepage and the product page
  * both read these values.
  */
@@ -356,8 +356,8 @@ export const LEAGUE_PACKAGE_PRICING = {
 	/** One-time setup by league size. */
 	tiers: [
 		{ teams: '16 teams or fewer', setup: '$3,000' },
-		{ teams: '17–24 teams', setup: '$6,000' },
-		{ teams: 'Over 24 teams', setup: 'Custom quote' },
+		{ teams: '17–32 teams', setup: '$6,000' },
+		{ teams: 'Over 32 teams', setup: 'Custom quote' },
 	],
 	/** Yearly renewal by league size; its bands differ from setup's (Brandon, 2026-11-05). */
 	renewals: [
@@ -404,8 +404,7 @@ const LEAGUE_PACKAGE: Product = {
 		columns: ['Setup and first year, starting at', 'Yearly renewal after'],
 		rows: [
 			{ label: '16 teams or fewer', values: ['$3,000', '$1,500/year'] },
-			{ label: '17–24 teams', values: ['$6,000', '$2,000/year'] },
-			{ label: '25–32 teams', values: ['Custom quote', '$2,000/year'] },
+			{ label: '17–32 teams', values: ['$6,000', '$2,000/year'] },
 			{ label: '33–49 teams', values: ['Custom quote', '$3,000/year'] },
 			{ label: '50–100 teams', values: ['Custom quote', '$4,000/year'] },
 			{ label: 'Over 100 teams', values: ['Custom quote', 'Quoted'] },
@@ -441,7 +440,7 @@ const LEAGUE_PACKAGE: Product = {
 				{ title: 'Franchise logos', price: 'Optional', body: `We design every franchise’s logo, or you make your own from our sizes and save ${LEAGUE_PACKAGE_PRICING.logoDiscount}.` },
 				{ title: 'Your league’s own rules', price: 'Included', body: 'Most league-specific standings, salary cap rules and side games, agreed at the kickoff call.' },
 				{ title: 'Other custom features', price: 'Quoted', body: 'Anything beyond your standings, cap rules and side games, quoted before work starts.' },
-				{ title: 'Leagues over 24 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
+				{ title: 'Leagues over 32 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
 				{ title: 'Priority support', price: 'Included', body: 'Your league comes first on game days and in the weekly release.' },
 			],
 		},

@@ -21,6 +21,8 @@ import {
 	INSTALLMENT_MONTHS,
 	INSTALLMENT_PREMIUM,
 	LOGO_DISCOUNT,
+	centsDollars,
+	perTeamMonth,
 	PRICING_FAQS,
 	SEASONAL_THEME_INCLUDES,
 	SEASONAL_THEME_PRICE,
@@ -122,7 +124,7 @@ const quote = 'Custom quote';
 					<p class="sp-eyebrow">Custom sites</p>
 					<h2 id="prc-size">Price by league size</h2>
 				</div>
-				<p class="sp-head__note">Monthly prices are billed annually. The first year includes setup.</p>
+				<p class="sp-head__note">Monthly prices are billed annually. The first year includes setup. The bigger the league, the less each team pays.</p>
 			</div>
 			<ul class="prc-sizes">
 				{CUSTOM_SITE_ROWS.map((row) => (
@@ -136,6 +138,9 @@ const quote = 'Custom quote';
 										<>
 											<b>{dollars(perMonth(row.setup))}/mo</b>
 											<span>{dollars(row.setup)} billed annually</span>
+											{row.maxTeams && row.maxTeams > 32 && (
+												<span class="prc-per-team">{centsDollars(perTeamMonth(row.setup, row.maxTeams))} per team/mo at {row.maxTeams} teams</span>
+											)}
 										</>
 									) : (
 										<b>{quote}</b>
@@ -149,6 +154,9 @@ const quote = 'Custom quote';
 										<>
 											<b>{dollars(perMonth(row.renewal))}/mo</b>
 											<span>{dollars(row.renewal)} billed annually</span>
+											{row.maxTeams && row.maxTeams > 32 && (
+												<span class="prc-per-team">{centsDollars(perTeamMonth(row.renewal, row.maxTeams))} per team/mo at {row.maxTeams} teams</span>
+											)}
 										</>
 									) : (
 										<b>Quoted</b>
@@ -436,6 +444,12 @@ const quote = 'Custom quote';
 	.prc-size dd span {
 		font-size: var(--sp-text-sm);
 		color: var(--sp-muted);
+	}
+
+	.prc-size dd .prc-per-team {
+		margin-top: 0.2rem;
+		font-weight: 600;
+		color: var(--sp-red);
 	}
 
 	.prc-mini {
