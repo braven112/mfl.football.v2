@@ -10,8 +10,10 @@
  *
  * Signed-in owners of that league (canAskLeagueHistory), and the league
  * comes from the URL the owner is on but must match the session, never just
- * the param. Rate-limited per franchise because every question spends Sonnet
- * tokens.
+ * the param. Rate-limited per franchise because every question spends model
+ * tokens. The model follows the league's plan (utils/ai-plan.mjs): Sonnet for
+ * a full custom site, Haiku for the League History tier and for guests; each
+ * question's real token cost is recorded per league and model (utils/ai-usage).
  *
  * Signed-out visitors may ask the public demo league (guest-ask.ts): a few
  * questions a day, counted per visitor and per address under a site-wide
@@ -42,6 +44,8 @@ import {
 } from '../../../utils/league-history/guest-ask';
 import { guestMasker, maskDataset, maskValue, type NameMasker } from '../../../utils/league-history/guest-mask';
 import { recordFunnel } from '../../../utils/history-funnel';
+import { aiModelForLeague } from '../../../utils/ai-plan.mjs';
+import { recordAiUsage } from '../../../utils/ai-usage';
 
 export const prerender = false;
 
@@ -111,7 +115,15 @@ async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeo
 			return json({ error: 'Unknown league.' }, 404, cookie);
 		}
 		const ds = maskAskData({ ...loaded, competitions }, mask);
-		result = maskValue(await askHistory(league.slug, ds, question, { turns, asker: null }), mask);
+		result = maskValue(
+			await askHistory(league.slug, ds, question, {
+				turns,
+				asker: null,
+				model: aiModelForLeague(league.slug, { guest: true }),
+				onUsage: (u) => void recordAiUsage(`${league.slug}-guest`, u).catch(() => {}),
+			}),
+			mask,
+		);
 	} catch (e) {
 		await spend.refund();
 		console.error('[league-history/ask] guest failed:', e);
@@ -190,7 +202,11 @@ export const POST: APIRoute = async ({ request }) => {
 		]);
 		if (!loaded) return json({ error: 'Unknown league.' }, 404);
 		const ds: AskData = { ...loaded, competitions };
-		result = await askHistory(league.slug, ds, question, { turns, asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)) });
+		result = await askHistory(league.slug, ds, question, {
+			turns,
+			asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
+			onUsage: (u) => void recordAiUsage(league.slug, u).catch(() => {}),
+		});
 	} catch (e) {
 		console.error('[league-history/ask] failed:', e);
 		return json({ error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' }, 503);

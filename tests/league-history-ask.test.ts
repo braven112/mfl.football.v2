@@ -11,6 +11,10 @@ import theleagueMoves from '../data/theleague/derived/league-history-moves.json'
 import aflMoves from '../data/afl-fantasy/derived/league-history-moves.json';
 import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery, teamRenames } from '../src/utils/league-history/ask-query.mjs';
 import { askHistory } from '../src/utils/league-history/ask';
+import { AI_PLANS } from '../src/utils/ai-plan.mjs';
+
+const SONNET = AI_PLANS.custom.model;
+const HAIKU = AI_PLANS.history.model;
 import { recordBook } from '../src/utils/league-history/records.mjs';
 import { describeMissingWeeks } from '../src/utils/league-history/ask-players.mjs';
 import { gapChart, historyChart } from '../src/utils/league-history/record-charts.mjs';
@@ -237,6 +241,27 @@ describe('askHistory', () => {
     // The tool result handed back to the model is the engine's output.
     const toolResult = seen[1].messages.at(-1).content[0];
     expect(JSON.parse(toolResult.content).total).toBe(res.table!.total);
+  });
+
+  it("calls the league's plan model and tallies every round's usage (ai-plan.mjs)", async () => {
+    const seen: any[] = [];
+    const replies = [
+      { content: [{ type: 'tool_use', id: 't1', name: 'run_query', input: nineOne }], usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 4000, cache_read_input_tokens: 0 } },
+      { content: [{ type: 'tool_use', id: 't2', name: 'answer', input: { answer: 'Yes.', show: 0 } }], usage: { input_tokens: 300, output_tokens: 80, cache_creation_input_tokens: 0, cache_read_input_tokens: 4000 } },
+    ];
+    let i = 0;
+    const client = { messages: { create: async (body: any) => (seen.push(body), replies[i++]) } };
+    let usage: any = null;
+    await askHistory('theleague', TL, 'started 9-1 with fewer points?', { client, onUsage: (u) => (usage = u) });
+    expect(seen.every((b) => b.model === SONNET)).toBe(true);
+    expect(usage).toMatchObject({ model: SONNET, rounds: 2, inputTokens: 400, outputTokens: 130, cacheWriteTokens: 4000, cacheReadTokens: 4000 });
+    // 400*2 + 130*10 + 4000*2.5 + 4000*0.2 = 12,900 per million
+    expect(usage.costUsd).toBeCloseTo(0.0129, 6);
+
+    i = 0;
+    seen.length = 0;
+    await askHistory('theleague', TL, 'started 9-1 with fewer points?', { client, model: HAIKU });
+    expect(seen.every((b) => b.model === HAIKU)).toBe(true);
   });
 
   it('hands a bad query back to the model as an error instead of failing', async () => {
