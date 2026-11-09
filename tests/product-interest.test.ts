@@ -58,8 +58,8 @@ beforeEach(() => {
 
 describe('product interest', () => {
 	it('accepts only real product slugs', () => {
-		expect(mod.isInterestProduct('league-hub')).toBe(true);
-		expect(mod.isInterestProduct('owner-suite')).toBe(true);
+		expect(mod.isInterestProduct('league-package')).toBe(true);
+		expect(mod.isInterestProduct('contest-package')).toBe(true);
 		expect(mod.isInterestProduct('not-a-product')).toBe(false);
 		expect(mod.isInterestProduct(undefined)).toBe(false);
 	});
@@ -82,14 +82,14 @@ describe('product interest', () => {
 	});
 
 	it('counts a browser once per product but every click', async () => {
-		expect((await post({ product: 'league-hub', visitor: 'visitor-aaaa' })).status).toBe(200);
-		await post({ product: 'league-hub', visitor: 'visitor-aaaa' });
-		await post({ product: 'league-hub', visitor: 'visitor-bbbb' });
+		expect((await post({ product: 'league-package', visitor: 'visitor-aaaa' })).status).toBe(200);
+		await post({ product: 'league-package', visitor: 'visitor-aaaa' });
+		await post({ product: 'league-package', visitor: 'visitor-bbbb' });
 		const rows = (await mod.readProductInterest())!;
-		const hub = rows.find((r) => r.slug === 'league-hub')!;
+		const hub = rows.find((r) => r.slug === 'league-package')!;
 		expect(hub.people).toBe(2);
 		expect(hub.clicks).toBe(3);
-		expect(rows[0].slug).toBe('league-hub');
+		expect(rows[0].slug).toBe('league-package');
 	});
 
 	it('keeps an email once, without counting it as a click', async () => {
@@ -102,13 +102,13 @@ describe('product interest', () => {
 
 	it('rejects unknown products, bad ids and bad emails without writing', async () => {
 		expect((await post({ product: 'free-money', visitor: 'visitor-aaaa' })).status).toBe(400);
-		expect((await post({ product: 'league-hub', visitor: '<script>' })).status).toBe(400);
-		expect((await post({ product: 'league-hub', visitor: 'visitor-aaaa', email: 'x' })).status).toBe(400);
+		expect((await post({ product: 'league-package', visitor: '<script>' })).status).toBe(400);
+		expect((await post({ product: 'league-package', visitor: 'visitor-aaaa', email: 'x' })).status).toBe(400);
 		expect(sets.size + hashes.size).toBe(0);
 	});
 
 	it('refuses a body that is not sent as JSON, so a cross-site form cannot post one', async () => {
-		expect((await post({ product: 'league-hub', visitor: 'visitor-aaaa' }, 'text/plain')).status).toBe(415);
+		expect((await post({ product: 'league-package', visitor: 'visitor-aaaa' }, 'text/plain')).status).toBe(415);
 		expect(sets.size + hashes.size).toBe(0);
 	});
 });
