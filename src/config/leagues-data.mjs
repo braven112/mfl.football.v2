@@ -22,6 +22,8 @@ export const LEAGUES = {
      * (src/types/nav.ts) is DERIVED from these, so a new league needs no type edit.
      */
     navSlug: /** @type {const} */ ('theleague'),
+    /** Full custom site: AI features run on Sonnet (src/utils/ai-plan.mjs). */
+    plan: 'custom',
     /**
      * Color theme — a file in src/themes/. Any league may name any theme;
      * a theme is complete on its own and never inherits from another.
@@ -263,6 +265,8 @@ export const LEAGUES = {
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
+    /** Full custom site: AI features run on Sonnet (src/utils/ai-plan.mjs). */
+    plan: 'custom',
     theme: 'afl',
     /** Seasonal themes — see TheLeague's entry. */
     seasonalThemes: ['halloween', 'christmas'],
