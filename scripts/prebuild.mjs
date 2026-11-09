@@ -34,7 +34,7 @@
  *     preview against the OLD derived file and look like it did nothing.
  */
 
-import { exec, execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { pathToFileURL } from 'url';
 import { isDemoEnv } from '../src/utils/demo-isolation-core.mjs';
@@ -298,25 +298,36 @@ for (const { name, cmd } of sequential) {
 }
 
 console.log('[prebuild] Starting parallel fetches…');
-// exec (not execSync) for true parallelism; awaited at top level so the
+// spawn (not execSync) for true parallelism; awaited at top level so the
 // script's lifetime explicitly covers every child instead of relying on the
 // event loop staying alive. Failures stay non-fatal (resolve, never reject).
+//
+// stdio: 'inherit', NOT exec + child.stdout.pipe(process.stdout). Each pipe()
+// adds unpipe/error/close/finish listeners to the parent's stdout and stderr
+// sockets, so with more than 10 parallel steps Node printed eight
+// MaxListenersExceededWarning lines into every Vercel build log (two of them
+// flagged as errors). Inherited stdio writes straight to the same file
+// descriptors with no listeners, and it also drops exec's 1 MB maxBuffer,
+// which would kill a chatty step outright.
 await Promise.all(
   parallel.map(
     ({ name, cmd }) =>
       new Promise((resolve) => {
         const start = Date.now();
-        const child = exec(cmd, (err) => {
-          if (err) {
-            console.error(`  ✗ ${name} failed (${Date.now() - start}ms)`);
-          } else {
+        let settled = false;
+        const done = (ok) => {
+          if (settled) return;
+          settled = true;
+          if (ok) {
             console.log(`  ✓ ${name} (${Date.now() - start}ms)`);
+          } else {
+            console.error(`  ✗ ${name} failed (${Date.now() - start}ms)`);
           }
           resolve();
-        });
-        // Pipe output
-        child.stdout?.pipe(process.stdout);
-        child.stderr?.pipe(process.stderr);
+        };
+        const child = spawn(cmd, { shell: true, stdio: 'inherit' });
+        child.on('error', () => done(false));
+        child.on('close', (code) => done(code === 0));
       })
   )
 );
