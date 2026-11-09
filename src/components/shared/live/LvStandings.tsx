@@ -85,11 +85,6 @@ function Move({ row }: { row: ProjectedStandingsRow }): JSX.Element | null {
   );
 }
 
-/** One decimal, the same as every score on this board. */
-function fmt(points: number): string {
-  return points.toFixed(1);
-}
-
 function record(row: LiveStandingsRow): string {
   // Ties are dropped from the label only when the league does not play them —
   // a league that does would read "10-3" for a 10-3-1 season, which is a
@@ -156,7 +151,9 @@ export function LvStandingsTable({
                 <th scope="col" className="lv-standings__num" title={leadColumn.title}>{leadColumn.label}</th>
               )}
               <th scope="col" className="lv-standings__num" title={recordTitle}>{recordLabel}</th>
-              <th scope="col" className="lv-standings__num">PF</th>
+              {/* No PF column: on a phone the record already fills the row, and
+                  PF ran off the edge of the card (Brandon, 2026-11-08). The
+                  rows still carry pointsFor for tiebreaks. */}
             </tr>
           </thead>
           <tbody>
@@ -200,7 +197,6 @@ export function LvStandingsTable({
                 </th>
                 {leadColumn && <td className="lv-standings__num">{leadColumn.value(row)}</td>}
                 <td className="lv-standings__num">{record(row)}</td>
-                <td className="lv-standings__num">{fmt(row.pointsFor)}</td>
               </tr>
             ))}
           </tbody>
