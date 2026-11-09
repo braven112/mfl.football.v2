@@ -537,6 +537,11 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   word-break: break-word;
 }
 
+/* A roster list is line-broken text; the line clamp above still applies. */
+.sfc-post__body--lines {
+  white-space: pre-line;
+}
+
 /* GroupMe image thumbnail in compact view */
 .sfc-post__gm-thumb {
   position: relative;

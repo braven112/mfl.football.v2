@@ -196,6 +196,10 @@ export type TransactionSubType =
   | 'FREE_AGENT'
   | 'BBID_WAIVER'
   | 'TRADE_PENDING'
+  /** A team's injured-reserve move (scripts/lib/schefter-wire-formats.mjs) */
+  | 'IR'
+  /** "Notable … roster moves today:" — several routine moves in one post */
+  | 'ROSTER_MOVES'
   // Site-generated lanes
   | 'milestone'
   | 'rumor_mill'
@@ -245,6 +249,19 @@ export interface AuctionGrade {
   postCapSpace?: number;
   postCapSpaceDisplay?: string;
   pickups?: Array<{ name: string; position: string; salary: string }>;
+}
+
+/** One MFL move folded into a roster-list post. */
+export interface SchefterRosterListMove {
+  sourceTimestamp: string;
+  transactionSubType: 'FREE_AGENT' | 'IR';
+  addedIds?: string[];
+  droppedIds?: string[];
+  placedIds?: string[];
+  activatedIds?: string[];
+  headline?: string;
+  body?: string;
+  storyVersion?: number;
 }
 
 /** A single Schefter feed post */
@@ -332,6 +349,21 @@ export interface SchefterPost {
   /** The move's players, stamped with the story — the Transactions page's join key. */
   addedIds?: string[];
   droppedIds?: string[];
+  /**
+   * The tweet-shaped formats (scripts/lib/schefter-wire-formats.mjs): a plain
+   * one-liner, an IR move, or a roster list. Absent on everything else.
+   * A 'roster-list' body is line-broken text; cards render it with pre-line.
+   */
+  format?: 'one-liner' | 'ir' | 'roster-list';
+  formatVersion?: number;
+  /** IR posts: players moved to / activated from injured reserve. */
+  placedIds?: string[];
+  activatedIds?: string[];
+  /**
+   * Roster lists: each folded MFL move. A pickup or cut keeps its own
+   * one-liner here, which the Transactions page leads that row with.
+   */
+  moves?: SchefterRosterListMove[];
   /** MFL pending-trade offer ID (rumor posts only) */
   offerId?: string;
   /** Stable trade dedup key — sorted franchise pair + sorted asset IDs.
