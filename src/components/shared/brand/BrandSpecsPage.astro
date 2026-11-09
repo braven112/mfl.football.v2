@@ -14,13 +14,14 @@ import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import { ASSET_SPECS } from '../../../utils/brand-asset-specs';
 import '../../../styles/brand-book.css';
 
-/** The only files the page asks for: the logos, plus the optional banner. */
-const SHOWN = ['crest', 'banner', 'league-logo', 'badges'] as const;
+/** The only files the page asks for: the logos, the optional banner, and the league's reporter picture. */
+const SHOWN = ['crest', 'banner', 'league-logo', 'badges', 'reporter'] as const;
 const LABELS: Record<(typeof SHOWN)[number], string> = {
   crest: 'Team icon',
   banner: 'Team banner',
   'league-logo': 'League logo',
   badges: 'Conference and division logos',
+  reporter: 'Your reporter’s picture',
 };
 const specs = SHOWN.flatMap((id) => {
   const s = ASSET_SPECS.find((x) => x.id === id);
@@ -42,13 +43,13 @@ const SHRINK_EXAMPLES = [
 
 <MflAppLayout
   title="Logo and asset specs | MFL.football"
-  description="The team, league, conference and division logo sizes to send, and how to keep a logo crisp."
+  description="The team, league, conference and division logo sizes to send, your reporter’s picture, and how to keep a logo crisp."
 >
   <main class="brand specs">
     <header class="brand__header">
       <p class="brand__eyebrow"><a href="/get-started">Get started</a> &middot; <a href="/brand">Brand Book</a> &middot; Specs</p>
       <h1>Logo and asset specs</h1>
-      <p class="brand__lede">Send each logo as a transparent PNG or SVG at these sizes. We shrink it to fit everywhere.</p>
+      <p class="brand__lede">Send each logo as a transparent PNG or SVG at these sizes, plus a square picture of your league&rsquo;s beat reporter. We shrink them to fit everywhere.</p>
       <p><a class="cta cta--primary" href="/team-logo">Make your logo with our logo maker</a></p>
     </header>
 

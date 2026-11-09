@@ -149,6 +149,20 @@ export const ASSET_SPECS: AssetSpec[] = [
     template: template('Social image template', 'social-image'),
   },
   {
+    // Each league names its own beat reporter and sends its picture
+    // (Brandon, 2026-11-09). The name and personality come in the story form.
+    id: 'reporter',
+    name: 'Reporter picture',
+    owner: 'league',
+    required: true,
+    size: '500 × 500',
+    ratio: '1:1 square',
+    format: 'PNG, JPG or WebP',
+    background: 'Any, filled to every edge',
+    shownAt: 'Next to the reporter’s name on every story and post, usually cropped to a circle',
+    notes: ['A head-and-shoulders portrait of your league’s beat reporter: a photo, a drawing or an AI image. Keep the face centered, since most places crop it to a circle.'],
+  },
+  {
     id: 'badges',
     name: 'Conference and division badges',
     owner: 'league',
