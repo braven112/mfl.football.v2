@@ -1,0 +1,186 @@
+---
+/**
+ * League stories — what new leagues sent from /league-story, newest first,
+ * each laid out under the questionnaire's own headings
+ * (src/data/league-story-questions.ts) so it reads like the doc it replaces.
+ * These are the raw material for a league's lore in data/schefter/<league>/.
+ *
+ * It is also where invites are made: the form is invite-only (Brandon,
+ * 2026-11-08), so "Invite a league" mints a private /league-story link
+ * (src/utils/league-story/invites.ts) to send the commissioner. The POST is
+ * handled here, after the same gate, and a session cookie is SameSite so a
+ * cross-site form cannot mint one.
+ *
+ * Gated exactly like `/live/video-ideas` (`canViewSiteInsights`): one viewer.
+ * Not in the page directory, for the same reason: search would show it to
+ * people it refuses. Storage: src/utils/league-story/submissions.ts.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewSiteInsights } from '../../utils/site-insights';
+import { listSubmissions } from '../../utils/league-story/submissions';
+import { STORY_SECTIONS } from '../../data/league-story-questions';
+import { createInvite, listInvites } from '../../utils/league-story/invites';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!authUser) return Astro.redirect(mflLoginUrl('/live/league-stories'));
+if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
+
+let made: { league: string; link: string } | null = null;
+let inviteError = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData().catch(() => null);
+  const league = String(form?.get('league') ?? '');
+  const invite = await createInvite(league).catch(() => null);
+  if (invite) made = { league: invite.league, link: inviteLink(invite.token) };
+  else inviteError = league.trim().length < 2 ? 'Type the league’s name first.' : 'Couldn’t make an invite just now. Try again.';
+}
+
+// The page's own origin, not SHARED_APP_ORIGIN: this page is served only on the
+// shared host, so its origin IS the shared host in production, and on a preview
+// or staging build the link opens the form that build actually has (a
+// production link 404s there until the form ships).
+function inviteLink(token: string): string {
+  const url = new URL('/league-story', Astro.url.origin);
+  url.searchParams.set('invite', token);
+  return url.href;
+}
+
+const [stories, invites] = await Promise.all([listSubmissions().catch(() => null), listInvites().catch(() => null)]);
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' PT';
+---
+
+<MflAppLayout title="League stories — MFL Football" description="Onboarding story questionnaires sent by new leagues">
+  <section class="mls">
+    <a class="mls__back" href="/live">&larr; Live board</a>
+    <h1 class="mls__title">League stories</h1>
+    <p class="mls__lede">What new leagues sent from <a href="/league-story">Tell us your league&rsquo;s story</a>, newest first.</p>
+
+    <section class="ui-card lst__invite" aria-labelledby="lst-invite-title">
+      <h2 class="lst__h" id="lst-invite-title">Invite a league</h2>
+      <p class="lst__q">The form only opens from a private link. Make one per league and send it to the commissioner.</p>
+      <form method="post" class="lst__row">
+        <input class="lst__input" name="league" maxlength="120" placeholder="League name" aria-label="League name" required />
+        <button type="submit" class="cta cta--primary">Make the link</button>
+      </form>
+      {inviteError && <p class="lst__q">{inviteError}</p>}
+      {made && (
+        <p class="lst__a">
+          Link for <strong>{made.league}</strong>: <a href={made.link}>{made.link}</a>
+        </p>
+      )}
+      {invites && invites.length > 0 && (
+        <details>
+          <summary class="lst__q">Invites ({invites.length})</summary>
+          <ul class="lst__invites">
+            {invites.map((i) => (
+              <li>
+                <strong>{i.league}</strong> · {i.submittedAt ? `answered ${when(i.submittedAt)}` : `sent ${when(i.createdAt)}, not answered yet`}
+                <br />
+                <a href={inviteLink(i.token)}>{inviteLink(i.token)}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+
+    {
+      stories === null ? (
+        <p class="mls__lede">Couldn&rsquo;t read the stories just now.</p>
+      ) : stories.length === 0 ? (
+        <p class="mls__lede">No stories yet.</p>
+      ) : (
+        <ul class="mls-fix__list">
+          {stories.map((s) => (
+            <li class="mls-fix__item">
+              <details class="lst">
+                <summary>
+                  <span class="mls__name">{s.league}</span>
+                  <span class="mls__sub">
+                    {[when(s.at), s.name, s.platform].filter(Boolean).join(' · ')} · <a href={`mailto:${s.email}`}>{s.email}</a>
+                  </span>
+                </summary>
+                {s.pasted && (
+                  <>
+                    <h2 class="lst__h">Pasted from their AI</h2>
+                    <p class="lst__a">{s.pasted}</p>
+                  </>
+                )}
+                {STORY_SECTIONS.filter((sec) => sec.questions.some((q) => s.answers[q.id])).map((sec) => (
+                  <>
+                    <h2 class="lst__h">{sec.title}</h2>
+                    {sec.questions
+                      .filter((q) => s.answers[q.id])
+                      .map((q) => (
+                        <>
+                          <p class="lst__q">{q.label}</p>
+                          <p class="lst__a">{s.answers[q.id]}</p>
+                        </>
+                      ))}
+                  </>
+                ))}
+              </details>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </section>
+</MflAppLayout>
+
+<style>
+  .lst__invite {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .lst__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .lst__input {
+    font: inherit;
+    flex: 1;
+    min-width: 12rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-3);
+    color: var(--page-text);
+  }
+  .lst__invites {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.5rem;
+    overflow-wrap: anywhere;
+  }
+  .lst summary {
+    cursor: pointer;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .lst__h {
+    margin: 1rem 0 0.25rem;
+    font-size: var(--font-size-base);
+  }
+  .lst__q {
+    margin: 0.5rem 0 0.1rem;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+  .lst__a {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+</style>

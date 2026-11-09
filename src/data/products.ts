@@ -203,9 +203,10 @@ export const FEATURES: Feature[] = [
 	},
 	{
 		id: 'ai-reporter',
-		name: 'AI league reporter',
-		summary: 'A league insider who breaks every trade and move and writes weekly columns about your league.',
+		name: 'Your league’s own beat reporter',
+		summary: 'Every league gets its own AI beat reporter, and your league names it. It breaks every trade and move and writes weekly columns about your league.',
 		details: [
+			'Your league picks the reporter’s name and voice. It covers only your league, and learns its story: the people, the rivalries and the running jokes.',
 			'Breaking-news posts for trades, signings and cuts, written in a reporter’s voice about your league’s real teams.',
 			'Weekly recaps and feature columns.',
 			'A rumor mill, posted to the site and to your group chat.',

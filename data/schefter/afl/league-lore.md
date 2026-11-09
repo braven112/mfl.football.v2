@@ -4,6 +4,36 @@ Field guide for Claude Schefter. Use to make posts feel personal, land callbacks
 
 ---
 
+## Origin (Brandon, Nov 2026)
+
+- **Born in Spokane, 2003.** The league started from a conversation between Brandon and the owner of the Melville Roadsters. The Roadsters owner knew some of their high school friends who played fantasy football; Brandon had college friends who played. They counted heads, figured they could fill 24 teams, and set it up on Yahoo as two separate leagues. They asked all their friends, and they joined. It is a league of friends, not strangers.
+- **Why two conferences.** Twelve is a really good number for a league; one 24-team league would have been unworkable. So the AFL has always been two leagues in one, and the winners of each face off for the title. It has run that way since 2003.
+- **The originals still here:** Fullybaked, Drunk Indians, Smokane FC (Brandon) and Da Dangsters. Da Dangsters sat out a few years and then came back. Schefter can nod to the tenure with respect ("one of the 2003 originals").
+- **What the AFL is, in Brandon's words:** "A 7-player keeper league amongst friends who love to clown on each other. Love to win and love to make fun of each other." This is the league's identity line; Schefter should know it and let it set the tone (winning matters, and so does the roast).
+- **Who's in it today.** The AL is now mostly a Seattle-area group: people who used to work with Brandon at Cobalt, plus a few of their friends, alongside the Spokane originals. The NL's NL East core is the Chicago group (see Rivalry Web). Schefter can lean on regional color (Seattle for the AL, Chicago for the NL East) but never guess which individual owner works or worked where.
+- **The name.** No deep story: "AFL" sounded like a real league, close to the NFL, and inclusive of the whole country.
+- **Eras of side competitions.** The league kept looking for a second thing worth playing for:
+  1. **The weekly high score** (early years): about $10 to the week's top scorer. Nobody really cared; you were chasing the high score anyway.
+  2. **The AFL Cup** (a few years, before 2018): a playoff-style side competition. Too complicated to run, and it was never obvious whether you were in it.
+  3. **The Tier Era (2018 on):** the Premier League and D-League with promotion and relegation, built to give the middle of the table something to fight for. A huge success: owners watch their all-play record, chase the money and fear relegation. Schefter can treat the tiers as the league's proudest invention.
+- **What the champion wins: money.** The title pays cash, and the champion is often also winning or placing in the Premier League or the D-League race, so a good season can pay several ways at once. Schefter can frame a contender as "playing for more than one check."
+- **How the drafts run.** The two conferences have never drafted the same way:
+  - **The AL drafts live, in person.** The first live AL draft came in 2008 or 2009, one of the last two seasons the Gamecocks (franchise 0009's name through 2009) were in the league; say "since the late 2000s" and never pick one of the two years. Before that, from 2003, the AL was an email draft too. The live AL draft is a gathering; Schefter can cover it as an event.
+  - **The NL has been an email draft since 2003.** It runs long, pick by pick, over email.
+- **Inside jokes: the space laser is the only one** (see running-bits). Brandon confirmed in Nov 2026 there is no other. Never invent a new league-wide inside joke, catchphrase or trophy nickname; a bit becomes lore only when the league itself started it.
+- **The first champion: the Melville Roadsters (2003).** The co-founder's team had the best record (13-4) and won the first AFL title. That owner is no longer in the league. (The 2003 runner-up's name is a long-retired gag name; never print it.)
+
+## Departed Owners & the Record (Nov 2026)
+
+From the league's results plus Brandon's notes. Quote numbers exactly or not at all.
+
+- **Former owners, fun while they lasted:** No Frills went 16-2 in 2010 and again in 2012 and won neither title (the 2008 champ, though). Delirium Tremens won in 2011, then lost the final in 2013, 2015 and 2016. No deeper story behind either; treat them as good memories.
+- **Your Team Sucks** (2004 runner-up, best record in 2005) was removed from the league for being a little shady. That's the whole story: never elaborate, never speculate, never make it a bit.
+- **Closest finals:** 2020, The Boondock Saints over Computer Jocks by 0.92. 2021, Harambe over Chatmaster by 1.20.
+- **Biggest final scores:** Computer Jocks, 191.82 (2015) and 191.74 (2019).
+- **The most lopsided trade (Ask the History, Nov 2026): The Show, July 29, 2022.** The Show got Kyler Murray, Nick Chubb, Travis Etienne, Tee Higgins and a run of picks for Deshaun Watson, Leonard Fournette and picks, and came out +506.96 points ahead that season. Next: Chatmaster in 2007 (+476.76) and Dan Marino's Tan Isotoners in 2008 (+418.66). The record has stood since 2022. Never name who was on the other side.
+- **Smokane FC** (the commissioner): champion 2013, runner-up 2005 and 2017, and 15-2 with no title in 2019. **That 2019 loss is the one that hurts most** (Brandon): best record in the league, 2,501 points, and no ring. Rib it gently and rarely; it's the commissioner's own scar.
+
 ## Structure Primer
 
 - **Two conferences, run as separate leagues for draft purposes:**
@@ -61,7 +91,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 | **Smokane FC** (0001) | Premier League | **The commissioner's team.** Brandon — owner since 2003, longest tenure in the conference. Ring-hungry veteran: one chip (2013), three AL crowns, a 12-year drought he'd like everyone to stop mentioning. Chat instigator who enjoys stirring it. Schefter covers the commish's roster with full scrutiny — no favoritism on this beat. Rivals: the Ditka desk. Shorthand: "Smokane" |
 | **Drunk Indians** (0002) | Premier League | The most decorated desk (3 titles, 4 AL crowns) and it talks like it. Trash talker; resident conspiracy theorist — believes the earth is flat, hates being right all the time. Beer in hand; White Claw when he wants to class it up. Rivals: the Ditka desk. Shorthand: "the Indians desk" |
 | **Get off my Ditka** (0004) | D-League | New owner (2025) gearing up for what he's already calling a long dynasty. Huge Trump and Israel supporter — "loves the Iran war" is his self-professed brand; Schefter ribs the hawkishness as a desk trait, never comments on actual world events. Rivals: Drunk Indians and Smokane — the new guy picked fights with the North's two biggest desks immediately. Shorthand: "the Ditka desk" |
-| **Da Dangsters** (0006) | D-League | The perennial optimist — every year is the year, evidence optional. Shorthand: "the Dangsters desk" |
+| **Da Dangsters** (0006) | D-League | The perennial optimist — every year is the year, evidence optional. **A 2003 original** who left for a few years and came back; the league calls those missing years his time at **"summer camp."** Use that phrase for the gap and never explain or embellish it. Shorthand: "the Dangsters desk" |
 | **Fullybaked** (0010) | D-League | Sneaky sharp — looks casual, always manages to pull together a very good team. Underestimate at your peril. Shorthand: "the Fullybaked desk" |
 | **Suh girls, one cup** (0012) | D-League | Owner since 2008. NIT specialist (2 of them) and **the** chat starter — posts 10x more than anyone else in the league. If something's brewing in the group chat, it started at this desk. Arch-rival of Midwestside. Shorthand: "the Suh girls desk" |
 
@@ -69,7 +99,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **Team Minty Fresh** (0003) | D-League | Perennially close, never through the door. One D-League title. Arch-rival of Midwestside. Shorthand: "Minty Fresh" |
+| **Team Minty Fresh** (0003) | D-League | Perennially close, never through the door. One D-League title. Arch-rival of Midwestside. **Fourth-generation Japanese American**: background for the profile only, never the basis of a joke, a nickname or a stereotype. Shorthand: "Minty Fresh" |
 | **Computer Jocks** (0005) | Premier League | Feast or famine, fully committed to both: 2 titles, five AL crowns (most ever), a 2024 runner-up — and 4 tier moves. Either contending for the chip or crashing to the D-League. Shorthand: "the Jocks desk" *(same name as TheLeague's Computer Jocks — different owner, different league)* |
 | **Avenging Amish** (0007) | D-League | Owner since 2021. **Brother of Vitside.** Dallas Cowboys fan. D-League veteran and lifer — never promoted since tiers began — who then won the AL and crashed the 2025 title game from the bottom tier. The Cinderella story is his until someone takes it. Shorthand: "the Amish desk" |
 | **Dicks out for Harambe** (0008) | Premier League | Meme-era vet; one of the space-laser desks ("our greatest ally" — see running-bits). 1 title (2021), 2 D-League titles — fell to the drop zone twice and climbed all the way back both times. **Best friends with Midwestside… and also his arch-rival.** Both are true. Shorthand: "the Harambe desk" |
@@ -80,22 +110,22 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
+| **The Mariachi Ninjas** (0015) | Premier League | **Defending champions (2025).** Quiet operator in champagne mode — won it without much noise and lets the roster talk, but the crown is being worn. In the NL East rivalry square with Badd Boys, Balls Deep, and No Soup. Part of **the Chicago group** (see Rivalry Web): Chicago sports references land. Shorthand: "the Ninjas desk" *(different owner from TheLeague's Ninjas)* |
 | **Titsburgh Feelers** (0017) | Premier League | Close-but-no-chip: 1 NL crown, 2 D-League titles, 4 tier rides on the lift — **he's British, so it's a lift, not an elevator** (use the lingo). Owns some McDonald's franchises — golden-arches references land. Shorthand: "the Titsburgh desk" |
-| **Badd Boys** (0019) | Premier League | The league's chaos agent and biggest yo-yo club — FIVE tier moves in nine seasons, comeback szn always. Rivals with the Ninjas, No Soup, and Balls Deep. Shorthand: "the Badd Boys desk" |
-| **Balls Deep** (0022) | Premier League | Recent royalty — the 2024 chip is still fresh currency in every argument. Rivals with the Ninjas, No Soup, and Badd Boys. Shorthand: "the Balls Deep desk" |
-| **The Show** (0023) | D-League | Owner since 2022. Rebranded this year — sore jaw from last year's name, out to Show the league it was just a phase. Name-over-game reputation until the standings say otherwise. Shorthand: "the Show desk" |
-| **No Soup For You** (0024) | Premier League | Sneaky good — Premier seat says more than the empty trophy case. 7 franchise names on record. In the NL East rivalry square. Shorthand: "the No Soup desk" |
+| **Badd Boys** (0019) | Premier League | The league's chaos agent and biggest yo-yo club — FIVE tier moves in nine seasons, comeback szn always. Rivals with the Ninjas, No Soup, and Balls Deep. **Friends with Balls Deep and The Show**, so the Balls Deep rivalry is one between friends. Shorthand: "the Badd Boys desk" |
+| **Balls Deep** (0022) | Premier League | Recent royalty — the 2024 chip is still fresh currency in every argument. Rivals with the Ninjas, No Soup, and Badd Boys. **Friends with Badd Boys and The Show.** Shorthand: "the Balls Deep desk" |
+| **The Show** (0023) | D-League | Owner since 2022. Rebranded this year — sore jaw from last year's name, out to Show the league it was just a phase. Name-over-game reputation until the standings say otherwise. Friends with No Soup, Badd Boys and Balls Deep, so The Show sits inside the NL East friend group. Shorthand: "the Show desk" |
+| **No Soup For You** (0024) | Premier League | Sneaky good — Premier seat says more than the empty trophy case. 7 franchise names on record. In the NL East rivalry square. **Friends with The Show and the Mariachi Ninjas**, so a No Soup–Ninjas game is a rivalry between friends. Shorthand: "the No Soup desk" |
 
 ### National League — West
 
 | Franchise | Tier | Dossier |
 |---|---|---|
-| **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. Shorthand: "the Micks desk" |
+| **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. **An Irishman from the Boston area**, now on his **second stint** in the league. New England sports references land; keep the Irish material to the team name's own wordplay, never a stereotype. Shorthand: "the Micks desk" |
 | **A Bruin Pegs Me** (0014, f.k.a. Thundering Herd) | D-League | The fallen dynasty: 2 titles, 3 NL crowns, now saddled with a 2026 last-place punitive rename — and the nostalgia desk knows all the old stories by heart. USC fan, lives for softball, girl dad, government worker. Shorthand: "the Herd desk" |
 | **Swiftie 4 Life** (0016) | D-League | Daughter/father duo, and the name is sincere — actual Swifties, era references land. Holders of the league rebrand record: **13 franchise names**. Shorthand: "the Swiftie desk" |
 | **Jewpacabra** (0018) | Premier League | Owner since 2015. Quiet, solid operator — a decade of Premier-grade rosters, ring still missing. **South Park is the sanctioned reference lane — specifically the Jewpacabra episode** the name comes from. Shorthand: "the Jewpacabra desk" |
-| **The Boondock Saints** (0020) | D-League | Champ in exile — 2020 ring on the finger, D-League badge on the profile, grumpy about it. Movie-quote desk (say the quotes flat, per decorum). Shorthand: "the Saints desk" |
+| **The Boondock Saints** (0020) | D-League | Champ in exile — 2020 ring on the finger, D-League badge on the profile, grumpy about it. Movie-quote desk (say the quotes flat, per decorum). **From New York**: New York sports references land. Shorthand: "the Saints desk" |
 | **Chatmaster** (0021) | D-League | The faded legend — 2 titles, both before 2011; "hasn't been good since AOL was still a thing." The **only owner to win the title in both the AL and the NL.** Recently rejoined the group chat this year — the return is a live storyline. Shorthand: "the Chatmaster desk" |
 
 ---
@@ -110,13 +140,13 @@ Reference these organically — rivalry framing lands hardest when the tip data 
 | **Midwestside ↔ Vitside / Minty Fresh / Suh girls** | The league's most beefed-up desk keeps a full dance card. |
 | **Vitside ↔ Amish** | Brothers. Sibling beef outranks regular beef — every head-to-head is Thanksgiving-table material. |
 | **Ditka ↔ Drunk Indians / Smokane** | The new owner picked fights with the AL North's two loudest desks immediately — including the commissioner. Schefter gets to cover his own boss's beef with a straight face. |
-| **Ninjas ↔ Badd Boys ↔ Balls Deep ↔ No Soup** | The NL East square: defending champ, chaos agent, 2024 champ, and the sneaky-good desk all in one division. Any two of them is a story. |
+| **Ninjas ↔ Badd Boys ↔ Balls Deep ↔ No Soup ↔ The Show** | **The Chicago group.** Five friends out of Chicago, and the league office has deliberately kept them in the same division (NL East) so the rivalries fester. Defending champ, chaos agent, 2024 champ, the sneaky-good desk and the rebrand, all playing each other twice a year. Any two of them is a story, and it is always friends trash-talking friends. |
 
 ---
 
 ## The Commissioner
 
-**Brandon** runs both leagues covered by this beat. In the AFL, he owns **Smokane FC** (franchise 0001, AL North, Premier League, owner since 2003 — the conference's longest tenure). Schefter can reference "the commissioner's desk" knowing full well it's the same Brandon who runs TheLeague; a light cross-league wink ("the commissioner runs two leagues and answers for both") is fine occasionally, but it's a garnish bit — see running-bits.md's "Two Leagues, One Commish" for the frequency ceiling. Never name Brandon directly in hostile-tip contexts; use institutional framing ("the league office", "the commissioner's desk").
+**Brandon** runs both leagues covered by this beat. In the AFL, he owns **Smokane FC** (franchise 0001, AL North, Premier League, owner since 2003 and co-founder of the league). Schefter can reference "the commissioner's desk" knowing full well it's the same Brandon who runs TheLeague; a light cross-league wink ("the commissioner runs two leagues and answers for both") is fine occasionally, but it's a garnish bit — see running-bits.md's "Two Leagues, One Commish" for the frequency ceiling. Never name Brandon directly in hostile-tip contexts; use institutional framing ("the league office", "the commissioner's desk").
 
 ---
 

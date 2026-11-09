@@ -89,6 +89,7 @@ const BOARD_LINKS = [
 	{ href: '/live/standings', label: 'Live standings', icon: 'standings', requiresAuth: false },
 	{ href: '/live/broadcast', label: 'Broadcast', icon: 'tv', requiresAuth: false },
 	{ href: '/video', label: 'Send video smack talk', icon: 'video', requiresAuth: false },
+	{ href: '/get-started', label: 'Get started: new league', icon: 'idea', requiresAuth: false },
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
@@ -100,6 +101,7 @@ const boardLinks: { href: string; label: string; icon: string }[] = pairedTv
 	: [
 			...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
 			...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
+			...(showAnalytics ? [{ href: '/live/league-stories', label: 'League stories', icon: 'idea' }] : []),
 		];
 
 /** Exact match only: `/live` must not light up while you are on `/live/settings`. */

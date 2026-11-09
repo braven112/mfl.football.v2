@@ -99,7 +99,7 @@ export const PRODUCTS: Door[] = [
     slug: 'league-hub',
     name: 'League Hub',
     who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with a draft hub, an AI league reporter, push alerts and more.',
+    body: 'A branded site on your own domain with a draft hub, your own AI beat reporter, push alerts and more.',
   },
   {
     slug: 'custom-build',

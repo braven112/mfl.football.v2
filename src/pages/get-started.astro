@@ -1,0 +1,89 @@
+---
+/**
+ * Get started — the onboarding steps for a new custom-site league, in one
+ * place (Brandon, 2026-11-08: the story form belongs "in the same section as
+ * creating logos and team colors. all of these are onboarding activities").
+ *
+ * Shared host only, like /brand/specs and /team-logo: a league reaches it
+ * before it has a site of its own. Each step is its own page; this one only
+ * orders them.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import '../styles/mfl-live.css';
+
+export const prerender = false;
+
+const STEPS = [
+  {
+    href: '/league-story',
+    title: 'Tell us your league’s story',
+    body: 'How it began, the people, the rivalries and traditions, and the name and personality of your league’s own beat reporter. We send your commissioner a private link; answer there, or let your own AI fill it in. About 30 minutes.',
+    cta: 'How it works',
+  },
+  {
+    href: '/team-logo',
+    title: 'Pick team colors and make a logo',
+    body: 'Choose a style and your team colors, and we write a prompt to paste into ChatGPT, Gemini or Claude.',
+    cta: 'Make a logo',
+  },
+  {
+    href: '/brand/specs',
+    title: 'Send your logos and reporter picture',
+    body: 'The team, league, conference and division logo sizes to send, with templates, plus a 500 × 500 picture of your beat reporter.',
+    cta: 'See the logo specs',
+  },
+];
+---
+
+<MflAppLayout title="Get started — MFL Football" description="The onboarding steps for a new custom league site: your league's story, team colors and logos.">
+  <section class="mls gstart">
+    <h1 class="mls__title">Get started</h1>
+    <p class="mls__lede">Three steps to set up your league&rsquo;s site. Do them in any order, and send what you have.</p>
+    <ol class="gstart__steps">
+      {
+        STEPS.map((s) => (
+          <li class="ui-card gstart__step">
+            <h2 class="gstart__h">{s.title}</h2>
+            <p class="gstart__body">{s.body}</p>
+            <a class="cta cta--primary" href={s.href}>
+              {s.cta}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+</MflAppLayout>
+
+<style>
+  .gstart {
+    max-width: 46rem;
+  }
+  .gstart__steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+    counter-reset: step;
+  }
+  .gstart__step {
+    counter-increment: step;
+    display: grid;
+    gap: 0.5rem;
+    justify-items: start;
+    padding: 1rem;
+  }
+  .gstart__h {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--page-text);
+  }
+  .gstart__h::before {
+    content: counter(step) '. ';
+  }
+  .gstart__body {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+</style>

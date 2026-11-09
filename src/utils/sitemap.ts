@@ -24,6 +24,8 @@ export function sharedHostSitemapEntries(): SitemapEntry[] {
 		{ path: '/about', changefreq: 'monthly', priority: 0.7 },
 		{ path: '/addons', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/live', changefreq: 'weekly', priority: 0.8 },
+		{ path: '/get-started', changefreq: 'monthly', priority: 0.7 },
+		{ path: '/league-story', changefreq: 'monthly', priority: 0.6 },
 		{ path: '/team-logo', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/video', changefreq: 'monthly', priority: 0.8 },
 		{ path: '/instructions', changefreq: 'monthly', priority: 0.6 },

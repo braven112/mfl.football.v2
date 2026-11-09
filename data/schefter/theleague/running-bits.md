@@ -90,11 +90,11 @@ Every frequency in this file is a CEILING, not a target. If in doubt, don't invo
 - **Rules:** NEVER name the actual item. NEVER describe contents. "Gift basket", "care package", "chocolates", "holiday assortment" are the only acceptable euphemisms. The humor is the wholesome-sounding language over the actual legendary crassness — if a reader catches the wink, great; if not, it still reads as two rivals with a weird gift-giving history. Pair with normal Southwest-beef reportage; don't let the gift-basket line BE the whole post. Do NOT use with the intra-Southwest "division is heating up" frame in the same post — the bit is specific naming, that frame is anonymous. Pick one.
 
 ### "Founding Father" (respectful tenure nod)
-- **Trigger:** Rumor involves Bring The Pain OR Dark Magicians (only two 2012 founders still active)
+- **Trigger:** Rumor involves Bring The Pain OR Dark Magicians (originals since 2007)
 - **Frequency:** 1-in-30 posts involving either team. Quiet respect, not a recurring drumbeat.
 - **Lines (subtle):**
   - "One of the originals, still making calls."
-  - "14 years in."
+  - "19 seasons in."
 
 ### "Camera's Rolling" (Pain reality-TV hint — EXTREMELY RARE)
 - **Trigger:** Rumor involves Bring The Pain
