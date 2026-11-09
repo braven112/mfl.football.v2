@@ -49,43 +49,46 @@ export const installment = (year: number) => (year * (1 + INSTALLMENT_PREMIUM)) 
 
 export interface CustomSiteRow {
 	teams: string;
-	/** The band's top size, which the per-team price is figured at; null when open-ended. */
-	maxTeams: number | null;
 	/** First year (setup), or null when quoted. */
 	setup: number | null;
-	/** Every year after, or null when quoted. */
+	/** Every year after, or null when quoted or priced per team. */
 	renewal: number | null;
+	/** 33–100 teams: each year after is a base plus a per-team monthly price. */
+	perTeam?: { baseYear: number; overTeams: number; perTeamMonth: number };
 }
 
 /**
- * Setup and renewal use different size bands (Brandon, 2026-11-05), so the
- * table is the union of both: setup is quoted over 32 teams, renewal over 100.
- * Each row also carries its per-team price, figured at the band's TOP size
- * (the cheapest a team gets in that band), down to $3.33 at 100 teams.
+ * Setup and renewal use different size bands (Brandon, 2026-11-05/09): setup
+ * is listed through 32 teams and quoted above; renewal is a flat price through
+ * 32 teams, then the 17–32 price plus a per-team price up to 100, and quoted
+ * over 100 ("outside a fantasy league", Brandon).
  */
-const setupFor = (teams: number): number | null => {
-	if (teams <= 16) return parseDollars(LEAGUE_PACKAGE_PRICING.tiers[0].setup);
-	if (teams <= 32) return parseDollars(LEAGUE_PACKAGE_PRICING.tiers[1].setup);
-	return null;
-};
-const renewalFor = (teams: number): number | null => {
-	const bands = [16, 32, 49, 100];
-	const i = bands.findIndex((max) => teams <= max);
-	return i === -1 ? null : parseDollars(LEAGUE_PACKAGE_PRICING.renewals[i].price);
-};
+const [SETUP_16, SETUP_32] = LEAGUE_PACKAGE_PRICING.tiers.map((t) => parseDollars(t.setup));
+const [RENEW_16, RENEW_32] = LEAGUE_PACKAGE_PRICING.renewals.map((r) => parseDollars(r.price));
+export const PER_TEAM_MONTH = LEAGUE_PACKAGE_PRICING.perTeamOver32Month;
+export const PER_TEAM_FROM = 33;
+export const PER_TEAM_TO = 100;
 
 export const CUSTOM_SITE_ROWS: CustomSiteRow[] = [
-	{ teams: '16 teams or fewer', at: 16 },
-	{ teams: '17–32 teams', at: 32 },
-	{ teams: '33–49 teams', at: 49 },
-	{ teams: '50–100 teams', at: 100 },
-	{ teams: 'Over 100 teams', at: 101 },
-].map(({ teams, at }) => ({ teams, maxTeams: at > 100 ? null : at, setup: setupFor(at), renewal: renewalFor(at) }));
+	{ teams: '16 teams or fewer', setup: SETUP_16, renewal: RENEW_16 },
+	{ teams: '17–32 teams', setup: SETUP_32, renewal: RENEW_32 },
+	{
+		teams: `${PER_TEAM_FROM}–${PER_TEAM_TO} teams`,
+		setup: null,
+		renewal: null,
+		perTeam: { baseYear: RENEW_32 as number, overTeams: PER_TEAM_FROM - 1, perTeamMonth: PER_TEAM_MONTH },
+	},
+	{ teams: 'Over 100 teams', setup: null, renewal: null },
+];
 
-/** A yearly price per team per month at `teams` teams, to the cent. */
-export const perTeamMonth = (year: number, teams: number) => Math.round((year / 12 / teams) * 100) / 100;
+/** The monthly renewal, billed annually, for a league of `teams` in the per-team band. */
+export const perTeamBandMonth = (teams: number) =>
+	Math.round((RENEW_32 as number) / 12 + (teams - (PER_TEAM_FROM - 1)) * PER_TEAM_MONTH);
 
-/** Per-team prices always show cents: "$3.33". */
+/** Worked examples shown under the per-team price. */
+export const PER_TEAM_EXAMPLES = [40, 64, 100].map((teams) => ({ teams, month: perTeamBandMonth(teams) }));
+
+/** Per-team prices always show cents: "$2.45". */
 export const centsDollars = (n: number) => '$' + n.toFixed(2);
 
 /** The headline "starting at" numbers. */
