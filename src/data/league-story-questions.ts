@@ -120,8 +120,9 @@ export const STORY_SECTIONS: StorySection[] = [
   {
     id: 'reporter',
     title: 'Your league’s reporter',
-    intro: 'Your site comes with an AI reporter who writes about your league all season. These answers set its voice.',
+    intro: 'Your league gets its own AI beat reporter who covers your league all season, and you name it. These answers set its name and voice.',
     questions: [
+      { id: 'reporter-name', label: 'What should we call your reporter? A name, a nickname, a pun on someone in the league: anything goes.' },
       { id: 'voice', label: 'How should the reporter sound: a straight-news insider, a roast comic, an old-school columnist, a hype man?' },
       { id: 'roast', label: 'How hard can the reporter roast: gentle ribbing, full trash talk, or nothing is sacred?' },
       { id: 'persona', label: 'Does the league already have a newsletter writer or a persona? Share the name and a sample.' },
