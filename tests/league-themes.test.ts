@@ -125,6 +125,36 @@ describe('league themes', () => {
         });
       }
 
+      for (const mode of ['light', 'dark'] as const) {
+        it(`muted text clears AA on every text surface in ${mode}`, () => {
+          // gray-400 / gray-500 are read as secondary TEXT by ~600 rules
+          // (timestamps, labels, positions, counts). Dark TheLeague's #6b6b6b
+          // and light's #9ca3af were ~2.5-3:1 — the "gray on gray" trade offer
+          // sheet (Nov 2026). gray-500 must also clear the page ground, where
+          // breadcrumbs sit; gray-400 is the lighter step and need not.
+          const r = resolveTheme(theme, mode);
+          const surfaces = ['--content-bg', '--card-surface', '--color-gray-50', '--color-gray-100',
+            '--table-row-bg-alt', '--table-header-bg', '--content-bg-muted', '--color-surface-3'];
+          const HEX = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
+          const fails: string[] = [];
+          for (const [ink, extra] of [
+            ['--color-gray-400', []],
+            ['--input-placeholder', []],
+            ['--color-gray-500', ['--page-bg']],
+            ['--content-text-muted', ['--page-bg']],
+            ['--nav-text-muted', ['--page-bg']],
+          ] as const) {
+            expect(r[ink], ink).toMatch(HEX);
+            for (const bg of [...surfaces, ...extra]) {
+              if (!HEX.test(r[bg] ?? '')) continue;
+              const c = contrast(r[ink]!, r[bg]!);
+              if (c < 4.5) fails.push(`${ink} ${r[ink]} on ${bg} ${r[bg]}: ${c.toFixed(2)}`);
+            }
+          }
+          expect(fails).toEqual([]);
+        });
+      }
+
       it('notes only name themed tokens', () => {
         expect(Object.keys(theme.notes ?? {}).filter((k) => !TOKENS.has(k))).toEqual([]);
       });
