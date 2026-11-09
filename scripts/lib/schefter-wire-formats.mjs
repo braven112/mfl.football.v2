@@ -123,8 +123,8 @@ const ADD_TAIL = {
  * @param {object} input
  * @param {string} input.team        the franchise's display name
  * @param {string} input.rawType     MFL type: FREE_AGENT | WAIVER | BBID_WAIVER | AUCTION_WON
- * @param {object[]} input.added     player records ({name, position})
- * @param {object[]} input.dropped
+ * @param {object[]} [input.added]   player records ({name, position})
+ * @param {object[]} [input.dropped]
  * @param {string|null} [input.price] formatted contract, printed only when given
  * @returns {{headline: string, body: string} | null}
  */
@@ -178,8 +178,8 @@ export function injuryReason(player, entry) {
  *
  * @param {object} input
  * @param {string} input.team
- * @param {object[]} input.placed      players moved to IR
- * @param {object[]} input.activated   players activated from IR
+ * @param {object[]} [input.placed]    players moved to IR
+ * @param {object[]} [input.activated] players activated from IR
  * @param {Map<string, object>|null} [input.injuries]  MFL id → injury row
  * @param {boolean} [input.another]    this team already put someone on IR today
  * @returns {{headline: string, body: string} | null}
