@@ -1,0 +1,509 @@
+---
+/**
+ * /pricing — the two products on sale, side by side, with every number
+ * behind the custom site (Brandon, 2026-11-09). Prices and billing rules
+ * live in src/data/pricing.ts; this page only lays them out, in the Soft
+ * Premium look every MarketingShell page wears.
+ *
+ * Shared host only, like the service pages: under a league apex no route
+ * claims /pricing, so it 404s there.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import {
+	CUSTOM_FEATURES,
+	CUSTOM_FROM_RENEWAL,
+	CUSTOM_FROM_SETUP,
+	CUSTOM_SITE_ROWS,
+	FULL_PRICE_MONTHS,
+	HISTORY_FEATURES,
+	HISTORY_PRICE_YEAR,
+	INSTALLMENT_COUNT,
+	INSTALLMENT_MONTHS,
+	INSTALLMENT_PREMIUM,
+	LOGO_DISCOUNT,
+	PRICING_FAQS,
+	SEASONAL_THEME_INCLUDES,
+	SEASONAL_THEME_PRICE,
+	SETUP_DISCOUNTS,
+	dollars,
+	installment,
+	perMonth,
+} from '../data/pricing';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd } from '../utils/structured-data';
+
+export const prerender = false;
+
+const jsonLd = [
+	organizationJsonLd(),
+	faqJsonLd(PRICING_FAQS),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: 'Pricing', path: '/pricing' },
+	]),
+];
+
+const premiumPct = `${Math.round(INSTALLMENT_PREMIUM * 100)}%`;
+const fromMonthly = perMonth(CUSTOM_FROM_SETUP);
+const renewMonthly = perMonth(CUSTOM_FROM_RENEWAL);
+const quote = 'Custom quote';
+---
+
+<MarketingShell
+	title="Pricing: League History and Custom MFL League Websites | MFL.football"
+	description={`League History is ${dollars(HISTORY_PRICE_YEAR)} a year. Custom MFL league websites start at ${dollars(CUSTOM_FROM_SETUP)}, or ${dollars(fromMonthly)} a month billed annually.`}
+	canonicalPath="/pricing"
+	jsonLd={jsonLd}
+>
+	<article class="prc">
+		<header class="prc-head">
+			<p class="sp-eyebrow"><span>Pricing</span></p>
+			<h1>Two ways to level up your MFL league</h1>
+			<p class="sp-lede">
+				Keep your league’s whole story for less than a draft-day pizza, or get a site built around how your league plays.
+				Your league stays on MyFantasyLeague either way.
+			</p>
+		</header>
+
+		<section class="prc-plans" aria-label="Plans">
+			<div class="ui-card sp-card prc-plan">
+				<p class="prc-plan__kind">For any MFL league</p>
+				<h2 class="prc-plan__name">League History</h2>
+				<p class="prc-price">
+					<b>{dollars(HISTORY_PRICE_YEAR)}</b><span>/year</span>
+				</p>
+				<p class="prc-price__note">Per league. Setup included.</p>
+				<ul class="prc-feats">
+					{HISTORY_FEATURES.map((f) => (
+						<li>
+							{f.text}
+							{f.highlight && <span class="prc-tag">{f.highlight}</span>}
+						</li>
+					))}
+				</ul>
+				<p class="prc-plan__ai">AI answers run on Claude Haiku.</p>
+				<div class="prc-plan__cta">
+					<button type="button" class="cta cta--ghost" data-interest="league-history" data-interest-name="League History">
+						I’m interested
+					</button>
+					<a class="cta-link" href="/mfl-league-history">See League History</a>
+				</div>
+			</div>
+
+			<div class="ui-card sp-card prc-plan prc-plan--top">
+				<p class="prc-plan__kind">For a league that wants it all</p>
+				<h2 class="prc-plan__name">Custom league website</h2>
+				<p class="prc-price">
+					<b>{dollars(fromMonthly)}</b><span>/mo</span>
+				</p>
+				<p class="prc-price__note">
+					Billed annually. First year {dollars(CUSTOM_FROM_SETUP)}, setup included, then {dollars(renewMonthly)}/mo
+					({dollars(CUSTOM_FROM_RENEWAL)}/year). 16 teams or fewer.
+				</p>
+				<ul class="prc-feats">
+					{CUSTOM_FEATURES.map((f) => (
+						<li>
+							{f.text}
+							{f.highlight && <span class="prc-tag">{f.highlight}</span>}
+						</li>
+					))}
+				</ul>
+				<div class="prc-plan__cta">
+					<button type="button" class="cta cta--primary" data-interest="league-package" data-interest-name="A custom MFL league website">
+						I’m interested
+					</button>
+					<a class="cta-link" href="/custom-mfl-league-website">See custom sites</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="sp-section" aria-labelledby="prc-size">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Custom sites</p>
+					<h2 id="prc-size">Price by league size</h2>
+				</div>
+				<p class="sp-head__note">Monthly prices are billed annually. The first year includes setup.</p>
+			</div>
+			<ul class="prc-sizes">
+				{CUSTOM_SITE_ROWS.map((row) => (
+					<li class="ui-card sp-card prc-size">
+						<h3>{row.teams}</h3>
+						<dl>
+							<div>
+								<dt>First year</dt>
+								<dd>
+									{row.setup ? (
+										<>
+											<b>{dollars(perMonth(row.setup))}/mo</b>
+											<span>{dollars(row.setup)} billed annually</span>
+										</>
+									) : (
+										<b>{quote}</b>
+									)}
+								</dd>
+							</div>
+							<div>
+								<dt>Each year after</dt>
+								<dd>
+									{row.renewal ? (
+										<>
+											<b>{dollars(perMonth(row.renewal))}/mo</b>
+											<span>{dollars(row.renewal)} billed annually</span>
+										</>
+									) : (
+										<b>Quoted</b>
+									)}
+								</dd>
+							</div>
+						</dl>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section class="sp-section" aria-labelledby="prc-save">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Ways to pay less</p>
+					<h2 id="prc-save">Save on setup</h2>
+				</div>
+			</div>
+			<ul class="sp-grid">
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Off-season setup</p>
+					<h3>Up to {Math.round(SETUP_DISCOUNTS[0].off * 100)}% off</h3>
+					<ul class="prc-mini">
+						{SETUP_DISCOUNTS.map((d) => (
+							<li>
+								<span>Signed {d.months}</span>
+								<b>{Math.round(d.off * 100)}% off · {dollars(CUSTOM_FROM_SETUP * (1 - d.off))}</b>
+							</li>
+						))}
+						<li>
+							<span>Signed {FULL_PRICE_MONTHS}</span>
+							<b>{dollars(CUSTOM_FROM_SETUP)}</b>
+						</li>
+					</ul>
+					<p>Prices shown for 16 teams or fewer. The discount applies to setup at every listed size.</p>
+				</li>
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Bring your own logos</p>
+					<h3>{LOGO_DISCOUNT} off setup</h3>
+					<p>Logo design is optional. Make your own franchise logos from the sizes we send and save {LOGO_DISCOUNT} (16 teams or fewer).</p>
+				</li>
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Only what you need</p>
+					<h3>Remove features</h3>
+					<p>Every feature is on by default. Leave out the ones your league will not use and we will quote the lower price.</p>
+				</li>
+			</ul>
+		</section>
+
+		<section class="sp-section" aria-labelledby="prc-terms">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Paying</p>
+					<h2 id="prc-terms">Annual, or in {INSTALLMENT_COUNT} payments</h2>
+				</div>
+			</div>
+			<ul class="sp-grid">
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Best price</p>
+					<h3>Pay annually</h3>
+					<p>One payment for the year. Every price on this page is the annual price.</p>
+				</li>
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Spread it out</p>
+					<h3>{INSTALLMENT_COUNT} installments, {premiumPct} more</h3>
+					<p>
+						Pay in {INSTALLMENT_MONTHS}. A {dollars(CUSTOM_FROM_SETUP)} year becomes {INSTALLMENT_COUNT} payments of
+						{' '}{dollars(installment(CUSTOM_FROM_SETUP))}, and a {dollars(CUSTOM_FROM_RENEWAL)} year becomes {INSTALLMENT_COUNT} of
+						{' '}{dollars(installment(CUSTOM_FROM_RENEWAL))}. It is still a 12-month commitment.
+					</p>
+				</li>
+				<li class="ui-card sp-card">
+					<p class="sp-card__who">Add-on</p>
+					<h3>Seasonal themes, {SEASONAL_THEME_PRICE}</h3>
+					<p>
+						A one-time {SEASONAL_THEME_PRICE} per theme for a custom site, including {SEASONAL_THEME_INCLUDES}.
+						<a href="/mfl-league-themes">See the themes</a>
+					</p>
+				</li>
+			</ul>
+		</section>
+
+		<section class="sp-section" aria-labelledby="prc-faq">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Questions</p>
+					<h2 id="prc-faq">Questions</h2>
+				</div>
+			</div>
+			<dl class="prc-faq">
+				{PRICING_FAQS.map((f) => (
+					<div class="ui-card sp-card">
+						<dt>{f.q}</dt>
+						<dd>{f.a}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+
+		<section class="sp-band sp-band--cta" aria-labelledby="prc-cta">
+			<div class="sp-band__copy">
+				<p class="sp-eyebrow">Get started</p>
+				<h2 id="prc-cta">Not sure which one fits?</h2>
+				<p>Try the live demo, built for your league format, before you decide.</p>
+			</div>
+			<div class="sp-ctas">
+				<button type="button" class="cta cta--primary" data-interest="league-package" data-interest-name="A custom MFL league website">
+					I’m interested
+				</button>
+				<a class="cta cta--ghost" href="https://demo.mfl.football" rel="noopener">Try the live demo</a>
+			</div>
+		</section>
+	</article>
+</MarketingShell>
+
+<style>
+	/* Page layout only; every surface comes from src/styles/soft-premium.css. */
+	.prc-head {
+		max-width: 46rem;
+		margin: clamp(2rem, 6vw, 4rem) auto 2rem;
+		text-align: center;
+	}
+
+	.prc-head .sp-eyebrow {
+		justify-content: center;
+	}
+
+	.prc-head h1 {
+		font-size: clamp(2.1rem, 5vw, 3.4rem);
+	}
+
+	.prc-head .sp-lede {
+		margin: 1rem auto 0;
+	}
+
+	.prc-plans {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem;
+		align-items: stretch;
+	}
+
+	.prc-plan {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding: clamp(1.4rem, 3vw, 2rem);
+	}
+
+	/* The top tier: a faint red tint, never a dark stripe (Brandon, 2026-11-04). */
+	.prc-plan--top {
+		border: 1px solid var(--sp-red-soft);
+		box-shadow: var(--sp-shadow), 0 0 0 4px var(--sp-red-soft);
+	}
+
+	.prc-plan__kind {
+		margin: 0;
+		font-size: var(--sp-text-xs);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--sp-muted);
+	}
+
+	.prc-plan__name {
+		margin: 0;
+		font-size: var(--sp-text-2xl);
+	}
+
+	.prc-price {
+		display: flex;
+		align-items: baseline;
+		gap: 0.2rem;
+		margin: 0.25rem 0 0;
+	}
+
+	.prc-price b {
+		font-size: clamp(2.6rem, 6vw, 3.4rem);
+		line-height: 1;
+		letter-spacing: -0.03em;
+		color: var(--sp-ink);
+	}
+
+	.prc-price span {
+		font-weight: 600;
+		color: var(--sp-muted);
+	}
+
+	.prc-price__note {
+		margin: 0;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+
+	.prc-feats {
+		display: grid;
+		gap: 0.55rem;
+		margin: 0.75rem 0 0;
+		padding: 1rem 0 0;
+		border-top: 1px solid var(--sp-line);
+		list-style: none;
+		font-size: var(--sp-text-md);
+	}
+
+	.prc-feats li {
+		position: relative;
+		padding-left: 1.5rem;
+		line-height: 1.45;
+	}
+
+	.prc-feats li::before {
+		content: '';
+		position: absolute;
+		left: 0.15rem;
+		top: 0.3em;
+		width: 0.55rem;
+		height: 0.3rem;
+		border-left: 2px solid var(--sp-red);
+		border-bottom: 2px solid var(--sp-red);
+		transform: rotate(-45deg);
+	}
+
+	.prc-tag {
+		display: inline-block;
+		margin-left: 0.4rem;
+		padding: 0.05rem 0.5rem;
+		border-radius: 999px;
+		background: var(--sp-red-soft);
+		color: var(--sp-red);
+		font-size: var(--sp-text-xs);
+		font-weight: 700;
+		vertical-align: 0.1em;
+	}
+
+	.prc-plan__ai {
+		margin: 0;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+
+	.prc-plan__cta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1.25rem;
+		margin-top: auto;
+		padding-top: 1rem;
+	}
+
+	.prc-sizes {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.prc-size h3 {
+		margin: 0 0 0.75rem;
+		font-size: var(--sp-text-lg);
+	}
+
+	.prc-size dl {
+		display: grid;
+		gap: 0.75rem;
+		margin: 0;
+	}
+
+	.prc-size dt {
+		font-size: var(--sp-text-xs);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--sp-muted);
+	}
+
+	.prc-size dd {
+		display: flex;
+		flex-direction: column;
+		margin: 0.15rem 0 0;
+	}
+
+	.prc-size dd b {
+		font-size: var(--sp-text-xl);
+		color: var(--sp-ink);
+	}
+
+	.prc-size dd span {
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+
+	.prc-mini {
+		display: grid;
+		gap: 0.4rem;
+		margin: 0.25rem 0 0.5rem;
+		padding: 0;
+		list-style: none;
+		font-size: var(--sp-text-md);
+	}
+
+	.prc-mini li {
+		display: flex;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding-bottom: 0.4rem;
+		border-bottom: 1px solid var(--sp-line);
+	}
+
+	.prc-mini b {
+		white-space: nowrap;
+	}
+
+	.prc-faq {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+	}
+
+	.prc-faq dt {
+		font-weight: 700;
+		font-size: var(--sp-text-base);
+	}
+
+	.prc-faq dd {
+		margin: 0;
+		font-size: var(--sp-text-md);
+		line-height: 1.55;
+		color: var(--sp-muted);
+	}
+
+	@media (max-width: 900px) {
+		.prc-sizes {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 760px) {
+		.prc-plans,
+		.prc-faq {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	@media (max-width: 520px) {
+		.prc-sizes {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.prc-mini li {
+			flex-direction: column;
+			gap: 0.1rem;
+		}
+	}
+</style>
