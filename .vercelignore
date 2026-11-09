@@ -17,8 +17,10 @@ tests/
 tmp/
 *.log
 
-# Git
-.git/
+# NOT .git/: vercel-ignore-build.mjs reads the commit range with git to skip
+# builds whose data is already live, and Vercel applies this file BEFORE the
+# ignore command runs. Excluding .git made every such check fail open and build.
+# (.git is never traced into the function, so it costs no function size.)
 
 # Editor configs
 .vscode/

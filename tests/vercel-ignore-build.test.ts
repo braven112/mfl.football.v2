@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
-import { mkdtempSync, copyFileSync, rmSync, realpathSync, symlinkSync } from 'fs';
+import { mkdtempSync, copyFileSync, rmSync, realpathSync, symlinkSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { decide, liveDataOnly, BUILD, SKIP, STAGING_BRANCH, DEMO_BRANCH } from '../scripts/vercel-ignore-build.mjs';
@@ -101,6 +101,7 @@ describe('the actual policy', () => {
     const { code, reason } = await decide(
       previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH }),
       stubFetch([]),
+      noGit,
     );
     expect(code).toBe(BUILD);
     expect(reason).toContain(STAGING_BRANCH);
@@ -117,6 +118,7 @@ describe('the actual policy', () => {
     const { code } = await decide(
       previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH }),
       spy,
+      noGit,
     );
     expect(code).toBe(BUILD);
     expect(called).toBe(false);
@@ -323,5 +325,18 @@ describe('commits whose data is already live', () => {
     const res = await decide(previewEnv(), stubFetch([{ number: 9 }]), fakeGit([MARKED], [ADP]));
     expect(res.code).toBe(BUILD);
     expect(res.reason).toMatch(/PR #9/);
+  });
+});
+
+describe('.vercelignore keeps git history for the live-data check', () => {
+  // Vercel applies .vercelignore before running the ignore command, so a
+  // `.git/` line there deletes the history liveDataOnly reads and every
+  // marked sync commit builds anyway (shipped 2026-11-07).
+  it('does not exclude .git', () => {
+    const lines = readFileSync(join(__dirname, '..', '.vercelignore'), 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'));
+    expect(lines.filter((l) => /^\/?\.git(\/|$|\/\*)/.test(l))).toEqual([]);
   });
 });
