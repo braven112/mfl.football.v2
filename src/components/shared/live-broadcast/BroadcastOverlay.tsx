@@ -47,10 +47,7 @@ import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../type
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
-import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
-import { isEspnCdnUrl } from '../../../utils/espn-cdn';
-import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
   detectBigPlays,
   formatChance,
@@ -355,6 +352,15 @@ export default function BroadcastOverlay({
     const t = window.setTimeout(() => setAlerts((queue) => queue.slice(1)), ALERT_MS);
     return () => window.clearTimeout(t);
   }, [alert]);
+  // The score box's width while it shows the score, so a big play can take
+  // the box over at exactly that size and never grow it (Brandon, Nov 9).
+  const cornerBoxRef = useRef<HTMLDivElement | null>(null);
+  const scoreWidthRef = useRef(0);
+  useEffect(() => {
+    if (alert || !cornerBoxRef.current) return;
+    const box = cornerBoxRef.current.querySelector<HTMLElement>(':scope > .bov__box');
+    if (box) scoreWidthRef.current = box.offsetWidth;
+  });
 
   // A page that could not read the leagues tries again soon; a working one
   // still reloads now and then to pick up a new week.
@@ -500,34 +506,26 @@ export default function BroadcastOverlay({
     const current = games[at];
     const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
-      <div className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
-        {/* A big play takes over in BOTH sizes. The quarter view used to keep
-            showing the matchup and only lit a dot beside the player, so a
-            touchdown went by unannounced (Brandon, Nov 8). */}
-        {alert ? (
-          <BigPlay
-            key={alert.key}
-            alert={alert}
-            game={alertGame}
-            logo={logoFor(alertGame)}
-            leagues={games.filter(
-              (g, i) =>
-                (g.leagueName === alert.leagueName || alert.alsoIn.includes(g.leagueName)) &&
-                games.findIndex((o) => o.leagueName === g.leagueName) === i,
-            )}
-            logoFor={logoFor}
-            meta={meta[alert.playerId]}
-          />
-        ) : quarter ? (
-          <Quarter
-            game={current}
-            others={games.filter((g) => g.key !== current.key).slice(0, 3)}
-            week={data.week}
-            slate={poll?.games ?? []}
-            lit={justScored}
-            logoFor={logoFor}
-            stale={stale}
-          />
+      <div ref={cornerBoxRef} className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
+        {/* A big play takes over the view it lands in, at that view's size:
+            the score box in the small size, the whole quarter in the quarter
+            size. It never grows past either (Brandon, Nov 9). */}
+        {quarter ? (
+          alert ? (
+            <QuarterPlay key={alert.key} alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
+          ) : (
+            <Quarter
+              game={current}
+              others={games.filter((g) => g.key !== current.key).slice(0, 3)}
+              week={data.week}
+              slate={poll?.games ?? []}
+              lit={justScored}
+              logoFor={logoFor}
+              stale={stale}
+            />
+          )
+        ) : alert ? (
+          <PlayBox key={alert.key} alert={alert} meta={meta[alert.playerId]} width={scoreWidthRef.current} />
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} focused={false} />
@@ -774,62 +772,68 @@ function Ticker({
   );
 }
 
-/** A starter's big play: the box grows into its quarter of the screen around the player. */
-function BigPlay({
+function playFace(alert: BigPlayAlert, meta: PlayerMeta | undefined, className: string) {
+  return (
+    <BroadcastFace
+      player={{
+        id: alert.playerId,
+        mflId: alert.playerId,
+        position: meta?.position ?? '',
+        nflTeam: alert.nflTeam,
+        headshot: meta?.headshot,
+        espnId: meta?.espnId ?? undefined,
+      }}
+      className={className}
+    />
+  );
+}
+
+/**
+ * The small size's big play: the score box itself, at the width it had while
+ * showing the score — the site's round player cell, his name, and the points.
+ */
+function PlayBox({ alert, meta, width }: { alert: BigPlayAlert; meta: PlayerMeta | undefined; width: number }) {
+  return (
+    <div
+      className="bov__box bov__playbox"
+      role="status"
+      aria-label={`Big play: ${alert.playerName}, plus ${onePlace(alert.gained)}`}
+      style={width > 0 ? { width: `${width}px` } : undefined}
+    >
+      {playFace(alert, meta, 'bov__playbox-face')}
+      <span className="bov__playbox-who">{alert.playerName}</span>
+      <b className="bov__gain">+{onePlace(alert.gained)}</b>
+    </div>
+  );
+}
+
+/** The quarter size's big play: the whole quarter, and never more. */
+function QuarterPlay({
   alert,
   game,
   logo,
-  leagues,
-  logoFor,
   meta,
 }: {
   alert: BigPlayAlert;
   game: OverlayGame;
   logo: string;
-  /** Every league he starts in for this owner, one game each. */
-  leagues: OverlayGame[];
-  logoFor: (game: OverlayGame) => string;
   meta: PlayerMeta | undefined;
 }) {
-  // Only ESPN's cut-out headshot reads on the team-color tile; anything else
-  // (MFL's old thumbnails, a placeholder) or a photo that fails to load shows
-  // the team logo instead.
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const photo = meta?.headshot ?? '';
-  const headshot = !photoFailed && isEspnCdnUrl(photo) ? photo : '';
   return (
-    <div className="bov__play" key={alert.key} role="status">
-      <div className="bov__box">
-        <ScoreRow game={game} logo={logo} />
-      </div>
-      <div className="bov__play-body">
-        {headshot ? (
-          <img
-            className="bov__shot"
-            src={headshot}
-            alt=""
-            style={{ background: getPlayerAvatarBackground(alert.nflTeam) }}
-            onError={() => setPhotoFailed(true)}
-          />
-        ) : (
-          <img className="bov__shot bov__shot--team" src={nflLogoUrl(alert.nflTeam, 'dark')} alt="" />
-        )}
-        <div>
-          <span className="bov__kick">Big play</span>
-          <p className="bov__play-who">{alert.playerName}</p>
-          {alert.text && <p className="bov__play-what">{alert.text}</p>}
-          <span className="bov__gain">+{onePlace(alert.gained)}</span>
-          {leagues.length > 1 && (
-            <p className="bov__play-in">
-              Counts in
-              {leagues.map((g) => (
-                <LeagueMark key={g.leagueId} game={g} logo={logoFor(g)} />
-              ))}
-            </p>
-          )}
+    <section className="bov__q bov__qplay" role="status">
+      <header className="bov__q-head">
+        <LeagueMark game={game} logo={logo} />
+        <span>Big play</span>
+      </header>
+      <div className="bov__qplay-body">
+        {playFace(alert, meta, 'bov__qplay-face')}
+        <div className="bov__qplay-text">
+          <p className="bov__qplay-who">{alert.playerName}</p>
+          {alert.text && <p className="bov__qplay-what">{alert.text}</p>}
+          <b className="bov__gain">+{onePlace(alert.gained)}</b>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
