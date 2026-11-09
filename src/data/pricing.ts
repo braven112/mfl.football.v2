@@ -129,7 +129,7 @@ export const PRICING_FAQS = [
 	},
 	{
 		q: 'Can I lower the price of a custom site?',
-		a: `Yes. Make your own franchise logos from our sizes and save ${LOGO_DISCOUNT} on setup (16 teams or fewer), or leave out features you do not need and we will quote the lower price.`,
+		a: `Yes. Make your own franchise logos from our sizes and save ${LOGO_DISCOUNT} on setup (16 teams or fewer), or set up in the off-season for up to 25% off.`,
 	},
 	{
 		q: 'What is a seasonal theme?',
