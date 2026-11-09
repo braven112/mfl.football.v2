@@ -118,6 +118,11 @@
   margin-top: 0.125rem;
 }
 
+/* A roster list ("Notable … roster moves today:") is line-broken text. */
+.sf-post__body--lines {
+  white-space: pre-line;
+}
+
 .sf-post__body strong {
   font-weight: 600;
 }

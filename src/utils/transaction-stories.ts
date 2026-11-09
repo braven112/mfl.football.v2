@@ -37,10 +37,38 @@ export interface StoryIndex {
   size: number;
 }
 
+/**
+ * A roster-list post ("Notable … roster moves today:") stands for several MFL
+ * rows at once, so it cannot lead any one of them. Each pickup or cut folded
+ * into it carries its own one-liner; this spreads those back out as per-row
+ * posts so the page joins them exactly as it joins any other story.
+ */
+export function expandRosterLists(posts: SchefterPost[]): SchefterPost[] {
+  return posts.flatMap((post) => {
+    if (post?.transactionSubType !== 'ROSTER_MOVES' || !Array.isArray(post.moves)) return [post];
+    return post.moves
+      .filter((m) => m.transactionSubType === 'FREE_AGENT' && m.headline && m.body)
+      .map((m, i) => ({
+        ...post,
+        id: `${post.id}-${i}`,
+        transactionSubType: 'FREE_AGENT' as const,
+        headline: m.headline!,
+        body: m.body!,
+        sourceTimestamp: m.sourceTimestamp,
+        addedIds: m.addedIds ?? [],
+        droppedIds: m.droppedIds ?? [],
+        playerIds: undefined,
+        storyVersion: m.storyVersion,
+        format: 'one-liner' as const,
+        moves: undefined,
+      }));
+  });
+}
+
 export function indexMoveStories(posts: SchefterPost[]): StoryIndex {
   const byKey = new Map<string, SchefterPost[]>();
   let size = 0;
-  for (const post of posts) {
+  for (const post of expandRosterLists(posts)) {
     if (!isMoveStory(post)) continue;
     size += 1;
     for (const fid of post.franchiseIds ?? []) {
