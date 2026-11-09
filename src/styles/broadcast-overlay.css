@@ -509,92 +509,70 @@ body.bov-doc {
   text-shadow: var(--bov-shadow);
 }
 
-/* A big play grows the box into the quarter: the score row stays on top,
-   and the player who scored fills the rest. */
-.bov__play {
-  width: calc(var(--u) * 44);
-  overflow: hidden;
-  border-radius: calc(var(--u) * 0.9);
-  background: var(--bov-box);
-  font-family: 'sans-serif-condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
-  text-shadow: var(--bov-shadow);
-  animation: bov-grow 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+/* A big play drops a second box, the score box's size, just under the score:
+   the round player cell, his name, and what the play was worth. On the
+   bottom edge it rises above the score instead, so it stays on screen. */
+.bov__stack {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--u) * 0.5);
 }
 
-.bov--corner[data-side='right'] > .bov__play {
-  transform-origin: top right;
+.bov--corner[data-edge='top'] > .bov__stack {
+  top: calc(var(--u) * 3.2);
 }
 
-@keyframes bov-grow {
+.bov--corner[data-edge='bottom'] > .bov__stack {
+  bottom: calc(var(--u) * 3.2);
+  flex-direction: column-reverse;
+}
+
+.bov--corner[data-side='right'] > .bov__stack {
+  right: calc(var(--u) * 3.2);
+}
+
+.bov--corner[data-side='left'] > .bov__stack {
+  left: calc(var(--u) * 3.2);
+}
+
+.bov__drop {
+  animation: bov-drop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes bov-drop {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    transform: translateY(calc(var(--u) * -1.2));
   }
 }
 
-.bov__play .bov__box {
-  background: none;
-  border-radius: 0;
+.bov__drop-face {
+  --player-avatar-size: calc(var(--u) * 3.4);
+  flex: none;
+  box-sizing: border-box;
 }
 
-.bov__play-body {
-  display: grid;
-  grid-template-columns: calc(var(--u) * 15) 1fr;
-  align-items: end;
-  gap: calc(var(--u) * 1.4);
-  padding: 0 calc(var(--u) * 1.4) calc(var(--u) * 1.4);
-}
-
-.bov__shot {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  object-position: 50% 15%;
-  border-radius: calc(var(--u) * 0.6);
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.bov__shot--team {
-  object-fit: contain;
-  padding: calc(var(--u) * 2);
-}
-
-.bov__play-who {
-  margin: calc(var(--u) * 0.8) 0 calc(var(--u) * 0.4);
-  font-size: calc(var(--u) * 3);
+.bov__drop-who {
+  flex: 1;
+  font-size: calc(var(--u) * 1.9);
   font-weight: 800;
-  line-height: 1;
 }
 
-.bov__play-body .bov__kick {
-  display: inline-block;
+/* In the quarter it lies over the lineups, right under the score. */
+.bov__q > .bov__drop {
+  grid-row: 3;
+  grid-column: 1;
+  align-self: start;
+  justify-self: stretch;
+  z-index: 1;
+  background: rgba(6, 9, 13, 0.94);
 }
 
-.bov__play-in {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--u) * 0.8);
-  margin-top: calc(var(--u) * 0.8);
-  font-size: calc(var(--u) * 1.2);
-  color: #e3e8ee;
-}
-
-.bov__play-in .bov__lg {
-  height: calc(var(--u) * 2.2);
-}
-
-.bov__play-what {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: calc(var(--u) * 1.5);
-  line-height: 1.25;
-  color: #e3e8ee;
-}
-
-.bov__play .bov__gain {
-  display: block;
-  margin-top: calc(var(--u) * 0.6);
-  font-size: calc(var(--u) * 5);
-  line-height: 1;
+.bov__q > .bov__q-cols {
+  grid-row: 3;
+  grid-column: 1;
 }
 
 /* ---- Quarter: the whole corner, for a multiview's spare quarter ------ */
@@ -916,7 +894,7 @@ body.bov-doc {
 @media (prefers-reduced-motion: reduce) {
   .bov__row,
   .bov__flash,
-  .bov__play {
+  .bov__drop {
     animation: none;
   }
 }

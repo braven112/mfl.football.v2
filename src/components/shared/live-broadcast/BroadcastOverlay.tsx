@@ -43,14 +43,12 @@
  * board's own model, through `overlayGames`; nothing here computes a score.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
-import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
-import { isEspnCdnUrl } from '../../../utils/espn-cdn';
-import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
 import {
   detectBigPlays,
   formatChance,
@@ -501,33 +499,27 @@ export default function BroadcastOverlay({
     const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
       <div className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
-        {/* A big play takes over in BOTH sizes. The quarter view used to keep
-            showing the matchup and only lit a dot beside the player, so a
-            touchdown went by unannounced (Brandon, Nov 8). */}
-        {alert ? (
-          <BigPlay
-            key={alert.key}
-            alert={alert}
-            game={alertGame}
-            logo={logoFor(alertGame)}
-            leagues={games.filter(
-              (g, i) =>
-                (g.leagueName === alert.leagueName || alert.alsoIn.includes(g.leagueName)) &&
-                games.findIndex((o) => o.leagueName === g.leagueName) === i,
-            )}
-            logoFor={logoFor}
-            meta={meta[alert.playerId]}
-          />
-        ) : quarter ? (
+        {/* A big play drops a panel under the score in BOTH sizes: the
+            player cell, his name and the points. It used to grow the box into
+            a big square photo, which looked cheap (Brandon, Nov 8). */}
+        {quarter ? (
           <Quarter
-            game={current}
-            others={games.filter((g) => g.key !== current.key).slice(0, 3)}
+            game={alert ? alertGame : current}
+            others={games.filter((g) => g.key !== (alert ? alertGame : current).key).slice(0, 3)}
             week={data.week}
             slate={poll?.games ?? []}
             lit={justScored}
             logoFor={logoFor}
             stale={stale}
+            drop={alert ? <PlayDrop key={alert.key} alert={alert} meta={meta[alert.playerId]} /> : null}
           />
+        ) : alert ? (
+          <div className="bov__stack">
+            <div className="bov__box">
+              <ScoreRow game={alertGame} logo={logoFor(alertGame)} />
+            </div>
+            <PlayDrop key={alert.key} alert={alert} meta={meta[alert.playerId]} />
+          </div>
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} focused={false} />
@@ -774,61 +766,26 @@ function Ticker({
   );
 }
 
-/** A starter's big play: the box grows into its quarter of the screen around the player. */
-function BigPlay({
-  alert,
-  game,
-  logo,
-  leagues,
-  logoFor,
-  meta,
-}: {
-  alert: BigPlayAlert;
-  game: OverlayGame;
-  logo: string;
-  /** Every league he starts in for this owner, one game each. */
-  leagues: OverlayGame[];
-  logoFor: (game: OverlayGame) => string;
-  meta: PlayerMeta | undefined;
-}) {
-  // Only ESPN's cut-out headshot reads on the team-color tile; anything else
-  // (MFL's old thumbnails, a placeholder) or a photo that fails to load shows
-  // the team logo instead.
-  const [photoFailed, setPhotoFailed] = useState(false);
-  const photo = meta?.headshot ?? '';
-  const headshot = !photoFailed && isEspnCdnUrl(photo) ? photo : '';
+/**
+ * A starter's big play: a panel the size of the score box, dropped just under
+ * it — the site's round player cell, his name, and what the play was worth.
+ */
+function PlayDrop({ alert, meta }: { alert: BigPlayAlert; meta: PlayerMeta | undefined }) {
   return (
-    <div className="bov__play" key={alert.key} role="status">
-      <div className="bov__box">
-        <ScoreRow game={game} logo={logo} />
-      </div>
-      <div className="bov__play-body">
-        {headshot ? (
-          <img
-            className="bov__shot"
-            src={headshot}
-            alt=""
-            style={{ background: getPlayerAvatarBackground(alert.nflTeam) }}
-            onError={() => setPhotoFailed(true)}
-          />
-        ) : (
-          <img className="bov__shot bov__shot--team" src={nflLogoUrl(alert.nflTeam, 'dark')} alt="" />
-        )}
-        <div>
-          <span className="bov__kick">Big play</span>
-          <p className="bov__play-who">{alert.playerName}</p>
-          {alert.text && <p className="bov__play-what">{alert.text}</p>}
-          <span className="bov__gain">+{onePlace(alert.gained)}</span>
-          {leagues.length > 1 && (
-            <p className="bov__play-in">
-              Counts in
-              {leagues.map((g) => (
-                <LeagueMark key={g.leagueId} game={g} logo={logoFor(g)} />
-              ))}
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="bov__box bov__drop" role="status" aria-label={`Big play: ${alert.playerName}, plus ${onePlace(alert.gained)}`}>
+      <BroadcastFace
+        player={{
+          id: alert.playerId,
+          mflId: alert.playerId,
+          position: meta?.position ?? '',
+          nflTeam: alert.nflTeam,
+          headshot: meta?.headshot,
+          espnId: meta?.espnId ?? undefined,
+        }}
+        className="bov__drop-face"
+      />
+      <span className="bov__drop-who">{alert.playerName}</span>
+      <b className="bov__gain">+{onePlace(alert.gained)}</b>
     </div>
   );
 }
@@ -846,6 +803,7 @@ function Quarter({
   lit,
   logoFor,
   stale,
+  drop,
 }: {
   game: OverlayGame;
   others: OverlayGame[];
@@ -854,6 +812,8 @@ function Quarter({
   lit: Record<string, number>;
   logoFor: (game: OverlayGame) => string;
   stale: boolean;
+  /** A big play's panel, dropped over the lineups just under the score. */
+  drop: ReactNode;
 }) {
   // Split per team, never summed, as on /live's matchup cards: a total says
   // how much football is on, never for WHOM (Brandon, Nov 8).
@@ -895,6 +855,7 @@ function Quarter({
         </b>
         <Crest side={game.opponent} />
       </div>
+      {drop}
       <div className="bov__q-cols">
         <QuarterLineup side={game.mine} slate={slate} lit={lit} />
         <QuarterLineup side={game.opponent} slate={slate} lit={{}} />
