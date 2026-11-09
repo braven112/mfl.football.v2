@@ -43,7 +43,6 @@
  * board's own model, through `overlayGames`; nothing here computes a score.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
@@ -353,6 +352,15 @@ export default function BroadcastOverlay({
     const t = window.setTimeout(() => setAlerts((queue) => queue.slice(1)), ALERT_MS);
     return () => window.clearTimeout(t);
   }, [alert]);
+  // The score box's width while it shows the score, so a big play can take
+  // the box over at exactly that size and never grow it (Brandon, Nov 9).
+  const cornerBoxRef = useRef<HTMLDivElement | null>(null);
+  const scoreWidthRef = useRef(0);
+  useEffect(() => {
+    if (alert || !cornerBoxRef.current) return;
+    const box = cornerBoxRef.current.querySelector<HTMLElement>(':scope > .bov__box');
+    if (box) scoreWidthRef.current = box.offsetWidth;
+  });
 
   // A page that could not read the leagues tries again soon; a working one
   // still reloads now and then to pick up a new week.
@@ -498,28 +506,26 @@ export default function BroadcastOverlay({
     const current = games[at];
     const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
-      <div className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
-        {/* A big play drops a panel under the score in BOTH sizes: the
-            player cell, his name and the points. It used to grow the box into
-            a big square photo, which looked cheap (Brandon, Nov 8). */}
+      <div ref={cornerBoxRef} className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
+        {/* A big play takes over the view it lands in, at that view's size:
+            the score box in the small size, the whole quarter in the quarter
+            size. It never grows past either (Brandon, Nov 9). */}
         {quarter ? (
-          <Quarter
-            game={alert ? alertGame : current}
-            others={games.filter((g) => g.key !== (alert ? alertGame : current).key).slice(0, 3)}
-            week={data.week}
-            slate={poll?.games ?? []}
-            lit={justScored}
-            logoFor={logoFor}
-            stale={stale}
-            drop={alert ? <PlayDrop key={alert.key} alert={alert} meta={meta[alert.playerId]} /> : null}
-          />
+          alert ? (
+            <QuarterPlay key={alert.key} alert={alert} game={alertGame} logo={logoFor(alertGame)} meta={meta[alert.playerId]} />
+          ) : (
+            <Quarter
+              game={current}
+              others={games.filter((g) => g.key !== current.key).slice(0, 3)}
+              week={data.week}
+              slate={poll?.games ?? []}
+              lit={justScored}
+              logoFor={logoFor}
+              stale={stale}
+            />
+          )
         ) : alert ? (
-          <div className="bov__stack">
-            <div className="bov__box">
-              <ScoreRow game={alertGame} logo={logoFor(alertGame)} />
-            </div>
-            <PlayDrop key={alert.key} alert={alert} meta={meta[alert.playerId]} />
-          </div>
+          <PlayBox key={alert.key} alert={alert} meta={meta[alert.playerId]} width={scoreWidthRef.current} />
         ) : (
           <>
             <Ticker game={current} logo={logoFor(current)} focused={false} />
@@ -766,27 +772,68 @@ function Ticker({
   );
 }
 
-/**
- * A starter's big play: a panel the size of the score box, dropped just under
- * it — the site's round player cell, his name, and what the play was worth.
- */
-function PlayDrop({ alert, meta }: { alert: BigPlayAlert; meta: PlayerMeta | undefined }) {
+function playFace(alert: BigPlayAlert, meta: PlayerMeta | undefined, className: string) {
   return (
-    <div className="bov__box bov__drop" role="status" aria-label={`Big play: ${alert.playerName}, plus ${onePlace(alert.gained)}`}>
-      <BroadcastFace
-        player={{
-          id: alert.playerId,
-          mflId: alert.playerId,
-          position: meta?.position ?? '',
-          nflTeam: alert.nflTeam,
-          headshot: meta?.headshot,
-          espnId: meta?.espnId ?? undefined,
-        }}
-        className="bov__drop-face"
-      />
-      <span className="bov__drop-who">{alert.playerName}</span>
+    <BroadcastFace
+      player={{
+        id: alert.playerId,
+        mflId: alert.playerId,
+        position: meta?.position ?? '',
+        nflTeam: alert.nflTeam,
+        headshot: meta?.headshot,
+        espnId: meta?.espnId ?? undefined,
+      }}
+      className={className}
+    />
+  );
+}
+
+/**
+ * The small size's big play: the score box itself, at the width it had while
+ * showing the score — the site's round player cell, his name, and the points.
+ */
+function PlayBox({ alert, meta, width }: { alert: BigPlayAlert; meta: PlayerMeta | undefined; width: number }) {
+  return (
+    <div
+      className="bov__box bov__playbox"
+      role="status"
+      aria-label={`Big play: ${alert.playerName}, plus ${onePlace(alert.gained)}`}
+      style={width > 0 ? { width: `${width}px` } : undefined}
+    >
+      {playFace(alert, meta, 'bov__playbox-face')}
+      <span className="bov__playbox-who">{alert.playerName}</span>
       <b className="bov__gain">+{onePlace(alert.gained)}</b>
     </div>
+  );
+}
+
+/** The quarter size's big play: the whole quarter, and never more. */
+function QuarterPlay({
+  alert,
+  game,
+  logo,
+  meta,
+}: {
+  alert: BigPlayAlert;
+  game: OverlayGame;
+  logo: string;
+  meta: PlayerMeta | undefined;
+}) {
+  return (
+    <section className="bov__q bov__qplay" role="status">
+      <header className="bov__q-head">
+        <LeagueMark game={game} logo={logo} />
+        <span>Big play</span>
+      </header>
+      <div className="bov__qplay-body">
+        {playFace(alert, meta, 'bov__qplay-face')}
+        <div className="bov__qplay-text">
+          <p className="bov__qplay-who">{alert.playerName}</p>
+          {alert.text && <p className="bov__qplay-what">{alert.text}</p>}
+          <b className="bov__gain">+{onePlace(alert.gained)}</b>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -803,7 +850,6 @@ function Quarter({
   lit,
   logoFor,
   stale,
-  drop,
 }: {
   game: OverlayGame;
   others: OverlayGame[];
@@ -812,8 +858,6 @@ function Quarter({
   lit: Record<string, number>;
   logoFor: (game: OverlayGame) => string;
   stale: boolean;
-  /** A big play's panel, dropped over the lineups just under the score. */
-  drop: ReactNode;
 }) {
   // Split per team, never summed, as on /live's matchup cards: a total says
   // how much football is on, never for WHOM (Brandon, Nov 8).
@@ -855,7 +899,6 @@ function Quarter({
         </b>
         <Crest side={game.opponent} />
       </div>
-      {drop}
       <div className="bov__q-cols">
         <QuarterLineup side={game.mine} slate={slate} lit={lit} />
         <QuarterLineup side={game.opponent} slate={slate} lit={{}} />

@@ -509,70 +509,76 @@ body.bov-doc {
   text-shadow: var(--bov-shadow);
 }
 
-/* A big play drops a second box, the score box's size, just under the score:
-   the round player cell, his name, and what the play was worth. On the
-   bottom edge it rises above the score instead, so it stays on screen. */
-.bov__stack {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: calc(var(--u) * 0.5);
+/* A big play takes the score box over at the width it had (set inline from
+   the score row), so the box never grows: the round player cell, the name,
+   and the points. */
+.bov__playbox {
+  box-sizing: border-box;
+  animation: bov-in 0.45s ease;
 }
 
-.bov--corner[data-edge='top'] > .bov__stack {
-  top: calc(var(--u) * 3.2);
-}
-
-.bov--corner[data-edge='bottom'] > .bov__stack {
-  bottom: calc(var(--u) * 3.2);
-  flex-direction: column-reverse;
-}
-
-.bov--corner[data-side='right'] > .bov__stack {
-  right: calc(var(--u) * 3.2);
-}
-
-.bov--corner[data-side='left'] > .bov__stack {
-  left: calc(var(--u) * 3.2);
-}
-
-.bov__drop {
-  animation: bov-drop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@keyframes bov-drop {
-  from {
-    opacity: 0;
-    transform: translateY(calc(var(--u) * -1.2));
-  }
-}
-
-.bov__drop-face {
+.bov__playbox-face {
   --player-avatar-size: calc(var(--u) * 3.4);
   flex: none;
   box-sizing: border-box;
 }
 
-.bov__drop-who {
+.bov__playbox-who {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: calc(var(--u) * 1.9);
   font-weight: 800;
 }
 
-/* In the quarter it lies over the lineups, right under the score. */
-.bov__q > .bov__drop {
-  grid-row: 3;
-  grid-column: 1;
-  align-self: start;
-  justify-self: stretch;
-  z-index: 1;
-  background: rgba(6, 9, 13, 0.94);
+/* In the quarter it takes the whole quarter: the same panel, the player
+   instead of the lineups. */
+.bov__q.bov__qplay {
+  grid-template-rows: auto 1fr;
+  animation: bov-in 0.45s ease;
 }
 
-.bov__q > .bov__q-cols {
-  grid-row: 3;
-  grid-column: 1;
+.bov__qplay-body {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2.4);
+  min-height: 0;
+  padding: 0 calc(var(--u) * 1);
+}
+
+.bov__qplay-face {
+  --player-avatar-size: calc(var(--u) * 14);
+  flex: none;
+  box-sizing: border-box;
+}
+
+.bov__qplay-text {
+  min-width: 0;
+}
+
+.bov__qplay-who {
+  margin: 0 0 calc(var(--u) * 0.6);
+  font-size: calc(var(--u) * 3.4);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.bov__qplay-what {
+  margin: 0 0 calc(var(--u) * 0.8);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: calc(var(--u) * 1.5);
+  line-height: 1.25;
+  color: #e3e8ee;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bov__qplay .bov__gain {
+  font-size: calc(var(--u) * 4.6);
+  line-height: 1;
 }
 
 /* ---- Quarter: the whole corner, for a multiview's spare quarter ------ */
@@ -894,7 +900,8 @@ body.bov-doc {
 @media (prefers-reduced-motion: reduce) {
   .bov__row,
   .bov__flash,
-  .bov__drop {
+  .bov__playbox,
+  .bov__qplay {
     animation: none;
   }
 }
