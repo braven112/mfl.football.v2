@@ -31,6 +31,13 @@ export const INTEREST_ONLY = [
 	{ slug: 'champion-card', name: 'Champion card' },
 	{ slug: 'league-domain', name: 'League domain' },
 	{ slug: 'logo-hosting', name: 'Logo hosting' },
+	// Products folded into the custom site (Brandon, 2026-11-08) whose doors
+	// still stand on /addons and the MFL Live landing. Kept here so those
+	// buttons keep counting instead of answering 400.
+	{ slug: 'league-hub', name: 'League Hub' },
+	{ slug: 'league-history', name: 'League History' },
+	{ slug: 'owner-suite', name: 'Owner Suite' },
+	{ slug: 'large-league', name: 'Large-league support' },
 ] as const;
 
 export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];
