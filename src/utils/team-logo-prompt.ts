@@ -3,8 +3,8 @@
  *
  * We do not make images. An owner picks a style, one to three team colors and a
  * kind of art, and this writes the prompt they paste into the AI image tool
- * they already use (ChatGPT, Gemini), or an SVG request for Claude, which draws vector code
- * rather than pictures. The rules wrapped around their choices are the ones
+ * they already use (ChatGPT, Gemini). An SVG-for-Claude kind was dropped on
+ * 2026-10-29: Brandon found its logos looked terrible next to the square icon's. The rules wrapped around their choices are the ones
  * our art has to meet: flat, bold and readable at 40 px, on a transparent
  * ground at the master sizes the Brand Book asks for (`brand-asset-specs.ts`),
  * and ORIGINAL — nothing that copies an NFL, college or pro mark, which the
@@ -34,14 +34,15 @@ import { AA_LARGE_TEXT_RATIO, contrastRatio } from './team-color-contrast';
  * label means. `image` is an example logo in that style, shown above the name
  * on the website: Brandon is making these (2026-10-30); until one is set the
  * card shows its name and hint alone. Put the files in
- * `public/assets/team-logo-styles/` and name them here.
+ * `public/assets/team-logo-styles/` and name them here. No hint promises
+ * words on the logo: icons carry no team name (`NO_TEXT_RULE`).
  */
 export const LOGO_STYLES: Array<MflLiveAppLogoOption & { phrase: string; hint: string; image?: string }> = [
-  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest', hint: 'A shield with your initials, old-school varsity' },
+  { id: 'crest', label: 'Classic crest', phrase: 'a classic varsity crest', hint: 'A varsity shield, old-school' },
   { id: 'mascot', label: 'Modern mascot', phrase: 'a modern, minimal mascot head', hint: 'A mascot head in sharp, simple shapes' },
-  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram built from the team initials', hint: 'Your initials, big and bold, no picture' },
+  { id: 'monogram', label: 'Monogram', phrase: 'a bold monogram: one stylized initial of the team name, or two initials interlocked into a single symbol', hint: 'One bold initial, or two joined into one symbol' },
   { id: 'retro', label: 'Retro patch', phrase: 'a retro 1970s embroidered patch', hint: 'A stitched 1970s patch, like on a jacket' },
-  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle', hint: 'A circle with the team name around the mascot' },
+  { id: 'badge', label: 'Round badge', phrase: 'a round badge with the mascot in the middle', hint: 'A circle with the mascot in the middle' },
 ];
 
 /**
@@ -142,7 +143,6 @@ export const LOGO_MIN_CONTRAST = AA_LARGE_TEXT_RATIO;
 export const LOGO_KINDS: Array<MflLiveAppLogoOption<MflLiveAppLogoKind>> = [
   { id: 'icon', label: 'Square icon' },
   { id: 'banner', label: 'Wide banner' },
-  { id: 'svg', label: 'Vector (for Claude)' },
 ];
 
 export const DEFAULT_LOGO_CHOICE = { style: 'crest', colors: ['#C8102E'], kind: 'icon' } as const;
@@ -232,6 +232,31 @@ export function logoColorAdvice(hexes: string[]): { note: MflLiveAppLogoColorNot
 }
 
 /**
+ * Icons are pictures only: our site shows team marks, never
+ * wordmarks, and image tools add the team name in big letters unless told not
+ * to (Brandon, 2026-10-29). The banner is the one kind that asks for the name.
+ */
+const NO_TEXT_RULE =
+  'Do not write the team name or any other words, letters or numbers anywhere in the logo: it is a picture-only mark.';
+
+/**
+ * One stylized letter is a graphic, not text (Brandon, 2026-10-29: "an M or
+ * an S, which is a great way to incorporate a letter and a logo in one"), and
+ * so are two letters interlocked into one symbol, the way a city's cap logo
+ * joins its initials: "we really just want one symbol". A word is what fails,
+ * because it cannot be read once the logo is shrunk. So a monogram, or an idea
+ * that asks for a letter ("a stylized M"), gets letters that form ONE symbol;
+ * the flat no-letters rule contradicted both.
+ */
+const INITIALS_RULE =
+  'The letters must form one symbol: a single stylized initial, or two initials interlocked into one mark. Do not write the team name or any other words, letters or numbers in the logo.';
+
+/** The owner's idea asks for a letter in the mark: "a stylized M", "initials", "monogram". */
+export function ideaAsksForInitials(idea: string): boolean {
+  return /\b(?:letter|letters|initial|initials|monogram|interlocking|interlocked)\b/i.test(idea) || /\b(?:stylized|stylised|big|bold|block|script)\s+[A-Z]\b/.test(idea);
+}
+
+/**
  * Every prompt ends here. Team names riff on real players, clubs and news, and
  * Brandon wants the art to hint at them as much as possible (2026-10-30), so
  * the rule invites the reference and draws the line only at a real face and at
@@ -257,12 +282,15 @@ export function writeLogoPrompt(input: {
   neutrals?: string[];
   /** A sentence about the real player or club the name nods to (`referencePromptLine`). */
   reference?: string;
+  /** The mark is built on the team's initials (`INITIALS_RULE`), not a picture alone. */
+  initials?: boolean;
 }): string {
-  const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'] } = input;
+  const { teamName, idea, stylePhrase, kind, neutrals = ['white', 'black'], initials = false } = input;
   const rule = input.reference ? `${input.reference} ${ORIGINAL_RULE}` : ORIGINAL_RULE;
   const subject = idea ? `${idea}, drawn as ${stylePhrase}` : stylePhrase;
+  const uses = kind === 'banner' ? 'outlines, lettering and contrast' : 'outlines and contrast';
   const colors = neutrals.length
-    ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for outlines, lettering and contrast`
+    ? `${input.colors}, plus ${neutrals.join(' and ')} wherever the logo needs ${neutrals.length > 1 ? 'them' : 'it'} for ${uses}`
     : input.colors;
   if (kind === 'banner') {
     return (
@@ -273,20 +301,12 @@ export function writeLogoPrompt(input: {
       `with the logo and name filling the height. ${rule}`
     );
   }
-  if (kind === 'svg') {
-    return (
-      `Write one self-contained SVG file (viewBox "0 0 1024 1024") for the logo of a fantasy football team called "${teamName}": ${subject}. ` +
-      `Use only these colors: ${colors}. Flat fills and thick outlines, no gradients, no filters, no embedded images, no small text. ` +
-      'Leave the background transparent with some empty space around the edges. ' +
-      `It must stay recognizable when shrunk to 40 pixels. ${rule} Reply with the SVG code only.`
-    );
-  }
   return (
     `Design a sports team logo for a fantasy football team called "${teamName}": ${subject}. ` +
     `Flat vector style, bold simple shapes, thick clean outlines, colors: ${colors}. ` +
-    'No gradients, no photo textures, no small text. Centered on a transparent background, ' +
+    'No gradients, no photo textures. Centered on a transparent background, ' +
     'square 1024 × 1024, with some empty space around the edges. ' +
-    `It must stay recognizable when shrunk to 40 pixels. ${rule}`
+    `It must stay recognizable when shrunk to 40 pixels. ${initials ? INITIALS_RULE : NO_TEXT_RULE} ${rule}`
   );
 }
 
@@ -323,6 +343,7 @@ export function buildTeamLogoPrompt(
       kind,
       neutrals: neutralsFor(colors),
       reference: reference && referencePromptLine(reference),
+      initials: style.id === 'monogram' || ideaAsksForInitials(idea),
     }),
     warning: reference && referenceNote(reference),
     colorNote: logoColorAdvice(colors).note,

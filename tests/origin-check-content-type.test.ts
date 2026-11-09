@@ -50,6 +50,12 @@ const ALLOWLIST: { file: string; count: number; reason: string }[] = [
 		reason:
 			'multipart image upload cannot be JSON; still exposed to the check in browsers that drop Origin — moving it off FormData is a separate change',
 	},
+	{
+		file: 'src/components/shared/live/LogoTracer.astro',
+		count: 1,
+		reason:
+			'posts the logo image itself as the body, typed image/* (or application/octet-stream), never a form-like type or none, so the check does not apply',
+	},
 ];
 
 /** The argument text of each `<needle>...)` call, paren-balanced. Not syntax-aware: a paren inside a string literal would miscount. */

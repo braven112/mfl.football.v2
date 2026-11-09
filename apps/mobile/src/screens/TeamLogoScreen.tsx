@@ -13,7 +13,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TeamLogo'>;
 const TOOLS = [
   { label: 'ChatGPT', url: 'https://chatgpt.com/' },
   { label: 'Gemini', url: 'https://gemini.google.com/app' },
-  { label: 'Claude', url: 'https://claude.ai/new' },
 ] as const;
 
 /**
@@ -121,8 +120,7 @@ export function TeamLogoScreen({ route }: Props) {
   return (
     <ScrollView style={[styles.screen, { backgroundColor: t.ground }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.body, { color: t.muted }]}>
-        Pick a look and we’ll write the prompt. Paste it into ChatGPT or Gemini to make the picture, or into Claude for a
-        vector logo.
+        Pick a look and we’ll write the prompt. Paste it into ChatGPT or Gemini to make the picture.
       </Text>
 
       <Field t={t} label="Team name">
@@ -312,9 +310,7 @@ export function TeamLogoScreen({ route }: Props) {
         ))}
       </View>
       <Text style={[styles.hint, { color: t.muted }]}>
-        {choice.kind === 'svg'
-          ? 'Claude answers with SVG code, which is a logo you can resize to any size without blur.'
-          : 'Ask for a few tries and keep the one that still reads when it’s tiny. A transparent background works best.'}
+        Ask for a few tries and keep the one that still reads when it’s tiny. A transparent background works best.
       </Text>
     </ScrollView>
   );
