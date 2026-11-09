@@ -182,9 +182,19 @@ describe('hero quick actions (Q7)', () => {
     expect(off).toMatchObject({ label: 'Add to trade block' });
     expect(off?.state).toBeUndefined();
   });
-  it('another owner’s player: Simulate cut + the kebab — simulations are for every club; trade block, IR and Release stay the owner’s', () => {
-    // User, 2026-09-26. Trade for him and Watch are the sheet's built-ins.
-    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['cut-simulate', 'contract-menu']);
+  it('another owner’s player: the kebab alone — no Simulate cut; trade block, IR and Release stay the owner’s', () => {
+    // User, 2026-11-09 ("Since I don't own this player, I shouldn't see
+    // simulate cut"), reversing 2026-09-26. Trade for him and Watch are the
+    // sheet's built-ins, so the row is Trade for him · Watch · ⋮ on one line.
+    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['contract-menu']);
+  });
+  it('another owner’s player keeps Undo for a simulation already running', () => {
+    const [first] = buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false }, activeActionType: 'trade' }));
+    expect(first).toMatchObject({ id: 'undo-simulation' });
+  });
+  it('another owner’s player: the Salary tab offers Simulate Trade, never Simulate Cut', () => {
+    const s = buildSalarySheet(facts({ viewer: { signedIn: true, isOwnTeam: false } }), pricing);
+    expect(s.simulations.map((o) => o.id)).toEqual(['trade-simulate']);
   });
 });
 

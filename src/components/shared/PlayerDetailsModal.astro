@@ -1237,6 +1237,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
   }
   .pdm-actions--hero .pdm-watch__desc,
   .pdm-actions--hero .pdm-claim__desc { display: none; }
+  /* The labelled pill leads, then the Watch circle, then the ⋮. On your own
+     player that pill is Simulate cut (first in DOM); on anyone else's it is
+     Trade for him / Claim, which sit after Watch in the DOM — so pull them to
+     the front. Three items, one line, even at 360px (user, 2026-11-09). */
+  .pdm-actions--hero .pdm-claim { order: -1; }
   .pdm-actions--hero .pdm-watch__icon,
   .pdm-actions--hero .pdm-claim__icon { border-radius: var(--radius-full, 9999px); }
   @media (max-width: 420px) {
