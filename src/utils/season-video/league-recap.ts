@@ -104,6 +104,58 @@ export interface Award {
 	value: string;
 	/** Good news or bad: sets the card's palette. */
 	tone: 'good' | 'bad';
+	/** The next teams in line for this award, best first, each with its own line: honorable mentions. */
+	alternates?: { teamId: string; value: string }[];
+}
+
+/**
+ * One card of the league recap. A team that wins several awards gets ONE
+ * bigger card naming them all, and each award it doubled up on hands its slot
+ * to the next team in line, as an honorable mention (Brandon, 2026-11-10: the
+ * AFL's week had one team on three cards in a row).
+ */
+export type RecapCard =
+	| { kind: 'award'; award: Award; mention?: boolean }
+	| { kind: 'combo'; teamId: string; awards: Award[] };
+
+/** The award's honorable-mention title: dishonorable for the bad ones. */
+export function mentionTitle(a: Pick<Award, 'title' | 'tone'>): string {
+	return `${a.title} · ${a.tone === 'good' ? 'honorable' : 'dishonorable'} mention`;
+}
+
+/**
+ * The awards as cards, in their order. A team's second and later awards fold
+ * into its first card; in each folded award's place, the next team in line
+ * that wins nothing in this video (not the champion either, who has its own
+ * card) gets an honorable mention, so a mention never joins a combined card
+ * and no team shows twice. A division winner has no runner-up mention: second
+ * in a division wins nothing. The champion always keeps its own card.
+ */
+export function recapCards(awards: readonly Award[]): RecapCard[] {
+	const cards: RecapCard[] = [];
+	const at = new Map<string, number>();
+	const winners = new Set(awards.map((a) => a.teamId));
+	const mentioned = new Set<string>();
+	for (const a of awards) {
+		if (a.id === 'champion') {
+			cards.push({ kind: 'award', award: a });
+			continue;
+		}
+		const i = at.get(a.teamId);
+		if (i === undefined) {
+			at.set(a.teamId, cards.length);
+			cards.push({ kind: 'award', award: a });
+			continue;
+		}
+		const c = cards[i];
+		cards[i] = c.kind === 'combo' ? { ...c, awards: [...c.awards, a] } : { kind: 'combo', teamId: a.teamId, awards: [c.award, a] };
+		const alt = a.id.startsWith('group:') ? undefined : a.alternates?.find((x) => !winners.has(x.teamId) && !mentioned.has(x.teamId));
+		if (alt) {
+			mentioned.add(alt.teamId);
+			cards.push({ kind: 'award', mention: true, award: { ...a, title: mentionTitle(a), teamId: alt.teamId, value: alt.value, alternates: [] } });
+		}
+	}
+	return cards;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -179,11 +231,15 @@ export function leagueAwards(
 ): Award[] {
 	const byId = new Map(lf.teams.map((t) => [t.id, t]));
 	const name = (id: string) => byId.get(id)?.name ?? 'Unknown';
-	const make = (id: AwardId, title: string, badge: string, tone: Award['tone'], pickedId: string | undefined, value: (teamId: string) => string): Award | null => {
+	/** `ranked` is the award's whole order, best first: its first team wins, the rest are next in line. */
+	const make = (id: AwardId, title: string, badge: string, tone: Award['tone'], ranked: readonly (string | undefined)[], value: (teamId: string) => string): Award | null => {
+		const order = [...new Set(ranked.filter((x): x is string => !!x))];
+		const pickedId = order[0];
 		if (!pickedId) return null;
 		const o = overrides[id];
 		const teamId = o && byId.has(o) ? o : pickedId;
-		return { id, title, badge, pickedId, teamId, value: value(teamId), tone };
+		const alternates = order.filter((t) => t !== teamId).slice(0, 6).map((t) => ({ teamId: t, value: value(t) }));
+		return { id, title, badge, pickedId, teamId, value: value(teamId), tone, alternates };
 	};
 	const out: (Award | null)[] = [];
 
@@ -208,15 +264,15 @@ export function leagueAwards(
 		const games = lf.games.filter((g) => g.week === w);
 		const margin = (g: LeagueGame) => Math.abs(g.aScore - g.bScore);
 		const winner = (g: LeagueGame) => (g.aScore >= g.bScore ? g.a : g.b);
-		const blowout = [...games].sort((x, y) => margin(y) - margin(x))[0];
-		const closest = [...games].filter((g) => margin(g) > 0).sort((x, y) => margin(x) - margin(y))[0];
+		const blowouts = [...games].sort((x, y) => margin(y) - margin(x));
+		const closests = [...games].filter((g) => margin(g) > 0).sort((x, y) => margin(x) - margin(y));
 		const losers = games
 			.filter((g) => g.aScore !== g.bScore)
 			.map((g) => (g.aScore < g.bScore ? { id: g.a, s: g.aScore } : { id: g.b, s: g.bScore }))
 			.sort((x, y) => y.s - x.s);
 		const starts = lf.bestStarts?.[w] ?? {};
 		const gap = (p: StarterLine) => p.pts - (p.avg ?? 0);
-		const bestStart = Object.entries(starts).sort((x, y) => gap(y[1]) - gap(x[1]))[0]?.[0];
+		const bestStarts = Object.entries(starts).sort((x, y) => gap(y[1]) - gap(x[1])).map(([id]) => id);
 		const startLine = (id: string) => {
 			const p = starts[id];
 			if (!p) return scoreLine(id);
@@ -224,12 +280,12 @@ export function leagueAwards(
 			return `${p.name}, ${positionLabel(p.pos)}: ${formatScore(p.pts)} points.${avg}`;
 		};
 		out.push(
-			make('top-score', 'Top score', '🔥', 'good', ranked[0]?.[0], scoreLine),
-			make('blowout', 'Biggest blowout', '💥', 'good', blowout && winner(blowout), resultLine),
-			make('best-start', 'Best start', '⭐', 'good', bestStart, startLine),
-			make('closest', 'Closest game', '😬', 'good', closest && winner(closest), resultLine),
-			make('unlucky', 'Unluckiest loss', '🍀', 'bad', losers[0]?.id, (id) => `${scoreLine(id)} ${resultLine(id)}`),
-			make('low-score', 'Low score', '🤡', 'bad', ranked[ranked.length - 1]?.[0], scoreLine),
+			make('top-score', 'Top score', '🔥', 'good', ranked.map(([id]) => id), scoreLine),
+			make('blowout', 'Biggest blowout', '💥', 'good', blowouts.map(winner), resultLine),
+			make('best-start', 'Best start', '⭐', 'good', bestStarts, startLine),
+			make('closest', 'Closest game', '😬', 'good', closests.map(winner), resultLine),
+			make('unlucky', 'Unluckiest loss', '🍀', 'bad', losers.map((l) => l.id), (id) => `${scoreLine(id)} ${resultLine(id)}`),
+			make('low-score', 'Low score', '🤡', 'bad', [...ranked].reverse().map(([id]) => id), scoreLine),
 		);
 		return out.filter((a): a is Award => !!a);
 	}
@@ -243,22 +299,23 @@ export function leagueAwards(
 	const record = (id: string) => (byId.get(id) ? `${formatRecord(byId.get(id)!)} record` : '');
 	const points = (id: string) => `${formatPoints(byId.get(id)?.pointsFor ?? 0)} points`;
 	const allPlay = (id: string) => `${formatRecord(ap.get(id) ?? { wins: 0, losses: 0, ties: 0 })} against everyone`;
+	const ids = (ts: readonly LeagueTeam[]) => ts.map((t) => t.id);
 	const groupWord = lf.groupKind === 'conference' ? 'Conference' : 'Division';
 
 	out.push(
-		make('best-record', 'Best record', '📈', 'good', byRecord[0]?.id, record),
-		make('most-points', 'Most points', '🔥', 'good', byPoints[0]?.id, points),
-		hasAp ? make('best-allplay', 'Best all-play', '💪', 'good', byAp[0]?.id, allPlay) : null,
+		make('best-record', 'Best record', '📈', 'good', ids(byRecord), record),
+		make('most-points', 'Most points', '🔥', 'good', ids(byPoints), points),
+		hasAp ? make('best-allplay', 'Best all-play', '💪', 'good', ids(byAp), allPlay) : null,
 	);
 	// Each group's winner: the first of its teams in the standings order.
 	for (const g of leagueGroups(lf)) {
-		out.push(make(`group:${g}`, `${g} ${groupWord.toLowerCase()} winner`, '🥇', 'good', teams.find((t) => t.group === g)?.id, record));
+		out.push(make(`group:${g}`, `${g} ${groupWord.toLowerCase()} winner`, '🥇', 'good', ids(teams.filter((t) => t.group === g)), record));
 	}
 	out.push(
-		make('worst-record', 'Worst record', '📉', 'bad', byRecord[byRecord.length - 1]?.id, record),
-		make('fewest-points', 'Fewest points', '🥶', 'bad', byPoints[byPoints.length - 1]?.id, points),
-		hasAp ? make('worst-allplay', 'Worst all-play', '🤡', 'bad', byAp[byAp.length - 1]?.id, allPlay) : null,
-		make('champion', 'Champion', '🏆', 'good', lf.championId ?? undefined, (id) => `${lf.season} champions · ${record(id)}`),
+		make('worst-record', 'Worst record', '📉', 'bad', ids(byRecord).reverse(), record),
+		make('fewest-points', 'Fewest points', '🥶', 'bad', ids(byPoints).reverse(), points),
+		hasAp ? make('worst-allplay', 'Worst all-play', '🤡', 'bad', ids(byAp).reverse(), allPlay) : null,
+		make('champion', 'Champion', '🏆', 'good', [lf.championId ?? undefined], (id) => `${lf.season} champions · ${record(id)}`),
 	);
 	return out.filter((a): a is Award => !!a);
 }
