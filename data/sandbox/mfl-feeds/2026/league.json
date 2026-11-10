@@ -1,160 +1,20 @@
 {
-  "version": "1.0",
   "encoding": "utf-8",
+  "version": "1.0",
   "league": {
-    "divisions": {
-      "count": "2",
-      "division": [
-        {
-          "name": "AMERICAN",
-          "id": "00"
-        },
-        {
-          "id": "01",
-          "name": "NATIONAL"
-        }
-      ]
-    },
-    "franchises": {
-      "count": "12",
-      "franchise": [
-        {
-          "division": "00",
-          "abbrev": "Chiefs",
-          "waiverSortOrder": "4",
-          "name": "Chiefs",
-          "id": "0001",
-          "icon": "https://rmiuadurellunapf.public.blob.vercel-storage.com/KC.png"
-        },
-        {
-          "waiverSortOrder": "11",
-          "name": "Broncos",
-          "division": "00",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0002.png",
-          "abbrev": "Broncos",
-          "id": "0002"
-        },
-        {
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0003.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0002.png",
-          "id": "0003",
-          "abbrev": "Bills",
-          "division": "00",
-          "waiverSortOrder": "2",
-          "name": "Bills"
-        },
-        {
-          "icon": "https://rmiuadurellunapf.public.blob.vercel-storage.com/PATRIOTS.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0004.png",
-          "abbrev": "Patriots",
-          "division": "00",
-          "waiverSortOrder": "1",
-          "name": "Patriots",
-          "id": "0004"
-        },
-        {
-          "waiverSortOrder": "7",
-          "name": "Ravens",
-          "abbrev": "Ravens",
-          "division": "00",
-          "id": "0005",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0005.png",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0005.png"
-        },
-        {
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0006.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0006.png",
-          "division": "00",
-          "abbrev": "Chargers",
-          "name": "TEXANS",
-          "waiverSortOrder": "12",
-          "id": "0006"
-        },
-        {
-          "division": "01",
-          "abbrev": "Rams",
-          "name": "Rams",
-          "waiverSortOrder": "3",
-          "id": "0007",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0007.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0007.png"
-        },
-        {
-          "abbrev": "Seattle",
-          "division": "01",
-          "name": "Seahawks",
-          "waiverSortOrder": "8",
-          "id": "0008",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0008.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0008.png"
-        },
-        {
-          "abbrev": "Eagles",
-          "division": "01",
-          "name": "Eagles",
-          "waiverSortOrder": "9",
-          "id": "0009",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0009.png",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0009.png"
-        },
-        {
-          "id": "0010",
-          "waiverSortOrder": "6",
-          "name": "LIONS",
-          "division": "01",
-          "abbrev": "DET",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0010.png"
-        },
-        {
-          "name": "Bears",
-          "waiverSortOrder": "10",
-          "division": "01",
-          "abbrev": "CHI",
-          "id": "0011",
-          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2023/70558_franchise_logo0011.png",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0011.png"
-        },
-        {
-          "id": "0012",
-          "division": "01",
-          "abbrev": "SF",
-          "name": "SF",
-          "waiverSortOrder": "5",
-          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0012.png"
-        }
-      ]
-    },
-    "usesContractYear": "0",
-    "history": {
-      "league": {
-        "year": "2026",
-        "url": "https://www44.myfantasyleague.com/2026/home/39163"
-      }
-    },
-    "rosterSize": "22",
-    "lockout": "No",
-    "tiebreaker": "nonstarter",
-    "bestLineup": "Yes",
-    "fantasyPoolEndWeek": "16",
-    "id": "39163",
-    "startWeek": "1",
-    "name": "2027 Sandbox",
-    "loadRosters": "live_draft",
-    "fantasyPoolType": "",
-    "playerLimitUnit": "LEAGUE",
-    "survivorPoolStartWeek": "1",
+    "draftLimitHours": "0:01",
+    "currentWaiverType": "FCFS",
     "nflPoolStartWeek": "1",
-    "survivorPool": "Yes",
-    "tiebreakerPosition": "WR",
+    "nflPoolEndWeek": "16",
+    "usesSalaries": "0",
+    "lastRegularSeasonWeek": "12",
+    "bestLineup": "Yes",
+    "h2h": "YES",
+    "standingsSort": "PCT,PTS,VICTORY_POINTS,",
+    "playerLimitUnit": "LEAGUE",
     "precision": "2",
-    "baseURL": "https://www44.myfantasyleague.com",
-    "taxiSquad": "0",
-    "draftPlayerPool": "Both",
-    "tiebreakerCount": "1",
-    "mobileAlerts": "",
     "starters": {
       "iop_starters": "8",
-      "count": "8",
       "position": [
         {
           "limit": "1-2",
@@ -172,23 +32,163 @@
           "name": "TE",
           "limit": "1-4"
         }
+      ],
+      "count": "8"
+    },
+    "id": "39163",
+    "fantasyPoolType": "",
+    "endWeek": "16",
+    "draftPlayerPool": "Both",
+    "survivorPool": "Yes",
+    "rostersPerPlayer": "1",
+    "divisions": {
+      "count": "2",
+      "division": [
+        {
+          "id": "00",
+          "name": "AMERICAN"
+        },
+        {
+          "name": "NATIONAL",
+          "id": "01"
+        }
       ]
     },
-    "currentWaiverType": "FCFS",
-    "nflPoolEndWeek": "16",
-    "draftTimer": "ON",
-    "endWeek": "16",
-    "standingsSort": "PCT,PTS,VICTORY_POINTS,",
-    "usesSalaries": "0",
-    "rostersPerPlayer": "1",
-    "survivorPoolEndWeek": "16",
+    "rosterSize": "22",
+    "startWeek": "1",
     "draft_kind": "live",
-    "draftLimitHours": "0:01",
-    "fantasyPoolStartWeek": "1",
-    "h2h": "YES",
-    "nflPoolType": "",
+    "tiebreaker": "nonstarter",
+    "usesContractYear": "0",
+    "baseURL": "https://www44.myfantasyleague.com",
     "defaultTradeExpirationDays": "7",
+    "franchises": {
+      "count": "12",
+      "franchise": [
+        {
+          "id": "0001",
+          "division": "00",
+          "waiverSortOrder": "3",
+          "name": "Chiefs",
+          "icon": "https://rmiuadurellunapf.public.blob.vercel-storage.com/KC.png",
+          "abbrev": "Chiefs"
+        },
+        {
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0002.png",
+          "name": "Broncos",
+          "abbrev": "Broncos",
+          "division": "00",
+          "waiverSortOrder": "11",
+          "id": "0002"
+        },
+        {
+          "waiverSortOrder": "2",
+          "division": "00",
+          "abbrev": "Bills",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0003.png",
+          "name": "Bills",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0002.png",
+          "id": "0003"
+        },
+        {
+          "waiverSortOrder": "1",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0004.png",
+          "division": "00",
+          "abbrev": "Patriots",
+          "name": "Patriots",
+          "id": "0004",
+          "icon": "https://rmiuadurellunapf.public.blob.vercel-storage.com/PATRIOTS.png"
+        },
+        {
+          "waiverSortOrder": "6",
+          "division": "00",
+          "abbrev": "Ravens",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0005.png",
+          "name": "Ravens",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0005.png",
+          "id": "0005"
+        },
+        {
+          "abbrev": "Chargers",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0006.png",
+          "id": "0006",
+          "name": "TEXANS",
+          "waiverSortOrder": "12",
+          "division": "00",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0006.png"
+        },
+        {
+          "waiverSortOrder": "4",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0007.png",
+          "division": "01",
+          "abbrev": "Rams",
+          "name": "Rams",
+          "id": "0007",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0007.png"
+        },
+        {
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0008.png",
+          "id": "0008",
+          "name": "Seahawks",
+          "abbrev": "Seattle",
+          "division": "01",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0008.png",
+          "waiverSortOrder": "7"
+        },
+        {
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_logo0009.png",
+          "division": "01",
+          "waiverSortOrder": "8",
+          "id": "0009",
+          "name": "Eagles",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39410_franchise_icon0009.png",
+          "abbrev": "Eagles"
+        },
+        {
+          "abbrev": "DET",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0010.png",
+          "id": "0010",
+          "name": "LIONS",
+          "waiverSortOrder": "9",
+          "division": "01"
+        },
+        {
+          "id": "0011",
+          "logo": "https://www44.myfantasyleague.com/fflnetdynamic2023/70558_franchise_logo0011.png",
+          "abbrev": "CHI",
+          "name": "Bears",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/39163_franchise_icon0011.png",
+          "waiverSortOrder": "10",
+          "division": "01"
+        },
+        {
+          "waiverSortOrder": "5",
+          "division": "01",
+          "abbrev": "SF",
+          "id": "0012",
+          "name": "SF",
+          "icon": "https://www44.myfantasyleague.com/fflnetdynamic2026/41527_franchise_icon0012.png"
+        }
+      ]
+    },
+    "fantasyPoolStartWeek": "1",
+    "survivorPoolStartWeek": "1",
+    "taxiSquad": "0",
+    "nflPoolType": "",
+    "lockout": "No",
+    "tiebreakerPosition": "WR",
+    "mobileAlerts": "",
+    "survivorPoolEndWeek": "16",
+    "loadRosters": "live_draft",
     "injuredReserve": "2",
-    "lastRegularSeasonWeek": "12"
+    "draftTimer": "ON",
+    "fantasyPoolEndWeek": "16",
+    "history": {
+      "league": {
+        "url": "https://www44.myfantasyleague.com/2026/home/39163",
+        "year": "2026"
+      }
+    },
+    "name": "2027 Sandbox",
+    "tiebreakerCount": "1"
   }
 }
