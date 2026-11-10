@@ -435,6 +435,54 @@ function drawAward(ctx: Ctx, s: SceneOf<'award'>, p: number, a: DrawAssets) {
 	paragraph(ctx, s.value, 1090 + lines.length * size * 0.95, 48, pal.muted);
 }
 
+/**
+ * One team, several awards: a smaller crest up top, then one row per award
+ * (badge, title, value), each landing in turn.
+ */
+function drawCombo(ctx: Ctx, s: SceneOf<'combo'>, p: number, a: DrawAssets) {
+	const pal = s.palette;
+	kicker(ctx, s.kicker, 300, pal.accent);
+	const cy = 500;
+	const sc = 0.6 + 0.4 * easeOut(p / 0.35);
+	ctx.save();
+	ctx.translate(CX, cy);
+	ctx.scale(sc, sc);
+	ctx.translate(-CX, -cy);
+	crest(ctx, a.logos?.get(s.teamId) ?? null, s.name, CX, cy, 140, pal, pal.accent);
+	ctx.restore();
+	const name = s.name.toUpperCase();
+	const size = fit(ctx, name, MAX_W, 110, 64, 'display');
+	centered(ctx, name, cy + 140 + size * 0.95, pal.ink);
+	const items = s.items.slice(0, 4);
+	const top = cy + 140 + size * 0.95 + 70;
+	const rowH = Math.min(190, (1420 - top) / items.length);
+	items.forEach((it, i) => {
+		const t = easeOut((p - 0.25 - i * 0.12) / 0.25);
+		if (t <= 0) return;
+		const y = top + i * rowH;
+		ctx.save();
+		ctx.globalAlpha *= t;
+		ctx.translate((1 - t) * 60, 0);
+		ctx.font = `72px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(it.badge, CX - MAX_W / 2 + 50, y + 30);
+		const x = CX - MAX_W / 2 + 120;
+		const w = MAX_W - 120;
+		const ts = fit(ctx, it.title.toUpperCase(), w, 40, 24, 'kicker');
+		font(ctx, ts, 'kicker');
+		ctx.fillStyle = pal.accent;
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(it.title.toUpperCase(), x, y + 14);
+		const vs = fit(ctx, it.value, w, 40, 26, 'text');
+		font(ctx, vs, 'text');
+		ctx.fillStyle = pal.muted;
+		ctx.fillText(it.value, x, y + 14 + vs * 1.4);
+		ctx.restore();
+	});
+}
+
 function drawTrade(ctx: Ctx, s: SceneOf<'trade'>, p: number, a: DrawAssets) {
 	const pal = s.palette;
 	kicker(ctx, s.kicker, 400, pal.accent);
@@ -654,6 +702,9 @@ export function drawFrame(ctx: Ctx, scenes: readonly Scene[], t: number, assets:
 			break;
 		case 'award':
 			drawAward(ctx, scene, p, assets);
+			break;
+		case 'combo':
+			drawCombo(ctx, scene, p, assets);
 			break;
 		case 'player':
 			drawPlayer(ctx, scene, p);
