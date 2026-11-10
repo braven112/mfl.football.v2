@@ -1,5 +1,73 @@
 [
   {
+    "id": "sunday-ticket-uk-mexico",
+    "date": "2026-09-06",
+    "category": "enhancement",
+    "icon": "goals",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Sunday Ticket Now Speaks British and Mexican",
+    "link": "/sunday-ticket",
+    "linkLabel": "Pick your country",
+    "image": "sunday-ticket-countries.webp",
+    "imageAlt": "The Sunday Ticket board with five country chips — United States, Canada, Australia, United Kingdom, Mexico — with the United Kingdom selected, a Channel 5 line underneath, kickoffs reading 6:00 PM BST, and the Sky Sports mark on every game",
+    "summary": "The Sunday Ticket board now has a United Kingdom and a Mexico view alongside the US, Canada and Australia — kickoffs in London and Mexico City clocks, and every game badged with the channel that actually carries it there: Sky Sports, Channel 5, FOX México, ESPN México, TUDN and NFL Game Pass, marks and all.",
+    "description": [
+      "One of our owners watches from Great Britain, where 1:00 PM ET is a 6:00 PM kick and CBS does not exist. Until now the <a href=\"/sunday-ticket\">Sunday Ticket</a> board told him a game was on FOX at 10:00 AM Pacific, which is true of nobody in his living room.",
+      "So the country strip has grown two chips. Pick <strong>United Kingdom</strong> and every kickoff reads in one London clock — 6:00 PM BST for the early window, 9:25 PM for the late one — and every box wears the <strong>Sky Sports</strong> mark, because Sky carries the lot over there, RedZone included. The window header swaps YouTube TV for <strong>NFL Game Pass on DAZN</strong>. Pick <strong>Mexico</strong> and the slate splits the way it actually splits: <strong>FOX México</strong> has the Sunday and Thursday package, <strong>ESPN México</strong> the Sunday and Monday night games, <strong>TUDN / ViX</strong> the free ones, Game Pass everything else — with two clocks, Mexico City and Tijuana.",
+      "There is one thing a network map can never say: which of Sunday's games the free channel picks up is that channel's call, not the American network's. So the board now says it in words, under the country chips — Channel 5's two free Sunday games in the UK, ViX and Canal 5's in Mexico, and 7mate's in Australia, which had been sitting in the config unsaid since the board shipped. Typing <em>UK</em> instead of <em>GB</em> lands you in the right place too; it used to quietly send you back to the American board."
+    ]
+  },
+  {
+    "id": "viewer-preferences",
+    "date": "2026-09-06",
+    "category": "new-page",
+    "icon": "wrench",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Pick The Clock You Actually Live In.",
+    "link": "/preferences",
+    "linkLabel": "Set your country and clock",
+    "summary": "Preferences is a new page: pick the country whose channels you see and the one time zone you live in. Every kickoff on Sunday Ticket prints in your clock, with Pacific — the clock lineup locks and auction windows run on — beside it. Signed in, it follows you to your phone.",
+    "description": [
+      "<a href=\"/sunday-ticket\">Sunday Ticket</a> has known which country you watch from since the day it launched — CBS becomes DAZN in Canada, everything is Kayo in Australia. What it did not know was the clock on your wall. Pick the United States and you got Eastern and Pacific, whether you were in Chicago, Denver or Honolulu. Half the league has been doing time-zone arithmetic on a page whose entire job is telling you when to sit down.",
+      "The new <a href=\"/preferences\">Preferences</a> page fixes that. Choose your country — it still decides the channel on every box and which service carries Sunday Ticket — and then choose the one time zone you live in. Central. Mountain. Arizona, which refuses to change its clocks and now gets a line of its own. Newfoundland, half an hour off from everybody. Perth, where the early window is a Monday. Whatever you pick, <strong>your league's PT rides along beside it</strong>, because Pacific is the clock lineup locks and auction windows actually run on. Already on Pacific? Then you get PT once, not twice.",
+      "Every kickoff time on the board reads that way now — the window headers, the jump links, the four multiview boxes, the national games underneath. Set it once. It sticks to the browser you set it in, and if you're signed in it's saved to your account too, so the phone you check from the couch reads the same clock as the laptop you set your lineup on. A few of you we already knew about — the Wabbits and the Dream up in Canada, Maverick keeping Sydney hours — and your board comes up right the first time without touching a thing.",
+      "The country chips on the Sunday Ticket board still work exactly as they did, and now land right back in your preferences. Nothing about where you actually are gets stored; the schedule is the schedule, we just do the arithmetic for you. Sunday Ticket is the first page to ask. It won't be the last — anything that names a channel or prints a kickoff can read the same two answers."
+    ],
+    "image": "viewer-preferences.webp",
+    "imageAlt": "The Preferences page: the country picker with United States selected, the United States time zone list below it with Eastern chosen, and a preview reading a 1:00 PM ET Sunday kickoff as 1:00 PM ET and 10:00 AM PT"
+  },
+  {
+    "id": "claim-from-player-modal",
+    "date": "2026-09-06",
+    "category": "new-feature",
+    "icon": "gavel",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Claim Him From Wherever You Found Him",
+    "link": "/players",
+    "linkLabel": "Open the free-agent pool",
+    "summary": "The Bid / Claim button has left the Free Agents table and moved into the player card — so any free agent you turn up anywhere on the site, on any page, can be added right there, next to Watch.",
+    "description": [
+      "Until this week, adding a free agent meant being on one specific page. The button lived in a column on <a href=\"/players\">Free Agents</a> and nowhere else, so a name you stumbled across in a matchup, on someone's roster, or halfway down a <a href=\"/news\">Schefter Report</a> post was a name you had to go and look up again somewhere else before you could do anything about him.",
+      "Now it is wherever he is. Tap a player's name and the card that opens carries two buttons side by side: <strong>Watch player</strong>, and — if he is genuinely available to you — <strong>Claim player</strong> in the AFL, <strong>Bid player</strong> in TheLeague. Same claim form, same drop picker, same waiver window; it just comes to you instead of the other way round.",
+      "That last condition is doing real work. The button only appears when the player is actually unrostered <em>in your league, in your conference</em>, and you have a roster to drop from — the AFL holds the same man once in each conference, so \"free\" there is a per-conference question, not a league-wide one. Anyone already rostered, and anyone you could not file for anyway, simply gets Watch. Nothing about who may claim whom has changed: the same server checks run on submit as always, against MFL rather than against anything the page believed.",
+      "On the Free Agents table itself, the pill that used to sit beside the ⋮ is gone and the ⋮ column now says what it does — <strong>Claim</strong>, or <strong>Bid</strong> — with the claim, the sign-in for signed-out visitors, and Watch all inside it. One column instead of two, on a table that already scrolls sideways on a phone."
+    ],
+    "image": "claim-from-player-modal.webp",
+    "imageAlt": "The AFL player card open on free agent Jacoby Brissett, with Watch player and Claim player side by side above his projected points"
+  },
+  {
     "id": "transaction-hub",
     "date": "2026-09-05",
     "category": "new-feature",
@@ -68,6 +136,28 @@
     ],
     "image": "afl-owner-award-badges.webp",
     "imageAlt": "Jim Shea's AFL owner page showing the career record alongside a row of award badge chips: AFL Champion, NL Champion ×3, NL West ×2 and NL Pacific"
+  },
+  {
+    "id": "fa-sheet-bid-claim",
+    "date": "2026-09-05",
+    "category": "enhancement",
+    "icon": "gavel",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Bid, Claim, Watch. One Tap, No Scrolling.",
+    "link": "/players",
+    "linkLabel": "Open the free-agent pool",
+    "summary": "On Free Agents the Bid or Claim button now sits right beside the player's name, and the ⋮ menu has grown a Bid / Claim option of its own — so on a phone you can file a claim, or start watching a guy, without scrolling the table sideways to find the button.",
+    "description": [
+      "Week 1 waivers found it: on a phone, the one button that does anything on <a href=\"/players\">Free Agents</a> — Bid in TheLeague, Claim in the AFL — lived in the last column of a table nine columns wide. Every claim started with a sideways scroll past age, bye week and three kinds of points to reach it. The <strong>&#8942;</strong> menu that arrived with <em>My Watch List</em> was parked out there with it.",
+      "Both now sit right after the player's name, ahead of Age, where a thumb can reach them. And the <strong>&#8942;</strong> sheet does more than watch: tap it on any free agent and the first option is <strong>Bid on this player</strong> or <strong>Claim this player</strong> — the same claim form, the same drop picker, opened from the sheet instead of the button. Signed out? That option opens the sign-in and brings you back to that player with the claim still pending. <em>Watch player</em> sits right underneath, so scouting a guy and striking on him are one tap apart, and every post about him in the <a href=\"/news\">Schefter Report</a> lights up the moment you do.",
+      "Nothing about the claim itself changed. Whoever may file for a player — and whoever may not — is decided exactly as before; the sheet just reads the button the page already drew for you and does what it does. A rostered player's sheet is still Watch alone."
+    ],
+    "image": "fa-sheet-bid-claim.webp",
+    "imageAlt": "The AFL free agents page with the ⋮ action sheet open on a free agent, showing Claim this player above Watch player"
   },
   {
     "id": "afl-search",
