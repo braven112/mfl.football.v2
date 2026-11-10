@@ -34,6 +34,19 @@ import {
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { parseRosterMove, rosterMoveString } from './lib/roster-move-parse.mjs';
+import {
+  IR_SUBTYPE,
+  WIRE_FORMAT_VERSION,
+  foldRosterLists,
+  irPost,
+  irSides,
+  placedOnIrEarlier,
+  leagueDay,
+  oneLiner,
+  rosterList,
+  rosterListId,
+  shouldUseOneLiner,
+} from './lib/schefter-wire-formats.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import {
   evaluatePingWindow,
@@ -86,7 +99,9 @@ const LEAGUES = SCHEFTER_LEAGUES;
 
 // ── Constants ──
 
-const SKIP_TYPES = new Set(['AUCTION_BID', 'AUCTION_INIT', 'IR', 'TAXI']);
+// IR moves post since Nov 2026 (scripts/lib/schefter-wire-formats.mjs); TAXI
+// promotions/demotions are still noise.
+const SKIP_TYPES = new Set(['AUCTION_BID', 'AUCTION_INIT', 'TAXI']);
 const BREAKING_AUCTION = 3_000_000;
 const STANDARD_AUCTION = 1_000_000;
 
@@ -509,6 +524,51 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMa
   return { ...base, tier, headline, body, playerIds: [added.playerId] };
 }
 
+/**
+ * An MFL `IR` row as a tweet-shaped post: "Maverick placed RB Brian Robinson
+ * Jr. on injured reserve. Robinson has a knee injury." The injury comes from
+ * MFL's own report, keyed by player id — never a name match.
+ */
+function generateIrPost(raw, players, teams, leagueSlug, injuries, priorPosts, clockZone) {
+  const team = teams.get(raw.franchise)?.name;
+  if (!team) return null;
+  const { placedIds, activatedIds } = irSides(raw);
+  const withId = (id) => {
+    const p = players.get(id);
+    return p ? { ...p, id } : null;
+  };
+  const placed = placedIds.map(withId);
+  const activated = activatedIds.map(withId);
+  // A player the players file cannot name would print as "Player 16171".
+  if ([...placed, ...activated].some((p) => !p)) return null;
+  const day = leagueDay(raw.timestamp, clockZone);
+  const text = irPost({
+    team,
+    placed,
+    activated,
+    injuries,
+    another: placed.length > 0 && placedOnIrEarlier(priorPosts, raw.franchise, day, clockZone),
+  });
+  if (!text) return null;
+  return {
+    id: generatePostId(raw.timestamp),
+    timestamp: new Date(parseInt(raw.timestamp) * 1000).toISOString(),
+    type: 'transaction',
+    transactionSubType: IR_SUBTYPE,
+    format: 'ir',
+    formatVersion: WIRE_FORMAT_VERSION,
+    tier: 'minor',
+    headline: text.headline,
+    body: text.body,
+    franchiseIds: [raw.franchise],
+    playerIds: [...placedIds, ...activatedIds],
+    placedIds,
+    activatedIds,
+    sourceTimestamp: raw.timestamp,
+    league: leagueSlug,
+  };
+}
+
 // ── AI Commentary (breaking tier) ──
 
 async function generateBreakingCommentary(post, raw) {
@@ -657,6 +717,29 @@ async function fetchTransactions(leagueId, year) {
 }
 
 /**
+ * MFL's injury report, MFL player id → `{ status, details }`. Only the IR
+ * post reads it, for the body part. Best-effort: an empty map on any failure
+ * just means no reason is printed.
+ */
+async function fetchInjuryReport(year) {
+  try {
+    const url = `https://${MFL_HOST}/${year}/export?TYPE=injuries&JSON=1`;
+    const res = await fetch(url);
+    if (!res.ok) return new Map();
+    const data = await res.json();
+    const rows = data?.injuries?.injury ?? [];
+    const map = new Map();
+    for (const row of Array.isArray(rows) ? rows : [rows]) {
+      if (row?.id) map.set(String(row.id), row);
+    }
+    return map;
+  } catch (err) {
+    console.warn(`  [injuries] fetch failed: ${err.message}`);
+    return new Map();
+  }
+}
+
+/**
  * Fetch salary adjustments. A FREE_AGENT drop transaction ("|playerId,")
  * carries no salary, but MFL logs a matching adjustment with the dropped
  * player's contract salary in its description — this is how we know whether a
@@ -737,11 +820,12 @@ async function scanLeague(league) {
   const now = new Date();
   const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
 
-  const [transactions, salaryAdjustments, players, teams] = await Promise.all([
+  const [transactions, salaryAdjustments, players, teams, injuries] = await Promise.all([
     fetchTransactions(league.leagueId, year),
     fetchSalaryAdjustments(league.leagueId, year),
     loadPlayers(league.playersPath(year)),
     loadTeams(league.configPath),
+    fetchInjuryReport(year),
   ]);
   const dropAdjustmentMap = buildDropAdjustmentMap(salaryAdjustments);
 
@@ -773,10 +857,15 @@ async function scanLeague(league) {
   newTxns.sort((a, b) => parseInt(a.timestamp) - parseInt(b.timestamp));
 
   const newPosts = [];
+  const drafts = [];
+  const registry = registryLeague(league);
+  const clockZone = registry?.officialClock?.zone ?? 'America/Los_Angeles';
 
   for (const txn of newTxns) {
     let post;
-    if (txn.type === 'TRADE') {
+    if (txn.type === 'IR') {
+      post = generateIrPost(txn, players, teams, leagueSlug, injuries, [...drafts.map((d) => d.post), ...feed.posts], clockZone);
+    } else if (txn.type === 'TRADE') {
       post = generateTradePost(txn, players, teams, leagueSlug);
     } else if (txn.type === 'AUCTION_WON') {
       post = generateAuctionPost(txn, players, teams, leagueSlug);
@@ -808,10 +897,19 @@ async function scanLeague(league) {
       }
     }
 
-    // Schefter's own write-up of the move — the Transactions page leads with
-    // it. Null on any failure, and the template post above stands.
-    if (MOVE_STORY_SUBTYPES.has(post.transactionSubType) && !DRY_RUN) {
-      const registry = registryLeague(league);
+    drafts.push({ post, txn });
+  }
+
+  // A team's busy day becomes ONE "Notable … roster moves today" list rather
+  // than a run of separate posts (scripts/lib/schefter-wire-formats.mjs).
+  // Only routine moves fold in; a list already posted today is extended.
+  const folded = foldRosterLists(drafts, feed, { players, teams, leagueSlug, clockZone, hasSalaries: !!registry?.features?.salaryCap });
+
+  for (const { post, txn } of folded) {
+    // Schefter's write-up of the move — the Transactions page leads with it.
+    // About one routine move in three is a plain one-liner; the rest go to
+    // the model. Null on any failure, and the template post above stands.
+    if (MOVE_STORY_SUBTYPES.has(post.transactionSubType) && txn) {
       const facts = factsFromRawMove(txn, {
         players,
         parseRosterMove,
@@ -819,8 +917,23 @@ async function scanLeague(league) {
         hasSalaries: !!registry?.features?.salaryCap,
         dropSalary: post.bigDrop ? formatSalary(post.bigDrop.salary) : null,
       });
-      const story = await writeMoveStory({ facts, teams, apiKey: process.env.ANTHROPIC_API_KEY });
-      if (story) applyMoveStory(post, story, facts);
+      const routine = post.tier === 'minor' && !post.bigDrop;
+      const line = routine && facts && shouldUseOneLiner(txn.timestamp, txn.franchise)
+        ? oneLiner({
+          team: teams.get(txn.franchise)?.name ?? `Team ${txn.franchise}`,
+          rawType: txn.type,
+          added: facts.added.map((p) => players.get(p.id)),
+          dropped: facts.dropped.map((p) => players.get(p.id)),
+          price: facts.price,
+        })
+        : null;
+      if (line) {
+        applyMoveStory(post, line, facts);
+        post.format = 'one-liner';
+      } else if (!DRY_RUN) {
+        const story = await writeMoveStory({ facts, teams, apiKey: process.env.ANTHROPIC_API_KEY });
+        if (story) applyMoveStory(post, story, facts);
+      }
     }
 
     // Generate AI commentary for breaking-tier posts
@@ -860,14 +973,20 @@ async function scanLeague(league) {
   // `newPosts` was reversed IN PLACE just above for the feed prepend, so it is
   // already newest-first here. Reversing a copy again — which is what this did
   // — put the three OLDEST moves in a digest whose headline says "new".
-  await pushTransaction({
-    league,
-    franchiseIds: [...teams.keys()],
-    headline: `${newPosts.length} new ${newPosts.length === 1 ? 'move' : 'moves'}`,
-    body: newPosts.slice(0, 3).map((p) => p.headline).join(' · '),
-    tag: `transactions-${newPosts[0]?.id ?? now.toISOString()}`,
-    big: false,
-  });
+  //
+  // An IR shuffle is not a transaction anyone subscribed to be woken for —
+  // those owners were never pushed one before IR moves reached the feed.
+  const pushable = newPosts.filter((p) => p.transactionSubType !== IR_SUBTYPE);
+  if (pushable.length > 0) {
+    await pushTransaction({
+      league,
+      franchiseIds: [...teams.keys()],
+      headline: `${pushable.length} new ${pushable.length === 1 ? 'move' : 'moves'}`,
+      body: pushable.slice(0, 3).map((p) => p.headline).join(' · '),
+      tag: `transactions-${pushable[0]?.id ?? now.toISOString()}`,
+      big: false,
+    });
+  }
 
   // Direct GroupMe posting for leagues using the directGroupMe feature flag
   // (currently AFL). Feed is already persisted above; post breaking/standard

@@ -325,6 +325,16 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    id: 'ops-league-story',
+    group: 'ops',
+    label: 'League story answers',
+    description: 'An invited league sent its story from mfl.football/league-story.',
+    cadence: 'When a league sends one',
+    defaultOn: true,
+    adminOnly: true,
+    live: true,
+  },
+  {
     id: 'ops-league-setup',
     group: 'ops',
     label: 'League setup drift',

@@ -19,7 +19,7 @@
  * then drops the statement-game card.
  */
 import { lookOf, type ChampionStyle, type LastPlaceTheme, type SeasonFacts, type SeasonGame, type SeasonStage, type SeasonVideoKind, type VideoLook } from './season';
-import { busiest, weekTrades, type Award, type LeagueFacts, type LeagueMoves } from './league-recap';
+import { busiest, recapCards, weekTrades, type Award, type LeagueFacts, type LeagueMoves } from './league-recap';
 import { formatPoints, formatRecord, formatScore, ordinal, positionLabel, seasonAllPlay, type StarterLine, type WeekLine } from './season';
 
 export const MAX_STORY_SECONDS = 50;
@@ -75,8 +75,18 @@ export type Scene =
 	| (SceneBase & { type: 'end'; line: string })
 	/** A league recap's award: one team, its logo by team id (`DrawAssets.logos`). */
 	| (SceneBase & { type: 'award'; name: string; teamId: string; value: string; badge: string; effect?: CrownEffect })
+	/**
+	 * A league recap's combined card: one team that won several awards, shown
+	 * once with every award listed (Brandon, 2026-11-10).
+	 */
+	| (SceneBase & { type: 'combo'; name: string; teamId: string; items: { title: string; badge: string; value: string }[] })
 	/** A league recap's trade: every side, its logo by team id, and what it got. */
 	| (SceneBase & { type: 'trade'; sides: { teamId: string; name: string; gets: string[] }[] })
+	/**
+	 * A player's week with no picture at all (the NFL week recap): the score is
+	 * the hero number, the name sits under it. No crest, no logo, no headshot.
+	 */
+	| (SceneBase & { type: 'player'; points: number; unit: string; name: string; sub: string; badge?: string; effect?: CrownEffect; colors?: [string, string] })
 	/** A league recap's season counts: big numbers, no team. */
 	| (SceneBase & { type: 'tally'; tiles: { value: number; label: string }[]; line: string });
 
@@ -192,7 +202,7 @@ const GOAT = {
 } satisfies Record<string, Palette>;
 
 /** One look: every card's colours, the crown effect and the badge. */
-interface Look {
+export interface Look {
 	title: Palette;
 	record: Palette;
 	games: Palette[];
@@ -205,7 +215,7 @@ interface Look {
 	badge: string;
 }
 
-const LOOKS: Record<VideoLook, Look> = {
+export const LOOKS: Record<VideoLook, Look> = {
 	trophy: {
 		title: TROPHY.navy,
 		record: TROPHY.navy,
@@ -1167,8 +1177,12 @@ export function leagueStory(
 	const nameOf = (id: string) => lf.teams.find((t) => t.id === id)?.name ?? '';
 	const trades = span === 'week' ? weekTrades(lf, week) : [];
 	const tally = span === 'season' && lf.moves ? lf.moves : null;
-	const fixed = 4 + 5 + (awards.some((a) => a.id === 'champion') ? 5 : 0) + (tally ? 4 : 0);
-	const others = awards.filter((a) => a.id !== 'champion').length;
+	const cards = recapCards(awards);
+	const hasChamp = awards.some((a) => a.id === 'champion');
+	const fixed = 4 + 5 + (hasChamp ? 5 : 0) + (tally ? 4 : 0);
+	// A combined card holds longer than a single one: it has more to read.
+	const COMBO = 1.5;
+	const others = cards.reduce((n, c) => n + (c.kind === 'combo' ? COMBO : c.award.id === 'champion' ? 0 : 1), 0);
 	// Floored to a tenth so rounding never tips the total over the bed. Trades
 	// get the longer cards (there is more to read); a week with more trades
 	// than the bed holds shows as many as fit, and each kicker says "of N".
@@ -1188,10 +1202,24 @@ export function leagueStory(
 		kicker: trades.length > 1 ? `${label} · Trade ${i + 1} of ${trades.length}` : `${label} · Trade`,
 		sides: t.sides.map((sd) => ({ teamId: sd.teamId, name: nameOf(sd.teamId), gets: sd.gets })),
 	}));
-	for (const a of awards) {
-		const champ = a.id === 'champion';
+	for (const c of cards) {
+		const list = c.kind === 'combo' ? c.awards : [c.award];
 		// The trades run just before the low score, so the week still ends on its roast.
-		if (a.id === 'low-score') scenes.push(...tradeScenes.splice(0));
+		if (list.some((a) => a.id === 'low-score')) scenes.push(...tradeScenes.splice(0));
+		if (c.kind === 'combo') {
+			scenes.push({
+				type: 'combo',
+				duration: tenth(each * COMBO),
+				palette: c.awards.every((a) => a.tone !== 'good') ? L.low : L.best,
+				kicker: `${label} · ${c.awards.length} awards`,
+				name: nameOf(c.teamId),
+				teamId: c.teamId,
+				items: c.awards.map((a) => ({ title: a.title, badge: a.badge, value: a.value })),
+			});
+			continue;
+		}
+		const a = c.award;
+		const champ = a.id === 'champion';
 		if (champ && tally) scenes.push(tallyScene(tally, label, L.stat, nameOf));
 		scenes.push({
 			type: 'award',
@@ -1206,7 +1234,7 @@ export function leagueStory(
 		});
 	}
 	scenes.push(...tradeScenes);
-	if (tally && !awards.some((a) => a.id === 'champion')) scenes.push(tallyScene(tally, label, L.stat, nameOf));
+	if (tally && !hasChamp) scenes.push(tallyScene(tally, label, L.stat, nameOf));
 	scenes.push(endScene());
 	return scenes;
 }

@@ -13,8 +13,9 @@ import { useActiveTeam } from '../active-team';
 import { useSession } from '../session-context';
 import { TeamSwitcher } from '../components/TeamSwitcher';
 import { usePlayerAdd } from '../players/player-actions';
-import { injuryBadge, ownerLine, playerLine, sortValue, SORT_LABEL } from '../players/format';
+import { injuryBadge, ownerLine, playerLine, playerParts, sortValue, SORT_LABEL } from '../players/format';
 import { font, useTheme, type Theme } from '../theme';
+import { PlayerMetaLine } from '../components/NflTeamStripe';
 
 const STATUS: { key: MflLiveAppPlayersStatus; label: string }[] = [
   { key: 'fa', label: 'Free agents' },
@@ -198,9 +199,7 @@ function PlayerRow(props: {
           </Text>
           {badge ? <Text style={s.badge}>{badge}</Text> : null}
         </View>
-        <Text numberOfLines={1} style={s.muted}>
-          {playerLine(player)}
-        </Text>
+        <PlayerMetaLine style={s.muted} parts={playerParts(player)} />
         <Text numberOfLines={1} style={[s.owner, { color: player.isFreeAgent ? t.win : t.muted }]}>
           {ownerLine(player)}
         </Text>

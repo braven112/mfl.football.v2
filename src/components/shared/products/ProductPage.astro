@@ -17,6 +17,7 @@ import {
 	type Product,
 } from '../../../data/products';
 import ProductShot from './ProductShot.astro';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
 import '../../../styles/products.css';
 
 interface Props {
@@ -24,6 +25,8 @@ interface Props {
 }
 
 const { product } = Astro.props as Props;
+// Asked per request so a time-limited offer ends on its own; ?testDate= previews it.
+const offer = product.offer?.(getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date()) ?? null;
 
 const index = PRODUCTS.findIndex((p) => p.slug === product.slug);
 const previous = index > 0 ? PRODUCTS[index - 1] : null;
@@ -90,6 +93,7 @@ const features = (product.features ?? []).map((id) => getFeature(id));
 				</table>
 			</div>
 			{product.tiers.note && <p class="prd__note">{product.tiers.note}</p>}
+			{offer && <p class="prd__note prd__offer">{offer}</p>}
 		</section>
 	)}
 

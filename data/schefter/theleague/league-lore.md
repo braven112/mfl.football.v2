@@ -1,6 +1,6 @@
 # TheLeague — Owner & Team Lore
 
-Field guide for Claude Schefter. Use to make posts feel personal, land callbacks, and reference rivalries organically. 14-year dynasty league, 16 teams, 4 divisions.
+Field guide for Claude Schefter. Use to make posts feel personal, land callbacks, and reference rivalries organically. Salary cap dynasty league since 2007 (2025 was season 19), 16 teams, 4 divisions.
 
 ---
 
@@ -23,7 +23,7 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 
 **Pacific Pigskins** (Brandon, the commish)
 - Role: Commissioner, runs the league and the site
-- **Has never won a league title.** 14 seasons, zero rings. The team is competitive — makes the playoffs, just can't close. Dry running gag is about PLAYOFF losses, not roster issues. Don't joke about his lineup or management — the team is fine, the rings aren't there.
+- **Has never won a league title.** An original from 2007: 19 seasons, zero rings, one final (lost to Bring The Pain in 2014). The team is competitive — makes the playoffs, just can't close. Dry running gag is about PLAYOFF losses, not roster issues. Don't joke about his lineup or management — the team is fine, the rings aren't there.
 - **Spends more time building the website than anyone needs to.** The tools, the features, the UI — Brandon's real hobby. Team is well-run; the site is where the obsession shows.
 - Schefter shorthand: "the commish", "Brandon", "the Pigskins desk"
 - Callback material (rare, playoff-focused): "Still looking for that first one." / "Pigskins making a run. We've heard this song before." / "Regular season stats look great. Playoffs are the problem." / "Brandon shipped three features this week. Playoff ghosts still unbeaten." / "The commish built a trade-rumor bot before he built a championship."
@@ -96,10 +96,12 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - Callback material (sparingly, 1-in-25 Ninjas posts): "Ninjas desk still waiting on a Bears QB worth drafting." / "Chicago energy on the Ninjas move." / "Somewhere in Chicago, a carne asada is being grilled. Ninjas posted." / "Mariachi Ninjas offer hit the desk over carne asada. Probably." / "Bears fan. It's been a rough century."
 
 **Bring The Pain**
-- **Founding member — in the league since 2012.** One of two founders still active (with Dark Magicians). Schefter should respect the tenure.
+- **Original member — in the league since 2007.** One of the originals still playing under their 2007 name (with the Pigskins and Dark Magicians). Schefter should respect the tenure.
+- **Gave the league its name.** Pain came over from the league the founders modeled TheLeague on, and when the owners debated renaming "Dynasty the League", Pain said he always thought of it as "The League": the purest form of NFL-based fantasy football. The name stuck.
+- **The closest thing to a dynasty:** titles in 2014, 2019 and 2020, runner-up in 2008 and 2021.
 - **Owner trait (deep-cut, use sparingly): was on a reality TV show.** This is a rare callback — maybe 1-in-20 Pain-related posts. A hint, never a direct reference. "Back on camera." / "The cameras never really left, did they." Don't explain it, don't name the show.
 - Schefter shorthand: "Pain", "Bring the Pain", "the Pain desk", "a founding father"
-- Callback material: "Pain's been here since day one" / "14 years, Pain's still asking the questions" / rare reality-TV hint
+- Callback material: "Pain's been here since day one" / "19 years, Pain's still asking the questions" / rare reality-TV hint
 - Rivalries: Wabbits, Ninjas
 
 **Cowboy Up**
@@ -123,7 +125,7 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - Rivalries: Bring The Pain, The Dream (Running down the Dream)
 
 **Dark Magicians of Chaos**
-- **Founding member — in the league since 2012.** One of two founders still active (with Bring The Pain).
+- **Original member — in the league since 2007.** The league's first champion, back to back (2007, 2008), and runner-up three times since (2016, 2022, 2025).
 - **Owner trait: Yu-Gi-Oh spellcaster energy.** Team name is pulled from the "Dark Magician of Chaos" trading card (Spellcaster type, Magician's Force set, 2003). Owner carries the vibe — tactical, deliberate, likes pulling the right card at the right moment. Never name the game directly; the card/spellcaster/graveyard/summon vocabulary is the wink.
 - Schefter shorthand: "Dark Magicians", "the Magicians", "DMoC", "a founding father", "the spellcaster desk"
 - Rivalry: Fire Ready Aim
@@ -150,18 +152,69 @@ Do NOT reveal specifics about the workplace or what they do. Just that they're c
 
 ## Founding Fathers
 
-Only two founding members from 2012 are still in the league:
+The league started in 2007. Three teams still play under their 2007 names (the 2007 runner-up, Acer FC Edge, has since left; Fire Ready Aim is a later owner in that slot):
+- **Pacific Pigskins** (Brandon, the commish)
 - **Bring The Pain**
 - **Dark Magicians of Chaos**
 
-Schefter should occasionally (1-in-15 posts involving either) acknowledge the tenure with respect:
-- "14 years in. Pain and Dark Magicians are the only founders left standing."
-- "Dark Magicians, founding father, still making calls."
-- "Pain's been doing this since 2012. Muscle memory at this point."
+Schefter should occasionally (1-in-15 posts involving Pain or Dark Magicians) acknowledge the tenure with respect:
+- "19 seasons in. Pain and Dark Magicians have been here since the first draft."
+- "Dark Magicians, an original, still making calls."
+- "Pain's been doing this since 2007. Muscle memory at this point."
+
+## Origin & Name (Brandon, Nov 2026)
+
+- **Born on the forums.** The league started in 2007 as a forum idea, likely on the MyFantasyLeague forums, then moved to the Footballguys forums. It was modeled on a league Rolling Rockers and Bring The Pain were in at the time; the founders took many of its rules and made them their own.
+- **Run it like the NFL.** The founding vision: whenever possible, do what the NFL does. Salary cap, rookie draft, and a calendar that lines up with the NFL's (the rookie draft a week after the NFL Draft, free agency and the tag period when the NFL's happen). This is the league's identity; Schefter can lean on it ("the most NFL league in fantasy").
+- **The tagline: "The purest form of NFL fantasy football."** Brandon loves it (Nov 2026). It is how the league sees itself. Schefter can use it sparingly as the league's motto, e.g. on rule changes that follow the NFL or in a season opener.
+- **The name.** It was first called "Dynasty the League." Being more salary cap than pure dynasty, the owners talked about renaming it, and Bring The Pain said he always thought of it as "The League," the purest form of NFL-based fantasy football. Brandon bought theleague.us, the league forum moved there, and it has been The League ever since.
+- **How the cast connects.** Four circles: the original forum members (MyFantasyLeague and Footballguys), the commish's co-workers (the Office Crew), and friends of the league. Running down the Dream is a friend of Wabbit's. Dark Magicians and Fire Ready Aim played in leagues together before. Cowboy Up came in as a friend of a former owner, the Degenerates.
+
+## Eras (Brandon, Nov 2026)
+
+- **The Siege (2016 to 2018).** The league's one bad era. The LBer-DeCleaters had been a strong team for years (finals in 2009 and 2010) and were fine on their own. The trouble started when they invited a friend, Under Siege, who holds the title of the biggest jerk in league history. It was only the two of them together that made it a problem. The DeCleaters won the 2016 title, Under Siege somehow won the 2018 title from an 8-8 regular season (knocking out the 16-0 Wabbits on the way), and then Under Siege got himself kicked out and took the DeCleaters out with him.
+- **After the Siege (2019 to 2025).** No official name; don't invent one. With those two gone, good people came back in, and the league has been calm, collaborative and fun ever since.
+- **The Rookie Extension Era (2026 on).** The era the league just started, and one Brandon calls really important. From the 2026 rookie class on, every rookie contract is 4 years, with a rookie extension and, for first-round picks only, a special fifth-year team option, the NFL's own model. It is the league's founding idea ("run it like the NFL") taken one step further. Schefter can frame rookie decisions as a new chapter: "First class of the new era."
+- **Rules for the villain:** Under Siege is the league's one villain, "the 8-8 champion." Name him only as league history, sparingly, and never connect him to a current team. His old franchise slot belongs to Midwestside Connection now and the DeCleaters' slot to Music City Mafia; neither owner had anything to do with him.
+
+## The Most Lopsided Trade (Ask the History, Nov 2026)
+
+- **Maverick's heist, May 15, 2017.** Maverick got Brian Hoyer, Alex Smith, DeMarco Murray, Pierre Garcon and T.Y. Hilton, and gave up Andrew Luck, Allen Hurns and others plus picks. The players Maverick received outscored the ones he gave up by 475.44 points that season, measured by rest-of-season points.
+- It is the record by a mile: 154.74 points clear of #2 (a Dark Magicians trade, +320.70), and it has stood since 2017.
+- Bring The Pain owns three of the top 10 trade wins and the Wabbits two, which fits the Wabbit's reputation as THE league trader.
+- **No trade has ever been vetoed** (as far as Brandon recalls, Nov 2026). Never invent a veto or a reversed trade.
+- Callback material (rare): "Somewhere, Maverick is still cashing the 2017 trade." Never name who was on the other side.
+
+## How the League Runs (Brandon, Nov 2026)
+
+- **Purely online.** No in-person draft weekend, no trip. The auction is online and the rookie draft is a long email draft. The league lives on the site and in the group chat.
+- **The prize is money and bragging rights.** No physical trophy, belt or ring. Don't invent one.
+- **No league inside joke and no name for the trophy page** beyond what's in this file. Don't invent either.
+- **No last-place punishment.** Don't invent one (the Dead Money Awards are the league's only shame awards).
+
+## Finals & Heartbreak (from the league record, Nov 2026)
+
+Every number here is from the league's own results; quote them exactly or not at all.
+
+- **The closest final ever: 2022.** Vitside Mafia beat Dark Magicians of Chaos 89.50 to 89.32, a 0.18-point margin.
+- **The highest-scoring final: 2024.** Wascawy Wabbits beat Da Dangsters 182.98 to 129.60 (312.58 combined), the most points either side has scored in a final.
+- **The most painful playoff loss: 2018.** The Wabbits went 16-0 in the regular season (2,453 points, best in the league) and lost their first playoff game to Under Siege, 123.01 to 113.17. Under Siege, an 8-8 team, went on to win the title. The perfect season ended at the hands of the league's villain.
+- **The Wabbits' playoff luck.** Best regular-season record five times (2018, 2020, 2021, 2024, 2025), one title (2024). The Wabbit complains about his playoff luck, and the record backs him up. Good callback material, always sympathetic-dry, never cruel.
+- **Dark Magicians, the bridesmaid.** Champions in 2007 and 2008, then runner-up in 2016, 2022 (by 0.18) and 2025.
+- **Da Dangsters lost back-to-back finals** (2023 to Fire Ready Aim, 2024 to the Wabbits).
+
+## Former Members Worth Remembering
+
+- **Boys to Men** (former owner) was on The Biggest Loser. One of two reality TV stars in league history. Fine to mention as history.
+- **Devil Dogs** (former owner): back-to-back champions (2012, 2013). An independent who didn't come in through any of the league's circles, and a former Marine. Retired from the league; his slot is Cowboy Up's now. Fine to mention with respect as history.
+- **Sabertooths** (former owner, 2011 champion): a friend of Brandon's.
+- **Amish Rakefighters** (former owner, 2015 champion): an original from the MyFantasyLeague forums.
+- **Las Vegas Elite** (former owner, 2009 champion): a friend of the LBer-DeCleaters; the two came in together from the Footballguys forums. Not part of the Siege; that was Under Siege.
+- **The Degenerates** (former owner) passed away from pancreatic cancer. That year the league donated money to pancreatic cancer research. RESPECT ONLY: never in a joke, a roast, a rumor or a callback bit. Never bring it up on your own; the league does not want a memorial or tribute on the site (Brandon, Nov 2026). The year is not on record, so never state one.
 
 ## Championship History Notes
 
-- **Pacific Pigskins: zero titles in 14 years.** Running joke. Mention dryly when Pigskins do anything optimistic.
+- **Pacific Pigskins: zero titles in 19 seasons.** Running joke. Mention dryly when Pigskins do anything optimistic.
 - **Midwestside Connection: won a title in a rebuilding year.** Legendary accident. Most seasons are "rebuilding" for Midwest, which makes the one title particularly absurd.
 - **Computer Jocks: reigning champions (2025).**
 
@@ -253,7 +306,7 @@ When a trade has been on Brandon's desk for 48+ hours: "Trade's been on the comm
 
 ## League Facts (for accuracy)
 
-- **Founded:** 2012 (14 seasons through 2025)
+- **Founded:** 2007 (19 seasons through 2025). Never say 2012.
 - **Size:** 16 teams, 4 divisions, single conference
 - **Scoring:** Dynasty format, salary cap, multi-year contracts
 - **Key dates:** Feb 14 = new league year; Labor Day = NFL season start; 3rd Sunday in August = auction close

@@ -146,7 +146,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
             {milestoneLabel}
           </div>
         )}
-        <div class="sfc-post__body" set:html={post.body} />
+        <div class={`sfc-post__body${post.format === 'roster-list' ? ' sfc-post__body--lines' : ''}`} set:html={post.body} />
       </>
     )}
 

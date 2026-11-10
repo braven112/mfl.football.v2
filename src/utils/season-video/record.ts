@@ -36,6 +36,8 @@ export function pickVideoMime(): string | null {
 export const fileExtension = (mime: string) => (mime.startsWith('video/mp4') ? 'mp4' : 'webm');
 
 const FADE_OUT_S = 1.5;
+/** The music's level under a voiceover (1 = full). */
+export const MUSIC_UNDER_VOICE = 0.3;
 /** Video bitrate for the recorded file. Was 8 Mbps (~40 MB for 40 s). */
 export const VIDEO_BITS_PER_SECOND = 3_000_000;
 
@@ -47,6 +49,12 @@ export interface PlayOptions {
 	/** The music bed, or null for no music. */
 	musicUrl: string | null;
 	record: boolean;
+	/**
+	 * A voiceover clip per scene (an audio URL, or null for none), each started
+	 * as its scene starts. Music ducks under it. Only the NFL week recap
+	 * (/live/weekly-recap) sends one today.
+	 */
+	narration?: readonly (string | null)[];
 	onProgress?: (fraction: number) => void;
 	/** Aborts playback; a recording in progress resolves with null. */
 	signal?: AbortSignal;
@@ -79,7 +87,7 @@ export function resetMusicCache() {
  * `record` is set, otherwise with null when playback ends.
  */
 export async function playStory(opts: PlayOptions): Promise<Blob | null> {
-	const { canvas, scenes, assets, teamName, musicUrl, record, onProgress, signal } = opts;
+	const { canvas, scenes, assets, teamName, musicUrl, record, narration, onProgress, signal } = opts;
 	const ctx = canvas.getContext('2d');
 	if (!ctx) throw new Error('no canvas');
 	const total = storyDuration(scenes);
@@ -89,22 +97,45 @@ export async function playStory(opts: PlayOptions): Promise<Blob | null> {
 	let ac: AudioContext | null = null;
 	let source: AudioBufferSourceNode | null = null;
 	let audioStream: MediaStream | null = null;
-	if (musicUrl) {
+	let dest: MediaStreamAudioDestinationNode | null = null;
+	const voiced = (narration ?? []).some(Boolean);
+	if (musicUrl || voiced) {
 		ac = new AudioContext();
+		if (record) {
+			dest = ac.createMediaStreamDestination();
+			audioStream = dest.stream;
+		}
+	}
+	if (ac && musicUrl) {
 		const buffer = await loadMusic(ac, musicUrl);
 		source = ac.createBufferSource();
 		source.buffer = buffer;
 		const gain = ac.createGain();
 		source.connect(gain);
 		gain.connect(ac.destination);
+		if (dest) gain.connect(dest);
 		const now = ac.currentTime;
-		gain.gain.setValueAtTime(1, now + Math.max(0, total - FADE_OUT_S));
+		// Under a voiceover the bed sits low enough to hear every word.
+		const level = voiced ? MUSIC_UNDER_VOICE : 1;
+		gain.gain.setValueAtTime(level, now);
+		gain.gain.setValueAtTime(level, now + Math.max(0, total - FADE_OUT_S));
 		gain.gain.linearRampToValueAtTime(0.0001, now + total);
-		if (record) {
-			const dest = ac.createMediaStreamDestination();
-			gain.connect(dest);
-			audioStream = dest.stream;
-		}
+	}
+	// Each clip is decoded up front, so it starts on its scene's first frame.
+	const clips: { buffer: AudioBuffer; at: number }[] = [];
+	if (ac && voiced) {
+		let at = 0;
+		const starts = scenes.map((s) => {
+			const t = at;
+			at += s.duration;
+			return t;
+		});
+		const decodedClips = await Promise.all(
+			(narration ?? []).map((url) => (url ? loadMusic(ac!, url).catch(() => null) : Promise.resolve(null))),
+		);
+		decodedClips.forEach((buffer, i) => {
+			if (buffer && i < starts.length) clips.push({ buffer, at: starts[i] });
+		});
 	}
 
 	let recorder: MediaRecorder | null = null;
@@ -127,6 +158,14 @@ export async function playStory(opts: PlayOptions): Promise<Blob | null> {
 	drawFrame(ctx, scenes, 0, assets, teamName);
 	const clock = ac ? () => ac!.currentTime : () => performance.now() / 1000;
 	recorder?.start(1000);
+	const voiceSources = clips.map(({ buffer, at }) => {
+		const node = ac!.createBufferSource();
+		node.buffer = buffer;
+		node.connect(ac!.destination);
+		if (dest) node.connect(dest);
+		node.start(ac!.currentTime + at);
+		return node;
+	});
 	source?.start();
 	const t0 = clock();
 
@@ -142,10 +181,12 @@ export async function playStory(opts: PlayOptions): Promise<Blob | null> {
 		requestAnimationFrame(tick);
 	});
 
-	try {
-		source?.stop();
-	} catch {
-		/* already stopped */
+	for (const node of [source, ...voiceSources]) {
+		try {
+			node?.stop();
+		} catch {
+			/* already stopped */
+		}
 	}
 	const done = recorder
 		? new Promise<Blob | null>((resolve) => {

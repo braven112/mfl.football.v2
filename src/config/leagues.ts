@@ -306,6 +306,12 @@ export interface LeagueDefinition {
    */
   bestBall?: boolean;
   /**
+   * The plan the league bought, which picks the model its AI features call
+   * (src/utils/ai-plan.mjs): `'custom'` (full custom site) runs on Sonnet.
+   * Absent means the League History tier, which runs on Haiku.
+   */
+  plan?: 'history' | 'custom';
+  /**
    * Weeks that run Throwback Week — franchises wear a legacy identity instead
    * of their current one. Absent for a league that doesn't run it, which is
    * every league but TheLeague today.

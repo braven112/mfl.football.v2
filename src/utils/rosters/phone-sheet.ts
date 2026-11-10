@@ -387,7 +387,11 @@ export function buildSalarySheet(facts: RosterSheetFacts, pricing: RosterSheetPr
         state: 'on',
       }]
     : [
-        { id: 'cut-simulate', label: 'Simulate Cut', icon: 'icon-bar-chart', detail: simulationPreview('cut', facts, pricing) },
+        // Cutting is the owner's move alone (user, 2026-11-09): a rival's
+        // player gets Simulate Trade, never Simulate Cut.
+        ...(facts.viewer.isOwnTeam
+          ? [{ id: 'cut-simulate', label: 'Simulate Cut', icon: 'icon-bar-chart', detail: simulationPreview('cut', facts, pricing) }]
+          : []),
         { id: 'trade-simulate', label: 'Simulate Trade', icon: 'icon-bar-chart', detail: simulationPreview('trade', facts, pricing) },
       ];
 
@@ -412,18 +416,22 @@ const MORE_ACTION_IDS: ReadonlyArray<CdmActionId> = [
 
 export function buildQuickActions(facts: RosterSheetFacts): SheetAction[] {
   const out: SheetAction[] = [];
-  // Simulations are for every club's players (user, 2026-09-26): they only
-  // move this page's numbers, and Submit files the viewer's own alone.
+  // Simulate cut is for the viewer's OWN players only (user, 2026-11-09:
+  // "Since I don't own this player, I shouldn't see simulate cut"). It
+  // reverses 2026-09-26's "every club's players". Simulate trade stays in the
+  // kebab for everyone, and an active simulation of any kind keeps its Undo.
   const active = facts.activeActionType;
-  out.push(active
-    ? {
-        id: 'undo-simulation',
-        label: active === 'cut' ? 'Simulated · Undo' : `Simulated ${ACTION_TYPE_LABELS[active] ?? active} · Undo`,
-        icon: 'icon-bar-chart',
-        state: 'on',
-        desc: 'Remove this simulation',
-      }
-    : { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart', desc: 'Track the cap impact locally — no roster change' });
+  if (active) {
+    out.push({
+      id: 'undo-simulation',
+      label: active === 'cut' ? 'Simulated · Undo' : `Simulated ${ACTION_TYPE_LABELS[active] ?? active} · Undo`,
+      icon: 'icon-bar-chart',
+      state: 'on',
+      desc: 'Remove this simulation',
+    });
+  } else if (facts.viewer.isOwnTeam) {
+    out.push({ id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart', desc: 'Track the cap impact locally — no roster change' });
+  }
   // The kebab: the table's ⋮ list, as a menu. The ONE overflow entry point in
   // the hero (it replaced a "More" button that reopened the CDM on top).
   const menu = buildContractMenu(facts);

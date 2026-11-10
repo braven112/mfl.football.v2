@@ -1,0 +1,256 @@
+---
+/**
+ * The NFL week recap — the weekly video for our own social accounts
+ * (Brandon, 2026-11-08). Made and approved here, on a phone: pick the week,
+ * watch it, make the video, share it to the apps or download it, copy the
+ * post text. Facts: /api/nfl-week-recap. Voice: /api/nfl-week-voice.
+ * Storyboard + script: src/utils/season-video/nfl-week.ts.
+ *
+ * OURS ONLY: gated like `/live/analytics` (`canViewSiteInsights`) and not in
+ * the page directory, for the same reason analytics is not — search would
+ * show it to people it refuses. Never linked from the public video maker.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewSiteInsights } from '../../utils/site-insights';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { REGULAR_SEASON_WEEKS } from '../../utils/nfl-week-starts.mjs';
+import { recapWeekFor } from '../../utils/season-video/nfl-week-source';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!authUser) return Astro.redirect(mflLoginUrl('/live/weekly-recap'));
+if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
+
+const season = getCurrentSeasonYear();
+const week = recapWeekFor(season, new Date());
+const weeks = Array.from({ length: REGULAR_SEASON_WEEKS }, (_, i) => i + 1);
+const MUSIC = ['hiphop', 'techno', 'rock', 'country', 'none'];
+---
+
+<MflAppLayout title="Weekly recap — MFL Football" description="Make the weekly NFL fantasy recap video for our social accounts">
+	<section class="mls wr" data-weekly-recap data-season={season}>
+		<a class="mls__back" href="/live">&larr; Live board</a>
+		<h1 class="mls__title">Weekly NFL recap</h1>
+		<p class="mls__lede">The Commish recaps the NFL week in PPR. Watch it, make it, then share it or copy the post text.</p>
+
+		<div class="wr__controls">
+			<label>Week
+				<select data-week>
+					{weeks.map((w) => <option value={w} selected={w === week}>Week {w}</option>)}
+				</select>
+			</label>
+			<label>Music
+				<select data-music>
+					{MUSIC.map((m) => <option value={m} selected={m === 'hiphop'}>{m === 'none' ? 'No music' : m}</option>)}
+				</select>
+			</label>
+			<label class="wr__check"><input type="checkbox" data-voice /> Voiceover (needs ELEVENLABS_API_KEY)</label>
+		</div>
+
+		<p class="mls__lede" data-status>Loading the week…</p>
+
+		<canvas class="wr__canvas" width="1080" height="1920" data-canvas></canvas>
+		<div class="wr__bar" data-progress hidden><span></span></div>
+
+		<div class="wr__actions">
+			<button type="button" class="cta cta--ghost" data-preview disabled>Watch it</button>
+			<button type="button" class="cta cta--primary" data-make disabled>Make the video</button>
+		</div>
+
+		<div class="wr__done" data-done hidden>
+			<button type="button" class="cta cta--primary" data-share hidden>Share to an app</button>
+			<a class="cta cta--ghost" data-download href="#">Download</a>
+		</div>
+
+		<h2 class="mls__title wr__h2">Post text</h2>
+		<div class="wr__copy" data-copy></div>
+	</section>
+</MflAppLayout>
+
+<style>
+	.wr__controls { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 12px 0; align-items: center; }
+	.wr__controls select { margin-left: 6px; }
+	.wr__canvas { display: block; width: 100%; max-width: 360px; aspect-ratio: 9 / 16; height: auto; border-radius: 12px; background: #0b1420; margin: 12px 0; }
+	.wr__bar { max-width: 360px; height: 6px; border-radius: 3px; background: rgba(127, 127, 127, 0.25); overflow: hidden; }
+	.wr__bar span { display: block; height: 100%; width: 0; background: #e8c46a; }
+	.wr__actions, .wr__done { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+	.wr__h2 { font-size: var(--font-size-lg); margin-top: 24px; }
+	.wr__copy { display: grid; gap: 12px; }
+	.wr__copy textarea { width: 100%; min-height: 84px; font: inherit; }
+</style>
+
+<script>
+	import { drawFrame } from '../../utils/season-video/draw';
+	import { loadBrand } from '../../utils/season-video/player';
+	import { fileExtension, playStory } from '../../utils/season-video/record';
+	import { fitScenesToVoice, nflWeekPostCopy, nflWeekVideo, type NflWeekFacts } from '../../utils/season-video/nfl-week';
+	import type { Scene } from '../../utils/season-video/story';
+
+	function init() {
+		// The gate asks a node the router swaps in, never a window global.
+		const root = document.querySelector<HTMLElement>('[data-weekly-recap]');
+		if (!root || root.dataset.init) return;
+		root.dataset.init = '1';
+		const $ = <T extends Element>(sel: string) => root.querySelector(sel) as T;
+		const season = Number(root.dataset.season);
+		const canvas = $<HTMLCanvasElement>('[data-canvas]');
+		const ctx = canvas.getContext('2d')!;
+		const status = $<HTMLElement>('[data-status]');
+		const preview = $<HTMLButtonElement>('[data-preview]');
+		const make = $<HTMLButtonElement>('[data-make]');
+		const progress = $<HTMLElement>('[data-progress]');
+		let facts: NflWeekFacts | null = null;
+		let voiceUrls: (string | null)[] | null = null;
+		let voiceFor = '';
+		let busy = false;
+
+		const assets = async () => {
+			const [mark, wordmark] = await loadBrand();
+			return { team: mark, opponents: new Map(), mark, wordmark };
+		};
+
+		async function load() {
+			facts = null;
+			voiceUrls = null;
+			preview.disabled = make.disabled = true;
+			const week = $<HTMLSelectElement>('[data-week]').value;
+			status.textContent = `Loading week ${week}…`;
+			const res = await fetch(`/api/nfl-week-recap?season=${season}&week=${week}`).catch(() => null);
+			const body = (await res?.json().catch(() => null)) as { facts?: NflWeekFacts; error?: string } | null;
+			if (!body?.facts) {
+				status.textContent = body?.error ?? 'Could not load that week.';
+				return;
+			}
+			facts = body.facts;
+			const bust = facts.bust ? ` Bust: ${facts.bust.name}.` : ' No bust this week.';
+			status.textContent = `Week ${facts.week}: ${facts.booms.map((b) => `${b.position} ${b.name}`).join(', ')}.${bust}`;
+			const { scenes } = nflWeekVideo(facts);
+			drawFrame(ctx, scenes, 1.2, await assets(), 'MFL Football');
+			renderCopy(facts);
+			preview.disabled = make.disabled = false;
+		}
+
+		function renderCopy(f: NflWeekFacts) {
+			const copy = nflWeekPostCopy(f);
+			const box = $<HTMLElement>('[data-copy]');
+			box.replaceChildren(
+				...(
+					[
+						['X', copy.x],
+						['TikTok', copy.tiktok],
+						['YouTube Shorts', copy.youtube],
+					] as const
+				).map(([label, text]) => {
+					const wrap = document.createElement('label');
+					wrap.textContent = label;
+					const area = document.createElement('textarea');
+					area.value = text;
+					const btn = document.createElement('button');
+					btn.type = 'button';
+					btn.className = 'cta-link';
+					btn.textContent = 'Copy';
+					btn.onclick = () => navigator.clipboard?.writeText(area.value).then(() => (btn.textContent = 'Copied'));
+					wrap.append(area, btn);
+					return wrap;
+				}),
+			);
+		}
+
+		/** One clip per card, spoken once per week and kept for every replay. */
+		async function voices(lines: (string | null)[]): Promise<(string | null)[] | null> {
+			const key = JSON.stringify(lines);
+			if (voiceUrls && voiceFor === key) return voiceUrls;
+			status.textContent = 'The Commish is reading his lines…';
+			const urls = await Promise.all(
+				lines.map(async (text) => {
+					if (!text) return null;
+					const res = await fetch('/api/nfl-week-voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).catch(() => null);
+					if (!res?.ok) return null;
+					return URL.createObjectURL(await res.blob());
+				}),
+			);
+			if (!urls.some(Boolean)) {
+				status.textContent = 'No voiceover available (is the ElevenLabs key set?). Making it with music only.';
+				return null;
+			}
+			voiceUrls = urls;
+			voiceFor = key;
+			return urls;
+		}
+
+		async function clipLengths(urls: (string | null)[]): Promise<(number | null)[]> {
+			const ac = new AudioContext();
+			try {
+				return await Promise.all(
+					urls.map(async (u) => (u ? (await ac.decodeAudioData(await (await fetch(u)).arrayBuffer()).catch(() => null))?.duration ?? null : null)),
+				);
+			} finally {
+				await ac.close().catch(() => undefined);
+			}
+		}
+
+		async function run(record: boolean) {
+			if (busy || !facts) return;
+			busy = true;
+			preview.disabled = make.disabled = true;
+			$<HTMLElement>('[data-done]').hidden = true;
+			try {
+				const video = nflWeekVideo(facts);
+				let scenes: Scene[] = video.scenes;
+				let narration: (string | null)[] | undefined;
+				if ($<HTMLInputElement>('[data-voice]').checked) {
+					const urls = await voices(video.voice);
+					if (urls) {
+						scenes = fitScenesToVoice(scenes, await clipLengths(urls));
+						narration = urls;
+					}
+				}
+				const music = $<HTMLSelectElement>('[data-music]').value;
+				progress.hidden = false;
+				status.textContent = record ? 'Recording… keep this tab open.' : 'Playing…';
+				const blob = await playStory({
+					canvas,
+					scenes,
+					assets: await assets(),
+					teamName: 'MFL Football',
+					musicUrl: music !== 'none' ? `/assets/season-video/music/${music}.mp3` : null,
+					narration,
+					record,
+					onProgress: (f) => ((progress.firstElementChild as HTMLElement).style.width = `${Math.round(f * 100)}%`),
+				});
+				status.textContent = record ? 'Done. Share it or download it, then copy the post text.' : 'Looks good? Make the video.';
+				if (blob) offer(blob, facts.week);
+			} catch (err) {
+				status.textContent = (err as Error).message || 'Something went wrong making the video.';
+			} finally {
+				busy = false;
+				progress.hidden = true;
+				preview.disabled = make.disabled = false;
+			}
+		}
+
+		function offer(blob: Blob, week: number) {
+			const name = `nfl-week-${week}-recap.${fileExtension(blob.type)}`;
+			const link = $<HTMLAnchorElement>('[data-download]');
+			if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
+			link.href = URL.createObjectURL(blob);
+			link.download = name;
+			const file = new File([blob], name, { type: blob.type });
+			const share = $<HTMLButtonElement>('[data-share]');
+			share.hidden = !(navigator.canShare?.({ files: [file] }) ?? false);
+			share.onclick = () => navigator.share({ files: [file], title: `Week ${week} recap` }).catch(() => undefined);
+			$<HTMLElement>('[data-done]').hidden = false;
+		}
+
+		$<HTMLSelectElement>('[data-week]').addEventListener('change', load);
+		preview.addEventListener('click', () => run(false));
+		make.addEventListener('click', () => run(true));
+		load();
+	}
+
+	document.addEventListener('astro:page-load', init);
+</script>

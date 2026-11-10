@@ -11,6 +11,7 @@ import { gameStateLabel, gameStateOf, isFinal, points, winSplit } from '../forma
 import { font, useTheme, type Theme } from '../theme';
 import { matchupColors, type MatchupColors } from '../teamColors';
 import { TeamMark } from './TeamMark';
+import { PlayerMetaLine } from './NflTeamStripe';
 
 interface Props {
   /** Team colours ride along when the server sends them (package E). */
@@ -181,11 +182,14 @@ function PlayerRow({
         <Text numberOfLines={1} style={[styles.playerName, { color: bench ? t.muted : t.text }]}>
           {who?.name ?? `Player ${row.id}`}
         </Text>
-        <Text style={[styles.sub, { color: state === 'in-progress' ? t.accentText : t.muted }]}>
-          {who?.position || '—'}
-          {who?.nflTeam && !isDef ? ` · ${who.nflTeam}` : ''}
-          {`  ·  ${gameStateLabel(state)}`}
-        </Text>
+        <PlayerMetaLine
+          style={[styles.sub, { color: state === 'in-progress' ? t.accentText : t.muted }]}
+          parts={[
+            who?.position || '—',
+            who?.nflTeam && !isDef ? { team: who.nflTeam } : null,
+            gameStateLabel(state),
+          ]}
+        />
       </View>
       <View style={styles.playerScore}>
         <Text style={[styles.playerPts, { color: state === 'not-started' ? t.muted : t.text }]}>{fmt(row.live)}</Text>

@@ -86,6 +86,11 @@ const ALLOWLIST: Record<string, string> = {
   'src/utils/player-modal-band.ts': 'player modal band painter',
   'src/utils/pick-reveal.ts': 'draft pick-reveal splash colors',
 
+  // The NFL week recap video's top-scorer cards: two small club-colour bars
+  // beside "QB · BUF" on a fixed dark card, each with a white outline, so no
+  // club colour sits behind a player or carries text.
+  'src/utils/season-video/nfl-week.ts': 'NFL week recap club-colour bars (outlined, on a dark card)',
+
   // Server-rendered OG imagery (dark card, fixed deep-navy ramp).
   'src/utils/schefter-og.ts': 'Schefter OG image background',
 

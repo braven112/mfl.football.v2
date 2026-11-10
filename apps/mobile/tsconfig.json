@@ -3,7 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@mfl/shared-types/*": ["../../packages/shared-types/src/*.ts"]
+      "@mfl/shared-types/*": ["../../packages/shared-types/src/*.ts"],
+      "@mfl/shared-utils/*": ["../../packages/shared-utils/src/*.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "expo-env.d.ts"],

@@ -6,6 +6,7 @@
  */
 import { SHARED_APP_ORIGIN } from '../config/leagues';
 import type { InterestSlug } from '../utils/product-interest';
+import { LEAGUE_PACKAGE_PRICING } from './products';
 
 export const ADDONS_TITLE = 'MFL Add-ons is now MFL Football';
 export const ADDONS_DESCRIPTION =
@@ -88,18 +89,18 @@ export const EXTRAS: Door[] = [
   },
 ];
 
+/**
+ * Only what we sell today (Brandon, 2026-11-08: "we only do custom sites" and
+ * every feature comes with one). League Hub, add-ons, Live scores Pro and
+ * large-league support were folded into the custom site, so they are not
+ * doors of their own here any more.
+ */
 export const PRODUCTS: Door[] = [
   {
     slug: 'league-package',
-    name: 'League Package',
+    name: 'Custom league site',
     who: 'For a league that wants it all handled',
-    body: 'Your own site with every feature we make, custom features built for your league, and priority support.',
-  },
-  {
-    slug: 'league-hub',
-    name: 'League Hub',
-    who: 'For a commissioner who wants a real site',
-    body: 'A branded site on your own domain with a draft hub, an AI league reporter, push alerts and more.',
+    body: `Your own site with every feature we make, including your league’s own standings, salary cap rules and side games. Starts at ${LEAGUE_PACKAGE_PRICING.tiers[0].setup}, first year included.`,
   },
   {
     slug: 'custom-build',
@@ -109,34 +110,16 @@ export const PRODUCTS: Door[] = [
     note: 'Leave your email and we will reach out to hear what you have in mind.',
   },
   {
-    slug: 'add-ons',
-    name: 'League add-ons',
-    who: 'For leagues that play their own way',
-    body: 'Side games, custom standings, prizes and payouts, contracts and the salary cap, and extra seasons of history.',
-  },
-  {
     slug: 'league-history',
     name: 'League History',
     who: 'For any league with a past',
     body: 'Every season back to your first: champions, standings, playoffs, owner pages, rivalries and records.',
   },
   {
-    slug: 'owner-suite',
-    name: 'Live scores Pro',
-    who: 'For any MFL owner',
-    body: 'The Broadcast for your TV, live and projected standings, full boards and game-day alerts.',
-  },
-  {
-    slug: 'large-league',
-    name: 'Large-league support',
-    who: 'For leagues with 32 teams or more',
-    body: 'A site that still works on a phone when your league has 100 teams and several drafts.',
-  },
-  {
     slug: 'contest-package',
     name: 'Contest Package',
     who: 'For organizers running many leagues',
-    body: 'One competition across dozens or hundreds of MFL leagues.',
+    body: 'A custom site for one competition across dozens or hundreds of MFL leagues. Contact us for a quote.',
   },
 ];
 

@@ -1169,6 +1169,48 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
+## Tweet-shaped posts — one-liners, IR moves and roster lists (Nov 2026)
+
+Brandon sent Adam Schefter screenshots asking for variety: not every move
+should be a model-written paragraph. `scripts/lib/schefter-wire-formats.mjs`
+writes three shapes IN CODE, from the move alone
+(`tests/schefter-wire-formats.test.ts`):
+
+- **One-liner** — "Pacific Pigskins released QB Austin Reed." About one
+  ROUTINE move in three (`shouldUseOneLiner`, hashed on timestamp + franchise,
+  never `Math.random`, so a re-scan agrees). Stamped `format: 'one-liner'` and
+  `storyVersion`, so the Transactions page leads its row with it and the
+  backfill does not rewrite it.
+- **IR post** — MFL's `IR` row (`deactivated` = placed, `activated` = back),
+  no longer in the scanner's `SKIP_TYPES`. The injury is printed only from
+  MFL's own `export?TYPE=injuries`, keyed by MFL player id — never a name
+  match against ESPN (`docs/claude/rules/live-scoring.md`: a bad join names
+  the wrong person). "Undisclosed"/"Personal" print nothing. A second
+  placement by the same team on the same league day leads with "Another
+  player added to IR:". IR posts do NOT join the push digest: owners who
+  subscribed to transactions were never pushed IR moves.
+- **Roster list** — "Notable X roster moves today:" with a 🏈 header per kind.
+  A team's routine moves for one LEAGUE-CLOCK day fold into it once they name
+  3+ players across 2+ MFL rows; a later scan the same day EXTENDS the list
+  (same id `sf_roster_<fid>_<yyyymmdd>`, old copy removed, so reactions stay).
+  Each folded pickup/cut keeps its one-liner in `moves[]`, and
+  `expandRosterLists` (src/utils/transaction-stories.ts) spreads them back into
+  per-row stories — a list post must never lead one Transactions row itself.
+
+**Only `tier: 'minor'`, non-`bigDrop` moves are routine.** A standard or
+breaking post (every BBID claim, a $1M+ auction, a big drop) keeps its own
+post and its model story, because that post IS what the AFL's chat lane and
+the big-drop lane send. Folding one into a list would silently stop an alert.
+
+Bodies are plain text like every other story (the feed renders `set:html`, the
+Transactions page renders text, so an entity escape would show on one of
+them). A roster list's line breaks render through `format === 'roster-list'`
+→ `sf-post__body--lines` / `sfc-post__body--lines` (`white-space: pre-line`).
+
+The Transactions page shows the story WITHOUT a bold headline (Brandon picked
+tweet style, Nov 2026). The headline is still written: the widget, front page
+and push digest read it.
+
 ## A first-come-first-served pickup is never free in a salary league
 
 MFL writes **no price** on a `FREE_AGENT` row, but in TheLeague that player

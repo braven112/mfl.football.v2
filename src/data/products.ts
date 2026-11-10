@@ -7,23 +7,25 @@
  * and legal to-dos live in the business plan doc, one tab per product.
  * `tests/product-pages.test.ts` scans this file for the obvious leaks.
  *
- * ORDER IS CHEAPEST FIRST, and it is load-bearing: a product may only build
- * on products earlier in the list (pinned by the same test), so the League
- * Package page can link to everything before it instead of restating it.
+ * ORDER IS LOAD-BEARING: a product may only build on products earlier in the
+ * list (pinned by the same test). The custom site comes first.
  *
  * Shared platform features are described ONCE, in `FEATURES`, and every
  * product lists the ids it includes; the catalog page shows each feature
  * with the products that include it.
  */
 
-export type ProductSlug =
-	| 'owner-suite'
-	| 'league-history'
-	| 'add-ons'
-	| 'large-league'
-	| 'league-hub'
-	| 'contest-package'
-	| 'league-package';
+import { getCurrentSeasonYear } from '../utils/league-year';
+import { nflWeekEndIsoDate, nflWeekStartInstant } from '../utils/nfl-week-starts.mjs';
+
+/**
+ * We sell custom league sites only (Brandon, 2026-11-08). Every feature comes
+ * with one, and the contest version is quoted to order. Seasonal themes
+ * (`add-ons`, the slug its interest counts were recorded under) are sold only
+ * on their own page. League History is sold on its own page
+ * (/history), not here.
+ */
+export type ProductSlug = 'league-package' | 'contest-package' | 'add-ons';
 
 export type FeatureId =
 	| 'live-scoreboard'
@@ -109,6 +111,12 @@ export interface Product {
 	features?: FeatureId[];
 	tiers?: TierTable;
 	sections: ProductSection[];
+	/**
+	 * A time-limited offer shown beside the price table, or null when none is
+	 * running at `now`. A function, not a string, so the page asks at request
+	 * time and the offer ends on its own.
+	 */
+	offer?: (now: Date) => string | null;
 }
 
 export const FEATURES: Feature[] = [
@@ -195,9 +203,10 @@ export const FEATURES: Feature[] = [
 	},
 	{
 		id: 'ai-reporter',
-		name: 'AI league reporter',
-		summary: 'A league insider who breaks every trade and move and writes weekly columns about your league.',
+		name: 'Your league’s own beat reporter',
+		summary: 'Every league gets its own AI beat reporter, and your league names it. It breaks every trade and move and writes weekly columns about your league.',
 		details: [
+			'Your league picks the reporter’s name and voice. It covers only your league, and learns its story: the people, the rivalries and the running jokes.',
 			'Breaking-news posts for trades, signings and cuts, written in a reporter’s voice about your league’s real teams.',
 			'Weekly recaps and feature columns.',
 			'A rumor mill, posted to the site and to your group chat.',
@@ -291,346 +300,24 @@ export const FEATURES: Feature[] = [
 ];
 
 /**
- * Owner Suite Pro's price, in whole dollars. Read by the product page below and
+ * MFL Football Pro's price, in whole dollars. Read by the homepage and
  * by MFL Live's landing (`/live`), so the number a visitor sees is one value.
  */
 export const MFL_LIVE_PRO_PRICE = { season: 24, month: 5 } as const;
-
-const OWNER_SUITE: Product = {
-	slug: 'owner-suite',
-	kind: 'owner',
-	name: 'Owner Suite',
-	price: `Free · Pro $${MFL_LIVE_PRO_PRICE.season}/season`,
-	tagline: 'All your MFL leagues on one live screen.',
-	buyer: 'Any owner in any MyFantasyLeague league',
-	screenshot: shot('live-scoring.webp', 'Live scoreboard: every matchup across your leagues on one screen.'),
-	summary: [
-		'Owner Suite is for the owner, not the league. Sign in with your MyFantasyLeague account and every league you play in shows up on one board, including leagues that do not use any of our products.',
-		'The free tier covers live scores for all your leagues. Pro adds the game-day extras: live and projected standings, the TV broadcast board, close-game alerts, the Game Day Planner and full boards for every league.',
-	],
-	features: ['live-scoreboard', 'league-boards', 'broadcast-board', 'game-day-alerts', 'game-day-planner'],
-	tiers: {
-		heading: 'Free and Pro',
-		columns: ['Free', 'Pro'],
-		rows: [
-			{ label: 'Live scores across all your MFL leagues on one screen', values: ['Yes', 'Yes'] },
-			{ label: 'Final standings for all your leagues on one page', values: ['Yes', 'Yes'] },
-			{ label: 'Live and projected standings, updating as the games play', values: ['No', 'Yes'] },
-			{ label: 'Full-league boards (every matchup, standings)', values: ['1 league', 'All leagues'] },
-			{ label: 'Broadcast board for the TV', values: ['No', 'Yes'] },
-			{ label: 'Close-game and final-score push alerts', values: ['No', 'Yes'] },
-			{ label: 'Game Day Planner', values: ['No', 'Yes'] },
-			{ label: 'Installs to your home screen', values: ['Yes', 'Yes'] },
-		],
-		note: `Pro is $${MFL_LIVE_PRO_PRICE.season}/season or $${MFL_LIVE_PRO_PRICE.month}/month in season. Every owner in a League Hub or League Package league gets Pro at no charge while their league’s plan is active.`,
-	},
-	sections: [
-		{
-			heading: 'How it works',
-			bullets: [
-				'Sign in with your MyFantasyLeague username and password. We read your leagues; we never change anything on MFL you did not ask for.',
-				'Every league on your account is on by default. Switch off any you do not want on the board.',
-				'Nothing to install from an app store: add it to your home screen from the browser.',
-			],
-		},
-		{
-			heading: 'Pricing and renewal',
-			bullets: [
-				`Pro is $${MFL_LIVE_PRO_PRICE.season} for the season, or $${MFL_LIVE_PRO_PRICE.month} a month during the NFL season.`,
-				'The season plan renews on August 1, with an email reminder 30 days before.',
-				'Cancel any time before renewal; the free tier stays.',
-			],
-		},
-	],
-};
-
-const LEAGUE_HISTORY: Product = {
-	slug: 'league-history',
-	kind: 'league',
-	name: 'League History',
-	price: 'Free · Full History $149/year',
-	tagline: 'Every season your league has played, in one place that never forgets.',
-	buyer: 'Any MFL, Sleeper or Yahoo league that wants its history kept',
-	screenshot: shot('afl-trophy-wall.webp', 'A franchise trophy wall: championships, division titles and other honors by season.'),
-	summary: [
-		'League History is a complete record of your league back to its first season: champions, standings, playoffs, rivalries, records and a trophy case for every franchise.',
-		'It is the low-cost way in for a league that is not ready for a full site. It is included in League Hub and League Package at no extra cost, so nothing is lost when a league moves up.',
-	],
-	tiers: {
-		heading: 'Free and Full History',
-		columns: ['Free', 'Full History'],
-		rows: [
-			{ label: 'Champions list, every season', values: ['Yes', 'Yes'] },
-			{ label: 'Trophy case for each franchise', values: ['Champion trophies', 'Every trophy, including custom awards'] },
-			{ label: 'Rebuilt seasons', values: ['Champion and runner-up only', 'Any level of detail'] },
-			{ label: 'Standings, playoffs, owner pages, franchise eras', values: ['No', 'Yes'] },
-			{ label: 'Records, rivalries, division strength', values: ['No', 'Yes'] },
-			{ label: 'Automatic new-season updates', values: ['No', 'Yes'] },
-			{ label: 'Shareable graphics', values: ['Champion card only', 'All'] },
-			{ label: 'Download my league', values: ['Yes', 'Yes'] },
-			{ label: 'Public page, searchable and shareable (can be made private)', values: ['Yes', 'Yes'] },
-			{ label: 'Group chat', values: ['One champion post a year', 'Full history bot with the $49/year add-on'] },
-			{ label: 'Who can start it', values: ['Any league member', 'The commissioner (or whoever claims the league)'] },
-		],
-		note: 'Full History is $149/year. The free page never expires. A lapsed subscription drops back to the free page; nothing is deleted.',
-	},
-	sections: [
-		{
-			heading: 'What Full History includes',
-			bullets: [
-				'Champions, season-by-season standings and playoff results.',
-				'Franchise pages that follow a team through every name and logo change.',
-				'Owner pages that follow a person across every franchise they have held.',
-				'All-time records, head-to-head rivalries with every game listed, and draft history.',
-				'Division strength and playoff performance across the years.',
-				'A trophy case for every franchise.',
-			],
-		},
-		{
-			heading: 'Rebuilt seasons',
-			body: 'Some seasons are on no platform any more. Rebuild them at whatever detail you have, from just a champion up to full weekly scores, by form, spreadsheet paste or screenshot.',
-		},
-		{
-			heading: 'Switching platforms',
-			body: 'A league that moves between platforms keeps one unbroken timeline, with owners and trophies carried across the move.',
-		},
-		{
-			heading: 'Platforms',
-			items: [
-				{ title: 'MyFantasyLeague', price: 'Spring 2027', body: 'Read directly from MFL; every season back to the league’s first.' },
-				{ title: 'Sleeper', price: 'May 2027', body: 'Every season linked back to the league’s first year.' },
-				{ title: 'Yahoo', price: 'July 2027', body: 'The commissioner connects their Yahoo account once.' },
-			],
-		},
-		{
-			heading: 'History chat bot',
-			body: 'A $49/year add-on to Full History: owners ask the group chat who won in 2014 or what the all-time record is between two teams, and the bot answers from your league’s history. GroupMe and Discord first, then Slack.',
-		},
-		{
-			heading: 'Pricing and renewal',
-			bullets: [
-				'$149 a year, the same on every platform. Setup is included.',
-				'Renews July 1, ahead of draft season, with a reminder 30 days before.',
-				'Each finished season is added automatically.',
-				'Moving up to League Hub credits what is left of your current year.',
-			],
-		},
-	],
-};
-
-const ADD_ONS: Product = {
-	slug: 'add-ons',
-	kind: 'addon',
-	name: 'Add-on menu',
-	price: '$500–$2,000 each',
-	tagline: 'The extras a league adds to its site: side games, custom standings, prizes and dynasty tools.',
-	buyer: 'A League Hub or League Package league',
-	screenshot: shot('dead-money-awards.webp', 'The Dead Money Awards: the season’s costliest cuts, ranked team by team.'),
-	summary: [
-		'Add-ons are features a league adds to League Hub. League Package includes about $4,000 of them; anything not on this menu is quoted to order.',
-		'Every add-on is built once and offered to every league, so a feature one league asked for is on this menu for the next.',
-	],
-	features: ['contracts-cap', 'league-books', 'power-rankings'],
-	sections: [
-		{
-			heading: 'The menu',
-			items: [
-				{
-					title: 'Skins or carry-over game',
-					price: '$1,500',
-					body: 'A weekly side game that runs itself. Each week has a score to beat: if exactly one team clears it they win the pot, and if several do it carries over.',
-					bullets: [
-						'A live pot tracker during the games.',
-						'Week-by-week history of every pot.',
-						'Win alerts by push and group chat, and coverage from the league reporter.',
-						'Rules set at kickoff: fixed or changing threshold, pot size, and what happens to a pot still unclaimed at season’s end.',
-					],
-				},
-				{
-					title: 'Custom standings',
-					price: '$1,500',
-					body: 'Standings your league’s way, alongside MFL’s official table.',
-					bullets: [
-						'A league-wide table across every division.',
-						'A week-by-week breakdown of victory points or any points system your league uses.',
-						'Power rankings with an owners’ poll.',
-					],
-				},
-				{
-					title: 'Prizes, awards and trophy history',
-					price: '$1,000',
-					body: 'A winners page for the season and a trophy history for every franchise, fed by side games, division titles and championships.',
-				},
-				{
-					title: 'Prize payouts in the league books',
-					price: '$1,500',
-					body: 'The commissioner’s season payouts written straight into MFL’s league books from the prize table, with spreadsheet import and export and the year-end carry-over.',
-				},
-				{
-					title: 'Contracts and salary cap',
-					price: '$2,000',
-					body: 'The full set of dynasty tools: contracts, extensions, franchise tags, dead money, salary history, projected free agents and cap projections in the trade builder.',
-				},
-				{
-					title: 'Extra seasons of history',
-					price: '$500',
-					body: 'League Hub backfills five seasons of history. This adds every season before that, back to the league’s first.',
-				},
-				{
-					title: 'History chat bot',
-					price: '$49/year',
-					body: 'The group-chat bot that answers questions from your league’s history. Needs Full History, which League Hub includes.',
-				},
-				{
-					title: 'Anything else',
-					price: '$125/hour',
-					body: 'A feature not on this menu, quoted up front before any work starts.',
-				},
-			],
-		},
-		{
-			heading: 'For leagues over 32 teams',
-			body: 'Large-league support is an add-on too, priced by size. It has its own page.',
-		},
-	],
-};
-
-const LARGE_LEAGUE: Product = {
-	slug: 'large-league',
-	kind: 'addon',
-	name: 'Large-league support',
-	price: '$1,500–$3,000 add-on',
-	tagline: 'A site that still works on a phone when your league has 100 teams.',
-	buyer: 'A league over 32 teams, or one that drafts in several separate groups',
-	screenshot: shot('standings-mobile-no-sideways-scroll.webp', 'Standings for a large league on a phone screen, with no sideways scrolling.', { dark: false }),
-	summary: [
-		'Most league sites assume 10 to 14 teams. A 99-team league in nine divisions breaks every one of those screens. Large-league support rebuilds them around your divisions first, so every owner sees their own corner of the league before the whole of it.',
-		'It is an add-on to League Hub and is priced by the league’s size and how many separate drafts it runs. It is also the engine behind the Contest Package, which applies the same idea across many leagues.',
-	],
-	sections: [
-		{
-			heading: 'What it includes',
-			items: [
-				{
-					title: 'Division-first views',
-					body: 'Every page opens on your own division: standings, matchups and scores. The whole league is one tap away.',
-				},
-				{
-					title: 'A league-wide table',
-					body: 'One table ranking every team in the league, next to MFL’s official division standings.',
-				},
-				{
-					title: 'Several drafts at once',
-					body: 'Each division or conference drafts on its own, from its own player pool if your league works that way. The draft hub, draft room and mock draft cover every one of them.',
-				},
-				{
-					title: 'Live scoring built for 100 teams',
-					body: 'Live scoring that leads with your division and your rivals, then the rest of the league.',
-				},
-				{
-					title: 'Tiers and conferences',
-					body: 'Conferences that share a player pool, and tiers with promotion and relegation, if your league uses them.',
-				},
-			],
-		},
-		{
-			heading: 'Pricing',
-			bullets: [
-				'$1,500 to $3,000, quoted from your league’s size and number of separate drafts.',
-				'A one-time add-on; it keeps working at every renewal.',
-			],
-		},
-	],
-};
-
-const LEAGUE_HUB: Product = {
-	slug: 'league-hub',
-	kind: 'league',
-	name: 'League Hub',
-	price: '$2,000/year',
-	tagline: 'A branded site for your league, built from everything the platform already does.',
-	buyer: 'A commissioner who wants a branded site, with no custom work',
-	screenshot: shot('theleague-branded-hero.webp', 'A branded league homepage: featured story, deadlines, standings and the news feed.'),
-	summary: [
-		'League Hub is a complete league site on your own domain, set up in about two weeks. It uses only features that already exist, which keeps the price fixed and the launch fast.',
-		'It includes League History (Full) and Owner Suite Pro for every owner, plus every platform feature below. Leagues that want something built for them step up to League Package.',
-	],
-	buildsOn: ['owner-suite', 'league-history'],
-	features: [
-		'branded-site',
-		'live-scoreboard',
-		'league-boards',
-		'broadcast-board',
-		'game-day-alerts',
-		'game-day-planner',
-		'draft-hub',
-		'ai-reporter',
-		'rules-assistant',
-		'group-chat-bot',
-		'push-notifications',
-		'owner-moves',
-		'power-rankings',
-		'custom-rankings',
-	],
-	sections: [
-		{
-			heading: 'Setup',
-			bullets: [
-				'Your domain, crest, colors and every franchise’s logo, in light and dark.',
-				'Five seasons of history backfilled (more is an add-on).',
-				'Your rulebook loaded into the rules assistant, and the reporter introduced to your league.',
-				'The group chat bot connected to your GroupMe.',
-				'About two weeks from signing to launch.',
-			],
-		},
-		{
-			heading: 'Every year',
-			bullets: [
-				'Hosting, data and AI costs.',
-				'Weekly releases: new features reach your league as they ship.',
-				'Season-long support: replies within one business day in the offseason, same day on game days.',
-				'Owner Suite Pro for every owner, and Full History updated each season.',
-				'The rollover to the next league year.',
-			],
-		},
-		{
-			heading: 'Adding to it',
-			body: 'Any item on the add-on menu can be added to League Hub. Leagues over 32 teams add large-league support.',
-		},
-		{
-			heading: 'Pricing and renewal',
-			bullets: [
-				'$2,000 a year, paid in full at signing.',
-				'Renews July 1, ahead of draft season, with a reminder 30 days before.',
-				'Moving up to League Package credits what is left of your current year.',
-			],
-		},
-	],
-};
 
 const CONTEST_PACKAGE: Product = {
 	slug: 'contest-package',
 	kind: 'contest',
 	name: 'Contest Package',
-	price: '$2,500 setup + $4/team/season',
-	tagline: 'One competition across dozens or hundreds of MFL leagues.',
+	price: 'Contact us for a quote',
+	tagline: 'A custom site for one competition across dozens or hundreds of MFL leagues.',
 	buyer: 'An organizer running one competition across many MFL leagues',
 	summary: [
-		'MFL shows each league on its own. Contest Package adds the view across all of them: one live leaderboard, advancement into a contest-wide playoff, and a branded site for the whole contest.',
-		'It runs on the same engine as large-league support, and every owner in the contest sees their contest standing inside Owner Suite.',
+		'MFL shows each league on its own. Contest Package is a custom site for the whole contest: one live leaderboard, advancement into a contest-wide playoff, and a branded site that ties every league together.',
+		'Every contest is different, so it is quoted to order. Tell us about yours and we will send a price.',
 	],
-	buildsOn: ['owner-suite', 'large-league'],
+	buildsOn: ['league-package'],
 	features: ['live-scoreboard', 'broadcast-board', 'ai-reporter', 'branded-site'],
-	tiers: {
-		heading: 'Pricing by contest size',
-		columns: ['Setup', 'Per team per season', 'Example yearly total'],
-		rows: [
-			{ label: 'Up to 250 teams', values: ['$2,500', '$4', '$3,500 at 250 teams'] },
-			{ label: '251–1,000 teams', values: ['$2,500', '$4', '$6,500 at 1,000 teams'] },
-			{ label: 'Over 1,000 teams', values: ['$2,500', '$3', 'Quoted'] },
-		],
-		note: 'The examples are the first year: setup plus the per-team fee. Setup is charged once; renewal is the per-team fee only.',
-	},
 	sections: [
 		{
 			heading: 'What it includes',
@@ -638,7 +325,7 @@ const CONTEST_PACKAGE: Product = {
 				'A combined, live overall leaderboard across every league in the contest.',
 				'Advancement rules from each league into a contest-wide playoff or finals.',
 				'A contest broadcast board and a contest news feed from the league reporter.',
-				'Each owner’s contest standing inside their Owner Suite.',
+				'Each owner’s contest standing in the live scoring app.',
 				'A branded contest site on your domain.',
 			],
 		},
@@ -647,11 +334,8 @@ const CONTEST_PACKAGE: Product = {
 			body: 'The contest organizer handles all entry fees and prizes. We provide the software and never hold or move money.',
 		},
 		{
-			heading: 'Renewal',
-			bullets: [
-				'Paid in full at signing.',
-				'Renews July 1 at the per-team fee, with a reminder 30 days before.',
-			],
+			heading: 'Pricing',
+			body: 'Quoted for each contest, from its number of leagues and the rules it runs. Contact us to start.',
 		},
 	],
 };
@@ -659,7 +343,7 @@ const CONTEST_PACKAGE: Product = {
 /**
  * League Package pricing (Brandon, 2026-11-04). This is the site's top price,
  * so every other price reads as small beside it. Each tier is priced at 10x or
- * more of its yearly AI cost. A league over 24 teams needs custom work on most
+ * more of its yearly AI cost. A league over 32 teams needs custom work on most
  * pages, so it is quoted rather than listed. The homepage and the product page
  * both read these values.
  */
@@ -672,47 +356,66 @@ export const LEAGUE_PACKAGE_PRICING = {
 	/** One-time setup by league size. */
 	tiers: [
 		{ teams: '16 teams or fewer', setup: '$3,000' },
-		{ teams: '17–24 teams', setup: '$6,000' },
-		{ teams: 'Over 24 teams', setup: 'Custom quote' },
+		{ teams: '17–32 teams', setup: '$6,000' },
+		{ teams: 'Over 32 teams', setup: 'Custom quote' },
 	],
 	/** Yearly renewal by league size; its bands differ from setup's (Brandon, 2026-11-05). */
 	renewals: [
 		{ teams: '16 or fewer', price: '$1,500' },
 		{ teams: '17–32', price: '$2,000' },
-		{ teams: '33–49', price: '$3,000' },
-		{ teams: '50–100', price: '$4,000' },
+		{ teams: '33–100', price: '$2,000 + $29.40 per team over 32' },
 	],
+	/**
+	 * 33–100 teams renew at the 17–32 price plus this much per team over 32, a
+	 * month (Brandon, 2026-11-09): $2.45 × 12 = $29.40 a year, landing on about
+	 * $333/mo ($4,000/yr) at 100 teams. Over 100 is always quoted.
+	 */
+	perTeamOver32Month: 2.45,
 	/** The smallest renewal, for "from" copy. */
 	renewal: '$1,500/year',
 	logoDiscount: '$500',
 } as const;
 
+/**
+ * Sign up during a season and the rest of it is free (Brandon, 2026-11-07).
+ * The setup fee is still paid now and still covers the first FULL season; the
+ * free part is the season already under way. Open from the NFL week 1 kickoff
+ * to the end of week 17, the last fantasy championship week either league
+ * plays, so it disappears by itself and comes back next September.
+ */
+export function leaguePackageSeasonOffer(now: Date = new Date()): string | null {
+	const year = getCurrentSeasonYear(now);
+	const opens = nflWeekStartInstant(year, 1);
+	const closesIso = nflWeekEndIsoDate(year, 17);
+	const nowIso = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+	if (now < opens || nowIso > closesIso) return null;
+	return `Sign up before the ${year} season ends and your site is free for the rest of it. Your setup fee still covers your first full season.`;
+}
+
 const LEAGUE_PACKAGE: Product = {
 	slug: 'league-package',
 	kind: 'league',
 	name: 'League Package',
-	price: `From ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} setup + ${LEAGUE_PACKAGE_PRICING.renewal}`,
+	price: `Starts at ${LEAGUE_PACKAGE_PRICING.tiers[0].setup} for setup and your first year, then ${LEAGUE_PACKAGE_PRICING.renewal}`,
 	tagline: 'The full suite: your league’s site, with features built for how your league plays.',
 	buyer: 'A league that wants custom features built',
 	screenshot: shot('front-office-hub.jpg', 'The front office hub: contracts, cap tools and roster planning in one place.'),
 	summary: [
-		'League Package is everything on the platform, set up and run for your league. It is League Hub with automation, custom work and priority support on top.',
-		'Each product before this one is part of it. Every owner gets Owner Suite Pro, the league gets Full History, and the custom budget comes from the add-on menu or is quoted to order. Large leagues get large-league support.',
+		'League Package is a custom site for your league with everything included: every feature on the platform, set up and run for you, with priority support.',
+		'That covers most league-specific standings, salary cap rules and side games, Full History and Ask the History, and MFL Football Pro for every owner. Anything beyond that is quoted before work starts.',
 	],
-	buildsOn: ['owner-suite', 'league-history', 'add-ons', 'large-league', 'league-hub'],
 	tiers: {
 		heading: 'Pricing by league size',
-		columns: ['Setup', 'Renewal'],
+		columns: ['Setup and first year, starting at', 'Yearly renewal after'],
 		rows: [
 			{ label: '16 teams or fewer', values: ['$3,000', '$1,500/year'] },
-			{ label: '17–24 teams', values: ['$6,000', '$2,000/year'] },
-			{ label: '25–32 teams', values: ['Custom quote', '$2,000/year'] },
-			{ label: '33–49 teams', values: ['Custom quote', '$3,000/year'] },
-			{ label: '50–100 teams', values: ['Custom quote', '$4,000/year'] },
+			{ label: '17–32 teams', values: ['$6,000', '$2,000/year'] },
+			{ label: '33–100 teams', values: ['Custom quote', '$2,000/year + $29.40 per team over 32'] },
 			{ label: 'Over 100 teams', values: ['Custom quote', 'Quoted'] },
 		],
-		note: `Setup is charged once. The renewal pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
+		note: `Setup prices are starting prices, and they include most league-specific standings, salary cap rules and side games. The setup fee also includes your first full season: hosting, automation and support. You pay nothing more until your first renewal, which pays for the automation that runs your league: news, reminders, rules answers, hosting and support. Make your own franchise logos and save ${LEAGUE_PACKAGE_PRICING.logoDiscount} on setup (16 teams or fewer); we send the sizes. Leaving out features lowers the price too; ask for a quote.`,
 	},
+	offer: leaguePackageSeasonOffer,
 	features: [
 		'branded-site',
 		'live-scoreboard',
@@ -728,17 +431,20 @@ const LEAGUE_PACKAGE: Product = {
 		'owner-moves',
 		'power-rankings',
 		'custom-rankings',
+		'contracts-cap',
+		'league-books',
 	],
 	sections: [
 		{
 			heading: 'What’s included',
 			items: [
 				{ title: 'Launch and branding', price: 'Included', body: 'Your domain, logos and colors, light and dark themes, and your league’s history backfilled.' },
-				{ title: 'Everything in League Hub', price: 'Included', body: 'Every platform feature, Full History, and hosting and support for the first year.' },
+				{ title: 'Every platform feature', price: 'Included', body: 'Every feature listed below, Full History and Ask the History, and hosting and support for the first year.' },
 				{ title: 'MFL Football Pro for every owner', price: 'Included', body: 'The live scoring app on every owner’s phone and the live Broadcast on their TV. Worth $24 per owner per season.' },
 				{ title: 'Franchise logos', price: 'Optional', body: `We design every franchise’s logo, or you make your own from our sizes and save ${LEAGUE_PACKAGE_PRICING.logoDiscount}.` },
-				{ title: 'Custom features', price: 'Quoted', body: 'Chosen from the add-on menu or quoted to order, and agreed at the kickoff call.' },
-				{ title: 'Leagues over 24 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
+				{ title: 'Your league’s own rules', price: 'Included', body: 'Most league-specific standings, salary cap rules and side games, agreed at the kickoff call.' },
+				{ title: 'Other custom features', price: 'Quoted', body: 'Anything beyond your standings, cap rules and side games, quoted before work starts.' },
+				{ title: 'Leagues over 32 teams', price: 'Custom quote', body: 'Large-league support and the custom work it takes on most pages, quoted with the package.' },
 				{ title: 'Priority support', price: 'Included', body: 'Your league comes first on game days and in the weekly release.' },
 			],
 		},
@@ -758,23 +464,41 @@ const LEAGUE_PACKAGE: Product = {
 				'Software only: we never collect entry fees, hold funds or pay out prizes.',
 				'You own your league’s name, logos and content. We own the platform and every feature built on it; a feature built for you may be offered to other leagues without your branding.',
 				'The work is what the proposal lists; anything else is quoted before work starts.',
-				'50% at signing, 50% at launch. The first year runs 12 months from launch.',
-				`Renews on July 1 at ${LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}, covering the automation, hosting, support and Owner Suite Pro for every owner. Renewal prices are fixed for the second year.`,
+				'50% at signing, 50% at launch. The setup fee covers your first full season.',
+				`Your first renewal is July 1, before your second full season, at ${LEAGUE_PACKAGE_PRICING.renewals.map((r) => `${r.price} for ${r.teams} teams`).join(', ')}, covering the automation, hosting, support and MFL Football Pro for every owner. Renewal prices are fixed for the second year.`,
 			],
 		},
 	],
 };
 
-/** The lineup, cheapest first. A product may only build on ones before it. */
-export const PRODUCTS: Product[] = [
-	OWNER_SUITE,
-	LEAGUE_HISTORY,
-	ADD_ONS,
-	LARGE_LEAGUE,
-	LEAGUE_HUB,
-	CONTEST_PACKAGE,
-	LEAGUE_PACKAGE,
-];
+const SEASONAL_THEMES: Product = {
+	slug: 'add-ons',
+	kind: 'addon',
+	name: 'Seasonal Themes',
+	price: `${SEASONAL_THEME_PRICE} per theme`,
+	tagline: 'Your site dresses up for Halloween, Christmas or your league’s own big week, then changes back.',
+	buyer: 'A league with a custom site',
+	summary: [
+		`A seasonal theme changes your site’s look on its own for a set window, then changes back when the week is over. Each theme remakes ${SEASONAL_THEME_INCLUDES}.`,
+		'It is the one add-on to a custom site; everything else is included.',
+	],
+	sections: [
+		{
+			heading: 'Pricing',
+			bullets: [`${SEASONAL_THEME_PRICE} per theme, one time.`],
+		},
+	],
+};
+
+/** The lineup: the custom site first. A product may only build on ones before it. */
+export const PRODUCTS: Product[] = [LEAGUE_PACKAGE, CONTEST_PACKAGE];
+
+/**
+ * Sold only on its own service page (/mfl-league-themes), never in the lineup
+ * or on the homepage (Brandon, 2026-11-08). Listed so that page's interest
+ * button still counts on Site Insights.
+ */
+export const OFF_LINEUP_PRODUCTS: Product[] = [SEASONAL_THEMES];
 
 export function findProduct(slug: string): Product | undefined {
 	return PRODUCTS.find((p) => p.slug === slug);

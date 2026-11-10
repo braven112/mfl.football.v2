@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { allPlayRecords, leagueAwards, leagueGroups, leagueWeeks, mflGroups, mflLeagueFacts, type LeagueFacts } from '../src/utils/season-video/league-recap';
+import { allPlayRecords, leagueAwards, recapCards, leagueGroups, leagueWeeks, mflGroups, mflLeagueFacts, type LeagueFacts } from '../src/utils/season-video/league-recap';
 import { leagueStory, MAX_STORY_SECONDS, storyDuration } from '../src/utils/season-video/story';
 import { sleeperLeagueFacts } from '../src/utils/season-video/sleeper-source';
 import { espnLeagueFacts } from '../src/utils/season-video/espn-source';
@@ -117,12 +117,66 @@ describe('season recap awards', () => {
 	});
 });
 
+describe('a team that wins several awards', () => {
+	// Week 1: Alpha has the top score, the best start and the closest game.
+	const awards = leagueAwards(small, 'week', 1);
+	const cards = recapCards(awards);
+	it('gets one combined card naming them all, where its first award was', () => {
+		const combos = cards.filter((c) => c.kind === 'combo');
+		expect(combos).toHaveLength(1);
+		expect(combos[0]).toMatchObject({ teamId: 'a' });
+		expect(combos[0].kind === 'combo' && combos[0].awards.map((a) => a.id)).toEqual(['top-score', 'best-start', 'closest']);
+		expect(cards[0].kind).toBe('combo');
+		expect(cards.filter((c) => c.kind === 'award' && c.award.teamId === 'a')).toHaveLength(0);
+	});
+	it('hands the freed slots to teams that won nothing else, never twice', () => {
+		const mentions = cards.flatMap((c) => (c.kind === 'award' && c.mention ? [c.award] : []));
+		const winners = new Set(awards.map((a) => a.teamId));
+		for (const m of mentions) expect(winners.has(m.teamId)).toBe(false);
+		expect(new Set(mentions.map((m) => m.teamId)).size).toBe(mentions.length);
+		// No team shows on two cards.
+		const shown = cards.map((c) => (c.kind === 'combo' ? c.teamId : c.award.teamId));
+		expect(new Set(shown).size).toBe(shown.length);
+	});
+	it('says honorable or dishonorable, and tells the truth about the team', () => {
+		const top = { id: 'top-score', title: 'Top score', badge: '🔥', pickedId: 'x', teamId: 'x', value: '', tone: 'good' } as const;
+		const low = { ...top, id: 'low-score', title: 'Low score', tone: 'bad' } as const;
+		const cs = recapCards([
+			top,
+			{ ...top, id: 'blowout', title: 'Biggest blowout', alternates: [{ teamId: 'x', value: 'no' }, { teamId: 'y', value: 'Beat Z by 9.00.' }] },
+			low,
+			{ ...low, id: 'unlucky', title: 'Unluckiest loss', alternates: [{ teamId: 'y', value: 'taken' }, { teamId: 'z', value: '80.00 points.' }] },
+		] as never);
+		expect(cs.map((c) => (c.kind === 'combo' ? 'combo' : `${c.award.title}:${c.award.teamId}:${c.award.value}`))).toEqual([
+			'combo',
+			'Biggest blowout · honorable mention:y:Beat Z by 9.00.',
+			'Unluckiest loss · dishonorable mention:z:80.00 points.',
+		]);
+	});
+	it('never folds the champion, and a division runner-up is no mention', () => {
+		const season = leagueAwards({ ...small, championId: 'a' }, 'season', undefined);
+		const cs = recapCards(season);
+		expect(cs.at(-1)).toMatchObject({ kind: 'award', award: { id: 'champion', teamId: 'a' } });
+		expect(cs.some((c) => c.kind === 'award' && c.mention && c.award.id.startsWith('group:'))).toBe(false);
+	});
+	it('is one bigger scene in the video, and the week stays within the bed', () => {
+		const scenes = leagueStory(small, awards, 'trophy', 'week', 1, 'regular');
+		const combo = scenes.find((s) => s.type === 'combo');
+		const award = scenes.find((s) => s.type === 'award');
+		expect(combo).toMatchObject({ name: 'Alpha', kicker: 'Week 1 · 3 awards' });
+		expect(combo && combo.type === 'combo' && combo.items.map((i) => i.title)).toEqual(['Top score', 'Best start', 'Closest game']);
+		expect(combo!.duration).toBeGreaterThan(award!.duration);
+		expect(storyDuration(scenes)).toBeLessThanOrEqual(MAX_STORY_SECONDS + 1e-9);
+	});
+});
+
 describe('league story', () => {
-	it('is a title, one card per award and the end card, within the bed', () => {
+	it('is a title, every award once and the end card, within the bed', () => {
 		const awards = leagueAwards({ ...mfl }, 'season', undefined);
 		const scenes = leagueStory(mfl, awards, 'trophy', 'season', undefined, 'final');
 		expect(scenes[0]).toMatchObject({ type: 'title', headline: ['2025', 'RECAP'], noCrest: true });
-		expect(scenes.filter((s) => s.type === 'award')).toHaveLength(awards.length);
+		const named = scenes.flatMap((s) => (s.type === 'award' && !s.kicker.endsWith('mention') ? [s.kicker.split(' · ')[1]] : s.type === 'combo' ? s.items.map((i) => i.title) : []));
+		expect(named.sort()).toEqual(awards.map((a) => a.title).sort());
 		expect(scenes.at(-1)?.type).toBe('end');
 		expect(storyDuration(scenes)).toBeLessThanOrEqual(MAX_STORY_SECONDS + 1e-9);
 		const champ = scenes.find((s) => s.type === 'award' && s.kicker.endsWith('Champion'));

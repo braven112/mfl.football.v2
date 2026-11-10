@@ -257,7 +257,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
           </div>
         )}
 
-        <div class="sf-post__body" set:html={post.body} />
+        <div class={`sf-post__body${post.format === 'roster-list' ? ' sf-post__body--lines' : ''}`} set:html={post.body} />
 
         {post.analysis && (
           <div class="sf-post__analysis">

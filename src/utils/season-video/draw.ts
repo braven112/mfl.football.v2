@@ -352,6 +352,62 @@ function drawCrown(ctx: Ctx, s: SceneOf<'crown'>, p: number, a: DrawAssets, team
 	paragraph(ctx, s.line, 1110 + lines.length * size * 0.95, 48, pal.muted);
 }
 
+/** A player card with no picture: the score counts up big, the name under it, the badge beside it. */
+function drawPlayer(ctx: Ctx, s: SceneOf<'player'>, p: number) {
+	const pal = s.palette;
+	if (s.effect) drawEffect(ctx, s.effect, p);
+	kicker(ctx, s.kicker, 400, pal.accent);
+	const k = easeOut((p - 0.2) / 1.2);
+	const sc = 0.8 + 0.2 * easeOut(p / 0.5);
+	ctx.save();
+	ctx.translate(CX, 720);
+	ctx.scale(sc, sc);
+	ctx.translate(-CX, -720);
+	display(ctx, (s.points * k).toFixed(1), 820, 400, pal.ink);
+	ctx.restore();
+	font(ctx, 34, 'kicker');
+	centered(ctx, s.unit.toUpperCase(), 900, pal.muted);
+	if (s.badge) {
+		const b = easeOut((p - 0.6) / 0.4);
+		ctx.save();
+		ctx.globalAlpha *= b;
+		ctx.font = `110px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(s.badge, CX, 290 - (1 - b) * 50);
+		ctx.restore();
+	}
+	ctx.save();
+	ctx.globalAlpha *= easeOut((p - 0.35) / 0.4);
+	const name = s.name.toUpperCase();
+	const size = fit(ctx, name, MAX_W, 140, 80, 'display');
+	const lines = ctx.measureText(name).width > MAX_W ? wrap(ctx, name, MAX_W).slice(0, 2) : [name];
+	lines.forEach((l, i) => centered(ctx, l, 1060 + i * size * 0.95, pal.accent));
+	const subY = 1090 + lines.length * size * 0.95;
+	if (s.colors) {
+		// The club's two colours as two upright bars before "QB · BUF": colour, never a logo.
+		font(ctx, 46, 'text');
+		const w = ctx.measureText(s.sub).width;
+		const bar = 14;
+		const gap = 8;
+		const lead = bar * 2 + gap + 22;
+		const x0 = CX - (w + lead) / 2;
+		s.colors.forEach((c, i) => {
+			roundRect(ctx, x0 + i * (bar + gap), subY - 44, bar, 54, 4);
+			ctx.fillStyle = c;
+			ctx.fill();
+			ctx.lineWidth = 2;
+			ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+			ctx.stroke();
+		});
+		ctx.fillStyle = pal.ink;
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(s.sub, x0 + lead, subY);
+	} else paragraph(ctx, s.sub, subY, 46, pal.ink);
+	ctx.restore();
+}
+
 /** A league recap's award: the badge, the team's crest, its name and its numbers. */
 function drawAward(ctx: Ctx, s: SceneOf<'award'>, p: number, a: DrawAssets) {
 	const pal = s.palette;
@@ -377,6 +433,54 @@ function drawAward(ctx: Ctx, s: SceneOf<'award'>, p: number, a: DrawAssets) {
 	const lines = ctx.measureText(name).width > MAX_W ? wrap(ctx, name, MAX_W).slice(0, 2) : [name];
 	lines.forEach((l, i) => centered(ctx, l, 1060 + i * size * 0.95, pal.ink));
 	paragraph(ctx, s.value, 1090 + lines.length * size * 0.95, 48, pal.muted);
+}
+
+/**
+ * One team, several awards: a smaller crest up top, then one row per award
+ * (badge, title, value), each landing in turn.
+ */
+function drawCombo(ctx: Ctx, s: SceneOf<'combo'>, p: number, a: DrawAssets) {
+	const pal = s.palette;
+	kicker(ctx, s.kicker, 300, pal.accent);
+	const cy = 500;
+	const sc = 0.6 + 0.4 * easeOut(p / 0.35);
+	ctx.save();
+	ctx.translate(CX, cy);
+	ctx.scale(sc, sc);
+	ctx.translate(-CX, -cy);
+	crest(ctx, a.logos?.get(s.teamId) ?? null, s.name, CX, cy, 140, pal, pal.accent);
+	ctx.restore();
+	const name = s.name.toUpperCase();
+	const size = fit(ctx, name, MAX_W, 110, 64, 'display');
+	centered(ctx, name, cy + 140 + size * 0.95, pal.ink);
+	const items = s.items.slice(0, 4);
+	const top = cy + 140 + size * 0.95 + 70;
+	const rowH = Math.min(190, (1420 - top) / items.length);
+	items.forEach((it, i) => {
+		const t = easeOut((p - 0.25 - i * 0.12) / 0.25);
+		if (t <= 0) return;
+		const y = top + i * rowH;
+		ctx.save();
+		ctx.globalAlpha *= t;
+		ctx.translate((1 - t) * 60, 0);
+		ctx.font = `72px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(it.badge, CX - MAX_W / 2 + 50, y + 30);
+		const x = CX - MAX_W / 2 + 120;
+		const w = MAX_W - 120;
+		const ts = fit(ctx, it.title.toUpperCase(), w, 40, 24, 'kicker');
+		font(ctx, ts, 'kicker');
+		ctx.fillStyle = pal.accent;
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(it.title.toUpperCase(), x, y + 14);
+		const vs = fit(ctx, it.value, w, 40, 26, 'text');
+		font(ctx, vs, 'text');
+		ctx.fillStyle = pal.muted;
+		ctx.fillText(it.value, x, y + 14 + vs * 1.4);
+		ctx.restore();
+	});
 }
 
 function drawTrade(ctx: Ctx, s: SceneOf<'trade'>, p: number, a: DrawAssets) {
@@ -598,6 +702,12 @@ export function drawFrame(ctx: Ctx, scenes: readonly Scene[], t: number, assets:
 			break;
 		case 'award':
 			drawAward(ctx, scene, p, assets);
+			break;
+		case 'combo':
+			drawCombo(ctx, scene, p, assets);
+			break;
+		case 'player':
+			drawPlayer(ctx, scene, p);
 			break;
 		case 'trade':
 			drawTrade(ctx, scene, p, assets);

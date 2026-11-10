@@ -31,6 +31,7 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'packages/shared-types/**'
+      - 'packages/shared-utils/src/nfl-team-colors.ts'
       - '.github/workflows/mobile-android.yml'
   push:
     # Staging only: a release fast-forwards main to a commit staging already
@@ -39,6 +40,7 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'packages/shared-types/**'
+      - 'packages/shared-utils/src/nfl-team-colors.ts'
       - '.github/workflows/mobile-android.yml'
   workflow_dispatch:
     inputs:

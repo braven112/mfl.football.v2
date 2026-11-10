@@ -424,7 +424,9 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
 
                   {r.story ? (
                     <>
-                      <h3 class="tx-card__headline">{r.story.headline}</h3>
+                      {/* Tweet style (Brandon, Nov 2026): the story IS the card — no bold
+                          headline restating it. The headline stays in the data for the
+                          widget and the front page. */}
                       <p class="tx-card__body">{r.story.body}</p>
                       {r.story.analysis && <p class="tx-card__take"><strong>The take:</strong> {r.story.analysis}</p>}
                       <details class="tx-card__details">
@@ -696,17 +698,17 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
     color: var(--tx-ink-muted);
     font-variant-numeric: tabular-nums;
   }
-  .tx-card__headline {
-    margin: 0 0 0.3rem;
-    font-size: var(--font-size-base, 1rem);
-    line-height: 1.3;
-  }
   .tx-card__body,
   .tx-card__take {
     margin: 0;
     font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.5;
     color: var(--tx-ink-muted);
+  }
+  /* The story is the card's headline now, so it reads at full size and ink. */
+  .tx-card__body {
+    font-size: var(--font-size-base, 1rem);
+    color: var(--tx-ink);
   }
   .tx-card__take { margin-top: 0.4rem; }
   .tx-card__details { margin-top: 0.5rem; }

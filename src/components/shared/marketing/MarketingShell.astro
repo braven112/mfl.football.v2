@@ -39,6 +39,7 @@ const here = canonicalPath;
 				{SERVICES.map((s) => (
 					<a href={s.path} aria-current={s.path === here ? 'page' : undefined}>{s.navLabel}</a>
 				))}
+				<a href="/pricing" aria-current={here === '/pricing' ? 'page' : undefined}>Pricing</a>
 				<a class="sp-top__live" href="/live">Live scores</a>
 			</nav>
 			<div class="sp-top__end">
@@ -54,6 +55,7 @@ const here = canonicalPath;
 			</p>
 			<nav class="sp-foot__links" aria-label="Site">
 				{SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
+				<a href="/pricing">Pricing</a>
 				<a href="/mfl-all-play-standings">Free all-play standings</a>
 				<a href="/live">Live scores</a>
 				<a href="/compare">Compare</a>

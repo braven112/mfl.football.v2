@@ -1,0 +1,342 @@
+---
+/**
+ * Tell us your league's story — the onboarding intake for a new custom-site
+ * league (Brandon, 2026-11-08). One of the three onboarding steps grouped on
+ * /get-started, next to the logo specs and the logo maker.
+ *
+ * Two ways in, both on this page (Brandon: "online form is fine but if people
+ * want to have AI fill it out and send it back that works for me too"):
+ *   - answer the boxes here, or
+ *   - copy the questions into their own ChatGPT / Claude / Gemini, then paste
+ *     what it writes into the one big box.
+ * Either way it POSTs to /api/league-story, and the answers land on
+ * /live/league-stories. The questions live in
+ * src/data/league-story-questions.ts, which also writes the AI prompt.
+ *
+ * INVITE ONLY (Brandon, 2026-11-08: "I don't want random people to fill it
+ * out either. I need to ask them"): the form renders only for a live
+ * `?invite=` token made on /live/league-stories, and the endpoint refuses a
+ * submission without one. Anyone else sees what the step is and how to ask.
+ *
+ * Shared host, no sign-in: a league fills this in before it has a site. The
+ * page keeps an unsent draft in this browser (localStorage, best effort) so a
+ * 30-minute form survives a closed tab.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { STORY_SECTIONS, storyAiPrompt } from '../data/league-story-questions';
+import { MAX_ANSWER_CHARS, MAX_PASTED_CHARS } from '../utils/league-story/submissions';
+import { getInvite } from '../utils/league-story/invites';
+import '../styles/mfl-live.css';
+
+export const prerender = false;
+
+const invite = await getInvite(Astro.url.searchParams.get('invite')).catch(() => null);
+// An invite link is a capability: keep it out of other sites' referrer logs.
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+const aiPrompt = storyAiPrompt();
+const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker', 'Other'];
+---
+
+<MflAppLayout
+  title="Tell us your league's story — MFL Football"
+  description="The onboarding questions for a new custom league site: how your league began, its people, rivalries and traditions."
+>
+  <section class="mls lstory" data-league-story>
+    <a class="mls__back" href="/get-started">&larr; Get started</a>
+    <h1 class="mls__title">Tell us your league&rsquo;s story</h1>
+    <p class="mls__lede">
+      How it started, who the characters are, the final nobody has gotten over. Your site and your league&rsquo;s
+      reporter tell that story back to your league all season.
+    </p>
+    {!invite && (
+      <div class="ui-card lstory__card">
+        <h2 class="lstory__h2">This form is by invitation</h2>
+        <p class="lstory__note">
+          When your league signs up for a custom site, we send your commissioner a private link to this form. If you
+          have one, open it from that email. Lost it, or the link stopped working? Reply to our email and we&rsquo;ll
+          send a new one.
+        </p>
+      </div>
+    )}
+    {invite && (<>
+    <ul class="lstory__tips">
+      <li>About 30 minutes. Short answers are perfect: a name, a year and one sentence.</li>
+      <li>Skip anything that doesn&rsquo;t fit. <strong>&ldquo;We don&rsquo;t have one&rdquo; is a great answer</strong>: it tells the reporter what not to make up.</li>
+      <li>No need to list champions or records. We pull those from your league&rsquo;s platform.</li>
+      <li>Your answers are saved in this browser as you type, so you can come back later.</li>
+    </ul>
+
+    <form class="lstory__form" novalidate data-story-form data-invite={invite.token}>
+      <div class="ui-card lstory__card" role="group" aria-labelledby="ls-about-title">
+        <h2 class="lstory__h2" id="ls-about-title">About your league</h2>
+        <label class="lstory__label" for="ls-league">League name</label>
+        <input id="ls-league" class="lstory__input" name="league" maxlength="120" required autocomplete="organization" value={invite.league} />
+        <label class="lstory__label" for="ls-name">Your name</label>
+        <input id="ls-name" class="lstory__input" name="name" maxlength="120" autocomplete="name" />
+        <label class="lstory__label" for="ls-email">Email, so we can follow up</label>
+        <input id="ls-email" class="lstory__input" name="email" type="email" inputmode="email" maxlength="254" required autocomplete="email" placeholder="you@example.com" />
+        <label class="lstory__label" for="ls-platform">Where your league plays</label>
+        <select id="ls-platform" class="lstory__input" name="platform">
+          <option value="">Choose one</option>
+          {PLATFORMS.map((p) => <option value={p}>{p}</option>)}
+        </select>
+      </div>
+
+      <section class="ui-card lstory__card lstory__ai" aria-labelledby="ls-ai-title">
+        <h2 class="lstory__h2" id="ls-ai-title">Rather have your AI answer it?</h2>
+        <p class="lstory__note">
+          Copy the questions into ChatGPT, Claude or Gemini, along with your constitution or old league chats if you have
+          them. Paste what it writes into the box below, check it over, and send. You can also mix: paste some, type some.
+        </p>
+        <div class="lstory__row">
+          <button type="button" class="cta cta--ghost" data-copy-prompt>Copy the questions</button>
+          <span class="lstory__note" data-copied aria-live="polite"></span>
+        </div>
+        <details class="lstory__prompt">
+          <summary>See the questions as text</summary>
+          <pre data-prompt>{aiPrompt}</pre>
+        </details>
+        <label class="lstory__label" for="ls-pasted">Paste your AI&rsquo;s answers here</label>
+        <textarea id="ls-pasted" class="lstory__input lstory__textarea lstory__textarea--tall" name="pasted" rows="8" maxlength={MAX_PASTED_CHARS}></textarea>
+      </section>
+
+      {
+        STORY_SECTIONS.map((s, si) => (
+          <div class="ui-card lstory__card" role="group" aria-labelledby={`ls-sec-${s.id}`}>
+            <h2 class="lstory__h2" id={`ls-sec-${s.id}`}>
+              {si + 1}. {s.title}
+            </h2>
+            {s.intro && <p class="lstory__note">{s.intro}</p>}
+            {s.questions.map((q) => (
+              <>
+                <label class="lstory__label lstory__q" for={`ls-q-${q.id}`}>
+                  {q.label}
+                </label>
+                {q.hint && <p class="lstory__hint">{q.hint}</p>}
+                <textarea
+                  id={`ls-q-${q.id}`}
+                  class:list={['lstory__input', 'lstory__textarea', { 'lstory__textarea--tall': q.long }]}
+                  data-answer={q.id}
+                  rows={q.long ? 8 : 2}
+                  maxlength={MAX_ANSWER_CHARS}
+                />
+              </>
+            ))}
+          </div>
+        ))
+      }
+
+      <section class="ui-card lstory__card" aria-labelledby="ls-send-title">
+        <h2 class="lstory__h2" id="ls-send-title">Send it</h2>
+        <p class="lstory__note">
+          Have a constitution, logos, trophy photos or chat screenshots? Once you send this, we&rsquo;ll email you back,
+          and you can reply with the files. Then we pull your league&rsquo;s full record and come back with a few
+          follow-up questions.
+        </p>
+        <input class="lstory__honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" data-website />
+        <div class="lstory__row">
+          <button type="submit" class="cta cta--primary" data-send>Send our story</button>
+        </div>
+        <p class="lstory__note" data-status aria-live="polite"></p>
+      </section>
+    </form>
+
+    <div class="ui-card lstory__card lstory__done" data-done hidden>
+      <h2 class="lstory__h2">Thanks. Your story is in.</h2>
+      <p class="lstory__note">
+        We&rsquo;ll email you soon about files and a few follow-up questions. Next, see the
+        <a href="/brand/specs">logo specs</a> or <a href="/team-logo">make a team logo</a>.
+      </p>
+    </div>
+    </>)}
+  </section>
+</MflAppLayout>
+
+<script>
+
+  function init() {
+    document.querySelectorAll<HTMLElement>('[data-league-story]').forEach(setup);
+  }
+
+  function setup(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const form = root.querySelector<HTMLFormElement>('[data-story-form]');
+    if (!form) return; // no invite: nothing to wire
+    // One draft per invite, so two leagues on one computer never share one.
+    const DRAFT_KEY = `league-story:draft:${form.dataset.invite}`;
+    const status = $<HTMLElement>('[data-status]');
+    const fields = () => Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input[name], textarea, select'));
+    const keyOf = (el: Element) => (el as HTMLElement).dataset.answer ?? (el as HTMLInputElement).name;
+
+    // ── the unsent draft: a convenience, so every read and write may fail ──
+    try {
+      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Record<string, string> | null;
+      if (saved) for (const el of fields()) if (keyOf(el) !== 'website' && typeof saved[keyOf(el)] === 'string') el.value = saved[keyOf(el)];
+    } catch {
+      /* no storage here: the form still works */
+    }
+    let timer: number | undefined;
+    const saveDraft = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        try {
+          const draft: Record<string, string> = {};
+          for (const el of fields()) if (keyOf(el) !== 'website' && el.value) draft[keyOf(el)] = el.value;
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch {
+          /* ignore */
+        }
+      }, 400);
+    };
+    form.addEventListener('input', saveDraft);
+
+    $('[data-copy-prompt]').addEventListener('click', () => {
+      const text = $('[data-prompt]').textContent ?? '';
+      const done = (msg: string) => ($('[data-copied]').textContent = msg);
+      navigator.clipboard?.writeText(text).then(
+        () => done('Copied. Paste it into your AI.'),
+        () => done('Open “See the questions as text” and copy them.'),
+      ) ?? done('Open “See the questions as text” and copy them.');
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value.trim() ?? '';
+      const answers: Record<string, string> = {};
+      form.querySelectorAll<HTMLTextAreaElement>('[data-answer]').forEach((t) => {
+        if (t.value.trim()) answers[t.dataset.answer!] = t.value.trim();
+      });
+      const body = {
+        invite: form.dataset.invite,
+        league: value('league'),
+        name: value('name'),
+        email: value('email'),
+        platform: value('platform'),
+        pasted: value('pasted'),
+        answers,
+        website: $<HTMLInputElement>('[data-website]').value,
+      };
+      if (body.league.length < 2) return void ((status.textContent = 'Add your league’s name first.'), $<HTMLInputElement>('#ls-league').focus());
+      if (!body.email) return void ((status.textContent = 'Add an email so we can follow up.'), $<HTMLInputElement>('#ls-email').focus());
+      if (!body.pasted && Object.keys(answers).length === 0) return void (status.textContent = 'Answer a few questions, or paste your AI’s answers, first.');
+      const send = $<HTMLButtonElement>('[data-send]');
+      send.disabled = true;
+      status.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/league-story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const out = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+        if (!res.ok || !out.ok) {
+          status.textContent = out.message ?? 'We couldn’t send that just now. Your answers are still here, so try again in a bit.';
+          send.disabled = false;
+          return;
+        }
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          /* ignore */
+        }
+        form.hidden = true;
+        const done = $<HTMLElement>('[data-done]');
+        done.hidden = false;
+        done.scrollIntoView({ block: 'start' });
+      } catch {
+        status.textContent = 'We couldn’t reach the site. Your answers are still here, so try again in a bit.';
+        send.disabled = false;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', init);
+  init();
+</script>
+
+<style>
+  .lstory {
+    max-width: 46rem;
+  }
+  .lstory__tips {
+    margin: 0 0 1.25rem;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.35rem;
+    color: var(--color-text-secondary);
+  }
+  .lstory__form {
+    display: grid;
+    gap: 1rem;
+  }
+  .lstory__card {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 1rem;
+    min-width: 0;
+  }
+  .lstory__h2 {
+    margin: 0 0 0.25rem;
+    padding: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--page-text);
+  }
+  .lstory__label {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--page-text);
+  }
+  .lstory__hint,
+  .lstory__note {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+  .lstory__input {
+    font: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-3);
+    color: var(--page-text);
+  }
+  .lstory__textarea {
+    resize: vertical;
+    min-height: 3.2rem;
+  }
+  .lstory__textarea--tall {
+    min-height: 10rem;
+  }
+  .lstory__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .lstory__prompt summary {
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+  .lstory__prompt pre {
+    white-space: pre-wrap;
+    font-size: var(--font-size-xs);
+    max-height: 18rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: var(--color-surface-3);
+    color: var(--page-text);
+  }
+  .lstory__honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+</style>

@@ -10,13 +10,15 @@
  * Separate from Roger on purpose: Roger answers from the Constitution only
  * (Brandon, 2026-10-22); this answers from the game record only.
  *
- * Sonnet, not Haiku (Brandon, 2026-10-25: "okay with using a slightly better
- * model for this"): turning "started 9-1 with fewer points" into the right
- * window and sort is the hard part, and a wrong query is a confident wrong
- * answer. Sonnet 5.5 always thinks, so tool_choice stays `auto` (a forced tool
- * is refused while thinking) and effort is set instead.
+ * The model follows the league's plan (src/utils/ai-plan.mjs, Brandon
+ * 2026-11-09): Sonnet for full custom sites, Haiku for the League History
+ * tier and the signed-out demo. Both think by default, so tool_choice stays
+ * `auto` (a forced tool is refused while thinking) and effort is set instead.
+ * Every call tallies its token usage, so the endpoint can record what each
+ * question really cost on each model.
  */
-import { SONNET_MODEL, responseText } from '../claude-models.mjs';
+import { responseText } from '../claude-models.mjs';
+import { addUsage, aiModelForLeague, emptyUsage, usageCost } from '../ai-plan.mjs';
 import { getLeagueBySlug } from '../../config/leagues';
 import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
@@ -83,6 +85,18 @@ export interface AskResult {
   asOf: string;
   /** Record Book boards that hold the record the answer is about. */
   records: AskRecordLink[];
+}
+
+/** What one question spent: tokens summed over every round, and their price. Never sent to the browser. */
+export interface AskUsage {
+  model: string;
+  rounds: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+  /** US dollars; null for a model with no price on file. */
+  costUsd: number | null;
 }
 
 export interface AskData {
@@ -362,8 +376,16 @@ export async function askHistory(
   leagueSlug: string,
   data: AskData,
   question: string,
-  { client, turns = [], asker = null }: { client?: AnthropicLike; turns?: AskTurn[]; asker?: AskAsker | null } = {},
+  {
+    client,
+    turns = [],
+    asker = null,
+    model = aiModelForLeague(leagueSlug),
+    onUsage,
+  }: { client?: AnthropicLike; turns?: AskTurn[]; asker?: AskAsker | null; model?: string; onUsage?: (usage: AskUsage) => void } = {},
 ): Promise<AskResult> {
+  const tally = emptyUsage(model);
+  const report = () => onUsage?.({ ...tally, costUsd: usageCost(tally) });
   const ds = data.history;
   let anthropic = client;
   if (!anthropic) {
@@ -382,17 +404,19 @@ export async function askHistory(
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     const response = await anthropic.messages.create({
-      model: SONNET_MODEL,
+      model,
       max_tokens: 6000,
       output_config: { effort: 'medium' },
       system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions), cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
     });
+    addUsage(tally, response?.usage);
 
     const uses: any[] = (response?.content ?? []).filter((b: any) => b?.type === 'tool_use');
     const final = uses.find((u) => u.name === ANSWER_TOOL.name);
     if (final) {
+      report();
       const show = Number(final.input?.show);
       return {
         answer: String(final.input?.answer ?? '').trim(),
@@ -407,7 +431,10 @@ export async function askHistory(
     if (!uses.length) {
       // Answered in plain text: keep it, with the last table as its receipt.
       const text = responseText(response).trim();
-      if (text) return { answer: text, headline: null, followUps: [], table: results.at(-1) ?? null, steps, asOf, records: [] };
+      if (text) {
+        report();
+        return { answer: text, headline: null, followUps: [], table: results.at(-1) ?? null, steps, asOf, records: [] };
+      }
       break;
     }
 
@@ -446,5 +473,6 @@ export async function askHistory(
       }),
     });
   }
+  report();
   throw new Error('No answer after the maximum number of rounds');
 }

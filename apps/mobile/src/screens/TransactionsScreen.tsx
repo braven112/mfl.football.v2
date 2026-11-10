@@ -11,6 +11,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { apiGet, SignedOutError } from '../api';
 import { useSession } from '../session-context';
 import { font, useTheme, type Theme } from '../theme';
+import { PlayerMetaLine } from '../components/NflTeamStripe';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Transactions'>;
 
@@ -259,17 +260,24 @@ function TradeSide({ side, other, t }: { side: MflLiveAppTxTradeSide; other: Mfl
 }
 
 function PlayerLine({ sign, player, t, tone }: { sign: string; player: MflLiveAppTxPlayer; t: Theme; tone: string }) {
-  const meta = [player.position, player.nflTeam].filter(Boolean).join(' · ');
   return (
-    <Text style={[styles.player, { color: t.text }]}>
-      <Text style={{ color: tone }}>{sign} </Text>
-      {player.name}
-      {meta ? <Text style={{ color: t.muted }}>{`  ${meta}`}</Text> : null}
-    </Text>
+    <View style={styles.playerLine}>
+      <Text style={[styles.player, styles.playerName, { color: t.text }]} numberOfLines={1}>
+        <Text style={{ color: tone }}>{sign} </Text>
+        {player.name}
+        {'  '}
+      </Text>
+      <PlayerMetaLine
+        style={[styles.player, { color: t.muted }]}
+        parts={[player.position, player.nflTeam ? { team: player.nflTeam } : null]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  playerLine: { flexDirection: 'row', alignItems: 'center' },
+  playerName: { flexShrink: 1 },
   screen: { flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   chip: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },

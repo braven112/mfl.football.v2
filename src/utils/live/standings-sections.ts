@@ -31,6 +31,7 @@ import type {
 } from '../../types/live';
 import { allPlayWeek, resultOf } from '../game-results.mjs';
 import { madSeeds } from '../mad-standings';
+import { NFL_GAME_SECONDS } from '../live-win-probability';
 import {
   hasStarted,
   isMatchupFinal,
@@ -59,6 +60,14 @@ function withZones(rows: ProjectedStandingsRow[], section: LiveStandingsSection)
   return rows.map((row, i) => ({ ...row, zone: section.zones?.[i] ?? null }));
 }
 
+/** One side has played: points scored, or a starter's game in progress. */
+function sideHasStarted(side: LiveMatchup['sides'][number]): boolean {
+  return (
+    side.live !== 0 ||
+    side.players.some((p) => p.secondsRemaining > 0 && p.secondsRemaining < NFL_GAME_SECONDS)
+  );
+}
+
 /**
  * Each franchise's score this week, once — or null when the view has nothing
  * to add.
@@ -66,10 +75,13 @@ function withZones(rows: ProjectedStandingsRow[], section: LiveStandingsSection)
  * ONCE, not per matchup: an AFL doubleheader puts a franchise in two matchups
  * with the same score, and all-play compares weekly scores, not games.
  *
- * Live adds nothing until a game has started anywhere (an unplayed week is a
- * board of zeros). Once one has, every franchise takes its score as it
- * stands, zero included — "if every game ended right now" — and
- * `allPlayWeek` already treats a week where nobody has scored as unplayed.
+ * Live counts only a franchise that has started: points on the board, or a
+ * starter whose game is in progress — the per-side form of `hasStarted`.
+ * Taking every score "as it stands, zero included" read Thursday night's
+ * board as eleven AFL teams tied 0-0 with each other and losing to the few
+ * who had played, so a 168-28 all-play record showed as 168-28-11. A team
+ * yet to play has no result this week, exactly as an unstarted head-to-head
+ * matchup has none. Projected counts everyone: it is the week as projected.
  */
 export function weekScores(
   matchups: readonly LiveMatchup[],
@@ -82,6 +94,7 @@ export function weekScores(
     const asLive = mode === 'live' || matchup.noProjections === true;
     for (const side of matchup.sides) {
       if (scores.has(side.franchiseId)) continue;
+      if (asLive && !sideHasStarted(side)) continue;
       scores.set(side.franchiseId, asLive ? side.live : side.projectedFinal);
     }
   }
