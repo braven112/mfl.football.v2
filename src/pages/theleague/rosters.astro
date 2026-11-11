@@ -4785,6 +4785,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     getCapPercent as getCapPercentCore,
     calculateCapChargesWithActions,
     calculateBucketCaps as calculateBucketCapsCore,
+    calculateBucketCapsForYear as calculateBucketCapsForYearCore,
     calculatePositionCaps as calculatePositionCapsCore,
     calculateCapEfficiency as calculateCapEfficiencyCore,
     calculateContractYearsMeta as calculateContractYearsMetaCore,
@@ -6773,6 +6774,54 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       return year ? `${year} salary` : 'salary';
     };
 
+    /** What updateView last computed for the cap surfaces, so a sort can repaint them. */
+    let capSurfaceCtx: {
+      rows: any[];
+      /** Per salary year, players + dead money. */
+      capCharges: number[];
+      deadMoney: number[];
+      capLimit: number;
+      /** This league year's rows (the phone cap card never shows a past season). */
+      capRows: any[];
+      simState: Parameters<typeof renderSimSurfaces>[0];
+    } | null = null;
+
+    /**
+     * The cap surfaces outside the table follow the sorted salary year: the
+     * Cap Subtotals card, the header's cap space and the phone cap card. Sorted
+     * by anything else (or this year) they show this year, as before.
+     */
+    const paintCapSurfacesForYear = (yearIndex: number) => {
+      const ctx = capSurfaceCtx;
+      if (!ctx) return;
+      const year = yearIndex > 0 ? tableYears()[yearIndex] : undefined;
+      const space = ctx.capLimit - (ctx.capCharges[yearIndex] ?? 0);
+
+      setCapSubtotals(calculateBucketCapsForYear(ctx.rows, yearIndex), ctx.deadMoney[yearIndex] ?? 0, space);
+      const subtotalsTitle = document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] .chart-card--sub h3');
+      if (subtotalsTitle) subtotalsTitle.textContent = year ? `Cap Subtotals (${year})` : 'Cap Subtotals (Current Season)';
+
+      // The header's cap space is the table's Cap Space cell, recomputed with
+      // every simulated cut / extension / tag, so the two can never disagree.
+      // Only for the season the header is about — a historical season in the
+      // table must not overwrite this year's number on the plate.
+      if (currentSeason === defaultSeason) {
+        const headerCapCell = headerTeamSlot?.querySelector<HTMLElement>('[data-rhdr-stat="cap-space"]');
+        if (headerCapCell) {
+          headerCapCell.textContent = _capSpaceFmt.format(space);
+          const label = headerCapCell.nextSibling;
+          if (label && label.nodeType === Node.TEXT_NODE) label.textContent = year ? ` ${year} cap space` : ' Cap space';
+        }
+      }
+
+      renderSimSurfaces({
+        ...ctx.simState,
+        cardYearIndex: yearIndex,
+        buckets:
+          yearIndex > 0 ? calculateBucketCapsForYear(ctx.capRows, yearIndex) : ctx.simState.buckets,
+      });
+    };
+
     /**
      * The phone's totals (Dead Money / Total Salary / Salary Cap / Cap Space)
      * show ONE year's column. Sorted by a future salary year, that is the
@@ -6820,6 +6869,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
+      // Painted ahead of the empty-roster return: a club with no rows still has a cap.
+      paintCapSurfacesForYear(/^salary_\d+$/.test(currentSortKey) ? Number(currentSortKey.slice('salary_'.length)) : 0);
       if (!rows.length) {
         rosterTableBody.innerHTML = `<tr><td colspan="${6 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
         return;
@@ -7335,6 +7386,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       });
 
     const calculateBucketCaps = (rows = []) => calculateBucketCapsCore(rows, capInclusion);
+
+    /** A bucket split of `calculateCapCharges` for one salary year (0 = this year's displayed view). */
+    const calculateBucketCapsForYear = (rows = [], yearIndex = 0) =>
+      calculateBucketCapsForYearCore(rows, yearIndex, {
+        salaryYears,
+        capInclusion,
+        contractActions,
+        localDeclarations,
+        declarationsByPlayer,
+      });
 
     const calculatePositionCaps = (rows = []) => calculatePositionCapsCore(rows, capInclusion);
 
@@ -10049,8 +10110,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         playersNextYear,
         lastContractYear
       );
-      const bucketCapsCurrent = calculateBucketCaps(rows);
-      setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
       // The header follows `currentTeam` from HERE, not from the click
       // handler, because the click is not the only thing that moves it: the
       // hidden #rosterTeamSelect, a season change and the parity harness all
@@ -10062,19 +10121,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // Scroll the switcher to the viewed club's crest if it is off-screen
       // (phones); a crest the owner just tapped is visible, so this no-ops.
       revealActiveTeamCrest(rosterHeader);
-      // The header's cap space is the table's Cap Space cell, recomputed with
-      // every simulated cut / extension / tag, so the two can never disagree.
-      // Only for the season the header is about — a historical season in the
-      // table must not overwrite this year's number on the plate.
-      if (currentSeason === defaultSeason) {
-        const headerCapCell = headerTeamSlot?.querySelector<HTMLElement>('[data-rhdr-stat="cap-space"]');
-        if (headerCapCell) headerCapCell.textContent = _capSpaceFmt.format(capLimitForSeason - capCharge);
-      }
       lastRenderedRows = rows;
-      // Keep the active sort (and All players) across a team switch or a
-      // simulated move; `rows` arrive in the default order.
-      renderTableRows(currentSortKey === 'position' ? rows : sortWithinGroups(rows, currentSortKey, currentSortDir));
-
       // The phone cap card, sim bar and Cap by year sheet (hidden on desktop).
       // Painted from THIS pass's numbers plus an unsimulated baseline computed
       // here too — never read back from a DOM cell — so they cannot disagree
@@ -10107,27 +10154,39 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           localDeclarations,
           declarationsByPlayer,
         });
-      renderSimSurfaces({
-        root: document.querySelector('.roster-page[data-league="theleague"]') ?? document,
-        actions: contractActions,
-        moves: summarizeSimMoves({
+      capSurfaceCtx = {
+        rows,
+        capCharges: capChargesWithDead,
+        deadMoney,
+        capLimit: capLimitForSeason,
+        capRows,
+        simState: {
+          root: document.querySelector('.roster-page[data-league="theleague"]') ?? document,
           actions: contractActions,
-          baseRows: simBaseRows,
-          baseDead: simBaseDead,
-          years: salaryYears,
-          chargesFor: simChargesFor,
-        }),
-        capByYear: buildCapByYear({
-          years: salaryYears,
-          capLimit: capSeasonData ? Number(capSeasonData.metadata?.capLimit ?? capLimit ?? 0) : capLimitForSeason,
-          charges: capSeasonData ? calculateCapCharges(capRows) : capCharges,
-          dead: capDead,
-          baseCharges: simChargesFor(simBaseRows, {}),
-          baseDead: simBaseDead,
-        }),
-        // A simulated cut or trade leaves the roster, so its salary leaves the bar.
-        buckets: calculateBucketCaps(withoutSimRemoved(capRows, contractActions)),
-      });
+          moves: summarizeSimMoves({
+            actions: contractActions,
+            baseRows: simBaseRows,
+            baseDead: simBaseDead,
+            years: salaryYears,
+            chargesFor: simChargesFor,
+          }),
+          capByYear: buildCapByYear({
+            years: salaryYears,
+            capLimit: capSeasonData ? Number(capSeasonData.metadata?.capLimit ?? capLimit ?? 0) : capLimitForSeason,
+            charges: capSeasonData ? calculateCapCharges(capRows) : capCharges,
+            dead: capDead,
+            baseCharges: simChargesFor(simBaseRows, {}),
+            baseDead: simBaseDead,
+          }),
+          // A simulated cut or trade leaves the roster, so its salary leaves the bar.
+          buckets: calculateBucketCaps(withoutSimRemoved(capRows, contractActions)),
+        },
+      };
+
+      // Keep the active sort (and All players) across a team switch or a
+      // simulated move; `rows` arrive in the default order. Rendering the rows
+      // also paints the cap surfaces above for the sorted salary year.
+      renderTableRows(currentSortKey === 'position' ? rows : sortWithinGroups(rows, currentSortKey, currentSortDir));
 
       // Cutdown Plan panel tracks every view change (team switch, roster
       // move, demo enter/exit) — it hides itself off the owner's own team.

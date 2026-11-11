@@ -312,6 +312,42 @@ export const calculateBucketCaps = (
     { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } },
   );
 
+/**
+ * Cap totals and headcounts per bucket for ONE salary year.
+ *
+ * Year 0 is `calculateBucketCaps` unchanged. A later year splits exactly what
+ * `calculateCapChargesWithActions` charges that year (escalation, future-year
+ * cap percentages, declarations, pending moves) by the row's `displayTag`, so
+ * the buckets sum to the same total the roster's Total Salary row shows. A
+ * player counts toward a bucket only if he carries a charge that year.
+ */
+export const calculateBucketCapsForYear = (
+  rows: (CapPlayer & { id?: string | number; status?: string | null })[] = [],
+  yearIndex: number,
+  options: CapChargeOptions = {},
+): BucketCaps => {
+  if (!(yearIndex > 0)) return calculateBucketCaps(rows, options.capInclusion);
+  const actions = options.contractActions ?? {};
+  const actionsFor = (ids: Set<string>) =>
+    Object.fromEntries(Object.entries(actions).filter(([id]) => ids.has(id)));
+  const chargeFor = (group: typeof rows) =>
+    calculateCapChargesWithActions(group, {
+      ...options,
+      contractActions: actionsFor(new Set(group.map((p) => String(p.id ?? '')))),
+    })[yearIndex] ?? 0;
+  const bucketOf = (player: CapPlayer) => {
+    const tag = String(player.displayTag ?? 'active').toUpperCase();
+    return tag === 'PRACTICE' ? 'practice' : tag === 'INJURED' ? 'injured' : 'active';
+  };
+  const result: BucketCaps = { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } };
+  (['active', 'practice', 'injured'] as const).forEach((bucket) => {
+    const group = rows.filter((p) => bucketOf(p) === bucket);
+    result[bucket] = chargeFor(group);
+    result.counts[bucket] = group.filter((p) => chargeFor([p]) > 0).length;
+  });
+  return result;
+};
+
 /** Current-year cap spend per position. Expired contracts are excluded. */
 export const calculatePositionCaps = (
   rows: (CapPlayer & { position?: string | null; status?: string | null })[] = [],
