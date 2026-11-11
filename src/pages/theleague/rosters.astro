@@ -2037,7 +2037,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               <td data-column="actions" class="gm-col"></td>
               <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`} class="gm-col">
+                <td data-column={`dm${index + 1}`} class:list={["gm-col", index === 0 && "roster-totals__phone-year"]} id={`dmTotal${index + 1}`}>
                   {formatCurrency(initialDeadMoney[index] ?? 0)}
                 </td>
               ))}
@@ -2048,7 +2048,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               <td data-column="actions" class="gm-col"></td>
               <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`} class="gm-col">
+                <td data-column={`year${index + 1}`} class:list={["gm-col", index === 0 && "roster-totals__phone-year"]} id={`yearTotal${index + 1}`}>
                   {formatCurrency((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))}
                 </td>
               ))}
@@ -2059,7 +2059,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               <td data-column="actions" class="gm-col"></td>
               <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`} class="gm-col">
+                <td data-column={`cap${index + 1}`} class:list={["gm-col", index === 0 && "roster-totals__phone-year"]} id={`capLimit${index + 1}`}>
                   {formatCurrency(initialCapLimit)}
                 </td>
               ))}
@@ -2070,7 +2070,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               <td data-column="actions" class="gm-col"></td>
               <td data-column="years" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`} class="gm-col">
+                <td data-column={`space${index + 1}`} class:list={["gm-col", index === 0 && "roster-totals__phone-year"]} id={`capSpaceTotal${index + 1}`}>
                   {formatCurrency(
                     (index === 0 ? initialCapLimit : initialCapLimit) -
                       ((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))
@@ -6773,6 +6773,31 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       return year ? `${year} salary` : 'salary';
     };
 
+    /**
+     * The phone's totals (Dead Money / Total Salary / Salary Cap / Cap Space)
+     * show ONE year's column. Sorted by a future salary year, that is the
+     * sorted year, labelled with it, so the totals agree with the band and
+     * card figures above them. Driven by index, so it holds for any number
+     * of salary years (rosters-mobile.css § Totals).
+     */
+    const paintPhoneTotalsYear = (yearIndex: number) => {
+      const tfoot = rosterTableBody?.closest('table')?.querySelector('tfoot');
+      if (!tfoot) return;
+      const year = yearIndex > 0 ? tableYears()[yearIndex] : undefined;
+      tfoot.querySelectorAll<HTMLTableRowElement>('tr.roster-totals').forEach((row) => {
+        const label = row.querySelector<HTMLElement>('td[data-column="player"]');
+        if (label) {
+          if (year) label.dataset.year = String(year);
+          else delete label.dataset.year;
+        }
+        // Cells after the label/rank/actions/years columns are one per salary year.
+        const yearCells = Array.from(row.querySelectorAll<HTMLElement>('td')).filter((td) =>
+          /^(dm|year|cap|space)\d+$/.test(td.dataset.column ?? ''),
+        );
+        yearCells.forEach((td, index) => td.classList.toggle('roster-totals__phone-year', index === yearIndex));
+      });
+    };
+
     /** The header row (or '') to print ahead of row `index`, in Grouped. */
     const buildGroupHeaders = (rows: any[]) => {
       const counts = countGroups(rows);
@@ -6817,6 +6842,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const salaryYearIndex = isSalaryYearSort ? Number(currentSortKey.slice('salary_'.length)) : 0;
       if (salaryYearIndex > 0) rosterTableBody.dataset.salaryYear = String(salaryYearIndex + 1);
       else delete rosterTableBody.dataset.salaryYear;
+      paintPhoneTotalsYear(salaryYearIndex);
       // Coach's corner (Proj) follows a stat sort the same way.
       const slotCol = sortSlotColumn(currentSortKey);
       if (slotCol) rosterTableBody.dataset.sortCol = slotCol;

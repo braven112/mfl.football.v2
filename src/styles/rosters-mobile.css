@@ -625,13 +625,17 @@
     border: 0 !important;
   }
 
+  /* One year's column per line: this year, or the salary year the table is
+     sorted by (the page moves .roster-totals__phone-year, any year count). */
   .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='player'],
-  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='dm1'],
-  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='year1'],
-  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='cap1'],
-  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='space1'] {
+  .roster-page[data-league='theleague'] .roster-table tfoot td.roster-totals__phone-year {
     display: block !important;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* …and the label names that year once it is not this one. */
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='player'][data-year]::before {
+    content: attr(data-year) ' ';
   }
 
   /* ── The shared page's card (docs/plans/rosters-mobile-layout.md § 8) ── */
