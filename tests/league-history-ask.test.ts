@@ -188,6 +188,62 @@ describe('move units', () => {
   });
 });
 
+describe('grouped counts', () => {
+  // Raw truth from the moves file: trades per date, each trade once.
+  const perDay = (moves: any) => {
+    const c = new Map<string, number>();
+    for (const t of moves.trades) c.set(t[1], (c.get(t[1]) ?? 0) + 1);
+    return c;
+  };
+
+  it('answers "most trades in a single day" in one query, counting each trade once', () => {
+    for (const [ds, data] of [[theleague, TL], [afl, AFL]] as const) {
+      const r = runQuery(ds, { unit: 'trades', groupBy: ['date'], limit: 3 }, data);
+      const truth = perDay(data.moves);
+      expect(r.total).toBe(truth.size);
+      expect((r as any).matched).toBe(data.moves.trades.length * 2);
+      expect(r.columns.map((c) => c.label)).toEqual(['Date', 'Trades']);
+      expect(r.rows[0].cells[1]).toBe(Math.max(...truth.values()));
+      for (const row of r.rows) expect(row.cells[1]).toBe(truth.get(row.cells[0] as string));
+      expect(r.description).toContain('each trade counted once');
+    }
+  });
+
+  it('keeps only the groups a having clause passes', () => {
+    const truth = perDay(TL.moves);
+    const r = runQuery(theleague, { unit: 'trades', groupBy: ['date'], having: [{ field: 'count', op: 'gte', value: 4 }] }, TL);
+    expect(r.total).toBe([...truth.values()].filter((n) => n >= 4).length);
+  });
+
+  it('counts waiver pickups per day and totals a summarize field per group', () => {
+    const r = runQuery(afl, { unit: 'pickups', groupBy: ['year', 'week'], where: [{ field: 'how', op: 'eq', value: 'waiver' }], summarize: ['bid'], limit: 1 }, AFL);
+    const [year, week, count] = r.rows[0].cells as [number, number, number];
+    const plain = runQuery(afl, { unit: 'pickups', years: { from: year, to: year }, where: [{ field: 'week', op: 'eq', value: week }, { field: 'how', op: 'eq', value: 'waiver' }] }, AFL);
+    expect(count).toBe(plain.total);
+    expect(r.columns.map((c) => c.key)).toEqual(['year', 'week', 'count', 'bid']);
+  });
+
+  it('credits a trade to each owner in it, and keeps the owner link', () => {
+    const r = runQuery(theleague, { unit: 'trades', groupBy: ['owner'], limit: 1 }, TL);
+    const owner = r.rows[0].cells[0] as string;
+    const plain = runQuery(theleague, { unit: 'trades', where: [{ field: 'owner', op: 'eq', value: owner }] }, TL);
+    expect(r.rows[0].cells[1]).toBe(plain.total);
+    expect(r.rows[0].ownerSlug).toBeTruthy();
+  });
+
+  it('counts a game once, not once per side', () => {
+    const r = runQuery(theleague, { unit: 'games', groupBy: ['year'], years: { from: 2015, to: 2015 } });
+    const plain = runQuery(theleague, { unit: 'games', years: { from: 2015, to: 2015 } });
+    expect(r.rows[0].cells[1]).toBe(plain.total / 2);
+  });
+
+  it('refuses count or having without groupBy, and sorting on a field the groups do not carry', () => {
+    expect(() => normalizeQuery({ unit: 'trades', sort: [{ field: 'count', dir: 'desc' }] })).toThrow(QueryError);
+    expect(() => normalizeQuery({ unit: 'trades', having: [{ field: 'count', op: 'gte', value: 2 }] })).toThrow(QueryError);
+    expect(() => normalizeQuery({ unit: 'trades', groupBy: ['date'], sort: [{ field: 'pointsNet', dir: 'desc' }] })).toThrow(QueryError);
+  });
+});
+
 describe('charts', () => {
   it('turns a ranked query into a board the Record Book charts can draw', () => {
     const r = runQuery(theleague, { ...nineOne, chart: 'pf' });

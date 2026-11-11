@@ -132,7 +132,7 @@ export function prepareMoves(p, pp, mds) {
   };
 
   const trades = [];
-  for (const [y, date, week, fa, fb, aGave, bGave] of mds.trades ?? []) {
+  for (const [i, [y, date, week, fa, fb, aGave, bGave]] of (mds.trades ?? []).entries()) {
     const a = assets(y, aGave);
     const b = assets(y, bGave);
     for (const [f, of, got, gave] of [
@@ -159,6 +159,8 @@ export function prepareMoves(p, pp, mds) {
         pointsGot,
         pointsGave,
         pointsNet: has ? r2(pointsGot - pointsGave) : null,
+        // Both sides of one trade share this, so a grouped count counts the trade once.
+        _event: `trade${i}`,
         _franchiseId: f,
         _ownerSlug: o.ownerSlug,
       });

@@ -348,6 +348,7 @@ You can only know what your tools return. Never answer from memory, never estima
 How to work:
 - Translate the question into one or more queries. "Started 9-1" means seasons with throughGames: 10, w = 9, l = 1. "Fewer points" with no comparison named means the fewest points in the same window (pf), and you should say which window you used.
 - For "has anyone ever / how many times" questions, rely on total, not on the rows shown.
+- For "most/how many in a single day, week or season" and "who did the most" questions, count with groupBy instead of reading rows: groupBy date (or year and week, or owner), and the top group by count is the answer. Trades and games count once each, not once per side. Use having (count gte N) for "how many days had N or more". This is exact over the whole record, so answer it plainly.
 - When a question compares against a specific team or season, query that one too and compare.
 - Records are credited to owners: an owner who moved teams keeps one career. Team names are per season, but a team that was renamed is still the same team: filtering on team (or opponent, partner) by any of its names matches every season under every name. When an answer covers a renamed team, name its other names (see Renamed teams).
 - Consolation games (toilet bowl, NIT) count as neither regular season nor playoffs. Season W/L/PF are regular season only.
@@ -461,6 +462,7 @@ export async function askHistory(
               index: results.length - 1,
               description: result.description,
               total: result.total,
+              ...('matched' in result ? { matchedRows: (result as any).matched } : {}),
               columns: result.columns.map((c: { key: string }) => c.key),
               rows: result.rows.map((r: { cells: unknown[] }) => r.cells),
               summary: result.summary,

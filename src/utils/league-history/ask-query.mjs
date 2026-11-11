@@ -185,9 +185,29 @@ export function querySchema() {
         type: 'array',
         items: {
           type: 'object',
-          properties: { field: { type: 'string', enum: allFields }, dir: { type: 'string', enum: ['asc', 'desc'] } },
+          properties: { field: { type: 'string', enum: [...allFields, 'count'] }, dir: { type: 'string', enum: ['asc', 'desc'] } },
           required: ['field', 'dir'],
         },
+        description: 'With groupBy, sort the groups: by count, a groupBy field, or a summarize field (its total per group). Grouped queries sort by count, highest first, unless told otherwise.',
+      },
+      groupBy: {
+        type: 'array',
+        items: { type: 'string', enum: allFields },
+        description:
+          'Combine the matching rows into one row per distinct value of these fields, with count = how many there were (a trade or a game counts once, not once per side) and, for each summarize field, its total per group. Use it for "most trades in one day" (trades, groupBy date), "most pickups in a week" (pickups, groupBy year and week), "who traded most" (trades, groupBy owner). total is then the number of groups.',
+      },
+      having: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            field: { type: 'string', enum: [...allFields, 'count'] },
+            op: { type: 'string', enum: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte'] },
+            value: { type: 'number' },
+          },
+          required: ['field', 'op', 'value'],
+        },
+        description: 'groupBy only: keep the groups whose count (or summarize total) passes, e.g. count gte 4 for "days with 4 or more trades".',
       },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT, description: `Rows to return (default 10, max ${MAX_LIMIT}). total always counts every match.` },
       columns: {
@@ -260,6 +280,8 @@ function prepare(ds) {
       combined: r2(g.s + g.os),
       result: g.tie ? 'T' : g.won ? 'W' : 'L',
       gameNumber,
+      // Both sides of one game share this, so a grouped count counts the game once.
+      _event: `${g.y}|${g.wk}|${[g.f, g.of].sort().join('-')}`,
       _franchiseId: g.f,
       _ownerSlug: owner.ownerSlug,
     });
@@ -422,29 +444,49 @@ export function normalizeQuery(q) {
     if (type === 'boolean') value = value === true || value === 'true';
     return { field: c.field, op: c.op, value };
   });
-  const sort = (Array.isArray(q.sort) ? q.sort : []).map((s) => {
-    check(s?.field, 'sort');
-    return { field: s.field, dir: s.dir === 'asc' ? 'asc' : 'desc' };
-  });
-  const columns = (Array.isArray(q.columns) && q.columns.length ? q.columns : DEFAULT_COLUMNS[unit]).filter((c) => fields[c]);
-  for (const c of q.columns ?? []) check(c, 'columns');
+  const groupBy = [...new Set(Array.isArray(q.groupBy) ? q.groupBy : [])];
+  for (const f of groupBy) check(f, 'groupBy');
   const summarize = (Array.isArray(q.summarize) ? q.summarize : []).filter((f) => {
     check(f, 'summarize');
     return fields[f].type === 'number';
   });
+  // A grouped row carries its keys, its count and each summarize total.
+  const groupField = (f, where) => {
+    if (f === 'count' || groupBy.includes(f) || summarize.includes(f)) return;
+    throw new QueryError(`${where}: a grouped query can use count, its groupBy fields (${groupBy.join(', ')}) or its summarize fields${summarize.length ? ` (${summarize.join(', ')})` : ''}`);
+  };
+  const sort = (Array.isArray(q.sort) ? q.sort : []).map((s) => {
+    if (groupBy.length) groupField(s?.field, 'sort');
+    else if (s?.field === 'count') throw new QueryError('sort: count needs groupBy');
+    else check(s?.field, 'sort');
+    return { field: s.field, dir: s.dir === 'asc' ? 'asc' : 'desc' };
+  });
+  if (groupBy.length && !sort.length) sort.push({ field: 'count', dir: 'desc' });
+  if (Array.isArray(q.having) && q.having.length && !groupBy.length) throw new QueryError('having needs groupBy');
+  const having = (Array.isArray(q.having) ? q.having : []).map((c) => {
+    groupField(c?.field, 'having');
+    if (!['eq', 'ne', 'gt', 'gte', 'lt', 'lte'].includes(c.op)) throw new QueryError('having: op must be eq, ne, gt, gte, lt or lte');
+    const value = Number(c.value);
+    if (!Number.isFinite(value)) throw new QueryError(`having: ${c.field} needs a number`);
+    return { field: c.field, op: c.op, value };
+  });
+  for (const c of q.columns ?? []) check(c, 'columns');
+  const columns = groupBy.length
+    ? [...groupBy, 'count', ...summarize]
+    : (Array.isArray(q.columns) && q.columns.length ? q.columns : DEFAULT_COLUMNS[unit]).filter((c) => fields[c]);
   const throughGames = unit === 'seasons' && Number.isInteger(q.throughGames) && q.throughGames > 0 ? q.throughGames : null;
   const years = q.years && typeof q.years === 'object'
     ? { from: Number.isFinite(q.years.from) ? q.years.from : null, to: Number.isFinite(q.years.to) ? q.years.to : null }
     : null;
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number.isInteger(q.limit) ? q.limit : 10));
   let chart = null;
-  if (q.chart != null && q.chart !== '') {
+  if (q.chart != null && q.chart !== '' && !groupBy.length) {
     check(q.chart, 'chart');
     if (fields[q.chart].type !== 'number') throw new QueryError(`chart: ${q.chart} is not a number`);
     chart = q.chart;
   }
   const competition = COMPETITION_UNITS.includes(unit) && COMPETITION_SCOPES.includes(q.competition) && q.competition !== 'all' ? q.competition : null;
-  return { unit, throughGames, competition, years, where, sort, limit, columns, summarize, chart };
+  return { unit, throughGames, competition, years, where, groupBy, having, sort, limit, columns, summarize, chart };
 }
 
 /**
@@ -500,6 +542,16 @@ export function runQuery(ds, rawQuery, extra = {}) {
   // that many; a team 6 games into this season has not "started 9-1" or not.
   if (q.unit === 'seasons' && q.throughGames) rows = rows.filter((r) => r.games >= q.throughGames);
   for (const c of q.where) rows = rows.filter(teamFilter(p, q.unit, c) ?? ((r) => OPS[c.op](r[c.field], c.value)));
+  /** @type {Record<string, FieldSummary | null>} */
+  const summary = {};
+  for (const f of q.summarize) {
+    const vals = rows.map((r) => r[f]).filter((v) => Number.isFinite(v));
+    summary[f] = vals.length
+      ? { min: Math.min(...vals), max: Math.max(...vals), avg: r2(vals.reduce((a, b) => a + b, 0) / vals.length), sum: r2(vals.reduce((a, b) => a + b, 0)) }
+      : null;
+  }
+  const matched = rows.length;
+  if (q.groupBy.length) rows = groupRows(rows, q).filter((g) => q.having.every((c) => OPS[c.op](g[c.field], c.value)));
   if (q.sort.length) {
     rows = rows.slice().sort((a, b) => {
       for (const s of q.sort) {
@@ -509,20 +561,13 @@ export function runQuery(ds, rawQuery, extra = {}) {
       return 0;
     });
   }
-  /** @type {Record<string, FieldSummary | null>} */
-  const summary = {};
-  for (const f of q.summarize) {
-    const vals = rows.map((r) => r[f]).filter((v) => Number.isFinite(v));
-    summary[f] = vals.length
-      ? { min: Math.min(...vals), max: Math.max(...vals), avg: r2(vals.reduce((a, b) => a + b, 0) / vals.length), sum: r2(vals.reduce((a, b) => a + b, 0)) }
-      : null;
-  }
   const shown = rows.slice(0, q.limit);
   return {
     query: q,
     description: describeQuery(q),
     total: rows.length,
-    columns: q.columns.map((c) => ({ key: c, label: FIELDS[q.unit][c].label })),
+    ...(q.groupBy.length ? { matched } : {}),
+    columns: q.columns.map((c) => ({ key: c, label: columnLabel(q, c) })),
     rows: shown.map((r) => ({
       cells: q.columns.map((c) => r[c] ?? null),
       franchiseId: r._franchiseId ?? null,
@@ -532,6 +577,55 @@ export function runQuery(ds, rawQuery, extra = {}) {
     summary,
     chart: q.chart ? chartBoard(q, rows) : null,
   };
+}
+
+/** What one counted row is, per unit, for a grouped count's column header. */
+const COUNT_LABEL = {
+  seasons: 'Seasons',
+  games: 'Games',
+  owners: 'Owners',
+  trades: 'Trades',
+  pickups: 'Pickups',
+  draftPicks: 'Picks',
+  auctions: 'Auction wins',
+};
+
+function columnLabel(q, c) {
+  if (q.groupBy.length && c === 'count') return COUNT_LABEL[q.unit] ?? 'Count';
+  if (q.groupBy.length && q.summarize.includes(c) && !q.groupBy.includes(c)) return `Total ${FIELDS[q.unit][c].label}`;
+  return FIELDS[q.unit][c].label;
+}
+
+/**
+ * One row per distinct value of q.groupBy: its keys, `count` (distinct
+ * `_event`s, so each trade or game counts once though it has a row per side)
+ * and each summarize field's total. A link (team, owner, season) survives only
+ * when every row in the group agrees on it.
+ */
+function groupRows(rows, q) {
+  const groups = new Map();
+  for (const r of rows) {
+    const key = JSON.stringify(q.groupBy.map((f) => norm(r[f] ?? null)));
+    let g = groups.get(key);
+    if (!g) {
+      g = { row: {}, events: new Set(), n: 0, sums: {}, links: { _franchiseId: r._franchiseId, _ownerSlug: r._ownerSlug, year: r.year } };
+      for (const f of q.groupBy) g.row[f] = r[f] ?? null;
+      for (const f of q.summarize) g.sums[f] = 0;
+      groups.set(key, g);
+    }
+    g.n++;
+    g.events.add(r._event ?? g.n);
+    for (const f of q.summarize) if (Number.isFinite(r[f])) g.sums[f] += r[f];
+    for (const k of Object.keys(g.links)) if (g.links[k] !== (r[k] ?? undefined)) g.links[k] = undefined;
+  }
+  return [...groups.values()].map((g) => {
+    const out = { ...g.row, count: g.events.size };
+    for (const f of q.summarize) if (!q.groupBy.includes(f)) out[f] = r2(g.sums[f]);
+    if (g.links._franchiseId) out._franchiseId = g.links._franchiseId;
+    if (g.links._ownerSlug) out._ownerSlug = g.links._ownerSlug;
+    if (out.year === undefined && g.links.year != null) out.year = g.links.year;
+    return out;
+  });
 }
 
 /**
@@ -711,12 +805,17 @@ export function describeQuery(q) {
           .join(' and '),
     );
   }
+  if (q.groupBy?.length) {
+    const once = q.unit === 'trades' ? ', each trade counted once' : q.unit === 'games' ? ', each game counted once' : '';
+    parts.push(`grouped by ${q.groupBy.map((f) => fields[f].label).join(' and ')}${once}`);
+    if (q.having?.length) parts.push('keeping groups where ' + q.having.map((c) => `${columnLabel(q, c.field)} ${OP_WORDS[c.op]} ${c.value}`).join(' and '));
+  }
   const filtersOn = (f) => q.where.some((c) => c.field === f);
   if ((q.unit === 'games' || q.unit === 'playerWeeks') && !filtersOn('kind')) parts.push('regular season and playoffs (consolation games excluded)');
   if (q.unit === 'playerWeeks' && !filtersOn('started')) parts.push('starters only');
   if (q.sort.length) {
     parts.push(
-      'sorted by ' + q.sort.map((s) => `${fields[s.field].label} (${s.dir === 'asc' ? 'lowest' : 'highest'} first)`).join(', then '),
+      'sorted by ' + q.sort.map((s) => `${q.groupBy?.length ? columnLabel(q, s.field) : fields[s.field].label} (${s.dir === 'asc' ? 'lowest' : 'highest'} first)`).join(', then '),
     );
   }
   return parts.filter(Boolean).join(', ');
