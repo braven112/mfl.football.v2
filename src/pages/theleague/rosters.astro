@@ -7388,7 +7388,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const calculateBucketCaps = (rows = []) => calculateBucketCapsCore(rows, capInclusion);
 
     /** A bucket split of `calculateCapCharges` for one salary year (0 = this year's displayed view). */
-    const calculateBucketCapsForYear = (rows = [], yearIndex = 0) =>
+    const calculateBucketCapsForYear = (rows: any[] = [], yearIndex = 0) =>
       calculateBucketCapsForYearCore(rows, yearIndex, {
         salaryYears,
         capInclusion,
