@@ -44,7 +44,7 @@ function deadlineFields(slug, year, date, week) {
   return { deadline, daysToDeadline: days, deadlineWeek: days >= 0 && date >= shiftIsoDate(deadline, -6) };
 }
 
-const PHASE_FIELD = { type: 'string', label: 'When', desc: 'before season (week 0) | in season (NFL regular-season weeks) | after season (NFL playoffs and the offseason that follows; week 22 = Super Bowl week and everything after it)' };
+const PHASE_FIELD = { type: 'string', label: 'When', desc: 'exactly one of "before season" (week 0), "in season" (the NFL regular-season weeks) or "after season" (NFL playoffs and the offseason that follows; week 22 = Super Bowl week and everything after it)' };
 const DEADLINE_FIELDS = {
   deadline: { type: 'string', label: 'Deadline', desc: "that season's trade deadline under the league's CURRENT rule (YYYY-MM-DD; null outside the season)" },
   daysToDeadline: { type: 'number', label: 'Days to deadline', desc: 'deadline minus this date in days: 0 = deadline day, 1-6 = deadline week, negative = after it (null outside the season)' },
