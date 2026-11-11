@@ -17,16 +17,47 @@
  * - `auctions`: one row per auction win (TheLeague's salary auction).
  */
 import { formatPickLabel, parsePickToken } from '../mfl-pick-tokens.mjs';
+import { shiftIsoDate, tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
 const VALUE = 'starter points, regular season and playoffs';
 
+/** NFL regular-season weeks: 17 through 2020, 18 since. */
+const nflRegularWeeks = (year) => (year >= 2021 ? 18 : 17);
+
+/** before season | in season | after season, by the NFL week current at the move. */
+const phaseOf = (year, week) => (week === 0 ? 'before season' : week <= nflRegularWeeks(year) ? 'in season' : 'after season');
+
+const dayNumber = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5;
+
+/**
+ * Where a move sits against that season's trade deadline, as the league's
+ * rules state it today (src/config/leagues-data.mjs#tradeDeadline, resolved
+ * by trade-deadline.mjs). Only in-season moves get one: the deadline is
+ * meaningless for an offseason trade.
+ */
+function deadlineFields(slug, year, date, week) {
+  const deadline = slug && phaseOf(year, week) === 'in season' ? tradeDeadlineIsoDate(slug, year) : null;
+  if (!deadline) return { deadline: null, daysToDeadline: null, deadlineWeek: null };
+  const days = dayNumber(deadline) - dayNumber(date);
+  return { deadline, daysToDeadline: days, deadlineWeek: days >= 0 && date >= shiftIsoDate(deadline, -6) };
+}
+
+const PHASE_FIELD = { type: 'string', label: 'When', desc: 'before season (week 0) | in season (NFL regular-season weeks) | after season (NFL playoffs and the offseason that follows; week 22 = Super Bowl week and everything after it)' };
+const DEADLINE_FIELDS = {
+  deadline: { type: 'string', label: 'Deadline', desc: "that season's trade deadline under the league's CURRENT rule (YYYY-MM-DD; null outside the season)" },
+  daysToDeadline: { type: 'number', label: 'Days to deadline', desc: 'deadline minus this date in days: 0 = deadline day, 1-6 = deadline week, negative = after it (null outside the season)' },
+  deadlineWeek: { type: 'boolean', label: 'Deadline week', desc: 'in the 7 days ending on the deadline (null outside the season)' },
+};
+
 export const MOVE_FIELDS = {
   trades: {
     year: { type: 'number', label: 'Season' },
     date: { type: 'string', label: 'Date', desc: 'YYYY-MM-DD (compare with gte/lte)' },
-    week: { type: 'number', label: 'Week', desc: 'NFL week current at the time; 0 = before the season' },
+    week: { type: 'number', label: 'Week', desc: 'NFL week current at the time; 0 = before the season; 22 = Super Bowl week and the offseason after it' },
+    phase: PHASE_FIELD,
+    ...DEADLINE_FIELDS,
     team: { type: 'string', label: 'Team' },
     owner: { type: 'string', label: 'Owner' },
     partner: { type: 'string', label: 'Partner', desc: 'the other team in the trade' },
@@ -42,7 +73,9 @@ export const MOVE_FIELDS = {
   pickups: {
     year: { type: 'number', label: 'Season' },
     date: { type: 'string', label: 'Date' },
-    week: { type: 'number', label: 'Week', desc: 'NFL week current at the time; 0 = before the season' },
+    week: { type: 'number', label: 'Week', desc: 'NFL week current at the time; 0 = before the season; 22 = Super Bowl week and the offseason after it' },
+    phase: PHASE_FIELD,
+    ...DEADLINE_FIELDS,
     team: { type: 'string', label: 'Team' },
     owner: { type: 'string', label: 'Owner' },
     player: { type: 'string', label: 'Player' },
@@ -94,7 +127,7 @@ const cache = new WeakMap();
  * prepare()) and the prepared player weeks `pp` (preparePlayers, or null when
  * the league has none, which leaves every points field null).
  */
-export function prepareMoves(p, pp, mds) {
+export function prepareMoves(p, pp, mds, slug = null) {
   if (cache.has(mds)) return cache.get(mds);
   const { ix } = p;
   const owner = (y, f) => ix.entity(ix.entityOf(y, f));
@@ -148,6 +181,8 @@ export function prepareMoves(p, pp, mds) {
         year: y,
         date,
         week,
+        phase: phaseOf(y, week),
+        ...deadlineFields(slug, y, date, week),
         team: teamName(y, f),
         owner: o.name,
         partner: teamName(y, of),
@@ -174,6 +209,8 @@ export function prepareMoves(p, pp, mds) {
       year: y,
       date,
       week,
+      phase: phaseOf(y, week),
+      ...deadlineFields(slug, y, date, week),
       team: teamName(y, f),
       owner: o.name,
       player: nameOf(pid),

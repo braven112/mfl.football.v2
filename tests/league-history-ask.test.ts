@@ -16,6 +16,7 @@ import { AI_PLANS } from '../src/utils/ai-plan.mjs';
 const SONNET = AI_PLANS.custom.model;
 const HAIKU = AI_PLANS.history.model;
 import { recordBook } from '../src/utils/league-history/records.mjs';
+import { tradeDeadlineIsoDate } from '../src/utils/trade-deadline.mjs';
 import { describeMissingWeeks } from '../src/utils/league-history/ask-players.mjs';
 import { gapChart, historyChart } from '../src/utils/league-history/record-charts.mjs';
 
@@ -235,6 +236,24 @@ describe('grouped counts', () => {
     const r = runQuery(theleague, { unit: 'games', groupBy: ['year'], years: { from: 2015, to: 2015 } });
     const plain = runQuery(theleague, { unit: 'games', years: { from: 2015, to: 2015 } });
     expect(r.rows[0].cells[1]).toBe(plain.total / 2);
+  });
+
+  it("places each in-season trade against that season's deadline under the league's rule, and offseason trades nowhere", () => {
+    for (const [ds, data, slug] of [[theleague, TL, 'theleague'], [afl, AFL, 'afl-fantasy']] as const) {
+      const r = runQuery(ds, { unit: 'trades', limit: 25, columns: ['year', 'date', 'phase', 'deadline', 'daysToDeadline', 'deadlineWeek'], where: [{ field: 'phase', op: 'eq', value: 'in season' }] }, { ...data, league: slug });
+      expect(r.total).toBeGreaterThan(0);
+      for (const [year, date, , deadline, days, week] of r.rows.map((x) => x.cells) as [number, string, string, string, number, boolean][]) {
+        expect(deadline).toBe(tradeDeadlineIsoDate(slug, year));
+        expect(days).toBe((Date.parse(deadline) - Date.parse(date)) / 864e5);
+        expect(week).toBe(days >= 0 && days <= 6);
+      }
+      const off = runQuery(ds, { unit: 'trades', limit: 5, columns: ['deadline', 'daysToDeadline'], where: [{ field: 'phase', op: 'ne', value: 'in season' }] }, { ...data, league: slug });
+      for (const row of off.rows) expect(row.cells).toEqual([null, null]);
+      // A null is not a number, so a range filter never matches an offseason trade.
+      const near = runQuery(ds, { unit: 'trades', where: [{ field: 'daysToDeadline', op: 'gte', value: -3 }] }, { ...data, league: slug });
+      const inSeason = runQuery(ds, { unit: 'trades', where: [{ field: 'phase', op: 'eq', value: 'in season' }] }, { ...data, league: slug });
+      expect(near.total).toBeLessThanOrEqual(inSeason.total);
+    }
   });
 
   it('refuses count or having without groupBy, and sorting on a field the groups do not carry', () => {

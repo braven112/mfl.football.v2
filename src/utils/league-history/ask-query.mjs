@@ -123,10 +123,11 @@ export const FIELDS = {
 const OPS = {
   eq: (a, b) => norm(a) === norm(b),
   ne: (a, b) => norm(a) !== norm(b),
-  gt: (a, b) => a > b,
-  gte: (a, b) => a >= b,
-  lt: (a, b) => a < b,
-  lte: (a, b) => a <= b,
+  // A missing value is not a number: null >= -3 is true in JS (null → 0).
+  gt: (a, b) => a != null && a > b,
+  gte: (a, b) => a != null && a >= b,
+  lt: (a, b) => a != null && a < b,
+  lte: (a, b) => a != null && a <= b,
   in: (a, b) => Array.isArray(b) && b.some((v) => norm(v) === norm(a)),
   contains: (a, b) => String(a ?? '').toLowerCase().includes(String(b ?? '').toLowerCase()),
 };
@@ -501,7 +502,7 @@ export function normalizeQuery(q) {
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
- * @param {{ players?: any, moves?: any, competitions?: any }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions) and the all-play competition's sources (ask-competitions.mjs)
+ * @param {{ players?: any, moves?: any, competitions?: any, league?: string }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions) and the all-play competition's sources (ask-competitions.mjs)
  * @returns {QueryResult}
  */
 export function runQuery(ds, rawQuery, extra = {}) {
@@ -514,7 +515,7 @@ export function runQuery(ds, rawQuery, extra = {}) {
   if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
   if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
   const pp = (isPlayer || isMove) && extra.players ? preparePlayers(p, extra.players) : null;
-  const pm = isMove ? prepareMoves(p, pp, extra.moves) : null;
+  const pm = isMove ? prepareMoves(p, pp, extra.moves, extra.league ?? ds.league ?? null) : null;
   const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
     q.unit === 'competitionOwners'
