@@ -82,6 +82,13 @@ export function tradeDeadlineIsoDate(slug, year) {
     return shiftIsoDate(nflWeekStartIsoDate(year, 11), -1);
   }
 
+  if (spec.kind === 'computed' && spec.rule === 'friday-before-week-11') {
+    // TheLeague (Constitution: "The Friday before Week 11 at 8:45pm PT"): the
+    // Friday of the week before NFL week 11 opens, six days before its start.
+    // Same rule as `friday-before-week-11` in league-event-resolver.ts.
+    return shiftIsoDate(nflWeekStartIsoDate(year, 11), -6);
+  }
+
   // An unrecognized spec is a registry edit that outran this resolver. Null is
   // the honest answer: a wrong date here silently moves a real deadline.
   return null;

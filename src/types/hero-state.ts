@@ -26,7 +26,7 @@ export type SeasonPhase =
   | 'cut-watch'           // Jun 1 → 3rd Sun of Aug (early=P3 ambient, final 30d=P1 urgent)
   | 'preseason-countdown' // FA close → NFL kickoff
   | 'regular-season'      // NFL kickoff → end of Week 14
-  | 'trade-deadline'      // Nov 13 (24h override)
+  | 'trade-deadline'      // Friday before Week 11 (24h override)
   | 'schedule-release'    // countdown to, and the week after, Schedule Release Day
   | 'playoffs'            // Week 15 → Week 16
   | 'offseason-fallback'; // Any gap not covered by above

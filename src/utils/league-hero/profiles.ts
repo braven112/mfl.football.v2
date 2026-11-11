@@ -27,6 +27,7 @@ import type { LeagueSlug } from '../../types/whats-new';
 import { getAllResolvedAflEvents } from '../league-event-resolver';
 import { MFL_EMAIL_DRAFT_OPTION, MFL_LINEUP_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from '../mfl-url';
 import { randomHeroPlayer } from '../hero-players';
+import { shiftIsoDate, tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import {
   getDraftStartFormatted,
   isAuctionHeroPeriod,
@@ -86,7 +87,7 @@ export interface LeagueHeroProfile {
   ladder: HeroStepId[];
   /**
    * The season's phases from the league's own constitution, when they are
-   * RULES rather than calendar events (a trade deadline that is always Nov 13,
+   * RULES rather than calendar events (a trade deadline on the Friday before Week 11,
    * playoffs that start in week 15). Omitted, each phase is read off the
    * calendar's roles.
    */
@@ -576,7 +577,7 @@ const archiesProfile: LeagueHeroProfile = buildPackageHeroProfile(LEAGUES.archie
 // ── TheLeague ────────────────────────────────────────────────────────────────
 //
 // A salary-cap contract dynasty league. Its seasons run on RULES rather than
-// calendar events (the trade deadline is always Nov 13; the playoffs open in
+// calendar events (the trade deadline is the Friday before Week 11; the playoffs open in
 // week 15), so its phases come from `clock`, and its offseason — auction,
 // rookie draft, franchise tags, the cut-down to 22 — from `contractCalendar`.
 // Its heroes are TheLeague's own bespoke components (the `LeagueHero` router
@@ -584,7 +585,7 @@ const archiesProfile: LeagueHeroProfile = buildPackageHeroProfile(LEAGUES.archie
 
 const THELEAGUE = LEAGUES.theleague;
 
-/** The calendar year in Pacific time, for the Nov 13 deadline's midnight. */
+/** The calendar year in Pacific time, for the deadline's midnight. */
 const ptYear = (now: Date) =>
   Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now));
 
@@ -606,7 +607,8 @@ const theleagueProfile: LeagueHeroProfile = {
   ],
   clock: {
     isTradeDeadlineDay,
-    tradeDeadlineMidnight: (now) => `${ptYear(now)}-11-14T00:00:00-08:00`,
+    // The midnight that ends deadline day (November is PST, -08:00).
+    tradeDeadlineMidnight: (now) => `${shiftIsoDate(tradeDeadlineIsoDate('theleague', ptYear(now))!, 1)}T00:00:00-08:00`,
     isChampionship: isChampionshipWeek,
     isChampionCrowned: isChampionCrownedPeriod,
     isRegularSeason,

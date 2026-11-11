@@ -179,11 +179,14 @@ export const LEAGUES = {
      * inline in the code that needs it — `tradeDeadlineIsoDate(slug, year)` in
      * `src/utils/trade-deadline.mjs` is the only resolver.
      *
-     * TheLeague's deadline is a FIXED calendar date (Nov 13), which is why it
-     * carries no `rule`. It is duplicated today in `hero-resolver.ts`
-     * (`isTradeDeadlineDay`) and `src/types/hero-state.ts` as a bare Nov 13 —
-     * `tests/schefter-rumor-cadence.test.ts` pins the registry against
-     * hero-resolver's copy so the two cannot silently disagree.
+     * TheLeague's deadline is the Constitution's "Friday before Week 11 at
+     * 8:45pm PT": the Friday of the week before NFL Week 11 opens (Nov 13 in
+     * 2026, Nov 7 in 2025). It was a fixed Nov 13 until Nov 2026, which only
+     * matched the rule in some years (Brandon, 2026-11-11). MFL's own calendar
+     * drifted a week late in 2024-2026 when it carried the event over, so it
+     * is not the source of truth. The hero (`isTradeDeadlineDay`) and the
+     * league events (`friday-before-week-11`) read the same rule;
+     * `tests/schefter-rumor-cadence.test.ts` pins them.
      */
     /**
      * The league chat the news persona posts into — see `chatConfigFor` in
@@ -194,7 +197,7 @@ export const LEAGUES = {
      * push, and nothing is posted anywhere else.
      */
     chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
-    tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
+    tradeDeadline: { kind: 'computed', rule: 'friday-before-week-11' },
     /**
      * League-minimum salary. Every player added to a roster carries at least
      * this — a first-come-first-served free-agent add included, which MFL

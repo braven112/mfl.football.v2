@@ -344,7 +344,9 @@ function deadlineLine(leagueSlug: string, year: number | undefined): string {
       ? 'a fixed date each season'
       : spec?.rule === 'wednesday-between-week-10-and-11'
         ? 'the Wednesday between NFL Week 10 and Week 11'
-        : null;
+        : spec?.rule === 'friday-before-week-11'
+          ? 'the Friday before NFL Week 11, at 8:45pm PT'
+          : null;
   const current = year ? tradeDeadlineIsoDate(leagueSlug, year) : null;
   if (!rule || !current) return '- This league has no trade deadline on record; say so if asked.';
   return `- Trade deadline, from the league's rules today: ${rule}${current ? ` (${current} in ${year})` : ''}. In-season trades and pickups carry that season's deadline under today's rule (deadline, daysToDeadline, deadlineWeek); use them for "deadline week" or "before/after the deadline" questions. Today's rule is the only one on record, so for past seasons say "under today's deadline rule": an earlier season's deadline may have been different. The data says when trades happened, never why; for a "why" question give the counts and say the record cannot say why.`;
