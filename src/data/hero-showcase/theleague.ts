@@ -426,7 +426,7 @@ function dailyPick(pool, date, seedKey, keyOf) {
             ['cut-watch', 'Jun 1 → 3rd Sun of Aug'],
             ['preseason-countdown', 'FA close → NFL kickoff'],
             ['regular-season', 'NFL kickoff → end of Week 14'],
-            ['trade-deadline', 'Nov 13 (24h override)'],
+            ['trade-deadline', 'Friday before Week 11 (24h override)'],
             ['playoffs', 'Week 15 → Week 16'],
             ['offseason-fallback', 'Any gap not covered above'],
           ],

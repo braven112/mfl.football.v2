@@ -51,9 +51,13 @@ describe('trade deadline — resolved from the registry, never inlined', () => {
     expect(nflKickoffIsoDate(2026)).toBe('2026-09-09');
   });
 
-  it("keeps TheLeague's fixed Nov 13 deadline", () => {
-    for (const y of [2025, 2026, 2027]) {
-      expect(tradeDeadlineIsoDate('theleague', y)).toBe(`${y}-11-13`);
+  it("puts TheLeague's deadline on the Friday before Week 11 (Constitution)", () => {
+    expect(tradeDeadlineIsoDate('theleague', 2025)).toBe('2025-11-07');
+    expect(tradeDeadlineIsoDate('theleague', 2026)).toBe('2026-11-13');
+    for (const y of [2022, 2023, 2024, 2025, 2026]) {
+      const d = new Date(`${tradeDeadlineIsoDate('theleague', y)}T12:00:00Z`);
+      expect(d.getUTCDay()).toBe(5);
+      expect(tradeDeadlineIsoDate('theleague', y)! < nflWeekStartIsoDate(y, 11)).toBe(true);
     }
   });
 
@@ -78,22 +82,18 @@ describe('trade deadline — resolved from the registry, never inlined', () => {
     );
   });
 
-  it("pins TheLeague's registry date against the hero-resolver override", () => {
-    // hero-resolver.ts carries its own hardcoded `month === 11 && day === 13`
-    // for the trade-deadline-day hero. Nothing shares the two, so moving the
-    // registry date would silently desync the hero override from the rumor
-    // mill's deadline window — the hero would fire on a day the mill no longer
-    // treats as the deadline. This IS that pin.
-    const hero = readFileSync(
-      path.join(process.cwd(), 'src/utils/hero-resolver.ts'),
-      'utf8',
-    );
-    const m = hero.match(/return month === (\d+) && day === (\d+);/);
-    expect(m, 'isTradeDeadlineDay no longer matches the expected shape').toBeTruthy();
-    const [, month, day] = m!;
-    expect(tradeDeadlineIsoDate('theleague', 2026)).toBe(
-      `2026-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
-    );
+  it("keeps TheLeague's hero, event feed and registry on one deadline", () => {
+    // The hero used to carry its own `month === 11 && day === 13`; it now asks
+    // the registry. The event feed (friday-before-week-11 in
+    // league-event-resolver.ts) is a second derivation of the same rule, so
+    // pin the two against each other for whatever year the artifact holds.
+    const hero = readFileSync(path.join(process.cwd(), 'src/utils/hero-resolver.ts'), 'utf8');
+    expect(hero).not.toMatch(/month === \d+ && day === \d+/);
+    const resolved = JSON.parse(readFileSync(path.join(process.cwd(), 'src/data/theleague/resolved-events.json'), 'utf8'));
+    const event = resolved.events.find((e: { id: string }) => e.id === 'trading-deadline');
+    expect(event, 'trading-deadline missing from resolved-events.json').toBeDefined();
+    const year = Number(String(event.startDate).slice(0, 4));
+    expect(tradeDeadlineIsoDate('theleague', year)).toBe(String(event.startDate).slice(0, 10));
   });
 
   it('returns null for a league with no deadline rather than inventing one', () => {
@@ -106,7 +106,7 @@ describe('trade deadline — resolved from the registry, never inlined', () => {
 
   it('rolls to next year once this year’s deadline has passed', () => {
     expect(upcomingTradeDeadline('theleague', atPT('2026-11-13'))).toBe('2026-11-13');
-    expect(upcomingTradeDeadline('theleague', atPT('2026-11-14'))).toBe('2027-11-13');
+    expect(upcomingTradeDeadline('theleague', atPT('2026-11-14'))).toBe('2027-11-12');
   });
 
   it('opens the window exactly 10 days out and closes it after deadline day', () => {

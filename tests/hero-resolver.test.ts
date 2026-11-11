@@ -909,16 +909,21 @@ describe('parseTestDate', () => {
 });
 
 describe('isTradeDeadlineDay', () => {
-  it('should return true on Nov 13', () => {
-    expect(isTradeDeadlineDay(new Date(2027, 10, 13, 12, 0))).toBe(true);
+  // The Constitution's Friday before Week 11: Fri Nov 12 in 2027, Fri Nov 13 in 2026.
+  it('should return true on the Friday before Week 11 (Nov 12, 2027)', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 12, 12, 0))).toBe(true);
   });
 
-  it('should return false on Nov 12', () => {
-    expect(isTradeDeadlineDay(new Date(2027, 10, 12, 23, 0))).toBe(false);
+  it('should return true on Nov 13, 2026', () => {
+    expect(isTradeDeadlineDay(new Date(2026, 10, 13, 12, 0))).toBe(true);
   });
 
-  it('should return false on Nov 14', () => {
-    expect(isTradeDeadlineDay(new Date(2027, 10, 14, 1, 0))).toBe(false);
+  it('should return false the day before', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 11, 23, 0))).toBe(false);
+  });
+
+  it('should return false the day after (Nov 13, 2027 is no longer a fixed deadline)', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 13, 1, 0))).toBe(false);
   });
 });
 
@@ -938,10 +943,10 @@ describe('isRegularSeason', () => {
     expect(isRegularSeason(new Date(2027, 9, 15))).toBe(true); // Oct 15
   });
 
-  it('should return false on trade deadline day (Nov 13)', () => {
+  it('should return false on trade deadline day (Nov 12, 2027)', () => {
     // Trade deadline overrides at a higher priority, but isRegularSeason
     // still returns true (the override is in resolveHeroState, not here)
-    expect(isRegularSeason(new Date(2027, 10, 13))).toBe(true);
+    expect(isRegularSeason(new Date(2027, 10, 12))).toBe(true);
   });
 });
 
@@ -1027,8 +1032,8 @@ describe('getDailySlot', () => {
 
 describe('resolveHeroState', () => {
   describe('P0++ Trade Deadline override', () => {
-    it('should return trade-deadline on Nov 13', () => {
-      const state = resolveHeroState(new Date(2027, 10, 13, 12, 0), true);
+    it('should return trade-deadline on the Friday before Week 11 (Nov 12, 2027)', () => {
+      const state = resolveHeroState(new Date(2027, 10, 12, 12, 0), true);
       expect(state.phase).toBe('trade-deadline');
       expect(state.priority).toBe('P0++');
     });

@@ -22,6 +22,7 @@ import { addUsage, aiModelForLeague, emptyUsage, usageCost } from '../ai-plan.mj
 import { getLeagueBySlug } from '../../config/leagues';
 import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
+import { tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
 
 /** A query result as a Record Book board, for record-charts.mjs (ask-query.mjs chartBoard). */
@@ -331,6 +332,26 @@ ${story}
 </competition>`;
 }
 
+/**
+ * The trade deadline as the league's rules state it today (the registry,
+ * resolved by trade-deadline.mjs), for "deadline week" questions. Only today's
+ * rule is known: what the deadline was in a past season is not on record.
+ */
+function deadlineLine(leagueSlug: string, year: number | undefined): string {
+  const spec = (getLeagueBySlug(leagueSlug) as { tradeDeadline?: { kind?: string; rule?: string } } | null)?.tradeDeadline;
+  const rule =
+    spec?.kind === 'fixed'
+      ? 'a fixed date each season'
+      : spec?.rule === 'wednesday-between-week-10-and-11'
+        ? 'the Wednesday between NFL Week 10 and Week 11'
+        : spec?.rule === 'friday-before-week-11'
+          ? 'the Friday before NFL Week 11, at 8:45pm PT'
+          : null;
+  const current = year ? tradeDeadlineIsoDate(leagueSlug, year) : null;
+  if (!rule || !current) return '- This league has no trade deadline on record; say so if asked.';
+  return `- Trade deadline, from the league's rules today: ${rule}${current ? ` (${current} in ${year})` : ''}. In-season trades and pickups carry that season's deadline under today's rule (deadline, daysToDeadline, deadlineWeek); use them for "deadline week" or "before/after the deadline" questions. Today's rule is the only one on record, so for past seasons say "under today's deadline rule": an earlier season's deadline may have been different. The data says when trades happened, never why; for a "why" question give the counts and say the record cannot say why.`;
+}
+
 function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
@@ -348,6 +369,7 @@ You can only know what your tools return. Never answer from memory, never estima
 How to work:
 - Translate the question into one or more queries. "Started 9-1" means seasons with throughGames: 10, w = 9, l = 1. "Fewer points" with no comparison named means the fewest points in the same window (pf), and you should say which window you used.
 - For "has anyone ever / how many times" questions, rely on total, not on the rows shown.
+- For "most/how many in a single day, week or season" and "who did the most" questions, count with groupBy instead of reading rows: groupBy date (or year and week, or owner), and the top group by count is the answer. Trades and games count once each, not once per side. Use having (count gte N) for "how many days had N or more". This is exact over the whole record, so answer it plainly.
 - When a question compares against a specific team or season, query that one too and compare.
 - Records are credited to owners: an owner who moved teams keeps one career. Team names are per season, but a team that was renamed is still the same team: filtering on team (or opponent, partner) by any of its names matches every season under every name. When an answer covers a renamed team, name its other names (see Renamed teams).
 - Consolation games (toilet bowl, NIT) count as neither regular season nor playoffs. Season W/L/PF are regular season only.
@@ -355,6 +377,7 @@ How to work:
 - Use the exact names from results. Match names with contains when the asker uses a nickname or part of a name.
 - ${players ? `Player questions use the player units: every rostered player's score each week, starter or bench. A player's points count for the team that started him. ${describeMissingWeeks(players.missingWeeks) ? `${describeMissingWeeks(players.missingWeeks)}; say so when a player answer could be missing those weeks.` : 'Every final week has player scores.'}` : 'There are no player stats for this league; say so if asked.'}
 - ${moves ? `Roster moves use the move units: trades (one row per side, with what the players each side got scored for it the rest of that season), pickups (waiver claims and free agents), draftPicks${moves.auctions?.length ? ', auctions (salary auction wins)' : ''}. "Best trade/pickup/pick" means the most points the player(s) scored for the team that got them unless the question says otherwise; say which measure you used. Contract lengths are not on record${moves.auctions?.length ? '; auction salaries are' : ''}.` : 'There are no trade, draft or pickup records for this league; say so if asked.'}
+${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
@@ -450,7 +473,7 @@ export async function askHistory(
           if (use.name !== RUN_QUERY_TOOL.name) {
             return { type: 'tool_result', tool_use_id: use.id, content: 'Unknown tool.', is_error: true };
           }
-          const result = runQuery(ds, use.input ?? {}, { players: data.players, moves: data.moves, competitions: data.competitions });
+          const result = runQuery(ds, use.input ?? {}, { players: data.players, moves: data.moves, competitions: data.competitions, league: leagueSlug });
           const { query: _q, ...table } = result;
           results.push(table as AskTable);
           steps.push(result.description);
@@ -461,6 +484,7 @@ export async function askHistory(
               index: results.length - 1,
               description: result.description,
               total: result.total,
+              ...('matched' in result ? { matchedRows: (result as any).matched } : {}),
               columns: result.columns.map((c: { key: string }) => c.key),
               rows: result.rows.map((r: { cells: unknown[] }) => r.cells),
               summary: result.summary,

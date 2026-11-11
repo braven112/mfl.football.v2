@@ -29,6 +29,7 @@ import {
   PLAYOFFS_START_WEEK,
 } from './fantasy-bracket.mjs';
 import { getCurrentNFLWeek } from './current-week';
+import { ptDateString, tradeDeadlineIsoDate } from './trade-deadline.mjs';
 import { dailyPick } from './hero-casting';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
@@ -619,12 +620,13 @@ function checkChampionshipForYear(seasonYear: number, referenceDate: Date): bool
 }
 
 /**
- * Check if today is trade deadline day (Nov 13).
- * This is the highest priority override — beats everything for 24 hours.
+ * Check if today is TheLeague's trade deadline day (the registry's rule, the
+ * Friday before Week 11). The highest priority override — beats everything
+ * for 24 hours.
  */
 export function isTradeDeadlineDay(referenceDate: Date): boolean {
-  const { month, day } = getPTComponents(referenceDate);
-  return month === 11 && day === 13;
+  const today = ptDateString(referenceDate);
+  return today === tradeDeadlineIsoDate('theleague', Number(today.slice(0, 4)));
 }
 
 /**
