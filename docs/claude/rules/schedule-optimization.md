@@ -990,13 +990,14 @@ Goal `marquee-rivals`, weight 50 — below every division and bye goal, beside
 bye luck. `src/utils/marquee-weeks.mjs` finds the weeks from the NFL calendar
 (never a constant: Thanksgiving was Week 12 in 2026 and Week 13 in 2024-25)
 and values each pair; the AFL's real-life list is `schedulePolicy.marquee` in
-the registry, by franchise ID so a last-place punishment rename cannot drop a
-pair.
+the registry (TheLeague's beside it), by franchise ID so a last-place
+punishment rename cannot drop a pair.
 
 - **Real-life rivals carry 60% of a pair's value**, career on-field intensity
   the other 40% ("at least 51%", commissioner). Any real-life pair outranks
   every pair that is not one; the series breaks ties among them.
-- **It steers NON-division pairs only.** It never decides what kind of round a
+- **Halloween steers NON-division pairs only** (a division Thanksgiving is
+  the exception, below). It never decides what kind of round a
   holiday week holds — the week plan does — only which pairs fill it. A trial
   that let it steer division rivals pulled them into a bye-week holiday and
   dropped bye-free division games 84 → 80, through the division-spread
@@ -1010,9 +1011,47 @@ pair.
   net bye spread 5 → 6. At 60k iterations the gain is smaller and noisier, so
   the admin preview will show less of it than the CLI draw.
 
+### A division Thanksgiving chases division rivals — in a second pass
+
+Commissioner, Nov 2026: when Thanksgiving is a division week, "highlight the
+division rivalries for that week". Each week now carries its own value map
+(`marqueeContext(...).byWeek`): Halloween, and a non-division Thanksgiving,
+chase non-division rivals; a division Thanksgiving (read off the week plan)
+chases its division rivals. In a division doubleheader every team plays two of
+its three rivals, so this only chooses WHICH two.
+
+What made that safe is that `searchColoring` no longer folds the marquee terms
+into one weighted sum. **It runs twice**: the first pass draws the season
+exactly as it would without them; the second starts from that draw and rejects
+any move that worsens a division term (`divisionByeFree`, `divisionSpread`,
+`divisionByeCost`, `rematchGap`) or bye luck past the first pass's value. A
+single pass let the 2026 TheLeague title rematch buy a division rematch three
+weeks apart (gap 9 → 3), and let one Halloween rival buy a net bye spread of
+2 → 6 — both "worth it" by weight, both against the commissioner's ordering.
+The one move allowed to cost bye evenness (never a division term) is the one
+that places the title rematch; the bye ceiling then rises to that cost.
+
+### TheLeague's Week 1 title rematch is a placement (from 2027)
+
+TheLeague has no crossover round and every non-division pair meets exactly
+once, so there is no formula to swap: last season's finalists simply play their
+one game in Week 1 (`marquee.titleRematchSince`; `titleRematchPair` reads it
+only for a league with no `crossConference`). Week 1 is a doubleheader with a
+non-division slot, so it always fits. Division finalists are skipped — they meet
+twice in rounds the division rules place. A colouring term (`titleRematch`)
+pulls it in, the search never lets go of it once placed, and a draw that still
+misses it reports `title rematch … is not in Week 1` against the marquee goal.
+
+Trials (150k iterations, goal forced on): 2026 placed Computer Jocks vs Dark
+Magicians, five division rivals on Thanksgiving, division terms and net bye
+spread (2) unchanged. 2025 placed Wascawy Wabbits vs Da Dangsters with division
+terms unchanged and net bye spread 5 → 7 — the rematch exception above.
+
 `tests/marquee-weeks.test.ts` pins the weeks, the 60/40 ranking, the
-non-division steer and that a league without the goal keeps its old weights
-exactly (the term is left out, not carried at zero, so it cannot rescale them).
+non-division steer, the per-week maps, TheLeague's rematch config, that the
+marquee pass never costs a division goal, and that a league without the goal
+keeps its old weights exactly (the term is left out, not carried at zero, so it
+cannot rescale them).
 
 ## Bye exposure is computed from current rosters
 

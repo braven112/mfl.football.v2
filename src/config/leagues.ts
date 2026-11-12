@@ -233,6 +233,11 @@ export interface SchedulePolicy {
   /** Marquee weeks — src/utils/marquee-weeks.mjs. Absent = the league's holiday weeks are not steered. */
   marquee?: {
     since: number;
+    /**
+     * First season whose Week 1 holds last season's title game, for a league
+     * with no crossover round (the AFL's lives on `crossConference`).
+     */
+    titleRematchSince?: number;
     /** Franchise-id pairs the commissioner names as real-life rivals. */
     realLifeRivalries: string[][];
   };

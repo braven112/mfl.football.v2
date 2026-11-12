@@ -99,6 +99,26 @@ export const LEAGUES = {
       doubleheaderCount: 4,
       keepDivisionFinish: true,
       crossConference: null,
+      // Marquee weeks (commissioner, Nov 2026). TheLeague has no crossover
+      // round, and every non-division pair meets exactly once, so the title
+      // rematch is a PLACEMENT: last season's finalists play their one game in
+      // Week 1 (always, unless they share a division).
+      marquee: {
+        since: 2027,
+        titleRematchSince: 2027,
+        realLifeRivalries: [
+          ['0012', '0010'], // Vitside Mafia / Computer Jocks
+          ['0012', '0001'], // Vitside Mafia / Pacific Pigskins
+          ['0012', '0004'], // Vitside Mafia / Dead Cap Walking
+          ['0012', '0011'], // Vitside Mafia / Midwestside Connection
+          ['0002', '0001'], // Da Dangsters / Pacific Pigskins
+          ['0009', '0016'], // Wascawy Wabbits / Running Down The Dream
+          ['0015', '0007'], // Dark Magicians of Chaos / Fire Ready Aim
+          ['0009', '0008'], // Wascawy Wabbits / Bring the Pain
+          ['0011', '0004'], // Midwestside Connection / Dead Cap Walking
+          ['0014', '0005'], // Cowboy Up / The Mariachi Ninjas
+        ],
+      },
     },
     name: 'The League',
     /** League mark: light cut for light grounds, dark cut for dark ones. */

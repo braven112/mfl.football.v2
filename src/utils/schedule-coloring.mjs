@@ -182,12 +182,16 @@ const variance = (xs) => {
  * so `balanceHomeAway` fixes it exactly afterwards rather than the search
  * spending iterations on it.
  */
-export const COLORING_WEIGHTS = ({ marquee = false } = {}) => {
+export const COLORING_WEIGHTS = ({ marquee = false, titleRematch = false } = {}) => {
   const raw = {
     // Only when the planner was handed marquee weeks and rival values. Left out
     // otherwise, rather than carried at zero, so a league without the goal is
     // optimised under exactly the weights it always was.
     ...(marquee ? { marqueeRivals: goalWeight('marquee-rivals') } : {}),
+    // A league with no crossover round places last season's title game in
+    // Week 1 through this term (TheLeague). Same weight as the marquee goal it
+    // belongs to; `searchColoring` then never gives it back once found.
+    ...(titleRematch ? { titleRematch: goalWeight('marquee-rivals') } : {}),
     divisionByeFree: goalWeight('division-bye-free-ceiling'),
     divisionSpread: goalWeight('division-spread'),
     divisionByeCost: goalWeight('light-bye-weeks'),
@@ -329,18 +333,33 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
   // Marquee weeks (marquee-weeks.mjs): how much rivalry the holiday weeks
   // hold, against the most they could if every franchise met its best-valued
   // rival there. 0 is that ceiling, 1 is no rivalry at all.
+  // Each week may carry its own value map (`byWeek`): a division Thanksgiving
+  // values division rivals, Halloween only the non-division ones.
   let marqueeRivals = 0;
   if (ctx.marquee) {
     let achieved = 0;
     bySlot.forEach((slotGames, i) => {
-      if (!ctx.marquee.weeks.has(slots[i].week)) return;
-      for (const g of slotGames) achieved += ctx.marquee.value[pairKey(g.away, g.home)] ?? 0;
+      const week = slots[i].week;
+      const values = ctx.marquee.byWeek?.get(week) ?? (ctx.marquee.weeks?.has(week) ? ctx.marquee.value : null);
+      if (!values) return;
+      for (const g of slotGames) achieved += values[pairKey(g.away, g.home)] ?? 0;
     });
     marqueeRivals = ctx.marquee.potential ? Math.max(0, 1 - achieved / ctx.marquee.potential) : 0;
   }
 
+  // Last season's finalists in their pinned week: 0 when they meet there.
+  let titleRematch = 0;
+  if (ctx.titleRematch) {
+    const { key, week } = ctx.titleRematch;
+    const held = bySlot.some(
+      (slotGames, i) => slots[i].week === week && slotGames.some((g) => pairKey(g.away, g.home) === key),
+    );
+    titleRematch = held ? 0 : 1;
+  }
+
   const terms = {
     ...(ctx.marquee ? { marqueeRivals } : {}),
+    ...(ctx.titleRematch ? { titleRematch } : {}),
     divisionByeFree: divisionGames ? divisionOnBye / divisionGames : 0,
     divisionSpread: spreadPenalty,
     // Two starters missing from a rivalry game is the reference point for "bad".
@@ -456,8 +475,8 @@ const pickCycle = (cycles, slotA, slots, ctx, rng) => {
  * already found would be indefensible. It therefore cannot do worse than the
  * seed it was handed.
  */
-export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterations = 20000, restarts = 3 } = {}) => {
-  const weights = COLORING_WEIGHTS({ marquee: Boolean(ctx.marquee) });
+const anneal = (seedBySlot, slots, ctx, { seed, iterations, restarts }, floor = null) => {
+  const weights = COLORING_WEIGHTS({ marquee: Boolean(ctx.marquee), titleRematch: Boolean(ctx.titleRematch) });
   const seedScore = scoreColoring(seedBySlot, slots, ctx, weights);
   let best = { bySlot: seedBySlot, score: seedScore };
 
@@ -477,6 +496,28 @@ export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterat
       // Absolute floor, never a price. Demoting the three-week rule to a goal
       // lets the optimiser trade it; it does not license a one-week rematch.
       if (candidateScore.minRematchGap < (ctx.hardMinRematchGap ?? 3)) continue;
+      // The title rematch is "always" (commissioner, Nov 2026): once the
+      // search has placed it, no move may take it back out.
+      if (ctx.titleRematch && best.score.terms.titleRematch === 0 && candidateScore.terms.titleRematch !== 0) continue;
+      // Marquee pass: no division goal, and no bye evenness, may end worse
+      // than the draw made without it. See `searchColoring`.
+      //
+      // One exception: the move that PLACES the title rematch may cost bye
+      // evenness (never a division goal). The commissioner made the rematch
+      // "always ... if it doesn't affect any division rules", and in 2025 no
+      // bye-neutral swap could reach it. The bye ceiling then rises to what
+      // that move cost, so nothing after it can spend more.
+      let raise = null;
+      if (floor) {
+        const placesRematch =
+          ctx.titleRematch && candidateScore.terms.titleRematch === 0 && score.terms.titleRematch !== 0;
+        const over = (k) => candidateScore.terms[k] > floor[k] + 1e-9;
+        if (DIVISION_ONLY.some(over)) continue;
+        if (over('byeLuck')) {
+          if (!placesRematch) continue;
+          raise = candidateScore.terms.byeLuck;
+        }
+      }
       // RATCHET ON THE TOP GOAL, with one exemption. A plain weighted sum lets
       // the lower goals club together and buy a loss on the highest-weighted
       // one: an AFL run pushed division games on bye weeks from 36 to 38
@@ -501,9 +542,46 @@ export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterat
       if (delta < 0 || rng() < Math.exp(-delta / Math.max(1e-9, 0.02 * temperature))) {
         current = candidate;
         score = candidateScore;
+        if (raise !== null) floor = { ...floor, byeLuck: raise };
         if (score.total < best.score.total) best = { bySlot: current, score };
       }
     }
   }
   return { ...best, seedScore };
+};
+
+/**
+ * What no marquee goal may cost: the division rules, and bye-week evenness.
+ * Bye luck is in here because a trial without it traded the 2026 TheLeague
+ * net bye spread from 2 to 6 for one Halloween rivalry; with it the rematch
+ * and the Thanksgiving rivals still landed, and the AFL kept every pick.
+ */
+const DIVISION_ONLY = ['divisionByeFree', 'divisionSpread', 'divisionByeCost', 'rematchGap'];
+
+/**
+ * Anneal a colouring with Kempe swaps, then — when the league has marquee
+ * weeks or a placed title rematch — fill those in a SECOND pass that may not
+ * worsen any division goal.
+ *
+ * Two passes, not one weighted sum, because the commissioner's rule is an
+ * ordering rather than a price: the marquee picks come "once we've done" the
+ * division and bye rules, and the title rematch only "if it doesn't affect any
+ * division rules" (Nov 2026). A single pass let them buy a three-week division
+ * rematch (gap 9 -> 3 in a 2026 TheLeague trial) because the weighted sum said
+ * it was worth it. So the first pass draws the season exactly as it would
+ * without them, and the second starts from that draw with each division term
+ * and bye-luck term as a hard ceiling (`DIVISION_ONLY` plus `byeLuck`).
+ */
+export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterations = 20000, restarts = 3 } = {}) => {
+  if (!ctx.marquee && !ctx.titleRematch) return anneal(seedBySlot, slots, ctx, { seed, iterations, restarts });
+  const plain = { ...ctx, marquee: null, titleRematch: null };
+  const first = anneal(seedBySlot, slots, plain, { seed, iterations, restarts });
+  const second = anneal(
+    first.bySlot,
+    slots,
+    ctx,
+    { seed: seed + 104729, iterations: Math.max(1, Math.round(iterations / 2)), restarts: 1 },
+    first.score.terms,
+  );
+  return { ...second, seedScore: scoreColoring(seedBySlot, slots, ctx, COLORING_WEIGHTS({ marquee: Boolean(ctx.marquee), titleRematch: Boolean(ctx.titleRematch) })) };
 };

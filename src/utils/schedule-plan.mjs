@@ -44,6 +44,7 @@ import {
 import { LEAGUES } from '../config/leagues-data.mjs';
 import { starterByeExposure } from './starter-exposure.mjs';
 import { marqueeWeeks, marqueePairValues, marqueeGamesIn } from './marquee-weeks.mjs';
+import { rivalryPairKey } from './rivalry-intensity.mjs';
 import {
   buildSlots,
   coloringFromWeeks,
@@ -148,7 +149,11 @@ const priorRatings = (standingsJson, franchiseIds) => {
  * schedule audit replays every stored AFL season against it).
  */
 export const titleRematchPair = (policy, year, lastChampionship) => {
-  const since = policy?.crossConference?.titleRematchSince;
+  // The AFL's lives on its crossover round; a league with none (TheLeague)
+  // declares it on its marquee config and places the game instead.
+  const since = policy?.crossConference
+    ? policy.crossConference.titleRematchSince
+    : policy?.marquee?.titleRematchSince;
   if (!since || year < since || !lastChampionship) return null;
   if (Number(lastChampionship.year) !== year - 1) return null;
   const { champion, runnerUp } = lastChampionship;
@@ -165,22 +170,45 @@ export const lastChampionshipFor = (championshipHistory, year) =>
  * Marquee-week inputs for the colouring search, or null when the league has no
  * rival list or the season predates the goal. See marquee-weeks.mjs.
  */
-export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders = []) => {
+/**
+ * @param {any} policy
+ * @param {number} year
+ * @param {any} shape
+ * @param {any} rivalrySeries
+ * @param {number[]} [doubleheaders]
+ * @param {{ lastChampionship?: any, thanksgivingIsDivision?: boolean }} [opts]
+ */
+export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders = [], { lastChampionship = null, thanksgivingIsDivision = false } = {}) => {
   const cfg = policy?.marquee;
   if (!cfg || year < (cfg.since ?? Infinity)) return null;
   const named = marqueeWeeks(year, shape.lastWeek);
-  if (!Object.keys(named).length) return null;
+  // Week 1's title rematch, for a league with no crossover round. Only a
+  // non-division final: division finalists already meet twice, in rounds the
+  // division rules place.
+  let titleRematch = null;
+  const finalists = policy.crossConference ? null : titleRematchPair(policy, year, lastChampionship);
+  if (finalists) {
+    const [a, b] = finalists;
+    if (shape.divisionOf[a] && shape.divisionOf[b] && shape.divisionOf[a] !== shape.divisionOf[b]) {
+      titleRematch = { week: 1, key: rivalryPairKey(a, b), away: a, home: b };
+    }
+  }
+  if (!Object.keys(named).length && !titleRematch) return null;
   const { value, real } = marqueePairValues({
     realLife: cfg.realLifeRivalries ?? [],
     series: rivalrySeries ?? {},
     franchiseIds: shape.franchiseIds,
   });
-  // The search steers NON-DIVISION pairs only. Division rivals already meet
+  // `steer` is the NON-DIVISION pairs (Halloween, and a non-division
+  // Thanksgiving). Division rivals already meet
   // twice a season in rounds the division and bye goals place; letting this
   // term pull one into a holiday week traded division games onto bye weeks
   // (84 -> 80 bye-free in a 2026 trial) — exactly what the commissioner ruled
   // out: "if it's division, then those typical division rules will apply, and
-  // we'll almost certainly have the rivalries anyways." Division rivals that
+  // we'll almost certainly have the rivalries anyways." (That trial was one
+  // weighted search pass; a division Thanksgiving now chases its rivals in
+  // `byWeek` below, because the second pass in `searchColoring` cannot cost a
+  // division term.) Division rivals that
   // land on a holiday still show in the report (`value`).
   const steer = {};
   for (const [key, v] of Object.entries(value)) {
@@ -197,7 +225,31 @@ export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders
   const perSlot = shape.franchiseIds.reduce((sum, id) => sum + (best[id] ?? 0), 0) / 2;
   const dh = new Set(doubleheaders);
   const slotCount = Object.values(named).reduce((n, w) => n + (dh.has(w) ? 2 : 1), 0);
-  return { named, weeks: new Set(Object.values(named)), value, steer, real, potential: perSlot * slotCount };
+  // What the search may chase in each week. Halloween, and a non-division
+  // Thanksgiving, chase the non-division rivals only. A DIVISION Thanksgiving
+  // (commissioner, Nov 2026: "highlight the division rivalries for that
+  // week") chases its division rivals instead — every team plays two of its
+  // three there, so this only chooses WHICH two, and the bye ratchet in
+  // `searchColoring` still outranks it.
+  const division = {};
+  for (const [key, v] of Object.entries(value)) {
+    const [a, b] = key.split('-');
+    if (shape.divisionOf[a] === shape.divisionOf[b]) division[key] = v;
+  }
+  const byWeek = new Map();
+  for (const [label, week] of Object.entries(named)) {
+    byWeek.set(week, label === 'thanksgiving' && thanksgivingIsDivision ? division : steer);
+  }
+  return {
+    named,
+    weeks: new Set(Object.values(named)),
+    byWeek,
+    value,
+    steer,
+    real,
+    titleRematch,
+    potential: perSlot * slotCount,
+  };
 };
 
 const buildCrossRound = (shape, policy, year, prevLeagueJson, prevStandingsJson, lastChampionship = null) => {
@@ -517,7 +569,7 @@ export const planSchedule = ({
   let crossConference = null;
   let fairness = null;
   let coloring = null;
-  const marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders);
+  let marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders, { lastChampionship });
 
   if (policy.mode === 'constructive') {
     const cross = policy.crossConference
@@ -560,6 +612,17 @@ export const planSchedule = ({
       conferenceSize,
       crossWeek,
     });
+    // Whether Thanksgiving holds division games decides which rivals it may
+    // chase, and only the week plan knows.
+    if (marquee?.named.thanksgiving) {
+      const thanksgivingIsDivision = weekPlan.some(
+        (s) => s.week === marquee.named.thanksgiving && s.kind === 'division',
+      );
+      marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders, {
+        lastChampionship,
+        thanksgivingIsDivision,
+      });
+    }
     const best = searchSeason(
       {
         divisions,
@@ -596,7 +659,8 @@ export const planSchedule = ({
       // to rebuild it inside a per-slot filter.
       const seeded = coloringFromWeeks(weeks, slots);
       const colorCtx = {
-        marquee: marquee ? { weeks: marquee.weeks, value: marquee.steer, potential: marquee.potential } : null,
+        marquee: marquee ? { byWeek: marquee.byWeek, potential: marquee.potential } : null,
+        titleRematch: marquee?.titleRematch ?? null,
         divisionOf: shape.divisionOf,
         byesFor: (id, week) => exposure[id]?.[week] ?? 0,
         rating: priorRatings(readFeed(year - 1, 'standings'), shape.franchiseIds),
@@ -681,6 +745,16 @@ export const planSchedule = ({
             awayName: shape.name[g.away],
             homeName: shape.name[g.home],
           })),
+          titleRematch: marquee.titleRematch
+            ? {
+                ...marquee.titleRematch,
+                awayName: shape.name[marquee.titleRematch.away],
+                homeName: shape.name[marquee.titleRematch.home],
+                placed: (weeks.get(marquee.titleRematch.week) ?? []).some(
+                  (g) => rivalryPairKey(g.away, g.home) === marquee.titleRematch.key,
+                ),
+              }
+            : null,
         }
       : null,
     fairness,
@@ -695,7 +769,14 @@ export const planSchedule = ({
           doubleheaders: doubleheaderWeeks(current),
         })
       : null,
-    problems: validateSeason(weeks, shape, { byeFree: clean, doubleheaders }),
+    problems: [
+      ...validateSeason(weeks, shape, { byeFree: clean, doubleheaders }),
+      // "Always" (commissioner, Nov 2026), so a draw that missed it says so.
+      ...(marquee?.titleRematch &&
+      !(weeks.get(marquee.titleRematch.week) ?? []).some((g) => rivalryPairKey(g.away, g.home) === marquee.titleRematch.key)
+        ? [`title rematch ${shape.name[marquee.titleRematch.away]} vs ${shape.name[marquee.titleRematch.home]} is not in Week ${marquee.titleRematch.week}`]
+        : []),
+    ],
     changedWeeks: current.size ? changedWeeks(current, weeks, shape.lastWeek) : null,
   };
 };

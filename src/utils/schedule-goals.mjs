@@ -62,6 +62,7 @@ import { divisionByeSplit, scheduleConstraints, upcomingConstraints } from './sc
 export const problemGoal = (message) => {
   if (/doubleheader in Week \d+ falls on an NFL bye week/i.test(message)) return 'doubleheaders-off-byes';
   if (/does not play exactly its division rivals twice/i.test(message)) return 'opponent-counts';
+  if (/^title rematch /i.test(message)) return 'marquee-rivals';
   return 'one-game-per-week';
 };
 
@@ -237,6 +238,8 @@ const SCORERS = {
   },
 
   'marquee-rivals': (f) => {
+    const missed = problemsFor(f, 'marquee-rivals');
+    if (missed.length) return { status: 'partial', detail: missed.join('; ') };
     const games = f.marqueeGames ?? null;
     if (!games) return { status: 'optimised', detail: 'no rival list for this league, so the holiday weeks were not steered' };
     if (!games.length) return { status: 'optimised', detail: 'no listed or long-running rivalry fit the holiday weeks this season' };

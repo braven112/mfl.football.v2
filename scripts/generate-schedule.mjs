@@ -101,6 +101,12 @@ if (plan.crossConference) {
 if (plan.marquee) {
   const { halloween, thanksgiving } = plan.marquee.weeks;
   console.log(`marquee weeks:         Halloween Wk ${halloween ?? '—'}, Thanksgiving Wk ${thanksgiving ?? '—'}`);
+  const tr = plan.marquee.titleRematch;
+  if (tr) {
+    console.log(
+      `title rematch:         ${tr.awayName} vs ${tr.homeName} ${tr.placed ? `(Week ${tr.week})` : `NOT in Week ${tr.week} — check the draw`}`,
+    );
+  }
   for (const g of plan.marquee.games) {
     console.log(`  ${g.label.padEnd(12)} Wk ${g.week}  ${g.awayName} vs ${g.homeName}${g.realLife ? '  (real-life)' : ''}`);
   }

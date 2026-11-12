@@ -6,8 +6,9 @@ import {
   thanksgivingIsoDate,
   REAL_LIFE_SHARE,
 } from '../src/utils/marquee-weeks.mjs';
-import { marqueeContext, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
-import { scoreColoring, COLORING_WEIGHTS } from '../src/utils/schedule-coloring.mjs';
+import { marqueeContext, titleRematchPair, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
+import { scoreColoring, searchColoring, COLORING_WEIGHTS } from '../src/utils/schedule-coloring.mjs';
+import { problemGoal } from '../src/utils/schedule-goals.mjs';
 
 /**
  * Marquee weeks (commissioner, Nov 2026): Halloween and Thanksgiving carry the
@@ -51,14 +52,51 @@ describe('marquee weeks', () => {
     expect(value['B-D']).toBeUndefined();
   });
 
-  it('the AFL list only names franchises that exist, each pair once', () => {
-    const list = SCHEDULE_POLICY['afl-fantasy'].marquee.realLifeRivalries as string[][];
-    const ids = new Set(Array.from({ length: 24 }, (_, i) => String(i + 1).padStart(4, '0')));
+  it.each([
+    ['afl-fantasy', 24],
+    ['theleague', 16],
+  ])('the %s list only names franchises that exist, each pair once', (slug, teams) => {
+    const list = SCHEDULE_POLICY[slug].marquee.realLifeRivalries as string[][];
+    const ids = new Set(Array.from({ length: teams }, (_, i) => String(i + 1).padStart(4, '0')));
     const keys = list.map(([a, b]) => [a, b].sort().join('-'));
     for (const [a, b] of list) {
       expect(ids.has(a) && ids.has(b) && a !== b, `${a}/${b}`).toBe(true);
     }
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('TheLeague places last season\'s title game in Week 1, from 2027', () => {
+    const policy = SCHEDULE_POLICY.theleague;
+    expect(policy.crossConference).toBeNull();
+    expect(policy.marquee.titleRematchSince).toBe(2027);
+    const final = { year: 2026, champion: '0010', runnerUp: '0015' };
+    expect(titleRematchPair(policy, 2027, final)).toEqual(['0010', '0015']);
+    expect(titleRematchPair(policy, 2026, { ...final, year: 2025 })).toBeNull();
+  });
+
+  it('a division Thanksgiving chases division rivals; Halloween never does', () => {
+    const shape = {
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      lastWeek: 14,
+    };
+    const policy = { marquee: { since: 2026, titleRematchSince: 2026, realLifeRivalries: [['A', 'B'], ['A', 'C']] } };
+    const final = { year: 2025, champion: 'B', runnerUp: 'D' };
+    const div = marqueeContext(policy, 2026, shape, {}, [], { lastChampionship: final, thanksgivingIsDivision: true })!;
+    expect(Object.keys(div.byWeek.get(12))).toEqual(['A-B']);
+    expect(Object.keys(div.byWeek.get(8))).toEqual(['A-C']);
+    expect(div.titleRematch).toMatchObject({ week: 1, key: 'B-D' });
+    const inter = marqueeContext(policy, 2026, shape, {}, [], { thanksgivingIsDivision: false })!;
+    expect(Object.keys(inter.byWeek.get(12))).toEqual(['A-C']);
+    expect(inter.titleRematch).toBeNull();
+    // Division finalists already meet twice; nothing to place.
+    const same = marqueeContext(policy, 2026, shape, {}, [], { lastChampionship: { ...final, runnerUp: 'A' } })!;
+    expect(same.titleRematch).toBeNull();
+  });
+
+  it('a missed rematch is reported against the marquee goal, not as a broken week', () => {
+    const msg = 'title rematch Computer Jocks vs Dark Magicians of Chaos is not in Week 1';
+    expect(problemGoal(msg)).toBe('marquee-rivals');
   });
 
   it('steers only non-division pairs, but reports division rivals too', () => {
@@ -102,5 +140,35 @@ describe('marquee weeks', () => {
     // No marquee context = the old weights exactly, not the old weights plus a zero.
     expect(COLORING_WEIGHTS()).not.toHaveProperty('marqueeRivals');
     expect(COLORING_WEIGHTS({ marquee: true })).toHaveProperty('marqueeRivals');
+  });
+
+  it('the marquee pass never costs a division goal or bye evenness, and places the rematch', () => {
+    // Kept tiny: 4 teams, 3 single-slot rounds of 2 games.
+    const slots = [{ week: 1 }, { week: 2 }, { week: 3 }];
+    const seed = [
+      [{ away: 'A', home: 'B' }, { away: 'C', home: 'D' }],
+      [{ away: 'A', home: 'C' }, { away: 'B', home: 'D' }],
+      [{ away: 'A', home: 'D' }, { away: 'B', home: 'C' }],
+    ];
+    const ctx = {
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      byesFor: () => 0,
+      rating: {},
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      byeFreeWeeks: [1, 2, 3],
+      lastWeek: 3,
+      doubleheaderWeeks: [],
+      minRematchGap: 1,
+      hardMinRematchGap: 0,
+      marquee: { byWeek: new Map([[2, { 'A-C': 1 }]]), potential: 2 },
+      titleRematch: { week: 1, key: 'A-D' },
+    };
+    const plain = searchColoring(seed, slots, { ...ctx, marquee: null, titleRematch: null }, { iterations: 400, restarts: 1 });
+    const out = searchColoring(seed, slots, ctx, { iterations: 400, restarts: 1 });
+    expect(out.score.terms.titleRematch).toBe(0);
+    for (const k of ['divisionByeFree', 'divisionSpread', 'divisionByeCost', 'rematchGap']) {
+      const terms = (x: { score: { terms: unknown } }) => x.score.terms as Record<string, number>;
+      expect(terms(out)[k]).toBeLessThanOrEqual(terms(plain)[k] + 1e-9);
+    }
   });
 });
