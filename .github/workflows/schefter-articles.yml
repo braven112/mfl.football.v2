@@ -104,6 +104,43 @@ jobs:
             echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
           fi
 
+      # Saturday, BEFORE the Matchup Preview: one post per league naming every
+      # team whose lineup has a problem (no lineup, an empty slot, an OUT, IR
+      # or bye starter), plus a push to each of those owners. The preview's own
+      # chat post follows after the deploy (announce step below), so the chat
+      # reads lineups first, preview second. Exempt from the one-a-day cap, so
+      # it never costs the preview its slot; deduped per league-week in Redis;
+      # posts only on the league's Saturday. Never fails the job: a missed roll
+      # call must not cost anyone the preview.
+      # scripts/lib/lineup-broadcast.mjs, docs/claude/rules/lineups.md.
+      # The lineup check reaches @upstash/redis; every other script in this
+      # job is dependency-free, so only the preview run pays for the install.
+      - name: Install dependencies (Saturday roll call)
+        if: steps.resolve.outputs.type == 'matchup-preview' && github.event.inputs.week == ''
+        uses: ./.github/actions/setup
+
+      - name: Saturday lineup roll call
+        if: steps.resolve.outputs.type == 'matchup-preview' && github.event.inputs.week == ''
+        continue-on-error: true
+        env:
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          SLACK_ARCHIES_BOT_TOKEN: ${{ secrets.SLACK_ARCHIES_BOT_TOKEN }}
+          SLACK_ARCHIES_CHANNEL_ID: ${{ secrets.SLACK_ARCHIES_CHANNEL_ID }}
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          GROUPME_AFL_GROUP_ID: ${{ secrets.GROUPME_AFL_GROUP_ID }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          for L in $(node scripts/league-jobs.mjs article:matchup-preview); do
+            node scripts/schefter-lineup-check.mjs --saturday --league "$L" \
+              || echo "::warning::Saturday lineup roll call failed for $L (non-fatal)"
+          done
+
       - name: Generate article
         if: steps.resolve.outputs.type != ''
         env:
