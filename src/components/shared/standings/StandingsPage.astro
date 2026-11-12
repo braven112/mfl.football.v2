@@ -25,6 +25,9 @@ import { standingsPageProfile } from './standings-page-profile';
 import RelatedPagesCard from '../RelatedPagesCard.astro';
 import StandingsBoard from './board/StandingsBoard.astro';
 import { resolveSiteTheme } from '../../../utils/site-theme';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { loadLatestPlayoffOdds, playoffOddsByTeam, type PlayoffOddsFile } from '../../../utils/playoff-odds-view';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -100,6 +103,29 @@ const boardHref = (id: string) =>
   franchiseHrefs?.[id] ?? (profile.franchiseBaseUrl ? `${profile.franchiseBaseUrl}/${id}` : undefined);
 
 const copy = profile.copy[view];
+
+// Playoff odds on the Playoff tab (owner's pick, Nov 2026: a bar on every tile
+// plus Odds/Bye table columns). The newest weekly file from
+// scripts/compute-playoff-odds.mjs, the same one the Playoff Odds page and the
+// Saturday preview read; shown only for the season it was computed for.
+const leagueEntry = getLeagueBySlug(leagueSlug);
+let odds: Map<string, { playoff: number; bye: number }> | undefined;
+let oddsFile: PlayoffOddsFile | null = null;
+if (view === 'league' && leagueEntry?.playoffOdds) {
+  const oddsFiles = Object.fromEntries(
+    listLeagueData(`${leagueEntry.dataPath}/derived/playoff-odds-${selectedYear}-*.json`).map((p) => [
+      p,
+      () => loadLeagueData<PlayoffOddsFile>(p) as Promise<PlayoffOddsFile>,
+    ]),
+  );
+  oddsFile = await loadLatestPlayoffOdds(oddsFiles);
+  if (oddsFile && oddsFile.year === selectedYear) odds = playoffOddsByTeam(oddsFile);
+}
+const weeksLeft = oddsFile ? oddsFile.lastWeek - oddsFile.completedWeek : 0;
+const oddsNote = oddsFile
+  ? `through Week ${oddsFile.completedWeek}${weeksLeft > 0 ? ` · ${weeksLeft} week${weeksLeft === 1 ? '' : 's'} left` : ''}`
+  : undefined;
+const oddsHref = odds ? resolveLeaguePath(`/${leagueEntry!.slug}/playoff-odds`, Astro.locals.hideLeaguePrefix ?? false) : undefined;
 ---
 
 <TheLeagueLayout title={title}>
@@ -137,6 +163,10 @@ const copy = profile.copy[view];
           hrefFor={boardHref}
           defendingChampions={defendingChampions}
           championYear={selectedYear - 1}
+          odds={odds}
+          oddsHaveByes={(leagueEntry?.playoffOdds?.byes ?? 0) > 0}
+          oddsHref={oddsHref}
+          oddsNote={oddsNote}
         />
       )}
 

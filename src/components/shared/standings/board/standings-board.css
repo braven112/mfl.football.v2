@@ -435,3 +435,17 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-champ { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; text-align: right; line-height: 1.15; font-size: var(--font-size-xs); color: var(--content-text-muted); }
 .stb-champ img { width: 1.75rem; height: 1.75rem; object-fit: contain; flex: none; order: 2; }
 .stb-champ small { display: block; font-size: var(--font-size-3xs); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---------- playoff odds on the Playoff tab (current season) ---------- */
+/* The bar rides each tile in the tile's own ink (white on a painted tile,
+   text color on a card), so it needs no colour of its own. */
+.stb-odds { display: grid; gap: 0.2rem; margin-top: 0.35rem; }
+.stb-odds__bar { display: block; height: 0.3rem; border-radius: 999px; background: currentColor; opacity: 1; position: relative; overflow: hidden; }
+.stb-odds__bar::before { content: ''; position: absolute; inset: 0; background: var(--stb-card, #fff); opacity: 0.75; }
+.stb-tile--painted .stb-odds__bar::before,
+[data-site-theme='primetime'] .stb-odds__bar::before { background: #000; opacity: 0.55; }
+.stb-odds__bar i { position: absolute; inset: 0 auto 0 0; background: currentColor; border-radius: 999px; }
+.stb-odds__nums { display: flex; justify-content: space-between; gap: 0.4rem; font-size: var(--font-size-2xs); opacity: 0.92; white-space: nowrap; }
+.stb-odds__in { font-weight: 700; }
+.stb-odds__in--hot { color: var(--stb-text); }
+.stb-odds-link { margin: 0; font-size: var(--font-size-sm); color: var(--stb-muted); }

@@ -47,6 +47,9 @@ import type { StandingsFeed } from '../../../utils/live-standings';
 import type { AflFamilySlug } from '../../../utils/afl-conference';
 import { leagueConferenceIds } from '../../../utils/afl-conference';
 import RelatedPagesCard from '../RelatedPagesCard.astro';
+import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { loadLatestPlayoffOdds, playoffOddsByTeam, type PlayoffOddsFile } from '../../../utils/playoff-odds-view';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 interface Props {
   league: LeagueDefinition;
@@ -281,6 +284,25 @@ const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' 
 // The standings board, in the request's site theme (registry `siteTheme`, or
 // a `?theme=` preview). Every list below is in the producer's order.
 const siteTheme = resolveSiteTheme(leagueSlug, Astro.locals.siteThemePreview);
+
+// Playoff odds on the Playoff tab — the same newest weekly file the Playoff
+// Odds page reads (scripts/compute-playoff-odds.mjs), this season only.
+let odds: Map<string, { playoff: number; bye: number }> | undefined;
+let oddsFile: PlayoffOddsFile | null = null;
+if (view === 'league' && leagueDef.playoffOdds) {
+  oddsFile = await loadLatestPlayoffOdds(Object.fromEntries(
+    listLeagueData(`${leagueDef.dataPath}/derived/playoff-odds-${selectedYear}-*.json`).map((p) => [
+      p,
+      () => loadLeagueData<PlayoffOddsFile>(p) as Promise<PlayoffOddsFile>,
+    ]),
+  ));
+  if (oddsFile && oddsFile.year === selectedYear) odds = playoffOddsByTeam(oddsFile);
+}
+const oddsWeeksLeft = oddsFile ? oddsFile.lastWeek - oddsFile.completedWeek : 0;
+const oddsNote = oddsFile
+  ? `through Week ${oddsFile.completedWeek}${oddsWeeksLeft > 0 ? ` · ${oddsWeeksLeft} week${oddsWeeksLeft === 1 ? '' : 's'} left` : ''}`
+  : undefined;
+const oddsHref = odds ? resolveLeaguePath(`/${leagueDef.slug}/playoff-odds`, Astro.locals.hideLeaguePrefix ?? false) : undefined;
 const logoFor = (confId?: string) =>
   confId ? { src: getConferenceLogo(confId, leagueSlug), darkSrc: getConferenceLogoDark(confId, leagueSlug) } : undefined;
 const boardDivisions = divisionStandings.map((d) => ({
@@ -385,6 +407,9 @@ const boardTiers = hasTierRecord
         tiers={boardTiers}
         nit={nitTeams}
         proRel={promoRegTeams.length === 4 ? { teams: promoRegTeams, logo: { src: '/assets/afl/premier.svg', darkSrc: '/assets/afl/premier-dark.svg' } } : undefined}
+        odds={odds}
+        oddsHref={oddsHref}
+        oddsNote={oddsNote}
       />
 
       {lastFetched && (

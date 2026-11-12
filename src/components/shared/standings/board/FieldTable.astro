@@ -15,16 +15,23 @@ interface Props {
   /** The picture's groups, for the band rows (first seed of each band → label). */
   groups: SeedGroup[];
   summary?: string;
+  /** Simulated playoff/bye odds by team id (current season only); omit for no columns. */
+  odds?: Map<string, { playoff: number; bye: number }>;
+  oddsHaveByes?: boolean;
 }
 
-const { theme, teams, groups, summary } = Astro.props;
+const { theme, teams, groups, summary, odds, oddsHaveByes = false } = Astro.props;
+const pct = (x: number | undefined) =>
+  x == null ? '–' : x >= 0.995 && x < 1 ? '>99%' : x > 0 && x < 0.005 ? '<1%' : `${Math.round(x * 100)}%`;
+const showOdds = Boolean(odds && odds.size > 0);
+const showBye = showOdds && oddsHaveByes;
 const showVp = teams.some((t) => t.vp !== null);
 const bandAt = new Map<number, string>();
 for (const g of groups) {
   const first = g.teams[0]?.team.seed;
   if (first && g.kind !== 'line') bandAt.set(first, g.label);
 }
-const cols = 5 + (showVp ? 1 : 0);
+const cols = 5 + (showVp ? 1 : 0) + (showOdds ? 1 : 0) + (showBye ? 1 : 0);
 // A summary folds the table away behind a <details> toggle.
 const Wrap = summary ? 'details' : 'div';
 ---
@@ -41,6 +48,8 @@ const Wrap = summary ? 'details' : 'div';
           {showVp && <th>VP</th>}
           <th class="stb-hide-sm">PF</th>
           <th class="stb-hide-sm">Strk</th>
+          {showOdds && <th title="Simulated chance to make the playoffs">Odds</th>}
+          {showBye && <th title="Simulated chance at a first-round bye">Bye</th>}
         </tr>
       </thead>
       <tbody>
@@ -60,6 +69,8 @@ const Wrap = summary ? 'details' : 'div';
               {showVp && <td class="stb-num"><b>{t.vp}</b></td>}
               <td class="stb-num stb-hide-sm">{t.pf.toFixed(1)}</td>
               <td class="stb-hide-sm">{t.streak}</td>
+              {showOdds && <td class="stb-num"><b>{pct(odds!.get(t.id)?.playoff)}</b></td>}
+              {showBye && <td class="stb-num">{(odds!.get(t.id)?.bye ?? 0) >= 0.005 ? pct(odds!.get(t.id)?.bye) : '–'}</td>}
             </tr>
           </>
         ))}

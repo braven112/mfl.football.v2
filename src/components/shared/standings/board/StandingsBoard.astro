@@ -44,9 +44,16 @@ interface Props {
   defendingChampions?: Record<string, { name: string; icon: string; id?: string }>;
   /** The season those champions won. */
   championYear?: number;
+  /** Simulated playoff odds for the Playoff tab (current season only). */
+  odds?: Map<string, { playoff: number; bye: number }>;
+  oddsHaveByes?: boolean;
+  /** The league's Playoff Odds page, linked under the picture when odds show. */
+  oddsHref?: string;
+  /** "Through Week 9 · 5 weeks left" — printed with the link. */
+  oddsNote?: string;
 }
 
-const { theme, view, leagueSlug, profile, divisions, league, allPlay, teams, preferredTeamId, hrefFor, defendingChampions, championYear } = Astro.props;
+const { theme, view, leagueSlug, profile, divisions, league, allPlay, teams, preferredTeamId, hrefFor, defendingChampions, championYear, odds, oddsHaveByes, oddsHref, oddsNote } = Astro.props;
 
 const configById = new Map(teams.map((t) => [t.franchiseId, t]));
 const usesVictoryPoints = profile.columns.division.some((c) => c.key === 'vp');
@@ -156,12 +163,22 @@ const allPlayRows = buildAllPlayRows(allPlay.map(board));
           theme={theme}
           groups={groups}
           topSeedTag={profile.board?.topSeedTag}
+          odds={odds}
+          oddsHaveByes={oddsHaveByes}
         />
+      )}
+      {odds && odds.size > 0 && oddsHref && (
+        <p class="stb-odds-link">
+          {oddsNote && <span>Playoff odds {oddsNote}. </span>}
+          <a class="cta-link" href={oddsHref}>Every team's odds</a>
+        </p>
       )}
       <FieldTable
         theme={theme}
         teams={leagueTeams}
         groups={groups}
+        odds={odds}
+        oddsHaveByes={oddsHaveByes}
         summary={groups.length ? `Full table · all ${leagueTeams.length} teams${fieldSize ? ` · ${fieldSize} in the field` : ''}` : undefined}
       />
     </>
