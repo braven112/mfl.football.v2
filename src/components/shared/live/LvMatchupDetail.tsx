@@ -17,7 +17,7 @@
 import { useRef, useState, type JSX } from 'react';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
 import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
-import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
+import { originalProjection, renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
 import LvLineup from './LvLineup';
 import LvBench from './LvBench';
@@ -80,6 +80,35 @@ export default function LvMatchupDetail({
   // when only one side's Throwback era renamed its club, the other side holds
   // an empty placeholder line or its score sits one line higher.
   const holdsCurrentLine = Boolean(a.currentName || b.currentName);
+
+  /**
+   * Under each score: the ORIGINAL projection (the starters' full-game
+   * numbers, which never move) and, while games are still being played, the
+   * live projected final. After the final the live one equals the score, so
+   * only the original stays, which is what shows how far off the forecast was.
+   * Both sides render the lines or neither does, so the scores stay level.
+   */
+  const origA = noProj ? null : originalProjection(a, meta);
+  const origB = noProj ? null : originalProjection(b, meta);
+  const showOrig = origA !== null || origB !== null;
+  const showLiveProj = !noProj && !isFinal;
+  const projLines = (t: LiveTeam, orig: number | null) =>
+    (showOrig || showLiveProj) && (
+      <dl className="lv-scorehead__proj">
+        {showOrig && (
+          <div>
+            <dt>Orig proj</dt>
+            <dd>{orig === null ? '–' : fmt(orig)}</dd>
+          </div>
+        )}
+        {showLiveProj && (
+          <div>
+            <dt>Proj</dt>
+            <dd>{fmt(t.projectedFinal)}</dd>
+          </div>
+        )}
+      </dl>
+    );
   const currentLine = (t: LiveTeam) =>
     t.currentName ? (
       <div className="lv-scorehead__current">{t.currentName}</div>
@@ -149,6 +178,7 @@ export default function LvMatchupDetail({
             <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
               {fmt(a.live)}
             </div>
+            {projLines(a, origA)}
           </div>
         </div>
         <span className="lv-scorehead__at">@</span>
@@ -160,6 +190,7 @@ export default function LvMatchupDetail({
             <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
               {fmt(b.live)}
             </div>
+            {projLines(b, origB)}
           </div>
         </div>
       </div>

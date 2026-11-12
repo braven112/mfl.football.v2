@@ -293,7 +293,16 @@ export default function LvPlayerRow({
           }`}
         >
           <span className="lv-plive">{fmt(row.live)}</span>
-          {!hideProjection && <span className="lv-pproj">proj {fmt(projFinal)}</span>}
+          {/* Once his game is final the projected final IS the score, so the
+              row shows his ORIGINAL full-game projection instead: how far off
+              the forecast was. A player with no projection keeps the old
+              line rather than printing "orig proj 0". */}
+          {!hideProjection &&
+            (state === 'final' && projected > 0 ? (
+              <span className="lv-pproj lv-pproj--orig">orig proj {fmt(projected)}</span>
+            ) : (
+              <span className="lv-pproj">proj {fmt(projFinal)}</span>
+            ))}
         </span>
         {statLine && <span className="lv-pstat">{statLine}</span>}
       </span>
