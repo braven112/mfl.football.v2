@@ -99,6 +99,27 @@ export const LEAGUES = {
       doubleheaderCount: 4,
       keepDivisionFinish: true,
       crossConference: null,
+      // Marquee weeks (commissioner, Nov 2026). TheLeague has no crossover
+      // round, and every non-division pair meets exactly once, so the title
+      // rematch is a PLACEMENT: last season's finalists play their one game in
+      // Week 1 (always, unless they share a division).
+      marquee: {
+        since: 2027,
+        titleRematchSince: 2027,
+        realLifeRivalries: [
+          ['0012', '0010'], // Vitside Mafia / Computer Jocks
+          ['0012', '0001'], // Vitside Mafia / Pacific Pigskins
+          ['0012', '0004'], // Vitside Mafia / Dead Cap Walking
+          ['0012', '0011'], // Vitside Mafia / Midwestside Connection
+          ['0002', '0001'], // Da Dangsters / Pacific Pigskins
+          ['0009', '0016'], // Wascawy Wabbits / Running Down The Dream
+          ['0015', '0007'], // Dark Magicians of Chaos / Fire Ready Aim
+          ['0009', '0008'], // Wascawy Wabbits / Bring the Pain
+          ['0011', '0004'], // Midwestside Connection / Dead Cap Walking
+          ['0014', '0005'], // Cowboy Up / The Mariachi Ninjas
+          ['0009', '0002'], // Wascawy Wabbits / Da Dangsters
+        ],
+      },
     },
     name: 'The League',
     /** League mark: light cut for light grounds, dark cut for dark ones. */
@@ -335,6 +356,47 @@ export const LEAGUES = {
           ['South', 'East'],
         ],
         protectedRivalries: [['Computer Jocks', 'Jewpacabra']],
+        /**
+         * From this season on, Week 1 replays last season's title game (AL
+         * champion vs NL champion). It outranks the protected rivalry above,
+         * which sits out any year it shares a finalist; the two teams the
+         * finalists would have drawn play each other instead (commissioner,
+         * Nov 2026). 2026 is locked and was drawn without it.
+         */
+        titleRematchSince: 2027,
+      },
+      /**
+       * Marquee weeks (src/utils/marquee-weeks.mjs): Halloween and Thanksgiving
+       * carry the best rivalries. Real-life rivals are the commissioner's list
+       * (Nov 2026) and outrank every on-field series. Franchise ids, not names:
+       * a last-place punishment rename must not drop a pair.
+       */
+      marquee: {
+        since: 2027,
+        realLifeRivalries: [
+          // American League
+          ['0001', '0002'], // Smokane FC / Drunk Indians
+          ['0011', '0009'], // Midwestside Connection / Vitside Mafia
+          ['0009', '0005'], // Vitside Mafia / Computer Jocks
+          ['0009', '0012'], // Vitside Mafia / Suh girls, one cup
+          ['0009', '0001'], // Vitside Mafia / Smokane FC
+          ['0010', '0002'], // Fullybaked / Drunk Indians
+          ['0002', '0006'], // Drunk Indians / Da Dangsters
+          ['0004', '0006'], // Get off my Ditka / Da Dangsters
+          ['0008', '0011'], // Dicks out for Harambe / Midwestside Connection
+          ['0009', '0007'], // Vitside Mafia / Avenging Amish
+          ['0003', '0011'], // Team Minty Fresh / Midwestside Connection
+          ['0003', '0009'], // Team Minty Fresh / Vitside Mafia
+          // National League
+          ['0014', '0021'], // A Bruin Pegs Me (Thundering Herd) / Chatmaster
+          // The Chicago four — all rivals with each other.
+          ['0015', '0022'], // The Mariachi Ninjas / Balls Deep
+          ['0015', '0019'], // The Mariachi Ninjas / Badd Boys
+          ['0015', '0024'], // The Mariachi Ninjas / No Soup For You
+          ['0024', '0019'], // No Soup For You / Badd Boys
+          ['0024', '0022'], // No Soup For You / Balls Deep
+          ['0019', '0022'], // Badd Boys / Balls Deep
+        ],
       },
     },
     name: 'AFL',

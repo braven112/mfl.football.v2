@@ -960,6 +960,114 @@ division pairings — so `buildCrossConferencePairs` matches leftovers across
 conferences in finish order. It is the only pair ever protected across multiple
 seasons; no other recurs off-formula more than twice.
 
+### The title rematch outranks it (from 2027)
+
+Commissioner, Nov 2026: Week 1 replays last season's title game. The AFL
+final is the AL champion against the NL champion, so it always fits the
+cross-conference round. `crossConference.titleRematchSince` (registry) gates
+it; 2026 is locked and was drawn without it, which is why the audit above
+still replays the plain formula for every stored season.
+
+- **It is a SWAP, not a redraw** (`swapInRematch`, schedule-rules.mjs). The
+  finalists meet, the two teams they would have drawn meet each other, and the
+  other ten games stay on the formula. Re-zipping the divisions without the
+  finalists looks equivalent and is not: every team below them shifts onto a
+  new opponent (10 of 12 games changed against the real 2025 finish).
+- **It outranks the protected rivalry.** A protected pair that shares a
+  finalist sits that year out and the plan reports it in `skippedRivalries`.
+  This is a real case, not a hypothetical: the 2024 final was Balls Deep vs
+  Computer Jocks.
+- The finalists come from `championship-history.json`, passed in as
+  `lastChampionship` (not an MFL feed, so not through `readFeed`). An entry
+  for any season other than the previous one is ignored.
+
+`tests/schedule-title-rematch.test.ts` pins both real cases.
+
+## Marquee weeks — Halloween and Thanksgiving (from 2027)
+
+Commissioner, Nov 2026: the holiday weeks carry the league's best rivalries.
+Goal `marquee-rivals`, weight 50 — below every division and bye goal, beside
+bye luck. `src/utils/marquee-weeks.mjs` finds the weeks from the NFL calendar
+(never a constant: Thanksgiving was Week 12 in 2026 and Week 13 in 2024-25)
+and values each pair; the AFL's real-life list is `schedulePolicy.marquee` in
+the registry (TheLeague's beside it), by franchise ID so a last-place
+punishment rename cannot drop a pair.
+
+- **Real-life rivals carry 60% of a pair's value**, career on-field intensity
+  the other 40% ("at least 51%", commissioner). Any real-life pair outranks
+  every pair that is not one; the series breaks ties among them.
+- **Halloween steers NON-division pairs only** (a division Thanksgiving is
+  the exception, below). It never decides what kind of round a
+  holiday week holds — the week plan does — only which pairs fill it. A trial
+  that let it steer division rivals pulled them into a bye-week holiday and
+  dropped bye-free division games 84 → 80, through the division-spread
+  exemption in the colouring ratchet. Division rivals meet twice a season
+  regardless, and the commissioner's own rule covers it: when Thanksgiving is
+  a division week, the division rules apply. They still appear in the plan's
+  `marquee.games` report.
+- Measured at full search on 2026 (goal forced on): non-division rivalry
+  value in the holiday weeks 1.47 → 3.57, Smokane FC vs Vitside Mafia drawn
+  onto Halloween, bye-free division games held at 84, min rematch gap equal,
+  net bye spread 5 → 6. At 60k iterations the gain is smaller and noisier, so
+  the admin preview will show less of it than the CLI draw.
+
+### A division Thanksgiving chases division rivals — in a second pass
+
+Commissioner, Nov 2026: when Thanksgiving is a division week, "highlight the
+division rivalries for that week". Each week now carries its own value map
+(`marqueeContext(...).byWeek`): Halloween, and a non-division Thanksgiving,
+chase non-division rivals; a division Thanksgiving (read off the week plan)
+chases its division rivals. In a division doubleheader every team plays two of
+its three rivals, so this only chooses WHICH two.
+
+What made that safe is that `searchColoring` no longer folds the marquee terms
+into one weighted sum. **It runs twice**: the first pass draws the season
+exactly as it would without them; the second starts from that draw and rejects
+any move that worsens a division term (`divisionByeFree`, `divisionSpread`,
+`divisionByeCost`, `rematchGap`) or bye luck past the first pass's value. A
+single pass let the 2026 TheLeague title rematch buy a division rematch three
+weeks apart (gap 9 → 3), and let one Halloween rival buy a net bye spread of
+2 → 6 — both "worth it" by weight, both against the commissioner's ordering.
+The one move allowed to cost bye evenness (never a division term) is the one
+that places the title rematch; the bye ceiling then rises to that cost.
+
+### TheLeague's Week 1 title rematch is a placement (from 2027)
+
+TheLeague has no crossover round and every non-division pair meets exactly
+once, so there is no formula to swap: last season's finalists simply play their
+one game in Week 1 (`marquee.titleRematchSince`; `titleRematchPair` reads it
+only for a league with no `crossConference`). Week 1 is a doubleheader with a
+non-division slot, so it always fits. Division finalists are skipped — they meet
+twice in rounds the division rules place. A colouring term (`titleRematch`)
+pulls it in, the search never lets go of it once placed, and a draw that still
+misses it reports `title rematch … is not in Week 1` against the marquee goal.
+
+Trials (150k iterations, goal forced on): 2026 placed Computer Jocks vs Dark
+Magicians, five division rivals on Thanksgiving, division terms and net bye
+spread (2) unchanged. 2025 placed Wascawy Wabbits vs Da Dangsters with division
+terms unchanged and net bye spread 5 → 7 — the rematch exception above.
+
+### Week 1 also replays last season's playoff games (both leagues, from 2027)
+
+Commissioner, Nov 2026: "all their playoff matches". `playoffRematchValues`
+reads last season's `playoff-brackets` feed and keeps only the brackets on the
+road to the title (`isPlayoffPathBracket`: a "Championship" bracket that is not
+NIT, toilet bowl, consolation, loser's or a placement game). A semifinal is
+worth 0.8, an earlier round 0.6; the final is left to the title-rematch rule.
+These fill Week 1's own `byWeek` map, so they ride the same protected second
+pass and never cost a division goal. Week 1 is a doubleheader, so a team can
+get one rematch in each of its two games. A finalist's non-division slot is
+taken by the title game, so in practice few of its other playoff games fit; in
+the AFL only division pairs can (the other Week 1 slot is the frozen
+crossover). 2026 trials: TheLeague placed Vitside Mafia vs Da Dangsters, the
+AFL three division playoff rematches, division terms unchanged in both.
+
+`tests/marquee-weeks.test.ts` pins the weeks, the 60/40 ranking, the
+non-division steer, the per-week maps, TheLeague's rematch config, that the
+marquee pass never costs a division goal, and that a league without the goal
+keeps its old weights exactly (the term is left out, not carried at zero, so it
+cannot rescale them).
+
 ## Bye exposure is computed from current rosters
 
 Which in August is keepers only for the AFL. That is deliberate — it fixes the

@@ -1,0 +1,205 @@
+import { describe, it, expect } from 'vitest';
+import {
+  marqueeWeeks,
+  marqueePairValues,
+  marqueeGamesIn,
+  thanksgivingIsoDate,
+  REAL_LIFE_SHARE,
+  playoffRematchValues,
+  isPlayoffPathBracket,
+} from '../src/utils/marquee-weeks.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { marqueeContext, titleRematchPair, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
+import { scoreColoring, searchColoring, COLORING_WEIGHTS } from '../src/utils/schedule-coloring.mjs';
+import { problemGoal } from '../src/utils/schedule-goals.mjs';
+
+/**
+ * Marquee weeks (commissioner, Nov 2026): Halloween and Thanksgiving carry the
+ * league's best rivalries. Real-life rivals are "the most important thing, at
+ * least 51% of the score"; the on-field series is the tiebreaker. A soft goal:
+ * it only steers NON-division pairs, because division rivals are placed by the
+ * division and bye rules and a trial that let it move them cost four division
+ * games their bye-free week.
+ */
+describe('marquee weeks', () => {
+  it('finds Halloween and Thanksgiving as NFL weeks, from the real calendar', () => {
+    expect(thanksgivingIsoDate(2026)).toBe('2026-11-26');
+    expect(thanksgivingIsoDate(2024)).toBe('2024-11-28');
+    // 2026: Thanksgiving week is the Wednesday-start week 12; 2024 ran a week later.
+    expect(marqueeWeeks(2026, 14)).toEqual({ halloween: 8, thanksgiving: 12 });
+    expect(marqueeWeeks(2024, 14)).toEqual({ halloween: 9, thanksgiving: 13 });
+  });
+
+  it('drops a holiday that falls after the fantasy regular season', () => {
+    expect(marqueeWeeks(2026, 10)).toEqual({ halloween: 8 });
+  });
+
+  it('a real-life rival outranks every on-field series, and the series breaks ties', () => {
+    const { value } = marqueePairValues({
+      realLife: [
+        ['A', 'B'],
+        ['A', 'C'],
+      ],
+      series: {
+        'A-B': { games: 10, intensity: 1 },
+        'A-C': { games: 10, intensity: 2 },
+        'D-E': { games: 30, intensity: 5 }, // the league's most charged series, not a real-life pair
+        'B-D': { games: 3, intensity: 4 }, // too few meetings to count
+      },
+      franchiseIds: ['A', 'B', 'C', 'D', 'E'],
+    }) as unknown as { value: Record<string, number> };
+    expect(REAL_LIFE_SHARE).toBeGreaterThanOrEqual(0.51);
+    expect(value['A-C']).toBeGreaterThan(value['A-B']);
+    expect(value['A-B']).toBeGreaterThan(value['D-E']);
+    expect(value['D-E']).toBeCloseTo(1 - REAL_LIFE_SHARE);
+    expect(value['B-D']).toBeUndefined();
+  });
+
+  it.each([
+    ['afl-fantasy', 24],
+    ['theleague', 16],
+  ])('the %s list only names franchises that exist, each pair once', (slug, teams) => {
+    const list = SCHEDULE_POLICY[slug].marquee.realLifeRivalries as string[][];
+    const ids = new Set(Array.from({ length: teams }, (_, i) => String(i + 1).padStart(4, '0')));
+    const keys = list.map(([a, b]) => [a, b].sort().join('-'));
+    for (const [a, b] of list) {
+      expect(ids.has(a) && ids.has(b) && a !== b, `${a}/${b}`).toBe(true);
+    }
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('TheLeague places last season\'s title game in Week 1, from 2027', () => {
+    const policy = SCHEDULE_POLICY.theleague;
+    expect(policy.crossConference).toBeNull();
+    expect(policy.marquee.titleRematchSince).toBe(2027);
+    const final = { year: 2026, champion: '0010', runnerUp: '0015' };
+    expect(titleRematchPair(policy, 2027, final)).toEqual(['0010', '0015']);
+    expect(titleRematchPair(policy, 2026, { ...final, year: 2025 })).toBeNull();
+  });
+
+  it('a division Thanksgiving chases division rivals; Halloween never does', () => {
+    const shape = {
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      lastWeek: 14,
+    };
+    const policy = { marquee: { since: 2026, titleRematchSince: 2026, realLifeRivalries: [['A', 'B'], ['A', 'C']] } };
+    const final = { year: 2025, champion: 'B', runnerUp: 'D' };
+    const div = marqueeContext(policy, 2026, shape, {}, [], { lastChampionship: final, thanksgivingIsDivision: true })!;
+    expect(Object.keys(div.byWeek.get(12))).toEqual(['A-B']);
+    expect(Object.keys(div.byWeek.get(8))).toEqual(['A-C']);
+    expect(div.titleRematch).toMatchObject({ week: 1, key: 'B-D' });
+    const inter = marqueeContext(policy, 2026, shape, {}, [], { thanksgivingIsDivision: false })!;
+    expect(Object.keys(inter.byWeek.get(12))).toEqual(['A-C']);
+    expect(inter.titleRematch).toBeNull();
+    // Division finalists already meet twice; nothing to place.
+    const same = marqueeContext(policy, 2026, shape, {}, [], { lastChampionship: { ...final, runnerUp: 'A' } })!;
+    expect(same.titleRematch).toBeNull();
+  });
+
+  it('a missed rematch is reported against the marquee goal, not as a broken week', () => {
+    const msg = 'title rematch Computer Jocks vs Dark Magicians of Chaos is not in Week 1';
+    expect(problemGoal(msg)).toBe('marquee-rivals');
+  });
+
+  it('steers only non-division pairs, but reports division rivals too', () => {
+    const shape = {
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      lastWeek: 14,
+    };
+    const policy = { marquee: { since: 2026, realLifeRivalries: [['A', 'B'], ['A', 'C']] } };
+    const ctx = marqueeContext(policy, 2026, shape, {}, [])!;
+    expect(Object.keys(ctx.value).sort()).toEqual(['A-B', 'A-C']);
+    expect(Object.keys(ctx.steer)).toEqual(['A-C']);
+    expect(marqueeContext(policy, 2025, shape, {}, [])).toBeNull();
+
+    const weeks = new Map([[8, [{ away: 'A', home: 'B' }, { away: 'C', home: 'D' }]]]);
+    const games = marqueeGamesIn(weeks, ctx.named, ctx);
+    expect(games.map((g: any) => `${g.away}-${g.home}`)).toEqual(['A-B']);
+  });
+
+  it('the colouring term rewards a holiday week holding the steered pair', () => {
+    const slots = [{ week: 8 }, { week: 9 }];
+    const base = {
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      byesFor: () => 0,
+      rating: {},
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      byeFreeWeeks: [8, 9],
+      lastWeek: 14,
+      doubleheaderWeeks: [],
+      minRematchGap: 4,
+      marquee: { weeks: new Set([8]), value: { 'A-C': 1 }, potential: 2 },
+    };
+    const withRival = [
+      [{ away: 'A', home: 'C' }, { away: 'B', home: 'D' }],
+      [{ away: 'A', home: 'D' }, { away: 'B', home: 'C' }],
+    ];
+    const without = [withRival[1], withRival[0]];
+    const a = scoreColoring(withRival, slots, base, undefined);
+    const b = scoreColoring(without, slots, base, undefined);
+    expect(a.terms.marqueeRivals as number).toBeLessThan(b.terms.marqueeRivals as number);
+    // No marquee context = the old weights exactly, not the old weights plus a zero.
+    expect(COLORING_WEIGHTS()).not.toHaveProperty('marqueeRivals');
+    expect(COLORING_WEIGHTS({ marquee: true })).toHaveProperty('marqueeRivals');
+  });
+
+  it('the marquee pass never costs a division goal or bye evenness, and places the rematch', () => {
+    // Kept tiny: 4 teams, 3 single-slot rounds of 2 games.
+    const slots = [{ week: 1 }, { week: 2 }, { week: 3 }];
+    const seed = [
+      [{ away: 'A', home: 'B' }, { away: 'C', home: 'D' }],
+      [{ away: 'A', home: 'C' }, { away: 'B', home: 'D' }],
+      [{ away: 'A', home: 'D' }, { away: 'B', home: 'C' }],
+    ];
+    const ctx = {
+      divisionOf: { A: 'N', B: 'N', C: 'S', D: 'S' },
+      byesFor: () => 0,
+      rating: {},
+      franchiseIds: ['A', 'B', 'C', 'D'],
+      byeFreeWeeks: [1, 2, 3],
+      lastWeek: 3,
+      doubleheaderWeeks: [],
+      minRematchGap: 1,
+      hardMinRematchGap: 0,
+      marquee: { byWeek: new Map([[2, { 'A-C': 1 }]]), potential: 2 },
+      titleRematch: { week: 1, key: 'A-D' },
+    };
+    const plain = searchColoring(seed, slots, { ...ctx, marquee: null, titleRematch: null }, { iterations: 400, restarts: 1 });
+    const out = searchColoring(seed, slots, ctx, { iterations: 400, restarts: 1 });
+    expect(out.score.terms.titleRematch).toBe(0);
+    for (const k of ['divisionByeFree', 'divisionSpread', 'divisionByeCost', 'rematchGap']) {
+      const terms = (x: { score: { terms: unknown } }) => x.score.terms as Record<string, number>;
+      expect(terms(out)[k]).toBeLessThanOrEqual(terms(plain)[k] + 1e-9);
+    }
+  });
+
+  it('Week 1 replays last season\'s playoff games, later rounds worth more (real 2025 TheLeague bracket)', () => {
+    const feed = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../data/theleague/mfl-feeds/2025/playoff-brackets.json'), 'utf8'),
+    );
+    const v = playoffRematchValues(feed) as Record<string, number>;
+    // First round, semifinals and the final of "The League Championship" only.
+    expect(v['0002-0012']).toBe(0.6); // Vitside Mafia @ Da Dangsters, Week 15
+    expect(v['0002-0015']).toBe(0.8); // semifinal
+    expect(v['0010-0015']).toBe(1); // the final
+    expect(Object.keys(v)).toHaveLength(6);
+    expect(isPlayoffPathBracket('AL Championship')).toBe(true);
+    expect(isPlayoffPathBracket('NIT Championship')).toBe(false);
+    expect(isPlayoffPathBracket('The Toilet Bowl Challenge - 1.17')).toBe(false);
+    expect(isPlayoffPathBracket('AFL 3rd Place Game')).toBe(false);
+    // MFL's template for an unplayed season names no franchises.
+    expect(playoffRematchValues({ brackets: { 1: { playoffBracket: { playoffRound: [{ week: '15', playoffGame: [{ away: { seed: '7' }, home: { seed: '2' } }] }] } } }, playoffBrackets: { playoffBracket: [{ id: '1', name: 'The League Championship' }] } })).toEqual({});
+
+    const shape = { franchiseIds: ['0002', '0010', '0012', '0015'], divisionOf: { '0002': 'N', '0010': 'N', '0012': 'N', '0015': 'E' }, lastWeek: 14 };
+    const policy = { marquee: { since: 2026, titleRematchSince: 2026, realLifeRivalries: [] } };
+    const ctx = marqueeContext(policy, 2026, shape, {}, [], {
+      lastChampionship: { year: 2025, champion: '0010', runnerUp: '0015' },
+      lastPlayoffs: feed,
+    })!;
+    // The final is the title rematch's job, not this map's.
+    expect(ctx.byWeek.get(1)).toEqual({ '0002-0012': 0.6, '0002-0015': 0.8 });
+  });
+});

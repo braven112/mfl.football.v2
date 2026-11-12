@@ -352,6 +352,32 @@ export const divisionFinishRanks = (standingsFranchises, divisionOf) => {
 };
 
 /**
+ * Replace the finalists' two formula games with the rematch plus one game
+ * between the two teams they displaced. A SWAP, not a redraw: re-zipping the
+ * divisions without the finalists would shift every team below them onto a
+ * new opponent (10 of 12 games changed when tried against the 2025 finish).
+ */
+const swapInRematch = (pairs, a, b) => {
+  const partnerOf = (id) => {
+    const p = pairs.find((x) => x.away === id || x.home === id);
+    return p.away === id ? p.home : p.away;
+  };
+  if (partnerOf(a) === b) {
+    return pairs.map((p) => (pairKey(p.away, p.home) === pairKey(a, b) ? { ...p, titleRematch: true } : p));
+  }
+  const x = partnerOf(a);
+  const y = partnerOf(b);
+  const touched = new Set([a, b, x, y]);
+  return [
+    { away: a, home: b, protectedRivalry: false, titleRematch: true },
+    // x and y each sit in the opposite conference to their old partner, so
+    // they are cross-conference to each other by construction.
+    { away: y, home: x, protectedRivalry: false },
+    ...pairs.filter((p) => !touched.has(p.away) && !touched.has(p.home)),
+  ];
+};
+
+/**
  * The AFL's Week 1 cross-conference round.
  *
  * Each franchise plays the team that finished in the same slot of the paired
@@ -364,14 +390,38 @@ export const divisionFinishRanks = (standingsFranchises, divisionOf) => {
  * whoever is left over in each conference is matched against whoever is left
  * over in the other, in finish order. That fallback is the whole reason this
  * returns leftovers explicitly instead of assuming the zip always balances.
+ *
+ * `rematchPair` is last season's two finalists (the AFL title game is the AL
+ * champion against the NL champion, so it is always cross-conference). It
+ * outranks every protected rivalry: a protected pair that shares a finalist
+ * sits the year out. The finalists then meet, and the two teams they would
+ * have drawn under the formula play each other — "swap the division winners"
+ * (commissioner, Nov 2026). Every other pairing is untouched (`swapInRematch`).
  */
 export const buildCrossConferencePairs = ({
   prevRank,
   divisionPairing,
   protectedPairs = [],
+  rematchPair = null,
   conferenceOf,
   franchiseIds,
 }) => {
+  // The rematch outranks every protected rivalry: one sharing a finalist sits
+  // this year out, and the formula is drawn without it.
+  if (rematchPair) {
+    const [a, b] = rematchPair;
+    if (franchiseIds.includes(a) && franchiseIds.includes(b) && conferenceOf[a] !== conferenceOf[b]) {
+      const pairs = buildCrossConferencePairs({
+        prevRank,
+        divisionPairing,
+        protectedPairs: protectedPairs.filter(([x, y]) => ![x, y].some((id) => id === a || id === b)),
+        conferenceOf,
+        franchiseIds,
+      });
+      return swapInRematch(pairs, a, b);
+    }
+  }
+
   const used = new Set();
   const pairs = [];
 
