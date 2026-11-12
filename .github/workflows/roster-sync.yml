@@ -189,6 +189,11 @@ jobs:
           pnpm run compute:free-agents
           pnpm run compute:schedule-strength
           pnpm run compute:playoff-performance
+          # Playoff odds (Matchup Preview, standings, /playoff-odds). Seeded, so
+          # unchanged feeds write nothing. Without it a new week's odds file is
+          # only made by a production build, and production serves derived/**
+          # from the pointer, so the build's copy never shows.
+          pnpm run compute:playoff-odds
           # Rules as configured on MFL (Ask Roger's fallback), for every syncing
           # league. Written only when a setting changed, so it costs no commit.
           DIGEST=$(node ./scripts/league-jobs.mjs mfl-settings-digest)
