@@ -60,6 +60,42 @@ export function viewerWinProbability(matchup: LiveMatchup): number | null {
 }
 
 /**
+ * The team's ORIGINAL projection: the sum of its starters' full-game
+ * projections, which do not move with the live score.
+ *
+ * `projectedFinal` is live points plus what is still left to play, so once the
+ * games end it equals the final score and says nothing about how far off the
+ * forecast was. This is the number from before kickoff, so an owner can see
+ * that after the final (asked for by an AFL owner, Nov 2026).
+ *
+ * Reads the row first and `meta` second, the same order `LvPlayerRow` uses: a
+ * projection belongs to a player IN A LEAGUE, so the board builders stamp it
+ * on the row and leave the shared meta map's copy at 0.
+ *
+ * Null when no starter has a projection at all (a Sleeper league, a replay),
+ * because "we have no forecast" must not print as "we forecast 0".
+ */
+export function originalProjection(
+  team: Pick<LiveTeam, 'players'>,
+  meta: Record<string, PlayerMeta> = {},
+): number | null {
+  let total = 0;
+  let any = false;
+  for (const row of team.players) {
+    const projected = row.projected ?? meta[row.id]?.projected;
+    // Every finite number counts (a defense can project negative), so the
+    // total matches the live projected final before kickoff exactly — the
+    // detail page relies on that to know when to show this line. Only a
+    // non-zero one proves the league has projections at all.
+    if (typeof projected === 'number' && Number.isFinite(projected)) {
+      total += projected;
+      if (projected !== 0) any = true;
+    }
+  }
+  return any ? total : null;
+}
+
+/**
  * The order a card renders its two sides in.
  *
  * A pure presentation choice, kept out of the data so the same payload serves

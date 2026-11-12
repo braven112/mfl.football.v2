@@ -771,6 +771,27 @@ button.lv-card:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* Original and live projections under each score. Quiet, like the row's own
+   "proj" line: the score is the headline. The right side mirrors the left. */
+.lv-scorehead__proj {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lv-scorehead__proj > div {
+  display: flex;
+  gap: 0.3rem;
+  align-items: baseline;
+}
+.lv-scorehead__side--right .lv-scorehead__proj > div { justify-content: flex-end; }
+.lv-scorehead__proj dt { font-weight: var(--font-weight-normal); }
+.lv-scorehead__proj dd {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--page-text);
+}
+
 .lv-scorehead__at {
   align-self: center;
   color: var(--content-text-muted);
