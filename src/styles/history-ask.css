@@ -770,3 +770,18 @@
 .hask-guest__out .cta {
   justify-self: start;
 }
+
+/* Share under each answer: the card goes to the group chat from the phone's
+   share sheet (share-answer.ts). Full width on a phone, where it is the
+   thumb's next move after reading. */
+.hask-share {
+  align-self: flex-start;
+}
+@media (max-width: 640px) {
+  .hask-share,
+  .hap__share {
+    align-self: stretch;
+    width: 100%;
+    justify-content: center;
+  }
+}
