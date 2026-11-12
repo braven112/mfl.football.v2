@@ -21,6 +21,7 @@ import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs'
 import { buildMatchupVisuals } from '../../src/utils/matchup-preview-visuals.mjs';
 import { recordBook } from '../../src/utils/league-history/records.mjs';
 import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
+import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/league-history/playoff-bubble.mjs';
 
 /**
  * The column is short because the visuals carry the numbers (owner's call,
@@ -119,13 +120,27 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // The series is the League History dataset's head-to-head, the record each
   // rivalry page shows (league-history/rivalry.mjs).
   let history;
+  let historyDataset = null;
   try {
     const historyFile = path.join(resolveMainRepo(projectRoot), LEAGUES[league].dataPath, 'derived', 'league-history.json');
-    history = recordBook(await loadJSON(historyFile)).ix;
+    historyDataset = await loadJSON(historyFile);
+    history = recordBook(historyDataset).ix;
   } catch {
     // No League History dataset: the cards still show this season's form.
     history = undefined;
   }
+  // Playoff-bubble storylines (commissioner, Nov 2026): who missed the
+  // playoffs by one spot, and who took it. Seeded per conference where the
+  // league has them, from this season's own league feed.
+  const conferenceName = {};
+  for (const c of [data.league?.league?.conferences?.conference ?? []].flat()) conferenceName[c.id] = c.name;
+  const conferenceOfDivision = {};
+  for (const d of [data.league?.league?.divisions?.division ?? []].flat()) {
+    if (d?.conference != null) conferenceOfDivision[d.name] = conferenceName[d.conference] ?? d.conference;
+  }
+  const bubble = historyDataset
+    ? { seasons: bubbleSeasons(historyDataset, conferenceOfDivision), owners: currentOwners(historyDataset) }
+    : null;
   const visuals = buildMatchupVisuals({
     pairings,
     weeklyResultsRaw: data['weekly-results-raw'],
@@ -168,6 +183,11 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     }
     const hometown = hometownFact(franchise1Id, franchise2Id, hometowns, nameOf);
     if (hometown) lines.push(`  ${hometown}`);
+    if (bubble) {
+      for (const fact of bubbleFacts(bubble.seasons, bubble.owners, franchise1Id, franchise2Id, nameOf)) {
+        lines.push(`  ${fact}`);
+      }
+    }
 
     for (const [fid, teamInfo] of [[franchise1Id, t1], [franchise2Id, t2]]) {
       const roster = rosterMap[fid] || [];
@@ -294,6 +314,7 @@ INSTRUCTIONS:
 - Then 1-2 paragraphs on the next 2-3 most interesting matchups, with picks. Do not run through every game.
 - Last paragraph: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
 - Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
+- PLAYOFF BUBBLE: if any matchup carries a "Playoff bubble" line (a team that missed the playoffs by one spot facing the team that took it), call out the strongest one in a sentence — it is a must-mention storyline, sharper the closer it is to the end of the regular season. "Bubble history" lines are supporting color. State the seasons only as the fact sheet does.
 - Hometown references are optional flavor, at most twice; mileage only as the fact sheet states it.
 - Reference specific projected scores and player names from the fact sheet.
 - Every name and number must come from the fact sheet.`;
