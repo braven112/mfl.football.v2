@@ -43,6 +43,7 @@ import {
 } from './schedule-builder.mjs';
 import { LEAGUES } from '../config/leagues-data.mjs';
 import { starterByeExposure } from './starter-exposure.mjs';
+import { marqueeWeeks, marqueePairValues, marqueeGamesIn } from './marquee-weeks.mjs';
 import {
   buildSlots,
   coloringFromWeeks,
@@ -159,6 +160,45 @@ export const lastChampionshipFor = (championshipHistory, year) =>
   Object.values(championshipHistory?.championships ?? championshipHistory ?? {}).find(
     (c) => Number(c?.year) === year - 1,
   ) ?? null;
+
+/**
+ * Marquee-week inputs for the colouring search, or null when the league has no
+ * rival list or the season predates the goal. See marquee-weeks.mjs.
+ */
+export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders = []) => {
+  const cfg = policy?.marquee;
+  if (!cfg || year < (cfg.since ?? Infinity)) return null;
+  const named = marqueeWeeks(year, shape.lastWeek);
+  if (!Object.keys(named).length) return null;
+  const { value, real } = marqueePairValues({
+    realLife: cfg.realLifeRivalries ?? [],
+    series: rivalrySeries ?? {},
+    franchiseIds: shape.franchiseIds,
+  });
+  // The search steers NON-DIVISION pairs only. Division rivals already meet
+  // twice a season in rounds the division and bye goals place; letting this
+  // term pull one into a holiday week traded division games onto bye weeks
+  // (84 -> 80 bye-free in a 2026 trial) — exactly what the commissioner ruled
+  // out: "if it's division, then those typical division rules will apply, and
+  // we'll almost certainly have the rivalries anyways." Division rivals that
+  // land on a holiday still show in the report (`value`).
+  const steer = {};
+  for (const [key, v] of Object.entries(value)) {
+    const [a, b] = key.split('-');
+    if (shape.divisionOf[a] !== shape.divisionOf[b]) steer[key] = v;
+  }
+  // The most rivalry a marquee slot could hold: every franchise meeting its
+  // best-valued non-division rival. Unreachable in general, which is fine —
+  // only the difference between two draws steers the search.
+  const best = {};
+  for (const [key, v] of Object.entries(steer)) {
+    for (const id of key.split('-')) best[id] = Math.max(best[id] ?? 0, v);
+  }
+  const perSlot = shape.franchiseIds.reduce((sum, id) => sum + (best[id] ?? 0), 0) / 2;
+  const dh = new Set(doubleheaders);
+  const slotCount = Object.values(named).reduce((n, w) => n + (dh.has(w) ? 2 : 1), 0);
+  return { named, weeks: new Set(Object.values(named)), value, steer, real, potential: perSlot * slotCount };
+};
 
 const buildCrossRound = (shape, policy, year, prevLeagueJson, prevStandingsJson, lastChampionship = null) => {
   const prevShape = seasonShape(prevLeagueJson);
@@ -397,6 +437,8 @@ export const planSchedule = ({
   rankingSources = null,
   /** Last season's entry of championship-history.json (`lastChampionshipFor`); feeds the Week 1 title rematch. */
   lastChampionship = null,
+  /** Career head-to-head keyed by pair (`rivalrySeries`, league-history/rivalry.mjs); feeds the marquee weeks. */
+  rivalrySeries = null,
 }) => {
   const base = SCHEDULE_POLICY[slug];
   if (!base) throw new Error(`no scheduling policy for league: ${slug}`);
@@ -475,6 +517,7 @@ export const planSchedule = ({
   let crossConference = null;
   let fairness = null;
   let coloring = null;
+  const marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders);
 
   if (policy.mode === 'constructive') {
     const cross = policy.crossConference
@@ -553,6 +596,7 @@ export const planSchedule = ({
       // to rebuild it inside a per-slot filter.
       const seeded = coloringFromWeeks(weeks, slots);
       const colorCtx = {
+        marquee: marquee ? { weeks: marquee.weeks, value: marquee.steer, potential: marquee.potential } : null,
         divisionOf: shape.divisionOf,
         byesFor: (id, week) => exposure[id]?.[week] ?? 0,
         rating: priorRatings(readFeed(year - 1, 'standings'), shape.franchiseIds),
@@ -627,6 +671,18 @@ export const planSchedule = ({
     weeks,
     text: toMflScheduleText(weeks),
     crossConference,
+    // Which rivalries the holiday weeks ended up holding. Null when the league
+    // has no rival list (the goal does not apply to it).
+    marquee: marquee
+      ? {
+          weeks: marquee.named,
+          games: marqueeGamesIn(weeks, marquee.named, marquee).map((g) => ({
+            ...g,
+            awayName: shape.name[g.away],
+            homeName: shape.name[g.home],
+          })),
+        }
+      : null,
     fairness,
     coloring,
     divisionGameCeiling: ceiling,

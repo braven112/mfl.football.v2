@@ -18,6 +18,8 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
 import { planSchedule, SCHEDULE_POLICY, lastChampionshipFor } from '../../utils/schedule-plan.mjs';
 import { leagueFeedPath, loadLeagueData } from '../../utils/league-data';
+import { recordBook } from '../../utils/league-history/records.mjs';
+import { rivalrySeries } from '../../utils/league-history/rivalry.mjs';
 
 export const prerender = false;
 
@@ -112,10 +114,14 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   try {
-    const [readFeed, rankingSources, championshipHistory] = await Promise.all([
+    const [readFeed, rankingSources, championshipHistory, leagueHistory] = await Promise.all([
       loadFeedReader(league.dataPath, year),
       readRankingSources(year),
       loadLeagueData(`${league.dataPath}/championship-history.json`).catch(() => null),
+      // Only the marquee weeks read it, so skip the load for leagues without them.
+      SCHEDULE_POLICY[slug]?.marquee
+        ? loadLeagueData(`${league.dataPath}/derived/league-history.json`).catch(() => null)
+        : Promise.resolve(null),
     ]);
     const plan = planSchedule({
       slug,
@@ -128,6 +134,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       rankingSources,
       // Last season's finalists, for the Week 1 title rematch.
       lastChampionship: lastChampionshipFor(championshipHistory, year),
+      // Career head-to-head, the on-field half of a marquee rivalry's value.
+      rivalrySeries: (leagueHistory ? rivalrySeries(recordBook(leagueHistory as any).ix) : null) as any,
       readFeed,
       // Bounded for the function's 30s ceiling. The colouring refinement needs
       // ~150k iterations to clear the structured seed's local optimum and that

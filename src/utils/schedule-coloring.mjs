@@ -182,8 +182,12 @@ const variance = (xs) => {
  * so `balanceHomeAway` fixes it exactly afterwards rather than the search
  * spending iterations on it.
  */
-export const COLORING_WEIGHTS = () => {
+export const COLORING_WEIGHTS = ({ marquee = false } = {}) => {
   const raw = {
+    // Only when the planner was handed marquee weeks and rival values. Left out
+    // otherwise, rather than carried at zero, so a league without the goal is
+    // optimised under exactly the weights it always was.
+    ...(marquee ? { marqueeRivals: goalWeight('marquee-rivals') } : {}),
     divisionByeFree: goalWeight('division-bye-free-ceiling'),
     divisionSpread: goalWeight('division-spread'),
     divisionByeCost: goalWeight('light-bye-weeks'),
@@ -322,7 +326,21 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     }),
   );
 
+  // Marquee weeks (marquee-weeks.mjs): how much rivalry the holiday weeks
+  // hold, against the most they could if every franchise met its best-valued
+  // rival there. 0 is that ceiling, 1 is no rivalry at all.
+  let marqueeRivals = 0;
+  if (ctx.marquee) {
+    let achieved = 0;
+    bySlot.forEach((slotGames, i) => {
+      if (!ctx.marquee.weeks.has(slots[i].week)) return;
+      for (const g of slotGames) achieved += ctx.marquee.value[pairKey(g.away, g.home)] ?? 0;
+    });
+    marqueeRivals = ctx.marquee.potential ? Math.max(0, 1 - achieved / ctx.marquee.potential) : 0;
+  }
+
   const terms = {
+    ...(ctx.marquee ? { marqueeRivals } : {}),
     divisionByeFree: divisionGames ? divisionOnBye / divisionGames : 0,
     divisionSpread: spreadPenalty,
     // Two starters missing from a rivalry game is the reference point for "bad".
@@ -439,7 +457,7 @@ const pickCycle = (cycles, slotA, slots, ctx, rng) => {
  * seed it was handed.
  */
 export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterations = 20000, restarts = 3 } = {}) => {
-  const weights = COLORING_WEIGHTS();
+  const weights = COLORING_WEIGHTS({ marquee: Boolean(ctx.marquee) });
   const seedScore = scoreColoring(seedBySlot, slots, ctx, weights);
   let best = { bySlot: seedBySlot, score: seedScore };
 

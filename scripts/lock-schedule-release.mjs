@@ -225,6 +225,7 @@ async function releaseFromPlan(slug, y) {
       doubleheaders: plan.doubleheaderWeeks,
       lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
       problems: plan.problems ?? [],
+      marqueeGames: plan.marquee?.games ?? null,
     }),
   );
   refuseAvoidableFailures(slug, y, scored.goals);

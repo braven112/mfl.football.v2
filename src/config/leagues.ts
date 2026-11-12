@@ -230,6 +230,12 @@ export interface SchedulePolicy {
     /** First season whose Week 1 replays last season's title game; absent = never. */
     titleRematchSince?: number;
   } | null;
+  /** Marquee weeks — src/utils/marquee-weeks.mjs. Absent = the league's holiday weeks are not steered. */
+  marquee?: {
+    since: number;
+    /** Franchise-id pairs the commissioner names as real-life rivals. */
+    realLifeRivalries: string[][];
+  };
 }
 
 export interface LeagueDefinition {

@@ -334,6 +334,39 @@ export const LEAGUES = {
          */
         titleRematchSince: 2027,
       },
+      /**
+       * Marquee weeks (src/utils/marquee-weeks.mjs): Halloween and Thanksgiving
+       * carry the best rivalries. Real-life rivals are the commissioner's list
+       * (Nov 2026) and outrank every on-field series. Franchise ids, not names:
+       * a last-place punishment rename must not drop a pair.
+       */
+      marquee: {
+        since: 2027,
+        realLifeRivalries: [
+          // American League
+          ['0001', '0002'], // Smokane FC / Drunk Indians
+          ['0011', '0009'], // Midwestside Connection / Vitside Mafia
+          ['0009', '0005'], // Vitside Mafia / Computer Jocks
+          ['0009', '0012'], // Vitside Mafia / Suh girls, one cup
+          ['0009', '0001'], // Vitside Mafia / Smokane FC
+          ['0010', '0002'], // Fullybaked / Drunk Indians
+          ['0002', '0006'], // Drunk Indians / Da Dangsters
+          ['0004', '0006'], // Get off my Ditka / Da Dangsters
+          ['0008', '0011'], // Dicks out for Harambe / Midwestside Connection
+          ['0009', '0007'], // Vitside Mafia / Avenging Amish
+          ['0003', '0011'], // Team Minty Fresh / Midwestside Connection
+          ['0003', '0009'], // Team Minty Fresh / Vitside Mafia
+          // National League
+          ['0014', '0021'], // A Bruin Pegs Me (Thundering Herd) / Chatmaster
+          // The Chicago four — all rivals with each other.
+          ['0015', '0022'], // The Mariachi Ninjas / Balls Deep
+          ['0015', '0019'], // The Mariachi Ninjas / Badd Boys
+          ['0015', '0024'], // The Mariachi Ninjas / No Soup For You
+          ['0024', '0019'], // No Soup For You / Badd Boys
+          ['0024', '0022'], // No Soup For You / Balls Deep
+          ['0019', '0022'], // Badd Boys / Balls Deep
+        ],
+      },
     },
     name: 'AFL',
     /**

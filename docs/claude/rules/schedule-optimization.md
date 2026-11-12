@@ -983,6 +983,37 @@ still replays the plain formula for every stored season.
 
 `tests/schedule-title-rematch.test.ts` pins both real cases.
 
+## Marquee weeks — Halloween and Thanksgiving (from 2027)
+
+Commissioner, Nov 2026: the holiday weeks carry the league's best rivalries.
+Goal `marquee-rivals`, weight 50 — below every division and bye goal, beside
+bye luck. `src/utils/marquee-weeks.mjs` finds the weeks from the NFL calendar
+(never a constant: Thanksgiving was Week 12 in 2026 and Week 13 in 2024-25)
+and values each pair; the AFL's real-life list is `schedulePolicy.marquee` in
+the registry, by franchise ID so a last-place punishment rename cannot drop a
+pair.
+
+- **Real-life rivals carry 60% of a pair's value**, career on-field intensity
+  the other 40% ("at least 51%", commissioner). Any real-life pair outranks
+  every pair that is not one; the series breaks ties among them.
+- **It steers NON-division pairs only.** It never decides what kind of round a
+  holiday week holds — the week plan does — only which pairs fill it. A trial
+  that let it steer division rivals pulled them into a bye-week holiday and
+  dropped bye-free division games 84 → 80, through the division-spread
+  exemption in the colouring ratchet. Division rivals meet twice a season
+  regardless, and the commissioner's own rule covers it: when Thanksgiving is
+  a division week, the division rules apply. They still appear in the plan's
+  `marquee.games` report.
+- Measured at full search on 2026 (goal forced on): non-division rivalry
+  value in the holiday weeks 1.47 → 3.57, Smokane FC vs Vitside Mafia drawn
+  onto Halloween, bye-free division games held at 84, min rematch gap equal,
+  net bye spread 5 → 6. At 60k iterations the gain is smaller and noisier, so
+  the admin preview will show less of it than the CLI draw.
+
+`tests/marquee-weeks.test.ts` pins the weeks, the 60/40 ranking, the
+non-division steer and that a league without the goal keeps its old weights
+exactly (the term is left out, not carried at zero, so it cannot rescale them).
+
 ## Bye exposure is computed from current rosters
 
 Which in August is keepers only for the AFL. That is deliberate — it fixes the

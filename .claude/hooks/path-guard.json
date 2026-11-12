@@ -887,14 +887,16 @@
       "rules": "docs/claude/rules/schedule-optimization.md",
       "paths": [
         "scripts/*schedule*",
-        "src/utils/schedule*"
+        "src/utils/schedule*",
+        "src/utils/marquee-weeks.mjs"
       ],
       "tests": [
         "tests/schedule-constraints.test.ts",
         "tests/schedule-week-plan.test.ts",
         "tests/schedule-release.test.ts",
         "tests/schedule-data.test.ts",
-        "tests/schedule-title-rematch.test.ts"
+        "tests/schedule-title-rematch.test.ts",
+        "tests/marquee-weeks.test.ts"
       ]
     },
     {

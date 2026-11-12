@@ -208,6 +208,22 @@ const allConstraints = () => {
       enforcedBy: 'tests/schedule-optimization.test.ts',
     },
     {
+      key: 'marquee-rivals',
+      weight: 50,
+      tier: 'maximise',
+      rule:
+        'Halloween and Thanksgiving carry the league\u2019s best rivalries — the commissioner\u2019s real-life rivals first, ' +
+        'then the most charged on-field series — in whatever kind of round those weeks hold.',
+      why:
+        'The holiday weeks are when a league is talking, and a rivalry game is what it wants to talk about. Ranked ' +
+        'below every division and bye goal on purpose: this never decides what KIND of round a week holds, only ' +
+        'which pairs fill it, so a Thanksgiving that lands on division games simply plays division rivals. Real-life ' +
+        'rivals carry 60% of a pair\u2019s value so any of them outranks every pair that is not one (commissioner, ' +
+        'Nov 2026). Leagues with no rival list skip it.',
+      enforcedBy: 'scoreColoring (marquee-weeks.mjs)',
+      since: 2027,
+    },
+    {
       key: 'bye-luck',
       weight: 45,
       tier: 'maximise',

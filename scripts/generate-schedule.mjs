@@ -20,6 +20,8 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { planSchedule, SCHEDULE_POLICY, lastChampionshipFor } from '../src/utils/schedule-plan.mjs';
 import { blockingFailures, goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
 import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
+import { recordBook } from '../src/utils/league-history/records.mjs';
+import { rivalrySeries } from '../src/utils/league-history/rivalry.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (p) => {
@@ -68,6 +70,12 @@ const plan = planSchedule({
   rankingSources,
   // Last season's finalists, for the Week 1 title rematch. Not an MFL feed, so
   // it does not come through readFeed.
+  // Career head-to-head, the on-field half of a marquee rivalry's value.
+  // Missing history just leaves the commissioner's real-life list to decide.
+  rivalrySeries: (() => {
+    const ds = readJson(path.join(ROOT, league.dataPath, 'derived', 'league-history.json'));
+    return ds ? rivalrySeries(recordBook(ds).ix) : null;
+  })(),
   lastChampionship: lastChampionshipFor(readJson(path.join(ROOT, league.dataPath, 'championship-history.json')), year),
   readFeed: (y, feed) => readJson(path.join(ROOT, league.dataPath, 'mfl-feeds', String(y), `${feed}.json`)),
   search: { restarts: Number(arg('restarts', 8)), iterations: Number(arg('iterations', 15000)) },
@@ -89,6 +97,13 @@ if (plan.crossConference) {
   const rematch = plan.crossConference.pairs.find((p) => p.titleRematch);
   if (rematch) console.log(`title rematch:         ${rematch.away} vs ${rematch.home} (Week 1)`);
   for (const s of plan.crossConference.skippedRivalries ?? []) console.log(`protected rivalry off: ${s}`);
+}
+if (plan.marquee) {
+  const { halloween, thanksgiving } = plan.marquee.weeks;
+  console.log(`marquee weeks:         Halloween Wk ${halloween ?? '—'}, Thanksgiving Wk ${thanksgiving ?? '—'}`);
+  for (const g of plan.marquee.games) {
+    console.log(`  ${g.label.padEnd(12)} Wk ${g.week}  ${g.awayName} vs ${g.homeName}${g.realLife ? '  (real-life)' : ''}`);
+  }
   console.log(
     `cross-conference:      ${plan.crossConference.divisionPairing.map((p) => p.join('/')).join(' + ')}` +
       `${changedPairs ? `, ${changedPairs} protected rivalry` : ''}`,
@@ -139,6 +154,7 @@ const scored = scoreSeasonGoals(
     doubleheaders: plan.doubleheaderWeeks,
     lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
     problems: plan.problems,
+    marqueeGames: plan.marquee?.games ?? null,
   }),
 );
 const GLYPH = { met: 'ok  ', partial: 'part', blocked: 'FAIL', optimised: 'opt ' };

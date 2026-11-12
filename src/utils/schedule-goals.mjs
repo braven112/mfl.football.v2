@@ -236,6 +236,17 @@ const SCORERS = {
     };
   },
 
+  'marquee-rivals': (f) => {
+    const games = f.marqueeGames ?? null;
+    if (!games) return { status: 'optimised', detail: 'no rival list for this league, so the holiday weeks were not steered' };
+    if (!games.length) return { status: 'optimised', detail: 'no listed or long-running rivalry fit the holiday weeks this season' };
+    const real = games.filter((g) => g.realLife).length;
+    return {
+      status: 'optimised',
+      detail: `${games.length} rivalry game${games.length === 1 ? '' : 's'} on Halloween and Thanksgiving, ${real} of them real-life rivals`,
+    };
+  },
+
   'bye-luck': (f) => ({
     status: 'optimised',
     detail: `most- to least-favoured franchise differ by ${f.netByeSpread} across the season`,
@@ -359,6 +370,8 @@ export const goalFactsFromSeason = ({
   doubleheaders,
   lightByeWeekMax,
   problems = [],
+  /** `marqueeGamesIn` output, or null when the league has no rival list. */
+  marqueeGames = null,
 }) => {
   const byeByWeek = new Map(described.byWeek.map((w) => [w.week, w.nflByes]));
   const divisionByeWeeks = described.byWeek
@@ -395,6 +408,7 @@ export const goalFactsFromSeason = ({
     minRematchGap: described.minRematchGap,
     lightByeWeekMax,
     problems,
+    marqueeGames,
   };
 };
 
