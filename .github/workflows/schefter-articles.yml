@@ -230,6 +230,9 @@ jobs:
               COMPUTE_WEEK_ARG="--week $((WEEK_OVERRIDE + 1))"
             fi
             node scripts/compute-schedule-strength.mjs $COMPUTE_WEEK_ARG
+            # Playoff odds ride the same Wednesday refresh (and Saturday's,
+            # below), so the Playoff Odds page moves once Monday night is in.
+            node scripts/compute-playoff-odds.mjs || echo "::warning::playoff odds compute failed (non-fatal)"
             # Every league whose feed is on and whose articleTypes allow it
             # (Archie's: The Gauntlet only; its chat is Slack, and the
             # announce step routes it there).
@@ -244,6 +247,10 @@ jobs:
           elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
             # Every league whose articleTypes allow it (TheLeague and the AFL);
             # each league previews its own slate from its own feeds.
+            # Fresh playoff odds first: the preview's race board and per-game
+            # stakes read the derived file this writes, as does the Playoff
+            # Odds page the preview links to.
+            node scripts/compute-playoff-odds.mjs || echo "::warning::playoff odds compute failed (non-fatal)"
             each_league article:matchup-preview node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           else
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
@@ -279,7 +286,7 @@ jobs:
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
-            FILES="$(jobfiles article:matchup-preview '{schefterFeedPath}')"
+            FILES="$(jobfiles article:matchup-preview '{schefterFeedPath}'),$(jobfiles article:matchup-preview '{dataPath}/derived')"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             FILES="$(jobfiles pecking-order '{dataPath}/pecking-order')"
           else

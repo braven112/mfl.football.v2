@@ -49,6 +49,7 @@
     "scan:mfl-injection": "node scripts/scan-mfl-page-injection.mjs --league=afl",
     "compute:free-agents": "node scripts/compute-free-agents.mjs --all",
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
+    "compute:playoff-odds": "node scripts/compute-playoff-odds.mjs",
     "compute:owner-tenures": "node scripts/compute-owner-tenures.mjs",
     "compute:division-strength": "node scripts/compute-division-strength.mjs",
     "compute:league-history": "node scripts/compute-league-history.mjs",

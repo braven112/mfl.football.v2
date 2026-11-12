@@ -18,7 +18,9 @@ import {
   doubleheaderBriefing,
 } from '../article-utils/franchise-record.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
-import { buildMatchupVisuals } from '../../src/utils/matchup-preview-visuals.mjs';
+import { buildMatchupVisuals, addPreviewExtras } from '../../src/utils/matchup-preview-visuals.mjs';
+import { tryLoadJSON } from '../article-utils/data-loaders.mjs';
+import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import { recordBook } from '../../src/utils/league-history/records.mjs';
 import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
 
@@ -28,7 +30,7 @@ import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
  * matchup gets a tale-of-the-tape card under the copy. Hard cap, applied in
  * buildPost — validate() only rejects too FEW paragraphs.
  */
-const MAX_PARAGRAPHS = 4;
+const MAX_PARAGRAPHS = 3;
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -44,9 +46,8 @@ export const config = {
   // in-season (recap Tue→Thu, preview Fri→Sun, matchup preview Sat→Mon),
   // preempting the regular-season daily rotation that was built for those
   // days. Tier drives the hero claim, the feed card's red treatment and the OG
-  // badge — nothing else. Chat and push are gated on whether the module exports
-  // buildGroupMePromo (only cut-watch, schedule-release and schedule-strength
-  // do), so this column has no chat or push path to lose either way.
+  // badge — nothing else. Chat and push come from buildGroupMePromo (below),
+  // which this column exports since Nov 2026 — not from the tier.
   // Pinned by tests/weekly-column-hero-claim.test.ts.
   tier: 'standard',
   maxTokens: 5000,
@@ -134,6 +135,20 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     week,
   });
   const nameOf = (id) => teams.get(id)?.name ?? id;
+
+  // The chart-led half (Nov 2026): playoff odds and The Gauntlet, both from
+  // their weekly derived files for THIS week (compute-playoff-odds.mjs runs in
+  // the same job just before this). Either missing just drops its charts.
+  const derived = (name) => tryLoadJSON(path.join(
+    resolveMainRepo(projectRoot), LEAGUES[league].dataPath, 'derived',
+    `${name}-${year}-w${String(week).padStart(2, '0')}.json`,
+  ));
+  const [odds, gauntlet] = await Promise.all([derived('playoff-odds'), derived('schedule-strength')]);
+  // The snapshot the page renders: race board, cards in stakes order. The fact
+  // sheet below keeps reading `visuals` (pairing order) so its MATCHUP numbers
+  // line up with `pairings`.
+  const rendered = addPreviewExtras(visuals, { weeklyResultsRaw: data['weekly-results-raw'], history, odds, gauntlet });
+  const stakesByPair = new Map(rendered.matchups.map((m) => [[m.a.franchiseId, m.b.franchiseId].sort().join('-'), m.stakes]));
   // Owner Map hometowns (Redis): the same cities and miles the cards' mini
   // maps print, so the copy and the map beside it agree.
   const hometowns = await loadHometowns(league);
@@ -144,6 +159,16 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   lines.push('');
   const dhBriefing = doubleheaderBriefing(weekFormat);
   if (dhBriefing) { lines.push(dhBriefing); lines.push(''); }
+
+  if (rendered.race) {
+    const r = rendered.race;
+    lines.push(`PLAYOFF RACE (simulated odds, ${r.spots} playoff spots, regular season ends week ${r.lastWeek}):`);
+    for (const t of r.teams.slice(0, 20)) {
+      lines.push(`  ${nameOf(t.franchiseId)} (${t.wins}-${t.losses}${t.ties ? `-${t.ties}` : ''}): ${pct(t.playoff)} playoff odds${r.hasByes ? `, ${pct(t.bye)} bye odds` : ''}`);
+    }
+    if (r.lockedIds.length) lines.push(`  ${r.lockedIds.length} teams are already all but in.`);
+    lines.push('');
+  }
 
   if (visuals.gameOfWeek != null) {
     const g = visuals.matchups[visuals.gameOfWeek];
@@ -156,7 +181,10 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   const nflTeamPlayers = {}; // nflTeam → [{player, position, franchiseName}]
 
   // Matchup analysis
+  // A large league's sheet covers only the games its cards show.
+  const carded = new Set(rendered.matchups.map((m) => [m.a.franchiseId, m.b.franchiseId].sort().join('-')));
   for (const [idx, { franchise1Id, franchise2Id }] of pairings.entries()) {
+    if (rendered.moreGames > 0 && !carded.has([franchise1Id, franchise2Id].sort().join('-'))) continue;
     const t1 = teams.get(franchise1Id);
     const t2 = teams.get(franchise2Id);
     const s1 = standingsMap[franchise1Id] || { wins: 0, losses: 0 };
@@ -166,6 +194,8 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     for (const fact of [...formFacts(visuals.matchups[idx], nameOf), ...seriesFacts(visuals.matchups[idx], nameOf)]) {
       lines.push(`  ${fact}`);
     }
+    const stakes = stakesByPair.get([franchise1Id, franchise2Id].sort().join('-'));
+    for (const fact of stakesFacts(stakes, nameOf)) lines.push(`  ${fact}`);
     const hometown = hometownFact(franchise1Id, franchise2Id, hometowns, nameOf);
     if (hometown) lines.push(`  ${hometown}`);
 
@@ -228,7 +258,24 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     lines.push('US Broadcast channels: ' + Object.keys(broadcastData.countries.US.channels).join(', '));
   }
 
-  return { factSheet: lines.join('\n'), enrichment: { visuals } };
+  // Team names ride along for the chat promo (never on the post: the page
+  // reads names from the league config, so a renamed team stays current).
+  const names = Object.fromEntries([...teams.entries()].map(([id, t]) => [id, t.nameMedium ?? t.name ?? id]));
+  return { factSheet: lines.join('\n'), enrichment: { visuals: rendered, names } };
+}
+
+const pct = (x) => `${Math.round(x * 100)}%`;
+
+/** What a game is worth, as fact-sheet lines: each side's odds now, with a win, with a loss. */
+function stakesFacts(stakes, nameOf) {
+  if (!stakes || stakes.swing < 0.02) return [];
+  const key = stakes.kind === 'bye' ? 'bye' : 'playoff';
+  const out = [`STAKES (${key} odds; this game swings them up to ${pct(stakes.swing)}):`];
+  for (const s of [stakes.a, stakes.b]) {
+    if (!s) continue;
+    out.push(`  ${nameOf(s.franchiseId)}: ${pct(s.now[key])} now, ${pct(s.win[key])} with a win, ${pct(s.loss[key])} with a loss`);
+  }
+  return out;
 }
 
 /** This season's streak and luck for both sides, as fact-sheet lines. */
@@ -273,7 +320,7 @@ function seriesFacts(m, nameOf, { full = false } = {}) {
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
 Preview the week's fantasy matchups and pick winners — be bold, be wrong sometimes, that's what makes it fun. This is the Saturday morning "what to watch" guide.
-The article page already SHOWS the numbers: a Game of the Week rivalry panel sits above your copy (series record, streak, playoff meetings, biggest and closest games, a chart of every meeting) and every matchup gets a tale-of-the-tape card below it (record, streak, recent results, weekly scores, luck). Your copy is SHORT and tells the story those visuals cannot: who wins and why. Do not recite records or streaks the cards already show.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
+The article page already SHOWS the numbers: a playoff-odds race board sits above your copy, and below it every game gets a card (the rivalry and its last five meetings, both teams' last five weeks, what the game does to their playoff or bye odds, and The Gauntlet's next four weeks). Your copy is SHORT and tells the story those charts cannot: what is on the line, who wins and why. Do not recite records, streaks or odds the charts already show; use at most one odds number per paragraph, exactly as the fact sheet states it.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
@@ -285,14 +332,15 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Game of the Week...</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
+  "content": ["<p>Biggest stakes...</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
 }
 
 INSTRUCTIONS:
-- Write exactly 3 or 4 SHORT paragraphs, each under 350 characters.
-- Paragraph 1: the GAME OF THE WEEK (if the fact sheet names one) — the rivalry angle and your pick.
-- Then 1-2 paragraphs on the next 2-3 most interesting matchups, with picks. Do not run through every game.
-- Last paragraph: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
+- Write exactly 3 SHORT paragraphs, each under 300 characters.
+- Paragraph 1: the game with the most on the line (STAKES lines) or the GAME OF THE WEEK — what is at stake and your pick.
+- Paragraph 2: one or two more games worth watching, with picks. Do not run through every game.
+- Paragraph 3: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
+- Odds are estimates from a simulation: say "about" or "roughly", never "guaranteed" or "eliminated".
 - Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
 - Hometown references are optional flavor, at most twice; mileage only as the fact sheet states it.
 - Reference specific projected scores and player names from the fact sheet.
@@ -362,4 +410,36 @@ export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LE
     // column was written so an old preview keeps that week's numbers.
     matchupVisuals: enrichment?.visuals ?? undefined,
   };
+}
+
+/**
+ * The Saturday chat post (owner's call, Nov 2026): one line and the link,
+ * after the lineup roll call (scripts/lib/lineup-broadcast.mjs) has gone out.
+ * Queued by the runner and sent only once the permalink answers on the live
+ * site; Saturday's one chat slot is this column's (groupme-day-plan.mjs).
+ *
+ * Leads with the game that has the most on the line; falls back to the Game of
+ * the Week, then to a plain line. The URL goes last with nothing glued to it
+ * (GroupMe autolinks trailing punctuation into a 404).
+ */
+export function buildGroupMePromo(post, enrichment, { league = DEFAULT_LEAGUE_SLUG, teamNames } = {}) {
+  const visuals = enrichment?.visuals;
+  if (!visuals?.matchups?.length) return null;
+  const url = leagueUrl(LEAGUES[league], post.link);
+  const nameOf = (id) => teamNames?.get?.(id) ?? enrichment?.names?.[id] ?? id;
+  const top = [...visuals.matchups].filter((m) => m.stakes).sort((x, y) => y.stakes.swing - x.stakes.swing)[0];
+  if (top && top.stakes.swing >= 0.05) {
+    const key = top.stakes.kind === 'bye' ? 'bye' : 'playoff';
+    const gap = (s) => (s ? Math.abs(s.win[key] - s.loss[key]) : -1);
+    // Name the team whose odds this game moves most, and who stands in the way.
+    const [mover, other] = gap(top.stakes.a) >= gap(top.stakes.b) ? [top.a, top.b] : [top.b, top.a];
+    // No possessive: "Gridiron Geeks's" is how a team name breaks one.
+    const what = key === 'bye' ? 'A first-round bye' : 'A playoff spot';
+    return `🔭 Week ${visuals.week} Matchup Preview: ${what} is on the line for ${nameOf(mover.franchiseId)} against ${nameOf(other.franchiseId)}. Odds, rivalries and every game ▸ ${url}`;
+  }
+  const gotw = visuals.gameOfWeek != null ? visuals.matchups[visuals.gameOfWeek] : null;
+  if (gotw) {
+    return `🔭 Week ${visuals.week} Matchup Preview: ${nameOf(gotw.a.franchiseId)} vs ${nameOf(gotw.b.franchiseId)} headlines the slate. Odds, rivalries and every game ▸ ${url}`;
+  }
+  return `🔭 Week ${visuals.week} Matchup Preview: playoff odds, rivalries and every game ▸ ${url}`;
 }

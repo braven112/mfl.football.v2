@@ -199,6 +199,16 @@ export const LEAGUES = {
     chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'computed', rule: 'friday-before-week-11' },
     /**
+     * Playoff odds (src/utils/playoff-odds.mjs, the Playoff Odds page, the
+     * standings Playoff tab and the Saturday Matchup Preview). How the league
+     * seeds: the top `divisionPlaces` of each division, then `wildCards` more,
+     * within each group (`groupBy: 'conference'` seeds each conference on its
+     * own); the best `byes` seeds skip round one. `rankBy: 'vp'` ranks on
+     * Victory Points instead of win percentage. Absent → no odds anywhere.
+     * TheLeague: 4 division winners + 3 wild cards, the 1 seed on a bye.
+     */
+    playoffOdds: { divisionPlaces: 1, wildCards: 3, byes: 1 },
+    /**
      * League-minimum salary. Every player added to a roster carries at least
      * this — a first-come-first-served free-agent add included, which MFL
      * records with NO price on the transaction row. Read by anything that
@@ -407,6 +417,8 @@ export const LEAGUES = {
     /** League chat — see TheLeague's entry for the shape. */
     chat: { provider: 'groupme', botEnv: 'GROUPME_AFL_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'computed', rule: 'wednesday-between-week-10-and-11' },
+    /** Playoff odds format (see TheLeague's entry). Each conference: 2 division winners + 2 wild cards. */
+    playoffOdds: { groupBy: 'conference', divisionPlaces: 1, wildCards: 2, byes: 0 },
     features: {
       contracts: false,
       salaryCap: false,
@@ -749,6 +761,8 @@ export const LEAGUES = {
      * would put a wrong one in front of 99 owners.
      */
     tradeDeadline: null,
+    /** Playoff odds format (see TheLeague's entry). MAD seeding: top 2 of each of the 9 divisions + 12 wild cards, on VP. */
+    playoffOdds: { divisionPlaces: 2, wildCards: 12, byes: 0, rankBy: 'vp' },
     /**
      * Every flag set on purpose. Launch surfaces: homepage (with
      * transactions), news + The Gauntlet, standings, rosters + team pages.
@@ -857,6 +871,8 @@ export const LEAGUES = {
       equivalents: ['America/Vancouver', 'America/Tijuana'],
     },
     tradeDeadline: null,
+    /** Playoff odds format (see TheLeague's entry). Sandbox: 2 division winners + 4 wild cards, top 2 on a bye. */
+    playoffOdds: { divisionPlaces: 1, wildCards: 4, byes: 2 },
     features: {
       contracts: false,
       salaryCap: false,

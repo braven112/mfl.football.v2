@@ -339,6 +339,18 @@ export interface LeagueDefinition {
    */
   standingsSeeding?: { kind: 'mad'; divisionLeaders: number; runnersUp: number; wildCards: number };
   /**
+   * How the league seeds, for playoff odds (src/utils/playoff-odds.mjs). See
+   * TheLeague's entry in leagues-data.mjs. Absent → no odds on any surface.
+   */
+  playoffOdds?: {
+    divisionPlaces: number;
+    wildCards: number;
+    byes: number;
+    groupBy?: 'league' | 'conference';
+    rankBy?: 'pct' | 'vp';
+    vpBuckets?: number[];
+  };
+  /**
    * The zone this league keeps its own time in — see `officialClock` in
    * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
    * than reaching into the entry, and never fall back to a hardcoded Pacific

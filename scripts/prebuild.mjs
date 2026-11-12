@@ -119,6 +119,10 @@ const PARALLEL = [
   // output dir) — overlaps with the network fetches instead of serializing
   // onto the build critical path.
   { name: 'compute:schedule-strength', cmd: 'pnpm run compute:schedule-strength', previewSkip: true },
+  // Same shape: committed feeds in, one derived file per league with a
+  // registry `playoffOdds` format out (src/utils/playoff-odds.mjs). Seeded,
+  // so a rebuild over unchanged feeds writes nothing.
+  { name: 'compute:playoff-odds', cmd: 'pnpm run compute:playoff-odds', previewSkip: true },
   // Reads only committed mfl-feeds + championship-history.json, so it has no
   // ordering relationship with anything else here.
   { name: 'compute:playoff-performance', cmd: 'pnpm run compute:playoff-performance', previewSkip: true },

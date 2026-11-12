@@ -217,3 +217,166 @@ export function buildMatchupVisuals({ pairings, weeklyResultsRaw, history, year,
   }
   return { year, week, gameOfWeek, matchups };
 }
+
+// ── The chart-led preview (Nov 2026) ────────────────────────────────────────
+//
+// The owner's "recommended mix": a playoff-race board on top, then one card per
+// game, biggest stakes first, each with the rivalry's last five meetings, both
+// teams' last five weeks, what the game is worth in playoff (or bye) odds, and
+// The Gauntlet's next four weeks. Everything below is added to the SAME
+// snapshot, so an old post (no `race`) keeps rendering the way it always did.
+
+/** Last N of something, newest last. */
+const lastN = (arr, n) => arr.slice(Math.max(0, arr.length - n));
+
+/** Cards a large league shows; the rest are named in one line under them. */
+export const MAX_GAME_CARDS = 12;
+
+/** A league bigger than this shows only the teams still in the race on the board. */
+export const BOARD_FULL_MAX_TEAMS = 32;
+
+/** Rows a large league's board shows on each side of the playoff line. */
+export const BUBBLE_ROWS = 10;
+
+/**
+ * One team's last five WEEKS: the week's one score, and W/L when the week's
+ * games all went one way ('S' for a split doubleheader).
+ */
+export function lastFiveWeeks(franchiseId, season) {
+  const s = season.get(franchiseId);
+  if (!s) return [];
+  return lastN(s.weekly, 5).map((w) => {
+    const results = s.games.filter((g) => g.week === w.week).map((g) => g.result);
+    const all = (r) => results.length > 0 && results.every((x) => x === r);
+    const result = all('W') ? 'W' : all('L') ? 'L' : all('T') ? 'T' : 'S';
+    return { week: w.week, score: round1(w.score), result };
+  });
+}
+
+/**
+ * The extras for the chart-led preview. Pure: everything comes in.
+ *
+ * @param {object} visuals         buildMatchupVisuals' result (mutated copy returned)
+ * @param {object} args
+ * @param {any[]} args.weeklyResultsRaw
+ * @param {object | undefined} args.history  recordBook(...).ix
+ * @param {any | null} args.odds    a playoff-odds derived file (compute-playoff-odds.mjs)
+ * @param {any | null} args.gauntlet a schedule-strength derived file
+ */
+export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gauntlet }) {
+  const season = seasonGames(weeklyResultsRaw, visuals.week);
+  const pairKey = (a, b) => [a, b].sort().join('-');
+  const gamesByPair = new Map((odds?.games ?? []).map((g) => [pairKey(g.a.franchiseId, g.b.franchiseId), g]));
+  const runInRank = new Map((gauntlet?.runIn ?? []).map((r) => [r.franchiseId, r.rank]));
+  const heat = new Map((gauntlet?.heatMap?.franchises ?? []).map((f) => [f.franchiseId, f.cells]));
+  const lastWeek = odds?.lastWeek ?? Infinity;
+
+  const strip = (id) => {
+    const cells = (heat.get(id) ?? [])
+      .filter((c) => c.week >= visuals.week && c.week <= lastWeek)
+      .slice(0, 4)
+      .map((c) => ({
+        week: c.week,
+        bye: Boolean(c.bye),
+        opps: (c.opps ?? []).map((o) => o.oppAbbrev ?? o.oppId),
+        step: c.step ?? 0,
+      }));
+    return cells.length ? { rank: runInRank.get(id) ?? null, cells } : null;
+  };
+
+  const matchups = visuals.matchups.map((m) => {
+    const a = m.a.franchiseId;
+    const b = m.b.franchiseId;
+    const full = seriesSnapshot(history, a, b, { withMeetings: true });
+    const recent = full?.meetings ? lastN(full.meetings, 5).map(({ year, week, score, opp }) => ({ year, week, score, opp })) : [];
+    const g = gamesByPair.get(pairKey(a, b));
+    // The odds file names its sides in its own order; turn it to this card's.
+    const sides = g ? (g.a.franchiseId === a ? [g.a, g.b] : [g.b, g.a]) : null;
+    const pick = (s) => s && {
+      franchiseId: s.franchiseId,
+      now: { playoff: s.playoff, bye: s.bye },
+      win: s.win,
+      loss: s.loss,
+      winChance: s.winChance ?? null,
+    };
+    return {
+      ...m,
+      recent,
+      lastFive: { a: lastFiveWeeks(a, season), b: lastFiveWeeks(b, season) },
+      stakes: g ? { kind: g.stakes.kind, swing: g.stakes.swing, a: pick(sides[0]), b: pick(sides[1]) } : null,
+      gauntlet: { a: strip(a), b: strip(b) },
+    };
+  });
+
+  // Order: the Game of the Week first, then every other game by what it is worth.
+  const gotw = visuals.gameOfWeek != null ? matchups[visuals.gameOfWeek] : null;
+  const rest = matchups.filter((m) => m !== gotw).sort((x, y) => (y.stakes?.swing ?? -1) - (x.stakes?.swing ?? -1));
+  const ordered = gotw ? [gotw, ...rest] : rest;
+  // A 99-team league plays ~100 games a week; the article carries the ones
+  // that matter most and says how many more there are.
+  const shown = ordered.slice(0, MAX_GAME_CARDS);
+
+  return {
+    ...visuals,
+    gameOfWeek: gotw ? 0 : null,
+    matchups: shown,
+    moreGames: ordered.length - shown.length,
+    race: odds ? raceBoard(odds, gamesByPair, runInRank) : null,
+  };
+}
+
+/**
+ * The race board: every team's playoff odds today, and the range this week's
+ * game can move them (low = with a loss, high = with a win).
+ */
+export function raceBoard(odds, gamesByPair, runInRank = new Map()) {
+  const range = new Map();
+  for (const g of gamesByPair.values()) {
+    for (const s of [g.a, g.b]) {
+      const lo = Math.min(range.get(s.franchiseId)?.low ?? 1, s.loss.playoff);
+      const hi = Math.max(range.get(s.franchiseId)?.high ?? 0, s.win.playoff);
+      range.set(s.franchiseId, { low: lo, high: hi });
+    }
+  }
+  const spots = Math.round(odds.teams.reduce((t, x) => t + x.playoff, 0));
+  const all = [...odds.teams]
+    .sort((x, y) => y.playoff - x.playoff || y.wins - x.wins || y.pf - x.pf)
+    .map((t) => ({
+      franchiseId: t.franchiseId,
+      wins: t.wins,
+      losses: t.losses,
+      ties: t.ties,
+      playoff: t.playoff,
+      bye: t.bye,
+      low: range.get(t.franchiseId)?.low ?? null,
+      high: range.get(t.franchiseId)?.high ?? null,
+      sked: runInRank.get(t.franchiseId) ?? null,
+    }));
+  // "Out" is a fact on the board, not a row: a team the draw never put in.
+  let out = all.filter((t) => t.playoff < 0.005 && (t.high ?? 0) < 0.005);
+  let shown = all.filter((t) => !out.includes(t));
+  let locked = [];
+  if (all.length > BOARD_FULL_MAX_TEAMS) {
+    // A 99-team board is a wall: show the bubble, the rows either side of the
+    // playoff line, and count everyone above and below it.
+    const from = Math.max(0, spots - BUBBLE_ROWS);
+    const to = Math.min(all.length, spots + BUBBLE_ROWS);
+    locked = all.slice(0, from);
+    shown = all.slice(from, to);
+    out = all.slice(to);
+  }
+  return {
+    week: odds.week,
+    lastWeek: odds.lastWeek,
+    spots,
+    hasByes: (odds.format?.byes ?? 0) > 0,
+    teams: shown,
+    /** Rows above the first one shown (a large league's board starts at the bubble). */
+    aboveCount: locked.length,
+    /** Index in `teams` of the first team outside the playoff spots. */
+    lineAt: Math.max(0, spots - locked.length),
+    lockedIds: locked.map((t) => t.franchiseId),
+    outIds: out.map((t) => t.franchiseId),
+    teamCount: all.length,
+  };
+}
