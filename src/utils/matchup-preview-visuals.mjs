@@ -354,6 +354,11 @@ export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gau
 /**
  * The race board: every team's playoff odds today, and the range this week's
  * game can move them (low = with a loss, high = with a win).
+ *
+ * @param {any} odds
+ * @param {Map<string, any>} gamesByPair
+ * @param {Map<string, number>} [runInRank]
+ * @param {{ full?: boolean, teams?: Set<string> | null }} [opts]
  */
 export function raceBoard(odds, gamesByPair, runInRank = new Map(), { full = false, teams: only = null } = {}) {
   const range = new Map();

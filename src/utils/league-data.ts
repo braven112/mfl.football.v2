@@ -398,7 +398,10 @@ async function checkPointer(now: number): Promise<void> {
       manifest: {
         base: deploy.base,
         schema: LEAGUE_DATA_SCHEMA,
-        files: composeFiles(deploy.files, files, pointer.patterns),
+        // A branch deploy keeps the files its branch added (composeFiles).
+        files: composeFiles(deploy.files, files, pointer.patterns, {
+          keepBranchFiles: Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== 'production',
+        }),
       },
     });
   } catch (err) {

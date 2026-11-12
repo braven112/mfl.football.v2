@@ -113,16 +113,26 @@ export function parsePointer(raw) {
  * The deploy's file map with the pointer's slice swapped in: every path under
  * `patterns` comes from `overlayFiles` (or is gone, if the overlay lacks it),
  * every other path from `builtFiles`.
+ *
+ * `keepBranchFiles` (preview and staging deploys only): a file the deploy has
+ * and the overlay lacks is KEPT. The overlay is built from main, so on a
+ * branch deploy "missing from the overlay" almost always means "new on this
+ * branch", not "deleted by a sync" — without this, a PR adding a derived file
+ * (the playoff-odds files, Nov 2026) shows nothing on its own preview.
+ * Production keeps the strict rule, where a sync's deletion must stick.
  * @param {Record<string, string>} builtFiles
  * @param {Record<string, string>} overlayFiles
  * @param {string[]} patterns
+ * @param {{ keepBranchFiles?: boolean }} [opts]
  * @returns {Record<string, string>}
  */
-export function composeFiles(builtFiles, overlayFiles, patterns) {
+export function composeFiles(builtFiles, overlayFiles, patterns, { keepBranchFiles = false } = {}) {
   const res = patterns.map(globToRegExp);
   const owned = (path) => res.some((re) => re.test(path));
   const out = {};
-  for (const [path, hash] of Object.entries(builtFiles)) if (!owned(path)) out[path] = hash;
+  for (const [path, hash] of Object.entries(builtFiles)) {
+    if (!owned(path) || (keepBranchFiles && !(path in overlayFiles))) out[path] = hash;
+  }
   for (const [path, hash] of Object.entries(overlayFiles)) if (owned(path)) out[path] = hash;
   return out;
 }
