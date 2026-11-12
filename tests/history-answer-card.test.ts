@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askAtLabel, buildAnswerCardTree, clipWords, headlineSize, teamIcon, ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../src/utils/league-history/answer-card';
+import { askAtLabel, buildAnswerCardTree, cardTeams, MAX_TIE_LOGOS, clipWords, headlineSize, teamIcon, ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../src/utils/league-history/answer-card';
 import { shareText } from '../src/utils/league-history/share-answer';
 
 describe('Ask the History share card', () => {
@@ -37,5 +37,30 @@ describe('Ask the History share card', () => {
   it('ends the share text with the link, so GroupMe cannot autolink punctuation into it', () => {
     const url = 'https://www.theleague.us/history/ask/abcdefghij';
     expect(shareText('Who won?', url).endsWith(url)).toBe(true);
+  });
+
+  describe('tied teams (Brandon, 2026-11-12: show both logos side by side)', () => {
+    const row = (fid: string | null, titles: number, year: number | null = null) => ({ cells: ['x', titles, 2020], franchiseId: fid, year });
+    it('shows every team tied on the headline number', () => {
+      const table = { rows: [row('0007', 3), row('0008', 3), row('0015', 2)] };
+      expect(cardTeams(table, { value: '3 titles' }).map((t) => t.franchiseId)).toEqual(['0007', '0008']);
+    });
+    it('shows one team when nothing ties', () => {
+      const table = { rows: [row('0002', 3), row('0007', 2)] };
+      expect(cardTeams(table, { value: '3 titles' }).map((t) => t.franchiseId)).toEqual(['0002']);
+    });
+    it('falls back to the top team when the headline has no number in the row', () => {
+      const table = { rows: [row('0002', 3), row('0007', 3)] };
+      expect(cardTeams(table, { value: 'Drunk Indians' }).map((t) => t.franchiseId)).toEqual(['0002']);
+      expect(cardTeams(table, null).map((t) => t.franchiseId)).toEqual(['0002']);
+    });
+    it('reads numbers with commas and counts each team once, capped', () => {
+      const rows = ['1', '2', '3', '4', '5', '1'].map((f) => ({ cells: [1021], franchiseId: f, year: null }));
+      expect(cardTeams({ rows }, { value: '1,021 pts' })).toHaveLength(MAX_TIE_LOGOS);
+    });
+    it('names no team when the top row has none', () => {
+      expect(cardTeams({ rows: [row(null, 3)] }, { value: '3' })).toEqual([]);
+      expect(cardTeams(null, { value: '3' })).toEqual([]);
+    });
   });
 });

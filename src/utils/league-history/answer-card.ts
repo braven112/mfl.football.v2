@@ -34,8 +34,12 @@ export interface AnswerCardInput {
 	question: string;
 	headline: { value: string; label: string } | null;
 	answer: string;
-	/** The answer's team logo as a data URI (record-card logoDataUri), or null. */
-	logo?: string | null;
+	/**
+	 * The answer's team logos as data URIs (record-card logoDataUri): one for
+	 * an answer about one team, every tied team's side by side for a tie
+	 * (Brandon, 2026-11-12), none when no team is named.
+	 */
+	logos?: string[];
 	/** Where to ask your own, shown in the footer: "theleague.us/history/ask". */
 	askAt: string;
 }
@@ -80,8 +84,56 @@ export function askAtLabel(href: string): string {
 	return href.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
 }
 
+/** Most logos a tie shows; past this the row would crowd the headline. */
+export const MAX_TIE_LOGOS = 4;
+
+interface TieTable {
+	rows?: Array<{ cells: Array<string | number | boolean | null>; franchiseId: string | null; year: number | null }>;
+}
+
+/**
+ * The teams the card should show: the answer's top row, plus every row tied
+ * with it on the headline's number. The tie is read from the engine's own
+ * table: the column whose top value IS the headline's number, and the rows
+ * that share that value. When the headline names no number in the top row,
+ * only the top row's team is shown, as before.
+ */
+export function cardTeams(
+	table: TieTable | null | undefined,
+	headline: { value: string } | null | undefined,
+): Array<{ franchiseId: string; year: number | null }> {
+	const rows = table?.rows ?? [];
+	const top = rows[0];
+	if (!top?.franchiseId) return [];
+	const one = [{ franchiseId: top.franchiseId, year: top.year }];
+	const m = headline?.value.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+	if (!m) return one;
+	const n = Number(m[0]);
+	const col = top.cells.findIndex((c) => typeof c === 'number' && Math.abs(c - n) < 1e-9);
+	if (col < 0) return one;
+	const out: Array<{ franchiseId: string; year: number | null }> = [];
+	const seen = new Set<string>();
+	for (const r of rows) {
+		if (r.cells[col] !== top.cells[col]) break;
+		if (!r.franchiseId || seen.has(r.franchiseId)) continue;
+		seen.add(r.franchiseId);
+		out.push({ franchiseId: r.franchiseId, year: r.year });
+		if (out.length === MAX_TIE_LOGOS) break;
+	}
+	return out;
+}
+
+const img = (src: string, size: number, style: Record<string, unknown>): Node =>
+	({ type: 'img', props: { src, width: size, height: size, style: { objectFit: 'contain', ...style } } }) as Node;
+
 export function buildAnswerCardTree(input: AnswerCardInput): Node {
-	const logo = input.logo ?? null;
+	const logos = (input.logos ?? []).slice(0, MAX_TIE_LOGOS);
+	const logo = logos.length === 1 ? logos[0] : null;
+	// A tie: every tied team side by side, in a row of their own above the stat.
+	const tieRow =
+		logos.length > 1
+			? [el('div', { display: 'flex', alignItems: 'center', marginBottom: 28 }, logos.map((src, i) => img(src, 120, { marginLeft: i ? 24 : 0 })))]
+			: [];
 	const head = input.headline;
 	// With a headline the answer is the supporting line; without one it IS the
 	// card, so it gets the room and the bigger type.
@@ -90,10 +142,9 @@ export function buildAnswerCardTree(input: AnswerCardInput): Node {
 
 	const middle: Node[] = head
 		? [
+				...tieRow,
 				el('div', { display: 'flex', alignItems: 'center' }, [
-					...(logo
-						? [{ type: 'img', props: { src: logo, width: 150, height: 150, style: { objectFit: 'contain', marginRight: 32 } } } as Node]
-						: []),
+					...(logo ? [img(logo, 150, { marginRight: 32 })] : []),
 					el(
 						'div',
 						{ display: 'flex', fontFamily: 'UFC Sans Condensed', fontWeight: 700, fontSize: headlineSize(head.value), lineHeight: 1, color: '#ffffff' },
@@ -104,9 +155,8 @@ export function buildAnswerCardTree(input: AnswerCardInput): Node {
 				el('div', { display: 'flex', fontSize: answerSize, lineHeight: 1.35, color: '#ffffff', marginTop: 44 }, answer),
 			]
 		: [
-				...(logo
-					? [{ type: 'img', props: { src: logo, width: 130, height: 130, style: { objectFit: 'contain', marginBottom: 36 } } } as Node]
-					: []),
+				...tieRow,
+				...(logo ? [img(logo, 130, { marginBottom: 36 })] : []),
 				el('div', { display: 'flex', fontSize: answerSize, fontWeight: 500, lineHeight: 1.3, color: '#ffffff' }, answer),
 			];
 

@@ -14,8 +14,7 @@
 import type { APIRoute } from 'astro';
 import { getLeagueBySlug, leagueUrl } from '../../../../config/leagues';
 import { readAnswer } from '../../../../utils/league-history/ask-store';
-import { answerTeam } from '../../../../utils/league-history/ask-render';
-import { askAtLabel, renderAnswerCardPng, teamIcon } from '../../../../utils/league-history/answer-card';
+import { askAtLabel, cardTeams, renderAnswerCardPng, teamIcon } from '../../../../utils/league-history/answer-card';
 import { logoDataUri } from '../../../../utils/league-history/record-card';
 import { hasLeagueHistoryProduct, loadLeagueHistory } from '../../../../utils/league-history/datasets';
 
@@ -31,15 +30,19 @@ export const GET: APIRoute = async ({ url }) => {
 	const saved = await readAnswer(league.slug, q.get('id') ?? '').catch(() => null);
 	if (!saved) return notFound();
 
-	const first = saved.table?.rows?.[0];
-	const icon = first ? teamIcon(await loadLeagueHistory(league.dataPath).catch(() => null), answerTeam(saved.table), first.year) : null;
+	// One logo for an answer about one team; every tied team's for a tie.
+	const teams = cardTeams(saved.table, saved.headline);
+	const data = teams.length ? await loadLeagueHistory(league.dataPath).catch(() => null) : null;
+	const logos = (await Promise.all(teams.map((t) => logoDataUri(teamIcon(data, t.franchiseId, t.year), url.origin)))).filter(
+		(l): l is string => !!l,
+	);
 	try {
 		const png = await renderAnswerCardPng({
 			leagueName: league.name,
 			question: saved.question,
 			headline: saved.headline ?? null,
 			answer: saved.answer,
-			logo: await logoDataUri(icon, url.origin),
+			logos,
 			askAt: askAtLabel(leagueUrl(league, `/${league.slug}/history/ask`)),
 		});
 		return new Response(new Uint8Array(png), {
