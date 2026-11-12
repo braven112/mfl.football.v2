@@ -43,7 +43,7 @@ cross-cutting, add a line here. Keep this file short.
   reasoning.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
-- **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
+- **Guard tests are the real memory.** The suites in `tests/` mechanically
   enforce most rules in this repo. When a rule below names a test, that test
   is what stops the regression — read it before working around it. A guard that
   reads a FIXTURE is only as strong as that fixture's coverage: the two MFL

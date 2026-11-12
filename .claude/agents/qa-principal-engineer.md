@@ -38,8 +38,7 @@ When you receive investigation reports, synthesize them into an action plan and 
 
 **Auth in This Codebase:**
 - Client sends requests to internal Astro API routes (`/api/...`)
-- Astro routes authenticate with MFL using server-side env vars (`MFL_USER_ID`, `MFL_APIKEY`)
-- OR routes proxy the user's own MFL cookie (for user-specific operations)
+- Routes act on MFL with the signed-in caller's own MFL session (`getAuthUser(request).id`), never the server's env credentials, and take the league from the session (`user.leagueId`), never a literal (CLAUDE.md § Auth)
 - The `src/utils/auth.ts` utility handles session management
 - The `src/utils/mfl-matchup-api.ts` client handles MFL API communication
 
@@ -47,15 +46,17 @@ When you receive investigation reports, synthesize them into an action plan and 
 ```typescript
 // Server-side API route pattern (e.g., src/pages/api/move-to-ir.ts)
 export const POST: APIRoute = async ({ request }) => {
+  const user = getAuthUser(request);
+  if (!user?.id || !user.franchiseId) return new Response(null, { status: 401 });
   const body = await request.json();
 
-  // Create MFL client with auth
-  const client = createMFLApiClient({
-    leagueId: '13522',
-    year: getCurrentLeagueYear().toString(),
-    mflUserId: process.env.MFL_USER_ID,   // Commissioner-level auth
-    mflApiKey: process.env.MFL_APIKEY,
-  });
+  // The caller's own MFL session, the session's league, that league's year
+  const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+  const league = getLeagueById(leagueId);
+  const year = league?.leagueYearRollover
+    ? getRolloverLeagueYear(league.leagueYearRollover)
+    : getCurrentLeagueYear();
+  const client = createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id });
 
   // Make authenticated write to MFL
   const result = await client.someWriteOperation(body);
@@ -182,7 +183,7 @@ When you complete a fix:
 - **Auth:** `src/utils/auth.ts`
 - **API Routes:** `src/pages/api/`
 - **Rosters Page:** `src/pages/theleague/rosters.astro` (player modal actions)
-- **Trade Builder:** `src/pages/theleague/trade-builder.astro`
+- **Trade Builder:** `src/pages/theleague/front-office/trade-builder.astro`
 - **MFL API Docs:** `docs/features/mfl-api.md`
 - **League Year:** `src/utils/league-year.ts`
 
@@ -247,7 +248,7 @@ function announce(message: string) {
 ```
 
 ### Color Contrast Rules
-- **Text labels:** Use `--color-gray-500` (#6b7280), NOT `--color-gray-400` (#9ca3af)
+- **Text labels:** Use the shared gray tokens (`--color-gray-400`/`--color-gray-500`), never a hand-typed hex; `tests/league-themes.test.ts` pins them to WCAG AA on text surfaces in every theme
 - **White on colored bg:** Background must be `--color-gray-500` minimum
 - **Small red text:** Use `--color-error-dark` (#b91c1c) instead of `--color-error` (#dc2626)
 - **Focus rings:** `outline: 2px solid var(--color-primary, #1c497c); outline-offset: 2px;`

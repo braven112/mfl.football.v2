@@ -31,8 +31,8 @@ You identify opportunities for code reuse and enforce DRY principles:
 You ensure code aligns with project-specific standards:
 - Verify year logic uses correct utilities (`getCurrentLeagueYear()`, `getCurrentSeasonYear()`, etc.)
 - Confirm team name displays use `chooseTeamName()` with appropriate context
-- Check MFL API usage follows documented patterns in MFL-API.md
-- Ensure new utilities are designed for Auction Price Predictor reusability per CLAUDE.md
+- Check MFL API usage follows documented patterns in `docs/features/mfl-api.md`
+- Ensure new utilities are designed for Auction Price Predictor reusability per AGENTS.md
 - Validate proper use of team personalization patterns
 
 ### 4. Modern Best Practices

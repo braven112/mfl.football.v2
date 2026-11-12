@@ -26,7 +26,7 @@ You audit client-side scripts for correctness under Astro's `<ClientRouter />`, 
    ```
    A file listed in `tests/fixtures/clientrouter-init-baseline.json` is a known offender for rule 1; still audit it for rules 2-4.
 3. For each script block, read it top to bottom and record, with line numbers: every top-level `document.`/`window.` read (rule 2); every `addEventListener` on `document`/`window` and whether a matching `removeEventListener` precedes it (rule 3); every `setInterval`/observer/fetch loop and whether `astro:before-swap` clears it (rule 4); the presence of `astro:page-load` and an `init()` (rule 1).
-4. Compare against the reference implementation `src/pages/theleague/salary.astro` (post-fix) and its test `tests/salary-page-clientrouter.test.ts`, which pins the correct shape.
+4. Compare against the reference implementation `src/pages/theleague/front-office/salary-analytics.astro` (post-fix) and its test `tests/salary-page-clientrouter.test.ts`, which pins the correct shape.
 
 ## Output — this exact shape
 
