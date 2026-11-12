@@ -536,9 +536,12 @@ read. Depth now lives behind a link, not in a longer announcement.
 
 ## Merge conflicts — always rebase, resolve autonomously
 
-Only Brandon and Claude commit here. **Default to `git rebase origin/main`
-(never merge).** Do not stop and ask — fix it, run the relevant tests, push,
-and report what you did.
+Only Brandon and Claude commit here. **Rebase onto the branch the PR targets
+(never merge)**: `origin/staging` for feature work, `origin/main` for a
+hotfix. With no PR yet, use the branch it will target (`/live` defaults to
+`staging`). Rebasing a staging-based branch onto `main` drags staging's
+unreleased commits into the PR. Below, "main" means that base branch. Do not
+stop and ask — fix it, run the relevant tests, push, and report what you did.
 
 1. **`package.json`** — union both sides. `.gitattributes` declares
    `merge=union`; if union duplicates a key, keep the newer version spec.
