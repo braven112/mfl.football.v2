@@ -1,16 +1,20 @@
 ---
 name: rebase
-description: Rebase the current branch onto origin/main and resolve conflicts by class, autonomously, the way CLAUDE.md "Merge conflicts — always rebase, resolve autonomously" prescribes — with the ours/theirs flip under rebase handled correctly, the lock regenerated, and both ratchet baselines re-measured. Use when a PR shows a merge conflict, when main has moved under a branch, or before /live on a long-lived branch. Trigger on /rebase, "rebase onto main", "resolve the conflicts", "branch is behind main".
+description: Rebase the current branch onto the branch its PR targets (origin/staging for features, origin/main for hotfixes) and resolve conflicts by class, autonomously, the way CLAUDE.md "Merge conflicts — always rebase, resolve autonomously" prescribes — with the ours/theirs flip under rebase handled correctly, the lock regenerated, and both ratchet baselines re-measured. Use when a PR shows a merge conflict, when the base has moved under a branch, or before /live on a long-lived branch. Trigger on /rebase, "rebase onto staging", "rebase onto main", "resolve the conflicts", "branch is behind".
 ---
 
-# /rebase — onto origin/main, resolved by class
+# /rebase — onto the PR's base branch, resolved by class
 
 Only Brandon and Claude commit here, so conflicts are resolved without asking.
 The classes and their rules are CLAUDE.md's; this skill is the order of
 operations plus the two mechanical helpers that remove the judgment from the
 mechanical classes.
 
-**The side trap, first:** under a rebase, `--ours` is MAIN and `--theirs` is
+**The base, first:** rebase onto the branch the PR targets: `staging` for
+feature work, `main` for a hotfix (`gh pr view --json baseRefName`; with no PR
+yet, the branch it will target). Below, "main" means that base.
+
+**The side trap:** under a rebase, `--ours` is the BASE and `--theirs` is
 your branch commit (the reverse of a merge). `scripts/resolve-rebase-conflicts.mjs`
 picks the correct side for you; if you resolve by hand, take MAIN with
 `git checkout --ours -- <file>`.
@@ -20,13 +24,14 @@ picks the correct side for you; if you resolve by hand, take MAIN with
 1. **Prepare.**
    ```bash
    git config rerere.enabled true        # a fresh clone does not carry it
-   git fetch origin main
+   BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo staging)
+   git fetch origin "$BASE"
    git status --short                    # must be clean; stash or commit first
    node scripts/ratchet.mjs --skip-types # note the pre-rebase fork state
    ```
    Record the pre-rebase unit-test baseline: `pnpm test:unit 2>&1 | tail -5`.
 
-2. **Rebase.** `git rebase origin/main`. If it completes clean, go to step 5.
+2. **Rebase.** `git rebase "origin/$BASE"`. If it completes clean, go to step 5.
 
 3. **On each stop, run the resolver, then finish the manual files.**
    ```bash
@@ -54,7 +59,7 @@ picks the correct side for you; if you resolve by hand, take MAIN with
 5. **Validate before pushing.**
    ```bash
    pnpm test:unit                        # same failures as pre-rebase, or fewer
-   git diff --name-only origin/main -- '*.mjs' | xargs -r node --check
+   git diff --name-only "origin/$BASE" -- '*.mjs' | xargs -r node --check
    ```
 
 6. **Push.** `git push --force-with-lease` — never plain `--force`.
@@ -65,7 +70,8 @@ picks the correct side for you; if you resolve by hand, take MAIN with
 
 ## Don'ts
 
-- Don't merge main into the branch. Rebase only.
+- Don't merge the base into the branch. Rebase only.
+- Don't rebase a staging-based feature branch onto `main`.
 - Don't hand-edit `pnpm-lock.yaml` or any generated feed file, ever.
 - Don't keep either side's ratchet baseline number — re-measure.
 - Don't turn `rerere` off.
