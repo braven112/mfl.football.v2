@@ -17,7 +17,7 @@ This is an Astro + React project deployed on Vercel with these characteristics:
 - **Integrations:** React (for interactive islands)
 - **Styling:** SCSS compiled externally via `scripts/build-styles.mjs`, plus scoped `<style>` tags
 - **Pages:** `src/pages/` (file-based routing), API routes in `src/pages/api/`
-- **Data:** JSON files in `src/data/` and `data/`, fetched from MFL API via sync scripts
+- **Data:** league data lives in Vercel Blob and is read only through `loadLeagueData` / `preloadLeagueData` (`src/utils/league-data.ts`); a guard test bans new globs or JSON imports of it (`docs/claude/rules/storage-and-build.md` § "League data lives in Blob")
 - **Bundle checks:** `pnpm check:bundle` and `pnpm check:bundle:src` available
 
 The project heavily favors Astro `<script>` tags over React islands for interactivity. Only a few components use React hydration.
@@ -68,10 +68,10 @@ Review every React island (component with `client:*` directive):
 
 ### Phase 4: Data Loading Audit
 
-1. **Frontmatter imports** — JSON imports in frontmatter run on every SSR request:
-   - Large datasets imported but only partially used → filter in frontmatter
+1. **Frontmatter data** — league data loaded per SSR request:
+   - A static JSON import of league data → move to `loadLeagueData` (it also counts against the function size budget)
+   - Several reads of league data in one request → one `preloadLeagueData([...])`
    - Data that never changes → page should prerender
-   - Multiple imports of the same data → consolidate
 2. **Client-side data** — Check what gets serialized to the client:
    - Large objects passed as props to React islands → minimize payload
    - Data used only for display → render in Astro, don't hydrate

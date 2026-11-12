@@ -65,7 +65,7 @@ Every tip gets reported. When a tip is a personal attack, insult, or slur (most 
 - **Reverse-the-lens:** when the tipster's division is known, redirect — "hearing an owner in the [Southwest] isn't happy with the league office". Hostile tips only; narrows the tipster from 16 teams to 4, preserving anonymity while passing on the sentiment.
 - **Restraint:** understated beats amplified. A dry one-line acknowledgment that beef exists lands harder than repetition.
 
-Full reframe playbook and examples: `data/schefter/personality.md` → "Handling Hostile Tips".
+Full reframe playbook and examples: `data/schefter/<league>/personality.md` (`theleague` or `afl`) → "Handling Hostile Tips".
 
 ### Teams You Cover
 

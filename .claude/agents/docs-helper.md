@@ -28,19 +28,8 @@ All documentation lives in `docs/claude/`:
 
 Per-domain rules — the prescriptive "do this, never that" for one area each —
 live in `docs/claude/rules/`. `CLAUDE.md`'s "Read before you touch" table is the
-index; read the matching file before answering a question about that area:
-
-| File | Topics Covered |
-|------|----------------|
-| `rules/schefter.md` | Tips, rumor mill, franchise-name redaction, tipster context, recurrence ledger |
-| `rules/roger.md` | Rules Q&A, GroupMe reminders, evals, NFL draft dates, daily audit |
-| `rules/standings-brackets-draft-order.md` | Standings order, AFL playoff brackets, draft-order phase |
-| `rules/live-scoring.md` | ESPN game data, athlete-id joins |
-| `rules/lineups.md` | Set Lineup pages, MFL soft failures |
-| `rules/theming-and-assets.md` | Design tokens, franchise colors, logos, headshots, service worker |
-| `rules/storage-and-build.md` | Feed writers, globs, `.git` size, Astro 7 compiler |
-| `rules/league-urls.md` | `leagueUrl()`, GroupMe punctuation autolinking |
-| `rules/best-ball.md` | Best-ball (draft-only) leagues |
+index: find the area there and read the file it names before answering a
+question about that area.
 
 ## Lookup Strategy
 

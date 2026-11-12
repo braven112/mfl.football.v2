@@ -121,7 +121,7 @@ Every investigation MUST include an accessibility section in the report. Check t
 - Do active nav links use `aria-current="page"`?
 
 ### Color Contrast (WCAG AA)
-- Text uses `--color-gray-500` (#6b7280) minimum, NOT `--color-gray-400` (#9ca3af) — gray-400 fails AA at 2.86:1
+- Secondary text uses the shared gray tokens, not a hand-typed hex; `tests/league-themes.test.ts` pins the tokens to AA on text surfaces in every theme
 - White text on colored backgrounds uses `--color-gray-500` minimum for the bg
 - Small text (< 12px) on red uses `--color-error-dark` (#b91c1c), not `--color-error` (#dc2626)
 
@@ -147,7 +147,7 @@ Add this section to every investigation report:
 
 ### Color Contrast
 - **Status:** ✅ / ⚠️ / ❌
-- **Findings:** [Any gray-400 text usage, contrast failures]
+- **Findings:** [Hand-typed colors, contrast failures]
 
 ### Dynamic Content
 - **Status:** ✅ / ⚠️ / ❌
@@ -162,7 +162,7 @@ This is an Astro + React project with:
 - MFL API client in `src/utils/mfl-matchup-api.ts`
 - Auth utilities in `src/utils/auth.ts`
 - Static data cached in `data/theleague/mfl-feeds/`
-- Two leagues: TheLeague (13522) and AFL Fantasy (19621)
+- Several leagues, all defined in the registry (`src/config/leagues-data.mjs`); TheLeague and the AFL are the full-management ones
 
 ## After Each Investigation
 
