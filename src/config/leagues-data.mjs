@@ -325,6 +325,14 @@ export const LEAGUES = {
           ['South', 'East'],
         ],
         protectedRivalries: [['Computer Jocks', 'Jewpacabra']],
+        /**
+         * From this season on, Week 1 replays last season's title game (AL
+         * champion vs NL champion). It outranks the protected rivalry above,
+         * which sits out any year it shares a finalist; the two teams the
+         * finalists would have drawn play each other instead (commissioner,
+         * Nov 2026). 2026 is locked and was drawn without it.
+         */
+        titleRematchSince: 2027,
       },
     },
     name: 'AFL',

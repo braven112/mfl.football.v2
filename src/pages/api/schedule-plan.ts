@@ -16,7 +16,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
-import { planSchedule, SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
+import { planSchedule, SCHEDULE_POLICY, lastChampionshipFor } from '../../utils/schedule-plan.mjs';
 import { leagueFeedPath, loadLeagueData } from '../../utils/league-data';
 
 export const prerender = false;
@@ -112,9 +112,10 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   try {
-    const [readFeed, rankingSources] = await Promise.all([
+    const [readFeed, rankingSources, championshipHistory] = await Promise.all([
       loadFeedReader(league.dataPath, year),
       readRankingSources(year),
+      loadLeagueData(`${league.dataPath}/championship-history.json`).catch(() => null),
     ]);
     const plan = planSchedule({
       slug,
@@ -125,6 +126,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       // leagues, so it does not come through readFeed (which is scoped to one
       // league's mfl-feeds directory). Null degrades to whole-roster counts.
       rankingSources,
+      // Last season's finalists, for the Week 1 title rematch.
+      lastChampionship: lastChampionshipFor(championshipHistory, year),
       readFeed,
       // Bounded for the function's 30s ceiling. The colouring refinement needs
       // ~150k iterations to clear the structured seed's local optimum and that

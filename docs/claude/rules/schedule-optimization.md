@@ -960,6 +960,29 @@ division pairings — so `buildCrossConferencePairs` matches leftovers across
 conferences in finish order. It is the only pair ever protected across multiple
 seasons; no other recurs off-formula more than twice.
 
+### The title rematch outranks it (from 2027)
+
+Commissioner, Nov 2026: Week 1 replays last season's title game. The AFL
+final is the AL champion against the NL champion, so it always fits the
+cross-conference round. `crossConference.titleRematchSince` (registry) gates
+it; 2026 is locked and was drawn without it, which is why the audit above
+still replays the plain formula for every stored season.
+
+- **It is a SWAP, not a redraw** (`swapInRematch`, schedule-rules.mjs). The
+  finalists meet, the two teams they would have drawn meet each other, and the
+  other ten games stay on the formula. Re-zipping the divisions without the
+  finalists looks equivalent and is not: every team below them shifts onto a
+  new opponent (10 of 12 games changed against the real 2025 finish).
+- **It outranks the protected rivalry.** A protected pair that shares a
+  finalist sits that year out and the plan reports it in `skippedRivalries`.
+  This is a real case, not a hypothetical: the 2024 final was Balls Deep vs
+  Computer Jocks.
+- The finalists come from `championship-history.json`, passed in as
+  `lastChampionship` (not an MFL feed, so not through `readFeed`). An entry
+  for any season other than the previous one is ignored.
+
+`tests/schedule-title-rematch.test.ts` pins both real cases.
+
 ## Bye exposure is computed from current rosters
 
 Which in August is keepers only for the AFL. That is deliberate — it fixes the

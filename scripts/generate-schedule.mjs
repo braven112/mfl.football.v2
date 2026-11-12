@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LEAGUES } from '../src/config/leagues-data.mjs';
-import { planSchedule, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
+import { planSchedule, SCHEDULE_POLICY, lastChampionshipFor } from '../src/utils/schedule-plan.mjs';
 import { blockingFailures, goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
 import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 
@@ -66,6 +66,9 @@ const plan = planSchedule({
   year,
   byes,
   rankingSources,
+  // Last season's finalists, for the Week 1 title rematch. Not an MFL feed, so
+  // it does not come through readFeed.
+  lastChampionship: lastChampionshipFor(readJson(path.join(ROOT, league.dataPath, 'championship-history.json')), year),
   readFeed: (y, feed) => readJson(path.join(ROOT, league.dataPath, 'mfl-feeds', String(y), `${feed}.json`)),
   search: { restarts: Number(arg('restarts', 8)), iterations: Number(arg('iterations', 15000)) },
   // --mode=constructive forces the full rebuild on a league whose policy is
@@ -83,6 +86,9 @@ if (plan.changedWeeks) {
 }
 if (plan.crossConference) {
   const changedPairs = plan.crossConference.pairs.filter((p) => p.protectedRivalry).length;
+  const rematch = plan.crossConference.pairs.find((p) => p.titleRematch);
+  if (rematch) console.log(`title rematch:         ${rematch.away} vs ${rematch.home} (Week 1)`);
+  for (const s of plan.crossConference.skippedRivalries ?? []) console.log(`protected rivalry off: ${s}`);
   console.log(
     `cross-conference:      ${plan.crossConference.divisionPairing.map((p) => p.join('/')).join(' + ')}` +
       `${changedPairs ? `, ${changedPairs} protected rivalry` : ''}`,

@@ -227,6 +227,8 @@ export interface SchedulePolicy {
     anchorPairing: string[][];
     alternatePairing: string[][];
     protectedRivalries: string[][];
+    /** First season whose Week 1 replays last season's title game; absent = never. */
+    titleRematchSince?: number;
   } | null;
 }
 

@@ -139,7 +139,28 @@ const priorRatings = (standingsJson, franchiseIds) => {
   return rating;
 };
 
-const buildCrossRound = (shape, policy, year, prevLeagueJson, prevStandingsJson) => {
+/**
+ * Last season's two finalists as a Week 1 rematch, or null.
+ *
+ * Gated on `crossConference.titleRematchSince` so a season drawn before the
+ * rule existed is still described by the formula it was drawn under (the
+ * schedule audit replays every stored AFL season against it).
+ */
+export const titleRematchPair = (policy, year, lastChampionship) => {
+  const since = policy?.crossConference?.titleRematchSince;
+  if (!since || year < since || !lastChampionship) return null;
+  if (Number(lastChampionship.year) !== year - 1) return null;
+  const { champion, runnerUp } = lastChampionship;
+  return champion && runnerUp ? [String(champion), String(runnerUp)] : null;
+};
+
+/** The entry of championship-history.json for the season before `year`, or null. */
+export const lastChampionshipFor = (championshipHistory, year) =>
+  Object.values(championshipHistory?.championships ?? championshipHistory ?? {}).find(
+    (c) => Number(c?.year) === year - 1,
+  ) ?? null;
+
+const buildCrossRound = (shape, policy, year, prevLeagueJson, prevStandingsJson, lastChampionship = null) => {
   const prevShape = seasonShape(prevLeagueJson);
   if (!prevShape || !prevStandingsJson) {
     throw new Error(`cannot build the cross-conference round: ${year - 1} league/standings feeds are missing`);
@@ -159,10 +180,21 @@ const buildCrossRound = (shape, policy, year, prevLeagueJson, prevStandingsJson)
     if (byName[a] && byName[b]) protectedPairs.push([byName[a], byName[b]]);
     else skipped.push(`${a} / ${b}`);
   }
+  const rematchPair = titleRematchPair(policy, year, lastChampionship);
+  // The rematch outranks a protected rivalry (commissioner, Nov 2026): a
+  // protected pair sharing a finalist sits this one year out.
+  if (rematchPair) {
+    for (const [a, b] of protectedPairs) {
+      if (rematchPair.includes(a) || rematchPair.includes(b)) {
+        skipped.push(`${shape.name[a]} / ${shape.name[b]} (title rematch takes Week 1)`);
+      }
+    }
+  }
   const pairs = buildCrossConferencePairs({
     prevRank,
     divisionPairing,
     protectedPairs,
+    rematchPair,
     conferenceOf: shape.conferenceOf,
     franchiseIds: shape.franchiseIds,
   });
@@ -355,7 +387,17 @@ export const roundsRequired = (shape, policy) => {
   return (divisionSize - 1) * 2 + (conferenceSize - divisionSize) + (policy?.crossConference ? 1 : 0);
 };
 
-export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, rankingSources = null }) => {
+export const planSchedule = ({
+  slug,
+  year,
+  readFeed,
+  byes,
+  search = {},
+  mode,
+  rankingSources = null,
+  /** Last season's entry of championship-history.json (`lastChampionshipFor`); feeds the Week 1 title rematch. */
+  lastChampionship = null,
+}) => {
   const base = SCHEDULE_POLICY[slug];
   if (!base) throw new Error(`no scheduling policy for league: ${slug}`);
   const policy = mode && mode !== base.mode ? { ...base, mode } : base;
@@ -436,7 +478,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
 
   if (policy.mode === 'constructive') {
     const cross = policy.crossConference
-      ? buildCrossRound(shape, policy, year, readFeed(year - 1, 'league'), readFeed(year - 1, 'standings'))
+      ? buildCrossRound(shape, policy, year, readFeed(year - 1, 'league'), readFeed(year - 1, 'standings'), lastChampionship)
       : null;
     if (cross) crossConference = {
       divisionPairing: cross.divisionPairing,
@@ -446,6 +488,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
         away: shape.name[p.away],
         home: shape.name[p.home],
         protectedRivalry: p.protectedRivalry,
+        titleRematch: Boolean(p.titleRematch),
       })),
     };
     const divisions = {};
