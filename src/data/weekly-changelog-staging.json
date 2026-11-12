@@ -120,15 +120,18 @@
     {
       "date": "2026-11-12",
       "type": "enhancement",
-      "summary": "Live scoring's matchup detail now shows each team's and each player's original projection, so after the final you can see how far off it was.",
+      "summary": "Live scoring's matchup detail now shows each team's and player's original projection once games start, so you can see how far off it was.",
       "impact": "user",
       "area": "live-scoring",
-      "league": "both",
-      "featured": true,
-      "headline": "See how far off the projections were",
-      "lede": "Open any matchup in live scoring and the original projection now sits under each score, and under every player once his game is final.",
-      "image": "/assets/whats-new/live-original-projection.webp",
-      "imageAlt": "A matchup header in live scoring showing each team's final score with its original projection underneath"
+      "league": "theleague"
+    },
+    {
+      "date": "2026-11-12",
+      "type": "enhancement",
+      "summary": "Live scoring's matchup detail now shows each team's and player's original projection once games start, so you can see how far off it was.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "afl"
     }
   ]
 }
