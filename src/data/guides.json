@@ -294,5 +294,149 @@
       },
       "The overlay is new, so tell Brandon what works on your TV and what doesn't."
     ]
+  },
+  {
+    "slug": "how-the-schedule-is-made",
+    "title": "How The League's schedule is made",
+    "summary": "The schedule isn't random and it isn't MFL's default. Here are the rules it follows, in order, and the day you get to see it: June 1.",
+    "featurePath": "/schedule-release",
+    "featureLabel": "Open Schedule Release Day",
+    "icon": "calendar-reveal",
+    "updated": "2026-11-12",
+    "leagues": [
+      "theleague"
+    ],
+    "visibility": "admin",
+    "body": [
+      "Breaking: your schedule is not an accident. Every fall's slate is drawn by a program that follows fourteen written rules in a fixed order, and it keeps reshuffling the season until it finds the fairest one it can. No hand-picked matchups and no favors. Here's what it's chasing, and when you find out how it went for you.",
+      {
+        "type": "list",
+        "heading": "Mark your calendar: June 1",
+        "items": [
+          "<strong>When.</strong> The schedule comes out every June 1 at 9am Pacific. The NFL announces its own schedule in mid-May, and ours can't be built until we know every NFL team's bye week.",
+          "<strong>Where.</strong> <a href=\"/schedule-release\">Schedule Release Day</a> counts down to the reveal, then shows the whole league the same four marquee games at the same moment.",
+          "<strong>Locked once.</strong> Every run of the program draws a different, equally legal season, so the first one is the one we keep. It's saved publicly the moment it's drawn, and nobody can redraw it for a better look. That includes the commissioner.",
+          "<strong>Then the column.</strong> Once the schedule is loaded into MFL, I break down the season: who got the soft landing, who got the gauntlet, and which weeks you'll want circled."
+        ]
+      },
+      "First, the shape of the season. Sixteen teams in four divisions of four. Fourteen weeks and 18 games: your three division rivals twice each, and everyone else in the league once. Four of those weeks are doubleheaders, which is how 18 games fit into 14 weeks.",
+      {
+        "type": "list",
+        "heading": "The rules, in the order they win",
+        "items": [
+          "<strong>Doubleheaders never land on an NFL bye week.</strong> A doubleheader pays for a missing starter twice, so it only goes on a week with no NFL byes. Doubleheaders are split between the start and the end of the season, and every team gets at least one after Week 8.",
+          "<strong>Division games go where the byes aren't.</strong> Rivalry games get first claim on weeks with no NFL byes, as many as the format allows.",
+          "<strong>The division race lasts all season.</strong> About half your division games come after the midpoint, so the race isn't settled in September.",
+          "<strong>When a division game has to land on a bye week, it lands on the lightest one.</strong> It's also judged by your projected starters, not your whole roster: a bye only counts against a game if one of the two teams is actually missing someone who plays.",
+          "<strong>No quick rematches.</strong> Division rivals don't meet twice within three weeks.",
+          "<strong>Marquee weeks (new for 2027).</strong> Week 1 replays last season's title game, plus as many of last season's other playoff games as fit. Halloween and Thanksgiving get rivalry games: the commissioner's list of real-life rivalries first, then the longest and closest series on the field.",
+          "<strong>Bye-week luck is evened out.</strong> Facing a team missing four starters while your roster is whole is the biggest free edge a schedule can hand out. The program keeps it as even as it can, game by game and across the season.",
+          "<strong>Tough stretches are shared.</strong> Doubleheader opponents and late-season opponents are balanced in strength, so the weeks that count double and the weeks that decide seeding aren't easier for some teams.",
+          "<strong>The season ends on rivalry games</strong> when the calendar allows it.",
+          "<strong>Home and away come out even.</strong> It decides nothing in fantasy, but a lopsided count looks like a mistake."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "How the 2026 schedule came out",
+        "items": [
+          "40 of the 48 division games landed on weeks with no NFL byes.",
+          "The closest any two division rivals met twice was nine weeks apart.",
+          "Every team had exactly nine home games and nine road games.",
+          "Bye luck: across the whole season, the luckiest team's edge over the unluckiest came to just four missing starters."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "FAQ",
+        "items": [
+          "<strong>Why not just use MFL's schedule?</strong> MFL's built-in schedule doesn't know when NFL teams are on bye. Ours is built around the bye calendar from the start.",
+          "<strong>Is it random?</strong> Partly, by design. The program searches through thousands of legal seasons and keeps the best one it finds, so two runs can give two different answers. That's why the first one is locked and saved publicly.",
+          "<strong>Could the commissioner tilt it toward their own team?</strong> No. The rules and their order are written down in advance, the draw happens on its own at 9am on June 1, and the result is saved before anyone sees it.",
+          "<strong>Why are so many division games early?</strong> NFL byes usually start around Week 5, so the bye-free weeks are mostly at the start of the season. The rule that spreads the division race out pushes about half of those games past the midpoint anyway.",
+          "<strong>Why is my doubleheader that week?</strong> Doubleheaders can only go on weeks with no NFL byes, and there are usually only four or five of those all season.",
+          "<strong>Why June 1?</strong> It leaves room after the NFL's mid-May schedule release, and by then rosters are full, so bye weeks are judged against the players you're projected to start.",
+          "<strong>Why isn't my rival on Thanksgiving?</strong> Holiday rivalries are a preference, ranked below the division and bye-week rules. If a rivalry game would cost someone a fair bye week, the bye week wins.",
+          "<strong>Where can I see how hard my schedule is?</strong> <a href=\"/schedule-strength\">Schedule Strength</a> ranks every team's remaining slate, and <a href=\"/schedule\">Schedule</a> has every week's games."
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "how-the-afl-schedule-is-made",
+    "title": "How the AFL schedule is made",
+    "summary": "The schedule isn't random and it isn't MFL's default. Here are the rules it follows, in order, and when you get to see it: two weeks before the NL draft.",
+    "featurePath": "/schedule-release",
+    "featureLabel": "Open Schedule Release Day",
+    "icon": "calendar-reveal",
+    "updated": "2026-11-12",
+    "leagues": [
+      "afl"
+    ],
+    "visibility": "admin",
+    "body": [
+      "Breaking: your schedule is not an accident. Every AFL season is drawn by a program that follows fourteen written rules in a fixed order, and it keeps reshuffling the season until it finds the fairest one it can. No hand-picked matchups and no favors. Here's what it's chasing, and when you find out how it went for you.",
+      {
+        "type": "list",
+        "heading": "Mark your calendar: two weeks before the NL draft",
+        "items": [
+          "<strong>When.</strong> The schedule comes out on the Sunday two weeks before the NL draft, at 9am Pacific. In 2027 that's Sunday, August 15. It can't be built until the NFL announces its own schedule in mid-May, because ours is built around every NFL team's bye week.",
+          "<strong>Where.</strong> <a href=\"/schedule-release\">Schedule Release Day</a> counts down to the reveal, then shows both conferences the same four marquee games at the same moment.",
+          "<strong>Locked once.</strong> Every run of the program draws a different, equally legal season, so the first one is the one we keep. It's saved publicly the moment it's drawn, and nobody can redraw it for a better look. That includes the commissioner.",
+          "<strong>Then the column.</strong> Once the schedule is loaded into MFL, I break down the season: who got the soft landing, who got the gauntlet, and which weeks you'll want circled."
+        ]
+      },
+      "First, the shape of the season. Twenty-four teams, two conferences, two divisions of six in each. Fourteen weeks and 17 games: your five division rivals twice each, the other division in your conference once each, and one cross-conference game in Week 1. Three of those weeks are doubleheaders, which is how 17 games fit into 14 weeks.",
+      {
+        "type": "list",
+        "heading": "Week 1: the only time the AL meets the NL",
+        "items": [
+          "<strong>Finish against finish.</strong> Each team plays the team that finished in the same spot of its paired division in the other conference: division winner against division winner, and on down the line.",
+          "<strong>The pairing rotates.</strong> North and South take turns facing East and West, so the matchups change from year to year.",
+          "<strong>One protected rivalry.</strong> Computer Jocks and Jewpacabra meet in Week 1 every year, outside the formula.",
+          "<strong>New for 2027: the title game, again.</strong> The AFL final is the AL champion against the NL champion, so Week 1 replays it. The two teams the finalists would have drawn play each other instead, and everyone else stays on the formula. The rematch even outranks Jocks vs Jewpacabra, which sits out any year it would clash."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "The rules, in the order they win",
+        "items": [
+          "<strong>Doubleheaders never land on an NFL bye week.</strong> A doubleheader pays for a missing starter twice, so it only goes on a week with no NFL byes. Doubleheaders are split between the start and the end of the season, and every team gets at least one after Week 8.",
+          "<strong>Division games go where the byes aren't.</strong> Rivalry games get first claim on weeks with no NFL byes, as many as the format allows. With ten division games each, the AFL always has some that have to land on a bye week (36 of 120 in 2026). The rest of the rules decide which ones.",
+          "<strong>The division race lasts all season.</strong> About half your division games come after the midpoint, so the race isn't settled in September.",
+          "<strong>When a division game has to land on a bye week, it lands on the lightest one.</strong> The schedule comes out before the draft, so bye weeks are judged against your keepers: the players you've already committed to.",
+          "<strong>No quick rematches.</strong> Division rivals don't meet twice within three weeks.",
+          "<strong>Marquee weeks (new for 2027).</strong> Besides the title rematch, Week 1 tries to replay last season's other playoff games between division rivals. Halloween and Thanksgiving get rivalry games: the commissioner's list of real-life rivalries first, then the longest and closest series on the field. When Thanksgiving is a division week, it gets the best division rivalries.",
+          "<strong>Bye-week luck is evened out.</strong> Facing a team missing four starters while your roster is whole is the biggest free edge a schedule can hand out. The program keeps it as even as it can, game by game and across the season.",
+          "<strong>Tough stretches are shared.</strong> Doubleheader opponents and late-season opponents are balanced in strength, so the weeks that count double and the weeks that decide seeding aren't easier for some teams.",
+          "<strong>The season ends on rivalry games</strong> when the calendar allows it.",
+          "<strong>Home and away come out even.</strong> It decides nothing in fantasy, but a lopsided count looks like a mistake."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "How the 2026 schedule came out",
+        "items": [
+          "84 of the 120 division games landed on weeks with no NFL byes. That's the most the format can fit.",
+          "The closest any two division rivals met twice was eight weeks apart.",
+          "Every team had eight or nine home games.",
+          "Bye luck: across the whole season, the luckiest team's edge over the unluckiest came to just two missing starters."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "FAQ",
+        "items": [
+          "<strong>Why not just use MFL's schedule?</strong> MFL's built-in schedule doesn't know when NFL teams are on bye, and it can't do the AFL's Week 1 finish-against-finish crossover. Ours is built around both.",
+          "<strong>Is it random?</strong> Partly, by design. The program searches through thousands of legal seasons and keeps the best one it finds, so two runs can give two different answers. That's why the first one is locked and saved publicly.",
+          "<strong>Could the commissioner tilt it toward their own team?</strong> No. The rules and their order are written down in advance, the draw happens on its own at 9am on release day, and the result is saved before anyone sees it.",
+          "<strong>Why are so many division games early?</strong> NFL byes usually start around Week 5, so the bye-free weeks are mostly at the start of the season. The rule that spreads the division race out pushes about half of those games past the midpoint anyway.",
+          "<strong>Why is my doubleheader that week?</strong> Doubleheaders can only go on weeks with no NFL byes, and there are usually only four or five of those all season.",
+          "<strong>Why before the draft?</strong> So the schedule is in your hands before draft day. It's also why bye weeks are judged against keepers: they're the only players on your roster yet.",
+          "<strong>Why isn't my rival on Thanksgiving?</strong> Holiday rivalries are a preference, ranked below the division and bye-week rules. If a rivalry game would cost someone a fair bye week, the bye week wins.",
+          "<strong>Where can I see how hard my schedule is?</strong> <a href=\"/schedule-strength\">Schedule Strength</a> ranks every team's remaining slate, and <a href=\"/schedule\">Schedule</a> has every week's games."
+        ]
+      }
+    ]
   }
 ]
