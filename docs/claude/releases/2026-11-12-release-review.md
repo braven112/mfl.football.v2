@@ -40,3 +40,7 @@ No change to page-fork, typecheck or clientrouter baselines in range.
 
 ## Promotion
 `git merge --ff-only origin/staging` → `main` at `e0e7ca9`. Rollback target: production deployment `dpl_53RVFkwgtRWtGcX6MKZvwMrUpYLQ` (`976ccc8`).
+
+## After promotion
+- Production deployment `dpl_75DN2SXJFLijLv8iSdfJ7Ra6bvvf` READY at 18:34 UTC; `www.theleague.us/playoff-odds` and `www.afl-fantasy.com/playoff-odds` return 200 with the new page; no runtime errors in the first 10 minutes.
+- `weekly-changelog-rollup.yml` dispatched on main (run 43281650813, green). This week's article (`weekly-rollup-2026-11-09*`) was already published Monday, so the run stood down and PRESERVED the staging queue: this release's entries publish in the Monday 2026-11-16 rollup.
