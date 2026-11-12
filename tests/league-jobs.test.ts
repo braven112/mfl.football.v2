@@ -43,7 +43,7 @@ describe('today’s leagues per job', () => {
     'pecking-order': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-release': ['theleague', 'afl-fantasy'],
-    'article:matchup-preview': ['theleague', 'afl-fantasy', 'sandbox'],
+    'article:matchup-preview': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:weekly': ['theleague'],
   };
 

@@ -78,7 +78,7 @@ const phoneLine = (line: string, division: string) =>
                     {alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
                   </span>
                   {odds?.has(team.id) && (
-                    <span class="stb-odds" aria-label={`${pct(odds.get(team.id)!.playoff)} playoff odds${oddsHaveByes && odds.get(team.id)!.bye >= 0.005 ? `, ${pct(odds.get(team.id)!.bye)} bye odds` : ''}`}>
+                    <span class:list={['stb-odds', { 'stb-odds--on-color': painted }]} aria-label={`${pct(odds.get(team.id)!.playoff)} playoff odds${oddsHaveByes && odds.get(team.id)!.bye >= 0.005 ? `, ${pct(odds.get(team.id)!.bye)} bye odds` : ''}`}>
                       <span class="stb-odds__bar" aria-hidden="true"><i style={`width:${(odds.get(team.id)!.playoff * 100).toFixed(1)}%`}></i></span>
                       <span class="stb-odds__nums stb-num">
                         <span>Playoffs <b>{pct(odds.get(team.id)!.playoff)}</b></span>

@@ -694,9 +694,10 @@ export const LEAGUES = {
     logoOg: '/assets/logos/archies-head.png',
     /**
      * Weekly Schefter article types this league gets (scripts/lib/article-leagues.mjs).
-     * Absent = every type. Archie's has bought The Gauntlet only.
+     * Absent = every type. Archie's has The Gauntlet, and (Brandon, Nov 2026)
+     * the Saturday Matchup Preview every league gets.
      */
-    articleTypes: ['schedule-strength'],
+    articleTypes: ['matchup-preview', 'schedule-strength'],
     /**
      * Wordmark shown beside the mark in the header and homepage hero, in place
      * of the text short name.

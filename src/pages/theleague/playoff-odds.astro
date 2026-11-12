@@ -13,7 +13,7 @@ import { resolveGauntletViewerTeam } from '../../utils/schedule-strength';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug } from '../../config/leagues';
 import { listLeagueData, loadLeagueData } from '../../utils/league-data';
-import config from '../../data/theleague.config.json';
+import { getLeagueTeams } from '../../utils/league-config';
 
 const league = getLeagueBySlug('theleague')!;
 // Lazy: weekly files are kept, and only the newest is read per request.
@@ -35,7 +35,7 @@ const r = (path: string) => resolveLeaguePath(path, Astro.locals.hideLeaguePrefi
   <PlayoffOddsPage
     leagueName={league.name}
     files={files}
-    teams={config.teams}
+    teams={getLeagueTeams(league.slug)}
     myTeamId={myTeamId}
     standingsHref={r('/theleague/standings')}
     gauntletHref={r('/theleague/schedule-strength')}

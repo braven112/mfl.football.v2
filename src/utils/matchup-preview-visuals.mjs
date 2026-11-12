@@ -254,16 +254,6 @@ export function lastFiveWeeks(franchiseId, season) {
 }
 
 /**
- * The extras for the chart-led preview. Pure: everything comes in.
- *
- * @param {object} visuals         buildMatchupVisuals' result (mutated copy returned)
- * @param {object} args
- * @param {any[]} args.weeklyResultsRaw
- * @param {object | undefined} args.history  recordBook(...).ix
- * @param {any | null} args.odds    a playoff-odds derived file (compute-playoff-odds.mjs)
- * @param {any | null} args.gauntlet a schedule-strength derived file
- */
-/**
  * The board(s) for the article: one for a league that seeds as a whole
  * (`race`), one per conference for a league that seeds each conference on its
  * own (`raceGroups`) — a single playoff line across two conferences would sit
@@ -289,10 +279,20 @@ export function oddsGamesByPair(odds) {
   return new Map((odds?.games ?? []).map((g) => [[g.a.franchiseId, g.b.franchiseId].sort().join('-'), g]));
 }
 
+/**
+ * The extras for the chart-led preview. Pure: everything comes in.
+ *
+ * @param {object} visuals         buildMatchupVisuals' result (mutated copy returned)
+ * @param {object} args
+ * @param {any[]} args.weeklyResultsRaw
+ * @param {object | undefined} args.history  recordBook(...).ix
+ * @param {any | null} args.odds    a playoff-odds derived file (compute-playoff-odds.mjs)
+ * @param {any | null} args.gauntlet a schedule-strength derived file
+ */
 export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gauntlet }) {
   const season = seasonGames(weeklyResultsRaw, visuals.week);
   const pairKey = (a, b) => [a, b].sort().join('-');
-  const gamesByPair = new Map((odds?.games ?? []).map((g) => [pairKey(g.a.franchiseId, g.b.franchiseId), g]));
+  const gamesByPair = oddsGamesByPair(odds);
   const runInRank = new Map((gauntlet?.runIn ?? []).map((r) => [r.franchiseId, r.rank]));
   const heat = new Map((gauntlet?.heatMap?.franchises ?? []).map((f) => [f.franchiseId, f.cells]));
   const lastWeek = odds?.lastWeek ?? Infinity;

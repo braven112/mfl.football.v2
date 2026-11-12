@@ -74,7 +74,7 @@ const final = odds ? odds.week > odds.lastWeek : false;
 
   {odds && (
     <Fragment>
-      <section class="pop-card">
+      <section class="ui-card pop-card">
         <h2 class="pop-title">Chance to make the playoffs</h2>
         {boards.map((b) => (
           <Fragment>
@@ -85,7 +85,7 @@ const final = odds ? odds.week > odds.lastWeek : false;
       </section>
 
       {byeLeaders.length > 0 && (
-        <section class="pop-card">
+        <section class="ui-card pop-card">
           <h2 class="pop-title">Chance at a first-round bye</h2>
           <ul class="pop-list">
             {byeLeaders.map((t) => (
@@ -99,7 +99,7 @@ const final = odds ? odds.week > odds.lastWeek : false;
       )}
 
       {bigGames.length > 0 && !final && (
-        <section class="pop-card">
+        <section class="ui-card pop-card">
           <h2 class="pop-title">Week {odds.week}: the games that move it most</h2>
           <ul class="pop-games">
             {bigGames.map((g) => {
@@ -123,7 +123,7 @@ const final = odds ? odds.week > odds.lastWeek : false;
         </section>
       )}
 
-      <section class="pop-card pop-how">
+      <section class="ui-card pop-card pop-how">
         <h2 class="pop-title">How these are figured</h2>
         <p>
           We play out the rest of the regular season {odds.iterations.toLocaleString('en-US')} times. Each team scores
@@ -164,8 +164,6 @@ const final = odds ? odds.week > odds.lastWeek : false;
     font-size: var(--font-size-sm, 0.875rem);
   }
   .pop-card {
-    border: var(--style-card-border, 1px solid var(--color-border-default, rgba(127, 127, 127, 0.3)));
-    border-radius: var(--radius-lg, 0.75rem);
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -178,6 +176,8 @@ const final = odds ? odds.week > odds.lastWeek : false;
     letter-spacing: var(--style-section-tracking, 0.08em);
     font-family: var(--style-section-font, inherit);
     border-left: var(--style-section-rule, 3px solid var(--color-primary, #1c497c));
+    background: var(--style-section-mark, none);
+    padding-bottom: var(--style-section-mark-pad, 0);
     padding-left: var(--style-section-rule-gap, 0.6rem);
   }
   .pop-list,
