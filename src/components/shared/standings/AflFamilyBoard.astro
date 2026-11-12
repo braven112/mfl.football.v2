@@ -48,9 +48,13 @@ interface Props {
   proRel?: { teams: TeamStanding[]; logo?: Logo };
   /** The NIT (conference seeds 5-12), ranked by power rank. */
   nit?: TeamStanding[];
+  /** Simulated playoff odds for the Playoff tab (current season only). */
+  odds?: Map<string, { playoff: number; bye: number }>;
+  oddsHref?: string;
+  oddsNote?: string;
 }
 
-const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel, nit = [] } = Astro.props;
+const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel, nit = [], odds, oddsHref, oddsNote } = Astro.props;
 
 const configById = new Map(teams.map((t) => [t.franchiseId, t]));
 const board = (t: TeamStanding, badgeSeeding?: StandingsTiering): BoardTeam =>
@@ -127,17 +131,24 @@ const proRelRows = proRel?.teams.length ? buildProRelRows(proRel.teams.map((t) =
   )}
 
   {view === 'league' &&
-    boardConferences.map((c) => (
+    boardConferences.map((c, ci) => (
       <section class="stb-conference">
         <h2 class="stb-sec stb-sec--logo">
           {c.logo && <ThemeImage src={c.logo.src} darkSrc={c.logo.darkSrc ?? c.logo.src} alt="" class="stb-sec__logo" />}
           {c.name}
         </h2>
-        <SeedField theme={theme} groups={c.groups} />
+        <SeedField theme={theme} groups={c.groups} odds={odds} />
+        {odds && odds.size > 0 && oddsHref && ci === boardConferences.length - 1 && (
+          <p class="stb-odds-link">
+            {oddsNote && <span>Playoff odds {oddsNote}. </span>}
+            <a class="cta-link" href={oddsHref}>Every team's odds</a>
+          </p>
+        )}
         <FieldTable
           theme={theme}
           teams={c.list}
           groups={c.groups}
+          odds={odds}
           summary={`Full table · ${c.list.length} teams · ${c.inField} in the field`}
         />
       </section>

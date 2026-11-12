@@ -68,7 +68,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { getRedisConfig } from './lib/redis.mjs';
@@ -78,6 +78,16 @@ import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
 import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
 import { buildFallbackPost } from './lib/reminder-fallback.mjs';
+import {
+  GROUPME_MAX_CHARS,
+  SLACK_MAX_CHARS,
+  buildSaturdayLineupPost,
+  isChatQuietDay,
+  leagueWeekday,
+  playingFranchiseIds,
+} from './lib/lineup-broadcast.mjs';
+import { chatConfigFor, slackSenderFor } from './lib/chat.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { buildAssistantPost, publishAssistantPosts } from './lib/schefter-assistant-post.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
@@ -116,6 +126,13 @@ if (leagueArgIdx !== -1 && (!LEAGUE_FILTER || LEAGUE_FILTER.startsWith('--'))) {
   console.error('--league requires a value (e.g. --league theleague)');
   process.exit(1);
 }
+// The Saturday roll call (scripts/lib/lineup-broadcast.mjs): one public post
+// naming EVERY team with a lineup problem, run by the Matchup Preview job just
+// before the preview is generated. Not a kickoff run — see saturdayRollCall.
+const SATURDAY = args.includes('--saturday');
+// The roll call posts only on the league's own Saturday; `--any-day` lifts that
+// for a deliberate manual run (a dry run never needs it to preview).
+const ANY_DAY = args.includes('--any-day');
 const weekArgIdx = args.indexOf('--week');
 const WEEK_OVERRIDE = weekArgIdx !== -1 ? parseInt(args[weekArgIdx + 1], 10) : null;
 
@@ -419,6 +436,16 @@ async function checkLeague(league, now = new Date()) {
     requiredStarters: parseRequiredStarters(leagueJson),
   });
   const actionable = dropLockedProblems(allWarnings, kickoffsByTeam, now);
+
+  if (SATURDAY) {
+    return saturdayRollCall({
+      league, schefterLeague, botId, year, week, now,
+      // Only teams that actually play this week — a playoff-bye or eliminated
+      // franchise has nothing to set and must not be called out for it.
+      warnings: actionable.filter((w) => playingFranchiseIds(weeklyResults).has(w.franchiseId)),
+    });
+  }
+
   const warnings = filterUnalerted(actionable, alerted);
 
   if (warnings.length === 0) {
@@ -549,6 +576,15 @@ async function checkLeague(league, now = new Date()) {
     await recordDelivery({ delivered: reached, consumedChatSlot: false });
     return 'pushed';
   }
+  // NO LINEUP CHAT ON SUNDAY (owner's call, Nov 2026). Saturday's roll call
+  // already named every problem in public; Sunday is push and feed only.
+  // Only the REACHED owners are marked, so a later slot still re-pushes the
+  // rest, the same as a quiet-hours hold.
+  if (isChatQuietDay(now, league.officialClock?.zone)) {
+    log(`  [chat] Sunday — no lineup chat posts; ${unreached.length} unreached owner(s) get push + feed only`);
+    if (!DRY_RUN) await recordDelivery({ delivered: reached, consumedChatSlot: false });
+    return 'pushed';
+  }
   log(`  ${unreached.length}/${warnings.length} flagged owners unreached by push — chat fallback`);
 
   // Overnight quiet window (11pm–7am PT) still holds the chat post, with ONE
@@ -643,6 +679,115 @@ async function checkLeague(league, now = new Date()) {
     delivered: [...reached, ...chatBatch.filter((w) => named.has(w.franchiseId))],
     consumedChatSlot: true,
   });
+  return 'posted';
+}
+
+// ── Saturday roll call ──────────────────────────────────────────────────────
+
+/** Outlives its week, then self-cleans. */
+const SATURDAY_TTL_SECONDS = 8 * 24 * 3600;
+
+/**
+ * Saturday morning: push every flagged owner, then post ONE message naming
+ * every team with a lineup problem, ahead of the Matchup Preview.
+ *
+ * Three things differ from a kickoff run, all on purpose:
+ *  - It names EVERYONE flagged, not just the owners push missed. It is a public
+ *    "fix it before tomorrow" list, which is what the owner asked for.
+ *  - It never touches the week's alerted set. Sunday's kickoff runs must still
+ *    push an owner whose lineup is still broken; Saturday was a heads-up, not
+ *    the delivery that retires the warning.
+ *  - It is posted under its own exempt kind, `lineup-saturday`, and never
+ *    spends the day's chat slot — Saturday's slot belongs to the preview that
+ *    follows it, and burning it here would silence the preview.
+ *
+ * Deduped per league-week by its own Redis key, so a re-run of the workflow
+ * does not post the roll call twice.
+ */
+async function saturdayRollCall({ league, schefterLeague, botId, year, week, now, warnings }) {
+  if (!DRY_RUN && !ANY_DAY && leagueWeekday(now, league.officialClock?.zone) !== 6) {
+    log("  [saturday] not the league's Saturday — no roll call (pass --any-day to force)");
+    return 'skipped';
+  }
+  if (warnings.length === 0) {
+    log('  ✅ Saturday roll call: every lineup is set — no post');
+    return 'clean';
+  }
+  log(`  📋 Saturday roll call: ${warnings.length} team(s) flagged`);
+  for (const w of warnings) log(`     ${formatWarningLine(w)}`);
+
+  const redis = DRY_RUN ? null : await getRedis();
+  const doneKey = schefterKey(league.navSlug, `lineup_check:saturday:${year}:w${week}`);
+  if (redis) {
+    const done = await redis.get(doneKey).catch(() => null);
+    if (done) {
+      log('  [saturday] already posted this week — skipping');
+      return 'skipped';
+    }
+  }
+
+  await sendPushFanout({
+    league,
+    dryRun: DRY_RUN,
+    category: 'lineup-deadline',
+    notifications: warnings.map((w) => ({
+      franchiseId: w.franchiseId,
+      title: w.noLineup ? 'No lineup set for this week' : 'Fix your lineup before Sunday',
+      body: formatWarningLine(w),
+      url: '/lineup',
+      // One per owner per week: a re-run replaces, and Sunday's kickoff pushes
+      // (their own tags) do not erase it.
+      tag: `lineup-saturday-${w.franchiseId}-w${week}`,
+    })),
+    log: { log, warn },
+  });
+
+  const slack = chatConfigFor(league)?.provider === 'slack';
+  const mentions = slack
+    ? new Map()
+    : await resolveFranchiseMentions({ league: schefterLeague, redis: redis ?? (await getRedis()), log: { log, warn } });
+  const post = buildSaturdayLineupPost({
+    week,
+    warnings,
+    mentions,
+    lineupUrl: leagueUrl(league, `/${league.slug}/lineup`),
+    maxChars: slack ? SLACK_MAX_CHARS : GROUPME_MAX_CHARS,
+  });
+  if (!post) return 'clean';
+
+  if (DRY_RUN) {
+    log(`  [dry-run] would post the Saturday roll call (${post.text.length} chars):\n---\n${post.text}\n---`);
+    return 'posted';
+  }
+
+  // EXEMPT kind (groupme-day-plan.mjs), and the shared slot is never spent: the preview
+  // posted right after this owns Saturday's slot.
+  const send = slack
+    ? slackSenderFor(league, { persona: await loadLeaguePersona(league.slug, { log: { log, warn } }) })
+    : postToGroupMe;
+  const result = await postToGroupMeCapped({
+    league,
+    kind: 'lineup-saturday',
+    botId,
+    text: post.text,
+    attachments: post.attachments,
+    send,
+    checkStatus: true,
+    onMissingBotId: () => warn(`  [chat] no chat configured for ${league.slug} — printing instead:\n---\n${post.text}\n---`),
+    onPosted: () => log('  [chat] Saturday roll call posted ✔'),
+    onHttpError: (status) => warn(`  [chat] HTTP ${status} — post failed`),
+    onFetchError: (err) => warn(`  [chat] send failed: ${err.message}`),
+  });
+  if (!result.posted) return 'skipped';
+
+  if (redis) {
+    try {
+      await redis.set(doneKey, now.toISOString());
+      await redis.expire(doneKey, SATURDAY_TTL_SECONDS);
+    } catch (err) {
+      warn(`  [redis] failed to record the Saturday post: ${err.message}`);
+    }
+  }
   return 'posted';
 }
 

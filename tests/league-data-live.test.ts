@@ -85,6 +85,17 @@ describe('composeFiles', () => {
     });
   });
 
+  it('on a branch deploy keeps a file the branch added that the overlay (built from main) lacks', () => {
+    const built = { 'data/x/mfl-feeds/2026/rosters.json': h('1'), 'data/x/mfl-feeds/2026/branch-new.json': h('2') };
+    const overlay = { 'data/x/mfl-feeds/2026/rosters.json': h('3') };
+    expect(composeFiles(built, overlay, PATTERNS, { keepBranchFiles: true })).toEqual({
+      'data/x/mfl-feeds/2026/rosters.json': h('3'),
+      'data/x/mfl-feeds/2026/branch-new.json': h('2'),
+    });
+    // Production: strict, the overlay's slice wins whole.
+    expect(composeFiles(built, overlay, PATTERNS)).toEqual({ 'data/x/mfl-feeds/2026/rosters.json': h('3') });
+  });
+
   it('reads globs the way the rest of the store does', () => {
     expect(globToRegExp('data/*/derived/**').test('data/afl-fantasy/derived/a/b.json')).toBe(true);
     expect(globToRegExp('src/data/mfl-player-salaries-*.json').test('src/data/x/mfl-player-salaries-2026.json')).toBe(

@@ -263,3 +263,29 @@ alert. Every rule below is a bug that shipped:
   Use `isSeasonWindowOpen` (`src/utils/pecking-order-season-window.mjs`), asked
   about both candidate years so January stays correct without re-deriving the
   rollover pivot.
+
+## The Saturday roll call, and no lineup chat on Sunday (Nov 2026)
+
+Brandon's call: the chat hears about lineups ONCE a week, on Saturday, as the
+first of two posts (the lineup roll call, then the Matchup Preview promo).
+Sunday is push only.
+
+- **The roll call names EVERYONE with a problem**: no lineup, an empty slot,
+  or an OUT/IR/bye starter, for every team actually playing that week
+  (`playingFranchiseIds`). It is `schefter-lineup-check.mjs --saturday`, run
+  by `schefter-articles.yml` in the matchup-preview job BEFORE the article is
+  generated, so it lands first. The text is `buildSaturdayLineupPost`
+  (`scripts/lib/lineup-broadcast.mjs`): no-lineup teams first, the URL last,
+  and when it runs long it drops detail before it drops a name.
+- **It is not the pre-kickoff warning.** It never reads or writes the
+  per-week `alerted` set (a Saturday mention must not silence Sunday's push),
+  dedupes on its own key (`lineup_check:saturday:<year>:w<week>`), and posts
+  as kind `lineup-saturday`, which `groupme-day-plan.mjs` exempts from the
+  one-post-a-day cap so it cannot cost the preview its slot.
+- **"Saturday" and "Sunday" are the LEAGUE's clock** (`officialClock.zone`,
+  `leagueWeekday`), never the runner's UTC date: 5pm PT Saturday is already
+  Sunday in UTC.
+- **Sunday: push, feed post, no chat.** `isChatQuietDay` short-circuits the
+  chat fallback after the push. Only the owners a push REACHED are marked
+  alerted, so an unreached owner is retried by the next slot's run on Monday
+  or Thursday, where the chat fallback is allowed again.

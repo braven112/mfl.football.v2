@@ -10,6 +10,8 @@
  */
 import GameOfTheWeekPanel from './GameOfTheWeekPanel.astro';
 import TaleOfTheTapeCard from './TaleOfTheTapeCard.astro';
+import PlayoffRaceBoard from './PlayoffRaceBoard.astro';
+import StakesGameCard from './StakesGameCard.astro';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
 import { readHometowns, type StoredHometown } from '../../../utils/owner-hometowns';
 import type { MatchupVisuals } from '../../../types/schefter';
@@ -29,6 +31,8 @@ export interface MatchupTeam {
   name: string;
   /** For tight spots: chart labels, "X lead series". */
   short: string;
+  /** Four-to-six letters, for chart row labels. */
+  abbrev?: string;
   icon?: string;
 }
 
@@ -39,10 +43,12 @@ export interface Props {
   rivalriesBase?: string;
   /** The league whose Owner Map hometowns the cards' mini maps read; omit to draw no maps. */
   leagueSlug?: string;
+  /** The league's Playoff Odds page; omit to drop the link. */
+  oddsHref?: string;
   part: 'top' | 'cards';
 }
 
-const { visuals, teams, rivalriesBase, leagueSlug, part } = Astro.props;
+const { visuals, teams, rivalriesBase, leagueSlug, oddsHref, part } = Astro.props;
 
 const byId = new Map(teams.map((t) => [t.franchiseId, t]));
 const teamOf = (id: string): MatchupTeam => {
@@ -50,6 +56,7 @@ const teamOf = (id: string): MatchupTeam => {
   return {
     name: t?.nameMedium ?? t?.name ?? id,
     short: t?.nameShort ?? t?.nameMedium ?? t?.abbrev ?? t?.name ?? id,
+    abbrev: t?.abbrev,
     icon: t?.icon,
   };
 };
@@ -64,11 +71,55 @@ const gotwSeries = gotw?.series && !gotw.series.disputed ? gotw.series : null;
 // Hometowns are read live (Redis), so a team that picks one after the post
 // went out gets its map on the next view. Reads never throw; an outage just
 // drops the maps.
+// The chart-led layout (Nov 2026) is for posts that carry its data; an older
+// post keeps the Game of the Week panel and tale-of-the-tape cards it shipped with.
+const chartLed = matchups.length > 0 && matchups[0].recent !== undefined;
+const boards: Array<{ label: string | null; race: NonNullable<MatchupVisuals['race']> }> = !chartLed
+  ? []
+  : visuals?.raceGroups?.length
+    ? visuals.raceGroups.map((g) => ({ label: g.label, race: g.race }))
+    : visuals?.race
+      ? [{ label: null, race: visuals.race }]
+      : [];
+
 const hometowns: Record<string, StoredHometown> =
-  part === 'cards' && leagueSlug && matchups.length > 0 ? await readHometowns(leagueSlug) : {};
+  !chartLed && part === 'cards' && leagueSlug && matchups.length > 0 ? await readHometowns(leagueSlug) : {};
 ---
 
-{part === 'top' && gotw && gotwSeries && (
+{chartLed && part === 'top' && boards.some((b) => b.race.teams.length > 0) && (
+  <section class="mpv-section mpv-section--top mpv-theme">
+    <h2 class="mpv-title">Playoff odds and this week's swing</h2>
+    {boards.map((b) => (
+      <Fragment>
+        {b.label && <h3 class="prb-group">{b.label}</h3>}
+        <PlayoffRaceBoard race={b.race} teamOf={teamOf} />
+      </Fragment>
+    ))}
+    {oddsHref && <a class="cta-link" href={oddsHref}>Every team's playoff odds</a>}
+  </section>
+)}
+
+{chartLed && part === 'cards' && (
+  <section class="mpv-section mpv-theme">
+    <h2 class="mpv-title">Every game, biggest stakes first</h2>
+    {matchups.map((m, i) => (
+      <StakesGameCard
+        m={m}
+        teamA={teamOf(m.a.franchiseId)}
+        teamB={teamOf(m.b.franchiseId)}
+        kicker={i === gotwIndex ? 'Game of the Week' : `Week ${visuals!.week}`}
+        rivalryHref={rivalryHref(m.a.franchiseId, m.b.franchiseId)}
+      />
+    ))}
+    {(visuals?.moreGames ?? 0) > 0 && (
+      <p class="sgc-more">
+        {visuals!.moreGames} more game{visuals!.moreGames === 1 ? '' : 's'} this week, with less on the line.
+      </p>
+    )}
+  </section>
+)}
+
+{!chartLed && part === 'top' && gotw && gotwSeries && (
   <section class="mpv-section mpv-section--top mpv-theme">
     <h2 class="mpv-title">Game of the Week</h2>
     <div class="mpv-panel">
@@ -84,7 +135,7 @@ const hometowns: Record<string, StoredHometown> =
   </section>
 )}
 
-{part === 'cards' && matchups.length > 0 && (
+{!chartLed && part === 'cards' && matchups.length > 0 && (
   <section class="mpv-section mpv-theme">
     <h2 class="mpv-title">Tale of the Tape · Week {visuals!.week}</h2>
     {matchups.map((m, i) => (

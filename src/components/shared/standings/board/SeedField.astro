@@ -16,9 +16,14 @@ interface Props {
   groups: SeedGroup[];
   /** Tag on the top seed's tile (TheLeague: "Bye"). */
   topSeedTag?: string;
+  /** Simulated playoff/bye odds by team id (current season only); omit to draw none. */
+  odds?: Map<string, { playoff: number; bye: number }>;
+  /** Whether the league seeds byes, so tiles print bye odds too. */
+  oddsHaveByes?: boolean;
 }
 
-const { theme, title, blurb, groups, topSeedTag } = Astro.props;
+const { theme, title, blurb, groups, topSeedTag, odds, oddsHaveByes = false } = Astro.props;
+const pct = (x: number) => (x >= 0.995 && x < 1 ? '>99%' : x > 0 && x < 0.005 ? '<1%' : `${Math.round(x * 100)}%`);
 const primetime = theme === 'primetime';
 // A division name's phone form inside a line: "6-1 · Lawrence Taylor" → "6-1 · Taylor".
 const phoneLine = (line: string, division: string) =>
@@ -72,6 +77,15 @@ const phoneLine = (line: string, division: string) =>
                   <span class="stb-tile__rec stb-num">
                     {alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
                   </span>
+                  {odds?.has(team.id) && (
+                    <span class:list={['stb-odds', { 'stb-odds--on-color': painted }]} aria-label={`${pct(odds.get(team.id)!.playoff)} playoff odds${oddsHaveByes && odds.get(team.id)!.bye >= 0.005 ? `, ${pct(odds.get(team.id)!.bye)} bye odds` : ''}`}>
+                      <span class="stb-odds__bar" aria-hidden="true"><i style={`width:${(odds.get(team.id)!.playoff * 100).toFixed(1)}%`}></i></span>
+                      <span class="stb-odds__nums stb-num">
+                        <span>Playoffs <b>{pct(odds.get(team.id)!.playoff)}</b></span>
+                        {oddsHaveByes && odds.get(team.id)!.bye >= 0.005 && <span>Bye <b>{pct(odds.get(team.id)!.bye)}</b></span>}
+                      </span>
+                    </span>
+                  )}
                 </Tag>
               );
             })}
@@ -94,7 +108,11 @@ const phoneLine = (line: string, division: string) =>
                 </span>
                 <span class="stb-chip__name"><TeamName team={team} size="short" /></span>
                 <small class="stb-num">
-                  {alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
+                  {odds?.has(team.id) ? (
+                    // With odds, the line is record + odds: a chip is too narrow on a
+                    // phone for the division as well, and the odds are the news.
+                    <>{team.record} · <b class:list={['stb-odds__in', { 'stb-odds__in--hot': odds.get(team.id)!.playoff >= 0.1 && odds.get(team.id)!.playoff <= 0.9 }]}>{pct(odds.get(team.id)!.playoff)} in</b></>
+                  ) : alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
                 </small>
               </Tag>
             );

@@ -1,0 +1,46 @@
+---
+/**
+ * Playoff Odds — __LEAGUE_NAME__ (package kit; edit the TEMPLATE, then
+ * node scripts/sync-league-routes.mjs --all). Thin route: the league's data import and the
+ * viewer's team stay here; the page is the shared PlayoffOddsPage.
+ * Data: data/__LEAGUE_SLUG__/derived/playoff-odds-<year>-w<NN>.json, written by
+ * scripts/compute-playoff-odds.mjs (Wednesday + Saturday jobs, and prebuild).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
+import PlayoffOddsPage from '../../components/shared/playoff-odds/PlayoffOddsPage.astro';
+import type { PlayoffOddsFile } from '../../utils/playoff-odds-view';
+import { resolveGauntletViewerTeam } from '../../utils/schedule-strength';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueBySlug } from '../../config/leagues';
+import { listLeagueData, loadLeagueData } from '../../utils/league-data';
+import { getLeagueTeams } from '../../utils/league-config';
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+// Lazy: weekly files are kept, and only the newest is read per request.
+const files: Record<string, () => Promise<PlayoffOddsFile>> = Object.fromEntries(
+  listLeagueData(`${league.dataPath}/derived/playoff-odds-*.json`).map((p) => [
+    p,
+    () => loadLeagueData<PlayoffOddsFile>(p) as Promise<PlayoffOddsFile>,
+  ]),
+);
+const myTeamId = resolveGauntletViewerTeam('__LEAGUE_SLUG__', Astro.cookies, Astro.request) ?? null;
+// The Gauntlet is a league's own page, not a kit route: link it only where it has issues.
+const hasGauntlet = listLeagueData(`${league.dataPath}/derived/schedule-strength-*.json`).length > 0;
+const r = (path: string) => resolveLeaguePath(path, Astro.locals.hideLeaguePrefix ?? false);
+---
+
+<TheLeagueLayout title={`Playoff Odds · ${league.name}`}>
+  <Breadcrumbs items={[
+    { label: league.name, href: '/__LEAGUE_SLUG__' },
+    { label: 'Playoff Odds' },
+  ]} />
+  <PlayoffOddsPage
+    leagueName={league.name}
+    files={files}
+    teams={getLeagueTeams(league.slug)}
+    myTeamId={myTeamId}
+    standingsHref={r('/__LEAGUE_SLUG__/standings')}
+    gauntletHref={hasGauntlet ? r('/__LEAGUE_SLUG__/schedule-strength') : undefined}
+  />
+</TheLeagueLayout>

@@ -46,6 +46,9 @@ export const PACKAGE_ROUTES = {
   'franchises/[id].astro': 'franchisePages',
   // Every league, always: private to site admins by default (owner-activity-access.ts).
   'activity.astro': null,
+  // Every package league; linked only where the registry has a playoffOdds
+  // format (DATA_GATES below), since the page has nothing to show without one.
+  'playoff-odds.astro': null,
 };
 
 /**
@@ -59,6 +62,7 @@ export const PACKAGE_ROUTES = {
  */
 const DATA_GATES = {
   'playoffs.astro': (league) => PLAYOFF_BRACKET_LEAGUES.includes(league?.slug),
+  'playoff-odds.astro': (league) => Boolean(league?.playoffOdds),
 };
 
 /** The routes a features object entitles, relative to the league's page dir. */

@@ -81,6 +81,13 @@ export const EXEMPT_KINDS = new Set([
   // flagged owners push did not reach, and nobody else. Miss it and you start
   // an empty slot for real points.
   'lineup-deadline',
+  // The Saturday-morning lineup roll call (scripts/lib/lineup-broadcast.mjs):
+  // one post naming every team with a broken lineup, sent just BEFORE the
+  // Matchup Preview. Exempt because Saturday's one slot belongs to that
+  // preview, and the roll call is what lets Sunday stay push-only for lineups
+  // (no lineup chat posts on Sunday at all). It posts once per league-week,
+  // deduped in Redis by the sender.
+  'lineup-saturday',
 ]);
 
 /**
