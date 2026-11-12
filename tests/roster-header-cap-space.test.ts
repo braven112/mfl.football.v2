@@ -47,16 +47,22 @@ describe('roster header cap space', () => {
     expect(nameplate).toContain('data-rhdr-stat={stat.key}');
   });
 
-  it('rewrites the header from the table figure on every updateView()', () => {
+  it('rewrites the header from the table figure on every render', () => {
+    // updateView() hands the table's own per-year figures (players + dead
+    // money) to the cap-surface painter, which every row render calls — so a
+    // sort by a later salary year moves the header to that year (Nov 2026).
     const view = page.slice(page.indexOf('const updateView = () => {'));
-    const write = view.match(
-      /querySelector<HTMLElement>\('\[data-rhdr-stat="cap-space"\]'\)[\s\S]{0,200}capLimitForSeason - capCharge/,
-    );
-    expect(write, 'updateView no longer writes the header cap space').not.toBeNull();
+    expect(view).toMatch(/capSurfaceCtx = \{[\s\S]{0,200}capCharges: capChargesWithDead,[\s\S]{0,80}capLimit: capLimitForSeason/);
+    const paint = page.match(/const paintCapSurfacesForYear = [\s\S]*?\n {4}\};/)?.[0] ?? '';
+    expect(paint, 'paintCapSurfacesForYear is missing').not.toBe('');
+    expect(paint).toContain('const space = ctx.capLimit - (ctx.capCharges[yearIndex] ?? 0)');
+    expect(paint).toMatch(/querySelector<HTMLElement>\('\[data-rhdr-stat="cap-space"\]'\)[\s\S]{0,120}_capSpaceFmt\.format\(space\)/);
     // Only the season the header is about.
-    expect(view.slice(0, view.indexOf('[data-rhdr-stat="cap-space"]'))).toContain(
+    expect(paint.slice(0, paint.indexOf('[data-rhdr-stat="cap-space"]'))).toContain(
       'currentSeason === defaultSeason',
     );
+    const render = page.slice(page.indexOf('const renderTableRows = '));
+    expect(render.slice(0, render.indexOf('if (!rows.length)'))).toContain('paintCapSurfacesForYear(');
   });
 });
 

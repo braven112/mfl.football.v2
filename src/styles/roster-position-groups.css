@@ -431,10 +431,13 @@ html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-
     white-space: nowrap;
   }
 
-  .roster-page[data-league='theleague'] #rosterTableBody[data-salary-year] td[data-column^='year']::after {
-    content: ' ' attr(data-label);
+  /* The year sits on its own line ABOVE the salary (user, 2026-11-10). */
+  .roster-page[data-league='theleague'] #rosterTableBody[data-salary-year] td[data-column^='year']::before {
+    content: attr(data-label);
+    display: block;
     font-size: var(--font-size-xs);
     font-weight: 400;
+    line-height: 1.2;
     color: var(--content-text-muted);
   }
 }

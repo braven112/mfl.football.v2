@@ -211,6 +211,12 @@ export interface SimSurfaceState {
   moves: SimMove[];
   capByYear: CapYear[];
   buckets: CapBuckets;
+  /**
+   * Which `capByYear` entry the cap card shows: 0 (this year) unless the
+   * roster is sorted by a later salary year, when the card follows it and
+   * `buckets` must be that year's. The sim bar always reads this year.
+   */
+  cardYearIndex?: number;
 }
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.max(0, Math.min(100, (part / whole) * 100)) : 0);
@@ -335,7 +341,7 @@ function renderReview(state: SimSurfaceState): void {
 export function renderSimSurfaces(state: SimSurfaceState): void {
   const count = Object.keys(state.actions).length;
   const current = state.capByYear[0];
-  renderCapCard(state, current, count);
+  renderCapCard(state, state.capByYear[state.cardYearIndex ?? 0] ?? current, count);
   renderSimBar(state, current, count);
   renderReview(state);
 }
