@@ -119,6 +119,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         <section class="hask-turn">
           <p class="hask-asked"><span class="hask-asked__kicker">{asked(earlier.length)}</span>{parent.question}</p>
           <HistoryAnswer headline={parent.headline} answer={parent.answer} table={parent.table} asOf={parent.asOf} records={parent.records} base={base} />
+          <button class="cta cta--primary hask-share" type="button" data-hask-share data-id={parent.id} data-question={parent.question}>Share to the group chat</button>
         </section>
       )}
     </div>
@@ -179,6 +180,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
 
 <script>
   import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
+  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const node = document.createElement(tag);
@@ -240,7 +242,15 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         url.searchParams.delete('q');
         url.searchParams.set('after', data.id);
         history.replaceState(history.state, '', url);
-        root.querySelector<HTMLElement>('[data-hask-share]')?.removeAttribute('hidden');
+        root.querySelector<HTMLElement>('.hask-top [data-hask-share]')?.removeAttribute('hidden');
+        // Every answer carries its own Share, under it, where the thumb is.
+        const shareButton = el('button', 'cta cta--primary hask-share', 'Share to the group chat') as HTMLButtonElement;
+        shareButton.type = 'button';
+        shareButton.dataset.haskShare = '';
+        shareButton.dataset.id = data.id;
+        shareButton.dataset.question = question;
+        turn.append(shareButton);
+        void prefetchCard({ league: root.dataset.league ?? '', id: data.id });
       }
       if (data.followUps?.length) setChips(root, data.followUps);
       const input = root.querySelector<HTMLInputElement>('.hask-input');
@@ -308,17 +318,15 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
   }
 
   async function share(root: HTMLElement, button: HTMLButtonElement) {
-    const id = root.dataset.after;
+    // The header icon shares the latest answer; an answer's own button, that one.
+    const id = button.dataset.id || root.dataset.after;
     if (!id) return;
-    const url = new URL(`${root.dataset.base ?? ''}/history/ask/${id}`, location.origin).toString();
-    try {
-      if (navigator.share) return void (await navigator.share({ title: 'Ask the History', url }));
-      await navigator.clipboard.writeText(url);
-      button.setAttribute('aria-label', 'Link copied');
-      button.dataset.copied = 'true';
-    } catch {
-      /* dismissed share sheet */
-    }
+    const question = button.dataset.question ?? root.querySelector('.hask-turn:last-child .hask-asked')?.lastChild?.textContent ?? '';
+    const outcome = await shareAnswer({ league: root.dataset.league ?? '', base: root.dataset.base ?? '', id, question });
+    if (outcome !== 'copied') return;
+    button.dataset.copied = 'true';
+    if (button.classList.contains('hask-share')) button.textContent = 'Link copied';
+    else button.setAttribute('aria-label', 'Link copied');
   }
 
   function init() {
@@ -352,6 +360,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         .then((d: { guest?: GuestAllowance | null }) => showGuest(root, d.guest ?? null))
         .catch(() => {});
     }
+    if (root.dataset.after) void prefetchCard({ league: root.dataset.league ?? '', id: root.dataset.after });
     if (root.dataset.first) void ask(root, root.dataset.first);
     else if (root.dataset.after) root.querySelector('.hask-turn:last-child')?.scrollIntoView({ block: 'start' });
     // Arriving fresh (the History home's ask bar), the visitor came to type:

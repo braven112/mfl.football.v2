@@ -88,6 +88,9 @@ export interface Props {
 		title: string;
 		description?: string;
 		image?: string;
+		/** The image's pixel size; the 1200×630 landscape card when omitted. */
+		imageWidth?: number;
+		imageHeight?: number;
 		url?: string;
 	};
 	/** Pin the page to one mode whatever the viewer's preference — the theme
@@ -491,8 +494,8 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 				{og.image && (
 					<>
 						<meta property="og:image" content={og.image} />
-						<meta property="og:image:width" content="1200" />
-						<meta property="og:image:height" content="630" />
+						<meta property="og:image:width" content={String(og.imageWidth ?? 1200)} />
+						<meta property="og:image:height" content={String(og.imageHeight ?? 630)} />
 					</>
 				)}
 				<meta name="twitter:card" content={og.image ? 'summary_large_image' : 'summary'} />

@@ -14,6 +14,7 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagu
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { countAnswerOpen, type SavedAnswer } from '../../../utils/league-history/ask-store';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../../../utils/league-history/answer-card';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -28,10 +29,13 @@ const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeag
 // Another owner opening the link counts toward the History home's "The league
 // is asking". A Redis hiccup must not cost the page.
 await countAnswerOpen(saved, franchiseIdForLeague(getAuthUser(Astro.request), league.id)).catch(() => {});
+// The portrait share card (answer-card.ts) is the link's unfurl, so a pasted
+// link shows the same picture the Share button sends.
+const card = new URL(`/api/og/league-history/answer.png?league=${league.slug}&id=${encodeURIComponent(saved.id)}`, Astro.url).href;
 const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 ---
 
-<TheLeagueLayout title={`Ask the history · ${league.name}`} og={{ title: saved.question, description: saved.answer }}>
+<TheLeagueLayout title={`Ask the history · ${league.name}`} og={{ title: saved.question, description: saved.answer, image: card, imageWidth: ANSWER_CARD_WIDTH, imageHeight: ANSWER_CARD_HEIGHT }}>
   <div class="hap">
     <Breadcrumbs
       items={[
@@ -44,10 +48,18 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
     <HistoryAnswer question={saved.question} headline={saved.headline} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
     <p class="hap__meta">
       Asked {saved.guest ? 'by a visitor ' : saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
-      <button class="cta-link hap__share" type="button" data-hap-share>Share</button>
     </p>
     <p class="hap__next">
-      <a class="cta cta--primary" href={`${base}/history/ask?after=${saved.id}`}>Ask a follow-up</a>
+      <button
+        class="cta cta--primary hap__share"
+        type="button"
+        data-hap-share
+        data-league={league.slug}
+        data-base={base}
+        data-id={saved.id}
+        data-question={saved.question}
+      >Share to the group chat</button>
+      <a class="cta cta--ghost" href={`${base}/history/ask?after=${saved.id}`}>Ask a follow-up</a>
       <a class="cta cta--ghost" href={`${base}/history/ask`}>Ask your own</a>
     </p>
   </div>
@@ -65,9 +77,6 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
   }
-  .hap__share {
-    margin-left: 0.5rem;
-  }
   .hap__next {
     display: flex;
     flex-wrap: wrap;
@@ -77,19 +86,22 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
 </style>
 
 <script>
+  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+
   document.addEventListener('astro:page-load', () => {
     const button = document.querySelector<HTMLButtonElement>('[data-hap-share]');
     if (!button || button.dataset.init) return;
     button.dataset.init = 'true';
+    const answer = {
+      league: button.dataset.league ?? '',
+      base: button.dataset.base ?? '',
+      id: button.dataset.id ?? '',
+      question: button.dataset.question ?? '',
+    };
+    void prefetchCard(answer);
     button.addEventListener('click', async () => {
-      const url = location.href;
-      try {
-        if (navigator.share) return void (await navigator.share({ title: document.title, url }));
-        await navigator.clipboard.writeText(url);
-        button.textContent = 'Link copied';
-      } catch {
-        /* dismissed share sheet */
-      }
+      const outcome = await shareAnswer(answer);
+      if (outcome === 'copied') button.textContent = 'Link copied';
     });
   });
 </script>
