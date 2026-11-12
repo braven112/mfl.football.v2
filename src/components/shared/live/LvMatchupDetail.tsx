@@ -83,14 +83,22 @@ export default function LvMatchupDetail({
 
   /**
    * Under each score: the ORIGINAL projection (the starters' full-game
-   * numbers, which never move) and, while games are still being played, the
-   * live projected final. After the final the live one equals the score, so
+   * numbers, which never move) once the matchup's first game has kicked off,
+   * and, while games are still being played, the live projected final. After the final the live one equals the score, so
    * only the original stays, which is what shows how far off the forecast was.
    * Both sides render the lines or neither does, so the scores stay level.
    */
   const origA = noProj ? null : originalProjection(a, meta);
   const origB = noProj ? null : originalProjection(b, meta);
-  const showOrig = origA !== null || origB !== null;
+  // Before the matchup's first kickoff the original and the live projection
+  // are the same number, so only the live one shows; the moment either side's
+  // live projection moves off its original, both appear. Asked from the
+  // numbers, not the clock: a starter on bye or an empty slot reads as
+  // "final" on MFL's clock before anything has kicked off. Both sides switch
+  // together so the scores stay level.
+  const moved = (t: LiveTeam, orig: number | null) =>
+    orig !== null && Math.abs(t.projectedFinal - orig) >= 0.005;
+  const showOrig = (origA !== null || origB !== null) && (isFinal || moved(a, origA) || moved(b, origB));
   const showLiveProj = !noProj && !isFinal;
   const projLines = (t: LiveTeam, orig: number | null) =>
     (showOrig || showLiveProj) && (

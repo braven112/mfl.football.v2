@@ -83,9 +83,13 @@ export function originalProjection(
   let any = false;
   for (const row of team.players) {
     const projected = row.projected ?? meta[row.id]?.projected;
-    if (typeof projected === 'number' && Number.isFinite(projected) && projected > 0) {
+    // Every finite number counts (a defense can project negative), so the
+    // total matches the live projected final before kickoff exactly — the
+    // detail page relies on that to know when to show this line. Only a
+    // non-zero one proves the league has projections at all.
+    if (typeof projected === 'number' && Number.isFinite(projected)) {
       total += projected;
-      any = true;
+      if (projected !== 0) any = true;
     }
   }
   return any ? total : null;
