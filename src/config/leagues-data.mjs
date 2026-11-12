@@ -117,6 +117,7 @@ export const LEAGUES = {
           ['0009', '0008'], // Wascawy Wabbits / Bring the Pain
           ['0011', '0004'], // Midwestside Connection / Dead Cap Walking
           ['0014', '0005'], // Cowboy Up / The Mariachi Ninjas
+          ['0009', '0002'], // Wascawy Wabbits / Da Dangsters
         ],
       },
     },
