@@ -1,0 +1,81 @@
+---
+/**
+ * The playoff race board: every team still in it, its playoff odds today as a
+ * bar, and an outline over the range this week's game can move it (the low
+ * end with a loss, the high end with a win). A rule marks the playoff line.
+ *
+ * Shared by the Saturday Matchup Preview (top of the article) and the Playoff
+ * Odds page. Odds are an estimate from a simulation; every surface says so.
+ */
+import type { PlayoffRace } from '../../../types/schefter';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import type { MatchupTeam } from './MatchupPreviewSection.astro';
+import '../../../styles/playoff-race.css';
+
+export interface Props {
+  race: PlayoffRace;
+  teamOf: (id: string) => MatchupTeam;
+  /** Show The Gauntlet's schedule-left rank column (the article does). */
+  showSked?: boolean;
+  /** The viewer's own team, softly highlighted. */
+  myTeamId?: string | null;
+}
+
+const { race, teamOf, showSked = true, myTeamId = null } = Astro.props;
+const pct = (x: number) => (x >= 0.995 && x < 1 ? '>99' : x > 0 && x < 0.005 ? '<1' : String(Math.round(x * 100)));
+const hasSked = showSked && race.teams.some((t) => t.sked != null);
+const lineAt = race.lineAt ?? race.spots;
+const names = (ids: string[]) => ids.map((id) => teamOf(id).short).join(', ');
+const anyRange = race.teams.some((t) => t.low != null && t.high != null && t.high - t.low >= 0.01);
+---
+
+<div class:list={['prb', { 'prb--sked': hasSked }]}>
+  <div class="prb-head" aria-hidden="true">
+    <span>Team</span>
+    <span>Playoff odds{anyRange ? ' · outline = loss to win' : ''}</span>
+    <span class="prb-num">Now</span>
+    {hasSked && <span class="prb-num">Sked</span>}
+  </div>
+  {race.aboveCount ? (
+    <p class="prb-note">{race.aboveCount} team{race.aboveCount === 1 ? '' : 's'} above the bubble, all but in.</p>
+  ) : null}
+  {race.teams.map((t, i) => {
+    const lo = t.low ?? t.playoff;
+    const hi = t.high ?? t.playoff;
+    const range = hi - lo >= 0.01;
+    return (
+      <Fragment>
+        {i === lineAt && i > 0 && (
+          <div class="prb-cut"><span>Playoff line · {race.spots} spots</span></div>
+        )}
+        <div
+          class:list={['prb-row', { 'prb-row--mine': t.franchiseId === myTeamId }]}
+          style={`--prb-team: ${teamAccentVar(t.franchiseId)}`}
+        >
+          <span class="prb-lbl" title={teamOf(t.franchiseId).name}>{teamOf(t.franchiseId).short}</span>
+          <div
+            class="prb-track"
+            role="img"
+            aria-label={`${teamOf(t.franchiseId).name}: ${pct(t.playoff)}% playoff odds${range ? `, ${pct(lo)}% with a loss, ${pct(hi)}% with a win` : ''}`}
+          >
+            <span class="prb-fill" style={`width:${(t.playoff * 100).toFixed(1)}%`}></span>
+            {range && (
+              <span class="prb-span" style={`left:${(lo * 100).toFixed(1)}%;width:${((hi - lo) * 100).toFixed(1)}%`}></span>
+            )}
+          </div>
+          <span class="prb-num prb-val">{pct(t.playoff)}</span>
+          {hasSked && <span class="prb-num prb-sked">{t.sked ?? '–'}</span>}
+        </div>
+      </Fragment>
+    );
+  })}
+  {race.outIds.length > 0 && (
+    race.teamCount > 32
+      ? <p class="prb-note">{race.outIds.length} more team{race.outIds.length === 1 ? '' : 's'} below the bubble.</p>
+      : <p class="prb-note">Out of the race: {names(race.outIds)}.</p>
+  )}
+  {hasSked && (
+    <p class="prb-legend">Sked = The Gauntlet's rank of the schedule left (1 = hardest). Odds are an estimate from 10,000 simulated seasons.</p>
+  )}
+  {!hasSked && <p class="prb-legend">Odds are an estimate from 10,000 simulated seasons.</p>}
+</div>

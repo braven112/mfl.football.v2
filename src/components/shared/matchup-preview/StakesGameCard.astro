@@ -1,0 +1,176 @@
+---
+/**
+ * One game in the chart-led Matchup Preview (owner's "recommended mix", Nov
+ * 2026): the rivalry and its last five meetings, both teams' last five weeks,
+ * what the game does to their playoff (or bye) odds, and The Gauntlet's next
+ * four weeks. Every section draws only when its data is on the snapshot.
+ *
+ * Owner's rule: the last-five-meetings scores stay on ONE line on a phone.
+ */
+import type { MatchupVisualsMatchup, MatchupStakesSide, GauntletStrip, LastFiveWeek } from '../../../types/schefter';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import type { MatchupTeam } from './MatchupPreviewSection.astro';
+import '../../../styles/playoff-race.css';
+
+export interface Props {
+  m: MatchupVisualsMatchup;
+  teamA: MatchupTeam;
+  teamB: MatchupTeam;
+  kicker: string;
+  rivalryHref?: string;
+}
+
+const { m, teamA, teamB, kicker, rivalryHref } = Astro.props;
+// Chart rows are narrow on a phone: the abbreviation, never a clipped name.
+const tag = (t: MatchupTeam) => t.abbrev ?? t.short;
+const a = m.a.franchiseId;
+const b = m.b.franchiseId;
+const record = (s: { wins: number; losses: number; ties: number }) => `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`;
+const pct = (x: number) => (x >= 0.995 && x < 1 ? '>99%' : x > 0 && x < 0.005 ? '<1%' : `${Math.round(x * 100)}%`);
+const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(0));
+
+const series = m.series && !m.series.disputed ? m.series : null;
+const seriesTotal = series ? series.aWins + series.bWins : 0;
+const recent = m.recent ?? [];
+
+// One bar scale for both teams, so the taller bar really is the bigger week.
+const fa: LastFiveWeek[] = m.lastFive?.a ?? [];
+const fb: LastFiveWeek[] = m.lastFive?.b ?? [];
+const maxScore = Math.max(1, ...fa.map((w) => w.score), ...fb.map((w) => w.score));
+const weekLabels = (fa.length >= fb.length ? fa : fb).map((w) => w.week);
+const barH = (s: number) => `${Math.max(30, Math.round((s / maxScore) * 100))}%`;
+
+const stakes = m.stakes && m.stakes.swing >= 0.01 ? m.stakes : null;
+const key = stakes?.kind === 'bye' ? 'bye' : 'playoff';
+const oddsRows = stakes
+  ? ([[stakes.a, teamA, a], [stakes.b, teamB, b]] as Array<[MatchupStakesSide | null, MatchupTeam, string]>)
+      .filter(([s]) => s)
+  : [];
+
+const ga: GauntletStrip | null = m.gauntlet?.a ?? null;
+const gb: GauntletStrip | null = m.gauntlet?.b ?? null;
+const gWeeks = (ga?.cells.length ?? 0) >= (gb?.cells.length ?? 0) ? ga?.cells ?? [] : gb?.cells ?? [];
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+---
+
+<article class="sgc" style={`--sgc-a: ${teamAccentVar(a)}; --sgc-b: ${teamAccentVar(b)}`}>
+  <span class="sgc-kicker">{kicker}</span>
+  <div class="sgc-head">
+    <div class="sgc-team">
+      {teamA.icon && <img src={teamA.icon} alt="" width="32" height="32" loading="lazy" />}
+      <span class="sgc-id">
+        <span class="sgc-name" style="color: var(--sgc-a)">{teamA.name}</span>
+        <span class="sgc-rec sgc-num">{record(m.a)}</span>
+      </span>
+    </div>
+    <span class="sgc-vs">vs</span>
+    <div class="sgc-team sgc-team--b">
+      {teamB.icon && <img src={teamB.icon} alt="" width="32" height="32" loading="lazy" />}
+      <span class="sgc-id">
+        <span class="sgc-name" style="color: var(--sgc-b)">{teamB.name}</span>
+        <span class="sgc-rec sgc-num">{record(m.b)}</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="sgc-sec">
+    <h4>The rivalry</h4>
+    {series && seriesTotal > 0 ? (
+      <div class="sgc-series sgc-num" role="img" aria-label={`All-time series: ${teamA.short} ${series.aWins}, ${teamB.short} ${series.bWins}${series.ties ? `, ${series.ties} ties` : ''}`}>
+        <span style={`width:${((series.aWins / seriesTotal) * 100).toFixed(1)}%`}>{series.aWins}</span>
+        <span style={`width:${((series.bWins / seriesTotal) * 100).toFixed(1)}%`}>{series.bWins}</span>
+      </div>
+    ) : (
+      <p class="sgc-swing">First meeting under the current owners.</p>
+    )}
+    {recent.length > 0 && (
+      <div class="sgc-meet" style={`grid-template-columns: repeat(${recent.length}, minmax(0, 1fr))`}>
+        {recent.map((g) => (
+          <div>
+            <i style={`background: ${g.score >= g.opp ? 'var(--sgc-a)' : 'var(--sgc-b)'}`}></i>
+            <b class="sgc-num">{fmt(g.score)}-{fmt(g.opp)}</b>
+            <span>{g.year}</span>
+          </div>
+        ))}
+      </div>
+    )}
+    {rivalryHref && series && <a class="sgc-link" href={rivalryHref}>The full rivalry</a>}
+  </div>
+
+  {(fa.length > 0 || fb.length > 0) && (
+    <div class="sgc-sec">
+      <h4>Last five weeks</h4>
+      <div class="sgc-form">
+        {([[fa, teamA, 'var(--sgc-a)'], [fb, teamB, 'var(--sgc-b)']] as Array<[LastFiveWeek[], MatchupTeam, string]>).map(([weeks, team, color]) => (
+          <Fragment>
+            <span class="sgc-lbl" style={`color: ${color}`}>{tag(team)}</span>
+            <div class="sgc-bars" role="img" aria-label={`${team.name}, last five weeks: ${weeks.map((w) => `${w.score} ${w.result === 'S' ? 'split' : w.result}`).join(', ')}`}>
+              {weeks.map((w) => (
+                <div class={`sgc-bar sgc-bar--${w.result}`} style={`height:${barH(w.score)}`}>
+                  <span class="sgc-num">{Math.round(w.score)}</span>
+                </div>
+              ))}
+            </div>
+          </Fragment>
+        ))}
+        <span></span>
+        <div class="sgc-weeks">{weekLabels.map((wk) => <span>Wk {wk}</span>)}</div>
+      </div>
+    </div>
+  )}
+
+  {stakes && (
+    <div class="sgc-sec">
+      <h4>What's at stake: {key === 'bye' ? 'the bye' : 'the playoffs'}</h4>
+      {oddsRows.map(([s, team, id]) => {
+        const lo = s!.loss[key];
+        const hi = s!.win[key];
+        const now = s!.now[key];
+        return (
+          <div class="sgc-odds" role="img" aria-label={`${team.name}: ${pct(now)} ${key} odds today, ${pct(hi)} with a win, ${pct(lo)} with a loss`}>
+            <span class="sgc-lbl" style={`color: ${id === a ? 'var(--sgc-a)' : 'var(--sgc-b)'}`}>{tag(team)}</span>
+            <div class="sgc-otrack">
+              <span class="sgc-orange" style={`left:${(lo * 100).toFixed(1)}%;width:${(Math.max(0, hi - lo) * 100).toFixed(1)}%`}></span>
+              <span class="sgc-omark sgc-omark--lo" style={`left:${(lo * 100).toFixed(1)}%`}></span>
+              <span class="sgc-omark sgc-omark--hi" style={`left:${(hi * 100).toFixed(1)}%`}></span>
+              <span class="sgc-omark sgc-omark--now" style={`left:${(now * 100).toFixed(1)}%`}></span>
+            </div>
+            <span class="sgc-oval sgc-num">{pct(now)}</span>
+          </div>
+        );
+      })}
+      <p class="sgc-swing">
+        {oddsRows.map(([s, team], i) => (
+          <Fragment>{i > 0 && ' '}{team.short}: <b>{pct(s!.win[key])}</b> with a win, <b>{pct(s!.loss[key])}</b> with a loss.</Fragment>
+        ))}
+      </p>
+    </div>
+  )}
+
+  {gWeeks.length > 0 && (
+    <div class="sgc-sec">
+      <h4>The Gauntlet: what's left</h4>
+      <div class="sgc-gs" style={`--sgc-cols: ${gWeeks.length}`}>
+        <span></span>
+        {gWeeks.map((c) => <span class="sgc-gh">Wk {c.week}</span>)}
+        <span class="sgc-gh">Rank</span>
+        {([[ga, teamA, 'var(--sgc-a)'], [gb, teamB, 'var(--sgc-b)']] as Array<[GauntletStrip | null, MatchupTeam, string]>).map(([g, team, color]) => (
+          <Fragment>
+            <span class="sgc-lbl" style={`color: ${color}`}>{tag(team)}</span>
+            {gWeeks.map((wk) => {
+              const c = g?.cells.find((x) => x.week === wk.week);
+              return c
+                ? <span class={`sgc-cell sgc-cell--${c.bye ? 0 : c.step}`}>{c.bye ? 'Bye' : c.opps.join(' ')}</span>
+                : <span class="sgc-cell sgc-cell--0">–</span>;
+            })}
+            <span class="sgc-rank sgc-num">{g?.rank ? ordinal(g.rank) : '–'}</span>
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  )}
+</article>

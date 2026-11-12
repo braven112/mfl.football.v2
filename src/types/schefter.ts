@@ -533,5 +533,79 @@ export interface MatchupVisuals {
   week: number;
   /** Index into `matchups`, or null when no pairing qualifies. */
   gameOfWeek: number | null;
-  matchups: Array<{ a: MatchupVisualsSide; b: MatchupVisualsSide; series: MatchupVisualsSeries | null }>;
+  matchups: MatchupVisualsMatchup[];
+  /**
+   * The chart-led preview (Nov 2026; matchup-preview-visuals.mjs#addPreviewExtras).
+   * Absent on older posts, which keep their tale-of-the-tape layout.
+   */
+  race?: PlayoffRace | null;
+  /** A league that seeds each conference on its own gets one board per conference instead. */
+  raceGroups?: Array<{ label: string; race: PlayoffRace }>;
+  /** Games left off the cards (a large league shows only the biggest). */
+  moreGames?: number;
+}
+
+export interface MatchupVisualsMatchup {
+  a: MatchupVisualsSide;
+  b: MatchupVisualsSide;
+  series: MatchupVisualsSeries | null;
+  /** The last five meetings, A's score first, oldest first. */
+  recent?: Array<{ year: number; week: number; score: number; opp: number }>;
+  /** Each side's last five weeks ('S' = a split doubleheader week). */
+  lastFive?: { a: LastFiveWeek[]; b: LastFiveWeek[] };
+  stakes?: MatchupStakes | null;
+  gauntlet?: { a: GauntletStrip | null; b: GauntletStrip | null };
+}
+
+export interface LastFiveWeek { week: number; score: number; result: 'W' | 'L' | 'T' | 'S' }
+
+export interface OddsPair { playoff: number; bye: number }
+
+export interface MatchupStakesSide {
+  franchiseId: string;
+  now: OddsPair;
+  win: OddsPair;
+  loss: OddsPair;
+  winChance: number | null;
+}
+
+export interface MatchupStakes {
+  /** What the game is played for: the bye once playoff odds are settled either way. */
+  kind: 'playoff' | 'bye';
+  swing: number;
+  a: MatchupStakesSide | null;
+  b: MatchupStakesSide | null;
+}
+
+export interface GauntletStrip {
+  /** The Gauntlet's run-in rank (1 = hardest schedule left). */
+  rank: number | null;
+  cells: Array<{ week: number; bye: boolean; opps: string[]; step: number }>;
+}
+
+/** The race board (matchup-preview-visuals.mjs#raceBoard). Odds are 0..1. */
+export interface PlayoffRace {
+  week: number;
+  lastWeek: number;
+  spots: number;
+  hasByes: boolean;
+  teams: Array<{
+    franchiseId: string;
+    wins: number;
+    losses: number;
+    ties: number;
+    playoff: number;
+    bye: number;
+    /** This week's range: odds with a loss / with a win. Null for a team not playing. */
+    low: number | null;
+    high: number | null;
+    /** The Gauntlet's run-in rank. */
+    sked: number | null;
+  }>;
+  aboveCount?: number;
+  /** Index in `teams` of the first team outside the playoff spots. */
+  lineAt?: number;
+  lockedIds: string[];
+  outIds: string[];
+  teamCount: number;
 }

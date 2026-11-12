@@ -131,6 +131,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         visuals={post.matchupVisuals}
         teams={aflConfig.teams}
         rivalriesBase={r('/afl-fantasy/rivalries')}
+        oddsHref={r('/afl-fantasy/playoff-odds')}
         part="top"
       />
 

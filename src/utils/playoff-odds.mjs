@@ -67,13 +67,22 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
   const lg = league?.league ?? league ?? {};
   const lastWeek = lastRegularWeek ?? (Number.parseInt(lg.lastRegularSeasonWeek, 10) || 14);
 
+  // MFL puts a franchise's CONFERENCE on its division, not on the franchise
+  // (the AFL's league export): read it there, or every conference collapses
+  // into one seeding group.
+  const divisionConference = new Map(
+    toArray(lg.divisions?.division).map((d) => [String(d?.id ?? ''), d?.conference ?? '']),
+  );
+  const conferenceNames = Object.fromEntries(
+    toArray(lg.conferences?.conference).filter((c) => c?.id).map((c) => [c.id, c.name ?? c.id]),
+  );
   const teams = new Map();
   for (const f of toArray(lg.franchises?.franchise)) {
     if (!f?.id) continue;
     teams.set(f.id, {
       id: f.id,
       division: f.division ?? '',
-      conference: f.conference ?? '',
+      conference: f.conference ?? divisionConference.get(String(f.division ?? '')) ?? '',
       wins: 0, losses: 0, ties: 0, pf: 0, vp: 0,
     });
   }
@@ -138,6 +147,7 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
   return {
     format: { groupBy: 'league', rankBy: 'pct', vpBuckets: [3, 2, 1], ...format },
     teams: [...teams.values()].map((t) => ({ ...t, mean: means.get(t.id) })),
+    conferenceNames,
     remaining,
     completedWeek,
     lastWeek,
@@ -338,6 +348,7 @@ export function playoffOddsReport(input, { week, iterations = 10000, seed = 2026
     week: targetWeek,
     lastWeek: input.lastWeek,
     format: input.format,
+    conferenceNames: input.conferenceNames ?? {},
     iterations,
     teams: input.teams.map((t) => ({
       franchiseId: t.id,

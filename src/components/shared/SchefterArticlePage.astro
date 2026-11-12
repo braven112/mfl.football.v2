@@ -11,6 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from './Breadcrumbs.astro';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import GauntletArticleSection from './schedule-strength/GauntletArticleSection.astro';
+import MatchupPreviewSection from './matchup-preview/MatchupPreviewSection.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues';
 import type { SchefterPost } from '../../types/schefter';
@@ -79,9 +80,25 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         part="chart"
       />
 
+      <!-- Matchup Preview: the playoff race board leads the copy -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={teams as any}
+        oddsHref={league.playoffOdds ? r(`${base}/playoff-odds`) : undefined}
+        part="top"
+      />
+
       <div class="sf-article__body">
         {post.content?.map((paragraph) => <p set:html={paragraph} />)}
       </div>
+
+      <!-- Matchup Preview: one card per game, biggest stakes first -->
+      <MatchupPreviewSection
+        visuals={post.matchupVisuals}
+        teams={teams as any}
+        leagueSlug={leagueSlug}
+        part="cards"
+      />
 
       <GauntletArticleSection
         gauntletRef={post.scheduleStrength}

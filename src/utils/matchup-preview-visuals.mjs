@@ -263,6 +263,32 @@ export function lastFiveWeeks(franchiseId, season) {
  * @param {any | null} args.odds    a playoff-odds derived file (compute-playoff-odds.mjs)
  * @param {any | null} args.gauntlet a schedule-strength derived file
  */
+/**
+ * The board(s) for the article: one for a league that seeds as a whole
+ * (`race`), one per conference for a league that seeds each conference on its
+ * own (`raceGroups`) — a single playoff line across two conferences would sit
+ * in the wrong place for both.
+ */
+export function raceBoards(odds, gamesByPair, runInRank = new Map()) {
+  if (!odds) return { race: null };
+  if (odds.format?.groupBy !== 'conference') return { race: raceBoard(odds, gamesByPair, runInRank) };
+  const confs = [...new Set(odds.teams.map((t) => t.conference))].sort();
+  return {
+    race: null,
+    raceGroups: confs.map((c) => ({
+      label: odds.conferenceNames?.[c] ?? c,
+      race: raceBoard(odds, gamesByPair, runInRank, {
+        teams: new Set(odds.teams.filter((t) => t.conference === c).map((t) => t.franchiseId)),
+      }),
+    })),
+  };
+}
+
+/** The odds file's games keyed by pair, for raceBoard. */
+export function oddsGamesByPair(odds) {
+  return new Map((odds?.games ?? []).map((g) => [[g.a.franchiseId, g.b.franchiseId].sort().join('-'), g]));
+}
+
 export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gauntlet }) {
   const season = seasonGames(weeklyResultsRaw, visuals.week);
   const pairKey = (a, b) => [a, b].sort().join('-');
@@ -321,7 +347,7 @@ export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gau
     gameOfWeek: gotw ? 0 : null,
     matchups: shown,
     moreGames: ordered.length - shown.length,
-    race: odds ? raceBoard(odds, gamesByPair, runInRank) : null,
+    ...raceBoards(odds, gamesByPair, runInRank),
   };
 }
 
@@ -329,7 +355,7 @@ export function addPreviewExtras(visuals, { weeklyResultsRaw, history, odds, gau
  * The race board: every team's playoff odds today, and the range this week's
  * game can move them (low = with a loss, high = with a win).
  */
-export function raceBoard(odds, gamesByPair, runInRank = new Map()) {
+export function raceBoard(odds, gamesByPair, runInRank = new Map(), { full = false, teams: only = null } = {}) {
   const range = new Map();
   for (const g of gamesByPair.values()) {
     for (const s of [g.a, g.b]) {
@@ -338,8 +364,11 @@ export function raceBoard(odds, gamesByPair, runInRank = new Map()) {
       range.set(s.franchiseId, { low: lo, high: hi });
     }
   }
-  const spots = Math.round(odds.teams.reduce((t, x) => t + x.playoff, 0));
-  const all = [...odds.teams]
+  // `teams` narrows the board to one seeding group (a conference); the spots
+  // are then that group's. Expected qualifiers = the sum of everyone's odds.
+  const pool = only ? odds.teams.filter((t) => only.has(t.franchiseId)) : odds.teams;
+  const spots = Math.round(pool.reduce((t, x) => t + x.playoff, 0));
+  const all = [...pool]
     .sort((x, y) => y.playoff - x.playoff || y.wins - x.wins || y.pf - x.pf)
     .map((t) => ({
       franchiseId: t.franchiseId,
@@ -353,10 +382,11 @@ export function raceBoard(odds, gamesByPair, runInRank = new Map()) {
       sked: runInRank.get(t.franchiseId) ?? null,
     }));
   // "Out" is a fact on the board, not a row: a team the draw never put in.
-  let out = all.filter((t) => t.playoff < 0.005 && (t.high ?? 0) < 0.005);
+  // The Playoff Odds page (`full`) lists everyone; the article trims.
+  let out = full ? [] : all.filter((t) => t.playoff < 0.005 && (t.high ?? 0) < 0.005);
   let shown = all.filter((t) => !out.includes(t));
   let locked = [];
-  if (all.length > BOARD_FULL_MAX_TEAMS) {
+  if (!full && all.length > BOARD_FULL_MAX_TEAMS) {
     // A 99-team board is a wall: show the bubble, the rows either side of the
     // playoff line, and count everyone above and below it.
     const from = Math.max(0, spots - BUBBLE_ROWS);
