@@ -38,6 +38,8 @@ const PLAN_FEEDS: Array<[number, string]> = [
   [0, 'ranking-sources'],
   [-1, 'league'],
   [-1, 'standings'],
+  // Last season's playoff games, replayed in Week 1 (marquee-weeks.mjs).
+  [-1, 'playoff-brackets'],
 ];
 
 /** Load the feeds and return planSchedule's `readFeed`. A missing or unreadable feed reads as null. */

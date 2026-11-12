@@ -1047,6 +1047,21 @@ Magicians, five division rivals on Thanksgiving, division terms and net bye
 spread (2) unchanged. 2025 placed Wascawy Wabbits vs Da Dangsters with division
 terms unchanged and net bye spread 5 → 7 — the rematch exception above.
 
+### Week 1 also replays last season's playoff games (both leagues, from 2027)
+
+Commissioner, Nov 2026: "all their playoff matches". `playoffRematchValues`
+reads last season's `playoff-brackets` feed and keeps only the brackets on the
+road to the title (`isPlayoffPathBracket`: a "Championship" bracket that is not
+NIT, toilet bowl, consolation, loser's or a placement game). A semifinal is
+worth 0.8, an earlier round 0.6; the final is left to the title-rematch rule.
+These fill Week 1's own `byWeek` map, so they ride the same protected second
+pass and never cost a division goal. Week 1 is a doubleheader, so a team can
+get one rematch in each of its two games. A finalist's non-division slot is
+taken by the title game, so in practice few of its other playoff games fit; in
+the AFL only division pairs can (the other Week 1 slot is the frozen
+crossover). 2026 trials: TheLeague placed Vitside Mafia vs Da Dangsters, the
+AFL three division playoff rematches, division terms unchanged in both.
+
 `tests/marquee-weeks.test.ts` pins the weeks, the 60/40 ranking, the
 non-division steer, the per-week maps, TheLeague's rematch config, that the
 marquee pass never costs a division goal, and that a league without the goal

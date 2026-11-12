@@ -5,7 +5,11 @@ import {
   marqueeGamesIn,
   thanksgivingIsoDate,
   REAL_LIFE_SHARE,
+  playoffRematchValues,
+  isPlayoffPathBracket,
 } from '../src/utils/marquee-weeks.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
 import { marqueeContext, titleRematchPair, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
 import { scoreColoring, searchColoring, COLORING_WEIGHTS } from '../src/utils/schedule-coloring.mjs';
 import { problemGoal } from '../src/utils/schedule-goals.mjs';
@@ -170,5 +174,32 @@ describe('marquee weeks', () => {
       const terms = (x: { score: { terms: unknown } }) => x.score.terms as Record<string, number>;
       expect(terms(out)[k]).toBeLessThanOrEqual(terms(plain)[k] + 1e-9);
     }
+  });
+
+  it('Week 1 replays last season\'s playoff games, later rounds worth more (real 2025 TheLeague bracket)', () => {
+    const feed = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../data/theleague/mfl-feeds/2025/playoff-brackets.json'), 'utf8'),
+    );
+    const v = playoffRematchValues(feed) as Record<string, number>;
+    // First round, semifinals and the final of "The League Championship" only.
+    expect(v['0002-0012']).toBe(0.6); // Vitside Mafia @ Da Dangsters, Week 15
+    expect(v['0002-0015']).toBe(0.8); // semifinal
+    expect(v['0010-0015']).toBe(1); // the final
+    expect(Object.keys(v)).toHaveLength(6);
+    expect(isPlayoffPathBracket('AL Championship')).toBe(true);
+    expect(isPlayoffPathBracket('NIT Championship')).toBe(false);
+    expect(isPlayoffPathBracket('The Toilet Bowl Challenge - 1.17')).toBe(false);
+    expect(isPlayoffPathBracket('AFL 3rd Place Game')).toBe(false);
+    // MFL's template for an unplayed season names no franchises.
+    expect(playoffRematchValues({ brackets: { 1: { playoffBracket: { playoffRound: [{ week: '15', playoffGame: [{ away: { seed: '7' }, home: { seed: '2' } }] }] } } }, playoffBrackets: { playoffBracket: [{ id: '1', name: 'The League Championship' }] } })).toEqual({});
+
+    const shape = { franchiseIds: ['0002', '0010', '0012', '0015'], divisionOf: { '0002': 'N', '0010': 'N', '0012': 'N', '0015': 'E' }, lastWeek: 14 };
+    const policy = { marquee: { since: 2026, titleRematchSince: 2026, realLifeRivalries: [] } };
+    const ctx = marqueeContext(policy, 2026, shape, {}, [], {
+      lastChampionship: { year: 2025, champion: '0010', runnerUp: '0015' },
+      lastPlayoffs: feed,
+    })!;
+    // The final is the title rematch's job, not this map's.
+    expect(ctx.byWeek.get(1)).toEqual({ '0002-0012': 0.6, '0002-0015': 0.8 });
   });
 });

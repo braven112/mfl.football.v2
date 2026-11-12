@@ -43,7 +43,7 @@ import {
 } from './schedule-builder.mjs';
 import { LEAGUES } from '../config/leagues-data.mjs';
 import { starterByeExposure } from './starter-exposure.mjs';
-import { marqueeWeeks, marqueePairValues, marqueeGamesIn } from './marquee-weeks.mjs';
+import { marqueeWeeks, marqueePairValues, marqueeGamesIn, playoffRematchValues } from './marquee-weeks.mjs';
 import { rivalryPairKey } from './rivalry-intensity.mjs';
 import {
   buildSlots,
@@ -176,9 +176,9 @@ export const lastChampionshipFor = (championshipHistory, year) =>
  * @param {any} shape
  * @param {any} rivalrySeries
  * @param {number[]} [doubleheaders]
- * @param {{ lastChampionship?: any, thanksgivingIsDivision?: boolean }} [opts]
+ * @param {{ lastChampionship?: any, thanksgivingIsDivision?: boolean, lastPlayoffs?: any }} [opts]
  */
-export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders = [], { lastChampionship = null, thanksgivingIsDivision = false } = {}) => {
+export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders = [], { lastChampionship = null, thanksgivingIsDivision = false, lastPlayoffs = null } = {}) => {
   const cfg = policy?.marquee;
   if (!cfg || year < (cfg.since ?? Infinity)) return null;
   const named = marqueeWeeks(year, shape.lastWeek);
@@ -193,7 +193,19 @@ export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders
       titleRematch = { week: 1, key: rivalryPairKey(a, b), away: a, home: b };
     }
   }
-  if (!Object.keys(named).length && !titleRematch) return null;
+  // Week 1 also replays last season's other playoff games, best round first.
+  // The title game is left to its own rule above (or to the AFL's crossover
+  // round), and a pair must exist this season.
+  const ids = new Set(shape.franchiseIds);
+  const lastFinal = titleRematchPair(policy, year, lastChampionship);
+  const titleKey = lastFinal ? rivalryPairKey(lastFinal[0], lastFinal[1]) : null;
+  const playoffRematches = {};
+  for (const [key, v] of Object.entries(playoffRematchValues(lastPlayoffs))) {
+    const [a, b] = key.split('-');
+    if (key === titleKey || !ids.has(a) || !ids.has(b)) continue;
+    playoffRematches[key] = v;
+  }
+  if (!Object.keys(named).length && !titleRematch && !Object.keys(playoffRematches).length) return null;
   const { value, real } = marqueePairValues({
     realLife: cfg.realLifeRivalries ?? [],
     series: rivalrySeries ?? {},
@@ -240,6 +252,12 @@ export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders
   for (const [label, week] of Object.entries(named)) {
     byWeek.set(week, label === 'thanksgiving' && thanksgivingIsDivision ? division : steer);
   }
+  // A holiday never falls in Week 1, so the map is Week 1's alone.
+  let playoffSlots = 0;
+  if (Object.keys(playoffRematches).length && !byWeek.has(1)) {
+    byWeek.set(1, playoffRematches);
+    playoffSlots = Object.values(playoffRematches).reduce((a, b) => a + b, 0);
+  }
   return {
     named,
     weeks: new Set(Object.values(named)),
@@ -248,7 +266,8 @@ export const marqueeContext = (policy, year, shape, rivalrySeries, doubleheaders
     steer,
     real,
     titleRematch,
-    potential: perSlot * slotCount,
+    playoffRematches,
+    potential: perSlot * slotCount + playoffSlots,
   };
 };
 
@@ -569,7 +588,8 @@ export const planSchedule = ({
   let crossConference = null;
   let fairness = null;
   let coloring = null;
-  let marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders, { lastChampionship });
+  const lastPlayoffs = readFeed(year - 1, 'playoff-brackets');
+  let marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders, { lastChampionship, lastPlayoffs });
 
   if (policy.mode === 'constructive') {
     const cross = policy.crossConference
@@ -620,6 +640,7 @@ export const planSchedule = ({
       );
       marquee = marqueeContext(policy, year, shape, rivalrySeries, doubleheaders, {
         lastChampionship,
+        lastPlayoffs,
         thanksgivingIsDivision,
       });
     }
@@ -745,6 +766,10 @@ export const planSchedule = ({
             awayName: shape.name[g.away],
             homeName: shape.name[g.home],
           })),
+          // Last season's playoff games the Week 1 draw replays.
+          playoffRematches: (weeks.get(1) ?? [])
+            .filter((g) => marquee.playoffRematches[rivalryPairKey(g.away, g.home)])
+            .map((g) => ({ away: g.away, home: g.home, awayName: shape.name[g.away], homeName: shape.name[g.home] })),
           titleRematch: marquee.titleRematch
             ? {
                 ...marquee.titleRematch,

@@ -101,3 +101,52 @@ export const marqueeGamesIn = (weeks, marquee, { value, real }) => {
   }
   return out.sort((a, b) => b.value - a.value);
 };
+
+/** What a replayed playoff game is worth in Week 1, by round. */
+export const PLAYOFF_REMATCH_VALUE = { final: 1, semifinal: 0.8, earlier: 0.6 };
+
+export const isPlayoffPathBracket = (name) => {
+  const label = String(name ?? '');
+  return /championship/i.test(label) && !/nit|toilet|consolation|loser|place/i.test(label);
+};
+
+/**
+ * Last season's playoff games, as Week 1 rematches (commissioner, Nov 2026:
+ * "all their playoff matches"). Read off MFL's playoff-brackets feed.
+ *
+ * Only the brackets on the road to the title count: TheLeague's "The League
+ * Championship", the AFL's AL, NL and AFL Championship brackets. Placement,
+ * consolation, loser's, toilet-bowl and NIT brackets are not playoff games in
+ * the sense the league means. A game whose franchises the feed does not name
+ * (MFL's template for a season not yet played) is skipped.
+ *
+ * Later rounds are worth more: a semifinal rematch outranks a first-round one.
+ * Keyed by `rivalryPairKey`, best value kept when a pair met twice.
+ *
+ * @param {any} feed  playoff-brackets.json for the season before
+ * @returns {Record<string, number>}
+ */
+export const playoffRematchValues = (feed) => {
+  const out = {};
+  const meta = [].concat(feed?.playoffBrackets?.playoffBracket ?? []);
+  if (!feed || feed.predicted) return out;
+  for (const [id, body] of Object.entries(feed.brackets ?? {})) {
+    const name = meta.find((m) => String(m.id) === String(id))?.name;
+    if (!isPlayoffPathBracket(name)) continue;
+    const rounds = [].concat(body?.playoffBracket?.playoffRound ?? []).sort((a, b) => Number(a.week) - Number(b.week));
+    rounds.forEach((round, i) => {
+      const fromEnd = rounds.length - 1 - i;
+      const v =
+        fromEnd === 0 ? PLAYOFF_REMATCH_VALUE.final : fromEnd === 1 ? PLAYOFF_REMATCH_VALUE.semifinal : PLAYOFF_REMATCH_VALUE.earlier;
+      for (const g of [].concat(round.playoffGame ?? [])) {
+        const a = g?.away?.franchise_id;
+        const b = g?.home?.franchise_id;
+        if (!a || !b || a === b) continue;
+        const key = rivalryPairKey(a, b);
+        out[key] = Math.max(out[key] ?? 0, v);
+      }
+    });
+  }
+  return out;
+};
+

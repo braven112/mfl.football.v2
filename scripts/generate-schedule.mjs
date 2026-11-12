@@ -101,6 +101,9 @@ if (plan.crossConference) {
 if (plan.marquee) {
   const { halloween, thanksgiving } = plan.marquee.weeks;
   console.log(`marquee weeks:         Halloween Wk ${halloween ?? '—'}, Thanksgiving Wk ${thanksgiving ?? '—'}`);
+  for (const g of plan.marquee.playoffRematches ?? []) {
+    console.log(`playoff rematch:       ${g.awayName} vs ${g.homeName} (Week 1)`);
+  }
   const tr = plan.marquee.titleRematch;
   if (tr) {
     console.log(
