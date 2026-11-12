@@ -18,9 +18,12 @@
  *     `divisionPlaces` of every division qualify, then `wildCards` more,
  *     within each group (the whole league, or each conference); the best
  *     `byes` qualifiers get a first-round bye;
- *   - ties are broken on points for (or Victory Points first, `rankBy: 'vp'`).
- *     The constitutions' full tiebreak chains (head-to-head, All-Play, Power
- *     Rank) are not reproduced; that is the main reason this is an estimate.
+ *   - ties are broken with the LEAGUE'S OWN chain, read from MFL's
+ *     `standingsSort` setting (league.json): PCT, H2H, DIVPCT, CONFPCT,
+ *     ALL_PLAY_PCT, PTS, VICTORY_POINTS, OPP_PTS, in whatever order the league
+ *     set (Brandon, Nov 2026). Head-to-head is the record among the teams
+ *     still tied, the way MFL applies it. MFL's Power Rank (PWR) is the one
+ *     step not reproduced: it is skipped and the next step decides.
  *
  * The draw is seeded, so a page refresh never flickers the numbers.
  */
@@ -100,6 +103,7 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
   // Played scores (one per team per week) and the games still to play.
   const weekly = new Map(); // id -> number[]
   const remaining = []; // {week, a, b}
+  const played = []; // {week, a, b, sa, sb}: what the tiebreakers count
   let completedWeek = 0;
   const weeks = toArray(schedule?.schedule?.weeklySchedule ?? schedule?.weeklySchedule)
     .slice()
@@ -117,6 +121,7 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
       const sy = num(y.score);
       if (sx != null && sy != null) {
         anyScore = true;
+        played.push({ week: wk, a: x.id, b: y.id, sa: sx, sb: sy });
         for (const [id, s] of [[x.id, sx], [y.id, sy]]) {
           if (seen.has(id)) continue; // doubleheader: one score a week
           seen.add(id);
@@ -144,8 +149,21 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
   }
   const sd = n > 1 ? Math.sqrt(resid / (n - 1)) : leagueMean * 0.2;
 
+  // The league's own tiebreaker chain, as MFL applies it ("PCT,H2H,DIVPCT,…").
+  const tiebreakers = String(lg.standingsSort ?? '')
+    .split(',')
+    .map((x) => x.trim().toUpperCase())
+    .filter(Boolean);
+
   return {
-    format: { groupBy: 'league', rankBy: 'pct', vpBuckets: [3, 2, 1], ...format },
+    format: {
+      groupBy: 'league',
+      rankBy: 'pct',
+      vpBuckets: [3, 2, 1],
+      ...(tiebreakers.length ? { tiebreakers } : {}),
+      ...format,
+    },
+    played,
     teams: [...teams.values()].map((t) => ({ ...t, mean: means.get(t.id) })),
     conferenceNames,
     remaining,
@@ -155,20 +173,157 @@ export function buildOddsInput({ league, standings, schedule, format, lastRegula
   };
 }
 
-/** Rank key, higher is better. */
-function rankKey(rankBy, t) {
-  const pct = (t.wins + t.ties * 0.5) / Math.max(1, t.wins + t.losses + t.ties);
-  return rankBy === 'vp' ? [t.vp, t.pf] : [pct, t.pf];
-}
-const byKey = (rankBy) => (a, b) => {
-  const ka = rankKey(rankBy, a);
-  const kb = rankKey(rankBy, b);
-  return kb[0] - ka[0] || kb[1] - ka[1];
-};
-const byPct = byKey('pct');
+/**
+ * The steps this simulator can reproduce. Anything else in a league's chain
+ * (MFL's Power Rank, `PWR`) is skipped and the next step decides.
+ */
+export const SUPPORTED_TIEBREAKERS = ['PCT', 'H2H', 'DIVPCT', 'CONFPCT', 'ALL_PLAY_PCT', 'PTS', 'VICTORY_POINTS', 'OPP_PTS'];
 
-/** Seeds one finished season: {id -> {seed, bye, divisionPlace}} for qualifiers. */
-export function seedSeason(teams, format) {
+/** The chain a format ranks by: the league's own, or the old two-step default. */
+export function tiebreakChain(format) {
+  const own = (format?.tiebreakers ?? []).filter((k) => SUPPORTED_TIEBREAKERS.includes(k));
+  if (own.length) return own;
+  return format?.rankBy === 'vp' ? ['VICTORY_POINTS', 'PTS'] : ['PCT', 'PTS'];
+}
+
+const pctOf = (w, g) => (g > 0 ? w / g : 0.5);
+
+/**
+ * Tiebreaker stats for one season, indexed like the teams array. `h2hW[i*n+j]`
+ * is i's wins over j (a tie counts half), `h2hG` the games between them.
+ */
+function emptyStats(n) {
+  return {
+    n,
+    pa: new Float64Array(n),
+    divW: new Float64Array(n), divG: new Float64Array(n),
+    confW: new Float64Array(n), confG: new Float64Array(n),
+    apW: new Float64Array(n), apG: new Float64Array(n),
+    h2hW: new Float32Array(n * n), h2hG: new Float32Array(n * n),
+  };
+}
+
+function copyStats(from, to) {
+  for (const k of ['pa', 'divW', 'divG', 'confW', 'confG', 'apW', 'apG', 'h2hW', 'h2hG']) to[k].set(from[k]);
+}
+
+/** Records one game (sa vs sb) into the stats. */
+function recordGame(st, teams, a, b, sa, sb, need) {
+  const aRes = sa > sb ? 1 : sa < sb ? 0 : 0.5;
+  st.pa[a] += sb;
+  st.pa[b] += sa;
+  if (need.div && teams[a].division === teams[b].division) {
+    st.divW[a] += aRes; st.divW[b] += 1 - aRes; st.divG[a] += 1; st.divG[b] += 1;
+  }
+  if (need.conf && teams[a].conference === teams[b].conference) {
+    st.confW[a] += aRes; st.confW[b] += 1 - aRes; st.confG[a] += 1; st.confG[b] += 1;
+  }
+  if (need.h2h) {
+    const n = st.n;
+    st.h2hW[a * n + b] += aRes; st.h2hW[b * n + a] += 1 - aRes;
+    st.h2hG[a * n + b] += 1; st.h2hG[b * n + a] += 1;
+  }
+}
+
+/** One week's All-Play: every team that played against every other one's score. */
+function recordAllPlay(st, playing, scoreOf) {
+  const m = playing.length;
+  if (m < 2) return;
+  for (const i of playing) {
+    let w = 0;
+    for (const j of playing) {
+      if (j === i) continue;
+      const d = scoreOf(i) - scoreOf(j);
+      w += d > 0 ? 1 : d === 0 ? 0.5 : 0;
+    }
+    st.apW[i] += w;
+    st.apG[i] += m - 1;
+  }
+}
+
+/**
+ * The tiebreaker stats of the weeks already played, indexed like `input.teams`.
+ * @param {ReturnType<typeof buildOddsInput>} input
+ * @param {{div?: boolean, conf?: boolean, h2h?: boolean, ap?: boolean}} [need] defaults to all
+ */
+export function playedStats(input, need = { div: true, conf: true, h2h: true, ap: true }) {
+  const { teams } = input;
+  const index = new Map(teams.map((t, i) => [t.id, i]));
+  const st = emptyStats(teams.length);
+  const weekScores = new Map(); // week -> Map(index -> score)
+  for (const g of input.played ?? []) {
+    const a = index.get(g.a);
+    const b = index.get(g.b);
+    if (a == null || b == null) continue;
+    recordGame(st, teams, a, b, g.sa, g.sb, need);
+    if (!weekScores.has(g.week)) weekScores.set(g.week, new Map());
+    weekScores.get(g.week).set(a, g.sa).set(b, g.sb);
+  }
+  if (need.ap) for (const m of weekScores.values()) recordAllPlay(st, [...m.keys()], (i) => m.get(i));
+  return st;
+}
+
+/** One step's value for each member (higher is better), or null if the step cannot be computed. */
+function stepValues(key, members, stats) {
+  switch (key) {
+    case 'PCT': return members.map((t) => pctOf(t.wins + t.ties * 0.5, t.wins + t.losses + t.ties));
+    case 'PTS': return members.map((t) => t.pf);
+    case 'VICTORY_POINTS': return members.map((t) => t.vp);
+    default: break;
+  }
+  if (!stats) return null;
+  switch (key) {
+    case 'DIVPCT': return members.map((t) => pctOf(stats.divW[t.ix], stats.divG[t.ix]));
+    case 'CONFPCT': return members.map((t) => pctOf(stats.confW[t.ix], stats.confG[t.ix]));
+    case 'ALL_PLAY_PCT': return members.map((t) => pctOf(stats.apW[t.ix], stats.apG[t.ix]));
+    // The team that gave up MORE points wins this step (rules doc, rule 2).
+    case 'OPP_PTS': return members.map((t) => stats.pa[t.ix]);
+    case 'H2H': {
+      // The record among the teams STILL tied, the way MFL applies it.
+      const n = stats.n;
+      return members.map((t) => {
+        let w = 0;
+        let g = 0;
+        for (const o of members) {
+          if (o === t) continue;
+          w += stats.h2hW[t.ix * n + o.ix];
+          g += stats.h2hG[t.ix * n + o.ix];
+        }
+        return pctOf(w, g);
+      });
+    }
+    default: return null;
+  }
+}
+
+/** Best first, by the chain; teams level on every step fall back to points, then id. */
+export function rankByChain(members, chain, stats, depth = 0) {
+  if (members.length < 2) return members.slice();
+  if (depth >= chain.length) {
+    return members.slice().sort((a, b) => b.pf - a.pf || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+  const vals = stepValues(chain[depth], members, stats);
+  if (!vals) return rankByChain(members, chain, stats, depth + 1);
+  const order = members.map((t, i) => ({ t, v: vals[i] })).sort((x, y) => y.v - x.v);
+  const out = [];
+  for (let i = 0; i < order.length; ) {
+    let j = i + 1;
+    while (j < order.length && Math.abs(order[j].v - order[i].v) < 1e-9) j++;
+    const run = order.slice(i, j).map((x) => x.t);
+    if (run.length === 1) out.push(run[0]);
+    else for (const t of rankByChain(run, chain, stats, depth + 1)) out.push(t);
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * Seeds one finished season: {id -> {seed, bye}} for qualifiers. `stats`
+ * (tiebreaker stats, teams carrying `ix`) lets the league's whole chain apply;
+ * without it only the record/points/VP steps can.
+ */
+export function seedSeason(teams, format, stats = null) {
+  const chain = tiebreakChain(format);
   const groups = new Map();
   for (const t of teams) {
     const g = format.groupBy === 'conference' ? t.conference : '';
@@ -176,25 +331,23 @@ export function seedSeason(teams, format) {
     groups.get(g).push(t);
   }
   const out = new Map();
-  const order = byKey(format.rankBy);
   for (const members of groups.values()) {
     const divs = new Map();
     for (const t of members) {
       if (!divs.has(t.division)) divs.set(t.division, []);
       divs.get(t.division).push(t);
     }
-    // Division places go on record (MFL's own division sort leads with PCT).
-    const placed = [];
+    // Division places by the league's chain, then each place ranked across divisions.
+    const byPlace = [];
     for (const d of divs.values()) {
-      d.sort(byPct);
-      d.slice(0, format.divisionPlaces).forEach((t, i) => placed.push({ t, place: i }));
+      rankByChain(d, chain, stats).slice(0, format.divisionPlaces).forEach((t, i) => {
+        (byPlace[i] ??= []).push(t);
+      });
     }
-    // Division winners outrank runners-up, and within a place, the better team.
-    placed.sort((x, y) => x.place - y.place || order(x.t, y.t));
-    const placedIds = new Set(placed.map((p) => p.t.id));
-    const wild = members.filter((t) => !placedIds.has(t.id)).sort(order).slice(0, format.wildCards);
-    const seeds = [...placed.map((p) => p.t), ...wild];
-    seeds.forEach((t, i) => out.set(t.id, { seed: i + 1, bye: i < (format.byes ?? 0) }));
+    const placed = byPlace.flatMap((p) => rankByChain(p, chain, stats));
+    const placedIds = new Set(placed.map((t) => t.id));
+    const wild = rankByChain(members.filter((t) => !placedIds.has(t.id)), chain, stats).slice(0, format.wildCards);
+    [...placed, ...wild].forEach((t, i) => out.set(t.id, { seed: i + 1, bye: i < (format.byes ?? 0) }));
   }
   return out;
 }
@@ -214,7 +367,20 @@ export function simulateOdds(input, { iterations = 5000, seed = 20261, force, tr
   const made = new Float64Array(n);
   const byes = new Float64Array(n);
   const buckets = format.vpBuckets ?? [3, 2, 1];
+  const chain = tiebreakChain(format);
   const vpMode = format.rankBy === 'vp';
+  // Only the stats the league's chain reads are kept up (H2H is n² a season).
+  const need = {
+    div: chain.includes('DIVPCT'),
+    conf: chain.includes('CONFPCT'),
+    h2h: chain.includes('H2H'),
+    ap: chain.includes('ALL_PLAY_PCT'),
+  };
+  const useStats = need.div || need.conf || need.h2h || need.ap || chain.includes('OPP_PTS');
+
+  // The played weeks' tiebreaker stats, once; each simulated season starts from a copy.
+  const baseStats = useStats ? playedStats(input, need) : emptyStats(n);
+  const stats = emptyStats(useStats ? n : 0);
 
   // Games grouped by week, as team indexes; the forced game resolved once.
   const byWeek = new Map();
@@ -242,7 +408,7 @@ export function simulateOdds(input, { iterations = 5000, seed = 20261, force, tr
   const trackedWinner = new Int32Array(tracked.length);
 
   // One working copy per team, reset each iteration (no per-iteration allocation).
-  const sim = teams.map((t) => ({ ...t }));
+  const sim = teams.map((t, ix) => ({ ...t, ix }));
   const score = new Float64Array(n);
   for (let it = 0; it < iterations; it++) {
     for (let i = 0; i < n; i++) {
@@ -250,6 +416,7 @@ export function simulateOdds(input, { iterations = 5000, seed = 20261, force, tr
       const s = sim[i];
       s.wins = t.wins; s.losses = t.losses; s.ties = t.ties; s.pf = t.pf; s.vp = t.vp;
     }
+    if (useStats) copyStats(baseStats, stats);
     for (const { games, playing } of weeks) {
       // A doubleheader week is ONE score against both opponents.
       for (const i of playing) {
@@ -263,7 +430,13 @@ export function simulateOdds(input, { iterations = 5000, seed = 20261, force, tr
         sim[w].wins += 1;
         sim[l].losses += 1;
         if (vpMode) sim[w].vp += 2;
+        if (useStats) {
+          // A forced result is a win by the smallest margin, so the stats agree with it.
+          const sa = g.forcedWinner >= 0 ? (w === g.a ? Math.max(score[g.a], score[g.b] + 0.01) : Math.min(score[g.a], score[g.b] - 0.01)) : score[g.a];
+          recordGame(stats, teams, g.a, g.b, sa, score[g.b], need);
+        }
       }
+      if (need.ap) recordAllPlay(stats, playing, (i) => score[i]);
       if (vpMode && buckets.length) {
         // Weekly scoring buckets: the teams that played, split into equal thirds by score.
         const ranked = playing.slice().sort((x, y) => score[y] - score[x]);
@@ -272,7 +445,7 @@ export function simulateOdds(input, { iterations = 5000, seed = 20261, force, tr
       }
     }
     for (let k = 0; k < tracked.length; k++) trackedWinner[k] = tracked[k].lastWinner;
-    const seeded = seedSeason(sim, format);
+    const seeded = seedSeason(sim, format, useStats ? stats : null);
     for (const [id, s] of seeded) {
       const i = index.get(id);
       made[i] += 1;

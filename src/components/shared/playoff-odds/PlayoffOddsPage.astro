@@ -132,8 +132,9 @@ const final = odds ? odds.week > odds.lastWeek : false;
           each team got in.
         </p>
         <p>
-          It's an estimate. Ties are broken on points for, not the league's full tiebreaker chain, so a team right on the
-          line can be off by a few points.
+          Ties are broken with this league's own tiebreakers, in the league's order (head-to-head, division record and
+          the rest). MFL's Power Rank is the one step we can't reproduce, so it's skipped and the next one decides.
+          It's still an estimate of the weeks left, not a guarantee.
         </p>
         {(standingsHref || gauntletHref) && (
           <p class="pop-links">

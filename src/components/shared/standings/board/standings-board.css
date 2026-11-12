@@ -445,7 +445,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 /* On a team-colour tile (Primetime's every tile, Editorial's division winners) the track darkens instead. */
 .stb-odds--on-color .stb-odds__bar::before { background: #000; opacity: 0.55; }
 .stb-odds__bar i { position: absolute; inset: 0 auto 0 0; background: currentColor; border-radius: 999px; }
-.stb-odds__nums { display: flex; justify-content: space-between; gap: 0.4rem; font-size: var(--font-size-2xs); opacity: 0.92; white-space: nowrap; }
+.stb-odds__nums { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; font-size: var(--font-size-2xs); opacity: 0.92; white-space: nowrap; }
 .stb-odds__in { font-weight: 700; }
 .stb-odds__in--hot { color: var(--stb-text); }
 .stb-odds-link { margin: 0; font-size: var(--font-size-sm); color: var(--stb-muted); }

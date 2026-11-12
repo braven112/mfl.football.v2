@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildOddsInput, playoffOddsReport, seedSeason, simulateOdds } from '../src/utils/playoff-odds.mjs';
+import { buildOddsInput, playoffOddsReport, seedSeason, simulateOdds, rankByChain, playedStats, tiebreakChain } from '../src/utils/playoff-odds.mjs';
 import { raceBoard, raceBoards, oddsGamesByPair, addPreviewExtras } from '../src/utils/matchup-preview-visuals.mjs';
 import { buildGroupMePromo } from '../scripts/article-types/matchup-preview.mjs';
 
@@ -87,6 +87,34 @@ describe('playoff odds engine', () => {
     // Ranked by swing, biggest first.
     const swings = r.games.map((g: any) => g.stakes.swing);
     expect([...swings].sort((x, y) => y - x)).toEqual(swings);
+  });
+});
+
+describe("each league's own tiebreakers", () => {
+  it("reads the chain from MFL's standingsSort and skips Power Rank", () => {
+    const l = league();
+    (l.league.league as any).standingsSort = 'PCT,H2H,DIVPCT,PWR,PTS,';
+    const input = buildOddsInput({ ...l, format: AFL_LIKE });
+    expect(input.format.tiebreakers).toEqual(['PCT', 'H2H', 'DIVPCT', 'PWR', 'PTS']);
+    expect(tiebreakChain(input.format)).toEqual(['PCT', 'H2H', 'DIVPCT', 'PTS']);
+  });
+
+  it('breaks a record tie on head-to-head before points, the way MFL does', () => {
+    // 01 and 02 are both 2-1; 02 beat 01 every week but 01 scored more overall.
+    const l = league();
+    (l.league.league as any).standingsSort = 'PCT,H2H,PTS';
+    const input = buildOddsInput({ ...l, format: AFL_LIKE });
+    input.played = [
+      { week: 1, a: '01', b: '02', sa: 90, sb: 91 },
+      { week: 2, a: '01', b: '03', sa: 200, sb: 80 },
+      { week: 3, a: '02', b: '03', sa: 95, sb: 80 },
+    ];
+    const teams = input.teams.map((t: any, ix: number) => ({ ...t, ix, wins: 2, losses: 1, ties: 0, pf: t.id === '01' ? 500 : 300 }));
+    const pair = teams.filter((t: any) => t.id === '01' || t.id === '02');
+    const chain = tiebreakChain(input.format);
+    expect(rankByChain(pair, chain, playedStats(input)).map((t: any) => t.id)).toEqual(['02', '01']);
+    // Without the stats only record and points can apply, and points say 01.
+    expect(rankByChain(pair, chain, null).map((t: any) => t.id)).toEqual(['01', '02']);
   });
 });
 
