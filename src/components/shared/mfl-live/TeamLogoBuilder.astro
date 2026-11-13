@@ -10,7 +10,9 @@
  * page). One per page: its fields carry fixed ids.
  *
  * A host page can set the team name and dispatch `team-logo:refresh` on the
- * `[data-team-logo]` root to redraw the prompt.
+ * `[data-team-logo]` root to redraw the prompt. Anything carrying
+ * `data-logo-use` (a JSON choice) fills the form when tapped: /team-logo's
+ * example logos do this.
  */
 import {
 	DEFAULT_LOGO_CHOICE,
@@ -44,7 +46,13 @@ const firstName = teams[0]?.name ?? '';
 
 	<div class="tlogo__field">
 		<label class="tlogo__label" for="tlogo-idea">Mascot or idea</label>
-		<input id="tlogo-idea" class="tlogo__input" type="text" maxlength="120" placeholder="a charging boar with a football" />
+		<input id="tlogo-idea" class="tlogo__input" type="text" maxlength="120" placeholder="a charging boar with a football" aria-describedby="tlogo-idea-tip" />
+		<p class="tlogo__tip" id="tlogo-idea-tip">
+			Tip: your team name can be as silly as you like, but pick something real you can picture for the mascot,
+			like an animal or an object. That gives the cleanest, most professional-looking logo. One stylized letter,
+			like an M, or two letters joined into one symbol works too; a whole word doesn&rsquo;t, because no one can
+			read it once the logo is small.
+		</p>
 	</div>
 
 	<div class="tlogo__field">
@@ -137,14 +145,13 @@ const firstName = teams[0]?.name ?? '';
 		<button type="button" class="cta cta--primary" data-copy>Copy prompt</button>
 		<a class="cta cta--ghost" href="https://chatgpt.com/" target="_blank" rel="noopener">Open ChatGPT</a>
 		<a class="cta cta--ghost" href="https://gemini.google.com/app" target="_blank" rel="noopener">Open Gemini</a>
-		<a class="cta cta--ghost" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude</a>
 		<span class="tlogo__copied" data-copied aria-live="polite"></span>
 	</div>
 </div>
 
 <script>
-	import { buildTeamLogoPrompt, LOGO_COLORS, normalizeHex } from '../../../utils/team-logo-prompt';
-		import type { MflLiveAppLogoKind } from '../../../../packages/shared-types/src/mfl-live-app-logo';
+	import { buildTeamLogoPrompt, LOGO_COLORS, LOGO_MAX_COLORS, normalizeHex } from '../../../utils/team-logo-prompt';
+	import type { MflLiveAppLogoChoice, MflLiveAppLogoKind } from '../../../../packages/shared-types/src/mfl-live-app-logo';
 
 	function init() {
 		document.querySelectorAll<HTMLElement>('[data-team-logo]').forEach(setup);
@@ -162,6 +169,8 @@ const firstName = teams[0]?.name ?? '';
 
 		const picked = (group: string) =>
 			root.querySelector<HTMLElement>(`[data-group="${group}"] [aria-pressed="true"]`)?.dataset.value ?? '';
+		const press = (group: string, value: string) =>
+			root.querySelectorAll<HTMLElement>(`[data-group="${group}"] [data-value]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === value)));
 		const colorName = (hex: string) => LOGO_COLORS.find((c) => c.hex === hex)?.name ?? hex;
 		// The "2 colors / 3 colors" choice: how many the grid holds before a new
 		// tap swaps the last one, and which ready-made sets show.
@@ -240,9 +249,39 @@ const firstName = teams[0]?.name ?? '';
 			) ?? done('Select the prompt and copy it');
 		});
 
+		// An example logo on the page hands over its choices (`data-logo-use`).
+		// Bound on this root's own event, so it dies with the root on a swap.
+		root.addEventListener('tlogo:use', (e) => {
+			const choice = (e as CustomEvent<Partial<MflLiveAppLogoChoice>>).detail;
+			name.value = choice.teamName ?? '';
+			idea.value = choice.idea ?? '';
+			if (choice.style) press('style', choice.style);
+			if (choice.kind) press('kind', choice.kind);
+			if (choice.colors?.length) {
+				colors = choice.colors.slice(0, LOGO_MAX_COLORS);
+				press('count', colors.length >= 3 ? '3' : '2');
+			}
+			render();
+			root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		});
+
 		render();
 	}
 
+	// Anything carrying `data-logo-use` (a JSON choice) fills the builder when
+	// tapped. Delegated once from `document`: it asks for the CURRENT root on
+	// every tap, so it never holds a node a page swap replaced.
+	document.addEventListener('click', (e) => {
+		const use = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-logo-use]');
+		if (!use) return;
+		let choice: unknown;
+		try {
+			choice = JSON.parse(use.dataset.logoUse ?? '');
+		} catch {
+			return;
+		}
+		document.querySelector('[data-team-logo]')?.dispatchEvent(new CustomEvent('tlogo:use', { detail: choice }));
+	});
 	document.addEventListener('astro:page-load', init);
 	init();
 </script>
@@ -300,6 +339,7 @@ const firstName = teams[0]?.name ?? '';
 		cursor: pointer;
 	}
 	.tlogo__picked,
+	.tlogo__tip,
 	.tlogo__warning,
 	.tlogo__copied {
 		margin: 0;

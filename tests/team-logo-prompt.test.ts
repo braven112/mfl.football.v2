@@ -29,7 +29,32 @@ describe('team logo prompt builder', () => {
     }
     expect(buildTeamLogoPrompt({ kind: 'icon' }, 'X').prompt).toContain('1024 × 1024');
     expect(buildTeamLogoPrompt({ kind: 'banner' }, 'X').prompt).toContain('1900 × 316');
-    expect(buildTeamLogoPrompt({ kind: 'svg' }, 'X').prompt).toContain('SVG');
+  });
+
+  it('the icon is a picture-only mark; only the banner asks for the name', () => {
+    const icon = buildTeamLogoPrompt({ kind: 'icon', teamName: 'Rhinos' }, '').prompt;
+    expect(icon).toContain('Do not write the team name or any other words, letters or numbers anywhere in the logo');
+    expect(icon).not.toMatch(/lettering/);
+    const banner = buildTeamLogoPrompt({ kind: 'banner', teamName: 'Rhinos' }, '').prompt;
+    expect(banner).toContain('the team name in big, bold letters');
+    expect(banner).not.toContain('Do not write the team name');
+  });
+
+  it('a monogram, or an idea asking for a letter, gets letters that form one symbol, and no words', () => {
+    const asked = buildTeamLogoPrompt({ kind: 'icon', style: 'crest', teamName: 'Maryville', idea: 'a stylized M with a crowned princess' }, '').prompt;
+    const mono = buildTeamLogoPrompt({ kind: 'icon', style: 'monogram', teamName: 'Maryville' }, '').prompt;
+    for (const p of [asked, mono]) {
+      expect(p).toContain('The letters must form one symbol: a single stylized initial, or two initials interlocked into one mark. Do not write the team name');
+      expect(p).not.toContain('it is a picture-only mark');
+    }
+    const plain = buildTeamLogoPrompt({ kind: 'icon', style: 'crest', teamName: 'Rhinos', idea: 'a charging rhino in a shield' }, '').prompt;
+    expect(plain).toContain('it is a picture-only mark');
+  });
+
+  it('an app build that still sends the retired SVG kind gets the square icon', () => {
+    const built = buildTeamLogoPrompt({ kind: 'svg' as never }, 'X');
+    expect(built.choice.kind).toBe('icon');
+    expect(built.prompt).not.toContain('SVG');
   });
 
   it('falls back to the defaults for unknown ids, and to the MFL name for an empty one', () => {

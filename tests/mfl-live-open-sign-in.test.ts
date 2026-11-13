@@ -152,6 +152,9 @@ describe('only the MFL Live surfaces read an open session', () => {
 		'src/pages/live/index.astro',
 		'src/pages/live/settings.astro',
 		'src/pages/team-logo.astro',
+		// The free logo tracer: the session only picks the hourly limit's key,
+		// league AND franchise, so a stranger's franchise 0001 is its own bucket.
+		'src/pages/api/logo-trace.ts',
 		// The season video maker: lists the owner's own leagues to pick from.
 		'src/pages/video.astro',
 		'src/pages/live/standings.astro',
