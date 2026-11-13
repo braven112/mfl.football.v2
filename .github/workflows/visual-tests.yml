@@ -102,7 +102,14 @@ concurrency:
 jobs:
   visual:
     name: Visual tests
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest: GitHub moved ubuntu-latest to 26.04 on
+    # 2026-11-12 and Playwright 1.57 cannot install Chromium there, so every
+    # run failed at "Install Chromium" and the baselines stopped advancing.
+    # The baselines are also only comparable to renders from one runner image,
+    # so a silent image swap would invalidate them anyway. Move this pin on
+    # purpose, together with a Playwright that supports the new image, and
+    # rebuild the baselines (Run workflow with `update` ticked) in that change.
+    runs-on: ubuntu-24.04
     # Drafts are still iterating; run once they are marked ready.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     timeout-minutes: 30
@@ -159,6 +166,12 @@ jobs:
           [ -d .git ] || git init -q -b visual-baselines
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Vercel builds every pushed branch, and reads its config from the
+          # pushed commit, so the repo's vercel.json (and its ignoreCommand)
+          # never reaches this orphan branch. Without one here every baselines
+          # push was a failed preview build. prune-baselines.mjs only deletes
+          # .png files, so this survives every update.
+          printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
           git add -A
           if git diff --cached --quiet; then
             echo "Baselines unchanged."
