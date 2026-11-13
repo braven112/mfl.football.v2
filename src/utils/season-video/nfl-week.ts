@@ -251,9 +251,8 @@ export function nflWeekVideo(f: NflWeekFacts): NflWeekVideo {
 				points: b.points,
 				unit: 'PPR points',
 				name: b.name,
-				sub: [b.position, b.team, `avg ${formatPts(b.average)}`].filter(Boolean).join(' · '),
+				sub: `He was averaging ${formatPts(b.average)}.`,
 				badge: '📉',
-				...clubColors(b.team),
 			},
 			`Bust of the week. ${b.name}. Averaging ${formatPts(b.average)}, gave you ${formatPts(b.points)}. I've seen better production from a bye week.`,
 		);
