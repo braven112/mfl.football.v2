@@ -27,7 +27,7 @@ import type { LeagueSlug } from '../../types/whats-new';
 import { getAllResolvedAflEvents } from '../league-event-resolver';
 import { MFL_EMAIL_DRAFT_OPTION, MFL_LINEUP_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from '../mfl-url';
 import { randomHeroPlayer } from '../hero-players';
-import { shiftIsoDate, tradeDeadlineIsoDate } from '../trade-deadline.mjs';
+import { tradeDeadlineCutoffISO, tradeDeadlineTimeLabel } from '../trade-deadline.mjs';
 import {
   getDraftStartFormatted,
   isAuctionHeroPeriod,
@@ -585,7 +585,7 @@ const archiesProfile: LeagueHeroProfile = buildPackageHeroProfile(LEAGUES.archie
 
 const THELEAGUE = LEAGUES.theleague;
 
-/** The calendar year in Pacific time, for the deadline's midnight. */
+/** The calendar year in Pacific time, for the deadline's cutoff. */
 const ptYear = (now: Date) =>
   Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now));
 
@@ -607,8 +607,9 @@ const theleagueProfile: LeagueHeroProfile = {
   ],
   clock: {
     isTradeDeadlineDay,
-    // The midnight that ends deadline day (November is PST, -08:00).
-    tradeDeadlineMidnight: (now) => `${shiftIsoDate(tradeDeadlineIsoDate('theleague', ptYear(now))!, 1)}T00:00:00-08:00`,
+    // The instant trading closes on deadline day — 8:45 PM PT, MFL's cutoff
+    // (registry `tradeDeadline.time`), not the midnight that ends the day.
+    tradeDeadlineMidnight: (now) => tradeDeadlineCutoffISO('theleague', ptYear(now))!,
     isChampionship: isChampionshipWeek,
     isChampionCrowned: isChampionCrownedPeriod,
     isRegularSeason,
@@ -635,7 +636,7 @@ const theleagueProfile: LeagueHeroProfile = {
     tradeDeadline: (p) => ({
       source: 'event',
       title: 'Trade Deadline',
-      summary: 'Make your moves before midnight PT. After today, rosters are locked for trades.',
+      summary: `Make your moves before ${tradeDeadlineTimeLabel('theleague')}. After that, rosters are locked for trades.`,
       link: p('/front-office/trade-builder'),
       linkLabel: 'Open Trade Builder',
       icon: 'handshake',
