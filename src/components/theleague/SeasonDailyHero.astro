@@ -38,7 +38,6 @@ import StandingsHero from './season-heroes/StandingsHero.astro';
 import RecapCompositeHero from './season-heroes/RecapCompositeHero.astro';
 import WaiverWireHero from './season-heroes/WaiverWireHero.astro';
 import ArticleHero from './season-heroes/ArticleHero.astro';
-import WeekendPreviewHero from './season-heroes/WeekendPreviewHero.astro';
 import MatchupSplitHero from './season-heroes/MatchupSplitHero.astro';
 import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
 import BreakingStoryHero from './BreakingStoryHero.astro';
@@ -143,11 +142,8 @@ const mondayNightQuiet = slot === 'live-scoring' && state.metadata.gameWindow ==
 const shownSlot = mondayNightQuiet ? 'recap' : slot === 'live-scoring' && !liveScoring ? 'standings' : slot;
 const fallback = state.fallbackHero;
 
-// Article slot disambiguation: Friday → weekend preview, else → waiver pickup report
-const ptWeekday = slot === 'article'
-  ? new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(state.metadata.referenceDate)
-  : undefined;
-const isFridayArticle = ptWeekday === 'Fri';
+// The article slot shows the latest column. Friday used to front the Weekend
+// Preview; that column was folded into Saturday's Matchup Preview (Nov 2026).
 ---
 
 {/* P0: Auction hero. No model/legacy fork any more: the composite renders the
@@ -234,8 +230,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 )}
 {shownSlot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} waiver={waiver} />}
-{slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
-{slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
+{slot === 'article' && <ArticleHero state={state} articleType="waiver-pickup" />}
 {slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} lineupSubmitted={lineupSubmitted} country={country} />}
 
 {/* Off-season heroes: dedicated components */}

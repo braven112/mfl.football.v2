@@ -1709,3 +1709,13 @@ snapshot as `matchupVisuals.matchups[i].story` / `matchupVisuals.closing`. The
 text is PLAIN (`plainText`) and renders escaped on `StakesGameCard`, re-flowed
 by `shortenParagraphs`. Posts written before this have no `story` and render as
 before. Tests: `tests/matchup-preview-stories.test.ts`.
+
+## One weekly preview: the Friday Weekend Preview is retired (Nov 2026)
+
+Owner's call: the Friday Weekend Preview and the Saturday Matchup Preview
+picked the same games a day apart, so they were combined into the Saturday
+column. Its Friday cron is commented out in `schefter-articles.yml` (the type
+stays dispatchable and its old posts still render), Friday's chat slot holds
+only the schedule release, and the homepage's Friday article hero is gone: the
+article slot shows the latest column every day. Do not bring a second preview
+back without asking.
