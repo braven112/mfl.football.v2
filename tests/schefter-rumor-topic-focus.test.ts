@@ -399,8 +399,11 @@ describe('rumor-scan two-post gossip — second bucket ships as its own feed pos
     // Both lanes are atomic single-write per cycle, but they're independent
     // lanes that never both fire on the same cycle (quiet-day only runs
     // when the normal pick returned null).
+    // A third (Nov 2026): the once-per-deadline wrap-up, which runs BEFORE
+    // the main flow and finishes its write first; the main flow re-reads the
+    // feed with loadFeed(), so the two never clobber each other.
     const feedWrites = (src.match(/await fs\.writeFile\(FEED_PATH/g) ?? []).length;
-    expect(feedWrites).toBe(2);
+    expect(feedWrites).toBe(3);
   });
 
   it('sends a separate GroupMe message per post (so each is independently replyable)', () => {
