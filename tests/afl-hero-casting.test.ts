@@ -363,7 +363,7 @@ describe('castAflHeroModel', () => {
 
   it('never casts for bespoke phases (their components own the visual)', () => {
     const bespoke: AflHeroState[] = [
-      { kind: 'trade-deadline', priority: 'P0++', content: stubContent, deadlineMidnightPT: '2026-11-19T00:00:00-08:00' },
+      { kind: 'trade-deadline', priority: 'P0++', content: stubContent, deadlineMidnightPT: '2026-11-19T00:00:00-08:00', deadlineLabel: 'midnight PT' },
       { kind: 'playoffs', priority: 'P0', content: stubContent },
       { kind: 'championship', priority: 'P0', content: stubContent },
     ];

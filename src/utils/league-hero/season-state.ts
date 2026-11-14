@@ -35,7 +35,7 @@ export function toSeasonHeroState(
         phase: 'trade-deadline',
         priority: 'P0++',
         metadata: base,
-        tradeDeadlineProps: { deadlineMidnightPT: state.deadlineMidnightPT },
+        tradeDeadlineProps: { deadlineMidnightPT: state.deadlineMidnightPT, deadlineLabel: state.deadlineLabel },
         fallbackHero: state.content,
       };
     case 'regular-season':
