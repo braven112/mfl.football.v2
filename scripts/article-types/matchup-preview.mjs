@@ -356,7 +356,7 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 }
 
 INSTRUCTIONS:
-- Write 3 beats, in order, as 5-8 SHORT paragraphs in all. Every paragraph is one or two sentences, never three (this overrides the 2-4 sentence default), and under about 200 characters: owners read this on a phone. Give a pick or a punchline its own one-sentence paragraph.
+- Write 3 beats, in order, as 5-8 SHORT paragraphs in all. Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone. Give a pick or a punchline its own one-sentence paragraph.
 - Beat 1: the game with the most on the line (STAKES lines) or the GAME OF THE WEEK — what is at stake and your pick.
 - Beat 2: one or two more games worth watching, with picks. Do not run through every game.
 - Beat 3: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.

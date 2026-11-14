@@ -1,18 +1,19 @@
 /**
- * Short paragraphs for Schefter's long-form previews.
+ * Short paragraphs for every Schefter column.
  *
- * Owner's call (Nov 2026): the Friday and Saturday previews read as a wall of
- * text on a phone. Sports sites write one or two sentences per paragraph, so
- * the reader never loses their place. The prompts ask for that, and this
- * splitter enforces it at render time so a column the model wrote long (and
- * every preview already in the feed) still reads short.
+ * Owner's call (Nov 2026): the previews read as a wall of text on a phone,
+ * and then "every column". Sports sites write one or two sentences per
+ * paragraph, so the reader never loses their place. The base prompt asks for
+ * that, and this splitter enforces it at render time so a column the model
+ * wrote long (and every article already in the feed) still reads short.
  *
- * Only the article types listed in SHORT_PARAGRAPH_TYPES are split. The rest
- * keep the paragraphs they were written with.
+ * A paragraph holding block markup (a list, a table, a heading, a quote, a
+ * line break) renders exactly as written: splitting it by sentence would cut
+ * its tags in half.
  */
 
-/** Article types whose copy renders as 1-2 sentence paragraphs. */
-export const SHORT_PARAGRAPH_TYPES = ['weekend-preview', 'matchup-preview'];
+/** Block markup that a sentence split must never cut through. */
+const BLOCK_TAG = /<\/?(?:ul|ol|li|table|thead|tbody|tr|td|th|h[1-6]|div|blockquote|figure|img|br|hr|section|pre)\b/i;
 
 /** At most this many sentences share a paragraph. */
 export const MAX_SENTENCES_PER_PARAGRAPH = 2;
@@ -28,19 +29,6 @@ export const MAX_PAIRED_CHARS = 200;
 const ABBREVIATIONS = new Set([
   'st', 'jr', 'sr', 'mr', 'mrs', 'ms', 'dr', 'vs', 'no', 'mt', 'ft', 'etc', 'approx',
 ]);
-
-/**
- * Which article type a feed post is, from its id (`sf_2026_weekend_preview_w09`).
- * @param {{ id?: string }} post
- * @returns {string | null}
- */
-export function articleTypeOf(post) {
-  const id = String(post?.id ?? '');
-  for (const type of SHORT_PARAGRAPH_TYPES) {
-    if (id.includes(`_${type.replace(/-/g, '_')}_`)) return type;
-  }
-  return null;
-}
 
 /** Strip one outer <p>…</p> wrapper, if the paragraph has one. */
 function unwrap(html) {
@@ -132,6 +120,10 @@ export function shortenParagraphs(paragraphs) {
   const out = [];
   for (const paragraph of paragraphs ?? []) {
     if (typeof paragraph !== 'string' || !paragraph.trim()) continue;
+    if (BLOCK_TAG.test(paragraph)) {
+      out.push(paragraph);
+      continue;
+    }
     let current = [];
     let currentLen = 0;
     for (const sentence of splitSentences(paragraph)) {
@@ -154,12 +146,10 @@ export function shortenParagraphs(paragraphs) {
 }
 
 /**
- * The paragraphs an article page renders. Preview types are re-flowed short;
- * every other article renders exactly as written.
- * @param {{ id?: string, content?: string[] }} post
+ * The paragraphs an article page renders: every column, re-flowed short.
+ * @param {{ content?: string[] }} post
  * @returns {string[]}
  */
 export function articleParagraphs(post) {
-  const content = post?.content ?? [];
-  return articleTypeOf(post) ? shortenParagraphs(content) : content;
+  return shortenParagraphs(post?.content ?? []);
 }

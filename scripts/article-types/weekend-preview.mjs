@@ -191,7 +191,7 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 }
 
 INSTRUCTIONS:
-- Write 8-12 SHORT content paragraphs: one or two sentences each, never three (this overrides the 2-4 sentence default). Owners read this on a phone, so keep each paragraph under about 200 characters.
+- Write 8-12 SHORT content paragraphs: one or two sentences each, never three. Owners read this on a phone, so keep each paragraph under about 200 characters.
 - Give a punchline or a bold prediction its own one-sentence paragraph.
 - Identify the matchup of the week (most competitive or highest stakes).
 - Make bold predictions for 2-3 key matchups.

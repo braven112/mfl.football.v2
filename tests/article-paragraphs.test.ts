@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   articleParagraphs,
-  articleTypeOf,
   shortenParagraphs,
   splitSentences,
   MAX_PAIRED_CHARS,
@@ -43,11 +42,18 @@ describe('shortenParagraphs', () => {
 });
 
 describe('articleParagraphs', () => {
-  it('re-flows the two preview types and nothing else', () => {
+  it('re-flows every article type', () => {
     const content = ['<p>One. Two. Three.</p>'];
-    expect(articleTypeOf({ id: 'sf_2026_weekend_preview_w09' })).toBe('weekend-preview');
-    expect(articleTypeOf({ id: 'sf_2026_matchup_preview_w09' })).toBe('matchup-preview');
-    expect(articleParagraphs({ id: 'sf_2026_weekend_preview_w09', content })).toHaveLength(2);
-    expect(articleParagraphs({ id: 'sf_2026_week_recap_w09', content })).toBe(content);
+    expect(articleParagraphs({ id: 'sf_2026_weekend_preview_w09', content })).toEqual(['One. Two.', 'Three.']);
+    expect(articleParagraphs({ id: 'sf_2026_gauntlet_w10_theleague', content })).toEqual(['One. Two.', 'Three.']);
+  });
+
+  it('leaves a paragraph with block markup exactly as written', () => {
+    const list = '<ul><li>One. Two. Three.</li></ul>';
+    expect(articleParagraphs({ content: [list, 'Go. Now. Win.'] })).toEqual([list, 'Go. Now.', 'Win.']);
+  });
+
+  it('tolerates a post with no content', () => {
+    expect(articleParagraphs({})).toEqual([]);
   });
 });
