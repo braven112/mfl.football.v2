@@ -15,6 +15,7 @@ import StakesGameCard from './StakesGameCard.astro';
 import { canonicalRivalryPair } from '../../../utils/rivalries';
 import { readHometowns, type StoredHometown } from '../../../utils/owner-hometowns';
 import type { MatchupVisuals } from '../../../types/schefter';
+import { shortenParagraphs } from '../../../utils/article-paragraphs.mjs';
 import '../../../styles/matchup-preview.css';
 
 interface TeamConfigEntry {
@@ -64,6 +65,8 @@ const rivalryHref = (a: string, b: string) =>
   rivalriesBase ? `${rivalriesBase}/${canonicalRivalryPair(a, b)}` : undefined;
 
 const matchups = visuals?.matchups ?? [];
+// The broadcast guide that closes the column, under the cards (Nov 2026).
+const closing: string[] = shortenParagraphs(visuals?.closing ?? []);
 const gotwIndex = visuals?.gameOfWeek ?? null;
 const gotw = gotwIndex != null ? matchups[gotwIndex] : null;
 const gotwSeries = gotw?.series && !gotw.series.disputed ? gotw.series : null;
@@ -116,6 +119,13 @@ const hometowns: Record<string, StoredHometown> =
         {visuals!.moreGames} more game{visuals!.moreGames === 1 ? '' : 's'} this week, with less on the line.
       </p>
     )}
+  </section>
+)}
+
+{chartLed && part === 'cards' && closing.length > 0 && (
+  <section class="mpv-section mpv-theme sgc-closing">
+    <h2 class="mpv-title">What to watch Sunday</h2>
+    {closing.map((p) => <p>{p}</p>)}
   </section>
 )}
 

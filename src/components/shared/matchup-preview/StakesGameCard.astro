@@ -10,6 +10,7 @@
 import type { MatchupVisualsMatchup, MatchupStakesSide, GauntletStrip, LastFiveWeek } from '../../../types/schefter';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import type { MatchupTeam } from './MatchupPreviewSection.astro';
+import { shortenParagraphs } from '../../../utils/article-paragraphs.mjs';
 import '../../../styles/playoff-race.css';
 
 export interface Props {
@@ -21,6 +22,9 @@ export interface Props {
 }
 
 const { m, teamA, teamB, kicker, rivalryHref } = Astro.props;
+// Schefter's write-up for this game: plain text, rendered escaped, re-flowed
+// into one- or two-sentence paragraphs like every column.
+const story: string[] = shortenParagraphs(m.story ?? []);
 // Chart rows are narrow on a phone: the abbreviation, never a clipped name.
 const tag = (t: MatchupTeam) => t.abbrev ?? t.short;
 const a = m.a.franchiseId;
@@ -76,6 +80,12 @@ const ordinal = (n: number) => {
       </span>
     </div>
   </div>
+
+  {story.length > 0 && (
+    <div class="sgc-story">
+      {story.map((p) => <p>{p}</p>)}
+    </div>
+  )}
 
   <div class="sgc-sec">
     <h4>The rivalry</h4>

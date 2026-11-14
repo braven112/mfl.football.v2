@@ -234,6 +234,23 @@ html.dark .sgc {
   color: var(--prb-muted);
 }
 
+/* Schefter's write-up for the game, between the teams and the charts. */
+.sgc-story p {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-base, 1rem);
+  line-height: 1.55;
+  color: var(--prb-ink);
+}
+
+.sgc-story p:last-child {
+  margin-bottom: 0;
+}
+
+.sgc-closing p {
+  margin: 0 0 0.75rem;
+  line-height: 1.55;
+}
+
 .sgc-sec h4 {
   margin: 0 0 0.4rem;
   font-size: var(--font-size-2xs, 0.6875rem);
