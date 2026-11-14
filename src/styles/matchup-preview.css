@@ -65,8 +65,8 @@ html.dark .mpv-theme {
   font-variant-numeric: tabular-nums;
 }
 
+/* Drawn whole, never masked to a circle: square marks lost their corners. */
 .mpv-logo {
-  border-radius: 50%;
   flex: none;
   object-fit: contain;
 }

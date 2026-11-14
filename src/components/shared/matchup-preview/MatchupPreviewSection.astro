@@ -35,6 +35,12 @@ export interface MatchupTeam {
   /** Four-to-six letters, for chart row labels. */
   abbrev?: string;
   icon?: string;
+  /**
+   * Header names, longest first: the full name, then the league's medium and
+   * short names. A card shows the first that fits its column (owner's rule,
+   * Nov 2026: the full name whenever it fits, never an ellipsis).
+   */
+  names?: string[];
 }
 
 export interface Props {
@@ -59,6 +65,7 @@ const teamOf = (id: string): MatchupTeam => {
     short: t?.nameShort ?? t?.nameMedium ?? t?.abbrev ?? t?.name ?? id,
     abbrev: t?.abbrev,
     icon: t?.icon,
+    names: [...new Set([t?.name, t?.nameMedium, t?.nameShort, t?.abbrev].filter((n): n is string => !!n))],
   };
 };
 const rivalryHref = (a: string, b: string) =>

@@ -185,43 +185,44 @@ html.dark .sgc {
 .sgc-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
   gap: 0.5rem;
 }
 
+/* Logo over name over record, centered, so the name gets the whole column
+   and the full name fits far more often (owner's rule, Nov 2026). */
 .sgc-team {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   min-width: 0;
+  text-align: center;
 }
 
-.sgc-team--b {
-  flex-direction: row-reverse;
-  text-align: right;
-}
-
+/* Team logos are drawn whole, never masked to a circle: a square mark lost
+   its corners here (owner's rule, Nov 2026). */
 .sgc-team img {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
   object-fit: contain;
   flex: none;
 }
 
 .sgc-id {
   display: block;
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
 }
 
+/* Up to two lines, never an ellipsis: the card's script swaps in the team's
+   shorter name when the full one will not fit (StakesGameCard.astro). */
 .sgc-name {
   display: block;
   font-weight: 800;
   line-height: 1.15;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 .sgc-rec {
@@ -230,6 +231,7 @@ html.dark .sgc {
 }
 
 .sgc-vs {
+  align-self: center;
   font-size: var(--font-size-xs, 0.75rem);
   color: var(--prb-muted);
 }
