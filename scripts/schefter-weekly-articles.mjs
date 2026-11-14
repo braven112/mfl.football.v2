@@ -306,9 +306,18 @@ async function main() {
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   // Generate → validate → build → link. Wrapped so the league-name check below
   // can run it a second time with a correction note.
-  const generate = async (prompt) => {
+  const generate = async (prompt, { mayRetry = true } = {}) => {
     const aiOutput = await callAnthropic(systemPrompt, prompt, mod.config.maxTokens);
     console.log(`  Headline: ${aiOutput.headline}`);
+
+    // A type may name a must-have the draft left out (the Matchup Preview's
+    // score in every pick, owner's call Nov 2026); the draft is rewritten ONCE
+    // with the gap named, same idiom as the league-name check below.
+    const correction = mayRetry && typeof mod.correctionFor === 'function' ? mod.correctionFor(aiOutput) : null;
+    if (correction) {
+      console.warn(`  [correction] ${correction} — regenerating once.`);
+      return generate(`${prompt}\n\nCORRECTION: ${correction}`, { mayRetry: false });
+    }
 
     // Step 9: Validate
     const errors = mod.validate(aiOutput);

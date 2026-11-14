@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { attachGameStories, buildPost, validate, getUserPrompt } from '../scripts/article-types/matchup-preview.mjs';
+import { attachGameStories, buildPost, validate, getUserPrompt, gamesMissingScore, correctionFor } from '../scripts/article-types/matchup-preview.mjs';
 
 // Two cards in stakes order; the fact sheet numbers pairings in schedule order.
 const visuals = {
@@ -60,7 +60,22 @@ describe('matchup preview post', () => {
 
   it('requires per-game write-ups', () => {
     expect(validate({ headline: 'H', excerpt: 'E', content: ['<p>x</p>'] })).toContain('Missing per-game write-ups');
-    expect(validate({ headline: 'H', excerpt: 'E', content: ['<p>x</p>'], games: [{ matchup: 1, paragraphs: ['x'] }] })).toEqual([]);
+    expect(validate({ headline: 'H', excerpt: 'E', content: ['<p>x</p>'], games: [{ matchup: 1, paragraphs: ['x', 'My pick: A, 124-117.'] }] })).toEqual([]);
+  });
+
+  // Owner's call (Nov 2026): every pick in every league carries a score. The
+  // Week 10 AFL preview picked twelve winners and scored none of them.
+  it('flags a pick without a predicted score, and asks for one rewrite', () => {
+    const games = [
+      { matchup: 1, paragraphs: ['Fullybaked own the series 21-16.', 'My pick: Drunk Indians.'] },
+      { matchup: 2, paragraphs: ['My pick: Running down the Dream, 131-129, in a tight one.'] },
+      { matchup: 3, paragraphs: ['My pick: Smokane FC, 118.5–112.2.'] },
+    ];
+    expect(gamesMissingScore({ games })).toEqual([1]);
+    expect(validate({ headline: 'H', excerpt: 'E', content: ['<p>x</p>'], games })).toContain('No predicted score for matchup 1');
+    expect(correctionFor({ games })).toMatch(/MATCHUP 1 has no predicted score/);
+    expect(correctionFor({ games: games.slice(1) })).toBeNull();
+    expect(getUserPrompt('FACTS')).toMatch(/EVERY pick carries a predicted final score/);
   });
 
   it('asks for a long featured game and quick hitters for the rest', () => {
