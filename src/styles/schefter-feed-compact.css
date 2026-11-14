@@ -172,6 +172,43 @@
   line-height: 1;
 }
 
+/* A clamped body opened with its "Show more". */
+.sfc-post__body--expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+/* "Show more" / "Show less" under a body the clamp cut. A text button in the
+   link color, so it reads in every theme without a new token. */
+.sfc-post__more {
+  display: inline-block;
+  margin-top: 0.125rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
+  cursor: pointer;
+}
+
+.sfc-post__more[hidden] {
+  display: none;
+}
+
+.sfc-post__more:hover {
+  text-decoration: underline;
+}
+
+.sfc-post__more:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .sfc-post__link {
   display: inline-block;
   margin-top: 0.25rem;
