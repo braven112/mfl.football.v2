@@ -48,8 +48,16 @@ function unwrap(html) {
   return (m ? m[1] : html).trim();
 }
 
+/** Characters outside tags. Measures only; the HTML itself is never rewritten. */
 function visibleLength(html) {
-  return html.replace(/<[^>]*>/g, '').length;
+  let n = 0;
+  let inTag = false;
+  for (const ch of html) {
+    if (ch === '<') inTag = true;
+    else if (ch === '>' && inTag) inTag = false;
+    else if (!inTag) n++;
+  }
+  return n;
 }
 
 /** The word right before index `end` (exclusive), letters only. */
