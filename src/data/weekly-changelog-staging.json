@@ -196,6 +196,14 @@
       "impact": "user",
       "area": "schefter",
       "league": "afl"
+    },
+    {
+      "date": "2026-11-14",
+      "type": "bug-fix",
+      "summary": "Schefter stops reporting trade offers once the trade deadline passes, and skips offers built around a player who has since been traded.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "both"
     }
   ]
 }

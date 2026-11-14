@@ -95,6 +95,20 @@ import {
   rumorMillDailyCap,
 } from './lib/schefter-rumor-cadence.mjs';
 import { assetShapeOf, tradeSignatureOf } from './lib/schefter-offer-beats.mjs';
+import {
+  tradingWindowState,
+  deadOfferReason,
+  lastTradedAtByPlayer,
+  tradingClosedPromptBlock,
+} from './lib/schefter-trading-window.mjs';
+import {
+  DEADLINE_WRAP_WINDOW_MS,
+  buildDeadlineWrapFacts,
+  wrapHasStory,
+  deadlineWrapTemplate,
+  deadlineWrapSystemPrompt,
+  deadlineWrapUserMessage,
+} from './lib/schefter-deadline-wrap.mjs';
 import { buildSeedFromProposal, writeSeed } from './lib/speculation-seeds.mjs';
 import {
   scanDraftTrades,
@@ -457,6 +471,25 @@ function buildTradeBuilderPath(franchiseId) {
  * Whisper-back tips (`repliesToPostId`) are excluded — the user explicitly
  * chose to reply to a non-trade rumor; we honor that lane.
  */
+/**
+ * This run's trading window (scripts/lib/schefter-trading-window.mjs), set
+ * once in main() before any tip is read. Null until then, which reads as OPEN:
+ * a failed calendar read must not mute the lane in the middle of the season.
+ */
+let TRADING_STATE = null;
+const tradingClosed = () => TRADING_STATE?.closed === true;
+
+/**
+ * A pending MFL offer or an owner's trade-block listing. Both are about a
+ * trade that could still happen, so neither has a story once trading closes.
+ * Web/GroupMe chatter tagged `topic: 'trade'` is NOT in this set — "the
+ * Geeks got fleeced in that deal" is a fine post-deadline story, and the
+ * closed-trading prompt block keeps it in the past tense.
+ */
+function isLiveTradeTip(tip) {
+  return tip?.source === 'trade_offer' || tip?.source === 'trade_bait';
+}
+
 function isTradeFlavoredTip(tip) {
   if (!tip) return false;
   if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
@@ -485,7 +518,9 @@ const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/front-office/trade-builder`;
  */
 function resolveCta(primaryBucket) {
   const tips = primaryBucket?.tips ?? [];
-  const tradeFlavored = tips.length > 0 && tips.some(isTradeFlavoredTip);
+  // Once trading has closed there is no counter-offer to build, so the Trade
+  // Builder link is an invitation to something MFL will refuse.
+  const tradeFlavored = !tradingClosed() && tips.length > 0 && tips.some(isTradeFlavoredTip);
   if (tradeFlavored) {
     const franchiseIds = new Set(
       tips
@@ -2808,6 +2843,12 @@ The greeting is a SHORT (2–6 words) cold-open BEFORE the actual post body — 
     corroborationDirective = `\n\nCORROBORATION_CONTEXT: ${maxCorroboration} independent ${sourceWord} ${maxCorroboration === 1 ? 'is' : 'are'} pointing at this same trade — a real pending offer on the books AND tipsters whispering about it. Upgrade voice to direct-knowledge framing. Use one of these patterns (rotate, vary across posts, never stack two identical openers in a row): "I'm told by multiple sources with direct knowledge", "a high-level source spoke on the condition of anonymity", "two independent sources confirm", "league sources with direct knowledge tell me", "multiple corners of the league are pointing at the same deal", "sources close to the negotiations". Drop the hedge words ("hearing chatter", "buzzing", "developing") — this is more solid intel than a typical rumor. Still respect every anonymity rule (no franchise names unless the existing scope rules already permit it; no player names unless escalation tier already permits). Direct-knowledge framing is about CREDIBILITY of the source, not LIBERTY to name names. Stack on top of any other directives (busy-morning, framing flips, etc.).`;
   }
 
+  // Trading closed: every post, whatever its lane, stays in the past tense on
+  // trades. A system-prompt rule rather than a user directive so it outranks
+  // the trade-offer playbook's "shopping / fielding calls" vocabulary.
+  const closedBlock = tradingClosedPromptBlock(TRADING_STATE);
+  if (closedBlock) system = `${closedBlock}\n\n${system}`;
+
   const jsonContract = `Output JSON ONLY: {"post": "<the post text as a single string>"}. No markdown, no headlines, no meta-commentary in the "post" field. If the IRON RULES require dropping this batch, output {"post": null} — never write reasoning, filtering decisions, or explanations into the "post" field.`;
 
   let userMessage;
@@ -3027,13 +3068,27 @@ function tradeSignaturesFrom(raw, signatures) {
   return signatures;
 }
 
-async function loadCompletedTradeSignatures(year) {
+/**
+ * Also fills `lastTradedAt` (playerId → epoch ms of his latest completed
+ * trade) when a map is passed — the dead-offer check below reads it, and it
+ * comes off the same two reads, so it costs no extra MFL call.
+ */
+async function loadCompletedTradeSignatures(year, lastTradedAt = null) {
   const signatures = new Set();
   const live = await fetchLiveLeagueExport(year, 'transactions', '&TRANS_TYPE=TRADE');
   if (live) tradeSignaturesFrom(live, signatures);
+  const mergeMoves = (raw) => {
+    if (!lastTradedAt) return;
+    for (const [id, ms] of lastTradedAtByPlayer(raw)) {
+      if (!lastTradedAt.has(id) || lastTradedAt.get(id) < ms) lastTradedAt.set(id, ms);
+    }
+  };
+  if (live) mergeMoves(live);
   const txnPath = SCHEFTER_LEAGUE.feedFilePath(year, 'transactions.json');
   try {
-    tradeSignaturesFrom(JSON.parse(await fs.readFile(txnPath, 'utf8')), signatures);
+    const committed = JSON.parse(await fs.readFile(txnPath, 'utf8'));
+    tradeSignaturesFrom(committed, signatures);
+    mergeMoves(committed);
   } catch (err) {
     warn(
       `  [offer-scan] transactions feed unreadable: ${err.message}` +
@@ -3171,56 +3226,13 @@ async function loadTeamsWithDivisions() {
  * Returns an array of TradeOfferTip objects to (maybe) enqueue, plus
  * a debug log array for dry-run output.
  */
-async function scanTradeOffers({ redis, dryRun }) {
-  const offerEnabled = process.env.SCHEFTER_TRADE_OFFER_RUMORS_ENABLED;
-  const offerDetectOnly = process.env.SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY;
-  const isTruthy = (v) => v && v !== '0' && String(v).toLowerCase() !== 'false';
-
-  const enabled = isTruthy(offerEnabled);
-  const detectionOnly = isTruthy(offerDetectOnly);
-
-  if (!enabled && !detectionOnly) {
-    log('  [offer-scan] Both SCHEFTER_TRADE_OFFER_RUMORS_ENABLED and …_DETECTION_ONLY are off — skipping');
-    return { tips: [], debug: [] };
-  }
-
-  const mode = enabled ? 'full' : 'detection-only';
-  log(`  [offer-scan] Mode: ${mode}`);
-
-  const mflCookie = process.env.MFL_USER_ID;
-  if (!mflCookie) {
-    warn('  [offer-scan] MFL_USER_ID not set — cannot fetch league-wide offers');
-    return { tips: [], debug: [] };
-  }
-
-  const now = new Date();
-  const nowMs = now.getTime();
-  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
-
-  const teams = await loadTeamsWithDivisions();
-  const players = await loadPlayers(year);
-  const adpRankByPlayerId = await loadAdpDynastyRanks(year);
-  // NOT `year`. The heuristic above advances on Feb 1 while TheLeague's MFL
-  // rollover is Feb 14 PT, so for those 13 days it names a league year MFL has
-  // not created — the rosters file is absent, the map comes back empty, and the
-  // ownership check silently degrades to trusting the row's own sides, which is
-  // the exact failure this whole branch exists to stop. `leagueYearFor` is the
-  // registry-aware clock and already carries each league's own rollover.
-  const rosterYear = leagueYearFor(SCHEFTER_LEAGUE, now);
-  const rosterOwnerByPlayerId = await loadRosterOwners(rosterYear);
-  log(`  [offer-scan] Roster ownership loaded for ${rosterOwnerByPlayerId.size} player(s)`);
-
-  // Step 0: fold each franchise's saved trade-builder drafts into the
-  // shopping-signal sorted sets. Drafts feed the player-escalation tier
-  // (capped at tightened_circle) and owner volume hint via discounted
-  // weight, but never on their own create a rumor — the loop below only
-  // iterates real pending offers from MFL / owner reports.
-  try {
-    await scanDraftTrades({ redis, teams, dryRun, log, warn });
-  } catch (err) {
-    warn(`  [offer-scan] tb-drafts scan failed: ${err.message} — continuing without draft signals`);
-  }
-
+/**
+ * Every open proposal this lane can see: MFL's league-wide pendingTrades read
+ * (per franchise, minus the commish-approval queue that Phase 1 owns), merged
+ * with owners' self-reported offers. Shared by the offer scan and the
+ * deadline wrap-up, which must count the same set of deals.
+ */
+async function collectPendingOffers({ redis, teams, year, mflCookie }) {
   // Step 1: figure out which offerIds are in commish-approval state
   // (Phase 1 handles those — skip them here).
   const commishPending = await fetchCommishPendingOfferIds(LEAGUE_ID, year, mflCookie);
@@ -3278,6 +3290,61 @@ async function scanTradeOffers({ redis, dryRun }) {
     warn(`  [offer-scan] owner-reports merge failed: ${err.message}`);
   }
 
+
+  return { offerMap, commishPending };
+}
+
+async function scanTradeOffers({ redis, dryRun }) {
+  const offerEnabled = process.env.SCHEFTER_TRADE_OFFER_RUMORS_ENABLED;
+  const offerDetectOnly = process.env.SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY;
+  const isTruthy = (v) => v && v !== '0' && String(v).toLowerCase() !== 'false';
+
+  const enabled = isTruthy(offerEnabled);
+  const detectionOnly = isTruthy(offerDetectOnly);
+
+  if (!enabled && !detectionOnly) {
+    log('  [offer-scan] Both SCHEFTER_TRADE_OFFER_RUMORS_ENABLED and …_DETECTION_ONLY are off — skipping');
+    return { tips: [], debug: [] };
+  }
+
+  const mode = enabled ? 'full' : 'detection-only';
+  log(`  [offer-scan] Mode: ${mode}`);
+
+  const mflCookie = process.env.MFL_USER_ID;
+  if (!mflCookie) {
+    warn('  [offer-scan] MFL_USER_ID not set — cannot fetch league-wide offers');
+    return { tips: [], debug: [] };
+  }
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+
+  const teams = await loadTeamsWithDivisions();
+  const players = await loadPlayers(year);
+  const adpRankByPlayerId = await loadAdpDynastyRanks(year);
+  // NOT `year`. The heuristic above advances on Feb 1 while TheLeague's MFL
+  // rollover is Feb 14 PT, so for those 13 days it names a league year MFL has
+  // not created — the rosters file is absent, the map comes back empty, and the
+  // ownership check silently degrades to trusting the row's own sides, which is
+  // the exact failure this whole branch exists to stop. `leagueYearFor` is the
+  // registry-aware clock and already carries each league's own rollover.
+  const rosterYear = leagueYearFor(SCHEFTER_LEAGUE, now);
+  const rosterOwnerByPlayerId = await loadRosterOwners(rosterYear);
+  log(`  [offer-scan] Roster ownership loaded for ${rosterOwnerByPlayerId.size} player(s)`);
+
+  // Step 0: fold each franchise's saved trade-builder drafts into the
+  // shopping-signal sorted sets. Drafts feed the player-escalation tier
+  // (capped at tightened_circle) and owner volume hint via discounted
+  // weight, but never on their own create a rumor — the loop below only
+  // iterates real pending offers from MFL / owner reports.
+  try {
+    await scanDraftTrades({ redis, teams, dryRun, log, warn });
+  } catch (err) {
+    warn(`  [offer-scan] tb-drafts scan failed: ${err.message} — continuing without draft signals`);
+  }
+
+  const { offerMap, commishPending } = await collectPendingOffers({ redis, teams, year, mflCookie });
   log(`  [offer-scan] Distinct counter-party-awaiting offers: ${offerMap.size}`);
 
   // ── Movement state ──
@@ -3300,7 +3367,8 @@ async function scanTradeOffers({ redis, dryRun }) {
   // finished TRADE supersede a pending-trade post: sorted franchise pair +
   // sorted assets, so a proposal and the transaction it became hash alike
   // whichever side MFL calls "franchise1".
-  const completedTradeSignatures = await loadCompletedTradeSignatures(year);
+  const lastTradedAt = new Map();
+  const completedTradeSignatures = await loadCompletedTradeSignatures(year, lastTradedAt);
 
   // Earlier proposals between the same franchise pair, from our own archive.
   const priorPairCounts = await loadPriorPairCounts({ redis, nowMs });
@@ -3339,6 +3407,22 @@ async function scanTradeOffers({ redis, dryRun }) {
   // proposals indefinitely, so counting the raw map would report a run on a
   // position off deals MFL dropped weeks ago — a hedge of "at least" does not
   // make a stale count true.
+  // Dead offers out, before anything counts them. A proposal whose player has
+  // since changed hands cannot execute, but owner self-reports keep it in view
+  // indefinitely — which is how a Saturday post (2026-11-14) put "The Dream at
+  // the center of the McCaffrey chatter" four days after McCaffrey was traded.
+  // Dropped here, ahead of positionRuns and the tip loop, so a dead proposal
+  // is neither a story nor a count. A proposal that was itself ACCEPTED is
+  // left alone here, so the signature check below still files its closure.
+  for (const [offerId, { raw }] of [...offerMap]) {
+    const sig = tradeSignatureOf(raw);
+    if (sig && completedTradeSignatures.has(sig)) continue;
+    const dead = deadOfferReason(raw, { rosterOwnerByPlayerId, lastTradedAt });
+    if (!dead) continue;
+    offerMap.delete(offerId);
+    log(`  [offer-scan] offerId=${offerId} dropped — ${dead}`);
+  }
+
   const positionRuns = new Map();
   for (const [, { raw }] of offerMap) {
     const expiresAt = parseInt(raw.expires ?? '0', 10);
@@ -4041,6 +4125,134 @@ async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
 
 // ── Main ──
 
+/**
+ * The deadline wrap-up (scripts/lib/schefter-deadline-wrap.mjs): ONE post per
+ * deadline, in the first days after trading closes, about the deals that were
+ * still on the table and did not get done. Brandon, 2026-11-14.
+ *
+ * Once per deadline, keyed on its cutoff instant, and outside the mill's daily
+ * caps — it is a once-a-season story, not a rumor competing for a slot. Feed
+ * only: the trade lanes never post to chat (docs/claude/rules/schefter.md).
+ * The model writes it; the template stands in when the model is unavailable,
+ * and also whenever the model's text carries a franchise name.
+ */
+async function maybePostDeadlineWrap({ redis, now, teams }) {
+  if (!TRADING_STATE?.closed || !TRADING_STATE.cutoffISO) return;
+  const cutoffMs = new Date(TRADING_STATE.cutoffISO).getTime();
+  if (now.getTime() - cutoffMs > DEADLINE_WRAP_WINDOW_MS) return;
+  if (isQuietHours(now)) return;
+
+  const wrapKey = `${schefterKey(NAV_SLUG, 'trade_deadline_wrap:')}${TRADING_STATE.cutoffISO}`;
+  try {
+    if (await redis.get(wrapKey)) return;
+  } catch (err) {
+    warn(`  [deadline-wrap] key read failed: ${err.message} — skipping rather than risk a second wrap`);
+    return;
+  }
+
+  const year = leagueYearFor(SCHEFTER_LEAGUE, now);
+  const tradesRaw = (await fetchLiveLeagueExport(year, 'transactions', '&TRANS_TYPE=TRADE'))
+    ?? await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'transactions.json'), 'utf8').then(JSON.parse).catch(() => null);
+  const tradeRows = (() => {
+    const list = tradesRaw?.transactions?.transaction ?? [];
+    return (Array.isArray(list) ? list : [list]).filter((t) => String(t?.type ?? '').toUpperCase() === 'TRADE');
+  })();
+
+  // Open offers come from the trade-offer lane's own sources, so only where
+  // that lane runs. Elsewhere the wrap still counts the deals that got done.
+  let offers = [];
+  const mflCookie = process.env.MFL_USER_ID;
+  if (SCHEFTER_LEAGUE.features?.tradeOfferRumors && mflCookie) {
+    try {
+      const { offerMap } = await collectPendingOffers({
+        redis, teams: await loadTeamsWithDivisions(), year, mflCookie,
+      });
+      offers = [...offerMap.values()].map((o) => o.raw);
+    } catch (err) {
+      warn(`  [deadline-wrap] open offers unreadable: ${err.message} — counting completed deals only`);
+    }
+  }
+
+  const features = SCHEFTER_LEAGUE_REGISTRY?.features ?? {};
+  const facts = buildDeadlineWrapFacts({
+    offers,
+    cutoffMs,
+    completedTrades: tradeRows,
+    rosterOwnerByPlayerId: await loadRosterOwners(year),
+    lastTradedAt: lastTradedAtByPlayer(tradeRows),
+    playerMap: await loadPlayers(year),
+    adpRankByPlayerId: await loadAdpDynastyRanks(year),
+    rostersCarryOver: Boolean(features.contracts || features.keepers),
+  });
+  log(`  [deadline-wrap] facts: ${JSON.stringify(facts)}`);
+
+  if (!wrapHasStory(facts)) {
+    if (!DRY_RUN) await redis.set(wrapKey, 'nothing-to-report', { ex: 60 * 24 * 60 * 60 });
+    log('  [deadline-wrap] no open deals and no completed deals — nothing to wrap');
+    return;
+  }
+
+  const template = deadlineWrapTemplate(facts, TRADING_STATE.cutoffLabel);
+  let body = template;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey && !DRY_RUN) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: HAIKU_MODEL,
+          thinking: HAIKU_THINKING,
+          max_tokens: 300,
+          system: deadlineWrapSystemPrompt(),
+          messages: [{ role: 'user', content: deadlineWrapUserMessage(facts, TRADING_STATE.cutoffLabel) }],
+        }),
+      });
+      if (res.ok) {
+        const match = responseText(await res.json()).match(/\{[\s\S]*\}/);
+        const post = match ? JSON.parse(match[0])?.post : null;
+        if (typeof post === 'string' && post.trim()) body = post.trim();
+      } else {
+        warn(`  [deadline-wrap] anthropic ${res.status} — using the template`);
+      }
+    } catch (err) {
+      warn(`  [deadline-wrap] generation failed: ${err.message} — using the template`);
+    }
+  }
+  // A wrap names no team. If the model slipped one in, the template ships.
+  if (redactFranchiseNamesInText(body, teams) !== body) {
+    warn('  [deadline-wrap] model text named a franchise — using the template');
+    body = template;
+  }
+
+  const post = {
+    id: generatePostId(),
+    timestamp: now.toISOString(),
+    type: 'transaction',
+    transactionSubType: RUMOR_SUB_TYPE,
+    tier: RUMOR_TIER,
+    headline: 'Trade deadline wrap-up',
+    body,
+    authorId: 'claude',
+    franchiseIds: [],
+    tipIds: [],
+    league: LEAGUE_SLUG,
+    link: `/${LEAGUE_SLUG}/transactions`,
+    linkLabel: 'See every deal that got done →',
+  };
+
+  if (DRY_RUN) {
+    log(`  [dry-run] Would post the deadline wrap:\n${JSON.stringify(post, null, 2)}`);
+    return;
+  }
+  const feed = await loadFeed();
+  feed.posts = [post, ...(feed.posts ?? [])];
+  feed.lastScanTimestamp = now.toISOString();
+  await fs.writeFile(FEED_PATH, JSON.stringify(feed, null, 2) + '\n');
+  await redis.set(wrapKey, post.id, { ex: 60 * 24 * 60 * 60 });
+  log(`  [deadline-wrap] posted ${post.id}`);
+}
+
 async function main() {
   log(`\n=== Schefter Rumor-Mill Scan ${DRY_RUN ? '[DRY RUN]' : ''} ===`);
   log(`  Timestamp: ${new Date().toISOString()}`);
@@ -4088,8 +4300,46 @@ async function main() {
   // TheLeague-only lane: AFL's tradeOfferRumors toggle is off (MFL
   // pendingOffer access + the duplicate-player escalation model need their
   // own design before this lane can go multi-league).
+  // ── Trading window ──
+  // Read before any trade lane runs. MFL's calendar is the source of truth
+  // for the deadline (live, else the committed feed); the Constitution only
+  // stands in when the calendar has no deadline. A failed read leaves
+  // TRADING_STATE null, which every check reads as OPEN.
+  try {
+    const leagueYear = leagueYearFor(SCHEFTER_LEAGUE, new Date());
+    let calendar = await fetchLiveLeagueExport(leagueYear, 'calendar');
+    if (!calendar) {
+      try {
+        calendar = JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(leagueYear, 'calendar.json'), 'utf8'));
+      } catch {
+        calendar = null;
+      }
+    }
+    TRADING_STATE = tradingWindowState({ slug: LEAGUE_SLUG, leagueYear, now: new Date(), calendar });
+    log(
+      `  [trading] ${TRADING_STATE.closed ? 'CLOSED' : 'open'} — deadline ${TRADING_STATE.cutoffLabel ?? 'none'} `
+        + `(${TRADING_STATE.source})${TRADING_STATE.reopensISO ? `, reopens ${TRADING_STATE.reopensISO}` : ''}`,
+    );
+  } catch (err) {
+    warn(`  [trading] window unreadable: ${err.message} — treating trading as open`);
+  }
+
+  if (tradingClosed()) {
+    try {
+      await maybePostDeadlineWrap({ redis, now: new Date(), teams });
+    } catch (err) {
+      warn(`  [deadline-wrap] failed: ${err.message} — continuing`);
+    }
+  }
+
   let offerTipsPushed = 0;
-  if (!SCHEFTER_LEAGUE.features?.tradeOfferRumors) {
+  if (tradingClosed()) {
+    // Past the deadline a pending proposal can never execute, so the lane has
+    // nothing to report: "four offers are circling… more to come" the morning
+    // after the deadline is the post this guard exists to stop.
+    log('  [offer-scan] trading is closed — trade-offer lane skipped');
+    if (TRADE_OFFERS_ONLY) return 0;
+  } else if (!SCHEFTER_LEAGUE.features?.tradeOfferRumors) {
     log(`  [offer-scan] trade-offer lane disabled for ${LEAGUE_SLUG} — skipping`);
     if (TRADE_OFFERS_ONLY) {
       log('  [offer-scan] --trade-offers-only with lane disabled → exiting');
@@ -4229,6 +4479,9 @@ async function main() {
     } else if (typeof t.firstSuppressedAt === 'number' && now.getTime() - t.firstSuppressedAt > MAX_HELD_MS) {
       droppedTips.push([t, 'spiked']);
     } else if (age > TIP_EXPIRY_MS) {
+      droppedTips.push([t, 'expired']);
+    } else if (tradingClosed() && isLiveTradeTip(t)) {
+      // Queued before the deadline, about a deal that can no longer happen.
       droppedTips.push([t, 'expired']);
     } else {
       freshTips.push(t);

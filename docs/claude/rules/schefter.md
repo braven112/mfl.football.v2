@@ -1123,6 +1123,45 @@ for the rest of its 30-day TTL).
   row is written on every scan, whether or not the dice landed, because the
   change is a fact about the proposal rather than about whether we reported it.
 
+### Past the deadline, a pending offer is history — and a traded player kills the offer
+
+TheLeague, Sat 2026-11-14, 8:06 AM PT, eleven hours after MFL closed trading:
+"Four trade offers are circling, and The Dream are at the center of the
+McCaffrey chatter… More to come," with an "Open in Trade Builder" link.
+Two bugs in one post, both now guarded in
+`scripts/lib/schefter-trading-window.mjs`:
+
+- **The rumor mill knows when trading is closed.** `tradingWindowState` reads
+  MFL's calendar `TRADE` event (live, else the committed feed): it starts at the
+  instant trading closes and, where MFL fills `end_time`, ends when trading
+  reopens. MFL is the source of truth (Brandon, 2026-11-13); the Constitution
+  formula only stands in when the calendar has no deadline. With no usable end
+  (the AFL's is `'18'`), trading stays closed until the league year rolls.
+  While closed: the trade-offer lane does not run, queued `trade_offer` /
+  `trade_bait` tips are dropped, no post links the Trade Builder, and every
+  rumor prompt carries `tradingClosedPromptBlock` — trades only in the past
+  tense, never "more to come". Web/GroupMe chatter tagged `topic: 'trade'` still
+  posts ("the Geeks got fleeced") under that rule. A failed calendar read reads
+  as OPEN, so a bad fetch cannot mute the lane mid-season.
+- **A proposal is dead once a player in it changes hands.** MFL cannot execute
+  it, but owner self-reports keep it in view forever. `deadOfferReason` drops
+  it before anything counts it when a player in it is rostered OUTSIDE the
+  deal's two franchises, or moved in a completed trade AFTER the proposal was
+  made (that second test catches the partner having acquired him in a
+  different deal, which the roster check alone reads as a valid "corrected"
+  orientation). Pinned by `tests/schefter-trading-window.test.ts`.
+- **One deadline wrap-up per deadline** (`scripts/lib/schefter-deadline-wrap.mjs`,
+  `maybePostDeadlineWrap` in the rumor scan). In the first three days after the
+  cutoff, outside quiet hours, the scan files ONE post, keyed in Redis on the
+  cutoff instant and outside the mill's caps: how many deals got done in the
+  run-up, how many offers were still open when the clock hit zero (made before
+  the cutoff, not expired, not executed, counted once), and, per Brandon
+  (2026-11-14), a deal whose player was since traded elsewhere is a MISSED
+  OPPORTUNITY while an untouched one may still materialize in the offseason —
+  the offseason line only where rosters carry over (`contracts` or `keepers`).
+  It names players, never teams; model text that carries a franchise name is
+  replaced by the deterministic template. Feed only, like every trade lane.
+
 ### Former-name callbacks — the bit is the pairing, and it expires
 
 Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the
