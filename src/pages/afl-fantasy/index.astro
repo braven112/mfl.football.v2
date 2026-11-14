@@ -63,7 +63,9 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
-import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import TradeDeadlineConflictNotice from '../../components/shared/TradeDeadlineConflictNotice.astro';
+import { checkTradeDeadline, isTradeDeadlineCheckWindow } from '../../utils/mfl-trade-deadline.mjs';
 import { spriteUrlFor } from '../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
@@ -295,6 +297,13 @@ const aflCalendarFeed = await loadLeagueData<unknown>(
   leagueFeedPath(AFL.dataPath, aflLeagueYearForHero, 'calendar.json'),
 ).catch(() => null);
 const aflWaiverCalendar: any[] = Array.isArray(aflCalendarFeed) ? aflCalendarFeed : [];
+// The trade deadline comes from the same feed (MFL is the source of truth;
+// the hero reads it in resolveLeagueHomeHero). A disagreement with the
+// Constitution is shown to commissioners above the hero.
+const aflTradeCheck = checkTradeDeadline(AFL.slug, aflLeagueYearForHero, aflWaiverCalendar);
+const showTradeDeadlineConflict =
+  !!authUser && isCommissionerOrAdminForLeague(authUser, AFL.id)
+  && isTradeDeadlineCheckWindow(aflTradeCheck, effectiveDate ?? new Date());
 
 const heroInput = {
   league: AFL,
@@ -468,6 +477,13 @@ const aflTopPlayers = await loadLeagueData<TopPlayersFile>(`${AFL.dataPath}/deri
     emptyText: rail.emptyText,
   }}
 >
+  {showTradeDeadlineConflict && (
+    <TradeDeadlineConflictNotice
+      slot="before-hero"
+      check={aflTradeCheck}
+      mflUrl={`https://${AFL.mflHost}/${aflLeagueYearForHero}/home/${AFL.id}`}
+    />
+  )}
   <AflTeamSnapshot
     slot="snapshot"
     userTeam={userTeam}

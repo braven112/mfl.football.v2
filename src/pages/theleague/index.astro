@@ -26,7 +26,9 @@ import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCar
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import WhatsNewRow from '../../components/shared/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/shared/PlayerDetailsModal.astro';
-import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import TradeDeadlineConflictNotice from '../../components/shared/TradeDeadlineConflictNotice.astro';
+import { checkTradeDeadline, isTradeDeadlineCheckWindow } from '../../utils/mfl-trade-deadline.mjs';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
@@ -216,6 +218,13 @@ const tlCalendarFeed = await loadLeagueData<unknown>(
   leagueFeedPath(THELEAGUE.dataPath, tlWaiverYear, 'calendar.json'),
 ).catch(() => null);
 const tlCalendarEvents: any[] = Array.isArray(tlCalendarFeed) ? tlCalendarFeed : [];
+// The trade deadline comes from the SAME feed: MFL's calendar is the source
+// of truth, the Constitution the cross-check. A disagreement is shown to
+// commissioners below (and pushed by scripts/check-trade-deadline.ts).
+const tlTradeCheck = checkTradeDeadline(THELEAGUE.slug, tlWaiverYear, tlCalendarEvents);
+const showTradeDeadlineConflict =
+  !!authUser && isCommissionerOrAdminForLeague(authUser, THELEAGUE.id)
+  && isTradeDeadlineCheckWindow(tlTradeCheck, heroReferenceDate);
 const tlWaiverCopy = waiverDeadlineCopy(
   resolveWaiverWindow(tlCalendarEvents, heroReferenceDate, leagueClock(THELEAGUE.slug).zone),
   { now: heroReferenceDate, clock: viewerClock },
@@ -270,6 +279,7 @@ const rawHeroState = resolveHeroState(
   hasBreakingStory,
   Math.random,
   scheduleReleaseRevealed,
+  tlTradeCheck.mfl,
 );
 const heroState = await enrichHeroState(rawHeroState);
 
@@ -900,6 +910,12 @@ const labels = await getPersonaLabels('theleague');
     */}
     <section class="hp2__lead" aria-labelledby="hp2-hero-heading">
       <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
+      {showTradeDeadlineConflict && (
+        <TradeDeadlineConflictNotice
+          check={tlTradeCheck}
+          mflUrl={`https://${THELEAGUE.mflHost}/${tlWaiverYear}/home/${THELEAGUE.id}`}
+        />
+      )}
       {testDriveHero ? (
         <LiveScoringTestDrive slug={THELEAGUE.slug} referenceDate={heroReferenceDate} />
       ) : (

@@ -119,6 +119,7 @@ export function resolveHeroState(
   hasBreakingStory: boolean = false,
   rng: () => number = Math.random,
   scheduleReleaseRevealed: boolean = false,
+  tradeDeadline: { isoDate: string; cutoffISO: string; timeLabel: string } | null = null,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const state = resolveLeagueHeroState({
@@ -131,6 +132,7 @@ export function resolveHeroState(
     hasBreakingStory,
     rng,
     scheduleReleaseRevealed,
+    tradeDeadline,
     // TheLeague's calendar is its constitution (profile `clock`), not events.
     events: [],
   });

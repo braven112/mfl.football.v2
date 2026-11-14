@@ -32,7 +32,7 @@ import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from '../schedule-rele
 import { dailyPick } from '../hero-casting';
 import { getDailySlot, isGameLive } from '../hero-resolver';
 import { getCurrentNFLWeek } from '../current-week';
-import { tradeDeadlineTimeLabel } from '../trade-deadline.mjs';
+import { ptDateString, tradeDeadlineTimeLabel } from '../trade-deadline.mjs';
 import { randomHeroPlayer } from '../hero-players';
 import type {
   EventHeroView,
@@ -578,7 +578,14 @@ const tradeDeadlineStep: HeroStep = (ctx) => {
   const { profile, now, input, p } = ctx;
   const clock = profile.clock;
   let midnight: string | null = null;
-  if (clock?.isTradeDeadlineDay) {
+  let label = clock?.isTradeDeadlineDay ? tradeDeadlineTimeLabel(profile.league) : 'midnight PT';
+  if (input.tradeDeadline) {
+    // MFL's own calendar wins: its day, its instant, its time.
+    if (ptDateString(now) === input.tradeDeadline.isoDate) {
+      midnight = input.tradeDeadline.cutoffISO;
+      label = input.tradeDeadline.timeLabel;
+    }
+  } else if (clock?.isTradeDeadlineDay) {
     if (clock.isTradeDeadlineDay(now)) midnight = clock.tradeDeadlineMidnight(now);
   } else {
     const event = findRole(ctx.events, 'trade-deadline');
@@ -590,7 +597,7 @@ const tradeDeadlineStep: HeroStep = (ctx) => {
     priority: 'P0++',
     content: profile.content?.tradeDeadline?.(p) ?? tradeDeadlineContent(p),
     deadlineMidnightPT: midnight,
-    deadlineLabel: clock?.isTradeDeadlineDay ? tradeDeadlineTimeLabel(profile.league) : 'midnight PT',
+    deadlineLabel: label,
     referenceNowISO: input.testMode ? now.toISOString() : undefined,
     resolvedBy: 'isTradeDeadlineDay',
   };

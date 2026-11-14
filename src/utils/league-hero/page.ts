@@ -25,6 +25,7 @@ import { getCurrentSeasonYear } from '../league-year';
 import { getRecapWeek, getOwnersByPlayer, HERO_CASTING_FEEDS, preloadOffseasonHeroData } from '../offseason-hero-data';
 import { resolveRecapDestination } from '../hero-recap-destination';
 import { resolveWaiverWindow } from '../waiver-window';
+import { mflTradeCutoff } from '../mfl-trade-deadline.mjs';
 import { waiverDeadlineCopy } from '../waiver-deadline-copy';
 import { readViewerClock } from '../viewer-preferences-page';
 import { pickLatestArticle, type LatestArticle } from '../article-hero-view';
@@ -181,6 +182,8 @@ export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise
     userPoolId: input.userPoolId,
     userTier: input.userTier,
     scheduleReleaseRevealed,
+    // The trade deadline from MFL's own calendar (its TRADE event), never prose.
+    tradeDeadline: mflTradeCutoff(input.waiverCalendar, input.leagueYear),
     recap,
     waiver,
     article,

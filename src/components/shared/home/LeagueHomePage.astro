@@ -109,6 +109,8 @@ const {
     */}
     <section class="league-hp__lead" aria-labelledby="league-hp-hero-heading">
       <h2 id="league-hp-hero-heading" class="visually-hidden">League Overview</h2>
+      {/* Admin-only notices that belong above the hero (trade deadline drift). */}
+      <slot name="before-hero" />
 
       {testDriveHero ? (
         <LiveScoringTestDrive slug={leagueSlug} referenceDate={effectiveDate} />

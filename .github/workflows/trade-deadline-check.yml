@@ -1,0 +1,51 @@
+name: Trade Deadline Check
+
+# Daily drift check: does MFL's trade deadline (its calendar's TRADE event,
+# the source of truth the site counts down to) agree with the Constitution?
+# MFL's calendar is carried forward every year and drifted a week late for
+# TheLeague in 2024-2026 unnoticed. A mismatch pushes the league's admins
+# (ops-league-setup) and shows a commissioner banner on the homepage.
+#
+# Self-guarding, so a year-round daily cron is safe: it only pushes for a
+# mismatch inside the window (60 days before the earlier date through the
+# later one) and stays quiet otherwise.
+#
+# Daily 8am PT (16:00 UTC in PST, 9am in PDT — an hour late in summer is fine).
+
+on:
+  schedule:
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Never send the alert, just print"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: trade-deadline-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Check trade deadline
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
+          pnpm exec tsx scripts/check-trade-deadline.ts $ARGS
