@@ -15,6 +15,7 @@
  *   data-limit    1-12 posts (default 5)
  *   data-theme    "dark" | "light" | "auto" (default auto)
  *   data-title    heading text (default "Latest from the beat"; "" hides it)
+ *   data-name     byline on each post (default "AI Beat Reporter")
  *   data-avatar   image URL for the reporter avatar on each post (default:
  *                 the AI beat reporter avatar next to this script; "" hides it)
  * Anything inside the container is a fallback: it shows if the feed can't load.
@@ -39,10 +40,11 @@
     'li{padding:12px 0;border-top:1px solid var(--_line)}li:first-child{border-top:0}' +
     'a{color:inherit;text-decoration:none;display:flex;gap:12px;align-items:flex-start}.txt{min-width:0;flex:1}' +
     '.av{flex:none;width:40px;height:40px;border-radius:50%;object-fit:cover}' +
-    'a:hover b,a:focus-visible b{color:var(--_accent);text-decoration:underline}' +
+    'a:hover b,a:focus-visible b,a:hover .body,a:focus-visible .body{text-decoration:underline}' +
     'a:focus-visible{outline:2px solid var(--_accent);outline-offset:2px;border-radius:4px}' +
     '.meta{display:block;font-size:12px;color:var(--_muted);margin-bottom:2px}' +
-    '.kind{color:var(--_accent);font-weight:600}' +
+    '.name{color:var(--_fg);font-weight:650}' +
+    '.body{margin:2px 0 0;color:var(--_fg);font-size:15px}' +
     'b{display:block;font-weight:650;font-size:15px}' +
     'p{margin:4px 0 0;color:var(--_muted);font-size:14px}' +
     '.empty{padding:12px 0;color:var(--_muted)}';
@@ -84,6 +86,7 @@
     var style = el('style');
     style.textContent = CSS;
     var wrap = el('div', 'wrap');
+    var name = host.getAttribute('data-name') || 'AI Beat Reporter';
     var avatar = host.hasAttribute('data-avatar')
       ? (host.getAttribute('data-avatar') ? safeUrl(host.getAttribute('data-avatar')) : '')
       : origin + '/embed/beat-reporter-avatar.webp';
@@ -113,7 +116,7 @@
           a.target = '_blank';
           a.rel = 'noopener';
           var meta = el('span', 'meta');
-          meta.appendChild(el('span', 'kind', p.kind === 'article' ? 'Article' : 'League move'));
+          meta.appendChild(el('span', 'name', name));
           meta.appendChild(document.createTextNode(' \u00b7 ' + timeAgo(p.timestamp)));
           if (avatar) {
             var img = el('img', 'av');
@@ -126,8 +129,14 @@
           }
           var txt = el('span', 'txt');
           txt.appendChild(meta);
-          txt.appendChild(el('b', null, p.headline));
-          if (p.excerpt && p.excerpt !== p.headline) txt.appendChild(el('p', null, p.excerpt));
+          // Matches the league feed card: an article leads with its headline;
+          // a league move is just the reporter's words, no headline.
+          if (p.kind === 'article') {
+            txt.appendChild(el('b', null, p.headline));
+            if (p.excerpt && p.excerpt !== p.headline) txt.appendChild(el('p', null, p.excerpt));
+          } else {
+            txt.appendChild(el('p', 'body', p.excerpt || p.headline));
+          }
           a.appendChild(txt);
           li.appendChild(a);
           list.appendChild(li);
