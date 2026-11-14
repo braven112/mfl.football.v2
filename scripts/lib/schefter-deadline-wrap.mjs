@@ -51,9 +51,14 @@ export function buildDeadlineWrapFacts({
 }) {
   const completedSignatures = new Set(completedTrades.map((t) => tradeSignatureOf(t)).filter(Boolean));
   const runupStart = cutoffMs - DEADLINE_RUNUP_MS;
+  // No upper bound at the cutoff: a deal only has to be ACCEPTED before the
+  // deadline, and the commissioner may approve (process) it after (Brandon,
+  // 2026-11-14). MFL stamps the processing time, so a trade stamped after the
+  // cutoff is still a deadline deal, never a late one. Trading is closed, so
+  // nothing stamped after the cutoff can be a new deal.
   const completedInRunup = completedTrades.filter((t) => {
     const ms = Number(t?.timestamp) * 1000;
-    return Number.isFinite(ms) && ms >= runupStart && ms <= cutoffMs;
+    return Number.isFinite(ms) && ms >= runupStart;
   }).length;
 
   const nameOf = (id) => {
