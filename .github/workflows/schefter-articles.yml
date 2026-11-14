@@ -12,8 +12,12 @@ on:
     # earlier, so the two were folded into the one Saturday column. The type
     # stays dispatchable below; its old posts still render.
     # - cron: "0 15 * * 5"
-    # Saturday 9am PT (16:00 UTC) — matchup-preview
-    - cron: "0 16 * * 6"
+    # Saturday 11am PT — matchup-preview, with the lineup roll call first
+    # (owner's call, Nov 2026; was 9am). Cron is UTC and PT shifts an hour at
+    # DST, so BOTH hours are scheduled and the resolve step keeps the one that
+    # is 11am PT that day: 18:00 UTC under PDT, 19:00 UTC under PST.
+    - cron: "0 18 * * 6"
+    - cron: "0 19 * * 6"
     # Sunday 8am PT (15:00 UTC) — cut-watch (weekly during the Jul 15–Aug 16
     # window; self-guards outside it)
     - cron: "0 15 * * 0"
@@ -99,9 +103,18 @@ jobs:
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
-              "0 16 * * 6") TYPE="matchup-preview" ;;
+              "0 18 * * 6") TYPE="matchup-preview" ;;
+              "0 19 * * 6") TYPE="matchup-preview" ;;
               "0 15 * * 0") TYPE="cut-watch" ;;
               "0 18 * * *") TYPE="schedule-release" ;;
+            esac
+            # The Saturday preview is scheduled at BOTH 18:00 and 19:00 UTC;
+            # keep only the one that is 11am PT on today's side of DST. Checked
+            # by the zone OFFSET, never the hour, so a delayed run still maps.
+            PT_OFFSET="$(TZ=America/Los_Angeles date +%z)"
+            case "$CRON_EXPR" in
+              "0 18 * * 6") [ "$PT_OFFSET" = "-0700" ] || TYPE="" ;;
+              "0 19 * * 6") [ "$PT_OFFSET" = "-0800" ] || TYPE="" ;;
             esac
             echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
           fi
