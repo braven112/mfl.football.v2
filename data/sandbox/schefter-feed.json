@@ -2,6 +2,1858 @@
   "$comment": "Sandbox news feed. Seeded 2026-11-04 with the NFL news lanes' posts (ESPN reporters, NFL Wire, odds) from the same window, so the demo does not open empty; the scanner keeps it current from here.",
   "posts": [
     {
+      "id": "sf_2026_matchup_preview_w10",
+      "timestamp": "2026-11-14T19:35:20.932Z",
+      "type": "article",
+      "category": "articles",
+      "tier": "standard",
+      "headline": "Week 10: Rams-Lions Is the Game That Matters",
+      "body": "Six matchups, one bubble, and a Saturday morning guide to everything you need to watch. Chargers and Broncos are cruising, but the Rams-Lions game could reshape the playoff race.",
+      "franchiseIds": [],
+      "link": "/sandbox/news/sf_2026_matchup_preview_w10",
+      "linkLabel": "Read matchup preview",
+      "league": "sandbox",
+      "authorId": "claude",
+      "content": [
+        "<p>Welcome to Week 10 in Sandbox, where the Chargers sit at 9-0 and nobody is rattled. I'm told the real drama is further down the standings.</p>",
+        "<p>Check <a href=\"/sandbox/live-scoring\">the live scoreboard</a> all day, because the Rams-Lions tilt is the one that moves the needle most.</p>"
+      ],
+      "matchupVisuals": {
+        "year": 2026,
+        "week": 10,
+        "gameOfWeek": null,
+        "matchups": [
+          {
+            "a": {
+              "franchiseId": "0007",
+              "wins": 3,
+              "losses": 1,
+              "ties": 0,
+              "streak": "W3",
+              "form": [
+                "L",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                131.1,
+                177,
+                172.4,
+                170.1
+              ],
+              "ppg": 162.6,
+              "allPlay": {
+                "wins": 38,
+                "losses": 6,
+                "ties": 0
+              },
+              "luck": -0.5
+            },
+            "b": {
+              "franchiseId": "0010",
+              "wins": 2,
+              "losses": 2,
+              "ties": 0,
+              "streak": "W2",
+              "form": [
+                "L",
+                "L",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                126.1,
+                145.9,
+                174.5,
+                124.6
+              ],
+              "ppg": 142.7,
+              "allPlay": {
+                "wins": 25,
+                "losses": 19,
+                "ties": 0
+              },
+              "luck": -0.3
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 0,
+              "bWins": 1,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0010",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0010",
+                "score": 181.5,
+                "opp": 179.84
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0010",
+                "score": 181.5,
+                "opp": 179.84
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 179.84,
+                "opp": 181.5
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 131.1,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 177,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 172.4,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 170.1,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 126.1,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 145.9,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 174.5,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 124.6,
+                  "result": "W"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.5329,
+              "a": {
+                "franchiseId": "0007",
+                "now": {
+                  "playoff": 0.387,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.5957,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0628,
+                  "bye": 0
+                },
+                "winChance": 0.6084
+              },
+              "b": {
+                "franchiseId": "0010",
+                "now": {
+                  "playoff": 0.8287,
+                  "bye": 0.1201
+                },
+                "win": {
+                  "playoff": 0.9946,
+                  "bye": 0.2232
+                },
+                "loss": {
+                  "playoff": 0.7219,
+                  "bye": 0.0537
+                },
+                "winChance": 0.3916
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 6,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DET"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "CHI"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "SF"
+                    ],
+                    "step": 1
+                  }
+                ]
+              },
+              "b": {
+                "rank": 2,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "LAR"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "PHI"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "SEA"
+                    ],
+                    "step": 4
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "BUF",
+              "home": "NYJ",
+              "kickoff": 1794765600,
+              "projTotal": 53.3,
+              "players": [
+                {
+                  "franchiseId": "0010",
+                  "name": "Josh Allen",
+                  "position": "QB",
+                  "nflTeam": "BUF",
+                  "proj": 30.27
+                },
+                {
+                  "franchiseId": "0010",
+                  "name": "Garrett Wilson",
+                  "position": "WR",
+                  "nflTeam": "NYJ",
+                  "proj": 14.22
+                },
+                {
+                  "franchiseId": "0007",
+                  "name": "Mason Taylor",
+                  "position": "TE",
+                  "nflTeam": "NYJ",
+                  "proj": 8.81
+                }
+              ]
+            },
+            "story": [
+              "Boom! This is the featured game and the one I'm most fired up about. The Rams are 3-6 and need this win badly, sitting at about 39% playoff odds.",
+              "Win and they jump to roughly 60%. Lose and they fall to about 6%. That is a playoff race in one afternoon.",
+              "The Lions are 5-4 and at about 83% to make it, but they can lock down a much bigger share with a win.",
+              "Josh Allen (Lions, 30.3 projected) is the engine for Detroit, and he is the player to watch in the NFL game that swings this one.",
+              "Here's the thing: BUF at NYJ projects 53.3 points from these two teams' starters, with Allen and Garrett Wilson (Lions, 14.2) right in the middle of it.",
+              "Bold call: the Lions win this one and keep their foot on the gas. Check the standings to see how much it matters."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0011",
+              "wins": 3,
+              "losses": 1,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "W",
+                "W",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                143.7,
+                173.6,
+                146.3,
+                144.6
+              ],
+              "ppg": 152.1,
+              "allPlay": {
+                "wins": 32,
+                "losses": 12,
+                "ties": 0
+              },
+              "luck": 0.1
+            },
+            "b": {
+              "franchiseId": "0012",
+              "wins": 1,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L3",
+              "form": [
+                "W",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                133.7,
+                141.8,
+                100.5,
+                108.1
+              ],
+              "ppg": 121.1,
+              "allPlay": {
+                "wins": 12,
+                "losses": 32,
+                "ties": 0
+              },
+              "luck": -0.1
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 0,
+              "bWins": 1,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0012",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0012",
+                "score": 153.4,
+                "opp": 135.22
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0012",
+                "score": 153.4,
+                "opp": 135.22
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 135.22,
+                "opp": 153.4
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 143.7,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 173.6,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 146.3,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 144.6,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 133.7,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 141.8,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 100.5,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 108.1,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "bye",
+              "swing": 0.343,
+              "a": {
+                "franchiseId": "0011",
+                "now": {
+                  "playoff": 0.9944,
+                  "bye": 0.6669
+                },
+                "win": {
+                  "playoff": 1,
+                  "bye": 0.7525
+                },
+                "loss": {
+                  "playoff": 0.9776,
+                  "bye": 0.4095
+                },
+                "winChance": 0.7504
+              },
+              "b": {
+                "franchiseId": "0012",
+                "now": {
+                  "playoff": 0.0069,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0276,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.2496
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 5,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "SF"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "LAR"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "PHI"
+                    ],
+                    "step": 3
+                  }
+                ]
+              },
+              "b": {
+                "rank": 1,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "CHI"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "SEA"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "LAR"
+                    ],
+                    "step": 5
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "SFO",
+              "home": "DAL",
+              "kickoff": 1794777900,
+              "projTotal": 42.1,
+              "players": [
+                {
+                  "franchiseId": "0011",
+                  "name": "Dak Prescott",
+                  "position": "QB",
+                  "nflTeam": "DAL",
+                  "proj": 27.42
+                },
+                {
+                  "franchiseId": "0012",
+                  "name": "George Kittle",
+                  "position": "TE",
+                  "nflTeam": "SFO",
+                  "proj": 14.71
+                }
+              ]
+            },
+            "story": [
+              "Bears at 6-3 against the 3-6 49ers. Chicago is in strong position for a bye.",
+              "Dak Prescott (Bears, 27.4) leads the way, and Bryce Young (Bears, 24.6) is a solid second option.",
+              "My pick: Bears, and it isn't close."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0002",
+              "wins": 4,
+              "losses": 0,
+              "ties": 0,
+              "streak": "W4",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                175.4,
+                142.4,
+                162.4,
+                144.4
+              ],
+              "ppg": 156.2,
+              "allPlay": {
+                "wins": 33,
+                "losses": 11,
+                "ties": 0
+              },
+              "luck": 1
+            },
+            "b": {
+              "franchiseId": "0005",
+              "wins": 1,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L3",
+              "form": [
+                "W",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                129.3,
+                109.7,
+                131.8,
+                96.2
+              ],
+              "ppg": 116.8,
+              "allPlay": {
+                "wins": 7,
+                "losses": 37,
+                "ties": 0
+              },
+              "luck": 0.4
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 1,
+              "bWins": 0,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0002",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0002",
+                "score": 188.68,
+                "opp": 116.6
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0002",
+                "score": 188.68,
+                "opp": 116.6
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 188.68,
+                "opp": 116.6
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 175.4,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 142.4,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 162.4,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 144.4,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 129.3,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 109.7,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 131.8,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 96.2,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "bye",
+              "swing": 0.3098,
+              "a": {
+                "franchiseId": "0002",
+                "now": {
+                  "playoff": 1,
+                  "bye": 0.4055
+                },
+                "win": {
+                  "playoff": 1,
+                  "bye": 0.4574
+                },
+                "loss": {
+                  "playoff": 1,
+                  "bye": 0.1476
+                },
+                "winChance": 0.8326
+              },
+              "b": {
+                "franchiseId": "0005",
+                "now": {
+                  "playoff": 0.092,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.3244,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0453,
+                  "bye": 0
+                },
+                "winChance": 0.1674
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 11,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "BAL"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "LAC"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "KC"
+                    ],
+                    "step": 2
+                  }
+                ]
+              },
+              "b": {
+                "rank": 7,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DEN"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "NE"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "BUF"
+                    ],
+                    "step": 2
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "NEP",
+              "home": "DET",
+              "kickoff": 1794753000,
+              "projTotal": 47.2,
+              "players": [
+                {
+                  "franchiseId": "0005",
+                  "name": "Jared Goff",
+                  "position": "QB",
+                  "nflTeam": "DET",
+                  "proj": 27.48
+                },
+                {
+                  "franchiseId": "0002",
+                  "name": "Jahmyr Gibbs",
+                  "position": "RB",
+                  "nflTeam": "DET",
+                  "proj": 19.72
+                }
+              ]
+            },
+            "story": [
+              "Broncos at 8-1 against the Ravens at 4-5. Denver is rolling with four straight wins.",
+              "Jared Goff (Ravens, 27.5) is the swing piece for Baltimore, but the Broncos have more depth.",
+              "My pick: Broncos. Check your lineup before kickoff."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0009",
+              "wins": 1,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L2",
+              "form": [
+                "L",
+                "W",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                109.1,
+                147.4,
+                159.3,
+                142.7
+              ],
+              "ppg": 139.6,
+              "allPlay": {
+                "wins": 22,
+                "losses": 22,
+                "ties": 0
+              },
+              "luck": -1
+            },
+            "b": {
+              "franchiseId": "0008",
+              "wins": 2,
+              "losses": 2,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "W",
+                "L",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                152.5,
+                147.3,
+                159.6,
+                143.7
+              ],
+              "ppg": 150.8,
+              "allPlay": {
+                "wins": 31,
+                "losses": 13,
+                "ties": 0
+              },
+              "luck": -0.8
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 1,
+              "bWins": 0,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0009",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0009",
+                "score": 156.12,
+                "opp": 125.38
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0009",
+                "score": 156.12,
+                "opp": 125.38
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 156.12,
+                "opp": 125.38
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 109.1,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 147.4,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 159.3,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 142.7,
+                  "result": "L"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 152.5,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 147.3,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 159.6,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 143.7,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.2702,
+              "a": {
+                "franchiseId": "0009",
+                "now": {
+                  "playoff": 0.8527,
+                  "bye": 0.1455
+                },
+                "win": {
+                  "playoff": 0.9777,
+                  "bye": 0.2365
+                },
+                "loss": {
+                  "playoff": 0.7075,
+                  "bye": 0.0398
+                },
+                "winChance": 0.5375
+              },
+              "b": {
+                "franchiseId": "0008",
+                "now": {
+                  "playoff": 0.8313,
+                  "bye": 0.0675
+                },
+                "win": {
+                  "playoff": 0.9619,
+                  "bye": 0.1421
+                },
+                "loss": {
+                  "playoff": 0.7189,
+                  "bye": 0.0033
+                },
+                "winChance": 0.4625
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 3,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "SEA"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DET"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "CHI"
+                    ],
+                    "step": 4
+                  }
+                ]
+              },
+              "b": {
+                "rank": 8,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "PHI"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "SF"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DET"
+                    ],
+                    "step": 3
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "WAS",
+              "home": "NYG",
+              "kickoff": 1794532500,
+              "projTotal": 42.8,
+              "players": [
+                {
+                  "franchiseId": "0008",
+                  "name": "Jayden Daniels",
+                  "position": "QB",
+                  "nflTeam": "WAS",
+                  "proj": 25.59
+                },
+                {
+                  "franchiseId": "0008",
+                  "name": "Chigoziem Okonkwo",
+                  "position": "TE",
+                  "nflTeam": "WAS",
+                  "proj": 9.19
+                },
+                {
+                  "franchiseId": "0008",
+                  "name": "Antonio Williams",
+                  "position": "WR",
+                  "nflTeam": "WAS",
+                  "proj": 8.01
+                }
+              ]
+            },
+            "story": [
+              "Eagles at 5-4 versus the Seahawks at 5-4, with both sides already on the bubble.",
+              "Joe Burrow (Eagles, 30.1) is the biggest name here, and Jayden Daniels (Seahawks, 25.6) is no slouch.",
+              "My pick: Eagles, narrowly."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0006",
+              "wins": 4,
+              "losses": 0,
+              "ties": 0,
+              "streak": "W4",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                172,
+                159.8,
+                137.9,
+                128.7
+              ],
+              "ppg": 149.6,
+              "allPlay": {
+                "wins": 28,
+                "losses": 16,
+                "ties": 0
+              },
+              "luck": 1.5
+            },
+            "b": {
+              "franchiseId": "0001",
+              "wins": 2,
+              "losses": 2,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "L",
+                "W",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                82.2,
+                135.7,
+                147.9,
+                119.3
+              ],
+              "ppg": 121.3,
+              "allPlay": {
+                "wins": 12,
+                "losses": 32,
+                "ties": 0
+              },
+              "luck": 0.9
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 1,
+              "bWins": 0,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0006",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0006",
+                "score": 173.88,
+                "opp": 161
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0006",
+                "score": 173.88,
+                "opp": 161
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 173.88,
+                "opp": 161
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 172,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 159.8,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 137.9,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 128.7,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 82.2,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 135.7,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 147.9,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 119.3,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "bye",
+              "swing": 0.2262,
+              "a": {
+                "franchiseId": "0006",
+                "now": {
+                  "playoff": 1,
+                  "bye": 0.5945
+                },
+                "win": {
+                  "playoff": 1,
+                  "bye": 0.6468
+                },
+                "loss": {
+                  "playoff": 1,
+                  "bye": 0.4206
+                },
+                "winChance": 0.7689
+              },
+              "b": {
+                "franchiseId": "0001",
+                "now": {
+                  "playoff": 0.006,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0238,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0007,
+                  "bye": 0
+                },
+                "winChance": 0.2311
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 9,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "KC"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DEN"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "NE"
+                    ],
+                    "step": 2
+                  }
+                ]
+              },
+              "b": {
+                "rank": 4,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "LAC"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "BUF"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DEN"
+                    ],
+                    "step": 4
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "PIT",
+              "home": "CIN",
+              "kickoff": 1794792000,
+              "projTotal": 53.4,
+              "players": [
+                {
+                  "franchiseId": "0006",
+                  "name": "Aaron Rodgers",
+                  "position": "QB",
+                  "nflTeam": "PIT",
+                  "proj": 23.9
+                },
+                {
+                  "franchiseId": "0001",
+                  "name": "Ja'Marr Chase",
+                  "position": "WR",
+                  "nflTeam": "CIN",
+                  "proj": 20.47
+                },
+                {
+                  "franchiseId": "0001",
+                  "name": "Rico Dowdle",
+                  "position": "RB",
+                  "nflTeam": "PIT",
+                  "proj": 9.03
+                }
+              ]
+            },
+            "story": [
+              "Chargers at 9-0 against the 3-6 Chiefs. Almost everything about this one screams Chargers.",
+              "Bo Nix (Chargers, 27.1) and Aaron Rodgers (Chargers, 23.9) give L.A. serious firepower.",
+              "My pick: Chargers, comfortably."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0004",
+              "wins": 0,
+              "losses": 4,
+              "ties": 0,
+              "streak": "L4",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                121.9,
+                131.1,
+                134,
+                109.8
+              ],
+              "ppg": 124.2,
+              "allPlay": {
+                "wins": 10,
+                "losses": 34,
+                "ties": 0
+              },
+              "luck": -0.9
+            },
+            "b": {
+              "franchiseId": "0003",
+              "wins": 1,
+              "losses": 3,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                111,
+                122.7,
+                121,
+                150.9
+              ],
+              "ppg": 126.4,
+              "allPlay": {
+                "wins": 14,
+                "losses": 30,
+                "ties": 0
+              },
+              "luck": -0.3
+            },
+            "series": {
+              "disputed": false,
+              "games": 1,
+              "aWins": 0,
+              "bWins": 1,
+              "ties": 0,
+              "since": 2026,
+              "streak": {
+                "franchiseId": "0003",
+                "count": 1
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0003",
+                "score": 142.12,
+                "opp": 134
+              },
+              "closest": {
+                "year": 2026,
+                "week": 3,
+                "winnerId": "0003",
+                "score": 142.12,
+                "opp": 134
+              }
+            },
+            "recent": [
+              {
+                "year": 2026,
+                "week": 3,
+                "score": 134,
+                "opp": 142.12
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 6,
+                  "score": 121.9,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 131.1,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 134,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 109.8,
+                  "result": "L"
+                }
+              ],
+              "b": [
+                {
+                  "week": 6,
+                  "score": 111,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 122.7,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 121,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 150.9,
+                  "result": "W"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.0018,
+              "a": {
+                "franchiseId": "0004",
+                "now": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.4548
+              },
+              "b": {
+                "franchiseId": "0003",
+                "now": {
+                  "playoff": 0.001,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0018,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.5452
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 10,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "BUF"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "BAL"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "LAC"
+                    ],
+                    "step": 4
+                  }
+                ]
+              },
+              "b": {
+                "rank": 12,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "NE"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "KC"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "BAL"
+                    ],
+                    "step": 1
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "KCC",
+              "home": "ATL",
+              "kickoff": 1794765600,
+              "projTotal": 41,
+              "players": [
+                {
+                  "franchiseId": "0004",
+                  "name": "Patrick Mahomes",
+                  "position": "QB",
+                  "nflTeam": "KCC",
+                  "proj": 26.48
+                },
+                {
+                  "franchiseId": "0003",
+                  "name": "Travis Kelce",
+                  "position": "TE",
+                  "nflTeam": "KCC",
+                  "proj": 14.5
+                }
+              ]
+            },
+            "story": [
+              "Patriots at 1-8 versus the 2-7 Bills. Both teams are struggling, but the Patriots' Patrick Mahomes (26.5 projected) is the best player on either roster.",
+              "My pick: Patriots, in a close one."
+            ]
+          }
+        ],
+        "moreGames": 0,
+        "race": {
+          "week": 10,
+          "lastWeek": 12,
+          "spots": 6,
+          "hasByes": true,
+          "teams": [
+            {
+              "franchiseId": "0006",
+              "wins": 9,
+              "losses": 0,
+              "ties": 0,
+              "playoff": 1,
+              "bye": 0.5945,
+              "low": 1,
+              "high": 1,
+              "sked": 9
+            },
+            {
+              "franchiseId": "0002",
+              "wins": 8,
+              "losses": 1,
+              "ties": 0,
+              "playoff": 1,
+              "bye": 0.4055,
+              "low": 1,
+              "high": 1,
+              "sked": 11
+            },
+            {
+              "franchiseId": "0011",
+              "wins": 6,
+              "losses": 3,
+              "ties": 0,
+              "playoff": 0.9944,
+              "bye": 0.6669,
+              "low": 0.9776,
+              "high": 1,
+              "sked": 5
+            },
+            {
+              "franchiseId": "0009",
+              "wins": 5,
+              "losses": 4,
+              "ties": 0,
+              "playoff": 0.8527,
+              "bye": 0.1455,
+              "low": 0.7075,
+              "high": 0.9777,
+              "sked": 3
+            },
+            {
+              "franchiseId": "0008",
+              "wins": 5,
+              "losses": 4,
+              "ties": 0,
+              "playoff": 0.8313,
+              "bye": 0.0675,
+              "low": 0.7189,
+              "high": 0.9619,
+              "sked": 8
+            },
+            {
+              "franchiseId": "0010",
+              "wins": 5,
+              "losses": 4,
+              "ties": 0,
+              "playoff": 0.8287,
+              "bye": 0.1201,
+              "low": 0.7219,
+              "high": 0.9946,
+              "sked": 2
+            },
+            {
+              "franchiseId": "0007",
+              "wins": 3,
+              "losses": 6,
+              "ties": 0,
+              "playoff": 0.387,
+              "bye": 0,
+              "low": 0.0628,
+              "high": 0.5957,
+              "sked": 6
+            },
+            {
+              "franchiseId": "0005",
+              "wins": 4,
+              "losses": 5,
+              "ties": 0,
+              "playoff": 0.092,
+              "bye": 0,
+              "low": 0.0453,
+              "high": 0.3244,
+              "sked": 7
+            },
+            {
+              "franchiseId": "0012",
+              "wins": 3,
+              "losses": 6,
+              "ties": 0,
+              "playoff": 0.0069,
+              "bye": 0,
+              "low": 0,
+              "high": 0.0276,
+              "sked": 1
+            },
+            {
+              "franchiseId": "0001",
+              "wins": 3,
+              "losses": 6,
+              "ties": 0,
+              "playoff": 0.006,
+              "bye": 0,
+              "low": 0.0007,
+              "high": 0.0238,
+              "sked": 4
+            }
+          ],
+          "aboveCount": 0,
+          "lineAt": 6,
+          "lockedIds": [],
+          "outIds": [
+            "0003",
+            "0004"
+          ],
+          "teamCount": 12
+        },
+        "closing": [
+          "The NFL game to circle: BUF at NYJ, with Josh Allen and Garrett Wilson carrying the fantasy stakes.",
+          "Also watch CIN, where Joe Burrow and Ja'Marr Chase both have a lot riding on it. Follow it all on the live scoreboard."
+        ]
+      }
+    },
+    {
+      "id": "wire_50481450",
+      "timestamp": "2026-11-14T19:06:19Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Panthers WR Xavier Legette, out since Week 2 with knee injury, activated from IR",
+      "body": "Panthers wide receiver Xavier Legette, sidelined since injuring his knee in a Week 2 blowout win over the Falcons, has been activated from injured reserve.",
+      "link": "https://www.espn.com/nfl/story/_/id/50481450/panthers-xavier-legette-week-2-activated-ir",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "16639"
+      ]
+    },
+    {
+      "id": "wire_50480529",
+      "timestamp": "2026-11-14T18:52:47Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Chiefs' Kenneth Walker III (groin) to sit out vs. Falcons",
+      "body": "Chiefs running back Kenneth Walker III will miss Sunday's game due to a groin injury.",
+      "link": "https://www.espn.com/nfl/story/_/id/50480529/chiefs-kenneth-walker-iii-groin-sit-sources-say",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15711"
+      ]
+    },
+    {
+      "id": "espn_fd8446d46f8ea",
+      "timestamp": "2026-11-14T16:30:05.626Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Chiefs are going to hold out RB Kenneth Walker for Sunday’s game at Atlanta after he injured his groin during Thursday’s practice, per source. The Chiefs, in the words of a source, “want to give him a week.”",
+      "body": "Chiefs are going to hold out RB Kenneth Walker for Sunday’s game at Atlanta after he injured his groin during Thursday’s practice, per source.",
+      "link": "https://www.espn.com/contributor/adam-schefter/fd8446d46f8ea",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15711"
+      ]
+    },
+    {
+      "id": "wire_50479874",
+      "timestamp": "2026-11-14T15:58:40Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Sources: Vikings made initial Kirk Cousins trade call to Raiders before MNF",
+      "body": "The Vikings initially reached out to the Raiders about a Kirk Cousins trade before their MNF game against the Bills, sources told ESPN and NFL Network.",
+      "link": "https://www.espn.com/nfl/story/_/id/50479874/sources-vikings-first-called-kirk-cousins-mnf",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "10700"
+      ]
+    },
+    {
+      "id": "wire_50475710",
+      "timestamp": "2026-11-14T11:00:11Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Untold stories of Detroit Lions WR Amon-Ra St. Brown's German upbringing",
+      "body": "For Amon-Ra St. Brown, Sunday's NFL game in Munich will mark the ultimate convergence of his dual heritage. Here are stories that shed more light.",
+      "link": "https://www.espn.com/nfl/story/_/id/50475710/nfl-germany-lions-amon-ra-st-brown-munich",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "15287"
+      ]
+    },
+    {
+      "id": "wire_50466331",
+      "timestamp": "2026-11-14T11:00:00Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Why the Raiders named Fernando Mendoza as the starter",
+      "body": "The Raiders named Fernando Mendoza as the starter shortly after trading Kirk Cousins to the Vikings.",
+      "link": "https://www.espn.com/nfl/story/_/id/50466331/las-vegas-raiders-why-fernando-mendoza-starting",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "17462",
+        "10700"
+      ]
+    },
+    {
+      "id": "espn_978abd798699b",
+      "timestamp": "2026-11-13T21:08:39.821Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Vikings QB Kirk Cousins will officially start Sunday’s game at Green Bay.",
+      "body": "Vikings QB Kirk Cousins will officially start Sunday’s game at Green Bay.",
+      "link": "https://www.espn.com/contributor/adam-schefter/978abd798699b",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "sandbox",
+      "namedPlayerIds": [
+        "10700"
+      ]
+    },
+    {
       "id": "wire_50473665",
       "timestamp": "2026-11-13T19:57:28Z",
       "type": "external",
@@ -6599,8 +8451,8 @@
       ]
     }
   ],
-  "lastEspnTimestamp": "2026-11-13T18:02:46.547Z",
-  "lastNflWireTimestamp": "2026-11-13T19:57:28.000Z",
+  "lastEspnTimestamp": "2026-11-14T16:30:05.626Z",
+  "lastNflWireTimestamp": "2026-11-14T20:05:23.000Z",
   "lastOddsWeek": 9,
-  "lastScanTimestamp": "2026-11-11T22:36:57.306Z"
+  "lastScanTimestamp": "2026-11-14T19:35:20.936Z"
 }

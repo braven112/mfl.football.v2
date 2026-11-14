@@ -1,7 +1,3273 @@
 {
-  "lastScanTimestamp": "2026-11-13T16:51:36.939Z",
-  "lastProcessedMflTimestamp": "1794452400",
+  "lastScanTimestamp": "2026-11-14T20:06:36.935Z",
+  "lastProcessedMflTimestamp": "1794685264",
   "posts": [
+    {
+      "id": "sf_1794685264_ie6r",
+      "timestamp": "2026-11-14T19:41:04.000Z",
+      "type": "transaction",
+      "transactionSubType": "FREE_AGENT",
+      "franchiseIds": [
+        "0001"
+      ],
+      "sourceTimestamp": "1794685264",
+      "league": "theleague",
+      "tier": "minor",
+      "headline": "Pacific Pigskins add Brevyn Spann-Ford",
+      "body": "Pacific Pigskins signed TE Brevyn Spann-Ford.",
+      "playerIds": [
+        "16647"
+      ],
+      "storyVersion": 4,
+      "addedIds": [
+        "16647"
+      ],
+      "droppedIds": [],
+      "format": "one-liner"
+    },
+    {
+      "id": "sf_2026_matchup_preview_w10",
+      "timestamp": "2026-11-14T19:34:56.549Z",
+      "type": "article",
+      "category": "articles",
+      "tier": "standard",
+      "headline": "Week 10: Dangsters vs Dream Headlines a Loaded Slate",
+      "body": "Da Dangsters and Running down the Dream collide in the Game of the Week, Pacific Pigskins face a must-win against the Magicians, and Vitside Mafia chase a bye. Here is what to watch and who I like.",
+      "franchiseIds": [],
+      "link": "/theleague/news/sf_2026_matchup_preview_w10",
+      "linkLabel": "Read matchup preview",
+      "league": "theleague",
+      "authorId": "claude",
+      "content": [
+        "<p>Boom! Week 10 is here, and the league's top two clubs are trying to keep the postseason fight from getting messy. <a href=\"/theleague/live-scoring\">the live scoreboard</a> is where you'll track every one of these games as they happen.</p>",
+        "<p>Money is nice, but championships are better, and this week separates the contenders from the pretenders. Check <a href=\"/theleague/standings\">the standings</a> to see how much every win matters right now.</p>"
+      ],
+      "matchupVisuals": {
+        "year": 2026,
+        "week": 10,
+        "gameOfWeek": 0,
+        "matchups": [
+          {
+            "a": {
+              "franchiseId": "0002",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "streak": "W4",
+              "form": [
+                "L",
+                "L",
+                "W",
+                "W",
+                "W",
+                "L",
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                120.5,
+                109.8,
+                135.3,
+                144.4,
+                86.9,
+                96.8,
+                142.6,
+                171.5,
+                118.6
+              ],
+              "ppg": 125.2,
+              "allPlay": {
+                "wins": 104,
+                "losses": 31,
+                "ties": 0
+              },
+              "luck": -0.2
+            },
+            "b": {
+              "franchiseId": "0016",
+              "wins": 8,
+              "losses": 4,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "L",
+                "W",
+                "L",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                164.4,
+                144,
+                157.3,
+                92.6,
+                142,
+                101.4,
+                99.8,
+                139.2,
+                102.6
+              ],
+              "ppg": 127,
+              "allPlay": {
+                "wins": 105,
+                "losses": 30,
+                "ties": 0
+              },
+              "luck": -1.3
+            },
+            "series": {
+              "disputed": false,
+              "games": 13,
+              "aWins": 6,
+              "bWins": 7,
+              "ties": 0,
+              "since": 2015,
+              "streak": {
+                "franchiseId": "0002",
+                "count": 1
+              },
+              "playoffGames": 1,
+              "playoffWins": 0,
+              "playoffLosses": 1,
+              "lastPlayoff": {
+                "year": 2020,
+                "week": 14,
+                "winnerId": "0016",
+                "score": 103.66,
+                "opp": 88.94
+              },
+              "biggest": {
+                "year": 2022,
+                "week": 12,
+                "winnerId": "0002",
+                "score": 140.15,
+                "opp": 64.39
+              },
+              "closest": {
+                "year": 2019,
+                "week": 8,
+                "winnerId": "0016",
+                "score": 134.35,
+                "opp": 124.13
+              },
+              "meetings": [
+                {
+                  "year": 2015,
+                  "week": 13,
+                  "score": 84.68,
+                  "opp": 98.54,
+                  "playoff": false
+                },
+                {
+                  "year": 2016,
+                  "week": 8,
+                  "score": 76.08,
+                  "opp": 129.36,
+                  "playoff": false
+                },
+                {
+                  "year": 2017,
+                  "week": 2,
+                  "score": 128.63,
+                  "opp": 102.95,
+                  "playoff": false
+                },
+                {
+                  "year": 2018,
+                  "week": 10,
+                  "score": 91.95,
+                  "opp": 81.26,
+                  "playoff": false
+                },
+                {
+                  "year": 2019,
+                  "week": 8,
+                  "score": 124.13,
+                  "opp": 134.35,
+                  "playoff": false
+                },
+                {
+                  "year": 2019,
+                  "week": 14,
+                  "score": 127.07,
+                  "opp": 113.6,
+                  "playoff": false
+                },
+                {
+                  "year": 2020,
+                  "week": 2,
+                  "score": 148.82,
+                  "opp": 166.26,
+                  "playoff": false
+                },
+                {
+                  "year": 2020,
+                  "week": 14,
+                  "score": 88.94,
+                  "opp": 103.66,
+                  "playoff": true
+                },
+                {
+                  "year": 2021,
+                  "week": 2,
+                  "score": 79.48,
+                  "opp": 113.02,
+                  "playoff": false
+                },
+                {
+                  "year": 2022,
+                  "week": 12,
+                  "score": 140.15,
+                  "opp": 64.39,
+                  "playoff": false
+                },
+                {
+                  "year": 2023,
+                  "week": 12,
+                  "score": 121.51,
+                  "opp": 108.36,
+                  "playoff": false
+                },
+                {
+                  "year": 2024,
+                  "week": 13,
+                  "score": 104.56,
+                  "opp": 121.76,
+                  "playoff": false
+                },
+                {
+                  "year": 2025,
+                  "week": 13,
+                  "score": 128.71,
+                  "opp": 77.04,
+                  "playoff": false
+                }
+              ]
+            },
+            "recent": [
+              {
+                "year": 2021,
+                "week": 2,
+                "score": 79.48,
+                "opp": 113.02
+              },
+              {
+                "year": 2022,
+                "week": 12,
+                "score": 140.15,
+                "opp": 64.39
+              },
+              {
+                "year": 2023,
+                "week": 12,
+                "score": 121.51,
+                "opp": 108.36
+              },
+              {
+                "year": 2024,
+                "week": 13,
+                "score": 104.56,
+                "opp": 121.76
+              },
+              {
+                "year": 2025,
+                "week": 13,
+                "score": 128.71,
+                "opp": 77.04
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 86.9,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 96.8,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 142.6,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 171.5,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 118.6,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 142,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 101.4,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 99.8,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 139.2,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 102.6,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.0695,
+              "a": {
+                "franchiseId": "0002",
+                "now": {
+                  "playoff": 0.9831,
+                  "bye": 0.0272
+                },
+                "win": {
+                  "playoff": 0.9964,
+                  "bye": 0.0527
+                },
+                "loss": {
+                  "playoff": 0.9711,
+                  "bye": 0.0042
+                },
+                "winChance": 0.4748
+              },
+              "b": {
+                "franchiseId": "0016",
+                "now": {
+                  "playoff": 0.9457,
+                  "bye": 0.0076
+                },
+                "win": {
+                  "playoff": 0.9787,
+                  "bye": 0.0145
+                },
+                "loss": {
+                  "playoff": 0.9092,
+                  "bye": 0
+                },
+                "winChance": 0.5252
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 9,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DREAM"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "MWS"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "SKINS",
+                      "JOCKS"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "DEAD"
+                    ],
+                    "step": 1
+                  }
+                ]
+              },
+              "b": {
+                "rank": 3,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DANG"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "NINJA"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "FIRE",
+                      "DMOC"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "CBOY"
+                    ],
+                    "step": 3
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "SFO",
+              "home": "DAL",
+              "kickoff": 1794777900,
+              "projTotal": 57.2,
+              "players": [
+                {
+                  "franchiseId": "0016",
+                  "name": "Brock Purdy",
+                  "position": "QB",
+                  "nflTeam": "SFO",
+                  "proj": 21.25
+                },
+                {
+                  "franchiseId": "0016",
+                  "name": "Christian McCaffrey",
+                  "position": "RB",
+                  "nflTeam": "SFO",
+                  "proj": 18.42
+                },
+                {
+                  "franchiseId": "0002",
+                  "name": "CeeDee Lamb",
+                  "position": "WR",
+                  "nflTeam": "DAL",
+                  "proj": 17.49
+                }
+              ]
+            },
+            "story": [
+              "Game of the Week, and it is a big one: Da Dangsters (9-3) host Running down the Dream (8-4) in a battle of two of the best teams in the league.",
+              "Da Dangsters are riding a four-game winning streak, and a win here pushes their playoff odds to 100%, per the simulation.",
+              "Running down the Dream lead the all-time series 7-6, and they won the closest game in the rivalry's history, a 134.35-124.13 thriller back in 2019.",
+              "The swing player is QB Cam Ward, who projects 22.4 points for Running down the Dream, and TE Trey McBride, who projects 19.2 for Da Dangsters.",
+              "The key NFL game is SFO at DAL, with QB Brock Purdy and RB Christian McCaffrey on one side and WR CeeDee Lamb on the other.",
+              "My pick: Running down the Dream, 131-129, in a game that will be decided by one lineup decision late on Sunday."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0005",
+              "wins": 5,
+              "losses": 7,
+              "ties": 0,
+              "streak": "L1",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "W",
+                "L",
+                "W",
+                "W",
+                "L"
+              ],
+              "weekly": [
+                131.5,
+                73.8,
+                74.6,
+                80.4,
+                104,
+                86.1,
+                68,
+                94.3,
+                86.7
+              ],
+              "ppg": 88.8,
+              "allPlay": {
+                "wins": 49,
+                "losses": 86,
+                "ties": 0
+              },
+              "luck": 0.6
+            },
+            "b": {
+              "franchiseId": "0013",
+              "wins": 10,
+              "losses": 2,
+              "ties": 0,
+              "streak": "W5",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "L",
+                "L",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                138.7,
+                129.7,
+                110.4,
+                90.9,
+                135.3,
+                126.8,
+                99.9,
+                127.1,
+                185.9
+              ],
+              "ppg": 127.2,
+              "allPlay": {
+                "wins": 100,
+                "losses": 35,
+                "ties": 0
+              },
+              "luck": 1.1
+            },
+            "series": {
+              "disputed": false,
+              "games": 11,
+              "aWins": 5,
+              "bWins": 6,
+              "ties": 0,
+              "since": 2016,
+              "streak": {
+                "franchiseId": "0013",
+                "count": 1
+              },
+              "playoffGames": 1,
+              "playoffWins": 1,
+              "playoffLosses": 0,
+              "lastPlayoff": {
+                "year": 2024,
+                "week": 17,
+                "winnerId": "0005",
+                "score": 115.71,
+                "opp": 73.74
+              },
+              "biggest": {
+                "year": 2023,
+                "week": 2,
+                "winnerId": "0013",
+                "score": 144.95,
+                "opp": 98.22
+              },
+              "closest": {
+                "year": 2016,
+                "week": 9,
+                "winnerId": "0005",
+                "score": 78.06,
+                "opp": 75.43
+              }
+            },
+            "recent": [
+              {
+                "year": 2022,
+                "week": 2,
+                "score": 109.07,
+                "opp": 123.96
+              },
+              {
+                "year": 2023,
+                "week": 2,
+                "score": 98.22,
+                "opp": 144.95
+              },
+              {
+                "year": 2024,
+                "week": 2,
+                "score": 129.05,
+                "opp": 114.4
+              },
+              {
+                "year": 2024,
+                "week": 17,
+                "score": 115.71,
+                "opp": 73.74
+              },
+              {
+                "year": 2025,
+                "week": 2,
+                "score": 91.79,
+                "opp": 106.9
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 104,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 86.1,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 68,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 94.3,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 86.7,
+                  "result": "L"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 135.3,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 126.8,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 99.9,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 127.1,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 185.9,
+                  "result": "W"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "bye",
+              "swing": 0.1905,
+              "a": {
+                "franchiseId": "0005",
+                "now": {
+                  "playoff": 0.0525,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.1093,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0407,
+                  "bye": 0
+                },
+                "winChance": 0.172
+              },
+              "b": {
+                "franchiseId": "0013",
+                "now": {
+                  "playoff": 0.9999,
+                  "bye": 0.4833
+                },
+                "win": {
+                  "playoff": 1,
+                  "bye": 0.5161
+                },
+                "loss": {
+                  "playoff": 0.9994,
+                  "bye": 0.3256
+                },
+                "winChance": 0.828
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 6,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "GEEKS"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DREAM"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "CBOY",
+                      "PAIN"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "WABS"
+                    ],
+                    "step": 4
+                  }
+                ]
+              },
+              "b": {
+                "rank": 16,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "NINJA"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "VIT"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "MWS",
+                      "MUSIC"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "SKINS"
+                    ],
+                    "step": 3
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "BUF",
+              "home": "NYJ",
+              "kickoff": 1794765600,
+              "projTotal": 33.9,
+              "players": [
+                {
+                  "franchiseId": "0005",
+                  "name": "James Cook",
+                  "position": "RB",
+                  "nflTeam": "BUF",
+                  "proj": 16.81
+                },
+                {
+                  "franchiseId": "0005",
+                  "name": "the Buffalo Bills defense",
+                  "position": "Def",
+                  "nflTeam": "BUF",
+                  "proj": 9.12
+                },
+                {
+                  "franchiseId": "0005",
+                  "name": "Khalil Shakir",
+                  "position": "WR",
+                  "nflTeam": "BUF",
+                  "proj": 8.01
+                }
+              ]
+            },
+            "story": [
+              "Gridiron Geeks (10-2) are on a five-game winning streak and have a bye chase of their own, about 48% likely right now.",
+              "The Mariachi Ninjas (5-7) are long shots, but RB James Cook projects 16.8 for them, and the Buffalo Bills defense projects 9.1.",
+              "The key NFL game is BUF at NYJ.",
+              "My pick: Gridiron Geeks, 121-96, and the Geeks keep the bye hunt alive."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0012",
+              "wins": 11,
+              "losses": 1,
+              "ties": 0,
+              "streak": "W7",
+              "form": [
+                "W",
+                "W",
+                "L",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                137.6,
+                146.4,
+                105,
+                129,
+                139.3,
+                126.9,
+                109.4,
+                88.3,
+                128.5
+              ],
+              "ppg": 123.4,
+              "allPlay": {
+                "wins": 105,
+                "losses": 30,
+                "ties": 0
+              },
+              "luck": 1.7
+            },
+            "b": {
+              "franchiseId": "0007",
+              "wins": 5,
+              "losses": 7,
+              "ties": 0,
+              "streak": "L5",
+              "form": [
+                "L",
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                125.1,
+                94.7,
+                129.3,
+                96.9,
+                86.5,
+                89,
+                61.1,
+                108.2,
+                104.6
+              ],
+              "ppg": 99.5,
+              "allPlay": {
+                "wins": 72,
+                "losses": 63,
+                "ties": 0
+              },
+              "luck": -1.4
+            },
+            "series": {
+              "disputed": false,
+              "games": 14,
+              "aWins": 6,
+              "bWins": 8,
+              "ties": 0,
+              "since": 2011,
+              "streak": {
+                "franchiseId": "0012",
+                "count": 4
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2025,
+                "week": 13,
+                "winnerId": "0012",
+                "score": 121.92,
+                "opp": 64.59
+              },
+              "closest": {
+                "year": 2019,
+                "week": 8,
+                "winnerId": "0007",
+                "score": 92.23,
+                "opp": 85.17
+              }
+            },
+            "recent": [
+              {
+                "year": 2021,
+                "week": 2,
+                "score": 94.37,
+                "opp": 102.18
+              },
+              {
+                "year": 2022,
+                "week": 12,
+                "score": 151.07,
+                "opp": 109.59
+              },
+              {
+                "year": 2023,
+                "week": 12,
+                "score": 165.22,
+                "opp": 122.34
+              },
+              {
+                "year": 2024,
+                "week": 13,
+                "score": 155.12,
+                "opp": 132.65
+              },
+              {
+                "year": 2025,
+                "week": 13,
+                "score": 121.92,
+                "opp": 64.59
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 139.3,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 126.9,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 109.4,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 88.3,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 128.5,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 86.5,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 89,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 61.1,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 108.2,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 104.6,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "bye",
+              "swing": 0.1863,
+              "a": {
+                "franchiseId": "0012",
+                "now": {
+                  "playoff": 0.9997,
+                  "bye": 0.4624
+                },
+                "win": {
+                  "playoff": 1,
+                  "bye": 0.5142
+                },
+                "loss": {
+                  "playoff": 0.9989,
+                  "bye": 0.3279
+                },
+                "winChance": 0.7219
+              },
+              "b": {
+                "franchiseId": "0007",
+                "now": {
+                  "playoff": 0.0132,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0316,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0061,
+                  "bye": 0
+                },
+                "winChance": 0.2781
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 2,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "FIRE"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "GEEKS"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "JOCKS",
+                      "SKINS"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "MUSIC"
+                    ],
+                    "step": 1
+                  }
+                ]
+              },
+              "b": {
+                "rank": 7,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "VIT"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "PAIN"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DREAM",
+                      "WABS"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "MAVS"
+                    ],
+                    "step": 1
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "CAR",
+              "home": "NOS",
+              "kickoff": 1794765600,
+              "projTotal": 49.5,
+              "players": [
+                {
+                  "franchiseId": "0007",
+                  "name": "Tyler Shough",
+                  "position": "QB",
+                  "nflTeam": "NOS",
+                  "proj": 26.49
+                },
+                {
+                  "franchiseId": "0012",
+                  "name": "Chris Olave",
+                  "position": "WR",
+                  "nflTeam": "NOS",
+                  "proj": 13.32
+                },
+                {
+                  "franchiseId": "0007",
+                  "name": "Juwan Johnson",
+                  "position": "TE",
+                  "nflTeam": "NOS",
+                  "proj": 9.73
+                }
+              ]
+            },
+            "story": [
+              "Vitside Mafia (11-1) are on a seven-game winning streak and chasing a first-round bye, which sits about 46% likely right now.",
+              "Fire Ready Aim (5-7) have lost five straight and are long shots, so this is a must-win for them only in pride.",
+              "QB Josh Allen projects 30.6 for Vitside Mafia, the biggest single number on either roster.",
+              "The key NFL game is CAR at NOS, where QB Tyler Shough of Fire Ready Aim projects 26.5 points.",
+              "My pick: Vitside Mafia, 141-118, and the bye chase keeps rolling."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0010",
+              "wins": 6,
+              "losses": 6,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "L",
+                "W",
+                "L",
+                "L",
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                101.1,
+                53.3,
+                83,
+                156.3,
+                110,
+                130.2,
+                109.4,
+                89.9,
+                109.2
+              ],
+              "ppg": 104.7,
+              "allPlay": {
+                "wins": 77,
+                "losses": 58,
+                "ties": 0
+              },
+              "luck": -0.8
+            },
+            "b": {
+              "franchiseId": "0009",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "streak": "W2",
+              "form": [
+                "W",
+                "W",
+                "L",
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                129.5,
+                99.4,
+                104.4,
+                108.1,
+                122.7,
+                108,
+                100.7,
+                107.4,
+                91.8
+              ],
+              "ppg": 108,
+              "allPlay": {
+                "wins": 85,
+                "losses": 50,
+                "ties": 0
+              },
+              "luck": 1.4
+            },
+            "series": {
+              "disputed": false,
+              "games": 10,
+              "aWins": 5,
+              "bWins": 5,
+              "ties": 0,
+              "since": 2016,
+              "streak": {
+                "franchiseId": "0010",
+                "count": 4
+              },
+              "playoffGames": 1,
+              "playoffWins": 1,
+              "playoffLosses": 0,
+              "lastPlayoff": {
+                "year": 2025,
+                "week": 16,
+                "winnerId": "0010",
+                "score": 110.35,
+                "opp": 81.69
+              },
+              "biggest": {
+                "year": 2021,
+                "week": 1,
+                "winnerId": "0009",
+                "score": 154.23,
+                "opp": 71.78
+              },
+              "closest": {
+                "year": 2023,
+                "week": 1,
+                "winnerId": "0010",
+                "score": 86.48,
+                "opp": 79.38
+              }
+            },
+            "recent": [
+              {
+                "year": 2022,
+                "week": 1,
+                "score": 72.3,
+                "opp": 122.37
+              },
+              {
+                "year": 2023,
+                "week": 1,
+                "score": 86.48,
+                "opp": 79.38
+              },
+              {
+                "year": 2024,
+                "week": 1,
+                "score": 99.41,
+                "opp": 69.86
+              },
+              {
+                "year": 2025,
+                "week": 1,
+                "score": 111.98,
+                "opp": 84.47
+              },
+              {
+                "year": 2025,
+                "week": 16,
+                "score": 110.35,
+                "opp": 81.69
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 110,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 130.2,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 109.4,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 89.9,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 109.2,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 122.7,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 108,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 100.7,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 107.4,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 91.8,
+                  "result": "W"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.144,
+              "a": {
+                "franchiseId": "0010",
+                "now": {
+                  "playoff": 0.1481,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.2252,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0812,
+                  "bye": 0
+                },
+                "winChance": 0.4644
+              },
+              "b": {
+                "franchiseId": "0009",
+                "now": {
+                  "playoff": 0.9655,
+                  "bye": 0.0057
+                },
+                "win": {
+                  "playoff": 0.9979,
+                  "bye": 0.0095
+                },
+                "loss": {
+                  "playoff": 0.9281,
+                  "bye": 0.0013
+                },
+                "winChance": 0.5356
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 8,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "WABS"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "MUSIC"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "VIT",
+                      "DANG"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "MWS"
+                    ],
+                    "step": 2
+                  }
+                ]
+              },
+              "b": {
+                "rank": 11,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "JOCKS"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "MAVS"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DMOC",
+                      "FIRE"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "NINJA"
+                    ],
+                    "step": 2
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "JAC",
+              "home": "TEN",
+              "kickoff": 1794765600,
+              "projTotal": 39.4,
+              "players": [
+                {
+                  "franchiseId": "0009",
+                  "name": "Trevor Lawrence",
+                  "position": "QB",
+                  "nflTeam": "JAC",
+                  "proj": 24.49
+                },
+                {
+                  "franchiseId": "0010",
+                  "name": "Brenton Strange",
+                  "position": "TE",
+                  "nflTeam": "JAC",
+                  "proj": 7.9
+                },
+                {
+                  "franchiseId": "0010",
+                  "name": "Jakobi Meyers",
+                  "position": "WR",
+                  "nflTeam": "JAC",
+                  "proj": 6.99
+                }
+              ]
+            },
+            "story": [
+              "Computer Jocks (6-6) have won four straight meetings with Wascawy Wabbits (9-3), even though the all-time series is dead even at 5-5.",
+              "The Jocks are on a one-game winning streak and need a win to meaningfully push their playoff odds from 15%.",
+              "QB Trevor Lawrence projects 24.5 for Wascawy Wabbits, and the key NFL game is JAC at TEN.",
+              "My pick: Wascawy Wabbits, 126-109, because the Wabbits should be too much for a Jocks team still trying to find its footing."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0001",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "streak": "L2",
+              "form": [
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "W",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                99.1,
+                90.9,
+                114.6,
+                100.3,
+                147.6,
+                95.3,
+                120.9,
+                81.5,
+                57.4
+              ],
+              "ppg": 100.8,
+              "allPlay": {
+                "wins": 73,
+                "losses": 62,
+                "ties": 0
+              },
+              "luck": 2.5
+            },
+            "b": {
+              "franchiseId": "0015",
+              "wins": 4,
+              "losses": 8,
+              "ties": 0,
+              "streak": "L5",
+              "form": [
+                "L",
+                "W",
+                "L",
+                "W",
+                "W",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                95.6,
+                127.2,
+                94.2,
+                127.2,
+                117.8,
+                82.6,
+                115.2,
+                79.8,
+                108.5
+              ],
+              "ppg": 105.3,
+              "allPlay": {
+                "wins": 74,
+                "losses": 61,
+                "ties": 0
+              },
+              "luck": -2.6
+            },
+            "series": {
+              "disputed": false,
+              "games": 20,
+              "aWins": 5,
+              "bWins": 15,
+              "ties": 0,
+              "since": 2007,
+              "streak": {
+                "franchiseId": "0015",
+                "count": 2
+              },
+              "playoffGames": 1,
+              "playoffWins": 0,
+              "playoffLosses": 1,
+              "lastPlayoff": {
+                "year": 2022,
+                "week": 16,
+                "winnerId": "0015",
+                "score": 129.31,
+                "opp": 122.58
+              },
+              "biggest": {
+                "year": 2013,
+                "week": 1,
+                "winnerId": "0015",
+                "score": 164.48,
+                "opp": 97.97
+              },
+              "closest": {
+                "year": 2020,
+                "week": 1,
+                "winnerId": "0015",
+                "score": 99.07,
+                "opp": 97.86
+              }
+            },
+            "recent": [
+              {
+                "year": 2022,
+                "week": 3,
+                "score": 98.29,
+                "opp": 106.38
+              },
+              {
+                "year": 2022,
+                "week": 16,
+                "score": 122.58,
+                "opp": 129.31
+              },
+              {
+                "year": 2023,
+                "week": 3,
+                "score": 132.44,
+                "opp": 119.56
+              },
+              {
+                "year": 2024,
+                "week": 3,
+                "score": 95.31,
+                "opp": 135.96
+              },
+              {
+                "year": 2025,
+                "week": 3,
+                "score": 72.17,
+                "opp": 104.33
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 147.6,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 95.3,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 120.9,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 81.5,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 57.4,
+                  "result": "L"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 117.8,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 82.6,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 115.2,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 79.8,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 108.5,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.1066,
+              "a": {
+                "franchiseId": "0001",
+                "now": {
+                  "playoff": 0.888,
+                  "bye": 0.0138
+                },
+                "win": {
+                  "playoff": 0.9458,
+                  "bye": 0.024
+                },
+                "loss": {
+                  "playoff": 0.8392,
+                  "bye": 0.0052
+                },
+                "winChance": 0.4578
+              },
+              "b": {
+                "franchiseId": "0015",
+                "now": {
+                  "playoff": 0.0058,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0107,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.5422
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 1,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DMOC"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DEAD"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DANG",
+                      "VIT"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "GEEKS"
+                    ],
+                    "step": 5
+                  }
+                ]
+              },
+              "b": {
+                "rank": 5,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "SKINS"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "CBOY"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "WABS",
+                      "DREAM"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "PAIN"
+                    ],
+                    "step": 3
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "NEP",
+              "home": "DET",
+              "kickoff": 1794753000,
+              "projTotal": 42.6,
+              "players": [
+                {
+                  "franchiseId": "0001",
+                  "name": "Jared Goff",
+                  "position": "QB",
+                  "nflTeam": "DET",
+                  "proj": 27.84
+                },
+                {
+                  "franchiseId": "0001",
+                  "name": "Amon-Ra St. Brown",
+                  "position": "WR",
+                  "nflTeam": "DET",
+                  "proj": 14.71
+                },
+                {
+                  "franchiseId": "0001",
+                  "name": "Corey Kiner",
+                  "position": "RB",
+                  "nflTeam": "NEP",
+                  "proj": 0
+                }
+              ]
+            },
+            "story": [
+              "Pacific Pigskins (9-3) are on a two-game skid and face Dark Magicians of Chaos (4-8), who have dropped five straight.",
+              "The Pigskins need this one badly, and a win moves their playoff odds from 89% to about 95%.",
+              "QB Jared Goff projects 27.8 for Pacific Pigskins, but QB Dak Prescott (27.6) and QB Jayden Daniels (25.9) give the Magicians plenty of firepower.",
+              "My pick: Pacific Pigskins, 118-112, because Goff and the Pigskins cannot afford another slip."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0008",
+              "wins": 2,
+              "losses": 10,
+              "ties": 0,
+              "streak": "L7",
+              "form": [
+                "W",
+                "L",
+                "W",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                91.7,
+                118.2,
+                118.9,
+                63,
+                109.2,
+                80.3,
+                77.8,
+                94.5,
+                78.1
+              ],
+              "ppg": 92.4,
+              "allPlay": {
+                "wins": 52,
+                "losses": 83,
+                "ties": 0
+              },
+              "luck": -2.6
+            },
+            "b": {
+              "franchiseId": "0011",
+              "wins": 6,
+              "losses": 6,
+              "ties": 0,
+              "streak": "W2",
+              "form": [
+                "W",
+                "L",
+                "W",
+                "L",
+                "W",
+                "W",
+                "L",
+                "L",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                84,
+                81.3,
+                110.4,
+                99.7,
+                73.1,
+                49.7,
+                89.9,
+                97.1,
+                86.8
+              ],
+              "ppg": 85.8,
+              "allPlay": {
+                "wins": 48,
+                "losses": 87,
+                "ties": 0
+              },
+              "luck": 1.7
+            },
+            "series": {
+              "disputed": false,
+              "games": 14,
+              "aWins": 8,
+              "bWins": 6,
+              "ties": 0,
+              "since": 2011,
+              "streak": {
+                "franchiseId": "0008",
+                "count": 1
+              },
+              "playoffGames": 2,
+              "playoffWins": 1,
+              "playoffLosses": 1,
+              "lastPlayoff": {
+                "year": 2021,
+                "week": 17,
+                "winnerId": "0011",
+                "score": 101.27,
+                "opp": 87.63
+              },
+              "biggest": {
+                "year": 2020,
+                "week": 12,
+                "winnerId": "0011",
+                "score": 164.39,
+                "opp": 59.73
+              },
+              "closest": {
+                "year": 2021,
+                "week": 4,
+                "winnerId": "0008",
+                "score": 100.79,
+                "opp": 100.06
+              }
+            },
+            "recent": [
+              {
+                "year": 2021,
+                "week": 17,
+                "score": 87.63,
+                "opp": 101.27
+              },
+              {
+                "year": 2022,
+                "week": 2,
+                "score": 121.37,
+                "opp": 95.1
+              },
+              {
+                "year": 2023,
+                "week": 2,
+                "score": 85.25,
+                "opp": 148.56
+              },
+              {
+                "year": 2024,
+                "week": 2,
+                "score": 101.09,
+                "opp": 135.33
+              },
+              {
+                "year": 2025,
+                "week": 2,
+                "score": 111.79,
+                "opp": 108.4
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 109.2,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 80.3,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 77.8,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 94.5,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 78.1,
+                  "result": "L"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 73.1,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 49.7,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 89.9,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 97.1,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 86.8,
+                  "result": "W"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.0693,
+              "a": {
+                "franchiseId": "0008",
+                "now": {
+                  "playoff": 0.0021,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0034,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0005,
+                  "bye": 0
+                },
+                "winChance": 0.5656
+              },
+              "b": {
+                "franchiseId": "0011",
+                "now": {
+                  "playoff": 0.0474,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.0866,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.0173,
+                  "bye": 0
+                },
+                "winChance": 0.4344
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 14,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "MWS"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "FIRE"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "MAVS",
+                      "NINJA"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "DMOC"
+                    ],
+                    "step": 4
+                  }
+                ]
+              },
+              "b": {
+                "rank": 10,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "PAIN"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DANG"
+                    ],
+                    "step": 5
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "GEEKS",
+                      "DEAD"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "JOCKS"
+                    ],
+                    "step": 4
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "NEP",
+              "home": "DET",
+              "kickoff": 1794753000,
+              "projTotal": 34.8,
+              "players": [
+                {
+                  "franchiseId": "0008",
+                  "name": "Jahmyr Gibbs",
+                  "position": "RB",
+                  "nflTeam": "DET",
+                  "proj": 17.45
+                },
+                {
+                  "franchiseId": "0008",
+                  "name": "Sam LaPorta",
+                  "position": "TE",
+                  "nflTeam": "DET",
+                  "proj": 10.93
+                },
+                {
+                  "franchiseId": "0011",
+                  "name": "Jake Bates",
+                  "position": "PK",
+                  "nflTeam": "DET",
+                  "proj": 6.44
+                },
+                {
+                  "franchiseId": "0008",
+                  "name": "A.J. Brown",
+                  "position": "WR",
+                  "nflTeam": "NEP",
+                  "proj": 0
+                }
+              ]
+            },
+            "story": [
+              "Bring The Pain (2-10) are on a seven-game losing streak against Midwestside Connection (6-6), who are riding a two-game winning streak.",
+              "RB Jahmyr Gibbs projects 17.4 for Bring The Pain and is their best bet to snap the skid.",
+              "My pick: Midwestside Connection, 101-98, in a tight one."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0014",
+              "wins": 7,
+              "losses": 5,
+              "ties": 0,
+              "streak": "W3",
+              "form": [
+                "W",
+                "L",
+                "W",
+                "W",
+                "L",
+                "L",
+                "L",
+                "W",
+                "W",
+                "W"
+              ],
+              "weekly": [
+                103.2,
+                68.1,
+                118.4,
+                72.3,
+                82.6,
+                82.4,
+                114.4,
+                134.5,
+                93
+              ],
+              "ppg": 96.5,
+              "allPlay": {
+                "wins": 64,
+                "losses": 71,
+                "ties": 0
+              },
+              "luck": 1.3
+            },
+            "b": {
+              "franchiseId": "0006",
+              "wins": 2,
+              "losses": 10,
+              "ties": 0,
+              "streak": "L3",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "W",
+                "W",
+                "L",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                61.3,
+                70,
+                59.4,
+                67.7,
+                133.2,
+                99.8,
+                51.3,
+                40.9,
+                66.1
+              ],
+              "ppg": 72.2,
+              "allPlay": {
+                "wins": 29,
+                "losses": 106,
+                "ties": 0
+              },
+              "luck": -0.6
+            },
+            "series": {
+              "disputed": false,
+              "games": 7,
+              "aWins": 1,
+              "bWins": 6,
+              "ties": 0,
+              "since": 2019,
+              "streak": {
+                "franchiseId": "0006",
+                "count": 2
+              },
+              "playoffGames": 0,
+              "playoffWins": 0,
+              "playoffLosses": 0,
+              "biggest": {
+                "year": 2022,
+                "week": 1,
+                "winnerId": "0006",
+                "score": 107.65,
+                "opp": 60.85
+              },
+              "closest": {
+                "year": 2023,
+                "week": 1,
+                "winnerId": "0014",
+                "score": 103.05,
+                "opp": 98.44
+              }
+            },
+            "recent": [
+              {
+                "year": 2021,
+                "week": 1,
+                "score": 78.28,
+                "opp": 100.73
+              },
+              {
+                "year": 2022,
+                "week": 1,
+                "score": 60.85,
+                "opp": 107.65
+              },
+              {
+                "year": 2023,
+                "week": 1,
+                "score": 103.05,
+                "opp": 98.44
+              },
+              {
+                "year": 2024,
+                "week": 1,
+                "score": 78.24,
+                "opp": 97.68
+              },
+              {
+                "year": 2025,
+                "week": 1,
+                "score": 89.47,
+                "opp": 108.84
+              }
+            ],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 82.6,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 82.4,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 114.4,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 134.5,
+                  "result": "W"
+                },
+                {
+                  "week": 9,
+                  "score": 93,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 133.2,
+                  "result": "W"
+                },
+                {
+                  "week": 6,
+                  "score": 99.8,
+                  "result": "W"
+                },
+                {
+                  "week": 7,
+                  "score": 51.3,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 40.9,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 66.1,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0.0571,
+              "a": {
+                "franchiseId": "0014",
+                "now": {
+                  "playoff": 0.949,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0.9651,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0.908,
+                  "bye": 0
+                },
+                "winChance": 0.7184
+              },
+              "b": {
+                "franchiseId": "0006",
+                "now": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.2816
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 15,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "MUSIC"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "DMOC"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "NINJA",
+                      "MAVS"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "DREAM"
+                    ],
+                    "step": 5
+                  }
+                ]
+              },
+              "b": {
+                "rank": 4,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "CBOY"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "JOCKS"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "DEAD",
+                      "GEEKS"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "VIT"
+                    ],
+                    "step": 5
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "PIT",
+              "home": "CIN",
+              "kickoff": 1794792000,
+              "projTotal": 30.4,
+              "players": [
+                {
+                  "franchiseId": "0014",
+                  "name": "Joe Burrow",
+                  "position": "QB",
+                  "nflTeam": "CIN",
+                  "proj": 30.4
+                }
+              ]
+            },
+            "story": [
+              "Cowboy Up (7-5) are on a three-game winning streak and face Music City Mafia (2-10), who have won the last two meetings.",
+              "QB Joe Burrow projects 30.4 for Cowboy Up, which is the biggest number on the roster.",
+              "My pick: Cowboy Up, 101-86, and they should be fine as long as Burrow stays healthy."
+            ]
+          },
+          {
+            "a": {
+              "franchiseId": "0003",
+              "wins": 1,
+              "losses": 11,
+              "ties": 0,
+              "streak": "W1",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "W"
+              ],
+              "weekly": [
+                61.6,
+                61.1,
+                67.5,
+                95,
+                28.9,
+                67.6,
+                75.6,
+                30.9,
+                76.1
+              ],
+              "ppg": 62.7,
+              "allPlay": {
+                "wins": 19,
+                "losses": 116,
+                "ties": 0
+              },
+              "luck": -0.7
+            },
+            "b": {
+              "franchiseId": "0004",
+              "wins": 2,
+              "losses": 10,
+              "ties": 0,
+              "streak": "L2",
+              "form": [
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "L",
+                "W",
+                "L",
+                "L"
+              ],
+              "weekly": [
+                103,
+                43.5,
+                57.4,
+                89.8,
+                44.7,
+                78.8,
+                94.6,
+                73.9,
+                68.6
+              ],
+              "ppg": 72.7,
+              "allPlay": {
+                "wins": 24,
+                "losses": 111,
+                "ties": 0
+              },
+              "luck": -0.1
+            },
+            "series": null,
+            "recent": [],
+            "lastFive": {
+              "a": [
+                {
+                  "week": 5,
+                  "score": 28.9,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 67.6,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 75.6,
+                  "result": "L"
+                },
+                {
+                  "week": 8,
+                  "score": 30.9,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 76.1,
+                  "result": "W"
+                }
+              ],
+              "b": [
+                {
+                  "week": 5,
+                  "score": 44.7,
+                  "result": "L"
+                },
+                {
+                  "week": 6,
+                  "score": 78.8,
+                  "result": "L"
+                },
+                {
+                  "week": 7,
+                  "score": 94.6,
+                  "result": "W"
+                },
+                {
+                  "week": 8,
+                  "score": 73.9,
+                  "result": "L"
+                },
+                {
+                  "week": 9,
+                  "score": 68.6,
+                  "result": "L"
+                }
+              ]
+            },
+            "stakes": {
+              "kind": "playoff",
+              "swing": 0,
+              "a": {
+                "franchiseId": "0003",
+                "now": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.4053
+              },
+              "b": {
+                "franchiseId": "0004",
+                "now": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "win": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "loss": {
+                  "playoff": 0,
+                  "bye": 0
+                },
+                "winChance": 0.5947
+              }
+            },
+            "gauntlet": {
+              "a": {
+                "rank": 13,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "DEAD"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "WABS"
+                    ],
+                    "step": 4
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "PAIN",
+                      "CBOY"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "FIRE"
+                    ],
+                    "step": 3
+                  }
+                ]
+              },
+              "b": {
+                "rank": 12,
+                "cells": [
+                  {
+                    "week": 10,
+                    "bye": false,
+                    "opps": [
+                      "MAVS"
+                    ],
+                    "step": 1
+                  },
+                  {
+                    "week": 11,
+                    "bye": false,
+                    "opps": [
+                      "SKINS"
+                    ],
+                    "step": 3
+                  },
+                  {
+                    "week": 12,
+                    "bye": false,
+                    "opps": [
+                      "MUSIC",
+                      "MWS"
+                    ],
+                    "step": 2
+                  },
+                  {
+                    "week": 13,
+                    "bye": false,
+                    "opps": [
+                      "DANG"
+                    ],
+                    "step": 5
+                  }
+                ]
+              }
+            },
+            "keyGame": {
+              "away": "KCC",
+              "home": "ATL",
+              "kickoff": 1794765600,
+              "projTotal": 32.7,
+              "players": [
+                {
+                  "franchiseId": "0003",
+                  "name": "Patrick Mahomes",
+                  "position": "QB",
+                  "nflTeam": "KCC",
+                  "proj": 26.7
+                },
+                {
+                  "franchiseId": "0004",
+                  "name": "Harrison Butker",
+                  "position": "PK",
+                  "nflTeam": "KCC",
+                  "proj": 5.98
+                }
+              ]
+            },
+            "story": [
+              "Maverick (1-11) face Dead Cap Walking (2-10) in a clash of the league's bottom dwellers, and this is their first meeting under the current owners.",
+              "QB Patrick Mahomes projects 26.7 for Maverick, which gives them the edge.",
+              "My pick: Maverick, 98-84, because even a bad season needs a win sometimes."
+            ]
+          }
+        ],
+        "moreGames": 0,
+        "race": {
+          "week": 10,
+          "lastWeek": 14,
+          "spots": 7,
+          "hasByes": true,
+          "teams": [
+            {
+              "franchiseId": "0013",
+              "wins": 10,
+              "losses": 2,
+              "ties": 0,
+              "playoff": 0.9999,
+              "bye": 0.4833,
+              "low": 0.9994,
+              "high": 1,
+              "sked": 16
+            },
+            {
+              "franchiseId": "0012",
+              "wins": 11,
+              "losses": 1,
+              "ties": 0,
+              "playoff": 0.9997,
+              "bye": 0.4624,
+              "low": 0.9989,
+              "high": 1,
+              "sked": 2
+            },
+            {
+              "franchiseId": "0002",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "playoff": 0.9831,
+              "bye": 0.0272,
+              "low": 0.9711,
+              "high": 0.9964,
+              "sked": 9
+            },
+            {
+              "franchiseId": "0009",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "playoff": 0.9655,
+              "bye": 0.0057,
+              "low": 0.9281,
+              "high": 0.9979,
+              "sked": 11
+            },
+            {
+              "franchiseId": "0014",
+              "wins": 7,
+              "losses": 5,
+              "ties": 0,
+              "playoff": 0.949,
+              "bye": 0,
+              "low": 0.908,
+              "high": 0.9651,
+              "sked": 15
+            },
+            {
+              "franchiseId": "0016",
+              "wins": 8,
+              "losses": 4,
+              "ties": 0,
+              "playoff": 0.9457,
+              "bye": 0.0076,
+              "low": 0.9092,
+              "high": 0.9787,
+              "sked": 3
+            },
+            {
+              "franchiseId": "0001",
+              "wins": 9,
+              "losses": 3,
+              "ties": 0,
+              "playoff": 0.888,
+              "bye": 0.0138,
+              "low": 0.8392,
+              "high": 0.9458,
+              "sked": 1
+            },
+            {
+              "franchiseId": "0010",
+              "wins": 6,
+              "losses": 6,
+              "ties": 0,
+              "playoff": 0.1481,
+              "bye": 0,
+              "low": 0.0812,
+              "high": 0.2252,
+              "sked": 8
+            },
+            {
+              "franchiseId": "0005",
+              "wins": 5,
+              "losses": 7,
+              "ties": 0,
+              "playoff": 0.0525,
+              "bye": 0,
+              "low": 0.0407,
+              "high": 0.1093,
+              "sked": 6
+            },
+            {
+              "franchiseId": "0011",
+              "wins": 6,
+              "losses": 6,
+              "ties": 0,
+              "playoff": 0.0474,
+              "bye": 0,
+              "low": 0.0173,
+              "high": 0.0866,
+              "sked": 10
+            },
+            {
+              "franchiseId": "0007",
+              "wins": 5,
+              "losses": 7,
+              "ties": 0,
+              "playoff": 0.0132,
+              "bye": 0,
+              "low": 0.0061,
+              "high": 0.0316,
+              "sked": 7
+            },
+            {
+              "franchiseId": "0015",
+              "wins": 4,
+              "losses": 8,
+              "ties": 0,
+              "playoff": 0.0058,
+              "bye": 0,
+              "low": 0,
+              "high": 0.0107,
+              "sked": 5
+            }
+          ],
+          "aboveCount": 0,
+          "lineAt": 7,
+          "lockedIds": [],
+          "outIds": [
+            "0008",
+            "0004",
+            "0006",
+            "0003"
+          ],
+          "teamCount": 16
+        },
+        "closing": [
+          "Watch SFO at DAL on Sunday for the Game of the Week swing, with QB Brock Purdy and RB Christian McCaffrey on one side and WR CeeDee Lamb on the other.",
+          "Also tune into BUF at NYJ and CAR at NOS, where QB Josh Allen and QB Tyler Shough hold the key roster spots. Check the rivalry pages to see how these matchups have played out over the years, and track it all on the live scoreboard."
+        ]
+      }
+    },
+    {
+      "id": "wire_50481450",
+      "timestamp": "2026-11-14T19:06:19Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Panthers WR Xavier Legette, out since Week 2 with knee injury, activated from IR",
+      "body": "Panthers wide receiver Xavier Legette, sidelined since injuring his knee in a Week 2 blowout win over the Falcons, has been activated from injured reserve.",
+      "link": "https://www.espn.com/nfl/story/_/id/50481450/panthers-xavier-legette-week-2-activated-ir",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "16639"
+      ]
+    },
+    {
+      "id": "sf_rumor_1794682206772_f8a8157f",
+      "timestamp": "2026-11-14T18:49:59.186Z",
+      "type": "transaction",
+      "transactionSubType": "rumor_mill",
+      "tier": "rumor",
+      "headline": "Trade deadline wrap-up",
+      "body": "The trade deadline passed Friday, Nov 13 at 8:45 PM PT, and many deals that were on the table never got done before the cutoff. Seven offers built around Christian McCaffrey and Rico Dowdle fell through as missed opportunities. Six other proposals involving Demond Claiborne and Quinshon Judkins are still alive in some form and could resurface in the offseason.",
+      "authorId": "claude",
+      "franchiseIds": [],
+      "tipIds": [],
+      "league": "theleague",
+      "link": "/theleague/transactions",
+      "linkLabel": "See every deal that got done →",
+      "namedPlayerIds": [
+        "13130",
+        "14823",
+        "17481",
+        "17051"
+      ]
+    },
+    {
+      "id": "wire_50480529",
+      "timestamp": "2026-11-14T16:54:19Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Chiefs' Kenneth Walker III (groin) to sit out vs. Falcons, sources say",
+      "body": "Chiefs running back Kenneth Walker III will miss Sunday's game due to a minor groin strain, sources told ESPN's Adam Schefter and NFL Network's Ian Rapoport.",
+      "link": "https://www.espn.com/nfl/story/_/id/50480529/chiefs-kenneth-walker-iii-groin-sit-sources-say",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "15711"
+      ]
+    },
+    {
+      "id": "espn_fd8446d46f8ea",
+      "timestamp": "2026-11-14T16:30:05.626Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Chiefs are going to hold out RB Kenneth Walker for Sunday’s game at Atlanta after he injured his groin during Thursday’s practice, per source. The Chiefs, in the words of a source, “want to give him a week.”",
+      "body": "Chiefs are going to hold out RB Kenneth Walker for Sunday’s game at Atlanta after he injured his groin during Thursday’s practice, per source.",
+      "link": "https://www.espn.com/contributor/adam-schefter/fd8446d46f8ea",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "15711"
+      ]
+    },
+    {
+      "id": "wire_50479874",
+      "timestamp": "2026-11-14T15:04:18Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Sources: Vikings made initial Kirk Cousins trade call to Raiders before MNF",
+      "body": "The Vikings initially reached out to the Raiders about a Kirk Cousins trade before their MNF game against the Bills, sources told ESPN and NFL Network.",
+      "link": "https://www.espn.com/nfl/story/_/id/50479874/sources-vikings-first-called-kirk-cousins-mnf",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "10700"
+      ]
+    },
+    {
+      "id": "wire_50475710",
+      "timestamp": "2026-11-14T11:00:11Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Untold stories of Detroit Lions WR Amon-Ra St. Brown's German upbringing",
+      "body": "For Amon-Ra St. Brown, Sunday's NFL game in Munich will mark the ultimate convergence of his dual heritage. Here are stories that shed more light.",
+      "link": "https://www.espn.com/nfl/story/_/id/50475710/nfl-germany-lions-amon-ra-st-brown-munich",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "15287"
+      ]
+    },
+    {
+      "id": "wire_50466331",
+      "timestamp": "2026-11-14T11:00:00Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Why the Raiders named Fernando Mendoza as the starter",
+      "body": "The Raiders named Fernando Mendoza as the starter shortly after trading Kirk Cousins to the Vikings.",
+      "link": "https://www.espn.com/nfl/story/_/id/50466331/las-vegas-raiders-why-fernando-mendoza-starting",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "17462",
+        "10700"
+      ]
+    },
+    {
+      "id": "sf_1794629243_h9i7",
+      "timestamp": "2026-11-14T04:07:23.000Z",
+      "type": "transaction",
+      "transactionSubType": "TRADE",
+      "tier": "breaking",
+      "headline": "Dark Magicians of Chaos trade with Da Dangsters for WR Samuel, Deebo",
+      "body": "League sources tell me Dark Magicians of Chaos and Da Dangsters have agreed to a blockbuster swap! I'm told Dark Magicians of Chaos are sending WR Samuel and WR Deebo, along with Da Dangsters' 2027 1st-round pick, to Da Dangsters in exchange for WR Flowers and Zay. Boom! This one just got a whole lot more interesting!",
+      "franchiseIds": [
+        "0015",
+        "0002"
+      ],
+      "playerIds": [
+        "14136",
+        "16190"
+      ],
+      "sourceTimestamp": "1794629243",
+      "tradeSignature": "0002:0015|14136,16190,FP_0002_2027_1",
+      "league": "theleague",
+      "analysis": "Schefter's Take: Dark Magicians of Chaos get the best of this deal by adding a 2027 1st and two proven playmakers in Samuel and Deebo, a rebuild-friendly haul that's hard to top. Grade: Dark Magicians of Chaos A-, Da Dangsters C-. Da Dangsters are paying a premium for depth they probably didn't need to surrender a future first to acquire."
+    },
+    {
+      "id": "wire_50474994",
+      "timestamp": "2026-11-13T22:48:46Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "When will Lamar Jackson return to the field?",
+      "body": "Jamison Hensley provides an update on Jackson's thumb injury post surgery, projecting a potential return as early as Week 16.",
+      "link": "https://www.espn.com/video/clip/_/id/50474994/when-lamar-jackson-return-field",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "13593"
+      ]
+    },
+    {
+      "id": "wire_50474656",
+      "timestamp": "2026-11-13T22:47:11Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Colts look to take advantage of Dolphins without QB Malik Willis",
+      "body": "Stephen Holder previews the Colts matchup against he Dolphins with new faces on offense post the NFL trade deadline.",
+      "link": "https://www.espn.com/video/clip/_/id/50474656/colts-look-take-advantage-dolphins-qb-malik-willis",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "15694"
+      ]
+    },
+    {
+      "id": "wire_50474753",
+      "timestamp": "2026-11-13T22:41:55Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Vikings to start reacquired QB Kirk Cousins vs. Packers",
+      "body": "Coach Kevin O'Connell called Kirk Cousins' ability to get reacquainted with the Vikings' offense \"impressive.\"",
+      "link": "https://www.espn.com/nfl/story/_/id/50474753/vikings-start-reacquired-qb-kirk-cousins-vs-packers",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "10700"
+      ]
+    },
+    {
+      "id": "wire_50474564",
+      "timestamp": "2026-11-13T21:54:35Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "NFL outlines steps in Jalen Hurts investigation in letter to senator",
+      "body": "The NFL provided some additional details about the investigation into how Jalen Hurts' blood clots were handled in response to an inquiry from a U.S. senator.",
+      "link": "https://www.espn.com/nfl/story/_/id/50474564/nfl-outlines-aspects-jalen-hurts-investigation-senator",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "14783"
+      ]
+    },
+    {
+      "id": "sf_2026_weekend_preview_w10",
+      "timestamp": "2026-11-13T21:24:35.823Z",
+      "type": "article",
+      "category": "articles",
+      "tier": "standard",
+      "headline": "Week 10 Weekend Preview: Gridiron Geeks Lead, Mariachi Ninjas Stand in Way",
+      "body": "Eight matchups, one doubleheader-style week with stakes everywhere. Vitside Mafia is the heavy favorite, but the Mariachi Ninjas and Gridiron Geeks headline the matchup of the week. Here is who needs a win and my bold predictions.",
+      "franchiseIds": [],
+      "link": "/theleague/news/sf_2026_weekend_preview_w10",
+      "linkLabel": "Read full preview",
+      "league": "theleague",
+      "authorId": "claude",
+      "content": [
+        "<p>Boom! Week 10 is here, and this is a Friday hype piece for the ages. Eight matchups, and I'm told the stakes are sky-high from top to bottom. Before the weekend kicks off, make sure you've checked <a href=\"/theleague/lineup\">your lineup</a> and know exactly who is starting for you.</p>",
+        "<p>The matchup of the week is Gridiron Geeks (10-2) against The Mariachi Ninjas (5-7). League sources tell me the Geeks are projected to put up 123.4 points, led by Jordan Love at 22.4, Daniel Jones at 21.7, and Ja'Marr Chase at 16.7. The Ninjas are projected at 79.5, with James Cook at 19.3 as their engine. That is a 44-point gap on paper, but Cook is the kind of player who can flip a game in one drive. Keep <a href=\"/theleague/live-scoring\">the live scoreboard</a> open Sunday, because this one is going to swing.</p>",
+        "<p>Vitside Mafia (11-1) is the best team in the building, projected at 163.4 points against Fire Ready Aim (5-7) at 133.3. Josh Allen at 31.4 and Matthew Stafford at 25.7 are a nightmare for anyone. Money is nice, but championships are better, and Vitside is playing for the trophy. My bold prediction: Vitside wins, but Fire Ready Aim's Tyler Shough at 26.4 keeps it closer than the projections say. Want to see how brutal the rest of the schedule is for the top teams? Check <a href=\"/theleague/schedule-strength\">the Gauntlet rankings</a> before you lock anything in.</p>",
+        "<p>Now the teams that absolutely need a win. Bring The Pain (2-10) is on a seven-game losing streak, and I'm not going to sugarcoat it: this is a must-win desperation spot against Midwestside Connection (6-6), projected 106.2 to their 87.6. Maverick (1-11) and Dead Cap Walking (2-10) are fighting for pride in a 93.8 to 79.2 projection, and Music City Mafia (2-10) is on a three-game skid against Cowboy Up. Dark Magicians of Chaos, on a five-game losing streak at 4-8, face Pacific Pigskins (9-3) in a spot where Dak Prescott (26.2) and Jayden Daniels (25.7) have to show up big. If you're on the wrong side of a losing streak, <a href=\"/theleague/notifications\">push notifications</a> will make sure you know the second a waiver or lineup change hits.</p>",
+        "<p>My bold predictions for the weekend: Gridiron Geeks handle the Mariachi Ninjas and move to 11-2. Wascawy Wabbits (9-3) survive Computer Jocks (6-6) because Trevor Lawrence at 26.4 is too much to overcome. And Running down the Dream (8-4) will beat Da Dangsters (9-3) on the strength of Brock Purdy's projected 26.6, even though the Dangsters have Trey McBride at 17.1. Remember, a free agent pickup is never free: every add signs at the $425K league-minimum salary, so think before you chase a late-week flier. Check <a href=\"/theleague/players\">the free agent board</a> for the best options, and get your lineup right. Boom, enjoy the weekend, and I'll see you on the other side with the results. Go check <a href=\"/theleague/lineup\">your lineup</a> one more time before kickoff.</p>"
+      ],
+      "heroPlayerId": "13589",
+      "playerIds": [
+        "13589"
+      ],
+      "namedPlayerIds": [
+        "14782",
+        "14059",
+        "15281",
+        "15715",
+        "9431",
+        "17039",
+        "12620",
+        "16581",
+        "15237",
+        "15794"
+      ]
+    },
+    {
+      "id": "espn_978abd798699b",
+      "timestamp": "2026-11-13T21:08:39.821Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Vikings QB Kirk Cousins will officially start Sunday’s game at Green Bay.",
+      "body": "Vikings QB Kirk Cousins will officially start Sunday’s game at Green Bay.",
+      "link": "https://www.espn.com/contributor/adam-schefter/978abd798699b",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "adam-schefter",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "10700"
+      ]
+    },
+    {
+      "id": "wire_50474246",
+      "timestamp": "2026-11-13T21:02:43Z",
+      "type": "external",
+      "tier": "standard",
+      "headline": "Andy Reid delivers injury update on Kenneth Walker III",
+      "body": "Andy Reid delivers injury update on Kenneth Walker III",
+      "link": "https://www.espn.com/video/clip/_/id/50474246/andy-reid-delivers-injury-update-kenneth-walker-iii",
+      "linkLabel": "Read on ESPN →",
+      "authorId": "nfl-wire",
+      "franchiseIds": [],
+      "league": "theleague",
+      "namedPlayerIds": [
+        "15711"
+      ]
+    },
     {
       "id": "wire_50473665",
       "timestamp": "2026-11-13T19:57:28Z",
@@ -7880,8 +11146,8 @@
       ]
     }
   ],
-  "lastEspnTimestamp": "2026-11-13T18:02:46.547Z",
-  "lastNflWireTimestamp": "2026-11-13T19:57:28.000Z",
+  "lastEspnTimestamp": "2026-11-14T16:30:05.626Z",
+  "lastNflWireTimestamp": "2026-11-14T20:05:23.000Z",
   "tradeBaitState": {
     "0001": {
       "committedBlock": [
@@ -7960,12 +11226,8 @@
       "lastChangeTs": null
     },
     "0015": {
-      "committedBlock": [
-        "16190"
-      ],
-      "observedBlock": [
-        "16190"
-      ],
+      "committedBlock": [],
+      "observedBlock": [],
       "firstChangeTs": null,
       "lastChangeTs": null
     },
@@ -7979,5 +11241,8 @@
   "archivedThroughTimestamp": "2026-11-01T12:29:35Z",
   "lastOddsWeek": 10,
   "pendingTradeWatermark": [],
-  "tradeBaitStateAt": "2026-11-11T23:04:31.157Z"
+  "tradeBaitStateAt": "2026-11-14T06:04:54.918Z",
+  "retractedIds": [
+    "sf_rumor_1794672395063_7a2515b2"
+  ]
 }
