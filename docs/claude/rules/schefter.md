@@ -1695,3 +1695,17 @@ heading, quote or line break) exactly as written. All three article renderers
 (`SchefterArticlePage.astro`, TheLeague's and the AFL's `news/[id].astro`) must
 go through `articleParagraphs`, never `post.content.map` directly. Tests:
 `tests/article-paragraphs.test.ts`.
+
+## The Matchup Preview's copy lives on each game's card (Nov 2026)
+
+Owner's call: no block of prose between the race board and the cards. The
+model returns `content` (a one- or two-paragraph opener, the only place links
+go), `games` (one entry per fact-sheet MATCHUP number: the FEATURED GAME, the
+first card, gets about 10 sentences; every other game a 2-5 sentence quick
+hitter) and `closing` (the broadcast guide). `attachGameStories` maps each
+MATCHUP number through `enrichment.pairKeys` to its card, since the cards are in
+stakes order and the fact sheet in schedule order, and stores the text on the
+snapshot as `matchupVisuals.matchups[i].story` / `matchupVisuals.closing`. The
+text is PLAIN (`plainText`) and renders escaped on `StakesGameCard`, re-flowed
+by `shortenParagraphs`. Posts written before this have no `story` and render as
+before. Tests: `tests/matchup-preview-stories.test.ts`.

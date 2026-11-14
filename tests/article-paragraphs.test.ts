@@ -4,6 +4,7 @@ import {
   shortenParagraphs,
   splitSentences,
   MAX_PAIRED_CHARS,
+  plainText,
 } from '../src/utils/article-paragraphs.mjs';
 
 describe('splitSentences', () => {
@@ -55,5 +56,12 @@ describe('articleParagraphs', () => {
 
   it('tolerates a post with no content', () => {
     expect(articleParagraphs({})).toEqual([]);
+  });
+});
+
+describe('plainText', () => {
+  it('drops tags and collapses whitespace', () => {
+    expect(plainText('<p>Go <a href="/x">see</a>\n it.</p>')).toBe('Go see it.');
+    expect(plainText(42)).toBe('');
   });
 });

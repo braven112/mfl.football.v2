@@ -534,6 +534,8 @@ export interface MatchupVisuals {
   /** Index into `matchups`, or null when no pairing qualifies. */
   gameOfWeek: number | null;
   matchups: MatchupVisualsMatchup[];
+  /** The closing broadcast guide, plain text, rendered after the cards (Nov 2026). */
+  closing?: string[];
   /**
    * The chart-led preview (Nov 2026; matchup-preview-visuals.mjs#addPreviewExtras).
    * Absent on older posts, which keep their tale-of-the-tape layout.
@@ -546,6 +548,8 @@ export interface MatchupVisuals {
 }
 
 export interface MatchupVisualsMatchup {
+  /** Schefter's write-up for this game, plain text, one paragraph per entry (Nov 2026). */
+  story?: string[];
   a: MatchupVisualsSide;
   b: MatchupVisualsSide;
   series: MatchupVisualsSeries | null;

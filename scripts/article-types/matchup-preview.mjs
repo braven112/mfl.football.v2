@@ -24,6 +24,7 @@ import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import { recordBook } from '../../src/utils/league-history/records.mjs';
 import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
 import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/league-history/playoff-bubble.mjs';
+import { plainText } from '../../src/utils/article-paragraphs.mjs';
 
 /**
  * The column is short because the visuals carry the numbers (owner's call,
@@ -31,7 +32,7 @@ import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/leagu
  * matchup gets a tale-of-the-tape card under the copy. Hard cap, applied in
  * buildPost — validate() only rejects too FEW paragraphs.
  */
-const MAX_PARAGRAPHS = 9;
+const MAX_PARAGRAPHS = 3;
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -185,6 +186,16 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     lines.push('');
   }
 
+  // The featured game is the first card on the page: the Game of the Week
+  // when there is one, else the game with the most on the line.
+  const pairKeys = pairings.map(({ franchise1Id, franchise2Id }) => pairKey(franchise1Id, franchise2Id));
+  const first = rendered.matchups[0];
+  const featuredNumber = first ? pairKeys.indexOf(pairKey(first.a.franchiseId, first.b.franchiseId)) + 1 : 0;
+  if (featuredNumber > 0) {
+    lines.push(`FEATURED GAME: MATCHUP ${featuredNumber} — the first card on the page. It gets the long write-up.`);
+    lines.push('');
+  }
+
   if (visuals.gameOfWeek != null) {
     const g = visuals.matchups[visuals.gameOfWeek];
     lines.push(`GAME OF THE WEEK: ${nameOf(g.a.franchiseId)} vs ${nameOf(g.b.franchiseId)} (MATCHUP ${visuals.gameOfWeek + 1}) — the rivalry panel at the top of the article features it.`);
@@ -281,10 +292,38 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // Team names ride along for the chat promo (never on the post: the page
   // reads names from the league config, so a renamed team stays current).
   const names = Object.fromEntries([...teams.entries()].map(([id, t]) => [id, t.nameMedium ?? t.name ?? id]));
-  return { factSheet: lines.join('\n'), enrichment: { visuals: rendered, names } };
+  return { factSheet: lines.join('\n'), enrichment: { visuals: rendered, names, pairKeys } };
 }
 
 const pct = (x) => `${Math.round(x * 100)}%`;
+
+/** One key per pairing, order-free, so a fact-sheet MATCHUP number finds its card. */
+const pairKey = (a, b) => [a, b].sort().join('-');
+
+/**
+ * Attach the model's per-game write-ups to the cards they describe (owner's
+ * call, Nov 2026: the copy lives on each game's card, not in a block above
+ * them). `games` is keyed by fact-sheet MATCHUP number; the cards are in
+ * stakes order, so the number goes through the pairing's key. The text is
+ * plain: the card renders it escaped, so a write-up can never carry markup.
+ * A number with no card is dropped; a doubleheader's repeat pairing fills the
+ * first card still without a story.
+ */
+export function attachGameStories(visuals, games, pairKeys, { closing } = {}) {
+  if (!visuals?.matchups?.length) return visuals;
+  const matchups = visuals.matchups.map((m) => ({ ...m }));
+  for (const g of Array.isArray(games) ? games : []) {
+    const key = pairKeys?.[Number(g?.matchup) - 1];
+    const paragraphs = (Array.isArray(g?.paragraphs) ? g.paragraphs : [])
+      .map(plainText)
+      .filter(Boolean);
+    if (!key || !paragraphs.length) continue;
+    const card = matchups.find((m) => !m.story && pairKey(m.a.franchiseId, m.b.franchiseId) === key);
+    if (card) card.story = paragraphs;
+  }
+  const closingText = (Array.isArray(closing) ? closing : []).map(plainText).filter(Boolean);
+  return { ...visuals, matchups, ...(closingText.length ? { closing: closingText } : {}) };
+}
 
 /** What a game is worth, as fact-sheet lines: each side's odds now, with a win, with a loss. */
 function stakesFacts(stakes, nameOf) {
@@ -340,7 +379,7 @@ function seriesFacts(m, nameOf, { full = false } = {}) {
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
 Preview the week's fantasy matchups and pick winners — be bold, be wrong sometimes, that's what makes it fun. This is the Saturday morning "what to watch" guide.
-The article page already SHOWS the numbers: a playoff-odds race board sits above your copy, and below it every game gets a card (the rivalry and its last five meetings, both teams' last five weeks, what the game does to their playoff or bye odds, and The Gauntlet's next four weeks). Your copy is SHORT and tells the story those charts cannot: what is on the line, who wins and why. Do not recite records, streaks or odds the charts already show; use at most one odds number per paragraph, exactly as the fact sheet states it.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
+The article page already SHOWS the numbers: a playoff-odds race board sits above your copy, and below it every game gets a card (the rivalry and its last five meetings, both teams' last five weeks, what the game does to their playoff or bye odds, and The Gauntlet's next four weeks). Your copy sits ON each game's card and tells the story those charts cannot: what is on the line, who wins and why. Do not recite records, streaks or odds the charts already show; use at most one odds number per paragraph, exactly as the fact sheet states it.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
@@ -352,15 +391,22 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Biggest stakes...</p>", "<p>Your pick, in one line.</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
+  "content": ["<p>One or two sentences that open the column.</p>"],
+  "games": [
+    { "matchup": 3, "paragraphs": ["One or two sentences.", "One or two sentences.", "..."] },
+    { "matchup": 1, "paragraphs": ["A quick hitter, two to five sentences in all."] }
+  ],
+  "closing": ["The broadcast guide, one or two sentences.", "..."]
 }
 
 INSTRUCTIONS:
-- Write 3 beats, in order, as 5-8 SHORT paragraphs in all. Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone. Give a pick or a punchline its own one-sentence paragraph.
-- Beat 1: the game with the most on the line (STAKES lines) or the GAME OF THE WEEK — what is at stake and your pick.
-- Beat 2: one or two more games worth watching, with picks. Do not run through every game.
-- Beat 3: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
-- Keep the whole column about as long as three short paragraphs would be (roughly 900 characters); the charts carry the rest.
+- The copy lives ON each game's card, not in a block above them.
+- "content": a one- or two-paragraph opener, each paragraph one or two sentences: the week's headline storyline. This is where links go.
+- "games": one entry for EVERY MATCHUP in the fact sheet, by its MATCHUP number. "paragraphs" is plain text, no HTML and no links.
+  - The FEATURED GAME gets the long write-up: about 10 sentences, as 4-6 short paragraphs of one or two sentences. What is at stake, the players who decide it, and your pick.
+  - Every other game is a quick hitter: 2-5 sentences in all, as one to three short paragraphs, ending with your pick.
+- "closing": the broadcast guide, 1-2 short plain-text paragraphs: the one or two NFL games to watch and which rostered players make them matter.
+- Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone.
 - Odds are estimates from a simulation: say "about" or "roughly", never "guaranteed" or "eliminated".
 - Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
 - PLAYOFF BUBBLE: if any matchup carries a "Playoff bubble" line (a team that missed the playoffs by one spot facing the team that took it), call out the strongest one in a sentence — it is a must-mention storyline, sharper the closer it is to the end of the regular season. "Bubble history" lines are supporting color. State the seasons only as the fact sheet does.
@@ -373,7 +419,8 @@ export function validate(aiOutput) {
   const errors = [];
   if (!aiOutput.headline || aiOutput.headline.length > 100) errors.push('Headline missing or too long');
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
-  if (!aiOutput.content || aiOutput.content.length < 3) errors.push('Too few content paragraphs');
+  if (!aiOutput.content || aiOutput.content.length < 1) errors.push('Missing opening paragraph');
+  if (!Array.isArray(aiOutput.games) || aiOutput.games.length === 0) errors.push('Missing per-game write-ups');
   return errors;
 }
 
@@ -430,7 +477,11 @@ export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LE
     // The Game of the Week panel and the tale-of-the-tape cards render from
     // this snapshot (src/components/shared/matchup-preview/), taken when the
     // column was written so an old preview keeps that week's numbers.
-    matchupVisuals: enrichment?.visuals ?? undefined,
+    // Each card's write-up and the closing broadcast guide ride on the same
+    // snapshot, so they render with the cards (MatchupPreviewSection).
+    matchupVisuals: enrichment?.visuals
+      ? attachGameStories(enrichment.visuals, aiOutput.games, enrichment.pairKeys, { closing: aiOutput.closing })
+      : undefined,
   };
 }
 

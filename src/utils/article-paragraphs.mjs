@@ -36,6 +36,25 @@ function unwrap(html) {
   return (m ? m[1] : html).trim();
 }
 
+/**
+ * The text of an HTML fragment with every tag dropped and whitespace
+ * collapsed. For copy that renders ESCAPED (a matchup card's write-up), so the
+ * result is never treated as markup.
+ * @param {unknown} html
+ * @returns {string}
+ */
+export function plainText(html) {
+  if (typeof html !== 'string') return '';
+  let out = '';
+  let inTag = false;
+  for (const ch of html) {
+    if (ch === '<') inTag = true;
+    else if (ch === '>' && inTag) inTag = false;
+    else if (!inTag) out += ch;
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 /** Characters outside tags. Measures only; the HTML itself is never rewritten. */
 function visibleLength(html) {
   let n = 0;
