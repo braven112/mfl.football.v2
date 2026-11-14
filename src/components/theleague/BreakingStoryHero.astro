@@ -61,6 +61,16 @@ const ctaExternal = !rosterHref && !!safeExternal;
 const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels('theleague');
+
+// The tag pill must stay on ONE line (Brandon, 2026-11-14). When the eyebrow
+// is too narrow for "<Persona> Report · Breaking", the source half drops and
+// the pill reads just "Breaking". The persona's surname sets the label's
+// length, so the cutoff is computed from it: ~9px per uppercase tracked
+// character at the pill's 0.65rem size (measured 8.2) plus the pill padding.
+// A container query cannot read a custom property, hence the inline rule.
+const tagSource = `${labels.reportShort} · `;
+const tagFullPx = Math.ceil((tagSource.length + 'Breaking'.length) * 9 + 24);
+const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bsh__tag-source { display: none; } }`;
 ---
 
 <section
@@ -86,7 +96,7 @@ const labels = await getPersonaLabels('theleague');
 
   <div class="bsh__content">
     <p class="bsh__eyebrow">
-      <span class="bsh__tag">{labels.reportShort} · Breaking</span>
+      <span class="bsh__tag"><span class="bsh__tag-source">{tagSource}</span>Breaking</span>
       <time class="bsh__time">{timeAgo}</time>
     </p>
     <h2 class="bsh__title">{story.headline}</h2>
@@ -102,6 +112,8 @@ const labels = await getPersonaLabels('theleague');
     </a>
   </div>
 </section>
+
+<style is:inline set:html={tagCollapseCss}></style>
 
 <style>
   .bsh {
@@ -230,9 +242,11 @@ const labels = await getPersonaLabels('theleague');
   }
 
   .bsh__eyebrow {
+    container: bsh-eyebrow / inline-size;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem 0.6rem;
     margin: 0 0 0.7rem;
   }
 
@@ -245,6 +259,7 @@ const labels = await getPersonaLabels('theleague');
     background: var(--bsh-tag-bg);
     padding: 0.3rem 0.6rem;
     border-radius: 999px;
+    white-space: nowrap;
   }
 
   .bsh__time {
@@ -329,17 +344,6 @@ const labels = await getPersonaLabels('theleague');
 
     .bsh__caption {
       display: none;
-    }
-
-    /* Keep the tag pill on one line; the time drops below it on a narrow
-       phone instead of splitting "Breaking" onto a second line. */
-    .bsh__eyebrow {
-      flex-wrap: wrap;
-      row-gap: 0.35rem;
-    }
-
-    .bsh__tag {
-      white-space: nowrap;
     }
 
     .bsh__content {
