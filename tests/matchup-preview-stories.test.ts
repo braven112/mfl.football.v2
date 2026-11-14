@@ -69,3 +69,37 @@ describe('matchup preview post', () => {
     expect(prompt).toMatch(/quick hitter: 2-5 sentences/);
   });
 });
+
+describe('key NFL game', () => {
+  it('picks the NFL game with the most projected points across both lineups', async () => {
+    const { keyNflGame, nflWeekGames } = await import('../src/utils/nfl-week-games.mjs');
+    const games = nflWeekGames([
+      { kickoff: '100', team: [{ id: 'BUF', isHome: '0' }, { id: 'KCC', isHome: '1' }] },
+      { kickoff: '50', team: [{ id: 'DAL', isHome: '0' }, { id: 'PHI', isHome: '1' }] },
+    ]);
+    const game = keyNflGame(games, [
+      { franchiseId: '0001', players: [{ name: 'Allen', position: 'QB', nflTeam: 'BUF', proj: 22 }, { name: 'Lamb', position: 'WR', nflTeam: 'DAL', proj: 15 }] },
+      { franchiseId: '0002', players: [{ name: 'Kelce', position: 'TE', nflTeam: 'KCC', proj: 9 }, { name: 'Hurts', position: 'QB', nflTeam: 'PHI', proj: 10 }] },
+    ]);
+    expect(game).toMatchObject({ away: 'BUF', home: 'KCC', projTotal: 31 });
+    expect(game?.players.map((p: { name: string }) => p.name)).toEqual(['Allen', 'Kelce']);
+    expect(keyNflGame(games, [{ franchiseId: '0001', players: [] }])).toBeNull();
+  });
+
+  it('uses a submitted lineup, else the nine best projected', async () => {
+    const { startersResolver, keyGameFact } = await import('../scripts/article-types/matchup-preview.mjs');
+    const players = new Map(Array.from({ length: 12 }, (_, i) => [`p${i}`, { name: `P${i}`, position: 'WR', team: 'BUF' }]));
+    const projections = new Map(Array.from({ length: 12 }, (_, i) => [`p${i}`, i]));
+    const rosterMap = { '0001': [...players.keys()], '0002': [...players.keys()] };
+    const raw = [{ weeklyResults: { week: '11', matchup: [{ franchise: [
+      { id: '0001', player: [{ id: 'p0', status: 'starter' }, { id: 'p1', status: 'nonstarter' }] },
+      { id: '0002' },
+    ] }] } }];
+    const startersOf = startersResolver(raw, 11, rosterMap, projections, players);
+    expect(startersOf('0001').map((p: { name: string }) => p.name)).toEqual(['P0']);
+    expect(startersOf('0002')).toHaveLength(9);
+    expect(startersOf('0002')[0].name).toBe('P11');
+    const line = keyGameFact({ away: 'BUF', home: 'KCC', kickoff: 0, projTotal: 31, players: [{ franchiseId: '0001', name: 'Allen', position: 'QB', nflTeam: 'BUF', proj: 22 }] }, (id: string) => `Team ${id}`);
+    expect(line).toBe('KEY NFL GAME: BUF at KCC, 31.0 projected points from these two teams\' starters — QB Allen (Team 0001, 22.0).');
+  });
+});

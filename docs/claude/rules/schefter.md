@@ -1710,6 +1710,21 @@ text is PLAIN (`plainText`) and renders escaped on `StakesGameCard`, re-flowed
 by `shortenParagraphs`. Posts written before this have no `story` and render as
 before. Tests: `tests/matchup-preview-stories.test.ts`.
 
+## Each Matchup Preview card names its key NFL game (Nov 2026)
+
+Owner's call: every fantasy game shows the NFL game that will swing it, by the
+total projected points of BOTH teams' starters in that NFL game (the submitted
+lineup when MFL has one, else the nine best projected). It reuses the Sunday
+Ticket board's data: the same `nflSchedule.json` through ONE reader,
+`selectWeekMatchups` in `src/utils/nfl-week-games.mjs`, which
+`sunday-ticket-slate.ts` re-exports, because the article scripts are node and
+cannot import TypeScript. The live `nflSchedule.json` carries only the current
+NFL week, so the article falls back to `nflSchedule-full.json` when it names
+another week. `keyNflGame` is stored on the snapshot as
+`matchupVisuals.matchups[i].keyGame` (top four players) and given to the model
+as a `KEY NFL GAME` fact line. Team codes stay MFL's (the players feed uses the
+same ones); the card prints them through `normalizeTeamCode`.
+
 ## One weekly preview: the Friday Weekend Preview is retired (Nov 2026)
 
 Owner's call: the Friday Weekend Preview and the Saturday Matchup Preview

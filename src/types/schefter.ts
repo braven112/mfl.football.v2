@@ -547,9 +547,24 @@ export interface MatchupVisuals {
   moreGames?: number;
 }
 
+export interface MatchupKeyNflGame {
+  away: string;
+  home: string;
+  /** Epoch seconds; 0 when the schedule had none. */
+  kickoff: number;
+  projTotal: number;
+  players: Array<{ franchiseId: string; name: string; position: string; nflTeam: string; proj: number }>;
+}
+
 export interface MatchupVisualsMatchup {
   /** Schefter's write-up for this game, plain text, one paragraph per entry (Nov 2026). */
   story?: string[];
+  /**
+   * The NFL game carrying the most projected points across both teams'
+   * starters (Nov 2026), from the same schedule feed the Sunday Ticket board
+   * reads. MFL team codes; `players` is the top four by projection.
+   */
+  keyGame?: MatchupKeyNflGame;
   a: MatchupVisualsSide;
   b: MatchupVisualsSide;
   series: MatchupVisualsSeries | null;

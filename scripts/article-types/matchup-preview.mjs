@@ -25,6 +25,9 @@ import { recordBook } from '../../src/utils/league-history/records.mjs';
 import { loadHometowns, hometownFact } from '../article-utils/hometowns.mjs';
 import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/league-history/playoff-bubble.mjs';
 import { plainText } from '../../src/utils/article-paragraphs.mjs';
+import { selectWeekMatchups, nflWeekGames, keyNflGame } from '../../src/utils/nfl-week-games.mjs';
+import { parseStartingLineups } from '../lib/lineup-warnings.mjs';
+import { resolveDataDir } from '../article-utils/data-loaders.mjs';
 
 /**
  * The column is short because the visuals carry the numbers (owner's call,
@@ -169,6 +172,28 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // maps print, so the copy and the map beside it agree.
   const hometowns = await loadHometowns(league);
 
+  // Each game's key NFL game (owner's call, Nov 2026): the NFL game carrying
+  // the most projected points across both teams' starters. Same schedule feed
+  // and the same projected-points question the Sunday Ticket board asks.
+  const nflGames = await loadNflWeekGames(projectRoot, year, league, week);
+  const startersOf = startersResolver(data['weekly-results-raw'], week, rosterMap, projections, players);
+  const keyGameByPair = new Map();
+  if (nflGames.length) {
+    for (const { franchise1Id, franchise2Id } of pairings) {
+      const k = pairKey(franchise1Id, franchise2Id);
+      if (keyGameByPair.has(k)) continue;
+      const game = keyNflGame(nflGames, [
+        { franchiseId: franchise1Id, players: startersOf(franchise1Id) },
+        { franchiseId: franchise2Id, players: startersOf(franchise2Id) },
+      ]);
+      if (game) keyGameByPair.set(k, game);
+    }
+    for (const m of rendered.matchups) {
+      const game = keyGameByPair.get(pairKey(m.a.franchiseId, m.b.franchiseId));
+      if (game) m.keyGame = { ...game, players: game.players.slice(0, 4) };
+    }
+  }
+
   const lines = [];
   lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`FORMAT: ${weekFormat.label}`);
@@ -222,6 +247,8 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     }
     const stakes = stakesByPair.get([franchise1Id, franchise2Id].sort().join('-'));
     for (const fact of stakesFacts(stakes, nameOf)) lines.push(`  ${fact}`);
+    const keyGame = keyGameByPair.get(pairKey(franchise1Id, franchise2Id));
+    if (keyGame) lines.push(`  ${keyGameFact(keyGame, nameOf)}`);
     const hometown = hometownFact(franchise1Id, franchise2Id, hometowns, nameOf);
     if (hometown) lines.push(`  ${hometown}`);
     if (bubble) {
@@ -296,6 +323,44 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 }
 
 const pct = (x) => `${Math.round(x * 100)}%`;
+
+/** This week's NFL games, from the same `nflSchedule.json` the Sunday Ticket board reads (the full archive as a fallback). */
+async function loadNflWeekGames(projectRoot, year, league, week) {
+  const dir = resolveDataDir(projectRoot, year, league);
+  for (const file of ['nflSchedule.json', 'nflSchedule-full.json']) {
+    const games = nflWeekGames(selectWeekMatchups(await tryLoadJSON(path.join(dir, file)), week));
+    if (games.length) return games;
+  }
+  return [];
+}
+
+/**
+ * A franchise's starters for the week: the lineup it has submitted when MFL
+ * has one, else its nine best projected players (what the sheet has always
+ * listed).
+ */
+export function startersResolver(weeklyResultsRaw, week, rosterMap, projections, players) {
+  const entry = (Array.isArray(weeklyResultsRaw) ? weeklyResultsRaw : [])
+    .find((w) => String(w?.weeklyResults?.week) === String(week));
+  const submitted = new Map(parseStartingLineups(entry).map((l) => [l.franchiseId, l.starters]));
+  const toPlayer = (pid) => {
+    const info = players.get(pid);
+    return info ? { name: info.name, position: info.position, nflTeam: info.team, proj: projections.get(pid) || 0 } : null;
+  };
+  return (fid) => {
+    const lineup = submitted.get(fid);
+    if (lineup?.length) return lineup.map(toPlayer).filter(Boolean);
+    return (rosterMap[fid] || []).map(toPlayer).filter(Boolean).sort((a, b) => b.proj - a.proj).slice(0, 9);
+  };
+}
+
+/** The key NFL game as one fact-sheet line. */
+export function keyGameFact(game, nameOf) {
+  const who = game.players.slice(0, 4)
+    .map((p) => `${p.position === 'Def' ? '' : `${p.position} `}${p.name} (${nameOf(p.franchiseId)}, ${p.proj.toFixed(1)})`)
+    .join(', ');
+  return `KEY NFL GAME: ${game.away} at ${game.home}, ${game.projTotal.toFixed(1)} projected points from these two teams' starters — ${who}.`;
+}
 
 /** One key per pairing, order-free, so a fact-sheet MATCHUP number finds its card. */
 const pairKey = (a, b) => [a, b].sort().join('-');
@@ -405,6 +470,7 @@ INSTRUCTIONS:
 - "games": one entry for EVERY MATCHUP in the fact sheet, by its MATCHUP number. "paragraphs" is plain text, no HTML and no links.
   - The FEATURED GAME gets the long write-up: about 10 sentences, as 4-6 short paragraphs of one or two sentences. What is at stake, the players who decide it, and your pick.
   - Every other game is a quick hitter: 2-5 sentences in all, as one to three short paragraphs, ending with your pick.
+  - KEY NFL GAME: when a matchup has a "KEY NFL GAME" line, name that NFL game and its biggest players in the write-up: it is the game that swings this one. The card shows it too, so give the why, not the numbers.
 - "closing": the broadcast guide, 1-2 short plain-text paragraphs: the one or two NFL games to watch and which rostered players make them matter.
 - Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone.
 - Odds are estimates from a simulation: say "about" or "roughly", never "guaranteed" or "eliminated".

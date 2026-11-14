@@ -206,29 +206,9 @@ export interface BroadcastLookup {
   broadcast?: string;
 }
 
-/**
- * Pick one week's matchups out of the committed `nflSchedule.json`, which
- * has TWO shapes: a live in-season feed carries only the current week under
- * `nflSchedule.matchup`, a synced/completed season only the full archive
- * under `fullNflSchedule.nflSchedule[week - 1].matchup`. The live shape may
- * carry `nflSchedule.week`; when it does and it is not the week asked for,
- * the answer is "no games", not another week's games wearing this week's
- * header. Same dual-source spine as MatchupPreviewHero.
- */
-export function selectWeekMatchups(scheduleFeed: any, week: number): any[] {
-  const feed = scheduleFeed?.default ?? scheduleFeed;
-  const archive = feed?.fullNflSchedule?.nflSchedule;
-  if (archive) {
-    const weeks = asArray<any>(archive);
-    const entry = weeks[week - 1];
-    return asArray<any>(entry?.matchup);
-  }
-  const live = feed?.nflSchedule;
-  if (!live) return [];
-  const liveWeek = parseInt(live.week ?? '', 10);
-  if (Number.isFinite(liveWeek) && liveWeek !== week) return [];
-  return asArray<any>(live.matchup);
-}
+// One reader for `nflSchedule.json`, shared with the Schefter article scripts
+// (node, no TypeScript), which name each fantasy game's key NFL game from it.
+export { selectWeekMatchups } from './nfl-week-games.mjs';
 
 /**
  * MFL matchups → slate games, with the network merged in from ESPN by team
