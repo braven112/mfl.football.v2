@@ -22,6 +22,9 @@
 import { deadOfferReason, offerPlayerIds } from './schefter-trading-window.mjs';
 import { tradeSignatureOf } from './schefter-offer-beats.mjs';
 
+/** MFL positions that stand for a whole NFL team rather than a player. */
+const TEAM_UNIT_POSITION = /^(def|st|off|tm[a-z]*)$/i;
+
 /** How long after the deadline the wrap may still go out (a missed run is not fatal). */
 export const DEADLINE_WRAP_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 /** The run-up whose completed trades the wrap counts. */
@@ -62,8 +65,12 @@ export function buildDeadlineWrapFacts({
   }).length;
 
   const nameOf = (id) => {
-    const raw = playerMap?.get?.(id)?.name;
+    const row = playerMap?.get?.(id);
+    const raw = row?.name;
     if (!raw) return null;
+    // A team unit (Def, ST, Off, TMQB…) is an NFL club, not a player: "the
+    // Denver Broncos talks" reads as a real NFL trade. Name players only.
+    if (TEAM_UNIT_POSITION.test(String(row?.position ?? ''))) return null;
     // MFL stores "Last, First".
     const [last, first] = String(raw).split(',').map((s) => s.trim());
     return first ? `${first} ${last}` : last;
