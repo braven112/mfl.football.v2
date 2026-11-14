@@ -476,7 +476,7 @@ moves to Tuesday 8pm PT: ship in the morning, announce at night.
 
 **Mechanical** [DECIDED] — `scripts/release-blackout.mjs`, run by `/promote`
 at step 3, exit 1 with the reason. It covers NFL game days in season
-(Thu/Sat/Sun/Mon), Feb 14 ±1, Labor Day through Labor Day + 3, and the AFL
+(Thu/Sun/Mon; Saturday dropped Nov 2026), Feb 14 ±1, Labor Day through Labor Day + 3, and the AFL
 National League draft ±1, all evaluated in PT.
 
 One gap, stated rather than hidden: **TheLeague's own draft date** lives in the
