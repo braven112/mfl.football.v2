@@ -246,6 +246,35 @@ html.dark .sgc {
   margin-bottom: 0;
 }
 
+/* Key NFL game: one row per player, team tag, name, projection. */
+.sgc-keyp {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.sgc-keyp li {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.2rem 0;
+  border-top: 1px solid var(--prb-line);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--prb-ink);
+}
+
+.sgc-keyname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sgc-keyteam {
+  color: var(--prb-muted);
+  font-size: var(--font-size-xs, 0.75rem);
+}
+
 .sgc-closing p {
   margin: 0 0 0.75rem;
   line-height: 1.55;

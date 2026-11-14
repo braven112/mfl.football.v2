@@ -58,7 +58,8 @@ export const GROUPME_DAY_PLAN = {
   2: ['schedule-release', 'pecking-order'],
   3: ['schedule-release', 'schedule-strength'],
   4: ['schedule-release'],
-  5: ['schedule-release', 'weekend-preview'],
+  // Friday's Weekend Preview was folded into Saturday's Matchup Preview (Nov 2026).
+  5: ['schedule-release'],
   6: ['schedule-release', 'matchup-preview'],
 };
 

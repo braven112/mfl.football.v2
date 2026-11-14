@@ -11,6 +11,7 @@ import type { MatchupVisualsMatchup, MatchupStakesSide, GauntletStrip, LastFiveW
 import { teamAccentVar } from '../../../utils/team-accent-css';
 import type { MatchupTeam } from './MatchupPreviewSection.astro';
 import { shortenParagraphs } from '../../../utils/article-paragraphs.mjs';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import '../../../styles/playoff-race.css';
 
 export interface Props {
@@ -29,6 +30,13 @@ const story: string[] = shortenParagraphs(m.story ?? []);
 const tag = (t: MatchupTeam) => t.abbrev ?? t.short;
 const a = m.a.franchiseId;
 const b = m.b.franchiseId;
+// The NFL game that swings this one: most projected points across both
+// teams' starters, the Sunday Ticket board's question asked of one game.
+const keyGame = m.keyGame && m.keyGame.players.length > 0 ? m.keyGame : null;
+const nfl = (code: string) => normalizeTeamCode(code);
+// A defense's name is already "the Chicago Bears defense": no position prefix.
+const playerLabel = (p: { position: string; name: string }) =>
+  p.position === 'Def' ? p.name.replace(/^the /, '') : `${p.position} ${p.name}`;
 const record = (s: { wins: number; losses: number; ties: number }) => `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`;
 const pct = (x: number) => (x >= 0.995 && x < 1 ? '>99%' : x > 0 && x < 0.005 ? '<1%' : `${Math.round(x * 100)}%`);
 const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(0));
@@ -84,6 +92,22 @@ const ordinal = (n: number) => {
   {story.length > 0 && (
     <div class="sgc-story">
       {story.map((p) => <p>{p}</p>)}
+    </div>
+  )}
+
+  {keyGame && (
+    <div class="sgc-sec sgc-key">
+      <h4>Key NFL game: {nfl(keyGame.away)} at {nfl(keyGame.home)}</h4>
+      <p class="sgc-swing"><b class="sgc-num">{keyGame.projTotal.toFixed(1)}</b> projected points from these two lineups.</p>
+      <ul class="sgc-keyp">
+        {keyGame.players.map((p) => (
+          <li>
+            <span class="sgc-lbl" style={`color: ${p.franchiseId === a ? 'var(--sgc-a)' : 'var(--sgc-b)'}`}>{tag(p.franchiseId === a ? teamA : teamB)}</span>
+            <span class="sgc-keyname">{playerLabel(p)} <span class="sgc-keyteam">{nfl(p.nflTeam)}</span></span>
+            <span class="sgc-num">{p.proj.toFixed(1)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )}
 

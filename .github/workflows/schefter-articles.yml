@@ -7,8 +7,11 @@ on:
     - cron: "0 14 * * 2"
     # Wednesday 10pm PT (05:00 UTC Thursday) — waiver-pickups
     - cron: "0 5 * * 4"
-    # Friday 8am PT (15:00 UTC) — weekend-preview
-    - cron: "0 15 * * 5"
+    # Friday 8am PT (15:00 UTC) — weekend-preview. RETIRED Nov 2026 (owner's
+    # call): it previewed the same games as Saturday's Matchup Preview a day
+    # earlier, so the two were folded into the one Saturday column. The type
+    # stays dispatchable below; its old posts still render.
+    # - cron: "0 15 * * 5"
     # Saturday 9am PT (16:00 UTC) — matchup-preview
     - cron: "0 16 * * 6"
     # Sunday 8am PT (15:00 UTC) — cut-watch (weekly during the Jul 15–Aug 16
@@ -96,7 +99,6 @@ jobs:
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
-              "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;
               "0 15 * * 0") TYPE="cut-watch" ;;
               "0 18 * * *") TYPE="schedule-release" ;;
