@@ -100,6 +100,7 @@ describe('key NFL game', () => {
     expect(startersOf('0002')).toHaveLength(9);
     expect(startersOf('0002')[0].name).toBe('P11');
     const line = keyGameFact({ away: 'BUF', home: 'KCC', kickoff: 0, projTotal: 31, players: [{ franchiseId: '0001', name: 'Allen', position: 'QB', nflTeam: 'BUF', proj: 22 }] }, (id: string) => `Team ${id}`);
-    expect(line).toBe('KEY NFL GAME: BUF at KCC, 31.0 projected points from these two teams\' starters — QB Allen (Team 0001, 22.0).');
+    // MFL's KCC prints as KC, the code the card shows (a raw NOS once put "CAR at NOS" in the copy).
+    expect(line).toBe('KEY NFL GAME: BUF at KC, 31.0 projected points from these two teams\' starters — QB Allen (Team 0001, 22.0).');
   });
 });
