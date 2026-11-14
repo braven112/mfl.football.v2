@@ -56,6 +56,16 @@
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
+  /** An absolute http(s) URL, or '' — never a javascript:/data: string from an attribute or the feed. */
+  function safeUrl(raw) {
+    try {
+      var u = new URL(String(raw), location.href);
+      return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -74,7 +84,9 @@
     var style = el('style');
     style.textContent = CSS;
     var wrap = el('div', 'wrap');
-    var avatar = host.hasAttribute('data-avatar') ? host.getAttribute('data-avatar') : origin + '/embed/beat-reporter-avatar.webp';
+    var avatar = host.hasAttribute('data-avatar')
+      ? (host.getAttribute('data-avatar') ? safeUrl(host.getAttribute('data-avatar')) : '')
+      : origin + '/embed/beat-reporter-avatar.webp';
     var title = host.hasAttribute('data-title') ? host.getAttribute('data-title') : 'Latest from the beat';
     if (title) wrap.appendChild(el('h3', null, title));
     var list = el('ol');
@@ -96,7 +108,8 @@
         posts.forEach(function (p) {
           var li = el('li');
           var a = el('a');
-          a.href = p.url;
+          var href = safeUrl(p.url);
+          if (href) a.href = href;
           a.target = '_blank';
           a.rel = 'noopener';
           var meta = el('span', 'meta');
