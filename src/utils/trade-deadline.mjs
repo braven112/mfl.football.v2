@@ -112,6 +112,52 @@ export function upcomingTradeDeadline(slug, now = new Date()) {
   return today <= thisYear ? thisYear : tradeDeadlineIsoDate(slug, year + 1);
 }
 
+/**
+ * The UTC offset (`-08:00` / `-07:00`) Pacific time is on for a PT calendar
+ * date at a PT wall-clock time. Tries both offsets and keeps the one whose
+ * instant reads back as that wall clock — no hand-kept DST table.
+ */
+function ptOffsetFor(iso, hhmm) {
+  for (const offset of ['-08:00', '-07:00']) {
+    const instant = new Date(`${iso}T${hhmm}:00${offset}`);
+    const back = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(instant).replace(', ', 'T');
+    if (back === `${iso}T${hhmm}`) return offset;
+  }
+  return '-08:00';
+}
+
+/**
+ * The exact instant trading closes for `year`, as an ISO string with its PT
+ * offset — what the deadline-day countdown counts down to. Uses the
+ * registry's `time` (TheLeague: 20:45, MFL's own cutoff); a spec without one
+ * closes at midnight PT that ends deadline day. Null when the league has no
+ * deadline.
+ */
+export function tradeDeadlineCutoffISO(slug, year) {
+  const date = tradeDeadlineIsoDate(slug, year);
+  if (!date) return null;
+  const time = LEAGUES[slug]?.tradeDeadline?.time;
+  if (time) return `${date}T${time}:00${ptOffsetFor(date, time)}`;
+  const next = shiftIsoDate(date, 1);
+  return `${next}T00:00:00${ptOffsetFor(next, '00:00')}`;
+}
+
+/**
+ * The cutoff as owners read it: "8:45 PM PT", or "midnight PT" for a league
+ * whose deadline runs to the end of the day.
+ */
+export function tradeDeadlineTimeLabel(slug) {
+  const time = LEAGUES[slug]?.tradeDeadline?.time;
+  if (!time) return 'midnight PT';
+  const [h, m] = time.split(':').map(Number);
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} PT`;
+}
+
 /** Days of run-up before the deadline that count as deadline season. */
 export const TRADE_DEADLINE_WINDOW_DAYS = 10;
 

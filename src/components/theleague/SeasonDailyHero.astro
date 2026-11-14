@@ -182,6 +182,7 @@ const isFridayArticle = ptWeekday === 'Fri';
   <TradeDeadlineHero
     client:load
     deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
+    deadlineLabel={state.tradeDeadlineProps.deadlineLabel}
     referenceNowISO={state.metadata.testMode ? state.metadata.referenceDate.toISOString() : undefined}
     tradeBuilderHref={resolveLeaguePath('/theleague/front-office/trade-builder')}
   />

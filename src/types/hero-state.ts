@@ -142,8 +142,10 @@ export interface HeroState {
   };
   /** Trade deadline props (only when phase is 'trade-deadline') */
   tradeDeadlineProps?: {
-    /** ISO string for midnight PT cutoff — used by client-side countdown */
+    /** ISO instant trading closes (PT offset) — used by client-side countdown */
     deadlineMidnightPT: string;
+    /** How owners read that cutoff, e.g. "8:45 PM PT". */
+    deadlineLabel: string;
   };
   /** Playoff bracket props (only when phase is 'playoffs' and slot is 'standings') */
   playoffProps?: {

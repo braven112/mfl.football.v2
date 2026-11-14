@@ -32,6 +32,7 @@ import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from '../schedule-rele
 import { dailyPick } from '../hero-casting';
 import { getDailySlot, isGameLive } from '../hero-resolver';
 import { getCurrentNFLWeek } from '../current-week';
+import { tradeDeadlineTimeLabel } from '../trade-deadline.mjs';
 import { randomHeroPlayer } from '../hero-players';
 import type {
   EventHeroView,
@@ -589,6 +590,7 @@ const tradeDeadlineStep: HeroStep = (ctx) => {
     priority: 'P0++',
     content: profile.content?.tradeDeadline?.(p) ?? tradeDeadlineContent(p),
     deadlineMidnightPT: midnight,
+    deadlineLabel: clock?.isTradeDeadlineDay ? tradeDeadlineTimeLabel(profile.league) : 'midnight PT',
     referenceNowISO: input.testMode ? now.toISOString() : undefined,
     resolvedBy: 'isTradeDeadlineDay',
   };

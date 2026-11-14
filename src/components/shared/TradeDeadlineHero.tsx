@@ -6,7 +6,7 @@
  * while the AFL imported it across directories, which is how the CTA below
  * came to send AFL owners to TheLeague's trade builder.
  *
- * Displays a live countdown to midnight PT with urgency messaging.
+ * Displays a live countdown to the league's cutoff (TheLeague: 8:45 PM PT) with urgency messaging.
  *
  * Hydration is the CALLER's choice, not this file's — AflHero mounts it
  * `client:idle`, SeasonDailyHero `client:load`. This comment used to assert
@@ -18,7 +18,10 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface TradeDeadlineHeroProps {
+  /** The instant trading closes, ISO with its PT offset (TheLeague: 8:45 PM PT). */
   deadlineMidnightPT: string;
+  /** How owners read the cutoff in copy, e.g. "8:45 PM PT" or "midnight PT". */
+  deadlineLabel?: string;
   /**
    * Test-mode reference instant — the page's ?testDate= clock. Callers pass
    * this ONLY when the page was rendered in test mode; when present, the
@@ -80,7 +83,7 @@ function formatCountdown(ms: number | null): { hours: string; minutes: string; s
   return { hours, minutes, seconds };
 }
 
-export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO, tradeBuilderHref }: TradeDeadlineHeroProps) {
+export default function TradeDeadlineHero({ deadlineMidnightPT, deadlineLabel = 'midnight PT', referenceNowISO, tradeBuilderHref }: TradeDeadlineHeroProps) {
   const remaining = useCountdown(deadlineMidnightPT, referenceNowISO);
   // Pre-mount (remaining === null) renders the not-expired layout with
   // placeholder digits — identical on server and client, so hydration is stable.
@@ -113,7 +116,7 @@ export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO,
       {!isExpired && (
         <div className="tdhero__countdown" aria-live="polite" aria-atomic="true">
           {prefersReducedMotion ? (
-            <p className="tdhero__static-time">Ends at midnight PT</p>
+            <p className="tdhero__static-time">Ends at {deadlineLabel}</p>
           ) : (
             <div className="tdhero__digits" role="timer">
               <div className="tdhero__digit-group">
@@ -141,7 +144,7 @@ export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO,
         </p>
       ) : (
         <p className="tdhero__message">
-          Make your moves before midnight PT. After today, rosters are locked for trades.
+          Make your moves before {deadlineLabel}. After that, rosters are locked for trades.
         </p>
       )}
 
