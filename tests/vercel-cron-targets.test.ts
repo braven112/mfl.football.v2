@@ -69,6 +69,11 @@ const SCHEDULED_BRIDGES = [
   'src/pages/api/cron/schefter-scan.ts',
   'src/pages/api/cron/groupme-sync.ts',
   'src/pages/api/cron/lineup-check.ts',
+  'src/pages/api/cron/schefter-articles.ts',
+  'src/pages/api/cron/apply-pending-contracts.ts',
+  'src/pages/api/cron/schefter-rumor-scan.ts',
+  'src/pages/api/cron/sync-draft-pick-contracts.ts',
+  'src/pages/api/cron/apply-august-cuts.ts',
 ];
 
 /**
@@ -351,6 +356,11 @@ describe('every bridged workflow', () => {
       'schefter-scan.yml': true,
       'groupme-sync.yml': false,
       'lineup-reminders.yml': true,
+      'schefter-articles.yml': true,
+      'apply-pending-contracts.yml': false,
+      'schefter-rumor-scan.yml': true,
+      'sync-draft-pick-contracts.yml': false,
+      'apply-august-cuts.yml': true,
     });
   });
 

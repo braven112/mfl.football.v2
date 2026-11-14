@@ -1,8 +1,12 @@
 name: Schefter Rumor Mill Scan
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
+  # NO `schedule:`. Vercel Cron is this workflow's only scheduled trigger:
+  # src/pages/api/cron/schefter-rumor-scan.ts dispatches it on the slots in INTERVAL_JOBS
+  # (src/utils/sync-cadence.ts), with the live inputs a scheduled run used to
+  # imply. GitHub delivered this repo's schedules hours late or not at all
+  # (Nov 2026), and a GitHub cron kept as a "backup" collides with the primary
+  # (tests/vercel-cron-targets.test.ts).
   workflow_dispatch:
     inputs:
       dry_run:
@@ -12,7 +16,9 @@ on:
 
 concurrency:
   group: schefter-rumor-scan
-  cancel-in-progress: true
+  # Queue, never cancel: the scan posts to GroupMe before its commit lands,
+  # so a cancel in between re-sends on the next run.
+  cancel-in-progress: false
 
 permissions:
   contents: write

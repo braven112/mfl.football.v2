@@ -222,3 +222,172 @@ export function lineupCheckDecision(
     reason: `Kickoff at ${new Date(best * 1000).toISOString()} — check lineups before it locks.`,
   };
 }
+
+// ── Schefter's scheduled columns ────────────────────────────────────────────
+//
+// A third question: not "how often" or "before which kickoff", but "is it the
+// minute a column is due". These are fixed times on the league's own clock —
+// the Saturday 11am PT Matchup Preview (with the lineup roll call first), the
+// Tuesday Pecking Order, and so on. They used to be GitHub `schedule:` crons
+// on schefter-articles.yml, which GitHub delivers whenever it likes: on
+// 2026-11-13 the Friday runs landed 5-8 hours late, and on 2026-11-14 the
+// Saturday preview never started at all and was run by hand.
+//
+// Each slot is written in the LEAGUE clock (Pacific), never UTC, so daylight
+// saving is the zone's problem, not a pair of DST-guarded UTC crons. A slot
+// matches exactly ONE tick: the tick whose PT hour is the slot's and whose
+// minute, floored to TICK_MINUTES, is the slot's minute. One dispatch per
+// slot is deliberate — the workflow's concurrency group queues runs, and a
+// second dispatch for the same slot would sit in that one pending place and
+// could displace a different column queued behind it.
+
+export type SchefterArticleType =
+  | 'pecking-order'
+  | 'schedule-strength'
+  | 'waiver-pickups'
+  | 'matchup-preview'
+  | 'cut-watch'
+  | 'schedule-release';
+
+export interface SchefterArticleSlot {
+  type: SchefterArticleType;
+  /** 0 = Sunday … 6 = Saturday, in the league clock. `null` = every day. */
+  weekday: number | null;
+  /** Hour and minute in the league clock. Minute must be a multiple of the tick. */
+  hour: number;
+  minute: number;
+}
+
+/**
+ * The columns and when each is due, Pacific time. Each type self-guards on its
+ * own season window and dedups on the week's article id, so a slot firing in
+ * the offseason is a no-op run, exactly as the old cron was.
+ *
+ * `schedule-release` is daily and a no-op until the commissioner's paste lands.
+ * It sits at :30, not on the hour with the preview, so the two never share a
+ * Saturday tick (on GitHub they did, and its `cancel-in-progress` meant one
+ * cancelled the other).
+ */
+export const SCHEFTER_ARTICLE_SLOTS: readonly SchefterArticleSlot[] = [
+  { type: 'pecking-order', weekday: 2, hour: 7, minute: 0 },
+  { type: 'schedule-strength', weekday: 3, hour: 9, minute: 0 },
+  { type: 'waiver-pickups', weekday: 3, hour: 22, minute: 0 },
+  { type: 'matchup-preview', weekday: 6, hour: 11, minute: 0 },
+  { type: 'cut-watch', weekday: 0, hour: 8, minute: 0 },
+  { type: 'schedule-release', weekday: null, hour: 11, minute: 30 },
+];
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Weekday, hour and minute of `now` on `zone`'s wall clock. */
+function wallClock(now: Date, zone: string): { weekday: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  return {
+    weekday: WEEKDAYS.indexOf(get('weekday')),
+    hour: Number(get('hour')) % 24,
+    minute: Number(get('minute')),
+  };
+}
+
+export interface SchefterArticleDecision {
+  /** The column types due on this tick, in slot order. Empty = skip. */
+  types: SchefterArticleType[];
+  reason: string;
+}
+
+/** Which Schefter columns are due on THIS tick? Stateless, like the tiers. */
+export function schefterArticleDecision(
+  now: Date = new Date(),
+  { slots = SCHEFTER_ARTICLE_SLOTS, zone = LEAGUE_CLOCK.zone }: {
+    slots?: readonly SchefterArticleSlot[];
+    zone?: string;
+  } = {},
+): SchefterArticleDecision {
+  const clock = wallClock(now, zone);
+  const tickMinute = clock.minute - (clock.minute % TICK_MINUTES);
+  const types = slots
+    .filter(
+      (s) =>
+        (s.weekday === null || s.weekday === clock.weekday) &&
+        s.hour === clock.hour &&
+        s.minute === tickMinute,
+    )
+    .map((s) => s.type);
+  const at = `${WEEKDAYS[clock.weekday]} ${String(clock.hour).padStart(2, '0')}:${String(tickMinute).padStart(2, '0')} ${zone}`;
+  return {
+    types,
+    reason: types.length ? `${types.join(', ')} due at ${at}.` : `No column due at ${at}.`,
+  };
+}
+
+// ── Fixed-interval jobs ─────────────────────────────────────────────────────
+//
+// Jobs whose old GitHub cron was a plain step ("every 30 min", "every 15 min
+// in August"), moved onto the Vercel tick for the same reason as the columns
+// above: GitHub drops and delays this repo's scheduled events. Each job's
+// own script carries its real gates (season windows, deadlines, dedup), so all
+// this decides is "is this tick one of the job's slots". Months are read on
+// the league clock, so "May only" means May in Pacific time, not UTC.
+
+export type IntervalJob =
+  | 'apply-pending-contracts'
+  | 'schefter-rumor-scan'
+  | 'sync-draft-pick-contracts'
+  | 'apply-august-cuts';
+
+export interface IntervalJobSchedule {
+  /** Minutes between dispatches. A multiple of TICK_MINUTES that divides 60. */
+  intervalMinutes: number;
+  /** 1-12 on the league clock. Omitted = every month. */
+  months?: readonly number[];
+}
+
+export const INTERVAL_JOBS: Readonly<Record<IntervalJob, IntervalJobSchedule>> = {
+  // Owners' submitted contract declarations, written to MFL.
+  'apply-pending-contracts': { intervalMinutes: 30 },
+  // Rumor mill + trade-offer rumors + the trade-deadline wrap-up.
+  'schefter-rumor-scan': { intervalMinutes: 15 },
+  // Rookie contracts stamped on new draft picks — TheLeague's May draft window.
+  'sync-draft-pick-contracts': { intervalMinutes: 5, months: [5] },
+  // TheLeague's August cutdown; the script's --auto picks the mode by date.
+  'apply-august-cuts': { intervalMinutes: 15, months: [8] },
+};
+
+export interface IntervalJobDecision {
+  dispatch: boolean;
+  reason: string;
+}
+
+/** Should THIS tick dispatch `job`? Stateless: the clock decides. */
+export function intervalJobDecision(
+  job: IntervalJob,
+  now: Date = new Date(),
+  zone: string = LEAGUE_CLOCK.zone,
+): IntervalJobDecision {
+  const { intervalMinutes, months } = INTERVAL_JOBS[job];
+  if (months) {
+    const month = Number(
+      new Intl.DateTimeFormat('en-US', { timeZone: zone, month: 'numeric' }).format(now),
+    );
+    if (!months.includes(month)) {
+      return { dispatch: false, reason: `${job} runs only in month(s) ${months.join(', ')}.` };
+    }
+  }
+  // Every interval divides 60 and every zone in use is a whole-hour offset,
+  // so the UTC minute is the league-clock minute. The cron fires a little
+  // after the minute, so the minute itself is the slot.
+  const dispatch = now.getUTCMinutes() % intervalMinutes === 0;
+  return {
+    dispatch,
+    reason: dispatch
+      ? `${job} slot (every ${intervalMinutes} min).`
+      : `${job} is between dispatches (every ${intervalMinutes} min).`,
+  };
+}

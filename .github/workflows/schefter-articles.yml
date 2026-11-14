@@ -1,34 +1,13 @@
 name: Schefter Articles
 
 on:
-  schedule:
-    # Tuesday 7am PT (14:00 UTC) — pecking-order (The Pecking Order weekly
-    # column; self-guards in the offseason and dedups on the issue file)
-    - cron: "0 14 * * 2"
-    # Wednesday 10pm PT (05:00 UTC Thursday) — waiver-pickups
-    - cron: "0 5 * * 4"
-    # Friday 8am PT (15:00 UTC) — weekend-preview. RETIRED Nov 2026 (owner's
-    # call): it previewed the same games as Saturday's Matchup Preview a day
-    # earlier, so the two were folded into the one Saturday column. The type
-    # stays dispatchable below; its old posts still render.
-    # - cron: "0 15 * * 5"
-    # Saturday 11am PT — matchup-preview, with the lineup roll call first
-    # (owner's call, Nov 2026; was 9am). Cron is UTC and PT shifts an hour at
-    # DST, so BOTH hours are scheduled and the resolve step keeps the one that
-    # is 11am PT that day: 18:00 UTC under PDT, 19:00 UTC under PST.
-    - cron: "0 18 * * 6"
-    - cron: "0 19 * * 6"
-    # Sunday 8am PT (15:00 UTC) — cut-watch (weekly during the Jul 15–Aug 16
-    # window; self-guards outside it)
-    - cron: "0 15 * * 0"
-    # Daily 11am PT (18:00 UTC) — schedule-release. Fires only once the
-    # commissioner's paste has landed in MFL and matches the locked reveal, so
-    # it is a no-op on every other day of the year (see the article type).
-    - cron: "0 18 * * *"
-    # Wednesday 9am PT (16:00 UTC) — schedule-strength (The Gauntlet, both
-    # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
-    # would have shadowed a Wednesday mapping; no reason to churn it back.
-    - cron: "0 16 * * 3"
+  # NO `schedule:`. Vercel Cron is this workflow's only scheduled trigger:
+  # src/pages/api/cron/schefter-articles.ts dispatches each column on the tick
+  # it is due, from SCHEFTER_ARTICLE_SLOTS in src/utils/sync-cadence.ts, on
+  # the league's Pacific clock (so DST needs no paired UTC crons). GitHub's own
+  # schedule ran these 5-8 hours late on 2026-11-13 and skipped the Saturday
+  # preview on 2026-11-14. A GitHub cron as a "backup" cannot be offset clear
+  # of the primary and collides with it (tests/vercel-cron-targets.test.ts).
   workflow_dispatch:
     inputs:
       type:
@@ -53,7 +32,9 @@ on:
 
 concurrency:
   group: schefter-articles
-  cancel-in-progress: true
+  # Queue, never cancel: a run posts to GroupMe and sends push BEFORE its
+  # commit lands, so a cancel in between re-sends on the next run.
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -88,36 +69,10 @@ jobs:
         id: resolve
         env:
           INPUT_TYPE: ${{ github.event.inputs.type }}
-          CRON_EXPR: ${{ github.event.schedule }}
         run: |
-          if [ -n "$INPUT_TYPE" ]; then
-            echo "type=$INPUT_TYPE" >> "$GITHUB_OUTPUT"
-          else
-            # Map the TRIGGERING cron expression (github.event.schedule) to an
-            # article type. Never derive the type from wall-clock time — GitHub
-            # schedule delays of 10-60 min are routine, and a delayed run
-            # crossing into another slot's hour would otherwise be misrouted
-            # to the wrong article type.
-            TYPE=""
-            case "$CRON_EXPR" in
-              "0 14 * * 2") TYPE="pecking-order" ;;
-              "0 16 * * 3") TYPE="schedule-strength" ;;
-              "0 5 * * 4")  TYPE="waiver-pickups" ;;
-              "0 18 * * 6") TYPE="matchup-preview" ;;
-              "0 19 * * 6") TYPE="matchup-preview" ;;
-              "0 15 * * 0") TYPE="cut-watch" ;;
-              "0 18 * * *") TYPE="schedule-release" ;;
-            esac
-            # The Saturday preview is scheduled at BOTH 18:00 and 19:00 UTC;
-            # keep only the one that is 11am PT on today's side of DST. Checked
-            # by the zone OFFSET, never the hour, so a delayed run still maps.
-            PT_OFFSET="$(TZ=America/Los_Angeles date +%z)"
-            case "$CRON_EXPR" in
-              "0 18 * * 6") [ "$PT_OFFSET" = "-0700" ] || TYPE="" ;;
-              "0 19 * * 6") [ "$PT_OFFSET" = "-0800" ] || TYPE="" ;;
-            esac
-            echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
-          fi
+          # Every run is a dispatch (Vercel's bridge or a human), so the type
+          # is always the input — there is no cron string left to map.
+          echo "type=$INPUT_TYPE" >> "$GITHUB_OUTPUT"
 
       # Saturday, BEFORE the Matchup Preview: one post per league naming every
       # team whose lineup has a problem (no lineup, an empty slot, an OUT, IR

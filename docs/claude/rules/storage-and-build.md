@@ -332,8 +332,8 @@ So the schedule lives in **`vercel.json` → `crons`**, which fires
 `/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
 now the sync's ONLY scheduled trigger — the workflow has no `schedule:` at all.
 
-**Four workflows ride the bridge now**, all four with no `schedule:` of their
-own, all three dispatching through `src/utils/workflow-dispatch.ts` (the single
+**Nine workflows ride the bridge now**, none with a `schedule:` of its
+own, all dispatching through `src/utils/workflow-dispatch.ts` (the single
 door that holds the `outboundAllowed()` check, because staging and every PR
 preview carry production's `GH_PAT`):
 
@@ -343,6 +343,17 @@ preview carry production's `GH_PAT`):
 | `/api/cron/schefter-scan` | `schefter-scan.yml` | tiered | Roger's deadline reminders + the news feed |
 | `/api/cron/groupme-sync` | `groupme-sync.yml` | every tick | the chat mirror — commits nothing |
 | `/api/cron/lineup-check` | `lineup-reminders.yml` | ahead of each kickoff | the pre-kickoff lineup warning (`lineupCheckDecision`) — see `lineups.md` |
+| `/api/cron/schefter-articles` | `schefter-articles.yml` | on each column's PT slot | Saturday roll call + Matchup Preview, Pecking Order, Gauntlet, waiver pickups, cut-watch, schedule-release (`SCHEFTER_ARTICLE_SLOTS`) |
+| `/api/cron/apply-pending-contracts` | `apply-pending-contracts.yml` | every 30 min | owners' contract declarations → MFL (`INTERVAL_JOBS`) |
+| `/api/cron/schefter-rumor-scan` | `schefter-rumor-scan.yml` | every 15 min | rumor mill + trade-deadline wrap-up |
+| `/api/cron/sync-draft-pick-contracts` | `sync-draft-pick-contracts.yml` | every 5 min, May (PT) | rookie contracts on new picks |
+| `/api/cron/apply-august-cuts` | `apply-august-cuts.yml` | every 15 min, August (PT) | the August cutdown (`--auto`) |
+
+A bridge that dispatches a workflow with dry-run-by-default inputs must pass
+the LIVE inputs a scheduled run used to imply (`dry_run: 'false'`, `mode:
+'auto'`): a bare dispatch takes the manual defaults and silently does nothing.
+Moved off GitHub's schedule 2026-11-14, after the Friday runs landed 5-8 hours
+late and the Saturday preview never started.
 
 `schefter-scan` is the one with owner-facing lateness: Roger's deadline
 reminders are push-first and held through quiet hours, so the first tick after
