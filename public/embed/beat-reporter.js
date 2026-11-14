@@ -15,6 +15,8 @@
  *   data-limit    1-12 posts (default 5)
  *   data-theme    "dark" | "light" | "auto" (default auto)
  *   data-title    heading text (default "Latest from the beat"; "" hides it)
+ *   data-avatar   image URL for the reporter avatar on each post (default:
+ *                 the AI beat reporter avatar next to this script; "" hides it)
  * Anything inside the container is a fallback: it shows if the feed can't load.
  * Colors follow CSS custom properties set on the container, e.g.
  *   style="--br-accent:#c9a227; --br-bg:transparent; --br-font:Georgia,serif"
@@ -35,7 +37,9 @@
     'h3{margin:12px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--_muted);font-weight:600}' +
     'ol{list-style:none;margin:0;padding:0}' +
     'li{padding:12px 0;border-top:1px solid var(--_line)}li:first-child{border-top:0}' +
-    'a{color:inherit;text-decoration:none;display:block}a:hover b,a:focus-visible b{color:var(--_accent);text-decoration:underline}' +
+    'a{color:inherit;text-decoration:none;display:flex;gap:12px;align-items:flex-start}.txt{min-width:0;flex:1}' +
+    '.av{flex:none;width:40px;height:40px;border-radius:50%;object-fit:cover}' +
+    'a:hover b,a:focus-visible b{color:var(--_accent);text-decoration:underline}' +
     'a:focus-visible{outline:2px solid var(--_accent);outline-offset:2px;border-radius:4px}' +
     '.meta{display:block;font-size:12px;color:var(--_muted);margin-bottom:2px}' +
     '.kind{color:var(--_accent);font-weight:600}' +
@@ -70,6 +74,7 @@
     var style = el('style');
     style.textContent = CSS;
     var wrap = el('div', 'wrap');
+    var avatar = host.hasAttribute('data-avatar') ? host.getAttribute('data-avatar') : origin + '/embed/beat-reporter-avatar.webp';
     var title = host.hasAttribute('data-title') ? host.getAttribute('data-title') : 'Latest from the beat';
     if (title) wrap.appendChild(el('h3', null, title));
     var list = el('ol');
@@ -97,9 +102,20 @@
           var meta = el('span', 'meta');
           meta.appendChild(el('span', 'kind', p.kind === 'article' ? 'Article' : 'League move'));
           meta.appendChild(document.createTextNode(' \u00b7 ' + timeAgo(p.timestamp)));
-          a.appendChild(meta);
-          a.appendChild(el('b', null, p.headline));
-          if (p.excerpt && p.excerpt !== p.headline) a.appendChild(el('p', null, p.excerpt));
+          if (avatar) {
+            var img = el('img', 'av');
+            img.src = avatar;
+            img.alt = '';
+            img.width = 40;
+            img.height = 40;
+            img.loading = 'lazy';
+            a.appendChild(img);
+          }
+          var txt = el('span', 'txt');
+          txt.appendChild(meta);
+          txt.appendChild(el('b', null, p.headline));
+          if (p.excerpt && p.excerpt !== p.headline) txt.appendChild(el('p', null, p.excerpt));
+          a.appendChild(txt);
           li.appendChild(a);
           list.appendChild(li);
         });
