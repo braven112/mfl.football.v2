@@ -11,6 +11,10 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
+import TradeDeadlineConflictNotice from '../../../components/shared/TradeDeadlineConflictNotice.astro';
+import { checkTradeDeadline } from '../../../utils/mfl-trade-deadline.mjs';
+import { leagueFeedPath, loadLeagueData } from '../../../utils/league-data';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 
 export const prerender = false;
 
@@ -20,6 +24,15 @@ if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('thel
 if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id)) {
   return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
 }
+
+// Trade deadline drift: MFL's calendar (the source of truth) against the
+// Constitution. Shown here whenever they disagree, not just near the deadline.
+const league = getLeagueBySlug('theleague')!;
+const leagueYear = getLeagueYearForSlug(league.slug);
+const calendarFeed = await loadLeagueData<unknown>(
+  leagueFeedPath(league.dataPath, leagueYear, 'calendar.json'),
+).catch(() => null);
+const tradeCheck = checkTradeDeadline(league.slug, leagueYear, Array.isArray(calendarFeed) ? calendarFeed : []);
 
 type AdminLink = {
   href: string;
@@ -160,6 +173,11 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
         <code>/theleague</code>. <strong>Conditional</strong> pages render for everyone but hide admin-only controls.
       </p>
     </header>
+
+    <TradeDeadlineConflictNotice
+      check={tradeCheck}
+      mflUrl={`https://${league.mflHost}/${leagueYear}/home/${league.id}`}
+    />
 
     {sections.map((section) => (
       <section class="admin-hub__section">
