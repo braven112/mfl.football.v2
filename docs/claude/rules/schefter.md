@@ -1678,3 +1678,18 @@ byte-identical between the two leagues and asserts no `\d+-team` size anywhere.
 The Pecking Order and Gauntlet GroupMe posts name one hook and link the
 column; the column does the talking. Never re-tell the column in the chat
 (`tests/groupme-one-sentence-promos.test.ts`).
+
+## The previews render in 1-2 sentence paragraphs (Nov 2026)
+
+Owner's call: the Friday Weekend Preview and Saturday Matchup Preview read as a
+wall of text on a phone. Their prompts ask for paragraphs of one or two
+sentences (overriding the base prompt's "2-4 sentences"), and every article
+page renders their `content` through `articleParagraphs(post)`
+(`src/utils/article-paragraphs.mjs`), which re-flows any paragraph the model
+wrote long — and every preview already in the feed — into at most two
+sentences, two only while they stay under ~200 characters together. It never
+splits inside a link and never merges the writer's own paragraphs. Other
+article types render as written; add a type to `SHORT_PARAGRAPH_TYPES` to opt
+it in. All three article renderers (`SchefterArticlePage.astro`, TheLeague's
+and the AFL's `news/[id].astro`) must go through `articleParagraphs`, never
+`post.content.map` directly. Tests: `tests/article-paragraphs.test.ts`.

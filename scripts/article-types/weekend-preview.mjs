@@ -187,11 +187,12 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Paragraph 1...</p>", "<p>Paragraph 2...</p>"]
+  "content": ["<p>One or two sentences.</p>", "<p>One punchy line.</p>", "..."]
 }
 
 INSTRUCTIONS:
-- Write 4-6 content paragraphs.
+- Write 8-12 SHORT content paragraphs: one or two sentences each, never three (this overrides the 2-4 sentence default). Owners read this on a phone, so keep each paragraph under about 200 characters.
+- Give a punchline or a bold prediction its own one-sentence paragraph.
 - Identify the matchup of the week (most competitive or highest stakes).
 - Make bold predictions for 2-3 key matchups.
 - Call out teams on winning/losing streaks.

@@ -31,7 +31,7 @@ import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/leagu
  * matchup gets a tale-of-the-tape card under the copy. Hard cap, applied in
  * buildPost — validate() only rejects too FEW paragraphs.
  */
-const MAX_PARAGRAPHS = 3;
+const MAX_PARAGRAPHS = 9;
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -352,14 +352,15 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Biggest stakes...</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
+  "content": ["<p>Biggest stakes...</p>", "<p>Your pick, in one line.</p>", "<p>Other matchups...</p>", "<p>Broadcast guide...</p>"]
 }
 
 INSTRUCTIONS:
-- Write exactly 3 SHORT paragraphs, each under 300 characters.
-- Paragraph 1: the game with the most on the line (STAKES lines) or the GAME OF THE WEEK — what is at stake and your pick.
-- Paragraph 2: one or two more games worth watching, with picks. Do not run through every game.
-- Paragraph 3: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
+- Write 3 beats, in order, as 5-8 SHORT paragraphs in all. Every paragraph is one or two sentences, never three (this overrides the 2-4 sentence default), and under about 200 characters: owners read this on a phone. Give a pick or a punchline its own one-sentence paragraph.
+- Beat 1: the game with the most on the line (STAKES lines) or the GAME OF THE WEEK — what is at stake and your pick.
+- Beat 2: one or two more games worth watching, with picks. Do not run through every game.
+- Beat 3: the broadcast guide — the one or two NFL games to watch and which rostered players make them matter.
+- Keep the whole column about as long as three short paragraphs would be (roughly 900 characters); the charts carry the rest.
 - Odds are estimates from a simulation: say "about" or "roughly", never "guaranteed" or "eliminated".
 - Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
 - PLAYOFF BUBBLE: if any matchup carries a "Playoff bubble" line (a team that missed the playoffs by one spot facing the team that took it), call out the strongest one in a sentence — it is a must-mention storyline, sharper the closer it is to the end of the regular season. "Bubble history" lines are supporting color. State the seasons only as the fact sheet does.
