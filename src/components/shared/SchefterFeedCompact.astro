@@ -179,7 +179,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
     // every render, and only on cards that are on screen and not yet measured
     // as fitting.
     function markClampedBodies() {
-      for (const btn of feed!.querySelectorAll<HTMLButtonElement>('[data-sfc-more]')) {
+      for (const btn of Array.from(feed!.querySelectorAll<HTMLButtonElement>('[data-sfc-more]'))) {
         if (btn.getAttribute('aria-expanded') === 'true') continue;
         const body = btn.previousElementSibling as HTMLElement | null;
         if (!body || body.offsetParent === null) continue;
