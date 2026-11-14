@@ -15,6 +15,7 @@
  *   data-limit    1-12 posts (default 5)
  *   data-theme    "dark" | "light" | "auto" (default auto)
  *   data-title    heading text (default "Latest from the beat"; "" hides it)
+ * Anything inside the container is a fallback: it shows if the feed can't load.
  * Colors follow CSS custom properties set on the container, e.g.
  *   style="--br-accent:#c9a227; --br-bg:transparent; --br-font:Georgia,serif"
  * Also: --br-fg, --br-muted, --br-line, --br-border, --br-radius, --br-pad.
@@ -104,6 +105,12 @@
         });
       })
       .catch(function () {
+        // Fall back to whatever the host page put inside the container (a
+        // static snapshot, a link), or a one-line notice when it put nothing.
+        if (root !== host && host.children.length) {
+          wrap.replaceChild(document.createElement('slot'), list);
+          return;
+        }
         list.removeAttribute('aria-busy');
         list.appendChild(el('li', 'empty', 'News is unavailable right now.'));
       });
