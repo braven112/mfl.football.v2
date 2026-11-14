@@ -208,6 +208,10 @@ export const LEAGUES = {
      * is not the source of truth. The hero (`isTradeDeadlineDay`) and the
      * league events (`friday-before-week-11`) read the same rule;
      * `tests/schefter-rumor-cadence.test.ts` pins them.
+     *
+     * `time` is the PT wall-clock cutoff on deadline day (MFL closes trading
+     * at 8:45 PM PT — its calendar's TRADE event starts then). A spec with no
+     * `time` closes at midnight PT, the end of deadline day.
      */
     /**
      * The league chat the news persona posts into — see `chatConfigFor` in
@@ -218,7 +222,7 @@ export const LEAGUES = {
      * push, and nothing is posted anywhere else.
      */
     chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
-    tradeDeadline: { kind: 'computed', rule: 'friday-before-week-11' },
+    tradeDeadline: { kind: 'computed', rule: 'friday-before-week-11', time: '20:45' },
     /**
      * Playoff odds (src/utils/playoff-odds.mjs, the Playoff Odds page, the
      * standings Playoff tab and the Saturday Matchup Preview). How the league

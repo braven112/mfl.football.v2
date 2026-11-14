@@ -183,7 +183,10 @@ type LeagueHeroStateKind =
       kind: 'trade-deadline';
       priority: 'P0++';
       content: HeroContent;
+      /** The instant trading closes (ISO with PT offset) — not always midnight. */
       deadlineMidnightPT: string;
+      /** How owners read that cutoff, e.g. "8:45 PM PT". */
+      deadlineLabel: string;
       /** Test-mode reference clock for the countdown — set only when ?testDate= drove resolution. */
       referenceNowISO?: string;
     }
