@@ -188,6 +188,25 @@ describe('deadline wrap-up', async () => {
     expect(deadlineWrapTemplate(redraft, null)).not.toMatch(/offseason/);
   });
 
+  it('a team unit (Def, ST, TMQB…) is never named as a player', () => {
+    // The first production dry run named "the Denver Broncos talks": a team
+    // defense read as a real NFL trade.
+    const units = new Map([
+      ['0501', { name: 'Broncos, Denver', position: 'Def' }],
+      ['0502', { name: 'Vikings, Minnesota', position: 'TMQB' }],
+      ['15000', { name: 'Nacua, Puka', position: 'WR' }],
+    ]);
+    const unitFacts = buildDeadlineWrapFacts({
+      offers: [
+        { id: 'x', franchise: '0004', franchise2: '0005', franchise1_gave_up: '0501,', franchise2_gave_up: '0502,', timestamp: '1794500000' },
+        { id: 'y', franchise: '0004', franchise2: '0005', franchise1_gave_up: '0501,15000,', franchise2_gave_up: '', timestamp: '1794500001' },
+      ],
+      cutoffMs, completedTrades: [], playerMap: units, rostersCarryOver: true,
+    });
+    expect(unitFacts.stillAliveCount).toBe(2);
+    expect(unitFacts.stillAlivePlayers).toEqual(['Puka Nacua']);
+  });
+
   it('nothing open and nothing done is no story', () => {
     expect(wrapHasStory(buildDeadlineWrapFacts({ offers: [], cutoffMs, completedTrades: [], rostersCarryOver: true }))).toBe(false);
   });
