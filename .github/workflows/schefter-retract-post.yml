@@ -1,0 +1,89 @@
+name: Schefter Retract Post
+
+# Manual only: take a published Schefter post down by id.
+#
+# The feed lives in Redis, so scripts/schefter-retract-post.mjs on its own (it
+# edits the working-tree file) does nothing to the live site. This job is the
+# same pull → edit → merge-into-Redis path every feed writer uses: pull the
+# live feed, retract, and publish through commit-feed-and-push, whose mergeFeed
+# unions the `retractedIds` tombstone so a scan racing this job cannot push the
+# post back. See docs/claude/rules/schefter.md § "Removing the row is not the
+# retraction".
+#
+# `feed_only` (default true) leaves the season archive alone — right for a
+# just-published post, which is never in an archive shard yet.
+
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "Schefter league slug (theleague, afl-fantasy)"
+        required: true
+        type: string
+      ids:
+        description: "Post id(s) to retract, comma-separated"
+        required: true
+        type: string
+      feed_only:
+        description: "Only the live feed, not the season archive"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: schefter-retract
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  retract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 1
+
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Retract
+        env:
+          LEAGUE: ${{ inputs.league }}
+          IDS: ${{ inputs.ids }}
+          FEED_ONLY: ${{ inputs.feed_only }}
+        run: |
+          args=(--league "$LEAGUE")
+          IFS=',' read -ra list <<< "$IDS"
+          for id in "${list[@]}"; do
+            id="$(echo "$id" | xargs)"
+            [ -n "$id" ] && args+=(--id "$id")
+          done
+          [ "$FEED_ONLY" = "true" ] && args+=(--feed-only)
+          node scripts/schefter-retract-post.mjs "${args[@]}"
+
+      - name: Commit and push
+        env:
+          IDS: ${{ inputs.ids }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter — retract post(s) $IDS" \
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/schefter-archive,data/afl-fantasy/schefter-archive"
