@@ -49,6 +49,7 @@ import {
   shouldUseOneLiner,
 } from './lib/schefter-wire-formats.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { formatPlayerName } from './lib/lineup-warnings.mjs';
 import {
   evaluatePingWindow,
   consumeDailyPost,
@@ -156,13 +157,18 @@ function formatDefenseName(name) {
   return `the ${name} defense`;
 }
 
-/** Format a player for display — DEF-aware */
+/**
+ * Format a player for display — DEF-aware. MFL stores names "Last, First";
+ * post copy reads "WR Deebo Samuel". Left as "WR Samuel, Deebo", a trade
+ * headline read like two players, and the AI rewrite then split it into
+ * "WR Samuel and WR Deebo" (TheLeague homepage hero, 2026-11-14).
+ */
 function formatPlayerDisplay(player) {
   if (!player) return 'Unknown Player';
   if (player.position === 'Def' || player.position === 'DEF') {
     return formatDefenseName(player.name);
   }
-  return `${player.position ?? ''} ${player.name}`.trim();
+  return `${player.position ?? ''} ${formatPlayerName(player.name)}`.trim();
 }
 
 function parseTradeAssets(str, players, teams) {
