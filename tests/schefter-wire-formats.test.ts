@@ -168,3 +168,26 @@ describe('folding a scan into roster lists', () => {
     expect(feed.posts).toHaveLength(0); // the old copy is replaced, not duplicated
   });
 });
+
+describe('roster lists render in full', () => {
+  // The homepage rail clamps every post body to three lines. A roster list's
+  // lead plus its blank line use two of them, so the clamp cut every list at
+  // "🏈 Added:…" — the post said who moved without saying who. The `--lines`
+  // body must opt out of the clamp in both cards' stylesheets.
+  it('the compact card exempts a roster list from the line clamp', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/styles/schefter-feed-compact.css', 'utf8');
+    const rule = css.match(/\.sfc-post__body--lines\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toMatch(/-webkit-line-clamp:\s*unset/);
+    expect(rule).toMatch(/display:\s*block/);
+    expect(rule).toMatch(/overflow:\s*visible/);
+  });
+
+  it('the full card never clamps a post body', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/styles/schefter-feed.css', 'utf8');
+    for (const m of css.matchAll(/([^{}]*\.sf-post__body[^{}]*)\{([^}]*)\}/g)) {
+      expect(m[2], m[1].trim()).not.toMatch(/line-clamp/);
+    }
+  });
+});

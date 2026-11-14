@@ -537,9 +537,16 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   word-break: break-word;
 }
 
-/* A roster list is line-broken text; the line clamp above still applies. */
+/* A roster list is line-broken text, and it shows IN FULL: its lead and the
+   blank line under it use two of the three clamped lines, so the clamp cut
+   every list at "🏈 Added:…" with no way to read who was added. The list is
+   the whole post, so it is exempt from the clamp. */
 .sfc-post__body--lines {
   white-space: pre-line;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
 }
 
 /* GroupMe image thumbnail in compact view */
