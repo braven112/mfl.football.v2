@@ -35,6 +35,7 @@ describe('schefter public feed', () => {
 
   it('strips HTML from excerpts and trims long text on a word', () => {
     expect(toPlainExcerpt('<p>One <a href="/x">two</a></p><p>three</p>')).toBe('One two three');
+    expect(toPlainExcerpt('a &amp;lt; b')).toBe('a &lt; b');
     const long = toPlainExcerpt('word '.repeat(100), 50);
     expect(long.length).toBeLessThanOrEqual(51);
     expect(long.endsWith('…')).toBe(true);

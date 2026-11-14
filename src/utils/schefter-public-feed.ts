@@ -57,11 +57,12 @@ export function toPlainExcerpt(html: unknown, max = EXCERPT_CHARS): string {
   const text = String(html ?? '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    // Last, so "&amp;lt;" decodes once to "&lt;" and never twice to "<".
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
   if (text.length <= max) return text;

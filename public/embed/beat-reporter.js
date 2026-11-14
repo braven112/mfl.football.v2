@@ -16,7 +16,8 @@
  *   data-theme    "dark" | "light" | "auto" (default auto)
  *   data-title    heading text (default "Latest from the beat"; "" hides it)
  * Colors follow CSS custom properties set on the container, e.g.
- *   style="--br-accent:#c9a227; --br-bg:transparent"
+ *   style="--br-accent:#c9a227; --br-bg:transparent; --br-font:Georgia,serif"
+ * Also: --br-fg, --br-muted, --br-line, --br-border, --br-radius, --br-pad.
  */
 (function () {
   'use strict';
@@ -24,12 +25,12 @@
   var origin = script && script.src ? new URL(script.src).origin : location.origin;
 
   var CSS =
-    ':host{all:initial;display:block;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;' +
+    ':host{all:initial;display:block;font-size:15px;line-height:1.45;font-family:var(--br-font,system-ui,-apple-system,"Segoe UI",sans-serif);' +
     '--_bg:var(--br-bg,#fff);--_fg:var(--br-fg,#14171c);--_muted:var(--br-muted,#5b6472);' +
     '--_line:var(--br-line,rgba(0,0,0,.1));--_accent:var(--br-accent,#1c497c);color:var(--_fg)}' +
     ':host([data-theme-resolved=dark]){--_bg:var(--br-bg,#111418);--_fg:var(--br-fg,#eef1f5);' +
     '--_muted:var(--br-muted,#9aa4b2);--_line:var(--br-line,rgba(255,255,255,.12));--_accent:var(--br-accent,#7fb0ff)}' +
-    '.wrap{background:var(--_bg);border:1px solid var(--_line);border-radius:12px;padding:4px 16px}' +
+    '.wrap{background:var(--_bg);border:var(--br-border,1px solid var(--_line));border-radius:var(--br-radius,12px);padding:var(--br-pad,4px 16px)}' +
     'h3{margin:12px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--_muted);font-weight:600}' +
     'ol{list-style:none;margin:0;padding:0}' +
     'li{padding:12px 0;border-top:1px solid var(--_line)}li:first-child{border-top:0}' +
