@@ -166,7 +166,7 @@ export function shortenParagraphs(paragraphs) {
 
 /**
  * The paragraphs an article page renders: every column, re-flowed short.
- * @param {{ content?: string[] }} post
+ * @param {{ id?: string, content?: string[] }} post
  * @returns {string[]}
  */
 export function articleParagraphs(post) {
