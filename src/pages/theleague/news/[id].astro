@@ -25,6 +25,7 @@ import MatchupPreviewSection from '../../../components/shared/matchup-preview/Ma
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import leagueConfig from '../../../data/theleague.config.json';
 import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { articleParagraphs } from '../../../utils/article-paragraphs.mjs';
 import { getLeagueBySlug } from '../../../config/leagues';
 
 const league = getLeagueBySlug('theleague')!;
@@ -230,7 +231,7 @@ function gradeColor(grade: string): string {
         </Fragment>
       ) : (
         <div class="sf-article__body">
-          {post.content?.map(paragraph => (
+          {articleParagraphs(post).map(paragraph => (
             <p set:html={paragraph} />
           ))}
         </div>

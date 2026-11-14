@@ -1678,3 +1678,34 @@ byte-identical between the two leagues and asserts no `\d+-team` size anywhere.
 The Pecking Order and Gauntlet GroupMe posts name one hook and link the
 column; the column does the talking. Never re-tell the column in the chat
 (`tests/groupme-one-sentence-promos.test.ts`).
+
+## Every column renders in 1-2 sentence paragraphs (Nov 2026)
+
+Owner's call: the previews read as a wall of text on a phone, and he then
+chose "every column". The base prompt (`BASE_SYSTEM_PROMPT` /
+`PERSONA_NEUTRAL_RULES` in `scripts/article-utils/ai-client.mjs`, and
+`scripts/schefter-article.mjs`) asks for paragraphs of one or two sentences,
+with a type's "N paragraphs" read as N beats. Every article page renders
+`content` through `articleParagraphs(post)` (`src/utils/article-paragraphs.mjs`),
+which re-flows any paragraph written long, and every article already in the
+feed, into at most two sentences, two only while they stay under ~200
+characters together. It never splits inside a link, never merges the writer's
+own paragraphs, and leaves a paragraph holding block markup (a list, table,
+heading, quote or line break) exactly as written. All three article renderers
+(`SchefterArticlePage.astro`, TheLeague's and the AFL's `news/[id].astro`) must
+go through `articleParagraphs`, never `post.content.map` directly. Tests:
+`tests/article-paragraphs.test.ts`.
+
+## The Matchup Preview's copy lives on each game's card (Nov 2026)
+
+Owner's call: no block of prose between the race board and the cards. The
+model returns `content` (a one- or two-paragraph opener, the only place links
+go), `games` (one entry per fact-sheet MATCHUP number: the FEATURED GAME, the
+first card, gets about 10 sentences; every other game a 2-5 sentence quick
+hitter) and `closing` (the broadcast guide). `attachGameStories` maps each
+MATCHUP number through `enrichment.pairKeys` to its card, since the cards are in
+stakes order and the fact sheet in schedule order, and stores the text on the
+snapshot as `matchupVisuals.matchups[i].story` / `matchupVisuals.closing`. The
+text is PLAIN (`plainText`) and renders escaped on `StakesGameCard`, re-flowed
+by `shortenParagraphs`. Posts written before this have no `story` and render as
+before. Tests: `tests/matchup-preview-stories.test.ts`.

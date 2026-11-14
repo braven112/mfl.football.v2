@@ -20,6 +20,7 @@ import { postByline } from '../../utils/persona-server';
 import type { GauntletDerived } from '../../utils/schedule-strength';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-article.css';
+import { articleParagraphs } from '../../utils/article-paragraphs.mjs';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -89,7 +90,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
       />
 
       <div class="sf-article__body">
-        {post.content?.map((paragraph) => <p set:html={paragraph} />)}
+        {articleParagraphs(post).map((paragraph) => <p set:html={paragraph} />)}
       </div>
 
       <!-- Matchup Preview: one card per game, biggest stakes first -->

@@ -25,6 +25,7 @@ import MatchupPreviewSection from '../../../components/shared/matchup-preview/Ma
 import type { GauntletDerived } from '../../../utils/schedule-strength';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { listLeagueData, loadLeagueData } from '../../../utils/league-data';
+import { articleParagraphs } from '../../../utils/article-paragraphs.mjs';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 
 // Lazy maps in the shape of a lazy `import.meta.glob`, read through the
@@ -136,7 +137,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
       />
 
       <div class="sf-article__body">
-        {post.content?.map(paragraph => (
+        {articleParagraphs(post).map(paragraph => (
           <p set:html={paragraph} />
         ))}
       </div>
