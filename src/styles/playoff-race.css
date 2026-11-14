@@ -225,6 +225,13 @@ html.dark .sgc {
   text-wrap: balance;
 }
 
+/* Dark theme: primary text, not the team color. Several team accents are
+   mid-gray on the dark card and read poorly at name size (owner, Nov 2026).
+   !important beats the per-team inline color, which light theme keeps. */
+html.dark .sgc-name {
+  color: var(--prb-ink) !important;
+}
+
 .sgc-rec {
   font-size: var(--font-size-xs, 0.75rem);
   color: var(--prb-muted);
