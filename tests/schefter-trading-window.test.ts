@@ -125,3 +125,82 @@ describe('rumor scan wiring', () => {
     expect(dead).toBeLessThan(runs);
   });
 });
+
+describe('deadline wrap-up', async () => {
+  const {
+    buildDeadlineWrapFacts, deadlineWrapTemplate, wrapHasStory, deadlineWrapSystemPrompt,
+  } = await import('../scripts/lib/schefter-deadline-wrap.mjs');
+  const cutoffMs = 1794631500 * 1000; // Fri 2026-11-13 8:45 PM PT
+  // TheLeague's real trades in the run-up (MFL, Nov 2026).
+  const completedTrades = [
+    { type: 'TRADE', timestamp: '1794632843', franchise: '0015', franchise2: '0002', franchise1_gave_up: '16190,', franchise2_gave_up: '14136,FP_0002_2027_1,' },
+    { type: 'TRADE', timestamp: '1794459004', franchise: '0015', franchise2: '0016', franchise1_gave_up: '13130,FP_0015_2027_3,', franchise2_gave_up: '12626,16620,FP_0016_2027_1,' },
+    { type: 'TRADE', timestamp: '1794458988', franchise: '0002', franchise2: '0003', franchise1_gave_up: 'FP_0002_2027_2,', franchise2_gave_up: '16583,' },
+    { type: 'TRADE', timestamp: '1794451000', franchise: '0008', franchise2: '0009', franchise1_gave_up: '16187,', franchise2_gave_up: '10700,' },
+    { type: 'TRADE', timestamp: '1794450951', franchise: '0011', franchise2: '0001', franchise1_gave_up: '15287,15757,', franchise2_gave_up: '15284,14823,11675,16617,FP_0001_2027_2,' },
+  ];
+  const playerMap = new Map([
+    ['13130', { name: 'McCaffrey, Christian' }],
+    ['15000', { name: 'Nacua, Puka' }],
+    ['15001', { name: 'Bijan Robinson' }],
+  ]);
+  const rosterOwnerByPlayerId = new Map([['13130', '0016'], ['15000', '0004'], ['15001', '0005']]);
+  const offers = [
+    // McCaffrey offer from his old team, made before he was traded → missed.
+    { id: 'a', franchise: '0015', franchise2: '0007', franchise1_gave_up: '13130,', franchise2_gave_up: 'FP_0007_2027_1,', timestamp: '1794300000', expires: '1795000000' },
+    // Still-valid offer, open at the deadline → may resurface.
+    { id: 'b', franchise: '0004', franchise2: '0005', franchise1_gave_up: '15000,', franchise2_gave_up: '15001,', timestamp: '1794500000', expires: '1795000000' },
+    // The same offer again (owner report + MFL) → counted once.
+    { id: 'b', franchise: '0005', franchise2: '0004', franchise1_gave_up: '15001,', franchise2_gave_up: '15000,', timestamp: '1794500000', expires: '1795000000' },
+    // Expired before the deadline → not "on the table".
+    { id: 'c', franchise: '0004', franchise2: '0006', franchise1_gave_up: '15000,', franchise2_gave_up: '', timestamp: '1794000000', expires: '1794100000' },
+    // Proposed after the deadline → not counted.
+    { id: 'd', franchise: '0004', franchise2: '0006', franchise1_gave_up: '15000,', franchise2_gave_up: '', timestamp: '1794700000', expires: '1795000000' },
+  ];
+  const facts = buildDeadlineWrapFacts({
+    offers, cutoffMs, completedTrades, rosterOwnerByPlayerId,
+    lastTradedAt: lastTradedAtByPlayer(completedTrades), playerMap, rostersCarryOver: true,
+  });
+
+  it('counts deals left open at the deadline and deals done in the run-up', () => {
+    expect(facts.openAtDeadline).toBe(2);
+    // The 0015/0002 deal is stamped 9:07 PM PT, after the 8:45 PM cutoff, so it is not run-up.
+    expect(facts.completedInRunup).toBe(4);
+    expect(wrapHasStory(facts)).toBe(true);
+  });
+
+  it('a traded player is a missed opportunity; an untouched deal may resurface in a carry-over league', () => {
+    expect(facts.missedPlayers).toEqual(['Christian McCaffrey']);
+    expect(facts.stillAlivePlayers.length).toBe(1);
+    const text = deadlineWrapTemplate(facts, 'Fri, Nov 13 at 8:45 PM PT');
+    expect(text).toMatch(/none of them got done/);
+    expect(text).toMatch(/Christian McCaffrey talks are a missed opportunity/);
+    expect(text).toMatch(/offseason/);
+    expect(text).not.toMatch(/more to come|coming|imminent/i);
+  });
+
+  it('no offseason line when rosters do not carry over', () => {
+    const redraft = buildDeadlineWrapFacts({
+      offers, cutoffMs, completedTrades, rosterOwnerByPlayerId,
+      lastTradedAt: lastTradedAtByPlayer(completedTrades), playerMap, rostersCarryOver: false,
+    });
+    expect(deadlineWrapTemplate(redraft, null)).not.toMatch(/offseason/);
+  });
+
+  it('nothing open and nothing done is no story', () => {
+    expect(wrapHasStory(buildDeadlineWrapFacts({ offers: [], cutoffMs, completedTrades: [], rostersCarryOver: true }))).toBe(false);
+  });
+
+  it('the model is told past tense, no teams, and the carry-over rule', () => {
+    const sys = deadlineWrapSystemPrompt();
+    expect(sys).toMatch(/past tense/);
+    expect(sys).toMatch(/NEVER name a fantasy team/);
+    expect(sys).toMatch(/rostersCarryOver is false, do not mention the offseason/);
+  });
+
+  it('the scanner posts the wrap once per deadline, before the offer lane is skipped', () => {
+    const src = readFileSync('scripts/schefter-rumor-scan.mjs', 'utf8');
+    expect(src).toMatch(/trade_deadline_wrap:/);
+    expect(src.indexOf('await maybePostDeadlineWrap(')).toBeLessThan(src.indexOf('trade-offer lane skipped'));
+  });
+});

@@ -1150,6 +1150,17 @@ Two bugs in one post, both now guarded in
   made (that second test catches the partner having acquired him in a
   different deal, which the roster check alone reads as a valid "corrected"
   orientation). Pinned by `tests/schefter-trading-window.test.ts`.
+- **One deadline wrap-up per deadline** (`scripts/lib/schefter-deadline-wrap.mjs`,
+  `maybePostDeadlineWrap` in the rumor scan). In the first three days after the
+  cutoff, outside quiet hours, the scan files ONE post, keyed in Redis on the
+  cutoff instant and outside the mill's caps: how many deals got done in the
+  run-up, how many offers were still open when the clock hit zero (made before
+  the cutoff, not expired, not executed, counted once), and, per Brandon
+  (2026-11-14), a deal whose player was since traded elsewhere is a MISSED
+  OPPORTUNITY while an untouched one may still materialize in the offseason —
+  the offseason line only where rosters carry over (`contracts` or `keepers`).
+  It names players, never teams; model text that carries a franchise name is
+  replaced by the deterministic template. Feed only, like every trade lane.
 
 ### Former-name callbacks — the bit is the pairing, and it expires
 
