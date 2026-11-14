@@ -164,8 +164,9 @@ describe('deadline wrap-up', async () => {
 
   it('counts deals left open at the deadline and deals done in the run-up', () => {
     expect(facts.openAtDeadline).toBe(2);
-    // The 0015/0002 deal is stamped 9:07 PM PT, after the 8:45 PM cutoff, so it is not run-up.
-    expect(facts.completedInRunup).toBe(4);
+    // The 0015/0002 deal is stamped 9:07 PM PT, after the 8:45 PM cutoff: it was
+    // accepted before the deadline and approved after, so it still counts.
+    expect(facts.completedInRunup).toBe(5);
     expect(wrapHasStory(facts)).toBe(true);
   });
 
