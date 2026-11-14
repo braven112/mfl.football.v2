@@ -22,11 +22,15 @@ const blocked = (iso: string) => resolveBlackout(at(iso)).blocked;
 
 describe('release blackout — NFL game days', () => {
   // 2026 season. Nov 15 is a Sunday, Nov 17 a Tuesday.
-  it('blocks Sunday, Monday, Thursday and Saturday in season', () => {
+  it('blocks Sunday, Monday and Thursday in season', () => {
     expect(blocked('2026-11-15'), 'Sunday').toBe(true);
     expect(blocked('2026-11-16'), 'Monday').toBe(true);
     expect(blocked('2026-11-19'), 'Thursday').toBe(true);
-    expect(blocked('2026-11-21'), 'Saturday').toBe(true);
+  });
+
+  it('never blocks Saturday (owner\'s call, Nov 2026)', () => {
+    expect(blocked('2026-11-21'), 'Saturday').toBe(false);
+    expect(blocked('2026-12-19'), 'week-16 Saturday').toBe(false);
   });
 
   it('leaves an ordinary Tuesday, Wednesday and Friday clear — Tuesday is the train day', () => {

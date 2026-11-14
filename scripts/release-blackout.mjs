@@ -32,11 +32,11 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * Weekdays that routinely carry NFL games, as JS day numbers (0 = Sunday):
- * Thursday, Saturday, Sunday, Monday.
+ * Thursday, Sunday, Monday.
  *
- * Saturday only carries games from ~week 15 on, but is included whenever the
- * season is open: a false blackout costs a day's wait, a miss deploys into a
- * live slate.
+ * Saturday is NOT a blackout (owner's call, Nov 2026): it carries NFL games
+ * only from ~week 15 on, and it is the day the Schefter preview ships, so a
+ * Saturday release is sometimes exactly what is needed.
  *
  * THIS SET IS NOT THE WHOLE ANSWER, and treating it as such was a bug. The
  * NFL's opening week and its Thanksgiving week do not start on Thursday —
@@ -46,7 +46,7 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
  * `officialWeekStartDays()` below, which adds whatever days the real calendar
  * says a week begins on.
  */
-const ROUTINE_GAME_WEEKDAYS = new Set([0, 1, 4, 6]);
+const ROUTINE_GAME_WEEKDAYS = new Set([0, 1, 4]);
 
 /**
  * The ISO days a season's weeks actually begin on, from the committed
@@ -173,7 +173,7 @@ export function resolveBlackout(now = new Date()) {
     } else if (ROUTINE_GAME_WEEKDAYS.has(today.weekday)) {
       reasons.push(
         `${WEEKDAY_NAMES[today.weekday]} in the ${seasonYear} season — games run ` +
-          `Thu/Sat/Sun/Mon, and live scoring is the surface owners are watching`,
+          `Thu/Sun/Mon, and live scoring is the surface owners are watching`,
       );
     }
   }

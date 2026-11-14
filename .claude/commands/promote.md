@@ -120,7 +120,7 @@ date -u; TZ=America/Los_Angeles date
 
 Exit 0 is clear; exit 1 prints every applicable reason. It covers, in PT:
 
-- **NFL game days in season** — the routine Thu/Sat/Sun/Mon, *plus whatever day
+- **NFL game days in season** — the routine Thu/Sun/Mon (never Saturday: owner's call, Nov 2026), *plus whatever day
   the real schedule opens a week on*. That second half is not decoration: 2026's
   week 1 is a Wednesday and so is week 12, and a fixed weekday list called both
   of them clear. The season year is resolved on the Labor Day clock first, so a
