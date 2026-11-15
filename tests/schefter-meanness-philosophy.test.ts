@@ -1,7 +1,8 @@
 /**
  * Tests for the "editorial filter is the feature" philosophy hardening —
  * HARD RULE 12 strengthening, HARD RULE 16 (off-topic personal insults),
- * personality.md expansion, and tip-page copy changes.
+ * and tip-page copy changes. (The personality.md pins moved with the
+ * file to the private beat-reporter repo, tests/lore.test.mjs.)
  *
  * These are contract / source-level checks. The meaningful behavior is
  * prompted into the LLM, which we don't run in unit tests — what we pin
@@ -156,104 +157,6 @@ describe('HARD RULE 16 — off-topic personal insults', () => {
     // target reciprocates. This comment in the prompt is intentional so
     // future devs (and reviewers) can find the extension point.
     expect(scannerSrc).toMatch(/mutual beef/i);
-  });
-});
-
-describe('personality.md — hostile-tips expansion', () => {
-  const src = read('data/schefter/theleague/personality.md');
-
-  it('states the design principle at the top of the section', () => {
-    expect(src).toMatch(/The editorial filter IS the product/);
-    // Direction shift: meaner input gets MORE DRAMATIC reporting (not softer).
-    // Schefter plays petty material straight; the drama amplification is the bit.
-    expect(src).toMatch(/The meaner the tip, the more dramatically Schefter reports it/);
-  });
-
-  it('forbids dropping hostile tips in the personality bible', () => {
-    // Personality.md Iron Rule 2 must mirror the scanner IRON RULE so the
-    // lore-loaded prompt and the inline prompt agree.
-    expect(src).toMatch(/Every non-empty tip ships/);
-    expect(src).toMatch(/Translate, don't drop/);
-  });
-
-  it('includes the "Brandon plays baseball like a girl" translation example with hissy-fit framing', () => {
-    expect(src).toMatch(/Brandon plays baseball like a girl/);
-    // The translation should carry source framing (Southwest / Dead Cap) and
-    // use the hissy-fit / elbows language — NOT the old "tempers running hot"
-    // generic default we walked back.
-    expect(src).toMatch(/hissy fit from an owner in the Southwest/i);
-    expect(src).toMatch(/throwing elbows at the commissioner/i);
-  });
-
-  it('has a dedicated off-topic section with the hissy-fit frame and kit split', () => {
-    expect(src).toMatch(/Off-topic personal insults/);
-    // Preferred frame callout
-    expect(src).toMatch(/the tipster is the story/i);
-    // Kit (A) — feminine-coded, reserved
-    expect(src).toMatch(/Kit \(A\)/);
-    expect(src).toMatch(/Feminine-coded/);
-    expect(src).toMatch(/hissy fit/i);
-    expect(src).toMatch(/cat fight/i);
-    // Kit (B) — neutral, default
-    expect(src).toMatch(/Kit \(B\)/);
-    expect(src).toMatch(/Default neutral/);
-    expect(src).toMatch(/throwing elbows/i);
-    expect(src).toMatch(/throwing a tantrum/i);
-    // Warning about false positives
-    expect(src).toMatch(/false positive on kit \(A\)/i);
-  });
-
-  it('documents the "every accusation is a confession" barometer', () => {
-    // Either phrasing — "every accusation is a confession" or
-    // "every accusation's a confession" — must appear in the phrasing kit.
-    expect(src).toMatch(/every accusation('s| is) a confession/i);
-    expect(src).toMatch(/tells us something about the shooter/i);
-    // The "barometer" / "dial" metaphor is what communicates the design
-    // intent — each owner's behavior tunes their own A=C weight.
-    expect(src).toMatch(/barometer/i);
-    expect(src).toMatch(/every owner's (recent )?behavior tunes their own barometer/i);
-  });
-
-  it('shows the offTopicCount → A=C weight ladder in personality.md', () => {
-    expect(src).toMatch(/offTopicCount/);
-    // Verify each breakpoint row of the ladder table is present.
-    expect(src).toMatch(/light or off/i);
-    expect(src).toMatch(/leaning in/i);
-    expect(src).toMatch(/pointed/i);
-    expect(src).toMatch(/power user/i);
-  });
-
-  it('explains that good behavior can improve the barometer via the rolling window', () => {
-    // The rolling-window framing is essential — without it, the dial only
-    // ever goes up and owners can't recover from old mean tips.
-    expect(src).toMatch(/rolling/i);
-    // Must call out 30 days so the window is documented
-    expect(src).toMatch(/30[- ]day/i);
-    // Must say good behavior improves the reading
-    expect(src).toMatch(/good behavior/i);
-  });
-
-  it('preserves the source-side framing fallback list', () => {
-    expect(src).toMatch(/GroupMe author/);
-    expect(src).toMatch(/Web tipster's division/);
-    expect(src).toMatch(/Intra-division signal/);
-  });
-
-  it('frames the bit as drama amplification (not dispassion)', () => {
-    // Direction shift: the section was previously titled "Restraint" and
-    // closed with "The bit is dispassion." It now reads as drama
-    // amplification — Schefter plays petty material completely straight,
-    // ridiculous-on-purpose. Pin both the new section header and the
-    // PG-but-dramatic framing so this can't silently regress.
-    expect(src).toMatch(/Drama amplification \(the bit\)/);
-    expect(src).toMatch(/ridiculous-on-purpose/);
-    expect(src).toMatch(/breathless beat-reporter earnestness/i);
-  });
-
-  it('describes football flavor as sparing seasoning in the personality bible', () => {
-    expect(src).toMatch(/Football flavor — sparingly/);
-    expect(src).toMatch(/AT MOST one football-flavor phrase per post/);
-    expect(src).toMatch(/drama-coloring, not content-encoding/);
   });
 });
 

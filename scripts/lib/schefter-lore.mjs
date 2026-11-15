@@ -20,19 +20,29 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
-// Lore is per-league: data/schefter/<navSlug>/{personality,league-lore,
-// running-bits}.md + post-history.json. No legacy-path fallback on purpose —
-// silently reading the wrong league's lore is worse than a hard error.
-const LORE_ROOT = path.join(projectRoot, 'data', 'schefter');
+// Lore is per-league. The voice files — {personality,league-lore,
+// running-bits}.md — are trade secrets and live in the PRIVATE beat-reporter
+// repo, which the Schefter workflows check out at .private/beat-reporter
+// (override with BEAT_REPORTER_DIR). post-history.json is run state, not
+// voice, and stays in this repo under data/schefter/<navSlug>/. No
+// legacy-path fallback on purpose — silently reading the wrong league's lore
+// is worse than a missing one, which loadLore already degrades from.
+const HISTORY_ROOT = path.join(projectRoot, 'data', 'schefter');
+
+/** Root of the private beat-reporter checkout, re-read per call. */
+export function privateLoreRoot() {
+  const override = process.env.BEAT_REPORTER_DIR;
+  return override ? path.resolve(override) : path.join(projectRoot, '.private', 'beat-reporter');
+}
 
 export function lorePaths(navSlug = 'theleague') {
-  const dir = path.join(LORE_ROOT, navSlug);
+  const dir = path.join(privateLoreRoot(), 'lore', navSlug);
   return {
     dir,
     personality: path.join(dir, 'personality.md'),
     leagueLore: path.join(dir, 'league-lore.md'),
     runningBits: path.join(dir, 'running-bits.md'),
-    postHistory: path.join(dir, 'post-history.json'),
+    postHistory: path.join(HISTORY_ROOT, navSlug, 'post-history.json'),
   };
 }
 
@@ -55,7 +65,7 @@ If you can't decide whether a bit fits, it doesn't fit. Write straight.
 `;
 
 // ── Personality catalog — phrase lists for detection heuristics ──
-// Kept in sync with data/schefter/personality.md and running-bits.md. If those
+// Kept in sync with the private lore's personality.md and running-bits.md. If those
 // files gain new openers/closers/winks, update this table too. Detection is
 // case-insensitive substring match — loose by design.
 

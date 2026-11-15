@@ -346,7 +346,6 @@ describe('ingestGroupMeMentions — Style Book integration', () => {
 
 describe('source-level contract — scanner + prompt', () => {
   const scannerSrc = read('scripts/schefter-rumor-scan.mjs');
-  const runningBitsSrc = read('data/schefter/theleague/running-bits.md');
 
   it('anonymizeTips surfaces attackOnSchefter + styleBookCount on GroupMe tips', () => {
     // The flag and count must be surfaced on the safe object so the LLM sees them.
@@ -368,12 +367,5 @@ describe('source-level contract — scanner + prompt', () => {
   it('system prompt forbids quoting the attack verbatim and clapping back', () => {
     expect(scannerSrc).toMatch(/NEVER quote the attack verbatim/);
     expect(scannerSrc).toMatch(/NEVER defensive or clapping-back/);
-  });
-
-  it('running-bits.md has been extended with count-based escalation lines', () => {
-    expect(runningBitsSrc).toMatch(/count === 1/);
-    expect(runningBitsSrc).toMatch(/count === 2/);
-    expect(runningBitsSrc).toMatch(/count >= 4/);
-    expect(runningBitsSrc).toMatch(/styleBookCount/);
   });
 });

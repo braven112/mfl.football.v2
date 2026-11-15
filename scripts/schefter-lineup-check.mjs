@@ -91,6 +91,7 @@ import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { buildAssistantPost, publishAssistantPosts } from './lib/schefter-assistant-post.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
+import { lorePaths } from './lib/schefter-lore.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
 import {
   buildLineupWarnings,
@@ -203,7 +204,8 @@ async function readFeedOrFetch(league, year, filename, liveUrl, label) {
 
 /** First ~1200 chars of the league's persona file, or '' when missing. */
 function readPersonaExcerpt(navSlug) {
-  const personaPath = path.join(root, 'data', 'schefter', navSlug, 'personality.md');
+  // The persona lives in the private beat-reporter checkout (lorePaths).
+  const personaPath = lorePaths(navSlug).personality;
   try {
     return fs.readFileSync(personaPath, 'utf8').slice(0, 1200);
   } catch {

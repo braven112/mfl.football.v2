@@ -73,10 +73,15 @@ rules — breaking any of these cross-contaminates the leagues:
   so the calendar heuristic the other scan lanes still use would aim it at a
   league year MFL hasn't created from Feb to June.
   `tests/schefter-trade-bait-league-scope.test.ts` pins all of it.
-- **Lore/persona** is per-league under `data/schefter/<navSlug>/`
-  (personality, league-lore, running-bits, post-history, topic-recurrence).
-  No legacy-path fallback on purpose — a missing file fails loudly rather
-  than silently reading the other league's voice.
+- **Lore/persona** is per-league. The voice files (personality,
+  league-lore, running-bits) are trade secrets and live in the PRIVATE
+  `braven112/beat-reporter` repo at `lore/<navSlug>/`; the Schefter
+  workflows check it out at `.private/beat-reporter` with the
+  `BEAT_REPORTER_TOKEN` secret, and `BEAT_REPORTER_DIR` overrides the path
+  locally. Never commit voice or lore text back into this public repo. Run
+  state (post-history, topic-recurrence) stays under `data/schefter/<navSlug>/`.
+  No legacy-path fallback on purpose — a missing lore file warns and the post
+  falls back to the inline prompt rather than reading the other league's voice.
 - **Pages** are thin per-league wrappers over shared components
   (`src/components/schefter/{TipPage,StyleBookPage,RumorThread,
   AdminDashboard}.astro`) — build tip-page improvements in the component
