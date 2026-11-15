@@ -27,6 +27,14 @@ import { bubbleSeasons, bubbleFacts, currentOwners } from '../../src/utils/leagu
 import { plainText } from '../../src/utils/article-paragraphs.mjs';
 import { selectWeekMatchups, nflWeekGames, keyNflGame } from '../../src/utils/nfl-week-games.mjs';
 import { parseStartingLineups } from '../lib/lineup-warnings.mjs';
+import { ALIASES as NFL_CODE_ALIASES } from '../lib/nfl-logo-sources.mjs';
+
+/**
+ * MFL's NFL team codes (NOS, KCC, GBP…) in the standard form the cards print
+ * (NO, KC, GB). The model copies whatever the fact sheet says, so a raw MFL
+ * code put "CAR at NOS" in the copy above a card reading "CAR at NO".
+ */
+const nflCode = (code) => (code ? NFL_CODE_ALIASES[String(code).toUpperCase()] ?? code : code);
 import { resolveDataDir } from '../article-utils/data-loaders.mjs';
 
 /**
@@ -273,12 +281,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
       lines.push(`  ${teamInfo?.name ?? fid} (projected ${totalProj.toFixed(1)}):`);
       for (const s of starters.slice(0, 5)) {
-        lines.push(`    ${s.position} ${s.name} (${s.nflTeam}) — proj ${s.proj.toFixed(1)}`);
+        const team = nflCode(s.nflTeam);
+        lines.push(`    ${s.position} ${s.name} (${team}) — proj ${s.proj.toFixed(1)}`);
 
         // Track for broadcast guide
-        if (s.nflTeam && s.nflTeam !== '??') {
-          if (!nflTeamPlayers[s.nflTeam]) nflTeamPlayers[s.nflTeam] = [];
-          nflTeamPlayers[s.nflTeam].push({
+        if (team && team !== '??') {
+          if (!nflTeamPlayers[team]) nflTeamPlayers[team] = [];
+          nflTeamPlayers[team].push({
             player: s.name,
             position: s.position,
             franchise: teamInfo?.name ?? fid,
@@ -359,7 +368,7 @@ export function keyGameFact(game, nameOf) {
   const who = game.players.slice(0, 4)
     .map((p) => `${p.position === 'Def' ? '' : `${p.position} `}${p.name} (${nameOf(p.franchiseId)}, ${p.proj.toFixed(1)})`)
     .join(', ');
-  return `KEY NFL GAME: ${game.away} at ${game.home}, ${game.projTotal.toFixed(1)} projected points from these two teams' starters — ${who}.`;
+  return `KEY NFL GAME: ${nflCode(game.away)} at ${nflCode(game.home)}, ${game.projTotal.toFixed(1)} projected points from these two teams' starters — ${who}.`;
 }
 
 /** One key per pairing, order-free, so a fact-sheet MATCHUP number finds its card. */

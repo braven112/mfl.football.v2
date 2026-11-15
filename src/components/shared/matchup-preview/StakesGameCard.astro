@@ -28,6 +28,9 @@ const { m, teamA, teamB, kicker, rivalryHref } = Astro.props;
 const story: string[] = shortenParagraphs(m.story ?? []);
 // Chart rows are narrow on a phone: the abbreviation, never a clipped name.
 const tag = (t: MatchupTeam) => t.abbrev ?? t.short;
+// The header leads with the FULL name and falls back to a shorter one only
+// when the full name will not fit its column (the script below measures).
+const names = (t: MatchupTeam) => (t.names && t.names.length > 0 ? t.names : [t.name]);
 const a = m.a.franchiseId;
 const b = m.b.franchiseId;
 // The NFL game that swings this one: most projected points across both
@@ -75,7 +78,7 @@ const ordinal = (n: number) => {
     <div class="sgc-team">
       {teamA.icon && <img src={teamA.icon} alt="" width="32" height="32" loading="lazy" />}
       <span class="sgc-id">
-        <span class="sgc-name" style="color: var(--sgc-a)">{teamA.name}</span>
+        <span class="sgc-name" style="color: var(--sgc-a)" data-names={JSON.stringify(names(teamA))}>{names(teamA)[0]}</span>
         <span class="sgc-rec sgc-num">{record(m.a)}</span>
       </span>
     </div>
@@ -83,7 +86,7 @@ const ordinal = (n: number) => {
     <div class="sgc-team sgc-team--b">
       {teamB.icon && <img src={teamB.icon} alt="" width="32" height="32" loading="lazy" />}
       <span class="sgc-id">
-        <span class="sgc-name" style="color: var(--sgc-b)">{teamB.name}</span>
+        <span class="sgc-name" style="color: var(--sgc-b)" data-names={JSON.stringify(names(teamB))}>{names(teamB)[0]}</span>
         <span class="sgc-rec sgc-num">{record(m.b)}</span>
       </span>
     </div>
@@ -208,3 +211,40 @@ const ordinal = (n: number) => {
     </div>
   )}
 </article>
+
+<script>
+  // Header names: show the longest of the team's names that fits its column
+  // in at most two lines, never an ellipsis (owner's rule, Nov 2026). Text
+  // width depends on the font and the phone, so this has to be measured.
+  //
+  // ClientRouter: this module evaluates once per session, so the listeners
+  // below are registered once and re-query the swapped DOM on every run.
+  const MAX_LINES = 2;
+
+  function fitNames() {
+    document.querySelectorAll<HTMLElement>('.sgc-name[data-names]').forEach((el) => {
+      let names: string[];
+      try {
+        names = JSON.parse(el.dataset.names ?? '[]');
+      } catch {
+        return;
+      }
+      if (names.length < 2) return;
+      const line = parseFloat(getComputedStyle(el).lineHeight) || el.offsetHeight;
+      const fits = () => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= line * MAX_LINES + 1;
+      for (const name of names) {
+        el.textContent = name;
+        if (fits()) return;
+      }
+    });
+  }
+
+  let resizeTimer: number | undefined;
+  document.addEventListener('astro:page-load', fitNames);
+  window.addEventListener('resize', () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(fitNames, 150);
+  });
+  // Web fonts change the measure: re-fit once they land.
+  document.fonts?.ready.then(fitNames);
+</script>
