@@ -2834,7 +2834,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   /* Dark mode: same blue-glow card treatment as the team hero above, plus
      the raised ring. */
   :global(html.dark) .roster-table-card {
-    background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
+    background: var(--card-bg, radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%));
     box-shadow:
       0 0 0 1px var(--style-card-ring, var(--content-border, #555555)),
       var(--shadow-lg);
