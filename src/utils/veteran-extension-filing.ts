@@ -10,6 +10,7 @@ import type { AuthUser } from './auth';
 import type { ContractDeclaration } from '../types/contracts';
 import { getCurrentLeagueYear } from './league-year';
 import { checkVeteranExtensionOnServer } from './veteran-extension-server';
+import { VETERAN_EXTENSION_CONTRACT_INFO } from './veteran-extension-rules';
 import {
   addDeclaration,
   generateDeclarationId,
@@ -65,7 +66,7 @@ export async function fileVeteranExtension(input: {
     currentContractInfo: player.contractInfo,
     requestedYears: price.newYears,
     requestedSalary: price.newSalary,
-    requestedContractInfo: player.contractInfo,
+    requestedContractInfo: VETERAN_EXTENSION_CONTRACT_INFO,
     submittedAt: new Date().toISOString(),
   };
 
@@ -120,7 +121,7 @@ export async function fileVeteranExtension(input: {
       playerId,
       salary: String(price.newSalary),
       contractYear: String(price.newYears),
-      contractInfo: player.contractInfo,
+      contractInfo: VETERAN_EXTENSION_CONTRACT_INFO,
     },
     credentials,
   );

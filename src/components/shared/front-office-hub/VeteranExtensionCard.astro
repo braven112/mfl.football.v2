@@ -29,8 +29,13 @@ const { slot, rows, leagueYear, ruleActive } = board;
 const slotOpen = slot.state === 'unused';
 const pendingPlayerId = slot.state === 'pending' ? slot.playerId : null;
 const money = (n: number) => formatSalaryCompact(n);
-/** Rows shown before "Show all": a full roster can list 18+ eligible players. */
-const VISIBLE_ROWS = 8;
+// Likely candidates show by default; everyone else waits behind "Show all"
+// (rules in veteran-extension-board.ts). The filed player always shows.
+const isOpen = (row: (typeof rows)[number]) => row.likely || row.player.id === pendingPlayerId;
+const moreCount = rows.filter((r) => !isOpen(r)).length;
+const likelyCount = rows.filter((r) => r.likely).length;
+const finishLabel = (f: { rank: number; year: number; position: string } | null) =>
+  f && f.rank <= 10 ? `No. ${f.rank} ${f.position} in ${f.year}` : null;
 const config = { leagueId, franchiseId, franchiseName };
 ---
 
@@ -64,22 +69,28 @@ const config = { leagueId, franchiseId, franchiseName };
     )}
   </header>
 
+  {ruleActive && rows.length > 0 && likelyCount === 0 && (
+    <p class="vxc__empty">No likely candidates: nobody under $3M has a top-10 finish at their position. Everyone else is under Show all.</p>
+  )}
+
   {ruleActive && rows.length === 0 && (
-    <p class="vxc__empty">No one on your roster is eligible: it takes 2+ years left, a non-rookie contract, and room under the 6-year limit.</p>
+    <p class="vxc__empty">No one on your roster fits. It takes 2+ years left, a non-rookie contract, room under the 6-year limit, and either a salary under $3M or a past top-10 finish.</p>
   )}
 
   {ruleActive && rows.length > 0 && (
     <ul class="vxc__list">
-      {rows.map(({ player, options }, index) => {
+      {rows.map((row) => {
+        const { player, options, likely, bestFinish } = row;
         const longest = options[options.length - 1];
         const canFile = slotOpen || pendingPlayerId === player.id;
+        const finish = finishLabel(bestFinish);
         return (
           <li
-            class="vxc__row"
+            class:list={['vxc__row', { 'vxc__row--likely': likely }]}
             data-vxc-row
             data-player-id={player.id}
-            data-vxc-extra={index >= VISIBLE_ROWS && player.id !== pendingPlayerId ? '' : undefined}
-            hidden={index >= VISIBLE_ROWS && player.id !== pendingPlayerId}
+            data-vxc-extra={isOpen(row) ? undefined : ''}
+            hidden={!isOpen(row)}
           >
             <div class="vxc__player">
               <PlayerCell
@@ -89,7 +100,10 @@ const config = { leagueId, franchiseId, franchiseName };
                 nflTeam={player.nflTeam}
                 playerData={{ id: player.id, name: player.name, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, franchiseId }}
               />
-              <span class="vxc__now">Now {money(player.salary)} × {player.contractYears}</span>
+              <span class="vxc__now">
+                Now {money(player.salary)} × {player.contractYears}
+                {finish && <span class="vxc__finish">{likely ? 'Likely · ' : ''}{finish}</span>}
+              </span>
             </div>
 
             <div class="vxc__choice" role="radiogroup" aria-label={`Years to add for ${player.name}`}>
@@ -138,9 +152,9 @@ const config = { leagueId, franchiseId, franchiseName };
     </ul>
   )}
 
-  {ruleActive && rows.length > VISIBLE_ROWS && (
-    <button type="button" class="cta-link vxc__more" data-vxc-more aria-expanded="false">
-      Show all {rows.length} eligible players
+  {ruleActive && moreCount > 0 && (
+    <button type="button" class="cta-link vxc__more" data-vxc-more data-count={moreCount} aria-expanded="false">
+      Show all ({moreCount} more)
     </button>
   )}
 
@@ -148,7 +162,7 @@ const config = { leagueId, franchiseId, franchiseName };
 </section>
 
 <script>
-  import { formatSalaryCompact } from '../../../utils/contract-actions-client';
+  import { formatSalaryCompact, submitDeclaration } from '../../../utils/contract-actions-client';
 
   let handler: ((e: Event) => void) | null = null;
 
@@ -174,17 +188,10 @@ const config = { leagueId, franchiseId, franchiseName };
       el.hidden = false;
       el.dataset.error = isError ? 'true' : 'false';
     };
-    const post = async (body: Record<string, unknown>) => {
-      const res = await fetch('/api/contracts/declare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.success) {
-        const detail = Array.isArray(data?.details) ? data.details.map((d: any) => d.message).join(' ') : '';
-        throw new Error(data?.error ? `${data.error}${detail ? ` ${detail}` : ''}` : `HTTP ${res.status}`);
-      }
+    // The one module that POSTs a declaration (tests/contract-actions-client.test.ts).
+    const post = async (body: Record<string, unknown>): Promise<any> => {
+      const data: any = await submitDeclaration(body as any);
+      if (!data?.success) throw new Error(data?.error || 'Submission failed');
       return data;
     };
 
@@ -214,7 +221,7 @@ const config = { leagueId, franchiseId, franchiseName };
           row.hidden = open;
         });
         more.setAttribute('aria-expanded', open ? 'false' : 'true');
-        more.textContent = open ? `Show all ${root.querySelectorAll('[data-vxc-row]').length} eligible players` : 'Show fewer';
+        more.textContent = open ? `Show all (${more.dataset.count} more)` : 'Show fewer';
         return;
       }
 
@@ -368,6 +375,19 @@ const config = { leagueId, franchiseId, franchiseName };
 
   .vxc__row[hidden] {
     display: none;
+  }
+
+  /* Likely candidates: a faint accent tint, never a hard stripe. */
+  .vxc__row--likely {
+    background: color-mix(in srgb, var(--cta-fill, #1c497c) 6%, transparent);
+    border-color: color-mix(in srgb, var(--cta-fill, #1c497c) 22%, var(--content-border, #e5e7eb));
+  }
+
+  .vxc__finish {
+    display: block;
+    margin-top: 0.1rem;
+    font-weight: 600;
+    color: var(--page-text, #1a1a1a);
   }
 
   .vxc__more {

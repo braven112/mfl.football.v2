@@ -87,7 +87,7 @@ describe('fileVeteranExtension', () => {
       mflSynced: true,
     });
     expect(writeContractToMFL).toHaveBeenCalledWith(
-      { playerId: 'P1', salary: '4250000', contractYear: '4', contractInfo: '' },
+      { playerId: 'P1', salary: '4250000', contractYear: '4', contractInfo: 'E' },
       { mflUserId: 'commish' },
     );
   });

@@ -31,6 +31,9 @@ import { calculateVeteranExtension } from './salary-calculations';
 import { getCurrentLeagueYear } from './league-year';
 
 export const VETERAN_EXTENSION_MAX_TOTAL_YEARS = 6;
+/** The roster designation an extended contract carries on MFL ('E'), as every
+ *  other extension path writes it (contract-actions-client.ts). */
+export const VETERAN_EXTENSION_CONTRACT_INFO = 'E';
 export const VETERAN_EXTENSION_MIN_YEARS_REMAINING = 2;
 /** The owner's choice of term (Brandon, 2026-11-14). */
 export const VETERAN_EXTENSION_YEAR_CHOICES = [1, 2] as const;

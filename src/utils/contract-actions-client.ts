@@ -152,6 +152,8 @@ export interface DeclarationRequest {
   requestedContractInfo?: string;
   deadlineAt?: string;
   acquisitionTimestamp?: number;
+  /** Veteran extension: years to add (1 or 2). The server prices it itself. */
+  addedYears?: number;
 }
 
 export const DECLARE_ENDPOINT = '/api/contracts/declare';
