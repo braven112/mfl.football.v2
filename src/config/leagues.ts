@@ -445,9 +445,11 @@ export interface LeagueDefinition {
   chat?: LeagueChatConfig;
   /**
    * The league's default news persona, used until the commissioner saves one
-   * (src/utils/persona.mjs). Absent → Claude Schefter.
+   * (src/utils/persona.mjs). `'schefter'` → Claude Schefter; an object
+   * overrides fields of the house AI beat reporter; absent → the house AI
+   * beat reporter.
    */
-  persona?: { name?: string; avatarUrl?: string; voice?: string };
+  persona?: 'schefter' | { name?: string; avatarUrl?: string; voice?: string };
   /**
    * League-minimum salary — what any roster add costs, FCFS free-agent adds
    * included. Absent for a league without salaries.

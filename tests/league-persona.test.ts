@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  BEAT_REPORTER_PERSONA,
   DEFAULT_PERSONA,
   PERSONA_LIMITS,
   absolutePersonaAvatar,
@@ -79,31 +80,39 @@ describe('resolvePersona', () => {
 
   it('prefers a registry default over Schefter', () => {
     const entry = { persona: { name: 'Registry Guy' } };
-    expect(resolvePersona(entry, null)).toMatchObject({ name: 'Registry Guy', voice: DEFAULT_PERSONA.voice, source: 'registry' });
+    expect(resolvePersona(entry, null)).toMatchObject({ name: 'Registry Guy', voice: BEAT_REPORTER_PERSONA.voice, source: 'registry' });
   });
 
   it('lets a registry default use a site asset path for its avatar', () => {
-    const entry = { persona: { avatarUrl: '/assets/beat-reporter-avatar.webp' } };
-    expect(resolvePersona(entry, null)).toMatchObject({
-      name: DEFAULT_PERSONA.name,
-      voice: DEFAULT_PERSONA.voice,
-      avatarUrl: '/assets/beat-reporter-avatar.webp',
-      source: 'registry',
-    });
-    // Still Schefter's voice, so the prompt stays byte-identical.
-    expect(isDefaultPersona(resolvePersona(entry, null))).toBe(true);
+    const entry = { persona: { avatarUrl: '/assets/other.webp' } };
+    expect(resolvePersona(entry, null)).toMatchObject({ avatarUrl: '/assets/other.webp', source: 'registry' });
   });
 
   it('refuses a protocol-relative registry avatar', () => {
     const entry = { persona: { avatarUrl: '//evil.test/a.png' } };
-    expect(resolvePersona(entry, null).source).toBe('default');
+    expect(resolvePersona(entry, null)).toEqual({ ...BEAT_REPORTER_PERSONA, source: 'default' });
   });
 
-  it("gives Archie's the AI beat reporter avatar, and the file exists", async () => {
+  it('gives a league that declares nothing the house AI beat reporter', async () => {
     const { existsSync } = await import('node:fs');
-    const persona = resolvePersona(LEAGUES.archies, null);
-    expect(persona.avatarUrl).toBe('/assets/beat-reporter-avatar.webp');
-    expect(existsSync(`public${persona.avatarUrl}`)).toBe(true);
+    for (const slug of ['archies', 'sandbox'] as const) {
+      const persona = resolvePersona(LEAGUES[slug], null);
+      expect(persona).toEqual({ ...BEAT_REPORTER_PERSONA, source: 'default' });
+      expect(isDefaultPersona(persona)).toBe(false);
+    }
+    expect(existsSync(`public${BEAT_REPORTER_PERSONA.avatarUrl}`)).toBe(true);
+  });
+
+  it('keeps Claude Schefter for TheLeague, the AFL and unattributed posts', () => {
+    for (const entry of [LEAGUES.theleague, LEAGUES['afl-fantasy'], null, undefined]) {
+      expect(resolvePersona(entry, null)).toEqual({ ...DEFAULT_PERSONA, source: 'default' });
+    }
+  });
+
+  it('the house voice borrows styles, never a real reporter by name', () => {
+    expect(validatePersona(BEAT_REPORTER_PERSONA).ok).toBe(false); // site-path avatar: registry-only
+    expect(validatePersona({ ...BEAT_REPORTER_PERSONA, avatarUrl: '' }).ok).toBe(true);
+    expect(BEAT_REPORTER_PERSONA.voice).not.toMatch(/Schefter|Glazer|Rapoport|Boom/i);
   });
 
   it('absolutizes a site asset avatar for Slack, leaves full URLs alone', () => {

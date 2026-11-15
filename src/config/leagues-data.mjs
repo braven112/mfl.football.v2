@@ -12,6 +12,11 @@ import { isDemoEnv } from '../utils/demo-isolation-core.mjs';
 
 export const LEAGUES = {
   theleague: {
+    /**
+     * News persona (src/utils/persona.mjs): this league's reporter is Claude
+     * Schefter. A league that declares nothing gets the house AI beat reporter.
+     */
+    persona: 'schefter',
     /** MFL numeric league id */
     id: '13522',
     /** Canonical slug: path segment under src/pages/ and in URLs */
@@ -300,6 +305,11 @@ export const LEAGUES = {
     throwbackWeeks: [4],
   },
   'afl-fantasy': {
+    /**
+     * News persona (src/utils/persona.mjs): this league's reporter is Claude
+     * Schefter. A league that declares nothing gets the house AI beat reporter.
+     */
+    persona: 'schefter',
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
@@ -758,13 +768,6 @@ export const LEAGUES = {
     shareCard: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
     /** The share-card mark: the OG renderer reads PNG/SVG only, not WebP. */
     logoOg: '/assets/logos/archies-head.png',
-    /**
-     * News persona default (src/utils/persona.mjs). Brandon, Nov 2026: Archie's
-     * wears the generic AI beat reporter (the mfl.football /features mark)
-     * instead of Claude Schefter's avatar. A commissioner's saved persona
-     * still wins over this.
-     */
-    persona: { avatarUrl: '/assets/beat-reporter-avatar.webp' },
     /**
      * Weekly Schefter article types this league gets (scripts/lib/article-leagues.mjs).
      * Absent = every type. Archie's has The Gauntlet, and (Brandon, Nov 2026)

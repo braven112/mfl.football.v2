@@ -9,11 +9,14 @@
  *
  * Resolution, most specific first:
  *   1. The commissioner's saved override (Redis, `personaKey(slug)`).
- *   2. The registry's `persona` default for the league, if it declares one.
- *   3. `DEFAULT_PERSONA` — Schefter.
+ *   2. The registry's `persona` for the league: `'schefter'` (TheLeague, the
+ *      AFL) keeps `DEFAULT_PERSONA`; an object overrides fields of the house
+ *      reporter.
+ *   3. `BEAT_REPORTER_PERSONA` — the house AI beat reporter, for every league
+ *      that declares nothing (Brandon, Nov 2026).
  *
- * A league that has never saved anything therefore writes EXACTLY what it
- * wrote before this module existed: `isDefaultPersona` is what lets the prompt
+ * `DEFAULT_PERSONA` is still Schefter: a Schefter league that has never saved
+ * anything writes EXACTLY what it wrote before this module existed: `isDefaultPersona` is what lets the prompt
  * builder keep the original, byte-identical system prompt for Schefter.
  *
  * Pure functions only — no Redis client in here. The API route (src/) and the
@@ -29,6 +32,29 @@ export const DEFAULT_PERSONA = Object.freeze({
     `Channel Adam Schefter's high-energy breaking news style.`,
     `Use "I'm told...", "League sources tell me...", "Boom!", "Money is nice, but championships are better".`,
     'Be opinionated. Be bold. Call out underperformers and praise elite moves.',
+  ].join('\n'),
+});
+
+/**
+ * The house AI beat reporter — the default for every league that has not
+ * declared its own (Brandon, Nov 2026). TheLeague and the AFL keep Schefter by
+ * declaring `persona: 'schefter'` in the registry.
+ *
+ * The voice uses Schefter as its base, then adds two more insider styles: a
+ * locker-room, relationship-driven insider and a fast, exact breaking-news
+ * reporter who leads with contract and roster detail. It borrows their
+ * STYLE only. It never uses a real reporter's name or catchphrase.
+ */
+export const BEAT_REPORTER_PERSONA = Object.freeze({
+  name: 'Max Insider',
+  avatarUrl: '/assets/beat-reporter-avatar.webp',
+  voice: [
+    'Write like a plugged-in league insider with every front office on speed dial.',
+    'Lead with the news in the first line, fast and clean, then give the detail that matters: the terms, the roster math, what it means for this week.',
+    'Source it like a reporter: "I\'m told...", "Per a league source...", "Sources close to the deal say...".',
+    'Bring the locker-room feel: you know these owners, their habits, grudges and tells, and you let a little of it slip.',
+    'Keep the energy of breaking news. Be opinionated and bold: call out underperformers and praise elite moves.',
+    'Never invent a fact. A hunch is labeled as a hunch.',
   ].join('\n'),
 });
 
@@ -149,18 +175,31 @@ export function resolvePersona(registryEntry, stored) {
     const checked = validatePersona(saved);
     if (checked.ok) return { ...checked.persona, source: 'league' };
   }
-  if (registryEntry?.persona) {
-    // The registry is code, not user input, so its avatar may be a site asset
-    // path ('/assets/…'): it renders on every host the league is served from,
-    // previews included. A commissioner's saved avatar still has to be a full
-    // https:// link. Node-side senders that need an absolute URL (Slack's
-    // icon_url) resolve it with `absolutePersonaAvatar`.
-    const declared = { ...DEFAULT_PERSONA, ...registryEntry.persona };
-    const sitePath = isSiteAssetPath(declared.avatarUrl) ? declared.avatarUrl : '';
-    const checked = validatePersona(sitePath ? { ...declared, avatarUrl: '' } : declared);
-    if (checked.ok) return { ...checked.persona, avatarUrl: sitePath || checked.persona.avatarUrl, source: 'registry' };
+  const declared = registryEntry?.persona;
+  // No league at all (an unattributed legacy post) keeps Schefter, as does a
+  // league that declares him.
+  if (!registryEntry || declared === 'schefter') return { ...DEFAULT_PERSONA, source: 'default' };
+  if (declared && typeof declared === 'object') {
+    const checked = checkRegistryPersona({ ...BEAT_REPORTER_PERSONA, ...declared });
+    if (checked) return { ...checked, source: 'registry' };
   }
-  return { ...DEFAULT_PERSONA, source: 'default' };
+  return { ...BEAT_REPORTER_PERSONA, source: 'default' };
+}
+
+/**
+ * Validate a persona written in code (the registry, or the house default).
+ * Code is not user input, so its avatar may be a site asset path
+ * ('/assets/…'), which renders on every host the league is served from,
+ * previews included. A commissioner's saved avatar still has to be a full
+ * https:// link. Node-side senders that need an absolute URL (Slack's
+ * icon_url) resolve it with `absolutePersonaAvatar`.
+ *
+ * @param {{ name?: string, avatarUrl?: string, voice?: string }} declared
+ */
+function checkRegistryPersona(declared) {
+  const sitePath = isSiteAssetPath(declared.avatarUrl) ? declared.avatarUrl : '';
+  const checked = validatePersona(sitePath ? { ...declared, avatarUrl: '' } : declared);
+  return checked.ok ? { ...checked.persona, avatarUrl: sitePath || checked.persona.avatarUrl } : null;
 }
 
 /**
