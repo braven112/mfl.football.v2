@@ -266,7 +266,7 @@ const bandStyle =
     /* Same accent edge as the breadcrumb bar: league-primary in dark
        (blue TheLeague / red AFL / emerald bb1 via --breadcrumb-bar-border),
        invisible in light where the token is unset. */
-    border-top: 0.1rem solid var(--breadcrumb-bar-border, transparent);
+    border-top: 0.1rem solid var(--footer-dark-border, var(--breadcrumb-bar-border, transparent));
     font-size: var(--font-size-sm);
     line-height: 1.5;
   }
@@ -275,7 +275,7 @@ const bandStyle =
      deep-blue glow (gradient token), AFL its navy, bb1 its green. background
      is SHORTHAND because the token can be a gradient. */
   :global(html.dark) .site-footer {
-    background: var(--breadcrumb-bar-bg, var(--inverse-content-bg));
+    background: var(--footer-dark-bg, var(--breadcrumb-bar-bg, var(--inverse-content-bg)));
   }
 
   .footer-container {
