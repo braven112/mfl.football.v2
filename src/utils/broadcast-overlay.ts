@@ -36,11 +36,14 @@ export type OverlayEdge = 'top' | 'bottom';
 export type OverlayColumn = 'left' | 'right';
 
 /**
- * How much of its corner the box takes: `small` is the one-line ticker, and
- * `quarter` fills the whole quarter of the screen with both lineups (for a
- * YouTube TV multiview, where three games take the other three quarters).
+ * How much of its corner the box takes: `small` is the one-line ticker (the
+ * remote calls it Default), `slim` is that ticker at about half its width and
+ * height with only the crests, scores and win bar (Brandon, Nov 2026: scores
+ * while covering as little of the game as possible), and `quarter` fills the
+ * whole quarter of the screen with both lineups (for a YouTube TV multiview,
+ * where three games take the other three quarters).
  */
-export type OverlaySize = 'small' | 'quarter';
+export type OverlaySize = 'small' | 'slim' | 'quarter';
 
 export interface OverlayPlayer {
   id: string;
@@ -188,7 +191,20 @@ export function overlayColumnFrom(raw: string | null | undefined): OverlayColumn
 }
 
 export function overlaySizeFrom(raw: string | null | undefined): OverlaySize {
-  return raw === 'quarter' ? 'quarter' : 'small';
+  return raw === 'quarter' || raw === 'slim' ? raw : 'small';
+}
+
+/**
+ * The size the corner box draws at. The TV app (1.0.81 on) stores only
+ * `small` or `quarter` and pushes its own value back to the page whenever the
+ * box moves, so a `slim` handed to it would come straight back as `small`.
+ * Slim is therefore remembered on the page, in the TV's own storage, as a
+ * refinement of `small`: the app's `quarter` always wins, and its `small`
+ * means slim while the page remembers slim. No app update is needed.
+ */
+export function cornerOverlaySize(appSize: OverlaySize, slim: boolean): OverlaySize {
+  if (appSize === 'quarter') return 'quarter';
+  return appSize === 'slim' || slim ? 'slim' : 'small';
 }
 
 /**

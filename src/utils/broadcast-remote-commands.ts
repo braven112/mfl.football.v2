@@ -18,7 +18,7 @@ export type RemoteCommand =
   | { kind: 'leagues' }
   /**
    * The score overlay drawn over another app (the TV app's corner box): the
-   * small box or a whole quarter of the screen, and which corner. The TV's
+   * small box, the slim one, or a whole quarter of the screen, and which corner. The TV's
    * remote belongs to the show underneath, so the phone is the only way to
    * steer it mid-game.
    */
@@ -39,6 +39,7 @@ export type OverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-r
  */
 export type OverlayAction =
   | 'small'
+  | 'slim'
   | 'quarter'
   | 'top'
   | 'bottom'
@@ -51,6 +52,7 @@ const OVERLAY_ACTIONS: readonly OverlayAction[] = [
   'hide',
   'show',
   'small',
+  'slim',
   'quarter',
   'top',
   'bottom',

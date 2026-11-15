@@ -7,6 +7,7 @@ import {
   overlayColumnFrom,
   overlayEdgeFrom,
   overlaySizeFrom,
+  cornerOverlaySize,
   moveWatch,
   overlayGames,
   overlayModeFrom,
@@ -145,6 +146,14 @@ describe('overlay controls', () => {
     expect(overlaySizeFrom('quarter')).toBe('quarter');
     expect(overlaySizeFrom(null)).toBe('small');
     expect(overlaySizeFrom('expanded')).toBe('small');
+    expect(overlaySizeFrom('slim')).toBe('slim');
+  });
+
+  it("keeps slim on the page, since the TV app only stores small or quarter", () => {
+    expect(cornerOverlaySize('small', true)).toBe('slim');
+    expect(cornerOverlaySize('small', false)).toBe('small');
+    expect(cornerOverlaySize('quarter', true)).toBe('quarter');
+    expect(cornerOverlaySize('slim', false)).toBe('slim');
   });
 
   it("splits the win bar by the board's win chance, so a decided game shows one colour", () => {
