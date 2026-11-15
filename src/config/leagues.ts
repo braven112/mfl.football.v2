@@ -266,6 +266,12 @@ export interface LeagueDefinition {
    * Absent = a news feed (if `schefterFeed`) but no scanner.
    */
   schefter?: {
+    /**
+     * 'notable' = only trades, big bids and IR moves for ranked players get
+     * their own post; the rest folds into one daily notebook post
+     * (scripts/lib/beat-notebook.mjs). Absent = a post per move.
+     */
+    newsVolume?: 'notable';
     eventsPath: string;
     env: { schefterBot: string; rogerBot: string; groupId: string; rogerSender: string };
     lanes: {

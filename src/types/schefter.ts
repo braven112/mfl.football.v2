@@ -354,7 +354,7 @@ export interface SchefterPost {
    * one-liner, an IR move, or a roster list. Absent on everything else.
    * A 'roster-list' body is line-broken text; cards render it with pre-line.
    */
-  format?: 'one-liner' | 'ir' | 'roster-list';
+  format?: 'one-liner' | 'ir' | 'roster-list' | 'notebook';
   formatVersion?: number;
   /** IR posts: players moved to / activated from injured reserve. */
   placedIds?: string[];

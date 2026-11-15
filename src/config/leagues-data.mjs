@@ -794,6 +794,9 @@ export const LEAGUES = {
      * league's own reporter's.
      */
     schefter: {
+      // "Notable + daily notebook" (Brandon, Nov 2026): 99 teams move too many
+      // players for a post per move (scripts/lib/beat-notebook.mjs).
+      newsVolume: /** @type {const} */ ('notable'),
       eventsPath: 'data/archies/resolved-events.json',
       env: {
         schefterBot: 'GROUPME_ARCHIES_SCHEFTER_BOT_ID',

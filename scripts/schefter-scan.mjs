@@ -34,6 +34,7 @@ import {
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { parseRosterMove, rosterMoveString } from './lib/roster-move-parse.mjs';
+import { adpRankLookup, foldDailyNotebook } from './lib/beat-notebook.mjs';
 import {
   IR_SUBTYPE,
   WIRE_FORMAT_VERSION,
@@ -802,6 +803,15 @@ async function loadTeams(configPath) {
   }
 }
 
+/** A JSON file's contents, or null when it is missing or unreadable. */
+async function readJsonOrNull(file) {
+  try {
+    return JSON.parse(await fs.readFile(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 async function loadFeed(feedPath) {
   try {
     return JSON.parse(await fs.readFile(feedPath, 'utf8'));
@@ -918,7 +928,18 @@ async function scanLeague(league) {
   // A team's busy day becomes ONE "Notable … roster moves today" list rather
   // than a run of separate posts (scripts/lib/schefter-wire-formats.mjs).
   // Only routine moves fold in; a list already posted today is extended.
-  const folded = foldRosterLists(drafts, feed, { players, teams, leagueSlug, clockZone, hasSalaries: !!registry?.features?.salaryCap });
+  // A big league opts into "notable + daily notebook" (scripts/lib/beat-notebook.mjs):
+  // trades, big bids and IR moves for real players keep their own post; the
+  // rest of the day's wire folds into one notebook post.
+  const notebookFolded = registry?.schefter?.newsVolume === 'notable'
+    ? foldDailyNotebook(drafts, feed, {
+      leagueSlug,
+      clockZone,
+      bidOf: (t) => parseRosterMove(rosterMoveString(t)).bbidAmount,
+      adpRank: adpRankLookup(await readJsonOrNull(path.join(projectRoot, registry.dataPath, 'mfl-feeds', String(leagueYearFor(league, now)), 'adp-redraft.json'))),
+    })
+    : drafts;
+  const folded = foldRosterLists(notebookFolded, feed, { players, teams, leagueSlug, clockZone, hasSalaries: !!registry?.features?.salaryCap });
 
   // Who writes the stories. Schefter's leagues keep his prompt byte-for-byte;
   // a league on the house AI beat reporter (or its commissioner's own writer)

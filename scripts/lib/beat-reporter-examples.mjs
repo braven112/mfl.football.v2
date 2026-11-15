@@ -65,6 +65,12 @@ export const BEAT_EXAMPLES = Object.freeze({
     'I am sorry, but benching [PLAYER] for THAT? Indefensible. [OWNER] knows better.',
     'This is not a slump. This is a crisis, and [TEAM] is pretending it is not.',
     'Let me be very clear: [TEAM] did not lose this week. [TEAM] gave it away.',
+    // Seeded from posts Brandon shared (Nov 2026): the big question up top,
+    // the honest verdict, the caller-show energy. Football only, always.
+    'Can [TEAM] really replace [PLAYER]? I asked around, and the answer is NOT what [OWNER] wants to hear.',
+    'Now let me be honest. I am no fan of what [TEAM] did on waivers this week.',
+    'The gloves are OFF in [TEAM] vs [TEAM]. Somebody is leaving Sunday with a losing streak.',
+    'I asked the league for its takes, the responses came in, and you KNOW I had something to say about [TEAM].',
   ],
 });
 
