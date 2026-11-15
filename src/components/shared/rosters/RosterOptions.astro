@@ -48,11 +48,13 @@ const panelId = `${selectId}-options`;
   <div class="roster-options__panel" id={panelId}>
     <div class="roster-options__year">
       <label for={selectId}>Year</label>
-      <select id={selectId} data-current-year={selectedYear}>
-        {years.map((year) => (
-          <option value={year} selected={String(year) === String(selectedYear)}>{year}</option>
-        ))}
-      </select>
+      <span class="roster-options__select">
+        <select id={selectId} data-current-year={selectedYear}>
+          {years.map((year) => (
+            <option value={year} selected={String(year) === String(selectedYear)}>{year}</option>
+          ))}
+        </select>
+      </span>
     </div>
     {rankingsLeague && <MyRankEditor league={rankingsLeague} />}
   </div>
@@ -90,8 +92,33 @@ const panelId = `${selectId}-options`;
     color: var(--color-gray-500, #6b7280);
   }
 
+  /* The browser's own arrow ignores padding and sits flush against the right
+     edge (user, 2026-11-14: "no padding to the right of the arrow"), so the
+     native one is turned off and a chevron is drawn here, inset from the edge
+     and in the select's own text color so it follows both themes. */
+  .roster-options__select {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .roster-options__select::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0.7rem;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1.5px solid var(--input-text, #111827);
+    border-bottom: 1.5px solid var(--input-text, #111827);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
   .roster-options__year select {
-    padding: 0.35rem 0.5rem;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0.35rem 2rem 0.35rem 0.6rem;
+    line-height: 1.25;
     border: 1px solid var(--input-border, #e5e7eb);
     border-radius: var(--radius-sm, 0.25rem);
     background: var(--input-bg, #fff);
