@@ -115,8 +115,8 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     `    pageKit: 'package',`,
     ...(spec.archetype === 'history-only'
       ? [
-          `    /** League History only (the History tier): its History pages and nothing else. */`,
-          `    historyOnly: true,`,
+          `    /** The History tier: its History pages and nothing else (leagueTier). */`,
+          `    tier: 'history',`,
         ]
       : []),
     ...(f.powerRankings ? [`    peckingOrder: { topN: 25 },`] : []),
@@ -186,9 +186,9 @@ export function setRegistryFeatures(source, slug, features) {
  * Pure apart from reading the template files and the current repo files.
  */
 export function planLaunch(rawSpec) {
-  // The History-only archetype is also a registry flag: the routes, nav and
-  // site search all read `historyOnly` (package-league-routes.mjs).
-  const spec = { ...rawSpec, historyOnly: rawSpec.archetype === 'history-only' };
+  // The History-only archetype is also the registry's History tier: the
+  // routes, nav and site search all read `tier` (package-league-routes.mjs).
+  const spec = rawSpec.archetype === 'history-only' ? { ...rawSpec, tier: 'history' } : rawSpec;
   const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
   const files = [];
   const year = new Date().getFullYear();

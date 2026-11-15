@@ -58,7 +58,7 @@ describe('every league has the report, gated', () => {
 	// EVERY registry league, best-ball included: "every league we create".
 	// A History-only league (the History tier) gets its History pages and
 	// nothing else of the site (package-league-routes.mjs HISTORY_ONLY_ROUTES).
-	const pageDirs = ALL_LEAGUES.filter((l: any) => !l.historyOnly).map((l: any) => l.slug);
+	const pageDirs = ALL_LEAGUES.filter((l: any) => l.tier !== 'history').map((l: any) => l.slug);
 
 	it.each(pageDirs)('%s/activity.astro exists and asks the access gate', (slug) => {
 		const file = path.join(process.cwd(), 'src/pages', slug, 'activity.astro');

@@ -29,10 +29,10 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const syncs = (l) => !l.bestBall;
 
 /**
- * A History-only league (the History tier) syncs MFL for its seasons and
- * builds its history, and nothing else: no player modal, no Roger, no columns.
+ * A History or AI tier league syncs MFL for its seasons and builds its
+ * history, and none of the full site's jobs: no player modal, no Roger.
  */
-const fullSite = (l) => syncs(l) && !l.historyOnly;
+const fullSite = (l) => syncs(l) && (l.tier ?? 'full') === 'full';
 
 /** Whether the league renders `page` (a file under its src/pages/<slug>/). */
 const hasPage = (l, page) => existsSync(join(ROOT, 'src/pages', l.slug, page));

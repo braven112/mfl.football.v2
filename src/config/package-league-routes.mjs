@@ -63,12 +63,12 @@ export const PACKAGE_ROUTES = {
 };
 
 /**
- * A History-only league (registry `historyOnly`, the $49 History tier) gets
+ * A History tier league (registry `tier: 'history'`, the $49 product) gets
  * its History pages and nothing else of the site: no standings, rosters or
  * lineups. Of the every-league routes it keeps only these; its homepage
  * (`index.astro`) redirects to `/<slug>/history`, the address the product is
  * sold at (Brandon, 2026-11-14). Upgrading to a full custom site is dropping
- * the flag: the homepage takes the bare address back and History stays put.
+ * its tier: the homepage takes the bare address back and History stays put.
  */
 export const HISTORY_ONLY_ROUTES = new Set(['index.astro', 'login.astro', 'forbidden.astro']);
 
@@ -98,7 +98,7 @@ function entitles(route, feature, features, historyOnly) {
  * league drops the every-league routes it does not get.
  */
 export function packageRoutesFor(features, league = null) {
-  const historyOnly = Boolean(league?.historyOnly);
+  const historyOnly = league?.tier === 'history';
   return Object.entries(PACKAGE_ROUTES)
     .filter(([route, feature]) => entitles(route, feature, features, historyOnly))
     .map(([route]) => route);
@@ -125,7 +125,7 @@ export function isPackageLeague(league) {
 export function packageLeagueHasPath(league, p) {
   const route = packageRouteForPath(p);
   if (!route) return false;
-  const entitled = entitles(route, PACKAGE_ROUTES[route], league?.features, Boolean(league?.historyOnly));
+  const entitled = entitles(route, PACKAGE_ROUTES[route], league?.features, league?.tier === 'history');
   return entitled && (DATA_GATES[route]?.(league) ?? true);
 }
 

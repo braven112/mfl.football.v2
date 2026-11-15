@@ -1030,7 +1030,7 @@ export const LEAGUES = {
     optInNav: true,
     pageKit: 'package',
     /** League History only (the History tier): its History pages and nothing else. */
-    historyOnly: true,
+    tier: 'history',
     officialClock: {
       id: 'PT',
       zone: 'America/Los_Angeles',
@@ -1196,18 +1196,36 @@ export const MFL_LIVE_PILOT_LEAGUE_IDS = [];
 export const MFL_LIVE_OPEN_SIGN_IN = false;
 
 /**
- * A league we run IN FULL: lineups, live scoring, trades, Schefter. Not a
- * draft-only best-ball league, and not a History-only league (`historyOnly`),
- * which has its past seasons and nothing else. Anything that offers or sends a
- * league its season-time features asks this, never `!bestBall` alone: that
- * older test let the first History-only league into MFL Live Pro, sign-in,
- * the lineup check and the weekly What's New.
+ * The three products a league can buy (Brandon, 2026-11-15), as the
+ * registry's `tier`:
+ *   - 'history' — its past seasons only: the History pages, nothing else.
+ *   - 'ai'      — we write the articles for it (the AI Beat Reporter plan),
+ *                 with History as the add-on; none of the site's tools.
+ *   - 'full'    — a full custom site. An entry with no `tier` is full.
+ * Best ball stays its own draft-only type (`bestBall`), outside the tiers.
+ */
+export const LEAGUE_TIERS = /** @type {const} */ (['history', 'ai', 'full']);
+
+/**
+ * @param {{ tier?: 'history' | 'ai' | 'full' } | null | undefined} l
+ * @returns {'history' | 'ai' | 'full'}
+ */
+export function leagueTier(l) {
+  return l?.tier ?? 'full';
+}
+
+/**
+ * A league we run IN FULL: lineups, live scoring, trades, MFL Live Pro. Not a
+ * draft-only best-ball league, and not a History or AI tier league. Anything
+ * that offers or sends a league its season-time features asks this, never
+ * `!bestBall` alone: that older test let the first History league into MFL
+ * Live Pro, sign-in, the lineup check and the weekly What's New.
  *
- * @param {{ bestBall?: boolean, historyOnly?: boolean } | null | undefined} l
+ * @param {{ bestBall?: boolean, tier?: 'history' | 'ai' | 'full' } | null | undefined} l
  * @returns {boolean}
  */
 export function isFullManagementLeague(l) {
-  return !!l && !l.bestBall && !l.historyOnly;
+  return !!l && !l.bestBall && leagueTier(l) === 'full';
 }
 
 /**

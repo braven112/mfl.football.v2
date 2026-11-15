@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hasMflLivePro } from '../src/utils/mfl-live-pro';
-import { ALL_LEAGUES } from '../src/config/leagues';
+import { ALL_LEAGUES, leagueTier } from '../src/config/leagues';
 import { MFL_LIVE_PILOT_LEAGUE_IDS } from '../src/config/leagues-data.mjs';
 import {
 	FREE_STANDINGS_MODE,
@@ -21,13 +21,13 @@ const user = (leagueId: string) =>
 
 describe('hasMflLivePro', () => {
 	it('includes Pro for every full-management league in the registry', () => {
-		const full = ALL_LEAGUES.filter((l) => !l.bestBall && !l.historyOnly);
+		const full = ALL_LEAGUES.filter((l) => !l.bestBall && leagueTier(l) === 'full');
 		expect(full.map((l) => l.slug)).toEqual(expect.arrayContaining(['theleague', 'afl-fantasy']));
 		for (const league of full) expect(hasMflLivePro(user(league.id)), league.slug).toBe(true);
 	});
 
 	it('leaves best-ball, pilot-league and signed-out viewers on the free tier', () => {
-		for (const league of ALL_LEAGUES.filter((l) => l.bestBall || l.historyOnly)) {
+		for (const league of ALL_LEAGUES.filter((l) => l.bestBall || leagueTier(l) !== 'full')) {
 			expect(hasMflLivePro(user(league.id)), league.slug).toBe(false);
 		}
 		for (const id of MFL_LIVE_PILOT_LEAGUE_IDS) expect(hasMflLivePro(user(id)), id).toBe(false);

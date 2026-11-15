@@ -49,7 +49,7 @@ const signInIds = () => [...new Set([...mflLiveSignInLeagueIds(), pilot])];
 describe('mflLiveSignInLeagueIds', () => {
   it('lists every full-management league in registry order, then the pilot leagues', () => {
     expect(mflLiveSignInLeagueIds()).toEqual([
-      ...ALL_LEAGUES.filter((l) => !l.bestBall && !l.historyOnly).map((l) => l.id),
+      ...ALL_LEAGUES.filter((l) => !l.bestBall && (l.tier ?? 'full') === 'full').map((l) => l.id),
       ...MFL_LIVE_PILOT_LEAGUE_IDS,
     ]);
   });

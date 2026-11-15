@@ -126,17 +126,29 @@ History franchise page rather than the older shared one. Every route reads
 its dataset through the league-data loader and 404s until the first sync has
 built it.
 
-The **History-only** archetype (`history-only`, the $49 History tier) launches
-a league with that box and Franchise pages ticked and writes `historyOnly:
-true` into its registry entry. `packageRoutesFor(features, league)` then drops
-every "every league" route except `index`, `login` and `forbidden`, and the
-homepage REDIRECTS to `/<slug>/history`, the address the tier is sold at
-(Brandon, 2026-11-14). Upgrading to a full site is removing the flag: the
-homepage takes the bare `/<slug>` back and History stays where links already
-point. Pass the league to `packageRoutesFor` (`kitPlan`, `syncNav`,
-`syncDirectory`, `launch-check` all do): a call with features alone cannot
-see the flag and plans the full site. `league-jobs.mjs` keeps a History-only
-league on the MFL sync and the history chain only (`fullSite`).
+A league is one of THREE products (Brandon, 2026-11-15), the registry's
+`tier`: `'history'` (its past seasons only), `'ai'` (we write its articles, the
+AI Beat Reporter plan, with History as the add-on) or `'full'` (a full site; an
+entry with no `tier` is full). Best ball stays its own draft-only type
+(`bestBall`), outside the tiers. Read it through `leagueTier()`, and ask
+`isFullManagementLeague()` before offering or sending a league anything
+season-time (MFL Live Pro and sign-in, lineup checks, trade pushes, the weekly
+What's New): it is false for best ball AND for the History and AI tiers. A
+bare `!bestBall` is how the first History league ended up in all of those
+(`tests/full-management-league.test.ts`).
+
+The **History-only** archetype (`history-only`) launches a league with the
+History box and Franchise pages ticked and writes `tier: 'history'` into its
+registry entry. `packageRoutesFor(features, league)` then drops every "every
+league" route except `index`, `login` and `forbidden`, and the homepage
+REDIRECTS to `/<slug>/history`, the address the tier is sold at (Brandon,
+2026-11-14). Upgrading to a full site is changing the tier: the homepage takes
+the bare `/<slug>` back and History stays where links already point. Pass the
+league to `packageRoutesFor` (`kitPlan`, `syncNav`, `syncDirectory`,
+`launch-check` all do): a call with features alone cannot see the tier and
+plans the full site. `league-jobs.mjs` keeps a History or AI tier league on the
+MFL sync and the history chain only (`fullSite`). The AI tier has no archetype
+or pages of its own yet; its product is the Beat Reporter plan.
 
 Launching one, end to end (Gridiron Gumbas, MFL 35892, Nov 2026):
 

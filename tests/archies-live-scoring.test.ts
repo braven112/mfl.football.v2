@@ -242,7 +242,7 @@ describe('the division picker is offered to a declared-divisions league only', (
       // Package leagues launched with divisions declare them (scripts/suggest-league-branding.mjs).
       if (league.slug === 'archies' || league.slug === 'sandbox') continue;
       // A History-only league has no live scoring board to group.
-      if ((league as { historyOnly?: boolean }).historyOnly) continue;
+      if ((league as { tier?: string }).tier === 'history') continue;
       expect(groupsFor(league.slug), league.slug).toBeUndefined();
     }
   });

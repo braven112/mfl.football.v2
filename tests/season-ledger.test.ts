@@ -91,7 +91,7 @@ describe.each(leagues)('$league.slug season ledger', ({ league, ledgerPath, hist
     // A History-only league is grouped by team identity alone (no owner names
     // from MFL), so a league whose every slot kept one name (Gridiron Gumbas)
     // has none either.
-    if (league.historyOnly) return;
+    if (league.tier === 'history') return;
     if ((ledger.yearsCovered ?? []).length > 1) expect(ledger.orphanedRows).toBeGreaterThan(0);
   });
 
