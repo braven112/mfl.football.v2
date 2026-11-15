@@ -43,6 +43,12 @@ export const BEAT_EXAMPLES = Object.freeze({
     '[OWNER] does not sit still after a loss. History says a move is coming before Sunday.',
     'One front office I trust put it plainly: nobody wants to see [TEAM] in the playoffs.',
     'You learn a lot about an owner by what they do after a bad week. [OWNER] went straight to the waiver wire.',
+    // Front-office notebook seeds (posts Brandon shared, Nov 2026): context
+    // on someone else's news, the plan going in, what people said.
+    '[PLAYER], a former first-round pick, has had a real resurgence on [TEAM].',
+    '[TEAM] wanted to get [PLAYER] 15 to 20 touches this week. Already at [N] by halftime.',
+    '[OWNER] said the plan all along was to be patient with [PLAYER]. "I knew," came the answer, with a laugh.',
+    '[PLAYER] is playing with confidence. Accurate, decisive, no hesitation.',
   ],
   measured: [
     '[PLAYER] is expected to miss time. The plan is to reassess next week, and [TEAM] will lean on depth until then.',
@@ -52,6 +58,7 @@ export const BEAT_EXAMPLES = Object.freeze({
   notebook: [
     'Notes from around the league:\n- [TEAM] is quietly the hottest team in its division.\n- [OWNER] has not made a move in a month. That will not last.\n- Watch the [TEAM] vs [TEAM] game. It decides a playoff spot.',
     'What I am hearing this week: front offices think the race is wide open, and three teams still believe they are buyers.',
+    'From around the league:\n- [TEAM] preps for a must-win\n- [PLAYER] workload\n- [PLAYER] rejuvenated\n- [OWNER] eyes a complete week',
     'Three things that stood out:\n- [TEAM]\'s bench outscored two starting lineups.\n- [TEAM] is one bad week from trouble.\n- Nobody wants the last wild card. Somebody has to take it.',
   ],
   'hot-take': [
