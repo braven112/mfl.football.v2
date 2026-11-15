@@ -16,7 +16,7 @@ name: Apply August Cuts
 # 8:45pm PT instant and re-enters every 15 min to retry failed franchises
 # (MAX_ATTEMPTS=8). The Redis flag autocut:paused:{year} is a kill switch
 # for every mode. No GitHub `vars.*` feature gates per CLAUDE.md — to disable
-# this job, comment out the cron line.
+# this job, remove its /api/cron/apply-august-cuts entry from vercel.json.
 #
 # Manual runs (workflow_dispatch) are dry-run by default:
 #   GitHub UI → Actions → Apply August Cuts → Run workflow
@@ -30,8 +30,12 @@ name: Apply August Cuts
 # makes the script exit non-zero, which files a GitHub issue below.
 
 on:
-  schedule:
-    - cron: "*/15 * * 8 *"   # every 15 min, August only (in-script gates do the real work)
+  # NO `schedule:`. Vercel Cron is this workflow's only scheduled trigger:
+  # src/pages/api/cron/apply-august-cuts.ts dispatches it on the slots in INTERVAL_JOBS
+  # (src/utils/sync-cadence.ts), with the live inputs a scheduled run used to
+  # imply. GitHub delivered this repo's schedules hours late or not at all
+  # (Nov 2026), and a GitHub cron kept as a "backup" collides with the primary
+  # (tests/vercel-cron-targets.test.ts).
   workflow_dispatch:
     inputs:
       mode:
@@ -78,7 +82,7 @@ jobs:
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: |
-          # Scheduled runs have no inputs, so both are empty → --auto, live-capable.
+          # The Vercel bridge dispatches mode=auto, dry_run=false → --auto, live-capable.
           MODE="${{ inputs.mode }}"
           [ -z "$MODE" ] && MODE=auto
           FLAGS=""

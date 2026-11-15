@@ -13,8 +13,9 @@ name: Sync Draft Pick Contracts
 # and doesn't impersonate.
 #
 # Schedule: every 5 min during May only (the rookie draft window in
-# TheLeague). Outside May the workflow does not fire at all. Update the
-# month component in the cron expression if the draft schedule shifts.
+# TheLeague), dispatched by the Vercel bridge. Outside May it does not
+# fire at all. Change `months` in INTERVAL_JOBS (src/utils/sync-cadence.ts)
+# if the draft schedule shifts.
 #
 # Manual triggering (workflow_dispatch) is available year-round for
 # testing or off-cycle runs:
@@ -23,8 +24,12 @@ name: Sync Draft Pick Contracts
 #              touching MFL. Uncheck to actually write.
 
 on:
-  schedule:
-    - cron: "*/5 * * 5 *"   # every 5 min, May only (UTC)
+  # NO `schedule:`. Vercel Cron is this workflow's only scheduled trigger:
+  # src/pages/api/cron/sync-draft-pick-contracts.ts dispatches it on the slots in INTERVAL_JOBS
+  # (src/utils/sync-cadence.ts), with the live inputs a scheduled run used to
+  # imply. GitHub delivered this repo's schedules hours late or not at all
+  # (Nov 2026), and a GitHub cron kept as a "backup" collides with the primary
+  # (tests/vercel-cron-targets.test.ts).
   workflow_dispatch:
     inputs:
       dry_run:
@@ -75,8 +80,8 @@ jobs:
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: |
-          # Scheduled runs have no inputs, so inputs.dry_run is empty.
-          # Treat anything other than the literal string "true" as live.
+          # The Vercel bridge dispatches with dry_run=false. Treat anything other
+          # than the literal string "true" as live.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             echo "::notice::Running in DRY-RUN mode (no MFL writes)"
             node ./scripts/sync-draft-pick-contracts.mjs --dry-run

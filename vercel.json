@@ -17,6 +17,26 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/schefter-articles",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/apply-pending-contracts",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/schefter-rumor-scan",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-draft-pick-contracts",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/apply-august-cuts",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/push-watch",
       "schedule": "* * * * *"
     }

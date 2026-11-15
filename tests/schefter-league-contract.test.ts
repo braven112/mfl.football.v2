@@ -5,6 +5,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 // @ts-ignore — sibling .mjs module, no .d.ts
 import { SCHEFTER_LEAGUES } from '../scripts/lib/schefter-leagues.mjs';
+import { SCHEFTER_ARTICLE_SLOTS } from '../src/utils/sync-cadence';
 
 /**
  * A Schefter league object and a registry entry disagree about what `slug`
@@ -54,35 +55,33 @@ describe('Schefter league objects satisfy the shared-helper contract', () => {
 });
 
 /**
- * Every scheduled cron must resolve to an article type.
+ * Every scheduled column must be a type the workflow can be dispatched with.
  *
- * The workflow maps `github.event.schedule` — the literal cron STRING — to a
- * type through a `case`. Adding a schedule entry without adding its arm gives
- * a run with `TYPE=""`, which is not an error anywhere: the job proceeds and
- * generates nothing. Splitting the (since-retired) Owners' Poll close into two
- * DST-safe entries is exactly the edit that trips this, and it tripped it.
+ * The schedule lives in `SCHEFTER_ARTICLE_SLOTS` (src/utils/sync-cadence.ts)
+ * and Vercel's bridge dispatches `schefter-articles.yml` with `inputs.type`.
+ * A slot whose type is not one of the workflow's `choice` options is refused
+ * by GitHub with a 422 — on a schedule nobody reads — so the column silently
+ * stops. This used to pin the cron → type `case` map, which is gone.
  */
-describe('schefter-articles.yml cron → article type', () => {
+describe('schefter-articles.yml dispatch types ↔ the slot table', () => {
   const file = path.resolve(__dirname, '../.github/workflows/schefter-articles.yml');
-  const src = readFileSync(file, 'utf8');
-  const doc = yaml.load(src) as Record<string, any>;
+  const doc = yaml.load(readFileSync(file, 'utf8')) as Record<string, any>;
   // `on:` parses as the boolean true under YAML 1.1, so the key is literally
   // `true` — indexed as a string here because TS will not take a boolean key.
-  const schedule = (doc['true'] ?? doc.on)?.schedule ?? [];
-  const crons: string[] = schedule.map((s: any) => s.cron);
-  const mapped = new Set([...src.matchAll(/"([^"]+)"\)\s*TYPE=/g)].map((m) => m[1]));
+  const on = doc['true'] ?? doc.on;
+  const options: string[] = on?.workflow_dispatch?.inputs?.type?.options ?? [];
 
-  it('parses a non-empty schedule', () => {
-    expect(crons.length).toBeGreaterThan(5);
+  it('has dispatch options and slots to compare (sanity)', () => {
+    expect(options.length).toBeGreaterThan(5);
+    expect(SCHEFTER_ARTICLE_SLOTS.length).toBeGreaterThan(5);
   });
 
-  it('maps every scheduled cron to a type', () => {
-    const unmapped = crons.filter((c) => !mapped.has(c));
-    expect(unmapped, `scheduled but unmapped — these runs generate nothing`).toEqual([]);
+  it('every scheduled slot is a dispatchable type', () => {
+    const missing = SCHEFTER_ARTICLE_SLOTS.map((s) => s.type).filter((t) => !options.includes(t));
+    expect(missing, 'scheduled but not a workflow_dispatch option').toEqual([]);
   });
 
-  it('has no case arm for a cron that no longer exists', () => {
-    const orphaned = [...mapped].filter((m) => !crons.includes(m));
-    expect(orphaned, 'case arms whose cron was removed or edited').toEqual([]);
+  it('the workflow has no GitHub schedule of its own', () => {
+    expect(on?.schedule).toBeUndefined();
   });
 });
