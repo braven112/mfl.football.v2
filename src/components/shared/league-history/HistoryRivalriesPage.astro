@@ -481,8 +481,14 @@ const groups = (gridGroups ?? [{ name: 'Every team', franchiseIds: teams.map((t)
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
+  /* Mirror the two sides: each score sits on the center line, each logo
+     at its own outer edge. Side b's right-aligned text must not pull its
+     score over to its logo. */
   .rx-match__side--a .rx-match__wins {
     text-align: right;
+  }
+  .rx-match__side--b .rx-match__wins {
+    text-align: left;
   }
   .rx-match__name {
     grid-area: name;
