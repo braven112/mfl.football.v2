@@ -80,6 +80,9 @@ const playerCell = (p: TopPlayerRow) =>
   buildPlayerCellHTML({
     name: p.name,
     position: p.position,
+    // The # column is the positional rank everywhere except Overall, so only
+    // there does the meta line need to carry it ("RB12" instead of "RB").
+    positionLabel: view.mode === 'overall' ? `${p.position}${p.posRank}` : undefined,
     nflTeam: p.team ?? undefined,
     mflId: p.id,
     espnId: p.espnId ?? undefined,
@@ -202,7 +205,6 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
                         ? 'Player'
                         : <a href={sortHref(basePath, view, 'name')} class="tp-sort">Player</a>}
                     </th>
-                    <th scope="col" class="tp-col-pos">Pos</th>
                     <th scope="col" class="tp-col-owner">Owner</th>
                     {COLUMNS.map((col) => (
                       <th scope="col" class="tp-col-num" title={col.title}>
@@ -226,7 +228,6 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
                       <tr class="tp-row">
                         <td class="tp-col-rank">{i + 1}</td>
                         <td class="tp-col-player"><Fragment set:html={playerCell(p)} /></td>
-                        <td class="tp-col-pos"><span class="tp-posrank">{p.position}{p.posRank}</span></td>
                         <td class="tp-col-owner">
                           {p.owners.length === 0
                             ? <span class="tp-fa">FA</span>
@@ -254,7 +255,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
                         </td>
                       </tr>
                       <tr class="tp-detail" hidden>
-                        <td colspan={5 + COLUMNS.length}>
+                        <td colspan={4 + COLUMNS.length}>
                           <ol class="tp-weeks" aria-label={`${p.name} by week`}>
                             {Array.from(
                               { length: data.endWeek - data.startWeek + 1 },
@@ -472,10 +473,6 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-  }
-  .tp-posrank {
-    font-variant-numeric: tabular-nums;
-    color: var(--content-text-muted);
   }
   /* The crest is the row's only owner identifier, so give it a real size.
      TeamIconCell reads --team-icon-size and reveals the NAME if the image
