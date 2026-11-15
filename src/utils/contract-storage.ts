@@ -10,6 +10,7 @@
 
 import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
 import { getRedis } from './redis-client';
+import { leagueYearOfTimestamp } from './veteran-extension-rules';
 
 const REDIS_KEY = 'contract-declarations';
 
@@ -254,8 +255,12 @@ export async function getFranchiseTagsByYear(leagueYear: number): Promise<Contra
 }
 
 /**
- * Check if a team has already used their extension for a given league year.
- * Returns the existing extension declaration if found.
+ * Check if a team has already used its ROOKIE extension slot (rookie
+ * extension or 5th-year team option) for a given year.
+ *
+ * Veteran extensions are NOT in this slot: the Constitution's one-per-season
+ * limit is the Veteran Extension rule's own (Brandon, 2026-11-14), so they
+ * are counted by `getTeamVeteranExtension` instead.
  */
 export async function getTeamExtension(
   franchiseId: string,
@@ -265,10 +270,32 @@ export async function getTeamExtension(
   return all.find(
     d =>
       d.franchiseId === franchiseId &&
-      (d.type === 'veteran-extension' || d.type === 'rookie-extension' || d.type === 'team-option') &&
+      (d.type === 'rookie-extension' || d.type === 'team-option') &&
       d.status !== 'rejected' &&
       d.status !== 'expired' &&
       d.submittedAt.startsWith(String(leagueYear)),
+  );
+}
+
+/**
+ * The team's veteran extension for a LEAGUE year (Feb 15 → Feb 14 8:45pm PT),
+ * if it has one that still counts (anything but rejected or expired).
+ *
+ * League year, not calendar year: `submittedAt.startsWith(year)` let a team
+ * extend once in November and again in February of the same season.
+ */
+export async function getTeamVeteranExtension(
+  franchiseId: string,
+  leagueYear: number,
+): Promise<ContractDeclaration | undefined> {
+  const all = await readAllDeclarations();
+  return all.find(
+    d =>
+      d.franchiseId === franchiseId &&
+      d.type === 'veteran-extension' &&
+      d.status !== 'rejected' &&
+      d.status !== 'expired' &&
+      leagueYearOfTimestamp(d.submittedAt) === leagueYear,
   );
 }
 

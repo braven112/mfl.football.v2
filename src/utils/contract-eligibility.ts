@@ -6,6 +6,7 @@
  * of modifications are available, and when deadlines expire.
  */
 
+import { veteranExtensionEligibility, priceVeteranExtension } from './veteran-extension-rules';
 import { getContractWindow } from './contract-validation';
 import type {
   DeclarationType,
@@ -400,19 +401,28 @@ export function getPlayerEligibility(
     };
   }
 
-  // 5. Check for veteran extension (2+ years, NOT RC, NOT TO)
-  // TO players are handled above in check #3; exclude them here to prevent fallthrough
-  if (currentYears >= 2 && !isRC && contractInfo !== 'TO' && window.windowType === 'offseason') {
-    // Extension salary = currentSalary escalated to the extension point (10% per current year)
-    const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
-    const extensionYears = currentYears + 2;
-    return {
-      ...base,
-      eligible: true,
-      declarationType: 'veteran-extension',
-      extensionSalary,
-      extensionYears,
-    };
+  // 5. Veteran extension — the rule lives in veteran-extension-rules.ts
+  // (Constitution § VETERAN EXTENSIONS). Open all year (Brandon, 2026-11-14),
+  // so no offseason gate; rookie contracts (RC and TO) never qualify.
+  if (!isRC && contractInfo !== 'TO') {
+    const position = (playerInfo?.position ?? '').toUpperCase();
+    const top5 = salaryAverages?.extensionSalaries?.[position] ?? 0;
+    const nested = { positions: { [position]: { top5Average: top5 } } };
+    const vetPlayer = { contractYears: currentYears, contractInfo, salary: currentSalary, position };
+    const vet = veteranExtensionEligibility(vetPlayer, currentYear);
+    if (vet.eligible) {
+      const longest = Math.max(...vet.yearChoices);
+      // Unpriced when the averages were not passed; the server prices it anyway.
+      const price = top5 > 0 ? priceVeteranExtension(vetPlayer, longest, nested) : null;
+      return {
+        ...base,
+        eligible: true,
+        declarationType: 'veteran-extension',
+        yearOptions: vet.yearChoices.map((add) => currentYears + add),
+        extensionSalary: price?.newSalary,
+        extensionYears: currentYears + longest,
+      };
+    }
   }
 
   // 6. Check for rookie extension (RC player with 2+ years, offseason)

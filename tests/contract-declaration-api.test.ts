@@ -21,6 +21,7 @@ import {
   getDeclarationsByFranchise,
   getTeamFranchiseTag,
   getTeamExtension,
+  getTeamVeteranExtension,
   getPendingDeclarationForPlayer,
   generateDeclarationId,
 } from '../src/utils/contract-storage';
@@ -217,7 +218,7 @@ describe('contract-storage', () => {
   });
 
   describe('getTeamExtension', () => {
-    it('finds existing veteran extension', async () => {
+    it('does NOT count a veteran extension — that rule has its own slot', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'EXT_1',
@@ -227,7 +228,7 @@ describe('contract-storage', () => {
           submittedAt: '2026-02-20T10:00:00.000Z',
         }),
       ]);
-      expect((await getTeamExtension('0002', 2026))?.id).toBe('EXT_1');
+      expect(await getTeamExtension('0002', 2026)).toBeUndefined();
     });
 
     it('finds existing rookie extension', async () => {
@@ -254,6 +255,32 @@ describe('contract-storage', () => {
         }),
       ]);
       expect(await getTeamExtension('0002', 2026)).toBeUndefined();
+    });
+  });
+
+  describe('getTeamVeteranExtension', () => {
+    // League year 2026 runs Feb 15 2026 → Feb 14 2027 8:45pm PT. Counting by
+    // calendar year let a team extend in November and again in February.
+    it('counts a November and a February filing as the SAME league year', async () => {
+      setupMockFile([
+        mockDeclaration({
+          id: 'VET_FEB',
+          type: 'veteran-extension',
+          franchiseId: '0004',
+          status: 'applied',
+          submittedAt: '2027-02-10T18:00:00.000Z',
+        }),
+      ]);
+      expect((await getTeamVeteranExtension('0004', 2026))?.id).toBe('VET_FEB');
+      expect(await getTeamVeteranExtension('0004', 2027)).toBeUndefined();
+    });
+
+    it('ignores rookie extensions and rejected veteran extensions', async () => {
+      setupMockFile([
+        mockDeclaration({ id: 'R', type: 'rookie-extension', franchiseId: '0004', status: 'pending', submittedAt: '2026-11-20T10:00:00.000Z' }),
+        mockDeclaration({ id: 'V', type: 'veteran-extension', franchiseId: '0004', status: 'rejected', submittedAt: '2026-11-20T10:00:00.000Z' }),
+      ]);
+      expect(await getTeamVeteranExtension('0004', 2026)).toBeUndefined();
     });
   });
 

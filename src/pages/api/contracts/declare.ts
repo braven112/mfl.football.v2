@@ -24,6 +24,7 @@ import type { DeclarationType } from '../../../types/contract-eligibility';
 import { JSON_HEADERS } from '../../../utils/api-response';
 import { getCachedRosters } from '../../../utils/mfl-roster-cache';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { fileVeteranExtension } from '../../../utils/veteran-extension-filing';
 
 interface DeclareRequestBody {
   leagueId: string;
@@ -40,6 +41,9 @@ interface DeclareRequestBody {
   requestedContractInfo?: string;
   deadlineAt?: string;
   acquisitionTimestamp?: number;
+  /** Veteran extension only: years to add (1 or 2). Falls back to
+   *  requestedYears - currentYears for callers that send the new total. */
+  addedYears?: number;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -123,6 +127,25 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // 3b. Veteran extensions have their own path: the server re-reads the
+    // contract from live MFL, re-prices it from the Constitution's formula and
+    // enforces one per team per league year (src/utils/veteran-extension-rules.ts).
+    // Nothing from the body but the player and the years to add is used.
+    if (type === 'veteran-extension') {
+      const addedYears = Number(body.addedYears ?? requestedYears - currentYears);
+      const outcome = await fileVeteranExtension({
+        user,
+        leagueId: CONTRACT_LEAGUE_ID,
+        franchiseId,
+        franchiseName,
+        playerId: String(playerId),
+        playerName,
+        addedYears,
+      });
+      if (outcome.ok) await recordInsightAction(user, 'contract_declare');
+      return new Response(JSON.stringify(outcome.body), { status: outcome.status, headers: JSON_HEADERS });
+    }
+
     // 4. Validate basic contract rules
     const validation = validateContractSubmission(
       leagueId,
@@ -194,8 +217,9 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // team-option counts as an extension (exercise or rookie extension both use the same limit)
-    if (type === 'veteran-extension' || type === 'rookie-extension' || type === 'team-option') {
+    // A team option and a rookie extension share one slot. Veteran extensions
+    // never reach here (3b) and have their own one-per-season limit.
+    if (type === 'rookie-extension' || type === 'team-option') {
       const existingExt = await getTeamExtension(franchiseId, new Date().getFullYear());
       if (existingExt) {
         return new Response(
