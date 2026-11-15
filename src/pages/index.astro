@@ -7,7 +7,7 @@ import { LEAGUE_PACKAGE_PRICING, leaguePackageSeasonOffer } from '../data/produc
 import { CUSTOM_FEATURES, CUSTOM_SITE_ROWS, SETUP_DISCOUNTS, dollars, perMonth } from '../data/pricing';
 import { siteExampleLeagues } from '../data/league-showcase';
 import { getTestDateFromSearchParams } from '../utils/league-year';
-import { FORMER_BRAND, SERVICES } from '../data/mfl-services';
+import { FORMER_BRAND, SITE_FOOTER_LINKS } from '../data/mfl-services';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 // ── What this page is for ─────────────────────────────────────────────────
@@ -224,18 +224,32 @@ const discountLine = SETUP_DISCOUNTS.map((d) => `${Math.round(d.off * 100)}% off
     </section>
   )}
 
+  <section class="sp-section" id="free" aria-labelledby="free-h">
+    <div class="sp-head">
+      <div class="sp-head__title">
+        <p class="sp-eyebrow">Free</p>
+        <h2 id="free-h">Free for any team</h2>
+      </div>
+      <p class="sp-head__note">No account, no cost.</p>
+    </div>
+    <div class="free">
+      <a class="ui-card sp-card" href="/team-logo">
+        <h3>Team logo maker</h3>
+        <p>Pick a style, a mascot and your colors, and get a prompt for ChatGPT or Gemini. A free tracer turns the result into an SVG.</p>
+        <span class="sp-card__more">Make a logo</span>
+      </a>
+      <a class="ui-card sp-card" href="/video">
+        <h3>Season video</h3>
+        <p>Turn any team’s season into a vertical video for TikTok, Reels, Shorts and X.</p>
+        <span class="sp-card__more">Make a video</span>
+      </a>
+    </div>
+  </section>
+
   <footer class="sp-foot">
     <span>MFL.football · formerly {FORMER_BRAND}</span>
     <nav class="sp-foot__links" aria-label="Site">
-      <a href="/features">Features</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/live">Live scores</a>
-      {SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
-      <a href="/mfl-all-play-standings">Free all-play standings</a>
-      <a href="/compare">Compare</a>
-      <a href="/about">About</a>
-      <a href="/instructions">Template instructions</a>
-      <a href="/brand">Brand Book</a>
+      {SITE_FOOTER_LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
     </nav>
   </footer>
 
@@ -379,6 +393,27 @@ const discountLine = SETUP_DISCOUNTS.map((d) => `${Math.round(d.off * 100)}% off
 
     .incl__list {
       columns: 1;
+    }
+  }
+
+  /* The two free tools, side by side at every width (Brandon, 2026-11-14). */
+  .free {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .free .sp-card__more {
+    margin-top: auto;
+  }
+
+  @media (max-width: 420px) {
+    .free {
+      gap: 0.6rem;
+    }
+
+    .free .sp-card {
+      padding: 1rem;
     }
   }
 

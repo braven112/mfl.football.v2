@@ -1,14 +1,6 @@
 ---
-/**
- * /mfl-league-history — a public service page on the shared host, indexable on purpose.
- * Content: src/data/mfl-services.ts. On a league apex the middleware rewrites
- * this path under the league's prefix, where no route claims it, so it 404s
- * there: it belongs to mfl.football alone.
- */
-import ServicePage from '../components/shared/marketing/ServicePage.astro';
-import { findService } from '../data/mfl-services';
-
+// Page cut when mfl.football was simplified; League History is sold on /pricing (Brandon, 2026-11-14). The route stays only so old links and search
+// results land somewhere useful: /pricing.
 export const prerender = false;
+return Astro.redirect('/pricing', 301);
 ---
-
-<ServicePage service={findService('league-history')} />

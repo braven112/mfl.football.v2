@@ -69,10 +69,10 @@ const TAUGHT = [
 ];
 
 const MORE = [
-	{ name: 'Ask Roger', body: 'Owners ask a rules question and get the answer from your constitution, on the site or in the group chat. Roger also sends the deadline reminders.', href: '/mfl-commissioner-tools', link: 'Commissioner tools' },
+	{ name: 'Ask Roger', body: 'Owners ask a rules question and get the answer from your constitution, on the site or in the group chat. Roger also sends the deadline reminders.', href: league ? hrefFromHere(`/${league.slug}/rules`) : '/', link: 'Ask Roger' },
 	{ name: 'A homepage that knows what day it is', body: 'Lineup holes on Sunday morning, claims on waiver night, the week’s best performer on Monday. Signed-in owners see it for their own team.', href: league ? hrefFromHere(`/${league.slug}`) : '/', link: 'See it live' },
 	{ name: 'Live scoring and the TV Broadcast', body: 'Every game scored live with win probability, plus a Broadcast board for the TV on game day. MFL Football Pro is included for every owner.', href: '/live', link: 'Open live scores' },
-	{ name: 'League History and Ask the History', body: 'Every season back to your first: champions, records, rivalries, franchise and owner pages. Owners ask anything about the league’s past and get the answer.', href: '/mfl-league-history', link: 'See League History' },
+	{ name: 'League History and Ask the History', body: 'Every season back to your first: champions, records, rivalries, franchise and owner pages. Owners ask anything about the league’s past and get the answer.', href: league ? hrefFromHere(`/${league.slug}/history`) : '/', link: 'See a league’s history' },
 	{ name: 'Your look, and seasonal themes', body: 'Your crest and colors on every page, in light and dark. Add a Halloween or Christmas week with every logo redrawn.', href: '/mfl-league-themes', link: 'See the themes' },
 ];
 

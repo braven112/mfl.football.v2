@@ -18,15 +18,17 @@
  * `?invite=` token made on /live/league-stories, and the endpoint refuses a
  * submission without one. Anyone else sees what the step is and how to ask.
  *
+ * Wears the MFL.football marketing chrome (MarketingShell, Soft Premium)
+ * since 2026-11-14, like /get-started.
+ *
  * Shared host, no sign-in: a league fills this in before it has a site. The
  * page keeps an unsent draft in this browser (localStorage, best effort) so a
  * 30-minute form survives a closed tab.
  */
-import MflAppLayout from '../layouts/MflAppLayout.astro';
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
 import { STORY_SECTIONS, storyAiPrompt } from '../data/league-story-questions';
 import { MAX_ANSWER_CHARS, MAX_PASTED_CHARS } from '../utils/league-story/submissions';
 import { getInvite } from '../utils/league-story/invites';
-import '../styles/mfl-live.css';
 
 export const prerender = false;
 
@@ -37,19 +39,23 @@ const aiPrompt = storyAiPrompt();
 const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker', 'Other'];
 ---
 
-<MflAppLayout
-  title="Tell us your league's story — MFL Football"
+<MarketingShell
+  title="Tell us your league's story | MFL.football"
   description="The onboarding questions for a new custom league site: how your league began, its people, rivalries and traditions."
+  canonicalPath="/league-story"
 >
-  <section class="mls lstory" data-league-story>
-    <a class="mls__back" href="/get-started">&larr; Get started</a>
-    <h1 class="mls__title">Tell us your league&rsquo;s story</h1>
-    <p class="mls__lede">
+  <section class="lstory" data-league-story>
+    <header class="lstory__head">
+      <a class="lstory__back" href="/get-started">&larr; Get started</a>
+      <p class="sp-eyebrow"><span>Onboarding</span></p>
+      <h1>Tell us your league&rsquo;s story</h1>
+    <p class="sp-lede">
       How it started, who the characters are, the final nobody has gotten over. Your site and your league&rsquo;s
       reporter tell that story back to your league all season.
     </p>
+    </header>
     {!invite && (
-      <div class="ui-card lstory__card">
+      <div class="ui-card sp-card lstory__card">
         <h2 class="lstory__h2">This form is by invitation</h2>
         <p class="lstory__note">
           When your league signs up for a custom site, we send your commissioner a private link to this form. If you
@@ -67,7 +73,7 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
     </ul>
 
     <form class="lstory__form" novalidate data-story-form data-invite={invite.token}>
-      <div class="ui-card lstory__card" role="group" aria-labelledby="ls-about-title">
+      <div class="ui-card sp-card lstory__card" role="group" aria-labelledby="ls-about-title">
         <h2 class="lstory__h2" id="ls-about-title">About your league</h2>
         <label class="lstory__label" for="ls-league">League name</label>
         <input id="ls-league" class="lstory__input" name="league" maxlength="120" required autocomplete="organization" value={invite.league} />
@@ -102,7 +108,7 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
 
       {
         STORY_SECTIONS.map((s, si) => (
-          <div class="ui-card lstory__card" role="group" aria-labelledby={`ls-sec-${s.id}`}>
+          <div class="ui-card sp-card lstory__card" role="group" aria-labelledby={`ls-sec-${s.id}`}>
             <h2 class="lstory__h2" id={`ls-sec-${s.id}`}>
               {si + 1}. {s.title}
             </h2>
@@ -126,7 +132,7 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
         ))
       }
 
-      <section class="ui-card lstory__card" aria-labelledby="ls-send-title">
+      <section class="ui-card sp-card lstory__card" aria-labelledby="ls-send-title">
         <h2 class="lstory__h2" id="ls-send-title">Send it</h2>
         <p class="lstory__note">
           Have a constitution, logos, trophy photos or chat screenshots? Once you send this, we&rsquo;ll email you back,
@@ -150,7 +156,7 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
     </div>
     </>)}
   </section>
-</MflAppLayout>
+</MarketingShell>
 
 <script>
 
@@ -255,13 +261,29 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
 <style>
   .lstory {
     max-width: 46rem;
+    margin: clamp(2rem, 6vw, 4rem) auto 3rem;
+  }
+  .lstory__head {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+    margin-bottom: 2rem;
+  }
+  .lstory__back {
+    font-size: var(--sp-text-sm);
+    font-weight: 600;
+    color: var(--sp-muted);
+    text-decoration: none;
+  }
+  .lstory__head h1 {
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
   }
   .lstory__tips {
     margin: 0 0 1.25rem;
     padding-left: 1.2rem;
     display: grid;
     gap: 0.35rem;
-    color: var(--color-text-secondary);
+    color: var(--sp-muted);
   }
   .lstory__form {
     display: grid;
@@ -277,22 +299,22 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
   .lstory__h2 {
     margin: 0 0 0.25rem;
     padding: 0;
-    font-size: var(--font-size-lg);
+    font-size: var(--sp-text-lg);
     font-weight: 700;
-    color: var(--page-text);
+    color: var(--sp-ink);
   }
   .lstory__label {
     display: block;
     margin-top: 0.4rem;
-    font-size: var(--font-size-sm);
+    font-size: var(--sp-text-sm);
     font-weight: 700;
-    color: var(--page-text);
+    color: var(--sp-ink);
   }
   .lstory__hint,
   .lstory__note {
     margin: 0;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-muted);
   }
   .lstory__input {
     font: inherit;
@@ -300,9 +322,9 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
     box-sizing: border-box;
     padding: 0.55rem 0.7rem;
     border-radius: 10px;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-3);
-    color: var(--page-text);
+    border: 1px solid var(--sp-line);
+    background: var(--sp-surface-2);
+    color: var(--sp-ink);
   }
   .lstory__textarea {
     resize: vertical;
@@ -319,18 +341,18 @@ const PLATFORMS = ['MyFantasyLeague', 'Sleeper', 'ESPN', 'Yahoo', 'Fleaflicker',
   }
   .lstory__prompt summary {
     cursor: pointer;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-muted);
   }
   .lstory__prompt pre {
     white-space: pre-wrap;
-    font-size: var(--font-size-xs);
+    font-size: var(--sp-text-xs);
     max-height: 18rem;
     overflow: auto;
     padding: 0.75rem;
     border-radius: 10px;
-    background: var(--color-surface-3);
-    color: var(--page-text);
+    background: var(--sp-surface-2);
+    color: var(--sp-ink);
   }
   .lstory__honeypot {
     position: absolute;
