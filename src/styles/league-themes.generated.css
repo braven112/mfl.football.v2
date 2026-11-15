@@ -1416,7 +1416,9 @@ html.dark:not([data-league]) {
   --hero-ink: #0f1e2e;
   --hero-surface: #0f1e2e;
   --hero-accent: #9ab6d9;
-  --hero-glow: rgba(28, 73, 124, 0.55);
+  --hero-glow: rgb(80 110 150 / 0.55);
+  --hero-highlight: #9ab6d9;
+  --hero-action: #456c9c;
   --selection-bg: rgb(111 148 194 / 0.55);
   --selection-text: #ffffff;
   --nav-active-bg: rgb(111 148 194 / 0.15);
@@ -1443,6 +1445,7 @@ html.dark:not([data-league]) {
   --accent-content-bg-color: var(--color-surface-3);
   --accent-content-border-color: #3a3a3a;
   --primary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
+  --league-phase-regular-season: #456c9c;
 }
 
 /* Seasonal: Christmas (Candy Cane) (christmas) on [data-season="christmas"] — Seasonal: a light sheet under a red header and peppermint stripe, framed by snow; candy-cane red for actions, evergreen for live state. Worn light-only (the season locks the page to light; seasonal-themes.css paints the snow frame around the content sheet); the dark block stays legible should the lock ever be lifted. */

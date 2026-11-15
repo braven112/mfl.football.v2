@@ -994,4 +994,9 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
       font-size: 1.25rem;
     }
   }
+
+  /* TheLeague dark: the edge follows the theme's blue (Steel family). */
+  :global(html.dark[data-league='theleague']) .theleague-header {
+    border-bottom-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
 </style>

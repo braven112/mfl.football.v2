@@ -4541,6 +4541,15 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       order: 1;
     }
   }
+
+  /* TheLeague dark: eligible-year chips use the theme blue, not raw #3b82f6. */
+  :global(html.dark[data-league='theleague'] .yrs-chip--eligible) {
+    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+  }
+  :global(html.dark[data-league='theleague'] .yrs-chip--eligible:hover) {
+    background: color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
 </style>
 
 <!-- Player Details Modal -->

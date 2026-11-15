@@ -228,4 +228,12 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
       font-size: var(--font-size-xl);
     }
   }
+
+  /* TheLeague dark: kicker and name shimmer use the theme's blue family. */
+  :global(html.dark[data-league='theleague']) .tpp__kicker { color: var(--color-primary-light); }
+  :global(html.dark[data-league='theleague']) .tpp__name {
+    background: linear-gradient(90deg, #ffffff, color-mix(in srgb, var(--color-primary-light) 45%, white) 60%, var(--color-primary-light));
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
 </style>
