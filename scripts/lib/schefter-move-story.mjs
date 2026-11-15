@@ -26,6 +26,8 @@
  *     never dropped because the model misbehaved.
  */
 
+import { isDefaultPersona } from '../../src/utils/persona.mjs';
+import { beatExamplesBlock } from './beat-reporter-examples.mjs';
 import { rosterMoveString } from './roster-move-parse.mjs';
 import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claude-models.mjs';
 
@@ -182,11 +184,43 @@ export function factsFromRawMove(raw, ctx) {
   });
 }
 
-/** The system + user prompt for one move. Exported for tests. */
-export function buildMovePrompt(facts) {
+/**
+ * Who writes the story. Schefter (the default persona) keeps his two original
+ * lines byte-for-byte; any other persona (the house AI beat reporter, or a
+ * commissioner's own) is named and given its voice, its drawn delivery
+ * examples and the openers it used most recently.
+ *
+ * @param {string} leagueName
+ * @param {{ persona?: { name: string, voice: string } | null, examples?: string[], recentOpeners?: string[] }} opts
+ */
+function moveWriterLines(leagueName, { persona, examples = [], recentOpeners = [] }) {
+  if (isDefaultPersona(persona)) {
+    return [
+      `You are Claude Schefter, the insider beat reporter for ${leagueName}, a fantasy football league.`,
+      `You write the one-paragraph wire story for a single roster move, in Adam Schefter's voice: confident, quick, plugged-in ("I'm told", "Sources say" — vary it, never the same opener twice in a row).`,
+    ];
+  }
+  const p = /** @type {{ name: string, voice: string }} */ (persona);
+  return [
+    `You are ${p.name}, the insider beat reporter for ${leagueName}, a fantasy football league. Never mention Claude Schefter or Adam Schefter.`,
+    'You write the one-paragraph wire story for a single roster move.',
+    `VOICE (tone only; the HARD RULES below always win):\n${p.voice}`,
+    ...(examples.length ? [beatExamplesBlock(examples).trimEnd()] : []),
+    ...(recentOpeners.length
+      ? [`Your most recent posts opened like this. Open differently: ${recentOpeners.map((o) => `"${o}"`).join(', ')}`]
+      : []),
+  ];
+}
+
+/**
+ * The system + user prompt for one move. Exported for tests.
+ *
+ * @param {Record<string, any>} facts
+ * @param {{ persona?: { name: string, voice: string } | null, examples?: string[], recentOpeners?: string[] }} [opts]
+ */
+export function buildMovePrompt(facts, opts = {}) {
   const system = [
-    `You are Claude Schefter, the insider beat reporter for ${facts.leagueName}, a fantasy football league.`,
-    `You write the one-paragraph wire story for a single roster move, in Adam Schefter's voice: confident, quick, plugged-in ("I'm told", "Sources say" — vary it, never the same opener twice in a row).`,
+    ...moveWriterLines(facts.leagueName, opts),
     '',
     'HARD RULES',
     '1. The team is written ONLY as the exact token given (e.g. {{TEAM:9999}}). Never write a team name, nickname or any other {{…}} token.',
@@ -275,9 +309,9 @@ export function parseMoveStory(text, facts, teams) {
  * reply fails its check. Null on any failure — the caller keeps its template
  * post.
  */
-export async function writeMoveStory({ facts, teams, apiKey, fetchImpl = fetch }) {
+export async function writeMoveStory({ facts, teams, apiKey, fetchImpl = fetch, persona = null, examples = [], recentOpeners = [] }) {
   if (!facts || !apiKey) return null;
-  const { system, user } = buildMovePrompt(facts);
+  const { system, user } = buildMovePrompt(facts, { persona, examples, recentOpeners });
   const messages = [{ role: 'user', content: user }];
   try {
     for (let attempt = 1; attempt <= 2; attempt += 1) {

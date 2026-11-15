@@ -55,6 +55,8 @@ import {
   buildPairings,
 } from './lib/pecking-order-math.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
+import { isDefaultPersona } from '../src/utils/persona.mjs';
+import { lanesForNews, pickBeatExamples } from './lib/beat-reporter-examples.mjs';
 import { num, int } from './lib/team-strength.mjs';
 // Announcements are QUEUED here and sent by scripts/schefter-announce-pending.mjs
 // after the commit, once the issue is live. See scripts/lib/await-published.mjs.
@@ -622,7 +624,13 @@ async function applySchefterVoice(issue, teams, league, topN = null) {
   let aiOutput;
   try {
     aiOutput = await callAnthropic(
-      getSystemPrompt(league.name, { persona, topN }),
+      getSystemPrompt(league.name, {
+        // A writer with its own voice also gets delivery examples suited to a
+        // ranking column (scripts/lib/beat-reporter-examples.mjs); Schefter's
+        // prompt stays byte-for-byte.
+        persona: isDefaultPersona(persona) ? persona : { ...persona, examples: pickBeatExamples({ lanes: lanesForNews('pecking-order'), count: 3 }) },
+        topN,
+      }),
       getUserPrompt(factSheet, voicedRows.length),
       4000,
     );

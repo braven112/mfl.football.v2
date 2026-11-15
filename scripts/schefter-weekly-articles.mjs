@@ -24,6 +24,7 @@
  *   ANTHROPIC_API_KEY — Required for Schefter voice generation
  */
 
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
@@ -37,10 +38,34 @@ import {
 } from '../src/utils/league-name-guard.mjs';
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { isDefaultPersona } from '../src/utils/persona.mjs';
+import { callbackLinks, lanesForNews, pickBeatExamples, recentPersonaOpeners } from './lib/beat-reporter-examples.mjs';
 import { VALID_LEAGUES, leagueWritesType } from './lib/article-leagues.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+
+
+/** The league feed's posts, or none (a missing or unreadable feed). */
+async function readFeedPosts(feedPath) {
+  try {
+    const feed = JSON.parse(await fs.readFile(feedPath, 'utf8'));
+    return Array.isArray(feed?.posts) ? feed.posts : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Every team name in the league's config, to mask out of the openers memory. */
+async function leagueTeamNames(league) {
+  try {
+    const raw = JSON.parse(await fs.readFile(path.join(projectRoot, LEAGUES[league].configPath), 'utf8'));
+    return (raw.teams ?? []).map((t) => t.name).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 const VALID_TYPES = [
   'waiver-pickups',
@@ -264,7 +289,20 @@ async function main() {
   // An unset or unreadable setting resolves to Schefter, byte-for-byte.
   const persona = await loadLeaguePersona(league);
   console.log(`  Generating article as ${persona.name} (${persona.source})...`);
-  const systemPrompt = mod.getSystemPrompt({ league, persona });
+  // A writer with its own voice (not Schefter, whose prompt stays
+  // byte-for-byte) also gets delivery examples picked by the article type,
+  // the openers of its last posts, and its own recent columns to call back to.
+  const ownVoice = !isDefaultPersona(persona);
+  const feedPosts = ownVoice ? await readFeedPosts(feedPath) : [];
+  const promptPersona = ownVoice
+    ? {
+      ...persona,
+      examples: pickBeatExamples({ lanes: lanesForNews(type), count: 3 }),
+      recentOpeners: recentPersonaOpeners(feedPosts, await leagueTeamNames(league)),
+    }
+    : persona;
+  if (ownVoice) links.push(...callbackLinks(feedPosts, { excludeId: articleId }));
+  const systemPrompt = mod.getSystemPrompt({ league, persona: promptPersona });
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   // Generate → validate → build → link. Wrapped so the league-name check below
   // can run it a second time with a correction note.

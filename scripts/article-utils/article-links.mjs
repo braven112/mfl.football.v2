@@ -252,7 +252,8 @@ export function linkDirective(links) {
   if (!links?.length) return '';
   const primary = links.filter((l) => l.primary);
   const promos = links.filter((l) => l.promo && !l.primary);
-  const subject = links.filter((l) => !l.primary && !l.promo);
+  const callbacks = links.filter((l) => l.callback && !l.primary && !l.promo);
+  const subject = links.filter((l) => !l.primary && !l.promo && !l.callback);
   const lines = [];
   lines.push('');
   lines.push('LINKS — Schefter always points at the thing he is talking about.');
@@ -277,6 +278,17 @@ export function linkDirective(links) {
     lines.push('  sheet is fixable, <a …>the trade builder</a> disagrees" — not to append');
     lines.push('  a paragraph of housekeeping. Pick the one or two that genuinely fit the');
     lines.push('  story you just told and skip the rest; a forced plug is worse than none.');
+  }
+  if (callbacks.length) {
+    // The writer's own earlier columns (scripts/lib/beat-reporter-examples.mjs
+    // #callbackLinks). Optional and capped at one: a real beat reporter points
+    // back at their own reporting when a story moves, never as filler.
+    lines.push('');
+    lines.push('  YOUR EARLIER REPORTING — call back to AT MOST ONE, and only where this week');
+    lines.push('  genuinely continues the story ("As I reported last week…", "Update on what I');
+    lines.push('  told you…", "I picked them to win. I was wrong."). Its claims are not facts');
+    lines.push('  for this column; only the fact sheet is:');
+    for (const l of callbacks) lines.push(`    ${renderAnchor(l)} (published ${l.publishedAt})`);
   }
   lines.push('');
   lines.push('  Link rules:');

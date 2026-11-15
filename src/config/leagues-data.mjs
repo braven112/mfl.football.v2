@@ -12,6 +12,11 @@ import { isDemoEnv } from '../utils/demo-isolation-core.mjs';
 
 export const LEAGUES = {
   theleague: {
+    /**
+     * News persona (src/utils/persona.mjs): this league's reporter is Claude
+     * Schefter. A league that declares nothing gets the house AI beat reporter.
+     */
+    persona: /** @type {const} */ ('schefter'),
     /** MFL numeric league id */
     id: '13522',
     /** Canonical slug: path segment under src/pages/ and in URLs */
@@ -300,6 +305,11 @@ export const LEAGUES = {
     throwbackWeeks: [4],
   },
   'afl-fantasy': {
+    /**
+     * News persona (src/utils/persona.mjs): this league's reporter is Claude
+     * Schefter. A league that declares nothing gets the house AI beat reporter.
+     */
+    persona: /** @type {const} */ ('schefter'),
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
@@ -775,6 +785,35 @@ export const LEAGUES = {
     stagingDomains: [],
     configPath: 'data/archies/archies.config.json',
     schefterFeedPath: 'data/archies/schefter-feed.json',
+    /**
+     * Schefter scanner (scripts/lib/schefter-leagues.mjs): Max Insider's quick
+     * news posts on adds, drops, claims, trades and IR (Brandon, Nov 2026).
+     * Feed only: Slack carries the Gauntlet alone, and every chat lane is off,
+     * so none of these env names is set. `nflNews: false` keeps the ESPN
+     * reporters, NFL Wire, Doc Rivers and Vegas Vic out — this feed is the
+     * league's own reporter's.
+     */
+    schefter: {
+      // "Notable + daily notebook" (Brandon, Nov 2026): 99 teams move too many
+      // players for a post per move (scripts/lib/beat-notebook.mjs).
+      newsVolume: /** @type {const} */ ('notable'),
+      eventsPath: 'data/archies/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_ARCHIES_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_ARCHIES_ROGER_BOT_ID',
+        groupId: 'GROUPME_ARCHIES_GROUP_ID',
+        rogerSender: 'GROUPME_ARCHIES_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        tradeBait: false,
+        eventReminders: false,
+        directGroupMe: false,
+        tradeOfferRumors: false,
+        groupmeListen: false,
+        rogerReplies: false,
+        nflNews: false,
+      },
+    },
     /** Redraft league re-created on MFL over the summer — the AFL's clock. */
     leagueYearRollover: { month: 6, day: 1 },
     /**
