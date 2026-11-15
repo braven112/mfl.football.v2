@@ -59,6 +59,7 @@ describe('the command list is closed', () => {
       'overlay:hide',
       'overlay:show',
       'overlay:small',
+      'overlay:slim',
       'overlay:quarter',
       'overlay:top',
       'overlay:bottom',
