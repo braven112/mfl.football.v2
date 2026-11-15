@@ -1,0 +1,283 @@
+/*
+ * Contract Desk — the Rosters page with only extend, franchise tag and cut
+ * (src/utils/rosters/contract-desk.ts, /theleague/front-office/contract-desk).
+ *
+ * Imported from the page's FRONTMATTER, never from a scoped <style>: the
+ * buttons and the phone sections are `innerHTML`, so a scoped selector would
+ * never reach them.
+ *
+ * EVERY RULE IS UNDER `.roster-page:has(> [data-desk-mode])`. The plain Rosters page never
+ * renders that flag, so this file changes nothing there
+ * (`scripts/roster-parity-check.mjs` must still report 0 diffs).
+ *
+ * `!important` on the hidden pieces is load-bearing: setMode(), updateView()
+ * and the rankings script write inline `style.display` on the same nodes.
+ */
+
+/* ---- What the desk leaves out --------------------------------------- */
+
+.roster-page:has(> [data-desk-mode]) .mode-toggle,
+.roster-page:has(> [data-desk-mode]) .roster-grouping,
+.roster-page:has(> [data-desk-mode]) .roster-options,
+.roster-page:has(> [data-desk-mode]) .rr-chips,
+.roster-page:has(> [data-desk-mode]) .roster-legend,
+.roster-page:has(> [data-desk-mode]) .cdp-panel,
+.roster-page:has(> [data-desk-mode]) .chart-card--sub,
+.roster-page:has(> [data-desk-mode]) #rosterDeadMoney,
+.roster-page:has(> [data-desk-mode]) .rpc,
+.roster-page:has(> [data-desk-mode]) [data-view-content]:not([data-view-content="roster"]),
+.roster-page:has(> [data-desk-mode]) [data-column="rank"],
+.roster-page:has(> [data-desk-mode]) .coach-col,
+/* The ⋮ stays in the DOM: every desk button opens the Contract Declaration
+   Modal through it (openCdmFromRow), so the desk files exactly what it does. */
+.roster-page:has(> [data-desk-mode]) .ufa-action-btn {
+  display: none !important;
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-title {
+  margin: 0;
+  margin-right: auto;
+  font-size: var(--font-size-lg, 1.125rem);
+  font-weight: 700;
+  color: var(--page-text);
+}
+
+/* ---- Desktop: inline buttons in the action column ------------------- */
+
+.roster-page:has(> [data-desk-mode]) .actions-column {
+  min-width: 9.5rem;
+  text-align: left;
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn {
+  min-height: 2rem;
+  padding: 0 0.625rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-default);
+  background: var(--card-surface);
+  color: var(--page-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--card-surface));
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn:focus-visible,
+.roster-page:has(> [data-desk-mode]) .desk-undo:focus-visible,
+.roster-page:has(> [data-desk-mode]) .desk-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn--extension,
+.roster-page:has(> [data-desk-mode]) .desk-btn--rookie-extension {
+  border-color: var(--color-primary);
+  color: var(--link-color-accent, var(--color-primary));
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn--franchise {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary-dark, var(--color-secondary));
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-btn--cut {
+  color: var(--color-error-dark, #b91c1c);
+}
+
+html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--franchise {
+  color: var(--color-success, #34d399);
+}
+
+html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
+  color: var(--color-error, #f87171);
+}
+
+/* A planned action: a soft tinted pill plus Undo. */
+.roster-page:has(> [data-desk-mode]) .desk-planned {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--page-text);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-planned--franchise {
+  background: color-mix(in srgb, var(--color-secondary) 16%, transparent);
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-planned--cut {
+  background: color-mix(in srgb, var(--color-error, #dc2626) 14%, transparent);
+}
+
+.roster-page:has(> [data-desk-mode]) .desk-undo {
+  min-height: 2rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- Phone: three sections replace the table ------------------------ */
+
+.roster-page:has(> [data-desk-mode]) .desk-sections {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .roster-page:has(> [data-desk-mode]) .desk-sections {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* The owner's own team: the sections ARE the roster here, so the table
+     card goes (the sim tray below still files and clears). Anyone else's
+     team keeps the table, read-only. */
+  .roster-page:has(> [data-desk-mode])[data-desk-own] .roster-table-card {
+    display: none !important;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section {
+    padding: 0.875rem 1rem 0.75rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--card-surface);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__num {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--page-text);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section--tag .desk-section__num {
+    background: color-mix(in srgb, var(--color-secondary) 18%, transparent);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section--cut .desk-section__num {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 14%, transparent);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__titles {
+    display: grid;
+    min-width: 0;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--page-text);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__sub,
+  .roster-page:has(> [data-desk-mode]) .desk-section__help,
+  .roster-page:has(> [data-desk-mode]) .desk-empty {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-section__help {
+    margin: 0.375rem 0 0.25rem;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-empty {
+    margin: 0.5rem 0;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-list > li + li {
+    border-top: 1px solid var(--color-border-default);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.5rem 0;
+    border: 0;
+    background: none;
+    color: var(--page-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-item__text {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-item__name {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-item__pos,
+  .roster-page:has(> [data-desk-mode]) .desk-item__line {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-item__chev {
+    flex: none;
+    color: var(--color-text-secondary);
+  }
+
+  .roster-page:has(> [data-desk-mode]) .desk-more {
+    margin-top: 0.25rem;
+    min-height: 2.75rem;
+  }
+}
+
+/* The player sheet sits outside the page section. Watching is not a desk
+   action, so its eye goes too; the sheet's ⋮ already lists only the desk's
+   three (cdm-wizard.ts filters step 1 in desk mode). */
+body:has(.roster-page:has(> [data-desk-mode])) #pdm-watch {
+  display: none !important;
+}

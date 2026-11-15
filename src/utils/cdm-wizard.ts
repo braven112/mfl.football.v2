@@ -39,6 +39,7 @@ import { submitDeclaration } from './contract-actions-client';
 import { applyPlayerModalBand } from './player-modal-band';
 import { NFL_TEAM_CITIES, normalizeTeamCode } from './nfl';
 import { isWatched, getWatchListAuth } from './watch-list-client';
+import { filterDeskDescriptors } from './rosters/contract-desk';
 import {
   getCdmActionDescriptors,
   type CdmActionContext,
@@ -846,7 +847,10 @@ export function createCdmWizard(deps: CdmWizardContext) {
     if (!actionOptions) return;
     actionOptions.replaceChildren();
 
-    const descriptors = describeCdmActions(elig);
+    // The Contract Desk (?desk=1) offers only extend, tag and cut, so its
+    // step 1 lists only those (src/utils/rosters/contract-desk.ts).
+    const allDescriptors = describeCdmActions(elig);
+    const descriptors = config.deskMode ? filterDeskDescriptors(allDescriptors) : allDescriptors;
     const autocutPid = String(cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '');
     const isOn = (id: CdmActionId) => descriptors.some((d) => d.id === id && d.state === 'on');
     const watchId = String(elig.playerId || '');

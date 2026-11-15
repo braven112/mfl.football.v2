@@ -1,0 +1,19 @@
+---
+/**
+ * Contract Desk — the Rosters page with only extend, franchise tag and cut.
+ *
+ * A rewrite, not a second page: the Rosters page already owns the team
+ * header, the player cells, the salary table and every contract simulation
+ * and filing flow, so the desk is that page with `?desk=1`, which hides
+ * everything else (src/utils/rosters/contract-desk.ts,
+ * src/styles/contract-desk.css). The address bar keeps this URL.
+ *
+ * Every query parameter the visitor sent (`franchise`, `testDate`, …) is
+ * carried over.
+ */
+import { DESK_QUERY_PARAM } from '../../../utils/rosters/contract-desk';
+
+const params = new URLSearchParams(Astro.url.search);
+params.set(DESK_QUERY_PARAM, '1');
+return Astro.rewrite(`/theleague/rosters?${params.toString()}`);
+---

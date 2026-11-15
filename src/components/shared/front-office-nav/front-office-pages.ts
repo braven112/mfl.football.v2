@@ -94,6 +94,15 @@ export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
     },
   },
   {
+    key: 'contract-desk',
+    label: 'Contract Desk',
+    shortLabel: 'Contract Desk',
+    path: '/front-office/contract-desk',
+    blurb: 'Extend, franchise tag or cut your players, with the cap math live.',
+    group: 'team',
+    leagues: TL,
+  },
+  {
     key: 'contracts',
     label: 'Contracts',
     shortLabel: 'Contracts',

@@ -74,6 +74,7 @@ describe('the Front Office page registry', () => {
     // deliberate edit to this test rather than an invented parity rule.
     expect(frontOfficePagesFor('theleague').map((p) => p.key)).toEqual([
       'rosters',
+      'contract-desk',
       'contracts',
       'trade-builder',
       'league-comparison',

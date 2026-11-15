@@ -121,6 +121,8 @@ import '../../styles/sort-chips.css';
 import '../../styles/rosters-mobile.css';
 import '../../styles/roster-position-groups.css';
 import RosterCapStrip from '../../components/theleague/RosterCapStrip.astro';
+import { isDeskRequest } from '../../utils/rosters/contract-desk';
+import '../../styles/contract-desk.css';
 import RosterSimTray from '../../components/theleague/RosterSimTray.astro';
 import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
 import { rosterGroupKey, countGroups, groupHeaderRowHtml } from '../../utils/rosters/position-groups';
@@ -150,6 +152,9 @@ const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 // Demo mode: ?demo=true populates coach mode with mock data
 const isDemoMode = Astro.url?.searchParams?.get('demo') === 'true';
+// Contract Desk (/theleague/front-office/contract-desk rewrites here with
+// ?desk=1): only extend, franchise tag and cut. src/utils/rosters/contract-desk.ts
+const deskMode = isDeskRequest(Astro.url);
 // Determine last 3 completed weeks
 // League ends week 17, so cap at 17
 const currentWeekNum = getCurrentWeek();
@@ -1695,6 +1700,7 @@ const serializedConfig = JSON.stringify({
   // these client-side — see CLAUDE.md League registry section).
   mflHost: THELEAGUE_MFL_HOST,
   defaultLeagueId: THELEAGUE_ID,
+  deskMode,
 });
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -1840,21 +1846,30 @@ const headerMoney = (n: number) =>
 const ownerSeenFor = await resolveOwnerPresence(THELEAGUE_ID);
 // Marks which Front Office strip item is current — presentational only,
 // independent of the client-side view-tab switching below.
-const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
-const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Planner' : 'Roster';
+const frontOfficeCurrent = deskMode
+  ? 'contract-desk'
+  : Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
+const frontOfficeCrumb = frontOfficeCurrent === 'contract-desk'
+  ? 'Contract Desk'
+  : frontOfficeCurrent === 'league-planner' ? 'League Planner' : 'Roster';
+const nameplateLabel = deskMode ? 'Contracts' : 'Roster & Cap';
 ---
 
-<TheLeagueLayout title="Team Rosters">
+<TheLeagueLayout title={deskMode ? 'Contract Desk' : 'Team Rosters'}>
   <FrontOfficeNav leagueSlug="theleague" current={frontOfficeCurrent} crumb={frontOfficeCrumb} bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page" data-league={PAGE_LEAGUE_SLUG}>
+    {/* The Contract Desk's flag (src/styles/contract-desk.css keys every rule
+        off it). A child rather than an attribute on the section, whose opening
+        tag tests/cross-league-init-gate.test.ts pins verbatim. */}
+    {deskMode && <span data-desk-mode hidden></span>}
     <RosterHeader
       leagueSlug="theleague"
       franchiseId={defaultTeamId}
       teamName={teamLookup[defaultTeamId]?.name ?? 'Franchise'}
       teamIcon={teamLookup[defaultTeamId]?.icon ?? null}
       teamMeta={`${teamLookup[defaultTeamId]?.division ?? 'Independent'} Division`}
-      label="Roster & Cap"
+      label={nameplateLabel}
       season={Number(defaultSeason)}
       standing={headerStandings.get(defaultTeamId) ?? {
         record: null,
@@ -1895,7 +1910,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 teamName={team.name}
                 teamIcon={team.icon}
                 teamMeta={team.meta}
-                label="Roster & Cap"
+                label={nameplateLabel}
                 season={Number(defaultSeason)}
                 standing={team.standing}
                 extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space', key: 'cap-space' }]}
@@ -1925,9 +1940,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         year={SALARY_YEARS[0]}
         capSpace={headerMoney(headerCapSpace)}
       />
+      {deskMode && (
+        /* Contract Desk, phone only: the roster as three decisions. Filled by
+           the page script (paintDesk) from the same rows the table renders. */
+        <div class="desk-sections" data-desk-sections aria-live="polite"></div>
+      )}
       <div class="roster-table-card">
         <div class="roster-controls">
           <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
+          {deskMode && (
+            <h2 class="desk-title">Extensions, franchise tag and cuts</h2>
+          )}
 
           <button class="clear-all-tags-btn" id="clearAllTagsBtn" data-sim-clear style="display: none;" title="Clear all contract actions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4765,6 +4788,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   } from '../../utils/rosters/sim-summary';
   import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
   import { createCdmWizard } from '../../utils/cdm-wizard';
+  import { deskButtonsFor, filterDeskDescriptors, groupDeskSections, plannedLabel, DESK_SECTION_PREVIEW, type DeskPlayer } from '../../utils/rosters/contract-desk';
   import { refreshConfigFromElement, replaceContents } from '../../utils/rosters/config-refresh';
   import { revealActiveTeamCrest } from '../../utils/rosters/reveal-active-team';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
@@ -4920,6 +4944,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   // for tags and the franchise id for extensions.
   const franchiseTagsByYear: Record<string, string> = {}; // { `${franchiseId}:${yearIndex}`: playerId }
   const veteranExtensionByTeam: Record<string, string> = {}; // { franchiseId: playerId }
+  /** Contract Desk: repaints the inline action buttons and the phone
+   *  sections after every table render. Assigned below, beside openCdmFromRow;
+   *  null on the plain Rosters page. */
+  let paintDesk: (() => void) | null = null;
   /** The club being viewed — the hidden input every team switch writes. */
   const viewedTeamId = () =>
     (document.getElementById('rosterTeamSelect') as HTMLInputElement | null)?.value ?? '';
@@ -7307,6 +7335,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             openDeclarationModal(readActionSelectPayload(btn));
           });
         });
+        paintDesk?.();
 
 
         // Eligible years cell clicks — open declaration modal
@@ -10469,6 +10498,151 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
     };
 
+    // ================================================================
+    //  Contract Desk (?desk=1) — inline Extend / Tag / Cut buttons in the
+    //  action column and, on a phone, the roster as three sections. Every
+    //  button goes through the SAME Contract Declaration Modal step the ⋮
+    //  menu reaches (openCdmFromRow), so the desk files nothing the Rosters
+    //  page would not. src/utils/rosters/contract-desk.ts
+    // ================================================================
+    if (config.deskMode) {
+      const escDesk = (v: unknown) => String(v ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const deskMoney = (v: number) => formatSalaryCompact(v);
+      const deskExpanded: Record<string, boolean> = {};
+
+      const deskRowFacts = (btn: HTMLElement) => {
+        const playerId = String(btn.dataset.playerId ?? '');
+        const payload = readActionSelectPayload(btn);
+        const descriptors = describeCdmActions(payload.eligibility, playerId);
+        const planned = (contractActions as Record<string, { type?: string }>)[playerId]?.type ?? null;
+        return { playerId, payload, descriptors, planned };
+      };
+
+      const deskActionsHtml = (playerId: string, descriptors: ReturnType<typeof describeCdmActions>, planned: string | null, isOwnTeam: boolean) => {
+        if (planned) {
+          return `<span class="desk-planned desk-planned--${escDesk(planned)}">${escDesk(plannedLabel(planned))}</span>`
+            + `<button type="button" class="desk-undo" data-desk-undo="${escDesk(playerId)}">Undo</button>`;
+        }
+        if (!isOwnTeam) return '';
+        return deskButtonsFor(descriptors).map((b) =>
+          `<button type="button" class="desk-btn desk-btn--${escDesk(b.id)}" data-desk-action="${escDesk(b.id)}" data-desk-player="${escDesk(playerId)}" title="${escDesk(b.title)}">${escDesk(b.label)}</button>`,
+        ).join('');
+      };
+
+      const paintDeskSections = (players: DeskPlayer[], isOwnTeam: boolean) => {
+        const host = document.querySelector<HTMLElement>('[data-desk-sections]');
+        if (!host) return;
+        if (!isOwnTeam) {
+          host.innerHTML = `<p class="desk-empty">Sign in to plan extensions, tags and cuts for your own team. The roster below still shows every contract.</p>`;
+          return;
+        }
+        const groups = groupDeskSections(players);
+        const section = (key: keyof typeof groups, num: number, title: string, sub: string, help: string, line: (p: DeskPlayer) => string) => {
+          const list = groups[key];
+          const open = !!deskExpanded[key];
+          const shown = open ? list : list.slice(0, DESK_SECTION_PREVIEW);
+          const items = shown.map((p) => `
+            <li><button type="button" class="desk-item${p.plannedType ? ' desk-item--planned' : ''}" data-desk-open="${escDesk(p.id)}">
+              <span class="desk-item__text">
+                <span class="desk-item__name">${escDesk(p.name)} <span class="desk-item__pos">${escDesk(p.position)}</span></span>
+                <span class="desk-item__line">${escDesk(line(p))}</span>
+              </span>
+              ${p.plannedType ? `<span class="desk-planned desk-planned--${escDesk(p.plannedType)}">${escDesk(plannedLabel(p.plannedType))}</span>` : ''}
+              <svg class="desk-item__chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+            </button></li>`).join('');
+          const more = list.length > DESK_SECTION_PREVIEW
+            ? `<button type="button" class="cta-link desk-more" data-desk-more="${key}">${open ? 'Show fewer' : `Show all ${list.length}`}</button>`
+            : '';
+          const empty = list.length ? '' : '<p class="desk-empty">Nobody on your roster right now.</p>';
+          return `
+            <section class="desk-section desk-section--${key}" aria-labelledby="desk-h-${key}">
+              <header class="desk-section__head">
+                <span class="desk-section__num" aria-hidden="true">${num}</span>
+                <span class="desk-section__titles">
+                  <h3 class="desk-section__title" id="desk-h-${key}">${title}</h3>
+                  <span class="desk-section__sub">${sub}</span>
+                </span>
+              </header>
+              <p class="desk-section__help">${help}</p>
+              ${empty}<ul class="desk-list">${items}</ul>${more}
+            </section>`;
+        };
+        const yrs = (n: number) => `${n} yr${n === 1 ? '' : 's'}`;
+        host.innerHTML =
+          section('extend', 1, 'Extend', 'Veterans and eligible rookies', 'Lowest salary first. Tap a player to see the new contract.',
+            (p) => `${deskMoney(p.salary)} · ${yrs(p.years)} left`)
+          + section('tag', 2, 'Franchise tag', 'Expiring contracts', 'One year at the tag price. Tap a player to see it.',
+            (p) => `${deskMoney(p.salary)} · expiring`)
+          + section('cut', 3, 'Cut', 'Only if you need the cap space', 'Biggest salary first. Tap a player to see the dead money.',
+            (p) => `${deskMoney(p.salary)} · ${yrs(p.years)} left`);
+      };
+
+      paintDesk = () => {
+        const isOwnTeam = !!config.authUser?.franchiseId && config.authUser.franchiseId === currentTeam;
+        const players: DeskPlayer[] = [];
+        rosterTableBody?.querySelectorAll<HTMLElement>('.ufa-action-btn[data-player-id]').forEach((btn) => {
+          const cell = btn.closest('td');
+          if (!cell) return;
+          const { playerId, payload, descriptors, planned } = deskRowFacts(btn);
+          let slot = cell.querySelector<HTMLElement>('.desk-actions');
+          if (!slot) {
+            slot = document.createElement('div');
+            slot.className = 'desk-actions';
+            cell.appendChild(slot);
+          }
+          slot.innerHTML = deskActionsHtml(playerId, descriptors, planned, isOwnTeam);
+          players.push({
+            id: playerId,
+            name: String(payload.name ?? ''),
+            position: String(payload.position ?? ''),
+            salary: Number(payload.salary) || 0,
+            years: Number(payload.years) || 0,
+            descriptors,
+            plannedType: planned,
+          });
+        });
+        // On a phone the sections replace the table, but only for the owner's
+        // own team: anyone else's roster has no sections to show.
+        document.querySelector('.roster-page[data-league="theleague"]')
+          ?.toggleAttribute('data-desk-own', isOwnTeam);
+        paintDeskSections(players, isOwnTeam);
+      };
+
+      // One delegated listener per surface; both nodes are replaced on every
+      // ClientRouter swap, so nothing stacks.
+      rosterTableBody?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const act = target.closest<HTMLElement>('[data-desk-action]');
+        if (act) {
+          e.stopPropagation();
+          openCdmFromRow(String(act.dataset.deskPlayer), [String(act.dataset.deskAction)]);
+          return;
+        }
+        const undo = target.closest<HTMLElement>('[data-desk-undo]');
+        if (undo) {
+          e.stopPropagation();
+          removeContractAction(String(undo.dataset.deskUndo));
+        }
+      });
+      document.querySelector<HTMLElement>('[data-desk-sections]')?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const more = target.closest<HTMLElement>('[data-desk-more]');
+        if (more) {
+          const key = String(more.dataset.deskMore);
+          deskExpanded[key] = !deskExpanded[key];
+          paintDesk?.();
+          return;
+        }
+        const open = target.closest<HTMLElement>('[data-desk-open]');
+        if (!open) return;
+        const { row } = findRosterRow(String(open.dataset.deskOpen));
+        // The phone sheet opens from the player cell, the way a row tap does.
+        row?.querySelector<HTMLElement>('.player-cell__name[data-player-modal]')?.click();
+      });
+      paintDesk();
+    }
+
     const buildRosterSheetPayload = (data: PlayerModalData, row: HTMLTableRowElement | null): PlayerModalData => {
       const btn = row?.querySelector<HTMLElement>('.ufa-action-btn');
       const playerId = String(btn?.dataset.playerId ?? '');
@@ -10502,7 +10676,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         },
         activeActionType: (contractActions as Record<string, { type?: string }>)[playerId]?.type ?? null,
         capSpaceNow: Number.isFinite(capSpaceNow) ? capSpaceNow : null,
-        descriptors: describeCdmActions(elig, playerId),
+        descriptors: config.deskMode
+          ? filterDeskDescriptors(describeCdmActions(elig, playerId))
+          : describeCdmActions(elig, playerId),
         eligibility: elig,
         now: Date.now(),
       }, sheetPricing);
