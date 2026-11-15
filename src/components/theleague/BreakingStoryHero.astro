@@ -61,6 +61,16 @@ const ctaExternal = !rosterHref && !!safeExternal;
 const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels('theleague');
+
+// The tag pill must stay on ONE line (Brandon, 2026-11-14). When the eyebrow
+// is too narrow for "<Persona> Report · Breaking", the source half drops and
+// the pill reads just "Breaking". The persona's surname sets the label's
+// length, so the cutoff is computed from it: ~9px per uppercase tracked
+// character at the pill's 0.65rem size (measured 8.2) plus the pill padding.
+// A container query cannot read a custom property, hence the inline rule.
+const tagSource = `${labels.reportShort} · `;
+const tagFullPx = Math.ceil((tagSource.length + 'Breaking'.length) * 9 + 24);
+const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bsh__tag-source { display: none; } }`;
 ---
 
 <section
@@ -86,7 +96,7 @@ const labels = await getPersonaLabels('theleague');
 
   <div class="bsh__content">
     <p class="bsh__eyebrow">
-      <span class="bsh__tag">{labels.reportShort} · Breaking</span>
+      <span class="bsh__tag"><span class="bsh__tag-source">{tagSource}</span>Breaking</span>
       <time class="bsh__time">{timeAgo}</time>
     </p>
     <h2 class="bsh__title">{story.headline}</h2>
@@ -102,6 +112,8 @@ const labels = await getPersonaLabels('theleague');
     </a>
   </div>
 </section>
+
+<style is:inline set:html={tagCollapseCss}></style>
 
 <style>
   .bsh {
@@ -230,9 +242,11 @@ const labels = await getPersonaLabels('theleague');
   }
 
   .bsh__eyebrow {
+    container: bsh-eyebrow / inline-size;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem 0.6rem;
     margin: 0 0 0.7rem;
   }
 
@@ -245,6 +259,7 @@ const labels = await getPersonaLabels('theleague');
     background: var(--bsh-tag-bg);
     padding: 0.3rem 0.6rem;
     border-radius: 999px;
+    white-space: nowrap;
   }
 
   .bsh__time {
@@ -283,27 +298,48 @@ const labels = await getPersonaLabels('theleague');
     padding: 0.6rem 1.05rem;
   }
 
+  /* Phones: STACK, never overlap. The cutout gets its own band across the
+     top of the card and the copy runs full width beneath it, so no headline
+     length can reach the player's face (Brandon, 2026-11-14: a long trade
+     headline covered the face when the two shared a row). The band is
+     height-driven: ESPN `full` cutouts are 350×254 landscape frames with the
+     player centered, so a fixed height shows head to chest uncropped, and a
+     bottom mask fades the chest into the card instead of a hard edge. */
   @media (max-width: 640px) {
     .bsh {
-      min-height: 260px;
+      --bsh-band: 190px;
+      min-height: 0;
+      display: block;
+      padding-top: calc(var(--bsh-band) + 0.75rem);
     }
 
-    /* ESPN `full` cutouts are landscape frames (350×254) with the player
-       centered, so height-driven sizing alone would park the face mid-card
-       under the text. Instead: a portrait box anchored bottom-right with a
-       cover crop — the face keeps its full 90%-height size, the shoulders
-       crop at the box edges, and the left-edge mask fades the crop line
-       into the gradient so no hard rectangle shows. */
+    .bsh__ghost {
+      left: 50%;
+      top: 0.5rem;
+      transform: translateX(-50%);
+      font-size: clamp(3.5rem, 18vw, 5rem);
+    }
+
+    .bsh__glow {
+      left: 50%;
+      right: auto;
+      top: -150px;
+      width: 380px;
+      height: 380px;
+      transform: translateX(-50%);
+    }
+
     .bsh__model {
-      width: 44%;
-      height: 90%;
-      right: 0;
-      bottom: 0;
-      object-fit: cover;
-      object-position: center top;
-      opacity: 1;
-      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
-      mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+      left: 50%;
+      right: auto;
+      top: 0;
+      bottom: auto;
+      width: auto;
+      height: var(--bsh-band);
+      max-width: none;
+      transform: translateX(-50%);
+      -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+      mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     }
 
     .bsh__caption {
@@ -311,28 +347,17 @@ const labels = await getPersonaLabels('theleague');
     }
 
     .bsh__content {
-      max-width: 62%;
+      max-width: 100%;
+    }
+
+    .bsh__summary {
+      max-width: none;
     }
 
     /* When the cutout 404s at runtime (`bsh--no-model` from the img
-       onerror), the text reflows back to full width instead of leaving
-       a dead right column. */
-    .bsh--no-model .bsh__content {
-      max-width: 100%;
-    }
-  }
-
-  /* Narrow phones: the constrained text column runs taller, so the headshot
-     cedes a little width (the cover crop trims more shoulder, the face keeps
-     its size) rather than letting the two meet. */
-  @media (max-width: 400px) {
-    .bsh__model {
-      width: 38%;
-      height: 86%;
-    }
-
-    .bsh__content {
-      max-width: 66%;
+       onerror), drop the empty band instead of leaving a blank stage. */
+    .bsh--no-model {
+      padding-top: clamp(1.25rem, 2.5vw, 1.9rem);
     }
   }
 </style>
