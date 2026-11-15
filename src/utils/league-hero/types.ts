@@ -271,6 +271,13 @@ export interface LeagueHeroResolverInput {
    * synchronous.
    */
   scheduleReleaseRevealed?: boolean;
+  /**
+   * The trade deadline AS MFL HAS IT (`mflTradeCutoff` over the league's
+   * calendar feed). MFL is the source of truth: when present, the deadline
+   * hero runs on this day and counts down to this instant. Omitted / null →
+   * the Constitution's date (profile clock or league event) as before.
+   */
+  tradeDeadline?: { isoDate: string; cutoffISO: string; timeLabel: string } | null;
   /** Owner's lineup for the week is in (true), not (false), or unknown / signed out (null). The page reads it only on Saturday evening. */
   lineupSubmitted?: boolean | null;
   /**

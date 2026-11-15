@@ -1,0 +1,56 @@
+---
+/**
+ * Admin-only warning: MFL's trade deadline disagrees with the Constitution.
+ *
+ * MFL is the source of truth for the deadline (it is what stops a trade), and
+ * the site counts down to MFL's date. The Constitution is the cross-check: its
+ * calendar is carried year to year and drifted a week late for TheLeague in
+ * 2024–2026 unnoticed. This card is how that drift gets noticed — the same
+ * mismatch also goes out as an `ops-league-setup` push
+ * (scripts/check-trade-deadline.ts).
+ *
+ * The CALLER decides visibility (`isCommissionerOrAdminForLeague` + the
+ * check's own window); this component renders whatever check it is handed
+ * and nothing when `check.flag` is false.
+ */
+interface Props {
+  check: { flag: boolean; message: string | null; year: number } | null;
+  /** The league's home on MFL, where the calendar fix is made. */
+  mflUrl: string;
+}
+const { check, mflUrl } = Astro.props;
+---
+{check?.flag && check.message && (
+  <aside class="td-conflict" role="status" aria-label="Trade deadline mismatch">
+    <p class="td-conflict__title">Trade deadline mismatch ({check.year})</p>
+    <p class="td-conflict__body">
+      {check.message} The site follows MFL. Fix whichever one is wrong.
+    </p>
+    <p class="td-conflict__meta">Only commissioners see this.</p>
+    <a class="cta-link" href={mflUrl} target="_blank" rel="noopener">Open the league on MFL</a>
+  </aside>
+)}
+
+<style>
+  .td-conflict {
+    margin: 0 0 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-warning);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: var(--color-warning-light);
+    color: inherit;
+  }
+  .td-conflict__title {
+    margin: 0 0 0.25rem;
+    font-weight: 700;
+  }
+  .td-conflict__body {
+    margin: 0 0 0.25rem;
+  }
+  .td-conflict__meta {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-sm);
+    opacity: 0.85;
+  }
+</style>
