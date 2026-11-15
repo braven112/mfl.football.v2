@@ -55,6 +55,9 @@ import {
 } from './lib/schefter-groupme-budget.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
+import { isDefaultPersona } from '../src/utils/persona.mjs';
+import { lanesForNews, pickBeatExamples, recentPersonaOpeners } from './lib/beat-reporter-examples.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 import {
@@ -833,6 +836,18 @@ async function scanLeague(league) {
   console.log(`  Players loaded: ${players.size}`);
   console.log(`  Teams loaded: ${teams.size}`);
 
+  // A league's FIRST scan seeds the watermark and posts nothing. A feed that
+  // has never been scanned has no watermark at all (not '0'), and reading
+  // that as "everything is new" would post the whole season at once — 1,373
+  // moves for Archie's when its scanner was switched on in Nov 2026.
+  if (feed.lastProcessedMflTimestamp === undefined) {
+    const newest = transactions.reduce((max, t) => Math.max(max, parseInt(t.timestamp) || 0), 0);
+    feed.lastProcessedMflTimestamp = String(newest);
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    console.log(`  First scan: watermark seeded at ${newest}; no backlog posted.`);
+    return 0;
+  }
+
   const leagueSlug = league.slug;
 
   // Filter new transactions
@@ -905,6 +920,16 @@ async function scanLeague(league) {
   // Only routine moves fold in; a list already posted today is extended.
   const folded = foldRosterLists(drafts, feed, { players, teams, leagueSlug, clockZone, hasSalaries: !!registry?.features?.salaryCap });
 
+  // Who writes the stories. Schefter's leagues keep his prompt byte-for-byte;
+  // a league on the house AI beat reporter (or its commissioner's own writer)
+  // gets that persona's voice, delivery examples picked by the kind of move,
+  // and the openers its last posts used, so no two stories start alike.
+  const persona = await loadLeaguePersona(league.registrySlug);
+  const ownVoice = !isDefaultPersona(persona);
+  const recentOpeners = ownVoice
+    ? recentPersonaOpeners(feed.posts, [...teams.values()].map((t) => t.name))
+    : [];
+
   for (const { post, txn } of folded) {
     // Schefter's write-up of the move — the Transactions page leads with it.
     // About one routine move in three is a plain one-liner; the rest go to
@@ -931,8 +956,18 @@ async function scanLeague(league) {
         applyMoveStory(post, line, facts);
         post.format = 'one-liner';
       } else if (!DRY_RUN) {
-        const story = await writeMoveStory({ facts, teams, apiKey: process.env.ANTHROPIC_API_KEY });
-        if (story) applyMoveStory(post, story, facts);
+        const story = await writeMoveStory({
+          facts,
+          teams,
+          apiKey: process.env.ANTHROPIC_API_KEY,
+          ...(ownVoice
+            ? { persona, examples: pickBeatExamples({ lanes: lanesForNews(txn.type), count: 2 }), recentOpeners }
+            : {}),
+        });
+        if (story) {
+          applyMoveStory(post, story, facts);
+          if (ownVoice) recentOpeners.unshift(...recentPersonaOpeners([{ body: story.body }], [...teams.values()].map((t) => t.name)));
+        }
       }
     }
 
@@ -3258,16 +3293,20 @@ for (const league of LEAGUES) {
     totalPosts += await scanPendingTrades(league);
     // Scan trade bait (per-franchise availability listings → rumor-mill tips)
     totalPosts += await scanTradeBait(league);
+    // The NFL news lanes (ESPN reporters, NFL Wire, Doc Rivers, Vegas Vic)
+    // run unless a league opts out with `lanes.nflNews: false` — Archie's
+    // feed is its own reporter's alone (Brandon, Nov 2026).
+    const nflNews = league.features.nflNews !== false;
     // Scan ESPN contributors
-    totalPosts += await scanEspn(league);
+    if (nflNews) totalPosts += await scanEspn(league);
     // Scan event reminders (Ask Roger)
     totalPosts += await scanEventReminders(league);
     // Scan NFL Wire (general NFL news)
-    totalPosts += await scanNflWire(league);
+    if (nflNews) totalPosts += await scanNflWire(league);
     // Scan injuries (Doc Rivers)
-    totalPosts += await scanInjuries(league);
+    if (nflNews) totalPosts += await scanInjuries(league);
     // Scan odds (Vegas Vic)
-    totalPosts += await scanOdds(league);
+    if (nflNews) totalPosts += await scanOdds(league);
     // Roger's reply lane — answer owners who took a shot at his reminders.
     // Runs AFTER scanEventReminders so a reminder posted this tick is already
     // in GroupMe (and cached as a Roger post id) before anyone can reply to it.

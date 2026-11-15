@@ -156,13 +156,16 @@ jobs:
           # merge=binary feed and the push fails. commit-feed-and-push reconciles
           # by content on top of the latest origin and retries (feeds union by
           # post id; resolved-events / groupme-suppressions are taken as-is). The
-          # "nothing changed" guard is handled inside the script.
+          # "nothing changed" guard is handled inside the script. The feed list
+          # comes from the registry (every league with a news feed), so a league
+          # whose scanner is switched on — Archie's, Sandbox — is published too;
+          # a hand-kept list silently dropped every Sandbox scan.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter scan — new transaction posts" \
-            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/theleague/post-history.json,data/schefter/groupme-suppressions.json"
+            --files "$(node scripts/schefter-feed-sync.mjs paths),src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/theleague/post-history.json,data/schefter/groupme-suppressions.json"
 
       # Once a day, commit the live feeds back to git: the backup if Redis is
       # ever wiped, and the copy the site falls back to when Redis is down.

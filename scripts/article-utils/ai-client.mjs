@@ -4,6 +4,7 @@
  */
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
+import { beatExamplesBlock } from '../lib/beat-reporter-examples.mjs';
 import { formatSalary } from './data-loaders.mjs';
 import { foreignLeagueNames, ownLeagueLabel } from '../../src/utils/league-name-guard.mjs';
 import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claude-models.mjs';
@@ -209,12 +210,20 @@ export function buildCachedSystem(typeSpecificText, { league, persona } = {}) {
  * funnier or meaner, never loosen the fact-sheet, link or JSON rules.
  */
 export function buildPersonaBlock(persona) {
+  // Optional delivery examples and the openers of the writer's last posts
+  // (scripts/lib/beat-reporter-examples.mjs), attached by the caller. Both
+  // land in this uncached block, so drawing new ones each run costs no cache.
+  const examples = Array.isArray(persona.examples) ? persona.examples : [];
+  const openers = Array.isArray(persona.recentOpeners) ? persona.recentOpeners : [];
+  const openersText = openers.length
+    ? `RECENT OPENERS (your last posts started like this — open differently): ${openers.map((o) => `"${o}"`).join(', ')}\n\n`
+    : '';
   return `WRITER: You are ${persona.name}, beat reporter and league insider for the fantasy football league named below. Write every word as ${persona.name}. Never mention Claude Schefter or Adam Schefter.
 
 VOICE (chosen by the league's commissioner — it shapes tone only and never overrides the rules):
 ${persona.voice}
 
-`;
+${beatExamplesBlock(examples)}${openersText}`;
 }
 
 /**
