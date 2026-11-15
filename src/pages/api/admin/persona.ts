@@ -20,6 +20,7 @@ import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import {
   DEFAULT_PERSONA,
   PERSONA_LIMITS,
+  absolutePersonaAvatar,
   personaKey,
   resolvePersona,
   validatePersona,
@@ -43,11 +44,20 @@ function gate(request: Request, url: URL): Gate {
   return { ok: true, league: resolved.league };
 }
 
-function view(league: LeagueDefinition, stored: unknown) {
+/**
+ * A registry default's avatar may be a site path ('/assets/…'), which the
+ * editor's https-only validation would refuse on the next save — so the editor
+ * is always handed the absolute form.
+ */
+function withAbsoluteAvatar(persona: ReturnType<typeof resolvePersona>, origin: string) {
+  return { ...persona, avatarUrl: absolutePersonaAvatar(persona, origin) };
+}
+
+function view(league: LeagueDefinition, stored: unknown, origin: string) {
   return {
     league: league.slug,
-    persona: resolvePersona(league, stored),
-    defaults: resolvePersona(league, null),
+    persona: withAbsoluteAvatar(resolvePersona(league, stored), origin),
+    defaults: withAbsoluteAvatar(resolvePersona(league, null), origin),
     schefter: DEFAULT_PERSONA,
     limits: PERSONA_LIMITS,
   };
@@ -58,7 +68,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   if (!g.ok) return g.response;
   const redis = await getRedis();
   const stored = redis ? await redis.get(personaKey(g.league.slug)).catch(() => null) : null;
-  return json({ ok: true, ...view(g.league, stored), storage: Boolean(redis) }, 200, JSON_HEADERS_NO_STORE);
+  return json({ ok: true, ...view(g.league, stored, url.origin), storage: Boolean(redis) }, 200, JSON_HEADERS_NO_STORE);
 };
 
 export const PUT: APIRoute = async ({ request, url }) => {
@@ -81,7 +91,7 @@ export const PUT: APIRoute = async ({ request, url }) => {
   } catch {
     return json({ ok: false, errors: ['Could not save — try again.'] }, 502, JSON_HEADERS_NO_STORE);
   }
-  return json({ ok: true, ...view(g.league, checked.persona) }, 200, JSON_HEADERS_NO_STORE);
+  return json({ ok: true, ...view(g.league, checked.persona, url.origin) }, 200, JSON_HEADERS_NO_STORE);
 };
 
 export const DELETE: APIRoute = async ({ request, url }) => {
@@ -94,5 +104,5 @@ export const DELETE: APIRoute = async ({ request, url }) => {
   } catch {
     return json({ ok: false, errors: ['Could not reset — try again.'] }, 502, JSON_HEADERS_NO_STORE);
   }
-  return json({ ok: true, ...view(g.league, null) }, 200, JSON_HEADERS_NO_STORE);
+  return json({ ok: true, ...view(g.league, null, url.origin) }, 200, JSON_HEADERS_NO_STORE);
 };

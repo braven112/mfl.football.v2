@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PERSONA,
   PERSONA_LIMITS,
+  absolutePersonaAvatar,
   isDefaultPersona,
   personaKey,
   resolvePersona,
@@ -79,6 +80,41 @@ describe('resolvePersona', () => {
   it('prefers a registry default over Schefter', () => {
     const entry = { persona: { name: 'Registry Guy' } };
     expect(resolvePersona(entry, null)).toMatchObject({ name: 'Registry Guy', voice: DEFAULT_PERSONA.voice, source: 'registry' });
+  });
+
+  it('lets a registry default use a site asset path for its avatar', () => {
+    const entry = { persona: { avatarUrl: '/assets/beat-reporter-avatar.webp' } };
+    expect(resolvePersona(entry, null)).toMatchObject({
+      name: DEFAULT_PERSONA.name,
+      voice: DEFAULT_PERSONA.voice,
+      avatarUrl: '/assets/beat-reporter-avatar.webp',
+      source: 'registry',
+    });
+    // Still Schefter's voice, so the prompt stays byte-identical.
+    expect(isDefaultPersona(resolvePersona(entry, null))).toBe(true);
+  });
+
+  it('refuses a protocol-relative registry avatar', () => {
+    const entry = { persona: { avatarUrl: '//evil.test/a.png' } };
+    expect(resolvePersona(entry, null).source).toBe('default');
+  });
+
+  it("gives Archie's the AI beat reporter avatar, and the file exists", async () => {
+    const { existsSync } = await import('node:fs');
+    const persona = resolvePersona(LEAGUES.archies, null);
+    expect(persona.avatarUrl).toBe('/assets/beat-reporter-avatar.webp');
+    expect(existsSync(`public${persona.avatarUrl}`)).toBe(true);
+  });
+
+  it('absolutizes a site asset avatar for Slack, leaves full URLs alone', () => {
+    expect(absolutePersonaAvatar({ avatarUrl: '/assets/a.webp' }, 'https://mfl.football')).toBe('https://mfl.football/assets/a.webp');
+    expect(absolutePersonaAvatar({ avatarUrl: 'https://x.test/a.png' }, 'https://mfl.football')).toBe('https://x.test/a.png');
+    expect(absolutePersonaAvatar({ avatarUrl: '' }, 'https://mfl.football')).toBe('');
+  });
+
+  it("hands Slack an absolute avatar for Archie's", async () => {
+    const persona = await loadLeaguePersona('archies', { redis: null });
+    expect(persona.avatarUrl).toBe('https://mfl.football/assets/beat-reporter-avatar.webp');
   });
 
   it('keys storage by registry slug', () => {

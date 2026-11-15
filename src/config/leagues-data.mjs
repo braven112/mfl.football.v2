@@ -759,6 +759,13 @@ export const LEAGUES = {
     /** The share-card mark: the OG renderer reads PNG/SVG only, not WebP. */
     logoOg: '/assets/logos/archies-head.png',
     /**
+     * News persona default (src/utils/persona.mjs). Brandon, Nov 2026: Archie's
+     * wears the generic AI beat reporter (the mfl.football /features mark)
+     * instead of Claude Schefter's avatar. A commissioner's saved persona
+     * still wins over this.
+     */
+    persona: { avatarUrl: '/assets/beat-reporter-avatar.webp' },
+    /**
      * Weekly Schefter article types this league gets (scripts/lib/article-leagues.mjs).
      * Absent = every type. Archie's has The Gauntlet, and (Brandon, Nov 2026)
      * the Saturday Matchup Preview every league gets.

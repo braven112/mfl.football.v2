@@ -150,10 +150,40 @@ export function resolvePersona(registryEntry, stored) {
     if (checked.ok) return { ...checked.persona, source: 'league' };
   }
   if (registryEntry?.persona) {
-    const checked = validatePersona({ ...DEFAULT_PERSONA, ...registryEntry.persona });
-    if (checked.ok) return { ...checked.persona, source: 'registry' };
+    // The registry is code, not user input, so its avatar may be a site asset
+    // path ('/assets/…'): it renders on every host the league is served from,
+    // previews included. A commissioner's saved avatar still has to be a full
+    // https:// link. Node-side senders that need an absolute URL (Slack's
+    // icon_url) resolve it with `absolutePersonaAvatar`.
+    const declared = { ...DEFAULT_PERSONA, ...registryEntry.persona };
+    const sitePath = isSiteAssetPath(declared.avatarUrl) ? declared.avatarUrl : '';
+    const checked = validatePersona(sitePath ? { ...declared, avatarUrl: '' } : declared);
+    if (checked.ok) return { ...checked.persona, avatarUrl: sitePath || checked.persona.avatarUrl, source: 'registry' };
   }
   return { ...DEFAULT_PERSONA, source: 'default' };
+}
+
+/**
+ * A root-relative path to one of the site's own files ('/assets/x.webp'),
+ * never a protocol-relative '//host' URL.
+ *
+ * @param {unknown} value
+ */
+export function isSiteAssetPath(value) {
+  return typeof value === 'string' && /^\/(?!\/)[\w\-./]+$/.test(value) && !value.includes('..');
+}
+
+/**
+ * The persona's avatar as an absolute URL, for senders that cannot take a
+ * path (Slack's `icon_url`). A site asset path resolves against `origin`;
+ * anything else is returned as it is.
+ *
+ * @param {{ avatarUrl?: string } | null | undefined} persona
+ * @param {string} origin  e.g. 'https://mfl.football'
+ */
+export function absolutePersonaAvatar(persona, origin) {
+  const avatar = persona?.avatarUrl ?? '';
+  return isSiteAssetPath(avatar) ? new URL(avatar, origin).href : avatar;
 }
 
 /**
