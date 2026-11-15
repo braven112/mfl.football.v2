@@ -1,0 +1,26 @@
+---
+/**
+ * Owner detail (Gumbas) — thin route over the shared owner page
+ * (components/shared/owners/OwnerDetailPage). The redirect lives HERE:
+ * `Astro.redirect()` only redirects from a page.
+ */
+import OwnerDetailPage from '../../../components/shared/owners/OwnerDetailPage.astro';
+import { resolveOwnerDetail } from '../../../utils/owner-detail';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('gumbas')!;
+const [ownerData, historyData] = (await Promise.all([
+  loadLeagueData(`${league.dataPath}/derived/owner-tenures.json`),
+  loadLeagueData(`${league.dataPath}/derived/league-history.json`),
+])) as [any, any];
+if (!ownerData) return Astro.rewrite('/_not-found');
+
+const result = resolveOwnerDetail(Astro, 'gumbas', ownerData as unknown as OwnerTenuresFile);
+if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
+---
+
+<OwnerDetailPage leagueSlug="gumbas" owner={result.owner} related={result.related} historyData={historyData} />

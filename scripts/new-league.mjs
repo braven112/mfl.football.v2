@@ -113,6 +113,12 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     `    advertiseOnSharedHost: false,`,
     `    optInNav: true,`,
     `    pageKit: 'package',`,
+    ...(spec.archetype === 'history-only'
+      ? [
+          `    /** League History only (the History tier): its History pages and nothing else. */`,
+          `    historyOnly: true,`,
+        ]
+      : []),
     ...(f.powerRankings ? [`    peckingOrder: { topN: 25 },`] : []),
     ...(spec.duplicatePlayers ? [`    duplicatePlayers: true,`] : []),
     `    officialClock: {`,
@@ -179,7 +185,10 @@ export function setRegistryFeatures(source, slug, features) {
  * Every file the launch writes, as { path, content } with repo-relative paths.
  * Pure apart from reading the template files and the current repo files.
  */
-export function planLaunch(spec) {
+export function planLaunch(rawSpec) {
+  // The History-only archetype is also a registry flag: the routes, nav and
+  // site search all read `historyOnly` (package-league-routes.mjs).
+  const spec = { ...rawSpec, historyOnly: rawSpec.archetype === 'history-only' };
   const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
   const files = [];
   const year = new Date().getFullYear();
@@ -239,7 +248,7 @@ export function planLaunch(spec) {
   // league in line with its features afterwards.
   const changes = syncPlan(spec);
   files.push(...changes);
-  const routes = routesFor(spec.features);
+  const routes = routesFor(spec.features, spec);
   const added = JSON.parse(changes.find((c) => c.path === 'src/data/page-directory.json').content).filter(
     (e) => e.path === `/${spec.slug}` || e.path.startsWith(`/${spec.slug}/`),
   );

@@ -454,6 +454,54 @@
       ]
     },
     {
+      "id": "gumbas",
+      "label": "League",
+      "leagueOnly": "gumbas",
+      "phaseOrder": {
+        "inSeason": 1,
+        "offSeason": 1
+      },
+      "defaultOpen": "always",
+      "links": [
+        {
+          "id": "gumbas-franchises",
+          "label": "Franchises",
+          "icon": "shield",
+          "path": "/franchises",
+          "external": false,
+          "leagueOnly": "gumbas",
+          "description": "Every club's all-time record, rivals and trades"
+        },
+        {
+          "id": "gumbas-history",
+          "label": "History",
+          "icon": "scroll",
+          "path": "/history",
+          "external": false,
+          "leagueOnly": "gumbas",
+          "description": "Every champion, the Record Book and Ask the History"
+        },
+        {
+          "id": "gumbas-rivalries",
+          "label": "Rivalries",
+          "icon": "rivalry",
+          "path": "/rivalries",
+          "external": false,
+          "leagueOnly": "gumbas",
+          "description": "Every head-to-head, hottest first"
+        },
+        {
+          "id": "gumbas-owners",
+          "label": "Owners",
+          "icon": "users",
+          "path": "/owners",
+          "external": false,
+          "leagueOnly": "gumbas",
+          "description": "Every owner and the teams they ran"
+        }
+      ]
+    },
+    {
       "id": "news-updates",
       "label": "News & Updates",
       "phaseOrder": {

@@ -57,7 +57,7 @@ export type IconSet = 'classic' | 'line';
  */
 export type SiteTheme = 'editorial' | 'primetime';
 
-export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -70,6 +70,8 @@ export interface LeagueFeatures {
   playoffs: boolean;
   /** Franchise pages (detail + index) from the league's MFL history (scripts/compute-franchise-history.mjs). */
   franchisePages: boolean;
+  /** The League History pages (Rafters, Record Book, rivalries, owners, Ask the History). */
+  leagueHistory: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**
@@ -399,6 +401,12 @@ export interface LeagueDefinition {
    * launches. Absent: hand-built pages (TheLeague, the AFL, best ball).
    */
   pageKit?: 'package';
+  /**
+   * League History only (the History tier): a package league that gets its
+   * History pages and nothing else of the site; its homepage redirects to
+   * `/<slug>/history` (src/config/package-league-routes.mjs).
+   */
+  historyOnly?: boolean;
   /**
    * MFL reassigns this league's franchise ids between seasons, so a departed
    * team's seasons are grouped by team name across ids (owner-tenures), not

@@ -20,6 +20,7 @@
  * from a page).
  */
 import FranchisePage from '../../../components/shared/franchises/FranchisePage.astro';
+import HistoryFranchisePage from '../../../components/shared/league-history/HistoryFranchisePage.astro';
 import config from '../../../../data/sandbox/sandbox.config.json';
 import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
@@ -55,7 +56,14 @@ for (const feed of weeklyFeeds) {
   for (const week of feed?.weeks ?? []) if (week.scores?.[team.franchiseId] != null) weeksScored += 1;
 }
 const pointsPerWeek = fr && weeksScored ? fr.careerPointsFor / weeksScored : null;
+// With League History ticked, the franchise page is the History one — the
+// page TheLeague and the AFL replaced theirs with (2026-10-25).
+const historyPage = leagueHasFeature(league.slug, 'leagueHistory') && Boolean(historyData);
 ---
+
+{historyPage ? (
+<HistoryFranchisePage leagueSlug={league.slug} data={historyData} franchiseId={team.franchiseId} rivalriesPage />
+) : (
 
 <FranchisePage
   leagueSlug={league.slug}
@@ -74,3 +82,4 @@ const pointsPerWeek = fr && weeksScored ? fr.careerPointsFor / weeksScored : nul
   showTitles={true}
   pointsPerWeek={pointsPerWeek}
 />
+)}

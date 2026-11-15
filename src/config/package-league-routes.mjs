@@ -44,12 +44,33 @@ export const PACKAGE_ROUTES = {
   'playoffs.astro': 'playoffs',
   'franchises/index.astro': 'franchisePages',
   'franchises/[id].astro': 'franchisePages',
+  // League History (the $49 History tier and every package league that ticks
+  // it): the same shared pages TheLeague and the AFL render.
+  'history/index.astro': 'leagueHistory',
+  'history/record-book.astro': 'leagueHistory',
+  'history/franchises/index.astro': 'leagueHistory',
+  'history/ask/index.astro': 'leagueHistory',
+  'history/ask/[id].astro': 'leagueHistory',
+  'rivalries/index.astro': 'leagueHistory',
+  'rivalries/[pair].astro': 'leagueHistory',
+  'owners/index.astro': 'leagueHistory',
+  'owners/[slug].astro': 'leagueHistory',
   // Every league, always: private to site admins by default (owner-activity-access.ts).
   'activity.astro': null,
   // Every package league; linked only where the registry has a playoffOdds
   // format (DATA_GATES below), since the page has nothing to show without one.
   'playoff-odds.astro': null,
 };
+
+/**
+ * A History-only league (registry `historyOnly`, the $49 History tier) gets
+ * its History pages and nothing else of the site: no standings, rosters or
+ * lineups. Of the every-league routes it keeps only these; its homepage
+ * (`index.astro`) redirects to `/<slug>/history`, the address the product is
+ * sold at (Brandon, 2026-11-14). Upgrading to a full custom site is dropping
+ * the flag: the homepage takes the bare address back and History stays put.
+ */
+export const HISTORY_ONLY_ROUTES = new Set(['index.astro', 'login.astro', 'forbidden.astro']);
 
 /**
  * Routes that also need DATA before they exist for a reader: a page the box
@@ -65,10 +86,21 @@ const DATA_GATES = {
   'playoff-odds.astro': (league) => Boolean(league?.playoffOdds),
 };
 
-/** The routes a features object entitles, relative to the league's page dir. */
-export function packageRoutesFor(features) {
+/** Whether a route is entitled by these features (and the History-only cut). */
+function entitles(route, feature, features, historyOnly) {
+  if (feature === null) return !historyOnly || HISTORY_ONLY_ROUTES.has(route);
+  return Boolean(features?.[feature]);
+}
+
+/**
+ * The routes a features object entitles, relative to the league's page dir.
+ * Pass the registry entry (or launch spec) as `league` so a History-only
+ * league drops the every-league routes it does not get.
+ */
+export function packageRoutesFor(features, league = null) {
+  const historyOnly = Boolean(league?.historyOnly);
   return Object.entries(PACKAGE_ROUTES)
-    .filter(([, feature]) => feature === null || Boolean(features?.[feature]))
+    .filter(([route, feature]) => entitles(route, feature, features, historyOnly))
     .map(([route]) => route);
 }
 
@@ -93,8 +125,7 @@ export function isPackageLeague(league) {
 export function packageLeagueHasPath(league, p) {
   const route = packageRouteForPath(p);
   if (!route) return false;
-  const feature = PACKAGE_ROUTES[route];
-  const entitled = feature === null || Boolean(league?.features?.[feature]);
+  const entitled = entitles(route, PACKAGE_ROUTES[route], league?.features, Boolean(league?.historyOnly));
   return entitled && (DATA_GATES[route]?.(league) ?? true);
 }
 

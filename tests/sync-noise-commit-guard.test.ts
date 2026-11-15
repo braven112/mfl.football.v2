@@ -211,6 +211,9 @@ describe('held rosters and transactions are read live', () => {
     'src/pages/sandbox/rosters.astro': 'src/components/shared/rosters/RostersPage.astro',
     'src/pages/sandbox/front-office/trade-builder.astro': 'src/components/shared/trade-builder/TradeBuilderPage.astro',
     'src/pages/sandbox/index.astro': 'src/components/shared/package-league/PackageLeagueHome.astro',
+    // Gumbas is History-only: its homepage redirects to /gumbas/history before
+    // the package home (and its rosters read) ever runs.
+    'src/pages/gumbas/index.astro': 'src/components/shared/package-league/PackageLeagueHome.astro',
     'src/pages/sandbox/transactions.astro': 'src/components/shared/transactions/TransactionsPage.astro',
     'src/pages/sandbox/free-agents.astro': 'src/components/shared/free-agents/FreeAgentsPage.astro',
   };

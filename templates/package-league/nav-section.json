@@ -45,6 +45,33 @@
       "description": "Every club's all-time record, rivals and trades"
     },
     {
+      "id": "__LEAGUE_SLUG__-history",
+      "label": "History",
+      "icon": "scroll",
+      "path": "/history",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every champion, the Record Book and Ask the History"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-rivalries",
+      "label": "Rivalries",
+      "icon": "rivalry",
+      "path": "/rivalries",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every head-to-head, hottest first"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-owners",
+      "label": "Owners",
+      "icon": "users",
+      "path": "/owners",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every owner and the teams they ran"
+    },
+    {
       "id": "__LEAGUE_SLUG__-transactions",
       "label": "Transactions",
       "icon": "transactions-2",

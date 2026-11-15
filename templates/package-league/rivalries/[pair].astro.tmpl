@@ -1,0 +1,31 @@
+---
+/**
+ * One rivalry (__LEAGUE_SHORT__) — thin route over the shared League History
+ * rivalry page (components/shared/league-history/HistoryRivalryPage). The
+ * redirects stay here: `Astro.redirect()` only redirects from a page.
+ */
+import HistoryRivalryPage from '../../../components/shared/league-history/HistoryRivalryPage.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { rivalryPairRoute } from '../../../utils/league-history/rivalry-route';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+const [historyData, franchiseHistory] = (await Promise.all([
+  loadLeagueData(`${league.dataPath}/derived/league-history.json`),
+  loadLeagueData(`${league.dataPath}/derived/franchise-history.json`),
+])) as [any, any];
+if (!historyData) return Astro.rewrite('/_not-found');
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const route = rivalryPairRoute(historyData, franchiseHistory ?? { franchises: {} }, Astro.params.pair);
+if (route.redirect !== null) {
+  const path = route.redirect === 'index' ? '/__LEAGUE_SLUG__/rivalries' : `/__LEAGUE_SLUG__/rivalries/${route.redirect}${Astro.url.search}`;
+  return Astro.redirect(resolveLeaguePath(path, hideLeaguePrefix), route.redirect === 'index' ? 302 : 301);
+}
+const { a, b, playoffRounds } = route;
+---
+
+<HistoryRivalryPage leagueSlug="__LEAGUE_SLUG__" data={historyData} a={a} b={b} playoffRounds={playoffRounds} />

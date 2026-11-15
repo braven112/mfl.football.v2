@@ -28,6 +28,12 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 /** A league MFL syncs live. Best ball is draft-only: no live syncing. */
 const syncs = (l) => !l.bestBall;
 
+/**
+ * A History-only league (the History tier) syncs MFL for its seasons and
+ * builds its history, and nothing else: no player modal, no Roger, no columns.
+ */
+const fullSite = (l) => syncs(l) && !l.historyOnly;
+
 /** Whether the league renders `page` (a file under its src/pages/<slug>/). */
 const hasPage = (l, page) => existsSync(join(ROOT, 'src/pages', l.slug, page));
 
@@ -46,11 +52,11 @@ export const LEAGUE_JOBS = {
   /** roster-sync.yml: salary averages — contract leagues only. */
   'salary-sync': (l) => syncs(l) && Boolean(l.features?.salaryCap),
   /** weekly-stats-sync.yml: fantasy points allowed, read by the shared player modal. */
-  'fantasy-points-allowed': syncs,
+  'fantasy-points-allowed': fullSite,
   /** prebuild: the per-league player identity table. */
-  'player-identity-union': syncs,
+  'player-identity-union': fullSite,
   /** prebuild + roster-sync.yml: the league's rules as configured on MFL, for Ask Roger and the Rules page. */
-  'mfl-settings-digest': syncs,
+  'mfl-settings-digest': fullSite,
   // The franchise-history chain (scripts/recompute-derived-chain.mjs): every
   // full league, and a package league once its Franchise pages box is ticked.
   'franchise-history': (l) => syncs(l) && (!isPackageLeague(l) || Boolean(l.features?.franchisePages)),

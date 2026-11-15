@@ -1,0 +1,19 @@
+---
+/**
+ * Ask the History (__LEAGUE_SHORT__) — thin route over the shared ask screen
+ * (components/shared/league-history/HistoryAskPage). Reading is open like
+ * every history page; asking is gated inside (canAskLeagueHistory) and runs
+ * on the league's plan model (utils/ai-plan.mjs).
+ */
+import HistoryAskPage from '../../../../components/shared/league-history/HistoryAskPage.astro';
+import { loadLeagueData } from '../../../../utils/league-data';
+import { getLeagueBySlug } from '../../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+const historyData: any = await loadLeagueData(`${league.dataPath}/derived/league-history.json`);
+if (!historyData) return Astro.rewrite('/_not-found');
+---
+
+<HistoryAskPage leagueSlug="__LEAGUE_SLUG__" data={historyData} />
