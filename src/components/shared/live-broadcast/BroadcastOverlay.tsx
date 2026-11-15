@@ -8,6 +8,8 @@
  *    clubs' crests and scores, and a win bar split by the board's win
  *    chance. It rotates through the owner's games. A big play by one of his
  *    own starters grows the box into the quarter of the screen around it.
+ *    At the SLIM size it is the same box at half the height, with no
+ *    MFL.football mark or league logo, only crests, scores and the win bar.
  *    At the QUARTER size (the phone's choice, for a YouTube TV multiview's
  *    spare quarter) it fills that quarter with both lineups instead. It never
  *    takes the remote, so YouTube TV keeps it. The app's window is that
@@ -55,6 +57,7 @@ import {
   overlayColumnFrom,
   overlayEdgeFrom,
   overlaySizeFrom,
+  cornerOverlaySize,
   winBarShare,
   moveWatch,
   overlayGames,
@@ -171,6 +174,26 @@ function readOverlayHidden(): boolean {
   }
 }
 
+/** Slim is the page's own refinement of the app's `small` (`cornerOverlaySize`). */
+const SLIM_KEY = 'mfl.overlay.slim';
+
+function readOverlaySlim(): boolean {
+  try {
+    return window.localStorage.getItem(SLIM_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberOverlaySlim(slim: boolean): void {
+  try {
+    if (slim) window.localStorage.setItem(SLIM_KEY, '1');
+    else window.localStorage.removeItem(SLIM_KEY);
+  } catch {
+    /* private storage: slim until this page reloads */
+  }
+}
+
 function rememberOverlayHidden(hidden: boolean): void {
   try {
     if (hidden) window.localStorage.setItem(HIDDEN_KEY, '1');
@@ -215,6 +238,9 @@ export default function BroadcastOverlay({
   // Read after hydration: the server render cannot see this TV's storage.
   const [hidden, setHidden] = useState(false);
   useEffect(() => setHidden(readOverlayHidden()), []);
+  // Slim, remembered the same way: the app only knows small and quarter.
+  const [slimPref, setSlimPref] = useState(false);
+  useEffect(() => setSlimPref(readOverlaySlim()), []);
   const takeRemote = useCallback((next: RemoteState | undefined) => {
     if (!next || typeof next.seq !== 'number') return;
     setRemote((prev) => (prev && prev.seq === next.seq && prev.active === next.active ? prev : next));
@@ -299,7 +325,9 @@ export default function BroadcastOverlay({
 
   // The ticker rotates through the owner's games; expanded and the panel leave
   // that to Left/Right.
-  const quarter = corner && size === 'quarter';
+  const cornerSize = cornerOverlaySize(size, slimPref);
+  const quarter = corner && cornerSize === 'quarter';
+  const slim = corner && cornerSize === 'slim';
   useEffect(() => {
     if (mode !== 'bar' || games.length < 2) return;
     const t = window.setInterval(
@@ -429,10 +457,16 @@ export default function BroadcastOverlay({
       }
       // Only the corner app can resize or move sideways: an older build's
       // moveTo reads anything but 'bottom' as 'top'.
-      if (cmd.action === 'quarter' || cmd.action === 'small') {
+      if (cmd.action === 'quarter' || cmd.action === 'small' || cmd.action === 'slim') {
         if (!cornerRef.current) return;
-        setSize(cmd.action);
-        host?.setSize?.(cmd.action);
+        // The app is told `small` for slim: it stores only small or quarter,
+        // and would push anything else back as small (`cornerOverlaySize`).
+        const appSize = cmd.action === 'quarter' ? 'quarter' : 'small';
+        const nextSlim = cmd.action === 'slim';
+        setSlimPref(nextSlim);
+        rememberOverlaySlim(nextSlim);
+        setSize(appSize);
+        host?.setSize?.(appSize);
         return;
       }
       // A corner is an edge and a side in one press.
@@ -506,7 +540,14 @@ export default function BroadcastOverlay({
     const current = games[at];
     const alertGame = alert ? (games.find((g) => g.key === alert.gameKey) ?? current) : current;
     return (
-      <div ref={cornerBoxRef} className="bov bov--corner" data-edge={edge} data-side={side} data-stale={stale || undefined}>
+      <div
+        ref={cornerBoxRef}
+        className="bov bov--corner"
+        data-edge={edge}
+        data-side={side}
+        data-size={slim ? 'slim' : undefined}
+        data-stale={stale || undefined}
+      >
         {/* A big play takes over the view it lands in, at that view's size:
             the score box in the small size, the whole quarter in the quarter
             size. It never grows past either (Brandon, Nov 9). */}
@@ -528,7 +569,7 @@ export default function BroadcastOverlay({
           <PlayBox key={alert.key} alert={alert} meta={meta[alert.playerId]} width={scoreWidthRef.current} />
         ) : (
           <>
-            <Ticker game={current} logo={logoFor(current)} focused={false} />
+            <Ticker game={current} logo={logoFor(current)} focused={false} slim={slim} />
             {barHint && <p className="bov__tip">Move, resize or turn off: your phone’s TV remote, or MFL Football › Back</p>}
           </>
         )}
@@ -720,14 +761,19 @@ function WinBar({ game }: { game: OverlayGame }) {
 }
 
 /** Our mark, the league, both crests and scores, and the win bar: the box's one line. */
-function ScoreRow({ game, logo }: { game: OverlayGame; logo: string }) {
+function ScoreRow({ game, logo, slim = false }: { game: OverlayGame; logo: string; slim?: boolean }) {
   const mineLead = game.readable && game.mine.live > game.opponent.live;
   const theirLead = game.readable && game.opponent.live > game.mine.live;
   return (
     <span className="bov__row" key={game.key}>
-      <img className="bov__brand" src={MFL_MARK} alt="MFL Football" />
-      <LeagueMark game={game} logo={logo} />
-      <span className="bov__sep" aria-hidden="true" />
+      {/* Slim keeps only the score: no MFL.football mark, no league logo (Brandon, Nov 2026). */}
+      {!slim && (
+        <>
+          <img className="bov__brand" src={MFL_MARK} alt="MFL Football" />
+          <LeagueMark game={game} logo={logo} />
+          <span className="bov__sep" aria-hidden="true" />
+        </>
+      )}
       <Crest side={game.mine} />
       <b className="bov__num" data-lead={mineLead || undefined}>
         {game.readable ? onePlace(game.mine.live) : '–'}
@@ -751,11 +797,13 @@ function Ticker({
   logo,
   alert,
   focused,
+  slim = false,
 }: {
   game: OverlayGame;
   logo: string;
   alert?: BigPlayAlert;
   focused: boolean;
+  slim?: boolean;
 }) {
   return (
     <div className="bov__box" data-focused={focused || undefined}>
@@ -766,7 +814,7 @@ function Ticker({
           <span className="bov__gain">+{onePlace(alert.gained)}</span>
         </span>
       ) : (
-        <ScoreRow game={game} logo={logo} />
+        <ScoreRow game={game} logo={logo} slim={slim} />
       )}
     </div>
   );

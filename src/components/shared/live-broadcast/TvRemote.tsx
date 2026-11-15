@@ -66,7 +66,7 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
     const newest = new URLSearchParams(window.location.search).get('tv') === 'newest';
     setRemembered(newest ? null : readChosenTv());
   }, []);
-  const [size, setSize] = useState<'small' | 'quarter' | null>(null);
+  const [size, setSize] = useState<'slim' | 'small' | 'quarter' | null>(null);
   const [shownOnTv, setShownOnTv] = useState<boolean | null>(null);
   const [corner, setCorner] = useState<string | null>(null);
   // The league set being edited, per TV: null until touched, so it starts
@@ -182,18 +182,30 @@ export default function TvRemote({ leagues, defaults = [], tvs: knownTvs }: Prop
         </p>
 
         <p className="tvr__sub">Size</p>
-        <div className="tvr__pair" role="group" aria-label="Overlay size">
+        <div className="tvr__pair tvr__pair--three" role="group" aria-label="Overlay size">
+          <button
+            type="button"
+            className="tvr__big"
+            aria-pressed={size === 'slim'}
+            onClick={() => {
+              setSize('slim');
+              void send(overlay('slim'), 'Slim score box');
+            }}
+          >
+            <span className="tvr__glyph tvr__glyph--slim" aria-hidden="true" />
+            Slim
+          </button>
           <button
             type="button"
             className="tvr__big"
             aria-pressed={size === 'small'}
             onClick={() => {
               setSize('small');
-              void send(overlay('small'), 'Small score box');
+              void send(overlay('small'), 'Default score box');
             }}
           >
             <span className="tvr__glyph tvr__glyph--small" aria-hidden="true" />
-            Small
+            Default
           </button>
           <button
             type="button"

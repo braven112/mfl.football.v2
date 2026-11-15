@@ -465,6 +465,7 @@ body.bov-doc {
 
 .bov--corner {
   --u: 2vw;
+  --bov-inset: calc(var(--u) * 3.2);
   position: relative;
   height: 100vh;
   background: transparent;
@@ -476,20 +477,22 @@ body.bov-doc {
   position: absolute;
 }
 
+/* The corner's inset, fixed here so a box that redefines its own unit (slim)
+   still sits the same distance from the screen's edge. */
 .bov--corner[data-edge='top'] > :is(.bov__box, .bov__play) {
-  top: calc(var(--u) * 3.2);
+  top: var(--bov-inset);
 }
 
 .bov--corner[data-edge='bottom'] > :is(.bov__box, .bov__play) {
-  bottom: calc(var(--u) * 3.2);
+  bottom: var(--bov-inset);
 }
 
 .bov--corner[data-side='right'] > :is(.bov__box, .bov__play, .bov__tip) {
-  right: calc(var(--u) * 3.2);
+  right: var(--bov-inset);
 }
 
 .bov--corner[data-side='left'] > :is(.bov__box, .bov__play, .bov__tip) {
-  left: calc(var(--u) * 3.2);
+  left: var(--bov-inset);
 }
 
 /* How to move it, for the first few seconds, just past the box. */
@@ -507,6 +510,27 @@ body.bov-doc {
   background: var(--bov-box);
   font-size: calc(var(--u) * 1.15);
   text-shadow: var(--bov-shadow);
+}
+
+/* SLIM: the same box at half its height, with only the crests, the scores
+   and the win bar (Brandon, Nov 2026). Only the box's own unit halves;
+   `--bov-inset` still places it, so it keeps the same distance from the edge
+   of the screen as the default box. A big play takes the slim box over at the
+   slim width, by the same rule as the default one. */
+.bov--corner[data-size='slim'] > :is(.bov__box, .bov__tip) {
+  --u: 1vw;
+}
+
+.bov--corner[data-size='slim'] .bov__num {
+  min-width: calc(var(--u) * 3.2);
+}
+
+.bov--corner[data-size='slim'][data-edge='top'] > .bov__tip {
+  top: calc(var(--bov-inset) + 1vw * 5.4);
+}
+
+.bov--corner[data-size='slim'][data-edge='bottom'] > .bov__tip {
+  bottom: calc(var(--bov-inset) + 1vw * 5.4);
 }
 
 /* A big play takes the score box over at the width it had (set inline from
