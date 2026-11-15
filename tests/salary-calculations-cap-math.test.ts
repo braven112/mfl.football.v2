@@ -148,6 +148,22 @@ describe('calculateCapCharges', () => {
     }
   });
 
+  it('adds a QUEUED franchise tag (pending declaration) at the UFA year, once', () => {
+    const rows = [player({ id: 'a', salary: 1000, contractYears: 1 })];
+    const tag = { type: 'franchise-tag', status: 'pending', requestedYears: 1, requestedSalary: 9000 };
+    const charges = calculateCapChargesWithActions(rows, { ...ctx, declarationsByPlayer: { a: tag } });
+    expect(charges[0]).toBeCloseTo(1000, 6);
+    expect(charges[1]).toBe(9000);
+    expect(charges[2]).toBe(0);
+    // A simulated tag on the same player replaces it rather than doubling it.
+    const both = calculateCapChargesWithActions(rows, {
+      ...ctx,
+      declarationsByPlayer: { a: tag },
+      contractActions: { a: { type: 'franchise', ufaYearIndex: 1, newSalary: 8000 } },
+    });
+    expect(both[1]).toBe(8000);
+  });
+
   it('returns one entry per configured salary year', () => {
     expect(calculateCapChargesWithActions([player()], { salaryYears: [0, 1] })).toHaveLength(2);
     expect(calculateCapChargesWithActions([player()], { salaryYears: years })).toHaveLength(4);

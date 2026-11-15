@@ -3,11 +3,12 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import PlayerCell from '../../../components/shared/PlayerCell.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isCommissionerOrAdminForLeague, franchiseIdForLeague } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import leagueConfig from '../../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { contractTermsChange, isDeclarationVisible } from '../../../utils/contract-record';
 
 const THELEAGUE_MFL_HOST = getLeagueBySlug('theleague')!.mflHost;
 
@@ -17,7 +18,14 @@ const isCommish = !!user && isCommissionerOrAdmin(user);
 const isCommishMode = isCommish && Astro.cookies.get('commish-mode')?.value === 'true';
 
 // Load declaration data at build/request time
-const pending = await getPendingDeclarations();
+// A queued franchise tag stays secret until Feb 15: only its own team and the
+// commissioner see it on this page (isDeclarationVisible).
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
+const declarationViewer = {
+  franchiseId: franchiseIdForLeague(user, THELEAGUE_ID),
+  isCommissioner: !!user && isCommissionerOrAdminForLeague(user, THELEAGUE_ID),
+};
+const pending = (await getPendingDeclarations()).filter(d => isDeclarationVisible(d, declarationViewer));
 const allDeclarations = await getDeclarations();
 const appliedContracts = allDeclarations
   .filter(d => d.status === 'applied');
@@ -135,11 +143,11 @@ const getHeadshot = (playerId: string, espnId?: string) => {
                 <div class="decl-card__grid">
                   <div class="decl-card__field">
                     <span class="field__label">Current</span>
-                    <span class="field__value">{d.currentYears}yr</span>
+                    <span class="field__value">{contractTermsChange(d).before}</span>
                   </div>
                   <div class="decl-card__field">
                     <span class="field__label">Requested</span>
-                    <span class="field__value field__value--accent">{d.requestedYears}yr
+                    <span class="field__value field__value--accent">{contractTermsChange(d).after}
                     </span>
                   </div>
                   {d.currentContractInfo && (
@@ -243,7 +251,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
                                 loading="lazy"
                               />
                             )}
-                            {d.currentYears}yr &rarr; {d.requestedYears}yr
+                            {contractTermsChange(d).before} &rarr; {contractTermsChange(d).after}
                           </span>
                           <span class="recent-item__meta">
                             <span class="recent-item__type">{typeLabel}</span>

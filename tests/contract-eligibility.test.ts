@@ -491,13 +491,25 @@ describe('getPlayerEligibility', () => {
   });
 
   describe('franchise-tag eligibility', () => {
-    it('marks 1-year player as eligible for franchise tag in offseason', () => {
+    // Constitution: tagging period Feb 1 to Feb 14 at 8:45pm PT.
+    const tagPeriod = new Date('2026-02-10T20:00:00Z');
+
+    it('marks 1-year player as eligible for franchise tag in the tagging period', () => {
       const roster = makeRosterPlayer({ contractYear: '1', contractInfo: '' });
       const playerInfo = makePlayerInfo();
 
-      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, tagPeriod);
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('franchise-tag');
+    });
+
+    it('does not offer a tag outside Feb 1-14 (March, or after 8:45pm PT Feb 14)', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: '' });
+      const playerInfo = makePlayerInfo();
+      for (const when of [offseasonDate(), new Date('2026-02-15T04:46:00Z'), new Date('2026-01-31T12:00:00Z')]) {
+        const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, when);
+        expect(result.declarationType).not.toBe('franchise-tag');
+      }
     });
 
     it('does not mark already-tagged player', () => {

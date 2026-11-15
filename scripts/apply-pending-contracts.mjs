@@ -35,6 +35,7 @@
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 import { mflFetch, loginToMFL } from './lib/mfl-api.mjs';
 import { DEFAULT_LEAGUE_ID, defaultMflWriteHost } from '../src/config/leagues-data.mjs';
+import { isFranchiseTagWritable } from '../src/utils/franchise-tag-window.mjs';
 
 const REDIS_KEY = 'contract-declarations';
 // Commissioner writes fail on the api subdomain — see defaultMflWriteHost.
@@ -113,7 +114,16 @@ async function main() {
   }
 
   const all = await getAllDeclarations(redis);
-  const pending = all.filter((d) => d.status === 'pending');
+  // A franchise tag is queued Feb 1-14 and written on Feb 15, into the new
+  // league year, as the Constitution's 1-year contract (Brandon, 2026-11-15).
+  // Until then it waits here untouched.
+  const now = new Date();
+  const pending = all.filter(
+    (d) => d.status === 'pending' && (d.type !== 'franchise-tag' || isFranchiseTagWritable(d.submittedAt, now)),
+  );
+  const heldTags = all.filter((d) => d.status === 'pending' && d.type === 'franchise-tag').length
+    - pending.filter((d) => d.type === 'franchise-tag').length;
+  if (heldTags > 0) console.log(`[apply-contracts] Holding ${heldTags} franchise tag(s) until Feb 15.`);
 
   if (pending.length === 0) {
     console.log('[apply-contracts] No pending declarations. Nothing to do.');

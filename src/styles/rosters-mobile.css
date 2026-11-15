@@ -836,12 +836,6 @@
     padding: 0.75rem !important;
   }
 
-  /* ── Above the rows: the originals move into the review sheet ───────── */
-  .roster-page[data-league='theleague'] #clearAllTagsBtn,
-  .roster-page[data-league='theleague'] #submitFranchiseTagsBtn {
-    display: none !important;
-  }
-
   /* ── Controls above the rows (idea B, user 2026-09-26) ─────────────── */
   /* Row 1: GM | Coach on the left, Year + My Rank behind a sliders icon on the right.
      Row 2: one horizontally scrolling row of THIS mode's sort chips. The
@@ -1068,7 +1062,12 @@
   .roster-page[data-league='theleague']:has(.rsim-bar:not([hidden])) {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
+}
 
+/* The bar's insides and the per-move figures, at every width: the bar is
+   the GM office plan bar on desktop too (below), and the review sheet is
+   its drawer there. Hidden until a move is simulated, so harmless at rest. */
+@media all {
   .rsim-bar__count {
     flex: none;
     padding: 0.25rem 0.5rem;
@@ -1145,8 +1144,8 @@
 /* ── The review sheet ─────────────────────────────────────────────────────
    A native modal <dialog>: the platform supplies focus containment, Esc,
    the top layer (above the bar and the page) and an inert page behind it.
-   Outside the phone query only because a dialog is inert until opened, and
-   only phone surfaces open it. */
+   At every width: on a phone it rises as a bottom sheet, on desktop it is
+   the plan bar's Review & submit drawer (the block at the end of this file). */
 .rsim-sheet {
   width: 100%;
   max-width: 34rem;
@@ -1155,21 +1154,43 @@
   margin: auto auto 0;
   padding: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  overflow: auto;
-  overscroll-behavior: contain;
+  /* The sheet itself never scrolls; .rsim-sheet__body does. */
+  overflow: hidden;
+  /* One flat surface, set here: left to the UA/theme, the dialog painted a
+     gradient that the sticky head's own fill showed up against as a block. */
+  background: var(--card-surface, #ffffff);
+}
+
+/* Head / scrolling body / foot as a column that fills the open sheet. Only
+   when open: display on a closed <dialog> would show it. */
+.rsim-sheet[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .rsim-sheet__panel {
-  padding: 0 1rem max(1rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+}
+
+.rsim-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 1rem 1rem;
 }
 
 .rsim-sheet__head {
-  position: sticky;
-  top: 0;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 0 0.5rem;
+  padding: 0.75rem 1rem 0.5rem;
   background: var(--card-surface, #ffffff);
 }
 
@@ -1274,6 +1295,9 @@
 .rsim-years td {
   padding: 0.4375rem 0.25rem;
   text-align: right;
+  /* Top-aligned, so every row's current figures share one line and the
+     Space column's "was $X" sits alone beneath them. */
+  vertical-align: top;
   border-bottom: 1px solid var(--content-border, #e2e8f0);
 }
 
@@ -1285,12 +1309,23 @@
   display: block;
 }
 
+/* Outside the scrolling body, so it never moves. */
+.rsim-sheet__foot {
+  flex: none;
+  padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom));
+  background: var(--card-surface, #ffffff);
+  border-top: 1px solid var(--content-border, #e2e8f0);
+}
+
+/* Same footer as the kebab menu's contract sheet (ContractDeclarationModal):
+   a secondary button on the left, the primary one taking the rest of the row. */
 .rsim-sheet__actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 1rem;
+}
+
+.rsim-sheet__actions .rsim-sheet__btn--primary {
+  flex: 1;
 }
 
 .rsim-sheet__btn {
@@ -1323,4 +1358,181 @@
     transition: none;
     animation: none;
   }
+}
+
+/* ── The GM office plan: Review & submit ──────────────────────────────────
+   One flow at every width (Brandon, 2026-11-15, option A): the sim bar is
+   the plan bar, the sheet is the review. What each move does on submit and
+   the order they are filed in live in src/utils/rosters/gm-plan.ts. */
+.rsim-sheet__intro {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-move__terms {
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--page-text, #111827);
+}
+
+.rsim-move__outcome {
+  margin-top: 0.125rem;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-move__outcome.is-final {
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.rsim-move__effect {
+  flex: none;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rsim-move__effect-year {
+  display: block;
+}
+
+.rsim-sheet__saved {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-sheet__saved:empty {
+  display: none;
+}
+
+/* On a phone the bar stays one line: the saved state shows in the sheet. */
+@media (max-width: 767px) {
+  .rsim-bar__saved {
+    display: none !important;
+  }
+}
+
+.rsim-bar__saved {
+  display: block;
+  font-size: var(--font-size-2xs);
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-sheet__confirm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-sm);
+  color: var(--page-text, #111827);
+}
+
+.rsim-sheet__confirm[hidden] {
+  display: none;
+}
+
+.rsim-sheet__confirm input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.0625rem;
+  accent-color: var(--btn-primary-bg, #1c497c);
+}
+
+.rsim-sheet__status {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.rsim-sheet__status:empty {
+  display: none;
+}
+
+.rsim-sheet__status.is-error {
+  color: var(--color-error);
+}
+
+.rsim-sheet__status.is-done {
+  color: var(--badge-success-text);
+}
+
+.rsim-sheet__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (min-width: 768px) {
+  /* The plan bar floats over the table, clear of the site's bottom dock. */
+  .roster-page[data-league='theleague'] .rsim-bar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: var(--z-sticky, 200);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: min(56rem, calc(100vw - 2rem));
+    padding: 0.75rem 0.875rem 0.75rem 1.25rem;
+    transform: translateX(-50%);
+    background: var(--card-surface, var(--card-bg, #ffffff));
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  }
+
+  .roster-page[data-league='theleague'] .rsim-bar[hidden] {
+    display: none;
+  }
+
+  body:has(.player-details-modal.active) .rsim-bar,
+  body:has(.contract-declaration-modal.active) .rsim-bar,
+  body:has(.rsim-sheet[open]) .rsim-bar {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:has(.rsim-bar:not([hidden])) {
+    padding-bottom: 8rem;
+  }
+
+  .rsim-bar__review {
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    font-size: var(--font-size-sm);
+  }
+
+  /* The review is a drawer on the right, full height. */
+  .rsim-sheet {
+    width: 30rem;
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    border-radius: 0;
+  }
+
+  .rsim-sheet__body {
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .rsim-sheet__foot {
+    padding: 1rem 1.5rem 1.5rem;
+  }
+
+  .rsim-sheet__head {
+    padding: 1.25rem 1.5rem 0.5rem;
+  }
+
+  .rsim-sheet__title {
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* The review rows draw the Rosters player cell (buildPlayerCellHTML). */
+.rsim-move__cell {
+  margin-bottom: 0.125rem;
 }

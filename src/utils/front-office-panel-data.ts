@@ -37,6 +37,31 @@ import {
   type FrontOfficeTeamSummary,
 } from './front-office-planner-data';
 import { buildAflFrontOfficeData, type AflFrontOfficeData } from './front-office-keeper-data';
+import { buildVeteranExtensionBoard, type VeteranExtensionBoard } from './veteran-extension-board';
+import { getTeamVeteranExtension } from './contract-storage';
+import { loadBestFinishes } from './position-finishes';
+
+/**
+ * The owner's veteran extension card. A storage outage must not take the
+ * whole planner down, so an unreadable slot renders as unused — the declare
+ * endpoint re-checks the slot itself before it files anything.
+ */
+async function loadVeteranExtensionBoard(
+  planner: FrontOfficePlannerData,
+  franchiseId: string,
+): Promise<VeteranExtensionBoard> {
+  const [declaration, bestFinishes] = await Promise.all([
+    getTeamVeteranExtension(franchiseId, planner.leagueYear).catch(() => undefined),
+    loadBestFinishes(getLeagueBySlug('theleague')!.dataPath),
+  ]);
+  return buildVeteranExtensionBoard({
+    bestFinishes,
+    players: planner.cutCandidates,
+    leagueYear: planner.leagueYear,
+    salaryAverages: planner.nestedSalaryAverages,
+    declaration,
+  });
+}
 
 export type { FrontOfficeTeamSummary, FrontOfficeDraftChipGroup };
 
@@ -93,6 +118,12 @@ export interface FrontOfficePanelData {
    */
   canAct: boolean;
   /**
+   * The viewer's own veteran extension card (TheLeague): every player they
+   * may extend, priced, and where their one slot stands this league year.
+   * Null for another team, a signed-out viewer, or a keeper league.
+   */
+  veteranExtensions: VeteranExtensionBoard | null;
+  /**
    * Present only where `leagueHasFeature(slug, 'keepers')` AND the viewer
    * owns the selected team.
    *
@@ -146,6 +177,7 @@ export async function buildFrontOfficePanelData(args: {
       playersByCollege: selected?.playersByCollege ?? [],
       contracts: planner,
       canAct: isOwnTeam,
+      veteranExtensions: isOwnTeam ? await loadVeteranExtensionBoard(planner, selectedTeamId) : null,
       keepers: null,
     };
   }
@@ -174,6 +206,7 @@ export async function buildFrontOfficePanelData(args: {
     contracts: null,
     // The AFL has no contracts or cap; its write surface is the keeper board.
     canAct: false,
+    veteranExtensions: null,
     keepers: isOwnTeam ? afl.keepers : null,
   };
 }

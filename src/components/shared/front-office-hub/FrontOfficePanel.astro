@@ -32,7 +32,6 @@
 import ChartCard from '../ChartCard.astro';
 import MetricCard from '../MetricCard.astro';
 import FranchiseOptions from '../FranchiseOptions.astro';
-import VeteranExtensionCandidates from '../VeteranExtensionCandidates.astro';
 import FreeAgentNeedsCard from '../FreeAgentNeedsCard.astro';
 import KeeperPlanner from '../keepers/KeeperPlanner.astro';
 import AFLActionModal from '../AFLActionModal.astro';
@@ -40,6 +39,8 @@ import CapProjectionTable from './CapProjectionTable.astro';
 import ScenarioBar from './ScenarioBar.astro';
 import CutCandidatesCard from './CutCandidatesCard.astro';
 import FrontOfficeActions from './FrontOfficeActions.astro';
+import VeteranExtensionCard from './VeteranExtensionCard.astro';
+import { WRITE_VETERAN_EXTENSIONS_TO_MFL } from '../../../utils/veteran-extension-filing';
 import DraftAssetChips from './DraftAssetChips.astro';
 import RosterAnalyticsPanel from './RosterAnalyticsPanel.astro';
 import NflCollegeStacks from './NflCollegeStacks.astro';
@@ -65,6 +66,7 @@ const {
   playersByCollege,
   contracts,
   canAct,
+  veteranExtensions,
   keepers,
 } = Astro.props;
 
@@ -126,22 +128,22 @@ const clientConfig = {
       <h2 class="planner-section__title">Extensions</h2>
       {canAct && (
         <p class="planner-section__lede">
-          Tagging or extending files a declaration for the commissioner to approve — it does not
-          change your roster on MFL by itself.
+          A franchise tag files a declaration for the commissioner to approve. It does not change
+          your roster on MFL by itself.
         </p>
+      )}
+      {veteranExtensions && (
+        <VeteranExtensionCard
+          board={veteranExtensions}
+          leagueId={league.id}
+          franchiseId={selectedTeamId}
+          franchiseName={teamsList.find((t) => t.id === selectedTeamId)?.name ?? selectedTeamId}
+          writesToMfl={WRITE_VETERAN_EXTENSIONS_TO_MFL}
+        />
       )}
       <div class="chart-grid">
         <ChartCard title={`Franchise Tag Options (${leagueYear + 1})`} subtitle="Potential franchise tag candidates">
           <FranchiseOptions
-            players={contracts.allPlayers as any}
-            salaryAverages={contracts.salaryAveragesBySeason as any}
-            season={contracts.extensionSeason}
-            franchiseId={selectedTeamId}
-            showActions={canAct}
-          />
-        </ChartCard>
-        <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
-          <VeteranExtensionCandidates
             players={contracts.allPlayers as any}
             salaryAverages={contracts.salaryAveragesBySeason as any}
             season={contracts.extensionSeason}
@@ -404,8 +406,11 @@ const clientConfig = {
 
       const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
       if (franchiseTagEl) franchiseTagEl.dataset.currentTeam = teamId;
-      const veteranExtensionEl = document.querySelector<HTMLElement>('.veteran-extension-candidates');
-      if (veteranExtensionEl) veteranExtensionEl.dataset.currentTeam = teamId;
+
+      // "Your veteran extension" is the viewer's own team only, rendered
+      // once — browsing another team must not show your slot as theirs.
+      const vxcEl = document.querySelector<HTMLElement>('.vxc[data-team-id]');
+      if (vxcEl) vxcEl.hidden = vxcEl.dataset.teamId !== teamId;
     };
 
     document.addEventListener('fo:team-change', currentHandler);

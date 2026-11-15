@@ -152,6 +152,8 @@ export interface DeclarationRequest {
   requestedContractInfo?: string;
   deadlineAt?: string;
   acquisitionTimestamp?: number;
+  /** Veteran extension: years to add (1 or 2). The server prices it itself. */
+  addedYears?: number;
 }
 
 export const DECLARE_ENDPOINT = '/api/contracts/declare';
@@ -190,6 +192,8 @@ export interface StagedContractAction {
   originalSalary: number;
   newYears: number;
   newSalary: number;
+  /** MFL's designation before the move ('RC', 'TO', ''); the API checks it for a 1st-round option. */
+  originalContractInfo?: string;
 }
 
 /**
@@ -197,26 +201,37 @@ export interface StagedContractAction {
  *
  * `requestedContractInfo` is the single letter MFL shows on the roster —
  * 'F' for a franchise tag, 'E' for an extension — and the commissioner's
- * apply step writes it through verbatim, so it is not decoration.
+ * apply step writes it through verbatim, so it is not decoration. A rookie
+ * extension or an exercised 1st-round option CLEARS the designation (the
+ * player leaves RC / TO), exactly as the contract modal files them.
  */
 export function toDeclarationRequest(
   action: StagedContractAction,
   ctx: { leagueId: string; franchiseId: string; franchiseName: string },
 ): DeclarationRequest {
   const isFranchise = action.type === 'franchise';
+  const type =
+    action.type === 'franchise'
+      ? 'franchise-tag'
+      : action.type === 'rookie-extension'
+        ? 'rookie-extension'
+        : action.type === 'team-option'
+          ? 'team-option'
+          : 'veteran-extension';
+  const requestedContractInfo = isFranchise ? 'F' : type === 'veteran-extension' ? 'E' : '';
   return {
     leagueId: ctx.leagueId,
     playerId: action.playerId,
     playerName: action.playerName,
     franchiseId: ctx.franchiseId,
     franchiseName: ctx.franchiseName,
-    type: isFranchise ? 'franchise-tag' : 'veteran-extension',
+    type,
     currentYears: action.originalYears,
     currentSalary: action.originalSalary,
-    currentContractInfo: '',
+    currentContractInfo: action.originalContractInfo ?? '',
     requestedYears: isFranchise ? 1 : action.newYears,
     requestedSalary: action.newSalary,
-    requestedContractInfo: isFranchise ? 'F' : 'E',
+    requestedContractInfo,
   };
 }
 

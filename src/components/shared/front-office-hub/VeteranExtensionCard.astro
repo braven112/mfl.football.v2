@@ -1,0 +1,520 @@
+---
+/**
+ * "Your veteran extension" — the owner's one veteran extension this season.
+ *
+ * Lists EVERY player on the viewer's roster the Constitution lets them
+ * extend, likely candidates first, priced at each term they may pick. The
+ * prices are the server's (src/utils/veteran-extension-board.ts) and the
+ * declare endpoint re-derives them before filing, so no salary math ships.
+ *
+ * Owner view only: FrontOfficePanel renders it when `veteranExtensions` is
+ * set, which front-office-panel-data.ts does only for the viewer's own team.
+ */
+import type { VeteranExtensionBoard } from '../../../utils/veteran-extension-board';
+import { formatSalaryCompact } from '../../../utils/contract-actions-client';
+import PlayerCell from '../PlayerCell.astro';
+
+interface Props {
+  board: VeteranExtensionBoard;
+  leagueId: string;
+  franchiseId: string;
+  franchiseName: string;
+  /** True once a filing writes to MFL itself (veteran-extension-filing.ts). */
+  writesToMfl: boolean;
+}
+
+const { board, leagueId, franchiseId, franchiseName, writesToMfl } = Astro.props;
+const { slot, rows, leagueYear, ruleActive } = board;
+const slotOpen = slot.state === 'unused';
+const pendingPlayerId = slot.state === 'pending' ? slot.playerId : null;
+const money = (n: number) => formatSalaryCompact(n);
+// Likely candidates show by default; every other eligible player waits behind
+// "Show all" (rules in veteran-extension-board.ts). The filed player always shows.
+const isOpen = (row: (typeof rows)[number]) => row.likely || row.player.id === pendingPlayerId;
+const moreCount = rows.filter((r) => !isOpen(r)).length;
+const likelyCount = rows.filter((r) => r.likely).length;
+const finishLabel = (f: { rank: number; year: number; position: string } | null) =>
+  f && f.rank <= 10 ? `No. ${f.rank} ${f.position} in ${f.year}` : null;
+const config = { leagueId, franchiseId, franchiseName };
+---
+
+<section class="vxc" data-team-id={franchiseId} aria-labelledby="vxc-title">
+  <script id="vxc-config" type="application/json" set:html={JSON.stringify(config)}></script>
+  <header class="vxc__head">
+    <h3 class="vxc__title" id="vxc-title">Your veteran extension · {leagueYear} season</h3>
+    {!ruleActive ? (
+      <p class="vxc__status">Veteran extensions ended on Feb 15, 2028.</p>
+    ) : slot.state === 'unused' ? (
+      <p class="vxc__status">
+        You have <strong>1</strong> veteran extension left this season. File it by Feb 14 at 8:45pm PT.
+      </p>
+    ) : slot.state === 'pending' ? (
+      <p class="vxc__status vxc__status--pending">
+        <strong>Pending:</strong> {slot.playerName} to {money(slot.newSalary)} × {slot.newYears}
+        {writesToMfl ? '.' : ', waiting for the commissioner to apply it on MFL.'}
+        <button
+          type="button"
+          class="cta-link vxc__withdraw"
+          data-vxc-withdraw
+          data-player-id={slot.playerId}
+          data-player-name={slot.playerName}
+          data-current-years={slot.currentYears}
+        >Withdraw</button>
+      </p>
+    ) : (
+      <p class="vxc__status vxc__status--done">
+        <strong>Used:</strong> {slot.playerName} extended to {money(slot.newSalary)} × {slot.newYears}.
+      </p>
+    )}
+  </header>
+
+  {ruleActive && rows.length > 0 && likelyCount === 0 && (
+    <p class="vxc__empty">No likely candidates: nobody under $3M has a top-10 finish at their position. Everyone else is under Show all.</p>
+  )}
+
+  {ruleActive && rows.length === 0 && (
+    <p class="vxc__empty">No one on your roster is eligible. It takes 2+ years left, a non-rookie contract, and room under the 6-year limit.</p>
+  )}
+
+  {ruleActive && rows.length > 0 && (
+    <ul class="vxc__list">
+      {rows.map((row) => {
+        const { player, options, likely, bestFinish } = row;
+        const longest = options[options.length - 1];
+        const canFile = slotOpen || pendingPlayerId === player.id;
+        const finish = finishLabel(bestFinish);
+        return (
+          <li
+            class:list={['vxc__row', { 'vxc__row--likely': likely }]}
+            data-vxc-row
+            data-player-id={player.id}
+            data-vxc-extra={isOpen(row) ? undefined : ''}
+            hidden={!isOpen(row)}
+          >
+            <div class="vxc__player">
+              <PlayerCell
+                name={player.name}
+                headshot={player.headshot}
+                position={player.position}
+                nflTeam={player.nflTeam}
+                playerData={{ id: player.id, name: player.name, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, franchiseId }}
+              />
+              <span class="vxc__now">
+                Now {money(player.salary)} × {player.contractYears}
+                {finish && <span class="vxc__finish">{likely ? 'Likely · ' : ''}{finish}</span>}
+              </span>
+            </div>
+
+            <div class="vxc__choice" role="radiogroup" aria-label={`Years to add for ${player.name}`}>
+              {options.map((o) => (
+                <button
+                  type="button"
+                  role="radio"
+                  class="vxc__term"
+                  aria-checked={o === longest ? 'true' : 'false'}
+                  data-vxc-term={o.addedYears}
+                >+{o.addedYears} {o.addedYears === 1 ? 'yr' : 'yrs'}</button>
+              ))}
+            </div>
+
+            {options.map((o) => (
+              <div class="vxc__price" data-vxc-price={o.addedYears} hidden={o !== longest}>
+                <span class="vxc__new">
+                  {money(o.newSalary)} × {o.newYears}
+                  <span class="vxc__delta">+{money(o.newSalary - player.salary)} this season</span>
+                </span>
+                <span class="vxc__years">
+                  {o.salaryByYear.map((s, i) => `${leagueYear + i} ${money(s)}`).join(' · ')}
+                </span>
+              </div>
+            ))}
+
+            <div class="vxc__action">
+              {canFile ? (
+                <button
+                  type="button"
+                  class="cta cta--primary vxc__extend"
+                  data-vxc-extend
+                  data-player-id={player.id}
+                  data-player-name={player.name}
+                  data-current-years={player.contractYears}
+                  data-current-salary={player.salary}
+                  data-contract-info={player.contractInfo}
+                >{pendingPlayerId === player.id ? 'Update' : 'Extend'}</button>
+              ) : (
+                <span class="vxc__locked">{slot.state === 'pending' ? 'Withdraw to switch' : 'Slot used'}</span>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+
+  {ruleActive && moreCount > 0 && (
+    <button type="button" class="cta-link vxc__more" data-vxc-more data-count={moreCount} aria-expanded="false">
+      Show all ({moreCount} more)
+    </button>
+  )}
+
+  <p class="vxc__message" data-vxc-message role="status" aria-live="polite" hidden></p>
+</section>
+
+<script>
+  import { formatSalaryCompact, submitDeclaration } from '../../../utils/contract-actions-client';
+
+  let handler: ((e: Event) => void) | null = null;
+
+  function initVeteranExtensionCard() {
+    if (handler) document.removeEventListener('click', handler);
+    handler = null;
+    // Gate on a node the ClientRouter swap replaced (never a window global).
+    // Only a contracts league's own-team view renders this card at all.
+    const root = document.querySelector<HTMLElement>('.vxc[data-team-id]');
+    if (!root) return;
+
+    const readConfig = () => {
+      try {
+        return JSON.parse(document.getElementById('vxc-config')?.textContent || '{}');
+      } catch {
+        return {};
+      }
+    };
+    const say = (msg: string, isError = false) => {
+      const el = root.querySelector<HTMLElement>('[data-vxc-message]');
+      if (!el) return;
+      el.textContent = msg;
+      el.hidden = false;
+      el.dataset.error = isError ? 'true' : 'false';
+    };
+    // The one module that POSTs a declaration (tests/contract-actions-client.test.ts).
+    const post = async (body: Record<string, unknown>): Promise<any> => {
+      const data: any = await submitDeclaration(body as any);
+      if (!data?.success) throw new Error(data?.error || 'Submission failed');
+      return data;
+    };
+
+    handler = async (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || !root.contains(target)) return;
+
+      // Term toggle: show that term's price, remember it on the row.
+      const term = target.closest<HTMLButtonElement>('[data-vxc-term]');
+      if (term) {
+        const row = term.closest<HTMLElement>('[data-vxc-row]');
+        if (!row) return;
+        const add = term.dataset.vxcTerm;
+        row.querySelectorAll<HTMLElement>('[data-vxc-term]').forEach((b) =>
+          b.setAttribute('aria-checked', b === term ? 'true' : 'false'),
+        );
+        row.querySelectorAll<HTMLElement>('[data-vxc-price]').forEach((p) => {
+          p.hidden = p.dataset.vxcPrice !== add;
+        });
+        return;
+      }
+
+      const more = target.closest<HTMLButtonElement>('[data-vxc-more]');
+      if (more) {
+        const open = more.getAttribute('aria-expanded') === 'true';
+        root.querySelectorAll<HTMLElement>('[data-vxc-extra]').forEach((row) => {
+          row.hidden = open;
+        });
+        more.setAttribute('aria-expanded', open ? 'false' : 'true');
+        more.textContent = open ? `Show all (${more.dataset.count} more)` : 'Show fewer';
+        return;
+      }
+
+      const extend = target.closest<HTMLButtonElement>('[data-vxc-extend]');
+      if (extend) {
+        const row = extend.closest<HTMLElement>('[data-vxc-row]');
+        const chosen = row?.querySelector<HTMLElement>('[data-vxc-term][aria-checked="true"]');
+        const addedYears = Number(chosen?.dataset.vxcTerm) || 0;
+        const priceEl = row?.querySelector<HTMLElement>(`[data-vxc-price="${addedYears}"] .vxc__new`);
+        const quoted = priceEl?.firstChild?.textContent?.trim() ?? '';
+        if (extend.dataset.confirming !== 'true') {
+          // Confirm in place: the second tap files. A native confirm() cannot
+          // show the price, and blocks the page.
+          extend.dataset.confirming = 'true';
+          extend.dataset.label = extend.textContent ?? 'Extend';
+          extend.textContent = `Confirm · ${quoted}`;
+          return;
+        }
+        extend.disabled = true;
+        extend.textContent = 'Filing…';
+        const cfg = readConfig();
+        const currentYears = Number(extend.dataset.currentYears) || 0;
+        try {
+          const data = await post({
+            type: 'veteran-extension',
+            leagueId: cfg.leagueId,
+            franchiseId: cfg.franchiseId,
+            franchiseName: cfg.franchiseName,
+            playerId: extend.dataset.playerId,
+            playerName: extend.dataset.playerName,
+            currentYears,
+            currentSalary: Number(extend.dataset.currentSalary) || 0,
+            currentContractInfo: extend.dataset.contractInfo ?? '',
+            addedYears,
+            requestedYears: currentYears + addedYears,
+          });
+          say(
+            `${extend.dataset.playerName}: ${formatSalaryCompact(data.newSalary)} × ${data.newYears}. ${data.message ?? ''}`,
+          );
+          window.setTimeout(() => window.location.reload(), 1200);
+        } catch (err) {
+          extend.disabled = false;
+          extend.dataset.confirming = 'false';
+          extend.textContent = extend.dataset.label ?? 'Extend';
+          say(err instanceof Error ? err.message : 'Could not file. Try again.', true);
+        }
+        return;
+      }
+
+      const withdraw = target.closest<HTMLButtonElement>('[data-vxc-withdraw]');
+      if (withdraw) {
+        if (withdraw.dataset.confirming !== 'true') {
+          withdraw.dataset.confirming = 'true';
+          withdraw.textContent = 'Tap again to withdraw';
+          return;
+        }
+        withdraw.disabled = true;
+        const cfg = readConfig();
+        const years = Number(withdraw.dataset.currentYears) || 0;
+        try {
+          // Same years as the current contract = cancel the pending request
+          // (declare.ts step 3a).
+          await post({
+            type: 'veteran-extension',
+            leagueId: cfg.leagueId,
+            franchiseId: cfg.franchiseId,
+            franchiseName: cfg.franchiseName,
+            playerId: withdraw.dataset.playerId,
+            playerName: withdraw.dataset.playerName,
+            currentYears: years,
+            requestedYears: years,
+          });
+          say('Withdrawn. Your veteran extension is open again.');
+          window.setTimeout(() => window.location.reload(), 1000);
+        } catch (err) {
+          withdraw.disabled = false;
+          withdraw.dataset.confirming = 'false';
+          withdraw.textContent = 'Withdraw';
+          say(err instanceof Error ? err.message : 'Could not withdraw. Try again.', true);
+        }
+      }
+    };
+    document.addEventListener('click', handler);
+  }
+
+  document.addEventListener('astro:page-load', initVeteranExtensionCard);
+</script>
+
+<style>
+  .vxc[hidden] {
+    display: none;
+  }
+
+  .vxc {
+    margin: 0 0 1rem;
+    padding: 1rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .vxc__title {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: 700;
+  }
+
+  .vxc__status {
+    margin: 0.35rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted, #4b5563);
+  }
+
+  .vxc__status strong {
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .vxc__withdraw {
+    margin-left: 0.5rem;
+    font-size: var(--font-size-sm);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .vxc__empty {
+    margin: 0.75rem 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted, #4b5563);
+  }
+
+  .vxc__list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .vxc__row {
+    display: grid;
+    /* Every track can shrink: a fixed minimum here pushed the +2 toggle and
+       the Extend button off the card's right edge on a narrow panel. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr) auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .vxc__row[hidden] {
+    display: none;
+  }
+
+  /* Likely candidates: a faint accent tint, never a hard stripe. */
+  .vxc__row--likely {
+    background: color-mix(in srgb, var(--cta-fill, #1c497c) 6%, transparent);
+    border-color: color-mix(in srgb, var(--cta-fill, #1c497c) 22%, var(--content-border, #e5e7eb));
+  }
+
+  .vxc__finish {
+    display: block;
+    margin-top: 0.1rem;
+    font-weight: 600;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .vxc__more {
+    margin-top: 0.75rem;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+  }
+
+  .vxc__player {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .vxc__now {
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted, #4b5563);
+  }
+
+  .vxc__choice {
+    display: inline-flex;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .vxc__term {
+    padding: 0.3rem 0.7rem;
+    border: 0;
+    background: transparent;
+    color: var(--page-text, #1a1a1a);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .vxc__term[aria-checked='true'] {
+    background: var(--cta-fill, #1c497c);
+    color: var(--on-cta-fill, #fff);
+  }
+
+  .vxc__term:focus-visible {
+    outline: 2px solid var(--btn-primary-border-hover, #1c497c);
+    outline-offset: -2px;
+  }
+
+  .vxc__price {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .vxc__price[hidden] {
+    display: none;
+  }
+
+  .vxc__new {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vxc__delta {
+    margin-left: 0.4rem;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--content-text-muted, #4b5563);
+  }
+
+  .vxc__years {
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted, #4b5563);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vxc__extend {
+    padding: 0.4rem 0.9rem;
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+  }
+
+  .vxc__locked {
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted, #4b5563);
+  }
+
+  .vxc__message {
+    margin: 0.75rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    background: var(--content-bg-muted, #f3f4f6);
+    font-size: var(--font-size-sm);
+  }
+
+  .vxc__message[data-error='true'] {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  :global(html.dark) .vxc__message[data-error='true'] {
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  /* Narrow: one card per player, name on top. Keyed to the CARD's width, not
+     the viewport's, because the planner can be narrow on a wide screen. */
+  .vxc {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 720px) {
+    .vxc__row {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        'player player'
+        'choice action'
+        'price price';
+    }
+    .vxc__player { grid-area: player; }
+    .vxc__choice { grid-area: choice; justify-self: start; }
+    .vxc__action { grid-area: action; }
+    .vxc__price { grid-area: price; }
+  }
+</style>
