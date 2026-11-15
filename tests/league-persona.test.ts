@@ -112,7 +112,7 @@ describe('resolvePersona', () => {
   it('the house voice borrows styles, never a real reporter by name', () => {
     expect(validatePersona(BEAT_REPORTER_PERSONA).ok).toBe(false); // site-path avatar: registry-only
     expect(validatePersona({ ...BEAT_REPORTER_PERSONA, avatarUrl: '' }).ok).toBe(true);
-    expect(BEAT_REPORTER_PERSONA.voice).not.toMatch(/Schefter|Glazer|Rapoport|Boom/i);
+    expect(BEAT_REPORTER_PERSONA.voice).not.toMatch(/Schefter|Glazer|Rapoport|Pelissero|Boom/i);
   });
 
   it('absolutizes a site asset avatar for Slack, leaves full URLs alone', () => {
