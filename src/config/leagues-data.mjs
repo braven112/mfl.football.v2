@@ -1196,6 +1196,21 @@ export const MFL_LIVE_PILOT_LEAGUE_IDS = [];
 export const MFL_LIVE_OPEN_SIGN_IN = false;
 
 /**
+ * A league we run IN FULL: lineups, live scoring, trades, Schefter. Not a
+ * draft-only best-ball league, and not a History-only league (`historyOnly`),
+ * which has its past seasons and nothing else. Anything that offers or sends a
+ * league its season-time features asks this, never `!bestBall` alone: that
+ * older test let the first History-only league into MFL Live Pro, sign-in,
+ * the lineup check and the weekly What's New.
+ *
+ * @param {{ bestBall?: boolean, historyOnly?: boolean } | null | undefined} l
+ * @returns {boolean}
+ */
+export function isFullManagementLeague(l) {
+  return !!l && !l.bestBall && !l.historyOnly;
+}
+
+/**
  * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE
  * order: the registry's FULL-MANAGEMENT leagues in registry order, then the
  * pilot leagues.
@@ -1216,7 +1231,7 @@ export const MFL_LIVE_OPEN_SIGN_IN = false;
  * @returns {string[]}
  */
 export function mflLiveSignInLeagueIds() {
-  return [...ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
+  return [...ALL_LEAGUES.filter(isFullManagementLeague).map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
 }
 
 /** @param {string} slug Canonical slug ('theleague' | 'afl-fantasy') */

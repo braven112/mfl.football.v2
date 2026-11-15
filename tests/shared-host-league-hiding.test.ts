@@ -314,7 +314,7 @@ describe('the splash advertises only the full-management leagues', () => {
     expect(src).toContain('const examples = siteExampleLeagues()');
     const showcase = read('src/data/league-showcase.ts');
     expect(showcase).toMatch(/showcaseLeagues\(\)\.filter\(\(l\) => l\.showcase\.siteExample\)/);
-    expect(showcase).toMatch(/!l\.bestBall && l\.advertiseOnSharedHost !== false/);
+    expect(showcase).toMatch(/isFullManagementLeague\(l\) && l\.advertiseOnSharedHost !== false/);
   });
 
   it('never makes a best-ball or unlisted league an example', () => {

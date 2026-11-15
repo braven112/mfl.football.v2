@@ -6,7 +6,7 @@
  * registry; this adds the line a visitor reads about each one. A league with
  * no entry here is simply not showcased.
  */
-import { ALL_LEAGUES, type CanonicalLeagueSlug } from '../config/leagues';
+import { ALL_LEAGUES, isFullManagementLeague, type CanonicalLeagueSlug } from '../config/leagues';
 
 export interface ShowcaseMeta {
 	/** The name as a marketing line uses it ("Archie's", not the full registry name). */
@@ -38,7 +38,7 @@ export type ShowcaseLeague = (typeof ALL_LEAGUES)[number] & { showcase: Showcase
  * the same rule the splash follows). Registry order.
  */
 export function showcaseLeagues(): ShowcaseLeague[] {
-	return ALL_LEAGUES.filter((l) => !l.bestBall && l.advertiseOnSharedHost !== false && SHOWCASE[l.slug]).map(
+	return ALL_LEAGUES.filter((l) => isFullManagementLeague(l) && l.advertiseOnSharedHost !== false && SHOWCASE[l.slug]).map(
 		(l) => ({ ...l, showcase: SHOWCASE[l.slug]! }),
 	);
 }
@@ -59,5 +59,5 @@ export function siteExampleLeagues(): ShowcaseLeague[] {
  * `showcaseLeagues`.
  */
 export function mflLiveIncludedNames(): string[] {
-	return ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => SHOWCASE[l.slug]?.short ?? l.name);
+	return ALL_LEAGUES.filter(isFullManagementLeague).map((l) => SHOWCASE[l.slug]?.short ?? l.name);
 }

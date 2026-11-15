@@ -27,6 +27,7 @@ import {
   MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
+  isFullManagementLeague,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -615,6 +616,7 @@ export {
   MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
+  isFullManagementLeague,
 };
 
 /**

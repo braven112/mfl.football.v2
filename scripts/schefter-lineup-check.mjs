@@ -68,7 +68,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALL_LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, isFullManagementLeague, leagueUrl } from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { getRedisConfig } from './lib/redis.mjs';
@@ -804,7 +804,7 @@ async function main() {
 
   // Every lineup-playing league in the registry. Best-ball leagues are
   // draft-only (no lineups to warn about) — the registry flag is the gate.
-  const leagues = ALL_LEAGUES.filter((l) => !l.bestBall).filter(
+  const leagues = ALL_LEAGUES.filter(isFullManagementLeague).filter(
     (l) => !LEAGUE_FILTER || l.slug === LEAGUE_FILTER || l.navSlug === LEAGUE_FILTER,
   );
   if (leagues.length === 0) {
