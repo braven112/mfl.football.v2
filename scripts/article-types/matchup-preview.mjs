@@ -468,7 +468,7 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
   "content": ["<p>One or two sentences that open the column.</p>"],
   "games": [
     { "matchup": 3, "paragraphs": ["One or two sentences.", "One or two sentences.", "..."] },
-    { "matchup": 1, "paragraphs": ["A quick hitter, two to five sentences in all."] }
+    { "matchup": 1, "paragraphs": ["A quick hitter, two to five sentences in all.", "My pick: Team Name, 124-117."] }
   ],
   "closing": ["The broadcast guide, one or two sentences.", "..."]
 }
@@ -479,6 +479,7 @@ INSTRUCTIONS:
 - "games": one entry for EVERY MATCHUP in the fact sheet, by its MATCHUP number. "paragraphs" is plain text, no HTML and no links.
   - The FEATURED GAME gets the long write-up: about 10 sentences, as 4-6 short paragraphs of one or two sentences. What is at stake, the players who decide it, and your pick.
   - Every other game is a quick hitter: 2-5 sentences in all, as one to three short paragraphs, ending with your pick.
+  - EVERY pick carries a predicted final score, winner's score first, in the form "My pick: Team Name, 124-117." Base it on the two teams' projected totals in the fact sheet (round to whole points); you may pick the underdog, but the score must make your pick the winner. No game goes without a score.
   - KEY NFL GAME: when a matchup has a "KEY NFL GAME" line, name that NFL game and its biggest players in the write-up: it is the game that swings this one. The card shows it too, so give the why, not the numbers.
 - "closing": the broadcast guide, 1-2 short plain-text paragraphs: the one or two NFL games to watch and which rostered players make them matter.
 - Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone.
@@ -490,12 +491,38 @@ INSTRUCTIONS:
 - Every name and number must come from the fact sheet.`;
 }
 
+/**
+ * A pick that carries a predicted final score, "My pick: X, 124-117" (whole or
+ * decimal points, any dash). The score must FOLLOW the word "pick": a write-up
+ * also quotes series records ("leads the series 21-16"), which are not a score.
+ */
+const PICK_WITH_SCORE = /\bpick\b[^]*?\b\d{2,3}(?:\.\d+)?\s*[-–—]\s*\d{2,3}(?:\.\d+)?\b/i;
+
+/**
+ * The MATCHUP numbers whose write-up names no predicted score. Owner's call
+ * (Nov 2026): every game in every league gets a score with its pick — the
+ * Week 10 AFL preview picked twelve winners and scored none of them.
+ */
+export function gamesMissingScore(aiOutput) {
+  return (Array.isArray(aiOutput?.games) ? aiOutput.games : [])
+    .filter((g) => !(g?.paragraphs ?? []).some((p) => PICK_WITH_SCORE.test(String(p))))
+    .map((g) => g?.matchup);
+}
+
+/** The runner's one rewrite (schefter-weekly-articles.mjs): a pick without a score. */
+export function correctionFor(aiOutput) {
+  const missing = gamesMissingScore(aiOutput);
+  if (!missing.length) return null;
+  return `the pick for MATCHUP ${missing.join(', ')} has no predicted score. Every game's pick must end with a final score, winner's first, like "My pick: Team Name, 124-117."`;
+}
+
 export function validate(aiOutput) {
   const errors = [];
   if (!aiOutput.headline || aiOutput.headline.length > 100) errors.push('Headline missing or too long');
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 1) errors.push('Missing opening paragraph');
   if (!Array.isArray(aiOutput.games) || aiOutput.games.length === 0) errors.push('Missing per-game write-ups');
+  else if (gamesMissingScore(aiOutput).length) errors.push(`No predicted score for matchup ${gamesMissingScore(aiOutput).join(', ')}`);
   return errors;
 }
 

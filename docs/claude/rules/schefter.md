@@ -1773,3 +1773,15 @@ stays dispatchable and its old posts still render), Friday's chat slot holds
 only the schedule release, and the homepage's Friday article hero is gone: the
 article slot shows the latest column every day. Do not bring a second preview
 back without asking.
+
+## Every Matchup Preview pick carries a predicted score (Nov 2026)
+
+Owner's call: "a score prediction no matter what league". The prompt only
+said "your pick", so the Week 10 run scored every TheLeague game and none of
+the AFL's twelve. The prompt now demands "My pick: Team, 124-117" from the
+projected totals, and `correctionFor` (matchup-preview.mjs) names any game
+whose write-up has no score AFTER the word "pick" — a series record like
+"21-16" elsewhere in the paragraph is not a score. The runner rewrites the
+draft ONCE with that note (`mod.correctionFor`, optional, typeof-guarded in
+`schefter-weekly-articles.mjs`); `validate` still warns if the rewrite misses.
+Guard: `tests/matchup-preview-stories.test.ts`.
