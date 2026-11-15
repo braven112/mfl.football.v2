@@ -53,7 +53,7 @@ export function dynamicRouteFor(p, routes) {
 export function startingPages(league, directory = readDirectory()) {
   const prefix = `/${league.slug}`;
   if (isPackageLeague(league)) {
-    const routes = packageRoutesFor(league.features);
+    const routes = packageRoutesFor(league.features, league);
     return {
       pages: routes.filter((r) => !isDynamic(r)).map((r) => ({ path: prefix + routePath(r).replace(/\/$/, ''), route: r })),
       dynamic: routes.filter(isDynamic),

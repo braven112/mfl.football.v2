@@ -88,6 +88,10 @@ describe.each(leagues)('$league.slug season ledger', ({ league, ledgerPath, hist
     const ledger = readJson(ledgerPath);
     // Orphans come from seasons MFL no longer names an owner for; a league whose
     // only season is the current one (Sandbox, Nov 2026) has none yet.
+    // A History-only league is grouped by team identity alone (no owner names
+    // from MFL), so a league whose every slot kept one name (Gridiron Gumbas)
+    // has none either.
+    if (league.tier === 'history') return;
     if ((ledger.yearsCovered ?? []).length > 1) expect(ledger.orphanedRows).toBeGreaterThan(0);
   });
 

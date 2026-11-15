@@ -150,6 +150,14 @@ export const FEATURE_CATALOG = [
         : { on: true, reason: 'History builds up from this season on.' },
   },
   {
+    key: 'leagueHistory',
+    label: 'League History',
+    description:
+      'The History pages: the Rafters, Record Book, rivalries, owner pages and Ask the History, built from every season MFL holds for the league. The franchise pages become their History version.',
+    group: 'community',
+    requires: ['franchisePages'],
+  },
+  {
     key: 'liveScoring',
     label: 'Live scoring',
     description: 'The live scoreboard and broadcast board.',

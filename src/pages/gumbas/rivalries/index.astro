@@ -1,0 +1,17 @@
+---
+/**
+ * Rivalries (Gumbas) — thin route over the shared League History
+ * rivalries page (components/shared/league-history/HistoryRivalriesPage).
+ */
+import HistoryRivalriesPage from '../../../components/shared/league-history/HistoryRivalriesPage.astro';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('gumbas')!;
+const historyData: any = await loadLeagueData(`${league.dataPath}/derived/league-history.json`);
+if (!historyData) return Astro.rewrite('/_not-found');
+---
+
+<HistoryRivalriesPage leagueSlug="gumbas" data={historyData} />

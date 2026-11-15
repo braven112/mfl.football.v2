@@ -7,7 +7,7 @@
  * answer quotes the whole answer.
  */
 import MarketingShell from './MarketingShell.astro';
-import { ALL_LEAGUES, crossHostLeagueHref } from '../../../config/leagues';
+import { ALL_LEAGUES, crossHostLeagueHref, isFullManagementLeague } from '../../../config/leagues';
 import { SERVICES, FORMER_BRAND, type Service } from '../../../data/mfl-services';
 import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, serviceJsonLd } from '../../../utils/structured-data';
 
@@ -19,7 +19,7 @@ const { service } = Astro.props as Props;
 
 // The leagues the homepage advertises (src/pages/index.astro): full-management
 // leagues their owners have agreed to show. They are the live examples.
-const exampleLeagues = ALL_LEAGUES.filter((l) => !l.bestBall && l.advertiseOnSharedHost !== false);
+const exampleLeagues = ALL_LEAGUES.filter((l) => isFullManagementLeague(l) && l.advertiseOnSharedHost !== false);
 const examples = service.examplePaths.flatMap((ex) =>
 	exampleLeagues.map((league) => ({
 		label: ex.label,

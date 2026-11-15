@@ -1,0 +1,17 @@
+---
+/**
+ * Rivalries (__LEAGUE_SHORT__) — thin route over the shared League History
+ * rivalries page (components/shared/league-history/HistoryRivalriesPage).
+ */
+import HistoryRivalriesPage from '../../../components/shared/league-history/HistoryRivalriesPage.astro';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+const historyData: any = await loadLeagueData(`${league.dataPath}/derived/league-history.json`);
+if (!historyData) return Astro.rewrite('/_not-found');
+---
+
+<HistoryRivalriesPage leagueSlug="__LEAGUE_SLUG__" data={historyData} />

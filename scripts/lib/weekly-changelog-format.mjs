@@ -18,7 +18,7 @@
  * Schefter, which Best Ball does not have.
  */
 
-import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, isFullManagementLeague } from '../../src/config/leagues-data.mjs';
 
 /**
  * @typedef {import('../../src/types/whats-new').DescriptionBlock} DescriptionBlock
@@ -55,7 +55,7 @@ export const BOTH_TAG = 'both';
  * (see its docblock in leagues-data.mjs), which is exactly the question being
  * asked here, and a fourth league joins the right side of it automatically.
  */
-export const BOTH_LEAGUES = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.navSlug);
+export const BOTH_LEAGUES = ALL_LEAGUES.filter(isFullManagementLeague).map((l) => l.navSlug);
 
 /**
  * Which league articles a staged change lands in.

@@ -242,7 +242,8 @@ html.dark[data-league="keeper"] {
 }
 
 /* Archie's (archies) — Black chrome and black brand-voice text with the wordmark's sky blue (#44aaff) as the one accent; no navy, no dark blue (the owner's call, Sep 2026). In light the blue is never text on a light surface (2.5:1 on white): it is a fill with black text on it, a rule, or text on the black chrome. Keeps the neutral dark surface ramp. */
-html[data-league="archies"] {
+html[data-league="archies"],
+html[data-league="gumbas"] {
   --card-bg: var(--color-white);
   --card-border: var(--content-border);
   --card-surface: var(--color-white);
@@ -362,7 +363,8 @@ html[data-league="archies"] {
   --league-palette-text-faint: #5f5f5f;
   --league-palette-text-muted: #525252;
 }
-html.dark[data-league="archies"] {
+html.dark[data-league="archies"],
+html.dark[data-league="gumbas"] {
   --card-bg: radial-gradient(92% 96% at 2% -6%, color-mix(in srgb, var(--page-text) 13%, transparent), var(--card-surface) 62%);
   --card-border: var(--color-border-default, #5f6885);
   --card-surface: #262626;

@@ -350,7 +350,7 @@ describe('`both` means the full-management leagues, not every league', () => {
   });
 
   it('includes every league that is not draft-only', () => {
-    const expected = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.navSlug);
+    const expected = ALL_LEAGUES.filter((l) => !l.bestBall && (l.tier ?? 'full') === 'full').map((l) => l.navSlug);
     expect([...BOTH_LEAGUES].sort()).toEqual([...expected].sort());
   });
 

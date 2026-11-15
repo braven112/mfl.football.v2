@@ -116,6 +116,59 @@ MFL holds for the league.
 - **Several games a week on one score** (Archie's plays two): the page shows
   points per week, not per game.
 
+## League History — a box, and a History-only league
+
+The **League History** box (`leagueHistory`, needs Franchise pages) gives a
+package league the same shared History pages TheLeague and the AFL render:
+`/history` (the Rafters), the Record Book, the History franchises tab, Ask the
+History, `/rivalries` and `/owners`. Its `franchises/[id]` then renders the
+History franchise page rather than the older shared one. Every route reads
+its dataset through the league-data loader and 404s until the first sync has
+built it.
+
+A league is one of THREE products (Brandon, 2026-11-15), the registry's
+`tier`: `'history'` (its past seasons only), `'ai'` (we write its articles, the
+AI Beat Reporter plan, with History as the add-on) or `'full'` (a full site; an
+entry with no `tier` is full). Best ball stays its own draft-only type
+(`bestBall`), outside the tiers. Read it through `leagueTier()`, and ask
+`isFullManagementLeague()` before offering or sending a league anything
+season-time (MFL Live Pro and sign-in, lineup checks, trade pushes, the weekly
+What's New): it is false for best ball AND for the History and AI tiers. A
+bare `!bestBall` is how the first History league ended up in all of those
+(`tests/full-management-league.test.ts`).
+
+The **History-only** archetype (`history-only`) launches a league with the
+History box and Franchise pages ticked and writes `tier: 'history'` into its
+registry entry. `packageRoutesFor(features, league)` then drops every "every
+league" route except `index`, `login` and `forbidden`, and the homepage
+REDIRECTS to `/<slug>/history`, the address the tier is sold at (Brandon,
+2026-11-14). Upgrading to a full site is changing the tier: the homepage takes
+the bare `/<slug>` back and History stays where links already point. Pass the
+league to `packageRoutesFor` (`kitPlan`, `syncNav`, `syncDirectory`,
+`launch-check` all do): a call with features alone cannot see the tier and
+plans the full site. `league-jobs.mjs` keeps a History or AI tier league on the
+MFL sync and the history chain only (`fullSite`). The AI tier has no archetype
+or pages of its own yet; its product is the Beat Reporter plan.
+
+Launching one, end to end (Gridiron Gumbas, MFL 35892, Nov 2026):
+
+1. `node scripts/new-league.mjs --spec <spec>` with `archetype: "history-only"`.
+2. `node scripts/backfill-historical-feeds.mjs --league=<slug>`: every season
+   MFL serves, each with its own year's league id and host, AND each season's
+   playoff bracket GAMES (the `playoffBrackets` export is metadata only; a
+   season without `brackets` has no champion).
+3. `node scripts/recompute-derived-chain.mjs`, then
+   `compute-league-history-players.mjs` / `-moves.mjs --league=<slug>` (Ask
+   the History needs all three files).
+
+**Private seasons.** MFL serves an archived season of a private league only to
+its owners: without the commissioner's `MFL_APIKEY` those seasons come back
+"API requires logged in user", and the history starts at the first public
+season. Gumbas lost 2014-2019 that way. A season MFL lists but no game was
+played in (Gumbas 2013, all-zero standings) is dropped from the dataset
+(`buildHistoryDataset`); delete its feed directory too, or owner tenures still
+date the owners from it.
+
 ## Owner Activity — every league, private by default
 
 Every league gets `/activity` (no feature box: `PACKAGE_ROUTES['activity.astro']`

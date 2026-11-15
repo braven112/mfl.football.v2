@@ -1,0 +1,19 @@
+---
+/**
+ * Owners (__LEAGUE_SHORT__) — thin route over the shared owners index
+ * (components/shared/owners/OwnersIndexPage). Owners are grouped from MFL's
+ * team names until the commissioner names them (owner-tenures.json).
+ */
+import OwnersIndexPage from '../../../components/shared/owners/OwnersIndexPage.astro';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { loadLeagueData } from '../../../utils/league-data';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+const ownerData: any = await loadLeagueData(`${league.dataPath}/derived/owner-tenures.json`);
+if (!ownerData) return Astro.rewrite('/_not-found');
+---
+
+<OwnersIndexPage leagueSlug="__LEAGUE_SLUG__" data={ownerData as unknown as OwnerTenuresFile} />

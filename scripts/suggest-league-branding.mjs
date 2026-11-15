@@ -40,7 +40,15 @@ export const LIMITS = Object.freeze({ medium: 15, short: 10, abbrev: 5 });
 
 /** Collapse whitespace; MFL names carry stray trailing spaces ("Goats "). */
 export function cleanName(name) {
-  return String(name ?? '').replace(/\s+/g, ' ').trim();
+  // MFL team names may carry markup (`<font color=…>Hail Mary</font>`, seen on
+  // Gridiron Gumbas 0001): strip tags until none are left, then any stray angle
+  // bracket, so a name is plain text before it is cut into its short forms.
+  let text = String(name ?? '');
+  for (let prev = ''; prev !== text; ) {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  }
+  return text.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 /** The longest leading run of whole words that fits `max`, else a hard cut. */

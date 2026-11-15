@@ -15,7 +15,7 @@
 import { FEATURE_CATALOG, FEATURE_KEYS, featureDependencyErrors, getFeature } from './league-feature-catalog.mjs';
 
 /**
- * @typedef {'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft'} LeagueArchetype
+ * @typedef {'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only'} LeagueArchetype
  */
 
 /**
@@ -40,6 +40,7 @@ export const ARCHETYPES = {
       rulesQa: true,
       playoffs: true,
       franchisePages: true,
+      leagueHistory: true,
       liveLineups: true,
       schefterFeed: true,
       schefterTips: true,
@@ -65,6 +66,7 @@ export const ARCHETYPES = {
       rulesQa: true,
       playoffs: true,
       franchisePages: true,
+      leagueHistory: true,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,
@@ -90,6 +92,7 @@ export const ARCHETYPES = {
       rulesQa: false,
       playoffs: false,
       franchisePages: true,
+      leagueHistory: false,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: false,
@@ -115,6 +118,7 @@ export const ARCHETYPES = {
       rulesQa: false,
       playoffs: false,
       franchisePages: false,
+      leagueHistory: false,
       liveLineups: false,
       schefterFeed: false,
       schefterTips: false,
@@ -140,6 +144,7 @@ export const ARCHETYPES = {
       rulesQa: true,
       playoffs: true,
       franchisePages: true,
+      leagueHistory: false,
       liveLineups: true,
       schefterFeed: true,
       schefterTips: false,
@@ -151,6 +156,33 @@ export const ARCHETYPES = {
       viewerPreferences: true,
       pushNotifications: true,
       brandingEditor: true,
+    },
+  },
+  'history-only': {
+    label: 'League History only',
+    description:
+      'The History tier: every season back to the first, records, rivalries, owners and Ask the History at /<league>/history. No other league pages.',
+    example: null,
+    features: {
+      contracts: false,
+      salaryCap: false,
+      keepers: false,
+      powerRankings: false,
+      rulesQa: false,
+      playoffs: false,
+      franchisePages: true,
+      leagueHistory: true,
+      liveLineups: false,
+      schefterFeed: false,
+      schefterTips: false,
+      liveScoring: false,
+      liveScoringSample: false,
+      taxiSquad: false,
+      offseasonAuction: false,
+      accounting: false,
+      viewerPreferences: false,
+      pushNotifications: false,
+      brandingEditor: false,
     },
   },
 };

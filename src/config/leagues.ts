@@ -27,6 +27,9 @@ import {
   MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
+  isFullManagementLeague,
+  leagueTier,
+  LEAGUE_TIERS,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -57,7 +60,8 @@ export type IconSet = 'classic' | 'line';
  */
 export type SiteTheme = 'editorial' | 'primetime';
 
-export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
+export type LeagueTier = 'history' | 'ai' | 'full';
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -70,6 +74,8 @@ export interface LeagueFeatures {
   playoffs: boolean;
   /** Franchise pages (detail + index) from the league's MFL history (scripts/compute-franchise-history.mjs). */
   franchisePages: boolean;
+  /** The League History pages (Rafters, Record Book, rivalries, owners, Ask the History). */
+  leagueHistory: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**
@@ -400,6 +406,13 @@ export interface LeagueDefinition {
    */
   pageKit?: 'package';
   /**
+   * The product the league bought: 'history' (History pages only; its
+   * homepage redirects to `/<slug>/history`), 'ai' (we write its articles,
+   * the AI Beat Reporter plan) or 'full' (a full site). Missing means full.
+   * Ask `leagueTier()` / `isFullManagementLeague()`, never this field.
+   */
+  tier?: LeagueTier;
+  /**
    * MFL reassigns this league's franchise ids between seasons, so a departed
    * team's seasons are grouped by team name across ids (owner-tenures), not
    * per id. Current teams are followed by `ownerHistory` in the config.
@@ -607,6 +620,9 @@ export {
   MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
+  isFullManagementLeague,
+  leagueTier,
+  LEAGUE_TIERS,
 };
 
 /**

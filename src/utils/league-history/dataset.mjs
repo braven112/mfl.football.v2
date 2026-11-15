@@ -78,7 +78,13 @@ export function buildHistoryDataset({ league, games, ledgerRows, ownerTenures, f
     owners[o.ownerId] = { name: o.displayName || o.title || o.dominantName, slug: o.slug };
   }
 
-  const years = [...new Set(ledgerRows.map((r) => r.year))].sort((a, b) => a - b);
+  const allYears = [...new Set(ledgerRows.map((r) => r.year))].sort((a, b) => a - b);
+  // A season no game was ever played in (Gridiron Gumbas 2013: a league MFL
+  // lists in the chain whose standings are all zeros) is not a season of the
+  // league's history, so it neither opens the history nor shows as a column.
+  // The newest year stays even when empty: that is the season not yet begun.
+  const played = (year) => ledgerRows.some((r) => r.year === year && !r.seasonNotStarted);
+  const years = allYears.filter((year, i) => i === allYears.length - 1 || played(year));
   const seasons = years.map((year) => {
     const rows = ledgerRows.filter((r) => r.year === year && !r.seasonNotStarted);
     const teams = {};

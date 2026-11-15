@@ -54,7 +54,7 @@ export const routeFile = (league, route) => `src/pages/${league.slug}/${route}`;
  * never touched.
  */
 export function kitPlan(league) {
-  const entitled = new Set(packageRoutesFor(league.features));
+  const entitled = new Set(packageRoutesFor(league.features, league));
   const write = [...entitled].map((route) => ({
     path: routeFile(league, route),
     content: renderKit(kitTemplate(route), league),
@@ -96,7 +96,7 @@ function mergeInOrder(list, wanted, order, key) {
 
 /** page-directory.json with this league's kit entries matching its features. */
 export function syncDirectory(directory, league) {
-  const entitled = new Set(packageRoutesFor(league.features));
+  const entitled = new Set(packageRoutesFor(league.features, league));
   const template = kitJson('page-directory.json', league);
   const wanted = template.filter((e) => entitled.has(routeOfLeaguePath(league, e.path)));
   const kept = directory.filter((e) => {
@@ -113,7 +113,7 @@ export function syncDirectory(directory, league) {
  * section gets the kit's, inserted after the last package league's.
  */
 export function syncNav(nav, league) {
-  const entitled = new Set(packageRoutesFor(league.features));
+  const entitled = new Set(packageRoutesFor(league.features, league));
   const template = kitJson('nav-section.json', league);
   const wanted = template.links.filter((l) => entitled.has(packageRouteForPath(l.path)));
   const sections = [...nav.sections];

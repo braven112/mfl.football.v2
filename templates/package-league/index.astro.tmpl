@@ -12,10 +12,17 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { getSchefterFeedIfAny } from '../../utils/schefter-league-data';
 import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 import type { LazyFeedGlob } from '../../utils/mfl-feed-glob';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+// A History-only league's homepage IS its History page, at /<slug>/history
+// (package-league-routes.mjs HISTORY_ONLY_ROUTES). Upgrading to a full site
+// changes the tier and this page takes the bare address back.
+if (league.tier === 'history') {
+  return Astro.redirect(resolveLeaguePath(`/${league.slug}/history`, Astro.locals.hideLeaguePrefix ?? false));
+}
 const feedDir = `${league.dataPath}/mfl-feeds`;
 /** A lazy-glob-shaped map over the loader: the keys say which seasons exist, only what is read is fetched. */
 const lazy = (pattern: string): LazyFeedGlob =>

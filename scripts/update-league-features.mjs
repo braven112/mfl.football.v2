@@ -58,7 +58,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const before = getLeagueBySlug(spec.slug).features;
   const changed = Object.keys(spec.features).filter((k) => Boolean(before[k]) !== spec.features[k]);
   console.log(`Updating ${spec.slug}: ${changed.map((k) => `${spec.features[k] ? '+' : '−'}${k}`).join(', ')}`);
-  console.log(`  ${packageRoutesFor(spec.features).length} pages after the update`);
+  console.log(`  ${packageRoutesFor(spec.features, getLeagueBySlug(spec.slug)).length} pages after the update`);
 
   const plan = planUpdate(spec);
   const dryRun = args.includes('--dry-run');

@@ -334,6 +334,40 @@ function seasonWeeks(yearDir) {
   return Number.isInteger(endWeek) && endWeek >= 1 ? Math.min(endWeek, LAST_NFL_WEEK) : 17;
 }
 
+// The playoffBrackets export is METADATA only (names, start weeks, ids); the
+// games live in one playoffBracket export per bracket. fetch-mfl-feeds.mjs
+// stores those under `brackets` for the current year, and franchise-history
+// reads a season's champion from them. A backfilled season had only the
+// metadata, so a package league whose brackets MFL does hold (Gridiron Gumbas,
+// 2020-2025) came out with no champions at all. Fill `brackets` once, in the
+// same shape, wherever the metadata names brackets the file does not carry.
+async function fetchBracketDetails(host, year, leagueId, yearDir) {
+  const dest = path.join(yearDir, 'playoff-brackets.json');
+  const file = readJson(dest);
+  const ids = toArray(file?.playoffBrackets?.playoffBracket).map((b) => String(b.id)).filter(Boolean);
+  if (!ids.length) return { skipped: true, reason: 'no brackets on MFL' };
+  const missing = ids.filter((id) => FORCE || !file.brackets?.[id]?.playoffBracket);
+  if (!missing.length) return { skipped: true, reason: 'already has every bracket' };
+  if (DRY_RUN) return { dryRun: true, count: missing.length };
+  const brackets = { ...(file.brackets ?? {}) };
+  let fetched = 0;
+  for (const id of missing) {
+    try {
+      const res = await fetchJson(buildUrl(host, year, leagueId, 'playoffBracket', `BRACKET_ID=${id}`));
+      if (res.ok && res.data?.playoffBracket && !isInvalidFeed(res.data)) {
+        brackets[id] = res.data;
+        fetched += 1;
+      }
+    } catch {
+      // A bracket MFL will not serve stays absent; the season reads as unknown.
+    }
+    await sleep(300);
+  }
+  if (!fetched) return { error: 'no bracket games returned' };
+  fs.writeFileSync(dest, `${JSON.stringify({ ...file, brackets }, null, 2)}\n`);
+  return { written: true, count: fetched };
+}
+
 // Fetch every week of weekly results and produce both raw and normalized
 // outputs, matching the format produced by scripts/fetch-mfl-feeds.mjs.
 async function fetchWeeklyResults(host, year, leagueId, yearDir) {
@@ -472,6 +506,11 @@ for (const entry of yearList) {
       }
     }
   }
+
+  const brOutcome = await fetchBracketDetails(entry.host, entry.year, entry.leagueId, yearDir);
+  if (brOutcome.dryRun) { console.log(`  [dry-run] would fetch ${brOutcome.count} playoff bracket(s)`); totalDryRun++; }
+  else if (brOutcome.written) { console.log(`  ✓ playoffBracket × ${brOutcome.count} → playoff-brackets.json brackets`); totalWritten++; }
+  else if (brOutcome.error) { console.log(`  ✗ playoffBracket → ${brOutcome.error}`); totalErrors++; }
 
   // Weekly results: special-cased because it needs one fetch per week.
   const wkOutcome = await fetchWeeklyResults(entry.host, entry.year, entry.leagueId, yearDir);

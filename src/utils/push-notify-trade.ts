@@ -13,7 +13,7 @@
  * docs/features/web-push.md.
  */
 
-import { ALL_LEAGUES, getLeagueById } from '../config/leagues';
+import { ALL_LEAGUES, getLeagueById, isFullManagementLeague } from '../config/leagues';
 import { isPushConfigured, sendPushToFranchise, type PushPayload, type PushSendResult } from './push-sender';
 
 interface LeagueTeam {
@@ -127,7 +127,7 @@ export async function notifyTradeOfferPush(
 
     const league = getLeagueById(leagueId);
     // Unknown league or draft-only best-ball (no trades) → nothing to send.
-    if (!league || league.bestBall) return null;
+    if (!league || !isFullManagementLeague(league)) return null;
 
     const normalizedTo = /^\d+$/.test(toFranchiseId.trim())
       ? toFranchiseId.trim().padStart(4, '0')

@@ -378,7 +378,8 @@ describe('the committed archive', () => {
   });
 
   /** Leagues whose bids are FAAB dollars, with the season budget (MFL `bbidSeasonLimit`). */
-  const FAAB_BUDGET: Record<string, number> = { archies: 100 };
+  // Gridiron Gumbas (History-only) bids from a $1,000 season budget.
+  const FAAB_BUDGET: Record<string, number> = { archies: 100, gumbas: 1000 };
 
   // A FAAB league's first-come pickups are free, not priced at a salary minimum.
   const rowsFor = (s: (typeof seasons)[number]) =>

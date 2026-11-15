@@ -24,7 +24,8 @@ const slugs = (job: string, leagues: Array<Record<string, any>> = ALL_LEAGUES) =
 
 describe('today’s leagues per job', () => {
   const expected: Record<string, string[]> = {
-    'mfl-sync': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
+    // Gumbas is History-only: it syncs for its seasons and builds its history, nothing else.
+    'mfl-sync': ['theleague', 'afl-fantasy', 'archies', 'sandbox', 'gumbas'],
     'salary-sync': ['theleague'],
     // Archie's joined: the player modal that reads it is shared by every league.
     'fantasy-points-allowed': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
@@ -33,12 +34,12 @@ describe('today’s leagues per job', () => {
     'mfl-settings-digest': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     // The franchise-history chain: a package league joins once its Franchise
     // pages box is ticked.
-    'franchise-history': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
+    'franchise-history': ['theleague', 'afl-fantasy', 'archies', 'sandbox', 'gumbas'],
     // Only where the division-strength page exists.
     'division-strength': ['theleague', 'afl-fantasy'],
     'top-players': ['theleague', 'afl-fantasy'],
     // Every league with a franchise history: it is also the site's one head-to-head.
-    'league-history': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
+    'league-history': ['theleague', 'afl-fantasy', 'archies', 'sandbox', 'gumbas'],
     'schedule-draw': ['theleague', 'afl-fantasy'],
     'pecking-order': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
@@ -108,6 +109,7 @@ describe('the CLI', () => {
       'afl:false:false',
       'archies:false:false',
       'sandbox:false:false',
+      'gumbas:false:false',
     ]);
   });
 

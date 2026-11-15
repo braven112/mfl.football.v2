@@ -21,10 +21,10 @@
  * the one place the rest of MFL Live asks.
  */
 import type { AuthUser } from './auth';
-import { getLeagueById } from '../config/leagues';
+import { getLeagueById, isFullManagementLeague } from '../config/leagues';
 
 export function hasMflLivePro(user: AuthUser | null | undefined): boolean {
 	if (!user) return false;
 	const league = getLeagueById(user.leagueId);
-	return !!league && !league.bestBall;
+	return isFullManagementLeague(league);
 }
