@@ -159,7 +159,7 @@ function formatDefenseName(name) {
 
 /**
  * Format a player for display — DEF-aware. MFL stores names "Last, First";
- * post copy reads "WR Deebo Samuel". Left as "WR Samuel, Deebo", a trade
+ * post copy reads "WR, Deebo Samuel". Left as "WR Samuel, Deebo", a trade
  * headline read like two players, and the AI rewrite then split it into
  * "WR Samuel and WR Deebo" (TheLeague homepage hero, 2026-11-14).
  */
@@ -168,7 +168,9 @@ function formatPlayerDisplay(player) {
   if (player.position === 'Def' || player.position === 'DEF') {
     return formatDefenseName(player.name);
   }
-  return `${player.position ?? ''} ${formatPlayerName(player.name)}`.trim();
+  // House style: "WR, Deebo Samuel" (Brandon, 2026-11-14).
+  const name = formatPlayerName(player.name);
+  return player.position ? `${player.position}, ${name}` : name;
 }
 
 function parseTradeAssets(str, players, teams) {

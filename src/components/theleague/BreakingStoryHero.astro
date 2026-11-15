@@ -16,6 +16,7 @@ import type { HeroModel } from '../../utils/hero-casting';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
 import { getNflTeamColors, getNflTeamNickname, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { repairLastFirstName } from '../../utils/player-name-matching';
 
 interface Props {
   model: HeroModel;
@@ -43,10 +44,14 @@ const timeAgo =
       : `${Math.floor(minsAgo / 1440)} DAY${Math.floor(minsAgo / 1440) === 1 ? '' : 'S'} AGO`;
 
 // Trim the hot take / body to a hero-sized sub-line without cutting a word.
+// Posts written before Nov 2026 printed the player as MFL's "Last, First"
+// ("WR Samuel, Deebo"); repair it from the cast player's real name.
+const headline = repairLastFirstName(story.headline, model.name);
+const fullSummary = repairLastFirstName(story.summary, model.name);
 const summary =
-  story.summary.length > 180
-    ? story.summary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
-    : story.summary;
+  fullSummary.length > 180
+    ? fullSummary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
+    : fullSummary;
 
 // A breaking transaction points at the acquiring team's roster — go see the
 // player on his new team. Otherwise a real http(s) source URL (never a
@@ -99,7 +104,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
       <span class="bsh__tag"><span class="bsh__tag-source">{tagSource}</span>Breaking</span>
       <time class="bsh__time">{timeAgo}</time>
     </p>
-    <h2 class="bsh__title">{story.headline}</h2>
+    <h2 class="bsh__title">{headline}</h2>
     {summary && <p class="bsh__summary">{summary}</p>}
     <a
       class="cta cta--primary bsh__cta"
@@ -192,9 +197,13 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
     pointer-events: none;
   }
 
+  /* Desktop: the cutout bleeds past the card's right edge (the card clips
+     it) and the copy column stops at 54%, so the face — the middle third of
+     ESPN's landscape cutout — always starts clear of the text (Brandon,
+     2026-11-14: the face sat under the summary at 1280px). */
   .bsh__model {
     position: absolute;
-    right: clamp(0.25rem, 2vw, 1.75rem);
+    right: -4%;
     bottom: 0;
     width: clamp(288px, 38vw, 438px);
     filter: drop-shadow(0 16px 32px var(--bsh-shadow));
@@ -238,7 +247,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
   .bsh__content {
     position: relative;
     z-index: 2;
-    max-width: min(34rem, 64%);
+    max-width: min(32rem, 54%);
   }
 
   .bsh__eyebrow {

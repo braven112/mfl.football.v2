@@ -108,3 +108,37 @@ export function resolveMflId(
   }
   return lookup.get(base);
 }
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Positions Schefter prints ahead of a player's name ("WR, Deebo Samuel"). */
+const POS = '(QB|RB|WR|TE|PK|K|DL|DE|DT|LB|DB|CB|S)';
+
+/**
+ * Repair copy that printed a player's MFL "Last, First" name, and put it in
+ * the house style "WR, Deebo Samuel" (position, comma, First Last — Brandon,
+ * 2026-11-14). Schefter's transaction posts printed "for WR Samuel, Deebo"
+ * until Nov 2026, and the AI rewrite then split it into two players
+ * ("WR Samuel and WR Deebo"). Posts already in the feed keep that text, so
+ * surfaces that show them repair it at render time from the player's real
+ * "First Last" name.
+ *
+ * Every first/last split of `fullName` is tried, so multi-word surnames
+ * ("Amon-Ra St. Brown") are covered without knowing where the surname starts.
+ */
+export function repairLastFirstName(text: string, fullName: string): string {
+  if (!text || !fullName) return text;
+  const words = fullName.trim().split(/\s+/);
+  const full = escapeRe(fullName.trim());
+  let out = text;
+  for (let i = 1; i < words.length; i++) {
+    const first = escapeRe(words.slice(0, i).join(' '));
+    const last = escapeRe(words.slice(i).join(' '));
+    // "WR Samuel and WR Deebo" → "WR, Deebo Samuel"
+    out = out.replace(new RegExp(`\\b${POS} ${last} and \\1 ${first}\\b`, 'g'), `$1, ${fullName}`);
+    // "Samuel, Deebo" → "Deebo Samuel"
+    out = out.replace(new RegExp(`\\b${last}, ${first}\\b`, 'g'), fullName);
+  }
+  // "WR Deebo Samuel" → "WR, Deebo Samuel"
+  return out.replace(new RegExp(`\\b${POS} ${full}\\b`, 'g'), `$1, ${fullName}`);
+}
