@@ -10510,6 +10510,23 @@ const nameplateLabel = deskMode ? 'Contracts' : 'Roster & Cap';
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       const deskMoney = (v: number) => formatSalaryCompact(v);
       const deskExpanded: Record<string, boolean> = {};
+      /** Each row's PlayerCell markup, inert (the item itself opens the sheet). */
+      const deskCellHtml = new Map<string, string>();
+      const inertCellHtml = (row: HTMLElement | null) => {
+        const cell = row?.querySelector<HTMLElement>('td[data-column="player"] > .player-cell');
+        if (!cell) return null;
+        const copy = cell.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+        copy.querySelectorAll<HTMLElement>('[data-player-modal]').forEach((n) => {
+          n.removeAttribute('data-player-modal');
+          n.removeAttribute('role');
+          n.removeAttribute('tabindex');
+          n.removeAttribute('title');
+          n.classList.remove('player-cell__name--clickable');
+        });
+        copy.querySelectorAll<HTMLElement>('button, a').forEach((n) => n.setAttribute('tabindex', '-1'));
+        return copy.outerHTML;
+      };
 
       const deskRowFacts = (btn: HTMLElement) => {
         const playerId = String(btn.dataset.playerId ?? '');
@@ -10542,15 +10559,17 @@ const nameplateLabel = deskMode ? 'Contracts' : 'Roster & Cap';
           const list = groups[key];
           const open = !!deskExpanded[key];
           const shown = open ? list : list.slice(0, DESK_SECTION_PREVIEW);
+          // Each player is the Rosters row's own PlayerCell (headshot, name,
+          // NFL logo, badges), copied in, with the desk's line beside it.
           const items = shown.map((p) => `
-            <li><button type="button" class="desk-item${p.plannedType ? ' desk-item--planned' : ''}" data-desk-open="${escDesk(p.id)}">
-              <span class="desk-item__text">
-                <span class="desk-item__name">${escDesk(p.name)} <span class="desk-item__pos">${escDesk(p.position)}</span></span>
+            <li class="desk-item${p.plannedType ? ' desk-item--planned' : ''}" data-desk-open="${escDesk(p.id)}" role="button" tabindex="0" aria-label="${escDesk(p.name)}: ${escDesk(line(p))}">
+              <span class="desk-item__cell">${deskCellHtml.get(p.id) ?? escDesk(p.name)}</span>
+              <span class="desk-item__side">
                 <span class="desk-item__line">${escDesk(line(p))}</span>
+                ${p.plannedType ? `<span class="desk-planned desk-planned--${escDesk(p.plannedType)}">${escDesk(plannedLabel(p.plannedType))}</span>` : ''}
               </span>
-              ${p.plannedType ? `<span class="desk-planned desk-planned--${escDesk(p.plannedType)}">${escDesk(plannedLabel(p.plannedType))}</span>` : ''}
               <svg class="desk-item__chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
-            </button></li>`).join('');
+            </li>`).join('');
           const more = list.length > DESK_SECTION_PREVIEW
             ? `<button type="button" class="cta-link desk-more" data-desk-more="${key}">${open ? 'Show fewer' : `Show all ${list.length}`}</button>`
             : '';
@@ -10585,6 +10604,8 @@ const nameplateLabel = deskMode ? 'Contracts' : 'Roster & Cap';
           const cell = btn.closest('td');
           if (!cell) return;
           const { playerId, payload, descriptors, planned } = deskRowFacts(btn);
+          const cellHtml = inertCellHtml(btn.closest('tr'));
+          if (cellHtml) deskCellHtml.set(playerId, cellHtml); else deskCellHtml.delete(playerId);
           let slot = cell.querySelector<HTMLElement>('.desk-actions');
           if (!slot) {
             slot = document.createElement('div');
@@ -10636,9 +10657,17 @@ const nameplateLabel = deskMode ? 'Contracts' : 'Roster & Cap';
         }
         const open = target.closest<HTMLElement>('[data-desk-open]');
         if (!open) return;
+        e.preventDefault();
         const { row } = findRosterRow(String(open.dataset.deskOpen));
         // The phone sheet opens from the player cell, the way a row tap does.
         row?.querySelector<HTMLElement>('.player-cell__name[data-player-modal]')?.click();
+      });
+      document.querySelector<HTMLElement>('[data-desk-sections]')?.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const open = (e.target as HTMLElement).closest<HTMLElement>('[data-desk-open]');
+        if (!open || e.target !== open) return;
+        e.preventDefault();
+        open.click();
       });
       paintDesk();
     }

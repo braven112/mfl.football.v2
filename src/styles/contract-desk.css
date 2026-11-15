@@ -244,24 +244,25 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
     cursor: pointer;
   }
 
-  .roster-page:has(> [data-desk-mode]) .desk-item__text {
-    display: grid;
+  /* The Rosters row's own PlayerCell, copied in (rosters.astro paintDesk). */
+  .roster-page:has(> [data-desk-mode]) .desk-item__cell {
     flex: 1;
     min-width: 0;
   }
 
-  .roster-page:has(> [data-desk-mode]) .desk-item__name {
-    overflow: hidden;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .roster-page:has(> [data-desk-mode]) .desk-item__side {
+    display: grid;
+    flex: none;
+    justify-items: end;
+    gap: 0.25rem;
+    text-align: right;
   }
 
-  .roster-page:has(> [data-desk-mode]) .desk-item__pos,
   .roster-page:has(> [data-desk-mode]) .desk-item__line {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
     color: var(--color-text-secondary);
+    white-space: nowrap;
   }
 
   .roster-page:has(> [data-desk-mode]) .desk-item__chev {
