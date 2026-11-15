@@ -173,6 +173,17 @@ describe('the shell is shared by three pages, not just the board', () => {
     expect(menu).toMatch(/showSignIn \? \(/);
   });
 
+  it('links the phone TV remote, signed-in only and kept off a paired TV', () => {
+    // Brandon, 2026-11-15: the remote lived only behind the board's TV remote
+    // button. It is session-gated (the page redirects to sign in), so it must
+    // carry requiresAuth, and a TV pass must never be offered its own remote.
+    const menu = read(MENU);
+    expect(menu).toContain(
+      "{ href: '/live/broadcast/remote', label: 'TV remote', icon: 'remote', requiresAuth: true }",
+    );
+    expect(menu).not.toMatch(/PAIRED_TV_LINKS = new Set\([^)]*remote/);
+  });
+
   it('offers a paired TV the Broadcast and Live standings only, and no sign-in', () => {
     // A TV holds a watch-only pass, not a session. Every other destination is
     // session-gated, so a TV that wandered there (the brand link is the first
