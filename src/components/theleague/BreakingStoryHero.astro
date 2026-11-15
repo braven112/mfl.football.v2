@@ -192,9 +192,13 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
     pointer-events: none;
   }
 
+  /* Desktop: the cutout bleeds past the card's right edge (the card clips
+     it) and the copy column stops at 54%, so the face — the middle third of
+     ESPN's landscape cutout — always starts clear of the text (Brandon,
+     2026-11-14: the face sat under the summary at 1280px). */
   .bsh__model {
     position: absolute;
-    right: clamp(0.25rem, 2vw, 1.75rem);
+    right: -4%;
     bottom: 0;
     width: clamp(288px, 38vw, 438px);
     filter: drop-shadow(0 16px 32px var(--bsh-shadow));
@@ -238,7 +242,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
   .bsh__content {
     position: relative;
     z-index: 2;
-    max-width: min(34rem, 64%);
+    max-width: min(32rem, 54%);
   }
 
   .bsh__eyebrow {
