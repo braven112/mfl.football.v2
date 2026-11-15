@@ -27,6 +27,12 @@ export interface PlayerCellOptions {
   name: string;
   headshot?: string;
   position?: string;
+  /**
+   * Text shown in the meta row in place of `position` (e.g. "RB12" for a
+   * positional rank). Display only: `position` still drives the DEF avatar
+   * treatment and the modal data.
+   */
+  positionLabel?: string;
   nflTeam?: string;
   size?: 'default' | 'compact';
   /** When provided, makes the name clickable for PlayerDetailsModal */
@@ -79,6 +85,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     name,
     headshot,
     position,
+    positionLabel,
     nflTeam,
     size = 'default',
     playerData,
@@ -138,7 +145,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
       : '';
     const statusSuffix = contractStatus ? ` - ${esc(contractStatus)}` : '';
     const posPart = position
-      ? `<span class="player-meta__pos">${esc(position)}${statusSuffix}</span>`
+      ? `<span class="player-meta__pos">${esc(positionLabel || position)}${statusSuffix}</span>`
       : '';
     metaHtml = `<div class="player-meta">${logoPart}${posPart}</div>`;
   }
