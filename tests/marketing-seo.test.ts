@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { SERVICES, COMPARISON, FORMER_BRAND } from '../src/data/mfl-services';
+import { SERVICES, FORMER_BRAND } from '../src/data/mfl-services';
 import {
 	canonicalUrl,
 	faqJsonLd,
@@ -50,10 +50,6 @@ describe('service pages', () => {
 			expect(s.faqs.length, s.slug).toBeGreaterThanOrEqual(4);
 			for (const f of s.faqs) expect(f.a.length, f.q).toBeGreaterThan(20);
 		}
-	});
-
-	it('comparison rows have one value per column', () => {
-		for (const row of COMPARISON.rows) expect(row.values.length, row.label).toBe(COMPARISON.columns.length);
 	});
 });
 

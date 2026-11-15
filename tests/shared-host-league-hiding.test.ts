@@ -213,15 +213,23 @@ describe('nothing on the shared host links into a hidden league', () => {
     }
   });
 
-  it('every splash link into a league goes through it — the example panels and the hero button', () => {
-    // The What's New cards left the splash in Nov 2026; the example panels and
-    // the hero's "See a live league site" button are the league links now.
+  it('every splash link into a league goes through it — the example panels', () => {
+    // The What's New cards left the splash in Nov 2026, and the hero's "See a
+    // live league site" button left on 2026-11-14 (the hero now points at
+    // /features); the example panels are the league links now.
     const src = read('src/pages/index.astro');
     expect(src).toContain('crossHostLeagueHref');
     expect(src).toMatch(/href=\{hrefFromHere\(`\/\$\{league\.slug\}`\)\}/);
-    expect(src).toMatch(/href=\{hrefFromHere\(`\/\$\{examples\[0\]\.slug\}`\)\}/);
     expect(src, 'a bare league path 404s on the shared host')
       .not.toMatch(/href=\{`\/\$\{(league|examples\[0\])\.slug\}`\}/);
+  });
+
+  it('/features links into the example league through it too', () => {
+    // Every post, article and "see it live" link on /features leaves for the
+    // example league's pages, which the shared host does not serve.
+    const src = read('src/pages/features.astro');
+    expect(src).toContain('crossHostLeagueHref');
+    expect(src, 'a bare league path 404s on the shared host').not.toMatch(/href=\{`\/\$\{league\.slug\}/);
   });
 
   it('the switcher shares that helper rather than re-deciding it', () => {

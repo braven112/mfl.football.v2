@@ -4,12 +4,14 @@
  * place (Brandon, 2026-11-08: the story form belongs "in the same section as
  * creating logos and team colors. all of these are onboarding activities").
  *
+ * Wears the MFL.football marketing chrome (MarketingShell, Soft Premium)
+ * since 2026-11-14, so it reads as part of the same site as the homepage.
+ *
  * Shared host only, like /brand/specs and /team-logo: a league reaches it
  * before it has a site of its own. Each step is its own page; this one only
  * orders them.
  */
-import MflAppLayout from '../layouts/MflAppLayout.astro';
-import '../styles/mfl-live.css';
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
 
 export const prerender = false;
 
@@ -35,14 +37,17 @@ const STEPS = [
 ];
 ---
 
-<MflAppLayout title="Get started — MFL Football" description="The onboarding steps for a new custom league site: your league's story, team colors and logos.">
-  <section class="mls gstart">
-    <h1 class="mls__title">Get started</h1>
-    <p class="mls__lede">Three steps to set up your league&rsquo;s site. Do them in any order, and send what you have.</p>
+<MarketingShell title="Get started | MFL.football" description="The onboarding steps for a new custom league site: your league's story, team colors and logos." canonicalPath="/get-started">
+  <section class="gstart">
+    <header class="gstart__head">
+      <p class="sp-eyebrow"><span>Onboarding</span></p>
+      <h1>Get started</h1>
+      <p class="sp-lede">Three steps to set up your league&rsquo;s site. Do them in any order, and send what you have.</p>
+    </header>
     <ol class="gstart__steps">
       {
         STEPS.map((s) => (
-          <li class="ui-card gstart__step">
+          <li class="ui-card sp-card gstart__step">
             <h2 class="gstart__h">{s.title}</h2>
             <p class="gstart__body">{s.body}</p>
             <a class="cta cta--primary" href={s.href}>
@@ -53,11 +58,21 @@ const STEPS = [
       }
     </ol>
   </section>
-</MflAppLayout>
+</MarketingShell>
 
 <style>
   .gstart {
     max-width: 46rem;
+    margin: clamp(2rem, 6vw, 4rem) auto 3rem;
+  }
+  .gstart__head {
+    margin-bottom: 2rem;
+  }
+  .gstart__head h1 {
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+  }
+  .gstart__head .sp-lede {
+    margin-top: 0.75rem;
   }
   .gstart__steps {
     list-style: none;
@@ -72,18 +87,18 @@ const STEPS = [
     display: grid;
     gap: 0.5rem;
     justify-items: start;
-    padding: 1rem;
   }
   .gstart__h {
     margin: 0;
-    font-size: var(--font-size-lg);
-    color: var(--page-text);
+    font-size: var(--sp-text-lg);
+    color: var(--sp-ink);
   }
   .gstart__h::before {
     content: counter(step) '. ';
+    color: var(--sp-red);
   }
   .gstart__body {
     margin: 0;
-    color: var(--color-text-secondary);
+    color: var(--sp-muted);
   }
 </style>

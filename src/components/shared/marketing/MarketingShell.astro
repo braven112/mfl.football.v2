@@ -1,8 +1,8 @@
 ---
 /**
  * MarketingShell — the chrome for MFL.football's public service pages
- * (/mfl-commissioner-tools, /mfl-league-history, /custom-mfl-league-website,
- * /mfl-skins, /about, /compare). Same wordmark, brand tokens and footer as
+ * (/features, /pricing, /custom-mfl-league-website, /mfl-league-themes,
+ * /get-started, /league-story). Same wordmark, brand tokens and footer as
  * the homepage (src/pages/index.astro), so a visitor who lands here from a
  * search moves between them without a seam.
  *
@@ -11,7 +11,7 @@
  */
 import SplashLayout from '../../../layouts/SplashLayout.astro';
 import ProductInterest from '../ProductInterest.astro';
-import { SERVICES, FORMER_BRAND } from '../../../data/mfl-services';
+import { SERVICES, SITE_FOOTER_LINKS, FORMER_BRAND } from '../../../data/mfl-services';
 import type { JsonLd } from '../../../utils/structured-data';
 
 export interface Props {
@@ -39,6 +39,7 @@ const here = canonicalPath;
 				{SERVICES.map((s) => (
 					<a href={s.path} aria-current={s.path === here ? 'page' : undefined}>{s.navLabel}</a>
 				))}
+				<a href="/features" aria-current={here === '/features' ? 'page' : undefined}>Features</a>
 				<a href="/pricing" aria-current={here === '/pricing' ? 'page' : undefined}>Pricing</a>
 				<a class="sp-top__live" href="/live">Live scores</a>
 			</nav>
@@ -51,17 +52,10 @@ const here = canonicalPath;
 
 		<footer class="sp-foot">
 			<p>
-				<strong>MFL.football</strong> · formerly {FORMER_BRAND}. Skins, tools, history and websites for MyFantasyLeague leagues.
+				<strong>MFL.football</strong> · formerly {FORMER_BRAND}. Custom websites for MyFantasyLeague leagues.
 			</p>
 			<nav class="sp-foot__links" aria-label="Site">
-				{SERVICES.map((s) => <a href={s.path}>{s.eyebrow}</a>)}
-				<a href="/pricing">Pricing</a>
-				<a href="/mfl-all-play-standings">Free all-play standings</a>
-				<a href="/live">Live scores</a>
-				<a href="/compare">Compare</a>
-				<a href="/about">About</a>
-				<a href="/instructions">Template instructions</a>
-				<a href="/privacy">Privacy</a>
+				{SITE_FOOTER_LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
 			</nav>
 		</footer>
 
@@ -70,7 +64,7 @@ const here = canonicalPath;
 </SplashLayout>
 
 <style>
-	/* /about, /compare and the all-play report still style with the old brand
+	/* Older pages still style with the old brand
 	   names; they point at the Soft Premium tokens so those pages follow the
 	   one palette in both themes. */
 	.mkt {

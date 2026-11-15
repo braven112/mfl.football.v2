@@ -1,0 +1,534 @@
+---
+/**
+ * /features — the one page that shows what a custom league site does
+ * (Brandon, 2026-11-14). It leads with the AI beat reporter and is laid out
+ * like the beat-reporter story on brandonshields.com: a result line, the
+ * harness in five parts, a real week of articles with the charts the harness
+ * draws, then live posts. Vegas Vic and Doc Rivers get their own sections,
+ * then a short list of everything else every package includes.
+ *
+ * Every post on this page is REAL, read from the example league's live feed
+ * (getSchefterFeedIfAny: Redis, falling back to the committed snapshot). A
+ * section with nothing to show says what the writer covers and shows no post;
+ * it never shows an invented one. Shared host only, like /pricing.
+ */
+import MarketingShell from '../components/shared/marketing/MarketingShell.astro';
+import { crossHostLeagueHref } from '../config/leagues';
+import { siteExampleLeagues } from '../data/league-showcase';
+import { getSchefterFeedIfAny } from '../utils/schefter-league-data';
+import { breadcrumbJsonLd, organizationJsonLd } from '../utils/structured-data';
+import type { SchefterPost } from '../types/schefter';
+
+export const prerender = false;
+
+// The league the posts come from: the homepage's own example (The League
+// today), so a second example league is a one-line change in league-showcase.
+const league = siteExampleLeagues()[0];
+const feed = league ? await getSchefterFeedIfAny(league) : null;
+const posts: SchefterPost[] = feed?.posts ?? [];
+const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
+
+// The reporter's own writing. Untagged transaction posts are his too: the
+// feed omits authorId for the default author (getAuthor falls back to him).
+const isReporter = (p: SchefterPost) => (p.authorId ?? 'claude') === 'claude';
+const newestFirst = (a: SchefterPost, b: SchefterPost) => (a.timestamp < b.timestamp ? 1 : -1);
+
+const articles = posts.filter((p) => isReporter(p) && p.type === 'article' && p.link).sort(newestFirst).slice(0, 4);
+const beatPosts = posts
+	.filter((p) => isReporter(p) && (p.type === 'transaction' || p.type === 'article') && (p.body || p.headline))
+	.sort(newestFirst)
+	.slice(0, 4);
+const vicPosts = posts.filter((p) => p.authorId === 'vegas-vic').sort(newestFirst).slice(0, 3);
+const docPosts = posts.filter((p) => p.authorId === 'doc-rivers').sort(newestFirst).slice(0, 3);
+
+const PT = 'America/Los_Angeles';
+const day = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', timeZone: PT });
+const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: PT });
+const postHref = (p: SchefterPost) =>
+	league ? hrefFromHere(p.link && p.type === 'article' ? p.link : `/${league.slug}/news?post=${p.id}#post-${p.id}`) : '#';
+const newsHref = league ? hrefFromHere(`/${league.slug}/news`) : '/';
+
+const HARNESS = [
+	{ name: 'Rules', body: 'It never names the team behind an anonymous tip, old names and nicknames included. One trade story a day, so trades never drown the feed.' },
+	{ name: 'Knowledge', body: 'Your league’s lore, running jokes, rosters and contracts. Players are tied to teams from verified rosters, never guessed.' },
+	{ name: 'Tools', body: 'It reads your live MFL transactions, takes tips from a web form or an @mention in the group chat, and posts to the site, the chat and push alerts.' },
+	{ name: 'Memory', body: 'It remembers its recent posts, so it never reuses an opener or reruns a rumor.' },
+	{ name: 'Review', body: 'A second AI scores every chat post from 1 to 10. Anything under 6 never ships.' },
+];
+
+const FIGURES = [
+	{ src: '/assets/features/gotw.webp', w: 900, h: 1081, cap: 'Game of the Week · every meeting since 2012', alt: 'Game of the Week panel: the all-time series between two teams, with a bar chart of the margin in every meeting since 2012' },
+	{ src: '/assets/features/tape.webp', w: 1000, h: 637, cap: 'Tale of the Tape · one card per game', alt: 'Tale of the Tape card: records, last 10 results, weekly scoring lines on one scale, and luck for both teams' },
+	{ src: '/assets/features/runin.webp', w: 900, h: 1022, cap: 'The Gauntlet · remaining schedule, hardest first', alt: 'The Gauntlet: every team ranked by remaining schedule difficulty, with opponent points per game and trend' },
+];
+
+const TAUGHT = [
+	{ saw: 'Trades drowned the feed.', taught: 'One trade story a day.' },
+	{ saw: 'Tips gave away whose team it was.', taught: 'Mask every team name first.' },
+	{ saw: 'Posts read like a wall of text.', taught: 'Short paragraphs, like a pro reporter.' },
+];
+
+const MORE = [
+	{ name: 'Ask Roger', body: 'Owners ask a rules question and get the answer from your constitution, on the site or in the group chat. Roger also sends the deadline reminders.', href: league ? hrefFromHere(`/${league.slug}/rules`) : '/', link: 'Ask Roger' },
+	{ name: 'A homepage that knows what day it is', body: 'Lineup holes on Sunday morning, claims on waiver night, the week’s best performer on Monday. Signed-in owners see it for their own team.', href: league ? hrefFromHere(`/${league.slug}`) : '/', link: 'See it live' },
+	{ name: 'Live scoring and the TV Broadcast', body: 'Every game scored live with win probability, plus a Broadcast board for the TV on game day. MFL Football Pro is included for every owner.', href: '/live', link: 'Open live scores' },
+	{ name: 'League History and Ask the History', body: 'Every season back to your first: champions, records, rivalries, franchise and owner pages. Owners ask anything about the league’s past and get the answer.', href: league ? hrefFromHere(`/${league.slug}/history`) : '/', link: 'See a league’s history' },
+	{ name: 'Your look, and seasonal themes', body: 'Your crest and colors on every page, in light and dark. Add a Halloween or Christmas week with every logo redrawn.', href: '/mfl-league-themes', link: 'See the themes' },
+];
+
+const jsonLd = [
+	organizationJsonLd(),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: 'Features', path: '/features' },
+	]),
+];
+---
+
+<MarketingShell
+	title="Features: an AI beat reporter for your MFL league | MFL.football"
+	description="Every custom MFL league site gets its own AI beat reporter, Vegas Vic on the lines, Doc Rivers on injuries, a rules assistant, live scoring and league history."
+	canonicalPath="/features"
+	ogImage="/assets/features/tape.webp"
+	jsonLd={jsonLd}
+>
+	<article class="ft">
+		<section class="sp-hero">
+			<div class="sp-hero__copy">
+				<p class="sp-eyebrow">Features · AI beat reporter</p>
+				<h1>Your league gets its own reporter. No editor needed.</h1>
+				<p class="sp-lede">
+					It turns every real move in your league into news: trades, signings, waiver wars, previews and power rankings, written
+					about your teams and posted to your site and group chat.
+				</p>
+				<ul class="ft-facts">
+					<li><b>24/7</b><span>Watching your league’s MFL moves</span></li>
+					<li><b>6/10</b><span>A second AI blocks any chat post that scores lower</span></li>
+					<li><b>0</b><span>Numbers it can make up: the system computes every one</span></li>
+				</ul>
+			</div>
+			<figure class="sp-hero__visual ft-shot">
+				<img src="/assets/features/tape.webp" width="1000" height="637" alt="Tale of the Tape card the AI beat reporter publishes for each game" fetchpriority="high" />
+				<figcaption>Tale of the Tape · one card per game</figcaption>
+			</figure>
+		</section>
+
+		<section class="sp-section" aria-labelledby="ft-harness">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">How it stays honest</p>
+					<h2 id="ft-harness">Five parts around the AI.</h2>
+				</div>
+				<p class="sp-head__note">The AI writes. Everything around it keeps it accurate, on brand and fair to every owner.</p>
+			</div>
+			<ol class="ft-harness">
+				{HARNESS.map((h, i) => (
+					<li class="ui-card sp-card">
+						<span class="ft-num">{i + 1}</span>
+						<h3>{h.name}</h3>
+						<p>{h.body}</p>
+					</li>
+				))}
+			</ol>
+		</section>
+
+		<section class="sp-section" aria-labelledby="ft-week">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Its weekly beat</p>
+					<h2 id="ft-week">A full week of columns, on its own schedule.</h2>
+				</div>
+				<p class="sp-head__note">
+					{league ? `Real articles from ${league.name}.` : 'Real articles from a league we run.'} The AI writes the words. The system draws every chart, so none of them can be made up.
+				</p>
+			</div>
+			{articles.length > 0 && (
+				<ol class="ft-week">
+					{articles.map((a) => (
+						<li>
+							<a class="ui-card sp-card ft-article" href={postHref(a)}>
+								<span class="sp-card__who">{day(a.timestamp)} · {date(a.timestamp)}</span>
+								<h3>{a.headline}</h3>
+								<span class="sp-card__more">{a.linkLabel ?? 'Read it'}</span>
+							</a>
+						</li>
+					))}
+				</ol>
+			)}
+			<div class="ft-figs">
+				{FIGURES.map((f) => (
+					<figure class="ui-card sp-card ft-fig">
+						<img src={f.src} width={f.w} height={f.h} loading="lazy" alt={f.alt} />
+						<figcaption>{f.cap}</figcaption>
+					</figure>
+				))}
+			</div>
+		</section>
+
+		{beatPosts.length > 0 && (
+			<section class="sp-section" aria-labelledby="ft-live">
+				<div class="sp-head">
+					<div class="sp-head__title">
+						<p class="sp-eyebrow">Live from the beat</p>
+						<h2 id="ft-live">The latest from {league?.name ?? 'the league'}.</h2>
+					</div>
+					<p class="sp-head__note">Pulled live from the league’s news feed. Anonymous tips never leave the league.</p>
+				</div>
+				<ul class="ft-feed">
+					{beatPosts.map((p) => (
+						<li>
+							<a class="ui-card sp-card ft-post" href={postHref(p)}>
+								<img class="ft-av" src="/assets/features/reporter.webp" width="40" height="40" alt="" loading="lazy" />
+								<span class="ft-post__txt">
+									<span class="ft-post__by"><b>AI Beat Reporter</b> · {date(p.timestamp)}</span>
+									{p.type === 'article' ? <b class="ft-post__head">{p.headline}</b> : <span>{p.body}</span>}
+								</span>
+							</a>
+						</li>
+					))}
+				</ul>
+				<p class="ft-more"><a class="cta-link" href={newsHref}>Read the whole feed</a></p>
+			</section>
+		)}
+
+		<section class="sp-section" aria-labelledby="ft-desk">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">The rest of the newsroom</p>
+					<h2 id="ft-desk">Your reporter has company.</h2>
+				</div>
+				<p class="sp-head__note">Two more writers work your league’s feed, each on one beat.</p>
+			</div>
+			<div class="ft-desk">
+				<div class="ui-card sp-card ft-writer">
+					<span class="ft-writer__top">
+						<img class="ft-av ft-av--lg" src="/assets/vegas-vic-avatar.webp?v=2" width="56" height="56" alt="" loading="lazy" />
+						<span>
+							<h3>Vegas Vic</h3>
+							<span class="sp-muted">The lines desk</span>
+						</span>
+					</span>
+					<p>Opening spreads and over/unders for every NFL game, posted the moment the week’s lines appear. Not financial advice. Okay, maybe a little.</p>
+					{vicPosts.length > 0 && (
+						<ul class="ft-mini">
+							{vicPosts.map((p) => (
+								<li>
+									<b>{p.headline}</b>
+									<span>{p.body}</span>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+				<div class="ui-card sp-card ft-writer">
+					<span class="ft-writer__top">
+						<img class="ft-av ft-av--lg" src="/assets/doc-rivers-avatar.webp?v=2" width="56" height="56" alt="" loading="lazy" />
+						<span>
+							<h3>Doc Rivers</h3>
+							<span class="sp-muted">The medical desk</span>
+						</span>
+					</span>
+					<p>Injury news the moment a status changes, ranked by who it hurts: a starter on a roster in your league is breaking news, a free agent is a footnote. No sugarcoating.</p>
+					{docPosts.length > 0 ? (
+						<ul class="ft-mini">
+							{docPosts.map((p) => (
+								<li>
+									<b>{p.headline}</b>
+									<span>{p.body}</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<ul class="sp-list ft-covers">
+							<li>Out, IR and suspensions for rostered players, flagged as breaking</li>
+							<li>Questionable and doubtful tags, before lineups lock</li>
+							<li>Tied to the team in your league that owns the player</li>
+						</ul>
+					)}
+				</div>
+			</div>
+		</section>
+
+		<section class="sp-section" aria-labelledby="ft-taught">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Always improving</p>
+					<h2 id="ft-taught">It’s never done. It’s taught.</h2>
+				</div>
+				<p class="sp-head__note">Every edge case we spot becomes a lesson, and a test, for every league at once.</p>
+			</div>
+			<ul class="sp-grid">
+				{TAUGHT.map((t) => (
+					<li class="ui-card sp-card">
+						<span class="sp-card__who">Saw</span>
+						<p>{t.saw}</p>
+						<span class="sp-card__who ft-taught">Taught</span>
+						<h3>{t.taught}</h3>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section class="sp-section" aria-labelledby="ft-more">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Also in every package</p>
+					<h2 id="ft-more">The rest of the platform.</h2>
+				</div>
+			</div>
+			<ul class="ft-grid">
+				{MORE.map((m) => (
+					<li class="ui-card sp-card">
+						<h3>{m.name}</h3>
+						<p>{m.body}</p>
+						<a class="sp-card__more" href={m.href}>{m.link}</a>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section class="sp-band sp-band--cta" aria-labelledby="ft-cta">
+			<div class="sp-band__copy">
+				<p class="sp-eyebrow">Get it for your league</p>
+				<h2 id="ft-cta">Three packages, priced by league size.</h2>
+				<p>Every feature on this page comes with every package. Your league stays on MyFantasyLeague.</p>
+			</div>
+			<a class="cta cta--primary" href="/#packages">See the packages</a>
+		</section>
+	</article>
+</MarketingShell>
+
+<style>
+	/* Page layout only; surfaces, type and color come from soft-premium.css. */
+	.ft-facts {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.75rem;
+		margin: 0.5rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-facts li {
+		display: grid;
+		gap: 0.15rem;
+		align-content: start;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+
+	.ft-facts b {
+		font-size: var(--sp-text-xl);
+		font-weight: 750;
+		color: var(--sp-red);
+	}
+
+	.ft-shot,
+	.ft-fig {
+		margin: 0;
+	}
+
+	.ft-shot img,
+	.ft-fig img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border-radius: var(--sp-radius-sm);
+	}
+
+	.ft-shot img {
+		border-radius: var(--sp-radius);
+		box-shadow: var(--sp-shadow);
+	}
+
+	figcaption {
+		margin-top: 0.6rem;
+		font-size: var(--sp-text-xs);
+		color: var(--sp-muted);
+		letter-spacing: 0.02em;
+	}
+
+	.ft-harness {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-num {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 999px;
+		background: var(--sp-red-soft);
+		color: var(--sp-red);
+		font-weight: 750;
+		font-size: var(--sp-text-sm);
+	}
+
+	.ft-week {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0 0 1rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-week li,
+	.ft-feed li {
+		display: grid;
+	}
+
+	.ft-article h3 {
+		font-size: var(--sp-text-md);
+	}
+
+	.ft-article .sp-card__more {
+		margin-top: auto;
+	}
+
+	.ft-figs {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.ft-feed {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-post {
+		flex-direction: row;
+		align-items: flex-start;
+		gap: 0.85rem;
+		color: var(--sp-ink);
+		text-decoration: none;
+	}
+
+	.ft-av {
+		flex: none;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 999px;
+		object-fit: cover;
+	}
+
+	.ft-av--lg {
+		width: 3.5rem;
+		height: 3.5rem;
+	}
+
+	.ft-post__txt {
+		display: grid;
+		gap: 0.3rem;
+		min-width: 0;
+		font-size: var(--sp-text-sm);
+		line-height: 1.5;
+	}
+
+	.ft-post__by {
+		font-size: var(--sp-text-xs);
+		color: var(--sp-muted);
+	}
+
+	.ft-post__by b {
+		color: var(--sp-ink);
+	}
+
+	.ft-post__head {
+		font-size: var(--sp-text-md);
+	}
+
+	.ft-more {
+		margin: 1rem 0 0;
+	}
+
+	.ft-desk {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+	}
+
+	.ft-writer__top {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.ft-writer__top h3 {
+		margin: 0;
+	}
+
+	.ft-mini {
+		display: grid;
+		gap: 0.6rem;
+		margin: 0.25rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-mini li {
+		display: grid;
+		gap: 0.15rem;
+		padding: 0.75rem 0.9rem;
+		border-radius: var(--sp-radius-sm);
+		background: var(--sp-surface-2);
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+
+	.ft-mini b {
+		color: var(--sp-ink);
+	}
+
+	.ft-taught {
+		margin-top: 0.5rem;
+		color: var(--sp-red);
+	}
+
+	.ft-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.ft-grid .sp-card__more {
+		margin-top: auto;
+	}
+
+	@media (max-width: 1000px) {
+		.ft-harness,
+		.ft-week,
+		.ft-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 760px) {
+		.ft-facts {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.ft-harness,
+		.ft-week,
+		.ft-figs,
+		.ft-feed,
+		.ft-desk,
+		.ft-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+</style>
