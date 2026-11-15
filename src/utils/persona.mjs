@@ -171,7 +171,7 @@ function parseStored(stored) {
  * limits) is ignored rather than trusted — the league falls back to its
  * default instead of feeding an unchecked string to the model.
  *
- * @param {{ persona?: object } | Record<string, unknown> | null | undefined} registryEntry  The league's registry entry.
+ * @param {object | null | undefined} registryEntry  The league's registry entry.
  * @param {unknown} [stored]  Raw value read from `personaKey(slug)`.
  * @returns {{ name: string, avatarUrl: string, voice: string, source: 'league' | 'registry' | 'default' }}
  */
@@ -181,7 +181,7 @@ export function resolvePersona(registryEntry, stored) {
     const checked = validatePersona(saved);
     if (checked.ok) return { ...checked.persona, source: 'league' };
   }
-  const declared = registryEntry?.persona;
+  const declared = /** @type {{ persona?: unknown }} */ (registryEntry ?? {}).persona;
   // No league at all (an unattributed legacy post) keeps Schefter, as does a
   // league that declares him.
   if (!registryEntry || declared === 'schefter') return { ...DEFAULT_PERSONA, source: 'default' };

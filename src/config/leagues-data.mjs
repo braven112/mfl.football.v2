@@ -16,7 +16,7 @@ export const LEAGUES = {
      * News persona (src/utils/persona.mjs): this league's reporter is Claude
      * Schefter. A league that declares nothing gets the house AI beat reporter.
      */
-    persona: 'schefter',
+    persona: /** @type {const} */ ('schefter'),
     /** MFL numeric league id */
     id: '13522',
     /** Canonical slug: path segment under src/pages/ and in URLs */
@@ -309,7 +309,7 @@ export const LEAGUES = {
      * News persona (src/utils/persona.mjs): this league's reporter is Claude
      * Schefter. A league that declares nothing gets the house AI beat reporter.
      */
-    persona: 'schefter',
+    persona: /** @type {const} */ ('schefter'),
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
