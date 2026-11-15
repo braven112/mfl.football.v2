@@ -37,7 +37,7 @@
 .roster-page:has(> [data-desk-mode]) .desk-title {
   margin: 0;
   margin-right: auto;
-  font-size: var(--font-size-lg, 1.125rem);
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--page-text);
 }
@@ -64,7 +64,7 @@
   background: var(--card-surface);
   color: var(--page-text);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
@@ -112,7 +112,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
   min-height: 1.5rem;
   padding: 0 0.5rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
   color: var(--page-text);
@@ -134,7 +134,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
   background: none;
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-sm);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -178,7 +178,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 999px;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--page-text);
     background: color-mix(in srgb, var(--color-primary) 14%, transparent);
@@ -199,7 +199,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
 
   .roster-page:has(> [data-desk-mode]) .desk-section__title {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--font-size-base);
     font-weight: 700;
     color: var(--page-text);
   }
@@ -207,7 +207,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
   .roster-page:has(> [data-desk-mode]) .desk-section__sub,
   .roster-page:has(> [data-desk-mode]) .desk-section__help,
   .roster-page:has(> [data-desk-mode]) .desk-empty {
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
   }
 
@@ -259,7 +259,7 @@ html.dark .roster-page:has(> [data-desk-mode]) .desk-btn--cut {
 
   .roster-page:has(> [data-desk-mode]) .desk-item__pos,
   .roster-page:has(> [data-desk-mode]) .desk-item__line {
-    font-size: 0.8125rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-text-secondary);
   }

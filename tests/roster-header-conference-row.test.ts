@@ -197,7 +197,10 @@ describe('the plate says what the page IS, per league', () => {
     const label = AFL_PAGE.match(/^\s*label="([^"]+)"/m)?.[1];
     expect(label, 'the AFL header needs a label').toBeTruthy();
     expect(label, 'keepers live on /afl-fantasy/keepers, not here').not.toMatch(/keeper/i);
-    expect(TL_PAGE).toMatch(/^\s*label="Roster & Cap"/m);
+    // The Rosters page says "Roster & Cap"; the Contract Desk (the same page
+    // in ?desk=1 mode) says "Contracts".
+    expect(TL_PAGE).toMatch(/^\s*label=\{nameplateLabel\}/m);
+    expect(TL_PAGE).toMatch(/const nameplateLabel = deskMode \? 'Contracts' : 'Roster & Cap';/);
   });
 
   it('centres the background crest where the featured card is gone', () => {
