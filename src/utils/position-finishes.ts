@@ -14,7 +14,7 @@
  * year (the file holds no free agents) by regular-season points. The current
  * season counts with the weeks played so far.
  */
-import { loadLeagueData } from './league-data';
+import { loadLeagueData, onLeagueDataChange } from './league-data';
 
 export interface BestFinish {
   /** 1 = the most points at the position that season. */
@@ -66,6 +66,8 @@ export function computeBestFinishes(playersFile: PlayersFile, historyFile: Histo
 }
 
 const cache = new Map<string, Promise<Map<string, BestFinish>>>();
+// A new live league-data pointer can carry new weeks: recompute from it.
+onLeagueDataChange(() => cache.clear());
 
 /** Best finishes for a league, read once per server instance. Empty on a read failure. */
 export function loadBestFinishes(dataPath: string): Promise<Map<string, BestFinish>> {
