@@ -32,7 +32,6 @@
 import ChartCard from '../ChartCard.astro';
 import MetricCard from '../MetricCard.astro';
 import FranchiseOptions from '../FranchiseOptions.astro';
-import VeteranExtensionCandidates from '../VeteranExtensionCandidates.astro';
 import FreeAgentNeedsCard from '../FreeAgentNeedsCard.astro';
 import KeeperPlanner from '../keepers/KeeperPlanner.astro';
 import AFLActionModal from '../AFLActionModal.astro';
@@ -150,20 +149,6 @@ const clientConfig = {
             season={contracts.extensionSeason}
             franchiseId={selectedTeamId}
             showActions={canAct}
-          />
-        </ChartCard>
-        <ChartCard
-          title="Veteran Extension Candidates"
-          subtitle={veteranExtensions ? 'Suggestions by points and price. Extend anyone eligible above.' : 'Potential contract extension candidates'}
-        >
-          {/* No Extend buttons here: the card above is the one place to file a
-              veteran extension, for every eligible player, not just these. */}
-          <VeteranExtensionCandidates
-            players={contracts.allPlayers as any}
-            salaryAverages={contracts.salaryAveragesBySeason as any}
-            season={contracts.extensionSeason}
-            franchiseId={selectedTeamId}
-            showActions={false}
           />
         </ChartCard>
       </div>
@@ -421,8 +406,6 @@ const clientConfig = {
 
       const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
       if (franchiseTagEl) franchiseTagEl.dataset.currentTeam = teamId;
-      const veteranExtensionEl = document.querySelector<HTMLElement>('.veteran-extension-candidates');
-      if (veteranExtensionEl) veteranExtensionEl.dataset.currentTeam = teamId;
 
       // "Your veteran extension" is the viewer's own team only, rendered
       // once — browsing another team must not show your slot as theirs.

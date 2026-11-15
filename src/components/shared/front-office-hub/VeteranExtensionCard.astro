@@ -3,8 +3,7 @@
  * "Your veteran extension" — the owner's one veteran extension this season.
  *
  * Lists EVERY player on the viewer's roster the Constitution lets them
- * extend (VeteranExtensionCandidates beside it is only a suggestion list,
- * filtered by points and price), priced at each term they may pick. The
+ * extend, likely candidates first, priced at each term they may pick. The
  * prices are the server's (src/utils/veteran-extension-board.ts) and the
  * declare endpoint re-derives them before filing, so no salary math ships.
  *
@@ -29,8 +28,8 @@ const { slot, rows, leagueYear, ruleActive } = board;
 const slotOpen = slot.state === 'unused';
 const pendingPlayerId = slot.state === 'pending' ? slot.playerId : null;
 const money = (n: number) => formatSalaryCompact(n);
-// Likely candidates show by default; everyone else waits behind "Show all"
-// (rules in veteran-extension-board.ts). The filed player always shows.
+// Likely candidates show by default; every other eligible player waits behind
+// "Show all" (rules in veteran-extension-board.ts). The filed player always shows.
 const isOpen = (row: (typeof rows)[number]) => row.likely || row.player.id === pendingPlayerId;
 const moreCount = rows.filter((r) => !isOpen(r)).length;
 const likelyCount = rows.filter((r) => r.likely).length;
@@ -74,7 +73,7 @@ const config = { leagueId, franchiseId, franchiseName };
   )}
 
   {ruleActive && rows.length === 0 && (
-    <p class="vxc__empty">No one on your roster fits. It takes 2+ years left, a non-rookie contract, room under the 6-year limit, and either a salary under $3M or a past top-10 finish.</p>
+    <p class="vxc__empty">No one on your roster is eligible. It takes 2+ years left, a non-rookie contract, and room under the 6-year limit.</p>
   )}
 
   {ruleActive && rows.length > 0 && (
@@ -365,7 +364,9 @@ const config = { leagueId, franchiseId, franchiseName };
 
   .vxc__row {
     display: grid;
-    grid-template-columns: minmax(11rem, 1fr) auto minmax(15rem, 1.4fr) auto;
+    /* Every track can shrink: a fixed minimum here pushed the +2 toggle and
+       the Extend button off the card's right edge on a narrow panel. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr) auto;
     align-items: center;
     gap: 0.5rem 1rem;
     padding: 0.625rem 0.75rem;
@@ -425,6 +426,7 @@ const config = { leagueId, franchiseId, franchiseName };
     color: var(--page-text, #1a1a1a);
     font-size: var(--font-size-sm);
     font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
   }
 
@@ -496,8 +498,13 @@ const config = { leagueId, franchiseId, franchiseName };
     color: #fecaca;
   }
 
-  /* Phones: one card per player, name on top, everything labeled below. */
-  @media (max-width: 640px) {
+  /* Narrow: one card per player, name on top. Keyed to the CARD's width, not
+     the viewport's, because the planner can be narrow on a wide screen. */
+  .vxc {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 720px) {
     .vxc__row {
       grid-template-columns: 1fr auto;
       grid-template-areas:

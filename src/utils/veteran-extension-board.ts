@@ -40,13 +40,10 @@ export interface VeteranExtensionBoardRow {
 }
 
 /**
- * Brandon's display rules (2026-11-14). Who the card SHOWS, not who may
- * extend — the declare endpoint still accepts any eligible player.
+ * Brandon's display rules (2026-11-14):
  * - Likely (highlighted, open by default): under $3M now AND ever top 10 at
- *   the position.
- * - Behind "Show all": under $3M OR ever top 10, but not both.
- * - Never shown: $3M or more AND never top 10.
- * Lowest salary first.
+ *   the position. Listed first, lowest salary first.
+ * - Behind "Show all": every other eligible player, lowest salary first.
  */
 export const LIKELY_SALARY_CEILING = 3_000_000;
 export const LIKELY_TOP_FINISH = 10;
@@ -102,8 +99,6 @@ export function buildVeteranExtensionBoard(input: {
       const bestFinish = bestFinishes?.get(player.id) ?? null;
       const cheap = player.salary < LIKELY_SALARY_CEILING;
       const proven = !!bestFinish && bestFinish.rank <= LIKELY_TOP_FINISH;
-      // The player already filed always shows, so the owner can see and change it.
-      if (!cheap && !proven && player.id !== filedId) continue;
       rows.push({
         player,
         options: eligibility.yearChoices.map((add) => priceVeteranExtension(facts, add, salaryAverages)),
@@ -112,6 +107,12 @@ export function buildVeteranExtensionBoard(input: {
       });
     }
   }
-  rows.sort((a, b) => a.player.salary - b.player.salary || a.player.name.localeCompare(b.player.name));
+  // Likely rows first, plus the player already filed so the owner sees it
+  // without opening "Show all"; then everyone else. Lowest salary first in each.
+  const first = (r: VeteranExtensionBoardRow) => (r.likely || r.player.id === filedId ? 0 : 1);
+  rows.sort(
+    (a, b) =>
+      first(a) - first(b) || a.player.salary - b.player.salary || a.player.name.localeCompare(b.player.name),
+  );
   return { leagueYear, ruleActive, slot, rows };
 }
