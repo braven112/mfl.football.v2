@@ -170,7 +170,32 @@ const spriteUrl = spriteUrlFor(Astro.url);
       for (const el of shown.slice(0, showing)) el.classList.remove('sfc-feed__item--hidden');
       if (moreWrap) moreWrap.hidden = shown.length <= showing;
       if (tabEmpty) tabEmpty.hidden = shown.length > 0;
+      markClampedBodies();
     }
+
+    // Each body is clamped to a few lines with no way to read the rest, so a
+    // post the clamp actually cut gets a "Show more". It is measured, not
+    // guessed from length: a hidden card has no height, so this runs after
+    // every render, and only on cards that are on screen and not yet measured
+    // as fitting.
+    function markClampedBodies() {
+      for (const btn of Array.from(feed!.querySelectorAll<HTMLButtonElement>('[data-sfc-more]'))) {
+        if (btn.getAttribute('aria-expanded') === 'true') continue;
+        const body = btn.previousElementSibling as HTMLElement | null;
+        if (!body || body.offsetParent === null) continue;
+        btn.hidden = body.scrollHeight <= body.clientHeight + 1;
+      }
+    }
+
+    feed.addEventListener('click', (event) => {
+      const btn = (event.target as Element | null)?.closest<HTMLButtonElement>('[data-sfc-more]');
+      if (!btn) return;
+      const body = btn.previousElementSibling as HTMLElement | null;
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      body?.classList.toggle('sfc-post__body--expanded', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = open ? 'Show less' : 'Show more';
+    });
 
     btn?.addEventListener('click', () => {
       const before = showing;
@@ -197,6 +222,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
     }
 
     render();
+    // A late web font reflows the text, so measure again once fonts settle.
+    document.fonts?.ready.then(markClampedBodies);
     feed.setAttribute('data-sfc-ready', '');
   }
 

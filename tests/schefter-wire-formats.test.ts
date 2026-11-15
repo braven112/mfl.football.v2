@@ -168,3 +168,32 @@ describe('folding a scan into roster lists', () => {
     expect(feed.posts).toHaveLength(0); // the old copy is replaced, not duplicated
   });
 });
+
+describe('clamped homepage posts can be opened', () => {
+  // The homepage rail clamps every post body to three lines. A roster list's
+  // lead plus its blank line use two of them, so the clamp cut every list at
+  // "🏈 Added:…" with no way to read the rest. Every clamped body — roster
+  // lists included — must sit right before its "Show more" toggle, and the
+  // expanded state must lift the clamp.
+  it('every compact body is followed by its Show more toggle', async () => {
+    const { readFileSync } = await import('node:fs');
+    const card = readFileSync('src/components/shared/SchefterPostCardCompact.astro', 'utf8');
+    const bodies = card.match(/<div class=\{?[`"]sfc-post__body[^>]*>[^\n]*\n\s*([^\n]*)/g) ?? [];
+    expect(bodies.length).toBeGreaterThanOrEqual(2);
+    expect(card.match(/data-sfc-more/g)?.length).toBe(2);
+    const css = readFileSync('src/styles/schefter-feed-compact.css', 'utf8');
+    const open = css.match(/\.sfc-post__body--expanded\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(open).toMatch(/-webkit-line-clamp:\s*unset/);
+    expect(open).toMatch(/overflow:\s*visible/);
+    const lines = css.match(/\.sfc-post__body--lines\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(lines).not.toMatch(/line-clamp/);
+  });
+
+  it('the full card never clamps a post body', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/styles/schefter-feed.css', 'utf8');
+    for (const m of css.matchAll(/([^{}]*\.sf-post__body[^{}]*)\{([^}]*)\}/g)) {
+      expect(m[2], m[1].trim()).not.toMatch(/line-clamp/);
+    }
+  });
+});

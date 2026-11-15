@@ -118,7 +118,10 @@ const spriteUrl = spriteUrlFor(Astro.url);
     {isGroupMe ? (
       <>
         {gmDisplayBody && (
-          <div class="sfc-post__body sfc-post__body--groupme">{gmDisplayBody}</div>
+          <>
+            <div class="sfc-post__body sfc-post__body--groupme">{gmDisplayBody}</div>
+            <button type="button" class="sfc-post__more" data-sfc-more aria-expanded="false" hidden>Show more</button>
+          </>
         )}
         {gmImages.length > 0 && (
           <div class="sfc-post__gm-thumb">
@@ -147,6 +150,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
           </div>
         )}
         <div class={`sfc-post__body${post.format === 'roster-list' || post.format === 'notebook' ? ' sfc-post__body--lines' : ''}`} set:html={post.body} />
+        {/* Shown by SchefterFeedCompact only when the clamp actually cut the body. */}
+        <button type="button" class="sfc-post__more" data-sfc-more aria-expanded="false" hidden>Show more</button>
       </>
     )}
 
