@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_LEAGUES, isFullManagementLeague, mflLiveSignInLeagueIds } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, isFullManagementLeague, mflLiveSignInLeagueIds } from '../src/config/leagues';
 import { BOTH_LEAGUES } from '../scripts/lib/weekly-changelog-format.mjs';
 import { mflLiveIncludedNames } from '../src/data/league-showcase';
 
