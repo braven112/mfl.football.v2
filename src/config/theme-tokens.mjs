@@ -141,6 +141,8 @@ export const THEME_TOKEN_GROUPS = [
       '--breadcrumb-bar-border-width',
       '--breadcrumb-bar-rule',
       '--breadcrumb-bar-glow',
+      '--footer-dark-bg',
+      '--footer-dark-border',
       '--header-nav-icon-color',
       '--header-nav-icon-hover-color',
       '--header-nav-label-color',
