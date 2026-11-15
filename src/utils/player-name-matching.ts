@@ -108,3 +108,33 @@ export function resolveMflId(
   }
   return lookup.get(base);
 }
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Repair copy that printed a player's MFL "Last, First" name. Schefter's
+ * transaction posts did this until Nov 2026 ("for WR Samuel, Deebo"), and the
+ * AI rewrite then split it into two players ("WR Samuel and WR Deebo"). Posts
+ * already in the feed keep that text, so surfaces that show them repair it at
+ * render time from the player's real "First Last" name.
+ *
+ * Every first/last split of `fullName` is tried, so multi-word surnames
+ * ("Amon-Ra St. Brown") are covered without knowing where the surname starts.
+ */
+export function repairLastFirstName(text: string, fullName: string): string {
+  if (!text || !fullName) return text;
+  const words = fullName.trim().split(/\s+/);
+  let out = text;
+  for (let i = 1; i < words.length; i++) {
+    const first = escapeRe(words.slice(0, i).join(' '));
+    const last = escapeRe(words.slice(i).join(' '));
+    // "Samuel, Deebo" → "Deebo Samuel"
+    out = out.replace(new RegExp(`\\b${last}, ${first}\\b`, 'g'), fullName);
+    // "WR Samuel and WR Deebo" → "WR Deebo Samuel"
+    out = out.replace(
+      new RegExp(`\\b([A-Z]{1,3}) ${last} and \\1 ${first}\\b`, 'g'),
+      `$1 ${fullName}`,
+    );
+  }
+  return out;
+}
