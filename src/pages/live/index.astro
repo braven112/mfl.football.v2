@@ -47,6 +47,7 @@ import { getLeagueById } from '../../config/leagues';
 import { mflLiveSeason } from '../../utils/mfl-live-season';
 import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
 import { getMflLiveUser } from '../../utils/auth';
+import { capturePendingOffersQuietly } from '../../utils/live/passive-trade-capture';
 import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
@@ -80,6 +81,11 @@ const authUser = getMflLiveUser(Astro.request);
 // imported component throws after the headers are committed and blanks the
 // page, which is why this lives here rather than inside the board.
 if (authUser) await rememberMflLiveChoiceForAccount(Astro.url, Astro.cookies, authUser);
+
+// The owner's own pending offers, read in the background for the rumor lane
+// (throttled per account, time-boxed, never throws). Started here so it runs
+// beside the board's assembly; awaited once that is done.
+const tradeCapture = capturePendingOffersQuietly(authUser);
 
 const now = new Date();
 
@@ -140,6 +146,7 @@ if (authUser && week) {
     assemblyFailed = true;
   }
 }
+await tradeCapture;
 ---
 
 <MflAppLayout

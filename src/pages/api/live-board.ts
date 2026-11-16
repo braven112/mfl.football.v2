@@ -23,6 +23,7 @@ import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
 import { readMflLiveSelection } from '../../utils/mfl-live-selection-store';
 import { mflLiveAppCadence, toMflLiveAppBoard } from '../../utils/live/mfl-live-app-view';
+import { capturePendingOffersQuietly } from '../../utils/live/passive-trade-capture';
 
 import { listLeagueData, loadLeagueData } from '../../utils/league-data';
 
@@ -78,6 +79,11 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     });
   }
 
+  // Background read of the owner's own pending offers for the rumor lane,
+  // throttled per account and time-boxed; it runs beside the board and is
+  // awaited before answering so the function is not frozen mid-read.
+  const tradeCapture = capturePendingOffersQuietly(user);
+
   // The RAW resolver result, never clamped up to 1. MFL serves no live scoring
   // before the Week 1 Thursday, and clamping is what hides that gap: a week-1
   // request in the September pre-kickoff window fails against a perfectly
@@ -92,6 +98,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
 
   if (!week) {
     const empty = { ok: true, week: 0, leagues: [], playerMeta: {}, preSeason: true };
+    await tradeCapture;
     return new Response(
       JSON.stringify(mflOnly ? { ...empty, ...mflLiveAppCadence(empty, kickoffs, Date.now()) } : empty),
       { status: 200, headers: NO_STORE },
@@ -110,6 +117,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       leaguesCookie: await readMflLiveSelection(user, cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value),
       mflOnly,
     });
+    await tradeCapture;
     return new Response(JSON.stringify(mflOnly ? toMflLiveAppBoard(board, kickoffs) : board), {
       status: 200,
       headers: NO_STORE,
@@ -121,6 +129,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     // The app still gets a poll hint, so a failed read is retried on the
     // schedule's cadence rather than never.
     const failed = { ok: false, week, leagues: [], playerMeta: {} };
+    await tradeCapture;
     return new Response(
       JSON.stringify(mflOnly ? { ...failed, ...mflLiveAppCadence(failed, kickoffs, Date.now()) } : failed),
       { status: 200, headers: NO_STORE },
