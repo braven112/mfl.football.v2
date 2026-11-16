@@ -786,7 +786,7 @@
   }
 }
 
-/* Rex Ordbook, the historian who answers (src/data/historian.ts): his byline
+/* Buck Archives, the historian who answers (src/data/historian.ts): his byline
    on every answer, and his introduction on the ask screen. The badge carries
    its own disc, so it needs no background; a gold ring (outline, which follows the radius) ties it to
    the history palette in both themes. */
@@ -821,13 +821,13 @@
   content: '·';
   margin-right: 0.5rem;
 }
-.hask-rex {
+.hask-buck {
   display: flex;
   align-items: center;
   gap: 0.875rem;
   margin: 0 0 1.25rem;
 }
-.hask-rex__avatar {
+.hask-buck__avatar {
   flex: none;
   width: 4.5rem;
   height: 4.5rem;
@@ -835,18 +835,18 @@
   border-radius: 50%;
   outline: 5px solid var(--history-gold-wash);
 }
-.hask-rex__text {
+.hask-buck__text {
   display: grid;
   gap: 0.125rem;
   margin: 0;
 }
-.hask-rex__name {
+.hask-buck__name {
   font-family: var(--font-display);
   font-size: var(--font-size-xl, 1.5rem);
   line-height: 1;
   text-transform: uppercase;
 }
-.hask-rex__role {
+.hask-buck__role {
   color: var(--content-text-muted);
   font-size: var(--font-size-sm);
 }

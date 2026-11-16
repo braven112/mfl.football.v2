@@ -5,12 +5,12 @@
  * src/data/mfl-services.ts. Belongs to mfl.football alone, like every service page.
  */
 import ServicePage from '../components/shared/marketing/ServicePage.astro';
-import AskRexDemo from '../components/shared/marketing/AskRexDemo.astro';
+import AskBuckDemo from '../components/shared/marketing/AskBuckDemo.astro';
 import { findService } from '../data/mfl-services';
 
 export const prerender = false;
 ---
 
 <ServicePage service={findService('ask-the-history')}>
-	<AskRexDemo slot="sample" />
+	<AskBuckDemo slot="sample" />
 </ServicePage>

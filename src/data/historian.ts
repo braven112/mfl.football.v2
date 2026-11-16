@@ -1,6 +1,6 @@
 /**
- * Rex Ordbook — the historian who speaks for Ask the History (Brandon,
- * 2026-11-16; the name is a pun on "record book"). He is to Ask the History
+ * Buck Archives — the historian who speaks for Ask the History (Brandon,
+ * 2026-11-16; an old-school name for the keeper of the archives). He is to Ask the History
  * what Max Insider is to the AI Beat Reporter: the face and byline on the
  * product page, the homepage card, and every answer.
  *
@@ -9,9 +9,9 @@
  * an answer (the intro, the "working" line), never in the answer itself.
  */
 export const HISTORIAN = Object.freeze({
-  name: 'Rex Ordbook',
+  name: 'Buck Archives',
   role: 'League historian',
   /** 512px round badge; shown from ~2rem up to 16rem. */
-  avatar: '/assets/rex-ordbook-avatar.webp',
-  alt: 'Rex Ordbook, the Ask the History league historian',
+  avatar: '/assets/buck-archives-avatar.webp',
+  alt: 'Buck Archives, the Ask the History league historian',
 });

@@ -91,11 +91,11 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     <div class="hask-thread" data-hask-thread>
       {!parent && (
         <div class="hask-intro" data-hask-intro>
-          <div class="hask-rex">
-            <img class="hask-rex__avatar" src={HISTORIAN.avatar} width="72" height="72" alt={HISTORIAN.alt} />
-            <p class="hask-rex__text">
-              <span class="hask-rex__name">{HISTORIAN.name}</span>
-              <span class="hask-rex__role">{HISTORIAN.role} · keeper of {league.name}’s record book</span>
+          <div class="hask-buck">
+            <img class="hask-buck__avatar" src={HISTORIAN.avatar} width="72" height="72" alt={HISTORIAN.alt} />
+            <p class="hask-buck__text">
+              <span class="hask-buck__name">{HISTORIAN.name}</span>
+              <span class="hask-buck__role">{HISTORIAN.role} · keeper of {league.name}’s archives</span>
             </p>
           </div>
           <p class="hask-intro__kicker">{guest ? 'Try it on a real league' : 'Stats lookup'}</p>
@@ -223,7 +223,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     const turn = el('section', 'hask-turn');
     const q = el('p', 'hask-asked');
     q.append(el('span', 'hask-asked__kicker', n === 0 ? 'You asked' : 'Then you asked'), question);
-    const pending = el('div', 'hask-pending', 'Rex is going through the record book…');
+    const pending = el('div', 'hask-pending', 'Buck is digging through the archives…');
     pending.setAttribute('role', 'status');
     turn.append(q, pending);
     thread.append(turn);

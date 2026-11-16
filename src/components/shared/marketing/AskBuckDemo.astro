@@ -1,7 +1,7 @@
 ---
 /**
  * The /ask-the-history product page's live demo (Brandon, 2026-11-16: "Both"):
- * a box to ask Rex Ordbook about a real league right on the page, with a few
+ * a box to ask Buck Archives about a real league right on the page, with a few
  * real answers already showing underneath so the page never looks empty.
  *
  * Asking goes through the same guest path as the league's own ask screen
@@ -29,47 +29,47 @@ const host = Astro.url.hostname;
 const base = league ? crossHostLeagueHref(host, `/${league.slug}/history`).replace(/\/history$/, '') : '';
 const askScreen = league ? crossHostLeagueHref(host, `/${league.slug}/history/ask`) : '';
 // Answer cards color by team (--team-accent-<id>); this host's <html> has no league, so re-home them here.
-const accentCss = league ? buildTeamAccentCss(league.navSlug as LeagueSlug, '.rexd') : '';
+const accentCss = league ? buildTeamAccentCss(league.navSlug as LeagueSlug, '.buckd') : '';
 const sampled = new Set<string>(DEMO_QUESTIONS);
 const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.has(q)).slice(0, 3);
 ---
 
 {league && (
-  <section class="sp-section rexd" aria-labelledby="rexd-h" data-rexd data-league={league.slug} data-base={base} data-ask-url={askScreen}>
+  <section class="sp-section buckd" aria-labelledby="buckd-h" data-buckd data-league={league.slug} data-base={base} data-ask-url={askScreen}>
     {accentCss && <style is:inline set:html={accentCss} />}
     <div class="sp-head">
       <div class="sp-head__title">
         <p class="sp-eyebrow">Try it now</p>
-        <h2 id="rexd-h">Ask Rex about a real league</h2>
+        <h2 id="buckd-h">Ask Buck about a real league</h2>
       </div>
     </div>
 
-    <div class="rexd__panel">
-      <div class="rexd__who">
-        <img class="rexd__avatar" src={HISTORIAN.avatar} width="64" height="64" alt={HISTORIAN.alt} />
-        <p class="rexd__intro">
-          <span class="rexd__name">{HISTORIAN.name}</span>
-          <span class="rexd__lede">Ask anything about {league.name}, a real MFL league with every season on record. Owner names are hidden. {GUEST_FREE_QUESTIONS} free questions a day.</span>
+    <div class="buckd__panel">
+      <div class="buckd__who">
+        <img class="buckd__avatar" src={HISTORIAN.avatar} width="64" height="64" alt={HISTORIAN.alt} />
+        <p class="buckd__intro">
+          <span class="buckd__name">{HISTORIAN.name}</span>
+          <span class="buckd__lede">Ask anything about {league.name}, a real MFL league with every season on record. Owner names are hidden. {GUEST_FREE_QUESTIONS} free questions a day.</span>
         </p>
       </div>
 
-      <form class="hask-form rexd__form" data-rexd-form>
-        <label class="visually-hidden" for="rexd-q">Your question for Rex</label>
-        <input id="rexd-q" class="hask-input" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder={`Ask about ${league.name}…`} required />
+      <form class="hask-form buckd__form" data-buckd-form>
+        <label class="visually-hidden" for="buckd-q">Your question for Buck</label>
+        <input id="buckd-q" class="hask-input" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder={`Ask about ${league.name}…`} required />
         <button class="hask-send" type="submit" aria-label="Ask">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
         </button>
       </form>
-      <div class="rexd__chips" aria-label="Questions to try">
-        {chips.map((q: string) => <button class="hask-suggest" type="button" data-rexd-ask>{q}</button>)}
+      <div class="buckd__chips" aria-label="Questions to try">
+        {chips.map((q: string) => <button class="hask-suggest" type="button" data-buckd-ask>{q}</button>)}
       </div>
-      <p class="rexd__status" data-rexd-status role="status" aria-live="polite"></p>
-      <div class="rexd__thread" data-rexd-thread></div>
+      <p class="buckd__status" data-buckd-status role="status" aria-live="polite"></p>
+      <div class="buckd__thread" data-buckd-thread></div>
     </div>
 
-    <div class="rexd__samples" data-rexd-samples hidden>
-      <h3 class="rexd__samples-h">Rex has already answered</h3>
-      <div class="rexd__sample-list" data-rexd-sample-list></div>
+    <div class="buckd__samples" data-buckd-samples hidden>
+      <h3 class="buckd__samples-h">Buck has already answered</h3>
+      <div class="buckd__sample-list" data-buckd-sample-list></div>
     </div>
   </section>
 )}
@@ -77,7 +77,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
 <style>
   /* The answer cards (history-ask.css) read league-page tokens this host does
      not set; map them onto the Soft Premium ones for this section only. */
-  .rexd {
+  .buckd {
     --card-bg: var(--sp-surface);
     --page-text: var(--sp-ink);
     --content-text-muted: var(--sp-muted);
@@ -85,7 +85,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
     --page-bg: var(--sp-bg, transparent);
   }
 
-  .rexd__panel {
+  .buckd__panel {
     display: grid;
     gap: 0.875rem;
     padding: clamp(1rem, 3vw, 1.5rem);
@@ -96,13 +96,13 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
     box-shadow: var(--sp-shadow);
   }
 
-  .rexd__who {
+  .buckd__who {
     display: flex;
     align-items: flex-start;
     gap: 0.875rem;
   }
 
-  .rexd__avatar {
+  .buckd__avatar {
     flex: none;
     width: 4rem;
     height: 4rem;
@@ -111,36 +111,36 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
     outline: 5px solid var(--history-gold-wash);
   }
 
-  .rexd__intro {
+  .buckd__intro {
     display: grid;
     gap: 0.2rem;
     margin: 0;
   }
 
-  .rexd__name {
+  .buckd__name {
     font-weight: 800;
     font-size: var(--sp-text-lg);
     letter-spacing: -0.01em;
   }
 
-  .rexd__lede {
+  .buckd__lede {
     color: var(--sp-muted);
     font-size: var(--sp-text-md);
     line-height: 1.45;
   }
 
-  .rexd__form {
+  .buckd__form {
     margin: 0;
   }
 
-  .rexd__chips {
+  .buckd__chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
 
   /* The ask screen's chips scroll in one row; here they wrap, so none is cut off on a phone. */
-  .rexd__chips .hask-suggest {
+  .buckd__chips .hask-suggest {
     flex: 0 1 auto;
     min-height: 2.5rem;
     padding-block: 0.4rem;
@@ -148,30 +148,30 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
     white-space: normal;
   }
 
-  .rexd__status:empty {
+  .buckd__status:empty {
     display: none;
   }
 
-  .rexd__status {
+  .buckd__status {
     margin: 0;
     color: var(--sp-muted);
     font-size: var(--sp-text-md);
   }
 
-  .rexd__thread:empty {
+  .buckd__thread:empty {
     display: none;
   }
 
-  .rexd__samples {
+  .buckd__samples {
     margin-top: 1.5rem;
   }
 
-  .rexd__samples-h {
+  .buckd__samples-h {
     margin: 0 0 0.25rem;
     font-size: var(--sp-text-lg);
   }
 
-  .rexd__sample-list {
+  .buckd__sample-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
     gap: 0 1rem;
@@ -179,20 +179,20 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   }
 
   /* Each turn: "You asked" + the answer card, as on the ask screen. */
-  .rexd :global(.rexd__turn) {
+  .buckd :global(.buckd__turn) {
     margin-top: 1rem;
   }
 
   /* The question over each card: one step under the section's h3, not over it. */
-  .rexd :global(.rexd__turn .hask-asked) {
+  .buckd :global(.buckd__turn .hask-asked) {
     font-size: var(--sp-text-md);
   }
 
-  .rexd :global(.rexd__turn .ha-answer) {
+  .buckd :global(.buckd__turn .ha-answer) {
     margin-top: 0.5rem;
   }
 
-  .rexd :global(.rexd__more) {
+  .buckd :global(.buckd__more) {
     display: inline-block;
     margin-top: 0.625rem;
   }
@@ -209,7 +209,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   };
 
   function turnFor(question: string, kicker: string): HTMLElement {
-    const turn = el('section', 'rexd__turn');
+    const turn = el('section', 'buckd__turn');
     const q = el('p', 'hask-asked');
     q.append(el('span', 'hask-asked__kicker', kicker), question);
     turn.append(q);
@@ -217,7 +217,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   }
 
   function continueLink(root: HTMLElement, id: string | null, label: string): HTMLAnchorElement {
-    const a = el('a', 'cta-link rexd__more', label) as HTMLAnchorElement;
+    const a = el('a', 'cta-link buckd__more', label) as HTMLAnchorElement;
     const url = new URL(root.dataset.askUrl ?? '', location.href);
     if (id) url.searchParams.set('after', id);
     a.href = url.toString();
@@ -225,13 +225,13 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   }
 
   async function ask(root: HTMLElement, question: string) {
-    const thread = root.querySelector<HTMLElement>('[data-rexd-thread]');
-    const status = root.querySelector<HTMLElement>('[data-rexd-status]');
+    const thread = root.querySelector<HTMLElement>('[data-buckd-thread]');
+    const status = root.querySelector<HTMLElement>('[data-buckd-status]');
     if (!thread || !status || root.dataset.busy) return false;
     root.dataset.busy = 'true';
     status.textContent = '';
     const turn = turnFor(question, 'You asked');
-    const pending = el('div', 'hask-pending', 'Rex is going through the record book…');
+    const pending = el('div', 'hask-pending', 'Buck is digging through the archives…');
     pending.setAttribute('role', 'status');
     turn.append(pending);
     thread.prepend(turn);
@@ -253,7 +253,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
         return false;
       }
       pending.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
-      turn.append(continueLink(root, data.id, 'Ask Rex a follow-up'));
+      turn.append(continueLink(root, data.id, 'Ask Buck a follow-up'));
       const left = data.guest ? Math.max(0, data.guest.limit - data.guest.used) : null;
       if (left !== null) status.textContent = left > 0 ? `${left} free ${left === 1 ? 'question' : 'questions'} left today.` : 'That was today’s last free question.';
       return true;
@@ -267,8 +267,8 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   }
 
   async function loadSamples(root: HTMLElement, tries = 0) {
-    const box = root.querySelector<HTMLElement>('[data-rexd-samples]');
-    const list = root.querySelector<HTMLElement>('[data-rexd-sample-list]');
+    const box = root.querySelector<HTMLElement>('[data-buckd-samples]');
+    const list = root.querySelector<HTMLElement>('[data-buckd-sample-list]');
     if (!box || !list) return;
     try {
       const res = await fetch(`/api/league-history/demo-samples?league=${encodeURIComponent(root.dataset.league ?? '')}`);
@@ -289,10 +289,10 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
   }
 
   function init() {
-    const root = document.querySelector<HTMLElement>('[data-rexd]');
+    const root = document.querySelector<HTMLElement>('[data-buckd]');
     if (!root || root.dataset.init) return;
     root.dataset.init = 'true';
-    const form = root.querySelector<HTMLFormElement>('[data-rexd-form]');
+    const form = root.querySelector<HTMLFormElement>('[data-buckd-form]');
     const input = form?.querySelector<HTMLInputElement>('input');
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -302,7 +302,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
       if (!(await ask(root, q))) input.value = q;
     });
     root.addEventListener('click', (event) => {
-      const chip = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-rexd-ask]');
+      const chip = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-buckd-ask]');
       if (chip) void ask(root, chip.textContent?.trim() ?? '');
     });
     void loadSamples(root);

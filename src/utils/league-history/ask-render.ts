@@ -34,7 +34,7 @@ export function answerTeam(table: AskTable | null | undefined): string | null {
   return id && /^[A-Za-z0-9_-]{1,16}$/.test(id) ? id : null;
 }
 
-/** Rex Ordbook's byline, the speaker of every answer (HistoryAnswer.astro prints the same). */
+/** Buck Archives's byline, the speaker of every answer (HistoryAnswer.astro prints the same). */
 export function historianByline(): HTMLElement {
   const by = el('p', 'ha-by');
   const img = el('img', 'ha-by__avatar');
