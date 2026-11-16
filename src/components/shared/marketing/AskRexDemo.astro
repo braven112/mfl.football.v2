@@ -1,0 +1,314 @@
+---
+/**
+ * The /ask-the-history product page's live demo (Brandon, 2026-11-16: "Both"):
+ * a box to ask Rex Ordbook about a real league right on the page, with a few
+ * real answers already showing underneath so the page never looks empty.
+ *
+ * Asking goes through the same guest path as the league's own ask screen
+ * (POST /api/league-history/ask as a signed-out visitor): the public demo
+ * league, owner names masked, a few free questions a day. The samples come
+ * from /api/league-history/demo-samples (a week-long cache of real, masked
+ * answers). Answers are drawn by ask-render.ts, exactly as on the ask screen.
+ *
+ * This host does not serve league pages, so every link out of an answer goes
+ * to the league's own domain: `base` is built through crossHostLeagueHref.
+ */
+import '../../../styles/history-ask.css';
+import '../../../styles/record-charts.css';
+import { crossHostLeagueHref, getLeagueBySlug } from '../../../config/leagues';
+import { GUEST_ASK_LEAGUES, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
+import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
+import { DEMO_QUESTIONS } from '../../../utils/league-history/demo-samples';
+import { buildTeamAccentCss } from '../../../utils/team-accent-css';
+import { HISTORIAN } from '../../../data/historian';
+import type { LeagueSlug } from '../../../types/nav';
+
+const league = getLeagueBySlug(GUEST_ASK_LEAGUES[0] ?? '');
+const host = Astro.url.hostname;
+// '/theleague' on a preview or localhost, 'https://theleague.us' on mfl.football.
+const base = league ? crossHostLeagueHref(host, `/${league.slug}/history`).replace(/\/history$/, '') : '';
+const askScreen = league ? crossHostLeagueHref(host, `/${league.slug}/history/ask`) : '';
+// Answer cards color by team (--team-accent-<id>); this host's <html> has no league, so re-home them here.
+const accentCss = league ? buildTeamAccentCss(league.navSlug as LeagueSlug, '.rexd') : '';
+const sampled = new Set<string>(DEMO_QUESTIONS);
+const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.has(q)).slice(0, 3);
+---
+
+{league && (
+  <section class="sp-section rexd" aria-labelledby="rexd-h" data-rexd data-league={league.slug} data-base={base} data-ask-url={askScreen}>
+    {accentCss && <style is:inline set:html={accentCss} />}
+    <div class="sp-head">
+      <div class="sp-head__title">
+        <p class="sp-eyebrow">Try it now</p>
+        <h2 id="rexd-h">Ask Rex about a real league</h2>
+      </div>
+    </div>
+
+    <div class="rexd__panel">
+      <div class="rexd__who">
+        <img class="rexd__avatar" src={HISTORIAN.avatar} width="64" height="64" alt={HISTORIAN.alt} />
+        <p class="rexd__intro">
+          <span class="rexd__name">{HISTORIAN.name}</span>
+          <span class="rexd__lede">Ask anything about {league.name}, a real MFL league with every season on record. Owner names are hidden. {GUEST_FREE_QUESTIONS} free questions a day.</span>
+        </p>
+      </div>
+
+      <form class="hask-form rexd__form" data-rexd-form>
+        <label class="visually-hidden" for="rexd-q">Your question for Rex</label>
+        <input id="rexd-q" class="hask-input" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder={`Ask about ${league.name}…`} required />
+        <button class="hask-send" type="submit" aria-label="Ask">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+        </button>
+      </form>
+      <div class="rexd__chips" aria-label="Questions to try">
+        {chips.map((q: string) => <button class="hask-suggest" type="button" data-rexd-ask>{q}</button>)}
+      </div>
+      <p class="rexd__status" data-rexd-status role="status" aria-live="polite"></p>
+      <div class="rexd__thread" data-rexd-thread></div>
+    </div>
+
+    <div class="rexd__samples" data-rexd-samples hidden>
+      <h3 class="rexd__samples-h">Rex has already answered</h3>
+      <div class="rexd__sample-list" data-rexd-sample-list></div>
+    </div>
+  </section>
+)}
+
+<style>
+  /* The answer cards (history-ask.css) read league-page tokens this host does
+     not set; map them onto the Soft Premium ones for this section only. */
+  .rexd {
+    --card-bg: var(--sp-surface);
+    --page-text: var(--sp-ink);
+    --content-text-muted: var(--sp-muted);
+    --content-border: var(--sp-line);
+    --page-bg: var(--sp-bg, transparent);
+  }
+
+  .rexd__panel {
+    display: grid;
+    gap: 0.875rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-line);
+    border-top: 4px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--sp-shadow);
+  }
+
+  .rexd__who {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .rexd__avatar {
+    flex: none;
+    width: 4rem;
+    height: 4rem;
+    border: 2px solid var(--history-gold);
+    border-radius: 50%;
+    outline: 5px solid var(--history-gold-wash);
+  }
+
+  .rexd__intro {
+    display: grid;
+    gap: 0.2rem;
+    margin: 0;
+  }
+
+  .rexd__name {
+    font-weight: 800;
+    font-size: var(--sp-text-lg);
+    letter-spacing: -0.01em;
+  }
+
+  .rexd__lede {
+    color: var(--sp-muted);
+    font-size: var(--sp-text-md);
+    line-height: 1.45;
+  }
+
+  .rexd__form {
+    margin: 0;
+  }
+
+  .rexd__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* The ask screen's chips scroll in one row; here they wrap, so none is cut off on a phone. */
+  .rexd__chips .hask-suggest {
+    flex: 0 1 auto;
+    min-height: 2.5rem;
+    padding-block: 0.4rem;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .rexd__status:empty {
+    display: none;
+  }
+
+  .rexd__status {
+    margin: 0;
+    color: var(--sp-muted);
+    font-size: var(--sp-text-md);
+  }
+
+  .rexd__thread:empty {
+    display: none;
+  }
+
+  .rexd__samples {
+    margin-top: 1.5rem;
+  }
+
+  .rexd__samples-h {
+    margin: 0 0 0.25rem;
+    font-size: var(--sp-text-lg);
+  }
+
+  .rexd__sample-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 0 1rem;
+    align-items: start;
+  }
+
+  /* Each turn: "You asked" + the answer card, as on the ask screen. */
+  .rexd :global(.rexd__turn) {
+    margin-top: 1rem;
+  }
+
+  /* The question over each card: one step under the section's h3, not over it. */
+  .rexd :global(.rexd__turn .hask-asked) {
+    font-size: var(--sp-text-md);
+  }
+
+  .rexd :global(.rexd__turn .ha-answer) {
+    margin-top: 0.5rem;
+  }
+
+  .rexd :global(.rexd__more) {
+    display: inline-block;
+    margin-top: 0.625rem;
+  }
+</style>
+
+<script>
+  import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
+
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  function turnFor(question: string, kicker: string): HTMLElement {
+    const turn = el('section', 'rexd__turn');
+    const q = el('p', 'hask-asked');
+    q.append(el('span', 'hask-asked__kicker', kicker), question);
+    turn.append(q);
+    return turn;
+  }
+
+  function continueLink(root: HTMLElement, id: string | null, label: string): HTMLAnchorElement {
+    const a = el('a', 'cta-link rexd__more', label) as HTMLAnchorElement;
+    const url = new URL(root.dataset.askUrl ?? '', location.href);
+    if (id) url.searchParams.set('after', id);
+    a.href = url.toString();
+    return a;
+  }
+
+  async function ask(root: HTMLElement, question: string) {
+    const thread = root.querySelector<HTMLElement>('[data-rexd-thread]');
+    const status = root.querySelector<HTMLElement>('[data-rexd-status]');
+    if (!thread || !status || root.dataset.busy) return false;
+    root.dataset.busy = 'true';
+    status.textContent = '';
+    const turn = turnFor(question, 'You asked');
+    const pending = el('div', 'hask-pending', 'Rex is going through the record book…');
+    pending.setAttribute('role', 'status');
+    turn.append(pending);
+    thread.prepend(turn);
+
+    try {
+      const res = await fetch('/api/league-history/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ league: root.dataset.league, question }),
+      });
+      const data = (await res.json().catch(() => ({}))) as ClientAnswer & {
+        guest?: { used: number; limit: number; hasEmail: boolean } | null;
+        needEmail?: boolean;
+      };
+      if (!res.ok || data.error) {
+        turn.remove();
+        status.textContent = data.error ?? 'Something went wrong. Try again.';
+        if (res.status === 429) status.append(' ', continueLink(root, null, 'Keep asking on the league’s own page'));
+        return false;
+      }
+      pending.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
+      turn.append(continueLink(root, data.id, 'Ask Rex a follow-up'));
+      const left = data.guest ? Math.max(0, data.guest.limit - data.guest.used) : null;
+      if (left !== null) status.textContent = left > 0 ? `${left} free ${left === 1 ? 'question' : 'questions'} left today.` : 'That was today’s last free question.';
+      return true;
+    } catch {
+      turn.remove();
+      status.textContent = 'Lost the connection. Try again.';
+      return false;
+    } finally {
+      delete root.dataset.busy;
+    }
+  }
+
+  async function loadSamples(root: HTMLElement, tries = 0) {
+    const box = root.querySelector<HTMLElement>('[data-rexd-samples]');
+    const list = root.querySelector<HTMLElement>('[data-rexd-sample-list]');
+    if (!box || !list) return;
+    try {
+      const res = await fetch(`/api/league-history/demo-samples?league=${encodeURIComponent(root.dataset.league ?? '')}`);
+      const data = (await res.json()) as { samples?: ClientAnswer[]; pending?: boolean };
+      if (data.pending && tries < 8) return void setTimeout(() => void loadSamples(root, tries + 1), 5000);
+      if (!data.samples?.length) return;
+      list.replaceChildren(
+        ...data.samples.map((s) => {
+          const turn = turnFor(s.question, 'Asked');
+          turn.append(renderAnswer({ ...s, id: null }, root.dataset.base ?? ''));
+          return turn;
+        }),
+      );
+      box.hidden = false;
+    } catch {
+      /* The live box stands on its own. */
+    }
+  }
+
+  function init() {
+    const root = document.querySelector<HTMLElement>('[data-rexd]');
+    if (!root || root.dataset.init) return;
+    root.dataset.init = 'true';
+    const form = root.querySelector<HTMLFormElement>('[data-rexd-form]');
+    const input = form?.querySelector<HTMLInputElement>('input');
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const q = input?.value.trim() ?? '';
+      if (!q || !input) return;
+      input.value = '';
+      if (!(await ask(root, q))) input.value = q;
+    });
+    root.addEventListener('click', (event) => {
+      const chip = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-rexd-ask]');
+      if (chip) void ask(root, chip.textContent?.trim() ?? '');
+    });
+    void loadSamples(root);
+  }
+
+  // The splash layout has no ClientRouter, so init now; astro:page-load covers a router if one is added.
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>

@@ -42,7 +42,7 @@ import {
 	spendGuestQuestion,
 	type GuestAllowance,
 } from '../../../utils/league-history/guest-ask';
-import { guestMasker, maskDataset, maskValue, type NameMasker } from '../../../utils/league-history/guest-mask';
+import { guestMasker, maskAskData, maskValue } from '../../../utils/league-history/guest-mask';
 import { recordFunnel } from '../../../utils/history-funnel';
 import { aiModelForLeague } from '../../../utils/ai-plan.mjs';
 import { recordAiUsage } from '../../../utils/ai-usage';
@@ -57,20 +57,6 @@ function json(data: unknown, status = 200, setCookie?: string): Response {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 	if (setCookie) headers['Set-Cookie'] = setCookie;
 	return new Response(JSON.stringify(data), { status, headers });
-}
-
-/** A guest's dataset: every loaded file masked once per instance (each is the loader's cached object). */
-function maskAskData(ds: AskData, mask: NameMasker): AskData {
-	const m = <T,>(v: T): T => (v && typeof v === 'object' ? maskDataset(v as object, mask) : v) as T;
-	const c = ds.competitions;
-	return {
-		history: m(ds.history),
-		players: m(ds.players),
-		moves: m(ds.moves),
-		competitions: c
-			? { tierCompetition: m(c.tierCompetition), tierHistory: m(c.tierHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
-			: c,
-	};
 }
 
 /** GET → where a signed-out visitor stands today, for the ask screen's counter. */

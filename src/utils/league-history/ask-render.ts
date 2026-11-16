@@ -39,8 +39,8 @@ export function historianByline(): HTMLElement {
   const by = el('p', 'ha-by');
   const img = el('img', 'ha-by__avatar');
   img.src = HISTORIAN.avatar;
-  img.width = 512;
-  img.height = 512;
+  img.width = 32;
+  img.height = 32;
   img.alt = '';
   img.decoding = 'async';
   by.append(img, el('span', 'ha-by__name', HISTORIAN.name), el('span', 'ha-by__role', HISTORIAN.role));
