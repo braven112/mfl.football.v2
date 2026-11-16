@@ -240,7 +240,10 @@
 .ha-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* The gold number sits centered against the white label beside it, so a
+     two- or three-line label reads as one block with it (Brandon, 2026-11-16:
+     on baseline the label hung below the number). */
+  align-items: center;
   gap: 0.25rem 0.75rem;
   margin: 0 0 0.5rem;
 }
@@ -784,4 +787,74 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Buck Archives, the historian who answers (src/data/historian.ts): his byline
+   on every answer, and his introduction on the ask screen. The badge carries
+   its own disc, so it needs no background; a gold ring (outline, which follows the radius) ties it to
+   the history palette in both themes. */
+/* The byline is the card's header row: a hairline under it keeps the big
+   stat from butting up against the avatar. */
+.ha-by {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  line-height: 1.2;
+  border-bottom: 1px solid var(--content-border);
+}
+.ha-by__avatar {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  outline: 1.5px solid var(--history-gold);
+}
+.ha-by__name {
+  color: var(--page-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+.ha-by__role {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.ha-by__role::before {
+  content: '·';
+  margin-right: 0.5rem;
+}
+.hask-buck {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin: 0 0 1.25rem;
+}
+.hask-buck__avatar {
+  flex: none;
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 2px solid var(--history-gold);
+  border-radius: 50%;
+  outline: 5px solid var(--history-gold-wash);
+}
+.hask-buck__text {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+}
+.hask-buck__name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl, 1.5rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+.hask-buck__role {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+/* The big stat's 0.9 line-height lets its digits rise into the space above;
+   under the byline that read as touching the divider. */
+.ha-by + .ha-head {
+  padding-top: 0.5rem;
 }

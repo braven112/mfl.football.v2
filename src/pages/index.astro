@@ -11,6 +11,7 @@ import {
 } from '../data/pricing';
 import { siteExampleLeagues } from '../data/league-showcase';
 import { FORMER_BRAND, SITE_FOOTER_LINKS, SITE_HEADER_LINKS, findService } from '../data/mfl-services';
+import { HISTORIAN } from '../data/historian';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 // ── What this page is for ─────────────────────────────────────────────────
@@ -49,7 +50,8 @@ const PRODUCTS = [
     href: history.path,
     kicker: 'League history',
     name: 'Ask the History',
-    pitch: 'Every season of your league in one place, and an AI that answers anything about its past.',
+    pitch: 'Every season of your league in one place, and Buck Archives, a historian who answers anything about its past.',
+    avatar: { src: HISTORIAN.avatar, alt: HISTORIAN.name },
     price: dollars(HISTORY_PRICE_YEAR),
     unit: 'a year',
     points: ['Ask any question in plain English', 'Champions, records and rivalries', 'Every franchise and owner'],
@@ -61,6 +63,7 @@ const PRODUCTS = [
     kicker: 'AI beat reporter',
     name: 'Max Insider',
     pitch: 'Your league’s own insider. He breaks every trade and move and writes the weekly columns.',
+    avatar: { src: '/assets/beat-reporter-avatar.webp', alt: 'Max Insider' },
     price: dollars(BEAT_REPORTER_PRICE_YEAR),
     unit: 'a year',
     points: ['Breaking news, minutes after a move', 'Weekly columns about your league', 'Right on your MFL home page'],
@@ -102,9 +105,7 @@ const PRODUCTS = [
       <article class={`prod prod--${p.key}`}>
         <div class="prod__head">
           <p class="prod__kicker">{p.kicker}</p>
-          {p.key === 'reporter' && (
-            <img class="prod__avatar" src="/assets/beat-reporter-avatar.webp" width="256" height="256" alt="Max Insider" />
-          )}
+          <img class="prod__avatar" src={p.avatar.src} width="256" height="256" alt={p.avatar.alt} />
         </div>
         <h2 class="prod__name">{p.name}</h2>
         <p class="prod__pitch">{p.pitch}</p>

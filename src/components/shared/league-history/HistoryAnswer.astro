@@ -10,6 +10,7 @@ import '../../../styles/history-ask.css';
 import '../../../styles/record-charts.css';
 import type { AskHeadline, AskRecordLink, AskTable } from '../../../utils/league-history/ask';
 import { answerTeam, receipt, rowsLabel } from '../../../utils/league-history/ask-render';
+import { HISTORIAN } from '../../../data/historian';
 import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
 
 interface Props {
@@ -34,6 +35,11 @@ const charts = answerCharts(table?.chart, base);
 
 <article class="ha-answer" style={team ? `--ha-team: var(--team-accent-${team}, var(--history-gold))` : undefined}>
   {question && <p class="ha-answer__q">{question}</p>}
+  <p class="ha-by">
+    <img class="ha-by__avatar" src={HISTORIAN.avatar} width="32" height="32" alt="" loading="lazy" decoding="async" />
+    <span class="ha-by__name">{HISTORIAN.name}</span>
+    <span class="ha-by__role">{HISTORIAN.role}</span>
+  </p>
   {headline && (
     <div class="ha-head">
       <span class="ha-head__value">{headline.value}</span>

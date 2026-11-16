@@ -77,7 +77,7 @@ export function isMflOrigin(origin) {
  */
 export function isLeagueDeskPost(p) {
   const author = p?.authorId ?? 'claude';
-  return (author === 'claude' || author === 'roger') && !String(p?.id ?? '').startsWith('wire_');
+  return (author === 'claude' || author === 'roger' || author === 'buck-archives') && !String(p?.id ?? '').startsWith('wire_');
 }
 
 /**
@@ -192,6 +192,7 @@ function badgeFor(post) {
   if (post.type === 'injury') return 'Injury';
   if (post.type === 'ask-roger') return 'Commish';
   if (post.authorId === 'nfl-draft') return 'Draft';
+  if (post.authorId === 'buck-archives') return 'History';
   if (post.type === 'external') return 'NFL';
   if (post.type === 'article' || post.type === 'matchup-preview' || post.type === 'power-ranking') return 'Column';
   if (post.type === 'milestone' || post.transactionSubType === 'milestone') return 'Milestone';

@@ -9,6 +9,7 @@
  */
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadLeagueData, onLeagueDataChange } from '../league-data';
+import type { AskData } from './ask';
 import { GUEST_MASKED_LEAGUES, buildNameMasker, maskJson, ownerStandIns } from './guest-names.mjs';
 
 export type NameMasker = (text: string) => string;
@@ -80,4 +81,18 @@ export async function maskHtmlResponse(response: Response, slug: string): Promis
   // A masked page and a real one share a URL; neither may be cached for the other.
   headers.set('Cache-Control', 'private, no-store');
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
+}
+
+/** A guest's dataset: every loaded file masked once per instance (each is the loader's cached object). */
+export function maskAskData(ds: AskData, mask: NameMasker): AskData {
+  const m = <T,>(v: T): T => (v && typeof v === 'object' ? maskDataset(v as object, mask) : v) as T;
+  const c = ds.competitions;
+  return {
+    history: m(ds.history),
+    players: m(ds.players),
+    moves: m(ds.moves),
+    competitions: c
+      ? { tierCompetition: m(c.tierCompetition), tierHistory: m(c.tierHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
+      : c,
+  };
 }

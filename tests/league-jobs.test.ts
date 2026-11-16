@@ -45,6 +45,8 @@ describe('today’s leagues per job', () => {
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-release': ['theleague', 'afl-fantasy'],
     'article:matchup-preview': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
+    // Feed on, League History on, and a Record Book page to link to.
+    'article:history-notebook': ['theleague', 'afl-fantasy'],
     'article:weekly': ['theleague'],
   };
 
@@ -85,7 +87,7 @@ describe('a registry-only league', () => {
   });
 
   it('runs no AI job with its boxes unticked', () => {
-    for (const job of ['pecking-order', 'article:schedule-strength', 'article:schedule-release', 'article:matchup-preview', 'article:weekly']) {
+    for (const job of ['pecking-order', 'article:schedule-strength', 'article:schedule-release', 'article:matchup-preview', 'article:history-notebook', 'article:weekly']) {
       expect(slugs(job, [off]), job).toEqual([]);
     }
   });

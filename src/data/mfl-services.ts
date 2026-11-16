@@ -15,6 +15,7 @@
  * homepage, these pages and /pricing can never disagree. Every paid service is
  * still a "coming soon" door (ProductInterest) until it is on sale.
  */
+import { HISTORIAN } from './historian';
 import { SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE } from './products';
 import {
 	BEAT_REPORTER_PRICE_YEAR,
@@ -95,11 +96,12 @@ export const SERVICES: Service[] = [
 		description: `Every season of your MyFantasyLeague league in one place, and an AI you can ask anything about its past. ${dollars(HISTORY_PRICE_YEAR)} a year per league.`,
 		eyebrow: 'Ask the History',
 		h1: 'Ask the History for your MFL league',
-		answer: `MFL.football (formerly MFL Addons) turns every season of a MyFantasyLeague league into one history site: champions, records, rivalries and every franchise and owner, plus Ask the History, an AI that answers any question about your league’s past. It is ${dollars(HISTORY_PRICE_YEAR)} a year per league.`,
+		answer: `MFL.football (formerly MFL Addons) turns every season of a MyFantasyLeague league into one history site: champions, records, rivalries and every franchise and owner, plus Buck Archives, an AI league historian who answers any question about your league’s past. It is ${dollars(HISTORY_PRICE_YEAR)} a year per league.`,
 		lede: 'Ask who has won the most titles, which rivalry is the most lopsided, or what happened the last time two teams met in the playoffs. Answers come from your league’s own records, every season back to the first.',
 		price: { amount: dollars(HISTORY_PRICE_YEAR), unit: 'a year per league', note: BUNDLE_NOTE_HISTORY },
+		portrait: { src: HISTORIAN.avatar, alt: HISTORIAN.alt },
 		features: [
-			{ title: 'Ask anything', body: 'Type a question in plain English and get an answer from your league’s own records, with the seasons and games behind it.' },
+			{ title: 'Ask anything', body: 'Type a question in plain English and Buck Archives answers from your league’s own records, with the seasons and games behind it.' },
 			{ title: 'Every champion and season', body: 'Champions, standings and playoffs for every season, back to the league’s first year on MFL.' },
 			{ title: 'Records and rivalries', body: 'The all-time record book, and every head-to-head rivalry with each game listed.' },
 			{ title: 'Franchises and owners', body: 'A page for every franchise through every name, logo and owner, with a trophy case.' },
@@ -113,6 +115,7 @@ export const SERVICES: Service[] = [
 		],
 		faqs: [
 			{ q: 'What is Ask the History?', a: 'It is an AI that answers questions about your MyFantasyLeague league’s past, such as who has the most titles or how two teams have done against each other, using your league’s own records.' },
+			{ q: 'Who is Buck Archives?', a: 'Buck Archives is your league’s historian, the name and face on every Ask the History answer. He has read every season on record, and he answers only from those records, so every number comes with the games behind it.' },
 			{ q: 'How far back does it go?', a: 'To your league’s first season on MyFantasyLeague. Every season MFL has is read in, and each new season is added when it finishes.' },
 			{ q: 'Do I have to upload anything?', a: 'No. We read your league’s history straight from MyFantasyLeague. You only tell us your league id.' },
 			{ q: 'Does it change anything on MFL?', a: 'No. Ask the History only reads your league. Rosters, lineups and scoring on MyFantasyLeague are untouched.' },

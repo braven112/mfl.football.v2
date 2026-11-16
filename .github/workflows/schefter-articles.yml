@@ -25,6 +25,7 @@ on:
           - schedule-strength
           - pecking-order
           - schedule-release
+          - history-notebook
       week:
         description: "Override week number (optional)"
         required: false
@@ -219,6 +220,17 @@ jobs:
             # (Archie's: The Gauntlet only; its chat is Slack, and the
             # announce step routes it there).
             each_league article:schedule-strength node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+          elif [ "$ARTICLE_TYPE" = "history-notebook" ]; then
+            # Buck's Notebook: Tuesday history facts about the coming week,
+            # drawn by code from each league's League History dataset (no
+            # model call). Self-skips out of season, after the title game and
+            # when the week's issue exists. Feed only: no chat post, no push.
+            # --week here is the COMING week, so the override passes through.
+            NOTEBOOK_WEEK_ARG=""
+            if [ -n "$WEEK_OVERRIDE" ]; then
+              NOTEBOOK_WEEK_ARG="--week $WEEK_OVERRIDE"
+            fi
+            each_league article:history-notebook node scripts/buck-notebook.mjs $NOTEBOOK_WEEK_ARG
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             # Release-day column, one per league per season. The article type
             # self-skips until BOTH the reveal is locked and the commissioner's
@@ -265,6 +277,8 @@ jobs:
           jobfiles() { node scripts/league-jobs.mjs "$1" --format "$2" --join ,; }
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             FILES="$(jobfiles article:schedule-strength '{schefterFeedPath}'),$(jobfiles article:schedule-strength '{dataPath}/derived')"
+          elif [ "$ARTICLE_TYPE" = "history-notebook" ]; then
+            FILES="$(jobfiles article:history-notebook '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
