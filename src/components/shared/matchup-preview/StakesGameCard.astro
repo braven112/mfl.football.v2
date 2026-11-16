@@ -12,6 +12,8 @@ import { teamAccentVar } from '../../../utils/team-accent-css';
 import type { MatchupTeam } from './MatchupPreviewSection.astro';
 import { shortenParagraphs } from '../../../utils/article-paragraphs.mjs';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import MatchupMiniMap from './MatchupMiniMap.astro';
+import type { StoredHometown } from '../../../utils/owner-hometowns';
 import '../../../styles/playoff-race.css';
 
 export interface Props {
@@ -20,9 +22,12 @@ export interface Props {
   teamB: MatchupTeam;
   kicker: string;
   rivalryHref?: string;
+  /** Owner Map hometowns; the card draws its mini map only when both are set. */
+  homeA?: StoredHometown | null;
+  homeB?: StoredHometown | null;
 }
 
-const { m, teamA, teamB, kicker, rivalryHref } = Astro.props;
+const { m, teamA, teamB, kicker, rivalryHref, homeA = null, homeB = null } = Astro.props;
 // Schefter's write-up for this game: plain text, rendered escaped, re-flowed
 // into one- or two-sentence paragraphs like every column.
 const story: string[] = shortenParagraphs(m.story ?? []);
@@ -72,7 +77,7 @@ const ordinal = (n: number) => {
 };
 ---
 
-<article class="sgc" style={`--sgc-a: ${teamAccentVar(a)}; --sgc-b: ${teamAccentVar(b)}`}>
+<article class="sgc" style={`--sgc-a: ${teamAccentVar(a)}; --sgc-b: ${teamAccentVar(b)}; --mpv-a: var(--sgc-a); --mpv-b: var(--sgc-b)`}>
   <span class="sgc-kicker">{kicker}</span>
   <div class="sgc-head">
     <div class="sgc-team">
@@ -91,6 +96,10 @@ const ordinal = (n: number) => {
       </span>
     </div>
   </div>
+
+  {/* The two hometowns and the miles between them, under the names (owner's
+      call, 2026-11-16: the map is back on every game card). */}
+  <MatchupMiniMap homeA={homeA} homeB={homeB} teamA={teamA} teamB={teamB} routeId={`${a}-${b}`} />
 
   {story.length > 0 && (
     <div class="sgc-story">

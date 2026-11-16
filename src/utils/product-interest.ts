@@ -38,6 +38,10 @@ export const INTEREST_ONLY = [
 	{ slug: 'league-history', name: 'League History' },
 	{ slug: 'owner-suite', name: 'Owner Suite' },
 	{ slug: 'large-league', name: 'Large-league support' },
+	// The two $49 products on the homepage (Brandon, 2026-11-16), and the two
+	// together. League History keeps its old slug above, so its count carries on.
+	{ slug: 'beat-reporter', name: 'AI Beat Reporter' },
+	{ slug: 'history-and-reporter', name: 'Ask the History + AI Beat Reporter' },
 ] as const;
 
 export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];
@@ -129,4 +133,81 @@ export async function readProductInterest(): Promise<ProductInterestRow[] | null
 		}),
 	);
 	return rows.sort((a, b) => b.people - a.people || b.clicks - a.clicks);
+}
+
+/**
+ * Products on sale now by direct contact (Brandon, 2026-11-16: "I want these
+ * products available now ... allow people to contact me directly"). Their
+ * door opens a request form instead of "coming soon": the request is kept for
+ * Site Insights and pushed to the owner, who replies by email. No checkout.
+ */
+export const AVAILABLE_NOW: ReadonlySet<InterestSlug> = new Set<InterestSlug>([
+	'league-history',
+	'beat-reporter',
+	'history-and-reporter',
+]);
+
+export function isAvailableNow(slug: unknown): slug is InterestSlug {
+	return typeof slug === 'string' && AVAILABLE_NOW.has(slug as InterestSlug);
+}
+
+export interface ContactRequest {
+	product: InterestSlug;
+	name: string;
+	email: string;
+	/** Their MFL league: a link, an id or a name, as they typed it. */
+	league: string;
+	message: string;
+	at: string;
+}
+
+/** The most requests kept (the endpoint has no session, so this bounds what a script can write). */
+export const MAX_CONTACT_REQUESTS = 2000;
+const REQUESTS_KEY = 'product-interest:requests';
+
+/** One line of free text: control characters out, whitespace collapsed, capped. */
+export function cleanContactText(raw: unknown, max: number): string {
+	if (typeof raw !== 'string') return '';
+	// eslint-disable-next-line no-control-regex
+	return raw.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+/**
+ * Keep a request, and its email on the product's list. One field per address
+ * and product, so a resend replaces the earlier request instead of piling up.
+ * Returns 'full' when the cap is reached (the caller still pushes the owner).
+ */
+export async function recordContactRequest(req: ContactRequest): Promise<boolean | 'full'> {
+	const redis = await getRedis();
+	if (!redis) return false;
+	const field = `${req.product}|${req.email}`;
+	const known = await redis.hget(REQUESTS_KEY, field);
+	if (!known && (await redis.hlen(REQUESTS_KEY)) >= MAX_CONTACT_REQUESTS) return 'full';
+	await redis.hset(REQUESTS_KEY, { [field]: JSON.stringify(req) });
+	await recordInterestEmail(req.product, req.email, new Date(req.at));
+	return true;
+}
+
+/** Every kept request, newest first. Null when storage is unavailable. */
+export async function readContactRequests(): Promise<ContactRequest[] | null> {
+	const redis = await getRedis();
+	if (!redis) return null;
+	const raw = (await redis.hgetall<unknown>(REQUESTS_KEY)) ?? {};
+	return Object.values(raw)
+		.map((r) => (typeof r === 'string' ? safeJson(r) : r))
+		.filter((r): r is ContactRequest => !!r && typeof (r as ContactRequest).email === 'string')
+		.sort((a, b) => b.at.localeCompare(a.at));
+}
+
+function safeJson(text: string): unknown {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return null;
+	}
+}
+
+/** The display name of a product slug. */
+export function interestName(slug: InterestSlug): string {
+	return INTEREST_ITEMS.find((p) => p.slug === slug)?.name ?? slug;
 }
