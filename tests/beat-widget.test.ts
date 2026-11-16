@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  widgetCss,
+  WIDGET_CSS as BASE_CSS,
   isMflOrigin,
   renderAdWidget,
   renderNewsWidget,
@@ -147,5 +149,37 @@ describe('rendering', () => {
     const html = renderAdWidget({ origin: 'https://mfl.football', avatar: '/assets/x.webp' });
     expect(html).toContain('Get the Beat Reporter');
     expect(html).toContain('https://mfl.football/');
+  });
+});
+
+describe('big news', () => {
+  it('rides in the feed with a red badge, never a pinned strip or an alert box', () => {
+    const html = renderNewsWidget({
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute: (path: string) => `https://www.theleague.us${path}`,
+      leagueSlug: 'theleague',
+      posts: [{ id: 'tr', type: 'transaction', transactionSubType: 'TRADE', headline: 'Big trade', body: 'Blockbuster', timestamp: '2026-11-15T10:00:00Z' }],
+    } as any);
+    expect(html).toContain('bw-badge bw-badge--hot');
+    expect(html).not.toContain('bw-breaking');
+    expect(html).not.toContain('bw-alerts');
+  });
+});
+
+describe('league colors', () => {
+  it('sets the league pair and ignores anything that is not a hex color', () => {
+    expect(widgetCss({ primary: '#1c497c', secondary: '#2e8743' })).toContain(':host{--bw-p:#1c497c;--bw-s:#2e8743}');
+    expect(widgetCss({ primary: '#1c497c' })).toContain('--bw-s:#1c497c');
+    expect(widgetCss({ primary: 'red;}body{display:none' })).toBe(BASE_CSS);
+    expect(widgetCss()).toBe(BASE_CSS);
+  });
+
+  it('loads the display face on the page, from our origin', () => {
+    const loader = readFileSync('public/mfl/beat.js', 'utf8');
+    expect(loader).toContain('"BW Display"');
+    expect(loader).toContain("origin + '/assets/fonts/UFCSans-'");
+    const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
+    const fonts = vercel.headers.find((h: any) => h.source === '/assets/fonts/(.*)');
+    expect(fonts?.headers).toContainEqual({ key: 'Access-Control-Allow-Origin', value: '*' });
   });
 });

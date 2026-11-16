@@ -22,6 +22,7 @@ import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   WIDGET_CSS,
+  widgetCss,
   isMflOrigin,
   renderAdWidget,
   renderNewsWidget,
@@ -31,6 +32,22 @@ import {
 } from '../../../utils/beat-widget.mjs';
 
 export const prerender = false;
+
+// Each league's light-theme palette (src/themes/<id>.json), for the widget's colors.
+const THEME_LIGHT = import.meta.glob<Record<string, string | null>>('../../../themes/*.json', { eager: true, import: 'light' });
+const isHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+/**
+ * The widget wears the league's own two colors (Brandon, 2026-11-16): its
+ * theme's primary and secondary, else its share-card color for both.
+ */
+function leagueWidgetColors(league: { theme?: string; shareCard?: { primary?: string }; themeColor?: string }) {
+  const light = (league.theme && THEME_LIGHT[`../../../themes/${league.theme}.json`]) || {};
+  const fallback = [league.shareCard?.primary, league.themeColor].find(isHex);
+  const primary = isHex(light['--color-primary']) ? light['--color-primary'] : fallback;
+  const secondary = isHex(light['--color-secondary']) ? light['--color-secondary'] : primary;
+  return { primary, secondary };
+}
 
 function headers(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
@@ -72,8 +89,10 @@ export const GET: APIRoute = async ({ request, url }) => {
   // Anyone can send any id, so it only decides which PUBLIC posts lead: the
   // roster is public on MFL, and nothing private (watch list, nudges) is read.
   const fid = (url.searchParams.get('F') ?? '').match(/^\d{4}$/)?.[0];
-  const roster = fid && fid !== '0000' ? await getOwnRosterIds(league, getLeagueYearForSlug(league.slug), fid).catch(() => new Set<string>()) : null;
+  const year = getLeagueYearForSlug(league.slug);
+  const roster = fid && fid !== '0000' ? await getOwnRosterIds(league, year, fid).catch(() => new Set<string>()) : null;
   const personal = roster && roster.size > 0;
+  const now = Date.now();
   const isFirstTab = personal
     ? (p: any) => SOURCE_PREDICATES.theleague(p) || postMentionsAny(p, roster) || postConcernsFranchise(p, fid)
     : SOURCE_PREDICATES.theleague;
@@ -97,6 +116,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     },
     absolute: (path: string) => leagueUrl(league, path),
     leagueSlug: league.slug,
+    now,
   });
-  return new Response(JSON.stringify({ html, css: WIDGET_CSS }), { status: 200, headers: headers(origin) });
+  return new Response(JSON.stringify({ html, css: widgetCss(leagueWidgetColors(league as any)) }), { status: 200, headers: headers(origin) });
 };
