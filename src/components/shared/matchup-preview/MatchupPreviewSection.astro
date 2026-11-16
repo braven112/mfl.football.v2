@@ -93,7 +93,7 @@ const boards: Array<{ label: string | null; race: NonNullable<MatchupVisuals['ra
       : [];
 
 const hometowns: Record<string, StoredHometown> =
-  !chartLed && part === 'cards' && leagueSlug && matchups.length > 0 ? await readHometowns(leagueSlug) : {};
+  part === 'cards' && leagueSlug && matchups.length > 0 ? await readHometowns(leagueSlug) : {};
 ---
 
 {chartLed && part === 'top' && boards.some((b) => b.race.teams.length > 0) && (
@@ -119,6 +119,8 @@ const hometowns: Record<string, StoredHometown> =
         teamB={teamOf(m.b.franchiseId)}
         kicker={i === gotwIndex ? 'Game of the Week' : `Week ${visuals!.week}`}
         rivalryHref={rivalryHref(m.a.franchiseId, m.b.franchiseId)}
+        homeA={hometowns[m.a.franchiseId] ?? null}
+        homeB={hometowns[m.b.franchiseId] ?? null}
       />
     ))}
     {(visuals?.moreGames ?? 0) > 0 && (
