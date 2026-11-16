@@ -10,7 +10,12 @@
  * reader watches. Both now read from here.
  *
  * The lanes are mutually exclusive by construction — `nfl` excludes every
- * persona that has a tab of its own — so a post lands in at most one of them.
+ * persona that has a tab of its own — so a post lands in at most one of them,
+ * with ONE deliberate exception: the insider personas (Doc Rivers, Vegas Vic)
+ * write for the league, so their posts are in the league's main lane AND keep
+ * the narrower NFL Insider filter (Brandon, Nov 2026 — Vic's lines were only
+ * findable under Insider, so nobody saw them). `insider` is a SUBSET of
+ * `theleague`, never a lane beside it.
  * `tests/schefter-sources.test.ts` asserts the partition rather than mere
  * membership, which is what caught the two overlaps this file was extracted
  * to fix.
@@ -61,11 +66,14 @@ export const SOURCE_PREDICATES: Record<FeedSource, (p: SchefterPost) => boolean>
    * still the wire; without that exclusion it matched two lanes at once, and
    * the homepage rail (which now files this lane into My News) would have put
    * it in the quiet tab the wire is meant to stay out of.
+   *
+   * Doc Rivers' injuries and Vegas Vic's lines are the league's own desk too:
+   * they appear here, and therefore in the homepage rail's My News.
    */
   theleague: (p) => {
     if (isWirePost(p)) return false;
     const authorId = p.authorId ?? 'claude';
-    return authorId === 'claude' || authorId === 'roger';
+    return authorId === 'claude' || authorId === 'roger' || INSIDER_AUTHOR_IDS.has(authorId);
   },
   nfl: isWirePost,
   draft: (p) => p.authorId === 'nfl-draft',

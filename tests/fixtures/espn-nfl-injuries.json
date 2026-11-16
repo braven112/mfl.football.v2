@@ -1,0 +1,730 @@
+{
+  "_provenance": {
+    "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries",
+    "recorded": "2026-11-16",
+    "note": "Trimmed: league-wide sample = first 3 teams, one entry per status; perTeam sample = ?team=12, one entry per status. Comments, headshots and non-playercard links dropped."
+  },
+  "leagueWide": {
+    "timestamp": "2026-11-16T02:28:32Z",
+    "season": {
+      "year": 2026,
+      "type": 2,
+      "name": "Regular Season",
+      "displayName": "2026"
+    },
+    "injuries": [
+      {
+        "id": "22",
+        "displayName": "Arizona Cardinals",
+        "injuries": [
+          {
+            "id": "648055",
+            "shortComment": "McBride tallied five catches on as many targets for 37 yards during Sunday's 34-6 loss to the Rams.",
+            "status": "Active",
+            "date": "2026-11-16T01:41Z",
+            "type": {
+              "id": "0",
+              "name": "INJURY_STATUS_ACTIVE",
+              "description": "active",
+              "abbreviation": "A"
+            },
+            "athlete": {
+              "firstName": "Trey",
+              "lastName": "McBride",
+              "displayName": "Trey McBride",
+              "shortName": "T. McBride",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4361307/trey-mcbride",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "TE"
+              },
+              "team": {
+                "id": "22",
+                "abbreviation": "ARI",
+                "displayName": "Arizona Cardinals"
+              }
+            }
+          },
+          {
+            "id": "647999",
+            "shortComment": "Burch (knee) has been ruled out for the remainder of Sunday's tilt against the Rams, Josh Weinfuss of ESPN.com reports.",
+            "status": "Questionable",
+            "date": "2026-11-15T22:55Z",
+            "type": {
+              "id": "2",
+              "name": "INJURY_STATUS_QUESTIONABLE",
+              "description": "questionable",
+              "abbreviation": "Q"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "QUESTIONABLE",
+                "abbreviation": "QUESTIONABLE"
+              },
+              "type": "Knee",
+              "location": "Leg",
+              "detail": "Not Specified",
+              "side": "Left",
+              "returnDate": "2026-11-22"
+            },
+            "athlete": {
+              "firstName": "Jordan",
+              "lastName": "Burch",
+              "displayName": "Jordan Burch",
+              "shortName": "J. Burch",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4428996/jordan-burch",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "LB"
+              },
+              "team": {
+                "id": "22",
+                "abbreviation": "ARI",
+                "displayName": "Arizona Cardinals"
+              }
+            }
+          },
+          {
+            "id": "647949",
+            "shortComment": "Williams (knee) has been ruled out for Sunday's game against the Rams, Darren Urban of the Cardinals' official site reports.",
+            "status": "Out",
+            "date": "2026-11-15T20:26Z",
+            "type": {
+              "id": "4",
+              "name": "INJURY_STATUS_OUT",
+              "description": "out",
+              "abbreviation": "O"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "INACTIVE",
+                "abbreviation": "INACTIVE"
+              },
+              "type": "Knee",
+              "location": "Leg",
+              "detail": "Not Specified",
+              "side": "Not Specified",
+              "returnDate": "2026-11-22"
+            },
+            "athlete": {
+              "firstName": "Jayden",
+              "lastName": "Williams",
+              "displayName": "Jayden Williams",
+              "shortName": "J. Williams",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4709718/jayden-williams",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "OT"
+              },
+              "team": {
+                "id": "22",
+                "abbreviation": "ARI",
+                "displayName": "Arizona Cardinals"
+              }
+            }
+          },
+          {
+            "id": "647789",
+            "shortComment": "Minshew suffered a torn UCL in his right throwing elbow last Sunday at Seattle and is slated to undergo season-ending surgery, Adam Schefter of ESPN reports.",
+            "status": "Injured Reserve",
+            "date": "2026-11-15T12:49Z",
+            "type": {
+              "id": "5",
+              "name": "INJURY_STATUS_IR",
+              "description": "Injured Reserve",
+              "abbreviation": "IR"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "IR",
+                "abbreviation": "IR"
+              },
+              "type": "Elbow",
+              "location": "Arm",
+              "detail": "Surgery",
+              "side": "Right",
+              "returnDate": "2027-02-15"
+            },
+            "athlete": {
+              "firstName": "Gardner",
+              "lastName": "Minshew II",
+              "displayName": "Gardner Minshew II",
+              "shortName": "G. Minshew II",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4038524/gardner-minshew-ii",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "QB"
+              },
+              "team": {
+                "id": "22",
+                "abbreviation": "ARI",
+                "displayName": "Arizona Cardinals"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "displayName": "Atlanta Falcons",
+        "injuries": [
+          {
+            "id": "648005",
+            "shortComment": "Penix completed 23 of 43 passes for 286 yards with no touchdowns and one interception and rushed four times for 29 yards in the Falcons' 35-13 loss to the Chiefs on Sunday. He also fumbled once but recovered.",
+            "status": "Active",
+            "date": "2026-11-15T23:30Z",
+            "type": {
+              "id": "0",
+              "name": "INJURY_STATUS_ACTIVE",
+              "description": "active",
+              "abbreviation": "A"
+            },
+            "athlete": {
+              "firstName": "Michael",
+              "lastName": "Penix Jr.",
+              "displayName": "Michael Penix Jr.",
+              "shortName": "M. Penix Jr.",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4360423/michael-penix-jr",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "QB"
+              },
+              "team": {
+                "id": "1",
+                "abbreviation": "ATL",
+                "displayName": "Atlanta Falcons"
+              }
+            }
+          },
+          {
+            "id": "647968",
+            "shortComment": "London is being evaluated for a possible concussion during Sunday's game against the Chiefs, Tori McElhaney of the Falcons' official site reports.",
+            "status": "Questionable",
+            "date": "2026-11-15T21:04Z",
+            "type": {
+              "id": "2",
+              "name": "INJURY_STATUS_QUESTIONABLE",
+              "description": "questionable",
+              "abbreviation": "Q"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "QUESTIONABLE",
+                "abbreviation": "QUESTIONABLE"
+              },
+              "type": "Concussion",
+              "location": "Head",
+              "detail": "Concussion",
+              "side": "Not Specified",
+              "returnDate": "2026-11-15"
+            },
+            "athlete": {
+              "firstName": "Drake",
+              "lastName": "London",
+              "displayName": "Drake London",
+              "shortName": "D. London",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4426502/drake-london",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "WR"
+              },
+              "team": {
+                "id": "1",
+                "abbreviation": "ATL",
+                "displayName": "Atlanta Falcons"
+              }
+            }
+          },
+          {
+            "id": "647831",
+            "shortComment": "Dalton is inactive for Sunday's game against the Chiefs but was designated as his team's emergency third quarterback.",
+            "status": "Out",
+            "date": "2026-11-15T16:45Z",
+            "type": {
+              "id": "4",
+              "name": "INJURY_STATUS_OUT",
+              "description": "out",
+              "abbreviation": "O"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "INACTIVE",
+                "abbreviation": "INACTIVE"
+              },
+              "type": "Coach's Decision",
+              "location": "Other",
+              "detail": "Not Specified",
+              "side": "Not Specified",
+              "returnDate": "2026-11-29"
+            },
+            "athlete": {
+              "firstName": "Andy",
+              "lastName": "Dalton",
+              "displayName": "Andy Dalton",
+              "shortName": "A. Dalton",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/14012/andy-dalton",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "QB"
+              },
+              "team": {
+                "id": "1",
+                "abbreviation": "ATL",
+                "displayName": "Atlanta Falcons"
+              }
+            }
+          },
+          {
+            "id": "646437",
+            "shortComment": "Robinson (hamstring) was placed on injured reserve Saturday, Marc Raimondi of ESPN.com reports.",
+            "status": "Injured Reserve",
+            "date": "2026-11-07T21:13Z",
+            "type": {
+              "id": "5",
+              "name": "INJURY_STATUS_IR",
+              "description": "Injured Reserve",
+              "abbreviation": "IR"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "IR",
+                "abbreviation": "IR"
+              },
+              "type": "Hamstring",
+              "location": "Leg",
+              "detail": "Not Specified",
+              "side": "Not Specified",
+              "returnDate": "2026-12-13"
+            },
+            "athlete": {
+              "firstName": "Brian",
+              "lastName": "Robinson Jr.",
+              "displayName": "Brian Robinson Jr.",
+              "shortName": "B. Robinson Jr.",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4241474/brian-robinson-jr",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "RB"
+              },
+              "team": {
+                "id": "1",
+                "abbreviation": "ATL",
+                "displayName": "Atlanta Falcons"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "33",
+        "displayName": "Baltimore Ravens",
+        "injuries": [
+          {
+            "id": "647757",
+            "shortComment": "Randall (neck), who remains on IR, has been tagged as questionable to face the Chargers on Monday.",
+            "status": "Injured Reserve",
+            "date": "2026-11-14T23:40Z",
+            "type": {
+              "id": "5",
+              "name": "INJURY_STATUS_IR",
+              "description": "Injured Reserve",
+              "abbreviation": "IR"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "IR-R",
+                "abbreviation": "IR-R"
+              },
+              "type": "Neck",
+              "location": "Head",
+              "detail": "Not Specified",
+              "side": "Not Specified",
+              "returnDate": "2026-11-16"
+            },
+            "athlete": {
+              "firstName": "Adam",
+              "lastName": "Randall",
+              "displayName": "Adam Randall",
+              "shortName": "A. Randall",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4685526/adam-randall",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "RB"
+              },
+              "team": {
+                "id": "33",
+                "abbreviation": "BAL",
+                "displayName": "Baltimore Ravens"
+              }
+            }
+          },
+          {
+            "id": "647722",
+            "shortComment": "Hawkins (knee) has been ruled out for Monday's game against the Chargers.",
+            "status": "Out",
+            "date": "2026-11-14T19:16Z",
+            "type": {
+              "id": "4",
+              "name": "INJURY_STATUS_OUT",
+              "description": "out",
+              "abbreviation": "O"
+            },
+            "details": {
+              "fantasyStatus": {
+                "description": "OUT",
+                "abbreviation": "OUT"
+              },
+              "type": "Knee",
+              "location": "Leg",
+              "detail": "Not Specified",
+              "side": "Left",
+              "returnDate": "2026-11-22"
+            },
+            "athlete": {
+              "firstName": "Jaylinn",
+              "lastName": "Hawkins",
+              "displayName": "Jaylinn Hawkins",
+              "shortName": "J. Hawkins",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/3858276/jaylinn-hawkins",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "S"
+              },
+              "team": {
+                "id": "33",
+                "abbreviation": "BAL",
+                "displayName": "Baltimore Ravens"
+              }
+            }
+          },
+          {
+            "id": "647590",
+            "shortComment": "Bateman (calf) was listed as a full participant on Friday's practice estimation.",
+            "status": "Active",
+            "date": "2026-11-13T23:22Z",
+            "type": {
+              "id": "0",
+              "name": "INJURY_STATUS_ACTIVE",
+              "description": "active",
+              "abbreviation": "A"
+            },
+            "athlete": {
+              "firstName": "Rashod",
+              "lastName": "Bateman",
+              "displayName": "Rashod Bateman",
+              "shortName": "R. Bateman",
+              "links": [
+                {
+                  "language": "en-US",
+                  "rel": [
+                    "playercard",
+                    "desktop",
+                    "athlete"
+                  ],
+                  "href": "https://www.espn.com/nfl/player/_/id/4360939/rashod-bateman",
+                  "text": "Player Card",
+                  "shortText": "Player Card",
+                  "isExternal": false,
+                  "isPremium": false
+                }
+              ],
+              "position": {
+                "abbreviation": "WR"
+              },
+              "team": {
+                "id": "33",
+                "abbreviation": "BAL",
+                "displayName": "Baltimore Ravens"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "perTeam": {
+    "timestamp": "2026-11-16T02:27:27Z",
+    "team": {
+      "id": "12",
+      "abbreviation": "KC",
+      "displayName": "Kansas City Chiefs"
+    },
+    "injuries": [
+      {
+        "id": "648030",
+        "shortComment": "Worthy failed to catch any of his three targets in Sunday's 35-13 win over the Falcons.",
+        "status": "Active",
+        "date": "2026-11-16T00:50Z",
+        "type": {
+          "id": "0",
+          "name": "INJURY_STATUS_ACTIVE",
+          "description": "active",
+          "abbreviation": "A"
+        },
+        "athlete": {
+          "firstName": "Xavier",
+          "lastName": "Worthy",
+          "displayName": "Xavier Worthy",
+          "shortName": "X. Worthy",
+          "links": [
+            {
+              "language": "en-US",
+              "rel": [
+                "playercard",
+                "desktop",
+                "athlete"
+              ],
+              "href": "https://www.espn.com/nfl/player/_/id/4683062/xavier-worthy",
+              "text": "Player Card",
+              "shortText": "Player Card",
+              "isExternal": false,
+              "isPremium": false
+            }
+          ],
+          "position": {
+            "abbreviation": "WR"
+          },
+          "team": {
+            "id": "12",
+            "abbreviation": "KC",
+            "displayName": "Kansas City Chiefs"
+          }
+        }
+      },
+      {
+        "id": "647976",
+        "shortComment": "Wiley suffered a fractured ankle in the Chiefs' 35-13 victory over the Falcons on Sunday, Matt Derrick of ChiefsDigest.com reports.",
+        "status": "Out",
+        "date": "2026-11-15T21:50Z",
+        "type": {
+          "id": "4",
+          "name": "INJURY_STATUS_OUT",
+          "description": "out",
+          "abbreviation": "O"
+        },
+        "details": {
+          "fantasyStatus": {
+            "description": "OUT",
+            "abbreviation": "OUT"
+          },
+          "type": "Ankle",
+          "location": "Leg",
+          "detail": "Fracture",
+          "side": "Right",
+          "returnDate": "2026-12-13"
+        },
+        "athlete": {
+          "firstName": "Jared",
+          "lastName": "Wiley",
+          "displayName": "Jared Wiley",
+          "shortName": "J. Wiley",
+          "links": [
+            {
+              "language": "en-US",
+              "rel": [
+                "playercard",
+                "desktop",
+                "athlete"
+              ],
+              "href": "https://www.espn.com/nfl/player/_/id/4430723/jared-wiley",
+              "text": "Player Card",
+              "shortText": "Player Card",
+              "isExternal": false,
+              "isPremium": false
+            }
+          ],
+          "position": {
+            "abbreviation": "TE"
+          },
+          "team": {
+            "id": "12",
+            "abbreviation": "KC",
+            "displayName": "Kansas City Chiefs"
+          }
+        }
+      },
+      {
+        "id": "647902",
+        "shortComment": "Smith (concussion) has been ruled out for the remainder of Sunday's game against the Falcons.",
+        "status": "Questionable",
+        "date": "2026-11-15T19:05Z",
+        "type": {
+          "id": "2",
+          "name": "INJURY_STATUS_QUESTIONABLE",
+          "description": "questionable",
+          "abbreviation": "Q"
+        },
+        "details": {
+          "fantasyStatus": {
+            "description": "QUESTIONABLE",
+            "abbreviation": "QUESTIONABLE"
+          },
+          "type": "Concussion",
+          "location": "Head",
+          "detail": "Concussion",
+          "side": "Not Specified",
+          "returnDate": "2026-11-22"
+        },
+        "athlete": {
+          "firstName": "Trey",
+          "lastName": "Smith",
+          "displayName": "Trey Smith",
+          "shortName": "T. Smith",
+          "links": [
+            {
+              "language": "en-US",
+              "rel": [
+                "playercard",
+                "desktop",
+                "athlete"
+              ],
+              "href": "https://www.espn.com/nfl/player/_/id/4242459/trey-smith",
+              "text": "Player Card",
+              "shortText": "Player Card",
+              "isExternal": false,
+              "isPremium": false
+            }
+          ],
+          "position": {
+            "abbreviation": "G"
+          },
+          "team": {
+            "id": "12",
+            "abbreviation": "KC",
+            "displayName": "Kansas City Chiefs"
+          }
+        }
+      }
+    ]
+  }
+}

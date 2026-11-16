@@ -49,13 +49,27 @@ export async function getPostPersona(league: string | undefined | null): Promise
   return def ? getLeaguePersona(def.slug) : null;
 }
 
+/**
+ * A feed author's avatar in a league: the league's own override
+ * (`reporterAvatars` in the registry) when it declares one, else the site-wide
+ * default it was handed. TheLeague and the AFL declare none, so they show the
+ * site-wide art (Brandon, Nov 2026).
+ */
+export function leagueAuthorAvatar(league: string | undefined | null, authorId: string, avatar: string): string {
+  if (!league) return avatar;
+  const def = ALL_LEAGUES.find((l) => l.navSlug === league || l.slug === league);
+  const override = def?.reporterAvatars?.[authorId];
+  return typeof override === 'string' && override ? override : avatar;
+}
+
 /** A post card's byline: the feed author, renamed to the league's persona when it is the persona writing. */
 export async function postByline(
   post: { league?: string | null },
   author: { id: string; name: string; handle?: string },
   avatar: string,
 ): Promise<{ name: string; avatar: string; handle: string }> {
-  return personaByline(author, avatar, await getPostPersona(post.league ?? null));
+  const leagueAvatar = leagueAuthorAvatar(post.league, author.id, avatar);
+  return personaByline(author, leagueAvatar, await getPostPersona(post.league ?? null));
 }
 
 /**

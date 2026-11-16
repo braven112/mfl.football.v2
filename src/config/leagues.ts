@@ -470,6 +470,15 @@ export interface LeagueDefinition {
    */
   persona?: 'schefter' | { name?: string; avatarUrl?: string; voice?: string };
   /**
+   * The league's own art for the site-wide feed authors (Doc Rivers, Vegas
+   * Vic, …), keyed by feed author id, as site asset paths
+   * ('/assets/<league>/vic.webp'). Absent, or an author left out, → the
+   * site-wide default in `SCHEFTER_AUTHORS` (src/types/schefter.ts). Read by
+   * `leagueAuthorAvatar` (src/utils/persona-server.ts). The league's own
+   * reporter is NOT here — that is `persona.avatarUrl`.
+   */
+  reporterAvatars?: Partial<Record<string, string>>;
+  /**
    * League-minimum salary — what any roster add costs, FCFS free-agent adds
    * included. Absent for a league without salaries.
    */

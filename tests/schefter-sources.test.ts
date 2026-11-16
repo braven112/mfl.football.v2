@@ -45,7 +45,6 @@ describe('a post lands in at most one lane', () => {
     ['an ESPN byline', post({ authorId: 'adam-schefter' }), 'nfl'],
     ['a wire_ item with no author', post({ id: 'wire_123' }), 'nfl'],
     ['the draft lane', post({ authorId: 'nfl-draft' }), 'draft'],
-    ['the insider lane', post({ authorId: 'vegas-vic' }), 'insider'],
   ];
 
   for (const [label, p, lane] of samples) {
@@ -53,6 +52,22 @@ describe('a post lands in at most one lane', () => {
       for (const other of LANES) {
         expect([other, SOURCE_PREDICATES[other](p)]).toEqual([other, other === lane]);
       }
+    });
+  }
+
+  /**
+   * The one deliberate overlap (Brandon, Nov 2026): Doc Rivers and Vegas Vic
+   * run in the league's main feed, and NFL Insider stays as a narrower filter
+   * over the same posts. Insider is a subset of the league lane, and still out
+   * of NFL and Draft.
+   */
+  for (const authorId of ['vegas-vic', 'doc-rivers']) {
+    it(`a ${authorId} post is in the league lane AND the insider filter, nothing else`, () => {
+      const p = post({ id: authorId === 'vegas-vic' ? 'odds_1' : 'inj_1', authorId });
+      expect(SOURCE_PREDICATES.theleague(p)).toBe(true);
+      expect(SOURCE_PREDICATES.insider(p)).toBe(true);
+      expect(SOURCE_PREDICATES.nfl(p)).toBe(false);
+      expect(SOURCE_PREDICATES.draft(p)).toBe(false);
     });
   }
 
@@ -72,7 +87,6 @@ describe('a post lands in at most one lane', () => {
     const p = post({ id: 'wire_9001', authorId: 'vegas-vic' });
     expect(SOURCE_PREDICATES.nfl(p)).toBe(false);
     expect(SOURCE_PREDICATES.insider(p)).toBe(true);
-    expect(SOURCE_PREDICATES.theleague(p)).toBe(false);
     expect(SOURCE_PREDICATES.draft(p)).toBe(false);
   });
 
