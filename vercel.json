@@ -53,6 +53,15 @@
       ]
     },
     {
+      "source": "/assets/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
       "source": "/assets/css/dist/archies_main.css",
       "headers": [
         {

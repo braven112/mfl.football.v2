@@ -27,6 +27,7 @@ import { postPlayerIds } from '../../../utils/schefter-player-tagger.mjs';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   WIDGET_CSS,
+  widgetCss,
   buildInjuryAlerts,
   isMflOrigin,
   pickBreaking,
@@ -38,6 +39,22 @@ import {
 } from '../../../utils/beat-widget.mjs';
 
 export const prerender = false;
+
+// Each league's light-theme palette (src/themes/<id>.json), for the widget's colors.
+const THEME_LIGHT = import.meta.glob<Record<string, string | null>>('../../../themes/*.json', { eager: true, import: 'light' });
+const isHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+/**
+ * The widget wears the league's own two colors (Brandon, 2026-11-16): its
+ * theme's primary and secondary, else its share-card color for both.
+ */
+function leagueWidgetColors(league: { theme?: string; shareCard?: { primary?: string }; themeColor?: string }) {
+  const light = (league.theme && THEME_LIGHT[`../../../themes/${league.theme}.json`]) || {};
+  const fallback = [league.shareCard?.primary, league.themeColor].find(isHex);
+  const primary = isHex(light['--color-primary']) ? light['--color-primary'] : fallback;
+  const secondary = isHex(light['--color-secondary']) ? light['--color-secondary'] : primary;
+  return { primary, secondary };
+}
 
 function headers(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
@@ -116,7 +133,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     lineupHref: `options?L=${mflId}&O=02`,
     now,
   });
-  return new Response(JSON.stringify({ html, css: WIDGET_CSS }), { status: 200, headers: headers(origin) });
+  return new Response(JSON.stringify({ html, css: widgetCss(leagueWidgetColors(league as any)) }), { status: 200, headers: headers(origin) });
 };
 
 /** Doc's word on a player only counts while it is this week's news. */

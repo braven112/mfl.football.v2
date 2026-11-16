@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  widgetCss,
+  WIDGET_CSS as BASE_CSS,
   buildInjuryAlerts,
   pickBreaking,
   isMflOrigin,
@@ -195,5 +197,23 @@ describe('injury alerts', () => {
     expect(html).toContain('Amon-Ra St. Brown');
     expect(html).toContain('href="options?L=1&amp;O=02"');
     expect(html).toContain('data-ts="');
+  });
+});
+
+describe('league colors', () => {
+  it('sets the league pair and ignores anything that is not a hex color', () => {
+    expect(widgetCss({ primary: '#1c497c', secondary: '#2e8743' })).toContain(':host{--bw-p:#1c497c;--bw-s:#2e8743}');
+    expect(widgetCss({ primary: '#1c497c' })).toContain('--bw-s:#1c497c');
+    expect(widgetCss({ primary: 'red;}body{display:none' })).toBe(BASE_CSS);
+    expect(widgetCss()).toBe(BASE_CSS);
+  });
+
+  it('loads the display face on the page, from our origin', () => {
+    const loader = readFileSync('public/mfl/beat.js', 'utf8');
+    expect(loader).toContain('"BW Display"');
+    expect(loader).toContain("origin + '/assets/fonts/UFCSans-'");
+    const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
+    const fonts = vercel.headers.find((h: any) => h.source === '/assets/fonts/(.*)');
+    expect(fonts?.headers).toContainEqual({ key: 'Access-Control-Allow-Origin', value: '*' });
   });
 });

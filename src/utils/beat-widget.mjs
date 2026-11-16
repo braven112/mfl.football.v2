@@ -174,68 +174,94 @@ export function relativeTime(iso, now = Date.now()) {
   return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
 }
 
-/** The widget's stylesheet: inherits the MFL skin's text color, so it fits light and dark skins alike. */
+/**
+ * The widget's stylesheet: a white "Primetime" card (Brandon, 2026-11-16:
+ * premium, white, the broadcast layout) in the league's own two colors.
+ * `--bw-p` / `--bw-s` default to navy; widgetCss() sets them per league.
+ * Status colors (Out, Doubtful, Questionable, Breaking) stay fixed: they mean
+ * the same thing in every league.
+ */
 export const WIDGET_CSS = `
-:host{display:block;font:inherit;color:inherit;margin-bottom:24px}
+:host{display:block;margin-bottom:24px;--bw-p:#1d3a6e;--bw-s:#1d3a6e}
 *{box-sizing:border-box}
-.bw{--bw-line:color-mix(in srgb,currentColor 18%,transparent);--bw-soft:color-mix(in srgb,currentColor 6%,transparent);--bw-dim:color-mix(in srgb,currentColor 65%,transparent);max-width:760px;margin:0 auto}
-.bw{padding:0 12px}
-@media (min-width:640px){.bw{padding:0}}
-.bw-head{display:flex;align-items:center;gap:12px;padding:4px 0 12px;border-bottom:1px solid var(--bw-line)}
-.bw-head img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none}
-.bw-title{font-weight:700;font-size:1.15em;line-height:1.2}
-.bw-sub{color:var(--bw-dim);font-size:.85em}
-.bw-list{list-style:none;margin:0;padding:0}
-.bw-post{padding:12px 0;border-bottom:1px solid var(--bw-line)}
-.bw-link{display:flex;gap:10px;align-items:flex-start}
-.bw-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:var(--bw-soft)}
-.bw-main{min-width:0;flex:1}
-.bw-by{font-weight:600}
-.bw-tab-in{position:absolute;opacity:0;pointer-events:none}
-.bw-tabs{display:flex;gap:6px;padding:10px 0 2px}
-.bw-tabs label{cursor:pointer;padding:5px 14px;border-radius:999px;font-weight:600;font-size:.85em;border:1px solid var(--bw-line)}
-#bw-tab-league:checked~.bw-tabs label[for=bw-tab-league],#bw-tab-all:checked~.bw-tabs label[for=bw-tab-all]{background:color-mix(in srgb,currentColor 14%,transparent);border-color:currentColor}
-#bw-tab-league:focus-visible~.bw-tabs label[for=bw-tab-league],#bw-tab-all:focus-visible~.bw-tabs label[for=bw-tab-all]{outline:2px solid currentColor;outline-offset:2px}
-#bw-tab-league:checked~.bw-list .bw-post:not(.bw-post--league){display:none}
-.bw-new{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:#c62828;color:#fff;font-size:.65em;font-weight:700;vertical-align:middle}
+.bw{--ink:#0f172a;--ink2:#334155;--dim:#64748b;--hair:#e9edf3;--tint:color-mix(in srgb,var(--bw-p) 5%,#fff);--display:"BW Display","UFC Sans Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,system-ui,sans-serif;
+  max-width:760px;margin:0 auto;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#fff;border-radius:20px;overflow:hidden;text-align:left;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--bw-p) 12%,transparent),0 2px 4px rgba(15,23,42,.04),0 12px 28px -12px rgba(15,23,42,.14),0 36px 64px -36px rgba(15,23,42,.22)}
+.bw a{color:inherit;text-decoration:none}
+.bw-head{position:relative;display:flex;align-items:center;gap:14px;padding:20px 18px 16px;background:linear-gradient(180deg,color-mix(in srgb,var(--bw-p) 7%,#fff),#fff)}
+.bw-head::after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--bw-p),var(--bw-s) 55%,transparent)}
+.bw-head img{width:54px;height:54px;border-radius:50%;object-fit:cover;flex:none;padding:2px;background:linear-gradient(135deg,var(--bw-p),var(--bw-s))}
+.bw-head>div{min-width:0;padding-right:56px}
+.bw-title{font-family:var(--display);font-weight:700;font-size:1.45em;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:var(--bw-p)}
+.bw-sub{margin-top:5px;font-size:.7em;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--bw-s)}
+.bw-new{position:absolute;top:14px;right:16px;padding:3px 10px;border-radius:999px;background:#dc2626;color:#fff;font-size:.7em;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 6px 14px -6px rgba(220,38,38,.7)}
 .bw-new[hidden]{display:none}
-.bw-post--new .bw-avatar{box-shadow:0 0 0 2px #c62828}
-.bw-post--new .bw-meta::after{content:"New";margin-left:6px;color:#c62828;font-weight:700}
-.bw-breaking{display:flex;gap:8px;align-items:flex-start;margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:#c62828;color:#fff;text-decoration:none;line-height:1.4}
-.bw-breaking-tag{flex:none;font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.8em;padding-top:2px}
-.bw-alerts{margin:10px 0 2px;padding:10px 12px;border-radius:10px;border:1px solid var(--bw-line);background:var(--bw-soft)}
+.bw-breaking{display:block;margin:14px 18px 2px;padding:12px 14px;border-radius:14px;background:linear-gradient(100deg,#dc2626,#991b1b);color:#fff!important;line-height:1.45;font-size:.93em;box-shadow:0 12px 24px -14px rgba(220,38,38,.8),inset 0 0 0 1px rgba(255,255,255,.12)}
+.bw-breaking-tag{display:flex;align-items:center;gap:7px;margin-bottom:3px;font-family:var(--display);font-weight:700;font-size:1.05em;letter-spacing:.12em;text-transform:uppercase}
+.bw-breaking-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.25)}
+.bw-tab-in{position:absolute;opacity:0;pointer-events:none}
+.bw-tabs{display:flex;gap:4px;margin:14px 18px 4px;padding:4px;border-radius:12px;background:#f1f4f8;box-shadow:inset 0 0 0 1px var(--hair)}
+.bw-tabs label{flex:1;cursor:pointer;text-align:center;padding:8px 0;border-radius:9px;font-family:var(--display);font-weight:700;font-size:.95em;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);transition:background .15s,color .15s}
+#bw-tab-league:checked~.bw-tabs label[for=bw-tab-league],#bw-tab-all:checked~.bw-tabs label[for=bw-tab-all]{background:var(--bw-p);color:#fff;box-shadow:0 6px 14px -8px color-mix(in srgb,var(--bw-p) 80%,transparent)}
+#bw-tab-league:focus-visible~.bw-tabs label[for=bw-tab-league],#bw-tab-all:focus-visible~.bw-tabs label[for=bw-tab-all]{outline:2px solid var(--bw-p);outline-offset:2px}
+#bw-tab-league:checked~.bw-list .bw-post:not(.bw-post--league){display:none}
+.bw-alerts{margin:12px 18px 4px;padding:14px 16px;border-radius:16px;background:var(--tint);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bw-p) 10%,transparent)}
 #bw-tab-all:checked~.bw-alerts{display:none}
-.bw-alerts-head{font-weight:700;font-size:.9em;margin-bottom:6px}
+.bw-alerts-head{font-family:var(--display);font-weight:700;font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:var(--bw-p);margin-bottom:4px}
 .bw-alert-list{list-style:none;margin:0;padding:0}
-.bw-alert{display:flex;gap:8px;align-items:flex-start;padding:5px 0}
-.bw-status{flex:none;min-width:2.2em;text-align:center;padding:1px 6px;border-radius:6px;font-size:.75em;font-weight:800;color:#fff}
-.bw-status--out{background:#c62828}
-.bw-status--doubtful{background:#e65100}
-.bw-status--questionable{background:#b8860b}
-.bw-alert-name{font-weight:600}
-.bw-alert-sub{font-weight:400;color:var(--bw-dim);font-size:.9em}
-.bw-alert-doc{font-size:.85em;color:var(--bw-dim);margin-top:2px}
-.bw-alert-cta{display:inline-block;margin-top:6px;font-weight:600;color:inherit}
-.bw-meta{color:var(--bw-dim);font-size:.8em;margin-bottom:2px}
-.bw-badge{display:inline-block;padding:1px 6px;border-radius:999px;background:var(--bw-soft);margin-right:6px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:.9em}
-.bw-headline{font-weight:700;line-height:1.3;margin:0 0 4px;font-size:1em}
-.bw-body{margin:0;line-height:1.45;white-space:pre-line}
-.bw-link{color:inherit;text-decoration:none}
+.bw-alert{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--bw-p) 9%,transparent)}
+.bw-alert:first-child{border-top:0}
+.bw-alert-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+.bw-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.68em;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.4;white-space:nowrap}
+.bw-status--out{background:#fee2e2;color:#b91c1c}
+.bw-status--doubtful{background:#ffedd5;color:#c2410c}
+.bw-status--questionable{background:#fef3c7;color:#92400e}
+.bw-alert-detail{font-size:.85em;color:var(--dim)}
+.bw-alert-name{font-weight:700;font-size:1.02em}
+.bw-alert-sub{font-weight:500;color:var(--dim);font-size:.85em;margin-left:4px}
+.bw-alert-doc{margin-top:4px;font-size:.88em;color:var(--ink2)}
+.bw-alert-doc b{color:var(--bw-s)}
+.bw-alert-cta{display:inline-block;margin-top:8px;font-weight:700;font-size:.88em;color:var(--bw-p)!important}
+.bw-alert-cta::after,.bw-more::after{content:" →"}
+.bw-list{list-style:none;margin:0;padding:2px 0 0}
+.bw-post{padding:14px 18px;border-bottom:1px solid var(--hair)}
+.bw-post:last-child{border-bottom:0}
+.bw-link{display:flex;gap:12px;align-items:flex-start}
+.bw-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:none;background:#f1f4f8;box-shadow:0 0 0 2px #fff,0 0 0 3px color-mix(in srgb,var(--bw-p) 30%,transparent)}
+.bw-post--new .bw-avatar{box-shadow:0 0 0 2px #fff,0 0 0 4px #dc2626}
+.bw-post--new .bw-meta::after{content:"New";margin-left:8px;color:#dc2626;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:.9em}
+.bw-main{min-width:0;flex:1}
+.bw-meta{color:var(--dim);font-size:.78em;margin-bottom:3px}
+.bw-by{color:var(--ink);font-weight:700}
+.bw-badge{display:inline-block;margin-right:8px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;font-size:.9em;color:var(--bw-s)}
+.bw-badge::after{content:"";display:inline-block;width:3px;height:3px;margin-left:8px;border-radius:50%;background:#cbd5e1;vertical-align:middle}
+.bw-headline{font-family:var(--display);font-weight:700;font-size:1.3em;line-height:1.15;letter-spacing:.01em;margin:2px 0 5px;color:var(--ink)}
+.bw-body{margin:0;line-height:1.5;color:var(--ink2);white-space:pre-line}
+.bw-more{display:inline-block;margin-top:6px;font-weight:700;font-size:.88em;color:var(--bw-p)}
 .bw-link:hover .bw-headline,.bw-link:hover .bw-more{text-decoration:underline}
-.bw-link:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-.bw-more{display:inline-block;margin-top:6px;font-weight:600;text-decoration:underline}
-.bw-foot{padding:10px 0 0;font-size:.8em;color:var(--bw-dim)}
-.bw-foot a,.bw-ad a{color:inherit}
-.bw-btn{all:unset;cursor:pointer;padding:9px 14px;border-radius:8px;font-weight:600;text-align:center;border:1px solid color-mix(in srgb,currentColor 30%,transparent)}
-.bw-ad{padding:16px;border:1px solid var(--bw-line);border-radius:12px;background:var(--bw-soft)}
-.bw-ad .bw-head{border:none;padding-top:0}
-.bw-ad-pitch{margin:0 0 12px;line-height:1.45}
-.bw-ad-sample{padding:10px 12px;border-radius:8px;border:1px solid var(--bw-line);margin-bottom:8px}
-.bw-ad-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.bw-ad-actions a{text-decoration:none}
-.bw-ad .bw-btn--primary{flex:none;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;border-color:currentColor}
-.bw-ad-note{margin-top:10px;font-size:.85em;color:var(--bw-dim)}
+.bw-link:focus-visible,.bw-breaking:focus-visible{outline:2px solid var(--bw-p);outline-offset:2px}
+.bw-foot{display:flex;justify-content:space-between;gap:8px;padding:13px 18px 15px;background:#f8fafc;border-top:1px solid var(--hair);font-size:.8em;color:var(--dim)}
+.bw-foot a{color:var(--bw-p);font-weight:700}
+.bw-btn{display:inline-block;cursor:pointer;padding:11px 18px;border-radius:12px;font-weight:700;text-align:center;color:var(--bw-p);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bw-p) 30%,transparent)}
+.bw-ad{padding-bottom:18px}
+.bw-ad-pitch{margin:14px 18px 12px;line-height:1.5;color:var(--ink2)}
+.bw-ad-sample{margin:0 18px 8px;padding:12px 14px;border-radius:14px;background:var(--tint);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bw-p) 10%,transparent)}
+.bw-ad-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 18px 0}
+.bw-ad .bw-btn--primary{background:var(--bw-p);color:#fff;box-shadow:0 8px 18px -10px var(--bw-p)}
+.bw-ad-note{margin:10px 18px 0;font-size:.85em;color:var(--dim)}
 `;
+
+const HEX = /^#[0-9a-f]{6}$/i;
+/**
+ * The stylesheet in one league's colors: `primary` for titles, tabs and
+ * links, `secondary` for the small labels. Anything but a #rrggbb is ignored,
+ * since the value lands inside CSS.
+ */
+export function widgetCss({ primary, secondary } = {}) {
+  const p = HEX.test(primary ?? '') ? primary : null;
+  const s = HEX.test(secondary ?? '') ? secondary : p;
+  return p ? `${WIDGET_CSS}:host{--bw-p:${p};--bw-s:${s}}\n` : WIDGET_CSS;
+}
 
 function badgeFor(post) {
   if (post.type === 'odds') return 'Odds';
@@ -324,17 +350,17 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
         alerts
           .map(
             (a) =>
-              `<li class="bw-alert"><span class="bw-status bw-status--${a.status.toLowerCase()}">${a.status}</span>` +
-              `<div><div class="bw-alert-name">${escapeHtml(a.name)}${a.position || a.team ? ` <span class="bw-alert-sub">${escapeHtml([a.position, a.team].filter(Boolean).join(', '))}</span>` : ''}` +
-              `${a.detail ? ` <span class="bw-alert-sub">· ${escapeHtml(a.detail)}</span>` : ''}</div>` +
-              `${a.doc ? `<div class="bw-alert-doc"><b>Doc:</b> ${escapeHtml(clip(a.doc, 160))}</div>` : ''}</div></li>`,
+              `<li class="bw-alert"><div class="bw-alert-top"><span class="bw-status bw-status--${a.status.toLowerCase()}">${a.status}</span>` +
+              `${a.detail ? `<span class="bw-alert-detail">${escapeHtml(a.detail)}</span>` : ''}</div>` +
+              `<div class="bw-alert-name">${escapeHtml(a.name)}${a.position || a.team ? `<span class="bw-alert-sub">${escapeHtml([a.position, a.team].filter(Boolean).join(' · '))}</span>` : ''}</div>` +
+              `${a.doc ? `<div class="bw-alert-doc"><b>Doc:</b> ${escapeHtml(clip(a.doc, 160))}</div>` : ''}</li>`,
           )
           .join('') +
         `</ul>${lineupHref ? `<a class="bw-alert-cta" href="${escapeHtml(lineupHref)}">Set your lineup</a>` : ''}</div>`
       : '';
   return (
     `<div class="bw">${reporterHead(reporter)}${strip}${tabs}${alertBox}<ul class="bw-list">${items.join('')}${empty}</ul>` +
-    `<div class="bw-foot">${escapeHtml(reporter.report)} · <a href="${escapeHtml(newsPage)}" target="_blank" rel="noopener">More news</a></div></div>`
+    `<div class="bw-foot"><span>${escapeHtml(reporter.report)}</span><a href="${escapeHtml(newsPage)}" target="_blank" rel="noopener">More news</a></div></div>`
   );
 }
 

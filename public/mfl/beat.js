@@ -9,11 +9,22 @@
   if (!host) { host = document.createElement('div'); me.parentNode.insertBefore(host, me); }
   if (host.classList) host.classList.add('report-wrapper');
   var root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : host;
+  var origin = new URL(me.src).origin;
+  // A font face must be declared on the page, not in the shadow root. Our own
+  // display face, served from our origin (its CORS header is in vercel.json).
+  if (!document.getElementById('bw-fonts')) {
+    var ff = document.createElement('style');
+    ff.id = 'bw-fonts';
+    ff.textContent = ['CondensedBold', 'CondensedMedium'].map(function (w, i) {
+      return '@font-face{font-family:"BW Display";src:url(' + origin + '/assets/fonts/UFCSans-' + w + '.woff2) format("woff2");font-weight:' + (i ? 500 : 700) + ';font-display:swap}';
+    }).join('');
+    document.head.appendChild(ff);
+  }
   // MFL sets this global for a signed-in owner (its own chat reads it). Never the login cookie.
   // Read as a bare name: a let/const global is not a window property.
   var fid = typeof franchise_id !== 'undefined' ? String(franchise_id) : '';
   var f = /^\d{4}$/.test(fid) ? '&F=' + fid : '';
-  fetch(new URL(me.src).origin + '/api/beat/widget?L=' + m[1] + '&k=' + encodeURIComponent(me.getAttribute('data-key') || '') + f)
+  fetch(origin + '/api/beat/widget?L=' + m[1] + '&k=' + encodeURIComponent(me.getAttribute('data-key') || '') + f)
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
       if (!d || !d.html) return;
