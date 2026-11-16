@@ -1283,7 +1283,7 @@ html:not([data-league]) {
   --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: var(--color-secondary);
   --btn-secondary-bg-hover: var(--color-secondary-dark);
-  --btn-secondary-text: var(--color-white); /* Dark: the secondary button is logo-green emerald with near-black text — white on #10b981 is only ~3:1, #121212 is ~6.4:1. */
+  --btn-secondary-text: var(--color-white); /* Dark: the secondary button is the Sage logo green (#6fae8c, muted to sit with the Steel blues) with near-black text — white on it is only ~2.6:1, #121212 is ~7.2:1. */
   --color-secondary: #2e8743;
   --color-secondary-dark: #26743a;
   --color-secondary-light: #3c9950;
@@ -1386,13 +1386,13 @@ html.dark:not([data-league]) {
   --cta-fill: var(--btn-primary-bg);
   --cta-fill-hover: var(--btn-primary-bg-hover);
   --on-cta-fill: var(--btn-primary-text);
-  --btn-secondary-bg: #10b981;
-  --btn-secondary-bg-hover: #34d399;
+  --btn-secondary-bg: #6fae8c;
+  --btn-secondary-bg-hover: #93c8ab;
   --btn-secondary-text: #121212;
-  --color-secondary: #10b981;
-  --color-secondary-dark: #2e8743;
-  --color-secondary-light: #4ade80;
-  --color-accent: #4ade80;
+  --color-secondary: #6fae8c;
+  --color-secondary-dark: #4f8a6c;
+  --color-secondary-light: #93c8ab;
+  --color-accent: #93c8ab;
   --league-accent: var(--color-primary);
   --link-color: #9ab6d9;
   --link-color-accent: #9ab6d9;
@@ -1411,8 +1411,8 @@ html.dark:not([data-league]) {
   --footer-dark-border: #6f94c2;
   --header-nav-icon-color: #ffffff;
   --header-nav-icon-hover-color: var(--color-secondary);
-  --logo-name-primary-color: #10b981;
-  --logo-secondary-color: #10b981;
+  --logo-name-primary-color: #6fae8c;
+  --logo-secondary-color: #6fae8c;
   --hero-ink: #0f1e2e;
   --hero-surface: #0f1e2e;
   --hero-accent: #9ab6d9;
