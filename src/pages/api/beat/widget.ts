@@ -14,7 +14,9 @@ import type { APIRoute } from 'astro';
 import { getLeagueById, leagueUrl, SHARED_APP_ORIGIN } from '../../../config/leagues';
 import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
 import { getLeaguePersona } from '../../../utils/persona-server';
-import { absolutePersonaAvatar, personaLabels, BEAT_REPORTER_PERSONA } from '../../../utils/persona.mjs';
+import { absolutePersonaAvatar, personaByline, personaLabels, BEAT_REPORTER_PERSONA } from '../../../utils/persona.mjs';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import { SOURCE_PREDICATES } from '../../../utils/schefter-sources';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   WIDGET_CSS,
@@ -64,8 +66,18 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const [feed, persona] = await Promise.all([getSchefterFeedIfAny(league), getLeaguePersona(league.slug)]);
   const labels = personaLabels(persona);
+  const { posts, leagueIds } = selectWidgetPosts(feed, { isLeague: SOURCE_PREDICATES.theleague });
+  const site = (src: string) => absolutePersonaAvatar({ avatarUrl: src }, SHARED_APP_ORIGIN);
   const html = renderNewsWidget({
-    posts: selectWidgetPosts(feed),
+    posts,
+    leagueIds,
+    // Each post wears its own author's face: the league's reporter (persona
+    // applied), Roger, Vegas Vic, Doc Rivers, or the ESPN writer.
+    bylineFor: (post: any) => {
+      const author = getAuthor(post.authorId);
+      const by = personaByline(author, getAuthorAvatar(author), persona);
+      return { name: by.name, avatar: site(by.avatar) };
+    },
     reporter: {
       name: labels.name,
       report: labels.report,
