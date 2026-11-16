@@ -6,11 +6,16 @@
  */
 import ServicePage from '../components/shared/marketing/ServicePage.astro';
 import AskBuckDemo from '../components/shared/marketing/AskBuckDemo.astro';
+import HistoryTour from '../components/shared/marketing/HistoryTour.astro';
 import { findService } from '../data/mfl-services';
 
 export const prerender = false;
 ---
 
 <ServicePage service={findService('ask-the-history')}>
-	<AskBuckDemo slot="sample" />
+	{/* What every league gets without asking, then the ask box (Brandon, 2026-11-16). */}
+	<Fragment slot="sample">
+		<HistoryTour />
+		<AskBuckDemo />
+	</Fragment>
 </ServicePage>

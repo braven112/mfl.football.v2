@@ -1,0 +1,185 @@
+---
+/**
+ * The /ask-the-history page's "already laid out" tour (Brandon, 2026-11-16:
+ * "show an example of what is laid out before questions so people know they
+ * don't have to ask for everything"). Four real pages from The League's
+ * history site, in a phone frame, each linked to the live page.
+ *
+ * The screenshots are crops below the league's own nav, so they show only
+ * the history pages a History league gets, not the full site's menus.
+ * Retake them from /theleague/history, /history/record-book, /rivalries and
+ * /history/franchises on a 390px-wide phone when those pages change.
+ */
+import { crossHostLeagueHref, LEAGUES } from '../../../config/leagues';
+
+const league = LEAGUES.theleague;
+const host = Astro.url.hostname;
+const href = (path: string) => crossHostLeagueHref(host, `/${league.slug}${path}`);
+
+const STOPS = [
+	{
+		title: 'Every champion',
+		body: 'A banner for every title, hung in the rafters, back to the first season.',
+		src: '/assets/ask-the-history/champions.webp',
+		alt: 'The League’s champions page: a banner for each season’s champion, 2014 to 2025, with the team logo and record',
+		path: '/history',
+	},
+	{
+		title: 'The record book',
+		body: 'Single-game, season and career records, each with the full leaderboard.',
+		src: '/assets/ask-the-history/records.webp',
+		alt: 'The League’s Record Book: the most points in a game, 219.61, with the top eight scores charted below it',
+		path: '/history/record-book',
+	},
+	{
+		title: 'Every rivalry',
+		body: 'Every head-to-head series, ranked by how often, how close and how much rode on it.',
+		src: '/assets/ask-the-history/rivalries.webp',
+		alt: 'The League’s rivalries page: the hottest rivalries, led by an 18–17 series over 35 meetings',
+		path: '/rivalries',
+	},
+	{
+		title: 'Every franchise',
+		body: 'All-time record, titles and division crowns for every team, through every name.',
+		src: '/assets/ask-the-history/franchises.webp',
+		alt: 'The League’s franchises page: a card for each team with its all-time record and titles',
+		path: '/history/franchises',
+	},
+];
+---
+
+<section class="sp-section htour" aria-labelledby="htour-h">
+	<div class="sp-head">
+		<div class="sp-head__title">
+			<p class="sp-eyebrow">Before you ask a thing</p>
+			<h2 id="htour-h">Your league’s history, already laid out</h2>
+		</div>
+	</div>
+	<p class="htour__lede">
+		You don’t have to ask for the basics. Every league gets these pages built from its own seasons and kept up to date. Here they are for {league.name}, a real MFL league.
+	</p>
+
+	<ul class="htour__row">
+		{STOPS.map((s) => (
+			<li class="htour__stop">
+				<a class="htour__link" href={href(s.path)}>
+					<span class="htour__frame">
+						<img src={s.src} alt={s.alt} width="780" height="1376" loading="lazy" decoding="async" />
+					</span>
+					<span class="htour__title">{s.title}</span>
+					<span class="htour__body">{s.body}</span>
+					<span class="sp-card__more htour__more">See it live</span>
+				</a>
+			</li>
+		))}
+	</ul>
+	<p class="htour__then">And when you want something these pages don’t show, ask Buck.</p>
+</section>
+
+<style>
+	.htour__lede {
+		max-width: 40rem;
+		margin: 0 0 1.25rem;
+		color: var(--sp-muted);
+		font-size: var(--sp-text-md);
+		line-height: 1.5;
+	}
+
+	/* A swipeable row on phones (one stop and a peek of the next), four across on wide screens. */
+	.htour__row {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: min(72%, 16rem);
+		gap: 1rem;
+		margin: 0;
+		padding: 0.25rem 0 1rem;
+		list-style: none;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+	}
+
+	.htour__row::-webkit-scrollbar {
+		display: none;
+	}
+
+	@media (min-width: 60rem) {
+		.htour__row {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(4, 1fr);
+			overflow: visible;
+		}
+	}
+
+	.htour__stop {
+		scroll-snap-align: start;
+	}
+
+	.htour__link {
+		display: grid;
+		gap: 0.35rem;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.htour__frame {
+		display: block;
+		margin-bottom: 0.5rem;
+		overflow: hidden;
+		aspect-ratio: 780 / 1376;
+		background: var(--sp-surface);
+		border: 1px solid var(--sp-line);
+		border-radius: var(--radius-lg, 16px);
+		box-shadow: var(--sp-shadow);
+		transition: transform var(--transition-fast);
+	}
+
+	.htour__frame img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: top;
+	}
+
+	.htour__link:hover .htour__frame,
+	.htour__link:focus-visible .htour__frame {
+		transform: translateY(-2px);
+	}
+
+	.htour__title {
+		font-weight: 800;
+		font-size: var(--sp-text-lg);
+		letter-spacing: -0.01em;
+	}
+
+	.htour__body {
+		color: var(--sp-muted);
+		font-size: var(--sp-text-md);
+		line-height: 1.45;
+	}
+
+	/* The whole stop is the link: the layouts' global a:hover would turn it
+	   red and underline it, so the state is restated (soft-premium.css, a.sp-card). */
+	.htour__link:is(:hover, :focus-visible) {
+		color: var(--sp-ink);
+		text-decoration: none;
+	}
+
+	.htour__more {
+		padding-top: 0;
+	}
+
+	.htour__then {
+		margin: 0.5rem 0 0;
+		font-weight: 700;
+		font-size: var(--sp-text-md);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.htour__frame {
+			transition: none;
+		}
+	}
+</style>
