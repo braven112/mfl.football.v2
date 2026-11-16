@@ -95,7 +95,7 @@ export function relativeTime(iso, now = Date.now()) {
 
 /** The widget's stylesheet: inherits the MFL skin's text color, so it fits light and dark skins alike. */
 export const WIDGET_CSS = `
-:host{display:block;font:inherit;color:inherit}
+:host{display:block;font:inherit;color:inherit;margin-bottom:24px}
 *{box-sizing:border-box}
 .bw{--bw-line:color-mix(in srgb,currentColor 18%,transparent);--bw-soft:color-mix(in srgb,currentColor 6%,transparent);--bw-dim:color-mix(in srgb,currentColor 65%,transparent);max-width:760px;margin:0 auto}
 .bw{padding:0 12px}
@@ -206,5 +206,5 @@ export function renderAdWidget({ origin, avatar, name = 'Max Insider' }) {
 
 /** The paste-in snippet for a league's Home Page Message. */
 export function widgetSnippet({ origin, key }) {
-  return `<div id="beat-reporter"></div>\n<script src="${origin}/mfl/beat.js" data-key="${key}" defer></script>`;
+  return `<div id="beat-reporter" class="report-wrapper"></div>\n<script src="${origin}/mfl/beat.js" data-key="${key}" defer></script>`;
 }

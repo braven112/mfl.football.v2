@@ -7,6 +7,7 @@
   if (!m) return;
   var host = document.getElementById('beat-reporter');
   if (!host) { host = document.createElement('div'); me.parentNode.insertBefore(host, me); }
+  if (host.classList) host.classList.add('report-wrapper');
   var root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : host;
   fetch(new URL(me.src).origin + '/api/beat/widget?L=' + m[1] + '&k=' + encodeURIComponent(me.getAttribute('data-key') || ''))
     .then(function (r) { return r.ok ? r.json() : null; })
