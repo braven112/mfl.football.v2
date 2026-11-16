@@ -8,6 +8,7 @@
 
 import { loadTeams, loadJSON, flipName, normalizePosition, formatDefName, resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import path from 'node:path';
@@ -450,45 +451,13 @@ function seriesFacts(m, nameOf, { full = false } = {}) {
   return out;
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
-Preview the week's fantasy matchups and pick winners — be bold, be wrong sometimes, that's what makes it fun. This is the Saturday morning "what to watch" guide.
-The article page already SHOWS the numbers: a playoff-odds race board sits above your copy, and below it every game gets a card (the rivalry and its last five meetings, both teams' last five weeks, what the game does to their playoff or bye odds, and The Gauntlet's next four weeks). Your copy sits ON each game's card and tells the story those charts cannot: what is on the line, who wins and why. Do not recite records, streaks or odds the charts already show; use at most one odds number per paragraph, exactly as the fact sheet states it.\nHOMETOWNS: some matchups carry a "Hometowns" line — the city each TEAM represents, picked by its owner (usually where they grew up, often not where they live now). Each card shows a map of the two cities with the miles apart. Use it as seasoning, at most twice in the whole article, best on the Game of the Week or a long-distance or same-city game: the miles between them, or a playful nod to what the city is famous for (its food, a landmark, its pro teams). When the city is small or you know little about it, use the state instead. Stick to well-known, friendly references; never invent local specifics (a restaurant, a street, a local event), and never say an owner lives there.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
+  return buildCachedSystem(articlePrompt('matchup-preview', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write a matchup preview + broadcast guide article using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>One or two sentences that open the column.</p>"],
-  "games": [
-    { "matchup": 3, "paragraphs": ["One or two sentences.", "One or two sentences.", "..."] },
-    { "matchup": 1, "paragraphs": ["A quick hitter, two to five sentences in all.", "My pick: Team Name, 124-117."] }
-  ],
-  "closing": ["The broadcast guide, one or two sentences.", "..."]
-}
-
-INSTRUCTIONS:
-- The copy lives ON each game's card, not in a block above them.
-- "content": a one- or two-paragraph opener, each paragraph one or two sentences: the week's headline storyline. This is where links go.
-- "games": one entry for EVERY MATCHUP in the fact sheet, by its MATCHUP number. "paragraphs" is plain text, no HTML and no links.
-  - The FEATURED GAME gets the long write-up: about 10 sentences, as 4-6 short paragraphs of one or two sentences. What is at stake, the players who decide it, and your pick.
-  - Every other game is a quick hitter: 2-5 sentences in all, as one to three short paragraphs, ending with your pick.
-  - EVERY pick carries a predicted final score, winner's score first, in the form "My pick: Team Name, 124-117." Base it on the two teams' projected totals in the fact sheet (round to whole points); you may pick the underdog, but the score must make your pick the winner. No game goes without a score.
-  - KEY NFL GAME: when a matchup has a "KEY NFL GAME" line, name that NFL game and its biggest players in the write-up: it is the game that swings this one. The card shows it too, so give the why, not the numbers.
-- "closing": the broadcast guide, 1-2 short plain-text paragraphs: the one or two NFL games to watch and which rostered players make them matter.
-- Every paragraph is one or two sentences, never three, and under about 200 characters: owners read this on a phone.
-- Odds are estimates from a simulation: say "about" or "roughly", never "guaranteed" or "eliminated".
-- Use the all-time series and streak facts only as the fact sheet states them, naming the team that leads.
-- PLAYOFF BUBBLE: if any matchup carries a "Playoff bubble" line (a team that missed the playoffs by one spot facing the team that took it), call out the strongest one in a sentence — it is a must-mention storyline, sharper the closer it is to the end of the regular season. "Bubble history" lines are supporting color. State the seasons only as the fact sheet does.
-- Hometown references are optional flavor, at most twice; mileage only as the fact sheet states it.
-- Reference specific projected scores and player names from the fact sheet.
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('matchup-preview', 'user', { FACT_SHEET: factSheet });
 }
 
 /**

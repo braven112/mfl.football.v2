@@ -73,10 +73,32 @@ rules — breaking any of these cross-contaminates the leagues:
   so the calendar heuristic the other scan lanes still use would aim it at a
   league year MFL hasn't created from Feb to June.
   `tests/schefter-trade-bait-league-scope.test.ts` pins all of it.
-- **Lore/persona** is per-league under `data/schefter/<navSlug>/`
-  (personality, league-lore, running-bits, post-history, topic-recurrence).
-  No legacy-path fallback on purpose — a missing file fails loudly rather
-  than silently reading the other league's voice.
+- **Lore/persona** is per-league. The voice files (personality,
+  league-lore, running-bits) are trade secrets and live in the PRIVATE
+  `braven112/beat-reporter` repo at `lore/<navSlug>/`; the Schefter
+  workflows check it out at `.private/beat-reporter` with the
+  `BEAT_REPORTER_TOKEN` secret, and `BEAT_REPORTER_DIR` overrides the path
+  locally. Never commit voice or lore text back into this public repo. Run
+  state (post-history, topic-recurrence) stays under `data/schefter/<navSlug>/`.
+  No legacy-path fallback on purpose — a missing lore file warns and the post
+  falls back to the inline prompt rather than reading the other league's voice.
+  The same repo holds the rumor mill's system prompt and trade-offer playbook
+  (`prompts/`), the quiet-day prompt, and Max Insider's example bank and full
+  voice (`voice/`), read through `scripts/lib/beat-reporter-pack.mjs`. Without
+  the pack, examples go empty and Max keeps his short public stub voice, but
+  the rumor mill FAILS CLOSED to its templates: its anonymity rules live in
+  that prompt, and a post written without them could out a tipster. Their
+  content pins are the private repo's tests; the real-franchise-name guard
+  stays here (`tests/schefter-former-name-callback.test.ts`, which CI runs
+  against a checkout of the pack).
+  Every COLUMN's own text lives there too: `prompts/articles/<type>.system.md`
+  and `.user.md` for the nine article types and the Pecking Order, read through
+  `scripts/article-utils/article-prompts.mjs` (`{{FACT_SHEET}}` is filled in one
+  pass). A missing column prompt also fails closed: the article runner skips
+  the column and the Pecking Order keeps its templated voice. The house rules
+  every column shares (`BASE_SYSTEM_PROMPT`) stay public. A public test that
+  checks prompt STRUCTURE (league line, persona) swaps in a stub with
+  `setArticlePromptReader`; one that checks WORDING belongs in the private repo.
 - **Pages** are thin per-league wrappers over shared components
   (`src/components/schefter/{TipPage,StyleBookPage,RumorThread,
   AdminDashboard}.astro`) — build tip-page improvements in the component

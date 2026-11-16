@@ -8,6 +8,7 @@
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { franchiseRecord } from '../article-utils/franchise-record.mjs';
@@ -118,30 +119,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: {} };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Championship Recap
-This is the biggest article of the year. Crown the champion with all the fanfare they deserve. Celebrate greatness — the MVP performances, the dynasty implications. This team just won the whole damn thing. Make it feel like a coronation. But also give the runner-up credit for getting there.`, { league, persona });
+  return buildCachedSystem(articlePrompt('championship-recap', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write a championship recap article using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars, crown the champion)",
-  "excerpt": "2-3 sentence teaser — the championship result and why it matters.",
-  "content": ["<p>Opening — the champion is crowned.</p>", "<p>The championship game breakdown.</p>", "<p>MVP performances.</p>", "<p>Season in review / dynasty implications.</p>"]
-}
-
-INSTRUCTIONS:
-- Write 4-6 content paragraphs.
-- Lead with the champion — name them, celebrate them.
-- Break down the championship game score and key performers.
-- Give credit to the runner-up.
-- Put the season in context — was this a dynasty? An upset? A coronation?
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('championship-recap', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {

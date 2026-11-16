@@ -16,6 +16,7 @@ import {
   resolvePersona,
   validatePersona,
 } from '../src/utils/persona.mjs';
+import { withHouseVoice } from '../scripts/lib/persona-store.mjs';
 import {
   BASE_SYSTEM_PROMPT,
   PERSONA_NEUTRAL_RULES,
@@ -164,16 +165,24 @@ describe('buildCachedSystem with a persona', () => {
 
   it('every article type forwards the persona to the prompt', async () => {
     const { readdirSync } = await import('node:fs');
-    const dir = new URL('../scripts/article-types/', import.meta.url);
-    const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));
-    for (const file of files) {
-      const mod = await import(new URL(file, dir).href);
-      if (typeof mod.getSystemPrompt !== 'function') continue;
-      const text = mod
-        .getSystemPrompt({ league: 'theleague', persona: ARCHIE })
-        .map((b: { text: string }) => b.text)
-        .join('');
-      expect(text, `${file} ignores the persona`).toContain('You are Archie Bunker');
+    const { setArticlePromptReader } = await import('../scripts/article-utils/article-prompts.mjs');
+    // The column's wording lives in the private pack; a stub stands in so this
+    // checks only that the persona reaches the prompt.
+    const restore = setArticlePromptReader((rel: string) => (rel.endsWith('.user.md') ? 'STUB {{FACT_SHEET}}' : 'ARTICLE TYPE: stub'));
+    try {
+      const dir = new URL('../scripts/article-types/', import.meta.url);
+      const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));
+      for (const file of files) {
+        const mod = await import(new URL(file, dir).href);
+        if (typeof mod.getSystemPrompt !== 'function') continue;
+        const text = mod
+          .getSystemPrompt({ league: 'theleague', persona: ARCHIE })
+          .map((b: { text: string }) => b.text)
+          .join('');
+        expect(text, `${file} ignores the persona`).toContain('You are Archie Bunker');
+      }
+    } finally {
+      restore();
     }
   });
 
@@ -245,5 +254,25 @@ describe('personaLabels and personaByline — the persona on owner-facing surfac
       avatar: '/assets/c.webp',
       handle: '@schefter',
     });
+  });
+});
+
+// Max's full voice lives in the private beat-reporter repo; the jobs swap it in
+// for the public stub, and only for a persona still carrying that stub.
+describe('withHouseVoice', () => {
+  const read = () => 'FULL PRIVATE VOICE';
+
+  it('swaps the stub for the private voice', () => {
+    expect(withHouseVoice({ ...BEAT_REPORTER_PERSONA }, { read }).voice).toBe('FULL PRIVATE VOICE');
+  });
+
+  it("never touches Schefter or a commissioner's own voice", () => {
+    expect(withHouseVoice({ ...DEFAULT_PERSONA }, { read })).toEqual(DEFAULT_PERSONA);
+    const own = { ...BEAT_REPORTER_PERSONA, voice: 'My own voice.' };
+    expect(withHouseVoice(own, { read }).voice).toBe('My own voice.');
+  });
+
+  it('keeps the stub when the private pack is missing', () => {
+    expect(withHouseVoice({ ...BEAT_REPORTER_PERSONA }, { read: () => null }).voice).toBe(BEAT_REPORTER_PERSONA.voice);
   });
 });

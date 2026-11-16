@@ -51,6 +51,18 @@ jobs:
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: node scripts/schefter-feed-sync.mjs pull
 
+      # Schefter's voice and lore live in the private beat-reporter repo, not
+      # here (scripts/lib/schefter-lore.mjs reads .private/beat-reporter). A
+      # missing token or failed checkout must not stop the job: the loader
+      # warns and the post is written in the plain house voice instead.
+      - name: Check out the private reporter lore
+        uses: actions/checkout@v6
+        continue-on-error: true
+        with:
+          repository: braven112/beat-reporter
+          token: ${{ secrets.BEAT_REPORTER_TOKEN }}
+          path: .private/beat-reporter
+
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 

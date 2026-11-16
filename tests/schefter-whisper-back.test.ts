@@ -94,9 +94,4 @@ describe('Phase 7 — scanner thread persistence', () => {
     // the key shape is the same: `thread_of:${postId}`.
     expect(scanner).toMatch(/globalSchefterKey\('threadOf', (?:post|p)\.id\)/);
   });
-
-  it('tells the LLM to open with continuity language when a threadFollowup is present', () => {
-    expect(scanner).toMatch(/threadFollowup/);
-    expect(scanner).toMatch(/Thread continuity/);
-  });
 });

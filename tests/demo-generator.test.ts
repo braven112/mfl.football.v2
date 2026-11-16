@@ -197,7 +197,7 @@ describe('demo build isolation', () => {
     const src = readFileSync('scripts/prebuild.mjs', 'utf8');
     const main = src.slice(src.indexOf('async function main()'));
     const demo = main.indexOf('isDemoEnv(process.env)');
-    const firstStep = main.indexOf('for (const { name, cmd } of sequential)');
+    const firstStep = main.indexOf('of sequential)');
     expect(demo).toBeGreaterThan(-1);
     expect(demo).toBeLessThan(firstStep);
   });

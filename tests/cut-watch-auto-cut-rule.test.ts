@@ -30,7 +30,7 @@ import path from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { findValueBasedAutoCutClaims, findValueBasedAutoCutClaimsInPost, stripHtml } from '../scripts/lib/cut-watch-graders.mjs';
-import { buildFactSheet, getUserPrompt } from '../scripts/article-types/cut-watch.mjs';
+import { buildFactSheet } from '../scripts/article-types/cut-watch.mjs';
 import { selectAutoMoves, parseAcquisitionEvents } from '../src/utils/august-cut-selection-core.mjs';
 import { fixtureData, fixtureAdp } from './fixtures/cut-watch-fixture';
 
@@ -306,30 +306,10 @@ describe('fact sheet — mechanical rule is stated and computed (Layer 1 source)
   });
 });
 
-describe('user prompt — instruction contract (Layer 1 + Layer 2)', () => {
-  const prompt = getUserPrompt('FACT SHEET PLACEHOLDER');
-
-  it('forbids value-based mechanic claims outright', () => {
-    expect(prompt).toContain('NEVER based on value');
-    expect(prompt).toMatch(/never\s+say or imply the system targets the weakest/i);
-  });
-
-  it('states the real mechanic for the model to repeat', () => {
-    expect(prompt).toMatch(/NEWEST waiver\/FA\/auction pickups, newest first/);
-    expect(prompt).toMatch(/acquired by\s+trade are treated as long-held/);
-    expect(prompt).toMatch(/moves rookies into open\s+practice-squad spots/);
-  });
-
-  it('demands the two framings stay separate (no welded clause)', () => {
-    expect(prompt).toContain('Keep the two lists separate');
-    expect(prompt).toMatch(/Never fuse them into one sentence/);
-  });
-
-  it('still demands value-ranked recommendations (overcorrection guard)', () => {
-    expect(prompt).toContain('COMBINED VALUE');
-    expect(prompt).toMatch(/Name specific players who could be cut/);
-  });
-});
+// The user prompt's instruction contract (Layer 1 + Layer 2: the real
+// mechanic, the two lists kept apart, the value-ranked recommendations) is
+// pinned in the private beat-reporter repo, where the prompt now lives
+// (tests/article-prompts.test.mjs there).
 
 describe('fact-sheet preview matches the deadline job byte-for-byte (shared implementation)', () => {
   it('selectAutoMoves on the fixture returns the exact taxi + cut sets', () => {

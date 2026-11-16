@@ -346,34 +346,10 @@ describe('ingestGroupMeMentions — Style Book integration', () => {
 
 describe('source-level contract — scanner + prompt', () => {
   const scannerSrc = read('scripts/schefter-rumor-scan.mjs');
-  const runningBitsSrc = read('data/schefter/theleague/running-bits.md');
 
   it('anonymizeTips surfaces attackOnSchefter + styleBookCount on GroupMe tips', () => {
     // The flag and count must be surfaced on the safe object so the LLM sees them.
     expect(scannerSrc).toMatch(/safe\.attackOnSchefter\s*=\s*true/);
     expect(scannerSrc).toMatch(/safe\.styleBookCount\s*=\s*tip\.styleBookCount/);
-  });
-
-  it('system prompt contains HARD RULE 15 (Style Book) and covers both named + anon', () => {
-    expect(scannerSrc).toMatch(/15\.\s*Style Book \(attacks on Schefter\)/);
-    expect(scannerSrc).toMatch(/attackOnSchefter:\s*true/);
-    expect(scannerSrc).toMatch(/styleBookCount/);
-    // Rule must distinguish GroupMe (named) and web (anonymous) flavors so
-    // Schefter addresses each correctly.
-    expect(scannerSrc).toMatch(/GroupMe \(named\)/);
-    expect(scannerSrc).toMatch(/Web \(anonymous\)/);
-    expect(scannerSrc).toMatch(/tipsterCodename/);
-  });
-
-  it('system prompt forbids quoting the attack verbatim and clapping back', () => {
-    expect(scannerSrc).toMatch(/NEVER quote the attack verbatim/);
-    expect(scannerSrc).toMatch(/NEVER defensive or clapping-back/);
-  });
-
-  it('running-bits.md has been extended with count-based escalation lines', () => {
-    expect(runningBitsSrc).toMatch(/count === 1/);
-    expect(runningBitsSrc).toMatch(/count === 2/);
-    expect(runningBitsSrc).toMatch(/count >= 4/);
-    expect(runningBitsSrc).toMatch(/styleBookCount/);
   });
 });

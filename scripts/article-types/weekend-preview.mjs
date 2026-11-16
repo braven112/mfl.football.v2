@@ -8,6 +8,7 @@
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
@@ -173,31 +174,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Weekend Preview
-Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, say so early — it is the week's defining feature. A team appearing in two matchups is the schedule, not a duplicate, and the stakes are doubled.`, { league, persona });
+  return buildCachedSystem(articlePrompt('weekend-preview', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write a weekend preview article using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>One or two sentences.</p>", "<p>One punchy line.</p>", "..."]
-}
-
-INSTRUCTIONS:
-- Write 8-12 SHORT content paragraphs: one or two sentences each, never three. Owners read this on a phone, so keep each paragraph under about 200 characters.
-- Give a punchline or a bold prediction its own one-sentence paragraph.
-- Identify the matchup of the week (most competitive or highest stakes).
-- Make bold predictions for 2-3 key matchups.
-- Call out teams on winning/losing streaks.
-- Reference specific projected scores and player matchups from the fact sheet.
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('weekend-preview', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {

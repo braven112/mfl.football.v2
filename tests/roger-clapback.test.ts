@@ -537,6 +537,10 @@ describe('buildFactSheet', () => {
 
 // ── Generator failure modes ─────────────────────────────────────────────────
 
+// The real prompt lives in the private beat-reporter pack; these pin the
+// plumbing around it, so a stand-in is enough.
+const TEST_PROMPT = 'You are Roger. Reply with JSON.';
+
 describe('generateClapback — silence is the safe failure', () => {
   const OLD_KEY = process.env.ANTHROPIC_API_KEY;
   beforeEach(() => {
@@ -555,7 +559,7 @@ describe('generateClapback — silence is the safe failure', () => {
   }
 
   it('returns the reply when the model says it was a shot', async () => {
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: OWNER_SHOT,
       ownerName: 'Harambe',
       factSheet: 'ROSTER FACTS: none',
@@ -566,7 +570,7 @@ describe('generateClapback — silence is the safe failure', () => {
   });
 
   it('stays silent when the model declines to swing', async () => {
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: 'roger, when is the trade deadline?',
       factSheet: '',
       fetchImpl: fakeApi('{"shot": false, "reply": ""}'),
@@ -576,7 +580,7 @@ describe('generateClapback — silence is the safe failure', () => {
   });
 
   it('skips a thinking block and reads the text block', async () => {
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: OWNER_SHOT,
       factSheet: '',
       fetchImpl: async () => ({
@@ -594,7 +598,7 @@ describe('generateClapback — silence is the safe failure', () => {
 
   it('drops a reply that blew past the brief instead of posting a wall of text', async () => {
     const long = 'x'.repeat(500);
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: OWNER_SHOT,
       factSheet: '',
       fetchImpl: fakeApi(`{"shot": true, "reply": "${long}"}`),
@@ -607,12 +611,12 @@ describe('generateClapback — silence is the safe failure', () => {
     ['unparseable body', fakeApi('not json at all')],
     ['empty reply', fakeApi('{"shot": true, "reply": "   "}')],
   ])('stays silent on %s', async (_label, impl) => {
-    const r = await generateClapback({ ownerText: OWNER_SHOT, factSheet: '', fetchImpl: impl });
+    const r = await generateClapback({ system: TEST_PROMPT, ownerText: OWNER_SHOT, factSheet: '', fetchImpl: impl });
     expect(r.shot).toBe(false);
   });
 
   it('stays silent on a non-2xx response', async () => {
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: OWNER_SHOT,
       factSheet: '',
       fetchImpl: async () => ({ ok: false, status: 529, text: async () => 'overloaded' }),
@@ -622,7 +626,7 @@ describe('generateClapback — silence is the safe failure', () => {
   });
 
   it('stays silent when the network throws', async () => {
-    const r = await generateClapback({
+    const r = await generateClapback({ system: TEST_PROMPT,
       ownerText: OWNER_SHOT,
       factSheet: '',
       fetchImpl: async () => {
@@ -635,7 +639,7 @@ describe('generateClapback — silence is the safe failure', () => {
 
   it('stays silent with no API key rather than throwing mid-scan', async () => {
     delete process.env.ANTHROPIC_API_KEY;
-    const r = await generateClapback({ ownerText: OWNER_SHOT, factSheet: '' });
+    const r = await generateClapback({ system: TEST_PROMPT, ownerText: OWNER_SHOT, factSheet: '' });
     expect(r).toEqual({ shot: false, reason: 'no-api-key' });
   });
 });

@@ -75,7 +75,6 @@ describe("Roger's prompt for a package league", () => {
     expect(prompt.indexOf('SOURCE 1 — THE LEAGUE RULEBOOK')).toBeLessThan(prompt.indexOf("SOURCE 2 — THE LEAGUE'S MFL SETTINGS"));
     expect(prompt).toContain('Rule 1: be nice.');
     expect(prompt).toContain('- Roster size: 14');
-    expect(prompt).toMatch(/disagree, give both and tell the owner to check with the Commissioner/);
     expect(prompt).toContain(`/smith/rules#${RULES_PAGE_ANCHORS.rulebook}`);
     expect(prompt).toContain(`/smith/rules#${RULES_PAGE_ANCHORS.mflSettings}`);
   });

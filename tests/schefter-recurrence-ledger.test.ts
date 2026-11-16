@@ -278,11 +278,6 @@ describe('scanner + admin integration (source guards)', () => {
     expect(SCANNER_SRC).toMatch(/mailbagBatch = gossipPool\.slice/);
   });
 
-  it('HARD RULE 20 mentions staleStreakWeeks framing', () => {
-    expect(SCANNER_SRC).toMatch(/staleStreakWeeks/);
-    expect(SCANNER_SRC).toMatch(/RECURRENCE FRAMING/);
-  });
-
   it('scanner annotates each anonymized tip with staleStreakWeeks before the LLM call', () => {
     expect(SCANNER_SRC).toMatch(/a\.staleStreakWeeks = streakById\.get/);
   });

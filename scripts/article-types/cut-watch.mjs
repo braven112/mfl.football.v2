@@ -25,6 +25,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary, resolveDataDir } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
@@ -447,58 +448,13 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Cut Watch
-Channel the urgency of NFL roster cut day. Name names — who's on the chopping block? Which teams are in the toughest spots? Who has easy decisions vs. gut-wrenching ones? Talk about salary implications of keeping vs. cutting players.`, { league, persona });
+  return buildCachedSystem(articlePrompt('cut-watch', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write a cut watch article using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Paragraph 1...</p>", "<p>Paragraph 2...</p>"]
-}
-
-INSTRUCTIONS:
-- Write 3-5 content paragraphs.
-- Focus on teams that are over the roster limit.
-- If the fact sheet shows cutdown-plan status, LEAD with the over-limit teams
-  marked "NONE ON FILE" — those owners haven't made their picks yet, and they
-  are the story. Call them out by team name for procrastinating with the
-  deadline looming.
-- Teams marked "FILED" have already made their plans — give them credit for
-  having their affairs in order and shift the heat to the procrastinators.
-- NEVER name or guess which players are in a FILED plan — plans are private.
-  Your "likely cut candidates" list is salary-based speculation and fair
-  game, but never present it as an owner's actual list.
-- Name specific players who could be cut and why. The candidates are ranked
-  by COMBINED VALUE — redraft and dynasty ADP blended by contract length
-  (1-year players are judged purely on redraft value, 5-year players purely
-  on dynasty value). Lean on it: a player UNRANKED in league-wide ADP is dead
-  weight nobody would draft; a strong blended ADP means that roster spot is
-  probably safe. But frame it as YOUR advice about who an owner SHOULD cut —
-  it is never how the system picks.
-- THE MECHANIC, GET IT RIGHT: deadline auto-cuts are NEVER based on value,
-  salary, or weakness. The system first moves rookies into open
-  practice-squad spots (those players are KEPT — never call a taxi move a
-  cut or a loss), then cuts owner-marked players in the owner's order, then
-  the NEWEST waiver/FA/auction pickups, newest first; players acquired by
-  trade are treated as long-held and go last. If you describe what happens
-  to an owner who does nothing, use the fact sheet's system lists — never
-  say or imply the system targets the weakest or lowest-value players.
-- Keep the two lists separate: "should cut" = the combined-value candidates
-  (your editorial advice); "will lose by doing nothing" = the system's
-  auto-cut order. Never fuse them into one sentence as if the value ranking
-  drives the system. The gap BETWEEN them is often the real story — the
-  system takes recent pickups while untouchable dead weight survives.
-- Discuss which cuts are easy (unranked, low salary, redundant) vs. painful.
-- If no teams are over the limit, write about who's cutting it close.
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('cut-watch', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {

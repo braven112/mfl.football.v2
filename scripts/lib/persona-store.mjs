@@ -9,7 +9,8 @@
  */
 
 import { LEAGUES, SHARED_APP_ORIGIN, leagueOrigin } from '../../src/config/leagues-data.mjs';
-import { absolutePersonaAvatar, personaKey, resolvePersona } from '../../src/utils/persona.mjs';
+import { BEAT_REPORTER_PERSONA, absolutePersonaAvatar, personaKey, resolvePersona } from '../../src/utils/persona.mjs';
+import { readPackText } from './beat-reporter-pack.mjs';
 import { getRedisConfig, redisCommand } from './redis.mjs';
 
 /**
@@ -22,7 +23,7 @@ export async function loadLeaguePersona(slug, { redis = getRedisConfig(), comman
   // A registry avatar may be a site path; the node-side senders (Slack's
   // icon_url) need it absolute.
   const origin = leagueOrigin(entry) ?? SHARED_APP_ORIGIN;
-  const withAbsoluteAvatar = (/** @type {ReturnType<typeof resolvePersona>} */ p) => ({ ...p, avatarUrl: absolutePersonaAvatar(p, origin) });
+  const withAbsoluteAvatar = (/** @type {ReturnType<typeof resolvePersona>} */ p) => withHouseVoice({ ...p, avatarUrl: absolutePersonaAvatar(p, origin) });
   if (!redis) return withAbsoluteAvatar(resolvePersona(entry, null));
   try {
     const stored = await command(redis, ['GET', personaKey(slug)]);
@@ -31,4 +32,22 @@ export async function loadLeaguePersona(slug, { redis = getRedisConfig(), comman
     log.warn?.(`  [persona] Could not read ${personaKey(slug)} (${/** @type {Error} */ (err).message}) — using the default.`);
     return withAbsoluteAvatar(resolvePersona(entry, null));
   }
+}
+
+/**
+ * Swap the house reporter's public stub voice for his full voice from the
+ * private beat-reporter pack (voice/max-insider.md). Only a persona still
+ * carrying the stub is touched — a commissioner's own saved voice, a registry
+ * voice and Schefter are left exactly as they are. Without the pack the stub
+ * stays, which is a blander post, never a broken one.
+ *
+ * @template {{ voice: string }} P
+ * @param {P} persona
+ * @param {{ read?: typeof readPackText }} [opts]
+ * @returns {P}
+ */
+export function withHouseVoice(persona, { read = readPackText } = {}) {
+  if (persona?.voice !== BEAT_REPORTER_PERSONA.voice) return persona;
+  const full = read('voice/max-insider.md');
+  return full ? { ...persona, voice: full } : persona;
 }

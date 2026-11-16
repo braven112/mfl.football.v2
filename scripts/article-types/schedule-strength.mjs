@@ -14,6 +14,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
@@ -133,34 +134,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: The Gauntlet (Weekly Schedule-Strength Column)
-This is YOUR named weekly analytics column — own it, and keep it SHORT.
-The rankings chart sits directly above your copy, so readers already see
-every team: your job is two quick paragraphs, not a rundown. Name the 2-3
-hardest roads ahead and, briefly, the easiest one. Frame difficulty as roads
-ahead: gauntlets, buzz saws, cupcake runs. Use only teams and numbers from
-the fact sheet. Do NOT invent matchups, records, or numbers.`, { league, persona });
+  return buildCachedSystem(articlePrompt('schedule-strength', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write this week's edition of The Gauntlet using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars) that leads with the week's spiciest schedule-strength finding",
-  "excerpt": "One sentence teaser for the feed card.",
-  "content": ["<p>The 2-3 hardest remaining schedules, with their difficulty numbers.</p>", "<p>The easiest road, and a pointer to the full rankings.</p>"]
-}
-
-INSTRUCTIONS:
-- EXACTLY 2 content paragraphs (3 only if truly needed). Never more.
-- Each paragraph is 2 short sentences, under 50 words. No lists of every team.
-- Do not cover schedule luck, trap weeks or movers — the page shows those.
-- Every team name and number must come from the fact sheet.
-- Voice: high-energy beat reporter who built the model himself and trusts it.`;
+  return articlePrompt('schedule-strength', 'user', { FACT_SHEET: factSheet });
 }
 
 /**

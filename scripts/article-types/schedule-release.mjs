@@ -22,6 +22,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { describeSeries, rivalryPairKey } from '../../src/utils/rivalry-intensity.mjs';
@@ -382,56 +383,11 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {
   );
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Schedule Release
-The schedule for the coming season just dropped. This is a release-day column:
-energy first, analysis second. Lead with the games people will circle, not with
-the methodology. The construction facts are there to reassure anyone who
-suspects the draw was unfair — mention them lightly, in passing, the way a beat
-writer notes the league office got something right for once. Never present the
-schedule as an opinion: it is set, it is final, and every team is looking at
-the same one.
-
-BYE-WEEK DIVISION GAMES ARE NOT A SCANDAL. The fact sheet gives both numbers:
-how many division games dodge the NFL byes and how many do not. Some leagues
-CANNOT get to zero — the format runs out of bye-free weeks before it runs out
-of division games — and where the fact sheet says a count is forced, say so or
-say nothing. Never write that the league office failed to avoid a bye week it
-had no way to avoid, and never round the awkward number away. The constraint
-list is in priority order for exactly this reason: if the schedule breaks a
-stated goal, a higher-ranked rule beat it, and that is the story.
-
-RIVALRIES ARE THE STORY. A schedule is a list of dates until you say who is
-playing whom and what happened the last dozen times. The fact sheet ranks the
-pairings this schedule renews, with all-time records — use them. A game between
-two teams that have split twenty meetings is worth more words than a
-construction fact. Cite the record when you name a rivalry; never estimate one,
-and never say a team leads a series unless the fact sheet says so.`, { league, persona });
+  return buildCachedSystem(articlePrompt('schedule-release', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write the schedule-release column using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": [
-    "<p>Opening paragraph — the schedule is out, set the tone.</p>",
-    "<p>...</p>",
-    "<p>Closing line — point at the opener.</p>"
-  ]
-}
-
-RULES:
-- "content" is a flat array of 6-10 standalone <p> paragraphs. No headings, no nesting.
-- Use ONLY franchise names and week numbers that appear above. Never invent a matchup.
-- Give each of the four circled games its own beat — that is the spine of the column.
-- Devote a section to the rivalry renewals, using the all-time records exactly as written.
-  Quote a record verbatim or not at all — do not recompute, round, or flip it.
-- If a game falls in Throwback Week, say so: those franchises play it in their old identities.
-- Do not restate every construction fact; pick the one or two that land.
-- No predictions of wins and losses. The schedule is news, not a forecast.`;
+  return articlePrompt('schedule-release', 'user', { FACT_SHEET: factSheet });
 }

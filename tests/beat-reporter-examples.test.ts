@@ -5,7 +5,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  BEAT_EXAMPLES,
   BEAT_LANES,
   beatExamplesBlock,
   callbackLinks,
@@ -23,23 +22,32 @@ const seeded = (seed = 1) => () => {
   return (seed - 1) / 2147483646;
 };
 
+// The bank's CONTENT (placeholders only, never a real reporter's line) is
+// voice material and is pinned in the private beat-reporter repo, beside
+// voice/beat-examples.json. What stays here is the machinery, run on a bank
+// built in the test.
 describe('the example bank', () => {
-  const all = BEAT_LANES.flatMap((l) => BEAT_EXAMPLES[l]);
-
-  it('never names a real reporter or borrows a catchphrase', () => {
-    for (const e of all) expect(e).not.toMatch(/Schefter|Glazer|Rapoport|Pelissero|Fowler|Stephen|Boom|Officially official/i);
-  });
-
-  it('uses placeholders, never a team name', () => {
-    for (const e of all) expect(e).toMatch(/\[(TEAM|OWNER|PLAYER|N)\]|^What I am hearing/);
-  });
+  const bank = {
+    scoop: ['s1', 's2', 's3'],
+    numbers: ['n1'],
+    insider: ['i1', 'i2'],
+    measured: ['m1', 'm2', 'm3'],
+    notebook: ['b1'],
+    'hot-take': ['h1'],
+  };
 
   it('draws without repeats, preferring the lanes the news picked', () => {
-    const picks = pickBeatExamples({ lanes: ['measured'], count: 3, random: seeded(7) });
+    const picks = pickBeatExamples({ lanes: ['measured'], count: 3, random: seeded(7), bank });
     expect(picks).toHaveLength(3);
     expect(new Set(picks).size).toBe(3);
-    expect(BEAT_EXAMPLES.measured).toContain(picks[0]);
-    expect(BEAT_EXAMPLES.measured).toContain(picks[1]);
+    expect(bank.measured).toContain(picks[0]);
+    expect(bank.measured).toContain(picks[1]);
+  });
+
+  it('draws nothing, rather than failing, when the private pack is absent', () => {
+    const empty = Object.fromEntries(BEAT_LANES.map((l) => [l, []]));
+    expect(pickBeatExamples({ lanes: ['measured'], count: 3, bank: empty })).toEqual([]);
+    expect(beatExamplesBlock([])).toBe('');
   });
 
   it('lets the news pick the style', () => {

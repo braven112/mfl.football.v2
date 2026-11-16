@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { setArticlePromptReader } from '../scripts/article-utils/article-prompts.mjs';
+
+// These tests check that the prompt carries the league and persona, not the
+// column's own wording, which lives in the private beat-reporter pack. A stub
+// stands in for it so they run with or without that checkout.
+const stubColumnPrompt = (rel: string) => (rel.endsWith('.user.md') ? 'STUB {{FACT_SHEET}}' : 'ARTICLE TYPE: stub');
+let restoreReader: () => void;
+beforeAll(() => { restoreReader = setArticlePromptReader(stubColumnPrompt); });
+afterAll(() => restoreReader());
 
 /**
  * Every article type's `buildPost` must honour the `{ league }` option it is

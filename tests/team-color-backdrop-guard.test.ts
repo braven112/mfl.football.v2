@@ -95,7 +95,6 @@ const ALLOWLIST: Record<string, string> = {
   'src/utils/schefter-og.ts': 'Schefter OG image background',
 
   // Page-level composite usage (hero art on the rookies page).
-  'src/pages/theleague/rookies-2026.astro': 'rookie hero composites',
 };
 
 // Pure-Node scan (no shelling out to grep — portable across dev platforms,

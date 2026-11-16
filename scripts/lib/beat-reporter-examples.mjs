@@ -7,87 +7,51 @@
  * prompt is what keeps a feed from reading like a template (Brandon, Nov 2026:
  * "the goal is to have multiple ways of saying the same things").
  *
- * Rules for every entry:
- *   - Original writing in the STYLE of the seeds. Never a real reporter's post,
- *     name or catchphrase (tests/beat-reporter-examples.test.ts).
- *   - Placeholders only — [TEAM], [OWNER], [PLAYER], [N] — never a real or
- *     invented team name, so nothing in an example can leak into a post as a
- *     fact.
- *   - One delivery each, short. These show rhythm, not content.
+ * The bank itself is voice material, so it lives in the PRIVATE beat-reporter
+ * repo at voice/beat-examples.json (scripts/lib/beat-reporter-pack.mjs). Its
+ * content rules (placeholders only, never a real reporter's line) are pinned
+ * by that repo's own tests. Without the pack every lane is empty and
+ * `beatExamplesBlock` emits nothing: the post is written without examples,
+ * which is the pre-bank behavior, never a broken prompt.
  */
+
+import { readPackJson } from './beat-reporter-pack.mjs';
 
 /** @typedef {'scoop' | 'numbers' | 'insider' | 'measured' | 'notebook' | 'hot-take'} BeatLane */
 
-/** @type {Readonly<Record<BeatLane, readonly string[]>>} */
-export const BEAT_EXAMPLES = Object.freeze({
-  // The plain wire (seeded from posts Brandon shared, Nov 2026): the move,
-  // stated flat, often in one line, sometimes with a few words of read.
-  scoop: [
-    '[TEAM] officially added [PLAYER].',
-    '[TEAM] placed [PLAYER] on IR.',
-    'Insurance for [TEAM], in case [PLAYER] cannot go Sunday.',
-    'Help is on the way for [TEAM]...',
-    '[TEAM] is adding [PLAYER], I\'m told. Done deal.',
-    'Per a league source: [OWNER] has been working the phones all morning. Something is coming.',
-    'Keep an eye on [TEAM]. Word around the league is they are not done.',
-    'Sources close to the deal say [PLAYER] is on the move. More soon.',
-  ],
-  numbers: [
-    '[TEAM] has dropped [N] of its last [N]. The schedule does not get easier: three of the next four opponents are top-ten scoring teams.',
-    'The math on [TEAM]: [N] points behind the cut line with [N] weeks left. Every week from here is a must-win.',
-    'Deal terms, as I understand them: [PLAYER] heads to [TEAM]. It fills the one hole in that lineup the rest of the league kept circling.',
-    '[N] points. That is how much separated [TEAM] from a top seed last week. Thinnest margin in the league.',
-  ],
-  insider: [
-    'Talked to people around [TEAM] this week. The mood is not panic. It is quieter than that, and that is worse.',
-    '[OWNER] does not sit still after a loss. History says a move is coming before Sunday.',
-    'One front office I trust put it plainly: nobody wants to see [TEAM] in the playoffs.',
-    'You learn a lot about an owner by what they do after a bad week. [OWNER] went straight to the waiver wire.',
-    // Front-office notebook seeds (posts Brandon shared, Nov 2026): context
-    // on someone else's news, the plan going in, what people said.
-    '[PLAYER], a former first-round pick, has had a real resurgence on [TEAM].',
-    '[TEAM] wanted to get [PLAYER] 15 to 20 touches this week. Already at [N] by halftime.',
-    '[OWNER] said the plan all along was to be patient with [PLAYER]. "I knew," came the answer, with a laugh.',
-    '[PLAYER] is playing with confidence. Accurate, decisive, no hesitation.',
-  ],
-  measured: [
-    '[PLAYER] is expected to miss time. The plan is to reassess next week, and [TEAM] will lean on depth until then.',
-    'Not the news [TEAM] wanted. [PLAYER] is out this week, and the backup is the starter for now.',
-    'The hope around [TEAM] is that this is short-term. Nothing is certain yet.',
-  ],
-  notebook: [
-    'Notes from around the league:\n- [TEAM] is quietly the hottest team in its division.\n- [OWNER] has not made a move in a month. That will not last.\n- Watch the [TEAM] vs [TEAM] game. It decides a playoff spot.',
-    'What I am hearing this week: front offices think the race is wide open, and three teams still believe they are buyers.',
-    'From around the league:\n- [TEAM] preps for a must-win\n- [PLAYER] workload\n- [PLAYER] rejuvenated\n- [OWNER] eyes a complete week',
-    'Three things that stood out:\n- [TEAM]\'s bench outscored two starting lineups.\n- [TEAM] is one bad week from trouble.\n- Nobody wants the last wild card. Somebody has to take it.',
-  ],
-  'hot-take': [
-    'I am sorry, but benching [PLAYER] for THAT? Indefensible. [OWNER] knows better.',
-    'This is not a slump. This is a crisis, and [TEAM] is pretending it is not.',
-    'Let me be very clear: [TEAM] did not lose this week. [TEAM] gave it away.',
-    // Seeded from posts Brandon shared (Nov 2026): the big question up top,
-    // the honest verdict, the caller-show energy. Football only, always.
-    'Can [TEAM] really replace [PLAYER]? I asked around, and the answer is NOT what [OWNER] wants to hear.',
-    'Now let me be honest. I am no fan of what [TEAM] did on waivers this week.',
-    'The gloves are OFF in [TEAM] vs [TEAM]. Somebody is leaving Sunday with a losing streak.',
-    'I asked the league for its takes, the responses came in, and you KNOW I had something to say about [TEAM].',
-  ],
-});
-
 /** Every lane, in a stable order. */
-export const BEAT_LANES = /** @type {readonly BeatLane[]} */ (Object.freeze(Object.keys(BEAT_EXAMPLES)));
+export const BEAT_LANES = /** @type {readonly BeatLane[]} */ (
+  Object.freeze(['scoop', 'numbers', 'insider', 'measured', 'notebook', 'hot-take'])
+);
+
+/**
+ * The bank, from the private pack. A lane the pack omits, or any entry that
+ * is not a non-empty string, is dropped rather than trusted.
+ *
+ * @returns {Readonly<Record<BeatLane, readonly string[]>>}
+ */
+export function loadBeatExamples() {
+  const raw = /** @type {Record<string, unknown> | null} */ (readPackJson('voice/beat-examples.json'));
+  /** @type {Record<string, readonly string[]>} */
+  const bank = {};
+  for (const lane of BEAT_LANES) {
+    const list = raw && Array.isArray(raw[lane]) ? raw[lane] : [];
+    bank[lane] = Object.freeze(list.filter((e) => typeof e === 'string' && e.trim()));
+  }
+  return /** @type {Readonly<Record<BeatLane, readonly string[]>>} */ (Object.freeze(bank));
+}
 
 /**
  * Draw `count` examples from the bank. Lanes named in `lanes` are drawn first
  * (the news decides the style); the rest of the draw comes from any lane so
  * the post still has range. No example repeats within one draw.
  *
- * @param {{ lanes?: readonly BeatLane[], count?: number, random?: () => number }} [opts]
+ * @param {{ lanes?: readonly BeatLane[], count?: number, random?: () => number, bank?: Readonly<Record<string, readonly string[]>> }} [opts]
  * @returns {string[]}
  */
-export function pickBeatExamples({ lanes = [], count = 3, random = Math.random } = {}) {
-  const preferred = lanes.flatMap((lane) => BEAT_EXAMPLES[lane] ?? []);
-  const rest = BEAT_LANES.filter((lane) => !lanes.includes(lane)).flatMap((lane) => BEAT_EXAMPLES[lane]);
+export function pickBeatExamples({ lanes = [], count = 3, random = Math.random, bank = loadBeatExamples() } = {}) {
+  const preferred = lanes.flatMap((lane) => bank[lane] ?? []);
+  const rest = BEAT_LANES.filter((lane) => !lanes.includes(lane)).flatMap((lane) => bank[lane] ?? []);
   const draw = (/** @type {string[]} */ pool, /** @type {number} */ n) => {
     const copy = [...pool];
     const out = [];

@@ -43,6 +43,7 @@ import { isDefaultPersona } from '../src/utils/persona.mjs';
 import { callbackLinks, lanesForNews, pickBeatExamples, recentPersonaOpeners } from './lib/beat-reporter-examples.mjs';
 import { VALID_LEAGUES, leagueWritesType } from './lib/article-leagues.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
+import { MissingPromptError } from './article-utils/article-prompts.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -302,8 +303,18 @@ async function main() {
     }
     : persona;
   if (ownVoice) links.push(...callbackLinks(feedPosts, { excludeId: articleId }));
-  const systemPrompt = mod.getSystemPrompt({ league, persona: promptPersona });
-  const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
+  // The column's text lives in the private beat-reporter pack; without it the
+  // column is skipped rather than written without its rules (article-prompts.mjs).
+  let systemPrompt;
+  let userPrompt;
+  try {
+    systemPrompt = mod.getSystemPrompt({ league, persona: promptPersona });
+    userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
+  } catch (err) {
+    if (!(err instanceof MissingPromptError)) throw err;
+    console.warn(`  [skip] ${err.message} — not writing ${type} without it. Exiting cleanly.`);
+    return;
+  }
   // Generate → validate → build → link. Wrapped so the league-name check below
   // can run it a second time with a correction note.
   const generate = async (prompt, { mayRetry = true } = {}) => {

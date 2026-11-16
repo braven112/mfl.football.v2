@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { attachGameStories, buildPost, validate, getUserPrompt, gamesMissingScore, correctionFor } from '../scripts/article-types/matchup-preview.mjs';
+import { attachGameStories, buildPost, validate, gamesMissingScore, correctionFor } from '../scripts/article-types/matchup-preview.mjs';
 
 // Two cards in stakes order; the fact sheet numbers pairings in schedule order.
 const visuals = {
@@ -75,14 +75,11 @@ describe('matchup preview post', () => {
     expect(validate({ headline: 'H', excerpt: 'E', content: ['<p>x</p>'], games })).toContain('No predicted score for matchup 1');
     expect(correctionFor({ games })).toMatch(/MATCHUP 1 has no predicted score/);
     expect(correctionFor({ games: games.slice(1) })).toBeNull();
-    expect(getUserPrompt('FACTS')).toMatch(/EVERY pick carries a predicted final score/);
   });
 
-  it('asks for a long featured game and quick hitters for the rest', () => {
-    const prompt = getUserPrompt('FACTS');
-    expect(prompt).toMatch(/FEATURED GAME gets the long write-up: about 10 sentences/);
-    expect(prompt).toMatch(/quick hitter: 2-5 sentences/);
-  });
+  // The prompt's own asks (a score in every pick, the long featured game and
+  // the quick hitters) are pinned with the prompt in the private
+  // beat-reporter repo.
 });
 
 describe('key NFL game', () => {

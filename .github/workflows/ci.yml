@@ -32,6 +32,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # The reporter's private prompts (braven112/beat-reporter). One guard
+      # here scans them for real franchise names and needs this repo's league
+      # configs to do it; without the checkout (a fork, a revoked token) that
+      # one test skips and everything else runs as before.
+      - name: Check out the private reporter lore
+        uses: actions/checkout@v6
+        continue-on-error: true
+        with:
+          repository: braven112/beat-reporter
+          token: ${{ secrets.BEAT_REPORTER_TOKEN }}
+          path: .private/beat-reporter
+
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 

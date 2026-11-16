@@ -12,14 +12,7 @@
  * design — codename-topic binding stays internal).
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { anonymizeTips } from '../scripts/schefter-rumor-scan.mjs';
-
-const SCANNER_SRC = readFileSync(
-  path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
-  'utf8',
-);
 
 const teams = new Map<string, { name: string; nameShort?: string; division?: string }>([
   ['0001', { name: 'Pacific Pigskins', nameShort: 'Pigskins', division: 'Northwest' }],
@@ -156,30 +149,5 @@ describe('anonymizeTips — tipster voice flags', () => {
     const out = await anonymizeTips(tips, teams, [], new Date(), null, ctx);
     const serialized = JSON.stringify(out[0]);
     expect(serialized).not.toContain('newbie01');
-  });
-});
-
-// ── Source-pin contracts on the prompt itself ──
-
-describe('rumor-scan system prompt — voice rules surface the new flags', () => {
-  it('HARD RULE 22 (curiosity sparks) references firstTimeTipster', () => {
-    expect(SCANNER_SRC).toMatch(/22\.\s+CURIOSITY SPARKS/);
-    expect(SCANNER_SRC).toMatch(/firstTimeTipster/);
-  });
-
-  it('HARD RULE 23 (grain of salt) references prolificTipster', () => {
-    expect(SCANNER_SRC).toMatch(/23\.\s+GRAIN OF SALT/);
-    expect(SCANNER_SRC).toMatch(/prolificTipster/);
-  });
-
-  it('HARD RULE 24 (standing beat) references tipsterBeat AND forbids codename pairing', () => {
-    expect(SCANNER_SRC).toMatch(/24\.\s+STANDING BEAT/);
-    expect(SCANNER_SRC).toMatch(/tipsterBeat/);
-    // Option B sentinel: the rule must explicitly forbid the codename.
-    expect(SCANNER_SRC).toMatch(/NEVER name the codename/i);
-  });
-
-  it('rules 22 and 23 explicitly de-conflict (first-time beats grain-of-salt)', () => {
-    expect(SCANNER_SRC).toMatch(/Never combine in the same post with rule 23/);
   });
 });
