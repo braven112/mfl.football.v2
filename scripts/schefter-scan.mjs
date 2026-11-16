@@ -50,6 +50,7 @@ import {
 } from './lib/schefter-wire-formats.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { formatPlayerName } from './lib/lineup-warnings.mjs';
+import { stripTakeLabel } from './lib/schefter-take-label.mjs';
 import {
   evaluatePingWindow,
   consumeDailyPost,
@@ -623,7 +624,7 @@ async function generateBreakingCommentary(post, raw) {
         messages: [
           {
             role: 'user',
-            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\n${post.transactionSubType === 'TRADE' ? 'Each team RECEIVES exactly the assets listed after its name (separated by semicolons). Never reverse who gets what, and write each player as given, e.g. "WR, Deebo Samuel".\n\n' : ''}Provide:\n1. A punchy body (2-3 sentences, Schefter voice)\n2. A "Schefter's Take" analysis (1-2 sentences, grade the trade if applicable)\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
+            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\n${post.transactionSubType === 'TRADE' ? 'Each team RECEIVES exactly the assets listed after its name (separated by semicolons). Never reverse who gets what, and write each player as given, e.g. "WR, Deebo Samuel".\n\n' : ''}Provide:\n1. A punchy body (2-3 sentences, Schefter voice)\n2. A "Schefter's Take" analysis (1-2 sentences, grade the trade if applicable). Do not start it with a label; the page prints "Schefter's Take" above it\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
           },
         ],
       }),
@@ -642,7 +643,7 @@ async function generateBreakingCommentary(post, raw) {
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       if (parsed.body) post.body = parsed.body;
-      if (parsed.analysis) post.analysis = parsed.analysis;
+      if (parsed.analysis) post.analysis = stripTakeLabel(parsed.analysis);
       console.log('  [AI] Commentary generated');
     }
   } catch (err) {

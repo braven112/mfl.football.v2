@@ -51,6 +51,7 @@ import {
   activeKindChip,
 } from '../../../utils/transactions-view';
 import type { TransactionRow } from '../../../utils/mfl-transactions';
+import { stripTakeLabel } from '../../../../scripts/lib/schefter-take-label.mjs';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -428,7 +429,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
                           headline restating it. The headline stays in the data for the
                           widget and the front page. */}
                       <p class="tx-card__body">{r.story.body}</p>
-                      {r.story.analysis && <p class="tx-card__take"><strong>The take:</strong> {r.story.analysis}</p>}
+                      {r.story.analysis && <p class="tx-card__take"><strong>The take:</strong> {stripTakeLabel(r.story.analysis)}</p>}
                       <details class="tx-card__details">
                         <summary>See details</summary>
                         <div class="tx-card__record">
