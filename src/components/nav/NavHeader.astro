@@ -465,6 +465,13 @@ const directTarget = switchTargets[0];
     color: var(--color-secondary-light, #4ade80); /* matches tokens-dark.css --link-color-hover / --color-secondary-light */
   }
 
+  /* TheLeague dark: the side nav's "LEAGUE" wears the exact green the
+     header wordmark wears (--logo-name-primary-color), so the two names
+     can never drift apart again. Other leagues keep the rule above. */
+  :global(html.dark[data-league='theleague']) .nav-header__league-name--league {
+    color: var(--logo-name-primary-color, var(--color-secondary-light, #4ade80));
+  }
+
   :global(html.dark) .nav-header__switch-btn {
     color: var(--nav-text-muted);
   }

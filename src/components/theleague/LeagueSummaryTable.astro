@@ -751,4 +751,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
       gap: 0.25rem;
     }
   }
+
+  :global(html.dark[data-league='theleague']) .league-summary__th:global(.league-summary__th--sorted) {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
 </style>

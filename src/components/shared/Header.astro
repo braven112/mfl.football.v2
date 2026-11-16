@@ -409,7 +409,12 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
     /* --breadcrumb-bar-border: transparent-ish in light (bar is already the
        brand blue); dark mode sets it to --color-primary so the near-black
        strip gets a brand accent edge. */
-    border-bottom: 2px solid var(--breadcrumb-bar-border, var(--breadcrumb-bar-bg, var(--color-primary, #1c497c)));
+    border-bottom: var(--breadcrumb-bar-border-width, 2px) solid var(--breadcrumb-bar-border, var(--breadcrumb-bar-bg, var(--color-primary, #1c497c)));
+    /* Optional theme hooks (TheLeague dark): a gradient rule that fades at
+       the edges replaces the flat border color, plus a faint glow under it.
+       Both default to none, so every other theme keeps its solid edge. */
+    border-image: var(--breadcrumb-bar-rule, none) 1;
+    box-shadow: var(--breadcrumb-bar-glow, none);
     padding: 0.125rem 0;
   }
 
@@ -988,5 +993,10 @@ const frontStyle = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) 
     .leaguename {
       font-size: 1.25rem;
     }
+  }
+
+  /* TheLeague dark: the edge follows the theme's blue (Steel family). */
+  :global(html.dark[data-league='theleague']) .theleague-header {
+    border-bottom-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
   }
 </style>
