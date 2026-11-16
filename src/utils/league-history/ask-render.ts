@@ -94,7 +94,7 @@ export function renderAnswer(data: ClientAnswer, base: string): HTMLElement {
     // Under a chart or a big stat the rows are the fine print; otherwise they ARE the answer.
     rows.open = !table.chart && !data.headline;
     rows.append(el('summary', 'ha-rows__toggle', rowsLabel(table)));
-    const t = el('table', 'ui-table ha-table');
+    const t = el('table', `ui-table ha-table${isWideTable(table) ? ' ha-table--wide' : ''}`);
     const head = el('tr');
     table.columns.forEach((c, i) => {
       const th = el('th', numeric[i] ? 'ha-num' : '', c.label);
@@ -130,6 +130,11 @@ export function renderAnswer(data: ClientAnswer, base: string): HTMLElement {
 }
 
 /** "Show the 23 rows" / "Show the top 10 of 23". */
+/** Seven or more columns stack sooner (history-ask.css), before Got/Gave crush to a word a line. */
+export function isWideTable(table: Pick<AskTable, 'columns'>): boolean {
+  return table.columns.length >= 7;
+}
+
 export function rowsLabel(table: Pick<AskTable, 'total' | 'rows'>): string {
   return table.total > table.rows.length ? `Show the top ${table.rows.length} of ${table.total.toLocaleString('en-US')}` : `Show the ${table.rows.length === 1 ? 'row' : `${table.rows.length} rows`}`;
 }
