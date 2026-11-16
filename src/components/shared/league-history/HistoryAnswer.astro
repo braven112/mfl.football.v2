@@ -9,7 +9,7 @@
 import '../../../styles/history-ask.css';
 import '../../../styles/record-charts.css';
 import type { AskHeadline, AskRecordLink, AskTable } from '../../../utils/league-history/ask';
-import { answerTeam, receipt, rowsLabel } from '../../../utils/league-history/ask-render';
+import { answerTeam, isWideTable, receipt, rowsLabel } from '../../../utils/league-history/ask-render';
 import { HISTORIAN } from '../../../data/historian';
 import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from '../../../utils/league-history/ask-format.mjs';
 
@@ -71,7 +71,7 @@ const charts = answerCharts(table?.chart, base);
   {table && table.rows.length > 0 && (
     <details class="ha-rows" open={!table.chart && !headline}>
       <summary class="ha-rows__toggle">{rowsLabel(table)}</summary>
-      <table class="ui-table ha-table">
+      <table class:list={['ui-table ha-table', { 'ha-table--wide': isWideTable(table) }]}>
         <thead>
           <tr>{table.columns.map((c, i) => <th class:list={{ 'ha-num': numeric[i] }} scope="col">{c.label}</th>)}</tr>
         </thead>

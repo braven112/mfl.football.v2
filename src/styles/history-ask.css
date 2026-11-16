@@ -4,8 +4,12 @@
  * stylesheet rather than scoped styles because the box renders answers
  * client-side, where Astro's scoping attributes never reach.
  *
- * Phones: the answer table becomes one card per row with every value
- * labeled, never a sideways-scrolling table (Brandon's rule).
+ * Narrow answers: the answer table becomes one card per row with every
+ * value labeled, never a sideways-scrolling table (Brandon's rule). "Narrow"
+ * is the ANSWER CARD's width (a container query), not the viewport's: the
+ * sample answers on /ask-the-history sit three across on a desktop, and a
+ * viewport query left a nine-column trade table spilling out of a 400px
+ * card into the next one.
  */
 .ha {
   margin-top: 1.5rem;
@@ -228,6 +232,8 @@
 
 /* ── An answer ─────────────────────────────────────────────────────────── */
 .ha-answer {
+  container: ha-answer / inline-size;
+  min-width: 0;
   margin-top: 1rem;
   padding: 1rem;
   background: var(--card-bg);
@@ -264,6 +270,9 @@
 /* The rows that prove it, folded away under a chart. */
 .ha-rows {
   margin: 0 0 0.25rem;
+  /* Last resort only: the container queries below stack any table that
+     would not fit, so this should never actually scroll. */
+  overflow-x: auto;
 }
 .ha-rows__toggle {
   display: inline-flex;
@@ -384,7 +393,9 @@
   margin: 0.875rem 0 0;
 }
 
-@media (max-width: 639px) {
+/* Stack under 40rem of card; a wide table (7+ columns, e.g. trades with
+ * Got/Gave lists) stacks under 52rem, before its columns crush to a word a line. */
+@container ha-answer (max-width: 39.99rem) {
   .ha-table thead {
     position: absolute;
     width: 1px;
@@ -410,12 +421,53 @@
     display: flex;
     justify-content: space-between;
     gap: 1rem;
+    align-items: baseline;
     padding: 0.125rem 0;
     text-align: right;
     border: 0;
   }
   .ha-table td::before {
     content: attr(data-label);
+    flex: none;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    text-align: left;
+  }
+}
+@container ha-answer (max-width: 51.99rem) {
+  .ha-table--wide thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .ha-table--wide,
+  .ha-table--wide tbody,
+  .ha-table--wide tr,
+  .ha-table--wide td {
+    display: block;
+  }
+  .ha-table--wide tr {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .ha-table--wide tr:last-child {
+    border-bottom: 0;
+  }
+  .ha-table--wide td,
+  .ha-table--wide td.ha-num {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.125rem 0;
+    text-align: right;
+    border: 0;
+  }
+  .ha-table--wide td::before {
+    content: attr(data-label);
+    flex: none;
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
     text-align: left;
