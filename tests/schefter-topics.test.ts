@@ -149,11 +149,4 @@ describe('scanner prompt coverage (source guard)', () => {
   it('the scanner asserts prompt coverage at startup', () => {
     expect(scannerSrc).toMatch(/for \(const topicId of DRAINABLE_TOPIC_IDS\)/);
   });
-
-  it('the new HARD RULES ship with the new topics', () => {
-    expect(scannerSrc).toMatch(/26\. TAMPERING/);
-    expect(scannerSrc).toMatch(/27\. HOT SEAT \/ RELEGATION WATCH/);
-    expect(scannerSrc).toMatch(/28\. FRONT-OFFICE DYSFUNCTION/);
-    expect(scannerSrc).toMatch(/29\. RIVAL-GM SOURCING FLAVOR/);
-  });
 });

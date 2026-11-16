@@ -15,8 +15,9 @@
  * franchise.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { privateLoreRoot } from '../scripts/lib/schefter-lore.mjs';
 // @ts-ignore — sibling .mjs module, no .d.ts
 import {
   resolveCallbackPhase,
@@ -414,85 +415,35 @@ describe('real configs — every last-season rename is actually reachable', () =
   }
 });
 
-describe('the prompt rule requires the pairing', () => {
-  const src = readFileSync(
-    path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
-    'utf8',
-  );
+// The rumor mill's prompt, its trade-offer playbook and the reporter's voice
+// files live in the PRIVATE beat-reporter repo (scripts/lib/beat-reporter-
+// pack.mjs); their content pins are that repo's own tests. This guard stays
+// here because it needs this repo's franchise configs: every string the model
+// is shown on every call must be free of real franchise names. It runs
+// wherever the pack is checked out (CI's Tests job checks it out; a fork or a
+// fresh clone without access skips it).
+describe('the private prompts name no real franchise', () => {
+  const packRoot = privateLoreRoot();
+  const PACK_FILES = [
+    'prompts/rumor-mill.md',
+    'prompts/trade-offer-playbook.md',
+    'prompts/quiet-day.md',
+    'voice/beat-examples.json',
+    'voice/max-insider.md',
+  ];
+  const present = existsSync(path.join(packRoot, 'prompts', 'rumor-mill.md'));
 
-  it('states rule 30 and forbids the bare former name', () => {
-    expect(src).toMatch(/30\. FORMER-NAME CALLBACK/);
-    expect(src).toMatch(/MUST appear alongside it/);
-    // The examples are TOKENS now (2026-09-08), not invented franchise names.
-    // The FORBIDDEN case still demonstrates the bare former name — it just
-    // demonstrates it in the form the model actually writes.
-    expect(src).toMatch(/FORBIDDEN: "\{\{TEAM_FORMER:\d{4}:\d{4}\}\} are fielding calls\."/);
-  });
-
-  it('uses an UNRESOLVABLE franchise id in every prompt example', () => {
-    // The sharpest edge of tokenizing: an example id that is a live franchise
-    // resolves cleanly when copied out of the examples instead of the payload,
-    // `unresolved` stays false, and the post names the wrong team — the exact
-    // misattribution tokens exist to prevent, now undetectable. 9999 is not a
-    // franchise in either league, so a copied token fails loudly instead.
-    const exampleIds = [...src.matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:(\d{4})/g)]
-      .map((m) => m[1]);
-    expect(exampleIds.length).toBeGreaterThan(0);
-    expect([...new Set(exampleIds)]).toEqual(['9999']);
-  });
-
-  /**
-   * Slice a named prompt region, refusing to return a region that is missing,
-   * inverted, or silently the wrong size.
-   *
-   * Both failure directions are real. A renamed START anchor gives
-   * `indexOf === -1` and `slice(-1, end)` collapses to nothing — a green test
-   * guarding an empty string. A renamed END anchor gives `slice(start, -1)`,
-   * which EXPANDS to nearly the rest of the file. Neither shows up as an
-   * error; both make the assertion below meaningless.
-   */
-  const region = (label: string, startMark: string, endMark: string) => {
-    const start = src.indexOf(startMark);
-    const end = src.indexOf(endMark, start + 1);
-    expect(start, `${label}: start anchor not found`).toBeGreaterThanOrEqual(0);
-    expect(end, `${label}: end anchor not found`).toBeGreaterThan(start);
-    return src.slice(start, end);
-  };
-
-  it('uses INVENTED names in its examples, never real franchises', () => {
+  it.skipIf(!present)('uses INVENTED names in its examples, never real franchises', () => {
     // The prompt is a leak path the payload redaction cannot reach: it is
     // built once and sent on EVERY call, including anonymous-scope posts. The
-    // first draft of rule 30 hardcoded "Dead Cap Walking / Heavy Chevy" and
-    // "The Show / Cock Gobbler" — real teams, paired with their real former
-    // names, one of them a punishment. That handed the model the exact
-    // association the whole feature is gated on, for teams that may be out of
-    // window, on posts not allowed to name anyone.
-    //
-    // Rule 30 was not the only offender, and the HARD RULES block was not the
-    // only region. 4b's explicit-pick examples ran on "[Geeks]" (0013's own
-    // alias) a dozen times over; 15/16 addressed a GroupMe author as "Dead
-    // Cap" (0004's nameShort); and the trade-offer playbook — appended to the
-    // very same system prompt whenever the batch holds a trade offer — named
-    // "Pacific Pigskins" and "Midwestside Connection" in four examples. Every
-    // string the model is ever shown gets scanned, not just the rule that
-    // happened to motivate the guard.
-    const regions = {
-      'HARD RULES': region(
-        'HARD RULES',
-        'HARD RULES (self-enforce, never violate):',
-        'Voice: "League sources tell me',
-      ),
-      'trade-offer playbook': region(
-        'trade-offer playbook',
-        'function buildTradeOfferPlaybook',
-        '\n// ── NFL news digest',
-      ),
-    };
-    // Sanity-check the regions really are the intended text, so a heading
-    // reshuffle can't quietly point them somewhere harmless.
-    expect(regions['HARD RULES']).toContain('4b. If a web tip\'s scope is "franchise-explicit-pick"');
-    expect(regions['HARD RULES']).toContain('30. FORMER-NAME CALLBACK');
-    expect(regions['trade-offer playbook']).toContain('Example J');
+    // first draft of rule 30 hardcoded real teams paired with their real
+    // former names, one of them a punishment, and the trade-offer playbook
+    // once named two real franchises in four examples. Every string the model
+    // is ever shown gets scanned, not just the rule that motivated the guard.
+    const packFiles = Object.fromEntries(
+      PACK_FILES.map((rel) => [rel, readFileSync(path.join(packRoot, rel), 'utf8')]),
+    );
+    expect(packFiles['prompts/rumor-mill.md']).toContain('30. FORMER-NAME CALLBACK');
 
     // Harvest every form a franchise answers to — including the aliases hung
     // off a HISTORY entry, which is where "Chevy" lives. This mirrors
@@ -536,7 +487,7 @@ describe('the prompt rule requires the pairing', () => {
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const distinctive = (n: string) => /\s/.test(n) || n.length >= 8;
     const failures: string[] = [];
-    for (const [label, text] of Object.entries(regions)) {
+    for (const [label, text] of Object.entries(packFiles)) {
       for (const name of realNames) {
         const re = new RegExp(`(?<!\\w)${escape(name)}(?!\\w)`, distinctive(name) ? 'i' : '');
         if (re.test(text)) failures.push(`${label}: ${name}`);

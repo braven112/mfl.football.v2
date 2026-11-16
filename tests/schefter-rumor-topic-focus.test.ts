@@ -119,25 +119,6 @@ describe('rumor-scan bucketing — one topic per post', () => {
 describe('rumor-scan LLM prompt — one topic per post', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('tells the LLM to stay on ONE TOPIC per post and refuses "meanwhile…" pivots', () => {
-    expect(src).toMatch(/ONE TOPIC per post/);
-    expect(src).toMatch(/No "meanwhile/);
-  });
-
-  it('references the two-separate-posts behavior in the one-topic rule', () => {
-    // The rule explicitly mentions that unrelated gossip ships as TWO
-    // posts rather than one blended post — prevents the LLM from
-    // "helpfully" stitching them back together.
-    expect(src).toMatch(/ships them as TWO separate posts/);
-  });
-
-  it('caps post length at 1–2 sentences', () => {
-    // HARD RULE 8 is the authoritative cap; the trade-offer playbook
-    // must defer to it as well.
-    expect(src).toMatch(/Length:\s*1[–-]2 sentences\./);
-    expect(src).toMatch(/1[–-]2 sentences TOTAL/);
-  });
-
   it('does not retain the old "mixed batches" multi-topic rule', () => {
     // The old rule 7 explicitly encouraged blending GroupMe + web tips
     // across topics — incompatible with single-topic focus.
@@ -293,20 +274,6 @@ describe('rumor-scan age metadata — tips carry ageDays + isStale to the LLM', 
     // reads. Both call sites still pass `now` as the 4th arg. Phase-8 added a
     // 6th `tipsterContext` arg (per-tipster recency/voice flags).
     expect(src).toMatch(/await anonymizeTips\(batch,\s*teams,\s*feedForAnonymize\.posts[^,]*,\s*now,\s*redis,\s*tipsterContext\)/);
-  });
-});
-
-describe('rumor-scan LLM — age-aware framing rule', () => {
-  const src = read('scripts/schefter-rumor-scan.mjs');
-
-  it('requires age-reference or hedge phrasing on stale tips (HARD RULE 17)', () => {
-    expect(src).toMatch(/17\.\s*AGE-AWARE FRAMING/);
-    expect(src).toMatch(/NEVER claim a stale tip is fresh/);
-    expect(src).toMatch(/still hearing about/);
-  });
-
-  it('forbids inventing specific calendar labels (only relative phrasing allowed)', () => {
-    expect(src).toMatch(/Never invent a specific date the tip doesn't have/);
   });
 });
 
@@ -494,49 +461,10 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
     expect(src).toMatch(/redis\.set\(FRIDAY_MAILBAG_DONE_KEY,\s*todayPtDate/);
   });
 
-  it('HARD RULE 20 prescribes bullet-style mailbag voice and caps length', () => {
-    // Rule was renumbered from 18 → 20 when the trade-bait directive
-    // (rule 19) was inserted between age-aware framing and the mailbag.
-    expect(src).toMatch(/20\.\s*MAILBAG POSTS/);
-    expect(src).toMatch(/bullet-style one-liners/);
-    expect(src).toMatch(/Length cap:\s*180 words/);
-  });
-
   it('user-prompt mode is "mailbag" on Friday mailbag cycles', () => {
     expect(src).toMatch(/const\s+aiMode\s*=\s*postKind\s*===\s*['"]mailbag['"]/);
     expect(src).toMatch(/if\s*\(mode\s*===\s*['"]mailbag['"]\)/);
     expect(src).toMatch(/GOSSIP_TIPS:/);
-  });
-});
-
-describe('rumor-scan rookie-draft scope guard (HARD RULE 21)', () => {
-  // Pinning test: the rumor mill must never frame a trade rumor as the
-  // rookie draft. The system prompt's hard rule prohibits "draft-room"
-  // framing on trade_offer tips; the trade-offer playbook reiterates it.
-  //
-  // History: on 2026-05-12 the scanner posted "Rookie draft's reached
-  // that sweet spot where half the league is locked in, half is on
-  // auto-pilot…" days AFTER the actual rookie draft completed. The
-  // LLM had hallucinated rookie-draft framing on top of trade-builder
-  // "draft" signals (saved trade proposals). HARD RULE 21 forbids that
-  // confusion; this test keeps the rule in place.
-  const src = read('scripts/schefter-rumor-scan.mjs');
-
-  it('HARD RULE 21 forbids framing trade rumors as the rookie draft', () => {
-    expect(src).toMatch(/21\.\s*NEVER FRAME A TRADE RUMOR AS THE ROOKIE DRAFT/);
-  });
-
-  it('HARD RULE 21 names the offending phrases the LLM previously reached for', () => {
-    expect(src).toMatch(/draft-room buzz|draft chatter|draft's in full swing|rookie-draft strategy|auto-pilot picks|half the league locked in/);
-  });
-
-  it('HARD RULE 21 clarifies that "draft" metadata refers to trade-builder saves, not the rookie draft', () => {
-    expect(src).toMatch(/TRADE-BUILDER SAVES/);
-    expect(src).toMatch(/NOT the rookie draft/);
-  });
-
-  it('trade-offer playbook redaction rules reiterate the rookie-draft ban', () => {
-    expect(src).toMatch(/NEVER frame a trade-offer tip as the rookie draft/);
   });
 });
 

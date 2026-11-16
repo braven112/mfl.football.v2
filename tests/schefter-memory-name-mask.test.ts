@@ -446,16 +446,6 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
     expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams, resolveOpts\)/);
   });
 
-  it('teaches the token in the rules AND the exposure examples', () => {
-    expect(RUMOR_SRC).toMatch(/is a PLACEHOLDER, not a name/);
-    expect(RUMOR_SRC).toMatch(/COPY THE TOKEN THROUGH/);
-    const examples = RUMOR_SRC.match(/Example G —[\s\S]*?Example J —[\s\S]*?\n\n/)?.[0] ?? '';
-    expect(examples, 'exposure ladder examples not found — regex is stale').toBeTruthy();
-    expect(examples).not.toMatch(/Gaslamp Griffins/);
-    expect(examples).not.toMatch(/Harbor City Kraken/);
-    expect(examples).toContain('{{TEAM_SHORT:');
-  });
-
   it('end to end: a model that copies a name from memory cannot succeed', () => {
     // Memory says "[a team]" (masked), the payload says "{{TEAM:0008}}", and
     // substitution only ever writes the franchise the token names — so the

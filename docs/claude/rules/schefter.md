@@ -82,6 +82,15 @@ rules — breaking any of these cross-contaminates the leagues:
   state (post-history, topic-recurrence) stays under `data/schefter/<navSlug>/`.
   No legacy-path fallback on purpose — a missing lore file warns and the post
   falls back to the inline prompt rather than reading the other league's voice.
+  The same repo holds the rumor mill's system prompt and trade-offer playbook
+  (`prompts/`), the quiet-day prompt, and Max Insider's example bank and full
+  voice (`voice/`), read through `scripts/lib/beat-reporter-pack.mjs`. Without
+  the pack, examples go empty and Max keeps his short public stub voice, but
+  the rumor mill FAILS CLOSED to its templates: its anonymity rules live in
+  that prompt, and a post written without them could out a tipster. Their
+  content pins are the private repo's tests; the real-franchise-name guard
+  stays here (`tests/schefter-former-name-callback.test.ts`, which CI runs
+  against a checkout of the pack).
 - **Pages** are thin per-league wrappers over shared components
   (`src/components/schefter/{TipPage,StyleBookPage,RumorThread,
   AdminDashboard}.astro`) — build tip-page improvements in the component

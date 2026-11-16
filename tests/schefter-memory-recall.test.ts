@@ -185,17 +185,4 @@ describe('rumor-scan source — memory recall wiring', () => {
   it('passes current-cycle tipster hashes into markFingerprintSeen at post-commit', () => {
     expect(SRC).toMatch(/markFingerprintSeen\(\s*recurrenceLedger,\s*fp,\s*currentIsoWeek,\s*now\.toISOString\(\),\s*tipsterHashes\s*\)/);
   });
-
-  it('HARD RULE 25 references the memoryRecall payload shape', () => {
-    expect(SRC).toMatch(/25\.\s+CROSS-WEEK MEMORY RECALL/);
-    expect(SRC).toMatch(/memoryRecall:\s*\{\s*weeksSinceFirstSeen/);
-    expect(SRC).toMatch(/distinctVoicesAcrossTime/);
-  });
-
-  it('HARD RULE 25 keeps the privacy invariant — never name a codename or franchise', () => {
-    // The phrasing "never name a codename, never name a franchise" lives
-    // inside the rule's hard constraints block. Locking with substring
-    // checks so a future edit that loosens the privacy stance fails CI.
-    expect(SRC).toMatch(/CROSS-WEEK MEMORY RECALL[\s\S]+?never name a codename[\s\S]+?never name a franchise/);
-  });
 });
