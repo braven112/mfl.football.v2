@@ -19,6 +19,7 @@ import { siteExampleLeagues } from '../../../data/league-showcase';
 import { getSchefterFeedIfAny, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import { getAuthor, getAuthorAvatar, type SchefterPost } from '../../../types/schefter';
 import { BEAT_REPORTER_PERSONA, personaByline } from '../../../utils/persona.mjs';
+import TeamIconDarkStyles from '../TeamIconDarkStyles.astro';
 import { buildTeamAccentCss } from '../../../utils/team-accent-css';
 import type { LeagueSlug } from '../../../types/nav';
 import { articleParagraphs } from '../../../utils/article-paragraphs.mjs';
@@ -58,6 +59,8 @@ const imagePath = post?.image ? `/assets/schefter/${post.image}` : null;
 {post && league && byline && (
 	<section class="sp-section brs" aria-labelledby="brs-h">
 		{accentCss && <style is:inline set:html={accentCss} />}
+		{/* Dark-mode team icons: the league layouts carry this swap; this host's does not. */}
+		<TeamIconDarkStyles />
 		<div class="sp-head">
 			<div class="sp-head__title">
 				<p class="sp-eyebrow">A real one, start to finish</p>
