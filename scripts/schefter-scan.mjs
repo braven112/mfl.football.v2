@@ -290,9 +290,13 @@ function generateTradePost(raw, players, teams, leagueSlug) {
     ? `${team1} trade with ${team2} for ${team1Gets[0] ?? 'assets'}`
     : `${team1} and ${team2} complete ${totalAssets}-asset trade`;
 
+  // Semicolons between assets: a player already reads "WR, Deebo Samuel", so a
+  // comma-joined list ("WR, Deebo Samuel, Da Dangsters' 2027 1st") is
+  // ambiguous, and the AI rewrite has sent the assets the wrong way when it
+  // could not tell where one ended (TheLeague, 2026-11-10 and 2026-11-13).
   const body = `League sources tell me ${team1} and ${team2} have agreed to a deal. ` +
-    `${team1} receive ${team1Gets.join(', ') || 'assets'}. ` +
-    `${team2} receive ${team2Gets.join(', ') || 'assets'}.`;
+    `${team1} receive ${team1Gets.join('; ') || 'assets'}. ` +
+    `${team2} receive ${team2Gets.join('; ') || 'assets'}.`;
 
   const franchiseIds = [raw.franchise];
   if (raw.franchise2) franchiseIds.push(raw.franchise2);
@@ -619,7 +623,7 @@ async function generateBreakingCommentary(post, raw) {
         messages: [
           {
             role: 'user',
-            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\nProvide:\n1. A punchy body (2-3 sentences, Schefter voice)\n2. A "Schefter's Take" analysis (1-2 sentences, grade the trade if applicable)\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
+            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\n${post.transactionSubType === 'TRADE' ? 'Each team RECEIVES exactly the assets listed after its name (separated by semicolons). Never reverse who gets what, and write each player as given, e.g. "WR, Deebo Samuel".\n\n' : ''}Provide:\n1. A punchy body (2-3 sentences, Schefter voice)\n2. A "Schefter's Take" analysis (1-2 sentences, grade the trade if applicable)\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
           },
         ],
       }),

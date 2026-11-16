@@ -5,6 +5,7 @@
  * kept, Redis down or empty serves the snapshot, and reads are memoized.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { applyPostCorrections } from '../scripts/lib/schefter-post-corrections.mjs';
 
 const redisGet = vi.fn();
 let redisAvailable = true;
@@ -46,18 +47,20 @@ describe('getSchefterFeed', () => {
   });
 
   it('serves the snapshot when Redis is empty, unreachable or throws', async () => {
-    const bundled = getBundledSchefterFeed(theleague);
+    // The snapshot as served: hand corrections to published posts apply to it
+    // too (scripts/lib/schefter-post-corrections.mjs).
+    const bundled = applyPostCorrections(getBundledSchefterFeed(theleague));
     redisGet.mockResolvedValue(null);
-    expect(await getSchefterFeed(theleague)).toBe(bundled);
+    expect(await getSchefterFeed(theleague)).toEqual(bundled);
 
     resetLiveFeedMemo();
     redisAvailable = false;
-    expect(await getSchefterFeed(theleague)).toBe(bundled);
+    expect(await getSchefterFeed(theleague)).toEqual(bundled);
 
     resetLiveFeedMemo();
     redisAvailable = true;
     redisGet.mockRejectedValue(new Error('down'));
-    expect(await getSchefterFeed(theleague)).toBe(bundled);
+    expect(await getSchefterFeed(theleague)).toEqual(bundled);
   });
 
   it('reads Redis once per memo window, then again after it', async () => {

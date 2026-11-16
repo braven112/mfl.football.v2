@@ -24,6 +24,7 @@ import type { SchefterFeed } from '../types/schefter';
 import { getRedis } from './redis-client';
 import { schefterFeedKey } from '../../scripts/lib/schefter-keys.mjs';
 import { mergeFeed } from '../../scripts/lib/merge-schefter-feed.mjs';
+import { applyPostCorrections } from '../../scripts/lib/schefter-post-corrections.mjs';
 
 export interface LeagueTeamConfig {
   franchiseId: string;
@@ -84,6 +85,12 @@ export const LIVE_FEED_TTL_MS = 30_000;
 const liveFeedMemo = new Map<string, { at: number; feed: Promise<SchefterFeed> }>();
 
 async function readLiveFeed(league: LeagueDefinition, bundled: SchefterFeed): Promise<SchefterFeed> {
+  // Hand corrections to published posts (scripts/lib/schefter-post-corrections.mjs)
+  // apply to whichever copy is served — live, or the snapshot fallback.
+  return applyPostCorrections(await readLiveOrBundled(league, bundled));
+}
+
+async function readLiveOrBundled(league: LeagueDefinition, bundled: SchefterFeed): Promise<SchefterFeed> {
   try {
     const redis = await getRedis();
     if (!redis) return bundled;

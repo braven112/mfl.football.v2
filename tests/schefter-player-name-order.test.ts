@@ -31,3 +31,12 @@ describe('Schefter scanner never prints a raw "Last, First" name', () => {
     expect(fn).toMatch(/formatPlayerName\(p\.name\)/);
   });
 });
+
+describe('Schefter trade template keeps each side readable', () => {
+  it('separates a side\'s assets with semicolons, not commas', () => {
+    const body = scan.slice(scan.indexOf('function generateTradePost'));
+    const fn = body.slice(0, body.indexOf('\n}\n'));
+    expect(fn).toContain("team1Gets.join('; ')");
+    expect(fn).toContain("team2Gets.join('; ')");
+  });
+});
