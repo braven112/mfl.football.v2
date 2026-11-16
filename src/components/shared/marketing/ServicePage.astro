@@ -58,12 +58,19 @@ const proof = exampleLeagues[0]
 
 <MarketingShell title={service.title} description={service.description} canonicalPath={service.path} jsonLd={jsonLd}>
 	<article class="svc">
-		<header class:list={['sp-hero', { 'sp-hero--solo': !proof || examples.length === 0 }]}>
+		<header class:list={['sp-hero', { 'sp-hero--solo': !service.portrait && (!proof || examples.length === 0) }]}>
 			<div class="sp-hero__copy">
 				<p class="sp-eyebrow"><span>{service.eyebrow} <span class="svc-former">· Formerly {FORMER_BRAND}</span></span></p>
 				<h1>{service.h1}</h1>
 				<p class="svc-answer">{service.answer}</p>
 				{!hasLead && <p class="sp-lede">{service.lede}</p>}
+				{service.price && (
+					<p class="svc-price">
+						<b>{service.price.amount}</b>
+						<span>{service.price.unit}</span>
+						{service.price.note && <small>{service.price.note}</small>}
+					</p>
+				)}
 				<div class="sp-ctas">
 					{service.cta.kind === 'interest' ? (
 						<button type="button" class="cta cta--primary" data-interest={service.cta.product} data-interest-name={service.cta.name}>
@@ -79,7 +86,11 @@ const proof = exampleLeagues[0]
 					)}
 				</div>
 			</div>
-			{proof && examples.length > 0 && (
+			{service.portrait ? (
+				<div class="sp-hero__visual svc-portrait">
+					<img src={service.portrait.src} alt={service.portrait.alt} width="256" height="256" />
+				</div>
+			) : proof && examples.length > 0 && (
 				<div class="sp-hero__visual">
 					<a class="sp-lcard svc-lcard" href={proof.href}>
 						<span class="sp-lcard__top">
@@ -227,6 +238,57 @@ const proof = exampleLeagues[0]
 
 	.svc-lcard {
 		margin-inline: auto;
+	}
+
+	/* The price, set like a figure rather than a sentence. */
+	.svc-price {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.6rem;
+		margin: 0;
+	}
+
+	.svc-price b {
+		font-size: clamp(2rem, 4vw, 2.6rem);
+		font-weight: 800;
+		letter-spacing: -0.03em;
+		line-height: 1;
+		color: var(--sp-ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.svc-price span {
+		font-size: var(--sp-text-md);
+		color: var(--sp-muted);
+	}
+
+	.svc-price small {
+		flex-basis: 100%;
+		font-size: var(--sp-text-sm);
+		font-weight: 600;
+		color: var(--sp-red);
+	}
+
+	.svc-portrait img {
+		display: block;
+		width: min(100%, 16rem);
+		height: auto;
+		margin-inline: auto;
+		border-radius: 50%;
+		background: var(--sp-surface);
+		box-shadow: var(--sp-shadow);
+	}
+
+	@media (max-width: 860px) {
+		.svc-portrait {
+			order: -1;
+		}
+
+		.svc-portrait img {
+			width: 9rem;
+			margin-inline: 0;
+		}
 	}
 
 	/* A linked card fills its grid cell; the li is only a wrapper. */

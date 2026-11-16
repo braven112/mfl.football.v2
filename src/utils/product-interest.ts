@@ -38,6 +38,10 @@ export const INTEREST_ONLY = [
 	{ slug: 'league-history', name: 'League History' },
 	{ slug: 'owner-suite', name: 'Owner Suite' },
 	{ slug: 'large-league', name: 'Large-league support' },
+	// The two $49 products on the homepage (Brandon, 2026-11-16), and the two
+	// together. League History keeps its old slug above, so its count carries on.
+	{ slug: 'beat-reporter', name: 'AI Beat Reporter' },
+	{ slug: 'history-and-reporter', name: 'Ask the History + AI Beat Reporter' },
 ] as const;
 
 export type InterestSlug = ProductSlug | (typeof INTEREST_ONLY)[number]['slug'];

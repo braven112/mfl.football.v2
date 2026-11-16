@@ -1,97 +1,92 @@
 ---
 import SplashLayout from '../layouts/SplashLayout.astro';
 import { crossHostLeagueHref } from '../config/leagues';
-import type { CanonicalLeagueSlug } from '../config/leagues';
 import ProductInterest from '../components/shared/ProductInterest.astro';
-import { LEAGUE_PACKAGE_PRICING, leaguePackageSeasonOffer } from '../data/products';
-import { CUSTOM_FEATURES, CUSTOM_SITE_ROWS, SETUP_DISCOUNTS, dollars, perMonth } from '../data/pricing';
+import {
+  BEAT_REPORTER_PRICE_YEAR,
+  CUSTOM_FROM_SETUP,
+  HISTORY_AND_REPORTER_PRICE_YEAR,
+  HISTORY_PRICE_YEAR,
+  dollars,
+} from '../data/pricing';
 import { siteExampleLeagues } from '../data/league-showcase';
-import { getTestDateFromSearchParams } from '../utils/league-year';
-import { FORMER_BRAND, SITE_FOOTER_LINKS } from '../data/mfl-services';
+import { FORMER_BRAND, SITE_FOOTER_LINKS, findService } from '../data/mfl-services';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 // ── What this page is for ─────────────────────────────────────────────────
-// MFL.football SELLS LEAGUE WEBSITES (Brandon, Nov 2026), and since
-// 2026-11-14 this page sells only that: a hero, the three packages, one band
-// pointing at /features, and a live example. Live scores and the free tools
-// are footer links, not sections.
+// Since 2026-11-16 the homepage shows only the products (Brandon: "super
+// simple, shows the products"): Ask the History ($49), the AI Beat Reporter
+// ($49, the house voice Max Insider), both together ($79), and custom sites
+// from $3,000. Each product has its own page (src/data/mfl-services.ts), and
+// every price here is read from src/data/pricing.ts, so the homepage, the
+// product pages and /pricing can never disagree.
 
-// The example section. Hand-picked through `siteExample` in league-showcase.ts
-// (Brandon chooses which leagues a buyer is sent to: The League only, for
-// now), and still under showcaseLeagues' rules, so a best-ball league or an
-// unlisted package league can never be one.
+// The example league the custom-site card links to. Hand-picked through
+// `siteExample` in league-showcase.ts (The League only, for now), and still
+// under showcaseLeagues' rules, so a best-ball league or an unlisted package
+// league can never be one.
 const examples = siteExampleLeagues();
 
-// The logo cuts each example panel draws. The panel follows the theme, so it
-// wants both; a league with no entry falls back to its registry logo.
-const EXAMPLE_LOGOS: Partial<Record<CanonicalLeagueSlug, { light: string; dark: string }>> = {
-  theleague: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
-};
-
 // This splash renders on every NON-league host: the shared app host, and also
-// localhost and Vercel previews. On the shared host TheLeague is not served —
-// `/theleague` 404s there — so an example panel must leave for the league's
-// own domain rather than link to something this host refuses.
-//
-// `crossHostLeagueHref` decides that per host rather than unconditionally,
-// which is the load-bearing part: absolute links everywhere would send a
-// preview build's visitor to PRODUCTION theleague.us on the first click, so
-// the branch under test becomes undrivable past its front page.
+// localhost and Vercel previews. On the shared host TheLeague is not served,
+// so a league link must leave for the league's own domain, and
+// `crossHostLeagueHref` decides that per host (an absolute link everywhere
+// would send a preview build's visitor to production).
 const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
 
-// Nothing paid is on sale yet (`PRODUCT_PAGES_PUBLIC` is false and /products
-// 404s for the public), so every "I'm interested" button is a coming-soon door
-// (ProductInterest): it counts the click and offers to email the visitor at
-// launch.
-const packageOffer = leaguePackageSeasonOffer(getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date());
+const history = findService('ask-the-history');
+const reporter = findService('beat-reporter');
+const custom = findService('league-website');
 
-// The homepage sells exactly THREE packages, one per league size (Brandon,
-// 2026-11-14: "the homepage should only offer the 3 packages"). Every number
-// comes from LEAGUE_PACKAGE_PRICING through src/data/pricing.ts, so this page,
-// /pricing and the product page can never disagree. Everything else that used
-// to live here (the daily homepage, the AI reporter, live scores, history) is
-// shown on /features instead.
-const PACKAGES = [
-  {
-    teams: CUSTOM_SITE_ROWS[0].teams,
-    setup: CUSTOM_SITE_ROWS[0].setup,
-    renewal: CUSTOM_SITE_ROWS[0].renewal,
-    who: 'Most home leagues',
-  },
-  {
-    teams: CUSTOM_SITE_ROWS[1].teams,
-    setup: CUSTOM_SITE_ROWS[1].setup,
-    renewal: CUSTOM_SITE_ROWS[1].renewal,
-    who: 'Big leagues and conferences',
-  },
-  {
-    teams: 'Over 32 teams',
-    setup: null,
-    renewal: null,
-    who: 'Contests and leagues of leagues',
-  },
-];
+const bundleSaves = HISTORY_PRICE_YEAR + BEAT_REPORTER_PRICE_YEAR - HISTORY_AND_REPORTER_PRICE_YEAR;
 
-const discountLine = SETUP_DISCOUNTS.map((d) => `${Math.round(d.off * 100)}% off setup signed ${d.months}`).join(', ');
+// Nothing paid is on sale yet, so every "I'm interested" button is a
+// coming-soon door (ProductInterest): it counts the click and offers to email
+// the visitor at launch.
+const PRODUCTS = [
+  {
+    key: 'history',
+    href: history.path,
+    kicker: 'League history',
+    name: 'Ask the History',
+    pitch: 'Every season of your league in one place, and an AI that answers anything about its past.',
+    price: dollars(HISTORY_PRICE_YEAR),
+    unit: 'a year',
+    points: ['Ask any question in plain English', 'Champions, records and rivalries', 'Every franchise and owner'],
+    interest: { product: 'league-history', name: `Ask the History, ${dollars(HISTORY_PRICE_YEAR)} a year` },
+  },
+  {
+    key: 'reporter',
+    href: reporter.path,
+    kicker: 'AI beat reporter',
+    name: 'Max Insider',
+    pitch: 'Your league’s own insider. He breaks every trade and move and writes the weekly columns.',
+    price: dollars(BEAT_REPORTER_PRICE_YEAR),
+    unit: 'a year',
+    points: ['Breaking news, minutes after a move', 'Weekly columns about your league', 'Right on your MFL home page'],
+    interest: { product: 'beat-reporter', name: `The AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
+  },
+] as const;
 ---
 <SplashLayout
-  title="MFL.football: custom league websites for MyFantasyLeague"
-  description={`MFL.football (formerly ${FORMER_BRAND}) builds and runs custom websites for MyFantasyLeague leagues. Three packages: ${PACKAGES.map((p) => `${p.setup ? dollars(p.setup) : 'a custom quote'} for ${p.teams.toLowerCase()}`).join(', ')}.`}
+  title="MFL.football: Ask the History, an AI beat reporter and custom MFL league sites"
+  description={`MFL.football (formerly ${FORMER_BRAND}) for MyFantasyLeague leagues: Ask the History ${dollars(HISTORY_PRICE_YEAR)}/yr, the AI Beat Reporter ${dollars(BEAT_REPORTER_PRICE_YEAR)}/yr, both ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}/yr, custom sites from ${dollars(CUSTOM_FROM_SETUP)}.`}
   canonicalPath="/"
   ogImage="/assets/home/league-site.webp"
   jsonLd={[organizationJsonLd(), websiteJsonLd()]}
 >
-  {/* Soft Premium (src/styles/soft-premium.css): the hero, card and dark band
-      here are the same ones every service page wears. */}
+  {/* Soft Premium (src/styles/soft-premium.css): the same header, card and
+      footer every service page wears. */}
   <div class="home sp">
   <header class="sp-top">
     <a class="sp-brand" href="/" aria-label="MFL.football home">
       <img class="sp-brand__light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
       <img class="sp-brand__dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
     </a>
-    <nav class="sp-top__links" aria-label="Sections">
-      <a href="#packages">Packages</a>
-      <a href="/features">Features</a>
+    <nav class="sp-top__links" aria-label="Products">
+      <a href={history.path}>{history.navLabel}</a>
+      <a href={reporter.path}>{reporter.navLabel}</a>
+      <a href={custom.path}>{custom.navLabel}</a>
       <a class="sp-top__live" href="/live">Live scores</a>
     </nav>
     <div class="sp-top__end">
@@ -99,151 +94,74 @@ const discountLine = SETUP_DISCOUNTS.map((d) => `${Math.round(d.off * 100)}% off
     </div>
   </header>
 
-  <section class="sp-hero">
-    <div class="sp-hero__copy">
-      <p class="sp-eyebrow">Formerly {FORMER_BRAND} · For MyFantasyLeague</p>
-      <h1>Custom websites for your MFL league.</h1>
-      <p class="sp-lede">
-        We build your league a branded site on its own domain, then run it for you: its own AI beat reporter, your house rules
-        automated, reminders, dues and league history, handled so the commissioner does not have to.
-      </p>
-      <div class="sp-ctas">
-        <a class="cta cta--primary" href="#packages">See the packages</a>
-        <a class="cta cta--ghost" href="/features">See the features</a>
-      </div>
-      <ul class="sp-hero__facts">
-        <li>Your league stays on MFL</li>
-        <li>Built for phones</li>
-        <li>Light and dark</li>
-      </ul>
-    </div>
-    <div class="sp-hero__visual">
-      <figure class="shot">
-        <img src="/assets/home/league-site.webp" width="1230" height="748" alt="TheLeague's league site, built on MFL.football, with its weekly recap hero in the winning team's colors" />
-      </figure>
-      {examples[0] && (
-        <div class="sp-lcard hero-lcard" aria-hidden="true">
-          <span class="sp-lcard__top">
-            <span>
-              <span class="sp-lcard__name">{examples[0].name}</span><br />
-              <span class="sp-lcard__meta">{examples[0].showcase.teams} teams · since {examples[0].showcase.estYear}</span>
-            </span>
-            <svg class="sp-lcard__ball" viewBox="-10 -8 20 16"><path d="M-6.5 0Q0-5.4 6.5 0Q0 5.4-6.5 0Z" stroke-width="3" stroke-linejoin="round" transform="rotate(-15)" /></svg>
-          </span>
-          {examples[0].domains?.[0] && <span class="sp-lcard__host">{examples[0].domains[0]}</span>}
-          <span class="sp-lcard__label">Run by MFL.football</span>
+  <section class="intro" aria-labelledby="intro-h">
+    <p class="sp-eyebrow">For MyFantasyLeague · Formerly {FORMER_BRAND}</p>
+    <h1 id="intro-h">Give your league<br class="intro__br" /> the full treatment.</h1>
+    <p class="intro__lede">Three ways to make an MFL league feel big-time. Pick one, or take it all.</p>
+  </section>
+
+  <section class="lineup" aria-label="Products">
+    {PRODUCTS.map((p) => (
+      <article class={`prod prod--${p.key}`}>
+        <div class="prod__head">
+          <p class="prod__kicker">{p.kicker}</p>
+          {p.key === 'reporter' && (
+            <img class="prod__avatar" src="/assets/beat-reporter-avatar.webp" width="256" height="256" alt="Max Insider" />
+          )}
         </div>
+        <h2 class="prod__name">{p.name}</h2>
+        <p class="prod__pitch">{p.pitch}</p>
+        <p class="prod__price"><b>{p.price}</b><span>{p.unit}</span></p>
+        <ul class="prod__points">
+          {p.points.map((t) => <li>{t}</li>)}
+        </ul>
+        <div class="prod__acts">
+          <a class="cta cta--primary" href={p.href}>See details</a>
+          <button type="button" class="cta-link" data-interest={p.interest.product} data-interest-name={p.interest.name}>I’m interested</button>
+        </div>
+      </article>
+    ))}
+
+    <aside class="bundle" aria-labelledby="bundle-h">
+      <div class="bundle__copy">
+        <p class="prod__kicker">Better together</p>
+        <h2 id="bundle-h" class="bundle__name">Ask the History + Max Insider</h2>
+      </div>
+      <p class="bundle__price"><b>{dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}</b><span>a year for both · save {dollars(bundleSaves)}</span></p>
+      <button
+        type="button"
+        class="cta cta--primary"
+        data-interest="history-and-reporter"
+        data-interest-name={`Ask the History + the AI Beat Reporter, ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year`}
+      >Get both</button>
+    </aside>
+
+    <article class="prod prod--custom">
+      <div class="prod__head">
+        <p class="prod__kicker">The flagship</p>
+        <svg class="prod__ball" viewBox="-10 -8 20 16" aria-hidden="true"><path d="M-6.5 0Q0-5.4 6.5 0Q0 5.4-6.5 0Z" stroke-width="3" stroke-linejoin="round" transform="rotate(-15)" /></svg>
+      </div>
+      <h2 class="prod__name">Custom sites</h2>
+      <p class="prod__pitch">Your league on its own domain, in its own colors, built and run for you. Everything above is included.</p>
+      <p class="prod__price"><small>Starting at</small><b>{dollars(CUSTOM_FROM_SETUP)}</b><span>setup and your first year</span></p>
+      <ul class="prod__points">
+        <li>Your domain, crest and colors</li>
+        <li>Lineups, trades and claims, synced to MFL</li>
+        <li>Live scoring, Ask the History and Max Insider</li>
+      </ul>
+      <div class="prod__acts">
+        <a class="cta cta--primary" href={custom.path}>See details</a>
+        <button type="button" class="cta-link" data-interest="league-package" data-interest-name="A custom MFL league website">I’m interested</button>
+      </div>
+      {examples.length > 0 && (
+        <p class="prod__live">
+          See one running:{' '}
+          {examples.map((league) => {
+            return <a class="cta-link" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>{league.name}</a>;
+          })}
+        </p>
       )}
-    </div>
-  </section>
-
-  <section class="sp-section" id="packages" aria-labelledby="packages-h">
-    <div class="sp-head">
-      <div class="sp-head__title">
-        <p class="sp-eyebrow">Packages</p>
-        <h2 id="packages-h">One full site. Priced by league size.</h2>
-      </div>
-      <p class="sp-head__note">Every package is the whole platform, built and run for your league. Launching soon: tap “I’m interested” and we’ll email you when it opens.</p>
-    </div>
-    <ul class="pkgs">
-      {PACKAGES.map((p, i) => (
-        <li class={`ui-card sp-card pkg${i === 0 ? ' pkg--top' : ''}`}>
-          <span class="sp-card__who">{p.who}</span>
-          <h3 class="pkg__teams">{p.teams}</h3>
-          {p.setup ? (
-            <p class="pkg__price"><b>{dollars(p.setup)}</b><span>setup and your first year</span></p>
-          ) : (
-            <p class="pkg__price"><b>Custom quote</b><span>priced to your league</span></p>
-          )}
-          {p.renewal ? (
-            <p class="pkg__renew">Then {dollars(perMonth(p.renewal))}/mo, billed annually ({dollars(p.renewal)}/year)</p>
-          ) : (
-            <p class="pkg__renew">Setup and renewal quoted to order, for a league or a contest of many leagues</p>
-          )}
-          <span class="sp-ctas pkg__acts">
-            <button
-              type="button"
-              class={`cta ${i === 0 ? 'cta--primary' : 'cta--ghost'}`}
-              data-interest="league-package"
-              data-interest-name={`League Package, ${p.teams.toLowerCase()}`}
-              data-interest-note={p.setup ? `${dollars(p.setup)} for setup and your first year, then ${dollars(p.renewal ?? 0)} a year.` : 'Over 32 teams, we quote it.'}
-            >{p.setup ? 'I’m interested' : 'Get a quote'}</button>
-          </span>
-        </li>
-      ))}
-    </ul>
-    <div class="ui-card sp-card incl">
-      <h3>Every package includes</h3>
-      <ul class="sp-list incl__list">
-        {CUSTOM_FEATURES.map((f) => <li>{f.text}</li>)}
-      </ul>
-    </div>
-    <p class="terms">
-      Set up in the off-season and save: {discountLine}. Leagues of 16 or fewer that make their own logos save {LEAGUE_PACKAGE_PRICING.logoDiscount}.
-      {packageOffer && <> {packageOffer}</>}
-      {' '}<a class="cta-link" href="/pricing">Full pricing details</a>
-    </p>
-  </section>
-
-  <section class="sp-band sp-band--cta feat" aria-labelledby="feat-h">
-    <div class="sp-band__copy">
-      <p class="sp-eyebrow">What you get</p>
-      <h2 id="feat-h">Your league gets its own AI beat reporter.</h2>
-      <p>It breaks every trade and signing, writes the weekly columns, and brings in Vegas Vic on the lines and Doc Rivers on injuries. See it, and the rest of the platform, on the features page.</p>
-    </div>
-    <a class="cta cta--primary" href="/features">See the features</a>
-  </section>
-
-  {examples.length > 0 && (
-    <section class="sp-section" id="examples" aria-labelledby="examples-h">
-      <div class="sp-head">
-        <div class="sp-head__title">
-          <p class="sp-eyebrow">See one running</p>
-          <h2 id="examples-h">Every feature runs on {examples.length === 1 ? 'this league' : 'these leagues'} today.</h2>
-        </div>
-      </div>
-      <div class="examples" style={`--panel-count: ${examples.length}`}>
-        {examples.map((league) => {
-          const logo = EXAMPLE_LOGOS[league.slug] ?? league.logo;
-          const host = league.domains?.[0];
-          return (
-            <a class="ui-card sp-card panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
-              <span class="panel__logo">
-                <img class="panel__logo-img panel__logo-img--light" src={logo.light} alt="" />
-                <img class="panel__logo-img panel__logo-img--dark" src={logo.dark} alt="" />
-              </span>
-              <span class="panel__text">
-                <h3>{league.name}</h3>
-                <span class="sp-muted panel__meta">{league.showcase.teams} teams · {league.showcase.format} · since {league.showcase.estYear}</span>
-              </span>
-              <span class="sp-card__more">{host ? `Visit ${host}` : 'Visit the site'}</span>
-            </a>
-          );
-        })}
-      </div>
-    </section>
-  )}
-
-  <section class="sp-section" id="free" aria-labelledby="free-h">
-    <div class="sp-head">
-      <div class="sp-head__title">
-        <p class="sp-eyebrow">Free</p>
-        <h2 id="free-h">Free for any team</h2>
-      </div>
-      <p class="sp-head__note">No account, no cost.</p>
-    </div>
-    <div class="free">
-      <a class="ui-card sp-card" href="/team-logo">
-        <h3>Team logo maker</h3>
-        <p>Pick a style, a mascot and your colors, and get a prompt for ChatGPT or Gemini. A free tracer turns the result into an SVG.</p>
-        <span class="sp-card__more">Make a logo</span>
-      </a>
-      <a class="ui-card sp-card" href="/video">
-        <h3>Season video</h3>
-        <p>Turn any team’s season into a vertical video for TikTok, Reels, Shorts and X.</p>
-        <span class="sp-card__more">Make a video</span>
-      </a>
-    </div>
+    </article>
   </section>
 
   <footer class="sp-foot">
@@ -257,231 +175,292 @@ const discountLine = SETUP_DISCOUNTS.map((d) => `${Math.round(d.off * 100)}% off
   </div>
 </SplashLayout>
 <style>
-  /* Page layout only. Every surface, type style and color comes from
-     src/styles/soft-premium.css, shared with the service pages. */
+  /* Page layout only. Surfaces, type and color come from the Soft Premium
+     tokens (src/styles/soft-premium.css), shared with the product pages. The
+     custom-site card is dark in BOTH themes, so it reads the band tokens. */
 
-  /* Hero visual: TheLeague's real site in a soft frame, with the graphite
-     league card overlapping its lower-left corner on wide screens. */
-  .shot {
-    margin: 0;
-    overflow: hidden;
-    border-radius: var(--sp-radius);
-    background: var(--sp-surface);
-    box-shadow: var(--sp-shadow);
-  }
-
-  .shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .hero-lcard {
-    position: absolute;
-    left: -2.5rem;
-    bottom: -2.5rem;
-    max-width: 17rem;
-    padding: 1.1rem 1.2rem;
-    aspect-ratio: 1.62;
-  }
-
-  .hero-lcard .sp-lcard__name {
-    font-size: var(--sp-text-lg);
-  }
-
-  @media (max-width: 1100px) {
-    .hero-lcard {
-      left: 1rem;
-      bottom: -2rem;
-      max-width: 15rem;
-    }
-  }
-
-  @media (max-width: 860px) {
-    .sp-hero__visual {
-      padding-bottom: 2.5rem;
-    }
-
-    .hero-lcard {
-      left: 0.75rem;
-      max-width: 12.5rem;
-      padding: 0.85rem 1rem;
-      gap: 0.5rem;
-    }
-
-    .hero-lcard .sp-lcard__name {
-      font-size: var(--sp-text-md);
-    }
-
-    .hero-lcard .sp-lcard__host {
-      font-size: var(--sp-text-xs);
-    }
-  }
-
-  /* The three packages, side by side; stacked on phones. */
-  .pkgs {
+  .intro {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    margin: 0 0 1rem;
-    padding: 0;
-    list-style: none;
+    justify-items: center;
+    gap: 1.1rem;
+    padding-block: clamp(3rem, 9vw, 6.5rem) clamp(2rem, 5vw, 3.5rem);
+    text-align: center;
   }
 
-  .pkg {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  /* The featured size: a faint red tint ring, never a dark stripe. */
-  .pkg--top {
-    box-shadow: var(--sp-shadow), 0 0 0 2px var(--sp-red-soft);
-  }
-
-  .pkg__teams {
-    font-size: var(--sp-text-xl);
-  }
-
-  .pkg__price {
-    display: grid;
-    gap: 0.15rem;
-    margin: 0;
-  }
-
-  .pkg__price b {
-    font-size: var(--sp-text-2xl);
-    font-weight: 750;
-    color: var(--sp-ink);
-    line-height: 1.1;
-  }
-
-  .pkg__price span,
-  .pkg .pkg__renew {
-    font-size: var(--sp-text-sm);
-    color: var(--sp-muted);
-  }
-
-  .pkg__acts {
-    margin-top: auto;
-    padding-top: 0.35rem;
-  }
-
-  .incl {
-    margin-bottom: 1rem;
-  }
-
-  .incl__list {
-    columns: 2;
-    column-gap: 2rem;
-  }
-
-  .incl__list :global(li) {
-    break-inside: avoid;
-  }
-
-  .terms {
-    margin: 0;
-    font-size: var(--sp-text-sm);
-    color: var(--sp-muted);
-  }
-
-  @media (max-width: 860px) {
-    .pkgs {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .incl__list {
-      columns: 1;
-    }
-  }
-
-  /* The two free tools, side by side at every width (Brandon, 2026-11-14). */
-  .free {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .free .sp-card__more {
-    margin-top: auto;
-  }
-
-  @media (max-width: 420px) {
-    .free {
-      gap: 0.6rem;
-    }
-
-    .free .sp-card {
-      padding: 1rem;
-    }
-  }
-
-  .examples {
-    display: grid;
-    grid-template-columns: repeat(min(var(--panel-count, 1), 2), minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .panel {
-    flex-direction: row;
-    align-items: center;
-    gap: 1.25rem;
-  }
-
-  .panel__logo {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 4rem;
-    height: 4rem;
-    border-radius: 1rem;
-    background: var(--sp-surface-2);
-  }
-
-  .panel__logo-img {
-    width: 2.75rem;
-    height: 2.75rem;
-    object-fit: contain;
-  }
-
-  .panel__logo-img--dark,
-  :global(html.dark) .panel__logo-img--light {
+  /* Centered, so the eyebrow drops its dot (it would orphan on a wrap). */
+  .intro .sp-eyebrow::before {
     display: none;
   }
 
-  :global(html.dark) .panel__logo-img--dark {
-    display: block;
+  .intro h1 {
+    margin: 0;
+    font-size: clamp(2.4rem, 7vw, 4.6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.02;
+    color: var(--sp-ink);
   }
 
-  .panel__text {
+  .intro__lede {
+    max-width: 34ch;
+    margin: 0;
+    font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+    color: var(--sp-muted);
+  }
+
+  /* Desktop: History | Reporter | Custom, with the bundle under the first two
+     and the custom card standing the full height. Phones: one column, in
+     that order with the bundle before the flagship. */
+  .lineup {
     display: grid;
-    gap: 0.2rem;
-    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'history reporter custom'
+      'bundle bundle custom';
+    gap: 1.1rem;
+    padding-bottom: clamp(3rem, 8vw, 6rem);
   }
 
-  .panel__meta {
+  .prod--history { grid-area: history; }
+  .prod--reporter { grid-area: reporter; }
+  .prod--custom { grid-area: custom; }
+  .bundle { grid-area: bundle; }
+
+  .prod,
+  .bundle {
+    box-sizing: border-box;
+    min-width: 0;
+    border: 1px solid var(--sp-line);
+    border-radius: var(--sp-radius);
+    background: var(--sp-surface);
+    box-shadow: var(--sp-shadow);
+    color: var(--sp-ink);
+  }
+
+  .prod {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: clamp(1.5rem, 3vw, 2.1rem);
+  }
+
+  .prod__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.75rem;
+  }
+
+  .prod__kicker {
+    margin: 0;
+    font-size: var(--sp-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sp-red);
+  }
+
+  .prod__avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    box-shadow: var(--sp-live-ring);
+  }
+
+  .prod__name {
+    margin: 0;
+    font-size: clamp(1.6rem, 2.6vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  .prod__pitch {
+    margin: 0;
+    font-size: var(--sp-text-md);
+    line-height: 1.55;
+    color: var(--sp-muted);
+  }
+
+  .prod__price,
+  .bundle__price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.5rem;
+    margin: 0.4rem 0 0;
+  }
+
+  .prod__price b,
+  .bundle__price b {
+    font-size: clamp(2.6rem, 4.5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prod__price small {
+    flex-basis: 100%;
+    font-size: var(--sp-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .prod__price span,
+  .bundle__price span {
+    font-size: var(--sp-text-sm);
+    color: var(--sp-muted);
+  }
+
+  .prod__points {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0.35rem 0 0;
+    padding: 1rem 0 0;
+    border-top: 1px solid var(--sp-line);
+    list-style: none;
+    font-size: var(--sp-text-md);
+  }
+
+  .prod__points li {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.6rem;
+    align-items: baseline;
+  }
+
+  .prod__points li::before {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--sp-red);
+    transform: translateY(-0.1rem);
+  }
+
+  .prod__acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.4rem;
+    margin-top: auto;
+    padding-top: 0.6rem;
+  }
+
+  /* The bundle: one quiet row, tinted, under the two $49 products. */
+  .bundle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 2rem;
+    padding: 1.4rem clamp(1.5rem, 3vw, 2.1rem);
+    background: linear-gradient(120deg, var(--sp-surface), var(--sp-surface-2));
+    border-color: var(--sp-red-soft);
+  }
+
+  .bundle__copy {
+    display: grid;
+    gap: 0.35rem;
+    flex: 1 1 14rem;
+  }
+
+  .bundle__name {
+    margin: 0;
+    font-size: var(--sp-text-xl);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .bundle__price {
+    margin: 0;
+  }
+
+  .bundle__price b {
+    font-size: clamp(2.1rem, 3.5vw, 2.6rem);
+  }
+
+  /* The flagship: graphite in both themes, with a faint red glow. */
+  .prod--custom {
+    --primary-link-default-text-color: var(--sp-band-ink);
+    position: relative;
+    overflow: hidden;
+    border-color: var(--sp-band-line);
+    background:
+      radial-gradient(90% 60% at 100% 0%, var(--sp-red-soft), transparent 70%),
+      linear-gradient(160deg, var(--sp-lcard-1), var(--sp-band) 55%);
+    box-shadow: var(--sp-lcard-shadow);
+    color: var(--sp-band-ink);
+  }
+
+  .prod--custom .prod__name {
+    color: var(--sp-band-ink);
+  }
+
+  .prod--custom .prod__kicker {
+    color: var(--sp-band-muted);
+  }
+
+  .prod--custom .prod__pitch,
+  .prod--custom .prod__price span,
+  .prod--custom .prod__live {
+    color: var(--sp-band-muted);
+  }
+
+  .prod--custom .prod__points {
+    border-top-color: var(--sp-band-line);
+  }
+
+  .prod__ball {
+    width: 2.1rem;
+    height: 1.4rem;
+    flex: none;
+  }
+
+  .prod__ball path {
+    fill: var(--sp-red);
+    stroke: var(--sp-red);
+  }
+
+  .prod__live {
+    margin: 0;
     font-size: var(--sp-text-sm);
   }
 
-  .panel .sp-card__more {
-    margin: 0 0 0 auto;
-    padding: 0;
-    white-space: nowrap;
+  @media (max-width: 1000px) {
+    .lineup {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-areas:
+        'history reporter'
+        'bundle bundle'
+        'custom custom';
+    }
   }
 
-  @media (max-width: 760px) {
-    .examples {
+  @media (max-width: 700px) {
+    .lineup {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'history'
+        'reporter'
+        'bundle'
+        'custom';
     }
 
-    .panel {
-      flex-wrap: wrap;
+    .intro__br {
+      display: none;
     }
 
-    .panel .sp-card__more {
-      margin-left: 0;
-      width: 100%;
+    .bundle {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .bundle__copy {
+      flex: none;
     }
   }
 </style>

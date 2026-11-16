@@ -20,6 +20,12 @@ import { LEAGUE_PACKAGE_PRICING, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE }
 /** League History, per league, per year. */
 export const HISTORY_PRICE_YEAR = 49;
 
+/** The AI Beat Reporter (Max Insider, the house voice), per league, per year. */
+export const BEAT_REPORTER_PRICE_YEAR = 49;
+
+/** Ask the History and the AI Beat Reporter together, per league, per year (Brandon, 2026-11-16). */
+export const HISTORY_AND_REPORTER_PRICE_YEAR = 79;
+
 /** Installments cost this much more than paying the year up front. */
 export const INSTALLMENT_PREMIUM = 0.2;
 export const INSTALLMENT_COUNT = 4;

@@ -1,0 +1,13 @@
+---
+/**
+ * /ai-beat-reporter — the AI Beat Reporter product page (Max Insider, $49 a
+ * year), one of the three products the homepage sells (Brandon, 2026-11-16).
+ * Content: src/data/mfl-services.ts. Belongs to mfl.football alone.
+ */
+import ServicePage from '../components/shared/marketing/ServicePage.astro';
+import { findService } from '../data/mfl-services';
+
+export const prerender = false;
+---
+
+<ServicePage service={findService('beat-reporter')} />
