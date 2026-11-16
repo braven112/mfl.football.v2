@@ -76,7 +76,7 @@ import {
 	type InsightPageRef,
 } from '../../utils/site-insights-model';
 import { canonicalPath, directoryTitle } from '../../utils/site-analytics';
-import { readProductInterest } from '../../utils/product-interest';
+import { interestName, readContactRequests, readProductInterest } from '../../utils/product-interest';
 import { FUNNEL_PLATFORMS, readFunnelReport } from '../../utils/history-funnel';
 import { recordedPageTitle } from '../../utils/recorded-page-title';
 import { formatLastSeen } from '../../utils/owner-activity';
@@ -210,9 +210,11 @@ const prevPageViews = new Map((previous?.pages ?? []).map((p) => [`${p.section}|
 
 // The homepage's "coming soon" product buttons. All-time, whatever the range.
 let interest: Awaited<ReturnType<typeof readProductInterest>> = null;
+// Requests for the products on sale by direct contact, newest first.
+let requests: Awaited<ReturnType<typeof readContactRequests>> = null;
 if (!useMock && !report.focused) {
 	try {
-		interest = await readProductInterest();
+		[interest, requests] = await Promise.all([readProductInterest(), readContactRequests()]);
 	} catch (err) {
 		console.warn('[live/analytics] product interest read failed:', err);
 	}
@@ -1099,6 +1101,39 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 											<td>{a.label}</td>
 											<td class="num">{n(a.count)}</td>
 											{!owner && <td class="num" data-v={a.owners ?? -1}>{a.owners === null ? '—' : a.owners}</td>}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				)}
+
+				{!report.focused && requests && requests.length > 0 && (
+					<section class="ins__card" aria-labelledby="ins-requests">
+						<h2 class="ins__h2" id="ins-requests">Product requests</h2>
+						<p class="ins__note">People who asked for Ask the History or the AI Beat Reporter. Reply by email.</p>
+						<div class="ins__scroll">
+							<table class="ui-table ins__table ins__table--stack">
+								<thead>
+									<tr>
+										<th>When</th>
+										<th>Product</th>
+										<th>Name</th>
+										<th>Email</th>
+										<th>League</th>
+										<th>Message</th>
+									</tr>
+								</thead>
+								<tbody>
+									{requests.map((r) => (
+										<tr>
+											<td data-label="When">{new Date(r.at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+											<td data-label="Product">{interestName(r.product)}</td>
+											<td data-label="Name">{r.name}</td>
+											<td data-label="Email"><a href={`mailto:${r.email}`}>{r.email}</a></td>
+											<td class="ins__wide" data-label="League">{r.league || '—'}</td>
+											<td class="ins__muted ins__wide" data-label="Message">{r.message || '—'}</td>
 										</tr>
 									))}
 								</tbody>

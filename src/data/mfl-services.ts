@@ -118,7 +118,7 @@ export const SERVICES: Service[] = [
 			{ q: 'Does it change anything on MFL?', a: 'No. Ask the History only reads your league. Rosters, lineups and scoring on MyFantasyLeague are untouched.' },
 			{ q: 'What does it cost?', a: `${dollars(HISTORY_PRICE_YEAR)} a year per league. Add the AI Beat Reporter and both are ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year. Tap “I’m interested” and we will email you when it opens.` },
 		],
-		cta: { kind: 'interest', product: 'league-history', label: 'I’m interested', name: `Ask the History, ${dollars(HISTORY_PRICE_YEAR)} a year` },
+		cta: { kind: 'interest', product: 'league-history', label: 'Get started', name: `Ask the History, ${dollars(HISTORY_PRICE_YEAR)} a year` },
 		secondary: { href: '/ai-beat-reporter', label: 'Add the AI Beat Reporter' },
 	},
 	{
@@ -151,7 +151,7 @@ export const SERVICES: Service[] = [
 			{ q: 'Does it change anything on MFL?', a: 'No. The reporter only reads your league. It never touches rosters, lineups or scoring.' },
 			{ q: 'What does it cost?', a: `${dollars(BEAT_REPORTER_PRICE_YEAR)} a year per league. Add Ask the History and both are ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year. Tap “I’m interested” and we will email you when it opens.` },
 		],
-		cta: { kind: 'interest', product: 'beat-reporter', label: 'I’m interested', name: `The AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
+		cta: { kind: 'interest', product: 'beat-reporter', label: 'Get started', name: `the AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
 		secondary: { href: '/ask-the-history', label: 'Add Ask the History' },
 	},
 	{

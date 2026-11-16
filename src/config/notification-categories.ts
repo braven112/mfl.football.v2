@@ -325,6 +325,16 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    id: 'ops-product-request',
+    group: 'ops',
+    label: 'Product requests',
+    description: 'Someone asked for Ask the History or the AI Beat Reporter on mfl.football.',
+    cadence: 'When a request arrives',
+    defaultOn: true,
+    adminOnly: true,
+    live: true,
+  },
+  {
     id: 'ops-league-story',
     group: 'ops',
     label: 'League story answers',

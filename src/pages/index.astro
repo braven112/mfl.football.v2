@@ -40,9 +40,9 @@ const custom = findService('league-website');
 
 const bundleSaves = HISTORY_PRICE_YEAR + BEAT_REPORTER_PRICE_YEAR - HISTORY_AND_REPORTER_PRICE_YEAR;
 
-// Nothing paid is on sale yet, so every "I'm interested" button is a
-// coming-soon door (ProductInterest): it counts the click and offers to email
-// the visitor at launch.
+// Ask the History and the Beat Reporter are on sale by direct contact
+// (Brandon, 2026-11-16): their buttons open ProductInterest's request form.
+// The custom site is still a coming-soon door.
 const PRODUCTS = [
   {
     key: 'history',
@@ -64,7 +64,7 @@ const PRODUCTS = [
     price: dollars(BEAT_REPORTER_PRICE_YEAR),
     unit: 'a year',
     points: ['Breaking news, minutes after a move', 'Weekly columns about your league', 'Right on your MFL home page'],
-    interest: { product: 'beat-reporter', name: `The AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
+    interest: { product: 'beat-reporter', name: `the AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
   },
 ] as const;
 ---
@@ -114,7 +114,7 @@ const PRODUCTS = [
         </ul>
         <div class="prod__acts">
           <a class="cta cta--primary" href={p.href}>See details</a>
-          <button type="button" class="cta-link" data-interest={p.interest.product} data-interest-name={p.interest.name}>I’m interested</button>
+          <button type="button" class="cta-link" data-interest={p.interest.product} data-interest-name={p.interest.name}>Get started</button>
         </div>
       </article>
     ))}
