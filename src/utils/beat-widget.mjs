@@ -180,7 +180,7 @@ function externalLink(post) {
  * @param {object} o
  * @param {any[]} o.posts         selectWidgetPosts(...).posts
  * @param {Set<string>} [o.leagueIds]  the League tab's posts; no tabs when absent
- * @param {(post: any) => { name: string, avatar: string }} o.bylineFor  absolute avatar URL
+ * @param {(post: any) => { name: string, avatar: string }} [o.bylineFor]  absolute avatar URL; defaults to the reporter
  * @param {{ name: string, avatar: string, report: string }} o.reporter  absolute avatar URL
  * @param {(path: string) => string} o.absolute  the league's leagueUrl
  * @param {string} o.leagueSlug  registry slug, for the article path
