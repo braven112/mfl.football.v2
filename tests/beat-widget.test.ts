@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
-  absolutizeLinks,
   isMflOrigin,
   renderAdWidget,
   renderNewsWidget,
@@ -71,8 +70,31 @@ describe('rendering', () => {
     expect(html).not.toContain('<img onerror');
     expect(html).toContain('a &amp; b');
   });
-  it('makes article links absolute, since the page lives on MFL', () => {
-    expect(absolutizeLinks('<a href="/standings">x</a>', absolute)).toContain('href="https://www.theleague.us/standings"');
+  it('every card links to our site: a column to its article, anything else to the news page', () => {
+    const html = renderNewsWidget({
+      posts: [
+        { id: 'col 1', type: 'article', headline: 'Gauntlet', content: ['<p>x</p>'], timestamp: '2026-11-10T00:00:00Z' },
+        { id: 'tx', type: 'transaction', headline: 'Pickup', timestamp: '2026-11-09T00:00:00Z' },
+      ],
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute,
+      leagueSlug: 'theleague',
+    });
+    expect(html).toContain('href="https://www.theleague.us/theleague/news/col%201"');
+    expect(html).toContain('href="https://www.theleague.us/theleague/news"');
+    expect(html).not.toContain('<template');
+    expect(html).not.toContain('<p>x</p>');
+  });
+  it('only a column carries a headline; a news post shows its text once', () => {
+    const html = renderNewsWidget({
+      posts: [{ id: 'tx', type: 'transaction', headline: 'Pigskins add Smith', body: 'Pigskins signed WR Smith.', timestamp: '2026-11-09T00:00:00Z' }],
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute,
+      leagueSlug: 'theleague',
+    });
+    expect(html).not.toContain('bw-headline');
+    expect(html).not.toContain('Pigskins add Smith');
+    expect(html).toContain('Pigskins signed WR Smith.');
   });
   it('the ad card sells, and links to our site', () => {
     const html = renderAdWidget({ origin: 'https://mfl.football', avatar: '/assets/x.webp' });

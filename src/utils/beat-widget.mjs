@@ -93,15 +93,6 @@ export function relativeTime(iso, now = Date.now()) {
   return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
 }
 
-/**
- * An article's paragraphs, with every site-relative link made absolute (the
- * page is on MFL, so a bare "/standings" would resolve against MFL).
- * `absolute(path)` is the league's leagueUrl.
- */
-export function absolutizeLinks(html, absolute) {
-  return String(html ?? '').replace(/href="(\/[^"]*)"/g, (_, path) => `href="${escapeHtml(absolute(path))}" target="_blank" rel="noopener"`);
-}
-
 /** The widget's stylesheet: inherits the MFL skin's text color, so it fits light and dark skins alike. */
 export const WIDGET_CSS = `
 :host{display:block;font:inherit;color:inherit}
@@ -119,21 +110,13 @@ export const WIDGET_CSS = `
 .bw-badge{display:inline-block;padding:1px 6px;border-radius:999px;background:var(--bw-soft);margin-right:6px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:.9em}
 .bw-headline{font-weight:700;line-height:1.3;margin:0 0 4px;font-size:1em}
 .bw-body{margin:0;line-height:1.45;white-space:pre-line}
-.bw-open{all:unset;cursor:pointer;display:block;width:100%}
-.bw-open:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.bw-link{display:block;color:inherit;text-decoration:none}
+.bw-link:hover .bw-headline,.bw-link:hover .bw-more{text-decoration:underline}
+.bw-link:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .bw-more{display:inline-block;margin-top:6px;font-weight:600;text-decoration:underline}
 .bw-foot{padding:10px 0 0;font-size:.8em;color:var(--bw-dim)}
 .bw-foot a,.bw-ad a{color:inherit}
-.bw-dialog{border:none;padding:0;max-width:min(680px,calc(100vw - 32px));width:100%;max-height:calc(100vh - 48px);border-radius:12px;background:Canvas;color:CanvasText;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-.bw-dialog::backdrop{background:rgba(0,0,0,.55)}
-.bw-sheet{display:flex;flex-direction:column;max-height:calc(100vh - 48px);overflow:hidden}
-.bw-sheet-head{flex:none;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:16px 16px 8px}
-.bw-sheet-head h2{outline:none;margin:0;font-size:1.2em;line-height:1.25}
-.bw-sheet-body{flex:1;min-height:0;overflow-y:auto;padding:0 16px 8px;line-height:1.5}
-.bw-sheet-body p{margin:0 0 .8em}
-.bw-sheet-foot{flex:none;display:flex;gap:8px;padding:12px 16px;border-top:1px solid color-mix(in srgb,CanvasText 15%,transparent)}
 .bw-btn{all:unset;cursor:pointer;padding:9px 14px;border-radius:8px;font-weight:600;text-align:center;border:1px solid color-mix(in srgb,currentColor 30%,transparent)}
-.bw-btn--primary{flex:1;background:CanvasText;color:Canvas;border-color:CanvasText}
 .bw-ad{padding:16px;border:1px solid var(--bw-line);border-radius:12px;background:var(--bw-soft)}
 .bw-ad .bw-head{border:none;padding-top:0}
 .bw-ad-pitch{margin:0 0 12px;line-height:1.45}
@@ -163,28 +146,26 @@ function badgeFor(post) {
  * @param {number} [o.now]
  */
 export function renderNewsWidget({ posts, reporter, absolute, leagueSlug, now = Date.now() }) {
-  const items = posts.map((post, i) => {
-    const long = Array.isArray(post.content) && post.content.length > 0;
+  const newsPage = absolute(`/${leagueSlug}/news`);
+  const items = posts.map((post) => {
+    // Every card opens our site: a column on its own article page (charts and
+    // all), anything else on the league's news page. Brandon, 2026-11-15:
+    // the write-ups are too nice to squeeze into a pop-up on MFL.
+    const isColumn = Array.isArray(post.content) && post.content.length > 0;
+    const href = isColumn ? absolute(`/${leagueSlug}/news/${encodeURIComponent(post.id)}`) : newsPage;
     const meta = `<div class="bw-meta"><span class="bw-badge">${badgeFor(post)}</span>${escapeHtml(relativeTime(post.timestamp, now))}</div>`;
     const body = post.body ? `<p class="bw-body">${escapeHtml(post.body)}</p>` : '';
-    if (!long) {
-      return `<li class="bw-post">${meta}<h3 class="bw-headline">${escapeHtml(post.headline)}</h3>${body}</li>`;
-    }
-    const share = absolute(`/${leagueSlug}/news/${encodeURIComponent(post.id)}`);
-    const paragraphs = post.content.map((p) => absolutizeLinks(p, absolute)).join('');
-    return (
-      `<li class="bw-post"><button type="button" class="bw-open" data-bw-open="bw-a${i}">${meta}` +
-      `<h3 class="bw-headline">${escapeHtml(post.headline)}</h3>${body}<span class="bw-more">Read the column</span></button>` +
-      `<template id="bw-a${i}"><div class="bw-sheet"><div class="bw-sheet-head"><h2 tabindex="-1" autofocus>${escapeHtml(post.headline)}</h2></div>` +
-      `<div class="bw-sheet-body">${paragraphs}</div>` +
-      `<div class="bw-sheet-foot"><button type="button" class="bw-btn" data-bw-close>Close</button>` +
-      `<a class="bw-btn bw-btn--primary" href="${escapeHtml(share)}" target="_blank" rel="noopener">Share or see the charts</a></div></div></template></li>`
-    );
+    // A headline only on a column. A news post is a tweet: its text is the
+    // story, and a headline over it says the same thing twice (Brandon).
+    const text = isColumn
+      ? `<h3 class="bw-headline">${escapeHtml(post.headline)}</h3>${body}<span class="bw-more">Read the column</span>`
+      : body || `<p class="bw-body">${escapeHtml(post.headline)}</p>`;
+    return `<li class="bw-post"><a class="bw-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">${meta}${text}</a></li>`;
   });
   const empty = posts.length === 0 ? '<li class="bw-post"><p class="bw-body">No news yet. Check back after the next move.</p></li>' : '';
   return (
     `<div class="bw">${reporterHead(reporter)}<ul class="bw-list">${items.join('')}${empty}</ul>` +
-    `<div class="bw-foot">${escapeHtml(reporter.report)} · <a href="${escapeHtml(absolute(`/${leagueSlug}/news`))}" target="_blank" rel="noopener">More news</a></div></div>`
+    `<div class="bw-foot">${escapeHtml(reporter.report)} · <a href="${escapeHtml(newsPage)}" target="_blank" rel="noopener">More news</a></div></div>`
   );
 }
 
