@@ -204,9 +204,11 @@ describe('admin-only ops categories', () => {
 
   it('keeps the admin default-on set small too', () => {
     // Same rule as the owner-facing set: an admin who never opens the page
-    // should hear only about things that are broken.
+    // should hear only about things that are broken — plus the two sales
+    // leads (demo questionnaire, product requests), which Brandon asked to be
+    // pushed (2026-11-16) so no paying customer waits on him.
     const on = visibleCategoriesForLeague(FEATURES, ADMIN).filter((c) => c.defaultOn);
-    expect(on.length).toBeLessThanOrEqual(7);
+    expect(on.length).toBeLessThanOrEqual(8);
   });
 
   it('offers them in both leagues — admin-ness is about the person, not the league', () => {

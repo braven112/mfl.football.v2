@@ -1,5 +1,9 @@
 ---
 /**
+ * A product on sale now (`AVAILABLE_NOW`, Brandon 2026-11-16) opens the same
+ * dialog in its "contact" mode instead: a short request form (name, email,
+ * league) that is kept for Site Insights and pushed to the owner.
+ *
  * The "coming soon" dialog behind every product button that is not on sale
  * yet (a fake door). Render this once per page; any element carrying
  * `data-interest="<product slug>"` opens it. Opening counts one click for that
@@ -11,20 +15,42 @@
  * Dark in both themes, like MFL Live's studio pieces, so it reads the same on
  * the homepage and on `/live` without borrowing either page's tokens.
  */
+import { AVAILABLE_NOW } from '../../utils/product-interest';
+
+const available = JSON.stringify([...AVAILABLE_NOW]);
 ---
 
-<dialog class="pi" id="product-interest" aria-labelledby="pi-title">
+<dialog class="pi" id="product-interest" aria-labelledby="pi-title" data-available={available}>
 	<form method="dialog" class="pi__close-form">
 		<button class="pi__close" aria-label="Close">×</button>
 	</form>
-	<p class="pi__kicker">Coming soon</p>
+	<p class="pi__kicker" data-pi-soon>Coming soon</p>
+	<p class="pi__kicker pi__kicker--live" data-pi-now hidden>Available now</p>
 	<h2 class="pi__title" id="pi-title">
-		<span data-pi-name>This product</span> isn’t available yet
+		<span data-pi-soon>
+			<span data-pi-name>This product</span> isn’t available yet
+		</span>
+		<span data-pi-now hidden>Get <span data-pi-name>this product</span></span>
 	</h2>
-	<p class="pi__body">
+	<p class="pi__body" data-pi-soon>
 		Thanks for clicking. That tells us you’re interested, and it helps us decide what to build first.
 	</p>
+	<p class="pi__body" data-pi-now hidden>
+		Tell us where to reach you and which MFL league it’s for. We’ll email you within a day to set it up.
+	</p>
 	<p class="pi__note" data-pi-note hidden></p>
+	<form class="pi__form pi__form--contact" data-pi-contact novalidate hidden>
+		<label class="pi__label" for="pi-c-name">Your name</label>
+		<input class="pi__input" id="pi-c-name" name="name" type="text" autocomplete="name" maxlength="80" required />
+		<label class="pi__label" for="pi-c-email">Email</label>
+		<input class="pi__input" id="pi-c-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" maxlength="254" required />
+		<label class="pi__label" for="pi-c-league">Your MFL league <span class="pi__opt">(link or name)</span></label>
+		<input class="pi__input" id="pi-c-league" name="league" type="text" maxlength="200" placeholder="Your league’s MFL link" />
+		<label class="pi__label" for="pi-c-message">Anything else? <span class="pi__opt">(optional)</span></label>
+		<textarea class="pi__input pi__textarea" id="pi-c-message" name="message" rows="3" maxlength="1000"></textarea>
+		<button class="cta cta--primary pi__send" type="submit">Send request</button>
+		<p class="pi__status" data-pi-status role="status" aria-live="polite"></p>
+	</form>
 	<form class="pi__form" data-pi-form novalidate>
 		<label class="pi__label" for="pi-email">Want to hear when it launches? (optional)</label>
 		<div class="pi__row">
@@ -63,7 +89,7 @@
 		}
 	}
 
-	function send(payload: Record<string, string>): Promise<Response> {
+	function send(payload: Record<string, string | boolean>): Promise<Response> {
 		return fetch('/api/product-interest', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -80,20 +106,67 @@
 
 		const product = trigger.dataset.interest!;
 		dialog.dataset.product = product;
-		dialog.querySelector('[data-pi-name]')!.textContent = trigger.dataset.interestName || 'This product';
+		let available: string[] = [];
+		try {
+			available = JSON.parse(dialog.dataset.available ?? '[]');
+		} catch {}
+		const now = available.includes(product);
+		dialog.querySelectorAll<HTMLElement>('[data-pi-soon], [data-pi-form]').forEach((el) => (el.hidden = now));
+		dialog.querySelectorAll<HTMLElement>('[data-pi-now], [data-pi-contact]').forEach((el) => (el.hidden = !now));
+		const label = trigger.dataset.interestName || 'This product';
+		dialog.querySelectorAll('[data-pi-name]').forEach((el) => (el.textContent = label));
 		const note = dialog.querySelector<HTMLElement>('[data-pi-note]')!;
 		note.textContent = trigger.dataset.interestNote ?? '';
 		note.hidden = !trigger.dataset.interestNote;
-		const form = dialog.querySelector<HTMLFormElement>('[data-pi-form]')!;
-		form.reset();
-		form.hidden = false;
-		dialog.querySelector('[data-pi-status]')!.textContent = '';
+		dialog.querySelectorAll<HTMLFormElement>('[data-pi-form], [data-pi-contact]').forEach((f) => {
+			f.reset();
+			f.querySelector('button[type="submit"]')?.removeAttribute('disabled');
+		});
+		dialog.querySelectorAll('[data-pi-status]').forEach((el) => (el.textContent = ''));
 		dialog.showModal();
 
 		send({ product }).catch(() => {});
 	});
 
 	document.addEventListener('submit', async (event) => {
+		const contact = (event.target as Element | null)?.closest<HTMLFormElement>('[data-pi-contact]');
+		if (contact) {
+			event.preventDefault();
+			const dialog = contact.closest<HTMLDialogElement>('dialog')!;
+			const status = contact.querySelector<HTMLElement>('[data-pi-status]')!;
+			const field = (n: string) => (contact.elements.namedItem(n) as HTMLInputElement).value.trim();
+			if (!field('name')) {
+				status.textContent = 'Add your name.';
+				return;
+			}
+			if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) {
+				status.textContent = 'Enter an email address so we can reach you.';
+				return;
+			}
+			const button = contact.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+			button.disabled = true;
+			status.textContent = 'Sending…';
+			try {
+				const res = await send({
+					product: dialog.dataset.product ?? '',
+					contact: true,
+					name: field('name'),
+					email: field('email'),
+					league: field('league'),
+					message: field('message'),
+				});
+				if (res.ok) {
+					status.textContent = 'Sent. We’ll email you within a day.';
+				} else {
+					button.disabled = false;
+					status.textContent = 'That didn’t send. Please try again.';
+				}
+			} catch {
+				button.disabled = false;
+				status.textContent = 'That didn’t send. Please try again.';
+			}
+			return;
+		}
 		const form = (event.target as Element | null)?.closest<HTMLFormElement>('[data-pi-form]');
 		if (!form) return;
 		event.preventDefault();
@@ -235,6 +308,43 @@
 	.pi__input:focus-visible {
 		outline: 2px solid var(--pi-red);
 		outline-offset: 1px;
+	}
+
+	.pi__kicker--live {
+		color: #4ade80;
+	}
+
+	.pi__kicker--live::before {
+		background: #22c55e;
+	}
+
+	.pi__form--contact {
+		display: grid;
+		gap: 0.35rem;
+	}
+
+	/* The kicker and forms set their own display, which would beat [hidden]. */
+	.pi [hidden] {
+		display: none;
+	}
+
+	.pi__form--contact .pi__label {
+		margin: 0.5rem 0 0;
+	}
+
+	.pi__opt {
+		font-weight: 400;
+		color: var(--pi-muted);
+	}
+
+	.pi__textarea {
+		resize: vertical;
+		min-height: 4.5rem;
+	}
+
+	.pi__send {
+		margin-top: 0.9rem;
+		justify-self: start;
 	}
 
 	.pi__status {

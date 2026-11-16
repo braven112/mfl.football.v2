@@ -2,7 +2,9 @@
  * POST /api/product-interest — the "coming soon" product buttons.
  *
  * Body: { product, visitor, email? }. Without an email it counts a click; with
- * one it keeps the address for that product. No session is needed (the
+ * one it keeps the address for that product. A product on sale now
+ * (`AVAILABLE_NOW`) also takes `contact: true` with name, league and message:
+ * the request is kept for Site Insights and pushed to the owner. No session is needed (the
  * buttons are for strangers), so every input is checked against a closed list
  * or a pattern before it reaches Redis, and each caller is rate-limited by a
  * salted hash of their address — the address itself is never stored.
@@ -13,7 +15,14 @@ import { createHash, createHmac } from 'node:crypto';
 import { getClientIdentity } from '../../utils/client-ip';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import { checkRateLimit } from '../../utils/rate-limit';
+import { sendPushToFranchise } from '../../utils/push-sender';
+import { getLeagueBySlug } from '../../config/leagues';
+import { SHARED_APP_ORIGIN } from '../../config/leagues-data.mjs';
 import {
+	cleanContactText,
+	interestName,
+	isAvailableNow,
+	recordContactRequest,
 	isInterestProduct,
 	isVisitorId,
 	normalizeEmail,
@@ -31,6 +40,9 @@ const MAX_PER_HOUR = 40;
  * Cloudflare edge is shared by many real visitors, hence the larger number.
  */
 const MAX_PER_HOP_PER_HOUR = 600;
+
+/** The owner's franchise in TheLeague, where requests are pushed (as demo leads are). */
+const OWNER_FRANCHISE = '0001';
 
 const json = (body: unknown, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -52,7 +64,15 @@ export const POST: APIRoute = async ({ request }) => {
 		return json({ message: 'Expected JSON.' }, 415);
 	}
 
-	let body: { product?: unknown; visitor?: unknown; email?: unknown };
+	let body: {
+		product?: unknown;
+		visitor?: unknown;
+		email?: unknown;
+		contact?: unknown;
+		name?: unknown;
+		league?: unknown;
+		message?: unknown;
+	};
 	try {
 		body = await request.json();
 	} catch {
@@ -72,6 +92,33 @@ export const POST: APIRoute = async ({ request }) => {
 	}
 	const limit = await checkRateLimit('product-interest', hashKey(identity.client ?? 'unknown'), MAX_PER_HOUR, 3600);
 	if (!limit.allowed) return json({ message: 'Too many requests.' }, 429);
+
+	if (body.contact === true) {
+		if (!isAvailableNow(product)) return json({ message: 'Unknown product.' }, 400);
+		const name = cleanContactText(body.name, 80);
+		if (!name || !email) return json({ message: 'Add your name and email.' }, 400);
+		const league = cleanContactText(body.league, 200);
+		const message = cleanContactText(body.message, 1000);
+		try {
+			const stored = await recordContactRequest({ product, name, email, league, message, at: new Date().toISOString() });
+			if (!stored) return json({ message: 'Storage unavailable.' }, 503);
+			const owner = getLeagueBySlug('theleague')!;
+			await sendPushToFranchise(
+				owner.id,
+				OWNER_FRANCHISE,
+				{
+					title: `New request: ${interestName(product)}`,
+					body: `${name} (${email})${league ? ` · ${league}` : ''}`,
+					url: new URL('/live/analytics', SHARED_APP_ORIGIN).href,
+					tag: `product-request-${product}-${email}`,
+				},
+				'ops-product-request',
+			).catch((err) => console.error('[product-interest] push failed:', err));
+			return json({ ok: true });
+		} catch {
+			return json({ message: 'Storage unavailable.' }, 503);
+		}
+	}
 
 	try {
 		const stored = email

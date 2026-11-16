@@ -11,7 +11,7 @@
  */
 import SplashLayout from '../../../layouts/SplashLayout.astro';
 import ProductInterest from '../ProductInterest.astro';
-import { SERVICES, SITE_FOOTER_LINKS, FORMER_BRAND } from '../../../data/mfl-services';
+import { SITE_HEADER_LINKS, SITE_FOOTER_LINKS, FORMER_BRAND } from '../../../data/mfl-services';
 import type { JsonLd } from '../../../utils/structured-data';
 
 export interface Props {
@@ -35,13 +35,10 @@ const here = canonicalPath;
 				<img class="sp-brand__light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
 				<img class="sp-brand__dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
 			</a>
-			<nav class="sp-top__links" aria-label="Services">
-				{SERVICES.map((s) => (
-					<a href={s.path} aria-current={s.path === here ? 'page' : undefined}>{s.navLabel}</a>
+			<nav class="sp-top__links" aria-label="Main">
+				{SITE_HEADER_LINKS.map((l) => (
+					<a href={l.href} aria-current={l.href === here ? 'page' : undefined}>{l.label}</a>
 				))}
-				<a href="/features" aria-current={here === '/features' ? 'page' : undefined}>Features</a>
-				<a href="/pricing" aria-current={here === '/pricing' ? 'page' : undefined}>Pricing</a>
-				<a class="sp-top__live" href="/live">Live scores</a>
 			</nav>
 			<div class="sp-top__end">
 				<a class="cta cta--ghost" href="/login">Sign in</a>
