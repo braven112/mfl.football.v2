@@ -32,7 +32,7 @@ export const POST_CORRECTIONS = {
     storyVersion: 1,
     headline: 'Dark Magicians of Chaos trade with Da Dangsters for WR, Deebo Samuel',
     body: "League sources tell me Dark Magicians of Chaos and Da Dangsters have agreed to a blockbuster swap! I'm told Dark Magicians of Chaos are landing WR, Deebo Samuel and Da Dangsters' 2027 1st-round pick, sending WR, Zay Flowers the other way. Boom! This one just got a whole lot more interesting!",
-    analysis: "Schefter's Take: Dark Magicians of Chaos get the best of this deal, adding a proven playmaker in Deebo Samuel plus a 2027 1st for one receiver. Grade: Dark Magicians of Chaos A-, Da Dangsters C-. Da Dangsters are betting big on Zay Flowers, and attaching their own first to do it is a steep price.",
+    analysis: "Dark Magicians of Chaos get the best of this deal, adding a proven playmaker in Deebo Samuel plus a 2027 1st for one receiver. Grade: Dark Magicians of Chaos A-, Da Dangsters C-. Da Dangsters are betting big on Zay Flowers, and attaching their own first to do it is a steep price.",
   },
   // TheLeague, 2026-11-10. Same cause. MFL: 0015 gave 13130 (Christian
   // McCaffrey) and FP_0015_2027_3; 0016 gave 12626 (Derrick Henry), 16620
@@ -41,7 +41,7 @@ export const POST_CORRECTIONS = {
     reason: 'split "Last, First" names; assets sent the wrong way; take graded the wrong side',
     storyVersion: 1,
     body: "Boom! League sources tell me Dark Magicians of Chaos and Running down the Dream have agreed to a blockbuster dynasty swap. Dark Magicians of Chaos land RB, Derrick Henry; WR, Xavier Worthy; and a 2027 1st, sending RB, Christian McCaffrey and a 2027 3rd to Running down the Dream. I'm told this one has been brewing for days, and it's a big one for both rosters.",
-    analysis: "Schefter's Take: Running down the Dream go all-in on Christian McCaffrey, but Dark Magicians of Chaos walk away with the bigger haul: Derrick Henry, a young receiver in Xavier Worthy and a 2027 1st, for a 3rd on top. Grade: Dark Magicians of Chaos A-, Running down the Dream B. A star back makes sense for a contender, but that is a lot of future to hand over.",
+    analysis: "Running down the Dream go all-in on Christian McCaffrey, but Dark Magicians of Chaos walk away with the bigger haul: Derrick Henry, a young receiver in Xavier Worthy and a 2027 1st, for a 3rd on top. Grade: Dark Magicians of Chaos A-, Running down the Dream B. A star back makes sense for a contender, but that is a lot of future to hand over.",
   },
   // TheLeague, 2026-11-10. Body and take were right; only the headline
   // carried the raw "Last, First" name.
