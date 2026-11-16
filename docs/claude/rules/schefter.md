@@ -1123,6 +1123,41 @@ for the rest of its 30-day TTL).
   row is written on every scan, whether or not the dice landed, because the
   change is a fact about the proposal rather than about whether we reported it.
 
+### MFL Live feeds `owner_reports` passively (Nov 2026)
+
+The owner-report intake used to fill only when an owner opened a trades
+surface. Brandon (2026-11-16) wanted it fully passive: any signed-in MFL Live
+load or poll (web `/live` and the app's `/api/live-board`) now reads that
+owner's pending offers in the background, through
+`src/utils/live/passive-trade-capture.ts`. Rules it keeps:
+
+- **The owner's own session only** — the MFL cookie inside the signed JWT they
+  made by signing in to Live. Never MFL's pages, never their browser cookies,
+  never a commissioner or env credential. No new sign-in prompt.
+- **One read per account per 15 minutes**, claimed with Redis `SET NX EX`
+  BEFORE the MFL call, so a tab plus the phone cost one read and a failed read
+  is not retried every poll. The key is a hash of the cookie, never the cookie.
+- **Time-boxed beside the board** (`capturePendingOffersQuietly`, 4 s, never
+  throws) and awaited before the response, so the function is not frozen
+  mid-read; a slow MFL can't delay a scoreboard past its own assembly.
+- **Only leagues with the "Trade rumors" setting on** — registry
+  `features.tradeRumors` (catalog key `tradeRumors`, requires `schefterTips`).
+  That ONE flag gates the intake (`ownerReportsKeyFor`) AND the scanner's offer
+  lane (surfaced as `features.tradeOfferRumors` by `schefter-leagues.mjs`; the
+  old `schefter.lanes.tradeOfferRumors` toggle was removed so the two can't
+  disagree). TheLeague and the AFL are on (Brandon, 2026-11-16). A league
+  switched on also needs its team names in its registry `configPath` (read
+  through the league-data store, never imported), or MFL's prose-only
+  proposer would reach the scanner as `'0000'`; intake refuses such a league
+  and `tests/owner-trade-reports.test.ts` fails on that pairing.
+- **Player escalation is per player POOL.** The AFL rosters one player in
+  both conferences, so `player_offer_history` is keyed by the offering team's
+  conference there (`playerOfferHistoryKey`); single-pool leagues keep the
+  legacy key.
+
+This makes live proposals stay in `owner_reports` far more often, which is
+why "dropped out of the scan" still must never be read as withdrawn (see "Closing a proposal" above).
+
 ### Past the deadline, a pending offer is history — and a traded player kills the offer
 
 TheLeague, Sat 2026-11-14, 8:06 AM PT, eleven hours after MFL closed trading:

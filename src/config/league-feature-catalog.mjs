@@ -198,6 +198,14 @@ export const FEATURE_CATALOG = [
     requires: ['schefterFeed'],
   },
   {
+    key: 'tradeRumors',
+    label: 'Trade rumors',
+    description:
+      "Rumors about pending trade offers in the news feed. Offers are read from each owner's own sign-in when they use the site or MFL Live; nothing extra for owners to do.",
+    group: 'news',
+    requires: ['schefterTips'],
+  },
+  {
     key: 'rulesQa',
     label: 'Ask Roger (rules Q&A)',
     description:

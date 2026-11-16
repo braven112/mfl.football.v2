@@ -58,3 +58,51 @@ describe('resolveOriginatorFid (owner-view pendingTrades)', () => {
     expect(resolveOriginatorFid(raw, '1')).toBe('0001');
   });
 });
+
+import { readFileSync } from 'node:fs';
+import { LEAGUES as REGISTRY } from '../src/config/leagues';
+import {
+  leagueTakesOwnerTradeReports,
+  loadTeamNameMap,
+  ownerReportsKeyFor,
+} from '../src/utils/owner-trade-reports';
+
+describe('trade rumors is a per-league setting (features.tradeRumors)', () => {
+  it("keeps TheLeague's legacy hash key byte-identical", () => {
+    expect(ownerReportsKeyFor(REGISTRY.theleague.id)).toBe('schefter:trade_offers:owner_reports');
+  });
+
+  it("writes the AFL's reports to the key its rumor scan reads", () => {
+    expect(ownerReportsKeyFor(REGISTRY['afl-fantasy'].id)).toBe('schefter:afl:trade_offers:owner_reports');
+  });
+
+  it('takes no reports from a league with the setting off', () => {
+    for (const league of Object.values(REGISTRY)) {
+      if (league.features.tradeRumors) continue;
+      expect(leagueTakesOwnerTradeReports(league.id), league.slug).toBe(false);
+    }
+    expect(leagueTakesOwnerTradeReports('99999')).toBe(false);
+  });
+
+  it("every league with the setting on names its teams in its config", () => {
+    // Otherwise its rows would reach the scanner stamped '0000'.
+    for (const league of Object.values(REGISTRY)) {
+      if (!league.features.tradeRumors) continue;
+      expect(league.configPath, league.slug).toBeTruthy();
+      const config = JSON.parse(readFileSync(league.configPath!, 'utf8'));
+      expect(config.teams?.filter((t: any) => t?.name && t?.franchiseId).length, league.slug).toBeGreaterThan(0);
+    }
+  });
+
+  it('trade rumors requires the tips pipeline it feeds', () => {
+    for (const league of Object.values(REGISTRY)) {
+      if (league.features.tradeRumors) expect(league.features.schefterTips, league.slug).toBe(true);
+    }
+  });
+
+  it("resolves an AFL proposer from the AFL's own team names", async () => {
+    const names = await loadTeamNameMap(REGISTRY['afl-fantasy'].id);
+    const raw = { offeredto: '0002', description: 'Smokane FC proposed a trade to Drunk Indians' };
+    expect(resolveOriginatorFid(raw, '0002', names)).toBe('0001');
+  });
+});
