@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  buildInjuryAlerts,
+  pickBreaking,
   isMflOrigin,
   renderAdWidget,
   renderNewsWidget,
@@ -147,5 +149,51 @@ describe('rendering', () => {
     const html = renderAdWidget({ origin: 'https://mfl.football', avatar: '/assets/x.webp' });
     expect(html).toContain('Get the Beat Reporter');
     expect(html).toContain('https://mfl.football/');
+  });
+});
+
+describe('breaking strip', () => {
+  const now = Date.parse('2026-11-16T03:00:00Z');
+  const at = (mins: number) => new Date(now - mins * 60000).toISOString();
+  it('takes the newest trade or breaking post from the last hour, by the reporter or Doc', () => {
+    const feed = { posts: [
+      { id: 'old', type: 'transaction', transactionSubType: 'TRADE', headline: 'x', timestamp: at(90) },
+      { id: 'trade', type: 'transaction', transactionSubType: 'TRADE', headline: 'x', timestamp: at(30) },
+      { id: 'doc', type: 'injury', authorId: 'doc-rivers', tier: 'breaking', headline: 'x', timestamp: at(10) },
+      { id: 'wire', type: 'external', authorId: 'nfl-wire', tier: 'breaking', headline: 'x', timestamp: at(5) },
+      { id: 'pickup', type: 'transaction', transactionSubType: 'FREE_AGENT', headline: 'x', timestamp: at(2) },
+    ] };
+    expect(pickBreaking(feed, now)?.id).toBe('doc');
+    expect(pickBreaking({ posts: [feed.posts[0]] }, now)).toBeNull();
+  });
+});
+
+describe('injury alerts', () => {
+  it('flags Out, Doubtful and Questionable, worst first, with Doc\'s take', () => {
+    const alerts = buildInjuryAlerts({
+      playerIds: ['1', '2', '3', '4'],
+      injuries: { '1': { injuryStatus: 'Questionable', injuryBodyPart: 'Ankle' }, '2': { injuryStatus: 'Out' }, '3': { injuryStatus: 'IR' } },
+      player: (id: string) => ({ name: `P${id}`, position: 'WR', nflTeam: 'DET' }),
+      docTake: (id: string) => (id === '2' ? 'Sitting this week.' : null),
+    });
+    expect(alerts.map((a: any) => [a.name, a.status])).toEqual([['P2', 'Out'], ['P1', 'Questionable']]);
+    expect(alerts[0].doc).toBe('Sitting this week.');
+  });
+  it('renders the strip, the alert box and the lineup link', () => {
+    const html = renderNewsWidget({
+      posts: [{ id: 'tx', type: 'transaction', headline: 'h', body: 'Pickup', timestamp: '2026-11-09T00:00:00Z' }],
+      leagueIds: new Set(['tx']),
+      breaking: { id: 'tr', type: 'transaction', transactionSubType: 'TRADE', headline: 'Big trade', body: 'Blockbuster <done>', timestamp: '2026-11-09T00:00:00Z' },
+      alerts: [{ id: '2', name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', status: 'Out', detail: 'Knee', doc: null }],
+      lineupHref: 'options?L=1&O=02',
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute: (p: string) => `https://www.theleague.us${p}`,
+      leagueSlug: 'theleague',
+    });
+    expect(html).toContain('bw-breaking');
+    expect(html).toContain('Blockbuster &lt;done&gt;');
+    expect(html).toContain('Amon-Ra St. Brown');
+    expect(html).toContain('href="options?L=1&amp;O=02"');
+    expect(html).toContain('data-ts="');
   });
 });

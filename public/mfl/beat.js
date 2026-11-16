@@ -15,6 +15,20 @@
   var f = /^\d{4}$/.test(fid) ? '&F=' + fid : '';
   fetch(new URL(me.src).origin + '/api/beat/widget?L=' + m[1] + '&k=' + encodeURIComponent(me.getAttribute('data-key') || '') + f)
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) { if (d && d.html) root.innerHTML = '<style>' + d.css + '</style>' + d.html; })
+    .then(function (d) {
+      if (!d || !d.html) return;
+      root.innerHTML = '<style>' + d.css + '</style>' + d.html;
+      // Unread count: posts newer than this browser's last visit. Kept here
+      // (not on our server) so no visit history ever leaves the browser.
+      var key = 'beat-seen:' + m[1] + ':' + (fid || '-'), seen = 0;
+      try { seen = +localStorage.getItem(key) || 0; localStorage.setItem(key, String(Date.now())); } catch (e) { return; }
+      if (!seen) return;
+      var lead = root.querySelector('.bw-tabs') ? '.bw-post--league' : '.bw-post', n = 0;
+      [].forEach.call(root.querySelectorAll('.bw-post[data-ts]'), function (li) {
+        if (+li.getAttribute('data-ts') > seen) { li.classList.add('bw-post--new'); if (li.matches(lead)) n++; }
+      });
+      var badge = root.querySelector('.bw-new');
+      if (badge && n) { badge.textContent = n + ' new'; badge.hidden = false; }
+    })
     .catch(function () {});
 })();

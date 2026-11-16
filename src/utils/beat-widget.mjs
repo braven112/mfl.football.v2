@@ -97,6 +97,65 @@ export function selectWidgetPosts(feed, { limit = WIDGET_POST_LIMIT, isLeague = 
   return { posts, leagueIds: new Set(league.map((p) => p.id)) };
 }
 
+/** How long a fresh trade or big injury rides the red strip at the top. */
+export const BREAKING_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * The post for the Breaking strip: the newest trade or breaking post from the
+ * reporter or Doc Rivers in the last hour, else null. Brandon, 2026-11-16.
+ */
+export function pickBreaking(feed, now = Date.now()) {
+  const posts = Array.isArray(feed?.posts) ? feed.posts : [];
+  let best = null;
+  for (const p of posts) {
+    if (!p || PRIVATE_POST_TYPES.has(p.type) || p.transactionSubType === 'TRADE_PENDING') continue;
+    const author = p.authorId ?? 'claude';
+    if (author !== 'claude' && author !== 'doc-rivers') continue;
+    if (p.transactionSubType !== 'TRADE' && p.tier !== 'breaking') continue;
+    const t = Date.parse(p.timestamp);
+    if (!Number.isFinite(t) || t > now || now - t > BREAKING_WINDOW_MS) continue;
+    if (!best || t > Date.parse(best.timestamp)) best = p;
+  }
+  return best;
+}
+
+/** Injury designations the alert box flags, worst first. */
+export const ALERT_STATUSES = ['Out', 'Doubtful', 'Questionable'];
+
+/**
+ * The owner's injury alerts: active-roster players MFL lists as Out, Doubtful
+ * or Questionable, worst first, each with Doc's latest word on him if any.
+ * @param {object} o
+ * @param {string[]} o.playerIds   the franchise's active roster (not IR, not taxi)
+ * @param {Record<string, { injuryStatus: string, injuryBodyPart?: string }>} o.injuries
+ * @param {(id: string) => { name: string, position?: string, nflTeam?: string } | undefined} o.player
+ * @param {(id: string) => string | null} [o.docTake]
+ */
+export function buildInjuryAlerts({ playerIds, injuries, player, docTake = () => null }) {
+  const rank = (s) => ALERT_STATUSES.findIndex((x) => x.toLowerCase() === String(s ?? '').toLowerCase());
+  return playerIds
+    .map((id) => ({ id, inj: injuries?.[id] }))
+    .filter(({ inj }) => inj && rank(inj.injuryStatus) >= 0)
+    .map(({ id, inj }) => {
+      const who = player(id);
+      return {
+        id,
+        name: who?.name ?? `Player ${id}`,
+        position: who?.position ?? '',
+        team: who?.nflTeam ?? '',
+        status: ALERT_STATUSES[rank(inj.injuryStatus)],
+        detail: inj.injuryBodyPart ?? '',
+        doc: docTake(id),
+      };
+    })
+    .sort((a, b) => rank(a.status) - rank(b.status) || a.name.localeCompare(b.name));
+}
+
+function clip(text, max) {
+  const t = String(text ?? '').trim();
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+}
+
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
@@ -138,6 +197,25 @@ export const WIDGET_CSS = `
 #bw-tab-league:checked~.bw-tabs label[for=bw-tab-league],#bw-tab-all:checked~.bw-tabs label[for=bw-tab-all]{background:color-mix(in srgb,currentColor 14%,transparent);border-color:currentColor}
 #bw-tab-league:focus-visible~.bw-tabs label[for=bw-tab-league],#bw-tab-all:focus-visible~.bw-tabs label[for=bw-tab-all]{outline:2px solid currentColor;outline-offset:2px}
 #bw-tab-league:checked~.bw-list .bw-post:not(.bw-post--league){display:none}
+.bw-new{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:#c62828;color:#fff;font-size:.65em;font-weight:700;vertical-align:middle}
+.bw-new[hidden]{display:none}
+.bw-post--new .bw-avatar{box-shadow:0 0 0 2px #c62828}
+.bw-post--new .bw-meta::after{content:"New";margin-left:6px;color:#c62828;font-weight:700}
+.bw-breaking{display:flex;gap:8px;align-items:flex-start;margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:#c62828;color:#fff;text-decoration:none;line-height:1.4}
+.bw-breaking-tag{flex:none;font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.8em;padding-top:2px}
+.bw-alerts{margin:10px 0 2px;padding:10px 12px;border-radius:10px;border:1px solid var(--bw-line);background:var(--bw-soft)}
+#bw-tab-all:checked~.bw-alerts{display:none}
+.bw-alerts-head{font-weight:700;font-size:.9em;margin-bottom:6px}
+.bw-alert-list{list-style:none;margin:0;padding:0}
+.bw-alert{display:flex;gap:8px;align-items:flex-start;padding:5px 0}
+.bw-status{flex:none;min-width:2.2em;text-align:center;padding:1px 6px;border-radius:6px;font-size:.75em;font-weight:800;color:#fff}
+.bw-status--out{background:#c62828}
+.bw-status--doubtful{background:#e65100}
+.bw-status--questionable{background:#b8860b}
+.bw-alert-name{font-weight:600}
+.bw-alert-sub{font-weight:400;color:var(--bw-dim);font-size:.9em}
+.bw-alert-doc{font-size:.85em;color:var(--bw-dim);margin-top:2px}
+.bw-alert-cta{display:inline-block;margin-top:6px;font-weight:600;color:inherit}
 .bw-meta{color:var(--bw-dim);font-size:.8em;margin-bottom:2px}
 .bw-badge{display:inline-block;padding:1px 6px;border-radius:999px;background:var(--bw-soft);margin-right:6px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:.9em}
 .bw-headline{font-weight:700;line-height:1.3;margin:0 0 4px;font-size:1em}
@@ -188,18 +266,25 @@ function externalLink(post) {
  * @param {{ name: string, avatar: string, report: string }} o.reporter  absolute avatar URL
  * @param {(path: string) => string} o.absolute  the league's leagueUrl
  * @param {string} o.leagueSlug  registry slug, for the article path
+ * @param {any} [o.breaking]  pickBreaking output: a red strip over the list
+ * @param {ReturnType<typeof buildInjuryAlerts>} [o.alerts]  the owner's injury alerts (My News only)
+ * @param {string} [o.lineupHref]  the league's MFL lineup page
  * @param {number} [o.now]
  */
-export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', bylineFor, reporter, absolute, leagueSlug, now = Date.now() }) {
+export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', bylineFor, reporter, absolute, leagueSlug, breaking = null, alerts = [], lineupHref = '', now = Date.now() }) {
   const newsPage = absolute(`/${leagueSlug}/news`);
   const byline = bylineFor ?? (() => ({ name: reporter.name, avatar: reporter.avatar }));
+  const hrefFor = (post) => {
+    const isColumn = Array.isArray(post.content) && post.content.length > 0;
+    return externalLink(post) ?? (isColumn ? absolute(`/${leagueSlug}/news/${encodeURIComponent(post.id)}`) : newsPage);
+  };
   const items = posts.map((post) => {
     // Every card opens our site: a column on its own article page (charts and
     // all), anything else on the league's news page. Brandon, 2026-11-15:
     // the write-ups are too nice to squeeze into a pop-up on MFL. A wire
     // story opens on ESPN, as it does on our news page.
     const isColumn = Array.isArray(post.content) && post.content.length > 0;
-    const href = externalLink(post) ?? (isColumn ? absolute(`/${leagueSlug}/news/${encodeURIComponent(post.id)}`) : newsPage);
+    const href = hrefFor(post);
     const by = byline(post);
     const meta =
       `<div class="bw-meta"><span class="bw-badge">${badgeFor(post)}</span>` +
@@ -213,7 +298,7 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
     const lane = leagueIds?.has(post.id) ? ' bw-post--league' : '';
     const avatar = by.avatar ? `<img class="bw-avatar" src="${escapeHtml(by.avatar)}" alt="" width="36" height="36" loading="lazy">` : '<span class="bw-avatar"></span>';
     return (
-      `<li class="bw-post${lane}"><a class="bw-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">` +
+      `<li class="bw-post${lane}" data-ts="${Number.isFinite(Date.parse(post.timestamp)) ? Date.parse(post.timestamp) : 0}"><a class="bw-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">` +
       `${avatar}<div class="bw-main">${meta}${text}</div></a></li>`
     );
   });
@@ -227,8 +312,28 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
         `<input type="radio" name="bw-tab" id="bw-tab-all" class="bw-tab-in">` +
         `<div class="bw-tabs" role="tablist"><label for="bw-tab-league">${escapeHtml(firstTab)}</label><label for="bw-tab-all">All</label></div>`
       : '';
+  // A fresh trade or big injury rides a red strip for an hour (pickBreaking).
+  const strip = breaking
+    ? `<a class="bw-breaking" href="${escapeHtml(hrefFor(breaking))}" target="_blank" rel="noopener"><span class="bw-breaking-tag">Breaking</span>` +
+      `<span>${escapeHtml(clip(breaking.body || breaking.headline, 180))}</span></a>`
+    : '';
+  // The owner's own injury report: My News only, so it hides on All.
+  const alertBox =
+    alerts.length > 0
+      ? `<div class="bw-alerts"><div class="bw-alerts-head">Injury report: your roster</div><ul class="bw-alert-list">` +
+        alerts
+          .map(
+            (a) =>
+              `<li class="bw-alert"><span class="bw-status bw-status--${a.status.toLowerCase()}">${a.status}</span>` +
+              `<div><div class="bw-alert-name">${escapeHtml(a.name)}${a.position || a.team ? ` <span class="bw-alert-sub">${escapeHtml([a.position, a.team].filter(Boolean).join(', '))}</span>` : ''}` +
+              `${a.detail ? ` <span class="bw-alert-sub">· ${escapeHtml(a.detail)}</span>` : ''}</div>` +
+              `${a.doc ? `<div class="bw-alert-doc"><b>Doc:</b> ${escapeHtml(clip(a.doc, 160))}</div>` : ''}</div></li>`,
+          )
+          .join('') +
+        `</ul>${lineupHref ? `<a class="bw-alert-cta" href="${escapeHtml(lineupHref)}">Set your lineup</a>` : ''}</div>`
+      : '';
   return (
-    `<div class="bw">${reporterHead(reporter)}${tabs}<ul class="bw-list">${items.join('')}${empty}</ul>` +
+    `<div class="bw">${reporterHead(reporter)}${strip}${tabs}${alertBox}<ul class="bw-list">${items.join('')}${empty}</ul>` +
     `<div class="bw-foot">${escapeHtml(reporter.report)} · <a href="${escapeHtml(newsPage)}" target="_blank" rel="noopener">More news</a></div></div>`
   );
 }
@@ -236,7 +341,7 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
 function reporterHead(reporter) {
   return (
     `<div class="bw-head"><img src="${escapeHtml(reporter.avatar)}" alt="" width="44" height="44">` +
-    `<div><div class="bw-title">${escapeHtml(reporter.report)}</div><div class="bw-sub">by ${escapeHtml(reporter.name)}, your league's beat reporter</div></div></div>`
+    `<div><div class="bw-title">${escapeHtml(reporter.report)}<span class="bw-new" hidden></span></div><div class="bw-sub">by ${escapeHtml(reporter.name)}, your league's beat reporter</div></div></div>`
   );
 }
 

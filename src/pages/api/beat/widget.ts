@@ -19,10 +19,17 @@ import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import { SOURCE_PREDICATES } from '../../../utils/schefter-sources';
 import { getOwnRosterIds, postConcernsFranchise, postMentionsAny } from '../../../utils/schefter-watching';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCachedRosterFranchises } from '../../../utils/mfl-roster-cache';
+import { loadLiveInjuryMap } from '../../../utils/mfl-injuries-live-map';
+import { getPlayerMap, preloadPlayerIdentity } from '../../../utils/player-map';
+import { resolveFeedMode } from '../../../utils/schefter-season-mode';
+import { postPlayerIds } from '../../../utils/schefter-player-tagger.mjs';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   WIDGET_CSS,
+  buildInjuryAlerts,
   isMflOrigin,
+  pickBreaking,
   renderAdWidget,
   renderNewsWidget,
   selectWidgetPosts,
@@ -72,8 +79,13 @@ export const GET: APIRoute = async ({ request, url }) => {
   // Anyone can send any id, so it only decides which PUBLIC posts lead: the
   // roster is public on MFL, and nothing private (watch list, nudges) is read.
   const fid = (url.searchParams.get('F') ?? '').match(/^\d{4}$/)?.[0];
-  const roster = fid && fid !== '0000' ? await getOwnRosterIds(league, getLeagueYearForSlug(league.slug), fid).catch(() => new Set<string>()) : null;
+  const year = getLeagueYearForSlug(league.slug);
+  const roster = fid && fid !== '0000' ? await getOwnRosterIds(league, year, fid).catch(() => new Set<string>()) : null;
   const personal = roster && roster.size > 0;
+  const now = Date.now();
+  const alerts = personal && resolveFeedMode(new Date(now)) === 'in-season'
+    ? await injuryAlerts(league, year, fid!, roster!, feed?.posts ?? [], now).catch(() => [])
+    : [];
   const isFirstTab = personal
     ? (p: any) => SOURCE_PREDICATES.theleague(p) || postMentionsAny(p, roster) || postConcernsFranchise(p, fid)
     : SOURCE_PREDICATES.theleague;
@@ -97,6 +109,47 @@ export const GET: APIRoute = async ({ request, url }) => {
     },
     absolute: (path: string) => leagueUrl(league, path),
     leagueSlug: league.slug,
+    breaking: pickBreaking(feed, now),
+    alerts,
+    // Relative on purpose: it resolves against the MFL page the widget sits
+    // on (…/<year>/home/<id>), so it lands on that league's own lineup page.
+    lineupHref: `options?L=${mflId}&O=02`,
+    now,
   });
   return new Response(JSON.stringify({ html, css: WIDGET_CSS }), { status: 200, headers: headers(origin) });
 };
+
+/** Doc's word on a player only counts while it is this week's news. */
+const DOC_TAKE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The owner's injury alerts: active-roster players (not IR, not taxi) MFL lists
+ * as Out, Doubtful or Questionable, with Doc Rivers' latest post on each. Every
+ * input is public (rosters, MFL's injury report, the feed), which is why a
+ * franchise id the page could have faked is enough to ask for it.
+ */
+async function injuryAlerts(league: any, year: number, fid: string, roster: Set<string>, posts: any[], now: number) {
+  const [franchises, injuries] = await Promise.all([
+    getCachedRosterFranchises(String(year), league.id).catch(() => null),
+    loadLiveInjuryMap(league.slug),
+    // getPlayerMap reads synchronously; on a function the file must be loaded first.
+    preloadPlayerIdentity([year]),
+  ]);
+  const mine = franchises?.find((f) => String(f.id) === fid);
+  const active = mine
+    ? mine.player.filter((p) => p.status === 'ROSTER').map((p) => String(p.id))
+    : [...roster];
+  const players = getPlayerMap(year);
+  const docPosts = posts
+    .filter((p) => p?.authorId === 'doc-rivers' && now - Date.parse(p.timestamp) <= DOC_TAKE_MAX_AGE_MS)
+    .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+  return buildInjuryAlerts({
+    playerIds: active,
+    injuries,
+    player: (id) => players.get(id),
+    docTake: (id) => {
+      const post = docPosts.find((p) => postPlayerIds(p).includes(id));
+      return post ? post.body || post.headline || null : null;
+    },
+  });
+}
