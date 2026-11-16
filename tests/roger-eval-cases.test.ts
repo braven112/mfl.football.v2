@@ -9,7 +9,6 @@
 import { describe, it, expect } from 'vitest';
 import fixture from './fixtures/roger-eval-cases.json';
 import {
-  THELEAGUE_RULES_QA_SYSTEM_PROMPT,
   RULEBOOK_ANCHORS,
 } from '../src/data/rules-qa-system-prompt';
 
@@ -93,20 +92,5 @@ describe('roger eval fixture', () => {
   });
 });
 
-describe('anchor whitelist stays in sync with the system prompt', () => {
-  it('every whitelisted anchor appears in the prompt', () => {
-    for (const anchor of RULEBOOK_ANCHORS) {
-      expect(THELEAGUE_RULES_QA_SYSTEM_PROMPT).toContain(`${anchor} —`);
-    }
-  });
-
-  it('every anchor the prompt offers is whitelisted', () => {
-    const promptAnchors = [
-      ...THELEAGUE_RULES_QA_SYSTEM_PROMPT.matchAll(/^ {2}(#[a-z0-9-]+) —/gm),
-    ].map((m) => m[1]);
-    expect(promptAnchors.length).toBeGreaterThan(0);
-    for (const anchor of promptAnchors) {
-      expect(RULEBOOK_ANCHORS).toContain(anchor);
-    }
-  });
-});
+// The anchor whitelist is checked against Roger's real prompt in
+// tests/roger-prompts.test.ts (the prompt lives in the private pack).

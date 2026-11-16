@@ -165,6 +165,32 @@ reach it.
   `rulesQaKeysFor`).
 - Guard: `tests/league-rulebook.test.ts`.
 
+## Roger's instructions live in the private pack — compiled in at build
+
+Every Roger prompt's INSTRUCTION text (persona, scope, format, anchors) lives in
+the private `braven112/beat-reporter` repo at `prompts/roger/`:
+`theleague.md`, `afl.md`, `package-league.md` and `clapback.md` (the GroupMe
+comeback). The constitutions and the package leagues' rulebooks stay public;
+they are filled into `{{CONSTITUTION}}` / `{{SOURCES}}` in one pass.
+
+- **The site reads them through `src/utils/roger-prompts.ts`**, whose
+  `import.meta.glob` compiles the files INTO THE SERVER BUNDLE. The build gets
+  them from `scripts/fetch-beat-reporter.mjs`, the first prebuild step, which
+  clones the repo with the `BEAT_REPORTER_TOKEN` Vercel env var. A PRODUCTION
+  build that cannot get the pack FAILS (the live deployment stays up); every
+  other build, local dev and the test suite fall back to short public stubs,
+  so Roger still answers from the constitution, without his voice.
+- **Server-only.** A React island or an `.astro` `<script>` that reaches
+  `roger-prompts.ts`, however many imports deep, would ship the text to every
+  browser. `tests/roger-prompts.test.ts` walks every client entry's imports.
+- **Not loadable under tsx.** `import.meta.glob` is a Vite transform, so a node
+  script that needs Roger's anchors imports `src/data/rulebook-anchors.ts`,
+  never `rules-qa-system-prompt.ts`.
+- **The clapback reads the pack at run time** (`readPackText`, in the
+  schefter-scan job, which checks the pack out) and stays SILENT without it.
+- A prompt edit reaches the site on the next deploy, not on the push to the
+  private repo. Wording pins live in that repo's `tests/roger-prompts.test.mjs`.
+
 ## Ask Roger eval — run before prompt/model/constitution changes
 
 `pnpm eval:roger` grades the live TheLeague Q&A pipeline against
@@ -175,12 +201,14 @@ injection). Costs ~$1 of API calls (needs `ANTHROPIC_API_KEY`, so
 Run it before merging any change to the Roger system prompt, the
 constitution, or the answering model, and compare per-category pass rates.
 
-- The production system prompt lives in
+- The production system prompt is exported from
   `src/data/rules-qa-system-prompt.ts` (imported by the endpoint AND the
   eval) so the eval always tests the real prompt — don't re-inline it into
-  the endpoint. The exported `RULEBOOK_ANCHORS` whitelist must match the
-  prompt's section list; `tests/roger-eval-cases.test.ts` (normal CI, no
-  API) enforces the sync and validates the fixture.
+  the endpoint. Its TEXT lives in the private pack (next section), so the eval
+  needs `.private/beat-reporter` checked out. The `RULEBOOK_ANCHORS` whitelist
+  (`src/data/rulebook-anchors.ts`) must match the prompt's section list;
+  `tests/roger-prompts.test.ts` enforces the sync when the pack is present and
+  `tests/roger-eval-cases.test.ts` (normal CI, no API) validates the fixture.
 - The LLM call is `generateRulesAnswer` in `src/utils/rules-qa-handlers.ts`
   with an injectable `now` for date-sensitive cases.
 - New Roger bug report → add a fixture case reproducing it, then fix.

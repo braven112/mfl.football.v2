@@ -54,6 +54,12 @@ function perLeague(job, task) {
 }
 
 const SEQUENTIAL = [
+  // The private beat-reporter pack: Ask Roger's instructions are compiled into
+  // the server bundle from it (src/utils/roger-prompts.ts). FATAL, and only
+  // here: the script itself decides, failing a PRODUCTION build that cannot
+  // get the pack and warning on every other one (scripts/fetch-beat-reporter.mjs).
+  // Never previewSkip — a preview without it runs Roger on the public stubs.
+  { name: 'fetch:beat-reporter', cmd: 'node scripts/fetch-beat-reporter.mjs', fatal: true },
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
   { name: 'build:bookmarklets', cmd: 'pnpm run build:bookmarklets' },
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
@@ -255,14 +261,16 @@ export const resolveSlimReason = (env = process.env, changed = changedVsMain()) 
   return 'preview build — reading committed data artifacts';
 };
 
-const run = (label, cmd) => {
+const run = (label, cmd, { fatal = false } = {}) => {
   const start = Date.now();
   try {
     execSync(cmd, { stdio: 'inherit' });
     console.log(`  ✓ ${label} (${Date.now() - start}ms)`);
   } catch (err) {
     console.error(`  ✗ ${label} failed (${Date.now() - start}ms)`);
-    // Non-fatal: let build continue even if a fetch fails
+    // Non-fatal: let build continue even if a fetch fails — unless the step
+    // says otherwise (its own script decides when to exit non-zero).
+    if (fatal) process.exit(1);
   }
 };
 
@@ -297,8 +305,8 @@ if (slimReason) {
 }
 
 console.log('[prebuild] Starting sequential steps…');
-for (const { name, cmd } of sequential) {
-  run(name, cmd);
+for (const { name, cmd, fatal } of sequential) {
+  run(name, cmd, { fatal });
 }
 
 console.log('[prebuild] Starting parallel fetches…');

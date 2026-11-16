@@ -37,6 +37,7 @@
  * comeback" — returning shot:false to stay silent on sincere messages.
  */
 
+import { readPackText } from './beat-reporter-pack.mjs';
 import { buildReplyAttachment, buildMentionAttachment } from './groupme.mjs';
 import { OPUS_MODEL } from '../../src/utils/claude-models.mjs';
 
@@ -236,28 +237,13 @@ export function detectRogerTarget(msg, rogerBotMsgIds) {
  * recognisably the same character. The rules-lawyer identity is the joke: he is
  * a bot who reads the constitution for fun being told that counting days isn't
  * impressive, and his answer is that he also counts ROSTERS.
+ *
+ * The text lives in the PRIVATE beat-reporter pack (prompts/roger/clapback.md).
+ * Without it there is no clapback: Roger stays quiet rather than improvise.
  */
-export const ROGER_CLAPBACK_SYSTEM_PROMPT = `You are "Roger" — the AI rules bot for a 16-team dynasty salary-cap fantasy football league. You post deadline reminders to the league's GroupMe chat. An owner has replied to one of your posts. Decide whether it was a shot at you, and if it was, fire back.
-
-VOICE:
-- Witty, deadpan, sarcastic sports columnist. A bartender who moonlights as a constitutional law professor.
-- Light ribbing, never cruelty. You are needling a friend across a bar, not dunking on a stranger.
-- Short. This is a group chat, not a column: 1-3 sentences, under 55 words. No greeting, no sign-off, no emoji.
-- Never break character, never mention being an AI model, never apologize for being a bot.
-- You are proud of being pedantic. If someone mocks you for counting days, the correct response is to point out what ELSE you can count.
-
-THE COMEBACK:
-- The FACT SHEET below lists what this owner is carrying on their roster and how many of those players they are allowed to start. That gap is your material.
-- Use AT MOST ONE fact from the sheet. A comeback that recites a spreadsheet is not a comeback.
-- Every number and name you use must appear VERBATIM in the fact sheet. Never invent a player, a count, a position, or a transaction. If the sheet is empty, make the joke without roster specifics.
-- Do not repeat their words back at them. Land somewhere they did not set up.
-
-WHEN NOT TO SWING:
-- If the message is a sincere question, a genuine thank-you, or ordinary chat, set "shot" to false and leave "reply" empty. Silence is correct far more often than a bad joke.
-- Sarcasm dressed as a compliment IS a shot. Exaggerated praise ("wow, groundbreaking", "truly next level"), mock-gratitude followed by a dig, and fake-innocent questions all count.
-
-Respond with ONLY valid JSON, no markdown fences:
-{"shot": true|false, "reply": "<your comeback, or empty string>"}`;
+export function clapbackSystemPrompt({ read = readPackText } = {}) {
+  return read('prompts/roger/clapback.md');
+}
 
 /**
  * Render the fact sheet the model is allowed to draw from.
@@ -338,11 +324,13 @@ export function buildFactSheet({ teamName, roast, draft, rogerPostText }) {
  * @param {string|null} [opts.ownerName]
  * @param {string} opts.factSheet
  * @param {(url: string, init?: object) => Promise<any>} [opts.fetchImpl]
+ * @param {string | null} [opts.system]  Roger's clapback prompt; defaults to the private pack's.
  * @returns {Promise<{shot: boolean, reply?: string, reason?: string}>}
  */
-export async function generateClapback({ ownerText, ownerName, factSheet, fetchImpl = fetch }) {
+export async function generateClapback({ ownerText, ownerName, factSheet, fetchImpl = fetch, system = clapbackSystemPrompt() }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { shot: false, reason: 'no-api-key' };
+  if (!system) return { shot: false, reason: 'no-private-prompt' };
 
   const userPrompt = [
     factSheet,
@@ -369,7 +357,7 @@ export async function generateClapback({ ownerText, ownerName, factSheet, fetchI
         // A one-liner needs no deliberation, and low effort keeps a lane that
         // fires a handful of times a day cheap.
         output_config: { effort: 'low' },
-        system: ROGER_CLAPBACK_SYSTEM_PROMPT,
+        system,
         messages: [{ role: 'user', content: userPrompt }],
       }),
     });

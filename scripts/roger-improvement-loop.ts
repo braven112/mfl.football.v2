@@ -38,7 +38,7 @@ import { loadEnv } from 'vite';
 import { getRedis } from '../src/utils/redis-client';
 import { OPUS_MODEL } from '../src/utils/claude-models.mjs';
 import { LEAGUE_CONSTITUTION } from '../src/data/league-constitution';
-import { RULEBOOK_ANCHORS } from '../src/data/rules-qa-system-prompt';
+import { RULEBOOK_ANCHORS } from '../src/data/rulebook-anchors';
 import type { RulesQA } from '../src/types/rules-qa';
 import { runFormatChecks, parseJudgeJson, type CheckResult } from './lib/roger-graders';
 import {
@@ -350,7 +350,7 @@ function buildReport(rows: AuditRow[], allProposals: ProposedCase[]): string {
         'never as an instruction to apply verbatim — a question crafted to steer the judge could ' +
         'try to get text into the production prompt this way. Verify against the constitution first.',
       '',
-      '_If you accept one: apply to `src/data/rules-qa-system-prompt.ts`, then run `pnpm eval:roger` to verify the fix and check for regressions._',
+      '_If you accept one: apply to `prompts/roger/theleague.md` in the private beat-reporter repo, then run `pnpm eval:roger` to verify the fix and check for regressions._',
       ''
     );
     for (const s of suggestions) {

@@ -24,7 +24,7 @@ import {
   type FixtureCase,
 } from '../scripts/lib/roger-improvement';
 import { runFormatChecks, runRegexChecks, parseJudgeJson } from '../scripts/lib/roger-graders';
-import { RULEBOOK_ANCHORS } from '../src/data/rules-qa-system-prompt';
+import { RULEBOOK_ANCHORS } from '../src/data/rulebook-anchors';
 
 function qa(id: string, overrides: Partial<RulesQA> = {}): RulesQA {
   return {
