@@ -222,7 +222,13 @@ export function isSiteAssetPath(value) {
  */
 export function absolutePersonaAvatar(persona, origin) {
   const avatar = persona?.avatarUrl ?? '';
-  return isSiteAssetPath(avatar) ? new URL(avatar, origin).href : avatar;
+  // A cache-busting query ('/assets/doc-rivers-avatar.webp?v=2') is still a
+  // site asset: judge the path alone. Without this the MFL widget shipped
+  // Doc Rivers' and Vegas Vic's avatars RELATIVE, so the browser asked MFL's
+  // own host for /assets/… and showed a broken image (Nov 2026).
+  const [path, query] = avatar.split(/\?(.*)/s, 2);
+  const siteQuery = query === undefined || /^[\w=&.-]*$/.test(query);
+  return isSiteAssetPath(path) && siteQuery ? new URL(avatar, origin).href : avatar;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   resolvePersona,
   validatePersona,
 } from '../src/utils/persona.mjs';
+import { SCHEFTER_AUTHORS, getAuthorAvatar } from '../src/types/schefter';
 import { withHouseVoice } from '../scripts/lib/persona-store.mjs';
 import {
   BASE_SYSTEM_PROMPT,
@@ -120,6 +121,19 @@ describe('resolvePersona', () => {
     expect(absolutePersonaAvatar({ avatarUrl: '/assets/a.webp' }, 'https://mfl.football')).toBe('https://mfl.football/assets/a.webp');
     expect(absolutePersonaAvatar({ avatarUrl: 'https://x.test/a.png' }, 'https://mfl.football')).toBe('https://x.test/a.png');
     expect(absolutePersonaAvatar({ avatarUrl: '' }, 'https://mfl.football')).toBe('');
+  });
+
+  // The MFL widget renders on MFL's own host, so a relative avatar is a broken
+  // image there. Doc Rivers and Vegas Vic carry a `?v=2` cache-bust, which used
+  // to fail the site-asset check and come back relative.
+  it('resolves a cache-busted site asset, and every author avatar, to an absolute URL', () => {
+    expect(absolutePersonaAvatar({ avatarUrl: '/assets/doc-rivers-avatar.webp?v=2' }, 'https://mfl.football'))
+      .toBe('https://mfl.football/assets/doc-rivers-avatar.webp?v=2');
+    expect(absolutePersonaAvatar({ avatarUrl: '//evil.test/a.png?v=2' }, 'https://mfl.football')).toBe('//evil.test/a.png?v=2');
+    for (const author of Object.values(SCHEFTER_AUTHORS)) {
+      const url = absolutePersonaAvatar({ avatarUrl: getAuthorAvatar(author) }, 'https://mfl.football');
+      expect(url, author.id).toMatch(/^https:\/\/mfl\.football\/assets\//);
+    }
   });
 
   it("hands Slack an absolute avatar for Archie's", async () => {
