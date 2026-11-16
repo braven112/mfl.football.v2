@@ -1,0 +1,169 @@
+---
+/**
+ * The AI Beat Reporter page's sample: the example league's LATEST Saturday
+ * Matchup Preview, rendered whole, the way an owner reads it on the league's
+ * own news page: Game of the Week panel, every matchup card with its mini map
+ * and rivalry series, the playoff race and the column itself (Brandon,
+ * 2026-11-16: "show the whole 9 yards so people understand what they are
+ * going to purchase").
+ *
+ * It reads the live feed (Redis, falling back to the committed snapshot) of
+ * the homepage's example league, so it always shows last Saturday's real
+ * preview and never a hand-copied one. Every link inside leaves for the
+ * league's own domain through crossHostLeagueHref, because the shared host
+ * does not serve league pages. Renders nothing when no preview exists.
+ */
+import MatchupPreviewSection from '../matchup-preview/MatchupPreviewSection.astro';
+import { crossHostLeagueHref } from '../../../config/leagues';
+import { siteExampleLeagues } from '../../../data/league-showcase';
+import { getSchefterFeedIfAny, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
+import { getAuthor, getAuthorAvatar, type SchefterPost } from '../../../types/schefter';
+import { BEAT_REPORTER_PERSONA, personaByline } from '../../../utils/persona.mjs';
+import TeamIconDarkStyles from '../TeamIconDarkStyles.astro';
+import { buildTeamAccentCss } from '../../../utils/team-accent-css';
+import type { LeagueSlug } from '../../../types/nav';
+import { articleParagraphs } from '../../../utils/article-paragraphs.mjs';
+import '../../../styles/schefter-feed.css';
+import '../../../styles/schefter-article.css';
+
+const league = siteExampleLeagues()[0];
+const feed = league ? await getSchefterFeedIfAny(league) : null;
+const post: SchefterPost | undefined = (feed?.posts ?? [])
+	.filter((p) => p.type === 'article' && p.matchupVisuals && (p.content || p.intro))
+	.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))[0];
+
+const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
+const teams = league && post ? getSchefterLeagueConfig(league).teams : [];
+const author = post ? getAuthor(post.authorId) : null;
+// The byline is Max Insider, the voice every new league gets, rather than the
+// example league's own reporter (Brandon, 2026-11-16: "show the generic
+// version").
+const byline = post && author ? personaByline(author, getAuthorAvatar(author), BEAT_REPORTER_PERSONA) : null;
+// Team colors: the race board and cards read --team-accent-<id>, which the
+// league layouts scope to html[data-league]. This host's <html> has none, so
+// the example league's tokens are re-homed onto the sample itself.
+const accentCss = league && post ? buildTeamAccentCss(league.navSlug as LeagueSlug, '.brs') : '';
+const date = post
+	? new Date(post.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
+	: '';
+// The column's own links point at the league's pages (/theleague/standings,
+// …), which this host does not serve, so each leaves for the league's domain.
+const paragraphs: string[] = post
+	? articleParagraphs(post).map((html: string) =>
+			html.replace(/href="(\/[^"]*)"/g, (_m: string, path: string) => `href="${hrefFromHere(path)}"`),
+		)
+	: [];
+const imagePath = post?.image ? `/assets/schefter/${post.image}` : null;
+---
+
+{post && league && byline && (
+	<section class="sp-section brs" aria-labelledby="brs-h">
+		{accentCss && <style is:inline set:html={accentCss} />}
+		{/* Dark-mode team icons: the league layouts carry this swap; this host's does not. */}
+		<TeamIconDarkStyles />
+		<div class="sp-head">
+			<div class="sp-head__title">
+				<p class="sp-eyebrow">A real one, start to finish</p>
+				<h2 id="brs-h">Last Saturday’s Matchup Preview</h2>
+			</div>
+			<p class="sp-head__note">
+				Every Saturday the reporter previews every game: the Game of the Week, each rivalry’s full series, where the owners live, the playoff race and a prediction for every score. This is the latest one from {league.name}, exactly as its owners got it.
+			</p>
+		</div>
+
+		<div class="brs__frame">
+			<div class="sf-article brs__article">
+				<div class="ui-card sf-article__card">
+					{imagePath && (
+						<div class="sf-article__hero-wrap">
+							<img src={imagePath} alt={post.imageAlt ?? post.headline} class="sf-article__hero-img" loading="lazy" />
+						</div>
+					)}
+
+					<div class="sf-article__header">
+						<div class="sf-article__meta">
+							<span class="ui-badge ui-badge--caps sf-article__badge">Matchup Preview</span>
+							<span class="sf-article__meta-dot" aria-hidden="true"></span>
+							<time class="sf-article__date" datetime={post.timestamp}>{date}</time>
+						</div>
+						<h3 class="sf-article__title">{post.headline}</h3>
+						<div class="sf-article__author">
+							<img class="sf-article__author-avatar" src={byline.avatar} alt="" aria-hidden="true" width="32" height="32" />
+							<div>
+								<span class="sf-article__author-name">{byline.name}</span>
+								<span class="sf-article__author-handle">{byline.handle}</span>
+							</div>
+						</div>
+					</div>
+
+					<MatchupPreviewSection
+						visuals={post.matchupVisuals}
+						teams={teams}
+						rivalriesBase={hrefFromHere(`/${league.slug}/rivalries`)}
+						oddsHref={hrefFromHere(`/${league.slug}/playoff-odds`)}
+						part="top"
+					/>
+
+					<div class="sf-article__body">
+						{paragraphs.map((paragraph) => <p set:html={paragraph} />)}
+					</div>
+
+					<MatchupPreviewSection
+						visuals={post.matchupVisuals}
+						teams={teams}
+						rivalriesBase={hrefFromHere(`/${league.slug}/rivalries`)}
+						leagueSlug={league.slug}
+						part="cards"
+					/>
+				</div>
+			</div>
+		</div>
+
+		<p class="brs__note">
+			{league.name}’s reporter is {byline.name}; your league gets Max Insider, or a voice of its own.
+			{' '}<a class="cta-link" href={hrefFromHere(post.link ?? `/${league.slug}/news/${post.id}`)}>Read it on {league.domains?.[0] ?? league.name}</a>
+		</p>
+	</section>
+)}
+
+<style>
+	/* One card only: the article's own card, lifted with the page's shadow.
+	   A second frame around it read as a double border on phones (Brandon,
+	   2026-11-16). */
+	.brs__frame {
+		max-width: 46rem;
+		margin-inline: auto;
+	}
+
+	.brs__article {
+		max-width: none;
+		padding: 0;
+	}
+
+	.brs__article :global(.sf-article__card) {
+		border-radius: var(--sp-radius);
+		box-shadow: var(--sp-shadow);
+	}
+
+	/* Phones: the article runs edge to edge, the way an owner sees it on the
+	   league's own news page, so it gets the whole width rather than sitting
+	   inset inside the page's gutter. */
+	@media (max-width: 600px) {
+		.brs__frame {
+			margin-inline: -16px;
+		}
+
+		.brs__article :global(.sf-article__card) {
+			border-radius: 0;
+			border-inline: 0;
+		}
+	}
+
+	.brs__note {
+		max-width: 46rem;
+		margin: 1rem auto 0;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+		text-align: center;
+	}
+</style>

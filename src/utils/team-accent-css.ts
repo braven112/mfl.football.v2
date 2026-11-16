@@ -69,9 +69,10 @@ const isHexColor = (value: unknown): value is string =>
 /**
  * Build the accent stylesheet for one league (or every league when omitted).
  * Returns '' when a league has no usable teams, so the caller can skip the
- * <style> element entirely.
+ * <style> element entirely. `scope` (a plain class selector) replaces the
+ * html[data-league] selector, for one league's sample shown on another host.
  */
-export function buildTeamAccentCss(league?: LeagueSlug): string {
+export function buildTeamAccentCss(league?: LeagueSlug, scope?: string): string {
   const leagues = league ? [league] : (ALL_LEAGUES.map((l) => l.navSlug) as LeagueSlug[]);
   const blocks: string[] = [];
 
@@ -97,8 +98,11 @@ export function buildTeamAccentCss(league?: LeagueSlug): string {
 
     // html.dark[data-league] (0,2,1) outranks html[data-league] (0,1,1), so the
     // dark block wins wherever the theme class is set.
-    blocks.push(`html[data-league="${slug}"]{${light.join(';')}}`);
-    blocks.push(`html.dark[data-league="${slug}"]{${dark.join(';')}}`);
+    // A `scope` selector re-homes one league's tokens onto an element, for a
+    // page outside that league (the shared host's product pages show a league's
+    // sample, and their <html> carries no data-league).
+    blocks.push(`${scope ?? `html[data-league="${slug}"]`}{${light.join(';')}}`);
+    blocks.push(`${scope ? `html.dark ${scope}` : `html.dark[data-league="${slug}"]`}{${dark.join(';')}}`);
   }
 
   return blocks.join('');
