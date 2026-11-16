@@ -9,8 +9,8 @@
  * actions/checkout instead and never run this.
  *
  * - Already there (a GitHub Actions checkout, or a local clone/symlink): no-op.
- * - Otherwise it clones with BEAT_REPORTER_TOKEN, a read-only token on the
- *   private repo (a Vercel environment variable).
+ * - Otherwise it clones with BEAT_REPORTER_TOKEN or VERCEL_BEAT_REPORTER_TOKEN,
+ *   a read-only token on the private repo (a Vercel environment variable).
  * - A PRODUCTION build (VERCEL_ENV=production) that cannot get the pack FAILS,
  *   so Roger never ships on the public stubs; the deployment already live
  *   stays live. Every other build warns and carries on with the stubs.
@@ -48,8 +48,10 @@ export function fetchBeatReporter({ env = process.env, root = privateLoreRoot(),
     return { ok: true, fatal: false, reason: 'present' };
   }
 
-  const token = env.BEAT_REPORTER_TOKEN;
-  if (!token) return fail('BEAT_REPORTER_TOKEN is not set');
+  // Either name works: the Actions secret is BEAT_REPORTER_TOKEN, and the
+  // Vercel variable was created as VERCEL_BEAT_REPORTER_TOKEN.
+  const token = env.BEAT_REPORTER_TOKEN || env.VERCEL_BEAT_REPORTER_TOKEN;
+  if (!token) return fail('BEAT_REPORTER_TOKEN (or VERCEL_BEAT_REPORTER_TOKEN) is not set');
 
   // Never delete what is there: a local clone on an old commit may hold work.
   if (existsSync(root) && readdirSync(root).length > 0) {

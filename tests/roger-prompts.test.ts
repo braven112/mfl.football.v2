@@ -88,6 +88,11 @@ describe('fetch-beat-reporter (the build step)', () => {
     expect(calls[0].join(' ')).toContain('x-access-token:sekrit@github.com/');
   });
 
+  it('also takes the token under its Vercel name', () => {
+    const r = fetchBeatReporter({ env: { VERCEL_ENV: 'production', VERCEL_BEAT_REPORTER_TOKEN: 'v' }, root: tmp(), exec: fakeClone(true) as any, log: quiet });
+    expect(r).toMatchObject({ ok: true, reason: 'cloned' });
+  });
+
   it('never prints the token, even when git echoes it back', () => {
     const lines: string[] = [];
     const log = { log: (m: string) => lines.push(m), warn: (m: string) => lines.push(m), error: (m: string) => lines.push(m) };
