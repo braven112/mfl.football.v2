@@ -206,5 +206,5 @@ export function renderAdWidget({ origin, avatar, name = 'Max Insider' }) {
 
 /** The paste-in snippet for a league's Home Page Message. */
 export function widgetSnippet({ origin, key }) {
-  return `<div id="beat-reporter"></div>\n<script src="${origin}/mfl/beat.js" data-key="${key}" defer></script>`;
+  return `<div id="beat-reporter" class="report-wrapper"></div>\n<script src="${origin}/mfl/beat.js" data-key="${key}" defer></script>`;
 }
