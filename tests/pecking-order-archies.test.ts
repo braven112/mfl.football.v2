@@ -11,6 +11,7 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { generatePeckingOrder, buildPairings } from '../scripts/generate-pecking-order.mjs';
 import { enrichStandingsFromResults } from '../scripts/lib/pecking-order-math.mjs';
 import { buildFactSheet, getSystemPrompt } from '../scripts/lib/pecking-order-ai.mjs';
+import { setArticlePromptReader } from '../scripts/article-utils/article-prompts.mjs';
 
 const archies = (LEAGUES as any).archies;
 
@@ -98,14 +99,24 @@ describe('AI sheet and prompt', () => {
     expect(sheet).toContain('re-voice in Schefter style');
   });
 
+  // The real column text lives in the private beat-reporter pack, which pins
+  // that it still carries both Schefter lines this rewrite looks for. Here a
+  // stub carrying the same two lines checks the rewrite itself.
   it("drops the Schefter voice lines for a renamed writer, keeps them for the default", () => {
-    const flat = (blocks: Array<{ text: string }>) => blocks.map((b) => b.text).join('\n');
-    const def = flat(getSystemPrompt('TheLeague'));
-    expect(def).toContain('in Schefter voice.');
-    const custom = flat(getSystemPrompt("Archie's", { persona: { name: 'Archie Bunker', voice: 'Grumpy.', avatarUrl: '' }, topN: 25 }));
-    expect(custom).not.toContain('in Schefter voice');
-    expect(custom).not.toContain('- Schefter: confident');
-    expect(custom).toContain('Archie Bunker');
-    expect(custom).toContain('TOP 25 ONLY');
+    const restore = setArticlePromptReader(() => 'ARTICLE TYPE: The Pecking Order.\n\nRewrite every blurb in Schefter voice.\n- Schefter: confident, punchy.\n- One blurb per team.');
+    try {
+      const flat = (blocks: Array<{ text: string }>) => blocks.map((b) => b.text).join('\n');
+      const def = flat(getSystemPrompt('TheLeague'));
+      expect(def).toContain('in Schefter voice.');
+      expect(def).toContain('- Schefter: confident');
+      const custom = flat(getSystemPrompt("Archie's", { persona: { name: 'Archie Bunker', voice: 'Grumpy.', avatarUrl: '' }, topN: 25 }));
+      expect(custom).not.toContain('in Schefter voice');
+      expect(custom).not.toContain('- Schefter: confident');
+      expect(custom).toContain("in the writer's voice.");
+      expect(custom).toContain('Archie Bunker');
+      expect(custom).toContain('TOP 25 ONLY');
+    } finally {
+      restore();
+    }
   });
 });

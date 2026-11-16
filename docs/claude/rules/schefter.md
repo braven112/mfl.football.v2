@@ -91,6 +91,14 @@ rules — breaking any of these cross-contaminates the leagues:
   content pins are the private repo's tests; the real-franchise-name guard
   stays here (`tests/schefter-former-name-callback.test.ts`, which CI runs
   against a checkout of the pack).
+  Every COLUMN's own text lives there too: `prompts/articles/<type>.system.md`
+  and `.user.md` for the nine article types and the Pecking Order, read through
+  `scripts/article-utils/article-prompts.mjs` (`{{FACT_SHEET}}` is filled in one
+  pass). A missing column prompt also fails closed: the article runner skips
+  the column and the Pecking Order keeps its templated voice. The house rules
+  every column shares (`BASE_SYSTEM_PROMPT`) stay public. A public test that
+  checks prompt STRUCTURE (league line, persona) swaps in a stub with
+  `setArticlePromptReader`; one that checks WORDING belongs in the private repo.
 - **Pages** are thin per-league wrappers over shared components
   (`src/components/schefter/{TipPage,StyleBookPage,RumorThread,
   AdminDashboard}.astro`) — build tip-page improvements in the component

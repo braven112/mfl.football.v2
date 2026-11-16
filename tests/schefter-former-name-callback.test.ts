@@ -15,7 +15,7 @@
  * franchise.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { privateLoreRoot } from '../scripts/lib/schefter-lore.mjs';
 // @ts-ignore — sibling .mjs module, no .d.ts
@@ -430,6 +430,13 @@ describe('the private prompts name no real franchise', () => {
     'prompts/quiet-day.md',
     'voice/beat-examples.json',
     'voice/max-insider.md',
+    // Every column prompt (article-prompts.mjs), read off the directory so a
+    // new column is scanned the day it lands.
+    ...(existsSync(path.join(packRoot, 'prompts', 'articles'))
+      ? readdirSync(path.join(packRoot, 'prompts', 'articles'))
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => `prompts/articles/${f}`)
+      : []),
   ];
   const present = existsSync(path.join(packRoot, 'prompts', 'rumor-mill.md'));
 
@@ -444,6 +451,7 @@ describe('the private prompts name no real franchise', () => {
       PACK_FILES.map((rel) => [rel, readFileSync(path.join(packRoot, rel), 'utf8')]),
     );
     expect(packFiles['prompts/rumor-mill.md']).toContain('30. FORMER-NAME CALLBACK');
+    expect(PACK_FILES, 'the column prompts are not being scanned').toContain('prompts/articles/pecking-order.system.md');
 
     // Harvest every form a franchise answers to — including the aliases hung
     // off a HISTORY entry, which is where "Chevy" lives. This mirrors

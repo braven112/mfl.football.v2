@@ -165,16 +165,24 @@ describe('buildCachedSystem with a persona', () => {
 
   it('every article type forwards the persona to the prompt', async () => {
     const { readdirSync } = await import('node:fs');
-    const dir = new URL('../scripts/article-types/', import.meta.url);
-    const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));
-    for (const file of files) {
-      const mod = await import(new URL(file, dir).href);
-      if (typeof mod.getSystemPrompt !== 'function') continue;
-      const text = mod
-        .getSystemPrompt({ league: 'theleague', persona: ARCHIE })
-        .map((b: { text: string }) => b.text)
-        .join('');
-      expect(text, `${file} ignores the persona`).toContain('You are Archie Bunker');
+    const { setArticlePromptReader } = await import('../scripts/article-utils/article-prompts.mjs');
+    // The column's wording lives in the private pack; a stub stands in so this
+    // checks only that the persona reaches the prompt.
+    const restore = setArticlePromptReader((rel: string) => (rel.endsWith('.user.md') ? 'STUB {{FACT_SHEET}}' : 'ARTICLE TYPE: stub'));
+    try {
+      const dir = new URL('../scripts/article-types/', import.meta.url);
+      const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));
+      for (const file of files) {
+        const mod = await import(new URL(file, dir).href);
+        if (typeof mod.getSystemPrompt !== 'function') continue;
+        const text = mod
+          .getSystemPrompt({ league: 'theleague', persona: ARCHIE })
+          .map((b: { text: string }) => b.text)
+          .join('');
+        expect(text, `${file} ignores the persona`).toContain('You are Archie Bunker');
+      }
+    } finally {
+      restore();
     }
   });
 

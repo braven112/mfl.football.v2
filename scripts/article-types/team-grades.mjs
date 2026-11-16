@@ -8,6 +8,7 @@
 
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
@@ -146,38 +147,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Pre-Season Team Grades
-Grade every roster top to bottom. Who's a contender? Who's rebuilding? Who's stuck in the middle with no plan? Factor in cap health, contract structure, projected starters, and bench depth. This is the definitive pre-season power ranking in grade form.`, { league, persona });
+  return buildCachedSystem(articlePrompt('team-grades', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write pre-season team grades using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "intro": ["<p>Opening paragraph — set the scene for the upcoming season.</p>"],
-  "grades": [
-    {
-      "franchiseId": "0001",  // MUST be the 4-digit ID from [franchiseId="XXXX"] in the fact sheet
-      "grade": "A",
-      "headline": "Punchy 5-8 word summary",
-      "body": "<p>2-3 sentences explaining the grade. Reference specific players, cap numbers, projected scores. Use <strong> for player names.</p>"
-    }
-  ]
-}
-
-INSTRUCTIONS:
-- Write 1-2 intro paragraphs setting the stage for the season.
-- Grade all 16 franchises. Sort grades best to worst.
-- Grade scale: A+, A, A-, B+, B, B-, C+, C, C-, D+, D, D-, F
-- Be bold. Identify the title contenders and the rebuilders.
-- Reference specific projected scores, salary numbers, and cap space from the fact sheet.
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('team-grades', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {

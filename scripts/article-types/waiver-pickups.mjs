@@ -8,6 +8,7 @@
 
 import { loadTeams, formatSalary, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 import { parseRosterMove } from '../lib/roster-move-parse.mjs';
@@ -196,29 +197,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Waiver Pickups
-Grade the waiver wire activity for the week. Who made the best claims? Who overpaid? Who missed out on players they needed? Talk about which pickups could be league-winners and which are desperation moves.`, { league, persona });
+  return buildCachedSystem(articlePrompt('waiver-pickups', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write a waiver pickups recap article using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "content": ["<p>Paragraph 1...</p>", "<p>Paragraph 2...</p>"]
-}
-
-INSTRUCTIONS:
-- Write 3-5 content paragraphs.
-- Lead with the biggest/most interesting waiver claim.
-- Comment on spending habits — who's aggressive, who's conservative.
-- Reference specific player names, positions, and bid amounts from the fact sheet.
-- Every name and number must come from the fact sheet.`;
+  return articlePrompt('waiver-pickups', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {

@@ -8,6 +8,7 @@
  */
 
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../src/utils/pecking-order-lede.mjs';
@@ -143,31 +144,10 @@ export function buildFactSheet({
 
 // ─── Prompts ───────────────────────────────────────────────────────
 
-const TYPE_SPECIFIC_PROMPT = `
-
-ARTICLE TYPE: The Pecking Order — the Tuesday-morning power-rankings column.
-
-Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for every franchise in the fact sheet's rankings table, in Schefter voice. Re-voice the AWARD blurbs in the same style.
-
-VOICE RULES
-- Schefter: confident, punchy, opinionated. "League sources tell me…", "Boom.", "Money is nice, but championships are better."
-- One blurb per team max. Specific. Reference the team's all-play %, record over the last three weeks, PPG, streak, or trend from the fact sheet.
-- Write in plain English, never box-score shorthand: "a 2-game winning streak", never "W2"; "a 3-game losing streak", never "L3 streak". Never write "L3", "rolling record" or "rolling average".
-- Every sentence must be a proper sentence. A record used as a noun needs a noun: "a 2-2 record", "a 2-2 mark over the last three", "a 2-2 performance over the last few weeks", or "went 2-2 over the last three weeks" — never "a 2-2 last three weeks". Mix these up across the column, and name the three-week window at most once per blurb.
-- Lede: 2-3 sentences. Frame the week's biggest story (rise to #1, fall, hot streak, blowup).
-- Headline: ≤100 chars, punchy, no period. Bias toward action verbs.
-
-NEVER
-- Invent franchise or player names. Only use names that appear in the ALLOWED FRANCHISE NAME TOKENS list.
-- Use curly/smart quotes — straight ASCII only.
-- Use markdown code fences.
-- Use HTML. Every field is PLAIN TEXT: the page prints it as text and the GroupMe announcement quotes it verbatim, so a <p> or <a> tag shows up literally. This overrides the "Wrap paragraphs in <p> tags" rule above, which is for full articles.
-- Hedge with "I'm an AI", "as a language model", "It appears that", "I hope this helps", "in conclusion".
-
-LENGTH
-- headline: ≤100 chars
-- lede: ≤600 chars
-- each blurb: ≤240 chars`;
+// The column's own text (its voice rules and output shape) lives in the
+// private beat-reporter pack: prompts/articles/pecking-order.{system,user}.md,
+// read through article-prompts.mjs. A missing file throws, and the generator
+// keeps the templated voice.
 
 /**
  * The shared base block (ai-client.mjs) introduces Schefter as TheLeague's beat
@@ -182,9 +162,10 @@ export function getSystemPrompt(leagueName = 'TheLeague', { persona = null, topN
   // A renamed writer (src/utils/persona.mjs) must not be told to write "in
   // Schefter voice": buildCachedSystem supplies the persona's own voice, so the
   // Schefter lines come out. The default persona keeps the text byte-for-byte.
+  const typeSpecific = articlePrompt('pecking-order', 'system');
   const typeText = isDefaultPersona(persona)
-    ? TYPE_SPECIFIC_PROMPT
-    : TYPE_SPECIFIC_PROMPT
+    ? typeSpecific
+    : typeSpecific
         .replace(' in Schefter voice.', " in the writer's voice.")
         .replace(/\n- Schefter: confident[^\n]*/, '\n- Confident, punchy, opinionated, in the voice described above.');
   const topNText = topN
@@ -197,32 +178,7 @@ export function getSystemPrompt(leagueName = 'TheLeague', { persona = null, topN
 }
 
 export function getUserPrompt(factSheet, franchiseCount = 16) {
-  return `Rewrite this week's Pecking Order issue using ONLY data from the fact sheet below.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Punchy headline (~60 chars)",
-  "lede": "2-3 sentence lede in Schefter's voice. Never more than three sentences.",
-  "blurbs": {
-    "<franchiseId>": "One sentence about that franchise (≤240 chars)",
-    ...
-  },
-  "awardBlurbs": {
-    "statOfWeek": "Schefter rewrite of the stat-of-week blurb (or null to keep raw)",
-    "benchBlunder": "...",
-    "heaterOfWeek": "...",
-    "coolerOfWeek": "...",
-    "matchupOfWeek": "..."
-  }
-}
-
-REQUIREMENTS
-- Provide a blurb for ALL ${franchiseCount} franchises in the fact sheet rankings table.
-- Key every blurb by the exact "blurb key" printed on that team's row (e.g. "0001"). A key that is not one of those strings is discarded.
-- Each blurb must contain a recognizable token for THAT franchise (e.g., the nameMedium).
-- Do not invent stats or names not present in the fact sheet.`;
+  return articlePrompt('pecking-order', 'user', { FACT_SHEET: factSheet, FRANCHISE_COUNT: franchiseCount });
 }
 
 // ─── Validation ────────────────────────────────────────────────────

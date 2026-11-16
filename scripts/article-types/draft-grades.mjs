@@ -8,6 +8,7 @@
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isDraftComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
@@ -133,37 +134,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   };
 }
 
+// The column's own text lives in the private pack (article-prompts.mjs).
 export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
-  return buildCachedSystem(`\n\nARTICLE TYPE: Draft Grades
-Grade each team's rookie draft class. Be harsh with reaches (players picked too early relative to projections), praise value picks. Dynasty drafts are about upside — young players with high ceilings are more valuable. Consider roster fit and how many picks each team had to work with.`, { league, persona });
+  return buildCachedSystem(articlePrompt('draft-grades', 'system'), { league, persona });
 }
 
 export function getUserPrompt(factSheet) {
-  return `Write rookie draft grades using ONLY the verified data in this fact sheet.
-
-${factSheet}
-
-OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
-{
-  "headline": "Short punchy headline (~60 chars)",
-  "excerpt": "2-3 sentence teaser for the feed card.",
-  "intro": ["<p>Opening paragraph — set the scene for the draft.</p>"],
-  "grades": [
-    {
-      "franchiseId": "0001",  // MUST be the 4-digit ID from [franchiseId="XXXX"] in the fact sheet
-      "grade": "A",
-      "headline": "Punchy 5-8 word summary",
-      "body": "<p>2-3 sentences explaining the grade. Reference specific picks. Use <strong> for player names.</p>"
-    }
-  ]
-}
-
-INSTRUCTIONS:
-- Write 1-2 intro paragraphs.
-- Grade every franchise that made picks. Sort grades best to worst.
-- Grade scale: A+, A, A-, B+, B, B-, C+, C, C-, D+, D, D-, F
-- Be bold. Spread grades out — not everyone gets a B.
-- Every player name must come from the fact sheet.`;
+  return articlePrompt('draft-grades', 'user', { FACT_SHEET: factSheet });
 }
 
 export function validate(aiOutput) {
