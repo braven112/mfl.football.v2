@@ -10,7 +10,7 @@ import {
   dollars,
 } from '../data/pricing';
 import { siteExampleLeagues } from '../data/league-showcase';
-import { FORMER_BRAND, SITE_FOOTER_LINKS, findService } from '../data/mfl-services';
+import { FORMER_BRAND, SITE_FOOTER_LINKS, SITE_HEADER_LINKS, findService } from '../data/mfl-services';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 // ── What this page is for ─────────────────────────────────────────────────
@@ -83,11 +83,8 @@ const PRODUCTS = [
       <img class="sp-brand__light" src="/assets/logos/mfl-football-wordmark.svg" width="5404" height="680" alt="" />
       <img class="sp-brand__dark" src="/assets/logos/mfl-football-wordmark-dark.svg" width="5404" height="680" alt="" />
     </a>
-    <nav class="sp-top__links" aria-label="Products">
-      <a href={history.path}>{history.navLabel}</a>
-      <a href={reporter.path}>{reporter.navLabel}</a>
-      <a href={custom.path}>{custom.navLabel}</a>
-      <a class="sp-top__live" href="/live">Live scores</a>
+    <nav class="sp-top__links" aria-label="Main">
+      {SITE_HEADER_LINKS.map((l) => <a href={l.href} aria-current={l.href === '/' ? 'page' : undefined}>{l.label}</a>)}
     </nav>
     <div class="sp-top__end">
       <a class="cta cta--ghost" href="/login">Sign in</a>
@@ -167,7 +164,10 @@ const PRODUCTS = [
   <footer class="sp-foot">
     <span>MFL.football · formerly {FORMER_BRAND}</span>
     <nav class="sp-foot__links" aria-label="Site">
-      {SITE_FOOTER_LINKS.map((l) => <a href={l.href}>{l.label}</a>)}
+      {/* Live scores left the header (Brandon, 2026-11-16) but the installed
+          app opens on this page, so the board stays one tap away here. */}
+      <a href="/live">Live scores</a>
+      {SITE_FOOTER_LINKS.filter((l) => l.href !== '/live').map((l) => <a href={l.href}>{l.label}</a>)}
     </nav>
   </footer>
 

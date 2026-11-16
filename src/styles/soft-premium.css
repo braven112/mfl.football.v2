@@ -648,11 +648,26 @@ html.dark .sp-brand .sp-brand__dark {
     flex-wrap: wrap;
   }
 
+  /* One row on phones (Brandon, 2026-11-16: Home + the three products),
+     spread across the width; a phone narrower than the row swipes it. */
   .sp-top__links {
     order: 3;
     width: 100%;
-    gap: 0.35rem 1.1rem;
+    min-width: 0;
+    /* Keep the row's full length out of the page's own sizing, so a long
+       row scrolls inside itself instead of widening the page. */
+    contain: inline-size;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
     font-size: var(--sp-text-sm);
+    white-space: nowrap;
+  }
+
+  .sp-top__links::-webkit-scrollbar {
+    display: none;
   }
 }
 

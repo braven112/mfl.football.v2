@@ -231,6 +231,18 @@ export function findService(slug: ServiceSlug): Service {
 }
 
 /**
+ * The shared-host header: Home and the three products, nothing else
+ * (Brandon, 2026-11-16). The homepage and every MarketingShell page read it.
+ */
+export const SITE_HEADER_LINKS: Array<{ href: string; label: string }> = [
+	{ href: '/', label: 'Home' },
+	...(['ask-the-history', 'beat-reporter', 'league-website'] as const).map((slug) => {
+		const s = findService(slug);
+		return { href: s.path, label: s.navLabel };
+	}),
+];
+
+/**
  * The shared-host footer, one list for the homepage and every MarketingShell
  * page (Brandon, 2026-11-14: Add-ons and Privacy belong there). Grouped
  * loosely: what we sell, onboarding, free products, then the fine print.
