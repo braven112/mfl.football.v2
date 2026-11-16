@@ -40,7 +40,9 @@ function deps(over: Partial<PassiveCaptureDeps> = {}) {
   const redis = fakeRedis();
   const d: PassiveCaptureDeps = {
     redis: async () => redis,
-    findTeam: vi.fn(async () => ({ franchiseId: '0003', host: 'https://www49.myfantasyleague.com' })),
+    findTeams: vi.fn(async () => [
+      { leagueId: LEAGUES.theleague.id, franchiseId: '0003', host: 'https://www49.myfantasyleague.com' },
+    ]),
     fetchRows: vi.fn(async () => ({ trades: [{ trade_id: '11', offeredto: '0005' }] })),
     report: vi.fn(async () => {}),
     ...over,
@@ -87,8 +89,8 @@ describe('capturePendingOffers', () => {
     expect(passiveCaptureKey(user)).not.toBe(passiveCaptureKey({ id: 'another-cookie' }));
   });
 
-  it('does nothing for an account with no TheLeague team', async () => {
-    const { d } = deps({ findTeam: vi.fn(async () => null) });
+  it('does nothing for an account with no team in a trade-rumor league', async () => {
+    const { d } = deps({ findTeams: vi.fn(async () => []) });
     expect(await capturePendingOffers(user, d)).toBe('no-team');
     expect(d.fetchRows).not.toHaveBeenCalled();
   });
@@ -96,7 +98,24 @@ describe('capturePendingOffers', () => {
   it('does nothing without Redis (nowhere to report into)', async () => {
     const { d } = deps({ redis: async () => null });
     expect(await capturePendingOffers(user, d)).toBe('no-store');
-    expect(d.findTeam).not.toHaveBeenCalled();
+    expect(d.findTeams).not.toHaveBeenCalled();
+  });
+
+  it('reads every trade-rumor league the owner is in, each on its own', async () => {
+    const afl = LEAGUES['afl-fantasy'].id;
+    const { d } = deps({
+      findTeams: vi.fn(async () => [
+        { leagueId: LEAGUES.theleague.id, franchiseId: '0003', host: null },
+        { leagueId: afl, franchiseId: '0012', host: null },
+      ]),
+      fetchRows: vi.fn(async (o: { leagueId: string }) =>
+        o.leagueId === afl ? { trades: [{ trade_id: '77' }] } : { trades: null, error: 'MFL HTTP 500' },
+      ),
+    });
+    expect(await capturePendingOffers(user, d)).toBe('reported');
+    expect(d.fetchRows).toHaveBeenCalledTimes(2);
+    expect(d.report).toHaveBeenCalledTimes(1);
+    expect(d.report).toHaveBeenCalledWith('0012', [{ trade_id: '77' }], afl);
   });
 
   it('does not report an empty offer list', async () => {
@@ -116,7 +135,7 @@ describe('capturePendingOffersQuietly', () => {
 
   it('never rejects', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { d } = deps({ redis: async () => { throw new Error('boom'); }, findTeam: async () => { throw new Error('x'); } });
+    const { d } = deps({ redis: async () => { throw new Error('boom'); }, findTeams: async () => { throw new Error('x'); } });
     await expect(capturePendingOffersQuietly(user, 100, d)).resolves.toBeUndefined();
     const { d: d2 } = deps({ report: async () => { throw new Error('redis down'); } });
     await expect(capturePendingOffersQuietly(user, 100, d2)).resolves.toBeUndefined();

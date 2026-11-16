@@ -23,17 +23,18 @@
  * - **Never in the way.** Callers start it beside the board's own work and
  *   await it through `capturePendingOffersQuietly`, which is time-boxed and
  *   never throws: a slow or failed MFL read can't delay or break a scoreboard.
- * - **TheLeague only**, because `reportOwnerTrades` is (its gate lives there,
- *   and so does the reason). An account with no TheLeague team spends one
- *   Redis claim and, at most, one cached `myleagues` read per interval.
+ * - **Only leagues that turned trade rumors on** (registry
+ *   `features.tradeRumors`, gated in `reportOwnerTrades` /
+ *   `leagueTakesOwnerTradeReports`). Today that is TheLeague and the AFL. An
+ *   owner in both gets both read in the same interval; an account in neither
+ *   spends one Redis claim and one cached `myleagues` read per interval.
  */
 
 import { createHash } from 'node:crypto';
 import type { AuthUser } from '../auth';
-import { LEAGUES } from '../../config/leagues';
 import { getLeagueYearForMflId } from '../league-year';
 import { fetchPendingTradeRows } from '../mfl-trade-ops';
-import { reportOwnerTrades } from '../owner-trade-reports';
+import { leagueTakesOwnerTradeReports, reportOwnerTrades } from '../owner-trade-reports';
 import { getRedis, type RedisClient } from '../redis-client';
 import { listOwnerLeagues } from './owner-league';
 import { schefterKey, DEFAULT_SCHEFTER_NAV_SLUG } from '../../../scripts/lib/schefter-keys.mjs';
@@ -52,14 +53,16 @@ export type PassiveCaptureOutcome =
   | 'no-offers'
   | 'reported';
 
-interface TheLeagueTeam {
+/** One team the account owns in a league that takes trade-rumor reports. */
+export interface ReportableTeam {
+  leagueId: string;
   franchiseId: string;
   host: string | null;
 }
 
 export interface PassiveCaptureDeps {
   redis: () => Promise<Pick<RedisClient, 'set'> | null>;
-  findTeam: (user: AuthUser) => Promise<TheLeagueTeam | null>;
+  findTeams: (user: AuthUser) => Promise<ReportableTeam[]>;
   fetchRows: typeof fetchPendingTradeRows;
   report: typeof reportOwnerTrades;
 }
@@ -73,23 +76,28 @@ export function passiveCaptureKey(user: Pick<AuthUser, 'id'>): string {
   return schefterKey(DEFAULT_SCHEFTER_NAV_SLUG, `trade_offers:passive_read:${account}`);
 }
 
-/** The account's TheLeague team: the session's own when it is a TheLeague session, else MFL's list. */
-async function findTheLeagueTeam(user: AuthUser): Promise<TheLeagueTeam | null> {
-  const theleagueId = LEAGUES.theleague.id;
-  if (user.leagueId === theleagueId && /^\d{4}$/.test(user.franchiseId)) {
-    return { franchiseId: user.franchiseId, host: null };
+/**
+ * The account's teams in every league that takes reports. MFL's own list
+ * first (Redis-cached per account in src/utils/my-leagues.ts, and only asked
+ * once the per-interval claim is won); if MFL can't list them, the session's
+ * own league still counts when it qualifies.
+ */
+async function findReportableTeams(user: AuthUser): Promise<ReportableTeam[]> {
+  const listed = await listOwnerLeagues(user).catch(() => null);
+  if (listed?.ok) {
+    return listed.leagues
+      .filter((l) => leagueTakesOwnerTradeReports(l.leagueId))
+      .map((l) => ({ leagueId: l.leagueId, franchiseId: l.franchiseId, host: l.host }));
   }
-  // `myleagues` is Redis-cached per account (src/utils/my-leagues.ts), and
-  // this only runs once the per-interval claim is won.
-  const listed = await listOwnerLeagues(user);
-  if (!listed.ok) return null;
-  const team = listed.leagues.find((l) => l.leagueId === theleagueId);
-  return team ? { franchiseId: team.franchiseId, host: team.host } : null;
+  if (leagueTakesOwnerTradeReports(user.leagueId) && /^\d{4}$/.test(user.franchiseId)) {
+    return [{ leagueId: user.leagueId, franchiseId: user.franchiseId, host: null }];
+  }
+  return [];
 }
 
 const DEFAULT_DEPS: PassiveCaptureDeps = {
   redis: getRedis,
-  findTeam: findTheLeagueTeam,
+  findTeams: findReportableTeams,
   fetchRows: fetchPendingTradeRows,
   report: reportOwnerTrades,
 };
@@ -110,24 +118,30 @@ export async function capturePendingOffers(
     .catch(() => null);
   if (claimed === null) return 'throttled';
 
-  const team = await deps.findTeam(user).catch(() => null);
-  if (!team) return 'no-team';
+  const teams = await deps.findTeams(user).catch((): ReportableTeam[] => []);
+  if (teams.length === 0) return 'no-team';
 
-  const theleagueId = LEAGUES.theleague.id;
-  const { trades } = await deps
-    .fetchRows({
-      leagueId: theleagueId,
-      year: getLeagueYearForMflId(theleagueId),
-      mflUserCookie: user.id,
-      franchiseId: team.franchiseId,
-      host: team.host,
-    })
-    .catch(() => ({ trades: null }));
-  if (!trades) return 'read-failed';
-  if (trades.length === 0) return 'no-offers';
-
-  await deps.report(team.franchiseId, trades, theleagueId);
-  return 'reported';
+  // Each league independently: one failed read never costs the other.
+  const outcomes = await Promise.all(
+    teams.map(async (team): Promise<PassiveCaptureOutcome> => {
+      const { trades } = await deps
+        .fetchRows({
+          leagueId: team.leagueId,
+          year: getLeagueYearForMflId(team.leagueId),
+          mflUserCookie: user.id,
+          franchiseId: team.franchiseId,
+          host: team.host,
+        })
+        .catch(() => ({ trades: null }));
+      if (!trades) return 'read-failed';
+      if (trades.length === 0) return 'no-offers';
+      await deps.report(team.franchiseId, trades, team.leagueId);
+      return 'reported';
+    }),
+  );
+  if (outcomes.includes('reported')) return 'reported';
+  if (outcomes.includes('no-offers')) return 'no-offers';
+  return 'read-failed';
 }
 
 /**

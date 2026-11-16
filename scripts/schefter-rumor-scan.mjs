@@ -348,6 +348,17 @@ const OFFER_DIV_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:div:');
 const OFFER_OWNER_REPORTS_KEY = schefterKey(NAV_SLUG, 'trade_offers:owner_reports');
 const PLAYER_OFFER_HISTORY_PREFIX = schefterKey(NAV_SLUG, 'player_offer_history:');
 const OFFER_ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;    // 7d owner + div
+/**
+ * Player escalation history, scoped to the player POOL the offer lives in.
+ * Single-pool leagues (TheLeague) keep the legacy `player_offer_history:<pid>`
+ * key; a per-conference league (the AFL rosters one player in both
+ * conferences) gets `player_offer_history:<conf>:<pid>`, so two unrelated
+ * deals in different conferences never read as "his name keeps coming up".
+ */
+export function playerOfferHistoryKey(pid, pool) {
+  const p = pool == null ? '' : String(pool).trim();
+  return p ? `${PLAYER_OFFER_HISTORY_PREFIX}${p}:${pid}` : `${PLAYER_OFFER_HISTORY_PREFIX}${pid}`;
+}
 const PLAYER_HISTORY_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;  // 21d player escalation
 
 const ROGER_RIFF_PROBABILITY = 0.07;
@@ -3214,6 +3225,9 @@ async function loadTeamsWithDivisions() {
       nameShort: t.nameShort,
       abbrev: t.abbrev,
       division: t.division,
+      // A per-conference player pool (the AFL): the same player id is a
+      // different asset in each conference. Absent for single-pool leagues.
+      conference: t.conference,
     });
   }
   return map;
@@ -3715,7 +3729,7 @@ async function scanTradeOffers({ redis, dryRun }) {
     const playerHistory = new Map();    // playerId -> effective distinct offerer count
     const playerDraftStats = new Map(); // playerId -> { realCount, draftCount, effectiveCount, capped }
     for (const pid of playerIds) {
-      const pKey = PLAYER_OFFER_HISTORY_PREFIX + pid;
+      const pKey = playerOfferHistoryKey(pid, teams.get(offeringFid)?.conference);
       // Add the offer to the player history only on first sighting so a single
       // lingering trade doesn't masquerade as 96 separate offerers.
       if (!dryRun && isFirstSighting) {
@@ -4297,9 +4311,11 @@ async function main() {
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
   // In detection-only mode, mutates Redis counters but doesn't queue.
-  // TheLeague-only lane: AFL's tradeOfferRumors toggle is off (MFL
-  // pendingOffer access + the duplicate-player escalation model need their
-  // own design before this lane can go multi-league).
+  // Runs for any league whose registry `features.tradeRumors` is on (surfaced
+  // as features.tradeOfferRumors). Offers arrive mostly through owners' own
+  // reads (owner_reports); player escalation is scoped per player POOL so a
+  // league with per-conference pools (the AFL) never counts two conferences'
+  // separate deals for one player as a bidding war.
   // ── Trading window ──
   // Read before any trade lane runs. MFL's calendar is the source of truth
   // for the deadline (live, else the committed feed); the Constitution only

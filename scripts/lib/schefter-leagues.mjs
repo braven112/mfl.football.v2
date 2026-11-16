@@ -17,9 +17,9 @@
  *   - directGroupMe:    transaction scanner posts straight to GroupMe
  *                       (AFL) instead of routing through the rumor-mill
  *                       big-drop flow (TheLeague).
- *   - tradeOfferRumors: the pending-trade-offer leak lane. TheLeague-only:
- *                       AFL needs MFL pendingOffer access and the
- *                       duplicate-players escalation model re-thought first.
+ *   - tradeOfferRumors: the pending-trade-offer leak lane. Derives from the
+ *                       registry's `features.tradeRumors` — the league
+ *                       setting that also gates owner-report intake.
  *   - groupmeListen:    GroupMe @mention → tip ingestion. TheLeague-only
  *                       until AFL GroupMe message ingestion exists.
  *
@@ -107,6 +107,9 @@ export const SCHEFTER_LEAGUES = ALL_LEAGUES.filter((reg) => reg.schefter).map((r
     features: {
       rumorMill: reg.features.schefterTips,
       ...lanes,
+      // The league's own setting, not a scanner lane toggle: the same flag
+      // gates the owner-report intake (src/utils/owner-trade-reports.ts).
+      tradeOfferRumors: reg.features.tradeRumors === true,
     },
   });
 });

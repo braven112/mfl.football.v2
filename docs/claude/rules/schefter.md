@@ -1140,7 +1140,20 @@ owner's pending offers in the background, through
 - **Time-boxed beside the board** (`capturePendingOffersQuietly`, 4 s, never
   throws) and awaited before the response, so the function is not frozen
   mid-read; a slow MFL can't delay a scoreboard past its own assembly.
-- **TheLeague only**, inherited from `reportOwnerTrades`' own gate.
+- **Only leagues with the "Trade rumors" setting on** — registry
+  `features.tradeRumors` (catalog key `tradeRumors`, requires `schefterTips`).
+  That ONE flag gates the intake (`ownerReportsKeyFor`) AND the scanner's offer
+  lane (surfaced as `features.tradeOfferRumors` by `schefter-leagues.mjs`; the
+  old `schefter.lanes.tradeOfferRumors` toggle was removed so the two can't
+  disagree). TheLeague and the AFL are on (Brandon, 2026-11-16). A league
+  switched on also needs its team names in its registry `configPath` (read
+  through the league-data store, never imported), or MFL's prose-only
+  proposer would reach the scanner as `'0000'`; intake refuses such a league
+  and `tests/owner-trade-reports.test.ts` fails on that pairing.
+- **Player escalation is per player POOL.** The AFL rosters one player in
+  both conferences, so `player_offer_history` is keyed by the offering team's
+  conference there (`playerOfferHistoryKey`); single-pool leagues keep the
+  legacy key.
 
 This makes live proposals stay in `owner_reports` far more often, which is
 why "dropped out of the scan" still must never be read as withdrawn (see "Closing a proposal" above).

@@ -88,7 +88,6 @@ export const LEAGUES = {
         eventReminders: true,
         // Uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague.
         directGroupMe: false,
-        tradeOfferRumors: true,
         groupmeListen: true,
         // Roger's clapback lane. AFL-first by request: the AFL drafts on the
         // Labor Day weekend, so its autodraft damage is days old and its owners
@@ -258,6 +257,7 @@ export const LEAGUES = {
       liveLineups: true,
       schefterFeed: true,
       schefterTips: true,
+      tradeRumors: true,
       liveScoring: true,
       liveScoringSample: true,
       /** Rookies only, cap of 3. */
@@ -341,9 +341,6 @@ export const LEAGUES = {
         eventReminders: true,
         // Posts breaking/standard transactions directly to GroupMe from scanLeague.
         directGroupMe: true,
-        // Deferred: needs MFL pendingOffer access and the duplicate-players
-        // escalation model re-thought first.
-        tradeOfferRumors: false,
         // Schefter's mention→tip ingest is still TheLeague-only (its Redis
         // keys are TheLeague-scoped).
         groupmeListen: false,
@@ -509,6 +506,7 @@ export const LEAGUES = {
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,
+      tradeRumors: true,
       liveScoring: true,
       liveScoringSample: true,
       /** The AFL has no practice squad — keepers are its off-roster mechanic. */
@@ -678,6 +676,7 @@ export const LEAGUES = {
       liveLineups: false,
       schefterFeed: false,
       schefterTips: false,
+      tradeRumors: false,
       /**
        * Results-shaped, not management-shaped — with no lineups to set,
        * scoreboard watching is the whole in-season experience here.
@@ -811,7 +810,6 @@ export const LEAGUES = {
         tradeBait: false,
         eventReminders: false,
         directGroupMe: false,
-        tradeOfferRumors: false,
         groupmeListen: false,
         rogerReplies: false,
         nflNews: false,
@@ -891,6 +889,7 @@ export const LEAGUES = {
       schefterFeed: true,
       /** No tips / rumor mill: that lane is built on the GroupMe listener. */
       schefterTips: false,
+      tradeRumors: false,
       /**
        * The shared board (/archies/live-scoring) and /archies/broadcast. MFL
        * serves this league's liveScoring in the FLAT shape (no pairings), so
@@ -968,7 +967,6 @@ export const LEAGUES = {
         tradeBait: false,
         eventReminders: false,
         directGroupMe: false,
-        tradeOfferRumors: false,
         groupmeListen: false,
         rogerReplies: false,
       },
@@ -998,6 +996,7 @@ export const LEAGUES = {
       powerRankings: true,
       schefterFeed: true,
       schefterTips: false,
+      tradeRumors: false,
       rulesQa: true,
       viewerPreferences: true,
       pushNotifications: false,
@@ -1054,6 +1053,7 @@ export const LEAGUES = {
       powerRankings: false,
       schefterFeed: false,
       schefterTips: false,
+      tradeRumors: false,
       rulesQa: false,
       viewerPreferences: false,
       pushNotifications: false,
@@ -1132,6 +1132,7 @@ if (isDemoEnv()) {
       ...LEAGUES['afl-fantasy'].features,
       schefterFeed: false,
       schefterTips: false,
+      tradeRumors: false,
       // No live scoring page in this slot: on, the homepage hero's game-day
       // card linked one that 404s.
       liveScoring: false,
@@ -1153,6 +1154,7 @@ if (isDemoEnv()) {
     keepers: false,
     schefterFeed: false,
     schefterTips: false,
+    tradeRumors: false,
     liveScoringSample: false,
     accounting: false,
     pushNotifications: false,

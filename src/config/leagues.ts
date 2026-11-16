@@ -84,6 +84,14 @@ export interface LeagueFeatures {
    * which only governs the news feed page.
    */
   schefterTips: boolean;
+  /**
+   * Trade rumors from PENDING offers: owners' own reads of their offers
+   * (Trades page, Trade Builder, MFL Live, passively on any signed-in Live
+   * load) feed the rumor scanner's offer lane. Optional per league — off,
+   * nothing is read or stored for it (src/utils/owner-trade-reports.ts) and
+   * the scanner skips the lane. Requires schefterTips.
+   */
+  tradeRumors: boolean;
   liveScoring: boolean;
   /**
    * The live-scoring board falls back to a BUNDLED REPLAY of the last
@@ -284,7 +292,6 @@ export interface LeagueDefinition {
       tradeBait: boolean;
       eventReminders: boolean;
       directGroupMe: boolean;
-      tradeOfferRumors: boolean;
       groupmeListen: boolean;
       rogerReplies: boolean;
     };
