@@ -70,7 +70,20 @@ import {
   writeMoveStory,
 } from './lib/schefter-move-story.mjs';
 
-import { getRedisConfig } from './lib/redis.mjs';
+import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import {
+  leagueMoves,
+  normalizeState as normalizeContractMoveState,
+  buildAppliedPosts,
+  trackPendingTags,
+  nextTagPost,
+  tagCandidates,
+  watchList,
+  buildWatchPost,
+  buildRumorPost,
+  settleState as settleContractMoveState,
+  tagWindowGate,
+} from './lib/schefter-contract-moves.mjs';
 import { createUpstashClient } from './lib/redis-client.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
@@ -1762,6 +1775,106 @@ async function scanPendingTrades(league) {
   return newPosts.length;
 }
 
+// ── Contract moves: applied extensions/options/tags + franchise-tag rumors ──
+// The record is the contract-declarations hash (PR #1742); the rules and every
+// ruling behind them live in scripts/lib/schefter-contract-moves.mjs. The
+// lane's state lives in REDIS, never the feed file: the feed is committed to a
+// public repo, and a state row naming a pending tag's player would publish the
+// very thing the rumor holds back.
+
+const CONTRACT_DECLARATIONS_KEY = 'contract-declarations';
+const contractMoveStateKey = (league) => schefterKey(league.slug, 'contract-moves:state');
+
+async function readContractDeclarations(redis) {
+  const result = await redisCommand(redis, ['HGETALL', CONTRACT_DECLARATIONS_KEY]);
+  if (!Array.isArray(result)) return [];
+  const out = [];
+  for (let i = 0; i < result.length; i += 2) {
+    try { out.push(JSON.parse(result[i + 1])); } catch { /* skip a malformed row */ }
+  }
+  return out;
+}
+
+async function scanContractMoves(league) {
+  if (!registryLeague(league)?.features?.contracts) return 0;
+  const redis = getRedisConfig();
+  if (!redis) {
+    console.log('  [contract-moves] Redis not configured — skipping');
+    return 0;
+  }
+
+  console.log(`\n=== Scanning Contract Moves for ${league.slug} ===`);
+  const now = new Date();
+  const year = leagueYearFor(league, now);
+
+  let declarations;
+  let state;
+  try {
+    const [all, rawState] = await Promise.all([
+      readContractDeclarations(redis),
+      redisCommand(redis, ['GET', contractMoveStateKey(league)]),
+    ]);
+    declarations = leagueMoves(all, league.leagueId);
+    state = normalizeContractMoveState(rawState ? JSON.parse(rawState) : null);
+  } catch (err) {
+    console.log(`  [contract-moves] Could not read the record: ${err.message}`);
+    return 0;
+  }
+
+  const [players, teams, rostersFeed] = await Promise.all([
+    loadPlayers(league.playersPath(year)),
+    loadTeamsWithShortNames(league.configPath),
+    readJsonOrNull(league.feedFilePath(year, 'rosters.json')),
+  ]);
+  const teamName = (fid) => pickTeamDisplayName(teams.get(String(fid)));
+
+  const applied = buildAppliedPosts({ declarations, state, players, teamName, now, leagueSlug: league.slug });
+
+  state = trackPendingTags(state, declarations, players, now);
+  const item = nextTagPost({ state, now });
+  let tagPost = null;
+  if (item) {
+    const candidates = tagCandidates(rostersFeed, players);
+    if (item.kind === 'watch') {
+      tagPost = buildWatchPost({ shortlist: watchList(candidates), teamName, now, year: tagWindowGate(now).year, leagueSlug: league.slug });
+    } else {
+      tagPost = buildRumorPost({ item, tag: state.tags[item.id], candidates, teamName, now, leagueSlug: league.slug });
+    }
+  }
+
+  const feed = await loadFeed(league.feedPath);
+  const known = new Set(feed.posts.map((p) => p.id));
+  const posts = [...applied.posts, ...(tagPost ? [tagPost] : [])].filter((p) => !known.has(p.id));
+  const nextState = settleContractMoveState(state, { reportedIds: applied.reportedIds, tagPost, tagItem: item, now });
+
+  for (const p of posts) console.log(`  [${p.transactionSubType}] ${p.headline}`);
+  if (DRY_RUN) {
+    for (const p of posts) console.log(`  [dry-run] ${p.body.replace(/\n/g, '\n    ')}`);
+    console.log(`  [dry-run] Would write ${posts.length} contract post(s); state not saved`);
+    return posts.length;
+  }
+
+  // Feed first, then state, then pushes: a post that failed to write must not
+  // be marked reported, and a push must never go out for a post the feed lacks.
+  if (posts.length) {
+    feed.posts = [...posts, ...feed.posts];
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  }
+  try {
+    await redisCommand(redis, ['SET', contractMoveStateKey(league), JSON.stringify(nextState)]);
+  } catch (err) {
+    console.warn(`  [contract-moves] State save failed: ${err.message}`);
+  }
+
+  // Feed and opt-in push only — the contract lane never posts to GroupMe.
+  for (const p of posts) {
+    const big = p.transactionSubType === 'tag_rumor' || p.contractMoveType === 'franchise-tag';
+    await pushTransaction({ league, franchiseIds: [...teams.keys()], headline: p.headline, body: p.body, tag: p.id, big });
+  }
+  console.log(`  Wrote ${posts.length} contract post(s).`);
+  return posts.length;
+}
+
 // ── Schefter Rumor Mill: Trade-Bait Detector ──
 // Owners add players to their MFL trade block to publicly signal availability.
 // This scan diffs per-franchise blocks against a committed state, debounces
@@ -3320,6 +3433,8 @@ for (const league of LEAGUES) {
     totalPosts += await scanLeague(league);
     // Scan pending trades (Schefter Rumor Mill — Phase 1)
     totalPosts += await scanPendingTrades(league);
+    // Contract moves (extensions, options, tags) + franchise-tag rumors
+    totalPosts += await scanContractMoves(league);
     // Scan trade bait (per-franchise availability listings → rumor-mill tips)
     totalPosts += await scanTradeBait(league);
     // The NFL news lanes (ESPN reporters, NFL Wire, Doc Rivers, Vegas Vic)

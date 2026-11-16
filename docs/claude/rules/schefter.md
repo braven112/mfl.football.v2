@@ -1785,3 +1785,37 @@ whose write-up has no score AFTER the word "pick" — a series record like
 draft ONCE with that note (`mod.correctionFor`, optional, typeof-guarded in
 `schefter-weekly-articles.mjs`); `validate` still warns if the rewrite misses.
 Guard: `tests/matchup-preview-stories.test.ts`.
+
+## Contract moves and franchise-tag rumors (Nov 2026)
+
+`scanContractMoves` (schefter-scan.mjs) reports the contract-declaration record
+(`contract-declarations` hash, PR #1742); every rule lives in
+`scripts/lib/schefter-contract-moves.mjs` and `tests/schefter-contract-moves.test.ts`
+pins it. TheLeague only (`features.contracts`). Brandon's rulings, 2026-11-15:
+
+- **Applied moves post, all of them** — veteran extension, rookie extension,
+  team option, franchise tag — as a `CONTRACT` one-liner with `Was:` / `Now:`
+  terms from `contractTermsChange` (`src/utils/contract-terms.mjs`, the ONE
+  copy the Contracts page also reads). Tags all land Feb 15, so the tags a run
+  finds applied fold into one "Franchise tags are official" list. An applied
+  move older than 3 days when first seen is history and never posts.
+- **A pending tag is insider info, posted as a rumor (`tag_rumor`).** The
+  public Contracts page hides it, so the rumor is the only public signal. It
+  names the TEAM and the POSITION, never the player or the value. When the team
+  has 2+ tag-eligible players at that position they are "in the mix" together;
+  with one, nobody is named, because a lone name IS the player. The rumor post
+  carries no `playerIds` and no declaration id.
+- **The window opens with a tag watch** (`sf_tagwatch_<year>`): the highest-paid
+  tag-eligible players, at most two per team, priming the audience.
+- **A cancelled tag gets "plans have changed", exactly as likely as a rumor**:
+  leaks and corrections are one pool and the daily draw is uniform over it. A
+  cancel the team immediately re-filed for the same player is `superseded` and
+  never posts. Every pending tag is fair game; there is no opt-out.
+- **Cadence: a rare, delayed drip.** At most one tag post a day (20h gap), each
+  1-2 days after the filing (stable per-id delay, so the timing cannot be traced
+  to the click), none in the last 24h before Feb 14 8:45 PM PT.
+- **Feed and opt-in push only; never GroupMe.**
+- **The lane's state lives in Redis** (`schefter:...contract-moves:state`), never
+  on the feed object: the feed is committed to a PUBLIC repo, and a state row
+  naming a pending tag's player would publish what the rumor holds back. The
+  test fails on any `feed.contract*` / `feed.tag*` write in the lane.

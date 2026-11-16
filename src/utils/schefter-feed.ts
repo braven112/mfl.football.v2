@@ -96,7 +96,7 @@ export function isDuplicatePost(feed: SchefterFeed, sourceTimestamp: string): bo
  * branch on `transactionSubType === 'rumor_mill'` directly — those are
  * tip-driven and tied to the anonymous tipster pipeline.
  */
-const RUMOR_LIKE_SUB_TYPES = new Set(['rumor_mill', 'trade_speculation']);
+const RUMOR_LIKE_SUB_TYPES = new Set(['rumor_mill', 'trade_speculation', 'tag_rumor']);
 
 export function isRumorLikePost(post: { type?: string; transactionSubType?: string }): boolean {
   if (post.type !== 'transaction') return false;
