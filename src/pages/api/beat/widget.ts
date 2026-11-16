@@ -14,7 +14,11 @@ import type { APIRoute } from 'astro';
 import { getLeagueById, leagueUrl, SHARED_APP_ORIGIN } from '../../../config/leagues';
 import { getSchefterFeedIfAny } from '../../../utils/schefter-league-data';
 import { getLeaguePersona } from '../../../utils/persona-server';
-import { absolutePersonaAvatar, personaLabels, BEAT_REPORTER_PERSONA } from '../../../utils/persona.mjs';
+import { absolutePersonaAvatar, personaByline, personaLabels, BEAT_REPORTER_PERSONA } from '../../../utils/persona.mjs';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import { SOURCE_PREDICATES } from '../../../utils/schefter-sources';
+import { getOwnRosterIds, postConcernsFranchise, postMentionsAny } from '../../../utils/schefter-watching';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   WIDGET_CSS,
@@ -64,8 +68,28 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const [feed, persona] = await Promise.all([getSchefterFeedIfAny(league), getLeaguePersona(league.slug)]);
   const labels = personaLabels(persona);
+  // The viewer's franchise, when MFL's page named one (public/mfl/beat.js).
+  // Anyone can send any id, so it only decides which PUBLIC posts lead: the
+  // roster is public on MFL, and nothing private (watch list, nudges) is read.
+  const fid = (url.searchParams.get('F') ?? '').match(/^\d{4}$/)?.[0];
+  const roster = fid && fid !== '0000' ? await getOwnRosterIds(league, getLeagueYearForSlug(league.slug), fid).catch(() => new Set<string>()) : null;
+  const personal = roster && roster.size > 0;
+  const isFirstTab = personal
+    ? (p: any) => SOURCE_PREDICATES.theleague(p) || postMentionsAny(p, roster) || postConcernsFranchise(p, fid)
+    : SOURCE_PREDICATES.theleague;
+  const { posts, leagueIds } = selectWidgetPosts(feed, { isLeague: isFirstTab });
+  const site = (src: string) => absolutePersonaAvatar({ avatarUrl: src }, SHARED_APP_ORIGIN);
   const html = renderNewsWidget({
-    posts: selectWidgetPosts(feed),
+    posts,
+    leagueIds,
+    firstTab: personal ? 'My News' : 'League',
+    // Each post wears its own author's face: the league's reporter (persona
+    // applied), Roger, Vegas Vic, Doc Rivers, or the ESPN writer.
+    bylineFor: (post: any) => {
+      const author = getAuthor(post.authorId);
+      const by = personaByline(author, getAuthorAvatar(author), persona);
+      return { name: by.name, avatar: site(by.avatar) };
+    },
     reporter: {
       name: labels.name,
       report: labels.report,

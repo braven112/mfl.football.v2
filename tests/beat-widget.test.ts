@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
   isMflOrigin,
@@ -46,15 +47,23 @@ describe('which posts leave our site', () => {
   const feed = {
     posts: [
       { id: 'a', type: 'transaction', headline: 'Trade', timestamp: '2026-11-10T00:00:00Z', franchiseIds: [] },
-      { id: 'b', type: 'external', headline: 'ESPN', timestamp: '2026-11-12T00:00:00Z', franchiseIds: [] },
-      { id: 'c', type: 'odds', headline: 'Odds', timestamp: '2026-11-12T00:00:00Z', franchiseIds: [] },
+      { id: 'b', type: 'external', authorId: 'nfl-wire', headline: 'ESPN', timestamp: '2026-11-12T00:00:00Z', franchiseIds: [] },
+      { id: 'c', type: 'odds', authorId: 'vegas-vic', headline: 'Odds', timestamp: '2026-11-12T00:00:00Z', franchiseIds: [] },
       { id: 'd', type: 'assistant', headline: 'Set your lineup', timestamp: '2026-11-12T00:00:00Z', franchiseIds: ['0001'] },
       { id: 'e', type: 'article', headline: 'Gauntlet', timestamp: '2026-11-11T00:00:00Z', franchiseIds: [], content: ['<p>x</p>'] },
       { id: 'f', type: 'transaction', transactionSubType: 'TRADE_PENDING', headline: 'Pending', timestamp: '2026-11-13T00:00:00Z', franchiseIds: [] },
     ],
   };
-  it('keeps league news only, newest first', () => {
-    expect(selectWidgetPosts(feed).map((p: any) => p.id)).toEqual(['e', 'a']);
+  it('keeps league news, the wire and the insiders; drops nudges and pending trades', () => {
+    const { posts, leagueIds } = selectWidgetPosts(feed);
+    expect(posts.map((p: any) => p.id)).toEqual(['b', 'c', 'e', 'a']);
+    expect([...leagueIds].sort()).toEqual(['a', 'e']);
+  });
+  it('gives each tab its own limit, so the wire cannot push league news out', () => {
+    const wire = Array.from({ length: 30 }, (_, i) => ({ id: `wire_${i}`, type: 'external', authorId: 'nfl-wire', headline: 'w', timestamp: `2026-11-20T00:00:${String(i).padStart(2, '0')}Z` }));
+    const { posts, leagueIds } = selectWidgetPosts({ posts: [...wire, feed.posts[0]] }, { limit: 5 });
+    expect(posts).toHaveLength(6);
+    expect([...leagueIds]).toEqual(['a']);
   });
 });
 
@@ -95,6 +104,44 @@ describe('rendering', () => {
     expect(html).not.toContain('bw-headline');
     expect(html).not.toContain('Pigskins add Smith');
     expect(html).toContain('Pigskins signed WR Smith.');
+  });
+  it('each post wears its author, the wire opens on ESPN, and League/All tabs split the list', () => {
+    const html = renderNewsWidget({
+      posts: [
+        { id: 'tx', type: 'transaction', headline: 'h', body: 'Pickup', timestamp: '2026-11-09T00:00:00Z' },
+        { id: 'wire_1', type: 'external', authorId: 'nfl-wire', headline: 'Wire', body: 'Wire', link: 'https://www.espn.com/x', timestamp: '2026-11-10T00:00:00Z' },
+      ],
+      leagueIds: new Set(['tx']),
+      bylineFor: (p: any) => (p.id === 'tx' ? { name: 'Claude Schefter', avatar: 'https://mfl.football/s.webp' } : { name: 'NFL Wire', avatar: 'https://mfl.football/w.webp' }),
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute,
+      leagueSlug: 'theleague',
+    });
+    expect(html).toContain('src="https://mfl.football/w.webp"');
+    expect(html).toContain('NFL Wire');
+    expect(html).toContain('href="https://www.espn.com/x"');
+    expect(html).toContain('for="bw-tab-league"');
+    expect(html.match(/bw-post--league/g)).toHaveLength(1);
+    expect(html).toContain('>League</label>');
+  });
+  it('names the first tab My News when the viewer is known', () => {
+    const html = renderNewsWidget({
+      posts: [
+        { id: 'tx', type: 'transaction', headline: 'h', body: 'Pickup', timestamp: '2026-11-09T00:00:00Z' },
+        { id: 'wire_1', type: 'external', authorId: 'nfl-wire', headline: 'Wire', timestamp: '2026-11-10T00:00:00Z' },
+      ],
+      leagueIds: new Set(['tx']),
+      firstTab: 'My News',
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute,
+      leagueSlug: 'theleague',
+    });
+    expect(html).toContain('>My News</label>');
+  });
+  it('the loader reads MFL\'s franchise_id global, never document.cookie', () => {
+    const src = readFileSync('public/mfl/beat.js', 'utf8');
+    expect(src).toContain('window.franchise_id');
+    expect(src).not.toMatch(/document\.cookie/);
   });
   it('the ad card sells, and links to our site', () => {
     const html = renderAdWidget({ origin: 'https://mfl.football', avatar: '/assets/x.webp' });
