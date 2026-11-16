@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  widgetSnippet,
   widgetCss,
   WIDGET_CSS as BASE_CSS,
   isMflOrigin,
@@ -181,5 +182,12 @@ describe('league colors', () => {
     const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
     const fonts = vercel.headers.find((h: any) => h.source === '/assets/fonts/(.*)');
     expect(fonts?.headers).toContainEqual({ key: 'Access-Control-Allow-Origin', value: '*' });
+  });
+});
+
+describe('own card', () => {
+  it('never wears the skin report-wrapper, which would frame the card twice', () => {
+    expect(widgetSnippet({ origin: 'https://mfl.football', key: 'k' })).not.toContain('report-wrapper');
+    expect(readFileSync('public/mfl/beat.js', 'utf8')).toContain("classList.remove('report-wrapper')");
   });
 });

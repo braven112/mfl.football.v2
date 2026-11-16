@@ -7,7 +7,9 @@
   if (!m) return;
   var host = document.getElementById('beat-reporter');
   if (!host) { host = document.createElement('div'); me.parentNode.insertBefore(host, me); }
-  if (host.classList) host.classList.add('report-wrapper');
+  // The widget is its own card. The skin's .report-wrapper (padding, shadow)
+  // would frame it twice, so an older snippet that carries it loses it here.
+  if (host.classList) host.classList.remove('report-wrapper');
   var root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : host;
   var origin = new URL(me.src).origin;
   // A font face must be declared on the page, not in the shadow root. Our own
