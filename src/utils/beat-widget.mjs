@@ -95,7 +95,7 @@ export function relativeTime(iso, now = Date.now()) {
 
 /** The widget's stylesheet: inherits the MFL skin's text color, so it fits light and dark skins alike. */
 export const WIDGET_CSS = `
-:host{display:block;font:inherit;color:inherit}
+:host{display:block;font:inherit;color:inherit;margin-bottom:24px}
 *{box-sizing:border-box}
 .bw{--bw-line:color-mix(in srgb,currentColor 18%,transparent);--bw-soft:color-mix(in srgb,currentColor 6%,transparent);--bw-dim:color-mix(in srgb,currentColor 65%,transparent);max-width:760px;margin:0 auto}
 .bw{padding:0 12px}
