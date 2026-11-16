@@ -97,65 +97,6 @@ export function selectWidgetPosts(feed, { limit = WIDGET_POST_LIMIT, isLeague = 
   return { posts, leagueIds: new Set(league.map((p) => p.id)) };
 }
 
-/** How long a fresh trade or big injury rides the red strip at the top. */
-export const BREAKING_WINDOW_MS = 60 * 60 * 1000;
-
-/**
- * The post for the Breaking strip: the newest trade or breaking post from the
- * reporter or Doc Rivers in the last hour, else null. Brandon, 2026-11-16.
- */
-export function pickBreaking(feed, now = Date.now()) {
-  const posts = Array.isArray(feed?.posts) ? feed.posts : [];
-  let best = null;
-  for (const p of posts) {
-    if (!p || PRIVATE_POST_TYPES.has(p.type) || p.transactionSubType === 'TRADE_PENDING') continue;
-    const author = p.authorId ?? 'claude';
-    if (author !== 'claude' && author !== 'doc-rivers') continue;
-    if (p.transactionSubType !== 'TRADE' && p.tier !== 'breaking') continue;
-    const t = Date.parse(p.timestamp);
-    if (!Number.isFinite(t) || t > now || now - t > BREAKING_WINDOW_MS) continue;
-    if (!best || t > Date.parse(best.timestamp)) best = p;
-  }
-  return best;
-}
-
-/** Injury designations the alert box flags, worst first. */
-export const ALERT_STATUSES = ['Out', 'Doubtful', 'Questionable'];
-
-/**
- * The owner's injury alerts: active-roster players MFL lists as Out, Doubtful
- * or Questionable, worst first, each with Doc's latest word on him if any.
- * @param {object} o
- * @param {string[]} o.playerIds   the franchise's active roster (not IR, not taxi)
- * @param {Record<string, { injuryStatus: string, injuryBodyPart?: string }>} o.injuries
- * @param {(id: string) => { name: string, position?: string, nflTeam?: string } | undefined} o.player
- * @param {(id: string) => string | null} [o.docTake]
- */
-export function buildInjuryAlerts({ playerIds, injuries, player, docTake = () => null }) {
-  const rank = (s) => ALERT_STATUSES.findIndex((x) => x.toLowerCase() === String(s ?? '').toLowerCase());
-  return playerIds
-    .map((id) => ({ id, inj: injuries?.[id] }))
-    .filter(({ inj }) => inj && rank(inj.injuryStatus) >= 0)
-    .map(({ id, inj }) => {
-      const who = player(id);
-      return {
-        id,
-        name: who?.name ?? `Player ${id}`,
-        position: who?.position ?? '',
-        team: who?.nflTeam ?? '',
-        status: ALERT_STATUSES[rank(inj.injuryStatus)],
-        detail: inj.injuryBodyPart ?? '',
-        doc: docTake(id),
-      };
-    })
-    .sort((a, b) => rank(a.status) - rank(b.status) || a.name.localeCompare(b.name));
-}
-
-function clip(text, max) {
-  const t = String(text ?? '').trim();
-  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
-}
-
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
@@ -178,8 +119,7 @@ export function relativeTime(iso, now = Date.now()) {
  * The widget's stylesheet: a white "Primetime" card (Brandon, 2026-11-16:
  * premium, white, the broadcast layout) in the league's own two colors.
  * `--bw-p` / `--bw-s` default to navy; widgetCss() sets them per league.
- * Status colors (Out, Doubtful, Questionable, Breaking) stay fixed: they mean
- * the same thing in every league.
+ * Breaking red stays fixed: it means the same thing in every league.
  */
 export const WIDGET_CSS = `
 :host{display:block;margin-bottom:24px;--bw-p:#1d3a6e;--bw-s:#1d3a6e}
@@ -196,33 +136,12 @@ export const WIDGET_CSS = `
 .bw-sub{margin-top:5px;font-size:.7em;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--bw-s)}
 .bw-new{position:absolute;top:14px;right:16px;padding:3px 10px;border-radius:999px;background:#dc2626;color:#fff;font-size:.7em;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 6px 14px -6px rgba(220,38,38,.7)}
 .bw-new[hidden]{display:none}
-.bw-breaking{display:block;margin:14px 18px 2px;padding:12px 14px;border-radius:14px;background:linear-gradient(100deg,#dc2626,#991b1b);color:#fff!important;line-height:1.45;font-size:.93em;box-shadow:0 12px 24px -14px rgba(220,38,38,.8),inset 0 0 0 1px rgba(255,255,255,.12)}
-.bw-breaking-tag{display:flex;align-items:center;gap:7px;margin-bottom:3px;font-family:var(--display);font-weight:700;font-size:1.05em;letter-spacing:.12em;text-transform:uppercase}
-.bw-breaking-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.25)}
 .bw-tab-in{position:absolute;opacity:0;pointer-events:none}
 .bw-tabs{display:flex;gap:4px;margin:14px 18px 4px;padding:4px;border-radius:12px;background:#f1f4f8;box-shadow:inset 0 0 0 1px var(--hair)}
 .bw-tabs label{flex:1;cursor:pointer;text-align:center;padding:8px 0;border-radius:9px;font-family:var(--display);font-weight:700;font-size:.95em;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);transition:background .15s,color .15s}
 #bw-tab-league:checked~.bw-tabs label[for=bw-tab-league],#bw-tab-all:checked~.bw-tabs label[for=bw-tab-all]{background:var(--bw-p);color:#fff;box-shadow:0 6px 14px -8px color-mix(in srgb,var(--bw-p) 80%,transparent)}
 #bw-tab-league:focus-visible~.bw-tabs label[for=bw-tab-league],#bw-tab-all:focus-visible~.bw-tabs label[for=bw-tab-all]{outline:2px solid var(--bw-p);outline-offset:2px}
 #bw-tab-league:checked~.bw-list .bw-post:not(.bw-post--league){display:none}
-.bw-alerts{margin:12px 18px 4px;padding:14px 16px;border-radius:16px;background:var(--tint);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bw-p) 10%,transparent)}
-#bw-tab-all:checked~.bw-alerts{display:none}
-.bw-alerts-head{font-family:var(--display);font-weight:700;font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:var(--bw-p);margin-bottom:4px}
-.bw-alert-list{list-style:none;margin:0;padding:0}
-.bw-alert{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--bw-p) 9%,transparent)}
-.bw-alert:first-child{border-top:0}
-.bw-alert-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px}
-.bw-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.68em;font-weight:800;letter-spacing:.09em;text-transform:uppercase;line-height:1.4;white-space:nowrap}
-.bw-status--out{background:#fee2e2;color:#b91c1c}
-.bw-status--doubtful{background:#ffedd5;color:#c2410c}
-.bw-status--questionable{background:#fef3c7;color:#92400e}
-.bw-alert-detail{font-size:.85em;color:var(--dim)}
-.bw-alert-name{font-weight:700;font-size:1.02em}
-.bw-alert-sub{font-weight:500;color:var(--dim);font-size:.85em;margin-left:4px}
-.bw-alert-doc{margin-top:4px;font-size:.88em;color:var(--ink2)}
-.bw-alert-doc b{color:var(--bw-s)}
-.bw-alert-cta{display:inline-block;margin-top:8px;font-weight:700;font-size:.88em;color:var(--bw-p)!important}
-.bw-alert-cta::after,.bw-more::after{content:" →"}
 .bw-list{list-style:none;margin:0;padding:2px 0 0}
 .bw-post{padding:14px 18px;border-bottom:1px solid var(--hair)}
 .bw-post:last-child{border-bottom:0}
@@ -234,12 +153,14 @@ export const WIDGET_CSS = `
 .bw-meta{color:var(--dim);font-size:.78em;margin-bottom:3px}
 .bw-by{color:var(--ink);font-weight:700}
 .bw-badge{display:inline-block;margin-right:8px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;font-size:.9em;color:var(--bw-s)}
+.bw-badge--hot{color:#dc2626}
 .bw-badge::after{content:"";display:inline-block;width:3px;height:3px;margin-left:8px;border-radius:50%;background:#cbd5e1;vertical-align:middle}
 .bw-headline{font-family:var(--display);font-weight:700;font-size:1.3em;line-height:1.15;letter-spacing:.01em;margin:2px 0 5px;color:var(--ink)}
 .bw-body{margin:0;line-height:1.5;color:var(--ink2);white-space:pre-line}
+.bw-more::after{content:" →"}
 .bw-more{display:inline-block;margin-top:6px;font-weight:700;font-size:.88em;color:var(--bw-p)}
 .bw-link:hover .bw-headline,.bw-link:hover .bw-more{text-decoration:underline}
-.bw-link:focus-visible,.bw-breaking:focus-visible{outline:2px solid var(--bw-p);outline-offset:2px}
+.bw-link:focus-visible{outline:2px solid var(--bw-p);outline-offset:2px}
 .bw-foot{display:flex;justify-content:space-between;gap:8px;padding:13px 18px 15px;background:#f8fafc;border-top:1px solid var(--hair);font-size:.8em;color:var(--dim)}
 .bw-foot a{color:var(--bw-p);font-weight:700}
 .bw-btn{display:inline-block;cursor:pointer;padding:11px 18px;border-radius:12px;font-weight:700;text-align:center;color:var(--bw-p);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bw-p) 30%,transparent)}
@@ -262,6 +183,9 @@ export function widgetCss({ primary, secondary } = {}) {
   const s = HEX.test(secondary ?? '') ? secondary : p;
   return p ? `${WIDGET_CSS}:host{--bw-p:${p};--bw-s:${s}}\n` : WIDGET_CSS;
 }
+
+/** Big news reads red in the feed, the one place it shows (no pinned strip; Brandon, 2026-11-16). */
+const HOT_BADGES = new Set(['Breaking', 'Trade']);
 
 function badgeFor(post) {
   if (post.type === 'odds') return 'Odds';
@@ -292,12 +216,9 @@ function externalLink(post) {
  * @param {{ name: string, avatar: string, report: string }} o.reporter  absolute avatar URL
  * @param {(path: string) => string} o.absolute  the league's leagueUrl
  * @param {string} o.leagueSlug  registry slug, for the article path
- * @param {any} [o.breaking]  pickBreaking output: a red strip over the list
- * @param {ReturnType<typeof buildInjuryAlerts>} [o.alerts]  the owner's injury alerts (My News only)
- * @param {string} [o.lineupHref]  the league's MFL lineup page
  * @param {number} [o.now]
  */
-export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', bylineFor, reporter, absolute, leagueSlug, breaking = null, alerts = [], lineupHref = '', now = Date.now() }) {
+export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', bylineFor, reporter, absolute, leagueSlug, now = Date.now() }) {
   const newsPage = absolute(`/${leagueSlug}/news`);
   const byline = bylineFor ?? (() => ({ name: reporter.name, avatar: reporter.avatar }));
   const hrefFor = (post) => {
@@ -313,7 +234,7 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
     const href = hrefFor(post);
     const by = byline(post);
     const meta =
-      `<div class="bw-meta"><span class="bw-badge">${badgeFor(post)}</span>` +
+      `<div class="bw-meta"><span class="bw-badge${HOT_BADGES.has(badgeFor(post)) ? ' bw-badge--hot' : ''}">${badgeFor(post)}</span>` +
       `<span class="bw-by">${escapeHtml(by.name)}</span> · ${escapeHtml(relativeTime(post.timestamp, now))}</div>`;
     const body = post.body ? `<p class="bw-body">${escapeHtml(post.body)}</p>` : '';
     // A headline only on a column. A news post is a tweet: its text is the
@@ -338,28 +259,8 @@ export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', byline
         `<input type="radio" name="bw-tab" id="bw-tab-all" class="bw-tab-in">` +
         `<div class="bw-tabs" role="tablist"><label for="bw-tab-league">${escapeHtml(firstTab)}</label><label for="bw-tab-all">All</label></div>`
       : '';
-  // A fresh trade or big injury rides a red strip for an hour (pickBreaking).
-  const strip = breaking
-    ? `<a class="bw-breaking" href="${escapeHtml(hrefFor(breaking))}" target="_blank" rel="noopener"><span class="bw-breaking-tag">Breaking</span>` +
-      `<span>${escapeHtml(clip(breaking.body || breaking.headline, 180))}</span></a>`
-    : '';
-  // The owner's own injury report: My News only, so it hides on All.
-  const alertBox =
-    alerts.length > 0
-      ? `<div class="bw-alerts"><div class="bw-alerts-head">Injury report: your roster</div><ul class="bw-alert-list">` +
-        alerts
-          .map(
-            (a) =>
-              `<li class="bw-alert"><div class="bw-alert-top"><span class="bw-status bw-status--${a.status.toLowerCase()}">${a.status}</span>` +
-              `${a.detail ? `<span class="bw-alert-detail">${escapeHtml(a.detail)}</span>` : ''}</div>` +
-              `<div class="bw-alert-name">${escapeHtml(a.name)}${a.position || a.team ? `<span class="bw-alert-sub">${escapeHtml([a.position, a.team].filter(Boolean).join(' · '))}</span>` : ''}</div>` +
-              `${a.doc ? `<div class="bw-alert-doc"><b>Doc:</b> ${escapeHtml(clip(a.doc, 160))}</div>` : ''}</li>`,
-          )
-          .join('') +
-        `</ul>${lineupHref ? `<a class="bw-alert-cta" href="${escapeHtml(lineupHref)}">Set your lineup</a>` : ''}</div>`
-      : '';
   return (
-    `<div class="bw">${reporterHead(reporter)}${strip}${tabs}${alertBox}<ul class="bw-list">${items.join('')}${empty}</ul>` +
+    `<div class="bw">${reporterHead(reporter)}${tabs}<ul class="bw-list">${items.join('')}${empty}</ul>` +
     `<div class="bw-foot"><span>${escapeHtml(reporter.report)}</span><a href="${escapeHtml(newsPage)}" target="_blank" rel="noopener">More news</a></div></div>`
   );
 }
