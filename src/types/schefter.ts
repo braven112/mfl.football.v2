@@ -1,5 +1,7 @@
 // ── Schefter Report Types ──
 
+import { HISTORIAN } from '../data/historian';
+
 // ── Author System ──
 
 /** A news feed author/contributor */
@@ -144,6 +146,16 @@ export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
     // `?v=2` — see doc-rivers above.
     avatar: 'vegas-vic-avatar.webp?v=2',
     bio: 'Weekly lines, spreads, and over/unders for every NFL matchup. Not financial advice. Okay, maybe a little.',
+  },
+  // Buck's Notebook (scripts/buck-notebook.mjs): the Ask the History
+  // historian's Tuesday history facts. Name and art come from historian.ts,
+  // the one place the character is defined.
+  'buck-archives': {
+    id: 'buck-archives',
+    name: HISTORIAN.name,
+    handle: '@BuckArchives',
+    avatar: HISTORIAN.avatar.replace(/^\/assets\//, ''),
+    bio: 'League historian. Every season on record, every number checked. Posts a few facts about the coming week every Tuesday.',
   },
   'nfl-insider': {
     id: 'nfl-insider',

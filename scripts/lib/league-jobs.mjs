@@ -95,6 +95,13 @@ export const LEAGUE_JOBS = {
    */
   'article:matchup-preview': writes('matchup-preview'),
   /**
+   * Buck's Notebook (scripts/buck-notebook.mjs): Tuesday history facts about
+   * the coming week. No model call, so no Claude cost; it needs the league's
+   * feed, its League History dataset and a Record Book page to link to.
+   */
+  'article:history-notebook': (l) =>
+    writes('history-notebook')(l) && LEAGUE_JOBS['league-history'](l) && hasPage(l, 'history/record-book.astro'),
+  /**
    * Every other weekly column (previews, recaps, …): still the default league
    * alone, as before this module existed. Widening them is a Claude-cost call
    * per column, so it is a deliberate predicate change here, never a side

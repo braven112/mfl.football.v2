@@ -26,6 +26,8 @@ import { SCHEFTER_AUTHORS } from '../types/schefter';
 
 export const DRAFT_AUTHOR_IDS = new Set(['nfl-draft']);
 export const INSIDER_AUTHOR_IDS = new Set(['doc-rivers', 'vegas-vic']);
+/** Buck Archives, the league historian: his Tuesday notebook is the league's own desk. */
+export const HISTORIAN_AUTHOR_IDS = new Set(['buck-archives']);
 const NFL_EXCLUDE_IDS = new Set([...DRAFT_AUTHOR_IDS, ...INSIDER_AUTHOR_IDS]);
 
 /** ESPN contributors, minus the personas that have their own tab. */
@@ -73,7 +75,7 @@ export const SOURCE_PREDICATES: Record<FeedSource, (p: SchefterPost) => boolean>
   theleague: (p) => {
     if (isWirePost(p)) return false;
     const authorId = p.authorId ?? 'claude';
-    return authorId === 'claude' || authorId === 'roger' || INSIDER_AUTHOR_IDS.has(authorId);
+    return authorId === 'claude' || authorId === 'roger' || INSIDER_AUTHOR_IDS.has(authorId) || HISTORIAN_AUTHOR_IDS.has(authorId);
   },
   nfl: isWirePost,
   draft: (p) => p.authorId === 'nfl-draft',

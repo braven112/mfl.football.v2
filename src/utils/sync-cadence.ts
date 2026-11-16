@@ -247,7 +247,8 @@ export type SchefterArticleType =
   | 'waiver-pickups'
   | 'matchup-preview'
   | 'cut-watch'
-  | 'schedule-release';
+  | 'schedule-release'
+  | 'history-notebook';
 
 export interface SchefterArticleSlot {
   type: SchefterArticleType;
@@ -270,6 +271,8 @@ export interface SchefterArticleSlot {
  */
 export const SCHEFTER_ARTICLE_SLOTS: readonly SchefterArticleSlot[] = [
   { type: 'pecking-order', weekday: 2, hour: 7, minute: 0 },
+  // Buck's Notebook: Tuesday, after the Pecking Order (Brandon, 2026-11-16).
+  { type: 'history-notebook', weekday: 2, hour: 9, minute: 0 },
   { type: 'schedule-strength', weekday: 3, hour: 9, minute: 0 },
   { type: 'waiver-pickups', weekday: 3, hour: 22, minute: 0 },
   { type: 'matchup-preview', weekday: 6, hour: 11, minute: 0 },
