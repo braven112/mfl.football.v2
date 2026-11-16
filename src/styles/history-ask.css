@@ -240,7 +240,10 @@
 .ha-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* The gold number sits centered against the white label beside it, so a
+     two- or three-line label reads as one block with it (Brandon, 2026-11-16:
+     on baseline the label hung below the number). */
+  align-items: center;
   gap: 0.25rem 0.75rem;
   margin: 0 0 0.5rem;
 }
