@@ -100,12 +100,24 @@ const ms = (iso) => {
   return Number.isFinite(t) ? t : NaN;
 };
 
-/** A fresh state blob. */
+/**
+ * @typedef {{ franchiseId: string, playerId: string, position: string, submittedAt?: string, firstSeenAt: string,
+ *   status: string, cancelledAt?: string, leakedAt?: string, changedAt?: string }} TrackedTag
+ * @typedef {{ reported: Record<string, string>, tags: Record<string, TrackedTag>, watchYear: number | null,
+ *   lastRumorAt: string | null }} ContractMoveState
+ * @typedef {{ kind: 'watch' } | { kind: 'leak' | 'changed', id: string }} TagItem
+ */
+
+/** A fresh state blob. @returns {ContractMoveState} */
 export function emptyState() {
   return { reported: {}, tags: {}, watchYear: null, lastRumorAt: null };
 }
 
-/** Coerce whatever Redis held into a state blob; anything malformed starts over. */
+/**
+ * Coerce whatever Redis held into a state blob; anything malformed starts over.
+ * @param {any} raw
+ * @returns {ContractMoveState}
+ */
 export function normalizeState(raw) {
   const s = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -116,7 +128,12 @@ export function normalizeState(raw) {
   };
 }
 
-/** This league's declarations of a reportable type. */
+/**
+ * This league's declarations of a reportable type.
+ * @param {any[]} declarations
+ * @param {string} leagueId
+ * @returns {any[]}
+ */
 export function leagueMoves(declarations, leagueId) {
   return (declarations ?? []).filter(
     (d) => d && String(d.leagueId) === String(leagueId) && CONTRACT_MOVE_TYPES.has(d.type),
@@ -413,7 +430,7 @@ const andList = (names) =>
 
 /**
  * The tag-watch post that opens the window.
- * @param {{ shortlist: ReturnType<typeof tagCandidates>, teamName: (fid: string) => string | null, closes: Date, now: Date, leagueSlug: string }} args
+ * @param {{ shortlist: ReturnType<typeof tagCandidates>, teamName: (fid: string) => string | null, now: Date, year: number, leagueSlug: string }} args
  */
 export function buildWatchPost({ shortlist, teamName, now, year, leagueSlug }) {
   const lines = shortlist.map((c) => `🏷️ ${playerLabel(c)} (${teamName(c.franchiseId) ?? `Team ${c.franchiseId}`})`);
@@ -474,10 +491,16 @@ export function buildRumorPost({ item, tag, candidates, teamName, now, leagueSlu
   };
 }
 
-/** The state after a run: reported ids added, tag posts stamped, stale rows pruned. */
+/**
+ * The state after a run: reported ids added, tag posts stamped, stale rows pruned.
+ * @param {ContractMoveState} state
+ * @param {{ reportedIds?: string[], tagPost?: any, tagItem?: { kind: string, id?: string } | null, now: Date }} args
+ * @returns {ContractMoveState}
+ */
 export function settleState(state, { reportedIds = [], tagPost = null, tagItem = null, now }) {
   const nowIso = now.toISOString();
   const nowMs = now.getTime();
+  /** @type {Record<string, string>} */
   const reported = {};
   for (const [id, at] of Object.entries(state.reported)) {
     if (nowMs - ms(at) <= REPORTED_KEEP_MS) reported[id] = at;
@@ -485,6 +508,7 @@ export function settleState(state, { reportedIds = [], tagPost = null, tagItem =
   for (const id of reportedIds) reported[id] = nowIso;
 
   const year = tagWindowGate(now).year;
+  /** @type {Record<string, TrackedTag>} */
   const tags = {};
   for (const [id, t] of Object.entries(state.tags)) {
     // A tag from an earlier window is resolved history; nothing reads it.
@@ -494,8 +518,9 @@ export function settleState(state, { reportedIds = [], tagPost = null, tagItem =
   if (tagPost && tagItem) {
     lastRumorAt = nowIso;
     if (tagItem.kind === 'watch') watchYear = year;
-    else if (tags[tagItem.id]) {
-      tags[tagItem.id] = { ...tags[tagItem.id], [tagItem.kind === 'leak' ? 'leakedAt' : 'changedAt']: nowIso };
+    else if (tagItem.id && tags[tagItem.id]) {
+      const tid = tagItem.id;
+      tags[tid] = { ...tags[tid], [tagItem.kind === 'leak' ? 'leakedAt' : 'changedAt']: nowIso };
     }
   }
   return { reported, tags, watchYear, lastRumorAt };
