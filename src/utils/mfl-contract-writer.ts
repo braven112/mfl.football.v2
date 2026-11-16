@@ -407,6 +407,25 @@ export async function writeMultipleContractsToMFL(
 }
 
 /**
+ * The league commissioner account's MFL credentials (server env), or null
+ * when the deployment has none.
+ *
+ * THE ONE REQUEST-PATH EXCEPTION to "MFL writes use the caller's own
+ * cookie". MFL accepts a salary import only from a commissioner login, so an
+ * owner's own cookie cannot write their extension, and Brandon chose
+ * (2026-11-14) to let a veteran extension go straight to MFL rather than wait
+ * for the commissioner. Its only caller is `veteran-extension-filing.ts`,
+ * which writes nothing the server did not derive itself: the live roster
+ * contract, the Constitution's price, one per team per league year
+ * (`tests/veteran-extension-filing.test.ts` pins that only it calls this).
+ */
+export function leagueCommissionerCredentials(): MFLCredentials | null {
+  const userId = process.env.MFL_USER_ID || '';
+  if (!userId) return null;
+  return { mflUserId: userId, mflIsCommish: process.env.MFL_IS_COMMISH || undefined };
+}
+
+/**
  * Restore salary data from a backup file.
  * Reads the backup and writes each player's data back to MFL.
  *

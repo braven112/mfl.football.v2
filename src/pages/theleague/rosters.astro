@@ -89,7 +89,8 @@ import {
   calculateContractYearsMeta,
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
-import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import { isDeclarationVisible } from '../../utils/contract-record';
 import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
 import { buildDraftAssets } from '../../utils/rosters/draft-assets';
 import { resolveEligibility } from '../../utils/rosters/eligibility';
@@ -1499,13 +1500,22 @@ if (testEligibility) {
 
 // Load existing declarations for indicator display
 const allDeclarations = await getDeclarations();
-const declarationsByPlayer: Record<string, { status: string; type: string; requestedYears: number }> = {};
+const declarationsByPlayer: Record<string, { status: string; type: string; requestedYears: number; requestedSalary?: number }> = {};
+// A queued franchise tag stays secret until Feb 15: only its own team and the
+// commissioner see it here (isDeclarationVisible).
+const declarationViewer = {
+  franchiseId: userFranchiseId || null,
+  isCommissioner: !!authUser && isCommissionerOrAdminForLeague(authUser, THELEAGUE_ID),
+};
 for (const decl of allDeclarations) {
+  if (!isDeclarationVisible(decl, declarationViewer)) continue;
   if (decl.status === 'pending' || decl.status === 'approved') {
     declarationsByPlayer[decl.playerId] = {
       status: decl.status,
       type: decl.type,
       requestedYears: decl.requestedYears,
+      // A queued franchise tag's price, shown as pending until Feb 15.
+      ...(decl.type === 'franchise-tag' ? { requestedSalary: decl.requestedSalary } : {}),
     };
   }
 }
@@ -1928,20 +1938,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       <div class="roster-table-card">
         <div class="roster-controls">
           <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
-
-          <button class="clear-all-tags-btn" id="clearAllTagsBtn" data-sim-clear style="display: none;" title="Clear all contract actions">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-            Clear All Tags
-          </button>
-
-          <button class="submit-franchise-tags-btn loading-btn loading-btn--on-accent" id="submitFranchiseTagsBtn" data-sim-submit style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span class="submit-franchise-tags-btn__label">Submit Tags/Extensions</span>
-          </button>
 
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
@@ -3451,6 +3447,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     font-weight: 700;
   }
 
+  /* A queued franchise tag's salary wears the pending chip, but is not a button. */
+  :global(.yrs-chip--static) {
+    cursor: default;
+  }
+
   /* Approved: green accent, non-interactive */
   :global(.yrs-chip--approved .yrs-chip__value) {
     color: #059669;
@@ -3940,72 +3941,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   :global(.contract-action-remove:hover) {
     background: rgba(255, 255, 255, 0.5);
-  }
-
-  .clear-all-tags-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border: 1px solid #6f6f6f;
-    background: white;
-    color: #6f6f6f;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all var(--transition-base);
-  }
-
-  .clear-all-tags-btn:hover {
-    background: #6f6f6f;
-    color: white;
-    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
-  }
-
-  .clear-all-tags-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  .submit-franchise-tags-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border: 1px solid #1c497c;
-    background: var(--color-primary-fill, var(--color-primary, #1c497c));
-    color: var(--on-color-primary, white);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all var(--transition-base);
-  }
-
-  .submit-franchise-tags-btn:hover {
-    background: #163a63;
-    border-color: #163a63;
-    box-shadow: 0 2px 6px rgba(28, 73, 124, 0.4);
-  }
-
-  .submit-franchise-tags-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .submit-franchise-tags-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  @media (max-width: 640px) {
-
-    .clear-all-tags-btn {
-      order: -1;
-      width: 100%;
-      justify-content: center;
-    }
   }
 
   /* Players by Team Report */
@@ -4602,12 +4537,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       gap: 0.75rem;
     }
 
-    .clear-all-tags-btn {
-      width: 100%;
-      justify-content: center;
-      order: 2;
-    }
-
     .mode-toggle {
       order: 1;
     }
@@ -4764,6 +4693,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     withoutSimRemoved,
   } from '../../utils/rosters/sim-summary';
   import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
+  import { submittableMoves, planToSave, restorablePlan } from '../../utils/rosters/gm-plan';
   import { createCdmWizard } from '../../utils/cdm-wizard';
   import { refreshConfigFromElement, replaceContents } from '../../utils/rosters/config-refresh';
   import { revealActiveTeamCrest } from '../../utils/rosters/reveal-active-team';
@@ -4920,17 +4850,29 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   // for tags and the franchise id for extensions.
   const franchiseTagsByYear: Record<string, string> = {}; // { `${franchiseId}:${yearIndex}`: playerId }
   const veteranExtensionByTeam: Record<string, string> = {}; // { franchiseId: playerId }
+  // Rookie extensions and 1st-round options have no per-team limit: any
+  // eligible player may take one (Brandon, 2026-11-14). Only the veteran
+  // extension and the franchise tag are one per team.
   /** The club being viewed — the hidden input every team switch writes. */
   const viewedTeamId = () =>
     (document.getElementById('rosterTeamSelect') as HTMLInputElement | null)?.value ?? '';
-  /** The viewer's own simulated tags and extensions: the only ones Submit may file. */
-  const ownDeclarableActions = () => {
-    const own = config.authUser?.franchiseId;
-    if (!own) return [];
-    return Object.values(contractActions as Record<string, any>).filter(
-      (a) => (a.type === 'franchise' || a.type === 'extension') && a.franchiseId === own
-    );
+  /**
+   * The signed-in owner's franchise in THIS league, or null. Both leagues have
+   * a franchise 0001, so a session from another league owns nothing here.
+   */
+  const planOwnerId = (): string | null => {
+    const user = config.authUser;
+    if (!user?.franchiseId) return null;
+    if (user.leagueId && config.defaultLeagueId && String(user.leagueId) !== String(config.defaultLeagueId)) return null;
+    return String(user.franchiseId);
   };
+  /**
+   * The viewer's own moves Submit files — tags, veteran and rookie
+   * extensions, 1st-round options and cuts — paperwork first, cuts last
+   * (src/utils/rosters/gm-plan.ts). A simulation on another club's player
+   * stays a simulation.
+   */
+  const ownDeclarableActions = () => submittableMoves(contractActions as Record<string, any>, planOwnerId());
   let currentSeason = config.defaultSeason; // Track current season for salary averages
 
   // --- Contract Declaration State ---
@@ -5187,6 +5129,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       delete veteranExtensionByTeam[teamId];
     }
 
+
     let result = null;
 
     // Check for conflicts with existing tags
@@ -5214,18 +5157,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       );
       veteranExtensionByTeam[teamId] = id;
     } else if (actionType === 'team-option') {
-      // Team option is separate from franchise tag — a team can exercise both
+      // Team option is separate from franchise tag — a team can exercise both.
       result = calculateTeamOption(salary, position, config.extensionSeason);
       result.ufaYearIndex = years; // Year after current contract
       result.newYears = years + 1; // Total years: current contract + 1 option year
     } else if (actionType === 'rookie-extension') {
-      // Rookie extension shares the team's extension slot with veteran extension
-      if (veteranExtensionByTeam[teamId]) {
-        delete contractActions[veteranExtensionByTeam[teamId]];
-        delete veteranExtensionByTeam[teamId];
-      }
+      // No per-team limit on rookie extensions
       result = calculateVeteranExtension(years, position, config.extensionSeason, 2, salary);
-      veteranExtensionByTeam[teamId] = id;
     } else if (actionType === 'cut') {
       const penalty = calculateCutPenalty(salary, years);
       result = {
@@ -5249,6 +5187,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         playerPosition: position,
         originalSalary: salary,
         originalYears: years,
+        // The API checks a 1st-round option against MFL's 'TO' designation.
+        originalContractInfo: selectedPlayer.contractInfo || getPlayerEligibility(id, teamId)?.contractInfo || '',
         // Whose player: Submit files only the viewer's own (ownDeclarableActions).
         franchiseId: teamId,
         ...result
@@ -5283,8 +5223,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // Clear tag tracking
       if (action.type === 'franchise' && action.ufaYearIndex !== undefined) {
         delete franchiseTagsByYear[`${action.franchiseId}:${action.ufaYearIndex}`];
-      } else if ((action.type === 'extension' || action.type === 'rookie-extension')
-        && veteranExtensionByTeam[action.franchiseId] === playerId) {
+      } else if (action.type === 'extension' && veteranExtensionByTeam[action.franchiseId] === playerId) {
         delete veteranExtensionByTeam[action.franchiseId];
       }
 
@@ -5303,35 +5242,150 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     updateClearAllButton();
   };
 
-  // Submit window: ~NFL Week 12 (Nov 14) through Feb 15 each year
-  const isInSubmitWindow = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const testDateStr = urlParams.get('testDate');
-    const now = testDateStr ? new Date(testDateStr) : new Date();
-    const m = now.getMonth(); // 0-indexed: 10=Nov, 11=Dec, 0=Jan, 1=Feb
-    const d = now.getDate();
-    return (m === 10 && d >= 14) || m === 11 || m === 0 || (m === 1 && d <= 15);
-  };
-
   // Update clear all / submit tags/extensions button visibility.
   //
   // Every copy, not one id: the desktop buttons above the table and the phone
   // Cap by year sheet's (RosterSimTray) both carry `data-sim-clear` /
-  // `data-sim-submit`, so visibility, loading state, aria-busy, the error
-  // flash and the Nov 14 – Feb 15 window stay in step across them. The
+  // `data-sim-submit`, so visibility, loading state, aria-busy and the error
+  // flash stay in step across them. Submit is open all year (Brandon,
+  // 2026-11-15); only a franchise tag has a window, and submittableMoves
+  // leaves a tag out of `own` outside Feb 1-14. The
   // originals keep their ids; the sheet's copies have none.
   const simClearButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[data-sim-clear]'));
   const simSubmitButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[data-sim-submit]'));
 
   const updateClearAllButton = () => {
     const hasActions = Object.keys(contractActions).length > 0;
-    // Submit is for the viewer's OWN tags and extensions; a simulation on
-    // another club's player stays a simulation.
-    const hasOwnDeclarations = ownDeclarableActions().length > 0;
+    // Submit is for the viewer's OWN moves; a simulation on another club's
+    // player stays a simulation.
+    const own = ownDeclarableActions();
+    const canSubmit = own.length > 0;
+    // An own-team tag outside Feb 1-14: kept in the plan, not submittable yet.
+    const ownerId = planOwnerId();
+    const heldTag = !!ownerId && Object.values(contractActions as Record<string, any>).some(
+      (a) => a?.type === 'franchise' && String(a.franchiseId ?? '') === String(ownerId),
+    ) && !own.some((a: any) => a.type === 'franchise');
+    const cuts = own.filter((a: any) => a.type === 'cut');
     simClearButtons().forEach((btn) => { btn.style.display = hasActions ? 'inline-flex' : 'none'; });
     simSubmitButtons().forEach((btn) => {
-      btn.style.display = hasOwnDeclarations && isInSubmitWindow() ? 'inline-flex' : 'none';
+      btn.style.display = canSubmit ? 'inline-flex' : 'none';
+      const label = btn.querySelector('.submit-franchise-tags-btn__label');
+      if (label && !btn.classList.contains('is-loading')) {
+        label.textContent = `Submit ${own.length} ${own.length === 1 ? 'move' : 'moves'}`;
+      }
     });
+
+    // The review: its title, the bar's button, and the cut confirmation.
+    const root = document.querySelector('.roster-page[data-league="theleague"]');
+    if (root) {
+      const title = root.querySelector<HTMLElement>('[data-plan-sheet-title]');
+      if (title) title.textContent = canSubmit ? 'Review & submit' : 'Your plan';
+      root.querySelectorAll<HTMLElement>('[data-plan-review-label]').forEach((btn) => {
+        btn.textContent = canSubmit ? 'Review & submit' : 'Review';
+      });
+      const intro = root.querySelector<HTMLElement>('[data-plan-intro]');
+      if (intro) {
+        intro.textContent = canSubmit
+          ? 'Nothing is filed until you submit. Here is what each move does.'
+          : heldTag
+            ? 'Franchise tags can be submitted Feb 1 to Feb 14. Your plan stays saved until then.'
+            : 'Simulated moves. Only your own team’s moves can be submitted.';
+      }
+      const confirmWrap = root.querySelector<HTMLElement>('[data-plan-cut-confirm-wrap]');
+      const confirmBox = root.querySelector<HTMLInputElement>('[data-plan-cut-confirm]');
+      if (confirmWrap) confirmWrap.hidden = !(canSubmit && cuts.length > 0);
+      const confirmText = root.querySelector<HTMLElement>('[data-plan-cut-confirm-text]');
+      if (confirmText && cuts.length) {
+        const names = cuts.map((a: any) => a.playerName || 'the player').join(', ');
+        confirmText.textContent = `I understand cutting ${names} releases ${cuts.length === 1 ? 'him' : 'them'} in MFL when I submit, and can’t be undone.`;
+      }
+      if (confirmBox && !cuts.length) confirmBox.checked = false;
+      const needsConfirm = cuts.length > 0 && !confirmBox?.checked;
+      simSubmitButtons().forEach((btn) => {
+        if (!btn.classList.contains('is-loading')) btn.disabled = needsConfirm;
+      });
+    }
+
+    savePlanSoon();
+  };
+
+  // ── The saved plan (owner only; src/utils/rosters/gm-plan.ts) ───────────
+  // An owner's own moves are kept to their account through /api/gm-plan, so
+  // a reload or another device finds them. Saving waits until the saved plan
+  // has been read back on this page load: before that, a save would replace
+  // the stored plan with whatever this visit happened to start with.
+  let planReady = false;
+  let planSaveTimer = 0;
+  let planSavedSignature = '';
+  const planSignature = (moves: any[]) =>
+    JSON.stringify(moves.map((m) => [String(m.playerId), m.type, m.newYears ?? null, m.newSalary ?? null]).sort());
+  const setPlanSaved = (text: string) => {
+    document
+      .querySelectorAll<HTMLElement>('.roster-page[data-league="theleague"] [data-plan-saved]')
+      .forEach((el) => { el.textContent = text; });
+  };
+  const savePlanNow = async () => {
+    window.clearTimeout(planSaveTimer);
+    const own = planOwnerId();
+    if (!planReady || !own) return;
+    const moves = planToSave(contractActions as Record<string, any>, own);
+    const signature = planSignature(moves);
+    if (signature === planSavedSignature) return;
+    try {
+      const res = await fetch('/api/gm-plan', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moves }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      planSavedSignature = signature;
+      setPlanSaved(moves.length ? 'Saved to your account' : '');
+    } catch {
+      setPlanSaved('Not saved. It will try again on your next change.');
+    }
+  };
+  const savePlanSoon = () => {
+    if (!planReady || !planOwnerId()) return;
+    window.clearTimeout(planSaveTimer);
+    planSaveTimer = window.setTimeout(() => { void savePlanNow(); }, 600);
+  };
+  /** Read the owner's saved plan back into this page's simulation. */
+  const restoreSavedPlan = async (ownRows: () => any[]) => {
+    planReady = false;
+    const own = planOwnerId();
+    if (!own) return;
+    try {
+      const res = await fetch('/api/gm-plan', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const saved = Array.isArray(data?.moves) ? data.moves : [];
+      const { moves, dropped } = restorablePlan(saved, ownRows());
+      let added = 0;
+      const actions = contractActions as Record<string, any>;
+      moves.forEach((move: any) => {
+        const id = String(move.playerId);
+        if (actions[id]) return; // a move made on this visit wins
+        actions[id] = { ...move, playerId: id, franchiseId: own };
+        if (move.type === 'franchise' && move.ufaYearIndex !== undefined) {
+          franchiseTagsByYear[`${own}:${move.ufaYearIndex}`] = id;
+        } else if (move.type === 'extension') {
+          veteranExtensionByTeam[own] = id;
+        }
+        added += 1;
+      });
+      planSavedSignature = planSignature(saved);
+      planReady = true;
+      if (added) recalculateRoster();
+      updateClearAllButton();
+      if (dropped) {
+        setPlanSaved(`${dropped} saved ${dropped === 1 ? 'move no longer matches' : 'moves no longer match'} the roster and ${dropped === 1 ? 'was' : 'were'} removed`);
+      } else if (planToSave(contractActions as Record<string, any>, own).length) {
+        setPlanSaved('Saved to your account');
+      }
+    } catch {
+      // Leave saving off: writing now could overwrite a plan we failed to read.
+      setPlanSaved('Couldn’t load your saved plan. Changes won’t be saved on this visit.');
+    }
   };
 
   // Clear all tags / Submit tags & extensions.
@@ -5357,6 +5411,21 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     if (submitButtons.some((btn) => btn.disabled)) return;
     const actionsToSubmit = ownDeclarableActions();
     if (!actionsToSubmit.length) return;
+    const cutsToFile = actionsToSubmit.filter((a: any) => a.type === 'cut');
+    const paperwork = actionsToSubmit.filter((a: any) => a.type !== 'cut');
+    const statusEl = document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] [data-plan-status]');
+    const setStatus = (text: string, tone: '' | 'is-error' | 'is-done' = '') => {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.classList.toggle('is-error', tone === 'is-error');
+      statusEl.classList.toggle('is-done', tone === 'is-done');
+    };
+    const confirmBox = document.querySelector<HTMLInputElement>('.roster-page[data-league="theleague"] [data-plan-cut-confirm]');
+    if (cutsToFile.length && !confirmBox?.checked) {
+      setStatus('Tick the box to confirm the cut first.', 'is-error');
+      return;
+    }
+    setStatus('');
 
     const franchiseId = config.authUser?.franchiseId ?? currentTeam;
     const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
@@ -5383,8 +5452,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       btn.disabled = true;
       btn.classList.add('is-loading');
       btn.setAttribute('aria-busy', 'true');
-      btn.setAttribute('aria-label', 'Submitting declarations');
+      btn.setAttribute('aria-label', 'Submitting your plan');
     });
+    let released = 0;
+    let filed = 0;
+    let written = 0;
+    let queuedTags = 0;
 
     try {
       // Sequential, one at a time, stopping at the first failure — the API
@@ -5393,31 +5466,75 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // per-action callback keeps whatever already landed if a later one
       // throws. Shared with the homepage card and the Front Office hub; see
       // contract-actions-client.ts.
-      await submitStagedActions(actionsToSubmit, { leagueId, franchiseId, franchiseName }, (action: any) => {
+      await submitStagedActions(paperwork, { leagueId, franchiseId, franchiseName }, (action: any) => {
         const isFranchise = action.type === 'franchise';
         // Optimistic update
         localDeclarations[action.playerId] = {
           status: 'pending',
           years: isFranchise ? 1 : action.newYears,
+          // A queued tag's price, shown as pending in its UFA year until Feb 15.
+          ...(isFranchise ? { type: 'franchise-tag', requestedSalary: action.newSalary } : {}),
         };
         delete contractActions[action.playerId];
         if (isFranchise && action.ufaYearIndex !== undefined) {
           delete franchiseTagsByYear[`${action.franchiseId}:${action.ufaYearIndex}`];
-        } else if (!isFranchise) {
+        } else if (action.type === 'extension') {
           delete veteranExtensionByTeam[action.franchiseId];
         }
+        if (action.type === 'extension') written += 1;
+        else if (isFranchise) queuedTags += 1;
+        else filed += 1;
       });
+
+      // Cuts last, one at a time: they cannot be undone, so a paperwork
+      // failure above stops the run before anyone is released. 409 = already
+      // off the MFL roster, which is the end state the owner asked for.
+      for (const cut of cutsToFile as any[]) {
+        const res = await fetch('/api/cut-player', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: String(cut.playerId) }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status !== 409 && (!res.ok || !data?.success)) {
+          throw new Error(data?.message || `Couldn’t release ${cut.playerName || 'that player'}. Nothing after it was filed.`);
+        }
+        delete (contractActions as Record<string, any>)[String(cut.playerId)];
+        released += 1;
+      }
 
       recalculateRoster();
       updateClearAllButton();
+      await savePlanNow();
       endTagsBtnLoading();
       setTagsBtnLabel('Submitted!');
+      const parts = [];
+      if (queuedTags) parts.push(`${queuedTags} franchise tag queued for Feb 15`);
+      if (filed) parts.push(`${filed} written to MFL within 30 minutes`);
+      if (written) parts.push(`${written} veteran extension filed to MFL`);
+      if (released) parts.push(`${released} released in MFL`);
+      setStatus(`Submitted: ${parts.join(', ')}.`, 'is-done');
+      if (released) {
+        // The roster changed in MFL: reload so every number reads the new roster.
+        setTimeout(() => window.location.reload(), 1800);
+        return;
+      }
       setTimeout(() => {
         restoreTagsBtnLabels();
         submitButtons.forEach((btn) => { btn.disabled = false; });
+        updateClearAllButton();
       }, 2000);
     } catch (err) {
-      console.error('Tags/extensions submission failed:', err);
+      console.error('Plan submission failed:', err);
+      // Whatever landed before the failure is already off the plan.
+      recalculateRoster();
+      updateClearAllButton();
+      void savePlanNow();
+      const landed = filed + written + released + queuedTags;
+      setStatus(
+          `${landed ? `${landed} ${landed === 1 ? 'move was' : 'moves were'} filed. ` : ''}${(err as Error)?.message || 'Something went wrong.'} The rest are still in your plan.`,
+          'is-error',
+      );
       endTagsBtnLoading();
       setTagsBtnLabel(err.message || 'Error — try again');
       submitButtons.forEach((btn) => {
@@ -5473,6 +5590,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // Every copy (the desktop buttons and the phone review sheet's).
     simClearButtons().forEach((clearAllBtn) => { clearAllBtn.onclick = handleClearAllTagsClick; });
     simSubmitButtons().forEach((submitBtn) => { submitBtn.onclick = handleSubmitFranchiseTagsClick; });
+    const cutConfirm = document.querySelector<HTMLInputElement>('.roster-page[data-league="theleague"] [data-plan-cut-confirm]');
+    if (cutConfirm) cutConfirm.onchange = () => updateClearAllButton();
     initSimSurfaces();
   };
 
@@ -6717,6 +6836,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         injuryStatus: btn.dataset.playerInjuryStatus || '',
         salary: playerSalary,
         years: playerYears,
+        // MFL's designation (RC / TO): a filed 1st-round option is checked against it.
+        contractInfo: btn.dataset.playerContractInfo || '',
         birthdate: birthdateRaw ? Number(birthdateRaw) : (actionModalData.birthdate ?? null),
         franchiseId: btn.dataset.playerFranchiseId || '',
         tradeBait: btn.dataset.playerTradeBait === 'true',
@@ -6940,9 +7061,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               const toSalaries = config.salaryAverages?.[config.extensionSeason]?.teamOptionSalaries || {};
               const playerPos = (player.position ?? '').toUpperCase();
 
+              const queuedTag = decl && decl.type === 'franchise-tag' && decl.status === 'pending' && decl.requestedSalary
+                ? Number(decl.requestedSalary)
+                : 0;
               if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
                 value = _capSpaceFmt.format(action.newSalary ?? 0);
                 cellClass += ' salary-cell--simulated';
+              } else if (queuedTag && isFirstYearUfa) {
+                // Queued franchise tag (Feb 1-14): its price in the UFA year,
+                // in the same amber pending chip as a declared year, until
+                // the Feb 15 write lands it in MFL.
+                value = `<span class="yrs-chip yrs-chip--pending yrs-chip--static" title="Franchise tag queued. Written to MFL on Feb 15."><span class="yrs-chip__value">${_capSpaceFmt.format(queuedTag)}</span></span>`;
+                cellClass += ' salary-cell--queued-tag';
               } else if (action && action.type === 'team-option' && action.ufaYearIndex === index) {
                 value = _capSpaceFmt.format(action.newSalary ?? 0);
                 cellClass += ' salary-cell--simulated';
@@ -10169,6 +10299,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             baseDead: simBaseDead,
             years: salaryYears,
             chargesFor: simChargesFor,
+            ownFranchiseId: planOwnerId(),
           }),
           capByYear: buildCapByYear({
             years: salaryYears,
@@ -10427,6 +10558,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       switchView(currentView);
     }
     updateView();
+
+    // The owner's saved GM office plan comes back into the simulation, checked
+    // against their roster as it is now (src/utils/rosters/gm-plan.ts).
+    void restoreSavedPlan(() => {
+      const own = planOwnerId();
+      const team = own ? seasons[defaultSeason]?.teams?.[own] : null;
+      return team ? buildDisplayRows(team) : [];
+    });
 
     // ----------------------------------------------------------------
     // Player sheet — the Salary tab, hero quick actions and More actions

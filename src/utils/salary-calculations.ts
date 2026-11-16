@@ -228,7 +228,9 @@ export interface CapChargeOptions {
  *  - an extension's explicit per-year breakdown overrides the 10% escalation.
  *
  * Franchise tags and team options are added at their UFA year rather than
- * escalated, because they are one-year awards priced off positional averages.
+ * escalated, because they are one-year awards priced off positional averages
+ * — simulated ones from `contractActions`, a QUEUED tag (a pending
+ * `franchise-tag` declaration with its `requestedSalary`) from the declaration.
  *
  * Called with no options this is equivalent to `calculateCapCharges(rows)`.
  */
@@ -253,7 +255,18 @@ export const calculateCapChargesWithActions = (
       const effectiveContractYears =
         declYears != null ? declYears : parseNumber(player.contractYears ?? 0);
 
-      if (effectiveContractYears <= index) return sum;
+      if (effectiveContractYears <= index) {
+        // A queued franchise tag (Feb 1-14, written Feb 15) is a 1-year award
+        // in the player's UFA year, like a simulated tag below.
+        const queuedTag =
+          index === effectiveContractYears &&
+          decl?.type === 'franchise-tag' &&
+          decl?.status === 'pending' &&
+          !(action && action.type === 'franchise')
+            ? Number(decl.requestedSalary ?? 0) || 0
+            : 0;
+        return sum + queuedTag;
+      }
 
       const percent = getCapPercent(normalizeBucket(player), index === 0, capInclusion);
       let salaryForYear = parseNumber(player.salary) * ANNUAL_ESCALATION ** index;

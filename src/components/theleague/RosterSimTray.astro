@@ -1,9 +1,17 @@
 ---
 /**
- * The Rosters sim bar and its Cap by year sheet — TheLeague, phone only
+ * The Rosters sim bar and its review sheet — TheLeague
  * (docs/plans/rosters-mobile-layout.md § 6).
  *
- * THE BAR is fixed to the bottom of the viewport while any move is simulated,
+ * THE GM OFFICE PLAN (Brandon, 2026-11-15, option A): at every width this is
+ * the place an owner turns simulated moves into real ones. The bar is the
+ * plan bar (desktop: floating over the table; phone: pinned to the bottom),
+ * the sheet is Review & submit (desktop: a right-hand drawer; phone: a bottom
+ * sheet). An owner's own moves save to their account (/api/gm-plan), each
+ * says what it does on submit, and a cut needs the confirm box ticked. The
+ * rules live in src/utils/rosters/gm-plan.ts.
+ *
+ * THE BAR is fixed to the viewport while any move is simulated,
  * on ANY viewed team (simulations apply to whichever team is open): the move
  * count, this year's cap space and its change against the unsimulated
  * baseline, and Review. It lives inside the page's own markup, never appended
@@ -11,12 +19,10 @@
  *
  * THE SHEET (a native modal <dialog>, so focus containment, Esc and the inert
  * page behind it come from the platform) lists each move with its cap effect
- * and an Undo, every salary year's Salary / Dead / Space, and Clear all /
- * Submit. Those two are NOT new implementations: they carry the same
- * `data-sim-clear` / `data-sim-submit` hooks as the buttons above the desktop
- * table, and the page's handlers act on every match, so loading state,
- * aria-busy, the error flash and the Nov 14 – Feb 15 window stay in step. No
- * id is duplicated — the originals keep theirs; these have none.
+ * and an Undo, every salary year's Payroll (salary + dead) / moved player's cap hit / Space, and Clear all /
+ * Submit. They carry the `data-sim-clear` / `data-sim-submit` hooks the
+ * page's handlers bind (the desktop toolbar's copies were retired when the bar
+ * reached desktop), so loading state and aria-busy live in one place.
  *
  * Every number is painted by `renderSimSurfaces`
  * (src/utils/rosters/sim-summary.ts). Styles: src/styles/rosters-mobile.css.
@@ -29,52 +35,70 @@ interface Props {
 const { years } = Astro.props;
 ---
 
-<div class="rsim-bar" data-rsim-bar role="region" aria-label="Simulated moves" hidden>
-  <span class="rsim-bar__count" data-rsim-count>0 sims</span>
+<div class="rsim-bar" data-rsim-bar role="region" aria-label="Your plan" hidden>
+  <span class="rsim-bar__count" data-rsim-count>0 moves</span>
   <span class="rsim-bar__figure">
     <span class="rsim-bar__label"><span data-rsim-year>{years[0]}</span> cap space</span>
     <span class="rsim-bar__values">
       <strong class="rsim-bar__space" data-rsim-space></strong>
       <span class="rsim-bar__change" data-rsim-change></span>
     </span>
+    <span class="rsim-bar__saved" data-plan-saved></span>
   </span>
-  <button type="button" class="rsim-bar__review" data-rsim-open>Review</button>
+  <button type="button" class="rsim-bar__review" data-rsim-open data-plan-review-label>Review</button>
   <p class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" data-rsim-live></p>
 </div>
 
 <dialog class="ui-modal rsim-sheet" data-rsim-sheet aria-labelledby="rsimSheetTitle">
   <div class="rsim-sheet__panel">
     <header class="rsim-sheet__head">
-      <h2 class="rsim-sheet__title" id="rsimSheetTitle">Cap by year</h2>
-      <button type="button" class="rsim-sheet__close" data-rsim-close aria-label="Close cap by year">
+      <h2 class="rsim-sheet__title" id="rsimSheetTitle" data-plan-sheet-title>Your plan</h2>
+      <button type="button" class="rsim-sheet__close" data-rsim-close aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
           <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
         </svg>
       </button>
     </header>
+    <!-- Only this middle scrolls. The head and foot are plain flex rows outside
+         it, not sticky: sticky inside a scrolling dialog jumped on Android
+         while a fling settled (Brandon, 2026-11-15). -->
+    <div class="rsim-sheet__body">
+    <p class="rsim-sheet__intro" data-plan-intro>
+      Nothing is filed until you submit. Here is what each move does.
+    </p>
+    <p class="rsim-sheet__saved" data-plan-saved></p>
 
     <section class="rsim-sheet__section" aria-labelledby="rsimMovesTitle">
-      <h3 class="rsim-sheet__subtitle" id="rsimMovesTitle">Simulated moves</h3>
+      <h3 class="rsim-sheet__subtitle" id="rsimMovesTitle">Moves</h3>
       <ul class="rsim-moves" data-rsim-moves></ul>
       <p class="rsim-sheet__empty" data-rsim-empty>
-        No simulated moves. Tap a player, then Cut or Trade, to try one.
+        No moves yet. Open a player's menu, then Extend, Tag or Cut, to add one.
       </p>
     </section>
 
     <section class="rsim-sheet__section" aria-labelledby="rsimYearsTitle">
-      <h3 class="rsim-sheet__subtitle" id="rsimYearsTitle">Totals by year</h3>
+      <h3 class="rsim-sheet__subtitle" id="rsimYearsTitle">Cap by year</h3>
       <table class="ui-table rsim-years">
         <thead>
           <tr>
             <th scope="col">Year</th>
-            <th scope="col">Salary</th>
-            <th scope="col">Dead</th>
+            <th scope="col">Payroll</th>
+            <th scope="col" data-rsim-moves-col hidden></th>
             <th scope="col">Space</th>
           </tr>
         </thead>
         <tbody data-rsim-years></tbody>
       </table>
     </section>
+
+    </div>
+    <!-- Always in view: the confirm and the buttons (Brandon, 2026-11-15). -->
+    <div class="rsim-sheet__foot">
+    <label class="rsim-sheet__confirm" data-plan-cut-confirm-wrap hidden>
+      <input type="checkbox" id="gmPlanCutConfirm" data-plan-cut-confirm />
+      <span data-plan-cut-confirm-text>I understand a cut releases the player in MFL when I submit, and can’t be undone.</span>
+    </label>
+    <p class="rsim-sheet__status" role="status" aria-live="polite" data-plan-status></p>
 
     <footer class="rsim-sheet__actions">
       <button type="button" class="rsim-sheet__btn rsim-sheet__btn--ghost" data-sim-clear style="display: none;">
@@ -86,8 +110,9 @@ const { years } = Astro.props;
         data-sim-submit
         style="display: none;"
       >
-        <span class="submit-franchise-tags-btn__label">Submit tags/extensions</span>
+        <span class="submit-franchise-tags-btn__label">Submit</span>
       </button>
     </footer>
+    </div>
   </div>
 </dialog>

@@ -191,7 +191,10 @@ never becomes a site session (`tests/mfl-live-app-auth.test.ts`). `isCommissione
 carries no league, so an endpoint acting on a FIXED league (contracts,
 autocut, TheLeague's GroupMe) gates with `isCommissionerOrAdminForLeague`, and
 MFL writes use the caller's own cookie, never the server's env credentials
-(`tests/auth-league-scope.test.ts`). Rate-limit any new LLM-backed endpoint with
+(`tests/auth-league-scope.test.ts`). The one exception is an owner's veteran
+extension, which MFL accepts only from a commissioner login: it writes through
+`leagueCommissionerCredentials` after the server re-derives every term, and
+`tests/veteran-extension-filing.test.ts` keeps that helper one caller wide. Rate-limit any new LLM-backed endpoint with
 `src/utils/rate-limit.ts`, and run any server-side fetch of a user-supplied
 URL through `src/utils/url-guard.ts#validatePublicUrl`.
 

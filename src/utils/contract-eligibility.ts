@@ -6,7 +6,9 @@
  * of modifications are available, and when deadlines expire.
  */
 
+import { veteranExtensionEligibility, priceVeteranExtension } from './veteran-extension-rules';
 import { getContractWindow } from './contract-validation';
+import { isFranchiseTagOpen } from './franchise-tag-window.mjs';
 import type {
   DeclarationType,
   EligibilityResult,
@@ -281,7 +283,7 @@ export interface SalaryAverages {
  * 1. New acquisition (BBID/auction within deadline)
  * 2. Rookie override (RC player before August cutdown)
  * 3. Team option (TO player before Year 4 begins)
- * 4. Franchise tag (1 year remaining, offseason, excluding RC/TO)
+ * 4. Franchise tag (1 year remaining, Feb 1-14 tagging period, excluding RC/TO)
  * 5. Veteran extension (2+ years, not RC, not TO)
  * 6. Rookie extension (RC player with 2+ years, offseason)
  *
@@ -375,13 +377,13 @@ export function getPlayerEligibility(
     };
   }
 
-  // The remaining types require an active contract window
-  if (!window.inWindow) return base;
-
-  // 4. Check for franchise tag eligibility (1 year remaining, offseason only)
+  // 4. Franchise tag: 1 year remaining, inside the Constitution's tagging
+  // period, Feb 1 to Feb 14 at 8:45pm PT (franchise-tag-window.mjs). It was
+  // gated on the Feb 15 to August "offseason" window, which is wrong, and it
+  // runs before the generic window gate, which does not cover early February.
   if (
     currentYears === 1 &&
-    window.windowType === 'offseason' &&
+    isFranchiseTagOpen(now) &&
     contractInfo !== 'F' &&
     !isRC &&
     contractInfo !== 'TO'
@@ -400,19 +402,31 @@ export function getPlayerEligibility(
     };
   }
 
-  // 5. Check for veteran extension (2+ years, NOT RC, NOT TO)
-  // TO players are handled above in check #3; exclude them here to prevent fallthrough
-  if (currentYears >= 2 && !isRC && contractInfo !== 'TO' && window.windowType === 'offseason') {
-    // Extension salary = currentSalary escalated to the extension point (10% per current year)
-    const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
-    const extensionYears = currentYears + 2;
-    return {
-      ...base,
-      eligible: true,
-      declarationType: 'veteran-extension',
-      extensionSalary,
-      extensionYears,
-    };
+  // The remaining types require an active contract window
+  if (!window.inWindow) return base;
+
+  // 5. Veteran extension — the rule lives in veteran-extension-rules.ts
+  // (Constitution § VETERAN EXTENSIONS). Open all year (Brandon, 2026-11-14),
+  // so no offseason gate; rookie contracts (RC and TO) never qualify.
+  if (!isRC && contractInfo !== 'TO') {
+    const position = (playerInfo?.position ?? '').toUpperCase();
+    const top5 = salaryAverages?.extensionSalaries?.[position] ?? 0;
+    const nested = { positions: { [position]: { top5Average: top5 } } };
+    const vetPlayer = { contractYears: currentYears, contractInfo, salary: currentSalary, position };
+    const vet = veteranExtensionEligibility(vetPlayer, currentYear);
+    if (vet.eligible) {
+      const longest = Math.max(...vet.yearChoices);
+      // Unpriced when the averages were not passed; the server prices it anyway.
+      const price = top5 > 0 ? priceVeteranExtension(vetPlayer, longest, nested) : null;
+      return {
+        ...base,
+        eligible: true,
+        declarationType: 'veteran-extension',
+        yearOptions: vet.yearChoices.map((add) => currentYears + add),
+        extensionSalary: price?.newSalary,
+        extensionYears: currentYears + longest,
+      };
+    }
   }
 
   // 6. Check for rookie extension (RC player with 2+ years, offseason)

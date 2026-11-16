@@ -13,6 +13,7 @@ import {
   applySimActionsToRows,
   buildCapByYear,
   formatSignedMoney,
+  movesColumn,
   summarizeSimMoves,
   withoutSimRemoved,
   type SimActions,
@@ -138,5 +139,48 @@ describe('formatSignedMoney', () => {
     expect(formatSignedMoney(847_000)).toBe('+$847,000');
     expect(formatSignedMoney(-120_000)).toBe('−$120,000');
     expect(formatSignedMoney(0.2)).toBe('$0');
+  });
+});
+
+describe('the Cap by year moved-player column (Brandon, 2026-11-15)', () => {
+  it('carries the extended player\'s new cap hit for every year, under his last name', () => {
+    const actions: SimActions = { '1': { type: 'extension', playerName: 'Jared Goff', newSalary: 6_000_000, newYears: 5 } };
+    const moves = summarizeSimMoves({
+      actions,
+      baseRows: rows,
+      baseDead: [0, 0, 0, 0, 0],
+      years: YEARS,
+      chargesFor,
+    });
+    const own = chargesFor(applySimActionsToRows(rows.slice(0, 1), actions), actions);
+    expect(own[4]).toBeGreaterThan(0); // the extension's added years carry salary
+    expect(moves[0].yearly).toEqual(own);
+    const col = movesColumn(moves)!;
+    expect(col.label).toBe('Goff');
+    expect(col.values).toEqual(own);
+  });
+
+  it('counts a cut player\'s dead money as his cap hit, and reads MFL\'s "Last, First"', () => {
+    const moves = summarizeSimMoves({
+      actions: { '1': { type: 'cut', playerName: 'Jackson, Lamar', currentPenalty: 2_500_000, futurePenalty: 750_000 } },
+      baseRows: rows,
+      baseDead: [0, 0, 0, 0, 0],
+      years: YEARS,
+      chargesFor,
+    });
+    const col = movesColumn(moves)!;
+    expect(col.label).toBe('Jackson');
+    expect(col.values.slice(0, 2)).toEqual([2_500_000, 750_000]);
+  });
+
+  it('has no column when no move touches this roster', () => {
+    const moves = summarizeSimMoves({
+      actions: { '99': { type: 'trade', playerName: 'Elsewhere' } },
+      baseRows: rows,
+      baseDead: [0, 0, 0, 0, 0],
+      years: YEARS,
+      chargesFor,
+    });
+    expect(movesColumn(moves)).toBeNull();
   });
 });

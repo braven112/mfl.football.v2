@@ -164,6 +164,8 @@ export interface FrontOfficeTagPlayer {
   headshot: string;
   nflLogo: string;
   contractYears: number;
+  /** MFL contract designation ('RC', 'TO', '' …) — rookie contracts cannot take a veteran extension. */
+  contractInfo: string;
   gamesPlayed?: number;
   birthdate: number | null;
 }
@@ -402,6 +404,7 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
       headshot: player.headshot,
       nflLogo: player.nflLogo,
       contractYears: player.contractYears,
+      contractInfo: player.contractInfo ?? '',
       gamesPlayed: player.gamesPlayed ?? undefined,
       birthdate: player.birthdate ?? null,
     })),

@@ -16,14 +16,14 @@ import {
   updateDeclaration,
   deleteDeclaration,
   getPendingDeclarationForPlayer,
-  getTeamFranchiseTag,
-  getTeamExtension,
 } from '../../../utils/contract-storage';
 import type { ContractDeclaration } from '../../../types/contracts';
 import type { DeclarationType } from '../../../types/contract-eligibility';
 import { JSON_HEADERS } from '../../../utils/api-response';
 import { getCachedRosters } from '../../../utils/mfl-roster-cache';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { fileVeteranExtension } from '../../../utils/veteran-extension-filing';
+import { checkFranchiseTagOnServer, FRANCHISE_TAG_CONTRACT_INFO } from '../../../utils/franchise-tag-server';
 
 interface DeclareRequestBody {
   leagueId: string;
@@ -40,6 +40,9 @@ interface DeclareRequestBody {
   requestedContractInfo?: string;
   deadlineAt?: string;
   acquisitionTimestamp?: number;
+  /** Veteran extension only: years to add (1 or 2). Falls back to
+   *  requestedYears - currentYears for callers that send the new total. */
+  addedYears?: number;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -99,6 +102,67 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // 3. Franchise tags are QUEUED, Feb 1 to Feb 14 at 8:45pm PT only
+    // (Constitution § PLAYER TAGS), and written to MFL on Feb 15 by
+    // scripts/apply-pending-contracts.mjs. That job writes what the
+    // declaration says, so the terms are the server's own
+    // (franchise-tag-server.ts), never the request body's.
+    if (type === 'franchise-tag') {
+      const check = await checkFranchiseTagOnServer({
+        leagueId: CONTRACT_LEAGUE_ID,
+        franchiseId,
+        playerId: String(playerId),
+      });
+      if (!check.ok) {
+        return new Response(JSON.stringify({ error: check.error }), { status: check.status, headers: JSON_HEADERS });
+      }
+      const terms = {
+        currentYears: check.currentYears,
+        currentSalary: check.currentSalary,
+        currentContractInfo: check.currentContractInfo,
+        requestedYears: check.newYears,
+        requestedSalary: check.newSalary,
+        requestedContractInfo: FRANCHISE_TAG_CONTRACT_INFO,
+        submittedAt: new Date().toISOString(),
+      };
+      const pendingTag = await getPendingDeclarationForPlayer(String(playerId), franchiseId);
+      let tagId: string;
+      if (pendingTag && pendingTag.status === 'pending' && pendingTag.type === 'franchise-tag') {
+        if (!(await updateDeclaration(pendingTag.id, terms))) {
+          return new Response(JSON.stringify({ error: 'Failed to update the tag' }), { status: 500, headers: JSON_HEADERS });
+        }
+        tagId = pendingTag.id;
+      } else {
+        const declaration: ContractDeclaration = {
+          id: generateDeclarationId(),
+          type,
+          playerId: String(playerId),
+          playerName,
+          franchiseId,
+          franchiseName,
+          leagueId: CONTRACT_LEAGUE_ID,
+          ...terms,
+          status: 'pending',
+          submittedBy: user.name || user.id,
+          mflSynced: false,
+        };
+        await addDeclaration(declaration);
+        tagId = declaration.id;
+      }
+      await recordInsightAction(user, 'contract_declare');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          declarationId: tagId,
+          status: 'pending',
+          newSalary: check.newSalary,
+          newYears: check.newYears,
+          message: 'Tag queued. It is written to MFL on Feb 15 as a 1-year contract.',
+        }),
+        { status: 200, headers: JSON_HEADERS },
+      );
+    }
+
     // 3a. Cancel-pending shortcut: selecting the same years as the current
     // contract means "revert any pending change for this player". Validation
     // would reject equal years, so handle this before validation runs.
@@ -121,6 +185,25 @@ export const POST: APIRoute = async ({ request }) => {
         }),
         { status: 200, headers: JSON_HEADERS },
       );
+    }
+
+    // 3b. Veteran extensions have their own path: the server re-reads the
+    // contract from live MFL, re-prices it from the Constitution's formula and
+    // enforces one per team per league year (src/utils/veteran-extension-rules.ts).
+    // Nothing from the body but the player and the years to add is used.
+    if (type === 'veteran-extension') {
+      const addedYears = Number(body.addedYears ?? requestedYears - currentYears);
+      const outcome = await fileVeteranExtension({
+        user,
+        leagueId: CONTRACT_LEAGUE_ID,
+        franchiseId,
+        franchiseName,
+        playerId: String(playerId),
+        playerName,
+        addedYears,
+      });
+      if (outcome.ok) await recordInsightAction(user, 'contract_declare');
+      return new Response(JSON.stringify(outcome.body), { status: outcome.status, headers: JSON_HEADERS });
     }
 
     // 4. Validate basic contract rules
@@ -184,26 +267,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 7. Type-specific validations
-    if (type === 'franchise-tag') {
-      const existingTag = await getTeamFranchiseTag(franchiseId, new Date().getFullYear());
-      if (existingTag) {
-        return new Response(
-          JSON.stringify({ error: 'Your team has already used its franchise tag this year' }),
-          { status: 400, headers: JSON_HEADERS },
-        );
-      }
-    }
+    // Franchise tags never reach here: step 3 handles them whole.
 
-    // team-option counts as an extension (exercise or rookie extension both use the same limit)
-    if (type === 'veteran-extension' || type === 'rookie-extension' || type === 'team-option') {
-      const existingExt = await getTeamExtension(franchiseId, new Date().getFullYear());
-      if (existingExt) {
-        return new Response(
-          JSON.stringify({ error: 'Your team has already used its extension this season' }),
-          { status: 400, headers: JSON_HEADERS },
-        );
-      }
-    }
+    // Rookie extensions and 1st-round options have NO per-team limit: any
+    // eligible player may take one (Brandon, 2026-11-14). Veteran extensions
+    // never reach here (3b) and keep their own one-per-league-year limit.
 
     // 8. Create declaration
     const declaration: ContractDeclaration = {

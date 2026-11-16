@@ -20,7 +20,7 @@ import {
   updateDeclaration,
   getDeclarationsByFranchise,
   getTeamFranchiseTag,
-  getTeamExtension,
+  getTeamVeteranExtension,
   getPendingDeclarationForPlayer,
   generateDeclarationId,
 } from '../src/utils/contract-storage';
@@ -216,44 +216,29 @@ describe('contract-storage', () => {
     });
   });
 
-  describe('getTeamExtension', () => {
-    it('finds existing veteran extension', async () => {
+  describe('getTeamVeteranExtension', () => {
+    // League year 2026 runs Feb 15 2026 → Feb 14 2027 8:45pm PT. Counting by
+    // calendar year let a team extend in November and again in February.
+    it('counts a November and a February filing as the SAME league year', async () => {
       setupMockFile([
         mockDeclaration({
-          id: 'EXT_1',
+          id: 'VET_FEB',
           type: 'veteran-extension',
-          franchiseId: '0002',
-          status: 'pending',
-          submittedAt: '2026-02-20T10:00:00.000Z',
+          franchiseId: '0004',
+          status: 'applied',
+          submittedAt: '2027-02-10T18:00:00.000Z',
         }),
       ]);
-      expect((await getTeamExtension('0002', 2026))?.id).toBe('EXT_1');
+      expect((await getTeamVeteranExtension('0004', 2026))?.id).toBe('VET_FEB');
+      expect(await getTeamVeteranExtension('0004', 2027)).toBeUndefined();
     });
 
-    it('finds existing rookie extension', async () => {
+    it('ignores rookie extensions and rejected veteran extensions', async () => {
       setupMockFile([
-        mockDeclaration({
-          id: 'EXT_2',
-          type: 'rookie-extension',
-          franchiseId: '0003',
-          status: 'approved',
-          submittedAt: '2026-02-20T10:00:00.000Z',
-        }),
+        mockDeclaration({ id: 'R', type: 'rookie-extension', franchiseId: '0004', status: 'pending', submittedAt: '2026-11-20T10:00:00.000Z' }),
+        mockDeclaration({ id: 'V', type: 'veteran-extension', franchiseId: '0004', status: 'rejected', submittedAt: '2026-11-20T10:00:00.000Z' }),
       ]);
-      expect((await getTeamExtension('0003', 2026))?.id).toBe('EXT_2');
-    });
-
-    it('ignores expired extensions', async () => {
-      setupMockFile([
-        mockDeclaration({
-          id: 'EXT_1',
-          type: 'veteran-extension',
-          franchiseId: '0002',
-          status: 'expired',
-          submittedAt: '2026-02-20T10:00:00.000Z',
-        }),
-      ]);
-      expect(await getTeamExtension('0002', 2026)).toBeUndefined();
+      expect(await getTeamVeteranExtension('0004', 2026)).toBeUndefined();
     });
   });
 
