@@ -1989,7 +1989,10 @@ function buildTradeBaitTip({
     const p = players.get(id);
     return {
       id,
-      name: p?.name ?? `Player ${id}`,
+      // MFL stores "Last, First". Raw, a comma-joined list of these reads
+      // "Samuel, Deebo (WR), Flowers, Zay (WR)" and the AI rewrite splits each
+      // player in two — the same bug #1728 fixed for trade posts.
+      name: p?.name ? formatPlayerName(p.name) : `Player ${id}`,
       pos: p?.position ?? '',
       nflTeam: p?.nflTeam ?? '',
     };
