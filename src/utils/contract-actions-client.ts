@@ -124,14 +124,8 @@ export function calculateVeteranExtension(
   );
 }
 
-/** Compact currency, for a chip or a modal line. */
-export function formatSalaryCompact(val: unknown): string {
-  const n = Number(val);
-  if (!Number.isFinite(n) || n === 0) return '$0';
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
-}
+/** Compact currency, for a chip or a modal line (one copy, in contract-terms.mjs). */
+export { formatSalaryCompact } from './contract-terms.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Filing

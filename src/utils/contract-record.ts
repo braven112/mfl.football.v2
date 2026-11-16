@@ -8,7 +8,7 @@
  * Salary is shown only when the declaration recorded it: a "Contract Years"
  * declaration on a new pickup changes years alone.
  */
-import { formatSalaryCompact } from './contract-actions-client';
+import { contractTermsChange as termsChange } from './contract-terms.mjs';
 
 export interface ContractTermsInput {
   currentYears?: number | null;
@@ -19,32 +19,16 @@ export interface ContractTermsInput {
   requestedContractInfo?: string | null;
 }
 
-const yearsLabel = (n: number | null | undefined) => `${Number(n) || 0} ${Number(n) === 1 ? 'yr' : 'yrs'}`;
-
-function terms(salary: number | null | undefined, years: number | null | undefined, info: string | null | undefined): string {
-  const parts: string[] = [];
-  if (salary != null && Number(salary) > 0) parts.push(formatSalaryCompact(salary));
-  parts.push(yearsLabel(years));
-  const tag = String(info ?? '').trim();
-  if (tag) parts.push(tag);
-  return parts.join(' · ');
-}
-
 /**
- * `{ before, after }` for one declaration. The requested salary falls back to
- * the current one, as the MFL write does (`requestedSalary ?? currentSalary`);
- * a requested designation of '' is a real answer (an RC or TO removed), so
- * only a missing one falls back.
+ * `{ before, after }` for one declaration. The one implementation lives in
+ * contract-terms.mjs so the Schefter scanner (plain node) prints the same
+ * terms the Contracts page does.
  */
-export function contractTermsChange(d: ContractTermsInput): { before: string; after: string } {
-  const afterSalary = d.requestedSalary ?? d.currentSalary;
-  const afterInfo = d.requestedContractInfo !== undefined && d.requestedContractInfo !== null
-    ? d.requestedContractInfo
-    : d.currentContractInfo;
-  return {
-    before: terms(d.currentSalary, d.currentYears, d.currentContractInfo),
-    after: terms(afterSalary, d.requestedYears, afterInfo),
-  };
+export function contractTermsChange(
+  d: ContractTermsInput,
+  opts?: { designation?: boolean },
+): { before: string; after: string } {
+  return termsChange(d, opts);
 }
 
 /**

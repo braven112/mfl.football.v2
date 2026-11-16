@@ -204,7 +204,11 @@ export type TransactionSubType =
   | 'milestone'
   | 'rumor_mill'
   | 'trade_speculation'
-  | 'trade_pending_rumor';
+  | 'trade_pending_rumor'
+  /** An extension, option or franchise tag that reached MFL (scripts/lib/schefter-contract-moves.mjs) */
+  | 'CONTRACT'
+  /** Franchise-tag window posts: the tag watch, a pending-tag rumor, "plans have changed" */
+  | 'tag_rumor';
 
 /** Badge metadata attached to franchise milestone posts
  *  (emitted by scripts/lib/franchise-milestone-posts.mjs) */
@@ -366,6 +370,10 @@ export interface SchefterPost {
   moves?: SchefterRosterListMove[];
   /** MFL pending-trade offer ID (rumor posts only) */
   offerId?: string;
+  /** CONTRACT posts: the declaration type that reached MFL */
+  contractMoveType?: 'veteran-extension' | 'rookie-extension' | 'team-option' | 'franchise-tag';
+  /** tag_rumor posts: which of the three the post is */
+  tagRumorKind?: 'watch' | 'leak' | 'changed';
   /** Stable trade dedup key — sorted franchise pair + sorted asset IDs.
    *  Lets a completed TRADE post supersede an earlier trade-pending rumor. */
   tradeSignature?: string | null;
