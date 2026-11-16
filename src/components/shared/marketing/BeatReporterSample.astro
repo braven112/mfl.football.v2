@@ -18,7 +18,9 @@ import { crossHostLeagueHref } from '../../../config/leagues';
 import { siteExampleLeagues } from '../../../data/league-showcase';
 import { getSchefterFeedIfAny, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import { getAuthor, getAuthorAvatar, type SchefterPost } from '../../../types/schefter';
-import { postByline } from '../../../utils/persona-server';
+import { BEAT_REPORTER_PERSONA, personaByline } from '../../../utils/persona.mjs';
+import { buildTeamAccentCss } from '../../../utils/team-accent-css';
+import type { LeagueSlug } from '../../../types/nav';
 import { articleParagraphs } from '../../../utils/article-paragraphs.mjs';
 import '../../../styles/schefter-feed.css';
 import '../../../styles/schefter-article.css';
@@ -32,7 +34,14 @@ const post: SchefterPost | undefined = (feed?.posts ?? [])
 const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
 const teams = league && post ? getSchefterLeagueConfig(league).teams : [];
 const author = post ? getAuthor(post.authorId) : null;
-const byline = post && author && league ? await postByline({ league: league.slug }, author, getAuthorAvatar(author)) : null;
+// The byline is Max Insider, the voice every new league gets, rather than the
+// example league's own reporter (Brandon, 2026-11-16: "show the generic
+// version").
+const byline = post && author ? personaByline(author, getAuthorAvatar(author), BEAT_REPORTER_PERSONA) : null;
+// Team colors: the race board and cards read --team-accent-<id>, which the
+// league layouts scope to html[data-league]. This host's <html> has none, so
+// the example league's tokens are re-homed onto the sample itself.
+const accentCss = league && post ? buildTeamAccentCss(league.navSlug as LeagueSlug, '.brs') : '';
 const date = post
 	? new Date(post.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
 	: '';
@@ -48,6 +57,7 @@ const imagePath = post?.image ? `/assets/schefter/${post.image}` : null;
 
 {post && league && byline && (
 	<section class="sp-section brs" aria-labelledby="brs-h">
+		{accentCss && <style is:inline set:html={accentCss} />}
 		<div class="sp-head">
 			<div class="sp-head__title">
 				<p class="sp-eyebrow">A real one, start to finish</p>
