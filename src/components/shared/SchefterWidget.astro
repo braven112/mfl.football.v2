@@ -10,7 +10,7 @@ import { formatRelativeTime } from '../../utils/schefter-feed';
 import '../../styles/schefter-feed.css';
 
 import type { LeagueSlug } from '../../types/nav';
-import { getPostPersona } from '../../utils/persona-server';
+import { getPostPersona, leagueAuthorAvatar } from '../../utils/persona-server';
 import { personaByline } from '../../utils/persona.mjs';
 
 interface Props {
@@ -41,7 +41,7 @@ const now = new Date();
     <div class="sf-widget__list">
       {posts.map(post => {
         const author = getAuthor(post.authorId);
-        const avatarSrc = personaByline(author, getAuthorAvatar(author), persona).avatar;
+        const avatarSrc = personaByline(author, leagueAuthorAvatar(league, author.id, getAuthorAvatar(author)), persona).avatar;
         return (
           <div class="sf-widget__item">
             <img class="sf-widget__avatar" src={avatarSrc} alt="" aria-hidden="true" width="18" height="18" loading="lazy" />

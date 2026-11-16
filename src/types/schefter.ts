@@ -130,14 +130,19 @@ export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
     id: 'doc-rivers',
     name: 'Doc Rivers',
     handle: '@DocRivers',
-    avatar: 'doc-rivers-avatar.webp',
+    // `?v=2`: the cartoon avatar (#1735) replaced the file in place, so a
+    // browser or the service worker holding the old cross kept showing it.
+    // Same version the /features page links. A league can override it with
+    // `reporterAvatars` in the registry.
+    avatar: 'doc-rivers-avatar.webp?v=2',
     bio: 'League medical correspondent. If your guy tweaked something in practice, I already know about it. Fantasy-relevant injury intel, no sugarcoating.',
   },
   'vegas-vic': {
     id: 'vegas-vic',
     name: 'Vegas Vic',
     handle: '@VegasVic',
-    avatar: 'vegas-vic-avatar.webp',
+    // `?v=2` — see doc-rivers above.
+    avatar: 'vegas-vic-avatar.webp?v=2',
     bio: 'Weekly lines, spreads, and over/unders for every NFL matchup. Not financial advice. Okay, maybe a little.',
   },
   'nfl-insider': {

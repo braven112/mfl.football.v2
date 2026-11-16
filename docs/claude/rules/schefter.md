@@ -1865,3 +1865,26 @@ read (`getSchefterFeed`) and on every feed job's pull, carrying a
 (`tests/schefter-post-corrections.test.ts`). Once the daily snapshot carries
 the corrected post, its entry can go. Check the trade against MFL's own
 `franchise1_gave_up` / `franchise2_gave_up` before writing who got what.
+
+## Doc Rivers reads ESPN's injury report, joined on ESPN id (Nov 2026)
+
+Doc posted NOTHING from launch until Nov 2026: ESPN changed the injuries
+response (league-wide = 32 teams each with `injuries`; per-team = a flat list;
+`athlete.id` gone, the id only in the player-card link) and the old parser
+found no rows without throwing. The parser is `scripts/lib/espn-injuries.mjs`,
+pinned by `tests/espn-injuries.test.ts` against a recorded sample
+(`tests/fixtures/espn-nfl-injuries.json`). Rules:
+
+- **Active rows are dropped.** The report now lists healthy players too.
+- **The MFL join is on `espn_id`** from the league's players export
+  (`mflPlayersByEspnId`), never on the name.
+- **Only players rostered in that league post**, because Doc and Vegas Vic now
+  run in the league's main lane (`SOURCE_PREDICATES.theleague`, so the
+  homepage's My News too); NFL Insider is a narrower filter over the same
+  posts, a SUBSET of the league lane (`tests/schefter-sources.test.ts`).
+- **An empty `lastInjurySnapshot` seeds and posts nothing**, the same rule as a
+  league's first transaction scan: otherwise every current injury reads as a
+  change.
+- **Avatars:** the site-wide art is `SCHEFTER_AUTHORS` (`?v=2` busts the
+  in-place replacement from #1735); a league overrides it with
+  `reporterAvatars` in the registry, read by `leagueAuthorAvatar`.

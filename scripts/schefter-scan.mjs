@@ -99,6 +99,7 @@ import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
 import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import { ESPN_INJURIES_URL, mflPlayersByEspnId, parseEspnInjuries } from './lib/espn-injuries.mjs';
 import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -3074,12 +3075,6 @@ async function scanNflWire(league) {
 // Only generates posts when a player's status CHANGES (snapshot diffing).
 // Rostered fantasy players get higher tiers.
 
-// ESPN team IDs for all 32 NFL teams
-const ESPN_TEAM_IDS = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-  17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 33, 34,
-];
-
 // Doc Rivers template pools — direct, no-nonsense medical correspondent
 const INJURY_TEMPLATES_BREAKING = [
   (p) => `Major update: ${p.name} (${p.nflTeam}) is now listed as ${p.status}. ${p.detail ? `Dealing with ${p.detail.toLowerCase()}.` : ''} If he's on your roster, it's time for Plan B.`,
@@ -3103,47 +3098,20 @@ const INJURY_TEMPLATES_MINOR = [
 ];
 
 async function fetchEspnInjuries() {
-  const allInjuries = new Map(); // espnId → { name, position, nflTeam, status, detail }
-
-  // Fetch all 32 teams in parallel
-  const results = await Promise.allSettled(
-    ESPN_TEAM_IDS.map(async (teamId) => {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries?team=${teamId}`;
-      const res = await fetch(url);
-      if (!res.ok) return [];
-
-      const data = await res.json();
-      const teamData = data.team;
-      const teamAbbrev = teamData?.abbreviation ?? '';
-      const injuries = [];
-
-      for (const group of (data.injuries ?? [])) {
-        for (const entry of (group.entries ?? [])) {
-          const athlete = entry.athlete;
-          if (!athlete?.id) continue;
-          injuries.push({
-            espnId: String(athlete.id),
-            name: athlete.displayName ?? athlete.fullName ?? 'Unknown',
-            position: athlete.position?.abbreviation ?? '',
-            nflTeam: teamAbbrev,
-            status: entry.status ?? entry.type ?? 'Unknown',
-            detail: entry.details?.detail ?? entry.details?.type ?? '',
-          });
-        }
-      }
-      return injuries;
-    })
-  );
-
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      for (const inj of result.value) {
-        allInjuries.set(inj.espnId, inj);
-      }
+  // One league-wide request (all 32 clubs). The parser lives in
+  // scripts/lib/espn-injuries.mjs, pinned by tests/espn-injuries.test.ts —
+  // ESPN changed this shape once already and Doc went silent for months.
+  try {
+    const res = await fetch(ESPN_INJURIES_URL);
+    if (!res.ok) {
+      console.warn(`  ESPN injuries: HTTP ${res.status}`);
+      return new Map();
     }
+    return parseEspnInjuries(await res.json());
+  } catch (err) {
+    console.warn(`  ESPN injuries: ${err instanceof Error ? err.message : err}`);
+    return new Map();
   }
-
-  return allInjuries;
 }
 
 /** Load all rostered player IDs for a league to determine fantasy relevance */
@@ -3170,18 +3138,15 @@ async function loadRosteredPlayerIds(league) {
   }
 }
 
-/** Load MFL players to map ESPN names → MFL player IDs */
-async function loadPlayerNameIndex(league) {
+/** The league's MFL players keyed by ESPN id — the ONLY join Doc makes (never a name). */
+async function loadPlayersByEspnId(league) {
   const year = new Date().getFullYear();
-  const players = await loadPlayers(league.playersPath(year));
-  const nameIndex = new Map();
-  for (const [id, p] of players) {
-    // MFL names are "LastName, FirstName" — normalize to "FirstName LastName"
-    const parts = p.name.split(', ');
-    const normalized = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p.name;
-    nameIndex.set(normalized.toLowerCase(), { id, ...p });
+  try {
+    return mflPlayersByEspnId(JSON.parse(await fs.readFile(league.playersPath(year), 'utf8')));
+  } catch {
+    console.log('  Could not load players for the ESPN id join');
+    return new Map();
   }
-  return nameIndex;
 }
 
 async function scanInjuries(league) {
@@ -3214,37 +3179,45 @@ async function scanInjuries(league) {
     return 0;
   }
 
+  const snapshotOf = () => Object.fromEntries([...currentInjuries].map(([id, inj]) => [id, inj.status]));
+
+  // First run (or the first since the parser fix): no snapshot to diff
+  // against, so EVERY current injury would read as a change — ~280 posts in
+  // one scan. Record the baseline and post nothing; changes start next scan.
+  if (Object.keys(previousSnapshot).length === 0) {
+    feed.lastInjurySnapshot = snapshotOf();
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    console.log(`  No previous injury snapshot — recorded a baseline of ${currentInjuries.size}, posting nothing`);
+    return 0;
+  }
+
   // Load roster data for fantasy relevance
   const rosteredPlayers = await loadRosteredPlayerIds(league);
-  const nameIndex = await loadPlayerNameIndex(league);
+  const playersByEspnId = await loadPlayersByEspnId(league);
 
-  // Diff against previous snapshot
+  // Diff against previous snapshot. Doc reports only players rostered in THIS
+  // league: his posts run in the league's main feed (Brandon, Nov 2026), and
+  // the report names ~280 NFL players a week, most of them nobody's.
   const statusChanges = [];
   for (const [espnId, inj] of currentInjuries) {
     const prevStatus = previousSnapshot[espnId];
-    if (prevStatus !== inj.status) {
-      // Find MFL player by name match
-      const mflPlayer = nameIndex.get(inj.name.toLowerCase());
-      const franchiseId = mflPlayer ? rosteredPlayers.get(mflPlayer.id) : null;
-
-      statusChanges.push({
-        ...inj,
-        mflId: mflPlayer?.id,
-        franchiseId,
-        isRostered: !!franchiseId,
-        prevStatus: prevStatus ?? null,
-      });
-    }
+    if (prevStatus === inj.status) continue;
+    const mflPlayer = playersByEspnId.get(espnId);
+    const franchiseId = mflPlayer ? rosteredPlayers.get(mflPlayer.id) : null;
+    if (!franchiseId) continue;
+    statusChanges.push({
+      ...inj,
+      mflId: mflPlayer.id,
+      franchiseId,
+      isRostered: true,
+      prevStatus: prevStatus ?? null,
+    });
   }
 
-  console.log(`  Status changes detected: ${statusChanges.length}`);
+  console.log(`  Status changes detected (rostered): ${statusChanges.length}`);
   if (statusChanges.length === 0) {
     // Update snapshot even with no changes (capture new players)
-    const newSnapshot = {};
-    for (const [espnId, inj] of currentInjuries) {
-      newSnapshot[espnId] = inj.status;
-    }
-    feed.lastInjurySnapshot = newSnapshot;
+    feed.lastInjurySnapshot = snapshotOf();
     await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
     return 0;
   }
