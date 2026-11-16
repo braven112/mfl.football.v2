@@ -15,8 +15,11 @@
  *   - It reads like the league homepage's news rail: a League tab (the
  *     reporter's own desk and Ask Roger) and an All tab that adds Vegas Vic,
  *     Doc Rivers and the NFL wire (Brandon, 2026-11-16). The widget cannot
- *     tell who is viewing, so there is no My Team tab. Posts addressed to one
- *     franchise (lineup nudges) and the group chat never leave our site.
+ *     tell who is viewing on its own; when MFL's page names the signed-in
+ *     franchise (its `franchise_id` global) the first tab becomes My News:
+ *     the league desk plus posts about that team and its players. That id is
+ *     a hint anyone can fake, so it only filters public news. Posts addressed
+ *     to one franchise (lineup nudges) and the group chat never leave our site.
  */
 import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto';
 
@@ -179,14 +182,15 @@ function externalLink(post) {
  * The news widget's HTML for one league.
  * @param {object} o
  * @param {any[]} o.posts         selectWidgetPosts(...).posts
- * @param {Set<string>} [o.leagueIds]  the League tab's posts; no tabs when absent
+ * @param {Set<string>} [o.leagueIds]  the first tab's posts; no tabs when absent
+ * @param {string} [o.firstTab]  the first tab's label: 'League', or 'My News' when personalized
  * @param {(post: any) => { name: string, avatar: string }} [o.bylineFor]  absolute avatar URL; defaults to the reporter
  * @param {{ name: string, avatar: string, report: string }} o.reporter  absolute avatar URL
  * @param {(path: string) => string} o.absolute  the league's leagueUrl
  * @param {string} o.leagueSlug  registry slug, for the article path
  * @param {number} [o.now]
  */
-export function renderNewsWidget({ posts, leagueIds, bylineFor, reporter, absolute, leagueSlug, now = Date.now() }) {
+export function renderNewsWidget({ posts, leagueIds, firstTab = 'League', bylineFor, reporter, absolute, leagueSlug, now = Date.now() }) {
   const newsPage = absolute(`/${leagueSlug}/news`);
   const byline = bylineFor ?? (() => ({ name: reporter.name, avatar: reporter.avatar }));
   const items = posts.map((post) => {
@@ -221,7 +225,7 @@ export function renderNewsWidget({ posts, leagueIds, bylineFor, reporter, absolu
     hasLeague && leagueIds.size < posts.length
       ? `<input type="radio" name="bw-tab" id="bw-tab-league" class="bw-tab-in" checked>` +
         `<input type="radio" name="bw-tab" id="bw-tab-all" class="bw-tab-in">` +
-        `<div class="bw-tabs" role="tablist"><label for="bw-tab-league">League</label><label for="bw-tab-all">All</label></div>`
+        `<div class="bw-tabs" role="tablist"><label for="bw-tab-league">${escapeHtml(firstTab)}</label><label for="bw-tab-all">All</label></div>`
       : '';
   return (
     `<div class="bw">${reporterHead(reporter)}${tabs}<ul class="bw-list">${items.join('')}${empty}</ul>` +

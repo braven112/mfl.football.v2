@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import {
   isMflOrigin,
@@ -121,6 +122,26 @@ describe('rendering', () => {
     expect(html).toContain('href="https://www.espn.com/x"');
     expect(html).toContain('for="bw-tab-league"');
     expect(html.match(/bw-post--league/g)).toHaveLength(1);
+    expect(html).toContain('>League</label>');
+  });
+  it('names the first tab My News when the viewer is known', () => {
+    const html = renderNewsWidget({
+      posts: [
+        { id: 'tx', type: 'transaction', headline: 'h', body: 'Pickup', timestamp: '2026-11-09T00:00:00Z' },
+        { id: 'wire_1', type: 'external', authorId: 'nfl-wire', headline: 'Wire', timestamp: '2026-11-10T00:00:00Z' },
+      ],
+      leagueIds: new Set(['tx']),
+      firstTab: 'My News',
+      reporter: { name: 'Max', report: 'The Insider Report', avatar: 'https://mfl.football/a.webp' },
+      absolute,
+      leagueSlug: 'theleague',
+    });
+    expect(html).toContain('>My News</label>');
+  });
+  it('the loader reads MFL\'s franchise_id global, never document.cookie', () => {
+    const src = readFileSync('public/mfl/beat.js', 'utf8');
+    expect(src).toContain('window.franchise_id');
+    expect(src).not.toMatch(/document\.cookie/);
   });
   it('the ad card sells, and links to our site', () => {
     const html = renderAdWidget({ origin: 'https://mfl.football', avatar: '/assets/x.webp' });
