@@ -6,6 +6,7 @@
  * prove it behind "Show the rows".
  */
 import { answerCharts, cellHref, formatCell, isNumericColumn, recordHref } from './ask-format.mjs';
+import { HISTORIAN } from '../../data/historian';
 import type { AskHeadline, AskRecordLink, AskTable } from './ask';
 
 export interface ClientAnswer {
@@ -33,10 +34,25 @@ export function answerTeam(table: AskTable | null | undefined): string | null {
   return id && /^[A-Za-z0-9_-]{1,16}$/.test(id) ? id : null;
 }
 
+/** Rex Ordbook's byline, the speaker of every answer (HistoryAnswer.astro prints the same). */
+export function historianByline(): HTMLElement {
+  const by = el('p', 'ha-by');
+  const img = el('img', 'ha-by__avatar');
+  img.src = HISTORIAN.avatar;
+  img.width = 512;
+  img.height = 512;
+  img.alt = '';
+  img.decoding = 'async';
+  by.append(img, el('span', 'ha-by__name', HISTORIAN.name), el('span', 'ha-by__role', HISTORIAN.role));
+  return by;
+}
+
 export function renderAnswer(data: ClientAnswer, base: string): HTMLElement {
   const article = el('article', 'ha-answer');
   const team = answerTeam(data.table);
   if (team) article.style.setProperty('--ha-team', `var(--team-accent-${team}, var(--history-gold))`);
+
+  article.append(historianByline());
 
   if (data.headline) {
     const head = el('div', 'ha-head');
