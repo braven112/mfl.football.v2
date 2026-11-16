@@ -140,7 +140,7 @@ describe('rendering', () => {
   });
   it('the loader reads MFL\'s franchise_id global, never document.cookie', () => {
     const src = readFileSync('public/mfl/beat.js', 'utf8');
-    expect(src).toContain('window.franchise_id');
+    expect(src).toContain('typeof franchise_id');
     expect(src).not.toMatch(/document\.cookie/);
   });
   it('the ad card sells, and links to our site', () => {
