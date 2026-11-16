@@ -114,20 +114,36 @@ const imagePath = post?.image ? `/assets/schefter/${post.image}` : null;
 )}
 
 <style>
-	/* The preview sits in a soft frame so it reads as "this is the product",
-	   not as part of the marketing page around it. The article keeps its own
-	   look from schefter-article.css and matchup-preview.css. */
+	/* One card only: the article's own card, lifted with the page's shadow.
+	   A second frame around it read as a double border on phones (Brandon,
+	   2026-11-16). */
 	.brs__frame {
-		padding: clamp(0.5rem, 2vw, 1.5rem);
-		border: 1px solid var(--sp-line);
-		border-radius: var(--sp-radius);
-		background: var(--sp-surface-2);
-		box-shadow: var(--sp-shadow);
+		max-width: 46rem;
+		margin-inline: auto;
 	}
 
 	.brs__article {
-		max-width: 46rem;
+		max-width: none;
 		padding: 0;
+	}
+
+	.brs__article :global(.sf-article__card) {
+		border-radius: var(--sp-radius);
+		box-shadow: var(--sp-shadow);
+	}
+
+	/* Phones: the article runs edge to edge, the way an owner sees it on the
+	   league's own news page, so it gets the whole width rather than sitting
+	   inset inside the page's gutter. */
+	@media (max-width: 600px) {
+		.brs__frame {
+			margin-inline: -16px;
+		}
+
+		.brs__article :global(.sf-article__card) {
+			border-radius: 0;
+			border-inline: 0;
+		}
 	}
 
 	.brs__note {
