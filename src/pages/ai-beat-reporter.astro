@@ -5,9 +5,12 @@
  * Content: src/data/mfl-services.ts. Belongs to mfl.football alone.
  */
 import ServicePage from '../components/shared/marketing/ServicePage.astro';
+import BeatReporterSample from '../components/shared/marketing/BeatReporterSample.astro';
 import { findService } from '../data/mfl-services';
 
 export const prerender = false;
 ---
 
-<ServicePage service={findService('beat-reporter')} />
+<ServicePage service={findService('beat-reporter')}>
+	<BeatReporterSample slot="sample" />
+</ServicePage>
