@@ -112,6 +112,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 const whisperLoginHref = (league: string | undefined) =>
   loginUrlForRequest(Astro, getLeagueBySlug(league === 'afl' ? 'afl-fantasy' : 'theleague')!);
 import { spriteUrlFor } from '../../utils/sprite-url';
+import { stripTakeLabel } from '../../../scripts/lib/schefter-take-label.mjs';
 const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
@@ -262,7 +263,7 @@ const spriteUrl = spriteUrlFor(Astro.url);
         {post.analysis && (
           <div class="sf-post__analysis">
             <div class="sf-post__analysis-label">{postLabels.surname}'s Take</div>
-            <Fragment set:html={post.analysis} />
+            <Fragment set:html={stripTakeLabel(post.analysis)} />
           </div>
         )}
 

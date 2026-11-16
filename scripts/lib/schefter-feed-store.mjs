@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getRedisConfig, redisCommand } from './redis.mjs';
 import { mergeFeed } from './merge-schefter-feed.mjs';
+import { applyPostCorrections } from './schefter-post-corrections.mjs';
 import { ALL_LEAGUES, LEAGUES } from '../../src/config/leagues-data.mjs';
 import { schefterFeedKey, schefterKey } from './schefter-keys.mjs';
 
@@ -142,7 +143,9 @@ export async function pullFeedFile(redis, slug, absPath, command = redisCommand)
   } catch {
     local = null;
   }
-  const merged = local ? mergeFeed(local, live) : live;
+  // A hand correction rides the pull into the file, so this job's commit puts
+  // it in Redis for good (scripts/lib/schefter-post-corrections.mjs).
+  const merged = applyPostCorrections(local ? mergeFeed(local, live) : live);
   const after = JSON.stringify(merged, null, 2) + '\n';
   if (after === before) return false;
   fs.mkdirSync(path.dirname(absPath), { recursive: true });

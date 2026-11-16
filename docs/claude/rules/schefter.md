@@ -1819,3 +1819,14 @@ pins it. TheLeague only (`features.contracts`). Brandon's rulings, 2026-11-15:
   on the feed object: the feed is committed to a PUBLIC repo, and a state row
   naming a pending tag's player would publish what the rumor holds back. The
   test fails on any `feed.contract*` / `feed.tag*` write in the lane.
+
+## Correcting a post that is already published
+
+Editing `schefter-feed.json` cannot fix a post: the live feed is in Redis and
+every merge lets the live copy win on a shared id. List the fix in
+`scripts/lib/schefter-post-corrections.mjs` instead. It applies on the site's
+read (`getSchefterFeed`) and on every feed job's pull, carrying a
+`storyVersion` so a writer holding the old text cannot merge it back
+(`tests/schefter-post-corrections.test.ts`). Once the daily snapshot carries
+the corrected post, its entry can go. Check the trade against MFL's own
+`franchise1_gave_up` / `franchise2_gave_up` before writing who got what.
