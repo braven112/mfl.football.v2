@@ -23,15 +23,18 @@ export const HISTORY_PRICE_YEAR = 49;
 /** The AI Beat Reporter (Max Insider, the house voice), per league, per year. */
 export const BEAT_REPORTER_PRICE_YEAR = 49;
 
-/** Ask the History and the AI Beat Reporter together, per league, per year (Brandon, 2026-11-16). */
-export const HISTORY_AND_REPORTER_PRICE_YEAR = 79;
+/**
+ * Ask the History and the AI Beat Reporter together, per league, per year:
+ * two for the price of one (Brandon, 2026-11-17; replaced the $79 bundle).
+ */
+export const HISTORY_AND_REPORTER_PRICE_YEAR = 49;
 
 /**
  * The launch sale on /ai-beat-reporter (Brandon, 2026-11-17): the AI Beat
  * Reporter and Ask the History together, per league. Buying now covers the
  * rest of this season AND the whole next season.
  */
-export const HISTORY_AND_REPORTER_SALE_PRICE = 49.99;
+export const HISTORY_AND_REPORTER_SALE_PRICE = HISTORY_AND_REPORTER_PRICE_YEAR;
 
 /**
  * Where the sale's "Get both" button sends a qualified commissioner: a PayPal

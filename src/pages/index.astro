@@ -17,7 +17,7 @@ import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 // ── What this page is for ─────────────────────────────────────────────────
 // Since 2026-11-16 the homepage shows only the products (Brandon: "super
 // simple, shows the products"): Ask the History ($49), the AI Beat Reporter
-// ($49, the house voice Max Insider), both together ($79), and custom sites
+// ($49, the house voice Max Insider), both together ($49, two for the price of one), and custom sites
 // from $3,000. Each product has its own page (src/data/mfl-services.ts), and
 // every price here is read from src/data/pricing.ts, so the homepage, the
 // product pages and /pricing can never disagree.
@@ -39,7 +39,6 @@ const history = findService('ask-the-history');
 const reporter = findService('beat-reporter');
 const custom = findService('league-website');
 
-const bundleSaves = HISTORY_PRICE_YEAR + BEAT_REPORTER_PRICE_YEAR - HISTORY_AND_REPORTER_PRICE_YEAR;
 
 // Ask the History and the Beat Reporter are on sale by direct contact
 // (Brandon, 2026-11-16): their buttons open ProductInterest's request form.
@@ -125,7 +124,7 @@ const PRODUCTS = [
         <p class="prod__kicker">Better together</p>
         <h2 id="bundle-h" class="bundle__name">Ask the History + Max Insider</h2>
       </div>
-      <p class="bundle__price"><b>{dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}</b><span>a year for both · save {dollars(bundleSaves)}</span></p>
+      <p class="bundle__price"><b>{dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}</b><span>a year for both · two for the price of one</span></p>
       <button
         type="button"
         class="cta cta--primary"
