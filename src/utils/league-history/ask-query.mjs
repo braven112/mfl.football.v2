@@ -28,6 +28,7 @@ import { indexDataset } from './records.mjs';
 import { PLAYER_DEFAULT_COLUMNS, PLAYER_FIELDS, PLAYER_UNITS, preparePlayers } from './ask-players.mjs';
 import { MOVE_DEFAULT_COLUMNS, MOVE_FIELDS, MOVE_UNITS, prepareMoves } from './ask-moves.mjs';
 import { STINT_DEFAULT_COLUMNS, STINT_FIELDS, STINT_TEAM_OWNER_FIELDS, STINT_UNITS, prepareStints } from './ask-stints.mjs';
+import { CAREER_COUNT_LABEL, CAREER_DEFAULT_COLUMNS, CAREER_FIELDS, CAREER_UNITS, CAREER_UNIT_WORDS, careerTimeline, prepareCareers } from './ask-careers.mjs';
 import {
   TITLE_BUILD_COUNT_LABEL,
   TITLE_BUILD_DEFAULT_COLUMNS,
@@ -57,7 +58,7 @@ import {
 } from './ask-rivalry-games.mjs';
 
 export const TEAM_UNITS = ['seasons', 'games', 'owners'];
-export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...TITLE_BUILD_UNITS, ...COMPETITION_UNITS, ...RIVALRY_GAME_UNITS];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...TITLE_BUILD_UNITS, ...CAREER_UNITS, ...COMPETITION_UNITS, ...RIVALRY_GAME_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -136,6 +137,7 @@ export const FIELDS = {
   ...MOVE_FIELDS,
   ...STINT_FIELDS,
   ...TITLE_BUILD_FIELDS,
+  ...CAREER_FIELDS,
   ...COMPETITION_FIELDS,
   ...RIVALRY_GAME_FIELDS,
 };
@@ -260,6 +262,7 @@ const DEFAULT_COLUMNS = {
   ...MOVE_DEFAULT_COLUMNS,
   ...STINT_DEFAULT_COLUMNS,
   ...TITLE_BUILD_DEFAULT_COLUMNS,
+  ...CAREER_DEFAULT_COLUMNS,
   ...COMPETITION_DEFAULT_COLUMNS,
   ...RIVALRY_GAME_DEFAULT_COLUMNS,
 };
@@ -525,7 +528,7 @@ export function normalizeQuery(q) {
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
- * @param {{ players?: any, moves?: any, keepers?: any, pickTrades?: any, competitions?: any, league?: string, pools?: any }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions; with the players, the stint units), keeper-history.json and pick-trades.json where the league has them (ask-stints.mjs), and the all-play competition's sources (ask-competitions.mjs)
+ * @param {{ players?: any, moves?: any, keepers?: any, pickTrades?: any, salaries?: any, competitions?: any, league?: string, pools?: any }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions; with the players, the stint units), keeper-history.json and pick-trades.json where the league has them (ask-stints.mjs), and the all-play competition's sources (ask-competitions.mjs)
  * @returns {QueryResult}
  */
 export function runQuery(ds, rawQuery, extra = {}) {
@@ -535,15 +538,17 @@ export function runQuery(ds, rawQuery, extra = {}) {
   const isMove = MOVE_UNITS.includes(q.unit);
   const isStint = STINT_UNITS.includes(q.unit);
   const isBuild = TITLE_BUILD_UNITS.includes(q.unit);
+  const isCareer = CAREER_UNITS.includes(q.unit);
   const isCompetition = COMPETITION_UNITS.includes(q.unit);
   if (isCompetition && !extra.competitions) throw new QueryError('This league has no all-play side competition on record.');
   if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
   if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
-  if ((isStint || isBuild) && !(extra.moves && extra.players)) throw new QueryError('Player stints and pick histories are not available for this league.');
-  const pp = (isPlayer || isMove || isStint || isBuild) && extra.players ? preparePlayers(p, extra.players) : null;
+  if ((isStint || isBuild || isCareer) && !(extra.moves && extra.players)) throw new QueryError('Player stints and pick histories are not available for this league.');
+  const pp = (isPlayer || isMove || isStint || isBuild || isCareer) && extra.players ? preparePlayers(p, extra.players) : null;
   const pm = isMove ? prepareMoves(p, pp, extra.moves, extra.league ?? ds.league ?? null) : null;
   const ps = isStint ? prepareStints(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
   const pb = isBuild ? prepareTitleBuilds(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
+  const pk = isCareer || isStint ? prepareCareers(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades, salaries: extra.salaries ?? null }) : null;
   const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
     RIVALRY_GAME_UNITS.includes(q.unit)
@@ -564,9 +569,11 @@ export function runQuery(ds, rawQuery, extra = {}) {
               ? ps[q.unit]
               : isBuild
                 ? pb[q.unit]
+              : isCareer
+                ? pk[q.unit]
                 : pp[q.unit];
   // A stint spans seasons: a years window keeps every stint that overlaps it.
-  if (q.unit === 'stints') rows = rows.filter((r) => inYears(r.year, { from: null, to: q.years?.to ?? null }) && inYears(r.lastYear, { from: q.years?.from ?? null, to: null }));
+  if (q.unit === 'stints' || q.unit === 'careers') rows = rows.filter((r) => inYears(r.year, { from: null, to: q.years?.to ?? null }) && inYears(r.lastYear, { from: q.years?.from ?? null, to: null }));
   else if (q.unit !== 'owners' && q.unit !== 'playerCareers' && q.unit !== 'competitionOwners') rows = rows.filter((r) => inYears(r.year, q.years));
   const filtersOn = (f) => q.where.some((c) => c.field === f);
   // Consolation games count nowhere unless asked for by name (records.mjs).
@@ -612,8 +619,10 @@ export function runQuery(ds, rawQuery, extra = {}) {
       year: r.year ?? null,
     })),
     summary,
-    // The title-build units draw their own stacked chart (ask-title-builds.mjs).
-    chart: isBuild && !q.groupBy.length ? titleBuildChart(q.unit, rows, pb[q.unit]) : q.chart ? chartBoard(q, rows) : null,
+    // The title-build units draw their own stacked chart (ask-title-builds.mjs); one player's path (careers, stints, pickupImpact) draws as his career timeline.
+    chart: isBuild && !q.groupBy.length
+      ? titleBuildChart(q.unit, rows, pb[q.unit])
+      : (pk && !q.groupBy.length && q.unit !== 'titleRosters' && q.unit !== 'pickChains' ? careerTimeline(rows, pk) : null) ?? (q.chart ? chartBoard(q, rows) : null),
   };
 }
 
@@ -631,6 +640,7 @@ const COUNT_LABEL = {
   pickChains: 'Picks',
   rivalryGames: 'Games',
   ...TITLE_BUILD_COUNT_LABEL,
+  ...CAREER_COUNT_LABEL,
 };
 
 function columnLabel(q, c) {
@@ -832,6 +842,7 @@ const UNIT_WORDS = {
   titleRosters: "champions' rosters (every player who started for the title team that season)",
   pickChains: 'traded draft picks, followed through every trade',
   ...TITLE_BUILD_UNIT_WORDS,
+  ...CAREER_UNIT_WORDS,
 };
 
 /** "Team-seasons, first 10 regular-season games, where W = 9 and L = 1, sorted by PF (lowest first)". */

@@ -3,11 +3,11 @@
  * server-rendered answer page and the question box's client script, so an
  * answer looks the same when it is asked and when it is shared.
  */
-import { compareChart, gapChart, historyChart } from './record-charts.mjs';
+import { careerChart, compareChart, gapChart, historyChart } from './record-charts.mjs';
 import { stackChart } from './title-build-charts.mjs';
 
-const TWO_DECIMALS = new Set(['pf', 'pa', 'pointDiff', 'avgPf', 'highGame', 'lowGame', 'finalPf', 'score', 'oppScore', 'margin', 'combined', 'points', 'avgStart', 'bestWeek', 'benchPoints', 'playoffPoints', 'pointsGot', 'pointsGave', 'pointsNet', 'pointsAfter', 'seasonPoints', 'pointsWithTeam', 'realPf', 'replayPf']);
-const DOLLARS = new Set(['salary', 'bid', 'dollarsPerPoint']);
+const TWO_DECIMALS = new Set(['pf', 'pa', 'pointDiff', 'avgPf', 'highGame', 'lowGame', 'finalPf', 'score', 'oppScore', 'margin', 'combined', 'points', 'avgStart', 'bestWeek', 'benchPoints', 'playoffPoints', 'pointsGot', 'pointsGave', 'pointsNet', 'pointsAfter', 'seasonPoints', 'pointsWithTeam', 'realPf', 'replayPf', 'pointsSeason']);
+const DOLLARS = new Set(['salary', 'bid', 'dollarsPerPoint', 'salaryHigh']);
 
 /** Display text for one cell. */
 export function formatCell(key, value) {
@@ -52,6 +52,13 @@ const WIDE_W = 400;
  * @returns {Array<{ title: string, phone: string, wide: string, take: string }>}
  */
 export function answerCharts(chart, base) {
+  // One player's path (ask-careers.mjs careerTimeline): his career timeline.
+  if (chart?.kind === 'career') {
+    const wide = careerChart(chart, WIDE_W);
+    if (!wide) return [];
+    const phone = careerChart(chart, PHONE_W) ?? wide;
+    return [{ title: `${chart.player}'s path through the league`, phone: phone.svg, wide: wide.svg, take: wide.take }];
+  }
   const href = (row) => (row.franchiseId ? `${base}/franchises/${row.franchiseId}?view=all` : null);
   // A what-if (what-if.mjs): real against replay, one chart.
   if (chart?.kind === 'compare') {
@@ -100,4 +107,7 @@ export const ASK_EXAMPLES = [
   'Which trades led to the 2019 title?',
   'How was each title team built?',
   'Which trade paid off most long-term?',
+  'Tell me Travis Kelce’s history in the league',
+  'Who started for the most champions?',
+  'Where did the pick that became Patrick Mahomes come from?',
 ];

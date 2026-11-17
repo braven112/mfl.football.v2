@@ -209,3 +209,13 @@
 .rb-viz__plot .rbc-s7 {
   fill: var(--history-series-7);
 }
+/*
+ * A career timeline's stints and season bars (record-charts.mjs careerChart).
+ * The fill is the team's accent token, set inline per mark; the ring in the
+ * card color keeps two touching segments apart in either theme.
+ */
+.rb-viz__plot .rbc-seg {
+  fill: var(--history-gold);
+  stroke: var(--content-bg);
+  stroke-width: 1;
+}

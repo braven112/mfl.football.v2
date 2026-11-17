@@ -466,3 +466,75 @@ export function compareChart(compare, W, opts = {}) {
   } else take = `${replayLabel}: ${teams(moved.length)} end with a different total of ${unit} than they really did.`;
   return { svg: svg(W, H, g, compare.title ?? `${realLabel} against ${replayLabel}`), take };
 }
+
+/** A franchise id that is safe inside a CSS custom-property name. */
+const safeId = (id) => (/^[A-Za-z0-9_-]{1,16}$/.test(String(id ?? '')) ? String(id) : null);
+/**
+ * A team's color as a FILL, from the site-wide accent token (team-accent-css.ts),
+ * which is forced to 3:1 against the card in BOTH themes. Set through `style`,
+ * because var() does not resolve in an SVG presentation attribute.
+ */
+const teamFill = (id) => (safeId(id) ? ` style="fill:var(--team-accent-${safeId(id)}, var(--history-gold))"` : '');
+
+/**
+ * One player's path through the league (ask-careers.mjs careerTimeline): each
+ * team that had him is a lane, each stint a segment in that team's color
+ * across the seasons (a mid-season trade starts or ends mid-season); below,
+ * his starter points season by season, stacked by the team he scored them
+ * for, with a gold dot over every season he started for the champion.
+ */
+export function careerChart(chart, W) {
+  if (!chart?.lanes?.length) return null;
+  const narrow = W < 360;
+  const L = narrow ? 86 : 124, R = 8, T = 4, laneH = 14, laneGap = 5;
+  const first = chart.first, last = chart.last;
+  const x = scale(first, last + 1, L, W - R);
+  const slot = (W - L - R) / (last - first + 1);
+  const lanesH = chart.lanes.length * (laneH + laneGap) - laneGap;
+  const barTop = T + lanesH + 22, barH = 96, H = barTop + barH + 22;
+  const chars = Math.floor((L - 6) / (narrow ? 6.4 : 6.2));
+  let g = '';
+  // Season boundaries, through the lanes and the bars alike.
+  for (let y = first; y <= last + 1; y++) g += `<line class="rbc-grid" x1="${px(x(y))}" x2="${px(x(y))}" y1="${T}" y2="${barTop + barH}"/>`;
+  chart.lanes.forEach((lane, i) => {
+    const y = T + i * (laneH + laneGap);
+    g += `<text class="rbc-name" x="0" y="${y + laneH - 3}">${esc(short(lane.team, chars))}</text>`;
+    for (const s of lane.segments) {
+      const x0 = x(s.from), w = Math.max(3, x(s.to) - x0);
+      g += `<rect class="rbc-seg" x="${px(x0)}" y="${y}" width="${px(w)}" height="${laneH}" rx="3"${teamFill(lane.franchiseId)}>${tip(`${lane.team} (${lane.owner}) · ${s.years} · ${s.how} → ${s.ended} · ${s.points} pts in ${s.starts} starts`)}</rect>`;
+    }
+  });
+  // Points per season, stacked by team.
+  const hi = Math.max(1, ...chart.seasons.map((s) => s.points));
+  const yv = scale(0, hi, barTop + barH, barTop);
+  for (const t of ticks(0, hi, 4, 1)) {
+    g += `<line class="rbc-grid" x1="${L}" x2="${W - R}" y1="${px(yv(t))}" y2="${px(yv(t))}"/>`;
+    g += `<text class="rbc-axis" x="${L - 4}" y="${px(yv(t)) + 3}" text-anchor="end">${t.toLocaleString('en-US')}</text>`;
+  }
+  g += `<text class="rbc-axis" x="0" y="${barTop + 10}">Starter pts</text>`;
+  const bw = Math.max(2, slot * 0.64);
+  for (const s of chart.seasons) {
+    const bx = x(s.year) + (slot - bw) / 2;
+    let acc = 0;
+    for (const part of s.parts) {
+      if (!(part.points > 0)) continue;
+      const lane = chart.lanes[part.lane];
+      const y0 = yv(acc + part.points), y1 = yv(acc);
+      g += `<rect class="rbc-seg" x="${px(bx)}" y="${px(y0)}" width="${px(bw)}" height="${px(Math.max(1, y1 - y0))}"${teamFill(lane?.franchiseId)}>${tip(`${s.year} · ${lane?.team ?? ''} · ${part.points} pts`)}</rect>`;
+      acc += part.points;
+    }
+    if (s.title) g += `<circle class="rbc-lead" cx="${px(bx + bw / 2)}" cy="${px(yv(s.points) - 7)}" r="4">${tip(`${s.year} · champion with ${s.title}`)}</circle>`;
+  }
+  const every = Math.max(1, Math.ceil((last - first + 1) / (narrow ? 5 : 8)));
+  for (let y = first; y <= last; y++) {
+    if ((y - first) % every === 0 || y === last) g += `<text class="rbc-axis" x="${px(x(y) + slot / 2)}" y="${H - 6}" text-anchor="middle">${y}</text>`;
+  }
+  const sum = chart.summary ?? {};
+  const teams = sum.teams ?? chart.lanes.length;
+  const take =
+    `${chart.player} was rostered by ${teams} ${teams === 1 ? 'team' : 'teams'} over ${sum.seasons ?? chart.seasons.length} ${sum.seasons === 1 ? 'season' : 'seasons'} here` +
+    ` and scored ${Number(sum.points ?? 0).toLocaleString('en-US')} starter points for them (${Number(sum.playoffPoints ?? 0).toLocaleString('en-US')} in the playoffs)` +
+    (sum.titles ? `; he started for ${sum.titles} ${sum.titles === 1 ? 'champion' : 'champions'}: ${sum.titleYears}.` : '.') +
+    (chart.lanes.length < teams ? ` The chart shows his first ${chart.lanes.length} teams.` : '');
+  return { svg: svg(W, H, g, `${chart.player}'s path through the league, ${first} to ${last}`), take };
+}

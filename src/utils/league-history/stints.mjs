@@ -39,6 +39,7 @@
  *   end: StintTime | null, ended: string, endRef: any,
  *   lastSeen: { year: number, week: number } | null,
  *   seasons: Map<number, StintSeason>,
+ *   weekRows?: Array<{ year: number, week: number, started: boolean, counted: boolean, playoff: boolean, score: number }>,
  * }} Stint
  */
 
@@ -336,6 +337,9 @@ function addWeek(stint, p, keptSet) {
   }
   const s = stint.seasons.get(p.year);
   s.weeks++;
+  // Every week he was on the roster in this stint, for week-level answers
+  // (wins a pickup swung, the career timeline: ask-careers.mjs).
+  (stint.weekRows ??= []).push(p);
   if (p.started && p.counted) {
     s.starts++;
     s.points = r2(s.points + p.score);

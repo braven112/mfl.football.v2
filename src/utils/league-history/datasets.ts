@@ -12,7 +12,8 @@
  * build derives for it. A league with only `league-history.json` (rivalry
  * lines, owner pages) does not.
  */
-import { hasLeagueData, listLeagueData, loadLeagueData } from '../league-data';
+import { hasLeagueData, listLeagueData, loadLeagueData, onLeagueDataChange } from '../league-data';
+import { compactSalaries } from './ask-careers.mjs';
 
 export interface LeagueHistoryPaths {
 	/** league-history.json */
@@ -99,4 +100,29 @@ export async function loadLeagueCompetitions(
 	const weekly: Record<string, any> = {};
 	for (const [year, value] of loaded) if (value) weekly[year] = value;
 	return { tierCompetition, tierHistory, awards, weekly };
+}
+
+/** Season salaries by player, compacted (ask-careers.mjs): `{ [year]: { [pid]: [salary, franchiseId] } }`. */
+export type LeagueSalaries = Record<string, Record<string, [number, string]>>;
+
+const salaryMemo = new Map<string, { raws: unknown[]; compact: LeagueSalaries }>();
+// A sync that moves the league-data pointer brings new salary files: drop the compact copies.
+onLeagueDataChange(() => salaryMemo.clear());
+
+/**
+ * A salary league's season salaries (`<dataPath>/mfl-player-salaries-<year>.json`,
+ * each the rostered players at that season's freeze week), for the career
+ * unit's salary fields. Only a league whose registry says it keeps contracts
+ * should ask (the AFL's files carry MFL's default salary, not a contract).
+ * The compact copy is reused while the loader serves the same files.
+ */
+export async function loadLeagueSalaries(dataPath: string): Promise<LeagueSalaries | null> {
+	const files = listLeagueData(`${dataPath}/mfl-player-salaries-*.json`);
+	if (!files.length) return null;
+	const raws = await Promise.all(files.map((p) => loadLeagueData<any>(p)));
+	const memo = salaryMemo.get(dataPath);
+	if (memo && memo.raws.length === raws.length && memo.raws.every((r, i) => r === raws[i])) return memo.compact;
+	const compact = compactSalaries(files.map((p, i) => [/mfl-player-salaries-(\d{4})\.json$/.exec(p)?.[1] ?? '', raws[i]])) as LeagueSalaries;
+	salaryMemo.set(dataPath, { raws, compact });
+	return compact;
 }
