@@ -556,6 +556,12 @@ export interface EspnScoringPlay {
   /** Distinct ESPN athlete ids credited on the play, in participant order. */
   espnAthleteIds: string[];
   /**
+   * Who put the ball in the end zone: the `scorer`, else the `recoverer` or
+   * `returner`. Narrower than `espnAthleteIds`, which on an own-fumble
+   * touchdown also names the player who fumbled. Optional for older payloads.
+   */
+  scorerEspnIds?: string[];
+  /**
    * Possession changed on this play — ESPN sets it when `start.team !==
    * end.team`, which makes the play's own team the DEFENSE.
    *
@@ -693,6 +699,33 @@ function creditedAthleteIds(item: any): string[] {
   return ids;
 }
 
+/** Athlete ids under the given roles, the first role that names anyone winning. */
+function roleAthleteIds(item: any, roles: string[]): string[] {
+  const participants = (item?.participants ?? []) as any[];
+  for (const role of roles) {
+    const ids = participants
+      .filter((p) => p?.type === role)
+      .map((p) => parseIdFromRef(p?.athlete?.$ref, 'athletes'))
+      .filter((id): id is string => !!id);
+    if (ids.length > 0) return [...new Set(ids)];
+  }
+  return [];
+}
+
+/**
+ * The MFL stat a scoring play adds beyond the box score, or null.
+ *
+ * `#FR` is an OFFENSIVE fumble-recovery touchdown: ESPN types it "Fumble
+ * Recovery (Own)" with no change of possession. `#MF` is a missed field goal
+ * returned for a touchdown. Neither has a box-score column, so without this
+ * both fell to the stat sheet's "Not itemized" line.
+ */
+export function returnTouchdownCode(play: Pick<EspnScoringPlay, 'typeText' | 'isTurnover'>): '#FR' | '#MF' | null {
+  if (!play.isTurnover && /fumble recovery \(own\)/i.test(play.typeText)) return '#FR';
+  if (/missed field goal/i.test(play.typeText)) return '#MF';
+  return null;
+}
+
 /**
  * Extract the scoring plays from a play-by-play page.
  *
@@ -713,6 +746,7 @@ export function parseScoringPlays(
 
     const teamId = parseIdFromRef(item?.team?.$ref, 'teams');
     const athleteIds = creditedAthleteIds(item);
+    const scorerEspnIds = roleAthleteIds(item, ['scorer', 'recoverer', 'returner']);
 
     out.push({
       playId,
@@ -727,6 +761,7 @@ export function parseScoringPlays(
       awayScore: Number(item?.awayScore) || 0,
       homeScore: Number(item?.homeScore) || 0,
       espnAthleteIds: athleteIds,
+      scorerEspnIds,
       isTurnover: item?.isTurnover === true,
       wallclock: typeof item?.wallclock === 'string' ? item.wallclock : '',
     });

@@ -12,9 +12,11 @@
  *
  * ── MFL'S NUMBER IS THE TOTAL ─────────────────────────────────────────────
  * The bottom line is the row's own live score, never this sheet's sum. What the
- * box score cannot itemize (first downs, 20-yard plays, a stat ESPN has not
- * caught up on) rides one "Not itemized" line so the sheet always adds up to
- * the number the owner tapped. See `scorePlayerStats`.
+ * box score cannot itemize rides one reconciling line so the sheet always adds
+ * up to the number the owner tapped. It reads "Not itemized" only when the
+ * league scores a stat this board never sees (first downs, points allowed);
+ * otherwise the gap can only be the feeds out of sync, and it says "Still
+ * updating". See `scorePlayerStats`.
  *
  * ── THE ROW IS RE-READ EVERY POLL ─────────────────────────────────────────
  * The caller resolves `row`/`box` from the CURRENT board each render, so a
@@ -254,9 +256,11 @@ export default function LvStatSheet({
                 {showPoints && sheet && sheet.unitemized !== 0 && (
                   <tr className="lv-sheet__other">
                     <th scope="row" colSpan={2}>
-                      Not itemized
+                      {sheet.hasUnseenRules ? 'Not itemized' : 'Still updating'}
                       <span className="lv-sheet__hint">
-                        Scoring the box score doesn't break out, or a stat still updating
+                        {sheet.hasUnseenRules
+                          ? "Scoring the box score doesn't list, or a stat still updating"
+                          : "MFL and the NFL box score haven't matched up on a stat yet"}
                       </span>
                     </th>
                     <td className="lv-sheet__num lv-sheet__pt">{signed(sheet.unitemized)}</td>

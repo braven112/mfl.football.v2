@@ -33,6 +33,7 @@ import {
   fieldGoalLength,
   parseBoxScore,
   parseTwoPointConversion,
+  returnTouchdownCode,
 } from '../src/utils/espn-game-detail';
 import {
   clearScoringRulesCache,
@@ -171,6 +172,33 @@ describe('scoring a line', () => {
     expect(s.unitemized).toBe(0);
   });
 
+  it('every offensive rule in TheLeague and the AFL is one the board can see', () => {
+    // So a gap on their sheets can only be the feeds out of sync ("Still
+    // updating"), never a stat we cannot itemize. Archie's first downs can't.
+    const afl = parseScoringRules(
+      JSON.parse(readFileSync(join(process.cwd(), 'data/afl-fantasy/mfl-feeds/2026/rules.json'), 'utf-8')),
+    )!;
+    for (const rules of [theLeagueRules, afl]) {
+      for (const pos of ['QB', 'RB', 'WR', 'TE', 'PK']) {
+        expect(scorePlayerStats({ rules, position: pos, stats: {}, total: 0 }).hasUnseenRules, pos).toBe(false);
+      }
+    }
+    expect(scorePlayerStats({ rules: outsideRules, position: 'WR', stats: {}, total: 0 }).hasUnseenRules).toBe(true);
+  });
+
+  it('itemizes an offensive fumble-recovery TD and a missed-FG return TD', () => {
+    const s = scorePlayerStats({
+      rules: theLeagueRules,
+      position: 'WR',
+      stats: { CC: 2, CY: 20, '#FR': 1, '#MF': 1 },
+      total: 15,
+    });
+    const pts = Object.fromEntries(s.lines.map((l) => [l.event, l.points]));
+    expect(pts['#FR']).toBe(6);
+    expect(pts['#MF']).toBe(6);
+    expect(s.unitemized).toBe(0);
+  });
+
   it('a rounding hair is agreement, not an unitemized line', () => {
     const s = scorePlayerStats({
       rules: theLeagueRules,
@@ -203,6 +231,14 @@ describe('ESPN box score → MFL stat codes', () => {
   it('reads each made field goal from the scoring play', () => {
     expect(fieldGoalLength('FG', 'Brandon Aubrey 53 Yd Field Goal')).toBe(53);
     expect(fieldGoalLength('TD', 'Javonte Williams 1 Yd Rush (Brandon Aubrey Kick)')).toBeNull();
+  });
+
+  it('names the stat for a return-style touchdown the box score has no column for', () => {
+    expect(returnTouchdownCode({ typeText: 'Fumble Recovery (Own)', isTurnover: false })).toBe('#FR');
+    // A defensive recovery is the defense's touchdown, not the offense's #FR.
+    expect(returnTouchdownCode({ typeText: 'Fumble Recovery (Opponent)', isTurnover: true })).toBeNull();
+    expect(returnTouchdownCode({ typeText: 'Missed Field Goal Return Touchdown', isTurnover: true })).toBe('#MF');
+    expect(returnTouchdownCode({ typeText: 'Passing Touchdown', isTurnover: false })).toBeNull();
   });
 
   it('credits a two-point conversion from the play prose', () => {

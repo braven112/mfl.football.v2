@@ -108,6 +108,8 @@ const LABELS: Record<string, string> = {
   '#U': 'Punt returns',
   UY: 'Punt return yards',
   '#UT': 'Punt return TDs',
+  '#FR': 'Fumble recovery TDs',
+  '#MF': 'Missed FG return TDs',
   TK: 'Tackles',
   AS: 'Assists',
   SK: 'Sacks',
@@ -129,8 +131,8 @@ const ORDER = [
   'TGT', 'CC', 'CY', '#C', 'C2',
   'RCY', 'PRY', 'TYS', 'TY', '#TD',
   'FG', '#F', '#A', '#M', 'EP', 'EA', 'EM',
-  '#K', 'KY', '#KT', '#U', 'UY', '#UT',
-  'FU', 'FL',
+  '#K', 'KY', '#KT', '#U', 'UY', '#UT', '#MF',
+  'FU', '#FR', 'FL',
   'TK', 'AS', 'SK', 'TKL', 'PD', 'QH', 'IC', 'ICY', '#IR',
 ];
 
@@ -238,6 +240,12 @@ export interface StatSheet {
   unitemized: number;
   /** False when the league publishes no rules — lines then carry no points. */
   scored: boolean;
+  /**
+   * True when a rule that applies to him scores a stat this board never sees
+   * (first downs, points allowed, …). Without one, a nonzero `unitemized` can
+   * only be the two feeds out of sync, and the sheet says so.
+   */
+  hasUnseenRules: boolean;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -254,7 +262,7 @@ const UNITS: Record<string, string> = {
   CC: 'rec', TGT: 'tgt', CY: 'yds', '#C': 'TD', C2: '2PT',
   RCY: 'yds', PRY: 'yds', TYS: 'yds', TY: 'yds', '#TD': 'TD',
   FU: 'FUM', FL: 'FUM', '#F': 'FG', '#A': 'att', '#M': 'FG', EP: 'XP', EA: 'att', EM: 'XP',
-  '#K': 'ret', KY: 'yds', '#KT': 'TD', '#U': 'ret', UY: 'yds', '#UT': 'TD',
+  '#K': 'ret', KY: 'yds', '#KT': 'TD', '#U': 'ret', UY: 'yds', '#UT': 'TD', '#MF': 'TD', '#FR': 'TD',
   TK: 'tkl', AS: 'ast', SK: 'sk', TKL: 'TFL', PD: 'PD', QH: 'hits', IC: 'INT', ICY: 'yds', '#IR': 'TD',
 };
 
@@ -290,11 +298,13 @@ export function scorePlayerStats({
 }: ScorePlayerInput): StatSheet {
   const pos = canonPosition(position);
   const lines = new Map<string, StatSheetLine & { order: number; raw: number }>();
+  let hasUnseenRules = false;
 
   if (rules) {
     for (const block of rules) {
       if (!block.positions.some((p) => canonPosition(p) === pos)) continue;
       for (const rule of block.rules) {
+        if (rule.event.some((code) => code !== 'FG' && !(code in LABELS))) hasUnseenRules = true;
         const key = rule.event.join('+');
         let value: number;
         let points = 0;
@@ -382,5 +392,6 @@ export function scorePlayerStats({
     // Within a rounding hair is agreement; MFL itself rounds to hundredths.
     unitemized: scored && Math.abs(diff) >= 0.05 ? diff : 0,
     scored,
+    hasUnseenRules,
   };
 }
