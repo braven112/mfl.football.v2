@@ -64,6 +64,16 @@ describe('the career and pickup-impact units', () => {
     expect(cell(r, 'salaryHigh')).toBe(15525000);
   });
 
+  it('names every team a player won a title with, by default (Brandon 2026-11-17)', () => {
+    const r = runQuery(afl, { unit: 'careers', where: [{ field: 'player', op: 'eq', value: 'Julio Jones' }] }, AFL);
+    const keys = r.columns.map((c: { key: string }) => c.key);
+    expect(keys).toEqual(expect.arrayContaining(['titles', 'titleTeams', 'titleYears']));
+    const row: any = r.rows[0];
+    const years = String(row.cells?.titleYears ?? row.titleYears ?? cell(r, 'titleYears'));
+    expect(years.split(', ').length).toBe(Number(cell(r, 'titles')));
+    for (const part of years.split(', ')) expect(part).toMatch(/^\d{4} \(.+\)$/);
+  });
+
   it('keeps the AFL’s two conferences apart: one player, two teams at once', () => {
     const r = runQuery(afl, { unit: 'stints', where: [{ field: 'player', op: 'eq', value: 'Travis Kelce' }, { field: 'year', op: 'eq', value: 2014 }], columns: ['team', 'lastYear', 'acquired'], limit: 5 }, AFL);
     const teams = r.rows.map((row) => row.cells[0]);
