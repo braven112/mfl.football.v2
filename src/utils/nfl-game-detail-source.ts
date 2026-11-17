@@ -40,6 +40,7 @@ import {
   boxScoreToMflStats,
   fieldGoalLength,
   parseTwoPointConversion,
+  returnTouchdownCode,
   parseBoxScore,
   comparePlaysChronologically,
   isTwoPointConversion,
@@ -337,6 +338,16 @@ export async function loadNflGameDetail(
       credit(conv.passer, 'P2');
       credit(conv.receiver, 'C2');
       credit(conv.rusher, 'R2');
+    }
+
+    // Offensive fumble-recovery and missed-FG-return touchdowns have no
+    // box-score column; the scoring play names who scored.
+    for (const play of detail.plays) {
+      const code = returnTouchdownCode(play);
+      if (!code) continue;
+      const id = (play.scorerEspnIds ?? []).map((e) => espnToMfl.get(e)).find((m) => !!m);
+      const row = id ? boxScore[id] : undefined;
+      if (row?.stats) row.stats[code] = (row.stats[code] ?? 0) + 1;
     }
 
     // MFL scores each field goal by its length, which the box score does not
