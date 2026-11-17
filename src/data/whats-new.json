@@ -1,5 +1,201 @@
 [
   {
+    "id": "weekly-rollup-2026-11-16",
+    "date": "2026-11-16",
+    "title": "Share the history",
+    "summary": "Found a great fact in Ask the History? Tap Share to the group chat under any answer and it lands in GroupMe as a tall picture card, with a link so the rest of The League can ask their own.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "The TV score overlay has a new Slim size: just both team logos, the scores and the win bar at about half the size. Pick it from your phone's TV remote. <a href=\"/guides/tv-score-overlay\">How to use it</a>.",
+          "Share an Ask the History answer to the group chat in one tap: it posts as a tall picture of the fact with a link for leaguemates to ask their own.",
+          "New Playoff Odds page: every team's chance to make the playoffs (and earn a bye), plus the games this week that move it most.",
+          "The Saturday Matchup Preview is now chart-led: a playoff race board up top, then a card per game with the rivalry, last five weeks, what's at stake and the schedule left.",
+          "The standings Playoffs tab now shows each team's playoff odds on its seed tile, with Odds and Bye columns in the table.",
+          "Saturday's group chat lineup check now names every team with no lineup, an empty slot or an OUT/IR/bye starter. Sunday reminders are push only.",
+          "Live scoring's matchup detail now shows each team's and player's original projection once games start, so you can see how far off it was.",
+          "Free team logo maker at mfl.football/team-logo: pick a style and colors, paste the prompt into ChatGPT or Gemini, then turn the PNG into a sharp SVG. No account needed.",
+          "Every Schefter column now reads in short one- or two-sentence paragraphs, so articles are easier to follow on a phone.",
+          "Schefter now writes one weekly preview on Saturday instead of two: the Friday Weekend Preview is folded into the Saturday Matchup Preview.",
+          "Every game in Schefter's Saturday Matchup Preview now names its key NFL game: the one with the most projected points from both lineups.",
+          "New guide: how the schedule is made, from the rules it follows in order to when it drops each year. <a href=\"/guides/how-the-schedule-is-made\">How to use it</a>.",
+          "File your veteran extension on the League Planner: pick any eligible player, choose +1 or +2 years, see each year's salary, and it goes straight onto MFL.",
+          "Rosters: your simulated tags, extensions, 1st-round options and cuts now save to your account, and Review & submit files them all in one go.",
+          "Schefter now reports every extension, option and franchise tag with the old and new terms, and leaks tag rumors during the Feb 1-14 window.",
+          "Dark mode gets a black top bar, calmer steel blues, and one matching sage green for the league name everywhere.",
+          "Ask the History answers now come from Buck Archives, the league historian, with his name and portrait on every answer.",
+          "Buck's Notebook: every Tuesday, Buck Archives posts a few history facts about the coming week, like the week's highest score ever."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Homepage Schefter posts longer than three lines, roster-move lists included, now have a \"Show more\" so you can read the whole post.",
+          "<strong>Schefter Report</strong> — Schefter stops reporting trade offers once the trade deadline passes, and skips offers built around a player who has since been traded.",
+          "<strong>Schefter Report</strong> — Vegas Vic and Doc Rivers get real cartoon avatars in the news feed, replacing their placeholder badges.",
+          "<strong>Schefter Report</strong> — Matchup Preview cards show each team's logo whole instead of cropping it to a circle, and spell out the full team name whenever it fits.",
+          "<strong>Schefter Report</strong> — Every game in the Saturday Matchup Preview now ends with a predicted final score, not just a winner.",
+          "<strong>Schefter Report</strong> — Schefter's trade posts now name each player once (\"WR, Deebo Samuel\"), show who got what the right way, and print his take's label only once.",
+          "<strong>Schefter Report</strong> — Doc Rivers is back: injury updates for rostered players now post again, and his and Vegas Vic's posts show in the league's main news feed.",
+          "<strong>Schefter Report</strong> — Doc Rivers and Vegas Vic avatars show again in the news widget on your league's MFL pages.",
+          "<strong>Franchise Pages</strong> — Ask the History can now count across the whole record: most trades in a single day, most waiver pickups in a week, who has traded the most.",
+          "<strong>Calendar</strong> — The trade deadline now follows the Constitution, the Friday before Week 11 at 8:45pm PT, everywhere on the site instead of a fixed Nov 13.",
+          "<strong>Rosters</strong> — Sorting a roster by a future salary year now switches the cap totals, Cap Subtotals card and cap space (header and phone card) to that year, labeled with it.",
+          "<strong>Rosters</strong> — Rosters: the Year picker's arrow now has room on its right instead of sitting flush against the edge.",
+          "<strong>Homepage</strong> — On phones, the homepage's Breaking news card now shows the player above the story, so the headline never covers his face.",
+          "<strong>Homepage</strong> — The trade deadline countdown now runs to the exact time MFL closes trading, read from MFL's own calendar, instead of midnight.",
+          "<strong>Other</strong> — Top Players drops its Pos column, since the # column already shows the positional rank; the Overall view shows it under each name (RB12).",
+          "<strong>Other</strong> — Wide Ask the History answer tables, like the biggest trade wins, now fit inside their card instead of spilling into the next one.",
+          "<strong>Live Scoring</strong> — Live scoring no longer double-counts a play when ESPN catches up after MFL, so a player no longer shows extra \"Not itemized\" points.",
+          "<strong>Live Scoring</strong> — Live stat sheets now itemize offensive fumble-recovery and missed-field-goal return touchdowns, and say \"Still updating\" when MFL and ESPN just haven't synced."
+        ]
+      },
+      "Everything above shipped in the week of Nov 10-17. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": false,
+    "leagues": [
+      "theleague"
+    ],
+    "image": "ask-history-share-card-theleague.webp",
+    "imageAlt": "A tall Ask the History share card: the question, the answer in big type, and a link to ask your own"
+  },
+  {
+    "id": "weekly-rollup-2026-11-16-afl",
+    "date": "2026-11-16",
+    "title": "Share the history",
+    "summary": "Found a great fact in Ask the History? Tap Share to the group chat under any answer and it lands in GroupMe as a tall picture card, with a link so the rest of the AFL can ask their own.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "The TV score overlay has a new Slim size: just both team logos, the scores and the win bar at about half the size. Pick it from your phone's TV remote. <a href=\"/guides/tv-score-overlay\">How to use it</a>.",
+          "Share an Ask the History answer to the group chat in one tap: it posts as a tall picture of the fact with a link for leaguemates to ask their own.",
+          "New Playoff Odds page: every team's chance to make the playoffs (and earn a bye), plus the games this week that move it most.",
+          "The Saturday Matchup Preview is now chart-led: a playoff race board up top, then a card per game with the rivalry, last five weeks, what's at stake and the schedule left.",
+          "The standings Playoffs tab now shows each team's playoff odds on its seed tile, with Odds and Bye columns in the table.",
+          "Saturday's group chat lineup check now names every team with no lineup, an empty slot or an OUT/IR/bye starter. Sunday reminders are push only.",
+          "Live scoring's matchup detail now shows each team's and player's original projection once games start, so you can see how far off it was.",
+          "Free team logo maker at mfl.football/team-logo: pick a style and colors, paste the prompt into ChatGPT or Gemini, then turn the PNG into a sharp SVG. No account needed.",
+          "Every Schefter column now reads in short one- or two-sentence paragraphs, so articles are easier to follow on a phone.",
+          "Schefter now writes one weekly preview on Saturday instead of two: the Friday Weekend Preview is folded into the Saturday Matchup Preview.",
+          "Every game in Schefter's Saturday Matchup Preview now names its key NFL game: the one with the most projected points from both lineups.",
+          "New guide: how the AFL schedule is made, from the Week 1 crossover to the rules it follows and when it drops each year. <a href=\"/guides/how-the-afl-schedule-is-made\">How to use it</a>.",
+          "Ask the History answers now come from Buck Archives, the league historian, with his name and portrait on every answer.",
+          "Buck's Notebook: every Tuesday, Buck Archives posts a few history facts about the coming week, like the week's highest score ever."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Homepage Schefter posts longer than three lines, roster-move lists included, now have a \"Show more\" so you can read the whole post.",
+          "<strong>Schefter Report</strong> — Schefter stops reporting trade offers once the trade deadline passes, and skips offers built around a player who has since been traded.",
+          "<strong>Schefter Report</strong> — Vegas Vic and Doc Rivers get real cartoon avatars in the news feed, replacing their placeholder badges.",
+          "<strong>Schefter Report</strong> — Matchup Preview cards show each team's logo whole instead of cropping it to a circle, and spell out the full team name whenever it fits.",
+          "<strong>Schefter Report</strong> — Every game in the Saturday Matchup Preview now ends with a predicted final score, not just a winner.",
+          "<strong>Schefter Report</strong> — Schefter's trade posts now name each player once (\"WR, Deebo Samuel\"), show who got what the right way, and print his take's label only once.",
+          "<strong>Schefter Report</strong> — Doc Rivers is back: injury updates for rostered players now post again, and his and Vegas Vic's posts show in the league's main news feed.",
+          "<strong>Schefter Report</strong> — Doc Rivers and Vegas Vic avatars show again in the news widget on your league's MFL pages.",
+          "<strong>Franchise Pages</strong> — Ask the History can now count across the whole record: most trades in a single day, most waiver pickups in a week, who has traded the most.",
+          "<strong>Homepage</strong> — The trade deadline countdown now runs to the exact time MFL closes trading, read from MFL's own calendar, instead of midnight.",
+          "<strong>Other</strong> — Top Players drops its Pos column, since the # column already shows the positional rank; the Overall view shows it under each name (RB12).",
+          "<strong>Other</strong> — Wide Ask the History answer tables, like the biggest trade wins, now fit inside their card instead of spilling into the next one.",
+          "<strong>Rosters</strong> — Rosters: the Year picker's arrow now has room on its right instead of sitting flush against the edge.",
+          "<strong>Live Scoring</strong> — Live scoring no longer double-counts a play when ESPN catches up after MFL, so a player no longer shows extra \"Not itemized\" points.",
+          "<strong>Live Scoring</strong> — Live stat sheets now itemize offensive fumble-recovery and missed-field-goal return touchdowns, and say \"Still updating\" when MFL and ESPN just haven't synced."
+        ]
+      },
+      "Everything above shipped in the week of Nov 11-17. Older weeks are in <a href=\"/whats-new\">the archive</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": false,
+    "leagues": [
+      "afl"
+    ],
+    "image": "ask-history-share-card-afl.webp",
+    "imageAlt": "A tall Ask the History share card: the question, the answer in big type, and a link to ask your own"
+  },
+  {
+    "id": "weekly-rollup-2026-11-16-archies",
+    "date": "2026-11-16",
+    "title": "The Week in Review (Nov 11-17)",
+    "summary": "16 fixes across the site this week.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Homepage Schefter posts longer than three lines, roster-move lists included, now have a \"Show more\" so you can read the whole post.",
+          "<strong>Schefter Report</strong> — Schefter stops reporting trade offers once the trade deadline passes, and skips offers built around a player who has since been traded.",
+          "<strong>Schefter Report</strong> — Vegas Vic and Doc Rivers get real cartoon avatars in the news feed, replacing their placeholder badges.",
+          "<strong>Schefter Report</strong> — Meet Max Insider, the league's new AI beat reporter: big trades, bids and IR moves get their own posts, and the rest of the wire lands in one daily notebook.",
+          "<strong>Schefter Report</strong> — Matchup Preview cards show each team's logo whole instead of cropping it to a circle, and spell out the full team name whenever it fits.",
+          "<strong>Schefter Report</strong> — Every game in the Saturday Matchup Preview now ends with a predicted final score, not just a winner.",
+          "<strong>Schefter Report</strong> — Schefter's trade posts now name each player once (\"WR, Deebo Samuel\"), show who got what the right way, and print his take's label only once.",
+          "<strong>Schefter Report</strong> — Doc Rivers is back: injury updates for rostered players now post again, and his and Vegas Vic's posts show in the league's main news feed.",
+          "<strong>Schefter Report</strong> — Doc Rivers and Vegas Vic avatars show again in the news widget on your league's MFL pages.",
+          "<strong>Franchise Pages</strong> — Ask the History can now count across the whole record: most trades in a single day, most waiver pickups in a week, who has traded the most.",
+          "<strong>Homepage</strong> — The trade deadline countdown now runs to the exact time MFL closes trading, read from MFL's own calendar, instead of midnight.",
+          "<strong>Other</strong> — Top Players drops its Pos column, since the # column already shows the positional rank; the Overall view shows it under each name (RB12).",
+          "<strong>Other</strong> — Wide Ask the History answer tables, like the biggest trade wins, now fit inside their card instead of spilling into the next one.",
+          "<strong>Rosters</strong> — Rosters: the Year picker's arrow now has room on its right instead of sitting flush against the edge.",
+          "<strong>Live Scoring</strong> — Live scoring no longer double-counts a play when ESPN catches up after MFL, so a player no longer shows extra \"Not itemized\" points.",
+          "<strong>Live Scoring</strong> — Live stat sheets now itemize offensive fumble-recovery and missed-field-goal return touchdowns, and say \"Still updating\" when MFL and ESPN just haven't synced."
+        ]
+      },
+      "Everything above shipped in the week of Nov 11-17. Older weeks are in <a href=\"/whats-new\">the archive</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "archies"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-11-16-sandbox",
+    "date": "2026-11-16",
+    "title": "The Week in Review (Nov 11-17)",
+    "summary": "15 fixes across the site this week.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Schefter Report</strong> — Homepage Schefter posts longer than three lines, roster-move lists included, now have a \"Show more\" so you can read the whole post.",
+          "<strong>Schefter Report</strong> — Schefter stops reporting trade offers once the trade deadline passes, and skips offers built around a player who has since been traded.",
+          "<strong>Schefter Report</strong> — Vegas Vic and Doc Rivers get real cartoon avatars in the news feed, replacing their placeholder badges.",
+          "<strong>Schefter Report</strong> — Matchup Preview cards show each team's logo whole instead of cropping it to a circle, and spell out the full team name whenever it fits.",
+          "<strong>Schefter Report</strong> — Every game in the Saturday Matchup Preview now ends with a predicted final score, not just a winner.",
+          "<strong>Schefter Report</strong> — Schefter's trade posts now name each player once (\"WR, Deebo Samuel\"), show who got what the right way, and print his take's label only once.",
+          "<strong>Schefter Report</strong> — Doc Rivers is back: injury updates for rostered players now post again, and his and Vegas Vic's posts show in the league's main news feed.",
+          "<strong>Schefter Report</strong> — Doc Rivers and Vegas Vic avatars show again in the news widget on your league's MFL pages.",
+          "<strong>Franchise Pages</strong> — Ask the History can now count across the whole record: most trades in a single day, most waiver pickups in a week, who has traded the most.",
+          "<strong>Homepage</strong> — The trade deadline countdown now runs to the exact time MFL closes trading, read from MFL's own calendar, instead of midnight.",
+          "<strong>Other</strong> — Top Players drops its Pos column, since the # column already shows the positional rank; the Overall view shows it under each name (RB12).",
+          "<strong>Other</strong> — Wide Ask the History answer tables, like the biggest trade wins, now fit inside their card instead of spilling into the next one.",
+          "<strong>Rosters</strong> — Rosters: the Year picker's arrow now has room on its right instead of sitting flush against the edge.",
+          "<strong>Live Scoring</strong> — Live scoring no longer double-counts a play when ESPN catches up after MFL, so a player no longer shows extra \"Not itemized\" points.",
+          "<strong>Live Scoring</strong> — Live stat sheets now itemize offensive fumble-recovery and missed-field-goal return touchdowns, and say \"Still updating\" when MFL and ESPN just haven't synced."
+        ]
+      },
+      "Everything above shipped in the week of Nov 11-17. Older weeks are in <a href=\"/whats-new\">the archive</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "sandbox"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-11-09",
     "date": "2026-11-09",
     "title": "Live standings, as the games are played",
@@ -1714,98 +1910,6 @@
       "<strong>It's a board of the AFL's own.</strong> Every idea, comment, reaction and unread badge posted here lives in the AFL's own storage — nothing is shared with any other league, and nothing you post shows up anywhere else. It starts empty, which means somebody gets to be first.",
       "The one thing that carries over from <a href=\"/rules\">the constitution</a>: a rule change still needs its 75% vote, 18 of 24. The Board is where the argument happens before the vote, not a replacement for it. Site suggestions have no such bar — the good ones just get built.",
       "New to how any of this fits together? <a href=\"/faq\">The FAQ</a> explains what still lives on MyFantasyLeague, what lives here, and what happens to an idea after you post it."
-    ]
-  },
-  {
-    "id": "app-vs-browser-split",
-    "date": "2026-09-06",
-    "category": "enhancement",
-    "icon": "activity",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Who's on the App, and Who's Still Living in a Tab",
-    "link": "/activity",
-    "linkLabel": "See the split on Owner Activity",
-    "summary": "Owner Activity now knows whether a visit came from the site installed on a home screen or from an ordinary browser tab — with the platform behind it, an app-versus-browser share for the league, and a note on each owner's row saying which one they showed up on last.",
-    "description": [
-      "An installed app and a browser tab are the same website wearing different clothes: same pages, same login, same everything the server can see. Which is why <a href=\"/activity\">Owner Activity</a> could tell you exactly when somebody last checked their roster and had nothing at all to say about how they did it — whether they tapped an icon on a home screen or dug the site out of a tab they had open since August.",
-      "<strong>Now it says.</strong> A new <strong>App vs Browser</strong> section up top splits every visit four ways — the installed-app share, the browser share, and how each of those breaks down for people signed in versus people just passing through — then goes platform by platform underneath: iPhone and iPad, Android, desktop, with a bar showing which way each one leans. And down in the Last Seen table, every owner's row now ends with where they turned up last: <em>On App (iPhone / iPad) — 81% app</em>.",
-      "The bookkeeping is deliberately thin. Signed-out visitors are counted, because an owner reading the league page without logging in is exactly the traffic the old counter never saw — but they are counted and nothing else: no page, no timestamp, no name. Two numbers go up, and the only other thing that touches the database is a one-minute counter that stops anyone hammering the endpoint, filed under a scrambled version of their address rather than the address itself."
-    ],
-    "image": "app-vs-browser-split.webp",
-    "imageAlt": "The App vs Browser section of Owner Activity: four cards reading Installed App 52%, Browser 48%, Signed In 1,612, Signed Out 278, above a table splitting visits by platform — iPhone / iPad, Desktop and Android — each with a bar showing how far it leans toward the app.",
-    "excludeFromHero": true
-  },
-  {
-    "id": "trade-for-him",
-    "date": "2026-09-06",
-    "category": "enhancement",
-    "icon": "activity",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "The Guy You Want Already Belongs to Somebody",
-    "link": "/front-office/trade-builder",
-    "linkLabel": "Open the Trade Builder",
-    "summary": "Tap a rostered player anywhere on the site and the modal now offers a handshake: Trade for him. It drops you into the Trade Builder with his owner on one side, him already in the deal, and you on the other — no team picker, no scrolling a roster to find the name you were just looking at.",
-    "description": [
-      "When we put a Claim button inside the player card, it fixed exactly one problem: the free agents. Tap a name nobody owns and you can bid on him then and there. Tap a name somebody <em>does</em> own — which is to say most of the league — and the card just sat there with his stats on it, admiring the problem. You knew who had him. You knew what you wanted. And the site's answer was to make you go find <a href=\"/front-office/trade-builder\">the Trade Builder</a> yourself, pick his team out of a dropdown, then hunt his name down a roster you had already been staring at.",
-      "<strong>Now there's a second button.</strong> Rostered players get <strong>Trade for him</strong>, with the owner named right on it — \"Build a trade with Vitside Mafia\" — so you find out who you're negotiating with before you commit to the click. It opens the builder with his club loaded, him already sitting in the deal, and your team seated across the table. The first decision you make is what you're willing to give up, which is the only decision that was ever interesting.",
-      "<strong>The card knows which of three people you are.</strong> He's yours: nothing to offer, and no button pretending otherwise. He's unowned: the Claim or Bid button you already know. He's somebody else's: the handshake. You never see the wrong one, because the site works it out from the actual rosters rather than guessing from whichever page you happened to open him on — the same page can hand you all three in a row and get all three right.",
-      "AFL owners, the conference line holds, because your league's trades do. A player rostered over in the other conference isn't a trade you're allowed to make, so the button doesn't appear and doesn't tease you — what you get is the copy of him inside your own conference, if there is one, and the claim button if there isn't. Go browse <a href=\"/rosters\">somebody else's roster</a> or run down the <a href=\"/players\">player list</a> and start tapping names."
-    ],
-    "image": "trade-for-him.webp",
-    "imageAlt": "The player card for Matthew Stafford, headed \"Rostered by Vitside Mafia\". Below it two side-by-side action cards: \"Watch player\" with an eye icon, and a highlighted \"Trade for him\" with a handshake icon reading \"Build a trade with Vitside Mafia\".",
-    "excludeFromHero": true
-  },
-  {
-    "id": "afl-owners-poll",
-    "date": "2026-09-06",
-    "category": "new-page",
-    "icon": "rank",
-    "leagues": [
-      "afl"
-    ],
-    "title": "Twenty-Four Teams. One Ballot. Your Call.",
-    "heroHeadline": "Now you do the",
-    "heroAccentWord": "Ranking.",
-    "link": "/pecking-order/ballot",
-    "linkLabel": "Cast your ballot",
-    "summary": "The Owners' Poll comes to the AFL. Every Tuesday The Pecking Order ranks all 24 by the numbers; now you rank your top 10 — your own team included, if you think you belong there — and the room's answer runs in Thursday's column right beside the machine's.",
-    "description": [
-      "For a year now, <a href=\"/pecking-order\">The Pecking Order</a> has told you every Tuesday who the best team in this league is, and every Tuesday somebody in the chat has explained why it's wrong. Fine. Put it on the record. The Owners' Poll opens with the column each Tuesday and closes Thursday at the week's first kickoff, and what comes out of it publishes in that same issue, next to the algorithm, so the week's real story becomes the room versus the machine.",
-      "<strong>Rank your top 10.</strong> Not seven — this is a 24-team league, and ten is what it takes to actually say something about a field this size. Your own team is on the ballot like everybody else's; nobody is stopping you from putting Smokane first, and the Homer Index is going to notice if you do. Tap the teams in the order you rate them, shuffle them until it's right, and change your mind as often as you like until the ballot shuts.",
-      "<strong>One ballot, both conferences.</strong> The AL doesn't get its own poll and neither does the NL. The column already ranks all 24 in one list, and half the fun of this league is arguing whether an American League team that beats up on the American League would survive a month in the National. Now there's a table where that argument settles.",
-      "You'll find the ballot on <a href=\"/lineup\">your lineup page</a> too, sitting at the top of the one page everybody in this league visits anyway — same trip, same deadline, no second errand. Twelve of the 24 have to vote or the column runs the machine's numbers alone and says so, which would be a bleak look for a league that argues this much.",
-      "Ballots stay sealed until the poll closes, then every one of them publishes. There is a <a href=\"/pecking-order/voters\">voters page</a> keeping the receipts — who voted, how often, and how well they actually read the league, because every ballot gets scored against how the next week plays out. Being loudly wrong in Week 2 is now a thing that follows you to Week 15. Want a nudge when the ballot opens or a warning before it shuts? <a href=\"/notifications\">Notifications</a> has both, and they're yours to switch on."
-    ],
-    "image": "afl-owners-poll.webp",
-    "imageAlt": "The Owners' Poll ballot page on the AFL. A card headed \"Rank your top 10 · Week 1\" shows \"9 of 24 ballots in\" and \"Closes Thursday, 4:00 PM PDT\", with numbered slots filled — Ninjas, Balls Deep, Vitside, Titsburgh, Suh girls, Indians — each with its franchise crest, a team-colored accent bar, and up/down/remove controls."
-  },
-  {
-    "id": "viewer-clock-everywhere",
-    "date": "2026-09-06",
-    "category": "enhancement",
-    "icon": "wrench",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "Your Clock Now Follows You Off the Sunday Ticket Board",
-    "link": "/preferences",
-    "linkLabel": "Set your clock",
-    "image": "viewer-clock-everywhere.webp",
-    "imageAlt": "The Preferences page with Australia and Sydney selected, a preview line reading \"Mon 3:00 AM AEST · 10:00 AM PT\" and \"Sunday Ticket via Kayo Sports\", beside an open nav drawer with Preferences pinned under Notifications",
-    "summary": "The country and clock you set on Preferences used to steer exactly one page. Now the draft's start time, the waiver window, the ballot deadline and the mock-draft lobby all read in your clock with the league's PT beside it — and Preferences has moved into the nav so you can actually find it.",
-    "description": [
-      "We shipped <a href=\"/preferences\">Preferences</a> so you could tell us where you watch from and which clock you live in. Then we used it on precisely one page. Everywhere else the site went on printing Pacific at you and letting you do the arithmetic — which, if you are the owner in Sydney, means every waiver deadline in the league arrived as a subtraction problem.",
-      "That is fixed. The draft's start time on the <a href=\"/draft\">draft hub</a>, the waiver window across the top of <a href=\"/players\">Free Agents</a> and inside the claim modal, the ballot deadline on <a href=\"/pecking-order\">The Pecking Order</a>, the session times in the mock-draft lobby, the \"data as of\" stamp on the AFL's keeper report — all of them now read in the clock you picked, with the league's <strong>PT</strong> beside it. A Wednesday 8:00 PM PT waiver deadline reads <em>Thu 1:00 PM AEST · Wed 8:00 PM PT</em> from Sydney, which is the useful version: it tells you it is not even Wednesday where you are.",
-      "Your country got the same promotion. The game-day hero on the homepage used to name American networks at everybody — Prime Video, ESPN, CBS/FOX — regardless of whether those channels exist where you are. It now names the channel that actually carries the game where you are: <strong>Sky Sports</strong> in the UK, <strong>Kayo</strong> in Australia, <strong>DAZN</strong> in Canada, <strong>FOX México</strong> and <strong>ESPN México</strong> south of the border. Which service sells you the whole slate is a longer answer than a hero has room for, and it stays where it has always lived — on the <a href=\"/sunday-ticket\">Sunday Ticket</a> board, one badge per window.",
-      "One deliberate piece of restraint: <strong>if you have never opened the picker, nothing about your site changed.</strong> No clock was guessed for you and none was bolted onto your screens — you stay on the league's PT exactly as before. The second clock shows up the moment you choose one, and not a render sooner. And <a href=\"/preferences\">Preferences</a> now sits in the nav right under Notifications, so finding it no longer requires knowing it exists."
     ]
   }
 ]
