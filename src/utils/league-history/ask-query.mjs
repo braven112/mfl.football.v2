@@ -27,6 +27,7 @@
 import { indexDataset } from './records.mjs';
 import { PLAYER_DEFAULT_COLUMNS, PLAYER_FIELDS, PLAYER_UNITS, preparePlayers } from './ask-players.mjs';
 import { MOVE_DEFAULT_COLUMNS, MOVE_FIELDS, MOVE_UNITS, prepareMoves } from './ask-moves.mjs';
+import { STINT_DEFAULT_COLUMNS, STINT_FIELDS, STINT_TEAM_OWNER_FIELDS, STINT_UNITS, prepareStints } from './ask-stints.mjs';
 import {
   COMPETITION_DEFAULT_COLUMNS,
   COMPETITION_FIELDS,
@@ -40,7 +41,7 @@ import {
 } from './ask-competitions.mjs';
 
 export const TEAM_UNITS = ['seasons', 'games', 'owners'];
-export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...COMPETITION_UNITS];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...COMPETITION_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -117,6 +118,7 @@ export const FIELDS = {
   },
   ...PLAYER_FIELDS,
   ...MOVE_FIELDS,
+  ...STINT_FIELDS,
   ...COMPETITION_FIELDS,
 };
 
@@ -238,6 +240,7 @@ const DEFAULT_COLUMNS = {
   owners: ['owner', 'seasons', 'w', 'l', 'titles', 'playoffApps'],
   ...PLAYER_DEFAULT_COLUMNS,
   ...MOVE_DEFAULT_COLUMNS,
+  ...STINT_DEFAULT_COLUMNS,
   ...COMPETITION_DEFAULT_COLUMNS,
 };
 
@@ -502,7 +505,7 @@ export function normalizeQuery(q) {
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
- * @param {{ players?: any, moves?: any, competitions?: any, league?: string }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions) and the all-play competition's sources (ask-competitions.mjs)
+ * @param {{ players?: any, moves?: any, keepers?: any, pickTrades?: any, competitions?: any, league?: string }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions; with the players, the stint units), keeper-history.json and pick-trades.json where the league has them (ask-stints.mjs), and the all-play competition's sources (ask-competitions.mjs)
  * @returns {QueryResult}
  */
 export function runQuery(ds, rawQuery, extra = {}) {
@@ -510,12 +513,15 @@ export function runQuery(ds, rawQuery, extra = {}) {
   const p = prepare(ds);
   const isPlayer = PLAYER_UNITS.includes(q.unit);
   const isMove = MOVE_UNITS.includes(q.unit);
+  const isStint = STINT_UNITS.includes(q.unit);
   const isCompetition = COMPETITION_UNITS.includes(q.unit);
   if (isCompetition && !extra.competitions) throw new QueryError('This league has no all-play side competition on record.');
   if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
   if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
-  const pp = (isPlayer || isMove) && extra.players ? preparePlayers(p, extra.players) : null;
+  if (isStint && !(extra.moves && extra.players)) throw new QueryError('Player stints and pick histories are not available for this league.');
+  const pp = (isPlayer || isMove || isStint) && extra.players ? preparePlayers(p, extra.players) : null;
   const pm = isMove ? prepareMoves(p, pp, extra.moves, extra.league ?? ds.league ?? null) : null;
+  const ps = isStint ? prepareStints(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
   const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
     q.unit === 'competitionOwners'
@@ -530,8 +536,12 @@ export function runQuery(ds, rawQuery, extra = {}) {
           ? p.gameRows
           : isMove
             ? pm[q.unit]
-            : pp[q.unit];
-  if (q.unit !== 'owners' && q.unit !== 'playerCareers' && q.unit !== 'competitionOwners') rows = rows.filter((r) => inYears(r.year, q.years));
+            : isStint
+              ? ps[q.unit]
+              : pp[q.unit];
+  // A stint spans seasons: a years window keeps every stint that overlaps it.
+  if (q.unit === 'stints') rows = rows.filter((r) => inYears(r.year, { from: null, to: q.years?.to ?? null }) && inYears(r.lastYear, { from: q.years?.from ?? null, to: null }));
+  else if (q.unit !== 'owners' && q.unit !== 'playerCareers' && q.unit !== 'competitionOwners') rows = rows.filter((r) => inYears(r.year, q.years));
   const filtersOn = (f) => q.where.some((c) => c.field === f);
   // Consolation games count nowhere unless asked for by name (records.mjs).
   if (q.unit === 'games' && !filtersOn('kind')) rows = rows.filter((r) => r.kind !== 'consolation');
@@ -589,6 +599,9 @@ const COUNT_LABEL = {
   pickups: 'Pickups',
   draftPicks: 'Picks',
   auctions: 'Auction wins',
+  stints: 'Stints',
+  titleRosters: 'Players',
+  pickChains: 'Picks',
 };
 
 function columnLabel(q, c) {
@@ -634,7 +647,7 @@ function groupRows(rows, q) {
  * Filtering on a team name matches that owner's team under EVERY name it used,
  * so "Poker in the Rear" also finds its 2014 season as the Generals.
  */
-const TEAM_OWNER_FIELD = { team: 'owner', opponent: 'opponentOwner', partner: 'partnerOwner' };
+const TEAM_OWNER_FIELD = { team: 'owner', opponent: 'opponentOwner', partner: 'partnerOwner', ...STINT_TEAM_OWNER_FIELDS };
 const NAME_OPS = new Set(['eq', 'ne', 'in', 'contains']);
 
 function teamFilter(p, unit, c) {
@@ -785,6 +798,9 @@ const UNIT_WORDS = {
   pickups: 'waiver and free-agent pickups',
   draftPicks: 'draft picks',
   auctions: 'auction wins',
+  stints: 'player stints (one player on one team, continuously)',
+  titleRosters: "champions' rosters (every player who started for the title team that season)",
+  pickChains: 'traded draft picks, followed through every trade',
 };
 
 /** "Team-seasons, first 10 regular-season games, where W = 9 and L = 1, sorted by PF (lowest first)". */

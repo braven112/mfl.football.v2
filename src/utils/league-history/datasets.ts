@@ -43,17 +43,32 @@ export function loadLeagueHistory<T = any>(dataPath: string): Promise<T | null> 
 	return loadLeagueData<T>(leagueHistoryPaths(dataPath).history);
 }
 
-/** All three files, loaded in parallel, or null unless every one exists. */
+/**
+ * The roster-path extras Ask the History's stint and pick units read when a
+ * league has them (ask-stints.mjs): its keeper sets (keeper-history.json, the
+ * AFL) and its traced pick trades (pick-trades.json, the AFL). Optional: a
+ * league without them derives what it can from the moves file alone.
+ */
+export function leagueHistoryExtraPaths(dataPath: string): { keepers: string; pickTrades: string } {
+	const dir = `${dataPath}/derived`;
+	return { keepers: `${dir}/keeper-history.json`, pickTrades: `${dir}/pick-trades.json` };
+}
+
+/** All three files, loaded in parallel, or null unless every one exists; plus the optional extras. */
 export async function loadLeagueHistoryDataset(
 	dataPath: string,
-): Promise<{ history: any; players: any; moves: any } | null> {
+): Promise<{ history: any; players: any; moves: any; keepers: any; pickTrades: any } | null> {
 	const paths = leagueHistoryPaths(dataPath);
-	const [history, players, moves] = await Promise.all([
+	const extras = leagueHistoryExtraPaths(dataPath);
+	const optional = (p: string) => (hasLeagueData(p) ? loadLeagueData(p) : Promise.resolve(null));
+	const [history, players, moves, keepers, pickTrades] = await Promise.all([
 		loadLeagueData(paths.history),
 		loadLeagueData(paths.players),
 		loadLeagueData(paths.moves),
+		optional(extras.keepers),
+		optional(extras.pickTrades),
 	]);
-	return history && players && moves ? { history, players, moves } : null;
+	return history && players && moves ? { history, players, moves, keepers: keepers ?? null, pickTrades: pickTrades ?? null } : null;
 }
 
 /**

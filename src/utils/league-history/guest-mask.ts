@@ -91,6 +91,8 @@ export function maskAskData(ds: AskData, mask: NameMasker): AskData {
     history: m(ds.history),
     players: m(ds.players),
     moves: m(ds.moves),
+    keepers: m(ds.keepers),
+    pickTrades: m(ds.pickTrades),
     competitions: c
       ? { tierCompetition: m(c.tierCompetition), tierHistory: m(c.tierHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
       : c,

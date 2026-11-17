@@ -105,8 +105,12 @@ export interface AskData {
   history: any;
   /** league-history-players.json, when the league has one */
   players?: any;
-  /** league-history-moves.json: trades, pickups, draft picks, auction wins */
+  /** league-history-moves.json: trades, pickups, draft picks, auction wins, drops */
   moves?: any;
+  /** keeper-history.json, for a league that records keeper sets (the stint units) */
+  keepers?: any;
+  /** pick-trades.json, for a league whose traded picks were traced once (the pickChains unit) */
+  pickTrades?: any;
   /** The all-play side competition's sources (datasets.ts loadLeagueCompetitions), for a league that runs one. */
   competitions?: any;
 }
@@ -352,7 +356,18 @@ function deadlineLine(leagueSlug: string, year: number | undefined): string {
   return `- Trade deadline, from the league's rules today: ${rule}${current ? ` (${current} in ${year})` : ''}. In-season trades and pickups carry that season's deadline under today's rule (deadline, daysToDeadline, deadlineWeek); use them for "deadline week" or "before/after the deadline" questions. Today's rule is the only one on record, so for past seasons say "under today's deadline rule": an earlier season's deadline may have been different. The data says when trades happened, never why; for a "why" question give the counts and say the record cannot say why.`;
 }
 
-function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any): string {
+/**
+ * The roster-path units (ask-stints.mjs): who had which player, how each team
+ * got him, how title teams were built, and where traded picks went. Their gaps
+ * are stated from the data, so "unknown" is said rather than filled in.
+ */
+function rosterPathLine(moves: any, keepers: any, pickTrades: any): string {
+  const firstTx = Math.min(...[...(moves.trades ?? []), ...(moves.pickups ?? [])].map((r: any[]) => r[0]));
+  return `- Roster paths use three units. stints: one row per player per stint with a team (one player on one team, under one owner, continuously), with how that team got him (acquired: draft, auction, trade, waiver, free agent, commissioner, came with the franchise, unknown), how it ended (traded, dropped, not kept, left roster, franchise changed hands, still rostered), his starter points for that team season by season, and the titles won during it; a player's path through the league is his stints sorted by year then fromDate. titleRosters: one row per player who started for a champion in its title season, with how the team got him, the trade that brought him (tradeId, tradePartner) and whether he was carried over from an earlier season${keepers ? ' (keeper: in the keeper set)' : ''}. "How was the 2019 champion built" is titleRosters for that year grouped by acquired (summarize points); "trades that led to a title" is titleRosters where acquired = trade, with tradeId to read the full trade in the trades unit (where tradeId matches). pickChains: one row per draft pick that changed hands: its original team, the path through every trade (path, tradeIds), who used it on whom, and what that player then did for the drafting team and each team he was traded to (afterDraft). A pick's confidence says how it was matched; say so when it is not exact, and when status is unknown say the record cannot tell which player it became (candidates lists the possibilities when there are few).
+- Trades, pickups and drops are on record from ${Number.isFinite(firstTx) ? firstTx : 'the first season with a transaction log'}; before that only draft picks${moves.auctions?.length ? ' and auction wins' : ''} are, so a player who arrived another way says "unknown". Never guess how a player arrived; say how many were unknown.${pickTrades ? '' : ' Picks traded before the draft order was set are matched to the player by the draft\'s own record when it names the trade, else by the one pick the last holder made in that round; anything else stays unknown.'}`;
+}
+
+function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
   const current = Object.values(latest?.teams ?? {})
@@ -378,6 +393,7 @@ How to work:
 - ${players ? `Player questions use the player units: every rostered player's score each week, starter or bench. A player's points count for the team that started him. ${describeMissingWeeks(players.missingWeeks) ? `${describeMissingWeeks(players.missingWeeks)}; say so when a player answer could be missing those weeks.` : 'Every final week has player scores.'}` : 'There are no player stats for this league; say so if asked.'}
 - ${moves ? `Roster moves use the move units: trades (one row per side, with what the players each side got scored for it the rest of that season), pickups (waiver claims and free agents), draftPicks${moves.auctions?.length ? ', auctions (salary auction wins)' : ''}. "Best trade/pickup/pick" means the most points the player(s) scored for the team that got them unless the question says otherwise; say which measure you used. Contract lengths are not on record${moves.auctions?.length ? '; auction salaries are' : ''}.` : 'There are no trade, draft or pickup records for this league; say so if asked.'}
 ${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
+${moves && players ? rosterPathLine(moves, keepers, pickTrades) : ''}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
@@ -430,7 +446,7 @@ export async function askHistory(
       model,
       max_tokens: 6000,
       output_config: { effort: 'medium' },
-      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions), cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades), cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
     });
@@ -473,7 +489,14 @@ export async function askHistory(
           if (use.name !== RUN_QUERY_TOOL.name) {
             return { type: 'tool_result', tool_use_id: use.id, content: 'Unknown tool.', is_error: true };
           }
-          const result = runQuery(ds, use.input ?? {}, { players: data.players, moves: data.moves, competitions: data.competitions, league: leagueSlug });
+          const result = runQuery(ds, use.input ?? {}, {
+            players: data.players,
+            moves: data.moves,
+            keepers: data.keepers,
+            pickTrades: data.pickTrades,
+            competitions: data.competitions,
+            league: leagueSlug,
+          });
           const { query: _q, ...table } = result;
           results.push(table as AskTable);
           steps.push(result.description);
