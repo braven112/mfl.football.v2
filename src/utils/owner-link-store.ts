@@ -79,7 +79,7 @@ const memoryStore: Store = {
 async function store(): Promise<Store | null> {
   const redis = await getRedis();
   if (redis) return redis;
-  return import.meta.env?.DEV || process.env.VITEST ? memoryStore : null;
+  return import.meta.env?.DEV || import.meta.env?.MODE === 'test' ? memoryStore : null;
 }
 
 export class OwnerLinkStoreUnavailable extends Error {
