@@ -3,9 +3,9 @@
  * server-rendered answer page and the question box's client script, so an
  * answer looks the same when it is asked and when it is shared.
  */
-import { gapChart, historyChart } from './record-charts.mjs';
+import { compareChart, gapChart, historyChart } from './record-charts.mjs';
 
-const TWO_DECIMALS = new Set(['pf', 'pa', 'pointDiff', 'avgPf', 'highGame', 'lowGame', 'finalPf', 'score', 'oppScore', 'margin', 'combined', 'points', 'avgStart', 'bestWeek', 'benchPoints', 'playoffPoints', 'pointsGot', 'pointsGave', 'pointsNet', 'pointsAfter', 'seasonPoints', 'pointsWithTeam']);
+const TWO_DECIMALS = new Set(['pf', 'pa', 'pointDiff', 'avgPf', 'highGame', 'lowGame', 'finalPf', 'score', 'oppScore', 'margin', 'combined', 'points', 'avgStart', 'bestWeek', 'benchPoints', 'playoffPoints', 'pointsGot', 'pointsGave', 'pointsNet', 'pointsAfter', 'seasonPoints', 'pointsWithTeam', 'realPf', 'replayPf']);
 const DOLLARS = new Set(['salary', 'bid', 'dollarsPerPoint']);
 
 /** Display text for one cell. */
@@ -51,8 +51,15 @@ const WIDE_W = 400;
  * @returns {Array<{ title: string, phone: string, wide: string, take: string }>}
  */
 export function answerCharts(chart, base) {
-  if (!chart?.rows?.length) return [];
   const href = (row) => (row.franchiseId ? `${base}/franchises/${row.franchiseId}?view=all` : null);
+  // A what-if (what-if.mjs): real against replay, one chart.
+  if (chart?.kind === 'compare') {
+    const wide = compareChart(chart.compare, WIDE_W, { href });
+    if (!wide) return [];
+    const phone = compareChart(chart.compare, PHONE_W, { href }) ?? wide;
+    return [{ title: chart.compare.title ?? 'Real vs. replay', phone: phone.svg, wide: wide.svg, take: wide.take }];
+  }
+  if (!chart?.rows?.length) return [];
   const bySeason = chart.population.length > 0 && chart.population.every((p) => p[1] != null);
   // One dot per entity reads for a league's owners, not for every player ever rostered.
   const oneLine = !bySeason && chart.population.length <= 120;
@@ -79,4 +86,7 @@ export const ASK_EXAMPLES = [
   'Who won the most lopsided trade?',
   'What was the biggest game against my top rival?',
   'My whole career across every team I’ve run: record, titles, trades and rivals?',
+  // What-ifs (what-if.mjs): a replayed season, real against replay.
+  'What if my team had started its best lineup last season?',
+  'What if the most lopsided trade had never happened?',
 ];
