@@ -64,7 +64,7 @@ describe('title-builds over a synthetic league', () => {
   it('links a starter to the trade that brought him and to the trade that brought his pick', () => {
     const rows = titleTrades([{ year: 2020, franchiseId: '0002' }], starters, chainsByUse(chains), trades);
     expect(rows).toHaveLength(1);
-    const [r] = rows;
+    const r: any = rows[0];
     expect(r.tradeId).toBe('2019-10-01:0001-0002');
     expect(r.players.map((p: any) => [p.pid, p.via]).sort()).toEqual([
       ['100', 'player'],
@@ -92,7 +92,7 @@ describe('title-builds over a synthetic league', () => {
     const one = out.find((r: any) => r.franchiseId === '0001')!;
     expect(two.points).toBe(70); // 20 + 30 + 12 for 100, 8 for 300 (drafted with the pick)
     expect(two.titleYears).toEqual([2020]);
-    expect(two.pieces.find((p: any) => p.kind === 'pick').status).toBe('used');
+    expect(two.pieces.find((p: any) => p.kind === 'pick')?.status).toBe('used');
     expect(one.points).toBe(5);
     expect(two.net).toBe(65);
     expect(two.result).toBe('won');
