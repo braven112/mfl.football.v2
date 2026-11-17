@@ -17,30 +17,34 @@
  * stamped: they are recomputed whole through scripts/recompute-derived-chain.mjs,
  * and their own data tests already demand row-for-row agreement. They are
  * listed with `version: null`, which checks only that every league has one.
+ *
+ * @type {Record<string, { job: string, version: number | null, rebuild: string }>}
  */
 export const DERIVED_DATASETS = {
-  "league-history.json": {
-    job: "league-history",
+  'league-history.json': {
+    job: 'league-history',
     version: null,
-    rebuild: "node scripts/recompute-derived-chain.mjs",
+    rebuild: 'node scripts/recompute-derived-chain.mjs',
   },
-  "league-history-players.json": {
-    job: "league-history",
+  'league-history-players.json': {
+    job: 'league-history',
     // 2: per-season NFL team (`nflTeams`).
     version: 2,
-    rebuild: "node scripts/compute-league-history-players.mjs --league=<slug>",
+    rebuild: 'node scripts/compute-league-history-players.mjs --league=<slug>',
   },
-  "league-history-moves.json": {
-    job: "league-history",
+  'league-history-moves.json': {
+    job: 'league-history',
     version: 1,
-    rebuild: "node scripts/compute-league-history-moves.mjs --league=<slug>",
+    rebuild: 'node scripts/compute-league-history-moves.mjs --league=<slug>',
   },
 };
 
-/** The version a generator stamps into `file`. Throws for an unlisted file. */
+/**
+ * The version a generator stamps into `file`. Throws for an unlisted file.
+ * @param {string} file
+ */
 export function derivedVersion(file) {
   const entry = DERIVED_DATASETS[file];
-  if (!entry || entry.version == null)
-    throw new Error(`derived-versions: "${file}" has no version`);
+  if (!entry || entry.version == null) throw new Error(`derived-versions: "${file}" has no version`);
   return entry.version;
 }
