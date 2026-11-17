@@ -28,7 +28,7 @@
  */
 import { ENDED, HOW, stintTotals } from './stints.mjs';
 import { prepareStints } from './ask-stints.mjs';
-import { NFL_PATH_DESC, nflTeamPath } from './ask-players.mjs';
+import { NFL_DRAFT_FIELDS, NFL_PATH_DESC, nflTeamPath } from './ask-players.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const money = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
@@ -64,6 +64,7 @@ export const CAREER_FIELDS = {
     salaryHigh: { type: 'number', label: 'Top salary', desc: 'highest salary on record; null where the league keeps no salaries' },
     salaries: { type: 'string', label: 'Salaries', desc: 'salary by season and team where on record: "2019 Team A $1,000,000; …". The season he was won at auction or claimed on waivers shows that bid; other seasons show the season salary file (rosters at its freeze week), which lists some players at the league minimum their bid says otherwise' },
     currentTeam: { type: 'string', label: 'Now with', desc: 'the team rostering him in the latest week (null when nobody is)' },
+    ...NFL_DRAFT_FIELDS,
   },
   pickupImpact: {
     year: { type: 'number', label: 'Season', desc: 'season of the pickup' },
@@ -263,6 +264,7 @@ export function prepareCareers(p, pp, mds, extra = {}) {
       teamsStartedFor: startedFor.size,
       stints: rows.length,
       nflTeams: nflTeamPath(pp?.nflTeamOf ?? (() => null), pid, rows.flatMap((r) => [...r._stint.seasons.keys()])),
+      ...(pp?.nflDraftOf ?? (() => ({})))(pid),
       path: capped(rows.map((r) => `${r.team} ${span(r)} (${r.acquired} → ${r.ended === ENDED.traded ? r.endDetail : r.ended})`)).join(' · '),
       owners: [...new Set(rows.map((r) => r.owner))].join(' → '),
       arrivals: [...arrivals].map(([k, n]) => `${k} ${n}`).join(', '),

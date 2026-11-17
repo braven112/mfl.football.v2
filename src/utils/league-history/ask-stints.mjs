@@ -20,7 +20,7 @@
  */
 import { ENDED, HOW, buildStints, stintTotals } from './stints.mjs';
 import { buildPickChains } from './pick-chains.mjs';
-import { NFL_PATH_DESC, NFL_TEAM_DESC, nflTeamPath } from './ask-players.mjs';
+import { NFL_DRAFT_FIELDS, NFL_PATH_DESC, NFL_TEAM_DESC, nflTeamPath } from './ask-players.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const ordinal = (n) => {
@@ -30,6 +30,14 @@ const ordinal = (n) => {
 
 const POINTS = 'starter points, regular season and playoffs';
 const ACQUIRED_DESC = `how this team got him: ${Object.values(HOW).join(' | ')} ("unknown" = before the transaction record, or no move on record; "came with the franchise" = on the roster when this owner took the team over)`;
+
+/** The league's OWN draft, when that is how this team got him (acquired = draft). */
+const LEAGUE_DRAFT_FIELDS = {
+  draftYear: { type: 'number', label: 'Draft', desc: "the league draft he was picked in, when this team drafted him (acquired = draft); else null. This league's draft, not the NFL's: that is nflDraftRound" },
+  draftRound: { type: 'number', label: 'Rd', desc: "round of this league's draft (1 = a league first-round pick), when acquired = draft; else null" },
+  draftPick: { type: 'number', label: 'Pick', desc: 'pick within that league draft round' },
+  draftOverall: { type: 'number', label: 'Overall', desc: 'overall pick in that league draft' },
+};
 
 export const STINT_FIELDS = {
   stints: {
@@ -56,6 +64,8 @@ export const STINT_FIELDS = {
     titles: { type: 'number', label: 'Titles', desc: 'seasons in the stint this team won the championship' },
     titleYears: { type: 'string', label: 'Title years' },
     playoffYears: { type: 'string', label: 'Playoff years', desc: 'seasons in the stint this team made the playoffs' },
+    ...LEAGUE_DRAFT_FIELDS,
+    ...NFL_DRAFT_FIELDS,
   },
   titleRosters: {
     year: { type: 'number', label: 'Season' },
@@ -77,6 +87,8 @@ export const STINT_FIELDS = {
     points: { type: 'number', label: 'Pts', desc: `that season (${POINTS})` },
     playoffStarts: { type: 'number', label: 'PO starts' },
     playoffPoints: { type: 'number', label: 'PO pts', desc: 'that postseason, as a starter' },
+    ...LEAGUE_DRAFT_FIELDS,
+    ...NFL_DRAFT_FIELDS,
   },
   pickChains: {
     year: { type: 'number', label: 'Draft', desc: 'the draft the pick belongs to' },
@@ -137,6 +149,11 @@ export function prepareStints(p, pp, mds, extra = {}) {
   const nameOf = (pid) => names.get(pid)?.[0] ?? pid;
   const posOf = (pid) => names.get(pid)?.[1] ?? '';
   const nflOf = pp?.nflTeamOf ?? (() => null);
+  const nflDraftOf = pp?.nflDraftOf ?? (() => ({}));
+  const leagueDraft = (s) => {
+    const r = s.how === HOW.draft ? s.ref ?? {} : {};
+    return { draftYear: r.year ?? null, draftRound: r.round ?? null, draftPick: r.pick ?? null, draftOverall: r.overall ?? null };
+  };
 
   let latest = null;
   const presence = (pp?.playerWeeks ?? []).map((w) => {
@@ -215,6 +232,8 @@ export function prepareStints(p, pp, mds, extra = {}) {
       titles: titleYears.length,
       titleYears: titleYears.join(', '),
       playoffYears: playoffYears.join(', '),
+      ...leagueDraft(s),
+      ...nflDraftOf(s.pid),
       _franchiseId: s.franchiseId,
       _ownerSlug: owner.ownerSlug,
       _pid: s.pid,
@@ -261,6 +280,8 @@ export function prepareStints(p, pp, mds, extra = {}) {
       points: sum('points'),
       playoffStarts: sum('playoffStarts'),
       playoffPoints: sum('playoffPoints'),
+      ...leagueDraft(s),
+      ...nflDraftOf(s.pid),
       _franchiseId: s.franchiseId,
       _ownerSlug: owner.ownerSlug,
       _pid: s.pid,

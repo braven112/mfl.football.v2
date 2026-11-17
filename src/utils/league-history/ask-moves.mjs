@@ -16,6 +16,7 @@
  * - `draftPicks`: one row per pick made.
  * - `auctions`: one row per auction win (TheLeague's salary auction).
  */
+import { NFL_DRAFT_FIELDS } from './ask-players.mjs';
 import { formatPickLabel, parsePickToken } from '../mfl-pick-tokens.mjs';
 import { shiftIsoDate, tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import { tradeIds } from './stints.mjs';
@@ -100,6 +101,7 @@ export const MOVE_FIELDS = {
     seasonPoints: { type: 'number', label: 'Pts that year', desc: `what he scored for the drafting team that season (${VALUE})` },
     pointsWithTeam: { type: 'number', label: 'Pts with team', desc: 'what he scored for the drafting franchise in every season on record' },
     seasonsWithTeam: { type: 'number', label: 'Seasons with team', desc: 'seasons he started for the drafting franchise' },
+    ...NFL_DRAFT_FIELDS,
   },
   auctions: {
     year: { type: 'number', label: 'Season' },
@@ -258,6 +260,7 @@ export function prepareMoves(p, pp, mds, slug = null) {
       seasonPoints: pointsFrom(y, f, pid).points,
       pointsWithTeam: has ? r2(later.reduce((a, yr) => a + pointsFrom(yr, f, pid).points, 0)) : null,
       seasonsWithTeam: has ? later.length : null,
+      ...(pp?.nflDraftOf ?? (() => ({})))(pid),
       _franchiseId: f,
       _ownerSlug: o.ownerSlug,
     };

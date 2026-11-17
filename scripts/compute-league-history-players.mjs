@@ -27,6 +27,10 @@
  * mid-season shows his later club). Codes are the NFL's own (NE, not MFL's
  * NEP); a franchise that moved keeps the code of its city that season (OAK,
  * STL, SD), and a free agent at season's end has no entry.
+ *
+ * `nflDraft` is player id → [year, round, pick within the round, drafting
+ * club] from MFL's player record (the latest season that lists a round).
+ * Undrafted players and team defenses have no entry.
  * One row per line, sorted, so a new week is added lines in git, not a
  * rewritten blob (storage-and-build.md).
  */
@@ -92,6 +96,9 @@ const nflCode = (team) => {
 
 const players = new Map();
 const nflByYear = new Map();
+// The NFL draft: id → [year, round, pick within the round, drafting club].
+// Undrafted players carry a draft year and no round; they stay out.
+const nflDraft = new Map();
 const rows = [];
 for (const year of years) {
   const dir = path.join(FEEDS, year);
@@ -99,6 +106,12 @@ for (const year of years) {
   for (const p of toArray(readJson(path.join(dir, 'players.json'))?.players?.player)) {
     if (!p?.id) continue;
     players.set(String(p.id), [displayName(p.name), String(p.position ?? '')]);
+    const round = Number(p.draft_round);
+    const draftYear = Number(p.draft_year);
+    if (round > 0 && draftYear > 1970) {
+      const pick = Number(p.draft_pick);
+      nflDraft.set(String(p.id), [draftYear, round, pick > 0 ? pick : null, nflCode(p.draft_team)]);
+    }
     const code = nflCode(p.team);
     if (code) {
       if (!nflByYear.has(year)) nflByYear.set(year, new Map());
@@ -163,6 +176,8 @@ const nflTeams = [...usedInYear.keys()].sort((a, b) => a - b).map((y) => {
   return [y, Object.fromEntries(entries)];
 });
 
+const nflDraftRows = [...used].sort(cmp).filter((id) => nflDraft.has(id)).map((id) => [id, nflDraft.get(id)]);
+
 const body = [
   `  "generatedAt": ${JSON.stringify(new Date().toISOString())}`,
   `  "league": ${JSON.stringify(SLUG)}`,
@@ -170,6 +185,7 @@ const body = [
   `  "missingWeeks": ${JSON.stringify(missing)}`,
   `  "players": {\n${Object.entries(playerMap).map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
   `  "nflTeams": {\n${nflTeams.map(([y, t]) => `    ${JSON.stringify(String(y))}: ${JSON.stringify(t)}`).join(',\n')}\n  }`,
+  `  "nflDraft": {\n${nflDraftRows.map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
   `  "weeks": [\n${rows.map((r) => `    ${JSON.stringify(r)}`).join(',\n')}\n  ]`,
 ];
 const wrote = writeJsonIfChanged(OUT, `{\n${body.join(',\n')}\n}\n`, { ignoreKeys: ['generatedAt'] });

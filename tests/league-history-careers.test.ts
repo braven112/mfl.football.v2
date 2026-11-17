@@ -87,6 +87,25 @@ describe('the career and pickup-impact units', () => {
     expect(none / all).toBeLessThan(0.03);
   });
 
+  it('tells the league draft from the NFL draft (Brandon 2026-11-17: "draft" means the league\'s unless it says NFL)', () => {
+    // League 1st-rounders who won a title with the team that drafted them.
+    const league1st = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'draftRound', op: 'eq', value: 1 }], columns: ['player', 'draftYear', 'draftRound'] }, AFL);
+    expect(league1st.total).toBeGreaterThan(30);
+    // NFL 1st-rounders on title rosters, however the champion got them.
+    const nfl1st = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'nflDraftRound', op: 'eq', value: 1 }], columns: ['player', 'nflDraftYear', 'nflDraftTeam'] }, AFL);
+    expect(nfl1st.total).toBeGreaterThan(league1st.total);
+    // Matt Ryan: NFL 2008 round 1, pick 3 by ATL; an AFL 2012 1st-rounder.
+    const ryan = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'player', op: 'eq', value: 'Matt Ryan' }, { field: 'year', op: 'eq', value: 2012 }], columns: ['draftYear', 'draftRound', 'nflDraftYear', 'nflDraftRound', 'nflDraftPick', 'nflDraftTeam'] }, AFL);
+    expect(ryan.rows[0].cells).toEqual([2012, 1, 2008, 1, 3, 'ATL']);
+    // Not drafted by this team: no league-draft round, but the NFL draft still shows.
+    const traded = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'acquired', op: 'eq', value: 'trade' }, { field: 'draftRound', op: 'gte', value: 1 }] }, AFL);
+    expect(traded.total).toBe(0);
+    for (const unit of ['playerSeasons', 'playerCareers', 'stints', 'careers', 'draftPicks']) {
+      const r = runQuery(afl, { unit, where: [{ field: 'nflDraftRound', op: 'eq', value: 1 }], limit: 1 }, AFL);
+      expect(r.total, unit).toBeGreaterThan(0);
+    }
+  });
+
   it('keeps the AFL’s two conferences apart: one player, two teams at once', () => {
     const r = runQuery(afl, { unit: 'stints', where: [{ field: 'player', op: 'eq', value: 'Travis Kelce' }, { field: 'year', op: 'eq', value: 2014 }], columns: ['team', 'lastYear', 'acquired'], limit: 5 }, AFL);
     const teams = r.rows.map((row) => row.cells[0]);
