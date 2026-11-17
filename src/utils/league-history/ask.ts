@@ -23,6 +23,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
 import { tradeDeadlineIsoDate } from '../trade-deadline.mjs';
+import { titleBuildLine } from './ask-title-builds.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
 import { RIVALRY_GAME_UNITS } from './ask-rivalry-games.mjs';
 import { loadSeedingPools } from './seeding-pools';
@@ -46,6 +47,16 @@ export interface AskChart {
   };
 }
 
+/** A stacked bar per row, drawn by title-build-charts.mjs (the title-build units). */
+export interface AskStackChart {
+  kind: 'stack';
+  label: string;
+  percent: boolean;
+  series: Array<{ label: string; tone: number }>;
+  bars: Array<{ name: string; context: string; values: number[]; display: string; franchiseId: string | null }>;
+  take: string;
+}
+
 export interface AskTable {
   description: string;
   total: number;
@@ -53,7 +64,7 @@ export interface AskTable {
   rows: Array<{ cells: Array<string | number | boolean | null>; franchiseId: string | null; ownerSlug: string | null; year: number | null }>;
   summary: Record<string, { min: number; max: number; avg: number; sum: number } | null>;
   /** Missing on answers saved before charts existed. */
-  chart?: AskChart | null;
+  chart?: AskChart | AskStackChart | null;
 }
 
 /** A Record Book board the answer points to, resolved from the book itself. */
@@ -465,6 +476,7 @@ How to work:
 ${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
 ${moves && players ? rosterPathLine(moves, keepers, pickTrades) : ''}
 ${whatIfBlock(players, moves)}
+${moves && players ? titleBuildLine() : ''}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - "Biggest game", "most important game", "game of the rivalry" or "closest playoff game" between two teams or owners use the rivalryGames unit: where team (or owner) is one side and opponent (or opponentOwner) the other, sorted by importance desc (biggest) or, for the closest playoff game, stakesLevel gte 60 sorted by absMargin asc; limit 3-5, chart margin, and columns year, week, stakes, team, score, opponent, oppScore, playoffSpot, decidedBy. Importance is STAKES FIRST (championship, then playoff rounds with the later round higher, then the third-place and placement games, then a regular-season game that decided a playoff spot, then the rest), the closer margin breaking ties. A playoff-spot game is one whose other result would have changed who made the playoffs; one that would only have forced a tiebreaker stays regular season (its playoffSpot says so). Name the stakes tier and, for a playoff-spot game, say who it put in or kept out (playoffSpot). Name the players who decided it only from decidedBy, topStarter, oppTopStarter and benchFlip, word for word: never guess a lineup. A conference league's playoff-spot line is its conference's. "My top rival" with no team named is the opponent owner the asker has played most (games, where owner is the asker, groupBy opponentOwner); say that is how you picked them.

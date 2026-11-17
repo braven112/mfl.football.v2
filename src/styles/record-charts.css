@@ -184,3 +184,28 @@
   stroke-width: 1.5;
   stroke-dasharray: 2 3;
 }
+/* Stacked bars (title-build-charts.mjs): one class per series, unknown in gray. */
+.rb-viz__plot .rbc-s0 {
+  fill: var(--history-series-unknown);
+}
+.rb-viz__plot .rbc-s1 {
+  fill: var(--history-series-1);
+}
+.rb-viz__plot .rbc-s2 {
+  fill: var(--history-series-2);
+}
+.rb-viz__plot .rbc-s3 {
+  fill: var(--history-series-3);
+}
+.rb-viz__plot .rbc-s4 {
+  fill: var(--history-series-4);
+}
+.rb-viz__plot .rbc-s5 {
+  fill: var(--history-series-5);
+}
+.rb-viz__plot .rbc-s6 {
+  fill: var(--history-series-6);
+}
+.rb-viz__plot .rbc-s7 {
+  fill: var(--history-series-7);
+}

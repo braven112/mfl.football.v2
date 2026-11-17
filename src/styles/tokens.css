@@ -482,6 +482,16 @@
      tuned for the dark footer and is too pale for text on white. */
   --history-gold: #8a6416;                       /* text on white      5.6:1 */
   --history-gold-wash: #f7eedb;                  /* plaque ground */
+  /* Ask the History's stacked bars (title-build-charts.mjs): seven categorical
+     series in a fixed, CVD-validated order, and a gray for "unknown". */
+  --history-series-1: #2a78d6;
+  --history-series-2: #eb6834;
+  --history-series-3: #1baf7a;
+  --history-series-4: #eda100;
+  --history-series-5: #e87ba4;
+  --history-series-6: #008300;
+  --history-series-7: #6250d6;
+  --history-series-unknown: #9a9a96;
 
   /* ========================================
      Component Tokens - Badges/Status

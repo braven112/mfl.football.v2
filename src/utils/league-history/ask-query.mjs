@@ -29,6 +29,15 @@ import { PLAYER_DEFAULT_COLUMNS, PLAYER_FIELDS, PLAYER_UNITS, preparePlayers } f
 import { MOVE_DEFAULT_COLUMNS, MOVE_FIELDS, MOVE_UNITS, prepareMoves } from './ask-moves.mjs';
 import { STINT_DEFAULT_COLUMNS, STINT_FIELDS, STINT_TEAM_OWNER_FIELDS, STINT_UNITS, prepareStints } from './ask-stints.mjs';
 import {
+  TITLE_BUILD_COUNT_LABEL,
+  TITLE_BUILD_DEFAULT_COLUMNS,
+  TITLE_BUILD_FIELDS,
+  TITLE_BUILD_UNITS,
+  TITLE_BUILD_UNIT_WORDS,
+  prepareTitleBuilds,
+  titleBuildChart,
+} from './ask-title-builds.mjs';
+import {
   COMPETITION_DEFAULT_COLUMNS,
   COMPETITION_FIELDS,
   COMPETITION_SCOPES,
@@ -48,7 +57,7 @@ import {
 } from './ask-rivalry-games.mjs';
 
 export const TEAM_UNITS = ['seasons', 'games', 'owners'];
-export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...COMPETITION_UNITS, ...RIVALRY_GAME_UNITS];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...TITLE_BUILD_UNITS, ...COMPETITION_UNITS, ...RIVALRY_GAME_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -126,6 +135,7 @@ export const FIELDS = {
   ...PLAYER_FIELDS,
   ...MOVE_FIELDS,
   ...STINT_FIELDS,
+  ...TITLE_BUILD_FIELDS,
   ...COMPETITION_FIELDS,
   ...RIVALRY_GAME_FIELDS,
 };
@@ -249,6 +259,7 @@ const DEFAULT_COLUMNS = {
   ...PLAYER_DEFAULT_COLUMNS,
   ...MOVE_DEFAULT_COLUMNS,
   ...STINT_DEFAULT_COLUMNS,
+  ...TITLE_BUILD_DEFAULT_COLUMNS,
   ...COMPETITION_DEFAULT_COLUMNS,
   ...RIVALRY_GAME_DEFAULT_COLUMNS,
 };
@@ -523,14 +534,16 @@ export function runQuery(ds, rawQuery, extra = {}) {
   const isPlayer = PLAYER_UNITS.includes(q.unit);
   const isMove = MOVE_UNITS.includes(q.unit);
   const isStint = STINT_UNITS.includes(q.unit);
+  const isBuild = TITLE_BUILD_UNITS.includes(q.unit);
   const isCompetition = COMPETITION_UNITS.includes(q.unit);
   if (isCompetition && !extra.competitions) throw new QueryError('This league has no all-play side competition on record.');
   if (isPlayer && !extra.players) throw new QueryError('Player stats are not available for this league.');
   if (isMove && !extra.moves) throw new QueryError('Trades, drafts and pickups are not available for this league.');
-  if (isStint && !(extra.moves && extra.players)) throw new QueryError('Player stints and pick histories are not available for this league.');
-  const pp = (isPlayer || isMove || isStint) && extra.players ? preparePlayers(p, extra.players) : null;
+  if ((isStint || isBuild) && !(extra.moves && extra.players)) throw new QueryError('Player stints and pick histories are not available for this league.');
+  const pp = (isPlayer || isMove || isStint || isBuild) && extra.players ? preparePlayers(p, extra.players) : null;
   const pm = isMove ? prepareMoves(p, pp, extra.moves, extra.league ?? ds.league ?? null) : null;
   const ps = isStint ? prepareStints(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
+  const pb = isBuild ? prepareTitleBuilds(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
   const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
     RIVALRY_GAME_UNITS.includes(q.unit)
@@ -549,7 +562,9 @@ export function runQuery(ds, rawQuery, extra = {}) {
             ? pm[q.unit]
             : isStint
               ? ps[q.unit]
-              : pp[q.unit];
+              : isBuild
+                ? pb[q.unit]
+                : pp[q.unit];
   // A stint spans seasons: a years window keeps every stint that overlaps it.
   if (q.unit === 'stints') rows = rows.filter((r) => inYears(r.year, { from: null, to: q.years?.to ?? null }) && inYears(r.lastYear, { from: q.years?.from ?? null, to: null }));
   else if (q.unit !== 'owners' && q.unit !== 'playerCareers' && q.unit !== 'competitionOwners') rows = rows.filter((r) => inYears(r.year, q.years));
@@ -597,7 +612,8 @@ export function runQuery(ds, rawQuery, extra = {}) {
       year: r.year ?? null,
     })),
     summary,
-    chart: q.chart ? chartBoard(q, rows) : null,
+    // The title-build units draw their own stacked chart (ask-title-builds.mjs).
+    chart: isBuild && !q.groupBy.length ? titleBuildChart(q.unit, rows, pb[q.unit]) : q.chart ? chartBoard(q, rows) : null,
   };
 }
 
@@ -614,6 +630,7 @@ const COUNT_LABEL = {
   titleRosters: 'Players',
   pickChains: 'Picks',
   rivalryGames: 'Games',
+  ...TITLE_BUILD_COUNT_LABEL,
 };
 
 function columnLabel(q, c) {
@@ -814,6 +831,7 @@ const UNIT_WORDS = {
   stints: 'player stints (one player on one team, continuously)',
   titleRosters: "champions' rosters (every player who started for the title team that season)",
   pickChains: 'traded draft picks, followed through every trade',
+  ...TITLE_BUILD_UNIT_WORDS,
 };
 
 /** "Team-seasons, first 10 regular-season games, where W = 9 and L = 1, sorted by PF (lowest first)". */

@@ -4,6 +4,7 @@
  * answer looks the same when it is asked and when it is shared.
  */
 import { compareChart, gapChart, historyChart } from './record-charts.mjs';
+import { stackChart } from './title-build-charts.mjs';
 
 const TWO_DECIMALS = new Set(['pf', 'pa', 'pointDiff', 'avgPf', 'highGame', 'lowGame', 'finalPf', 'score', 'oppScore', 'margin', 'combined', 'points', 'avgStart', 'bestWeek', 'benchPoints', 'playoffPoints', 'pointsGot', 'pointsGave', 'pointsNet', 'pointsAfter', 'seasonPoints', 'pointsWithTeam', 'realPf', 'replayPf']);
 const DOLLARS = new Set(['salary', 'bid', 'dollarsPerPoint']);
@@ -59,6 +60,13 @@ export function answerCharts(chart, base) {
     const phone = compareChart(chart.compare, PHONE_W, { href }) ?? wide;
     return [{ title: chart.compare.title ?? 'Real vs. replay', phone: phone.svg, wide: wide.svg, take: wide.take }];
   }
+  // The title-build units' stacked bars (ask-title-builds.mjs titleBuildChart).
+  if (chart?.kind === 'stack') {
+    const wide = stackChart(chart, WIDE_W, { href });
+    if (!wide) return [];
+    const phone = stackChart(chart, PHONE_W, { href }) ?? wide;
+    return [{ title: chart.label, phone: phone.svg, wide: wide.svg, take: wide.take }];
+  }
   if (!chart?.rows?.length) return [];
   const bySeason = chart.population.length > 0 && chart.population.every((p) => p[1] != null);
   // One dot per entity reads for a league's owners, not for every player ever rostered.
@@ -89,4 +97,7 @@ export const ASK_EXAMPLES = [
   // What-ifs (what-if.mjs): a replayed season, real against replay.
   'What if my team had started its best lineup last season?',
   'What if the most lopsided trade had never happened?',
+  'Which trades led to the 2019 title?',
+  'How was each title team built?',
+  'Which trade paid off most long-term?',
 ];
