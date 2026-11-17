@@ -458,3 +458,16 @@ never backfilled weather, so the same NFL game showed weather in TheLeague and
 none in the AFL. Match a player's club to the map with `oddsForTeam` (it
 settles MFL's WAS / JAC against the map's own spelling), not a bare index.
 Guard: `tests/nfl-odds-weather-guard.test.ts`.
+
+## A quiet ESPN line is not "MFL caught up" — it may be ESPN that is behind
+
+The ESPN-first overlay (`src/utils/live/espn-overlay.ts`) keeps a per-player
+gap `u = mfl − itemized` for points the box score cannot see, retaken when
+ESPN's line has sat still for `SETTLE_MS`. Our ESPN feed can lag MFL by more
+than that, so a gap with MFL AHEAD is ambiguous: a bonus, or ESPN still
+missing a play. Banking it as a bonus counts the play twice once ESPN catches
+up — Zay Flowers read 17.90 against MFL's 10.90 (Nov 2026), with the extra 7
+on the stat sheet's "Not itemized" line. Such a gap stays `pending` (shown as
+`max(mfl, espn)`, never their sum) and is confirmed only at a later settle
+after ESPN's line has MOVED and the gap survived. Guard:
+`tests/live-espn-overlay.test.ts`.

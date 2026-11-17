@@ -26,15 +26,19 @@
  *  - A first sighting where ESPN is already ahead (gap below zero) starts from
  *    U = 0, so a board opened mid-drive shows the newer number at once instead
  *    of a "Not itemized" line below zero.
- *  - A first sighting where MFL is AHEAD (gap above zero) is PROVISIONAL until
- *    it settles. That gap is either a bonus the box score cannot see or ESPN's
- *    box score lagging MFL, and one observation cannot tell them apart. Read as
- *    a bonus, a lag is counted twice the moment ESPN catches up, for up to
- *    SETTLE_MS per player — the likeliest cause of an owner's report (Nov 2026)
- *    of a board opened mid-game reading 170-odd against MFL's 132.8, which a
- *    refresh (a fresh first sighting, ESPN caught up) "fixed". Until
- *    the gap is confirmed by a quiet line, the score is the larger of the two
- *    feeds and never their sum.
+ *  - A gap where MFL is AHEAD of ESPN is PENDING until ESPN has MOVED and the
+ *    gap is still there. That gap is either a bonus the box score cannot see or
+ *    ESPN's box score lagging MFL, and a quiet line cannot tell them apart:
+ *    ESPN's feed sitting still for SETTLE_MS is just as true while it is the
+ *    one behind. Read as a bonus, a lag is counted twice the moment ESPN
+ *    catches up. That shipped twice: a board opened mid-game read 170-odd
+ *    against MFL's 132.8 (first sighting), and Zay Flowers read 17.90 against
+ *    MFL's 10.90 (Nov 2026, a RETAKE: MFL scored three catches, ESPN's line sat
+ *    still on the older number past SETTLE_MS, the 7-point gap was banked as a
+ *    bonus, and ESPN's catch-up was then added on top as "Not itemized").
+ *    A lag closes when ESPN moves; a real bonus survives it. So a pending gap
+ *    is confirmed only at a later settle, after ESPN's line has changed, and
+ *    until then the score is the larger of the two feeds, never their sum.
  */
 import type { LivePlayerRow, PlayerBoxScore, PlayerMeta } from '../../types/live-scoring';
 import type { LiveMatchup, LivePanel, LiveTeam } from '../../types/live';
@@ -61,10 +65,13 @@ export interface PlayerBaseline {
   lastItemized: number;
   itemizedSince: number;
   /**
-   * True while `u` is a first-sighting gap that has never settled. It may be
-   * ESPN lagging rather than a real bonus, so it is not added on top of ESPN.
+   * A gap with MFL AHEAD of ESPN beyond `u`, not yet confirmed. It may be ESPN
+   * lagging rather than a real bonus, so it is never added on top of ESPN.
+   * Null when there is none.
    */
-  provisional: boolean;
+  pending: number | null;
+  /** ESPN's itemized points when `pending` was seen; confirming needs a move off it. */
+  pendingItemized: number;
 }
 
 /** Keyed `leagueId:playerId` — same player, same rules, same answer. */
@@ -87,14 +94,17 @@ export function overlayPlayerLive({ key, mfl, itemized, now, memory }: OverlayPl
   let m = memory.get(key);
   if (!m) {
     const gap = mfl - itemized;
+    const ahead = gap > EPS;
     m = {
-      u: Math.max(0, gap),
+      // MFL ahead is unconfirmed (pending); ESPN ahead starts from 0.
+      u: ahead || gap < 0 ? 0 : gap,
       // ESPN already ahead: treat the line as new, so it shows now.
       baseItemized: gap < 0 ? Number.NEGATIVE_INFINITY : itemized,
       baseMfl: mfl,
       lastItemized: itemized,
       itemizedSince: now,
-      provisional: gap > EPS,
+      pending: ahead ? gap : null,
+      pendingItemized: itemized,
     };
     memory.set(key, m);
   }
@@ -110,18 +120,29 @@ export function overlayPlayerLive({ key, mfl, itemized, now, memory }: OverlayPl
   // cannot see) is accepted at STALE_MS.
   const quiet = now - m.itemizedSince;
   if (quiet >= STALE_MS || (quiet >= SETTLE_MS && mfl - itemized > -EPS)) {
-    m.u = mfl - itemized;
+    const gap = mfl - itemized;
+    if (gap <= m.u + EPS) {
+      // MFL caught up (or took points back): the gap is what MFL says it is.
+      m.u = gap;
+      m.pending = null;
+    } else if (m.pending !== null && same(gap, m.pending) && !same(itemized, m.pendingItemized)) {
+      // ESPN moved and MFL is still ahead by the same amount: a lag would have
+      // closed, so this is a bonus the box score cannot see.
+      m.u = gap;
+      m.pending = null;
+    } else if (m.pending === null || !same(gap, m.pending)) {
+      // MFL ahead by more than we know of: bonus or ESPN lag, not yet known.
+      m.pending = gap;
+      m.pendingItemized = itemized;
+    }
     m.baseItemized = itemized;
     m.baseMfl = mfl;
-    m.provisional = false;
   }
 
   if (same(itemized, m.baseItemized)) return mfl;
-  // An unconfirmed gap: ESPN's newer number when it is ahead, MFL's otherwise,
-  // and never ESPN plus a gap ESPN may be about to fill itself.
-  if (m.provisional) return Math.max(mfl, round2(itemized));
   const espn = round2(itemized + m.u);
-  return same(mfl, m.baseMfl) ? espn : Math.max(mfl, espn);
+  // A pending gap may be a bonus: never show less than MFL while it is open.
+  return m.pending === null && same(mfl, m.baseMfl) ? espn : Math.max(mfl, espn);
 }
 
 export interface OverlayContext {
