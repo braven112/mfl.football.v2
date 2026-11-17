@@ -26,6 +26,20 @@ export const BEAT_REPORTER_PRICE_YEAR = 49;
 /** Ask the History and the AI Beat Reporter together, per league, per year (Brandon, 2026-11-16). */
 export const HISTORY_AND_REPORTER_PRICE_YEAR = 79;
 
+/**
+ * The launch sale on /ai-beat-reporter (Brandon, 2026-11-17): the AI Beat
+ * Reporter and Ask the History together, per league. Buying now covers the
+ * rest of this season AND the whole next season.
+ */
+export const HISTORY_AND_REPORTER_SALE_PRICE = 49.99;
+
+/**
+ * Where the sale's "Get both" button sends a qualified commissioner: a PayPal
+ * checkout link. Null until the PayPal account and button exist; until then
+ * the button opens the product's contact form instead.
+ */
+export const HISTORY_AND_REPORTER_CHECKOUT_URL: string | null = null;
+
 /** Installments cost this much more than paying the year up front. */
 export const INSTALLMENT_PREMIUM = 0.2;
 export const INSTALLMENT_COUNT = 4;

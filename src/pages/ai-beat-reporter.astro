@@ -1,16 +1,18 @@
 ---
 /**
- * /ai-beat-reporter — the AI Beat Reporter product page (Max Insider, $49 a
- * year), one of the three products the homepage sells (Brandon, 2026-11-16).
- * Content: src/data/mfl-services.ts. Belongs to mfl.football alone.
+ * /ai-beat-reporter — the AI Beat Reporter's long sales page (Max Insider,
+ * $49 a year; on sale bundled with Ask the History), one of the three
+ * products the homepage sells (Brandon, 2026-11-16). Hormozi structure,
+ * VSL up top, qualifier then checkout: BeatReporterSalesPage. SEO copy:
+ * src/data/mfl-services.ts. Belongs to mfl.football alone.
  */
-import ServicePage from '../components/shared/marketing/ServicePage.astro';
+import BeatReporterSalesPage from '../components/shared/marketing/BeatReporterSalesPage.astro';
 import BeatReporterSample from '../components/shared/marketing/BeatReporterSample.astro';
 import { findService } from '../data/mfl-services';
 
 export const prerender = false;
 ---
 
-<ServicePage service={findService('beat-reporter')}>
+<BeatReporterSalesPage service={findService('beat-reporter')}>
 	<BeatReporterSample slot="sample" />
-</ServicePage>
+</BeatReporterSalesPage>
