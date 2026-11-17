@@ -1,0 +1,372 @@
+{
+  "league": "sandbox",
+  "year": 2026,
+  "completedWeek": 10,
+  "week": 11,
+  "lastWeek": 12,
+  "format": {
+    "groupBy": "league",
+    "rankBy": "pct",
+    "vpBuckets": [
+      3,
+      2,
+      1
+    ],
+    "tiebreakers": [
+      "PCT",
+      "PTS",
+      "VICTORY_POINTS"
+    ],
+    "divisionPlaces": 1,
+    "wildCards": 4,
+    "byes": 2
+  },
+  "conferenceNames": {},
+  "iterations": 10000,
+  "teams": [
+    {
+      "franchiseId": "0001",
+      "division": "00",
+      "conference": "",
+      "wins": 3,
+      "losses": 7,
+      "ties": 0,
+      "pf": 1336.08,
+      "playoff": 0.0009,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0002",
+      "division": "00",
+      "conference": "",
+      "wins": 8,
+      "losses": 2,
+      "ties": 0,
+      "pf": 1641,
+      "playoff": 1,
+      "bye": 0.0778
+    },
+    {
+      "franchiseId": "0003",
+      "division": "00",
+      "conference": "",
+      "wins": 2,
+      "losses": 8,
+      "ties": 0,
+      "pf": 1376.66,
+      "playoff": 0,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0004",
+      "division": "00",
+      "conference": "",
+      "wins": 2,
+      "losses": 8,
+      "ties": 0,
+      "pf": 1348.76,
+      "playoff": 0,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0005",
+      "division": "00",
+      "conference": "",
+      "wins": 5,
+      "losses": 5,
+      "ties": 0,
+      "pf": 1328.48,
+      "playoff": 0.3222,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0006",
+      "division": "00",
+      "conference": "",
+      "wins": 10,
+      "losses": 0,
+      "ties": 0,
+      "pf": 1647.08,
+      "playoff": 1,
+      "bye": 0.9222
+    },
+    {
+      "franchiseId": "0007",
+      "division": "01",
+      "conference": "",
+      "wins": 3,
+      "losses": 7,
+      "ties": 0,
+      "pf": 1572.66,
+      "playoff": 0.0272,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0008",
+      "division": "01",
+      "conference": "",
+      "wins": 5,
+      "losses": 5,
+      "ties": 0,
+      "pf": 1401.64,
+      "playoff": 0.6951,
+      "bye": 0
+    },
+    {
+      "franchiseId": "0009",
+      "division": "01",
+      "conference": "",
+      "wins": 6,
+      "losses": 4,
+      "ties": 0,
+      "pf": 1497.64,
+      "playoff": 0.9851,
+      "bye": 0.1662
+    },
+    {
+      "franchiseId": "0010",
+      "division": "01",
+      "conference": "",
+      "wins": 6,
+      "losses": 4,
+      "ties": 0,
+      "pf": 1501.5,
+      "playoff": 0.9695,
+      "bye": 0.1362
+    },
+    {
+      "franchiseId": "0011",
+      "division": "01",
+      "conference": "",
+      "wins": 7,
+      "losses": 3,
+      "ties": 0,
+      "pf": 1532.92,
+      "playoff": 1,
+      "bye": 0.6976
+    },
+    {
+      "franchiseId": "0012",
+      "division": "01",
+      "conference": "",
+      "wins": 3,
+      "losses": 7,
+      "ties": 0,
+      "pf": 1291.48,
+      "playoff": 0,
+      "bye": 0
+    }
+  ],
+  "games": [
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0012",
+        "playoff": 0,
+        "bye": 0,
+        "winChance": 0.3766,
+        "win": {
+          "playoff": 0,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0008",
+        "playoff": 0.6951,
+        "bye": 0,
+        "winChance": 0.6234,
+        "win": {
+          "playoff": 0.8731,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0.4004,
+          "bye": 0
+        }
+      },
+      "stakes": {
+        "kind": "playoff",
+        "swing": 0.4727
+      }
+    },
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0005",
+        "playoff": 0.3222,
+        "bye": 0,
+        "winChance": 0.4816,
+        "win": {
+          "playoff": 0.5517,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0.109,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0004",
+        "playoff": 0,
+        "bye": 0,
+        "winChance": 0.5184,
+        "win": {
+          "playoff": 0,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0,
+          "bye": 0
+        }
+      },
+      "stakes": {
+        "kind": "playoff",
+        "swing": 0.4427
+      }
+    },
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0007",
+        "playoff": 0.0272,
+        "bye": 0,
+        "winChance": 0.54,
+        "win": {
+          "playoff": 0.0504,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0011",
+        "playoff": 1,
+        "bye": 0.6976,
+        "winChance": 0.46,
+        "win": {
+          "playoff": 1,
+          "bye": 0.8907
+        },
+        "loss": {
+          "playoff": 1,
+          "bye": 0.5331
+        }
+      },
+      "stakes": {
+        "kind": "bye",
+        "swing": 0.3576
+      }
+    },
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0010",
+        "playoff": 0.9695,
+        "bye": 0.1362,
+        "winChance": 0.5006,
+        "win": {
+          "playoff": 1,
+          "bye": 0.2721
+        },
+        "loss": {
+          "playoff": 0.9389,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0009",
+        "playoff": 0.9851,
+        "bye": 0.1662,
+        "winChance": 0.4994,
+        "win": {
+          "playoff": 1,
+          "bye": 0.316
+        },
+        "loss": {
+          "playoff": 0.9702,
+          "bye": 0.0168
+        }
+      },
+      "stakes": {
+        "kind": "bye",
+        "swing": 0.2992
+      }
+    },
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0002",
+        "playoff": 1,
+        "bye": 0.0778,
+        "winChance": 0.4827,
+        "win": {
+          "playoff": 1,
+          "bye": 0.1612
+        },
+        "loss": {
+          "playoff": 1,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0006",
+        "playoff": 1,
+        "bye": 0.9222,
+        "winChance": 0.5173,
+        "win": {
+          "playoff": 1,
+          "bye": 1
+        },
+        "loss": {
+          "playoff": 1,
+          "bye": 0.8388
+        }
+      },
+      "stakes": {
+        "kind": "bye",
+        "swing": 0.1612
+      }
+    },
+    {
+      "week": 11,
+      "a": {
+        "franchiseId": "0001",
+        "playoff": 0.0009,
+        "bye": 0,
+        "winChance": 0.4597,
+        "win": {
+          "playoff": 0.002,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0,
+          "bye": 0
+        }
+      },
+      "b": {
+        "franchiseId": "0003",
+        "playoff": 0,
+        "bye": 0,
+        "winChance": 0.5403,
+        "win": {
+          "playoff": 0,
+          "bye": 0
+        },
+        "loss": {
+          "playoff": 0,
+          "bye": 0
+        }
+      },
+      "stakes": {
+        "kind": "playoff",
+        "swing": 0.002
+      }
+    }
+  ]
+}

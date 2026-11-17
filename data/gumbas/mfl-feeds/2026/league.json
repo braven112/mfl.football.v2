@@ -1,11 +1,203 @@
 {
-  "encoding": "utf-8",
+  "version": "1.0",
   "league": {
+    "draft_kind": "email",
+    "injuredReserve": "2",
+    "franchises": {
+      "franchise": [
+        {
+          "waiverSortOrder": "12",
+          "bbidAvailableBalance": "474.00",
+          "id": "0001",
+          "name": "<font color=33cc33>Hail Mary</font>",
+          "division": "00"
+        },
+        {
+          "waiverSortOrder": "6",
+          "division": "00",
+          "name": "QB Graveyard ",
+          "id": "0002",
+          "bbidAvailableBalance": "352.00",
+          "abbrev": "OTB",
+          "icon": "https://www49.myfantasyleague.com/fflnet2021/newhelmets/nh-0030.png"
+        },
+        {
+          "division": "01",
+          "name": "Sgt. Hulka's Army",
+          "waiverSortOrder": "3",
+          "sound": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_sound0003.wav",
+          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_logo0003.jpg",
+          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_icon0003.jpg",
+          "bbidAvailableBalance": "538.00",
+          "id": "0003",
+          "abbrev": "HULKA"
+        },
+        {
+          "division": "00",
+          "name": "Elementary",
+          "waiverSortOrder": "10",
+          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_logo0004.jpg",
+          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_icon0004.jpg",
+          "bbidAvailableBalance": "549.00",
+          "id": "0004",
+          "abbrev": "ELMT"
+        },
+        {
+          "division": "01",
+          "name": "You're in Sample",
+          "waiverSortOrder": "1",
+          "bbidAvailableBalance": "553.00",
+          "id": "0005"
+        },
+        {
+          "id": "0006",
+          "bbidAvailableBalance": "982.00",
+          "waiverSortOrder": "4",
+          "name": "Absolutely Cooked",
+          "division": "01"
+        },
+        {
+          "division": "00",
+          "name": "Big Blue Harbaugh-Q",
+          "waiverSortOrder": "2",
+          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_logo0007.jpg",
+          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_icon0007.jpg",
+          "id": "0007",
+          "bbidAvailableBalance": "1000.00"
+        },
+        {
+          "division": "00",
+          "name": "Enigma",
+          "id": "0008",
+          "bbidAvailableBalance": "653.00",
+          "waiverSortOrder": "9",
+          "abbrev": "ENIGMA"
+        },
+        {
+          "division": "01",
+          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2014/72900_franchise_icon0009.jpg",
+          "name": "Ballzdeep",
+          "waiverSortOrder": "5",
+          "bbidAvailableBalance": "677.00",
+          "id": "0009"
+        },
+        {
+          "id": "0010",
+          "waiverSortOrder": "8",
+          "bbidAvailableBalance": "1000.00",
+          "name": "Cobra Kyler",
+          "icon": "http://images.daznservices.com/di/library/sporting_news/a3/d7/2021-fantasy-football-team-names_726wlot1pr4b1m7e5l82xias5.jpg?t=525813035",
+          "division": "00"
+        },
+        {
+          "waiverSortOrder": "11",
+          "logo": "https://th.bing.com/th/id/OIP.YwfriLOc8CGr_u5fIwpKywHaFj?rs=1&pid=ImgDetMain",
+          "division": "01",
+          "name": "SpeedKillz",
+          "id": "0011",
+          "bbidAvailableBalance": "0.00",
+          "abbrev": "SK",
+          "icon": "https://th.bing.com/th/id/OIP.YwfriLOc8CGr_u5fIwpKywHaFj?rs=1&pid=ImgDetMain"
+        },
+        {
+          "name": "Bless'm",
+          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_icon0012.png",
+          "division": "01",
+          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_logo0012.png",
+          "id": "0012",
+          "bbidAvailableBalance": "1000.00",
+          "waiverSortOrder": "7"
+        }
+      ],
+      "count": "12"
+    },
+    "lastRegularSeasonWeek": "14",
+    "tiebreakerPosition": "",
+    "name": "The Gridiron Gumbas Dynasty",
+    "standingsSort": "DIVPCT,PTS,H2H,",
+    "h2h": "YES",
+    "mobileAlerts": "",
+    "startWeek": "1",
+    "loadRosters": "email_draft",
+    "starters": {
+      "position": [
+        {
+          "name": "QB",
+          "limit": "1"
+        },
+        {
+          "name": "RB",
+          "limit": "2-4"
+        },
+        {
+          "limit": "2-4",
+          "name": "WR"
+        },
+        {
+          "limit": "1-3",
+          "name": "TE"
+        },
+        {
+          "name": "PK",
+          "limit": "1"
+        },
+        {
+          "limit": "1",
+          "name": "Def"
+        }
+      ],
+      "count": "10"
+    },
+    "bestLineup": "No",
+    "partialLineupAllowed": "NO",
+    "taxiSquad": "0",
+    "rostersPerPlayer": "1",
+    "bbidFCFSCharge": "",
+    "defaultTradeExpirationDays": "4",
+    "keeperType": "dynasty",
+    "bbidIncrement": "1",
+    "tiebreaker": "nonstarter",
+    "endWeek": "17",
+    "bbidConditional": "Yes",
+    "bbidTiebreaker": "SORT",
+    "draftTimer": "ONS",
+    "rosterSize": "25",
+    "bbidSeasonLimit": "1000",
+    "currentWaiverType": "BBID_FCFS",
+    "draftTimerSusp": "00 09",
+    "rosterLimits": {
+      "position": [
+        {
+          "name": "QB",
+          "limit": "1-4"
+        },
+        {
+          "limit": "2-15",
+          "name": "RB"
+        },
+        {
+          "limit": "2-15",
+          "name": "WR"
+        },
+        {
+          "name": "TE",
+          "limit": "1-5"
+        },
+        {
+          "limit": "1-3",
+          "name": "PK"
+        },
+        {
+          "name": "Def",
+          "limit": "1-3"
+        }
+      ]
+    },
     "history": {
       "league": [
         {
-          "year": "2026",
-          "url": "https://www49.myfantasyleague.com/2026/home/35892"
+          "url": "https://www49.myfantasyleague.com/2026/home/35892",
+          "year": "2026"
         },
         {
           "year": "2013",
@@ -16,12 +208,12 @@
           "year": "2014"
         },
         {
-          "year": "2015",
-          "url": "https://www46.myfantasyleague.com/2015/home/42921"
+          "url": "https://www46.myfantasyleague.com/2015/home/42921",
+          "year": "2015"
         },
         {
-          "year": "2016",
-          "url": "https://www48.myfantasyleague.com/2016/home/35892"
+          "url": "https://www48.myfantasyleague.com/2016/home/35892",
+          "year": "2016"
         },
         {
           "url": "http://www46.myfantasyleague.com/2017/home/35892",
@@ -40,16 +232,16 @@
           "url": "https://www49.myfantasyleague.com/2020/home/35892"
         },
         {
-          "year": "2021",
-          "url": "https://www49.myfantasyleague.com/2021/home/35892"
+          "url": "https://www49.myfantasyleague.com/2021/home/35892",
+          "year": "2021"
         },
         {
           "url": "https://www49.myfantasyleague.com/2022/home/35892",
           "year": "2022"
         },
         {
-          "year": "2023",
-          "url": "https://www49.myfantasyleague.com/2023/home/35892"
+          "url": "https://www49.myfantasyleague.com/2023/home/35892",
+          "year": "2023"
         },
         {
           "year": "2024",
@@ -61,222 +253,30 @@
         }
       ]
     },
-    "taxiSquad": "0",
+    "lockout": "Yes",
+    "precision": "1",
     "usesSalaries": "0",
-    "lastRegularSeasonWeek": "14",
+    "baseURL": "https://www49.myfantasyleague.com",
+    "draftPlayerPool": "Both",
     "maxWaiverRounds": "6",
-    "rosterSize": "25",
-    "bbidSeasonLimit": "1000",
-    "h2h": "YES",
-    "rosterLimits": {
-      "position": [
-        {
-          "name": "QB",
-          "limit": "1-4"
-        },
-        {
-          "name": "RB",
-          "limit": "2-15"
-        },
-        {
-          "name": "WR",
-          "limit": "2-15"
-        },
-        {
-          "limit": "1-5",
-          "name": "TE"
-        },
-        {
-          "name": "PK",
-          "limit": "1-3"
-        },
-        {
-          "limit": "1-3",
-          "name": "Def"
-        }
-      ]
-    },
-    "mobileAlerts": "",
-    "bbidIncrement": "1",
-    "playerLimitUnit": "LEAGUE",
-    "defaultTradeExpirationDays": "4",
-    "draft_kind": "email",
-    "startWeek": "1",
     "usesContractYear": "0",
-    "keeperType": "dynasty",
-    "tiebreakerCount": "1",
-    "draftLimitHours": "8:00",
+    "id": "35892",
     "divisions": {
+      "count": "2",
       "division": [
         {
-          "id": "00",
-          "name": "The 2 Minute Drillers"
+          "name": "The 2 Minute Drillers",
+          "id": "00"
         },
         {
           "id": "01",
           "name": "The No Huddlers"
         }
-      ],
-      "count": "2"
-    },
-    "injuredReserve": "2",
-    "franchises": {
-      "count": "12",
-      "franchise": [
-        {
-          "id": "0001",
-          "division": "00",
-          "waiverSortOrder": "11",
-          "bbidAvailableBalance": "474.00",
-          "name": "<font color=33cc33>Hail Mary</font>"
-        },
-        {
-          "id": "0002",
-          "abbrev": "OTB",
-          "division": "00",
-          "name": "QB Graveyard ",
-          "icon": "https://www49.myfantasyleague.com/fflnet2021/newhelmets/nh-0030.png",
-          "waiverSortOrder": "3",
-          "bbidAvailableBalance": "352.00"
-        },
-        {
-          "bbidAvailableBalance": "538.00",
-          "waiverSortOrder": "5",
-          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_logo0003.jpg",
-          "abbrev": "HULKA",
-          "division": "01",
-          "sound": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_sound0003.wav",
-          "name": "Sgt. Hulka's Army",
-          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_icon0003.jpg",
-          "id": "0003"
-        },
-        {
-          "id": "0004",
-          "name": "Elementary",
-          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_icon0004.jpg",
-          "division": "00",
-          "abbrev": "ELMT",
-          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_logo0004.jpg",
-          "bbidAvailableBalance": "549.00",
-          "waiverSortOrder": "10"
-        },
-        {
-          "division": "01",
-          "id": "0005",
-          "name": "You're in Sample",
-          "bbidAvailableBalance": "553.00",
-          "waiverSortOrder": "2"
-        },
-        {
-          "division": "01",
-          "id": "0006",
-          "name": "Absolutely Cooked",
-          "bbidAvailableBalance": "982.00",
-          "waiverSortOrder": "4"
-        },
-        {
-          "name": "Big Blue Harbaugh-Q",
-          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_icon0007.jpg",
-          "bbidAvailableBalance": "1000.00",
-          "waiverSortOrder": "1",
-          "id": "0007",
-          "division": "00",
-          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2019/35892_franchise_logo0007.jpg"
-        },
-        {
-          "id": "0008",
-          "division": "00",
-          "abbrev": "ENIGMA",
-          "waiverSortOrder": "9",
-          "bbidAvailableBalance": "653.00",
-          "name": "Enigma"
-        },
-        {
-          "id": "0009",
-          "name": "Ballzdeep",
-          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2014/72900_franchise_icon0009.jpg",
-          "division": "01",
-          "waiverSortOrder": "7",
-          "bbidAvailableBalance": "677.00"
-        },
-        {
-          "name": "Cobra Kyler",
-          "icon": "http://images.daznservices.com/di/library/sporting_news/a3/d7/2021-fantasy-football-team-names_726wlot1pr4b1m7e5l82xias5.jpg?t=525813035",
-          "waiverSortOrder": "8",
-          "bbidAvailableBalance": "1000.00",
-          "id": "0010",
-          "division": "00"
-        },
-        {
-          "icon": "https://th.bing.com/th/id/OIP.YwfriLOc8CGr_u5fIwpKywHaFj?rs=1&pid=ImgDetMain",
-          "name": "SpeedKillz",
-          "id": "0011",
-          "waiverSortOrder": "12",
-          "bbidAvailableBalance": "0.00",
-          "logo": "https://th.bing.com/th/id/OIP.YwfriLOc8CGr_u5fIwpKywHaFj?rs=1&pid=ImgDetMain",
-          "abbrev": "SK",
-          "division": "01"
-        },
-        {
-          "id": "0012",
-          "division": "01",
-          "logo": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_logo0012.png",
-          "name": "Bless'm",
-          "icon": "https://www46.myfantasyleague.com/fflnetdynamic2018/35892_franchise_icon0012.png",
-          "waiverSortOrder": "6",
-          "bbidAvailableBalance": "1000.00"
-        }
       ]
     },
-    "tiebreakerPosition": "",
-    "partialLineupAllowed": "NO",
-    "starters": {
-      "count": "10",
-      "position": [
-        {
-          "name": "QB",
-          "limit": "1"
-        },
-        {
-          "limit": "2-4",
-          "name": "RB"
-        },
-        {
-          "limit": "2-4",
-          "name": "WR"
-        },
-        {
-          "limit": "1-3",
-          "name": "TE"
-        },
-        {
-          "limit": "1",
-          "name": "PK"
-        },
-        {
-          "name": "Def",
-          "limit": "1"
-        }
-      ]
-    },
-    "bbidFCFSCharge": "",
-    "lockout": "Yes",
-    "draftPlayerPool": "Both",
-    "name": "The Gridiron Gumbas Dynasty",
-    "precision": "1",
-    "rostersPerPlayer": "1",
-    "baseURL": "https://www49.myfantasyleague.com",
-    "bestLineup": "No",
-    "bbidConditional": "Yes",
-    "endWeek": "17",
-    "draftTimerSusp": "00 09",
-    "standingsSort": "DIVPCT,PTS,H2H,",
-    "tiebreaker": "nonstarter",
-    "loadRosters": "email_draft",
-    "currentWaiverType": "BBID_FCFS",
-    "draftTimer": "ONS",
-    "id": "35892",
-    "bbidTiebreaker": "SORT"
+    "tiebreakerCount": "1",
+    "draftLimitHours": "8:00",
+    "playerLimitUnit": "LEAGUE"
   },
-  "version": "1.0"
+  "encoding": "utf-8"
 }
