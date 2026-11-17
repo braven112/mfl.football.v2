@@ -90,7 +90,7 @@ export const MOVE_FIELDS = {
   },
   draftPicks: {
     year: { type: 'number', label: 'Season' },
-    draft: { type: 'string', label: 'Draft', desc: "which draft: '' for a league-wide draft, else the conference" },
+    draft: { type: 'string', label: 'Draft', desc: "which draft: '' for a league-wide draft, else the conference's name. A conference league drafts once PER CONFERENCE, so the same player can be picked in each conference's draft in the same year: two picks, two teams, both real" },
     round: { type: 'number', label: 'Rd' },
     pick: { type: 'number', label: 'Pick', desc: 'pick within the round' },
     overall: { type: 'number', label: 'Overall', desc: 'pick number in the whole draft' },
@@ -249,7 +249,7 @@ export function prepareMoves(p, pp, mds, slug = null) {
     const later = career ? [...career.years].filter((yr) => yr >= y) : [];
     return {
       year: y,
-      draft: unit === 'LEAGUE' ? '' : unit.replace(/^CONFERENCE0*/, 'Conference '),
+      draft: unit === 'LEAGUE' ? '' : mds.draftUnits?.[unit] ?? unit.replace(/^CONFERENCE(\d+)$/, (_, n) => `Conference ${Number(n) + 1}`),
       round,
       pick,
       overall,

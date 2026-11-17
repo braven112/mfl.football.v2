@@ -181,7 +181,9 @@ export function prepareStints(p, pp, mds, extra = {}) {
     const y = s.start?.year;
     if (s.how === HOW.draft) {
       const from = r.from ? ` (pick acquired from ${teamName(r.year, r.from)})` : '';
-      return `${r.year} ${ordinal(r.round)} round, pick ${r.pick} (${ordinal(r.overall)} overall)${from}`;
+      // A conference league drafts once per conference: name which one.
+      const unit = r.unit && r.unit !== 'LEAGUE' ? `${mds.draftUnits?.[r.unit] ?? 'conference'} draft, ` : '';
+      return `${r.year} ${unit}${ordinal(r.round)} round, pick ${r.pick} (${ordinal(r.overall)} overall)${from}`;
     }
     if (s.how === HOW.trade) return `trade with ${teamName(y, r.from)}`;
     if (s.how === HOW.auction) return r.bid != null ? `auction, $${r.bid.toLocaleString('en-US')}` : 'auction';
