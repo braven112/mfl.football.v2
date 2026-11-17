@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-11-17",
+      "type": "bug-fix",
+      "summary": "Record Book keeper streaks now credit every team that kept the player, and Most Seasons Kept counts a year once even when both conferences kept him.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "afl"
+    },
+    {
+      "date": "2026-11-17",
       "type": "enhancement",
       "summary": "Ask the History now answers what-ifs: replay a season with your best lineup every week, or with a trade undone, and see real vs. replay records, seeds and champion.",
       "impact": "user",

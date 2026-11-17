@@ -167,9 +167,31 @@ export function keeperBoards(kh, ix, { from = null, rankRows }) {
       franchiseId: f,
     };
   };
+  // A streak is one franchise slot keeping one player, even across owners
+  // (Brandon, 2026-11-17: "we can count it if each owner kept him but we need
+  // to give all teams credit"), so every holding in the run is named, not
+  // only the one that ended it.
+  const holdingsIn = (f, a, b) => {
+    const parts = [];
+    for (let y = a; y <= b; y++) {
+      const key = ix.entityOf(y, f);
+      const last = parts[parts.length - 1];
+      if (last && last.key === key) { last.to = y; last.team = ix.team(y, f)?.n ?? last.team; continue; }
+      parts.push({ key, from: y, to: y, team: ix.team(y, f)?.n ?? f });
+    }
+    return parts;
+  };
   const streakRows = [...runs.values()].map((r) => {
     const n = r.to - r.from + 1;
-    return { ...row(r.to, r.franchiseId, n, keeperPlayer(kh, r.id), `${ix.team(r.to, r.franchiseId)?.n ?? r.franchiseId} · ${span(r.from, r.to)}`), tiebreak: -r.to };
+    const parts = holdingsIn(r.franchiseId, r.from, r.to);
+    const base = row(r.to, r.franchiseId, n, keeperPlayer(kh, r.id), `${ix.team(r.to, r.franchiseId)?.n ?? r.franchiseId} · ${span(r.from, r.to)}`);
+    if (parts.length > 1) {
+      base.context = parts.map((p) => `${p.team} ${span(p.from, p.to)}`).join(' · ');
+      // Team names only (Brandon, 2026-11-17): the run already names every
+      // team, so a list of owners on top is noise.
+      base.owner = null;
+    }
+    return { ...base, tiebreak: -r.to };
   });
 
   // Seasons kept by any team, per player.
@@ -187,8 +209,11 @@ export function keeperBoards(kh, ix, { from = null, rankRows }) {
     const [topTeam, topYears] = [...perTeam.entries()].sort((a, b) => b[1].length - a[1].length || Math.max(...b[1]) - Math.max(...a[1]))[0];
     const years = kept.map((k) => k.y);
     const teams = perTeam.size;
+    // Seasons, not team-seasons: the AFL's two conferences can each keep the
+    // same player in one year, which once credited Tom Brady with 34 seasons.
+    const seasons = new Set(years).size;
     return {
-      ...row(Math.max(...topYears), topTeam, kept.length, keeperPlayer(kh, id),
+      ...row(Math.max(...topYears), topTeam, seasons, keeperPlayer(kh, id),
         `${teams === 1 ? `${ix.team(Math.max(...topYears), topTeam)?.n ?? topTeam}` : `${teams} teams`} · ${span(Math.min(...years), Math.max(...years))}`),
       tiebreak: -Math.max(...years),
     };
@@ -198,7 +223,7 @@ export function keeperBoards(kh, ix, { from = null, rankRows }) {
     { id: 'keeper-streak', label: 'Keeper streak', title: 'Longest keeper streak',
       note: `Seasons in a row one team kept the same player${estimatedNote}`, rows: rankRows(streakRows) },
     { id: 'keeper-seasons', label: 'Seasons kept', title: 'Most seasons kept',
-      note: `Every season a player was kept, by any team${estimatedNote}`, rows: rankRows(totalRows) },
+      note: `Seasons a player was kept by at least one team${estimatedNote}`, rows: rankRows(totalRows) },
   ];
 }
 
