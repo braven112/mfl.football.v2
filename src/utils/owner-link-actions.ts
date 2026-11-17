@@ -23,10 +23,10 @@ import { linkableTenures, validateLinkRequest } from './owner-link-overlay.mjs';
 import { leagueLatestYear, loadLiveOwnerTenures, ownerLinksSupported } from './owner-link-live';
 
 /** The session's league, when it is one owner links run in. */
-export function leagueForSession(user: AuthUser | null): LeagueDefinition | null {
+export async function leagueForSession(user: AuthUser | null): Promise<LeagueDefinition | null> {
   if (!user) return null;
   const league = getLeagueById(user.leagueId);
-  return league && ownerLinksSupported(league.slug) ? league : null;
+  return league && (await ownerLinksSupported(league.slug)) ? league : null;
 }
 
 export function canReviewOwnerLinks(user: AuthUser | null, league: LeagueDefinition | null): boolean {

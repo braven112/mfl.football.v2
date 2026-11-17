@@ -176,7 +176,7 @@ const showHistory = Boolean(historyData) && canViewLeagueHistory(authUser);
 const viewerFranchise = franchiseIdForLeague(authUser, league.id);
 // Owner links (utils/owner-link-live.ts): the owner whose page this is may
 // claim former teams; a commissioner gets the review queue.
-const ownerLinksOn = ownerLinksSupported(league.slug);
+const ownerLinksOn = await ownerLinksSupported(league.slug);
 const canLinkHere = ownerLinksOn && Boolean(viewerFranchise) && owner.isCurrent && owner.currentFranchiseId === viewerFranchise;
 const canReviewLinks = ownerLinksOn && Boolean(authUser) && isCommissionerOrAdminForLeague(authUser!, league.id);
 

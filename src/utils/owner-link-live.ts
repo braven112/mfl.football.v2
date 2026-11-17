@@ -27,14 +27,18 @@ import {
   overlayHistoryDataset,
   overlayOwnerTenures,
 } from './owner-link-overlay.mjs';
-import registry from '../data/owners-registry.json';
 import type { OwnerTenuresFile } from '../types/owner-tenures';
 
 const LINKS_TTL_MS = 15_000;
 
+/** owners-registry.json, read through the league-data loader (never bundled). */
+const REGISTRY_PATH = 'src/data/owners-registry.json';
+const loadRegistry = () => loadLeagueData<any>(REGISTRY_PATH);
+
 /** Leagues with registry claims — the ones a link can be expressed in. */
-export function ownerLinksSupported(leagueSlug: string): boolean {
-  return (registry as any).people.some((p: any) => (p.claims ?? []).some((c: any) => c.league === leagueSlug));
+export async function ownerLinksSupported(leagueSlug: string): Promise<boolean> {
+  const registry = await loadRegistry();
+  return Boolean(registry?.people?.some((p: any) => (p.claims ?? []).some((c: any) => c.league === leagueSlug)));
 }
 
 const linkCache = new Map<string, { at: number; links: OwnerLink[] }>();
@@ -96,7 +100,7 @@ export async function loadLiveOwnerTenures(
   if (!league) return null;
   const base =
     committed ?? (await loadLeagueData<OwnerTenuresFile>(derived(league.dataPath, 'owner-tenures.json')));
-  if (!base || !ownerLinksSupported(leagueSlug)) return base ?? null;
+  if (!base || !(await ownerLinksSupported(leagueSlug))) return base ?? null;
 
   const approved = approvedLinks(await cachedOwnerLinks(leagueSlug), leagueSlug) as OwnerLink[];
   if (approved.length === 0) return base;
@@ -105,7 +109,7 @@ export async function loadLiveOwnerTenures(
   const hit = memo.get(leagueSlug);
   if (hit && hit.signature === signature && hit.committed === base) return hit.data;
 
-  const inputs = await loadInputs(leagueSlug);
+  const [inputs, registry] = await Promise.all([loadInputs(leagueSlug), loadRegistry()]);
   const result = overlayOwnerTenures({ league, committed: base, registry, inputs, links: approved });
   if (result.error) console.warn(`[owner-links] ${leagueSlug} overlay refused: ${result.error}`);
   memo.set(leagueSlug, { signature, committed: base, data: result.data as OwnerTenuresFile });

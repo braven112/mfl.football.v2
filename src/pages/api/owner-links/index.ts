@@ -36,7 +36,7 @@ const json = (body: unknown, status = 200) =>
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Sign in to link teams.' }, 401);
-  const league = leagueForSession(user);
+  const league = await leagueForSession(user);
   if (!league) return json({ error: 'Owner links are not available in this league.' }, 404);
   const reviewer = canReviewOwnerLinks(user, league);
   const [links, data] = await Promise.all([listOwnerLinks(league.slug), loadLiveOwnerTenures(league.slug)]);
@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Sign in to link teams.' }, 401);
-  const league = leagueForSession(user);
+  const league = await leagueForSession(user);
   if (!league) return json({ error: 'Owner links are not available in this league.' }, 404);
 
   const limit = await checkRateLimit('owner-links', `${league.slug}:${user.franchiseId || user.id}`, MAX_PER_HOUR, 3600);

@@ -16,7 +16,7 @@ export const prerender = false;
 const LEAGUE = getLeagueBySlug('theleague')!;
 
 const user = getAuthUser(Astro.request);
-if (!user || !isAuthorizedForLeague(user, LEAGUE.id) || leagueForSession(user)?.slug !== LEAGUE.slug) {
+if (!user || !isAuthorizedForLeague(user, LEAGUE.id) || (await leagueForSession(user))?.slug !== LEAGUE.slug) {
   return Astro.redirect('/theleague/owners');
 }
 const model = await ownerLinksPageModel(user, LEAGUE);

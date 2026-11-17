@@ -31,7 +31,7 @@ const REASONS = {
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Sign in first.' }, 401);
-  const league = leagueForSession(user);
+  const league = await leagueForSession(user);
   if (!league || !canReviewOwnerLinks(user, league)) return json({ error: 'Commissioners only.' }, 403);
 
   const limit = await checkRateLimit('owner-links-decide', `${league.slug}:${user.id}`, 120, 3600);
