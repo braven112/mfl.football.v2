@@ -7,12 +7,14 @@
  *
  * Server-only: reads through the league-data loader, which caches each feed.
  */
-import { listLeagueData, loadLeagueData } from '../league-data';
+import { listLeagueData, loadLeagueData, onLeagueDataChange } from '../league-data';
 import { seedingPoolsFromFeeds } from './ask-rivalry-games.mjs';
 
 export type SeedingPools = Record<number, Record<string, string>>;
 
 const built = new Map<string, Promise<SeedingPools>>();
+// A new league-data version may carry a new season's feed: build again from it.
+onLeagueDataChange(() => built.clear());
 
 export function loadSeedingPools(dataPath: string): Promise<SeedingPools> {
   let p = built.get(dataPath);
