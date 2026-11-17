@@ -74,6 +74,19 @@ describe('the career and pickup-impact units', () => {
     for (const part of years.split(', ')) expect(part).toMatch(/^\d{4} \(.+\)$/);
   });
 
+  it('knows every player’s NFL team by season, so "Seahawks" means every Seahawk (Brandon 2026-11-17)', () => {
+    const julio = runQuery(afl, { unit: 'careers', where: [{ field: 'player', op: 'eq', value: 'Julio Jones' }], columns: ['nflTeams'] }, AFL);
+    expect(cell(julio, 'nflTeams')).toMatch(/^ATL 20\d\d-2020, TEN 2021, TB 2022/);
+    const seahawks = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'nflTeam', op: 'eq', value: 'SEA' }], columns: ['player', 'position', 'nflTeam'] }, AFL);
+    const positions = new Set(seahawks.rows.map((_: unknown, i: number) => cell(seahawks, 'position', i)));
+    expect(seahawks.total).toBeGreaterThan(5);
+    expect([...positions].some((p) => p !== 'Def')).toBe(true);
+    // Almost every champion's starter has a club on record (free agents at season end are the gap).
+    const all = runQuery(afl, { unit: 'titleRosters' }, AFL).total;
+    const none = runQuery(afl, { unit: 'titleRosters', where: [{ field: 'nflTeam', op: 'eq', value: null }] }, AFL).total;
+    expect(none / all).toBeLessThan(0.03);
+  });
+
   it('keeps the AFL’s two conferences apart: one player, two teams at once', () => {
     const r = runQuery(afl, { unit: 'stints', where: [{ field: 'player', op: 'eq', value: 'Travis Kelce' }, { field: 'year', op: 'eq', value: 2014 }], columns: ['team', 'lastYear', 'acquired'], limit: 5 }, AFL);
     const teams = r.rows.map((row) => row.cells[0]);

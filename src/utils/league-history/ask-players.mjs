@@ -18,6 +18,34 @@
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
+/** What `nflTeam` means, for every unit that carries it. */
+export const NFL_TEAM_DESC =
+  "the NFL team MFL lists him on that season (each season as it ended, so a player traded mid-season shows his later club). NFL codes: SEA, KC, NE, GB, TB, SF, LV…; a team that moved keeps its old city's code that season (OAK, STL, SD). null = a free agent at season's end, or not on record";
+export const NFL_PATH_DESC = 'his NFL teams over the seasons in question, in order: "ATL 2011-2020, TEN 2021, TB 2022"';
+
+/**
+ * The NFL team a player was on in a season, from the dataset's `nflTeams`
+ * (compute-league-history-players.mjs): year → player id → code.
+ * @returns {(pid: string, year: number) => string | null}
+ */
+export function nflTeamLookup(pds) {
+  const by = pds?.nflTeams ?? {};
+  return (pid, year) => by[String(year)]?.[pid] ?? null;
+}
+
+/** "ATL 2011-2020, TEN 2021, TB 2022" over the given seasons. */
+export function nflTeamPath(lookup, pid, years) {
+  const parts = [];
+  for (const y of [...new Set(years)].sort((a, b) => a - b)) {
+    const t = lookup(pid, y);
+    if (!t) continue;
+    const last = parts.at(-1);
+    if (last && last.t === t && last.to === y - 1) last.to = y;
+    else parts.push({ t, from: y, to: y });
+  }
+  return parts.map((p) => `${p.t} ${p.from === p.to ? p.from : `${p.from}-${p.to}`}`).join(', ') || null;
+}
+
 export const PLAYER_FIELDS = {
   playerWeeks: {
     year: { type: 'number', label: 'Season' },
@@ -25,6 +53,7 @@ export const PLAYER_FIELDS = {
     kind: { type: 'string', label: 'Type', desc: "the team's week: regular | playoffs | consolation | none. Only regular and playoffs unless you filter on kind" },
     player: { type: 'string', label: 'Player' },
     position: { type: 'string', label: 'Pos', desc: 'QB | RB | WR | TE | PK | Def (MFL codes)' },
+    nflTeam: { type: 'string', label: 'NFL', desc: NFL_TEAM_DESC },
     team: { type: 'string', label: 'Team', desc: 'the fantasy team that rostered him that week' },
     owner: { type: 'string', label: 'Owner' },
     score: { type: 'number', label: 'Pts' },
@@ -37,6 +66,7 @@ export const PLAYER_FIELDS = {
     year: { type: 'number', label: 'Season' },
     player: { type: 'string', label: 'Player' },
     position: { type: 'string', label: 'Pos' },
+    nflTeam: { type: 'string', label: 'NFL', desc: NFL_TEAM_DESC },
     team: { type: 'string', label: 'Team' },
     owner: { type: 'string', label: 'Owner' },
     starts: { type: 'number', label: 'Starts', desc: 'regular-season weeks started' },
@@ -51,6 +81,7 @@ export const PLAYER_FIELDS = {
   playerCareers: {
     player: { type: 'string', label: 'Player' },
     position: { type: 'string', label: 'Pos' },
+    nflTeams: { type: 'string', label: 'NFL teams', desc: NFL_PATH_DESC },
     starts: { type: 'number', label: 'Starts', desc: 'regular-season and playoff weeks started' },
     points: { type: 'number', label: 'Pts', desc: 'regular-season and playoff points as a starter' },
     avgStart: { type: 'number', label: 'Pts/start' },
@@ -67,7 +98,7 @@ export const PLAYER_UNITS = Object.keys(PLAYER_FIELDS);
 
 export const PLAYER_DEFAULT_COLUMNS = {
   playerWeeks: ['year', 'week', 'player', 'position', 'team', 'score', 'kind'],
-  playerSeasons: ['year', 'player', 'position', 'team', 'points', 'starts'],
+  playerSeasons: ['year', 'player', 'position', 'nflTeam', 'team', 'points', 'starts'],
   playerCareers: ['player', 'position', 'points', 'starts', 'seasons', 'teams'],
 };
 
@@ -94,6 +125,7 @@ export function preparePlayers(p, pds) {
   const champs = new Set();
   for (const s of ix.ds.seasons) for (const [f, t] of Object.entries(s.teams)) if (s.done && t.r === 'C') champs.add(`${s.y}|${f}`);
 
+  const nflOf = nflTeamLookup(pds);
   const weeks = [];
   for (const [y, wk, f, pid, score, flags] of pds.weeks ?? []) {
     const games = teamWeek.get(`${y}|${wk}|${f}`);
@@ -105,6 +137,7 @@ export function preparePlayers(p, pds) {
       kind: kindOf(games),
       player: name,
       position: pos,
+      nflTeam: nflOf(pid, y),
       team: ix.team(y, f)?.n ?? f,
       owner: owner.name,
       score,
@@ -128,7 +161,7 @@ export function preparePlayers(p, pds) {
     const sk = `${w.year}|${w._franchiseId}|${w._pid}`;
     if (!seasons.has(sk)) {
       seasons.set(sk, {
-        year: w.year, player: w.player, position: w.position, team: w.team, owner: w.owner,
+        year: w.year, player: w.player, position: w.position, nflTeam: w.nflTeam, team: w.team, owner: w.owner,
         starts: 0, points: 0, bestWeek: null, benchPoints: 0, playoffStarts: 0, playoffPoints: 0,
         champion: champs.has(`${w.year}|${w._franchiseId}`),
         _franchiseId: w._franchiseId, _ownerSlug: w._ownerSlug,
@@ -151,7 +184,7 @@ export function preparePlayers(p, pds) {
       careers.set(w._pid, {
         player: w.player, position: w.position, starts: 0, points: 0, bestWeek: null,
         _years: new Set(), _owners: new Set(), _titles: new Set(), lastTeam: w.team, _last: 0, playoffPoints: 0,
-        _franchiseId: w._franchiseId, _ownerSlug: null,
+        _franchiseId: w._franchiseId, _ownerSlug: null, _pid: w._pid,
       });
     }
     const c = careers.get(w._pid);
@@ -176,6 +209,7 @@ export function preparePlayers(p, pds) {
   const careerRows = [...careers.values()].map((c) => ({
     player: c.player,
     position: c.position,
+    nflTeams: nflTeamPath(nflOf, c._pid, [...c._years]),
     starts: c.starts,
     points: c.points,
     avgStart: c.starts ? r2(c.points / c.starts) : 0,
@@ -189,7 +223,7 @@ export function preparePlayers(p, pds) {
     _ownerSlug: null,
   }));
 
-  const prepared = { playerWeeks: weeks, playerSeasons: seasonRows, playerCareers: careerRows, missingWeeks: pds.missingWeeks ?? {} };
+  const prepared = { playerWeeks: weeks, playerSeasons: seasonRows, playerCareers: careerRows, missingWeeks: pds.missingWeeks ?? {}, nflTeamOf: nflOf };
   cache.set(pds, prepared);
   return prepared;
 }

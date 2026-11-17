@@ -22,6 +22,11 @@
  *   [year, week, franchiseId, playerId, score, flags]
  * flags: 1 = started, 2 = MFL's optimal lineup would have started him.
  * `missingWeeks` is year → the final weeks with no player scores in the feed.
+ * `nflTeams` is year → player id → the NFL team that season's players.json
+ * lists him on (MFL archives each season as it ended, so a player traded in
+ * mid-season shows his later club). Codes are the NFL's own (NE, not MFL's
+ * NEP); a franchise that moved keeps the code of its city that season (OAK,
+ * STL, SD), and a free agent at season's end has no entry.
  * One row per line, sorted, so a new week is added lines in git, not a
  * rewritten blob (storage-and-build.md).
  */
@@ -76,13 +81,28 @@ function displayName(raw) {
 
 const years = fs.existsSync(FEEDS) ? fs.readdirSync(FEEDS).filter((y) => /^\d{4}$/.test(y)).sort() : [];
 
+// MFL's codes → the NFL's own. Moved franchises keep their old city's code.
+const NFL_CODE = { GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO', SFO: 'SF', TBB: 'TB', LVR: 'LV', RAM: 'LAR', JAC: 'JAX', SDC: 'SD' };
+const nflCode = (team) => {
+  const t = String(team ?? '').trim().toUpperCase();
+  if (!t || t.startsWith('FA')) return null;
+  return NFL_CODE[t] ?? t;
+};
+
 const players = new Map();
+const nflByYear = new Map();
 const rows = [];
 for (const year of years) {
   const dir = path.join(FEEDS, year);
   // Oldest first, so the latest season's name and position win.
   for (const p of toArray(readJson(path.join(dir, 'players.json'))?.players?.player)) {
-    if (p?.id) players.set(String(p.id), [displayName(p.name), String(p.position ?? '')]);
+    if (!p?.id) continue;
+    players.set(String(p.id), [displayName(p.name), String(p.position ?? '')]);
+    const code = nflCode(p.team);
+    if (code) {
+      if (!nflByYear.has(year)) nflByYear.set(year, new Map());
+      nflByYear.get(year).set(String(p.id), code);
+    }
   }
   const weeks = readJson(path.join(dir, 'weekly-results-raw.json'));
   if (!Array.isArray(weeks)) continue;
@@ -130,11 +150,24 @@ const playerMap = Object.fromEntries(
   [...players.entries()].filter(([id]) => used.has(id)).sort(([a], [b]) => cmp(a, b)),
 );
 
+// Only the players and seasons the weeks use, one season per line.
+const usedInYear = new Map();
+for (const r of rows) {
+  if (!usedInYear.has(r[0])) usedInYear.set(r[0], new Set());
+  usedInYear.get(r[0]).add(r[3]);
+}
+const nflTeams = [...usedInYear.keys()].sort((a, b) => a - b).map((y) => {
+  const teams = nflByYear.get(String(y)) ?? new Map();
+  const entries = [...usedInYear.get(y)].sort(cmp).filter((id) => teams.has(id)).map((id) => [id, teams.get(id)]);
+  return [y, Object.fromEntries(entries)];
+});
+
 const body = [
   `  "generatedAt": ${JSON.stringify(new Date().toISOString())}`,
   `  "league": ${JSON.stringify(SLUG)}`,
   `  "missingWeeks": ${JSON.stringify(missing)}`,
   `  "players": {\n${Object.entries(playerMap).map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
+  `  "nflTeams": {\n${nflTeams.map(([y, t]) => `    ${JSON.stringify(String(y))}: ${JSON.stringify(t)}`).join(',\n')}\n  }`,
   `  "weeks": [\n${rows.map((r) => `    ${JSON.stringify(r)}`).join(',\n')}\n  ]`,
 ];
 const wrote = writeJsonIfChanged(OUT, `{\n${body.join(',\n')}\n}\n`, { ignoreKeys: ['generatedAt'] });
