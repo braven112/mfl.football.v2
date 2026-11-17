@@ -12,7 +12,7 @@
  * build derives for it. A league with only `league-history.json` (rivalry
  * lines, owner pages) does not.
  */
-import { hasLeagueData, listLeagueData, loadLeagueData } from '../league-data';
+import { hasLeagueData, listLeagueData, loadLeagueData, onLeagueDataChange } from '../league-data';
 import { compactSalaries } from './ask-careers.mjs';
 
 export interface LeagueHistoryPaths {
@@ -106,6 +106,8 @@ export async function loadLeagueCompetitions(
 export type LeagueSalaries = Record<string, Record<string, [number, string]>>;
 
 const salaryMemo = new Map<string, { raws: unknown[]; compact: LeagueSalaries }>();
+// A sync that moves the league-data pointer brings new salary files: drop the compact copies.
+onLeagueDataChange(() => salaryMemo.clear());
 
 /**
  * A salary league's season salaries (`<dataPath>/mfl-player-salaries-<year>.json`,
