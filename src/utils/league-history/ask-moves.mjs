@@ -18,6 +18,7 @@
  */
 import { formatPickLabel, parsePickToken } from '../mfl-pick-tokens.mjs';
 import { shiftIsoDate, tradeDeadlineIsoDate } from '../trade-deadline.mjs';
+import { tradeIds } from './stints.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
@@ -69,6 +70,7 @@ export const MOVE_FIELDS = {
     pointsGot: { type: 'number', label: 'Pts in', desc: `what the received players scored for this team the rest of that season (${VALUE})` },
     pointsGave: { type: 'number', label: 'Pts out', desc: 'what the players given up scored for the partner the rest of that season' },
     pointsNet: { type: 'number', label: 'Net', desc: 'pointsGot - pointsGave: who won the trade that season' },
+    tradeId: { type: 'string', label: 'Trade id', desc: 'this trade, as stints, titleRosters and pickChains name it' },
   },
   pickups: {
     year: { type: 'number', label: 'Season' },
@@ -165,6 +167,7 @@ export function prepareMoves(p, pp, mds, slug = null) {
   };
 
   const trades = [];
+  const ids = tradeIds(mds.trades);
   for (const [i, [y, date, week, fa, fb, aGave, bGave]] of (mds.trades ?? []).entries()) {
     const a = assets(y, aGave);
     const b = assets(y, bGave);
@@ -194,6 +197,7 @@ export function prepareMoves(p, pp, mds, slug = null) {
         pointsGot,
         pointsGave,
         pointsNet: has ? r2(pointsGot - pointsGave) : null,
+        tradeId: ids[i],
         // Both sides of one trade share this, so a grouped count counts the trade once.
         _event: `trade${i}`,
         _franchiseId: f,

@@ -29,8 +29,21 @@
  *   trades:   [year, date, week, franchiseA, franchiseB, aGaveUp, bGaveUp]
  *   pickups:  [year, date, week, franchise, playerId, how, bid]
  *             how: "waiver" (a claim, blind bid or not) | "free agent"
- *   drafts:   [year, draftUnit, round, pick, overall, franchise, playerId]
- *   auctions: [year, franchise, playerId, winningBid]
+ *   drafts:   [year, draftUnit, round, pick, overall, franchise, playerId,
+ *              date, week, tradedFrom]
+ *             tradedFrom: the franchise MFL's own draft comment says the pick
+ *             was "traded from" (2018 on): the LAST team to trade it away,
+ *             not necessarily its original owner. null is "not stated",
+ *             never "not traded".
+ *   auctions: [year, franchise, playerId, winningBid, date, week]
+ *   drops:    [year, date, week, franchise, playerId]
+ *             every release on record (free agent, waiver and blind-bid drops,
+ *             commissioner roster loads), so a player's stint with a team has
+ *             a dated end (stints.mjs).
+ *   adds:     [year, date, week, franchise, playerId, how, bid]
+ *             acquisitions that are not pickups, drafts or auction results:
+ *             how "auction" (an AUCTION_WON outside auctionResults.json, e.g. an
+ *             in-season free-agent auction) | "commissioner" (LOAD_ROSTERS).
  *   players:  id → [name, position], for ids the player-week file may not have
  * `date` is the Pacific calendar day; `week` is the NFL week that was current
  * then (nflWeekFor: 0 before kickoff), so "what he scored after the trade"
@@ -106,14 +119,47 @@ if (!seasons.size) {
 
 const years = fs.existsSync(FEEDS) ? fs.readdirSync(FEEDS).filter((y) => /^\d{4}$/.test(y) && seasons.has(Number(y))).sort() : [];
 
+/**
+ * A franchise named in a draft comment ("[Pick traded from Pacific
+ * Pigskins.]"), resolved by the names that league year's own league.json
+ * used, then by the names league-history.json records for that season and its
+ * neighbours (a team renamed between the trade and the draft). null when no
+ * name matches: unresolved stays unresolved.
+ */
+const historyNames = new Map();
+for (const s of history?.seasons ?? []) {
+  for (const [f, t] of Object.entries(s.teams ?? {})) {
+    const key = String(t?.n ?? '').trim().toLowerCase();
+    if (!key) continue;
+    if (!historyNames.has(key)) historyNames.set(key, []);
+    historyNames.get(key).push([s.y, f]);
+  }
+}
+function franchiseNamed(name, y, leagueNames) {
+  const key = String(name ?? '').trim().toLowerCase();
+  if (!key) return null;
+  if (leagueNames.has(key)) return leagueNames.get(key);
+  const hits = (historyNames.get(key) ?? []).slice().sort((a, b) => Math.abs(a[0] - y) - Math.abs(b[0] - y));
+  return hits[0]?.[1] ?? null;
+}
+const TRADED_FROM = /\[Pick traded from (.+?)\.\]/;
+
 const players = new Map();
 const trades = [];
 const pickups = [];
 const drafts = [];
 const auctions = [];
+const drops = [];
+const adds = [];
 for (const year of years) {
   const dir = path.join(FEEDS, year);
   const y = Number(year);
+  const leagueNames = new Map(
+    toArray(readJson(path.join(dir, 'league.json'))?.league?.franchises?.franchise)
+      .filter((f) => f?.id && f?.name)
+      .map((f) => [String(f.name).trim().toLowerCase(), String(f.id)]),
+  );
+  const auctionWins = [];
   for (const p of toArray(readJson(path.join(dir, 'players.json'))?.players?.player)) {
     if (p?.id) players.set(String(p.id), [displayName(p.name), String(p.position ?? '')]);
   }
@@ -126,35 +172,63 @@ for (const year of years) {
       if (!tx.franchise2) continue;
       trades.push([y, ...when(y, ts), f, String(tx.franchise2), ids(tx.franchise1_gave_up).join(','), ids(tx.franchise2_gave_up).join(',')]);
     } else if (tx.type === 'FREE_AGENT') {
-      const [added] = String(tx.transaction ?? '').split('|');
+      const [added, dropped] = String(tx.transaction ?? '').split('|');
       for (const pid of ids(added).filter(isPlayerId)) pickups.push([y, ...when(y, ts), f, pid, 'free agent', null]);
+      for (const pid of ids(dropped).filter(isPlayerId)) drops.push([y, ...when(y, ts), f, pid]);
     } else if (tx.type === 'WAIVER') {
       for (const pid of ids(tx.added).filter(isPlayerId)) pickups.push([y, ...when(y, ts), f, pid, 'waiver', null]);
+      for (const pid of ids(tx.dropped).filter(isPlayerId)) drops.push([y, ...when(y, ts), f, pid]);
     } else if (tx.type === 'BBID_WAIVER') {
-      const [added, bid] = String(tx.transaction ?? '').split('|');
+      const [added, bid, dropped] = String(tx.transaction ?? '').split('|');
       const amount = Number(bid);
       for (const pid of ids(added).filter(isPlayerId)) pickups.push([y, ...when(y, ts), f, pid, 'waiver', Number.isFinite(amount) ? amount : null]);
+      for (const pid of ids(dropped).filter(isPlayerId)) drops.push([y, ...when(y, ts), f, pid]);
+    } else if (tx.type === 'LOAD_ROSTERS') {
+      const [added, dropped] = String(tx.transaction ?? '').split('|');
+      for (const pid of ids(added).filter(isPlayerId)) adds.push([y, ...when(y, ts), f, pid, 'commissioner', null]);
+      for (const pid of ids(dropped).filter(isPlayerId)) drops.push([y, ...when(y, ts), f, pid]);
+    } else if (tx.type === 'AUCTION_WON') {
+      const [pid, bid] = String(tx.transaction ?? '').split('|');
+      const amount = Number(bid);
+      if (isPlayerId(pid)) auctionWins.push([y, ...when(y, ts), f, pid, 'auction', Number.isFinite(amount) ? amount : null]);
     }
   }
 
   for (const unit of toArray(readJson(path.join(dir, 'draftResults.json'))?.draftResults?.draftUnit)) {
     const picks = toArray(unit?.draftPick)
       .filter((p) => p?.player && p?.franchise)
-      .map((p) => ({ round: Number(p.round), pick: Number(p.pick), f: String(p.franchise), pid: String(p.player) }))
+      .map((p) => ({
+        round: Number(p.round),
+        pick: Number(p.pick),
+        f: String(p.franchise),
+        pid: String(p.player),
+        ts: Number(p.timestamp),
+        from: TRADED_FROM.exec(String(p.comments ?? ''))?.[1] ?? null,
+      }))
       .filter((p) => Number.isFinite(p.round) && Number.isFinite(p.pick))
       .sort((a, b) => a.round - b.round || a.pick - b.pick);
     // Overall number counts the picks actually made: rounds are not uniform
     // (TheLeague's run 16/17/18), so round × size would be wrong.
-    picks.forEach((p, i) => drafts.push([y, String(unit.unit ?? ''), p.round, p.pick, i + 1, p.f, p.pid]));
+    picks.forEach((p, i) => {
+      const at = p.ts > 0 ? when(y, p.ts) : [null, null];
+      const from = p.from ? franchiseNamed(p.from, y, leagueNames) : null;
+      drafts.push([y, String(unit.unit ?? ''), p.round, p.pick, i + 1, p.f, p.pid, ...at, from]);
+    });
   }
 
+  const won = new Set();
   for (const unit of toArray(readJson(path.join(dir, 'auctionResults.json'))?.auctionResults?.auctionUnit)) {
     for (const a of toArray(unit?.auction)) {
       const bid = Number(a?.winningBid);
       if (!a?.player || !a?.franchise || !Number.isFinite(bid)) continue;
-      auctions.push([y, String(a.franchise), String(a.player), bid]);
+      const ts = Number(a.lastBidTime);
+      auctions.push([y, String(a.franchise), String(a.player), bid, ...(ts > 0 ? when(y, ts) : [null, null])]);
+      won.add(`${a.franchise}|${a.player}`);
     }
   }
+  // An AUCTION_WON the auction results do not list (a free-agent auction run
+  // outside the main one) is still how the team got him.
+  for (const a of auctionWins) if (!won.has(`${a[3]}|${a[4]}`)) adds.push(a);
 }
 
 const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -165,13 +239,14 @@ const byAll = (a, b) => {
   }
   return 0;
 };
-for (const list of [trades, pickups, drafts, auctions]) list.sort(byAll);
+for (const list of [trades, pickups, drafts, auctions, drops, adds]) list.sort(byAll);
 
 const used = new Set([
   ...trades.flatMap((t) => [...t[5].split(','), ...t[6].split(',')].filter(isPlayerId)),
   ...pickups.map((p) => p[4]),
   ...drafts.map((d) => d[6]),
   ...auctions.map((a) => a[2]),
+  ...adds.map((a) => a[4]),
 ]);
 const playerMap = Object.fromEntries([...players.entries()].filter(([id]) => used.has(id)).sort(([a], [b]) => cmp(a, b)));
 
@@ -184,8 +259,10 @@ const body = [
   `  "pickups": ${lines(pickups)}`,
   `  "drafts": ${lines(drafts)}`,
   `  "auctions": ${lines(auctions)}`,
+  `  "drops": ${lines(drops)}`,
+  `  "adds": ${lines(adds)}`,
 ];
 const wrote = writeJsonIfChanged(OUT, `{\n${body.join(',\n')}\n}\n`, { ignoreKeys: ['generatedAt'] });
 console.log(
-  `[league-history-moves] ${SLUG}: ${trades.length} trades, ${pickups.length} pickups, ${drafts.length} draft picks, ${auctions.length} auction wins -> ${path.relative(ROOT, OUT)}${wrote ? '' : ' (unchanged)'}`,
+  `[league-history-moves] ${SLUG}: ${trades.length} trades, ${pickups.length} pickups, ${drafts.length} draft picks, ${auctions.length} auction wins, ${drops.length} drops, ${adds.length} other adds -> ${path.relative(ROOT, OUT)}${wrote ? '' : ' (unchanged)'}`,
 );
