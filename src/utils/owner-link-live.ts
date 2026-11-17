@@ -19,7 +19,7 @@
  * show up on the very next request.
  */
 import { getLeagueBySlug } from '../config/leagues';
-import { loadLeagueData } from './league-data';
+import { loadLeagueData, onLeagueDataChange } from './league-data';
 import { listOwnerLinks, type OwnerLink } from './owner-link-store';
 import {
   approvedLinks,
@@ -78,6 +78,8 @@ async function loadInputs(leagueSlug: string) {
 }
 
 const memo = new Map<string, { signature: string; committed: unknown; data: OwnerTenuresFile }>();
+// A data sync that moves the derived files drops the rebuilt payloads with it.
+onLeagueDataChange(() => memo.clear());
 
 const signatureOf = (links: OwnerLink[]) =>
   links.map((l) => `${l.id}:${l.decidedAt}:${l.franchiseId}:${l.yearStart}-${l.yearEnd}:${l.targetOwnerId}`).join('|');
