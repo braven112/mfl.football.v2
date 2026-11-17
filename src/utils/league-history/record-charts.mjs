@@ -415,3 +415,54 @@ export function seasonBarChart(series, W, { noun = 'picks' } = {}) {
   const take = `${total} ${noun} changed hands from ${first} to ${last}; the busiest season was ${peak.season}, with ${hi}. The last five seasons saw ${recent}.`;
   return { svg: svg(W, H, g, `${noun} traded each season, ${first} to ${last}`), take };
 }
+
+/**
+ * E · a what-if, real against replay (what-if.mjs): one row per team, a muted
+ * dot at what really happened and a gold one at the replay, joined by a stem,
+ * so the teams the what-if moved are the rows with a gap. `compare.rows` are
+ * `{ name, real, replay, realDisplay, replayDisplay, subject, franchiseId }`;
+ * the teams the question was about (`subject`) draw in the viewer's color.
+ * The legend names which dot is the replay, so the chart never reads as the
+ * real standings.
+ */
+export function compareChart(compare, W, opts = {}) {
+  const rows = compare?.rows ?? [];
+  if (!rows.length) return null;
+  const narrow = W < 360;
+  const L = Math.min(150, W * (narrow ? 0.42 : 0.34)), R = 66, rowH = 24, T = 26, H = T + rows.length * rowH + 22;
+  const vals = rows.flatMap((r) => [r.real, r.replay]);
+  const lo = Math.min(0, ...vals), hi = Math.max(...vals, 1);
+  const x = scale(lo, hi, L, W - R);
+  const chars = Math.floor((L - 6) / (narrow ? 7.6 : 7.2));
+  const realLabel = compare.realLabel ?? 'Real';
+  const replayLabel = compare.replayLabel ?? 'Replay';
+  const unit = compare.unit ?? 'wins';
+  // The legend: which dot is which.
+  let g = `<circle class="rbc-dot" cx="6" cy="9" r="5"/><text class="rbc-axis" x="15" y="13">${esc(realLabel)}</text>`;
+  const lx = 28 + realLabel.length * 6.5;
+  g += `<circle class="rbc-lead" cx="${px(lx)}" cy="9" r="5"/><text class="rbc-axis" x="${px(lx + 9)}" y="13">${esc(replayLabel)}</text>`;
+  for (const t of ticks(lo, hi, W < 480 ? 3 : 5, 1)) {
+    g += `<line class="rbc-grid" x1="${px(x(t))}" x2="${px(x(t))}" y1="${T}" y2="${H - 20}"/>`;
+    g += `<text class="rbc-axis" x="${px(x(t))}" y="${H - 5}" text-anchor="middle">${t}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const y = T + i * rowH + rowH / 2, xr = px(x(r.real)), xp = px(x(r.replay));
+    const moved = r.real !== r.replay;
+    let row = `<text class="rbc-name${r.subject ? ' rbc-name--mine' : ''}" x="0" y="${y + 4}">${esc(short(r.name, chars))}</text>`;
+    if (moved) row += `<line class="rbc-stem" x1="${xr}" x2="${xp}" y1="${y}" y2="${y}"/>`;
+    row += `<circle class="rbc-dot" cx="${xr}" cy="${y}" r="5">${tip(`${r.name} · ${realLabel} ${r.realDisplay}`)}</circle>`;
+    row += `<circle class="${r.subject ? 'rbc-mine' : 'rbc-lead'}" cx="${xp}" cy="${y}" r="${moved ? 6 : 4}">${tip(`${r.name} · ${replayLabel} ${r.replayDisplay}`)}</circle>`;
+    row += `<text class="rbc-val" x="${Math.max(xr, xp) + 10}" y="${y + 4}">${esc(moved ? `${r.realDisplay} → ${r.replayDisplay}` : r.replayDisplay)}</text>`;
+    g += link(opts.href?.(r), `<rect class="rbc-hit" x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}"/>${row}`);
+  });
+  const moved = rows.filter((r) => r.real !== r.replay);
+  const subject = rows.find((r) => r.subject && r.real !== r.replay);
+  const teams = (n) => `${n} team${n === 1 ? '' : 's'}`;
+  let take;
+  if (!moved.length) take = `${replayLabel}: no team's ${unit} change.`;
+  else if (subject) {
+    const d = subject.replay - subject.real;
+    take = `${replayLabel}: ${subject.name} goes from ${subject.realDisplay} to ${subject.replayDisplay} (${d > 0 ? '+' : ''}${d} ${unit}); ${teams(moved.length)} end with a different total.`;
+  } else take = `${replayLabel}: ${teams(moved.length)} end with a different total of ${unit} than they really did.`;
+  return { svg: svg(W, H, g, compare.title ?? `${realLabel} against ${replayLabel}`), take };
+}

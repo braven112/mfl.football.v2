@@ -26,6 +26,8 @@ import { tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
 import { RIVALRY_GAME_UNITS } from './ask-rivalry-games.mjs';
 import { loadSeedingPools } from './seeding-pools';
+import { WHAT_IF_KINDS, WhatIfError, runWhatIf } from './what-if.mjs';
+import { leagueFeedPath, loadLeagueData } from '../league-data';
 
 /** A query result as a Record Book board, for record-charts.mjs (ask-query.mjs chartBoard). */
 export interface AskChart {
@@ -34,6 +36,14 @@ export interface AskChart {
   asc: boolean;
   rows: Array<{ value: number; display: string; name: string; owner: string | null; context: string; year: number | null; rank: number; franchiseId: string | null; entity: { key: null } }>;
   population: Array<Array<number | string | null>>;
+  /** 'compare': a what-if's real-against-replay chart (what-if.mjs), drawn from `compare`. */
+  kind?: 'compare';
+  compare?: {
+    title: string;
+    realLabel: string;
+    replayLabel: string;
+    rows: Array<{ name: string; franchiseId: string | null; real: number; replay: number; realDisplay: string; replayDisplay: string; subject: boolean }>;
+  };
 }
 
 export interface AskTable {
@@ -117,6 +127,18 @@ export interface AskData {
   competitions?: any;
   /** Each season's division → conference (seeding-pools.ts); loaded on first use by the rivalryGames unit when absent. */
   pools?: Record<number, Record<string, string>> | false | null;
+  /**
+   * One season's league.json, playoff-brackets.json and players.json, for a
+   * what-if. Defaults to the league's committed feeds through the league-data
+   * loader, read only for the season a what-if asks about.
+   */
+  loadSeasonFeeds?: (year: number) => Promise<WhatIfFeeds>;
+}
+
+interface WhatIfFeeds {
+  league: any;
+  brackets: any;
+  players: any;
 }
 
 interface AnthropicLike {
@@ -196,7 +218,7 @@ const ANSWER_TOOL = {
       },
       show: {
         type: 'integer',
-        description: '0-based index of the run_query result whose rows best prove the answer; they are shown under it. -1 for none.',
+        description: '0-based index of the run_query or what_if result whose rows best prove the answer; they are shown under it. -1 for none.',
       },
       records: {
         type: 'array',
@@ -216,7 +238,39 @@ const ANSWER_TOOL = {
   },
 };
 
-const TOOLS = [RUN_QUERY_TOOL, RECORD_BOOK_TOOL, RECORD_WATCH_TOOL, CALC_TOOL, ANSWER_TOOL];
+const WHAT_IF_TOOL = {
+  name: 'what_if',
+  description:
+    "Replay one season with one thing changed and get real vs. replay side by side: each team's record, points, standing and playoff finish, the games that flip, and the champion. best_lineup: a team (or every team) starts its best legal lineup each week from the players it really had. undo_trade: one trade never happens. The result is a REPLAY, never the real standings; its rows can be shown like a run_query result.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      kind: { type: 'string', enum: WHAT_IF_KINDS },
+      year: { type: 'integer', description: 'the season; for undo_trade, the season the trade was made in' },
+      team: { type: 'string', description: 'team name or owner (contains). best_lineup: leave out for every team at once. undo_trade: one side of the trade' },
+      partner: { type: 'string', description: 'undo_trade: the other side of the trade' },
+      player: { type: 'string', description: 'undo_trade: a player in the trade, to pick it when the teams traded more than once' },
+      date: { type: 'string', description: 'undo_trade: the trade date YYYY-MM-DD, from an earlier result, to pick it' },
+    },
+    required: ['kind', 'year'],
+  },
+};
+
+const TOOLS = [RUN_QUERY_TOOL, RECORD_BOOK_TOOL, RECORD_WATCH_TOOL, CALC_TOOL, WHAT_IF_TOOL, ANSWER_TOOL];
+
+/** The committed feeds a what-if reads for one season, via the league-data loader. */
+function seasonFeedsLoader(leagueSlug: string): (year: number) => Promise<WhatIfFeeds> {
+  const dataPath = (getLeagueBySlug(leagueSlug) as { dataPath?: string } | null)?.dataPath;
+  return async (year) => {
+    if (!dataPath) return { league: null, brackets: null, players: null };
+    const [league, brackets, players] = await Promise.all([
+      loadLeagueData(leagueFeedPath(dataPath, year, 'league.json')),
+      loadLeagueData(leagueFeedPath(dataPath, year, 'playoff-brackets.json')),
+      loadLeagueData(leagueFeedPath(dataPath, year, 'players.json')),
+    ]);
+    return { league, brackets, players };
+  };
+}
 
 type Board = { id: string; title: string; note?: string; asc: boolean; rows: Array<{ rank: number; display: string; name: string; owner?: string | null; context?: string; year?: number | null }> };
 
@@ -371,6 +425,17 @@ function rosterPathLine(moves: any, keepers: any, pickTrades: any): string {
 - Trades, pickups and drops are on record from ${Number.isFinite(firstTx) ? firstTx : 'the first season with a transaction log'}; before that only draft picks${moves.auctions?.length ? ' and auction wins' : ''} are, so a player who arrived another way says "unknown". Never guess how a player arrived; say how many were unknown.${pickTrades ? '' : ' Picks traded before the draft order was set are matched to the player by the draft\'s own record when it names the trade, else by the one pick the last holder made in that round; anything else stays unknown.'}`;
 }
 
+/**
+ * The prompt's lines about what-ifs (what-if.mjs), Brandon 2026-11-17: "what
+ * ifs are a must". A replay is never the real standings, so the model is told
+ * to say so every time and to state the assumptions the tool returns.
+ */
+function whatIfBlock(players: any, moves: any): string {
+  if (!players) return '- What-ifs need player scores, which this league does not have; say so if asked.';
+  return `- What-ifs ("what if X had started its best lineup in 2019", "what if the 2021 trade between X and Y never happened", "how many games did we leave on the bench") use what_if, never run_query: kind best_lineup (team, or no team for every team at once) or kind undo_trade${moves ? '' : ' (not available here: no trade record)'} (team and partner; when the result lists several trades, call again with date or player). Show its result (set show to its index): it draws real against replay.
+- Every what-if answer must: call it a replay, never the real standings or the real result; give real and replay side by side for the team(s) asked about (record, finish, and the champion when it changes); and state in one plain clause the key assumption the result's assumptions give (best legal lineup from the players really rostered; for a trade, each side keeps what it gave up and both start their best lineup). For undo_trade, the swing from lineups alone is in lineupOnly: compare the replay with lineupOnly to say what the trade itself was worth, and say so. When playoffs.replayed is false, say the playoffs were not replayed and why; when controlReproducesRealBracket is false, call the replayed playoff result approximate.`;
+}
+
 function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
@@ -399,6 +464,7 @@ How to work:
 - ${moves ? `Roster moves use the move units: trades (one row per side, with what the players each side got scored for it the rest of that season), pickups (waiver claims and free agents), draftPicks${moves.auctions?.length ? ', auctions (salary auction wins)' : ''}. "Best trade/pickup/pick" means the most points the player(s) scored for the team that got them unless the question says otherwise; say which measure you used. Contract lengths are not on record${moves.auctions?.length ? '; auction salaries are' : ''}.` : 'There are no trade, draft or pickup records for this league; say so if asked.'}
 ${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
 ${moves && players ? rosterPathLine(moves, keepers, pickTrades) : ''}
+${whatIfBlock(players, moves)}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - "Biggest game", "most important game", "game of the rivalry" or "closest playoff game" between two teams or owners use the rivalryGames unit: where team (or owner) is one side and opponent (or opponentOwner) the other, sorted by importance desc (biggest) or, for the closest playoff game, stakesLevel gte 60 sorted by absMargin asc; limit 3-5, chart margin, and columns year, week, stakes, team, score, opponent, oppScore, playoffSpot, decidedBy. Importance is STAKES FIRST (championship, then playoff rounds with the later round higher, then the third-place and placement games, then a regular-season game that decided a playoff spot, then the rest), the closer margin breaking ties. A playoff-spot game is one whose other result would have changed who made the playoffs; one that would only have forced a tiebreaker stays regular season (its playoffSpot says so). Name the stakes tier and, for a playoff-spot game, say who it put in or kept out (playoffSpot). Name the players who decided it only from decidedBy, topStarter, oppTopStarter and benchFlip, word for word: never guess a lineup. A conference league's playoff-spot line is its conference's. "My top rival" with no team named is the opponent owner the asker has played most (games, where owner is the asker, groupBy opponentOwner); say that is how you picked them.
@@ -491,11 +557,38 @@ export async function askHistory(
       // false = unknown: no playoff-spot games rather than a league-wide line in a conference league.
       pools = data.pools = dataPath ? await loadSeedingPools(dataPath).catch(() => false as const) : false;
     }
+    // A what-if reads its season's feeds first (the only tool that waits on a load).
+    const feedsByYear = new Map<number, WhatIfFeeds>();
+    for (const use of uses) {
+      if (use.name !== WHAT_IF_TOOL.name) continue;
+      const year = Number(use.input?.year);
+      if (!Number.isInteger(year)) continue;
+      const load = data.loadSeasonFeeds ?? seasonFeedsLoader(leagueSlug);
+      // A trade made after its season changes the next one.
+      for (const y of use.input?.kind === 'undo_trade' ? [year, year + 1] : [year]) {
+        if (!feedsByYear.has(y)) feedsByYear.set(y, await load(y).catch(() => ({ league: null, brackets: null, players: null })));
+      }
+    }
     messages.push({
       role: 'user',
       content: uses.map((use) => {
         const reply = (content: unknown) => ({ type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(content) });
         try {
+          if (use.name === WHAT_IF_TOOL.name) {
+            const { whatIf, ...table } = runWhatIf(ds, data.players, data.moves, use.input ?? {}, {
+              leagueSlug,
+              feeds: (y: number) => feedsByYear.get(y) ?? { league: null, brackets: null, players: null },
+            });
+            results.push(table as AskTable);
+            steps.push(table.description);
+            return reply({
+              index: results.length - 1,
+              description: table.description,
+              ...whatIf,
+              columns: table.columns.map((c: { key: string }) => c.key),
+              rows: table.rows.map((r: { cells: unknown[] }) => r.cells),
+            });
+          }
           if (use.name === RECORD_BOOK_TOOL.name) return reply(recordBookResult(ds, use.input));
           if (use.name === RECORD_WATCH_TOOL.name) return reply(recordWatchResult(ds));
           if (use.name === CALC_TOOL.name) return reply(calcResult(use.input));
@@ -528,7 +621,7 @@ export async function askHistory(
             }),
           };
         } catch (e) {
-          const message = e instanceof QueryError ? e.message : 'The query failed.';
+          const message = e instanceof QueryError || e instanceof WhatIfError ? e.message : 'The query failed.';
           return { type: 'tool_result', tool_use_id: use.id, content: message, is_error: true };
         }
       }),
