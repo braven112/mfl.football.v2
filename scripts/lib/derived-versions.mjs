@@ -28,8 +28,8 @@ export const DERIVED_DATASETS = {
   },
   'league-history-players.json': {
     job: 'league-history',
-    // 2: per-season NFL team (`nflTeams`).
-    version: 2,
+    // 2: per-season NFL team (`nflTeams`). 3: NFL draft year/round/pick (`nflDraft`).
+    version: 3,
     rebuild: 'node scripts/compute-league-history-players.mjs --league=<slug>',
   },
   'league-history-moves.json': {

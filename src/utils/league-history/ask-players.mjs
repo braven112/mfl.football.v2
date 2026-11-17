@@ -46,6 +46,27 @@ export function nflTeamPath(lookup, pid, years) {
   return parts.map((p) => `${p.t} ${p.from === p.to ? p.from : `${p.from}-${p.to}`}`).join(', ') || null;
 }
 
+/**
+ * The player's NFL draft, from the dataset's `nflDraft` (MFL's player record):
+ * the REAL draft, never the league's own. Spread into every unit that names a
+ * player, so "NFL first-rounders who won a title" is a filter, not a guess.
+ */
+export const NFL_DRAFT_FIELDS = {
+  nflDraftYear: { type: 'number', label: 'NFL draft', desc: "year of his NFL draft (the real NFL draft, not this league's). null = undrafted, a team defense, or not on record" },
+  nflDraftRound: { type: 'number', label: 'NFL Rd', desc: "round he went in the NFL draft (1 = an NFL first-round pick). Not this league's draft: that is draftRound. null = undrafted or not on record" },
+  nflDraftPick: { type: 'number', label: 'NFL pick', desc: 'pick within that NFL draft round' },
+  nflDraftTeam: { type: 'string', label: 'NFL drafted by', desc: 'the NFL club that drafted him (NFL code)' },
+};
+
+/** pid → the NFL_DRAFT_FIELDS values for him (all null when not on record). */
+export function nflDraftLookup(pds) {
+  const by = pds?.nflDraft ?? {};
+  return (pid) => {
+    const d = by[pid];
+    return { nflDraftYear: d?.[0] ?? null, nflDraftRound: d?.[1] ?? null, nflDraftPick: d?.[2] ?? null, nflDraftTeam: d?.[3] ?? null };
+  };
+}
+
 export const PLAYER_FIELDS = {
   playerWeeks: {
     year: { type: 'number', label: 'Season' },
@@ -77,6 +98,7 @@ export const PLAYER_FIELDS = {
     playoffStarts: { type: 'number', label: 'PO starts' },
     playoffPoints: { type: 'number', label: 'PO pts', desc: 'postseason points as a starter (consolation excluded)' },
     champion: { type: 'boolean', label: 'Won title', desc: "his team won the championship that season" },
+    ...NFL_DRAFT_FIELDS,
   },
   playerCareers: {
     player: { type: 'string', label: 'Player' },
@@ -91,6 +113,7 @@ export const PLAYER_FIELDS = {
     lastTeam: { type: 'string', label: 'Last team' },
     playoffPoints: { type: 'number', label: 'PO pts' },
     titles: { type: 'number', label: 'Titles', desc: 'championships won by a team he started for in that postseason' },
+    ...NFL_DRAFT_FIELDS,
   },
 };
 
@@ -126,6 +149,7 @@ export function preparePlayers(p, pds) {
   for (const s of ix.ds.seasons) for (const [f, t] of Object.entries(s.teams)) if (s.done && t.r === 'C') champs.add(`${s.y}|${f}`);
 
   const nflOf = nflTeamLookup(pds);
+  const nflDraftOf = nflDraftLookup(pds);
   const weeks = [];
   for (const [y, wk, f, pid, score, flags] of pds.weeks ?? []) {
     const games = teamWeek.get(`${y}|${wk}|${f}`);
@@ -164,6 +188,7 @@ export function preparePlayers(p, pds) {
         year: w.year, player: w.player, position: w.position, nflTeam: w.nflTeam, team: w.team, owner: w.owner,
         starts: 0, points: 0, bestWeek: null, benchPoints: 0, playoffStarts: 0, playoffPoints: 0,
         champion: champs.has(`${w.year}|${w._franchiseId}`),
+        ...nflDraftOf(w._pid),
         _franchiseId: w._franchiseId, _ownerSlug: w._ownerSlug,
       });
     }
@@ -219,11 +244,12 @@ export function preparePlayers(p, pds) {
     lastTeam: c.lastTeam,
     playoffPoints: c.playoffPoints,
     titles: c._titles.size,
+    ...nflDraftOf(c._pid),
     _franchiseId: c._franchiseId,
     _ownerSlug: null,
   }));
 
-  const prepared = { playerWeeks: weeks, playerSeasons: seasonRows, playerCareers: careerRows, missingWeeks: pds.missingWeeks ?? {}, nflTeamOf: nflOf };
+  const prepared = { playerWeeks: weeks, playerSeasons: seasonRows, playerCareers: careerRows, missingWeeks: pds.missingWeeks ?? {}, nflTeamOf: nflOf, nflDraftOf };
   cache.set(pds, prepared);
   return prepared;
 }
