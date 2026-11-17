@@ -294,6 +294,15 @@
       ]
     },
     {
+      "name": "derived-versions",
+      "paths": [
+        "scripts/lib/derived-versions.mjs",
+        "scripts/compute-league-history-players.mjs",
+        "scripts/compute-league-history-moves.mjs"
+      ],
+      "tests": ["tests/derived-versions.test.ts"]
+    },
+    {
       "name": "game-results",
       "paths": [
         "src/utils/game-results.mjs",

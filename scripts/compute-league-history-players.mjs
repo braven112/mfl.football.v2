@@ -35,6 +35,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { derivedVersion } from './lib/derived-versions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -165,6 +166,7 @@ const nflTeams = [...usedInYear.keys()].sort((a, b) => a - b).map((y) => {
 const body = [
   `  "generatedAt": ${JSON.stringify(new Date().toISOString())}`,
   `  "league": ${JSON.stringify(SLUG)}`,
+  `  "version": ${derivedVersion('league-history-players.json')}`,
   `  "missingWeeks": ${JSON.stringify(missing)}`,
   `  "players": {\n${Object.entries(playerMap).map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
   `  "nflTeams": {\n${nflTeams.map(([y, t]) => `    ${JSON.stringify(String(y))}: ${JSON.stringify(t)}`).join(',\n')}\n  }`,

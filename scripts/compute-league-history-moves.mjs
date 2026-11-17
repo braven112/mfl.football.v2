@@ -54,6 +54,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { derivedVersion } from './lib/derived-versions.mjs';
 import { nflWeekFor, ptParts } from '../src/utils/nfl-week-starts.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -254,6 +255,7 @@ const lines = (rows) => (rows.length ? `[\n${rows.map((r) => `    ${JSON.stringi
 const body = [
   `  "generatedAt": ${JSON.stringify(new Date().toISOString())}`,
   `  "league": ${JSON.stringify(SLUG)}`,
+  `  "version": ${derivedVersion('league-history-moves.json')}`,
   `  "players": {\n${Object.entries(playerMap).map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
   `  "trades": ${lines(trades)}`,
   `  "pickups": ${lines(pickups)}`,
