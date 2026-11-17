@@ -37,7 +37,8 @@ import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
 import HistoryTabs from '../league-history/HistoryTabs.astro';
 import HistoryOwnerSections from '../league-history/HistoryOwnerSections.astro';
 import type { RafterHonor } from '../league-history/HistoryRafters.astro';
-import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
+import { franchiseIdForLeague, getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
+import { ownerLinksSupported } from '../../../utils/owner-link-live';
 import { canViewLeagueHistory } from '../../../utils/league-history/access';
 import { getTeamColorPrimary, getTeamColorSecondary, getTeamEraColors } from '../../../utils/team-colors';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
@@ -173,6 +174,11 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
 const authUser = getAuthUser(Astro.request);
 const showHistory = Boolean(historyData) && canViewLeagueHistory(authUser);
 const viewerFranchise = franchiseIdForLeague(authUser, league.id);
+// Owner links (utils/owner-link-live.ts): the owner whose page this is may
+// claim former teams; a commissioner gets the review queue.
+const ownerLinksOn = await ownerLinksSupported(league.slug);
+const canLinkHere = ownerLinksOn && Boolean(viewerFranchise) && owner.isCurrent && owner.currentFranchiseId === viewerFranchise;
+const canReviewLinks = ownerLinksOn && Boolean(authUser) && isCommissionerOrAdminForLeague(authUser!, league.id);
 
 // The hero wears the team the owner runs now, or the last one they ran — in
 // that team's own era colors when the slot has since been rebranded or sold.
@@ -223,6 +229,13 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
         )}
       </div>
     </header>
+
+    {(canLinkHere || canReviewLinks) && (
+      <p class="owner-link-actions">
+        {canLinkHere && <a class="cta cta--ghost" href={r('/owner-links')}>Link my former teams</a>}
+        {canReviewLinks && <a class="cta-link" href={r('/owner-links-review')}>Review owner links</a>}
+      </p>
+    )}
 
     {showHistory && <HistoryTabs leagueSlug={league.slug} current={null} />}
 
@@ -643,5 +656,12 @@ const teamNames = [...new Set(owner.identities.map((i) => i.name))];
     .hero { gap: 0.875rem; }
     .hero-icon { width: 64px; height: 64px; }
     .hero h1 { font-size: 1.375rem; }
+  }
+  .owner-link-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-md) 0 0;
   }
 </style>

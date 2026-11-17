@@ -1,0 +1,26 @@
+---
+/**
+ * Owner Link Review (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/owner-links/OwnerLinksReviewPage.
+ * The commissioner gate lives HERE, not in the component: Astro.redirect()
+ * only redirects from a PAGE. isCommissionerOrAdminForLeague, never the
+ * league-less isCommissionerOrAdmin — a TheLeague commissioner session must
+ * not open the AFL's queue.
+ */
+import OwnerLinksReviewPage from '../../components/shared/owner-links/OwnerLinksReviewPage.astro';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { leagueForSession, ownerLinksPageModel } from '../../utils/owner-link-actions';
+
+export const prerender = false;
+const LEAGUE = getLeagueBySlug('afl-fantasy')!;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isCommissionerOrAdminForLeague(user, LEAGUE.id) || (await leagueForSession(user))?.slug !== LEAGUE.slug) {
+  return Astro.redirect('/afl-fantasy/owners');
+}
+const model = await ownerLinksPageModel(user, LEAGUE);
+---
+
+<OwnerLinksReviewPage leagueSlug="afl-fantasy" model={model} />

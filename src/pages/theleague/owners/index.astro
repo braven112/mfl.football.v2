@@ -10,11 +10,13 @@ import OwnersIndexPage from '../../../components/shared/owners/OwnersIndexPage.a
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 import { loadLeagueData } from '../../../utils/league-data';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { loadLiveOwnerTenures } from '../../../utils/owner-link-live';
 
 // Read through the league-data loader, never bundled into the function
 // (src/utils/league-data.ts).
 const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
-const ownerData: any = await loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`);
+// Committed owner tenures plus approved owner links (owner-link-live.ts).
+const ownerData: any = await loadLiveOwnerTenures('theleague', await loadLeagueData<any>(`${THELEAGUE_DATA}/derived/owner-tenures.json`));
 
 export const prerender = false;
 ---

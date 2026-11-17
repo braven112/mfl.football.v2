@@ -1,0 +1,466 @@
+/* ==========================================================================
+   Owner links — Link My Former Teams + the commissioner's review queue.
+
+   Unscoped on purpose: the client script (owner-links-client.ts) builds
+   options and fills the dialogs at runtime, and Astro's scoped CSS never
+   reaches an element JS created (docs/claude/rules/theming-and-assets.md).
+   Every class is `olk-` prefixed so nothing here can leak.
+
+   Tokens only; both themes come from the tokens. The dialog wears the kit's
+   surface (`ui-modal`) and owns only its layout: a phone bottom sheet with the
+   action buttons pinned in a footer OUTSIDE the scrolling body, so a long
+   form never scrolls its own Save button out of reach.
+   ========================================================================== */
+
+.olk {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-3xl);
+  color: var(--color-text-primary);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.olk-hero {
+  margin: var(--spacing-md) 0 var(--spacing-lg);
+}
+.olk-hero--row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.olk-eyebrow {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--league-accent);
+}
+.olk-title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.olk-lede {
+  margin: var(--spacing-sm) 0 0;
+  max-width: 62ch;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+.olk-hero__cta {
+  align-self: flex-start;
+}
+
+/* ── Career strip ─────────────────────────────────────────────────────── */
+.olk-career {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-md);
+  border-left: 3px solid var(--league-accent);
+}
+.olk-career__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  object-fit: contain;
+  background: var(--content-bg-muted);
+}
+.olk-career__name {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+}
+.olk-career__meta,
+.olk-career__teams {
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.olk-career__link {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-size: var(--font-size-sm);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+.olk-section {
+  margin-top: var(--spacing-xl);
+}
+.olk-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0 0 var(--spacing-md);
+  padding-left: var(--spacing-sm);
+  border-left: var(--style-section-rule, 3px solid var(--league-accent));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.olk-count {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.olk-empty {
+  margin: var(--spacing-sm) 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+.olk-footnote {
+  margin-top: var(--spacing-2xl);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Queue stats ──────────────────────────────────────────────────────── */
+.olk-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+}
+.olk-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  color: inherit;
+  text-decoration: none;
+}
+.olk-stat:hover {
+  border-color: var(--league-accent);
+  text-decoration: none;
+  color: inherit;
+}
+.olk-stat__n {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.olk-stat__label {
+  font-size: var(--font-size-2xs);
+  color: var(--content-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Rows (requests, queue) ───────────────────────────────────────────── */
+.olk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  overflow: hidden;
+}
+.olk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+.olk-row + .olk-row {
+  border-top: 1px solid var(--content-border);
+}
+.olk-row--review {
+  flex-direction: column;
+  align-items: stretch;
+}
+.olk-row__main {
+  min-width: 0;
+}
+.olk-row__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin: 0;
+  font-weight: 700;
+}
+.olk-row__years {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--league-accent);
+  font-variant-numeric: tabular-nums;
+}
+.olk-row__meta {
+  margin: 4px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+.olk-row__meta--dim {
+  font-size: var(--font-size-2xs);
+}
+.olk-row__note {
+  margin: var(--spacing-xs) 0 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background: var(--content-bg-muted);
+  font-size: var(--font-size-xs);
+  font-style: italic;
+}
+.olk-strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.olk-row__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+.olk-row__actions .cta {
+  min-height: var(--touch-target-min);
+  flex: 1;
+}
+
+/* ── Tenure grid ──────────────────────────────────────────────────────── */
+.olk-search {
+  display: block;
+  margin-bottom: var(--spacing-md);
+}
+.olk-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--spacing-sm);
+}
+.olk-tenure {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+.olk-tenure[hidden] {
+  display: none;
+}
+.olk-tenure:hover {
+  transform: translateY(-1px);
+}
+.olk-tenure__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  background: var(--content-bg-muted);
+}
+.olk-tenure__body {
+  min-width: 0;
+}
+.olk-tenure__name {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.olk-tenure__meta,
+.olk-tenure__holder {
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.olk-tenure__cta {
+  grid-column: 2;
+  justify-self: start;
+  min-height: var(--touch-target-min);
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+.olk-tenure__cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────── */
+.olk-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+}
+.olk-field--inline {
+  max-width: 360px;
+}
+.olk-field__label {
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+.olk-input,
+.olk-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-base); /* 16px: stops iOS zooming the page on focus */
+}
+.olk-input:focus,
+.olk-select:focus {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 1px;
+}
+.olk-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+.olk-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+.olk-error {
+  margin: var(--spacing-md) 0 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Dialog: bottom sheet on a phone, centred card from 640px ──────────── */
+.olk-modal {
+  width: 100%;
+  max-width: 100%;
+  max-height: 90vh;
+  max-height: 90dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+}
+.olk-modal[open] {
+  display: flex;
+  animation: olk-sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.olk-modal__form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+}
+.olk-modal__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+}
+.olk-modal__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  line-height: 1.2;
+}
+.olk-modal__meta {
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+  line-height: 1.5;
+}
+.olk-modal__footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  padding-bottom: max(var(--spacing-md), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--content-border);
+  background: var(--card-surface);
+}
+.olk-modal__footer .cta {
+  flex: 1;
+  min-height: 48px;
+}
+
+@keyframes olk-sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .olk-modal[open] {
+    animation: none;
+  }
+  .olk-tenure:hover {
+    transform: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .olk {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+  .olk-title {
+    font-size: var(--font-size-3xl);
+  }
+  .olk-hero--row {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .olk-hero__cta {
+    align-self: auto;
+    flex-shrink: 0;
+  }
+  .olk-career {
+    grid-template-columns: auto 1fr auto;
+  }
+  .olk-career__link {
+    grid-column: auto;
+  }
+  .olk-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .olk-tenure {
+    grid-template-columns: auto 1fr auto;
+  }
+  .olk-tenure__cta {
+    grid-column: auto;
+  }
+  .olk-row--review {
+    flex-direction: row;
+    align-items: center;
+  }
+  .olk-row__actions .cta {
+    flex: 0 0 auto;
+  }
+  .olk-modal {
+    width: min(520px, calc(100% - 2rem));
+    margin: auto;
+    border-radius: var(--radius-lg);
+  }
+  .olk-modal__footer {
+    justify-content: flex-end;
+  }
+  .olk-modal__footer .cta {
+    flex: 0 0 auto;
+  }
+}

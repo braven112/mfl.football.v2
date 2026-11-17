@@ -78,4 +78,5 @@ export const ASK_EXAMPLES = [
   'What was the best waiver pickup ever?',
   'Who won the most lopsided trade?',
   'What was the biggest game against my top rival?',
+  'My whole career across every team I’ve run: record, titles, trades and rivals?',
 ];

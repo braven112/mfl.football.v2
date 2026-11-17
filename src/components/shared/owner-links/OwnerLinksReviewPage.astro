@@ -1,0 +1,180 @@
+---
+/**
+ * Owner Link Review — the commissioner's queue, shared by every league owner
+ * links run in.
+ *
+ * Three lists: requests waiting on a decision, links that are live, and
+ * declined ones. Approving makes a link live on the next request; "Take back"
+ * on a live link declines it and the seasons return to whoever held them.
+ * "Link directly" files a commissioner link, approved on the spot.
+ *
+ * The route wrapper gates on isCommissionerOrAdminForLeague and builds the
+ * model from the session's league; /api/owner-links/decide re-checks both, so
+ * this page is a convenience, never the gate.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import type { OwnerLinksPageModel } from '../../../utils/owner-link-actions';
+import type { OwnerLink } from '../../../utils/owner-link-store';
+import './owner-links.css';
+
+interface Props {
+  leagueSlug: string;
+  model: OwnerLinksPageModel;
+}
+
+const { leagueSlug, model } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const groups: Array<{ id: string; title: string; empty: string; links: OwnerLink[] }> = [
+  { id: 'pending', title: 'Waiting for you', empty: 'No requests waiting.', links: model.links.filter((l) => l.status === 'pending') },
+  { id: 'approved', title: 'Live links', empty: 'No links yet.', links: model.links.filter((l) => l.status === 'approved') },
+  { id: 'rejected', title: 'Declined', empty: 'Nothing declined.', links: model.links.filter((l) => l.status === 'rejected') },
+];
+const years = (a: number, b: number) => (a === b ? String(a) : `${a}–${b}`);
+const when = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' }) : '';
+const ownerHref = (slug: string) => r(`/owners/${slug}`);
+---
+
+<TheLeagueLayout title={`Owner Link Review — ${league.name}`}>
+  <main class="olk" data-owner-links-root data-league={league.slug} data-mode="review">
+    <Breadcrumbs items={[{ label: 'Owners', href: r('/owners') }, { label: 'Owner link review' }]} />
+
+    <header class="olk-hero olk-hero--row">
+      <div>
+        <p class="olk-eyebrow">Commissioner</p>
+        <h1 class="olk-title">Owner link review</h1>
+        <p class="olk-lede">Approve a link and it is live on the owner's page and in Ask the History right away. Take one back and the seasons return to whoever held them.</p>
+      </div>
+      <button type="button" class="cta cta--primary olk-hero__cta" data-olk-direct>Link directly</button>
+    </header>
+
+    <nav class="olk-stats" aria-label="Queue">
+      {groups.map((g) => (
+        <a class="olk-stat" href={`#olk-${g.id}`}>
+          <span class="olk-stat__n">{g.links.length}</span>
+          <span class="olk-stat__label">{g.title}</span>
+        </a>
+      ))}
+    </nav>
+
+    {groups.map((g) => (
+      <section class="olk-section" id={`olk-${g.id}`} aria-labelledby={`olk-${g.id}-h`}>
+        <h2 id={`olk-${g.id}-h`} class="olk-section__title">{g.title}</h2>
+        {g.links.length === 0 ? (
+          <p class="olk-empty">{g.empty}</p>
+        ) : (
+          <ul class="olk-list">
+            {g.links.map((l) => (
+              <li class="olk-row olk-row--review" data-olk-link={l.id}>
+                <div class="olk-row__main">
+                  <p class="olk-row__title">
+                    {l.names.join(' / ') || `Franchise ${l.franchiseId}`}
+                    <span class="olk-row__years">{years(l.yearStart, l.yearEnd)}</span>
+                  </p>
+                  <p class="olk-row__meta">
+                    Franchise {l.franchiseId}
+                    {l.fromTitle && <> · from <span class="olk-strong">{l.fromTitle}</span></>}
+                    {' → '}<a href={ownerHref(l.targetSlug)}>{l.targetTitle}</a>
+                  </p>
+                  <p class="olk-row__meta olk-row__meta--dim">
+                    {l.proposedBy.role === 'owner' ? `Asked by ${l.proposedBy.name || `franchise ${l.proposedBy.franchiseId}`}` : `Linked by ${l.proposedBy.name || 'the commissioner'}`} · {when(l.proposedAt)}
+                    {l.decidedBy && l.status !== 'pending' && l.decidedBy.userId !== l.proposedBy.userId && ` · ${l.status === 'approved' ? 'approved' : 'declined'} by ${l.decidedBy.name} ${when(l.decidedAt)}`}
+                  </p>
+                  {l.note && <p class="olk-row__note">“{l.note}”</p>}
+                  {l.decisionNote && <p class="olk-row__note">Commissioner: “{l.decisionNote}”</p>}
+                </div>
+                <div class="olk-row__actions">
+                  {l.status === 'pending' && (
+                    <>
+                      <button type="button" class="cta cta--ghost" data-olk-decide="rejected" data-id={l.id}>Decline</button>
+                      <button type="button" class="cta cta--primary" data-olk-decide="approved" data-id={l.id}>Approve</button>
+                    </>
+                  )}
+                  {l.status === 'approved' && (
+                    <button type="button" class="cta cta--ghost" data-olk-decide="rejected" data-id={l.id}>Take back</button>
+                  )}
+                  {l.status === 'rejected' && <span class="ui-badge ui-badge--neutral">Declined</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    ))}
+
+    <p class="olk-footnote"><a class="cta-link" href={r('/owner-links')}>Link your own former teams</a></p>
+
+    <script type="application/json" data-olk-data set:html={JSON.stringify({ owners: model.owners, tenures: model.tenures }).replace(/</g, '\\u003c')}></script>
+
+    <dialog class="ui-modal olk-modal" data-olk-decide-modal aria-labelledby="olk-decide-title">
+      <form method="dialog" class="olk-modal__form" data-olk-decide-form>
+        <div class="olk-modal__scroll">
+          <p class="olk-eyebrow" data-olk-decide-eyebrow></p>
+          <h2 id="olk-decide-title" class="olk-modal__title" data-olk-decide-title></h2>
+          <p class="olk-modal__meta" data-olk-decide-meta></p>
+          <label class="olk-field">
+            <span class="olk-field__label">Note to the owner (optional)</span>
+            <textarea class="olk-input olk-textarea" maxlength="280" rows="3" data-olk-decide-note></textarea>
+          </label>
+          <p class="olk-error" role="alert" data-olk-error hidden></p>
+        </div>
+        <footer class="olk-modal__footer">
+          <button type="button" class="cta cta--ghost" data-olk-cancel>Cancel</button>
+          <button type="submit" class="cta cta--primary" data-olk-decide-submit>Approve</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="ui-modal olk-modal" data-olk-modal aria-labelledby="olk-direct-title">
+      <form method="dialog" class="olk-modal__form" data-olk-form>
+        <div class="olk-modal__scroll">
+          <p class="olk-eyebrow">Link directly</p>
+          <h2 id="olk-direct-title" class="olk-modal__title">Give an owner their former team</h2>
+          <label class="olk-field">
+            <span class="olk-field__label">Owner</span>
+            <select class="olk-select" data-olk-direct-owner>
+              <option value="">Choose an owner…</option>
+              {model.owners.map((o) => <option value={o.ownerId}>{o.title}{o.isCurrent ? '' : ' (former)'}</option>)}
+            </select>
+          </label>
+          <label class="olk-field">
+            <span class="olk-field__label">Team they ran</span>
+            <select class="olk-select" data-olk-direct-tenure disabled>
+              <option value="">Choose the owner first</option>
+            </select>
+          </label>
+          <div class="olk-range">
+            <label class="olk-field">
+              <span class="olk-field__label">From</span>
+              <select class="olk-select" data-olk-from disabled></select>
+            </label>
+            <label class="olk-field">
+              <span class="olk-field__label">Through</span>
+              <select class="olk-select" data-olk-to disabled></select>
+            </label>
+          </div>
+          <label class="olk-field">
+            <span class="olk-field__label">Note (optional)</span>
+            <textarea class="olk-input olk-textarea" maxlength="280" rows="2" data-olk-note></textarea>
+          </label>
+          <p class="olk-error" role="alert" data-olk-error hidden></p>
+        </div>
+        <footer class="olk-modal__footer">
+          <button type="button" class="cta cta--ghost" data-olk-cancel>Cancel</button>
+          <button type="submit" class="cta cta--primary" data-olk-submit>Link now</button>
+        </footer>
+      </form>
+    </dialog>
+  </main>
+</TheLeagueLayout>
+
+<script>
+  import { initOwnerLinks } from './owner-links-client';
+  document.addEventListener('astro:page-load', initOwnerLinks);
+</script>
