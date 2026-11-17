@@ -77,4 +77,5 @@ export const ASK_EXAMPLES = [
   'Most points by a QB in a playoff game?',
   'What was the best waiver pickup ever?',
   'Who won the most lopsided trade?',
+  'What was the biggest game against my top rival?',
 ];

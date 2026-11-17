@@ -39,9 +39,16 @@ import {
   prepareCompetitions,
   describeCompetitions as describeCompetitionsOf,
 } from './ask-competitions.mjs';
+import {
+  RIVALRY_GAME_DEFAULT_COLUMNS,
+  RIVALRY_GAME_FIELDS,
+  RIVALRY_GAME_UNITS,
+  RIVALRY_GAME_UNIT_WORDS,
+  rivalryGameRows,
+} from './ask-rivalry-games.mjs';
 
 export const TEAM_UNITS = ['seasons', 'games', 'owners'];
-export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...COMPETITION_UNITS];
+export const UNITS = [...TEAM_UNITS, ...PLAYER_UNITS, ...MOVE_UNITS, ...STINT_UNITS, ...COMPETITION_UNITS, ...RIVALRY_GAME_UNITS];
 
 const FINISH = { C: 'Champion', R: 'Runner-up', 3: 'Third place', P: 'Playoffs', M: 'Missed playoffs' };
 const MADE = new Set(['C', 'R', '3', 'P']);
@@ -120,6 +127,7 @@ export const FIELDS = {
   ...MOVE_FIELDS,
   ...STINT_FIELDS,
   ...COMPETITION_FIELDS,
+  ...RIVALRY_GAME_FIELDS,
 };
 
 const OPS = {
@@ -242,6 +250,7 @@ const DEFAULT_COLUMNS = {
   ...MOVE_DEFAULT_COLUMNS,
   ...STINT_DEFAULT_COLUMNS,
   ...COMPETITION_DEFAULT_COLUMNS,
+  ...RIVALRY_GAME_DEFAULT_COLUMNS,
 };
 
 /**
@@ -505,7 +514,7 @@ export function normalizeQuery(q) {
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
- * @param {{ players?: any, moves?: any, keepers?: any, pickTrades?: any, competitions?: any, league?: string }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions; with the players, the stint units), keeper-history.json and pick-trades.json where the league has them (ask-stints.mjs), and the all-play competition's sources (ask-competitions.mjs)
+ * @param {{ players?: any, moves?: any, keepers?: any, pickTrades?: any, competitions?: any, league?: string, pools?: any }} [extra] league-history-players.json (player units), league-history-moves.json (trades, pickups, drafts, auctions; with the players, the stint units), keeper-history.json and pick-trades.json where the league has them (ask-stints.mjs), and the all-play competition's sources (ask-competitions.mjs)
  * @returns {QueryResult}
  */
 export function runQuery(ds, rawQuery, extra = {}) {
@@ -524,7 +533,9 @@ export function runQuery(ds, rawQuery, extra = {}) {
   const ps = isStint ? prepareStints(p, pp, extra.moves, { keepers: extra.keepers, pickTrades: extra.pickTrades }) : null;
   const pc = isCompetition ? competitionsOf(ds, extra.competitions) : null;
   let rows =
-    q.unit === 'competitionOwners'
+    RIVALRY_GAME_UNITS.includes(q.unit)
+      ? rivalryGameRows(p, { players: extra.players ?? null, pools: extra.pools ?? null })
+      : q.unit === 'competitionOwners'
       ? competitionOwnerRows(pc, p.latestHoldings, q.competition, (y) => inYears(y, q.years))
       : isCompetition
         ? pc[q.unit].filter((r) => inCompetition(r, q.competition))
@@ -602,6 +613,7 @@ const COUNT_LABEL = {
   stints: 'Stints',
   titleRosters: 'Players',
   pickChains: 'Picks',
+  rivalryGames: 'Games',
 };
 
 function columnLabel(q, c) {
@@ -788,6 +800,7 @@ export function competitionStory(ds, data) {
 
 const UNIT_WORDS = {
   ...COMPETITION_UNIT_WORDS,
+  ...RIVALRY_GAME_UNIT_WORDS,
   seasons: 'team-seasons',
   games: 'team-games',
   owners: 'owners',
@@ -828,6 +841,7 @@ export function describeQuery(q) {
     if (q.having?.length) parts.push('keeping groups where ' + q.having.map((c) => `${columnLabel(q, c.field)} ${OP_WORDS[c.op]} ${c.value}`).join(' and '));
   }
   const filtersOn = (f) => q.where.some((c) => c.field === f);
+  if (RIVALRY_GAME_UNITS.includes(q.unit)) parts.push('regular season and playoffs (consolation games excluded)');
   if ((q.unit === 'games' || q.unit === 'playerWeeks') && !filtersOn('kind')) parts.push('regular season and playoffs (consolation games excluded)');
   if (q.unit === 'playerWeeks' && !filtersOn('started')) parts.push('starters only');
   if (q.sort.length) {
