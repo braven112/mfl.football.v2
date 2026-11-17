@@ -53,6 +53,7 @@
  * the AFL: 2018 on, every season).
  */
 import { parsePickToken } from '../mfl-pick-tokens.mjs';
+import { resultOf } from '../game-results.mjs';
 import { bracketKindFromName } from '../afl-bracket-kind.mjs';
 import { bracketMetas, getEntryBracketIds } from '../playoff-entry-brackets.mjs';
 
@@ -247,7 +248,9 @@ function replay(ix, deltaOf, playoffSetup) {
     const as = scoreOf(g.a, g.wk);
     const bs = scoreOf(g.b, g.wk);
     const same = as === g.as && bs === g.bs;
-    const [aw, bw] = same ? (g.tie ? [0.5, 0.5] : [1, 0]) : as > bs ? [1, 0] : as < bs ? [0, 1] : [0.5, 0.5];
+    // The real result stands while neither score moved (it carries MFL's broken ties).
+    const SIDES = { W: [1, 0], L: [0, 1], T: [0.5, 0.5] };
+    const [aw, bw] = same ? (g.tie ? SIDES.T : SIDES.W) : SIDES[resultOf(as, bs)];
     for (const [f, real, rep, s, rs] of [
       [g.a, g.tie ? 0.5 : 1, aw, g.as, as],
       [g.b, g.tie ? 0.5 : 0, bw, g.bs, bs],
@@ -269,7 +272,7 @@ function replay(ix, deltaOf, playoffSetup) {
     for (const [f, s] of list) {
       const t = tally.get(f);
       if (!t) continue;
-      for (const [o, os] of list) if (o !== f) { t.apG++; t.apW += s > os ? 1 : s === os ? 0.5 : 0; }
+      for (const [o, os] of list) if (o !== f) { t.apG++; t.apW += { W: 1, L: 0, T: 0.5 }[resultOf(s, os)]; }
     }
   }
 
@@ -902,8 +905,7 @@ export function runWhatIf(ds, pds, moves, input, { leagueSlug, feeds }) {
       .map((g) => {
         const mine = g.a === f;
         const [s, os, rs, ros] = mine ? [g.as, g.bs, g.ras, g.rbs] : [g.bs, g.as, g.rbs, g.ras];
-        const res = (x, y) => (x > y ? 'W' : x < y ? 'L' : 'T');
-        return { week: g.wk, opponent: teamName(mine ? g.b : g.a), real: `${res(s, os)} ${s}-${os}`, replay: `${res(rs, ros)} ${rs}-${ros}` };
+        return { week: g.wk, opponent: teamName(mine ? g.b : g.a), real: `${resultOf(s, os)} ${s}-${os}`, replay: `${resultOf(rs, ros)} ${rs}-${ros}` };
       });
   const changed = result.rows.filter((r) => r.replay.w !== r.real.w || r.replay.l !== r.real.l || r.replay.t !== r.real.t);
   const summary = {

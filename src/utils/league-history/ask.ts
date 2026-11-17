@@ -579,8 +579,8 @@ export async function askHistory(
               leagueSlug,
               feeds: (y: number) => feedsByYear.get(y) ?? { league: null, brackets: null, players: null },
             });
-            results.push(table as AskTable);
-            steps.push(table.description);
+            results.push(table as unknown as AskTable);
+            steps.push(String(table.description));
             return reply({
               index: results.length - 1,
               description: table.description,

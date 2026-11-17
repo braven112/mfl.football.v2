@@ -52,7 +52,8 @@ const feedsFor = (slug: Slug) => (year: number) => ({
   brackets: readFeed(slug, year, 'playoff-brackets.json'),
   players: readFeed(slug, year, 'players.json'),
 });
-const whatIf = (slug: Slug, input: Record<string, unknown>) =>
+// Engine results are read as `any`: the .mjs is not type-checked (checkJs is off), so its inferred shapes are partial.
+const whatIf = (slug: Slug, input: Record<string, unknown>): any =>
   runWhatIf(LEAGUES[slug].ds, LEAGUES[slug].pds, LEAGUES[slug].moves, input, { leagueSlug: slug, feeds: feedsFor(slug) });
 
 const cell = (out: any, franchiseId: string, key: string) => {
@@ -62,7 +63,7 @@ const cell = (out: any, franchiseId: string, key: string) => {
 
 describe('starter rules', () => {
   it("reads a season's range rules from league.json", () => {
-    const rules = parseStarterRules(readFeed('theleague', 2019, 'league.json'))!;
+    const rules: any = parseStarterRules(readFeed('theleague', 2019, 'league.json'));
     expect(rules.count).toBe(9);
     expect(rules.slots).toEqual(
       expect.arrayContaining([
@@ -76,7 +77,7 @@ describe('starter rules', () => {
   });
 
   it('reads a combined flex slot (the AFL in 2003)', () => {
-    const rules = parseStarterRules(readFeed('afl-fantasy', 2003, 'league.json'))!;
+    const rules: any = parseStarterRules(readFeed('afl-fantasy', 2003, 'league.json'));
     expect(rules.count).toBe(8);
     expect(rules.flex).toEqual([{ positions: ['RB', 'WR', 'TE'], n: 1 }]);
   });
@@ -100,7 +101,7 @@ describe('bestLineup', () => {
       p('te1', 'TE', 2), p('te2', 'TE', 21),
       p('pk', 'PK', 5), p('def', 'Def', -2),
     ];
-    const best = bestLineup(roster, ranged);
+    const best: any = bestLineup(roster, ranged);
     // QB 30, RB max 3 (25+24+23), the 4th RB (22) cannot start, so TE 21 and both WRs fill the rest.
     expect(best.ids.sort()).toEqual(['def', 'pk', 'qb2', 'rb1', 'rb2', 'rb3', 'te2', 'wr1', 'wr2'].sort());
     expect(best.points).toBe(30 + 25 + 24 + 23 + 21 + 10 + 9 + 5 - 2);
@@ -108,7 +109,7 @@ describe('bestLineup', () => {
 
   it('starts a full lineup even when a slot can only go negative, and leaves an unfillable slot empty', () => {
     const roster = [p('qb', 'QB', 10), p('rb', 'RB', 10), p('wr1', 'WR', 10), p('wr2', 'WR', 9), p('wr3', 'WR', 8), p('wr4', 'WR', 7), p('wr5', 'WR', 6), p('pk', 'PK', 1), p('def', 'Def', -5)];
-    const best = bestLineup(roster, ranged);
+    const best: any = bestLineup(roster, ranged);
     // No TE on the roster: its slot stays empty, so 8 start, and the fifth WR never takes it.
     expect(best.ids).toHaveLength(8);
     expect(best.ids).toContain('def');
@@ -125,7 +126,7 @@ describe('bestLineup', () => {
       p('qb', 'QB', 10), p('rb1', 'RB', 20), p('rb2', 'RB', 19), p('rb3', 'RB', 18),
       p('wr1', 'WR', 15), p('wr2', 'WR', 14), p('wr3', 'WR', 17), p('te1', 'TE', 5), p('te2', 'TE', 4), p('pk', 'PK', 3), p('def', 'Def', 2),
     ];
-    const best = bestLineup(roster, rules);
+    const best: any = bestLineup(roster, rules);
     // RB 2 + WR 2 + TE 1, and the one flex goes to the best of what is left: rb3 (18) over wr2 (14) and te2 (4).
     expect(best.ids.sort()).toEqual(['def', 'pk', 'qb', 'rb1', 'rb2', 'rb3', 'te1', 'wr1', 'wr3'].sort());
     expect(best.points).toBe(10 + 20 + 19 + 18 + 17 + 15 + 5 + 3 + 2);
@@ -135,7 +136,7 @@ describe('bestLineup', () => {
     for (const slug of Object.keys(LEAGUES) as Slug[]) {
       const { pds } = LEAGUES[slug];
       const year = slug === 'theleague' ? 2022 : 2024;
-      const rules = parseStarterRules(readFeed(slug, year, 'league.json'))!;
+      const rules: any = parseStarterRules(readFeed(slug, year, 'league.json'));
       const positions = seasonPositions(readFeed(slug, year, 'players.json'));
       const weeks = new Map<string, any[]>();
       for (const [y, wk, f, pid, score, flags] of pds.weeks) {
@@ -158,7 +159,7 @@ describe('bestLineup', () => {
 
 describe('standardBracket', () => {
   it("builds TheLeague's 7-team bracket the way MFL's 2019 export has it", () => {
-    const rounds = standardBracket(7, 15);
+    const rounds: any[] = standardBracket(7, 15);
     expect(rounds.map((r) => r.week)).toEqual([15, 16, 17]);
     const pairs = rounds[0].games.map((g: any) => [g.home.seed, g.away.seed].map(Number).sort((a, b) => a - b));
     expect(pairs.sort()).toEqual([[2, 7], [3, 6], [4, 5]]);
@@ -176,7 +177,7 @@ describe('replay with the real lineups', () => {
     const { ds, pds } = LEAGUES[slug];
     for (const s of ds.seasons) {
       if (!s.done || !pds.weeks.some((w: any[]) => w[0] === s.y)) continue;
-      const run = replayLineups(ds, pds, s.y, { leagueSlug: slug, feeds: feedsFor(slug), lineup: realStarters });
+      const run: any = replayLineups(ds, pds, s.y, { leagueSlug: slug, feeds: feedsFor(slug), lineup: realStarters });
       expect(run.flipped, `${slug} ${s.y}`).toEqual([]);
       for (const r of run.rows) {
         expect([r.replay.w, r.replay.l, r.replay.t, r.replay.pf], `${slug} ${s.y} ${r.f}`).toEqual([r.real.w, r.real.l, r.real.t, r.real.pf]);
@@ -192,7 +193,7 @@ describe('replay with the real lineups', () => {
       const { ds, pds } = LEAGUES[slug];
       for (const s of ds.seasons) {
         if (!s.done || !pds.weeks.some((w: any[]) => w[0] === s.y)) continue;
-        const run = replayLineups(ds, pds, s.y, { leagueSlug: slug, feeds: feedsFor(slug), lineup: realStarters });
+        const run: any = replayLineups(ds, pds, s.y, { leagueSlug: slug, feeds: feedsFor(slug), lineup: realStarters });
         if (run.controlCheck !== 'reproduces') continue;
         reproduced++;
         const champ = Object.entries(s.teams).find(([, t]: any) => t.r === 'C')![0];
@@ -280,11 +281,11 @@ describe('a replay never claims to be the real standings', () => {
 
   it('draws real against replay with a legend and a take that say "Replay"', () => {
     const out: any = outs[1];
-    const chart = compareChart(out.chart.compare, 400)!;
+    const chart: any = compareChart(out.chart.compare, 400);
     expect(chart.svg).toContain('>Replay<');
     expect(chart.svg).toContain('>Real<');
     expect(chart.take.startsWith('Replay:')).toBe(true);
-    const drawn = answerCharts(out.chart, '/theleague');
+    const drawn: any[] = answerCharts(out.chart, '/theleague');
     expect(drawn).toHaveLength(1);
     expect(drawn[0].title).toMatch(/Real vs\. replay/);
   });
@@ -305,7 +306,7 @@ describe('askHistory routes what-ifs', () => {
       moves: theleagueMoves,
       loadSeasonFeeds: async (y: number) => feedsFor('theleague')(y),
     };
-    const res = await askHistory('theleague', data, 'what if the Pigskins had started their best lineup in 2021?', { client: client as any });
+    const res: any = await askHistory('theleague', data, 'what if the Pigskins had started their best lineup in 2021?', { client: client as any });
     expect(seen[0].tools.map((t: any) => t.name)).toContain('what_if');
     expect(seen[0].system[0].text).toMatch(/never the real standings/);
     const reply = JSON.parse(seen[1].messages.at(-1).content[0].content);
