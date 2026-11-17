@@ -107,4 +107,7 @@ export const ASK_EXAMPLES = [
   'Which trades led to the 2019 title?',
   'How was each title team built?',
   'Which trade paid off most long-term?',
+  'Tell me Travis Kelce’s history in the league',
+  'Who started for the most champions?',
+  'Where did the pick that became Patrick Mahomes come from?',
 ];
