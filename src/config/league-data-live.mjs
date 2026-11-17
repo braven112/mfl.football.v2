@@ -109,6 +109,9 @@ export function parsePointer(raw) {
   };
 }
 
+/** A computed file (`data/<league>/derived/…`), as opposed to a raw feed. */
+const isDerived = (path) => path.split('/').includes('derived');
+
 /**
  * The deploy's file map with the pointer's slice swapped in: every path under
  * `patterns` comes from `overlayFiles` (or is gone, if the overlay lacks it),
@@ -119,6 +122,13 @@ export function parsePointer(raw) {
  * branch deploy "missing from the overlay" almost always means "new on this
  * branch", not "deleted by a sync" — without this, a PR adding a derived file
  * (the playoff-odds files, Nov 2026) shows nothing on its own preview.
+ * A branch deploy also keeps its own copy of every `derived/` file. Those are
+ * computed from the feeds by scripts the branch may have changed, so main's
+ * sync copy is the OLD shape: staging's NFL-team history (Nov 2026) existed in
+ * the deploy and the overlay silently swapped it back to a file without it,
+ * so Ask the History answered "the NFL team is blank" on staging only. Raw
+ * feeds (`mfl-feeds/`) still come from the overlay, so a branch deploy keeps
+ * live rosters; its derived files are as fresh as its last merge-down.
  * Production keeps the strict rule, where a sync's deletion must stick.
  * @param {Record<string, string>} builtFiles
  * @param {Record<string, string>} overlayFiles
@@ -131,8 +141,10 @@ export function composeFiles(builtFiles, overlayFiles, patterns, { keepBranchFil
   const owned = (path) => res.some((re) => re.test(path));
   const out = {};
   for (const [path, hash] of Object.entries(builtFiles)) {
-    if (!owned(path) || (keepBranchFiles && !(path in overlayFiles))) out[path] = hash;
+    if (!owned(path) || (keepBranchFiles && (!(path in overlayFiles) || isDerived(path)))) out[path] = hash;
   }
-  for (const [path, hash] of Object.entries(overlayFiles)) if (owned(path)) out[path] = hash;
+  for (const [path, hash] of Object.entries(overlayFiles)) {
+    if (owned(path) && !(keepBranchFiles && isDerived(path) && path in builtFiles)) out[path] = hash;
+  }
   return out;
 }
