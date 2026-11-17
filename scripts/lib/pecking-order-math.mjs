@@ -270,11 +270,14 @@ export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairin
     }
     if (rec && blank(row.all_play_wlt)) next.all_play_wlt = `${rec.w}-${rec.l}-${rec.t}`;
     if (blank(row.strk)) next.strk = streakOf(results.get(fid));
-    if (blank(row.pa) && pa.has(fid)) {
-      next.pa = pa.get(fid).toFixed(2);
-      const m = margin.get(fid);
-      if (m?.games) next.avg_margin = m.sum / m.games;
-    }
+    if (blank(row.pa) && pa.has(fid)) next.pa = pa.get(fid).toFixed(2);
+    // The margin is ALWAYS derived from the games themselves, through the
+    // issue's week. MFL's standings pf and pa are not on one basis (TheLeague
+    // and the AFL both carry a pf of ten weeks against a pa of every game
+    // played, and the file is as of today rather than the issue's week), so
+    // (pf - pa) / games read negative for 22 of 24 AFL teams.
+    const m = margin.get(fid);
+    if (m?.games) next.avg_margin = m.sum / m.games;
     out.set(fid, next);
   }
   return out;

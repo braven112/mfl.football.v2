@@ -204,6 +204,16 @@ describe('buildFactSheet', () => {
     expect(sheet).toContain('STAT VARIETY');
   });
 
+  it('carries the season scoring margin when the row has one', () => {
+    const withMargin = {
+      ...issue,
+      rankings: issue.rankings.map((r: any, i: number) => ({ ...r, metrics: { ...r.metrics, avgMargin: i === 0 ? 14.25 : -3.5 } })),
+    };
+    const sheet = buildFactSheet({ issue: withMargin, teams });
+    expect(sheet).toContain('outscoring opponents by 14.3 a game this season');
+    expect(sheet).toContain('outscored by 3.5 a game this season');
+  });
+
   it('ranks scoring across the whole league', () => {
     const sheet = buildFactSheet({ issue, teams });
     expect(sheet).toContain('2nd of 2 in scoring over the last three weeks');

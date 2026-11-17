@@ -81,15 +81,13 @@ export function buildFactSheet({
   // keys (or keys by team name), every blurb misses its row in applyAIVoice,
   // and the whole column silently falls back to templated voice — which is
   // exactly what shipped from launch until 2026-08-14.
-  lines.push('Format: rank | team | trend | all-play % | record over the last three weeks | PPG over the last three weeks | scoring rank over the last three weeks | streak | season PPG | season scoring rank | blurb key');
+  lines.push('Format: rank | team | trend | all-play % | record over the last three weeks | PPG over the last three weeks | scoring rank over the last three weeks | streak | season PPG | season scoring rank | season scoring margin | blurb key');
   // Never stack two stats that say the same thing (Brandon, Nov 2026: a
   // 3-game winning streak already IS a 3-0 last three). Where the streak covers
   // the window, the record cell says so instead of handing the writer the
   // number, and the row carries other stats to reach for.
-  lines.push('STAT VARIETY: never pair two stats that say the same thing. Where a row\'s record cell reads "covered by the streak", the streak already says it: do NOT state that record (no "3-0 over the last three" beside a 3-game or longer winning streak). Use a different stat from the row instead: a scoring rank, all-play %, PPG, or the trend.');
+  lines.push('STAT VARIETY: never pair two stats that say the same thing. Where a row\'s record cell reads "covered by the streak", the streak already says it: do NOT state that record (no "3-0 over the last three" beside a 3-game or longer winning streak). Use a different stat from the row instead: a scoring rank, the season scoring margin, all-play %, PPG, or the trend.');
   // Ranks run over the whole league, even when the sheet carries only a top N.
-  // (Not the season scoring margin: metrics.avgMargin reads negative for
-  // nearly every team, so it is not a stat to hand the writer.)
   const scoringRank = rankBy(issue.rankings, (r) => r.metrics?.rolling3Ppg);
   const seasonScoringRank = rankBy(issue.rankings, (r) => r.metrics?.seasonPpg);
   for (const r of rows) {
@@ -119,7 +117,12 @@ export function buildFactSheet({
     const sRankStr = sRank ? `${ordinal(sRank)} of ${size} in scoring over the last three weeks` : '—';
     const seasonRank = seasonScoringRank.get(r.franchiseId);
     const seasonRankStr = seasonRank ? `${ordinal(seasonRank)} of ${size} in season scoring` : '—';
-    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG over the last three weeks | ${sRankStr} | ${streakStr} | ${seasonPpg} season PPG | ${seasonRankStr} | blurb key: ${r.franchiseId}`);
+    const margin = Number.isFinite(r.metrics.avgMargin)
+      ? r.metrics.avgMargin >= 0
+        ? `outscoring opponents by ${r.metrics.avgMargin.toFixed(1)} a game this season`
+        : `outscored by ${(-r.metrics.avgMargin).toFixed(1)} a game this season`
+      : '—';
+    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG over the last three weeks | ${sRankStr} | ${streakStr} | ${seasonPpg} season PPG | ${seasonRankStr} | ${margin} | blurb key: ${r.franchiseId}`);
   }
   lines.push('');
 
