@@ -12,7 +12,7 @@ import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { toChatPlainText } from '../../src/utils/chat-plain-text.mjs';
 import { capSentences, LEDE_MAX_SENTENCES } from '../../src/utils/pecking-order-lede.mjs';
-import { spellOutShorthand } from '../../src/utils/pecking-order-wording.mjs';
+import { spellOutShorthand, streakCoversRecord } from '../../src/utils/pecking-order-wording.mjs';
 
 // ─── Quality-gate constants ────────────────────────────────────────
 
@@ -81,7 +81,15 @@ export function buildFactSheet({
   // keys (or keys by team name), every blurb misses its row in applyAIVoice,
   // and the whole column silently falls back to templated voice — which is
   // exactly what shipped from launch until 2026-08-14.
-  lines.push('Format: rank | team | trend | all-play % | record over the last three weeks | PPG over the last three weeks | streak | season PPG | blurb key');
+  lines.push('Format: rank | team | trend | all-play % | record over the last three weeks | PPG over the last three weeks | scoring rank over the last three weeks | streak | season PPG | season scoring rank | season scoring margin | blurb key');
+  // Never stack two stats that say the same thing (Brandon, Nov 2026: a
+  // 3-game winning streak already IS a 3-0 last three). Where the streak covers
+  // the window, the record cell says so instead of handing the writer the
+  // number, and the row carries other stats to reach for.
+  lines.push('STAT VARIETY: never pair two stats that say the same thing. Where a row\'s record cell reads "covered by the streak", the streak already says it: do NOT state that record (no "3-0 over the last three" beside a 3-game or longer winning streak). Use a different stat from the row instead: a scoring rank, the season scoring margin, all-play %, PPG, or the trend.');
+  // Ranks run over the whole league, even when the sheet carries only a top N.
+  const scoringRank = rankBy(issue.rankings, (r) => r.metrics?.rolling3Ppg);
+  const seasonScoringRank = rankBy(issue.rankings, (r) => r.metrics?.seasonPpg);
   for (const r of rows) {
     const team = teams.get(r.franchiseId);
     const name = team?.nameMedium ?? team?.name ?? r.franchiseId;
@@ -96,11 +104,25 @@ export function buildFactSheet({
     const seasonPpg = r.metrics.seasonPpg != null ? r.metrics.seasonPpg.toFixed(1) : '—';
     const allPlay = r.metrics.allPlayPct != null ? `${(r.metrics.allPlayPct * 100).toFixed(1)}% all-play` : '—';
     const factsForBlurb = r.factsForBlurb || {}; // optional caller enrichment
-    const recStr = factsForBlurb.last3Record ? `${factsForBlurb.last3Record.wins}-${factsForBlurb.last3Record.losses}${factsForBlurb.last3Record.ties ? `-${factsForBlurb.last3Record.ties}` : ''} over the last three weeks` : '—';
+    const rec = factsForBlurb.last3Record;
+    const recStr = !rec
+      ? '—'
+      : streakCoversRecord(factsForBlurb.streak, rec)
+        ? 'covered by the streak (do not repeat it)'
+        : `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''} over the last three weeks`;
     const streakStr = factsForBlurb.streak && factsForBlurb.streak.length >= 2
       ? `${factsForBlurb.streak.length}-game ${factsForBlurb.streak.type === 'W' ? 'winning' : 'losing'} streak`
       : 'no active streak';
-    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG over the last three weeks | ${streakStr} | ${seasonPpg} season PPG | blurb key: ${r.franchiseId}`);
+    const sRank = scoringRank.get(r.franchiseId);
+    const sRankStr = sRank ? `${ordinal(sRank)} of ${size} in scoring over the last three weeks` : '—';
+    const seasonRank = seasonScoringRank.get(r.franchiseId);
+    const seasonRankStr = seasonRank ? `${ordinal(seasonRank)} of ${size} in season scoring` : '—';
+    const margin = Number.isFinite(r.metrics.avgMargin)
+      ? r.metrics.avgMargin >= 0
+        ? `outscoring opponents by ${r.metrics.avgMargin.toFixed(1)} a game this season`
+        : `outscored by ${(-r.metrics.avgMargin).toFixed(1)} a game this season`
+      : '—';
+    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG over the last three weeks | ${sRankStr} | ${streakStr} | ${seasonPpg} season PPG | ${seasonRankStr} | ${margin} | blurb key: ${r.franchiseId}`);
   }
   lines.push('');
 
@@ -140,6 +162,29 @@ export function buildFactSheet({
   lines.push('');
 
   return lines.join('\n');
+}
+
+/**
+ * 1-based rank of every row by a metric, highest first; rows without a finite
+ * value get no rank. Ties share the better rank.
+ * @returns {Map<string, number>}
+ */
+export function rankBy(rows, metric) {
+  const vals = (rows || [])
+    .map((r) => ({ fid: r.franchiseId, v: metric(r) }))
+    .filter((x) => Number.isFinite(x.v))
+    .sort((a, b) => b.v - a.v);
+  const out = new Map();
+  vals.forEach((x, i) => {
+    out.set(x.fid, i > 0 && x.v === vals[i - 1].v ? out.get(vals[i - 1].fid) : i + 1);
+  });
+  return out;
+}
+
+export function ordinal(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] ?? 'th'}`;
 }
 
 // ─── Prompts ───────────────────────────────────────────────────────

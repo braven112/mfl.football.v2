@@ -38,6 +38,15 @@ describe('enrichStandingsFromResults', () => {
     const out = enrichStandingsFromResults(new Map([['a', row]]), weekly, pairings as any, 2);
     expect(out.get('a')).toEqual(row);
   });
+
+  // MFL's pf and pa are not on one basis (pf counts weeks, pa counts every
+  // game), so a margin built from them read negative for 22 of 24 AFL teams.
+  // The margin always comes from the games, even when MFL supplies a pa.
+  it('derives the margin from the games even when MFL has a pa', () => {
+    const row = { id: 'a', pf: '1585.84', pa: '1403.00', h2hw: '11', h2hl: '1', strk: 'W4' };
+    const out = enrichStandingsFromResults(new Map([['a', row]]), weekly, pairings as any, 2, { deriveMargin: true });
+    expect(out.get('a').avg_margin).toBe(-2.5);
+  });
 });
 
 describe('archies issue', () => {

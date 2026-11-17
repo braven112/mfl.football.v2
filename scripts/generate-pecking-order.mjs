@@ -38,13 +38,15 @@ import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { capSentences, LEDE_MAX_SENTENCES } from '../src/utils/pecking-order-lede.mjs';
-import { spellOutShorthand } from '../src/utils/pecking-order-wording.mjs';
+import { spellOutShorthand, streakCoversRecord } from '../src/utils/pecking-order-wording.mjs';
 import { normalizeFranchiseId } from '../src/utils/franchise-id.mjs';
 import {
   buildFactSheet,
   getSystemPrompt,
   getUserPrompt,
   applyAIVoice,
+  rankBy,
+  ordinal,
 } from './lib/pecking-order-ai.mjs';
 import {
   computePeckingOrder,
@@ -372,12 +374,21 @@ function findMatchupOfWeek({ teams, pairings, rankings, week }) {
 
 // ─── Templated blurbs (deterministic fallback voice) ────────────────
 
-function rankingBlurb(row, standingsByFid) {
+function rankingBlurb(row, standingsByFid, scoringRank = new Map()) {
   const standing = standingsByFid.get(row.franchiseId);
   const rec = row.factsForBlurb.last3Record;
   const ppg = row.metrics.rolling3Ppg ?? row.metrics.seasonPpg;
   const ppgStr = Number.isFinite(ppg) ? `${ppg.toFixed(1)} PPG` : null;
-  const recStr = rec.gamesCounted > 0 ? `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''} over their last ${rec.gamesCounted}` : null;
+  const streak = parseStreak(standing?.strk);
+  // A streak that covers the whole window already says the record (a 3-game
+  // winning streak IS 3-0 over the last three; Brandon, Nov 2026), so the
+  // record gives way to a stat the streak does not carry: where that scoring
+  // ranks in the league.
+  const covered = streakCoversRecord(streak, rec);
+  const sRank = scoringRank.get(row.franchiseId);
+  const recStr = covered
+    ? null
+    : rec.gamesCounted > 0 ? `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''} over their last ${rec.gamesCounted}` : null;
   const trendStr = (() => {
     if (row.previousRank == null) return null;
     const delta = row.previousRank - row.rank;
@@ -385,13 +396,13 @@ function rankingBlurb(row, standingsByFid) {
     if (delta < 0) return `down ${-delta} from #${row.previousRank}`;
     return 'holding steady';
   })();
-  const streak = parseStreak(standing?.strk);
   const streakStr = streak.length >= 2
     ? `${streak.length}-game ${streak.type === 'W' ? 'winning' : 'losing'} streak`
     : null;
 
   const parts = [];
   if (recStr && ppgStr) parts.push(`${recStr} at ${ppgStr}.`);
+  else if (covered && ppgStr && sRank) parts.push(`Averaging ${ppgStr} over recent weeks, ${ordinal(sRank)} in the league.`);
   else if (ppgStr) parts.push(`Averaging ${ppgStr} over recent weeks.`);
   if (streakStr) parts.push(`Riding a ${streakStr}.`);
   if (trendStr) parts.push(`Pecking order: ${trendStr}.`);
@@ -499,7 +510,7 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
   }
   // Fill all-play / streak / PA where the league's export lacks them (archies);
   // a no-op for a league whose MFL standings already carry them.
-  standingsByFid = enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, week);
+  standingsByFid = enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, week, { deriveMargin: true });
 
   // A big league writes up only its top N (registry `peckingOrder.topN`); the
   // rest are still ranked, and shown in their division lists.
@@ -547,11 +558,12 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
 
   // Templated blurbs (deterministic fallback voice). Structured facts ride
   // along so the AI fact sheet can reference them; stripped before write.
+  const scoringRank = rankBy(namedRankings, (r) => r.metrics.rolling3Ppg);
   const rankings = namedRankings.map(r => {
     const last3Record = rollingRecord(pairings, weeklyResults, r.franchiseId, week, 3);
     const factsForBlurb = { last3Record, streak: parseStreak(standingsByFid.get(r.franchiseId)?.strk) };
     const withFacts = { ...r, factsForBlurb };
-    return { ...withFacts, blurb: rankingBlurb(withFacts, standingsByFid) };
+    return { ...withFacts, blurb: rankingBlurb(withFacts, standingsByFid, scoringRank) };
   });
 
   const awards = {
