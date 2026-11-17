@@ -57,14 +57,26 @@ export interface AskStackChart {
   take: string;
 }
 
+/** One player's path through the league (ask-careers.mjs careerTimeline), drawn by record-charts.mjs careerChart. */
+export interface AskCareerChart {
+  kind: 'career';
+  player: string;
+  position: string;
+  first: number;
+  last: number;
+  lanes: Array<{ team: string; owner: string; franchiseId: string; segments: Array<{ from: number; to: number; how: string; ended: string; years: string; points: number; starts: number }> }>;
+  seasons: Array<{ year: number; points: number; playoffPoints: number; parts: Array<{ lane: number; points: number }>; title: string | null }>;
+  summary: { teams: number; seasons: number; points: number; playoffPoints: number; titles: number; titleYears: string };
+}
+
 export interface AskTable {
   description: string;
   total: number;
   columns: Array<{ key: string; label: string }>;
   rows: Array<{ cells: Array<string | number | boolean | null>; franchiseId: string | null; ownerSlug: string | null; year: number | null }>;
   summary: Record<string, { min: number; max: number; avg: number; sum: number } | null>;
-  /** Missing on answers saved before charts existed. */
-  chart?: AskChart | AskStackChart | null;
+  /** Missing on answers saved before charts existed. A one-player path answer carries his career timeline instead of a board. */
+  chart?: AskChart | AskStackChart | AskCareerChart | null;
 }
 
 /** A Record Book board the answer points to, resolved from the book itself. */
@@ -134,6 +146,8 @@ export interface AskData {
   keepers?: any;
   /** pick-trades.json, for a league whose traded picks were traced once (the pickChains unit) */
   pickTrades?: any;
+  /** Season salaries (datasets.ts loadLeagueSalaries), for a league that keeps contracts (the careers unit) */
+  salaries?: any;
   /** The all-play side competition's sources (datasets.ts loadLeagueCompetitions), for a league that runs one. */
   competitions?: any;
   /** Each season's division → conference (seeding-pools.ts); loaded on first use by the rivalryGames unit when absent. */
@@ -447,7 +461,17 @@ function whatIfBlock(players: any, moves: any): string {
 - Every what-if answer must: call it a replay, never the real standings or the real result; give real and replay side by side for the team(s) asked about (record, finish, and the champion when it changes); and state in one plain clause the key assumption the result's assumptions give (best legal lineup from the players really rostered; for a trade, each side keeps what it gave up and both start their best lineup). For undo_trade, the swing from lineups alone is in lineupOnly: compare the replay with lineupOnly to say what the trade itself was worth, and say so. When playoffs.replayed is false, say the playoffs were not replayed and why; when controlReproducesRealBracket is false, call the replayed playoff result approximate.`;
 }
 
-function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null): string {
+/**
+ * A player's whole path, and what a pickup was worth (ask-careers.mjs). The
+ * pickup measure is named in the prompt so every answer can say which one it
+ * ranked by, and wins swung carries its assumption into the answer.
+ */
+function careerLine(hasSalaries: boolean): string {
+  return `- A player's history here ("tell me X's history in the league", "who has played for the most teams", "started for the most champions") uses careers: one row per player with every team that rostered him (teams, path, owners), how each got him and how he left (arrivals, timesTraded, timesDropped, timesClaimed), starter points, playoff points, best season and the champions he started for (titles, titleYears)${hasSalaries ? ', and his salaries where on record (salaries, salaryHigh: the season salary file, else an auction or waiver bid)' : ''}. For one player, also run stints where player matches, sorted by year: a one-player result draws his career timeline chart, so show the careers or stints result. playerCareers is scoring only; careers is the path. "Most teams" sorts teams (a team is one owner's franchise); say defenses and kickers lead it when they do, and offer the leader at another position.
+- "Biggest/best free-agent or waiver pickup ever" uses pickupImpact: one row per pickup, valued over the WHOLE stint it opened (every season he stayed with that team, not just that season). Rank by points (his starter points for that team over the stint) unless the question names another measure, and say so; it can also rank by winsSwung, playoffPoints, titles or pointsSeason (that season only, the old pickups measure). winsSwung counts games the team won by less than he scored as a starter: with a zero in his slot each would have been a loss. State that assumption whenever you use it.`;
+}
+
+function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null, salaries: any = null): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
   const current = Object.values(latest?.teams ?? {})
@@ -477,6 +501,7 @@ ${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
 ${moves && players ? rosterPathLine(moves, keepers, pickTrades) : ''}
 ${whatIfBlock(players, moves)}
 ${moves && players ? titleBuildLine() : ''}
+${moves && players ? careerLine(!!salaries) : ''}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - "Biggest game", "most important game", "game of the rivalry" or "closest playoff game" between two teams or owners use the rivalryGames unit: where team (or owner) is one side and opponent (or opponentOwner) the other, sorted by importance desc (biggest) or, for the closest playoff game, stakesLevel gte 60 sorted by absMargin asc; limit 3-5, chart margin, and columns year, week, stakes, team, score, opponent, oppScore, playoffSpot, decidedBy. Importance is STAKES FIRST (championship, then playoff rounds with the later round higher, then the third-place and placement games, then a regular-season game that decided a playoff spot, then the rest), the closer margin breaking ties. A playoff-spot game is one whose other result would have changed who made the playoffs; one that would only have forced a tiebreaker stays regular season (its playoffSpot says so). Name the stakes tier and, for a playoff-spot game, say who it put in or kept out (playoffSpot). Name the players who decided it only from decidedBy, topStarter, oppTopStarter and benchFlip, word for word: never guess a lineup. A conference league's playoff-spot line is its conference's. "My top rival" with no team named is the opponent owner the asker has played most (games, where owner is the asker, groupBy opponentOwner); say that is how you picked them.
@@ -530,7 +555,7 @@ export async function askHistory(
       model,
       max_tokens: 6000,
       output_config: { effort: 'medium' },
-      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades), cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades, data.salaries), cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
     });
@@ -612,6 +637,7 @@ export async function askHistory(
             moves: data.moves,
             keepers: data.keepers,
             pickTrades: data.pickTrades,
+            salaries: data.salaries,
             competitions: data.competitions,
             league: leagueSlug,
             pools,

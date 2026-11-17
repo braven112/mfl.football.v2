@@ -257,6 +257,7 @@ export function prepareStints(p, pp, mds, extra = {}) {
       playoffPoints: sum('playoffPoints'),
       _franchiseId: s.franchiseId,
       _ownerSlug: owner.ownerSlug,
+      _pid: s.pid,
     });
   }
   titleRows.sort((a, b) => a.year - b.year || b.points - a.points);

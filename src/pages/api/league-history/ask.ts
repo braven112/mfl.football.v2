@@ -25,12 +25,12 @@
  */
 import type { APIRoute } from 'astro';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
 import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
-import { hasLeagueHistoryProduct, loadLeagueCompetitions, loadLeagueHistoryDataset } from '../../../utils/league-history/datasets';
+import { hasLeagueHistoryProduct, loadLeagueCompetitions, loadLeagueHistoryDataset, loadLeagueSalaries } from '../../../utils/league-history/datasets';
 import {
 	GUEST_REFUSALS,
 	canGuestAsk,
@@ -93,15 +93,17 @@ async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeo
 
 	let result;
 	try {
-		const [loaded, competitions] = await Promise.all([
+		const [loaded, competitions, salaries] = await Promise.all([
 			loadLeagueHistoryDataset(league.dataPath),
 			loadLeagueCompetitions(league.dataPath, league.configPath),
+			// A contract league's salaries, for the careers unit (ask-careers.mjs).
+			leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
 		]);
 		if (!loaded) {
 			await spend.refund();
 			return json({ error: 'Unknown league.' }, 404, cookie);
 		}
-		const ds = maskAskData({ ...loaded, competitions }, mask);
+		const ds = maskAskData({ ...loaded, competitions, salaries }, mask);
 		result = maskValue(
 			await askHistory(league.slug, ds, question, {
 				turns,
@@ -183,14 +185,16 @@ export const POST: APIRoute = async ({ request }) => {
 	let result;
 	try {
 		// Only the league asked about, per request (utils/league-history/datasets).
-		const [loaded, competitions] = await Promise.all([
+		const [loaded, competitions, salaries] = await Promise.all([
 			loadLeagueHistoryDataset(league.dataPath),
 			loadLeagueCompetitions(league.dataPath, league.configPath),
+			// A contract league's salaries, for the careers unit (ask-careers.mjs).
+			leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
 		]);
 		if (!loaded) return json({ error: 'Unknown league.' }, 404);
 		// Owners credited through approved owner links (utils/owner-link-live.ts).
 		const history = await loadLiveLeagueHistory(league.slug, loaded.history);
-		const ds: AskData = { ...loaded, history, competitions };
+		const ds: AskData = { ...loaded, history, competitions, salaries };
 		result = await askHistory(league.slug, ds, question, {
 			turns,
 			asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
