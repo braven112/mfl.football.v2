@@ -18,32 +18,32 @@
  * title game "Conference final" / "Conference semifinal".
  *
  * "DECIDED A PLAYOFF SPOT" — exactly, from the official standings rows
- * (league-history.json seasons: w, l, t, wd, r), for a COMPLETED season only.
- * Wins count w + t/2. Each season is cut into seeding pools: the conference a
- * team's division belonged to that year where the league has conferences
- * (`pools`, seeding-pools.ts, read from that year's MFL league feed),
- * otherwise the whole league. In a team's pool:
+ * (league-history.json seasons: w, l, t, wd, r), for a COMPLETED season only:
+ * the game changed who made the playoffs. Wins count w + t/2. Each season is
+ * cut into seeding pools: the conference a team's division belonged to that
+ * year where the league has conferences (`pools`, seeding-pools.ts, read from
+ * that year's MFL league feed), otherwise the whole league. In each pool the
+ * game's two teams belong to, flip the result (winner one win fewer, loser
+ * one more) and re-run the WILD-CARD race: the playoff teams that did not win
+ * their division against every team that missed.
  *
- *   - the IN line is the fewest wins of a team that made the playoffs without
- *     winning its division (a wild card), or of any playoff team when every
- *     one won its division;
- *   - the OUT line is the most wins of a team that missed the playoffs.
+ *   - DECIDED (tier "Playoff spot"): after the flip the LOSER (who missed)
+ *     is SURELY IN — at least as many race teams strictly behind it as there
+ *     were teams that missed — or the WINNER (a wild card) is SURELY OUT — at
+ *     least as many race teams strictly ahead of it as there are wild-card
+ *     spots. Wild cards go by record, so a strictly better record holds the
+ *     spot whatever the tiebreakers say.
+ *   - TIEBREAKER (stays "Regular season"; `playoffSpot` says so): after the
+ *     flip the loser is not surely out, or the winner not surely in — it would
+ *     be level with others for the last spot. MFL's tiebreakers would have
+ *     settled it, and they cannot be re-derived (we never re-sort its
+ *     standings), so the game is not counted as deciding anything.
  *
- * A regular-season game decided a playoff spot when flipping its result alone
- * would have brought a team to the line:
- *
- *   - the LOSER missed the playoffs and finished at most one win short of the
- *     IN line (one more win reaches it) — "missed the playoffs by one game"
- *     (or by half a game, or on a tiebreaker at level wins); or
- *   - the WINNER made the playoffs and finished at most one win above the OUT
- *     line (one fewer win drops it to the line) — "clinched with it".
- *
- * At level wins MFL's tiebreakers decided the spot (we never re-sort its
- * standings), so "reaches the line" means "would have been tied for it", and
- * the detail says so. A season whose pool cannot be known (a conference
- * league with no feed for that year, or `pools: false` when the feeds could
- * not be read) gets no playoff-spot games; `pools` null or `{}` is one
- * league-wide pool.
+ * Not re-derived, and so never counted: division titles (a division winner
+ * keeps its bid under the flip, so a game it won never counts as costing it).
+ * A season whose pool cannot be known (a conference league with no feed
+ * for that year, or `pools: false` when the feeds could not be read) gets no
+ * playoff-spot games; `pools` null or `{}` is one league-wide pool.
  *
  * "THE PLAYERS WHO DECIDED IT" — from league-history-players.json, only where
  * the data supports it exactly: each side's top starters, the winner's top
@@ -84,7 +84,7 @@ export const RIVALRY_GAME_FIELDS = {
       desc: 'Championship | Semifinal | Quarterfinal | Conference final | Conference semifinal | Playoff round | Third-place game | Playoff spot | Regular season',
     },
     stakesLevel: { type: 'number', label: 'Stakes level', desc: '100 championship, 90/80/… earlier playoff rounds (later round higher), 50 third-place game, 40 playoff spot, 10 other regular season' },
-    playoffSpot: { type: 'string', label: 'Playoff spot', desc: 'how the game decided a playoff spot ("" when it did not)' },
+    playoffSpot: { type: 'string', label: 'Playoff spot', desc: 'how the game changed the playoff field; on a Regular season game, that the other result would only have forced a tiebreaker for the last spot ("" when neither)' },
     importance: { type: 'number', label: 'Importance', desc: 'stakesLevel first, closer margin breaking ties: sort desc for "biggest game"' },
     team: { type: 'string', label: 'Team' },
     owner: { type: 'string', label: 'Owner' },
@@ -124,65 +124,75 @@ function poolOf(ix, pools, y, f) {
   return (d != null && pools?.[y]?.[d]) || null;
 }
 
-const lines = new WeakMap();
-/** The IN and OUT lines of each (season, pool), for completed seasons. Cached per index. */
-function playoffLines(ix, pools) {
-  let byPools = lines.get(ix);
-  if (!byPools) lines.set(ix, (byPools = new Map()));
+const poolCache = new WeakMap();
+/** Each completed (season, pool)'s teams, `{ id, t }`. Cached per index and pools. */
+function seasonPools(ix, pools) {
+  let byPools = poolCache.get(ix);
+  if (!byPools) poolCache.set(ix, (byPools = new Map()));
   const cacheKey = JSON.stringify(pools ?? null);
   if (byPools.has(cacheKey)) return byPools.get(cacheKey);
   const out = new Map();
   for (const s of ix.ds.seasons) {
     if (!s.done) continue;
-    const groups = new Map();
-    for (const f of Object.keys(s.teams)) {
-      const pool = poolOf(ix, pools, s.y, f);
+    for (const [id, t] of Object.entries(s.teams)) {
+      const pool = poolOf(ix, pools, s.y, id);
       if (pool == null) continue;
-      if (!groups.has(pool)) groups.set(pool, []);
-      groups.get(pool).push(s.teams[f]);
-    }
-    for (const [pool, teams] of groups) {
-      const made = teams.filter((t) => MADE.has(t.r));
-      const missed = teams.filter((t) => !MADE.has(t.r));
-      if (!made.length || !missed.length) continue;
-      const wildCards = made.filter((t) => !t.wd);
-      const inLine = Math.min(...(wildCards.length ? wildCards : made).map(winsOf));
-      const outLine = Math.max(...missed.map(winsOf));
-      out.set(`${s.y}|${pool}`, { inLine, outLine });
+      const k = `${s.y}|${pool}`;
+      if (!out.has(k)) out.set(k, []);
+      out.get(k).push({ id, t });
     }
   }
   byPools.set(cacheKey, out);
   return out;
 }
 
-const gamesWord = (d) => (d === 0 ? null : d === 0.5 ? 'half a game' : 'one game');
-
-/** How a regular-season game decided a playoff spot, or null. `g` is an ix.games row. */
+/**
+ * Whether flipping one regular-season game (an ix.games row) would have
+ * changed its pool's playoff field. Returns null for a game that could not
+ * have; `{ decided: true, text }` when the flip puts a team that missed
+ * strictly ahead of a wild card (the field changes); `{ decided: false,
+ * tiebreaker: true, text }` when the flip only leaves the two level for the
+ * last spot, which MFL's tiebreakers (never re-derived here) would have
+ * settled. Applied to each pool the game's two teams belong to.
+ */
 export function playoffSpotDetail(ix, g, pools) {
   if (g.kind !== 'regular' || g.tie) return null;
-  const season = ix.seasonByYear.get(g.y);
-  if (!season?.done) return null;
-  const ln = playoffLines(ix, pools);
-  const parts = [];
-  const loser = ix.team(g.y, g.lf);
-  const lp = poolOf(ix, pools, g.y, g.lf);
-  const lline = lp != null && ln.get(`${g.y}|${lp}`);
-  if (loser && lline && !MADE.has(loser.r)) {
-    const short = lline.inLine - winsOf(loser);
-    if (short >= 0 && short <= 1) {
-      parts.push({ side: 'loser', franchiseId: g.lf, text: `${loser.n} missed the playoffs ${short === 0 ? 'on a tiebreaker' : `by ${gamesWord(short)}`}` });
+  if (!ix.seasonByYear.get(g.y)?.done) return null;
+  const byPool = seasonPools(ix, pools);
+  const keys = new Set([g.wf, g.lf].map((f) => poolOf(ix, pools, g.y, f)).filter((p) => p != null).map((p) => `${g.y}|${p}`));
+  const decided = [];
+  const tied = [];
+  for (const k of keys) {
+    const teams = byPool.get(k) ?? [];
+    const adj = (x) => winsOf(x.t) + (x.id === g.lf ? 1 : x.id === g.wf ? -1 : 0);
+    // Division winners hold their own bids: only the wild-card race is re-run.
+    const wild = teams.filter((x) => MADE.has(x.t.r) && !x.t.wd);
+    const missed = teams.filter((x) => !MADE.has(x.t.r));
+    if (!wild.length || !missed.length) continue;
+    const race = [...wild, ...missed];
+    const above = (x) => race.filter((o) => o !== x && adj(o) > adj(x)).length;
+    const below = (x) => race.filter((o) => o !== x && adj(o) < adj(x)).length;
+    // After the flip: surely in once enough of the race is strictly behind,
+    // surely out once every wild-card spot is held by a strictly better record.
+    const surelyIn = (x) => below(x) >= missed.length;
+    const surelyOut = (x) => above(x) >= wild.length;
+    const loser = missed.find((x) => x.id === g.lf);
+    const winner = wild.find((x) => x.id === g.wf);
+    if (loser && surelyIn(loser)) {
+      const out = wild.filter((x) => surelyOut(x)).map((x) => x.t.n);
+      decided.push(`with a win, ${loser.t.n} would have made the playoffs${out.length === 1 ? ` instead of ${out[0]}` : ''}`);
+    } else if (loser && !surelyOut(loser)) {
+      tied.push(`with a win, ${loser.t.n} would have been level for the last spot, a tiebreaker`);
+    }
+    if (winner && surelyOut(winner)) {
+      decided.push(`with a loss, ${winner.t.n} would have missed the playoffs`);
+    } else if (winner && !surelyIn(winner)) {
+      tied.push(`with a loss, ${winner.t.n} would have been level for the last spot, a tiebreaker`);
     }
   }
-  const winner = ix.team(g.y, g.wf);
-  const wp = poolOf(ix, pools, g.y, g.wf);
-  const wline = wp != null && ln.get(`${g.y}|${wp}`);
-  if (winner && wline && MADE.has(winner.r)) {
-    const over = winsOf(winner) - wline.outLine;
-    if (over >= 0 && over <= 1) {
-      parts.push({ side: 'winner', franchiseId: g.wf, text: `${winner.n} made the playoffs ${over === 0 ? 'on a tiebreaker' : `by ${gamesWord(over)}`}` });
-    }
-  }
-  return parts.length ? { parts, text: parts.map((p) => p.text).join('; ') } : null;
+  if (decided.length) return { decided: true, tiebreaker: false, text: decided.join('; ') };
+  if (tied.length) return { decided: false, tiebreaker: true, text: tied.join('; ') };
+  return null;
 }
 
 const rounds = new WeakMap();
@@ -247,9 +257,9 @@ export function gameStakes(ix, g, pools) {
     return { level, label, playoffSpot: null };
   }
   const spot = playoffSpotDetail(ix, g, pools);
-  return spot
+  return spot?.decided
     ? { level: STAKES.playoffSpot, label: 'Playoff spot', playoffSpot: spot }
-    : { level: STAKES.regular, label: 'Regular season', playoffSpot: null };
+    : { level: STAKES.regular, label: 'Regular season', playoffSpot: spot };
 }
 
 /** Stakes first, then the closer game, then the more recent one. */

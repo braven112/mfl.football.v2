@@ -67,12 +67,17 @@ function synthetic() {
     ],
     // [year, week, winner, winnerScore, loser, loserScore, playoffWeek]
     games: [
-      [2020, 1, A, 110, E, 100, 0], // E missed by one game: playoff spot, margin 10
-      [2020, 2, F, 90, A, 80, 0], // regular: F missed by 5, A was never on the line
-      [2020, 3, D, 95, F, 90, 0], // D made it by one game: playoff spot, margin 5
+      // Flipped, E would only draw level with the wild cards: a tiebreaker, not decided.
+      [2020, 1, A, 110, E, 100, 0],
+      [2020, 2, F, 90, A, 80, 0], // regular: nobody near the line
+      [2020, 3, D, 95, F, 90, 0], // flipped, D (7) would be level with E: a tiebreaker
       [2020, 4, E, 99, F, 98, 0], // regular, margin 1
-      [2020, 5, A, 54, E, 51, 0], // E missed by one game: playoff spot, margin 3
-      [2020, 6, E, 120, A, 100, 0], // regular: E won, A made it with room
+      [2020, 5, A, 54, E, 51, 0], // a tiebreaker again, margin 3
+      [2020, 6, E, 120, A, 100, 0], // regular: E won, A won its division
+      // Flipped, E (8) passes the wild card it beat (7): the field changes. Decided.
+      [2020, 7, C, 100, E, 95, 0], // margin 5
+      [2020, 8, D, 100, E, 99, 0], // margin 1
+      [2020, 9, C, 100, E, 98, 0], // margin 2
       [2020, 14, A, 130, D, 128, 1], // semifinal
       [2020, 14, B, 110, C, 100, 1], // semifinal
       [2020, 15, A, 140, B, 100, 1], // title game
@@ -91,8 +96,13 @@ describe('stakes tiers', () => {
     expect(gameStakes(ix, gameAt(ix, 15, A), null).label).toBe('Championship');
     expect(gameStakes(ix, gameAt(ix, 14, A), null).label).toBe('Semifinal');
     expect(gameStakes(ix, gameAt(ix, 15, C), null).label).toBe('Third-place game');
-    expect(gameStakes(ix, gameAt(ix, 1, A), null).label).toBe('Playoff spot');
-    expect(gameStakes(ix, gameAt(ix, 3, D), null).label).toBe('Playoff spot');
+    expect(gameStakes(ix, gameAt(ix, 7, C), null).label).toBe('Playoff spot');
+    expect(gameStakes(ix, gameAt(ix, 8, D), null).label).toBe('Playoff spot');
+    // A flip that only forces a tiebreaker stays a regular-season game, and says so.
+    const tied = gameStakes(ix, gameAt(ix, 1, A), null);
+    expect(tied.label).toBe('Regular season');
+    expect(tied.playoffSpot?.tiebreaker).toBe(true);
+    expect(gameStakes(ix, gameAt(ix, 3, D), null).label).toBe('Regular season');
     expect(gameStakes(ix, gameAt(ix, 2, F), null).label).toBe('Regular season');
     expect(gameStakes(ix, gameAt(ix, 6, E), null).label).toBe('Regular season');
   });
@@ -116,14 +126,15 @@ describe('stakes tiers', () => {
   it('breaks a tie inside a tier by the closer margin', () => {
     const ds = synthetic();
     const ix2 = ixOf(ds);
-    const rv = rivalryHistory(ix2, A, E) as any;
+    const rv = rivalryHistory(ix2, C, E) as any;
     const ranked = rankRivalryMeetings(ix2, rv.meetings, { limit: 10 });
-    // Both playoff-spot games against E: week 5 (by 3) before week 1 (by 10).
+    // Both playoff-spot games between C and E: week 9 (by 2) before week 7 (by 5).
     expect(ranked.map((m: any) => [m.wk, m.stakes.label])).toEqual([
-      [5, 'Playoff spot'],
-      [1, 'Playoff spot'],
-      [6, 'Regular season'],
+      [9, 'Playoff spot'],
+      [7, 'Playoff spot'],
     ]);
+    const ae = rankRivalryMeetings(ix2, (rivalryHistory(ix2, A, E) as any).meetings, { limit: 10 });
+    expect(ae.map((m: any) => m.wk)).toEqual([5, 1, 6]);
     expect(compareBigGames({ stakesLevel: 40, absMargin: 3, year: 2020, week: 5 }, { stakesLevel: 40, absMargin: 10, year: 2020, week: 1 })).toBeLessThan(0);
   });
 
@@ -141,19 +152,38 @@ describe('stakes tiers', () => {
 });
 
 describe('decided a playoff spot', () => {
-  it('names who it kept out or put in, and by how much', () => {
+  it('counts a game only when the other result changes the playoff field', () => {
     const ix = ixOf(synthetic());
-    expect(playoffSpotDetail(ix, gameAt(ix, 1, A), null)?.text).toBe('Eels missed the playoffs by one game');
-    expect(playoffSpotDetail(ix, gameAt(ix, 3, D), null)?.text).toBe('Dogs made the playoffs by one game');
+    expect(playoffSpotDetail(ix, gameAt(ix, 7, C), null)).toEqual({
+      decided: true,
+      tiebreaker: false,
+      text: 'with a win, Eels would have made the playoffs instead of Cats; with a loss, Cats would have missed the playoffs',
+    });
   });
 
-  it('draws the line inside each seeding pool', () => {
+  it('calls a flip that only leaves teams level a tiebreaker, never decided', () => {
+    const ix = ixOf(synthetic());
+    expect(playoffSpotDetail(ix, gameAt(ix, 1, A), null)).toEqual({
+      decided: false,
+      tiebreaker: true,
+      text: 'with a win, Eels would have been level for the last spot, a tiebreaker',
+    });
+    expect(playoffSpotDetail(ix, gameAt(ix, 3, D), null)?.text).toBe('with a loss, Dogs would have been level for the last spot, a tiebreaker');
+    // A division winner keeps its bid: its win is never what decided a spot.
+    expect(playoffSpotDetail(ix, gameAt(ix, 2, F), null)).toBeNull();
+  });
+
+  it('re-runs the race inside each seeding pool', () => {
     const ix = ixOf(synthetic());
     // East: A (division winner), C (wild card, 8), E (7). West: B, D (wild card, 8), F (3).
     const pools = { 2020: { East: 'AL', West: 'NL' } };
-    expect(playoffSpotDetail(ix, gameAt(ix, 1, A), pools)?.text).toBe('Eels missed the playoffs by one game');
-    // D's OUT line is now F's 3 wins, so its 8 wins were never on the line.
-    expect(playoffSpotDetail(ix, gameAt(ix, 3, D), pools)).toBeNull();
+    expect(playoffSpotDetail(ix, gameAt(ix, 8, D), null)?.decided).toBe(true);
+    // In its own pool D at 7 still clears F; E at 8 only draws level with C.
+    expect(playoffSpotDetail(ix, gameAt(ix, 8, D), pools)).toEqual({
+      decided: false,
+      tiebreaker: true,
+      text: 'with a win, Eels would have been level for the last spot, a tiebreaker',
+    });
   });
 
   it('claims no playoff spot when the pools could not be read', () => {
