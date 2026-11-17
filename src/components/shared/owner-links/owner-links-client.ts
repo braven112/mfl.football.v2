@@ -93,7 +93,7 @@ function initOwnerMode(root: HTMLElement) {
   const targetSelect = root.querySelector<HTMLSelectElement>('[data-olk-target]');
   const search = root.querySelector<HTMLInputElement>('[data-olk-search]');
   const noResults = root.querySelector<HTMLElement>('[data-olk-noresults]');
-  const cards = [...root.querySelectorAll<HTMLElement>('[data-olk-tenure]')];
+  const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-olk-tenure]'));
   wireCancel(dialog);
   wireRange(from, to);
 
