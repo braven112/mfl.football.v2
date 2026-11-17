@@ -185,11 +185,29 @@ describe('buildFactSheet', () => {
     const sheet = buildFactSheet({ issue, teams });
     expect(sheet).toContain('#1 | Pigskins');
     expect(sheet).toContain('up 4 (was #5)');
-    expect(sheet).toContain('3-0 over the last three weeks');
     expect(sheet).toContain('132.5 PPG over the last three weeks');
     expect(sheet).toContain('4-game winning streak');
     expect(sheet).toContain('#2 | Da Dangsters');
     expect(sheet).toContain('down 1 (was #1)');
+    expect(sheet).toContain('1-2 over the last three weeks');
+  });
+
+  // Brandon, Nov 2026: "on a 3-game winning streak and a 3-0 mark over the
+  // last three weeks" says one thing twice. A streak that covers the window
+  // hides the record from the writer and hands it other stats instead.
+  it('never hands the writer a record the streak already covers', () => {
+    const sheet = buildFactSheet({ issue, teams });
+    const pigskinsRow = sheet.split('\n').find((l) => l.startsWith('#1 | Pigskins'))!;
+    expect(pigskinsRow).not.toContain('3-0');
+    expect(pigskinsRow).toContain('covered by the streak');
+    expect(pigskinsRow).toContain('1st of 2 in scoring over the last three weeks');
+    expect(sheet).toContain('STAT VARIETY');
+  });
+
+  it('ranks scoring across the whole league', () => {
+    const sheet = buildFactSheet({ issue, teams });
+    expect(sheet).toContain('2nd of 2 in scoring over the last three weeks');
+    expect(sheet).toContain('1st of 2 in season scoring');
   });
 
   it('includes the allowed franchise tokens block', () => {

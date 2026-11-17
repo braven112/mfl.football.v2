@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { spellOutShorthand } from '../src/utils/pecking-order-wording.mjs';
+import { spellOutShorthand, streakCoversRecord, dropRecordTheStreakCovers } from '../src/utils/pecking-order-wording.mjs';
 
 // Owners read "W2" / "L3" as a puzzle; the Pecking Order says it in words.
 describe('spellOutShorthand', () => {
@@ -25,7 +25,7 @@ describe('spellOutShorthand', () => {
       ['on a 3-1 rolling record and a W2 streak', 'on a 3-1 ', ' and a 2-game winning streak'],
       ['their 2-3 L3 record leaves room', 'their 2-3 ', ' leaves room'],
       ['with a 2-2 L3 and weak 51.9% all-play', 'with a 2-2 ', ' and weak 51.9% all-play'],
-      ['a perfect 4-0 L3 and a W5 active, posting', 'a perfect 4-0 ', ' and a 5-game winning streak, posting'],
+      ['a perfect 4-0 L3 and a W2 active, posting', 'a perfect 4-0 ', ' and a 2-game winning streak, posting'],
     ]) {
       expect(spellOutShorthand(input), input).toMatch(new RegExp(`^${lead}${NOUN}${tail}$`));
     }
@@ -74,5 +74,59 @@ describe('spellOutShorthand', () => {
   it('the fact sheet the writer reads carries no shorthand', () => {
     const src = readFileSync('scripts/lib/pecking-order-ai.mjs', 'utf8');
     expect(src).not.toMatch(/PPG L3|\} L3`|streak\.type\}\$\{/);
+  });
+
+  // Brandon, Nov 2026: a streak of three or more already says the last-three
+  // record, so a blurb never says both.
+  it('drops a last-three record the streak already covers', () => {
+    expect(spellOutShorthand('Suh girls, one cup, climb two spots to No. 8 on a 3-game winning streak and a 3-0 mark over the last three weeks.'))
+      .toBe('Suh girls, one cup, climb two spots to No. 8 on a 3-game winning streak.');
+    expect(spellOutShorthand('Pigskins hold No. 1 with a perfect 3-0 record over the last three and a 4-game winning streak, averaging 132 PPG.'))
+      .toBe('Pigskins hold No. 1 with a 4-game winning streak, averaging 132 PPG.');
+    expect(spellOutShorthand('Amish sink on a 5-game losing streak, with an 0-3 record over the last three.'))
+      .toBe('Amish sink on a 5-game losing streak.');
+    expect(spellOutShorthand('Ditka ride a W4 streak and a 3-0 L3 record.')).toBe('Ditka ride a 4-game winning streak.');
+  });
+
+  // Real published blurbs: the sentence around the dropped record is mended.
+  it('mends the sentence the record leaves behind', () => {
+    for (const [input, want] of [
+      ['Balls Deep have a 7-game winning streak, the longest active run in the league, and a 3-0 mark over the last three weeks. Money is nice.',
+        'Balls Deep have a 7-game winning streak, the longest active run in the league. Money is nice.'],
+      ['Harambe climbs two spots to #6 with a 4-0 mark over the last three, a 6-game winning streak, and 69.6% all-play.',
+        'Harambe climbs two spots to #6 with a 6-game winning streak and 69.6% all-play.'],
+      ['Patriots sit at No. 10 with a 28.4% all-play mark, a 7-game losing streak, and an 0-3 mark over the last three weeks.',
+        'Patriots sit at No. 10 with a 28.4% all-play mark and a 7-game losing streak.'],
+      ['Vitside Mafia are the new No. 1 with an 81.9% all-play mark, a 3-0 stretch over the last three weeks, and a 5-game winning streak that has them looking unbeatable.',
+        'Vitside Mafia are the new No. 1 with an 81.9% all-play mark and a 5-game winning streak that has them looking unbeatable.'],
+      ['Da Dangsters inch up one despite an ugly 0-4 performance over the last few weeks and 5-game losing streak.',
+        'Da Dangsters inch up one despite a 5-game losing streak.'],
+      ['Bring The Pain are up one spot, but a 5-game losing streak and an 0-3 mark over the last three weeks show they still have work to do.',
+        'Bring The Pain are up one spot, but a 5-game losing streak shows they still have work to do.'],
+      ['Monsters are the new No. 1, going 6-0 over the last three weeks with a 6-game winning streak and 179.5 PPG.',
+        'Monsters are the new No. 1, on a 6-game winning streak and 179.5 PPG.'],
+      ['Mavericks are spiraling, #14, 20.0% all-play, 0-5 over the last three, and a 7-game losing streak.',
+        'Mavericks are spiraling, #14, 20.0% all-play, a 7-game losing streak.'],
+      ['Cowboy Up rise to #7 on a 3-game winning streak and a 3-0 run over the last three weeks, averaging 114.0 PPG.',
+        'Cowboy Up rise to #7 on a 3-game winning streak, averaging 114.0 PPG.'],
+    ]) expect(spellOutShorthand(input), input).toBe(want);
+  });
+
+  it('keeps a record the streak does not cover', () => {
+    for (const t of [
+      'Ditka ride a 2-game winning streak and a 2-1 mark over the last three weeks.',
+      'Ditka ride a 2-game winning streak and a 3-0 mark over the last three weeks.',
+      'Ditka sit on a 3-game losing streak and a 3-0 mark over the last three weeks.',
+    ]) expect(dropRecordTheStreakCovers(t), t).toBe(t);
+  });
+
+  it('knows when a streak covers the record', () => {
+    expect(streakCoversRecord({ type: 'W', length: 3 }, { wins: 3, losses: 0 })).toBe(true);
+    expect(streakCoversRecord({ type: 'W', length: 4 }, { wins: 3, losses: 0 })).toBe(true);
+    expect(streakCoversRecord({ type: 'L', length: 5 }, { wins: 0, losses: 3 })).toBe(true);
+    expect(streakCoversRecord({ type: 'W', length: 2 }, { wins: 3, losses: 0 })).toBe(false);
+    expect(streakCoversRecord({ type: 'W', length: 4 }, { wins: 2, losses: 1 })).toBe(false);
+    expect(streakCoversRecord({ type: 'W', length: 4 }, { wins: 2, losses: 0, ties: 1 })).toBe(false);
+    expect(streakCoversRecord({ type: null, length: 0 }, { wins: 0, losses: 0 })).toBe(false);
   });
 });
