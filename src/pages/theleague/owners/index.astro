@@ -16,7 +16,7 @@ import { loadLiveOwnerTenures } from '../../../utils/owner-link-live';
 // (src/utils/league-data.ts).
 const THELEAGUE_DATA = getLeagueBySlug('theleague')!.dataPath;
 // Committed owner tenures plus approved owner links (owner-link-live.ts).
-const ownerData: any = await loadLiveOwnerTenures('theleague', await loadLeagueData(`${THELEAGUE_DATA}/derived/owner-tenures.json`));
+const ownerData: any = await loadLiveOwnerTenures('theleague', await loadLeagueData<any>(`${THELEAGUE_DATA}/derived/owner-tenures.json`));
 
 export const prerender = false;
 ---

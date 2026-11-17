@@ -188,7 +188,7 @@ const ownedKeys = (payload) => {
  * @param args.inputs     { teams, ledgerRows, yearSummaries, awardRows } — what
  *                        compute-owner-tenures.mjs feeds buildOwnerTenures
  * @param args.links      link records (any state)
- * @returns {{ data: object, applied: string[], skipped: Array<{id: string, reason: string}>, error?: string }}
+ * @returns {{ data: any, applied: string[], skipped: Array<{id: string, reason: string}>, error?: string }}
  */
 export function overlayOwnerTenures({ league, committed, registry, inputs, links }) {
   if (approvedLinks(links, league.slug).length === 0 || !inputs) {

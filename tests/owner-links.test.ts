@@ -24,7 +24,8 @@ vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => null }));
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'owner-links-test-secret';
 
 const ROOT = process.cwd();
-const { LEAGUES } = await import('../src/config/leagues-data.mjs');
+const { LEAGUES: LEAGUES_TYPED } = await import('../src/config/leagues-data.mjs');
+const LEAGUES = LEAGUES_TYPED as Record<string, any>;
 const { buildOwnerTenures } = await import('../src/utils/owner-tenures.mjs');
 const { loadLeagueInputs } = await import('../scripts/lib/owner-tenure-inputs.mjs');
 const overlay = await import('../src/utils/owner-link-overlay.mjs');
@@ -76,7 +77,7 @@ describe.each(FULL_LEAGUES)('owner-link overlay — %s', (slug) => {
       teams: inputs.teams,
       ledgerRows: inputs.ledgerRows,
       yearSummaries: inputs.yearSummaries,
-      awardRows: inputs.awardRows,
+      awardRows: inputs.awardRows as any,
       registry,
       generatedAt: committed.generatedAt,
     });
