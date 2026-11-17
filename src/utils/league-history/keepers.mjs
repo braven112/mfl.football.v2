@@ -177,7 +177,7 @@ export function keeperBoards(kh, ix, { from = null, rankRows }) {
       const key = ix.entityOf(y, f);
       const last = parts[parts.length - 1];
       if (last && last.key === key) { last.to = y; last.team = ix.team(y, f)?.n ?? last.team; continue; }
-      parts.push({ key, from: y, to: y, team: ix.team(y, f)?.n ?? f, name: ix.entity(key)?.name ?? null });
+      parts.push({ key, from: y, to: y, team: ix.team(y, f)?.n ?? f });
     }
     return parts;
   };
@@ -187,8 +187,9 @@ export function keeperBoards(kh, ix, { from = null, rankRows }) {
     const base = row(r.to, r.franchiseId, n, keeperPlayer(kh, r.id), `${ix.team(r.to, r.franchiseId)?.n ?? r.franchiseId} · ${span(r.from, r.to)}`);
     if (parts.length > 1) {
       base.context = parts.map((p) => `${p.team} ${span(p.from, p.to)}`).join(' · ');
-      const owners = [...new Set(parts.map((p) => p.name).filter(Boolean))];
-      if (base.owner && owners.length > 1) base.owner = owners.join(', ');
+      // Team names only (Brandon, 2026-11-17): the run already names every
+      // team, so a list of owners on top is noise.
+      base.owner = null;
     }
     return { ...base, tiebreak: -r.to };
   });
