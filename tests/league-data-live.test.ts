@@ -96,6 +96,26 @@ describe('composeFiles', () => {
     expect(composeFiles(built, overlay, PATTERNS)).toEqual({ 'data/x/mfl-feeds/2026/rosters.json': h('3') });
   });
 
+  it("on a branch deploy keeps its own derived files, since the branch's scripts compute them", () => {
+    const built = {
+      'data/x/mfl-feeds/2026/rosters.json': h('1'),
+      'data/x/derived/league-history-players.json': h('2'),
+    };
+    const overlay = {
+      'data/x/mfl-feeds/2026/rosters.json': h('3'),
+      'data/x/derived/league-history-players.json': h('4'),
+      'data/x/derived/main-only.json': h('5'),
+    };
+    const patterns = [...PATTERNS, 'data/x/derived/**'];
+    expect(composeFiles(built, overlay, patterns, { keepBranchFiles: true })).toEqual({
+      'data/x/mfl-feeds/2026/rosters.json': h('3'),
+      'data/x/derived/league-history-players.json': h('2'),
+      'data/x/derived/main-only.json': h('5'),
+    });
+    // Production: the sync's derived copy wins.
+    expect(composeFiles(built, overlay, patterns)['data/x/derived/league-history-players.json']).toBe(h('4'));
+  });
+
   it('reads globs the way the rest of the store does', () => {
     expect(globToRegExp('data/*/derived/**').test('data/afl-fantasy/derived/a/b.json')).toBe(true);
     expect(globToRegExp('src/data/mfl-player-salaries-*.json').test('src/data/x/mfl-player-salaries-2026.json')).toBe(
