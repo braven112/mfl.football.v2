@@ -46,6 +46,7 @@ import { guestMasker, maskAskData, maskValue } from '../../../utils/league-histo
 import { recordFunnel } from '../../../utils/history-funnel';
 import { aiModelForLeague } from '../../../utils/ai-plan.mjs';
 import { recordAiUsage } from '../../../utils/ai-usage';
+import { loadLiveLeagueHistory } from '../../../utils/owner-link-live';
 
 export const prerender = false;
 
@@ -187,7 +188,9 @@ export const POST: APIRoute = async ({ request }) => {
 			loadLeagueCompetitions(league.dataPath, league.configPath),
 		]);
 		if (!loaded) return json({ error: 'Unknown league.' }, 404);
-		const ds: AskData = { ...loaded, competitions };
+		// Owners credited through approved owner links (utils/owner-link-live.ts).
+		const history = await loadLiveLeagueHistory(league.slug, loaded.history);
+		const ds: AskData = { ...loaded, history, competitions };
 		result = await askHistory(league.slug, ds, question, {
 			turns,
 			asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),

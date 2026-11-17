@@ -1,0 +1,25 @@
+---
+/**
+ * Link My Former Teams (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/owner-links/OwnerLinksPage.
+ * The auth gate lives HERE, not in the component: Astro.redirect() only
+ * redirects from a PAGE. The league is the session's — a visitor signed in to
+ * another league is sent back rather than shown this league's queue.
+ */
+import OwnerLinksPage from '../../components/shared/owner-links/OwnerLinksPage.astro';
+import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { leagueForSession, ownerLinksPageModel } from '../../utils/owner-link-actions';
+
+export const prerender = false;
+const LEAGUE = getLeagueBySlug('afl-fantasy')!;
+
+const user = getAuthUser(Astro.request);
+if (!user || !isAuthorizedForLeague(user, LEAGUE.id) || leagueForSession(user)?.slug !== LEAGUE.slug) {
+  return Astro.redirect('/afl-fantasy/owners');
+}
+const model = await ownerLinksPageModel(user, LEAGUE);
+---
+
+<OwnerLinksPage leagueSlug="afl-fantasy" model={model} />

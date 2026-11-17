@@ -16,13 +16,15 @@ import { ownerIdForSlug } from '../../../utils/league-history/owner.mjs';
 import { ownerKeepers } from '../../../utils/league-history/keepers.mjs';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { loadLeagueData } from '../../../utils/league-data';
+import { loadLiveLeagueHistory, loadLiveOwnerTenures } from '../../../utils/owner-link-live';
 
 // Derived history files, read through the league-data loader
 // (src/utils/league-data.ts) instead of being bundled into the function.
 const AFL_DERIVED = `${getLeagueBySlug('afl-fantasy')!.dataPath}/derived`;
 const [ownerData, historyData, keeperHistory] = await Promise.all([
-  loadLeagueData<any>(`${AFL_DERIVED}/owner-tenures.json`),
-  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`),
+  // Committed owner tenures plus approved owner links (owner-link-live.ts).
+  loadLiveOwnerTenures('afl-fantasy') as Promise<any>,
+  loadLeagueData<any>(`${AFL_DERIVED}/league-history.json`).then((h) => loadLiveLeagueHistory('afl-fantasy', h)),
   loadLeagueData<any>(`${AFL_DERIVED}/keeper-history.json`),
 ]);
 

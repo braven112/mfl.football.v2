@@ -1,0 +1,182 @@
+---
+/**
+ * Link My Former Teams — shared page for every league owner links run in.
+ *
+ * A signed-in owner picks a team from the league's past ("this was me"), trims
+ * the seasons if they only ran part of it, and sends it to the commissioner.
+ * Once approved it is live on the next request: their owner page, the owners
+ * index and Ask the History all read owner tenures through
+ * utils/owner-link-live.ts. A commissioner using this page links on the spot.
+ *
+ * The route wrapper owns the auth gate and builds `model` from the SESSION's
+ * league (utils/owner-link-actions.ts); nothing here trusts a parameter.
+ *
+ * Styles live in owner-links.css (unscoped) because the client script builds
+ * the request list and modal contents at runtime, and Astro's scoped CSS never
+ * reaches an element JS created.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import type { OwnerLinksPageModel } from '../../../utils/owner-link-actions';
+import './owner-links.css';
+
+interface Props {
+  leagueSlug: string;
+  model: OwnerLinksPageModel;
+}
+
+const { leagueSlug, model } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const me = model.mine[0] ?? null;
+const pending = model.links.filter((l) => l.status === 'pending').length;
+const statusLabel = { pending: 'Waiting on the commissioner', approved: 'Linked', rejected: 'Declined' } as const;
+const statusTone = { pending: 'warning', approved: 'success', rejected: 'neutral' } as const;
+const years = (a: number, b: number) => (a === b ? String(a) : `${a}–${b}`);
+/** A tenure the viewer already asked for (pending) — its button says so instead of offering it twice. */
+const requested = (franchiseId: string, from: number, to: number) =>
+  model.links.some((l) => l.status === 'pending' && l.franchiseId === franchiseId && l.yearStart <= to && l.yearEnd >= from);
+---
+
+<TheLeagueLayout title={`Link My Former Teams — ${league.name}`}>
+  <main class="olk" data-owner-links-root data-league={league.slug} data-mode="owner">
+    <Breadcrumbs items={[{ label: 'Owners', href: r('/owners') }, { label: 'Link my former teams' }]} />
+
+    <header class="olk-hero">
+      <p class="olk-eyebrow">Owner history</p>
+      <h1 class="olk-title">Link your former teams</h1>
+      <p class="olk-lede">
+        Ran a team here under another name, on another franchise, or before you left and came back?
+        Claim those seasons and your owner page, record and Ask the History answers carry your whole career.
+        {model.reviewer ? ' As commissioner, your links go live right away.' : ' The commissioner approves each one.'}
+      </p>
+    </header>
+
+    {me ? (
+      <section class="olk-career ui-card" aria-label="Your career on record">
+        <img class="olk-career__icon" src={me.icon} alt="" width="56" height="56" />
+        <div class="olk-career__body">
+          <p class="olk-career__name">{me.title}</p>
+          <p class="olk-career__meta">{years(me.yearStart, me.isCurrent ? model.latestYear : me.yearEnd)} · {me.seasons} seasons · {me.record}{me.titles ? ` · ${me.titles} title${me.titles === 1 ? '' : 's'}` : ''}</p>
+          {me.teams.length > 1 && <p class="olk-career__teams">{me.teams.join(' · ')}</p>}
+        </div>
+        <a class="cta-link olk-career__link" href={r(`/owners/${me.slug}`)}>Owner page</a>
+      </section>
+    ) : (
+      <p class="olk-empty">Your franchise has no owner page on record yet, so there is nothing to link to.</p>
+    )}
+
+    {model.mine.length > 1 && (
+      <label class="olk-field olk-field--inline">
+        <span class="olk-field__label">Linking for</span>
+        <select class="olk-select" data-olk-target>
+          {model.mine.map((o) => <option value={o.ownerId}>{o.title}</option>)}
+        </select>
+      </label>
+    )}
+
+    <section class="olk-section" aria-labelledby="olk-requests-h">
+      <h2 id="olk-requests-h" class="olk-section__title">
+        Your requests {pending > 0 && <span class="ui-badge ui-badge--warning olk-count">{pending} pending</span>}
+      </h2>
+      {model.links.length === 0 ? (
+        <p class="olk-empty">Nothing yet. Pick a team below that you ran.</p>
+      ) : (
+        <ul class="olk-list">
+          {model.links.map((l) => (
+            <li class="olk-row">
+              <div class="olk-row__main">
+                <p class="olk-row__title">{l.names.join(' / ') || `Franchise ${l.franchiseId}`}</p>
+                <p class="olk-row__meta">Franchise {l.franchiseId} · {years(l.yearStart, l.yearEnd)}{l.decisionNote ? ` · “${l.decisionNote}”` : ''}</p>
+              </div>
+              <span class:list={['ui-badge', `ui-badge--${statusTone[l.status]}`]}>{statusLabel[l.status]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    {me && (
+      <section class="olk-section" aria-labelledby="olk-teams-h">
+        <h2 id="olk-teams-h" class="olk-section__title">Teams from the league's past</h2>
+        <label class="olk-search">
+          <span class="visually-hidden">Find a team</span>
+          <input type="search" class="olk-input" placeholder="Search a team name, franchise or year" data-olk-search autocomplete="off" />
+        </label>
+        <ul class="olk-grid" data-olk-grid>
+          {model.tenures.map((t) => (
+            <li
+              class="olk-tenure ui-card"
+              data-olk-tenure
+              data-holder={t.holderOwnerId}
+              hidden={t.holderOwnerId === me.ownerId}
+              data-search={`${t.names.join(' ')} ${t.franchiseId} ${t.years.join(' ')} ${t.holderTitle}`.toLowerCase()}
+            >
+              <img class="olk-tenure__icon" src={t.icon ?? ''} alt="" width="44" height="44" loading="lazy" />
+              <div class="olk-tenure__body">
+                <p class="olk-tenure__name">{t.names.join(' / ') || `Franchise ${t.franchiseId}`}</p>
+                <p class="olk-tenure__meta">
+                  {years(t.yearStart, t.yearEnd)} · Franchise {t.franchiseId} · {t.record}{t.titles ? ` · 🏆 ${t.titles}` : ''}
+                </p>
+                <p class="olk-tenure__holder">On record under {t.holderTitle}{t.holderIsCurrent ? ' (current owner)' : ''}</p>
+              </div>
+              <button
+                type="button"
+                class="cta cta--ghost olk-tenure__cta"
+                data-olk-open
+                data-franchise={t.franchiseId}
+                data-years={t.years.join(',')}
+                data-names={t.names.join(' / ')}
+                data-holder-title={t.holderTitle}
+                disabled={requested(t.franchiseId, t.yearStart, t.yearEnd)}
+              >{requested(t.franchiseId, t.yearStart, t.yearEnd) ? 'Requested' : 'This was me'}</button>
+            </li>
+          ))}
+        </ul>
+        <p class="olk-empty" data-olk-noresults hidden>No team matches that search.</p>
+      </section>
+    )}
+
+    {model.reviewer && (
+      <p class="olk-footnote"><a class="cta-link" href={r('/owner-links-review')}>Review every owner's requests</a></p>
+    )}
+
+    <dialog class="ui-modal olk-modal" data-olk-modal aria-labelledby="olk-modal-title">
+      <form method="dialog" class="olk-modal__form" data-olk-form>
+        <div class="olk-modal__scroll">
+          <p class="olk-eyebrow">Claim these seasons</p>
+          <h2 id="olk-modal-title" class="olk-modal__title" data-olk-modal-name></h2>
+          <p class="olk-modal__meta" data-olk-modal-meta></p>
+          <div class="olk-range">
+            <label class="olk-field">
+              <span class="olk-field__label">From</span>
+              <select class="olk-select" data-olk-from></select>
+            </label>
+            <label class="olk-field">
+              <span class="olk-field__label">Through</span>
+              <select class="olk-select" data-olk-to></select>
+            </label>
+          </div>
+          <label class="olk-field">
+            <span class="olk-field__label">Note for the commissioner (optional)</span>
+            <textarea class="olk-input olk-textarea" maxlength="280" rows="3" data-olk-note placeholder="e.g. I renamed the team when I came back in 2016"></textarea>
+          </label>
+          <p class="olk-error" role="alert" data-olk-error hidden></p>
+        </div>
+        <footer class="olk-modal__footer">
+          <button type="button" class="cta cta--ghost" data-olk-cancel>Cancel</button>
+          <button type="submit" class="cta cta--primary" data-olk-submit>{model.reviewer ? 'Link now' : 'Send to commissioner'}</button>
+        </footer>
+      </form>
+    </dialog>
+  </main>
+</TheLeagueLayout>
+
+<script>
+  import { initOwnerLinks } from './owner-links-client';
+  document.addEventListener('astro:page-load', initOwnerLinks);
+</script>

@@ -54,6 +54,20 @@ export function holdingsBySeason(ownerTenures) {
   return out;
 }
 
+/**
+ * The dataset's `owners` map — ownerId → { name, slug }, sorted by id — from
+ * owner tenures. Exported so the live owner-link overlay
+ * (owner-link-overlay.mjs) re-credits a dataset exactly the way this file
+ * built it.
+ */
+export function historyOwners(ownerTenures) {
+  const owners = {};
+  for (const o of ownerTenures?.owners ?? []) {
+    owners[o.ownerId] = { name: o.displayName || o.title || o.dominantName, slug: o.slug };
+  }
+  return sortKeys(owners);
+}
+
 const RESULT_CODES = {
   champion: 'C',
   'runner-up': 'R',
@@ -73,10 +87,7 @@ const RESULT_CODES = {
 export function buildHistoryDataset({ league, games, ledgerRows, ownerTenures, firstPlayoffWeeks = {} }) {
   const holdings = holdingsBySeason(ownerTenures);
 
-  const owners = {};
-  for (const o of ownerTenures?.owners ?? []) {
-    owners[o.ownerId] = { name: o.displayName || o.title || o.dominantName, slug: o.slug };
-  }
+  const owners = historyOwners(ownerTenures);
 
   const allYears = [...new Set(ledgerRows.map((r) => r.year))].sort((a, b) => a - b);
   // A season no game was ever played in (Gridiron Gumbas 2013: a league MFL
@@ -133,7 +144,7 @@ export function buildHistoryDataset({ league, games, ledgerRows, ownerTenures, f
     league,
     firstSeason: years[0] ?? null,
     lastSeason: years[years.length - 1] ?? null,
-    owners: sortKeys(owners),
+    owners,
     seasons,
     games: compact,
   };
