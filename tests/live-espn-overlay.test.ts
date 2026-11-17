@@ -47,12 +47,39 @@ describe('overlayPlayerLive', () => {
     expect(run([[0, 10, 10], [MIN, 10, 18], [2 * MIN, 19, 18]])).toEqual([10, 18, 19]);
   });
 
-  it('keeps an unitemized gap MFL scores beyond the box score, once it has settled', () => {
-    // MFL counts 2 points ESPN's line cannot see (first downs, say). Seen once,
-    // the gap could be ESPN lagging, so ESPN's own number shows until the line
-    // has sat still; after that the bonus rides on top.
+  it('keeps an unitemized gap MFL scores beyond the box score, once ESPN has moved and it survived', () => {
+    // MFL counts 2 points ESPN's line cannot see (a 2-pt conversion, say). A
+    // quiet line cannot tell that from ESPN lagging, so ESPN's own number shows
+    // (never below MFL) until ESPN has MOVED, settled, and the gap is still 2.
     expect(run([[0, 12, 10], [MIN, 12, 16]])).toEqual([12, 16]);
-    expect(run([[0, 12, 10], [SETTLE_MS, 12, 10], [SETTLE_MS + MIN, 12, 16]])).toEqual([12, 12, 18]);
+    expect(run([[0, 12, 10], [SETTLE_MS, 12, 10], [SETTLE_MS + MIN, 12, 16]])).toEqual([12, 12, 16]);
+    const t = SETTLE_MS + MIN;
+    expect(
+      run([
+        [0, 12, 10],
+        [SETTLE_MS, 12, 10],
+        [t, 12, 16], // ESPN moves: pending gap not added
+        [t + SETTLE_MS, 18, 16], // MFL caught up, still 2 ahead: confirmed
+        [t + SETTLE_MS + MIN, 18, 20], // now the bonus rides on top
+      ]),
+    ).toEqual([12, 12, 16, 18, 22]);
+  });
+
+  it('never banks ESPN lagging MFL as a bonus when the baseline is retaken (Zay Flowers, Nov 2026)', () => {
+    // AFL WR: 1 pt/rec + 0.1/yd. MFL scores three catches (3 rec, 40 yds = 7)
+    // while ESPN's box line sits on the older 3.9 past SETTLE_MS. When ESPN
+    // catches up the score is MFL's 10.90, not 17.90 with 7 "Not itemized".
+    const t = MIN + SETTLE_MS;
+    expect(
+      run([
+        [0, 3.9, 3.9],
+        [MIN, 10.9, 3.9],
+        [t, 10.9, 3.9], // quiet line, MFL ahead: pending, not a bonus
+        [t + MIN, 10.9, 10.9], // ESPN catches up
+        [t + MIN + SETTLE_MS, 10.9, 10.9],
+        [t + 2 * MIN + SETTLE_MS, 10.9, 12.5], // a new catch ESPN has first
+      ]),
+    ).toEqual([3.9, 10.9, 10.9, 10.9, 10.9, 12.5]);
   });
 
   it('a board opened while ESPN lags MFL never counts the catch-up twice', () => {
