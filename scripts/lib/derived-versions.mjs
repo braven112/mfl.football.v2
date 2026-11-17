@@ -34,7 +34,8 @@ export const DERIVED_DATASETS = {
   },
   'league-history-moves.json': {
     job: 'league-history',
-    version: 1,
+    // 2: conference draft names (`draftUnits`).
+    version: 2,
     rebuild: 'node scripts/compute-league-history-moves.mjs --league=<slug>',
   },
 };

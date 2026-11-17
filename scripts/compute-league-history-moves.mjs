@@ -152,9 +152,15 @@ const drafts = [];
 const auctions = [];
 const drops = [];
 const adds = [];
+// Draft unit → its name ("CONFERENCE00" → "American League"): a conference
+// league drafts once per conference, so one player can go twice in a year.
+const draftUnits = {};
 for (const year of years) {
   const dir = path.join(FEEDS, year);
   const y = Number(year);
+  for (const c of toArray(readJson(path.join(dir, 'league.json'))?.league?.conferences?.conference)) {
+    if (c?.id != null && c?.name) draftUnits[`CONFERENCE${c.id}`] = String(c.name).trim();
+  }
   const leagueNames = new Map(
     toArray(readJson(path.join(dir, 'league.json'))?.league?.franchises?.franchise)
       .filter((f) => f?.id && f?.name)
@@ -256,6 +262,7 @@ const body = [
   `  "generatedAt": ${JSON.stringify(new Date().toISOString())}`,
   `  "league": ${JSON.stringify(SLUG)}`,
   `  "version": ${derivedVersion('league-history-moves.json')}`,
+  `  "draftUnits": ${JSON.stringify(Object.fromEntries(Object.entries(draftUnits).sort(([a], [b]) => cmp(a, b))))}`,
   `  "players": {\n${Object.entries(playerMap).map(([id, v]) => `    ${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(',\n')}\n  }`,
   `  "trades": ${lines(trades)}`,
   `  "pickups": ${lines(pickups)}`,
