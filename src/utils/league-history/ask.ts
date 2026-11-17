@@ -24,6 +24,8 @@ import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQ
 import { describeMissingWeeks } from './ask-players.mjs';
 import { tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
+import { RIVALRY_GAME_UNITS } from './ask-rivalry-games.mjs';
+import { loadSeedingPools } from './seeding-pools';
 
 /** A query result as a Record Book board, for record-charts.mjs (ask-query.mjs chartBoard). */
 export interface AskChart {
@@ -113,6 +115,8 @@ export interface AskData {
   pickTrades?: any;
   /** The all-play side competition's sources (datasets.ts loadLeagueCompetitions), for a league that runs one. */
   competitions?: any;
+  /** Each season's division → conference (seeding-pools.ts); loaded on first use by the rivalryGames unit when absent. */
+  pools?: Record<number, Record<string, string>> | false | null;
 }
 
 interface AnthropicLike {
@@ -396,6 +400,7 @@ ${moves ? deadlineLine(leagueSlug, latest?.y) : ''}
 ${moves && players ? rosterPathLine(moves, keepers, pickTrades) : ''}
 ${competitionBlock(ds, competitions)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
+- "Biggest game", "most important game", "game of the rivalry" or "closest playoff game" between two teams or owners use the rivalryGames unit: where team (or owner) is one side and opponent (or opponentOwner) the other, sorted by importance desc (biggest) or, for the closest playoff game, stakesLevel gte 60 sorted by absMargin asc; limit 3-5, chart margin, and columns year, week, stakes, team, score, opponent, oppScore, playoffSpot, decidedBy. Importance is STAKES FIRST (championship, then playoff rounds with the later round higher, then the third-place and placement games, then a regular-season game that decided a playoff spot, then the rest), the closer margin breaking ties. A playoff-spot game is one whose other result would have changed who made the playoffs; one that would only have forced a tiebreaker stays regular season (its playoffSpot says so). Name the stakes tier and, for a playoff-spot game, say who it put in or kept out (playoffSpot). Name the players who decided it only from decidedBy, topStarter, oppTopStarter and benchFlip, word for word: never guess a lineup. A conference league's playoff-spot line is its conference's. "My top rival" with no team named is the opponent owner the asker has played most (games, where owner is the asker, groupBy opponentOwner); say that is how you picked them.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
 - Keep queries few and focused; then call answer once, with a headline when one stat sums the answer up and two or three followUps.
 - <asker> names the team the person asking owns: "my team", "us", "we" and "I" mean that team.
@@ -478,6 +483,13 @@ export async function askHistory(
     }
 
     messages.push({ role: 'assistant', content: response.content });
+    // The rivalryGames unit seeds per conference: read the pools once, only when asked.
+    let pools = data.pools;
+    if (pools === undefined && uses.some((u) => u.name === RUN_QUERY_TOOL.name && RIVALRY_GAME_UNITS.includes(u.input?.unit))) {
+      const dataPath = getLeagueBySlug(leagueSlug)?.dataPath;
+      // false = unknown: no playoff-spot games rather than a league-wide line in a conference league.
+      pools = data.pools = dataPath ? await loadSeedingPools(dataPath).catch(() => false as const) : false;
+    }
     messages.push({
       role: 'user',
       content: uses.map((use) => {
@@ -496,6 +508,7 @@ export async function askHistory(
             pickTrades: data.pickTrades,
             competitions: data.competitions,
             league: leagueSlug,
+            pools,
           });
           const { query: _q, ...table } = result;
           results.push(table as AskTable);

@@ -16,6 +16,11 @@
  * tug-of-war bar, plaques, a margin chart of every meeting, the series
  * highlights, the playoff meetings and every meeting. Zero client JS; the
  * chart is plain CSS bars.
+ *
+ * Under the plaques, the series' single biggest game (ask-rivalry-games.mjs:
+ * stakes first, the closest margin breaking ties — the same ranking Ask the
+ * History answers "biggest game between X and Y" with), and the players who
+ * decided it where the league has player scores.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
@@ -32,6 +37,10 @@ import { ensureLegibleOn } from '../../../utils/team-color-contrast';
 import { toBroadcastPair } from '../../../utils/draft-broadcast';
 import { recordBook } from '../../../utils/league-history/records.mjs';
 import { rivalryHistory } from '../../../utils/league-history/rivalry.mjs';
+import { rankRivalryMeetings } from '../../../utils/league-history/ask-rivalry-games.mjs';
+import { leagueHistoryPaths } from '../../../utils/league-history/datasets';
+import { loadSeedingPools } from '../../../utils/league-history/seeding-pools';
+import { loadLeagueData } from '../../../utils/league-data';
 
 interface Entity {
   key: string;
@@ -118,6 +127,31 @@ const ix = recordBook(data).ix;
 const ownerOnly = Astro.url.searchParams.get('view') !== 'all';
 const rv = rivalryHistory(ix, a, b, { ownerOnly }) as Rivalry;
 const pageHref = r(`/rivalries/${a}-vs-${b}`);
+
+// The biggest game: player scores and the per-season conferences are extra
+// reads, so a failure of either only drops the card's player lines or its
+// playoff-spot tier, never the page.
+interface BigPlayer {
+  name: string;
+  pos: string;
+  score: number;
+}
+interface BigGame extends Meeting {
+  stakes: { level: number; label: string; playoffSpot: { text: string } | null };
+  decidedBy: {
+    star: (BigPlayer & { beatMargin: boolean }) | null;
+    benchFlip: { bench: BigPlayer; starter: BigPlayer; wouldHaveWonBy: number } | null;
+    loserOptimal: number | null;
+  } | null;
+}
+let biggest: BigGame | null = null;
+if (rv.meetings.some((m) => m.kind !== 'consolation')) {
+  const [players, pools] = await Promise.all([
+    loadLeagueData<any>(leagueHistoryPaths(league.dataPath).players).catch(() => null),
+    loadSeedingPools(league.dataPath).catch(() => false as const),
+  ]);
+  biggest = (rankRivalryMeetings(ix, rv.meetings, { players, pools, limit: 1 })[0] as BigGame | undefined) ?? null;
+}
 const viewQuery = ownerOnly ? '' : '?view=all';
 
 const authUser = getAuthUser(Astro.request);
@@ -303,6 +337,55 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
             <span class="hrv-plaque__sub">{s.current ? nameOf(s.current.side) : 'Last meeting was a tie'}</span>
           </div>
         </section>
+
+        {biggest && (
+          <section class="hrv-section" aria-labelledby="hrv-biggest">
+            <p class="hrv-section__kicker">The biggest game</p>
+            <h2 class="hrv-section__title" id="hrv-biggest">
+              {biggest.y} {biggest.stakes.label}
+            </h2>
+            <article class="hrv-big">
+              <p class="hrv-big__when">
+                {`Week ${biggest.wk} · the biggest of ${s.games} ${s.games === 1 ? 'meeting' : 'meetings'}`}
+              </p>
+              <div class="hrv-big__score">
+                {(['A', 'B'] as const).map((side) => (
+                  <span class:list={['hrv-big__team', `hrv-big__team--${side.toLowerCase()}`, { 'hrv-big__team--won': biggest!.winner === side }]}>
+                    <span class="hrv-big__name">{side === 'A' ? biggest!.nameA : biggest!.nameB}</span>
+                    <span class="hrv-big__pts">{fmt2(side === 'A' ? biggest!.sA : biggest!.sB)}</span>
+                  </span>
+                ))}
+              </div>
+              <p class="hrv-big__line">
+                {`${winnerName(biggest) ? `${winnerName(biggest)} won by ${fmt2(margin(biggest))}` : 'A tie'}.${biggest.stakes.playoffSpot ? ` ${biggest.stakes.playoffSpot.text}.` : ''}`}
+              </p>
+              {biggest.decidedBy && (biggest.decidedBy.star || biggest.decidedBy.benchFlip || biggest.decidedBy.loserOptimal != null) && (
+                <ul class="hrv-big__players" aria-label="The players who decided it">
+                  {biggest.decidedBy.star && (
+                    <li>
+                      <span class="hrv-big__role">Top starter</span>
+                      {`${biggest.decidedBy.star.name} (${biggest.decidedBy.star.pos}) scored ${fmt2(biggest.decidedBy.star.score)}${biggest.decidedBy.star.beatMargin ? `, more than the ${fmt2(margin(biggest))} margin` : ''}`}
+                    </li>
+                  )}
+                  {biggest.decidedBy.benchFlip ? (
+                    <li>
+                      <span class="hrv-big__role">Left on the bench</span>
+                      {`${biggest.decidedBy.benchFlip.bench.name} (${biggest.decidedBy.benchFlip.bench.pos}) scored ${fmt2(biggest.decidedBy.benchFlip.bench.score)} for the loser; started over ${biggest.decidedBy.benchFlip.starter.name} (${fmt2(biggest.decidedBy.benchFlip.starter.score)}), he would have won it by ${fmt2(biggest.decidedBy.benchFlip.wouldHaveWonBy)}`}
+                    </li>
+                  ) : (
+                    biggest.decidedBy.loserOptimal != null && (
+                      <li>
+                        <span class="hrv-big__role">Best possible lineup</span>
+                        The loser's optimal lineup scored {fmt2(biggest.decidedBy.loserOptimal)}, enough to win
+                      </li>
+                    )
+                  )}
+                </ul>
+              )}
+              <p class="hrv-big__why">Ranked on stakes first (title game, playoff rounds, a playoff spot on the line), then the closest margin.</p>
+            </article>
+          </section>
+        )}
 
         <section class="hrv-section" aria-labelledby="hrv-chart">
           <p class="hrv-section__kicker">Every meeting</p>
@@ -664,6 +747,83 @@ const title = `${rv.a.name} vs ${rv.b.name}`;
     font-size: var(--font-size-xl);
     line-height: 1;
     text-transform: uppercase;
+  }
+
+  /* ── The biggest game ─────────────────────────────────────────────────── */
+  .hrv-big {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 1rem 1.125rem;
+    background: linear-gradient(160deg, var(--card-bg) 45%, var(--history-gold-wash));
+    border: 1px solid var(--history-gold);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--style-card-shadow, none);
+  }
+  .hrv-big__when {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .hrv-big__score {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .hrv-big__team {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-left: 0.625rem;
+    color: var(--content-text-muted);
+    border-left: 4px solid var(--rv-ca);
+  }
+  .hrv-big__team--b {
+    border-left-color: var(--rv-cb);
+  }
+  .hrv-big__team--won {
+    color: var(--page-text);
+  }
+  .hrv-big__name {
+    min-width: 0;
+    font-weight: var(--font-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+  .hrv-big__pts {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .hrv-big__line {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+  .hrv-big__players {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-sm);
+  }
+  .hrv-big__role {
+    display: block;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+  }
+  .hrv-big__why {
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
   }
 
   /* ── Margin chart ─────────────────────────────────────────────────────── */
