@@ -91,7 +91,7 @@ export const CAREER_FIELDS = {
 export const CAREER_UNITS = Object.keys(CAREER_FIELDS);
 
 export const CAREER_DEFAULT_COLUMNS = {
-  careers: ['player', 'position', 'year', 'lastYear', 'teams', 'path', 'points', 'titles'],
+  careers: ['player', 'position', 'year', 'lastYear', 'teams', 'path', 'points', 'titles', 'titleTeams', 'titleYears'],
   pickupImpact: ['year', 'player', 'position', 'team', 'seasons', 'points', 'winsSwung', 'titles'],
 };
 
