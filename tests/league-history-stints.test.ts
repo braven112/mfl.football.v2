@@ -89,7 +89,7 @@ describe('buildStints', () => {
       ['own-a', HOW.unknown, ENDED.handsChanged],
       ['own-b', HOW.inherited, ENDED.left],
     ]);
-    expect(list[1].seasons.get(2021).carriedOver).toBe(true);
+    expect(list[1].seasons.get(2021)?.carriedOver).toBe(true);
   });
 
   it('orders a same-day drop and re-claim by what follows', () => {
@@ -99,7 +99,7 @@ describe('buildStints', () => {
     };
     const list = buildStints({ presence: [week(2017, 1, '0003', '400')], moves: same });
     const seen = list.find((s: any) => s.seasons.size);
-    expect(seen.how).toBe(HOW.waiver);
+    expect(seen?.how).toBe(HOW.waiver);
   });
 });
 
@@ -119,7 +119,7 @@ describe('AFL keeper carry-over', () => {
   it('ends the stint when he is left out of the keeper set, and does not invent how he came back', () => {
     expect(list[0].ended).toBe(ENDED.notKept);
     expect(list[1].how).toBe(HOW.unknown);
-    expect(list[1].seasons.get(2022).keeper).toBe(false);
+    expect(list[1].seasons.get(2022)?.keeper).toBe(false);
   });
 
   it('does not use an estimated keeper set as evidence', () => {
