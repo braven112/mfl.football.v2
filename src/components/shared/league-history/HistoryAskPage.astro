@@ -25,7 +25,7 @@ import HistoryAnswer from './HistoryAnswer.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getAuthUser } from '../../../utils/auth';
-import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
 import { readAnswer } from '../../../utils/league-history/ask-store';
 import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
@@ -41,6 +41,9 @@ interface Props {
 
 const { leagueSlug, data } = Astro.props as Props;
 const league = getLeagueBySlug(leagueSlug)!;
+// This league's own sign-in: the shared MFL login signs a shared-host visitor
+// into TheLeague, so an AFL owner "signed in" and still could not ask.
+const signInHref = loginUrlForRequest(Astro, league);
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix).replace(/\/$/, '');
 const authUser = getAuthUser(Astro.request);
@@ -156,7 +159,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
             <p>Want this for your own league? Every question, every season, with your league's real names.</p>
             <a class="cta cta--primary" href={productUrl}>Get Ask the History</a>
           </div>
-          <p class="hask-guest__owner"><a class="cta-link" href={productUrl}>Get it for your league</a> · {league.name} owner? <a class="cta-link" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in</a></p>
+          <p class="hask-guest__owner"><a class="cta-link" href={productUrl}>Get it for your league</a> · {league.name} owner? <a class="cta-link" href={signInHref}>Sign in</a></p>
         </div>
       )}
       {canAsk ? (
@@ -178,7 +181,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         </form>
       ) : (
         <p class="hask-signin">
-          <a class="cta cta--primary" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in to ask</a>
+          <a class="cta cta--primary" href={signInHref}>Sign in to ask</a>
           <span>Asking is for {league.name} owners.</span>
         </p>
       )}
