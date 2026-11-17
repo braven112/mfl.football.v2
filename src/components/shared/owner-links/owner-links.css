@@ -98,6 +98,8 @@
   margin: 0 0 var(--spacing-md);
   padding-left: var(--spacing-sm);
   border-left: var(--style-section-rule, 3px solid var(--league-accent));
+  background: var(--style-section-mark, none);
+  padding-bottom: var(--style-section-mark-pad, 0);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -219,7 +221,7 @@
   justify-content: flex-end;
 }
 .olk-row__actions .cta {
-  min-height: 44px;
+  min-height: var(--touch-target-min);
   flex: 1;
 }
 
@@ -274,7 +276,7 @@
 .olk-tenure__cta {
   grid-column: 2;
   justify-self: start;
-  min-height: 44px;
+  min-height: var(--touch-target-min);
   padding-left: var(--spacing-md);
   padding-right: var(--spacing-md);
   font-size: var(--font-size-sm);
@@ -306,14 +308,14 @@
 .olk-select {
   box-sizing: border-box;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--touch-target-min);
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--content-border);
   border-radius: var(--radius-md);
   background: var(--content-bg-muted);
   color: var(--color-text-primary);
   font: inherit;
-  font-size: 16px; /* 16px stops iOS zooming the page on focus */
+  font-size: var(--font-size-base); /* 16px: stops iOS zooming the page on focus */
 }
 .olk-input:focus,
 .olk-select:focus {
