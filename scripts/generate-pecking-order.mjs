@@ -510,7 +510,7 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
   }
   // Fill all-play / streak / PA where the league's export lacks them (archies);
   // a no-op for a league whose MFL standings already carry them.
-  standingsByFid = enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, week);
+  standingsByFid = enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, week, { deriveMargin: true });
 
   // A big league writes up only its top N (registry `peckingOrder.topN`); the
   // rest are still ranked, and shown in their division lists.

@@ -199,8 +199,11 @@ export function buildPairings(schedule, rawWeekly) {
  * @param {object} weeklyResults — weekly-results.json shape.
  * @param {Map<number, Array<Array<{id: string}>>>} pairings — week → games.
  * @param {number} throughWeek
+ * @param {{ deriveMargin?: boolean }} [options] — deriveMargin: also derive
+ *   `avg_margin` for a row MFL already gave a pa (the Pecking Order wants it
+ *   for every row; the shared standings page leaves a full row untouched).
  */
-export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, throughWeek) {
+export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, throughWeek, { deriveMargin = false } = {}) {
   const weeks = (Array.isArray(weeklyResults?.weeks) ? weeklyResults.weeks : [])
     .map((w) => ({ week: int(w?.week, 0), scores: w?.scores || {} }))
     .filter((w) => w.week >= 1 && w.week <= throughWeek)
@@ -270,14 +273,15 @@ export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairin
     }
     if (rec && blank(row.all_play_wlt)) next.all_play_wlt = `${rec.w}-${rec.l}-${rec.t}`;
     if (blank(row.strk)) next.strk = streakOf(results.get(fid));
-    if (blank(row.pa) && pa.has(fid)) next.pa = pa.get(fid).toFixed(2);
-    // The margin is ALWAYS derived from the games themselves, through the
-    // issue's week. MFL's standings pf and pa are not on one basis (TheLeague
-    // and the AFL both carry a pf of ten weeks against a pa of every game
-    // played, and the file is as of today rather than the issue's week), so
-    // (pf - pa) / games read negative for 22 of 24 AFL teams.
+    const paDerived = blank(row.pa) && pa.has(fid);
+    if (paDerived) next.pa = pa.get(fid).toFixed(2);
+    // With deriveMargin the margin comes from the games themselves, through
+    // the issue's week. MFL's standings pf and pa are not on one basis
+    // (TheLeague and the AFL both carry a pf of ten weeks against a pa of
+    // every game played, and the file is as of today rather than the issue's
+    // week), so (pf - pa) / games read negative for 22 of 24 AFL teams.
     const m = margin.get(fid);
-    if (m?.games) next.avg_margin = m.sum / m.games;
+    if ((paDerived || deriveMargin) && m?.games) next.avg_margin = m.sum / m.games;
     out.set(fid, next);
   }
   return out;
