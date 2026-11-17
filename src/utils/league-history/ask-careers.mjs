@@ -28,6 +28,7 @@
  */
 import { ENDED, HOW, stintTotals } from './stints.mjs';
 import { prepareStints } from './ask-stints.mjs';
+import { NFL_PATH_DESC, nflTeamPath } from './ask-players.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const money = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
@@ -58,6 +59,7 @@ export const CAREER_FIELDS = {
     bestSeason: { type: 'string', label: 'Best season', desc: '"2019 Team A: 310.5 pts"' },
     titles: { type: 'number', label: 'Titles', desc: 'championship seasons he started at least one game for the champion ("started for the most champions" sorts this)' },
     titleYears: { type: 'string', label: 'Title years', desc: '"2019 (Team A), 2022 (Team B)"' },
+    nflTeams: { type: 'string', label: 'NFL teams', desc: `${NFL_PATH_DESC}, over every season he was rostered here` },
     titleTeams: { type: 'number', label: 'Title teams', desc: 'different teams he won a title with' },
     salaryHigh: { type: 'number', label: 'Top salary', desc: 'highest salary on record; null where the league keeps no salaries' },
     salaries: { type: 'string', label: 'Salaries', desc: 'salary by season and team where on record: "2019 Team A $1,000,000; …". The season he was won at auction or claimed on waivers shows that bid; other seasons show the season salary file (rosters at its freeze week), which lists some players at the league minimum their bid says otherwise' },
@@ -260,6 +262,7 @@ export function prepareCareers(p, pp, mds, extra = {}) {
       teams: teams.size,
       teamsStartedFor: startedFor.size,
       stints: rows.length,
+      nflTeams: nflTeamPath(pp?.nflTeamOf ?? (() => null), pid, rows.flatMap((r) => [...r._stint.seasons.keys()])),
       path: capped(rows.map((r) => `${r.team} ${span(r)} (${r.acquired} → ${r.ended === ENDED.traded ? r.endDetail : r.ended})`)).join(' · '),
       owners: [...new Set(rows.map((r) => r.owner))].join(' → '),
       arrivals: [...arrivals].map(([k, n]) => `${k} ${n}`).join(', '),

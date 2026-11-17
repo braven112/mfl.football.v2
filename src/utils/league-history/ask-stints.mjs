@@ -20,6 +20,7 @@
  */
 import { ENDED, HOW, buildStints, stintTotals } from './stints.mjs';
 import { buildPickChains } from './pick-chains.mjs';
+import { NFL_PATH_DESC, NFL_TEAM_DESC, nflTeamPath } from './ask-players.mjs';
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const ordinal = (n) => {
@@ -36,6 +37,7 @@ export const STINT_FIELDS = {
     lastYear: { type: 'number', label: 'To', desc: 'last season of the stint' },
     player: { type: 'string', label: 'Player' },
     position: { type: 'string', label: 'Pos' },
+    nflTeams: { type: 'string', label: 'NFL teams', desc: `${NFL_PATH_DESC}, over the stint's seasons` },
     team: { type: 'string', label: 'Team', desc: "the team's name in the stint's last season" },
     owner: { type: 'string', label: 'Owner' },
     fromDate: { type: 'string', label: 'Acquired', desc: 'YYYY-MM-DD of the move that brought him (null when unknown)' },
@@ -61,6 +63,7 @@ export const STINT_FIELDS = {
     owner: { type: 'string', label: 'Owner' },
     player: { type: 'string', label: 'Player' },
     position: { type: 'string', label: 'Pos' },
+    nflTeam: { type: 'string', label: 'NFL', desc: `${NFL_TEAM_DESC}. "Seahawks who won a title" = nflTeam SEA, every position, not only the Seattle defense` },
     acquired: { type: 'string', label: 'How', desc: ACQUIRED_DESC },
     acquiredYear: { type: 'number', label: 'Since', desc: 'season he was acquired (null when unknown)' },
     acquiredDetail: { type: 'string', label: 'Detail' },
@@ -107,7 +110,7 @@ export const STINT_UNITS = Object.keys(STINT_FIELDS);
 
 export const STINT_DEFAULT_COLUMNS = {
   stints: ['player', 'team', 'year', 'lastYear', 'acquired', 'ended', 'points', 'titles'],
-  titleRosters: ['year', 'team', 'player', 'position', 'acquired', 'acquiredYear', 'tradePartner', 'points'],
+  titleRosters: ['year', 'team', 'player', 'position', 'nflTeam', 'acquired', 'acquiredYear', 'tradePartner', 'points'],
   pickChains: ['year', 'round', 'originalTeam', 'path', 'player', 'pointsForTeam', 'afterDraft'],
 };
 
@@ -133,6 +136,7 @@ export function prepareStints(p, pp, mds, extra = {}) {
   for (const w of pp?.playerWeeks ?? []) if (!names.has(w._pid)) names.set(w._pid, [w.player, w.position]);
   const nameOf = (pid) => names.get(pid)?.[0] ?? pid;
   const posOf = (pid) => names.get(pid)?.[1] ?? '';
+  const nflOf = pp?.nflTeamOf ?? (() => null);
 
   let latest = null;
   const presence = (pp?.playerWeeks ?? []).map((w) => {
@@ -192,6 +196,7 @@ export function prepareStints(p, pp, mds, extra = {}) {
       lastYear: last,
       player: nameOf(s.pid),
       position: posOf(s.pid),
+      nflTeams: nflTeamPath(nflOf, s.pid, years),
       team: teamName(last, s.franchiseId),
       owner: owner.name,
       fromDate: s.start?.date ?? null,
@@ -242,6 +247,7 @@ export function prepareStints(p, pp, mds, extra = {}) {
       owner: owner.name,
       player: nameOf(s.pid),
       position: posOf(s.pid),
+      nflTeam: nflOf(s.pid, y),
       acquired: s.how,
       acquiredYear: s.start?.year ?? null,
       acquiredDetail: detail(s),
