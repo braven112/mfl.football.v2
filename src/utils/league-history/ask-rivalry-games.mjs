@@ -155,6 +155,12 @@ function seasonPools(ix, pools) {
  * last spot, which MFL's tiebreakers (never re-derived here) would have
  * settled. Applied to each pool the game's two teams belong to.
  */
+/**
+ * @param {any} ix
+ * @param {any} g
+ * @param {Record<number, Record<string, string>> | false | null | undefined} pools
+ * @returns {any}
+ */
 export function playoffSpotDetail(ix, g, pools) {
   if (g.kind !== 'regular' || g.tie) return null;
   if (!ix.seasonByYear.get(g.y)?.done) return null;
@@ -240,6 +246,12 @@ const POOL_ROUND_NAMES = ['Championship', 'Conference final', 'Conference semifi
 /**
  * The stakes of one game (an ix.games row): `{ level, label, playoffSpot }`.
  * Consolation games have no stakes here (null): they never count.
+ */
+/**
+ * @param {any} ix
+ * @param {any} g
+ * @param {Record<number, Record<string, string>> | false | null | undefined} pools
+ * @returns {any}
  */
 export function gameStakes(ix, g, pools) {
   if (g.kind === 'consolation') return null;
@@ -359,6 +371,11 @@ const rowCache = new WeakMap();
  * twice, once from each side, like `games`), consolation games left out.
  * `p` is ask-query.mjs's prepared index. Cached per (index, players, pools).
  */
+/**
+ * @param {any} p
+ * @param {{ players?: any, pools?: Record<number, Record<string, string>> | false | null }} [opts]
+ * @returns {any[]}
+ */
 export function rivalryGameRows(p, { players = null, pools = null } = {}) {
   const { ix } = p;
   let byIx = rowCache.get(ix);
@@ -429,6 +446,12 @@ export function rivalryGameRows(p, { players = null, pools = null } = {}) {
  * games are left out. Each item is the meeting plus `stakes` ({ level, label,
  * playoffSpot }), `absMargin` and `decidedBy` (null without player scores).
  */
+/**
+ * @param {any} ix
+ * @param {any[]} meetings
+ * @param {{ players?: any, pools?: Record<number, Record<string, string>> | false | null, limit?: number }} [opts]
+ * @returns {any[]}
+ */
 export function rankRivalryMeetings(ix, meetings, { players = null, pools = null, limit = 3 } = {}) {
   const index = playerIndex(players);
   const byKey = new Map(ix.games.map((g) => [`${g.y}|${g.wk}|${[g.wf, g.lf].sort().join('-')}`, g]));
@@ -462,8 +485,10 @@ export function rankRivalryMeetings(ix, meetings, { players = null, pools = null
  * Read per season because a division's conference is the feed's fact for
  * that year, never today's config (the AFL had six divisions until 2012).
  * @param {Record<string | number, any>} feedsByYear year → parsed league.json
+ * @returns {Record<number, Record<string, string>>}
  */
 export function seedingPoolsFromFeeds(feedsByYear) {
+  /** @type {Record<number, Record<string, string>>} */
   const out = {};
   for (const [year, feed] of Object.entries(feedsByYear ?? {})) {
     const league = feed?.league ?? feed;
