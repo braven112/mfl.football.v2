@@ -112,11 +112,26 @@ describe('spellOutShorthand', () => {
     ]) expect(spellOutShorthand(input), input).toBe(want);
   });
 
+  it('reads past a rank, a streak said as "won N straight" and a span with no window', () => {
+    // AFL Week 10, 2026: both shipped with the record the streak covers.
+    for (const [input, want] of [
+      ['Jewpacabra are on a 6-game losing streak, the longest active losing streak in the league, and they sit at No. 14 with a 0-3 mark over the last three weeks.',
+        'Jewpacabra are on a 6-game losing streak, the longest active losing streak in the league, and they sit at No. 14.'],
+      ['Swiftie 4 Life have won 4 straight, the longest active win streak in the league, but they slide two spots to No. 6 despite a 3-0 stretch.',
+        'Swiftie 4 Life have won 4 straight, the longest active win streak in the league, but they slide two spots to No. 6.'],
+      ['Ditka have lost 3 in a row and an 0-3 run over the last three weeks.',
+        'Ditka have lost 3 in a row.'],
+    ]) expect(spellOutShorthand(input), input).toBe(want);
+  });
+
   it('keeps a record the streak does not cover', () => {
     for (const t of [
       'Ditka ride a 2-game winning streak and a 2-1 mark over the last three weeks.',
       'Ditka ride a 2-game winning streak and a 3-0 mark over the last three weeks.',
       'Ditka sit on a 3-game losing streak and a 3-0 mark over the last three weeks.',
+      'Ditka have won 2 straight despite a 2-1 stretch.',
+      'Ditka have won 4 straight, up to No. 3 despite a 10-3 record.',
+      'Ditka have won 4 straight. Their 3-0 stretch in October was better.',
     ]) expect(dropRecordTheStreakCovers(t), t).toBe(t);
   });
 
