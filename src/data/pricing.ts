@@ -37,6 +37,21 @@ export const HISTORY_AND_REPORTER_PRICE_YEAR = 49;
 export const HISTORY_AND_REPORTER_SALE_PRICE = HISTORY_AND_REPORTER_PRICE_YEAR;
 
 /**
+ * The two-for-one runs as a Black Friday sale (Brandon, 2026-11-18): from
+ * Black Friday 2026 until the 2027 NFL Draft opens. The draft date is pinned
+ * in src/data/theleague/league-year-config.ts (April 29, the one year the
+ * "fourth Thursday" rule is wrong); keep the two in step.
+ */
+export const BUNDLE_SALE_STARTS = '2026-11-27';
+export const BUNDLE_SALE_ENDS = '2027-04-29';
+
+/** "April 29": the sale's last day as the sales copy prints it. */
+export function bundleSaleEndLabel(): string {
+	const [y, m, d] = BUNDLE_SALE_ENDS.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+/**
  * Where the sale's "Get both" button sends a qualified commissioner: a PayPal
  * checkout link. Null until the PayPal account and button exist; until then
  * the button opens the product's contact form instead.
