@@ -89,7 +89,8 @@ export function streakCoversRecord(streak, rec) {
 // The record clause drops and the streak, the stronger claim, stays, with the
 // sentence around it mended (list commas, the article, the verb). Anything
 // riskier is left alone: the fact sheet stops new issues from saying it.
-const STREAK_RE = /\b(\d+)-game (winning|losing) streak\b/;
+// A streak said either way: "a 4-game winning streak" or "have won 4 straight".
+const STREAK_RE = /\b(?:(\d+)-game (winning|losing) streak|(won|lost) (\d+) (?:straight|in a row))\b/;
 const WINDOW = String.raw`over (?:the|their) last (?:three|four|five|six|few|\d)(?:\s+(?:weeks|games))?`;
 const SCORE = String.raw`(?<w>\d+)-(?<l>\d+)(?:-(?<t>\d+))?`;
 const REC_NOUN = String.raw`(?:\s+(?:record|mark|run|stretch|performance|finish|showing))?`;
@@ -104,7 +105,11 @@ const LISTED_BEFORE = new RegExp(String.raw`(?<=,\s)${SCORE}\s+${WINDOW},\s+and\
 // Before the streak, on a verb: "going 6-0 over the last three weeks with " → "on ".
 const VERB_BEFORE = new RegExp(String.raw`\b(?<verb>going|is|are)\s+${SCORE}\s+${WINDOW}\s+(?:with|on|riding)\s+${STREAK_AHEAD}`, 'g');
 // After the streak, as a noun: ", and a 3-0 mark over the last three weeks".
-const RECORD_AFTER = new RegExp(String.raw`(?<lead>,?\s+(?:and|with|after|plus)\s+)(?:(?:an?|the|their)\s+)?${ADJ}${SCORE}${REC_NOUN}\s+${WINDOW}(?![\w-])`, 'g');
+const RECORD_AFTER = new RegExp(String.raw`(?<lead>,?\s+(?:and|with|after|plus|despite)\s+)(?:(?:an?|the|their)\s+)?${ADJ}${SCORE}${REC_NOUN}\s+${WINDOW}(?![\w-])`, 'g');
+// After the streak, as a noun with no window named: "despite a 3-0 stretch".
+// Only "stretch" and "run" name a recent span on their own; a bare "10-3
+// record" is the season, and the length check keeps a long span out anyway.
+const SPAN_AFTER = new RegExp(String.raw`(?<lead>,?\s+(?:and|with|after|plus|despite)\s+)(?:an?|the|their)\s+${ADJ}${SCORE}\s+(?:stretch|run)(?![\w-])`, 'g');
 // After the streak, on a verb, only where the clause ends cleanly:
 // ", going 6-0 over the last three weeks." / "and went 0-3 over the last three weeks,".
 const VERB_AFTER = new RegExp(String.raw`(?<lead>,?\s+(?:and\s+)?)(?:went|going)\s+${SCORE}\s+${WINDOW}(?=\s*[,.;!?—]|\s*$|\s+and\b)`, 'g');
@@ -112,7 +117,9 @@ const VERB_AFTER = new RegExp(String.raw`(?<lead>,?\s+(?:and\s+)?)(?:went|going)
 // The verb that followed "a streak and a record" now has one subject.
 const SINGULAR = { show: 'shows', make: 'makes', say: 'says', suggest: 'suggests', have: 'has', leave: 'leaves', put: 'puts', keep: 'keeps', are: 'is' };
 
-const asStreak = (n, kind) => ({ type: kind === 'winning' ? 'W' : 'L', length: Number(n) });
+// Either spelling of STREAK_RE: [length, 'W' | 'L'].
+const streakParts = (m) => (m[1] ? [m[1], m[2] === 'winning' ? 'W' : 'L'] : [m[4], m[3] === 'won' ? 'W' : 'L']);
+const asStreak = (m) => { const [n, type] = streakParts(m); return { type, length: Number(n) }; };
 const asRecord = (g) => ({ wins: Number(g.w), losses: Number(g.l), ties: Number(g.t || 0) });
 const groupsOf = (args) => args[args.length - 1];
 const offsetOf = (args) => args[args.length - 3];
@@ -121,12 +128,13 @@ export function dropRecordTheStreakCovers(text) {
   if (typeof text !== 'string' || !text) return text;
   // Sentence by sentence, so a record is only ever weighed against the streak
   // it shares a sentence with. A decimal point ("134.1 PPG") is not a break.
-  return text.replace(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]*/g, (sentence) => {
+  // "No. 14" is a rank, not the end of a sentence.
+  return text.replace(/(?:\bNo\.\s*(?=\d)|[^.!?]|[.!?](?!\s|$))+[.!?]*/g, (sentence) => {
     const s = sentence.match(STREAK_RE);
     if (!s) return sentence;
-    const streak = asStreak(s[1], s[2]);
+    const streak = asStreak(s);
     const covers = (g) => streakCoversRecord(streak, asRecord(g));
-    const article = `${takesAn(s[1]) ? 'an' : 'a'} `;
+    const article = `${takesAn(streakParts(s)[0]) ? 'an' : 'a'} `;
     let out = sentence;
     let unlist = false; // a list lost an item: "A, B, and C" → "B and C"
 
@@ -163,7 +171,7 @@ export function dropRecordTheStreakCovers(text) {
       }
       return '';
     };
-    tail = tail.replace(RECORD_AFTER, drop).replace(VERB_AFTER, drop);
+    tail = tail.replace(RECORD_AFTER, drop).replace(SPAN_AFTER, drop).replace(VERB_AFTER, drop);
     if (dropped) {
       tail = tail
         // the record's own noun, stranded behind the streak: "streak and a 0-6 run … mark"
