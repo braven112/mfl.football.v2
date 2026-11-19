@@ -77,6 +77,10 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	<section class="mls svid" data-season-video data-nfl-season={nflSeason} data-nfl-week={nflWeek} data-history={historyOpen ? '1' : undefined} data-optin-open={optInOpen ? '1' : undefined}>
 		<h1 class="mls__title">Make your season video</h1>
 		<p class="mls__lede">Brag, roast or tell it straight. Free, for any team.</p>
+		<p class="svid__logo-tip">
+			<svg class="svid__icon" aria-hidden="true" focusable="false"><use href={`${sprite}#icon-${'shield'}`} /></svg>
+			<span>Need a team logo? <a class="cta-link" href="/team-logo" data-logo-maker-link>Make one free with our logo maker</a></span>
+		</p>
 
 		<ol class="svid__steps" data-steps>
 			<li><button type="button" class="svid__step" data-step-tab="1" aria-current="step"><span>1</span> Who</button></li>
@@ -682,7 +686,7 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 
 		// The logo builder, in a dialog so nobody leaves the page to use it.
 		const dialog = document.querySelector<HTMLDialogElement>('[data-logo-dialog]');
-		$('[data-open-logo-maker]').addEventListener('click', () => {
+		const openLogoMaker = () => {
 			if (!dialog) return;
 			const builder = dialog.querySelector<HTMLElement>('[data-team-logo]');
 			const name = dialog.querySelector<HTMLInputElement>('#tlogo-name');
@@ -692,6 +696,15 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 				builder.dispatchEvent(new Event('team-logo:refresh'));
 			}
 			dialog.showModal();
+		};
+		$('[data-open-logo-maker]').addEventListener('click', openLogoMaker);
+		// The link under the title: the logo maker is visible before a team is
+		// picked (Brandon, 2026-11-19). It opens the same dialog; without the
+		// dialog (or with a modifier key) it is a plain link to /team-logo.
+		$<HTMLAnchorElement>('[data-logo-maker-link]').addEventListener('click', (e) => {
+			if (!dialog || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+			e.preventDefault();
+			openLogoMaker();
 		});
 		dialog?.querySelector('[data-logo-dialog-close]')?.addEventListener('click', () => dialog.close());
 		dialog?.addEventListener('click', (e) => {
@@ -699,6 +712,8 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 		});
 		dialog?.querySelector('[data-logo-dialog-upload]')?.addEventListener('click', () => {
 			dialog.close();
+			// Opened from the link before picking: a logo is a team's, so pick "One team" to show where it lands.
+			if (picked('mode') !== 'team') root.querySelector<HTMLElement>('[data-group="mode"] [data-value="team"]')?.click();
 			logoInput.click();
 		});
 
@@ -1585,6 +1600,18 @@ const ROUNDS = ['Wild Card', 'Quarterfinal', 'Semifinal', 'The Final'];
 	}
 	.svid__logo-remove {
 		justify-self: start;
+	}
+	.svid__logo-tip {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: -0.75rem 0 1.25rem;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+	.svid__logo-tip .svid__icon {
+		flex: none;
+		color: var(--league-accent);
 	}
 	.svid__make-logo {
 		display: flex;
