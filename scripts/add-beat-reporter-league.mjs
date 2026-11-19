@@ -55,7 +55,10 @@ export function parseMflLeagueUrl(link) {
   return id && /^\d{3,6}$/.test(id) ? { mflId: id, mflHost: u.hostname } : null;
 }
 
-/** The launch spec for a reporter league. Pure. */
+/**
+ * The launch spec for a reporter league. Pure.
+ * @param {{ mflId: string, mflHost: string, slug: string, name: string, shortName?: string, reporterName: string, voice: string }} args
+ */
 export function reporterSpec({ mflId, mflHost, slug, name, shortName, reporterName, voice }) {
   return {
     mflId: String(mflId),
