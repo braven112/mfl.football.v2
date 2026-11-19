@@ -15,6 +15,7 @@
  * - Setup is discounted in the off-season so launches don't all land in
  *   August: 25% off January–April, 10% off May–June, full price July–December.
  */
+import { LEAGUE_YEAR_OVERRIDES } from './theleague/league-year-config';
 import { LEAGUE_PACKAGE_PRICING, SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE } from './products';
 
 /** League History, per league, per year. */
@@ -37,20 +38,19 @@ export const HISTORY_AND_REPORTER_PRICE_YEAR = 49;
 export const HISTORY_AND_REPORTER_SALE_PRICE = HISTORY_AND_REPORTER_PRICE_YEAR;
 
 /**
- * The two-for-one runs as a Black Friday sale (Brandon, 2026-11-18): from
- * Black Friday 2026 until the 2027 NFL Draft opens. The draft date is pinned
- * in src/data/theleague/league-year-config.ts (April 29, the one year the
- * "fourth Thursday" rule is wrong); keep the two in step.
- */
-/**
  * Group chat posting for the AI Beat Reporter (Brandon, 2026-11-19): one
  * integration (GroupMe, Slack or Discord) per league per season is included;
  * moving to a different chat service mid-season costs this much, each time.
  */
 export const EXTRA_INTEGRATION_PRICE = 49;
 
+/**
+ * The two-for-one runs as a Black Friday sale (Brandon, 2026-11-18): from
+ * Black Friday 2026 until the 2027 NFL Draft opens. The end date is read from
+ * the league calendar's pinned draft date, so a correction there moves it.
+ */
 export const BUNDLE_SALE_STARTS = '2026-11-27';
-export const BUNDLE_SALE_ENDS = '2027-04-29';
+export const BUNDLE_SALE_ENDS: string = LEAGUE_YEAR_OVERRIDES[2027]?.nflDraftDate ?? '2027-04-29';
 
 /** "April 29": the sale's last day as the sales copy prints it. */
 export function bundleSaleEndLabel(): string {

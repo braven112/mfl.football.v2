@@ -76,9 +76,9 @@ const faqs = [
 	{ q: 'How hard is it to set up?', a: 'The commissioner pastes one line into the MFL Home Page Message. That is the whole setup.' },
 	{ q: 'Does it change anything on MFL?', a: 'No. The reporter only reads your league. It never touches rosters, lineups or scoring.' },
 	{ q: 'Does it get the facts right?', a: 'It writes from your league’s own MFL data: the real transactions, scores, standings and history. It does not make up trades or results.' },
-	{ q: 'What does the guarantee cover?', a: 'At least three stories about your league every week of the regular season.' },
-	{ q: 'I’m not the commissioner. Can I still get it?', a: 'Only a commissioner can add it to the league’s MFL page. Send this page to yours with the button at the bottom.' },
-	{ q: 'Does it work on Sleeper, ESPN or Yahoo?', a: 'It runs on MyFantasyLeague today. Leave your email at the bottom and we will tell you when your platform is ready.' },
+	{ q: 'What does the guarantee cover?', a: 'At least three stories about your league every week of the season.' },
+	{ q: 'I’m not the commissioner. Can I still get it?', a: 'Only a commissioner can add it to the league’s MFL page. Answer “No” to the first question at the bottom and we will give you a link to send them.' },
+	{ q: 'Does it work on Sleeper, ESPN or Yahoo?', a: 'It runs on MyFantasyLeague today. Answer the questions at the bottom and leave your email, and we will tell you when your platform is ready.' },
 ];
 
 const jsonLd = [
@@ -279,7 +279,7 @@ const after = [
 					{HISTORY_AND_REPORTER_CHECKOUT_URL ? (
 						<a class="cta cta--primary" href={HISTORY_AND_REPORTER_CHECKOUT_URL} rel="noopener">{ctaLabel}</a>
 					) : (
-						<button type="button" class="cta cta--primary" data-interest="history-and-reporter" data-interest-name={productName} data-brp-buy>{ctaLabel}</button>
+						<button type="button" class="cta cta--primary" data-interest="history-and-reporter" data-interest-name={productName} data-interest-carry-note data-brp-buy>{ctaLabel}</button>
 					)}
 				</div>
 
@@ -291,7 +291,7 @@ const after = [
 
 				<div class="brp-q__result" data-brp-result="platform" hidden>
 					<p>The reporter runs on MyFantasyLeague today. Leave your email and we’ll tell you when your platform is ready.</p>
-					<button type="button" class="cta cta--ghost" data-interest="beat-reporter" data-interest-name="the AI Beat Reporter on your platform" data-interest-note="Not on MFL yet">Tell me when it’s ready</button>
+					<button type="button" class="cta cta--ghost" data-interest="beat-reporter-other-platform" data-interest-name="the AI Beat Reporter on your platform">Tell me when it’s ready</button>
 				</div>
 			</div>
 		</section>
@@ -329,7 +329,7 @@ const after = [
 
 		root.querySelector<HTMLButtonElement>('[data-brp-share]')?.addEventListener('click', async () => {
 			const status = root.querySelector<HTMLElement>('[data-brp-share-status]')!;
-			const url = location.origin + location.pathname;
+			const url = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href ?? location.href;
 			const text = 'Our league needs this: an AI beat reporter for our MFL league.';
 			try {
 				if (navigator.share) {
@@ -338,7 +338,9 @@ const after = [
 				}
 				await navigator.clipboard.writeText(`${text} ${url}`);
 				status.textContent = 'Link copied. Paste it to your commissioner.';
-			} catch {
+			} catch (err) {
+				// Closing the share sheet is not a failure.
+				if ((err as Error)?.name === 'AbortError') return;
 				status.textContent = url;
 			}
 		});

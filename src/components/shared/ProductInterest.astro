@@ -118,6 +118,10 @@ const available = JSON.stringify([...AVAILABLE_NOW]);
 		const note = dialog.querySelector<HTMLElement>('[data-pi-note]')!;
 		note.textContent = trigger.dataset.interestNote ?? '';
 		note.hidden = !trigger.dataset.interestNote;
+		// A trigger marked data-interest-carry-note sends its note with the
+		// contact request (the beat reporter's qualifier answers), so the owner
+		// sees it, not just the visitor.
+		dialog.dataset.carryNote = trigger.hasAttribute('data-interest-carry-note') ? (trigger.dataset.interestNote ?? '') : '';
 		dialog.querySelectorAll<HTMLFormElement>('[data-pi-form], [data-pi-contact]').forEach((f) => {
 			f.reset();
 			f.querySelector('button[type="submit"]')?.removeAttribute('disabled');
@@ -153,7 +157,7 @@ const available = JSON.stringify([...AVAILABLE_NOW]);
 					name: field('name'),
 					email: field('email'),
 					league: field('league'),
-					message: field('message'),
+					message: [dialog.dataset.carryNote, field('message')].filter(Boolean).join('\n'),
 				});
 				if (res.ok) {
 					status.textContent = 'Sent. We’ll email you within a day.';
