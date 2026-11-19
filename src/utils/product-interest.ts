@@ -26,6 +26,9 @@ import { getRedis } from './redis-client';
  */
 export const INTEREST_ONLY = [
 	{ slug: 'tv-app', name: 'TV app' },
+	// The beat reporter's sales page, for a league not on MFL (Brandon,
+	// 2026-11-17): an email for when their platform is ready.
+	{ slug: 'beat-reporter-other-platform', name: 'Beat Reporter on another platform' },
 	{ slug: 'phone-app', name: 'Phone app' },
 	{ slug: 'custom-build', name: 'Custom builds' },
 	{ slug: 'champion-card', name: 'Champion card' },

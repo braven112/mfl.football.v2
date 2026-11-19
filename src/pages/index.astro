@@ -6,12 +6,14 @@ import {
   BEAT_REPORTER_PRICE_YEAR,
   CUSTOM_FROM_SETUP,
   HISTORY_AND_REPORTER_PRICE_YEAR,
+  isBundleSaleOn,
   HISTORY_PRICE_YEAR,
   dollars,
 } from '../data/pricing';
 import { siteExampleLeagues } from '../data/league-showcase';
 import { FORMER_BRAND, SITE_FOOTER_LINKS, SITE_HEADER_LINKS, findService } from '../data/mfl-services';
 import { HISTORIAN } from '../data/historian';
+import { getTestDateFromSearchParams } from '../utils/league-year';
 import { organizationJsonLd, websiteJsonLd } from '../utils/structured-data';
 
 // ── What this page is for ─────────────────────────────────────────────────
@@ -35,6 +37,8 @@ const examples = siteExampleLeagues();
 // would send a preview build's visitor to production).
 const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, path);
 
+// The two-for-one card shows only while the sale runs (until the NFL Draft).
+const bundleOn = isBundleSaleOn(getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date());
 const history = findService('ask-the-history');
 const reporter = findService('beat-reporter');
 const custom = findService('league-website');
@@ -72,7 +76,7 @@ const PRODUCTS = [
 ---
 <SplashLayout
   title="MFL.football: Ask the History, an AI beat reporter and custom MFL league sites"
-  description={`MFL.football (formerly ${FORMER_BRAND}) for MyFantasyLeague leagues: Ask the History ${dollars(HISTORY_PRICE_YEAR)}/yr, the AI Beat Reporter ${dollars(BEAT_REPORTER_PRICE_YEAR)}/yr, both ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}/yr, custom sites from ${dollars(CUSTOM_FROM_SETUP)}.`}
+  description={`MFL.football (formerly ${FORMER_BRAND}) for MyFantasyLeague leagues: Ask the History ${dollars(HISTORY_PRICE_YEAR)}/yr, the AI Beat Reporter ${dollars(BEAT_REPORTER_PRICE_YEAR)}/yr${bundleOn ? `, both ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)}/yr` : ''}, custom sites from ${dollars(CUSTOM_FROM_SETUP)}.`}
   canonicalPath="/"
   ogImage="/assets/home/league-site.webp"
   jsonLd={[organizationJsonLd(), websiteJsonLd()]}
@@ -119,7 +123,7 @@ const PRODUCTS = [
       </article>
     ))}
 
-    <aside class="bundle" aria-labelledby="bundle-h">
+    {bundleOn && <aside class="bundle" aria-labelledby="bundle-h">
       <div class="bundle__copy">
         <p class="prod__kicker">Better together</p>
         <h2 id="bundle-h" class="bundle__name">Ask the History + Max Insider</h2>
@@ -131,7 +135,7 @@ const PRODUCTS = [
         data-interest="history-and-reporter"
         data-interest-name={`Ask the History + the AI Beat Reporter, ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year`}
       >Get both</button>
-    </aside>
+    </aside>}
 
     <article class="prod prod--custom">
       <div class="prod__head">
