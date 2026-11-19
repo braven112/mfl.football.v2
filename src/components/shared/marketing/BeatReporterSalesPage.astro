@@ -30,9 +30,11 @@ import {
 	HISTORY_AND_REPORTER_SALE_PRICE,
 	HISTORY_AND_REPORTER_CHECKOUT_URL,
 	bundleSaleEndLabel,
+	isBundleSaleOn,
 	EXTRA_INTEGRATION_PRICE,
 	dollars,
 } from '../../../data/pricing';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
 import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, serviceJsonLd } from '../../../utils/structured-data';
 
 export interface Props {
@@ -45,14 +47,20 @@ const { service } = Astro.props as Props;
 const VSL_SRC: string | null = null;
 const VSL_POSTER = '/assets/beat-reporter-avatar.webp';
 
+// The two-for-one runs until the NFL Draft (isBundleSaleOn); after that the
+// page sells the reporter alone at its own price, with no bundle (Brandon,
+// 2026-11-19). The page is server-rendered, so it switches on the day.
+// ?testDate=YYYY-MM-DD shows either side.
+const onSale = isBundleSaleOn(getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date());
 const sale = dollars(HISTORY_AND_REPORTER_SALE_PRICE);
 const one = dollars(BEAT_REPORTER_PRICE_YEAR);
 const saleEnds = bundleSaleEndLabel();
-const ctaLabel = `Get both for ${sale}`;
-const productName = `the AI Beat Reporter and Ask the History, ${sale}`;
+const ctaLabel = onSale ? `Get both for ${sale}` : `Get it for ${one}`;
+const productName = onSale ? `the AI Beat Reporter and Ask the History, ${sale}` : `the AI Beat Reporter, ${one} a year`;
+const interestSlug = onSale ? 'history-and-reporter' : 'beat-reporter';
 
 // The stack: only real prices, never an invented "value".
-const stack = [
+const fullStack = [
 	{ title: 'Your own AI beat reporter', body: 'Breaks every trade, waiver claim, signing and cut minutes after it happens, in a voice your owners will quote back at each other.', value: `${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
 	{ title: 'Three stories a week, guaranteed', body: 'Weekly columns all season: matchup previews, recaps and the stories behind the standings, about your league and nobody else’s.', value: 'Included' },
 	{ title: 'Vegas Vic and Doc Rivers', body: 'Vic sets a line on every matchup. Doc tracks the injuries that matter to your rosters.', value: 'Included' },
@@ -61,6 +69,9 @@ const stack = [
 	{ title: 'Ask the History', body: 'Every season of your league in one place, and an AI historian that answers any question about your league’s past.', value: `${dollars(HISTORY_PRICE_YEAR)} a year` },
 	{ title: 'The rest of this season, free', body: 'Start today and your year runs through the end of next season.', value: 'Included' },
 ];
+// Off sale, Ask the History and the free rest-of-season leave the offer.
+const SALE_ONLY = new Set(['Ask the History', 'The rest of this season, free']);
+const stack = onSale ? fullStack : fullStack.filter((s) => !SALE_ONLY.has(s.title));
 
 const valueEquation = [
 	{ kicker: 'The outcome', title: 'A chat that never goes quiet', body: 'Trades get roasted, bad lineups get called out, and owners argue about the preview all week instead of only on Sunday.' },
@@ -135,7 +146,11 @@ const after = [
 			<div class="brp-hero__buy">
 				<a class="cta cta--primary" href="#get-it">{ctaLabel}</a>
 				<p class="brp-price-line">
-					Black Friday sale: AI Beat Reporter + Ask the History, two for the price of one · <b>{sale}</b> per league · ends {saleEnds} · rest of this season free
+					{onSale ? (
+						<>Black Friday sale: AI Beat Reporter + Ask the History, two for the price of one · <b>{sale}</b> per league · ends {saleEnds} · rest of this season free</>
+					) : (
+						<>AI Beat Reporter · <b>{one}</b> a year per league</>
+					)}
 				</p>
 			</div>
 		</header>
@@ -217,8 +232,14 @@ const after = [
 					))}
 				</ul>
 				<div class="brp-stack__total">
-					<p>Each one is {one} a year on its own.</p>
-					<p class="brp-stack__sale">Black Friday sale, two for the price of one: <b>{sale}</b> per league</p>
+					{onSale ? (
+						<>
+							<p>Each one is {one} a year on its own.</p>
+							<p class="brp-stack__sale">Black Friday sale, two for the price of one: <b>{sale}</b> per league</p>
+						</>
+					) : (
+						<p class="brp-stack__sale"><b>{one}</b> a year per league</p>
+					)}
 					<a class="cta cta--primary" href="#get-it">{ctaLabel}</a>
 				</div>
 			</div>
@@ -228,7 +249,7 @@ const after = [
 			<p class="sp-eyebrow">Our guarantee</p>
 			<h2 id="brp-g">Three stories a week. Guaranteed.</h2>
 			<p>Every week of the season, your reporter files at least three stories about your league. Trades, previews, recaps, roasts. Your chat will always have something new to fight about.</p>
-			<p class="brp-guarantee__sale"><b>Black Friday sale: two for the price of one, {sale} for both.</b> It ends {saleEnds}, when the NFL Draft starts. The rest of this season is free when you start now.</p>
+			{onSale && <p class="brp-guarantee__sale"><b>Black Friday sale: two for the price of one, {sale} for both.</b> It ends {saleEnds}, when the NFL Draft starts. The rest of this season is free when you start now.</p>}
 		</section>
 
 		{/* 7. Objections. */}
@@ -274,12 +295,18 @@ const after = [
 				</form>
 
 				<div class="brp-q__result" data-brp-result="buy" hidden>
-					<p data-brp-timeline-now>You’re all set. Start today and the rest of this season is free.</p>
-					<p data-brp-timeline-next hidden>Lock in two for the price of one now. Your year runs through the end of next season, so you lose nothing by starting early.</p>
-					{HISTORY_AND_REPORTER_CHECKOUT_URL ? (
+					{onSale ? (
+						<>
+							<p data-brp-timeline-now>You’re all set. Start today and the rest of this season is free.</p>
+							<p data-brp-timeline-next hidden>Lock in two for the price of one now. Your year runs through the end of next season, so you lose nothing by starting early.</p>
+						</>
+					) : (
+						<p>You’re all set.</p>
+					)}
+					{onSale && HISTORY_AND_REPORTER_CHECKOUT_URL ? (
 						<a class="cta cta--primary" href={HISTORY_AND_REPORTER_CHECKOUT_URL} rel="noopener">{ctaLabel}</a>
 					) : (
-						<button type="button" class="cta cta--primary" data-interest="history-and-reporter" data-interest-name={productName} data-interest-carry-note data-brp-buy>{ctaLabel}</button>
+						<button type="button" class="cta cta--primary" data-interest={interestSlug} data-interest-name={productName} data-interest-carry-note data-brp-buy>{ctaLabel}</button>
 					)}
 				</div>
 
@@ -318,8 +345,11 @@ const after = [
 			if (a.need === 'no') return show('platform');
 			if (a.authority === 'no') return show('commish');
 			if (a.authority === 'yes' && a.need === 'yes' && a.timeline) {
-				root.querySelector<HTMLElement>('[data-brp-timeline-now]')!.hidden = a.timeline !== 'now';
-				root.querySelector<HTMLElement>('[data-brp-timeline-next]')!.hidden = a.timeline !== 'next';
+				// Both lines exist only while the sale is on.
+				const now = root.querySelector<HTMLElement>('[data-brp-timeline-now]');
+				const next = root.querySelector<HTMLElement>('[data-brp-timeline-next]');
+				if (now) now.hidden = a.timeline !== 'now';
+				if (next) next.hidden = a.timeline !== 'next';
 				const buy = root.querySelector<HTMLElement>('[data-brp-buy]');
 				if (buy) buy.dataset.interestNote = `Commissioner · On MFL · Wants it ${a.timeline === 'now' ? 'this season' : 'next season'}`;
 				return show('buy');
