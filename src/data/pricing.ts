@@ -45,7 +45,7 @@ export const HISTORY_AND_REPORTER_SALE_PRICE = HISTORY_AND_REPORTER_PRICE_YEAR;
 /**
  * Group chat posting for the AI Beat Reporter (Brandon, 2026-11-19): one
  * integration (GroupMe, Slack or Discord) per league per season is included;
- * each additional one is this much, each time.
+ * moving to a different chat service mid-season costs this much, each time.
  */
 export const EXTRA_INTEGRATION_PRICE = 49;
 
