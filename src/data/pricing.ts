@@ -42,6 +42,13 @@ export const HISTORY_AND_REPORTER_SALE_PRICE = HISTORY_AND_REPORTER_PRICE_YEAR;
  * in src/data/theleague/league-year-config.ts (April 29, the one year the
  * "fourth Thursday" rule is wrong); keep the two in step.
  */
+/**
+ * Group chat posting for the AI Beat Reporter (Brandon, 2026-11-19): one
+ * integration (GroupMe, Slack or Discord) per league per season is included;
+ * each additional one is this much, each time.
+ */
+export const EXTRA_INTEGRATION_PRICE = 49;
+
 export const BUNDLE_SALE_STARTS = '2026-11-27';
 export const BUNDLE_SALE_ENDS = '2027-04-29';
 

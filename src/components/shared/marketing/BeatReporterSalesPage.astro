@@ -30,6 +30,7 @@ import {
 	HISTORY_AND_REPORTER_SALE_PRICE,
 	HISTORY_AND_REPORTER_CHECKOUT_URL,
 	bundleSaleEndLabel,
+	EXTRA_INTEGRATION_PRICE,
 	dollars,
 } from '../../../data/pricing';
 import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, serviceJsonLd } from '../../../utils/structured-data';
@@ -56,7 +57,7 @@ const stack = [
 	{ title: 'Three stories a week, guaranteed', body: 'Weekly columns all season: matchup previews, recaps and the stories behind the standings, about your league and nobody else’s.', value: 'Included' },
 	{ title: 'Vegas Vic and Doc Rivers', body: 'Vic sets a line on every matchup. Doc tracks the injuries that matter to your rosters.', value: 'Included' },
 	{ title: 'On your MFL page, with its own web page', body: 'Every story lands in a news card on your league’s own MFL pages, in your league’s colors, and gets its own web page your owners can share.', value: 'Included' },
-	{ title: 'GroupMe, Slack or Discord', body: 'Want the stories where your league already talks? We set it up for you.', value: 'Custom setup' },
+	{ title: 'Your group chat: GroupMe, Slack or Discord', body: `One group chat per league each season, set up for you, so the stories land where your league already talks. More chats are ${dollars(EXTRA_INTEGRATION_PRICE)} each.`, value: 'Included' },
 	{ title: 'Ask the History', body: 'Every season of your league in one place, and an AI historian that answers any question about your league’s past.', value: `${dollars(HISTORY_PRICE_YEAR)} a year` },
 	{ title: 'The rest of this season, free', body: 'Start today and your year runs through the end of next season.', value: 'Included' },
 ];
@@ -71,7 +72,7 @@ const valueEquation = [
 const faqs = [
 	{ q: 'Will my owners actually read it?', a: 'It writes about them: their trades, their lineups, their rivalries. People read stories about themselves, and they reply to them.' },
 	{ q: 'We already have a group chat. Why do we need this?', a: 'Because a group chat needs something to talk about. The reporter starts the conversation every few days, so the chat is not just lineup reminders.' },
-	{ q: 'Can it post to our GroupMe, Slack or Discord?', a: 'Yes, as a custom setup. By default every story is posted on your MFL page. Tell us where your league talks and we will set it up.' },
+	{ q: 'Can it post to our GroupMe, Slack or Discord?', a: `Yes. One group chat per league each season is included, and we set it up for you. Each additional chat is ${dollars(EXTRA_INTEGRATION_PRICE)}. Every story is also posted on your MFL page and gets its own web page.` },
 	{ q: 'How hard is it to set up?', a: 'The commissioner pastes one line into the MFL Home Page Message. That is the whole setup.' },
 	{ q: 'Does it change anything on MFL?', a: 'No. The reporter only reads your league. It never touches rosters, lineups or scoring.' },
 	{ q: 'Does it get the facts right?', a: 'It writes from your league’s own MFL data: the real transactions, scores, standings and history. It does not make up trades or results.' },
