@@ -10,6 +10,10 @@
 import { ALL_LEAGUES } from './leagues-data.mjs';
 import { ARCHETYPE_KEYS } from './league-archetypes.mjs';
 import { FEATURE_KEYS, featureDependencyErrors } from './league-feature-catalog.mjs';
+import { validatePersona } from '../utils/persona.mjs';
+
+/** A reporter's picture, as a site asset path (scripts/add-beat-reporter-league.mjs writes it). */
+export const REPORTER_AVATAR_RE = /^\/assets\/reporters\/[a-z][a-z0-9]{1,23}\.webp$/;
 
 /** Lowercase letters/digits, starting with a letter: safe as a slug, nav slug, path and JS identifier. */
 export const SLUG_RE = /^[a-z][a-z0-9]{1,23}$/;
@@ -47,6 +51,17 @@ export function specErrors(spec) {
   }
   for (const id of spec.adminFranchiseIds ?? []) if (!/^\d{4}$/.test(String(id))) errors.push(`admin franchise id ${id} is not 4 digits`);
   if (spec.theme !== undefined && !/^[a-z0-9-]{2,24}$/.test(String(spec.theme))) errors.push('theme must be a theme id');
+  if (spec.reporter !== undefined) {
+    // The league's own reporter (the AI Beat Reporter plan): the same rules a
+    // commissioner's saved persona must pass, except the picture is a site
+    // asset rather than an https link.
+    const r = spec.reporter ?? {};
+    const checked = validatePersona({ name: r.name, voice: r.voice });
+    if (!checked.ok) errors.push(...checked.errors.map((e) => `reporter: ${e}`));
+    if (r.avatarUrl !== undefined && !REPORTER_AVATAR_RE.test(String(r.avatarUrl))) {
+      errors.push('reporter: avatarUrl must be /assets/reporters/<slug>.webp');
+    }
+  }
   const clash = ALL_LEAGUES.find((l) => l.slug === spec.slug || l.navSlug === spec.slug || l.id === String(spec.mflId));
   if (clash) errors.push(`league ${clash.slug} already uses that slug or MFL id`);
   return errors;

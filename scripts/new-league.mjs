@@ -57,6 +57,16 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATE = 'archies';
 export const PLACEHOLDER_LOGO = '/assets/logos/league-placeholder.svg';
 
+/** The $49 two-for-one: History plus the league's own AI beat reporter. */
+export const REPORTER_ARCHETYPE = 'history-and-reporter';
+
+/**
+ * The weekly columns a reporter league writes, on top of a post for every
+ * move: Saturday's matchup preview and Tuesday's history notebook. Together
+ * with the move posts they carry the page's three-stories-a-week guarantee.
+ */
+export const REPORTER_ARTICLE_TYPES = ['matchup-preview', 'history-notebook'];
+
 
 // ── Spec ─────────────────────────────────────────────────────────────────────
 
@@ -118,7 +128,12 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
           `    /** The History tier: its History pages and nothing else (leagueTier). */`,
           `    tier: 'history',`,
         ]
-      : []),
+      : spec.archetype === REPORTER_ARCHETYPE
+        ? [
+            `    /** The AI tier: History plus the beat reporter's stories, no site tools (leagueTier). */`,
+            `    tier: 'ai',`,
+          ]
+        : []),
     ...(f.powerRankings ? [`    peckingOrder: { topN: 25 },`] : []),
     ...(spec.duplicatePlayers ? [`    duplicatePlayers: true,`] : []),
     `    officialClock: {`,
@@ -133,11 +148,53 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     ...FEATURE_KEYS.map((k) => `      ${k}: ${Boolean(f[k])},`),
     `    },`,
     `    defaultRankingSources: ${q(rankingSources)},`,
-    `    /** No weekly Schefter articles until chosen: each type links pages a package league may not have. */`,
-    `    articleTypes: [],`,
+    ...(spec.archetype === REPORTER_ARCHETYPE ? reporterLines(spec) : [
+      `    /** No weekly Schefter articles until chosen: each type links pages a package league may not have. */`,
+      `    articleTypes: [],`,
+    ]),
     `  },`,
   ];
   return lines.join('\n') + '\n';
+}
+
+/**
+ * A reporter league's own reporter, scanner block and columns. The reporter
+ * is the league's to name (Brandon, 2026-11-19); the commissioner can still
+ * change it later on the league's news admin page, which saves over this.
+ * Feed only: no GroupMe lane runs until the league's chat is hooked up by
+ * hand, so the env names below stay unset until then.
+ */
+function reporterLines(spec) {
+  const r = spec.reporter ?? {};
+  const env = (what) => `GROUPME_${spec.slug.toUpperCase()}_${what}`;
+  // JSON.stringify, not q(): the voice is prose (commas, newlines, quotes),
+  // and q() reflows commas and cannot hold a newline in a single quote.
+  const fields = ['name', 'avatarUrl', 'voice'].filter((k) => r[k]).map((k) => `      ${k}: ${JSON.stringify(r[k])},`);
+  return [
+    `    /** The league's own reporter (src/utils/persona.mjs); absent fields fall back to the house reporter. */`,
+    `    persona: {`,
+    ...fields,
+    `    },`,
+    `    /** Schefter scanner (scripts/lib/schefter-leagues.mjs): a post for every move, plus the NFL lanes. */`,
+    `    schefter: {`,
+    `      eventsPath: ${q(`data/${spec.slug}/resolved-events.json`)},`,
+    `      env: {`,
+    `        schefterBot: ${q(env('SCHEFTER_BOT_ID'))},`,
+    `        rogerBot: ${q(env('ROGER_BOT_ID'))},`,
+    `        groupId: ${q(env('GROUP_ID'))},`,
+    `        rogerSender: ${q(env('ROGER_BOT_SENDER_ID'))},`,
+    `      },`,
+    `      lanes: {`,
+    `        tradeBait: false,`,
+    `        eventReminders: false,`,
+    `        directGroupMe: false,`,
+    `        groupmeListen: false,`,
+    `        rogerReplies: false,`,
+    `      },`,
+    `    },`,
+    `    /** The weekly columns (REPORTER_ARTICLE_TYPES in scripts/new-league.mjs). */`,
+    `    articleTypes: ${q(REPORTER_ARTICLE_TYPES)},`,
+  ];
 }
 
 /** Insert `entry` as the last member of `export const LEAGUES = { … };`. */
@@ -188,7 +245,8 @@ export function setRegistryFeatures(source, slug, features) {
 export function planLaunch(rawSpec) {
   // The History-only archetype is also the registry's History tier: the
   // routes, nav and site search all read `tier` (package-league-routes.mjs).
-  const spec = rawSpec.archetype === 'history-only' ? { ...rawSpec, tier: 'history' } : rawSpec;
+  const tier = rawSpec.archetype === 'history-only' ? 'history' : rawSpec.archetype === REPORTER_ARCHETYPE ? 'ai' : null;
+  const spec = tier ? { ...rawSpec, tier } : rawSpec;
   const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
   const files = [];
   const year = new Date().getFullYear();
