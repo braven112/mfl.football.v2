@@ -12,6 +12,7 @@
 import { memo } from 'react';
 import type { BroadcastLeaguePanel, BroadcastLeagueScore } from '../../../types/live-broadcast';
 import type { NflGame } from '../../../types/live-scoring';
+import { kickoffText, type KickoffClock } from '../../../utils/live-scoring-view';
 
 export type SaverScene = 'slate' | 'finals' | 'clock';
 
@@ -20,6 +21,8 @@ interface Props {
   panels: readonly BroadcastLeaguePanel[];
   scores: Record<string, BroadcastLeagueScore>;
   games: readonly NflGame[];
+  /** The viewer's chosen clock for kickoffs; null means the device's. */
+  kickoffClock?: KickoffClock | null;
   /** Rendered clock text; the island owns the tick so this stays pure. */
   now: string;
   today: string;
@@ -33,7 +36,7 @@ const ANCHORS: Record<SaverScene, 'center' | 'start' | 'end'> = {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Props) {
+function BroadcastScreensaver({ scene, panels, scores, games, kickoffClock = null, now, today }: Props) {
   const anchor = ANCHORS[scene];
 
   if (scene === 'clock') {
@@ -62,7 +65,7 @@ function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Prop
                 <span>
                   {g.away.code} at {g.home.code}
                 </span>
-                <span>{g.shortDetail}</span>
+                <span>{kickoffText(g, kickoffClock)}</span>
               </p>
             ))}
           </div>

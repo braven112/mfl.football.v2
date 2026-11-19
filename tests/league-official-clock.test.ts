@@ -113,6 +113,36 @@ describe('league official clock', () => {
     }
   });
 
+  it('every equivalent really keeps the league\'s wall clock, across a whole year', () => {
+    // An identity list goes stale when a GOVERNMENT changes its clocks, not
+    // when we do: BC went to permanent daylight time in March 2026 and
+    // Vancouver sat in this list for eight months afterwards, folding a BC
+    // owner's clock into PT and hiding the league's from them every winter.
+    // Checking one instant would pass half the year, so check every month.
+    const offset = (zone: string, at: number) => {
+      const p = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).format(at);
+      return p;
+    };
+    for (const league of ALL_LEAGUES) {
+      const { zone, equivalents = [] } = league.officialClock;
+      for (const eq of equivalents) {
+        for (let m = 0; m < 24; m++) {
+          const at = Date.UTC(2026 + Math.floor(m / 12), m % 12, 15, 20, 0, 0);
+          expect(offset(eq, at), `${league.slug}: ${eq} drifts from ${zone} in ${new Date(at).toISOString().slice(0, 7)}`).toBe(offset(zone, at));
+        }
+      }
+    }
+  });
+
+  it('never offers America/Vancouver — BC is a fixed UTC-7 clock', () => {
+    // BC's permanent daylight time only reached tzdata in 2026. A server or
+    // phone on older data would print America/Vancouver an hour early all
+    // winter, so the catalog uses a fixed offset that is right everywhere.
+    for (const code of COUNTRY_CODES) {
+      for (const z of zoneOptionsFor(code)) expect(z.zone, `${code}/${z.id}`).not.toBe('America/Vancouver');
+    }
+  });
+
   it('keeps the registry OUT of viewer-preferences.ts', () => {
     // The dependency must run one way only. `viewer-preferences.ts` is
     // reachable from a Storybook story, so importing the registry here would

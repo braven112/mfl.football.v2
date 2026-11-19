@@ -78,9 +78,14 @@ describe('the floor: nothing changes until the viewer chooses', () => {
 
   it('never prints the league clock twice to someone already on it', () => {
     expect(formatForViewer(WED_8PM_PT, chose('US', 'PT'), { weekday: true })).toBe('Wed 8:00 PM PT');
-    // Vancouver keeps Los Angeles' wall clock year-round — an identity, not
+    // Tijuana keeps Los Angeles' wall clock year-round — an identity, not
     // today's offset.
-    expect(formatForViewer(WED_8PM_PT, chose('CA', 'PT'), { weekday: true })).toBe('Wed 8:00 PM PT');
+    expect(formatForViewer(WED_8PM_PT, chose('MX', 'TIJ'), { weekday: true })).toBe('Wed 8:00 PM Tijuana');
+  });
+
+  it("puts BC an hour ahead of the league in winter (permanent daylight time since 2026)", () => {
+    const winter = new Date(Date.UTC(2026, 11, 3, 4, 0, 0)); // Wed Dec 2, 8:00 PM PST
+    expect(formatForViewer(winter, chose('CA', 'PT'), { weekday: true })).toBe('Wed 9:00 PM BC · 8:00 PM PT');
   });
 });
 

@@ -207,9 +207,26 @@ Pacific: lineup locks, auction windows, the 8:45 rollover), read with
 `kickoffZonesFor` adds the league's after it. The exception is a viewer already
 on that clock — printing "1:00 PM PT · 1:00 PM PT" helps nobody — decided by
 `isLeagueClock`, which matches the clock's zone or one of its declared
-`equivalents`. That list is an IDENTITY list (Los Angeles, Vancouver, Tijuana
-keep the same wall clock year-round), NOT a snapshot of today's offsets — never
-compute it from a current offset.
+`equivalents`. That list is an IDENTITY list (Los Angeles and Tijuana
+keep the same wall clock year-round), NOT a snapshot of today's offsets —
+never compute it from a current offset. An identity can still END when a
+government changes its clocks: Vancouver was on it until British Columbia
+moved to permanent daylight time (UTC-7) on 2026-03-08, after which it sat
+there for eight months folding a BC owner's clock into PT and dropping the
+league's every winter. `tests/league-official-clock.test.ts` now checks every
+equivalent against the league's zone for every month of two years.
+
+**BC is a FIXED offset, never `America/Vancouver`.** The catalog prints BC as
+`Etc/GMT+7` (POSIX sign: UTC-7) labeled `BC`, keeping the id `PT` so stored
+choices and seeds follow the province. The change only reached tzdata in 2026
+(2026e has it), and a server or phone with older data would print
+`America/Vancouver` an hour early all winter; a fixed offset is right on every
+runtime. Same reason Mexico's Pacific option points at `America/Mazatlan`:
+`America/Chihuahua` moved to Central in 2022 and was printing Central under a
+Pacific name (its id `CHI` is kept for stored choices). The catalog covers
+every clock in the US (incl. Puerto Rico and Adak), Canada (incl. the
+no-DST pockets: Saskatchewan, Yukon, Atikokan, Blanc-Sablon) and Mexico
+(incl. the border cities that still follow US DST).
 
 **`LEAGUE_CLOCK` is the FALLBACK, not the setting.** `viewer-preferences.ts`
 deliberately does not import the registry — it is in Storybook's rendering

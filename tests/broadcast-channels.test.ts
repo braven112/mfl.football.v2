@@ -153,7 +153,7 @@ describe('sundayTicketProvider', () => {
 describe('countryTimeZones', () => {
   it('reads ET/PT at home and the Australian clocks with auto labels', () => {
     expect(countryTimeZones('US').map((z) => z.label)).toEqual(['ET', 'PT']);
-    expect(countryTimeZones('CA').map((z) => z.zone)).toEqual(['America/Toronto', 'America/Vancouver']);
+    expect(countryTimeZones('CA').map((z) => z.zone)).toEqual(['America/Toronto', 'America/Los_Angeles']);
     expect(countryTimeZones('AU')).toEqual([
       { zone: 'Australia/Sydney', label: 'auto', locale: 'en-AU' },
       { zone: 'Australia/Perth', label: 'auto', locale: 'en-AU' },

@@ -78,8 +78,14 @@ describe('the league clock rides along, and is never chosen', () => {
 
   it('leaves it off for someone already on Pacific — no "1:00 PM PT · 1:00 PM PT"', () => {
     expect(kickoffZonesFor({ country: 'US', zoneId: 'PT' })).toHaveLength(1);
-    // Canada's Pacific is the same wall clock as Los Angeles, DST included.
-    expect(kickoffZonesFor({ country: 'CA', zoneId: 'PT' })).toHaveLength(1);
+    // Mexico's Tijuana is the same wall clock as Los Angeles, DST included.
+    expect(kickoffZonesFor({ country: 'MX', zoneId: 'TIJ' })).toHaveLength(1);
+  });
+
+  it("prints BC's permanent daylight time BESIDE the league's PT, never as it", () => {
+    // BC stopped falling back in 2026, so it is an hour ahead of Los Angeles
+    // every winter. Folding it into PT would print the wrong kickoff.
+    expect(kickoffZonesFor({ country: 'CA', zoneId: 'PT' }).map((z) => z.label)).toEqual(['BC', 'PT']);
   });
 
   it('still rides along abroad, where the league clock is the shared reference', () => {
@@ -90,7 +96,8 @@ describe('the league clock rides along, and is never chosen', () => {
 
   it('recognizes every zone that IS the league clock', () => {
     expect(isLeagueClock({ zone: 'America/Los_Angeles' })).toBe(true);
-    expect(isLeagueClock({ zone: 'America/Vancouver' })).toBe(true);
+    expect(isLeagueClock({ zone: 'America/Tijuana' })).toBe(true);
+    expect(isLeagueClock({ zone: 'America/Vancouver' })).toBe(false);
     expect(isLeagueClock({ zone: 'America/Denver' })).toBe(false);
   });
 });
@@ -150,10 +157,12 @@ describe('seeded per-owner defaults', () => {
     expect(seededPreferencesFor('theleague', '0003')).toEqual({ country: 'AU', zoneId: 'SYD' });
   });
 
-  it('the Wabbits, already on Pacific, get one clock and Canadian channels', () => {
+  it('the Wabbits, on BC time, get their own clock beside the league\'s and Canadian channels', () => {
+    // BC went to permanent daylight time in 2026, so it is no longer the
+    // league's clock: an hour ahead every winter.
     const seed = seededPreferencesFor('theleague', '0009')!;
-    expect(kickoffZonesFor(seed)).toHaveLength(1);
-    expect(zoneSummary(seed)).toBe('PT');
+    expect(kickoffZonesFor(seed)).toHaveLength(2);
+    expect(zoneSummary(seed)).toBe('BC · PT');
   });
 
   it('needs BOTH a league and a franchise — a bare id is ambiguous across leagues', () => {

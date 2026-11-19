@@ -197,7 +197,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     /**
      * Trade deadline. A per-league constant, so it lives here rather than
@@ -479,7 +479,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     /**
      * Trade deadline — the Wednesday between Week 10 and Week 11, i.e.
@@ -656,7 +656,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     /**
      * Best Ball is draft-only — no in-season roster management, so there is
@@ -858,7 +858,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     /** Slack only. Secrets are set per environment; see the plan doc's setup section. */
     chat: { provider: 'slack', tokenEnv: 'SLACK_ARCHIES_BOT_TOKEN', channelEnv: 'SLACK_ARCHIES_CHANNEL_ID' },
@@ -976,7 +976,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     tradeDeadline: null,
     /** Playoff odds format (see TheLeague's entry). Sandbox: 2 division winners + 4 wild cards, top 2 on a bye. */
@@ -1035,7 +1035,7 @@ export const LEAGUES = {
       zone: 'America/Los_Angeles',
       label: 'PT',
       name: "The league's clock (Pacific)",
-      equivalents: ['America/Vancouver', 'America/Tijuana'],
+      equivalents: ['America/Tijuana'],
     },
     tradeDeadline: null,
     features: {

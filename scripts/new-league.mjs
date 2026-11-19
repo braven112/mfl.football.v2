@@ -126,7 +126,7 @@ export function registryEntry(spec, today = new Date().toISOString().slice(0, 10
     `      zone: 'America/Los_Angeles',`,
     `      label: 'PT',`,
     `      name: "The league's clock (Pacific)",`,
-    `      equivalents: ['America/Vancouver', 'America/Tijuana'],`,
+    `      equivalents: ['America/Tijuana'],`,
     `    },`,
     `    tradeDeadline: null,`,
     `    features: {`,

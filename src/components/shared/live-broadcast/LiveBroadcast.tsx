@@ -1432,6 +1432,7 @@ export default function LiveBroadcast({ pageData }: Props) {
               panels={data.panels}
               scores={scoresByLeague}
               games={poll.games}
+              kickoffClock={data.kickoffClock ?? null}
               now={new Date(nowTick).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
               today={new Date(nowTick).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
             />
