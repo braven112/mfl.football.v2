@@ -31,6 +31,7 @@
  * the thin route wrapper.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import ThrowbackEraPicker from '../ThrowbackEraPicker.astro';
 import type { ThrowbackPickerView } from '../../../utils/throwback-settings-view';
 import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
@@ -55,8 +56,17 @@ export interface Props {
   title: string;
   /** This route's own path, prefix already resolved — the form posts back to it. */
   pathname: string;
-  /** The league's Sunday Ticket path, prefix already resolved. */
-  sundayTicketPath: string;
+  /**
+   * The league's Sunday Ticket path, prefix already resolved. Null on MFL
+   * Live, which has no Sunday Ticket board: its links are left out.
+   */
+  sundayTicketPath: string | null;
+  /**
+   * Which shell the page renders in. 'mfl-live' is mfl.football/live, which
+   * has its own app layout and no league of its own: its clock is the site's
+   * fallback (Pacific).
+   */
+  shell?: 'league' | 'mfl-live';
   /** True when this request carried a choice, so the page can confirm it. */
   justSaved?: boolean;
   /** True when the choice was mirrored to the signed-in owner's account. */
@@ -78,7 +88,7 @@ export interface Props {
    * every "Preview →" href a bare `?week=N&demo=1`, which resolves against
    * this page and silently reloads it instead of opening the scoreboard.
    */
-  scoreboardPath: string;
+  scoreboardPath: string | null;
   /**
    * This league's official clock, from the registry. A PROP rather than a
    * registry lookup because this component is deliberately props-only — the
@@ -100,7 +110,10 @@ const {
   officialClock = LEAGUE_CLOCK,
   throwback = null,
   scoreboardPath,
+  shell = 'league',
 } = Astro.props;
+
+const Shell = shell === 'mfl-live' ? MflAppLayout : TheLeagueLayout;
 
 const countries = countryOptions();
 const provider = sundayTicketProvider(prefs.country);
@@ -110,16 +123,25 @@ const leagueClockLabel = zoneShortName(officialClock);
 const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
 ---
 
-<TheLeagueLayout title={title}>
+<Shell title={title}>
   <div class="pf-page">
     <header class="pf-head">
       <p class="pf-eyebrow">Your settings</p>
       <h1 class="pf-title">Preferences</h1>
       <p class="pf-lede">
         Where you're watching from, and which clock you read kickoffs in.
-        <a href={sundayTicketPath}>Sunday Ticket</a> uses both — channels, carrier and every kickoff
-        time — and so does everything else with a clock on it: the draft's start time, the waiver
-        window, the ballot deadline. Pick nothing and you stay on the league's PT, exactly as before.
+        {sundayTicketPath ? (
+          <>
+            <a href={sundayTicketPath}>Sunday Ticket</a> uses both — channels, carrier and every kickoff
+            time — and so does everything else with a clock on it: the draft's start time, the waiver
+            window, the ballot deadline. Pick nothing and you stay on the league's PT, exactly as before.
+          </>
+        ) : (
+          <>
+            Every game time on your live board prints in your clock. Pick nothing and you stay on
+            Pacific (PT).
+          </>
+        )}
         {throwback && ' Below them, the era your team wears on Throwback Week.'}
       </p>
     </header>
@@ -130,7 +152,7 @@ const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
         {syncedToAccount
           ? 'Stored with your account, so it follows you to your phone.'
           : 'Stored on this device.'}
-        {' '}<a href={sundayTicketPath}>See it on Sunday Ticket →</a>
+        {sundayTicketPath && <>{' '}<a href={sundayTicketPath}>See it on Sunday Ticket →</a></>}
       </p>
     )}
 
@@ -207,7 +229,9 @@ const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
       <div class="pf-actions">
         <button class="pf-save" type="submit">Save preferences</button>
         <span class="pf-actions__note">
-          {loginPath ? (
+          {shell === 'mfl-live' ? (
+            <>Kept on this device.</>
+          ) : loginPath ? (
             <>Kept on this device. <a href={loginPath}>Sign in</a> and it follows you everywhere you're logged in.</>
           ) : (
             <>Kept on this device and with your account, so your phone reads the same clock.</>
@@ -216,7 +240,7 @@ const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
       </div>
     </form>
 
-    {throwback && (
+    {throwback && scoreboardPath && (
       <section class="pf-field pf-throwback" aria-labelledby="pf-throwback-title">
         <h2 id="pf-throwback-title" class="pf-field__legend pf-field__legend--standalone">
           Throwback Week
@@ -232,12 +256,15 @@ const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
     <footer class="pf-foot">
       <p>
         Kickoff times come from the NFL schedule and are converted here — nothing is stored about where you
-        actually are. Changing the country on the <a href={sundayTicketPath}>Sunday Ticket</a> board still works and
-        lands right back here.
+        actually are.
+        {sundayTicketPath && (
+          <> Changing the country on the <a href={sundayTicketPath}>Sunday Ticket</a> board still works and
+          lands right back here.</>
+        )}
       </p>
     </footer>
   </div>
-</TheLeagueLayout>
+</Shell>
 
 <style>
   .pf-page {

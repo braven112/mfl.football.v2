@@ -97,6 +97,8 @@ const BOARD_LINKS = [
 	{ href: '/live/broadcast/remote', label: 'TV remote', icon: 'remote', requiresAuth: true },
 	{ href: '/video', label: 'Send video smack talk', icon: 'video', requiresAuth: false },
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
+	// Works signed out: the clock is a cookie on this device.
+	{ href: '/live/preferences', label: 'Time zone', icon: 'clock', requiresAuth: false },
 ] as const;
 
 /** The pages a TV pass opens. Read-only, and pinned by tests/broadcast-tv-pass-scope.test.ts. */
@@ -193,6 +195,11 @@ const showSignIn = !signedIn && !pairedTv && !isCurrent(signInHref.split('?')[0]
 								<Fragment>
 									<rect x="3" y="6" width="13" height="12" rx="2" />
 									<path d="M16 10.5l5-3v9l-5-3z" />
+								</Fragment>
+							) : link.icon === 'clock' ? (
+								<Fragment>
+									<circle cx="12" cy="12" r="9" />
+									<path d="M12 7v5l3 2" />
 								</Fragment>
 							) : link.icon === 'standings' ? (
 								<Fragment>

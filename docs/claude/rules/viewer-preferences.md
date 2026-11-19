@@ -340,3 +340,13 @@ DST transition (`addWeeksOnWallClock`). Passing the wrong zone there does not
 mis-LABEL a time, it moves it — and `mode` is read by `/api/waiver-claim` to
 choose an MFL endpoint, so an hour of drift routes a live claim at a locked
 pool. Treat a zone argument on anything schedule-shaped as load-bearing.
+
+**MFL Live has its own copy of the choice, on mfl.football.** `/live/preferences`
+renders the SAME `PreferencesPage` in MFL Live's shell (`shell="mfl-live"`,
+no Sunday Ticket links, no Throwback). It is COOKIE-ONLY — the route passes
+`user: null` — because the account mirror is keyed by registry slug and an
+MFL Live session can belong to any MFL league. Cookies are per apex domain, so
+a clock chosen on theleague.us does not reach mfl.football; the Live menu
+links "Time zone" for that reason. `/live` and `/live/league/[id]` hand
+`LiveBoard` a `kickoffClock` (PT floor), and `/live/broadcast` passes the
+chosen clock only when explicit, letting a TV fall back to its device clock.
