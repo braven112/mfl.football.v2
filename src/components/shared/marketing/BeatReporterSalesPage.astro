@@ -1,0 +1,625 @@
+---
+/**
+ * /ai-beat-reporter — the AI Beat Reporter's long sales page (Brandon,
+ * 2026-11-17), built on Alex Hormozi's landing-page structure:
+ *
+ *   1. Hero: the dream outcome, the VSL, one button.
+ *   2. Proof #1, right under the video: the league chat before and after.
+ *   3. The value equation: outcome, proof it works, speed, effort.
+ *   4. Proof #2: last Saturday's REAL preview (BeatReporterSample, the slot).
+ *   5. The stack, each piece with its real price: two for the price of one.
+ *   6. The guarantee (three stories a week) and the offer: two for the price of one.
+ *   7. Objections (the FAQ, also FAQPage JSON-LD).
+ *   8. A three-question qualifier (Authority, Need, Timeline; the price is on
+ *      the page, so Budget is not asked), then checkout.
+ *
+ * Checkout is PayPal (HISTORY_AND_REPORTER_CHECKOUT_URL). Until that link
+ * exists, the button opens the product's contact form (ProductInterest), with
+ * the qualifier's answers carried in its note.
+ *
+ * The VSL is Brandon's own recording; until it exists the frame shows a
+ * placeholder. Put the file at VSL_SRC and it plays.
+ *
+ * The repo is public: customer-facing copy only.
+ */
+import MarketingShell from './MarketingShell.astro';
+import type { Service } from '../../../data/mfl-services';
+import {
+	BEAT_REPORTER_PRICE_YEAR,
+	HISTORY_PRICE_YEAR,
+	HISTORY_AND_REPORTER_SALE_PRICE,
+	HISTORY_AND_REPORTER_CHECKOUT_URL,
+	bundleSaleEndLabel,
+	EXTRA_INTEGRATION_PRICE,
+	dollars,
+} from '../../../data/pricing';
+import { breadcrumbJsonLd, faqJsonLd, organizationJsonLd, serviceJsonLd } from '../../../utils/structured-data';
+
+export interface Props {
+	service: Service;
+}
+
+const { service } = Astro.props as Props;
+
+/** Brandon's video sales letter. Null shows the placeholder. */
+const VSL_SRC: string | null = null;
+const VSL_POSTER = '/assets/beat-reporter-avatar.webp';
+
+const sale = dollars(HISTORY_AND_REPORTER_SALE_PRICE);
+const one = dollars(BEAT_REPORTER_PRICE_YEAR);
+const saleEnds = bundleSaleEndLabel();
+const ctaLabel = `Get both for ${sale}`;
+const productName = `the AI Beat Reporter and Ask the History, ${sale}`;
+
+// The stack: only real prices, never an invented "value".
+const stack = [
+	{ title: 'Your own AI beat reporter', body: 'Breaks every trade, waiver claim, signing and cut minutes after it happens, in a voice your owners will quote back at each other.', value: `${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
+	{ title: 'Three stories a week, guaranteed', body: 'Weekly columns all season: matchup previews, recaps and the stories behind the standings, about your league and nobody else’s.', value: 'Included' },
+	{ title: 'Vegas Vic and Doc Rivers', body: 'Vic sets a line on every matchup. Doc tracks the injuries that matter to your rosters.', value: 'Included' },
+	{ title: 'On your MFL page, with its own web page', body: 'Every story lands in a news card on your league’s own MFL pages, in your league’s colors, and gets its own web page your owners can share.', value: 'Included' },
+	{ title: 'Your group chat: GroupMe, Slack or Discord', body: `One group chat per league each season, set up for you, so the stories land where your league already talks. Switching to a different chat later in the season is ${dollars(EXTRA_INTEGRATION_PRICE)}.`, value: 'Included' },
+	{ title: 'Ask the History', body: 'Every season of your league in one place, and an AI historian that answers any question about your league’s past.', value: `${dollars(HISTORY_PRICE_YEAR)} a year` },
+	{ title: 'The rest of this season, free', body: 'Start today and your year runs through the end of next season.', value: 'Included' },
+];
+
+const valueEquation = [
+	{ kicker: 'The outcome', title: 'A chat that never goes quiet', body: 'Trades get roasted, bad lineups get called out, and owners argue about the preview all week instead of only on Sunday.' },
+	{ kicker: 'Proof it works', title: 'Covering real MFL leagues now', body: 'The same reporter files for our own leagues every week of the season. Last Saturday’s preview is below, exactly as the owners got it.' },
+	{ kicker: 'How fast', title: 'Live in minutes', body: 'The commissioner pastes one line into the MFL Home Page Message. The first story can land the same day.' },
+	{ kicker: 'How much work', title: 'None', body: 'No prompts, no posting, no writing. The reporter watches the league around the clock and files on its own.' },
+];
+
+const faqs = [
+	{ q: 'Will my owners actually read it?', a: 'It writes about them: their trades, their lineups, their rivalries. People read stories about themselves, and they reply to them.' },
+	{ q: 'We already have a group chat. Why do we need this?', a: 'Because a group chat needs something to talk about. The reporter starts the conversation every few days, so the chat is not just lineup reminders.' },
+	{ q: 'Can it post to our GroupMe, Slack or Discord?', a: `Yes. One group chat per league each season is included, and we set it up for you. If your league switches to a different chat service during the season, moving it over is ${dollars(EXTRA_INTEGRATION_PRICE)}. Use a different chat app? Tell us, and we will look at adding it. Every story is also posted on your MFL page and gets its own web page.` },
+	{ q: 'How hard is it to set up?', a: 'The commissioner pastes one line into the MFL Home Page Message. That is the whole setup.' },
+	{ q: 'Does it change anything on MFL?', a: 'No. The reporter only reads your league. It never touches rosters, lineups or scoring.' },
+	{ q: 'Does it get the facts right?', a: 'It writes from your league’s own MFL data: the real transactions, scores, standings and history. It does not make up trades or results.' },
+	{ q: 'What does the guarantee cover?', a: 'At least three stories about your league every week of the regular season.' },
+	{ q: 'I’m not the commissioner. Can I still get it?', a: 'Only a commissioner can add it to the league’s MFL page. Send this page to yours with the button at the bottom.' },
+	{ q: 'Does it work on Sleeper, ESPN or Yahoo?', a: 'It runs on MyFantasyLeague today. Leave your email at the bottom and we will tell you when your platform is ready.' },
+];
+
+const jsonLd = [
+	organizationJsonLd(),
+	serviceJsonLd(service),
+	faqJsonLd(faqs),
+	breadcrumbJsonLd([
+		{ name: 'MFL.football', path: '/' },
+		{ name: service.eyebrow, path: service.path },
+	]),
+];
+
+// The before-and-after chat. An illustration of the two states, not a
+// transcript: owners are shown as teams, never names (Brandon, 2026-11-17).
+const before = [
+	{ who: 'Commish', text: 'Lineups lock Sunday 10am' },
+	{ who: 'Team 4', text: '👍' },
+	{ gap: 'No messages for 4 days' },
+	{ who: 'Commish', text: 'Reminder: lineups lock Sunday' },
+];
+const after = [
+	{ who: 'Max Insider', reporter: true, text: 'BREAKING: Team 7 sends their WR1 to Team 2 for a late first. Sources say Team 2 “could not believe he said yes.”' },
+	{ who: 'Team 2', text: 'Highway robbery and I’d do it again 😂' },
+	{ who: 'Team 7', text: 'Max wasn’t in the room. Picks win titles' },
+	{ who: 'Team 4', text: 'Vegas Vic has you as a 9-point dog this week btw' },
+	{ who: 'Team 7', text: 'Vic can come watch me win then' },
+];
+---
+
+<MarketingShell title={service.title} description={service.description} canonicalPath={service.path} jsonLd={jsonLd} ogImage={service.portrait?.src}>
+	<article class="brp" data-beat-sales>
+		{/* 1. Hero: the outcome, the video, one button. */}
+		<header class="sp-hero sp-hero--solo brp-hero">
+			<div class="sp-hero__copy brp-hero__copy">
+				<p class="sp-eyebrow">AI beat reporter for MFL leagues</p>
+				<h1>An AI beat reporter that gets your league talking again</h1>
+				<p class="sp-lede">
+					Your own reporter breaks every trade, calls out every bad lineup and writes three stories a week about your league, so your owners have something to argue about all week, not just on Sunday.
+				</p>
+			</div>
+
+			<div class="brp-vsl">
+				{VSL_SRC ? (
+					<video class="brp-vsl__video" src={VSL_SRC} poster={VSL_POSTER} controls playsinline preload="metadata"></video>
+				) : (
+					<div class="brp-vsl__placeholder" role="img" aria-label="Video coming soon: a league chat before and after the AI beat reporter">
+						<svg viewBox="0 0 24 24" width="56" height="56" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor" opacity="0.18" /><path d="M10 8l6 4-6 4z" fill="currentColor" /></svg>
+						<p>Video coming soon</p>
+						<p class="brp-vsl__sub">A league chat before the beat reporter, and after.</p>
+					</div>
+				)}
+			</div>
+
+			<div class="brp-hero__buy">
+				<a class="cta cta--primary" href="#get-it">{ctaLabel}</a>
+				<p class="brp-price-line">
+					Black Friday sale: AI Beat Reporter + Ask the History, two for the price of one · <b>{sale}</b> per league · ends {saleEnds} · rest of this season free
+				</p>
+			</div>
+		</header>
+
+		{/* 2. Proof #1, right under the video: before and after. */}
+		<section class="sp-section" aria-labelledby="brp-ba">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Before and after</p>
+					<h2 id="brp-ba">Same league. Different chat.</h2>
+				</div>
+				<p class="sp-head__note">An example of what changes. Owners are shown as teams, never by name.</p>
+			</div>
+			<div class="brp-ba">
+				<figure class="ui-card sp-card brp-chat brp-chat--before">
+					<figcaption class="brp-chat__label">Before</figcaption>
+					<ul class="brp-chat__list">
+						{before.map((m) => 'gap' in m ? (
+							<li class="brp-chat__gap">{m.gap}</li>
+						) : (
+							<li class="brp-msg"><span class="brp-msg__who">{m.who}</span><span class="brp-msg__text">{m.text}</span></li>
+						))}
+					</ul>
+					<p class="brp-chat__verdict">Reminders, a thumbs up, then silence.</p>
+				</figure>
+				<figure class="ui-card sp-card brp-chat brp-chat--after">
+					<figcaption class="brp-chat__label">After</figcaption>
+					<ul class="brp-chat__list">
+						{after.map((m) => (
+							<li class:list={['brp-msg', { 'brp-msg--reporter': m.reporter }]}><span class="brp-msg__who">{m.who}</span><span class="brp-msg__text">{m.text}</span></li>
+						))}
+					</ul>
+					<p class="brp-chat__verdict">One story, a whole afternoon of trash talk.</p>
+				</figure>
+			</div>
+		</section>
+
+		{/* 3. The value equation. */}
+		<section class="sp-section" aria-labelledby="brp-why">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Why it works</p>
+					<h2 id="brp-why">Everything your league chat is missing</h2>
+				</div>
+			</div>
+			<ul class="sp-grid sp-grid--4">
+				{valueEquation.map((v) => (
+					<li class="ui-card sp-card">
+						<p class="brp-kicker">{v.kicker}</p>
+						<h3>{v.title}</h3>
+						<p>{v.body}</p>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		{/* 4. Proof #2: a real Saturday preview, whole. */}
+		<slot name="sample" />
+		<p class="brp-mid-cta"><a class="cta cta--primary" href="#get-it">{ctaLabel}</a></p>
+
+		{/* 5. The stack, 6. guarantee and urgency. */}
+		<section class="sp-section" aria-labelledby="brp-stack">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Everything you get</p>
+					<h2 id="brp-stack">The whole package, one price</h2>
+				</div>
+			</div>
+			<div class="ui-card sp-card brp-stack">
+				<ul class="brp-stack__list">
+					{stack.map((s) => (
+						<li class="brp-stack__item">
+							<div>
+								<h3>{s.title}</h3>
+								<p>{s.body}</p>
+							</div>
+							<span class="brp-stack__value">{s.value}</span>
+						</li>
+					))}
+				</ul>
+				<div class="brp-stack__total">
+					<p>Each one is {one} a year on its own.</p>
+					<p class="brp-stack__sale">Black Friday sale, two for the price of one: <b>{sale}</b> per league</p>
+					<a class="cta cta--primary" href="#get-it">{ctaLabel}</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="sp-band brp-guarantee" aria-labelledby="brp-g">
+			<p class="sp-eyebrow">Our guarantee</p>
+			<h2 id="brp-g">Three stories a week. Guaranteed.</h2>
+			<p>Every week of the season, your reporter files at least three stories about your league. Trades, previews, recaps, roasts. Your chat will always have something new to fight about.</p>
+			<p class="brp-guarantee__sale"><b>Black Friday sale: two for the price of one, {sale} for both.</b> It ends {saleEnds}, when the NFL Draft starts. The rest of this season is free when you start now.</p>
+		</section>
+
+		{/* 7. Objections. */}
+		<section class="sp-section" aria-labelledby="brp-faq">
+			<div class="sp-head">
+				<div class="sp-head__title">
+					<p class="sp-eyebrow">Questions</p>
+					<h2 id="brp-faq">Before you ask</h2>
+				</div>
+				<p class="sp-head__note">{service.answer}</p>
+			</div>
+			<div class="brp-faq">
+				{faqs.map((f) => (
+					<details class="ui-card sp-card brp-faq__item">
+						<summary>{f.q}</summary>
+						<p>{f.a}</p>
+					</details>
+				))}
+			</div>
+		</section>
+
+		{/* 8. The qualifier, then checkout. */}
+		<section class="sp-section" id="get-it" aria-labelledby="brp-q">
+			<div class="ui-card sp-card brp-q">
+				<p class="sp-eyebrow">Get started</p>
+				<h2 id="brp-q">Three quick questions</h2>
+				<form class="brp-q__form" data-brp-qualify>
+					<fieldset>
+						<legend>Are you your league’s commissioner?</legend>
+						<label><input type="radio" name="authority" value="yes" required /> Yes</label>
+						<label><input type="radio" name="authority" value="no" /> No</label>
+					</fieldset>
+					<fieldset>
+						<legend>Is your league on MyFantasyLeague (MFL)?</legend>
+						<label><input type="radio" name="need" value="yes" required /> Yes</label>
+						<label><input type="radio" name="need" value="no" /> No, another site</label>
+					</fieldset>
+					<fieldset>
+						<legend>When do you want it?</legend>
+						<label><input type="radio" name="timeline" value="now" required /> This season</label>
+						<label><input type="radio" name="timeline" value="next" /> Next season</label>
+					</fieldset>
+				</form>
+
+				<div class="brp-q__result" data-brp-result="buy" hidden>
+					<p data-brp-timeline-now>You’re all set. Start today and the rest of this season is free.</p>
+					<p data-brp-timeline-next hidden>Lock in two for the price of one now. Your year runs through the end of next season, so you lose nothing by starting early.</p>
+					{HISTORY_AND_REPORTER_CHECKOUT_URL ? (
+						<a class="cta cta--primary" href={HISTORY_AND_REPORTER_CHECKOUT_URL} rel="noopener">{ctaLabel}</a>
+					) : (
+						<button type="button" class="cta cta--primary" data-interest="history-and-reporter" data-interest-name={productName} data-brp-buy>{ctaLabel}</button>
+					)}
+				</div>
+
+				<div class="brp-q__result" data-brp-result="commish" hidden>
+					<p>Only a commissioner can add the reporter to your league’s MFL page. Send this page to yours.</p>
+					<button type="button" class="cta cta--primary" data-brp-share>Send to my commissioner</button>
+					<p class="brp-q__status" data-brp-share-status aria-live="polite"></p>
+				</div>
+
+				<div class="brp-q__result" data-brp-result="platform" hidden>
+					<p>The reporter runs on MyFantasyLeague today. Leave your email and we’ll tell you when your platform is ready.</p>
+					<button type="button" class="cta cta--ghost" data-interest="beat-reporter" data-interest-name="the AI Beat Reporter on your platform" data-interest-note="Not on MFL yet">Tell me when it’s ready</button>
+				</div>
+			</div>
+		</section>
+	</article>
+</MarketingShell>
+
+<script>
+	// One init per page view; the gate asks a node the page swap replaces.
+	function initBeatSales() {
+		const root = document.querySelector<HTMLElement>('[data-beat-sales]');
+		if (!root || root.dataset.init) return;
+		root.dataset.init = '1';
+
+		const form = root.querySelector<HTMLFormElement>('[data-brp-qualify]')!;
+		const results = root.querySelectorAll<HTMLElement>('[data-brp-result]');
+		const show = (key: string | null) => results.forEach((el) => (el.hidden = el.dataset.brpResult !== key));
+		const answers = () => {
+			const d = new FormData(form);
+			return { authority: d.get('authority'), need: d.get('need'), timeline: d.get('timeline') };
+		};
+
+		form.addEventListener('change', () => {
+			const a = answers();
+			if (a.need === 'no') return show('platform');
+			if (a.authority === 'no') return show('commish');
+			if (a.authority === 'yes' && a.need === 'yes' && a.timeline) {
+				root.querySelector<HTMLElement>('[data-brp-timeline-now]')!.hidden = a.timeline !== 'now';
+				root.querySelector<HTMLElement>('[data-brp-timeline-next]')!.hidden = a.timeline !== 'next';
+				const buy = root.querySelector<HTMLElement>('[data-brp-buy]');
+				if (buy) buy.dataset.interestNote = `Commissioner · On MFL · Wants it ${a.timeline === 'now' ? 'this season' : 'next season'}`;
+				return show('buy');
+			}
+			show(null);
+		});
+
+		root.querySelector<HTMLButtonElement>('[data-brp-share]')?.addEventListener('click', async () => {
+			const status = root.querySelector<HTMLElement>('[data-brp-share-status]')!;
+			const url = location.origin + location.pathname;
+			const text = 'Our league needs this: an AI beat reporter for our MFL league.';
+			try {
+				if (navigator.share) {
+					await navigator.share({ title: document.title, text, url });
+					return;
+				}
+				await navigator.clipboard.writeText(`${text} ${url}`);
+				status.textContent = 'Link copied. Paste it to your commissioner.';
+			} catch {
+				status.textContent = url;
+			}
+		});
+	}
+	document.addEventListener('astro:page-load', initBeatSales);
+	initBeatSales();
+</script>
+
+<style>
+	.brp-hero {
+		grid-template-columns: minmax(0, 1fr);
+		justify-items: center;
+		text-align: center;
+		gap: 1.75rem;
+	}
+	.brp-hero__copy {
+		justify-items: center;
+		max-width: 46rem;
+	}
+	.brp-hero__copy .sp-lede {
+		margin-inline: auto;
+	}
+	.brp-vsl {
+		width: min(100%, 52rem);
+		aspect-ratio: 16 / 9;
+		border-radius: var(--sp-radius-sm);
+		overflow: hidden;
+		background: var(--sp-band);
+		color: var(--sp-band-ink);
+		box-shadow: var(--sp-shadow);
+	}
+	.brp-vsl__video {
+		width: 100%;
+		height: 100%;
+		display: block;
+	}
+	.brp-vsl__placeholder {
+		height: 100%;
+		display: grid;
+		place-content: center;
+		justify-items: center;
+		gap: 0.4rem;
+		padding: 1rem;
+	}
+	.brp-vsl__placeholder p {
+		margin: 0;
+		font-weight: 700;
+		font-size: var(--sp-text-lg);
+	}
+	.brp-vsl__placeholder .brp-vsl__sub {
+		font-weight: 400;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-band-muted);
+	}
+	.brp-hero__buy {
+		display: grid;
+		justify-items: center;
+		gap: 0.6rem;
+	}
+	.brp-price-line {
+		margin: 0;
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+	.brp-price-line b {
+		color: var(--sp-ink);
+	}
+
+	.brp-ba {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+	}
+	@media (max-width: 720px) {
+		.brp-ba {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	.brp-chat {
+		margin: 0;
+		display: grid;
+		gap: 0.9rem;
+		align-content: start;
+	}
+	.brp-chat__label {
+		font-size: var(--sp-text-xs);
+		font-weight: 800;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--sp-muted);
+	}
+	.brp-chat--after .brp-chat__label {
+		color: var(--sp-red);
+	}
+	.brp-chat__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.55rem;
+	}
+	.brp-msg {
+		display: grid;
+		gap: 0.15rem;
+		padding: 0.6rem 0.8rem;
+		border-radius: 14px;
+		background: var(--sp-surface-2);
+		max-width: 92%;
+	}
+	.brp-msg__who {
+		font-size: var(--sp-text-xs);
+		font-weight: 700;
+		color: var(--sp-muted);
+	}
+	.brp-msg--reporter {
+		background: var(--sp-red-soft);
+		border: 1px solid var(--sp-red);
+		max-width: 100%;
+	}
+	.brp-msg--reporter .brp-msg__who {
+		color: var(--sp-red);
+	}
+	.brp-chat__gap {
+		text-align: center;
+		font-size: var(--sp-text-xs);
+		color: var(--sp-muted);
+		font-style: italic;
+		padding-block: 1.25rem;
+	}
+	.brp-chat__verdict {
+		margin: 0;
+		font-weight: 700;
+	}
+
+	.brp-mid-cta {
+		display: flex;
+		justify-content: center;
+		margin: 0;
+	}
+	.brp-kicker {
+		margin: 0;
+		font-size: var(--sp-text-xs);
+		font-weight: 700;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--sp-red);
+	}
+
+	.brp-stack {
+		display: grid;
+		gap: 1.25rem;
+	}
+	.brp-stack__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+	}
+	.brp-stack__item {
+		display: flex;
+		justify-content: space-between;
+		align-items: start;
+		gap: 1rem;
+		padding-block: 0.9rem;
+		border-bottom: 1px solid var(--sp-line);
+	}
+	.brp-stack__item h3 {
+		margin: 0 0 0.25rem;
+	}
+	.brp-stack__item p {
+		margin: 0;
+		color: var(--sp-muted);
+	}
+	.brp-stack__value {
+		flex: none;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	.brp-stack__total {
+		display: grid;
+		justify-items: start;
+		gap: 0.5rem;
+	}
+	.brp-stack__total p {
+		margin: 0;
+		color: var(--sp-muted);
+	}
+	.brp-stack__sale {
+		font-size: var(--sp-text-xl);
+		color: var(--sp-ink) !important;
+	}
+	.brp-stack__sale b {
+		color: var(--sp-red);
+	}
+
+	.brp-guarantee {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.8rem;
+		justify-items: start;
+	}
+	.brp-guarantee h2 {
+		margin: 0;
+		color: var(--sp-band-ink);
+	}
+	.brp-guarantee p {
+		margin: 0;
+		max-width: 60ch;
+		color: var(--sp-band-muted);
+	}
+	.brp-guarantee .brp-guarantee__sale {
+		color: var(--sp-band-ink);
+	}
+
+	.brp-faq {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		align-items: start;
+	}
+	@media (max-width: 720px) {
+		.brp-faq {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	.brp-faq__item summary {
+		cursor: pointer;
+		font-weight: 700;
+	}
+	.brp-faq__item p {
+		margin: 0.6rem 0 0;
+		color: var(--sp-muted);
+	}
+
+	.brp-q {
+		display: grid;
+		gap: 1rem;
+		max-width: 40rem;
+		margin-inline: auto;
+	}
+	.brp-q h2 {
+		margin: 0;
+	}
+	.brp-q__form {
+		display: grid;
+		gap: 0.9rem;
+	}
+	.brp-q__form fieldset {
+		border: 0;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.25rem;
+	}
+	.brp-q__form legend {
+		width: 100%;
+		margin-bottom: 0.35rem;
+		font-weight: 700;
+	}
+	.brp-q__form label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		cursor: pointer;
+	}
+	.brp-q__result {
+		display: grid;
+		justify-items: start;
+		gap: 0.6rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--sp-line);
+	}
+	.brp-q__result[hidden] {
+		display: none;
+	}
+	.brp-q__result p {
+		margin: 0;
+	}
+	.brp-q__status {
+		font-size: var(--sp-text-sm);
+		color: var(--sp-muted);
+	}
+</style>

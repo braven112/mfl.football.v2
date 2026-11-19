@@ -20,7 +20,7 @@ import { SEASONAL_THEME_INCLUDES, SEASONAL_THEME_PRICE } from './products';
 import {
 	BEAT_REPORTER_PRICE_YEAR,
 	CUSTOM_FROM_SETUP,
-	HISTORY_AND_REPORTER_PRICE_YEAR,
+	HISTORY_AND_REPORTER_SALE_PRICE,
 	HISTORY_PRICE_YEAR,
 	dollars,
 } from './pricing';
@@ -84,8 +84,8 @@ export interface Service {
 }
 
 /** The two $49 products cost less together; each page says so under its price. */
-const BUNDLE_NOTE_HISTORY = `Add the AI Beat Reporter: both for ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year`;
-const BUNDLE_NOTE_REPORTER = `Add Ask the History: both for ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year`;
+const BUNDLE_NOTE_HISTORY = `Add the AI Beat Reporter: two for the price of one, both for ${dollars(HISTORY_AND_REPORTER_SALE_PRICE)} a year`;
+const BUNDLE_NOTE_REPORTER = `Add Ask the History: two for the price of one, both for ${dollars(HISTORY_AND_REPORTER_SALE_PRICE)} a year`;
 
 export const SERVICES: Service[] = [
 	{
@@ -119,7 +119,7 @@ export const SERVICES: Service[] = [
 			{ q: 'How far back does it go?', a: 'To your league’s first season on MyFantasyLeague. Every season MFL has is read in, and each new season is added when it finishes.' },
 			{ q: 'Do I have to upload anything?', a: 'No. We read your league’s history straight from MyFantasyLeague. You only tell us your league id.' },
 			{ q: 'Does it change anything on MFL?', a: 'No. Ask the History only reads your league. Rosters, lineups and scoring on MyFantasyLeague are untouched.' },
-			{ q: 'What does it cost?', a: `${dollars(HISTORY_PRICE_YEAR)} a year per league. Add the AI Beat Reporter and both are ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year. Tap “I’m interested” and we will email you when it opens.` },
+			{ q: 'What does it cost?', a: `${dollars(HISTORY_PRICE_YEAR)} a year per league. Add the AI Beat Reporter and you get both for ${dollars(HISTORY_AND_REPORTER_SALE_PRICE)} a year, two for the price of one. Tap “I’m interested” and we will email you when it opens.` },
 		],
 		cta: { kind: 'interest', product: 'league-history', label: 'Get started', name: `Ask the History, ${dollars(HISTORY_PRICE_YEAR)} a year` },
 		secondary: { href: '/ai-beat-reporter', label: 'Add the AI Beat Reporter' },
@@ -152,7 +152,7 @@ export const SERVICES: Service[] = [
 			{ q: 'Who is Max Insider?', a: 'Max Insider is our house reporter, the voice every league gets. He writes in the style of a TV insider, with breaking news, hot takes and the occasional told-you-so.' },
 			{ q: 'Where do the posts show up?', a: 'On your league’s MyFantasyLeague home page. The commissioner pastes one line into the MFL Home Page Message, and the news card appears for every owner.' },
 			{ q: 'Does it change anything on MFL?', a: 'No. The reporter only reads your league. It never touches rosters, lineups or scoring.' },
-			{ q: 'What does it cost?', a: `${dollars(BEAT_REPORTER_PRICE_YEAR)} a year per league. Add Ask the History and both are ${dollars(HISTORY_AND_REPORTER_PRICE_YEAR)} a year. Tap “I’m interested” and we will email you when it opens.` },
+			{ q: 'What does it cost?', a: `${dollars(BEAT_REPORTER_PRICE_YEAR)} a year per league. Add Ask the History and you get both for ${dollars(HISTORY_AND_REPORTER_SALE_PRICE)} a year, two for the price of one. Tap “I’m interested” and we will email you when it opens.` },
 		],
 		cta: { kind: 'interest', product: 'beat-reporter', label: 'Get started', name: `the AI Beat Reporter, ${dollars(BEAT_REPORTER_PRICE_YEAR)} a year` },
 		secondary: { href: '/ask-the-history', label: 'Add Ask the History' },
