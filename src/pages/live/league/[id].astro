@@ -24,6 +24,8 @@
  * request blocked at the edge never reaches the route.
  * `docs/claude/rules/live-scoring.md`.
  */
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { viewerClockZone } from '../../../utils/viewer-clock';
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import LiveBoard from '../../../components/shared/live/LiveBoard';
 import { getMflLiveUser } from '../../../utils/auth';
@@ -91,6 +93,12 @@ if (authUser && leagueId) {
     assemblyFailed = true;
   }
 }
+// Game times print in the viewer's clock from /live/preferences (a cookie on
+// mfl.football), with Pacific as the floor for anyone who has not chosen.
+// No user and no slug: an MFL Live session can be any MFL league, and the
+// account mirror is keyed by registry league.
+const kickoffClock = viewerClockZone(await readViewerClock(Astro.cookies, null));
+
 ---
 
 {notYours ? (
@@ -140,6 +148,7 @@ if (authUser && leagueId) {
   ) : (
     <LiveBoard
       client:load
+      kickoffClock={kickoffClock}
       board={board}
       title={leagueName}
       pollUrl={`/api/league-board?mfl=${encodeURIComponent(leagueId)}`}

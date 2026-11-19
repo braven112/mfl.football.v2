@@ -49,6 +49,7 @@ import type { BroadcastPollResponse, LiveBroadcastPageData } from '../../../type
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { parseRemoteCommand, type RemoteState } from '../../../utils/broadcast-remote-commands';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { kickoffText } from '../../../utils/live-scoring-view';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 import {
   detectBigPlays,
@@ -1036,7 +1037,8 @@ function gameNote(nflTeam: string, slate: readonly NflGame[]): GameNote {
   if (!nflTeam) return none;
   const game = slate.find((g) => normalizeTeamCode(g.away.code) === nflTeam || normalizeTeamCode(g.home.code) === nflTeam);
   if (!game) return none;
-  return { text: game.shortDetail, live: game.state === 'in', done: game.state === 'post', started: game.state !== 'pre' };
+  // A kickoff in the streamer's own clock, never ESPN's always-Eastern text.
+  return { text: kickoffText(game), live: game.state === 'in', done: game.state === 'post', started: game.state !== 'pre' };
 }
 
 function XpLineup({ side, slate, lit }: { side: OverlaySide; slate: readonly NflGame[]; lit: Record<string, number> }) {

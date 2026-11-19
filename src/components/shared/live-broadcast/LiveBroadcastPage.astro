@@ -30,6 +30,8 @@ import {
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import type { AuthUser } from '../../../utils/auth';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { viewerClockZone } from '../../../utils/viewer-clock';
 import '../../../styles/live-broadcast.css';
 // The handheld board's own sheet. Every rule in it sits under `.lbh`, which
 // the TV board never renders (tests/broadcast-handheld-isolation.test.ts).
@@ -83,7 +85,13 @@ const sound = resolveBroadcastSound(
  */
 const demo = Astro.url.searchParams.get('demo') === '1';
 
-const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname, demo });
+// Kickoffs print in the viewer's own clock once they have chosen one; with no
+// choice the island falls back to the device's (a TV has no preference).
+const viewerClock = await readViewerClock(Astro.cookies, user);
+const pageData = {
+  ...toPageData(board, { week, year, sound, pathname: Astro.url.pathname, demo }),
+  kickoffClock: viewerClock.explicit ? viewerClockZone(viewerClock) : null,
+};
 
 /** Back to the board, keeping the set the chips just built. */
 const doneHref = broadcastHref(

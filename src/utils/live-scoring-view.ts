@@ -158,6 +158,37 @@ export function kickoffInClock(
   };
 }
 
+/**
+ * The device's own clock as a `KickoffClock` — for a surface with no viewer
+ * preference to read (a paired TV, a stream overlay). Null when the runtime
+ * cannot name its zone.
+ */
+export function deviceKickoffClock(at: Date = new Date()): KickoffClock | null {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!zone) return null;
+    const label =
+      new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'short' })
+        .formatToParts(at)
+        .find((p) => p.type === 'timeZoneName')?.value ?? '';
+    return { zone, label };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A not-yet-started game's kickoff as one line ("Sun 1:00 PM PT"), in the
+ * given clock — the viewer's chosen one when the route had it, else the
+ * device's. Never ESPN's raw `shortDetail` for a kickoff: that is always
+ * Eastern, whoever is watching. Anything that is not a kickoff (a live clock,
+ * "Final", "TBD") comes back as ESPN wrote it.
+ */
+export function kickoffText(game: NflGame, clock?: KickoffClock | null): string {
+  const k = kickoffInClock(game, clock ?? deviceKickoffClock());
+  return k ? `${k.weekday} ${k.time} ${k.label}`.trim() : game.shortDetail;
+}
+
 export function compactKickoff(shortDetail: string): string {
   const m = /^\s*(.*?)\s*(?:-\s*)?(\d{1,2}:\d{2})\s*(AM|PM)\b\s*[A-Z]{0,4}\s*$/i.exec(shortDetail ?? '');
   if (!m) return shortDetail ?? '';

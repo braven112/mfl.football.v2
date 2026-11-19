@@ -16,6 +16,7 @@
 import type { LivePlayerRow, NflGame, PlayerMeta } from './live-scoring';
 import type { BroadcastMoment, RedZoneAlert } from '../utils/broadcast-moments';
 import type { RemoteState } from '../utils/broadcast-remote-commands';
+import type { KickoffClock } from '../utils/live-scoring-view';
 
 /**
  * One marquee defender standing in for a team defense on the takeover.
@@ -230,6 +231,12 @@ export interface LiveBroadcastPageData {
    * and re-shipping it every eight seconds for eight hours would be absurd.
    */
   defenseFaces: Record<string, BroadcastDefenderFace[]>;
+  /**
+   * The clock kickoffs print in: the viewer's own choice on /preferences,
+   * resolved by the route. Absent or null, the device's clock answers — the
+   * board is often a television with no preference of its own.
+   */
+  kickoffClock?: KickoffClock | null;
   /** Every league the owner is in, for the picker. */
   available: { id: string; name: string; registered: boolean; enabled: boolean }[];
   /** Where the picker's links point. */

@@ -60,21 +60,41 @@ export interface ZoneOption {
  */
 export const ZONE_OPTIONS: Record<CountryCode, readonly ZoneOption[]> = {
   US: [
+    { id: 'AST', zone: 'America/Puerto_Rico', label: 'AST', name: 'Atlantic (Puerto Rico, U.S. Virgin Islands)' },
     { id: 'ET', zone: 'America/New_York', label: 'ET', name: 'Eastern (New York, Atlanta)' },
     { id: 'CT', zone: 'America/Chicago', label: 'CT', name: 'Central (Chicago, Dallas)' },
     { id: 'MT', zone: 'America/Denver', label: 'MT', name: 'Mountain (Denver, Salt Lake City)' },
     { id: 'AZ', zone: 'America/Phoenix', label: 'MST', name: 'Arizona (no daylight saving)' },
     { id: 'PT', zone: 'America/Los_Angeles', label: 'PT', name: 'Pacific (Los Angeles, Seattle)' },
     { id: 'AKT', zone: 'America/Anchorage', label: 'AKT', name: 'Alaska (Anchorage)' },
+    { id: 'ADK', zone: 'America/Adak', label: 'Adak', name: 'Aleutian Islands (Adak)' },
     { id: 'HT', zone: 'Pacific/Honolulu', label: 'HT', name: 'Hawaii (Honolulu)' },
   ],
+  // Every clock Canada keeps, including the provinces and pockets that never
+  // change their clocks (Saskatchewan, Yukon, Atikokan, Quebec's Lower North
+  // Shore).
+  //
+  // BRITISH COLUMBIA moved to permanent daylight time on 2026-03-08: it sprang
+  // forward one last time and never falls back, so it is UTC-7 all year, the
+  // same clock as Yukon. It is NOT Los Angeles' clock any more — they agree
+  // March to November and BC is an hour ahead the rest of the year — so it
+  // gets its own label rather than "PT", and it is no longer one of the
+  // league clock's `equivalents`. The zone is the fixed `Etc/GMT+7` (POSIX
+  // sign: +7 means UTC-7), NOT `America/Vancouver`: the change only reached
+  // tzdata in 2026, and a server or phone carrying older data would print
+  // Vancouver an hour early all winter. A fixed offset is right everywhere.
+  // The id stays 'PT' so every stored choice and seed follows the province.
   CA: [
     { id: 'NT', zone: 'America/St_Johns', label: 'NT', name: "Newfoundland (St. John's)" },
-    { id: 'AT', zone: 'America/Halifax', label: 'AT', name: 'Atlantic (Halifax)' },
-    { id: 'ET', zone: 'America/Toronto', label: 'ET', name: 'Eastern (Toronto, Montreal)' },
+    { id: 'AT', zone: 'America/Halifax', label: 'AT', name: 'Atlantic (Halifax, Moncton, Charlottetown)' },
+    { id: 'AST', zone: 'America/Blanc-Sablon', label: 'AST', name: "Atlantic, no daylight saving (Quebec's Lower North Shore)" },
+    { id: 'ET', zone: 'America/Toronto', label: 'ET', name: 'Eastern (Toronto, Montreal, Ottawa)' },
+    { id: 'EST', zone: 'America/Atikokan', label: 'EST', name: 'Eastern, no daylight saving (Atikokan, Southampton Island)' },
     { id: 'CT', zone: 'America/Winnipeg', label: 'CT', name: 'Central (Winnipeg)' },
-    { id: 'MT', zone: 'America/Edmonton', label: 'MT', name: 'Mountain (Calgary, Edmonton)' },
-    { id: 'PT', zone: 'America/Vancouver', label: 'PT', name: 'Pacific (Vancouver)' },
+    { id: 'SK', zone: 'America/Regina', label: 'CST', name: 'Saskatchewan (Regina, Saskatoon), no daylight saving' },
+    { id: 'MT', zone: 'America/Edmonton', label: 'MT', name: 'Mountain (Calgary, Edmonton, Yellowknife)' },
+    { id: 'PT', zone: 'Etc/GMT+7', label: 'BC', short: 'BC', name: 'British Columbia (Vancouver, Victoria), permanent daylight time, UTC-7' },
+    { id: 'YT', zone: 'America/Whitehorse', label: 'Yukon', name: 'Yukon (Whitehorse), UTC-7 year-round' },
   ],
   AU: [
     { id: 'SYD', zone: 'Australia/Sydney', label: 'auto', locale: 'en-AU', short: 'Sydney', name: 'Eastern (Sydney, Melbourne)' },
@@ -89,14 +109,21 @@ export const ZONE_OPTIONS: Record<CountryCode, readonly ZoneOption[]> = {
     { id: 'LON', zone: 'Europe/London', label: 'auto', locale: 'en-GB', short: 'London', name: 'United Kingdom (London)' },
   ],
   // Mexico dropped daylight saving in 2022 EXCEPT along the US border, so
-  // Tijuana still flips with California and the rest do not. City labels, not
-  // CT/MT/PT: Mexico City is UTC-6 year-round while US Central is -5 half the
-  // year, and printing them under the same two letters would be a lie the
-  // board tells twice a Sunday.
+  // Tijuana, Ciudad Juárez and Matamoros still flip with the US and the rest
+  // do not. City labels, not CT/MT/PT: Mexico City is UTC-6 year-round while
+  // US Central is -5 half the year, and printing them under the same two
+  // letters would be a lie the board tells twice a Sunday.
+  //
+  // 'CHI' is Mexico's PACIFIC clock (Mazatlán, UTC-7 year-round). Its id is a
+  // leftover: it used to point at America/Chihuahua, but Chihuahua state moved
+  // to Central (UTC-6) in late 2022, so that zone was printing Central time
+  // under a Pacific name. The id is kept so stored choices still resolve.
   MX: [
     { id: 'CUN', zone: 'America/Cancun', label: 'Cancún', name: 'Southeast (Cancún)' },
-    { id: 'CDMX', zone: 'America/Mexico_City', label: 'CDMX', name: 'Central (Mexico City, Guadalajara)' },
-    { id: 'CHI', zone: 'America/Chihuahua', label: 'Chihuahua', name: 'Pacific (Chihuahua, Mazatlán)' },
+    { id: 'MAT', zone: 'America/Matamoros', label: 'Matamoros', name: 'Northeast border (Matamoros, Nuevo Laredo, Piedras Negras)' },
+    { id: 'CDMX', zone: 'America/Mexico_City', label: 'CDMX', name: 'Central (Mexico City, Guadalajara, Monterrey, Chihuahua)' },
+    { id: 'JUA', zone: 'America/Ciudad_Juarez', label: 'Juárez', name: 'Ciudad Juárez (follows US Mountain)' },
+    { id: 'CHI', zone: 'America/Mazatlan', label: 'Mazatlán', name: 'Pacific (Mazatlán, La Paz, Hermosillo)' },
     { id: 'TIJ', zone: 'America/Tijuana', label: 'Tijuana', name: 'Northwest (Tijuana)' },
   ],
 };
@@ -136,7 +163,9 @@ export const LEAGUE_CLOCK: LeagueClock = {
   zone: 'America/Los_Angeles',
   label: 'PT',
   name: "The league's clock (Pacific)",
-  equivalents: ['America/Vancouver', 'America/Tijuana'],
+  // Vancouver is NOT here any more: BC went to permanent daylight time in
+  // March 2026, so it leaves Los Angeles' clock every November.
+  equivalents: ['America/Tijuana'],
 };
 
 /**
@@ -335,8 +364,8 @@ export function eventZonesFor(clock: ViewerClock): KickoffZone[] {
  * infer a zone from a team name.
  */
 export const SEEDED_PREFERENCES: Record<string, ViewerPreferences> = {
-  // Wascawy Wabbits — Canada, and already on the league's own clock, so the
-  // board prints PT alone for them.
+  // Wascawy Wabbits — Canada, Pacific. Since BC went to permanent daylight
+  // time (2026) that is the BC clock, printed beside the league's PT.
   'theleague:0009': { country: 'CA', zoneId: 'PT' },
   // Running down the Dream — Canada, Eastern.
   'theleague:0016': { country: 'CA', zoneId: 'ET' },

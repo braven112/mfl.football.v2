@@ -15,6 +15,7 @@ import {
   formatFeedAge,
   formatGameClock,
   kickoffInClock,
+  kickoffText,
   formatPlayClock,
   isPlayerInRedZone,
   playerDownDistance,
@@ -80,6 +81,24 @@ describe('kickoff in the viewer\'s clock', () => {
     expect(kickoffInClock(game({ state: 'pre', shortDetail: 'TBD', date: '2026-10-19T17:00Z' }), PT)).toBeNull();
     expect(kickoffInClock(game({ date: '2026-10-19T17:00Z' }), PT)).toBeNull();
     expect(kickoffInClock(game({ state: 'pre', shortDetail: '10/19 - 1:00 PM EDT', date: '' }), PT)).toBeNull();
+  });
+});
+
+describe('kickoffText — the broadcast board\'s one-line kickoff', () => {
+  const pre = game({ state: 'pre', shortDetail: '11/22 - 1:00 PM EST', date: '2026-11-22T18:00Z' });
+
+  it('prints the chosen clock, never ESPN\'s Eastern text', () => {
+    expect(kickoffText(pre, { zone: 'America/Los_Angeles', label: 'PT' })).toBe('Sun 10:00 AM PT');
+    // BC is on permanent daylight time: an hour ahead of PT in November.
+    expect(kickoffText(pre, { zone: 'Etc/GMT+7', label: 'BC' })).toBe('Sun 11:00 AM BC');
+  });
+
+  it('falls back to the device clock rather than to ESPN when no clock was chosen', () => {
+    expect(kickoffText(pre, null)).not.toBe(pre.shortDetail);
+  });
+
+  it('leaves a live game\'s clock as ESPN wrote it', () => {
+    expect(kickoffText(game(), { zone: 'America/Los_Angeles', label: 'PT' })).toBe('8:12 - 3rd');
   });
 });
 

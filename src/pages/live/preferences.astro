@@ -1,0 +1,34 @@
+---
+/**
+ * mfl.football/live/preferences — MFL Live's time zone (and country) picker.
+ *
+ * The SAME shared PreferencesPage the league sites render, in MFL Live's own
+ * shell. The route owns the cookie writes: `Astro.cookies.set()` from an
+ * imported component runs after the headers are committed and throws
+ * `ResponseSentError`, blanking the page.
+ *
+ * Cookie only, never the account mirror. The mirror is keyed by REGISTRY
+ * league slug, and an MFL Live session can belong to any MFL league, so it has
+ * no bucket to write to. Cookies are per apex domain, so this choice is
+ * mfl.football's own: it is what the live board reads.
+ */
+import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
+import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
+
+export const prerender = false;
+
+const { prefs } = await resolveViewerPreferences(Astro.url, Astro.cookies, null);
+---
+
+<PreferencesPage
+  prefs={prefs}
+  title="Time zone | MFL Live"
+  pathname="/live/preferences"
+  sundayTicketPath={null}
+  justSaved={hasPreferenceParams(Astro.url)}
+  syncedToAccount={false}
+  loginPath={null}
+  throwback={null}
+  scoreboardPath={null}
+  shell="mfl-live"
+/>
