@@ -2,14 +2,58 @@
   "$comment": "Archie's Fantasy Football League news feed. Starts empty; the weekly Gauntlet column is the first thing written here.",
   "posts": [
     {
+      "id": "sf_notebook_archies_20261120",
+      "timestamp": "2026-11-20T19:08:00.000Z",
+      "type": "transaction",
+      "transactionSubType": "NOTEBOOK",
+      "format": "notebook",
+      "tier": "minor",
+      "headline": "Around the league: Nov 20 notebook",
+      "body": "Notes from around the league today:\n- Bears sign QB, Malik Willis\n- Stingers add QB, Fernando Mendoza",
+      "franchiseIds": [
+        "0032",
+        "0046"
+      ],
+      "playerIds": [
+        "15694",
+        "17462"
+      ],
+      "sourceTimestamp": "1795201680",
+      "items": [
+        {
+          "sourceTimestamp": "1795185396",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Bears sign QB, Malik Willis",
+          "franchiseIds": [
+            "0032"
+          ],
+          "playerIds": [
+            "15694"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795201680",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Stingers add QB, Fernando Mendoza",
+          "franchiseIds": [
+            "0046"
+          ],
+          "playerIds": [
+            "17462"
+          ]
+        }
+      ],
+      "league": "archies"
+    },
+    {
       "id": "sf_notebook_archies_20261119",
-      "timestamp": "2026-11-19T19:28:03.000Z",
+      "timestamp": "2026-11-20T04:22:07.000Z",
       "type": "transaction",
       "transactionSubType": "NOTEBOOK",
       "format": "notebook",
       "tier": "minor",
       "headline": "Around the league: Nov 19 notebook",
-      "body": "Notes from around the league today:\n- Vipers claim TE, Chigoziem Okonkwo\n- Vipers add the New York Jets defense\n- Vipers claim WR, Laquon Treadwell\n- Barracudas pick up QB, Joe Milton\n- Chickens pick up TE, Dalton Schultz\n- Goats grab RB, J.K. Dobbins\n- Waves sign RB, David Montgomery\n- Waves pick up TE, Michael Mayer\n- Waves add the New York Jets defense\n- Mammoth add TE, Pat Freiermuth\n- Mammoth pick up the Tampa Bay Buccaneers defense\n- Freeze grab TE, Chigoziem Okonkwo",
+      "body": "Notes from around the league today:\n- Demons pick up QB, Cam Ward\n- Ducks waive the Cincinnati Bengals defense\n- Ducks pick up TE, Brenton Strange\n- Lobstahs add the Detroit Lions defense\n- Lobstahs claim QB, Baker Mayfield\n- Sandmen pick up the Los Angeles Chargers defense\n- Beasts claim RB, Kyle Monangai\n- Sandmen sign WR, Malik Washington\n- Sioux pick up TE, Mark Andrews\n- Rafters claim WR, DeVonta Smith\n- Dawgs claim WR, Xavier Hutchinson\n- Badgers add the Buffalo Bills defense\n- Saints grab TE, T.J. Hockenson\n- Lions pick up WR, Xavier Hutchinson\n- Phantoms claim WR, Antonio Williams\n- Rhinos claim RB, Jordan Mason\n- KitKats add RB, Chris Rodriguez\n- Tikis pick up RB, Josh Jacobs\n- KitKats grab RB, Mike Washington Jr.\n- Dawgs claim TE, Chigoziem Okonkwo\n- …and 12 more moves on the wire.",
       "franchiseIds": [
         "0061",
         "0075",
@@ -17,7 +61,22 @@
         "0003",
         "0004",
         "0055",
-        "0002"
+        "0002",
+        "0044",
+        "0074",
+        "0085",
+        "0026",
+        "0082",
+        "0017",
+        "0098",
+        "0042",
+        "0030",
+        "0037",
+        "0005",
+        "0090",
+        "0001",
+        "0097",
+        "0066"
       ],
       "playerIds": [
         "15889",
@@ -29,9 +88,26 @@
         "14071",
         "16212",
         "15331",
-        "0525"
+        "0525",
+        "17030",
+        "16269",
+        "0522",
+        "13590",
+        "0514",
+        "17066",
+        "16684",
+        "13671",
+        "15282",
+        "16201",
+        "0501",
+        "14138",
+        "17512",
+        "15972",
+        "16174",
+        "14073",
+        "17482"
       ],
-      "sourceTimestamp": "1795116483",
+      "sourceTimestamp": "1795148527",
       "items": [
         {
           "sourceTimestamp": "1795098511",
@@ -164,9 +240,294 @@
           "playerIds": [
             "15889"
           ]
+        },
+        {
+          "sourceTimestamp": "1795119726",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Demons pick up QB, Cam Ward",
+          "franchiseIds": [
+            "0044"
+          ],
+          "playerIds": [
+            "17030"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795125349",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Ducks waive the Cincinnati Bengals defense",
+          "franchiseIds": [
+            "0074"
+          ],
+          "playerIds": []
+        },
+        {
+          "sourceTimestamp": "1795125385",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Ducks pick up TE, Brenton Strange",
+          "franchiseIds": [
+            "0074"
+          ],
+          "playerIds": [
+            "16269"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795126492",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Lobstahs add the Detroit Lions defense",
+          "franchiseIds": [
+            "0085"
+          ],
+          "playerIds": [
+            "0522"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795126690",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Lobstahs claim QB, Baker Mayfield",
+          "franchiseIds": [
+            "0085"
+          ],
+          "playerIds": [
+            "13590"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795128094",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Sandmen pick up the Los Angeles Chargers defense",
+          "franchiseIds": [
+            "0026"
+          ],
+          "playerIds": [
+            "0514"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795128183",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Beasts claim RB, Kyle Monangai",
+          "franchiseIds": [
+            "0082"
+          ],
+          "playerIds": [
+            "17066"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795128220",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Sandmen sign WR, Malik Washington",
+          "franchiseIds": [
+            "0026"
+          ],
+          "playerIds": [
+            "16684"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795128425",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Sioux pick up TE, Mark Andrews",
+          "franchiseIds": [
+            "0017"
+          ],
+          "playerIds": [
+            "13671"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795129242",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Rafters claim WR, DeVonta Smith",
+          "franchiseIds": [
+            "0098"
+          ],
+          "playerIds": [
+            "15282"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795131647",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Dawgs claim WR, Xavier Hutchinson",
+          "franchiseIds": [
+            "0042"
+          ],
+          "playerIds": [
+            "16201"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795131992",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Badgers add the Buffalo Bills defense",
+          "franchiseIds": [
+            "0030"
+          ],
+          "playerIds": [
+            "0501"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795134075",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Saints grab TE, T.J. Hockenson",
+          "franchiseIds": [
+            "0037"
+          ],
+          "playerIds": [
+            "14138"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795136646",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Lions pick up WR, Xavier Hutchinson",
+          "franchiseIds": [
+            "0005"
+          ],
+          "playerIds": [
+            "16201"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795137975",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Phantoms claim WR, Antonio Williams",
+          "franchiseIds": [
+            "0090"
+          ],
+          "playerIds": [
+            "17512"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795141359",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Rhinos claim RB, Jordan Mason",
+          "franchiseIds": [
+            "0001"
+          ],
+          "playerIds": [
+            "15972"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795141760",
+          "transactionSubType": "FREE_AGENT",
+          "line": "KitKats add RB, Chris Rodriguez",
+          "franchiseIds": [
+            "0097"
+          ],
+          "playerIds": [
+            "16174"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795142670",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Tikis pick up RB, Josh Jacobs",
+          "franchiseIds": [
+            "0066"
+          ],
+          "playerIds": [
+            "14073"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795142883",
+          "transactionSubType": "FREE_AGENT",
+          "line": "KitKats grab RB, Mike Washington Jr.",
+          "franchiseIds": [
+            "0097"
+          ],
+          "playerIds": [
+            "17482"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795148527",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Dawgs claim TE, Chigoziem Okonkwo",
+          "franchiseIds": [
+            "0042"
+          ],
+          "playerIds": [
+            "15889"
+          ]
         }
       ],
       "league": "archies"
+    },
+    {
+      "id": "sf_1795129222_4do0",
+      "timestamp": "2026-11-19T23:00:22.000Z",
+      "type": "transaction",
+      "transactionSubType": "TRADE",
+      "tier": "breaking",
+      "headline": "Luchadors and Foxes complete 4-asset trade",
+      "body": "League sources tell me the Luchadors and Foxes have agreed to a blockbuster swap! The Luchadors are receiving QB, Bryce Young and RB, Chase Brown, while the Foxes are landing QB, Jared Goff and RB, Jonah Coleman. Boom! The deal is official and the rosters are about to look very different.",
+      "franchiseIds": [
+        "0078",
+        "0018"
+      ],
+      "playerIds": [
+        "16148",
+        "16181",
+        "12611",
+        "17477"
+      ],
+      "sourceTimestamp": "1795129222",
+      "tradeSignature": "0018:0078|12611,16148,16181,17477",
+      "league": "archies",
+      "analysis": "Luchadors get a B+ here: Bryce Young offers real upside and Chase Brown brings a strong dynasty floor at running back. Foxes earn a B- since Jared Goff gives them immediate stability, but Jonah Coleman doesn't move the needle enough to fully justify giving up the young upside."
+    },
+    {
+      "id": "sf_1795128107_244n",
+      "timestamp": "2026-11-19T22:41:47.000Z",
+      "type": "transaction",
+      "transactionSubType": "TRADE",
+      "tier": "breaking",
+      "headline": "Chickens and Sioux complete 4-asset trade",
+      "body": "I'm told the Chickens and Sioux have agreed to a blockbuster dynasty deal! League sources tell me the Chickens are receiving QB Cam Ward and WR Amon-Ra St. Brown, while the Sioux are landing QB Jayden Daniels and WR Malik Nabers. Boom! Two contenders just reshuffled their rosters in a big way.",
+      "franchiseIds": [
+        "0006",
+        "0017"
+      ],
+      "playerIds": [
+        "17030",
+        "15287",
+        "16581",
+        "16615"
+      ],
+      "sourceTimestamp": "1795128107",
+      "tradeSignature": "0006:0017|15287,16581,16615,17030",
+      "league": "archies",
+      "analysis": "Sioux get the edge here with Jayden Daniels and Malik Nabers giving them a higher ceiling for the next several seasons, earning them a B+. The Chickens get a grade of B- for Amon-Ra St. Brown's steady production, though they're banking on Cam Ward developing into the elite option they need."
+    },
+    {
+      "id": "sf_1795125625_0vbn",
+      "timestamp": "2026-11-19T22:00:25.000Z",
+      "type": "transaction",
+      "transactionSubType": "TRADE",
+      "tier": "breaking",
+      "headline": "Tombstones trade with Razerbacks for WR, Jameson Williams",
+      "body": "League sources tell me the Tombstones and Razerbacks have agreed to a blockbuster swap, and I'm told it's official. Tombstones are landing WR, Jameson Williams, while the Razerbacks are bringing in WR, Josh Downs. Boom! Two wideouts changing hands in a deal that has the whole league buzzing.",
+      "franchiseIds": [
+        "0014",
+        "0020"
+      ],
+      "playerIds": [
+        "15756",
+        "16187"
+      ],
+      "sourceTimestamp": "1795125625",
+      "tradeSignature": "0014:0020|15756,16187",
+      "league": "archies",
+      "analysis": "Williams brings big-play upside that the Tombstones can use right now, and Downs gives the Razerbacks a reliable target in the slot. I'm giving this one a B+ across the board, with a slight edge to the Razerbacks for landing the more consistent producer."
     },
     {
       "id": "sf_notebook_archies_20261118",
@@ -6551,6 +6912,6 @@
       }
     }
   ],
-  "lastScanTimestamp": "2026-11-19T20:05:29.703Z",
-  "lastProcessedMflTimestamp": "1795116483"
+  "lastScanTimestamp": "2026-11-20T20:05:24.624Z",
+  "lastProcessedMflTimestamp": "1795201680"
 }
