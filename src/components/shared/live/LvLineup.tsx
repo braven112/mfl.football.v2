@@ -14,6 +14,14 @@
 import type { JSX } from 'react';
 import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import LvPlayerRow from './LvPlayerRow';
+import type { NflGameOwner } from '../../../utils/live/nfl-game-players';
+
+/** Per-row extras the NFL game drill-in adds: whose he is, and no stray "proj". */
+export interface LvRowDecoration {
+  owners?: readonly NflGameOwner[];
+  freeAgent?: boolean;
+  hideProjection?: boolean;
+}
 
 export interface LvLineupProps {
   side0: readonly LivePlayerRow[];
@@ -29,6 +37,8 @@ export interface LvLineupProps {
   onOpenPlayer?: (row: LivePlayerRow, side: 0 | 1) => void;
   /** No projections behind this matchup — see `LiveMatchup.noProjections`. */
   hideProjection?: boolean;
+  /** Per-row extras, keyed off the row — the NFL game drill-in only. */
+  decorate?: (row: LivePlayerRow) => LvRowDecoration | undefined;
 }
 
 export default function LvLineup({
@@ -41,6 +51,7 @@ export default function LvLineup({
   bench = false,
   onOpenPlayer,
   hideProjection = false,
+  decorate,
 }: LvLineupProps): JSX.Element {
   // The two sides can legitimately differ in length — a franchise may start
   // fewer players, and a bench is routinely lopsided. The pair count is the
@@ -51,6 +62,7 @@ export default function LvLineup({
   const cell = (row: LivePlayerRow | undefined, side: 'left' | 'right') => {
     if (!row) return <div />;
     const who = meta[row.id];
+    const extra = decorate?.(row);
     return (
       <div>
         <LvPlayerRow
@@ -61,7 +73,9 @@ export default function LvLineup({
           box={boxScore[row.id]}
           detailStatus={detailStatus}
           onOpen={onOpenPlayer ? () => onOpenPlayer(row, side === 'left' ? 0 : 1) : undefined}
-          hideProjection={hideProjection}
+          hideProjection={hideProjection || extra?.hideProjection === true}
+          owners={extra?.owners}
+          freeAgent={extra?.freeAgent}
         />
       </div>
     );
