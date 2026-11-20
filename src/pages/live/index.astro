@@ -60,6 +60,7 @@ import type { MflLiveBoard as Board } from '../../types/mfl-live';
 import '../../styles/live.css';
 import '../../styles/nfl-games-strip.css';
 import '../../styles/network-badge.css';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
 
 /**
@@ -157,6 +158,14 @@ await tradeCapture;
 // No user and no slug: an MFL Live session can be any MFL league, and the
 // account mirror is keyed by registry league.
 const viewerClock = await readViewerClock(Astro.cookies, null);
+// The rail's server slate. The board's own read usually carries it; when ESPN
+// failed that read, ask once more so the rail still has something to render
+// (an island that server-renders nothing never hydrates — see NflGamesStrip).
+const nflGames = board
+  ? board.games?.length
+    ? board.games
+    : await fetchInitialNflGames({ week: board.week, year: board.year, params: Astro.url.searchParams })
+  : undefined;
 const kickoffClock = viewerClockZone(viewerClock);
 // Whose channel lineup the NFL game cards name (CBS at home, DAZN in Canada).
 const viewerCountry = viewerClock.prefs.country;
@@ -231,7 +240,7 @@ const viewerCountry = viewerClock.prefs.country;
 					week={board.week}
 					year={board.year}
 					isLive={isLive}
-					initialGames={board.games}
+					initialGames={nflGames}
 					country={viewerCountry}
 					kickoffClock={kickoffClock}
 				/>

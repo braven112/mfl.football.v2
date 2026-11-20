@@ -1187,7 +1187,10 @@ button.lv-card:focus-visible {
   overflow: hidden;
   border-radius: 50%;
   background: var(--card-surface);
-  box-shadow: 0 0 0 1.5px var(--card-surface), 0 1px 2px color-mix(in srgb, var(--page-text) 25%, transparent);
+  /* The ring that separates it from the headshot is an OUTLINE in the card's
+     own colour, so it reads as a cut-out in both themes. */
+  outline: 1.5px solid var(--card-surface);
+  box-shadow: var(--shadow-sm);
   /* A failed mark must not paint its alt text — see `.lv-side__crest`. */
   font-size: 0;
   color: transparent;
@@ -1196,7 +1199,7 @@ button.lv-card:focus-visible {
 .lv-powner img { width: 86%; height: 86%; object-fit: contain; }
 .lv-powner--crop img { width: 100%; height: 100%; object-fit: cover; }
 .lv-powner--text {
-  font-size: 0.48rem;
+  font-size: calc(var(--font-size-xs) * 0.65);
   font-weight: var(--font-weight-bold);
   color: var(--content-text-muted);
   background: var(--content-bg-muted);
@@ -1226,7 +1229,7 @@ button.lv-card:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .lv-nflgame__status--live { color: var(--lv-live); font-weight: var(--font-weight-semibold); }
-.lv-nflgame__poss { color: var(--lv-live); font-size: 0.55em; vertical-align: middle; }
+.lv-nflgame__poss { color: var(--lv-live); font-size: var(--font-size-xs); vertical-align: middle; }
 .lv-nflgame__leagues { padding: 0.35rem 0.6rem 0; }
 .lv-nflgame__scoring {
   margin: 0;
