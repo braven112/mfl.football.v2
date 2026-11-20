@@ -1153,6 +1153,100 @@ button.lv-card:focus-visible {
   outline-offset: -2px;
 }
 
+/* ── the NFL game drill-in: whose he is ──────────────────────────────────── */
+
+/**
+ * The fantasy team's mark on the corner of the headshot.
+ *
+ * It shares the `face` grid area with the headshot rather than taking a track
+ * of its own: the row's three columns are spoken for (see `.lv-prow`), and a
+ * league's owners know each other's marks at a glance. Overlapping in one
+ * area is what keeps the name column exactly as wide as on a fantasy lineup.
+ * A second mark (the AFL rosters one player in both conferences) tucks in
+ * beside the first.
+ */
+.lv-powners {
+  grid-area: face;
+  align-self: start;
+  justify-self: end;
+  display: inline-flex;
+  margin-top: calc(var(--lv-face-w) - 0.95rem);
+  margin-right: -0.35rem;
+  pointer-events: none;
+}
+.lv-prow--right .lv-powners {
+  justify-self: start;
+  margin-right: 0;
+  margin-left: -0.35rem;
+}
+.lv-powner {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--card-surface);
+  box-shadow: 0 0 0 1.5px var(--card-surface), 0 1px 2px color-mix(in srgb, var(--page-text) 25%, transparent);
+  /* A failed mark must not paint its alt text — see `.lv-side__crest`. */
+  font-size: 0;
+  color: transparent;
+}
+.lv-powner + .lv-powner { margin-left: -0.3rem; }
+.lv-powner img { width: 86%; height: 86%; object-fit: contain; }
+.lv-powner--crop img { width: 100%; height: 100%; object-fit: cover; }
+.lv-powner--text {
+  font-size: 0.48rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+  background: var(--content-bg-muted);
+}
+
+/* Free agent: metadata, so it reads at the meta line's own muted weight. */
+.lv-pfa {
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted);
+}
+
+/* The viewer's own player: a faint wash, never a stripe (owner, 2026-11-04). */
+.lv-prow--mine:not(.lv-prow--redzone) {
+  background: color-mix(in srgb, var(--league-accent, var(--color-primary)) 7%, transparent);
+}
+
+.lv-nflgame__status {
+  margin: -0.35rem 0 0;
+  padding: 0 0.6rem 0.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lv-nflgame__status--live { color: var(--lv-live); font-weight: var(--font-weight-semibold); }
+.lv-nflgame__poss { color: var(--lv-live); font-size: 0.55em; vertical-align: middle; }
+.lv-nflgame__leagues { padding: 0.35rem 0.6rem 0; }
+.lv-nflgame__scoring {
+  margin: 0;
+  padding: 0.45rem 0.6rem 0;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+.lv-nflgame__scoring strong { color: var(--page-text); font-weight: var(--font-weight-semibold); }
+.lv-nflgame__caps { padding-top: 0.1rem; padding-bottom: 0.25rem; }
+.lv-nflgame__empty,
+.lv-nflgame__note {
+  margin: 0;
+  padding: 0.6rem var(--lv-gutter, 0.55rem);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+.lv-nflgame__note { padding: 0 0.6rem 0.8rem; font-size: var(--font-size-xs); }
+
 /* ── the bench ───────────────────────────────────────────────────────────── */
 
 /**
