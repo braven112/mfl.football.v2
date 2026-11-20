@@ -210,7 +210,7 @@ export function parseScoringRules(payload: unknown): PositionRuleSet[] | null {
  * One position spelling, for matching a player to a rule block. MFL's rules
  * say `PK` and `Def`; rows can carry `K`, `DEF`, `DST`.
  */
-function canonPosition(raw: string): string {
+export function canonPosition(raw: string): string {
   const p = raw.trim().toUpperCase();
   if (p === 'K') return 'PK';
   if (p === 'DST' || p === 'D/ST' || p === 'TMDEF') return 'DEF';

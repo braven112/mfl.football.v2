@@ -236,7 +236,9 @@ describe('the shell outlives the screen switch', () => {
   it('renders the rail and the red-zone banner BEFORE the branch', () => {
     const rail = src.indexOf('{rail}');
     const banner = src.indexOf('<LvRedZoneBanner');
-    const branch = src.indexOf('{open ? (');
+    // The branch now opens on the NFL game drill-in, then the matchup one —
+    // both are screen switches, and the shell must sit above both.
+    const branch = src.indexOf('{openGame ? (');
     expect(rail).toBeGreaterThan(-1);
     expect(banner).toBeGreaterThan(-1);
     expect(branch).toBeGreaterThan(-1);
@@ -249,7 +251,8 @@ describe('the shell outlives the screen switch', () => {
   });
 
   it('keeps the head above the branch too, so the week picker never disappears', () => {
-    expect(src.indexOf('<div className="lv-head">')).toBeLessThan(src.indexOf('{open ? ('));
+    expect(src.indexOf('<div className="lv-head">')).toBeLessThan(src.indexOf('{openGame ? ('));
+    expect(src.indexOf('{openGame ? (')).toBeLessThan(src.indexOf(') : open ? ('));
   });
 
   /**
@@ -347,7 +350,10 @@ describe('the shell outlives the screen switch', () => {
     });
 
     it('renders the pre-season reason rather than "this week has not kicked off"', () => {
-      expect(src).toMatch(/reason=\{preSeason \? 'pre-season' : panel\.status\}/);
+      // Pre-season wins first; a league board with no pairings at all says
+      // "not set yet" rather than "you have no game" (nobody does).
+      expect(src).toMatch(/reason=\{\s*preSeason\s*\?\s*'pre-season'\s*:/);
+      expect(src).toMatch(/rostersComplete && panel\.status === 'no-matchup'\s*\?\s*'not-scheduled'\s*:\s*panel\.status/);
     });
   });
 });

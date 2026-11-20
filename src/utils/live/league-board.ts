@@ -37,6 +37,7 @@ import {
 import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
 import { readLiveStandings, withBoardIdentities } from './league-live-standings';
+import { isSeasonWindowOpen } from '../pecking-order-season-window.mjs';
 
 export interface AssembleLeagueBoardInput {
   slug: CanonicalLeagueSlug;
@@ -61,6 +62,8 @@ export interface AssembleLeagueBoardInput {
    * replay — its honest empty state is the better answer.
    */
   sample?: boolean;
+  /** The clock the season-window check reads. Tests pin it; pages omit it. */
+  now?: Date;
 }
 
 export interface AssembledLeagueBoard {
@@ -114,6 +117,7 @@ async function assembleUngrouped(
   input: AssembleLeagueBoardInput,
 ): Promise<AssembledLeagueBoard> {
   const { slug, leagueId, week, year, authUser, searchParams, throwbackScope, sample = false } = input;
+  const now = input.now ?? new Date();
 
   // League-scoped, in ONE place, for every league. See the header.
   const viewerFranchiseId =
@@ -205,9 +209,21 @@ async function assembleUngrouped(
         ],
       };
     }
-    // An empty-but-HEALTHY feed is the offseason. `ok` is the whole guard: a
-    // failed read also yields no matchups.
-    if (sample && demoParam !== '0' && board.ok && board.panels[0].matchups.length === 0) {
+    // An empty-but-HEALTHY feed is the offseason. `ok` guards an outage (a
+    // failed read also yields no matchups), and the season window guards a
+    // FUTURE week: in November, Week 15 is TheLeague's first playoff round,
+    // whose pairings MFL has not set yet, so its feed is empty too — and the
+    // replay printed last season's Week 14 under a "Week 14" picker, which
+    // read as this season's real games. In season, an unset week is the
+    // honest empty state, never the replay. An explicit `?demo=1` still is.
+    const offseason = !isSeasonWindowOpen(year, now);
+    if (
+      sample &&
+      offseason &&
+      demoParam !== '0' &&
+      board.ok &&
+      board.panels[0].matchups.length === 0
+    ) {
       isSample = true;
       board = null;
     }

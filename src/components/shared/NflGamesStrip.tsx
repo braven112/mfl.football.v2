@@ -33,6 +33,11 @@ import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../
 import { useNflScoreboard } from '../../hooks/useNflScoreboard';
 import { resolveChannel, type CountryCode } from '../../utils/broadcast-channels';
 import { kickoffInClock, type KickoffClock } from '../../utils/live-scoring-view';
+import {
+  selectNflGame,
+  useNflGameBoardListening,
+  useSelectedNflGame,
+} from '../../utils/live/nfl-game-select';
 
 const nflLogoUrl = (code: string) => (code ? `/assets/nfl-logos/${normalizeTeamCode(code)}.svg` : '');
 
@@ -61,11 +66,18 @@ export interface NflGamesStripProps {
 }
 
 function GameCard(
-  { game, country, unconfirmed, kickoffClock }: {
+  { game, country, unconfirmed, kickoffClock, onOpen, selected = false }: {
     game: NflGame;
     country: CountryCode;
     unconfirmed: boolean;
     kickoffClock: KickoffClock | null;
+    /**
+     * Opens the game's drill-in on the live board. Present only while a board
+     * on the page can open one (see `nfl-game-select.ts`), so a rail with no
+     * board behind it never offers a tap that does nothing.
+     */
+    onOpen?: () => void;
+    selected?: boolean;
   },
 ) {
   // `unconfirmed` = these games came from the SERVER slate and no poll has ever
@@ -108,8 +120,8 @@ function GameCard(
   const kickoff = kickoffInClock(game, kickoffClock);
   const preText = kickoff ? `${kickoff.weekday} ${kickoff.time} ${kickoff.label}`.trim() : game.shortDetail;
 
-  return (
-    <article className={`nfl-game ${game.state}`}>
+  const body = (
+    <>
       {teamLine('away')}
       {teamLine('home')}
       <footer className="nfl-game__foot">
@@ -133,8 +145,25 @@ function GameCard(
           )
         )}
       </footer>
-    </article>
+    </>
   );
+
+  if (onOpen) {
+    const away = game.away.code || 'TBD';
+    const home = game.home.code || 'TBD';
+    return (
+      <button
+        type="button"
+        className={`nfl-game nfl-game--open ${game.state}${selected ? ' nfl-game--selected' : ''}`}
+        aria-pressed={selected}
+        aria-label={`${away} at ${home}: show fantasy points for both teams`}
+        onClick={onOpen}
+      >
+        {body}
+      </button>
+    );
+  }
+  return <article className={`nfl-game ${game.state}`}>{body}</article>;
 }
 
 export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames, country = 'US', kickoffClock = null }: NflGamesStripProps) {
@@ -145,6 +174,10 @@ export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games',
     live: !!isLive,
     fallbackGames: initialGames,
   });
+
+  // Tapping a card opens its drill-in, but only where a board can show one.
+  const canOpen = useNflGameBoardListening();
+  const selectedId = useSelectedNflGame();
 
   // The server slate is showing and no poll has ever landed. In demo there is
   // no poll by design, so the bundled slate is authoritative and not stale.
@@ -162,7 +195,17 @@ export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games',
     <section className="nfl-strip" aria-label={label ?? 'NFL games'}>
       {label && <span className="nfl-strip__label">{label}</span>}
       <div className="nfl-strip__rail">
-        {sorted.map((g) => <GameCard key={g.id} game={g} country={country} unconfirmed={unconfirmed} kickoffClock={kickoffClock} />)}
+        {sorted.map((g) => (
+          <GameCard
+            key={g.id}
+            game={g}
+            country={country}
+            unconfirmed={unconfirmed}
+            kickoffClock={kickoffClock}
+            onOpen={canOpen && !demo ? () => selectNflGame(g.id) : undefined}
+            selected={canOpen && selectedId === g.id}
+          />
+        ))}
       </div>
     </section>
   );

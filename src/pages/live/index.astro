@@ -58,6 +58,10 @@ import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
 import { readMflLiveSelection, rememberMflLiveChoiceForAccount } from '../../utils/mfl-live-selection-store';
 import type { MflLiveBoard as Board } from '../../types/mfl-live';
 import '../../styles/live.css';
+import '../../styles/nfl-games-strip.css';
+import '../../styles/network-badge.css';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
+import NflGamesStrip from '../../components/shared/NflGamesStrip';
 
 /**
  * This board renders through the SHARED kit (`components/shared/live`).
@@ -153,7 +157,18 @@ await tradeCapture;
 // mfl.football), with Pacific as the floor for anyone who has not chosen.
 // No user and no slug: an MFL Live session can be any MFL league, and the
 // account mirror is keyed by registry league.
-const kickoffClock = viewerClockZone(await readViewerClock(Astro.cookies, null));
+const viewerClock = await readViewerClock(Astro.cookies, null);
+// The rail's server slate. The board's own read usually carries it; when ESPN
+// failed that read, ask once more so the rail still has something to render
+// (an island that server-renders nothing never hydrates — see NflGamesStrip).
+const nflGames = board
+  ? board.games?.length
+    ? board.games
+    : await fetchInitialNflGames({ week: board.week, year: board.year, params: Astro.url.searchParams })
+  : undefined;
+const kickoffClock = viewerClockZone(viewerClock);
+// Whose channel lineup the NFL game cards name (CBS at home, DAZN in Canada).
+const viewerCountry = viewerClock.prefs.country;
 
 ---
 
@@ -211,7 +226,25 @@ const kickoffClock = viewerClockZone(await readViewerClock(Astro.cookies, null))
 				panelHrefBase="/live/league/"
 				standingsProLocked={!hasMflLivePro(authUser)}
 				season={season}
+				rostersComplete={false}
 			/>
+			{/* The NFL games, below the board as on every league's Live Scoring
+			    page. A card opens that game's drill-in on the board above: both
+			    clubs' players scored by each of your leagues. A SEPARATE island,
+			    outside the board, so it survives a drill-in; the two share one
+			    scoreboard poller and talk through nfl-game-select.ts.
+			    `client:idle`, never `client:visible` — see NflGamesStrip. */}
+			<div class="lv-page__strip">
+				<NflGamesStrip
+					client:idle
+					week={board.week}
+					year={board.year}
+					isLive={isLive}
+					initialGames={nflGames}
+					country={viewerCountry}
+					kickoffClock={kickoffClock}
+				/>
+			</div>
 		</div>
 	)}
 </MflAppLayout>

@@ -24,6 +24,12 @@ import type { LiveBoard as Board, LiveMatchup, LivePanel } from '../../../types/
 import type { NflGame } from '../../../types/live-scoring';
 import LvMatchupCard from './LvMatchupCard';
 import LvMatchupDetail from './LvMatchupDetail';
+import LvNflGameDetail from './LvNflGameDetail';
+import {
+  registerNflGameBoard,
+  selectNflGame,
+  useSelectedNflGame,
+} from '../../../utils/live/nfl-game-select';
 import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
 import LvFeedStatus from './LvFeedStatus';
@@ -154,6 +160,13 @@ export interface LiveBoardProps {
    * Projected locked (`src/utils/mfl-live-pro.ts`). League sites never pass it.
    */
   standingsProLocked?: boolean;
+  /**
+   * Every panel holds the WHOLE league — true on a league board. MFL Live's
+   * cross-league board holds only the viewer's own matchup per league, so a
+   * player on neither side there may still be on somebody's roster, and the
+   * NFL game drill-in must not tag him a free agent (`buildNflGamePlayers`).
+   */
+  rostersComplete?: boolean;
 }
 
 /**
@@ -260,8 +273,17 @@ export default function LiveBoard({
   hideWeekPicker = false,
   onSelectWeek,
   standingsProLocked = false,
+  rostersComplete = true,
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
+  /**
+   * The open NFL GAME — chosen on the rail, which is a separate island, so it
+   * arrives through a shared module store rather than a prop
+   * (`nfl-game-select.ts`). Registering is what turns the rail's cards into
+   * buttons; a page with no board never offers the tap.
+   */
+  const selectedGameId = useSelectedNflGame();
+  useEffect(() => registerNflGameBoard(), []);
   /**
    * WHAT IS OPEN, AS AN IDENTITY — never the matchup object itself.
    *
@@ -291,7 +313,27 @@ export default function LiveBoard({
    */
   const rootRef = useRef<HTMLDivElement>(null);
   const boardScrollY = useRef<number | null>(null);
-  const selectedKey = selected ? `${selected.leagueId}|${selected.pairing}` : '';
+  const selectedKey = selectedGameId
+    ? `nfl|${selectedGameId}`
+    : selected
+      ? `${selected.leagueId}|${selected.pairing}`
+      : '';
+  /**
+   * A game opened from the rail. The rail sits BELOW the board on the league
+   * pages, so the tap happens far down the page: remember where the reader
+   * was before the scroll effect below brings the drill-in's top into view,
+   * and close any open matchup — one drill-in at a time.
+   */
+  const lastGameId = useRef<string | null>(null);
+  if (selectedGameId !== lastGameId.current) {
+    if (selectedGameId && lastGameId.current === null && !selected && typeof window !== 'undefined') {
+      boardScrollY.current = window.scrollY;
+    }
+    lastGameId.current = selectedGameId;
+  }
+  useEffect(() => {
+    if (selectedGameId) setSelected(null);
+  }, [selectedGameId]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (selectedKey) {
@@ -658,6 +700,19 @@ export default function LiveBoard({
     openRef.current = open;
   });
 
+  /**
+   * The open NFL game, re-found in the CURRENT slate every render so the
+   * drill-in's score and clock move with the rail beside it. A poll that
+   * briefly drops it holds the last good game rather than closing the screen.
+   */
+  const openGameRef = useRef<NflGame | null>(null);
+  const openGame: NflGame | null = selectedGameId
+    ? slate.games.find((g) => g.id === selectedGameId) ?? openGameRef.current
+    : null;
+  useEffect(() => {
+    openGameRef.current = openGame;
+  });
+
   // Each league's own MFL decimal setting — a cross-league board can mix them.
   const card = (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => (
     <ScorePrecisionContext.Provider
@@ -671,6 +726,7 @@ export default function LiveBoard({
       lead={lead}
       onOpen={() => {
         boardScrollY.current = window.scrollY;
+        selectNflGame(null);
         setSelected({ leagueId: panel.leagueId, pairing: pairingKey(matchup) });
       }}
     />
@@ -697,6 +753,7 @@ export default function LiveBoard({
             season={season}
             onOpenClosest={(game) => {
               boardScrollY.current = window.scrollY;
+              selectNflGame(null);
               setSelected({ leagueId: game.leagueId, pairing: game.pairing });
             }}
           />
@@ -713,7 +770,7 @@ export default function LiveBoard({
           `aria-pressed` states exactly what these are. Hidden while a matchup
           is open: the detail screen replaces the board, and a Standings tab
           there would leave the matchup with no way back. */}
-      {!open && hasStandings && (
+      {!open && !openGame && hasStandings && (
         <div className="ui-tabs lv-tabs" role="group" aria-label="Board view">
           <button
             type="button"
@@ -734,7 +791,22 @@ export default function LiveBoard({
         </div>
       )}
 
-      {open ? (
+      {openGame ? (
+        <LvNflGameDetail
+          game={openGame}
+          panels={panelViews.map((v) => v.panel)}
+          meta={board.playerMeta}
+          gamesByTeam={gamesByTeam}
+          boxScore={detail.boxScore}
+          detailStatus={detailStatus}
+          rules={leagueRules}
+          rostersComplete={rostersComplete}
+          year={board.year}
+          interactive={!demoLabel && !!pollUrl}
+          kickoffClock={kickoffClock}
+          onBack={() => selectNflGame(null)}
+        />
+      ) : open ? (
         <>
         {/* The drill-in is where a dropped league is LEAST obvious and matters
             most — the reader is watching one game, and every number on this
@@ -846,7 +918,13 @@ export default function LiveBoard({
                 // list, saying why. Dropping it would re-order the board
                 // mid-afternoon and make an owner wonder where a team went.
                 <LvEmptyState
-                  reason={preSeason ? 'pre-season' : panel.status}
+                  reason={
+                    preSeason
+                      ? 'pre-season'
+                      : rostersComplete && panel.status === 'no-matchup'
+                        ? 'not-scheduled'
+                        : panel.status
+                  }
                   leagueName={multiLeague ? panel.leagueName : undefined}
                 />
               )}

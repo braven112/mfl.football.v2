@@ -30,6 +30,28 @@
   flex-direction: column;
   gap: 0.35rem;
 }
+/* A card that opens its game's drill-in on the live board. A real <button>,
+   so the UA box styling is reset back to the card's own. */
+.nfl-game--open {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+.nfl-game--open:hover { border-color: color-mix(in srgb, var(--page-text) 28%, var(--card-border)); }
+.nfl-game--open:active { transform: scale(0.98); }
+.nfl-game--open:focus-visible {
+  outline: 2px solid var(--color-primary, currentColor);
+  outline-offset: 2px;
+}
+/* The open game: a soft ring, never a heavy stripe. */
+.nfl-game--selected {
+  border-color: var(--league-accent, var(--color-primary));
+  outline: 1px solid var(--league-accent, var(--color-primary));
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) { .nfl-game--open { transition: none; } .nfl-game--open:active { transform: none; } }
 .nfl-game__team { display: flex; align-items: center; gap: 0.5rem; }
 .nfl-game__logo { width: 24px; height: 24px; object-fit: contain; }
 .nfl-game__code { font-weight: var(--font-weight-bold); font-size: 0.88rem; color: var(--page-text); }
