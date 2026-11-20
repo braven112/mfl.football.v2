@@ -822,7 +822,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     <!-- Starters -->
     <section class="lineup-starters" aria-labelledby="starters-heading">
-      <h2 class="section-title" id="starters-heading">Starters</h2>
+      <div class="lineup-starters__header">
+        <h2 class="section-title" id="starters-heading">Starters</h2>
+        <!-- Names the board behind the #N pills. Filled by refreshRankChips(),
+             hidden when the owner has no board for this league. -->
+        <span class="lineup-rank-key" id="lineup-rank-key" hidden></span>
+      </div>
       <ol class="lineup-slots" id="lineup-slots">
         {slots.map((slot, i) => {
           const player = slot.playerId ? rosterById.get(slot.playerId) : null;
@@ -1428,10 +1433,22 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         * six callers — one of which would eventually be missed.
         */
       function refreshRankChips() {
+        // The chip rides the position line ("QB  #113"), not the row: in the
+        // row it sat in the same gap the kickoff time hangs into, and on a
+        // phone the two drew on top of each other.
         applyRankChips(rankings, [
-          { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player' },
-          { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player' },
+          { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player .player-meta__pos' },
+          { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player .player-meta__pos' },
         ]);
+        // A bare "#113" says nothing about whose rank it is, and the board's
+        // name will not fit inside every chip at phone width without bringing
+        // the overlap back — so the header names it once.
+        const rankKey = document.getElementById('lineup-rank-key');
+        if (rankKey) {
+          rankKey.hidden = !rankings.available;
+          rankKey.textContent = rankings.available ? `# = ${rankings.fullName} rank` : '';
+          rankKey.title = rankings.available ? `Pills show each player's rank on your ${rankings.fullName} board` : '';
+        }
       }
 
       /**
@@ -3069,13 +3086,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     color: var(--color-primary-dark, #15385f);
   }
 
-  /* Inline rank chip on a starter slot / bench row — sits between the player
-     block and the matchup, so the row keeps its height. */
+  /* Inline rank chip on a starter slot / bench row — sits on the position
+     line under the name ("QB  #113"), so the row keeps its height and the
+     kickoff time, which hangs left from the projection on that same line,
+     keeps the space beside it. The board's name lives once in the Starters
+     header (.lineup-rank-key), not in every chip. */
   .lineup-rank-chip {
     flex-shrink: 0;
-    align-self: center;
-    margin-right: 0.375rem;
-    padding: 0.1rem 0.4rem;
+    padding: 0 0.35rem;
     border-radius: var(--radius-full, 999px);
     background: rgba(28, 73, 124, 0.09);
     color: var(--color-primary, #1c497c);
@@ -3088,6 +3106,34 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   html.dark .lineup-rank-chip {
     background: rgba(59, 130, 246, 0.16);
+  }
+
+  /* Below ~340px the starter row's position line and the hanging kickoff
+     time ("Sun 10:00 AM PT") leave only a few pixels between them, so a
+     three-digit chip would touch the time. Tighten the chip there. */
+  @media (max-width: 340px) {
+    .lineup-rank-chip {
+      padding: 0 0.25rem;
+      font-size: var(--font-size-3xs);
+    }
+    .lineup-slot__player .player-meta { gap: 0.25rem; }
+  }
+
+  .lineup-starters__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .lineup-rank-key {
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .lineup-cdm__stat--rank {
