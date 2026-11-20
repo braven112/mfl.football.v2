@@ -37,7 +37,7 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 .nfl-game--open:hover { border-color: color-mix(in srgb, var(--page-text) 28%, var(--card-border)); }
 .nfl-game--open:active { transform: scale(0.98); }
@@ -48,7 +48,8 @@
 /* The open game: a soft ring, never a heavy stripe. */
 .nfl-game--selected {
   border-color: var(--league-accent, var(--color-primary));
-  box-shadow: 0 0 0 1px var(--league-accent, var(--color-primary)), var(--shadow-card);
+  outline: 1px solid var(--league-accent, var(--color-primary));
+  outline-offset: -2px;
 }
 @media (prefers-reduced-motion: reduce) { .nfl-game--open { transition: none; } .nfl-game--open:active { transform: none; } }
 .nfl-game__team { display: flex; align-items: center; gap: 0.5rem; }

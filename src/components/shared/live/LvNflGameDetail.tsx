@@ -57,6 +57,11 @@ export interface LvNflGameDetailProps {
   kickoffClock: KickoffClock | null;
   /** MFL Live's store build — no headshots. */
   storeBuild?: boolean;
+  /**
+   * The two clubs' players, handed in rather than fetched — a story renders
+   * with no API behind it. Omitted on every real board.
+   */
+  pool?: readonly PlayerMeta[];
   onBack: () => void;
 }
 
@@ -73,6 +78,7 @@ export default function LvNflGameDetail({
   interactive,
   kickoffClock,
   storeBuild = false,
+  pool: poolOverride,
   onBack,
 }: LvNflGameDetailProps): JSX.Element {
   // A Sleeper league has no MFL rules to score a free agent with, and its
@@ -86,7 +92,11 @@ export default function LvNflGameDetail({
   const [leagueId, setLeagueId] = useState<string | null>(null);
   const panel = ordered.find((p) => p.leagueId === leagueId) ?? ordered[0] ?? null;
 
-  const pool = useNflTeamPlayers([game.away.code, game.home.code], year, { storeBuild });
+  const fetched = useNflTeamPlayers([game.away.code, game.home.code], year, {
+    storeBuild,
+    enabled: !poolOverride,
+  });
+  const pool = poolOverride ? { status: 'ok' as const, players: [...poolOverride] } : fetched;
 
   const built = panel
     ? buildNflGamePlayers({
