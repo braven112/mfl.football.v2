@@ -350,7 +350,10 @@ describe('the shell outlives the screen switch', () => {
     });
 
     it('renders the pre-season reason rather than "this week has not kicked off"', () => {
-      expect(src).toMatch(/reason=\{preSeason \? 'pre-season' : panel\.status\}/);
+      // Pre-season wins first; a league board with no pairings at all says
+      // "not set yet" rather than "you have no game" (nobody does).
+      expect(src).toMatch(/reason=\{\s*preSeason\s*\?\s*'pre-season'\s*:/);
+      expect(src).toMatch(/rostersComplete && panel\.status === 'no-matchup'\s*\?\s*'not-scheduled'\s*:\s*panel\.status/);
     });
   });
 });

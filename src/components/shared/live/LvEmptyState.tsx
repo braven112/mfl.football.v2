@@ -26,8 +26,13 @@
 import type { JSX } from 'react';
 import type { LiveLeagueStatus } from '../../../types/live';
 
-/** `LiveLeagueStatus` minus `ok`, plus the pre-kickoff window. */
-export type LvEmptyReason = Exclude<LiveLeagueStatus, 'ok'> | 'pre-season';
+/**
+ * `LiveLeagueStatus` minus `ok`, plus the pre-kickoff window, plus
+ * `not-scheduled`: a league board (which shows EVERY pairing) whose feed is
+ * healthy but has none at all for the week — a future playoff round MFL has not
+ * seeded yet. "You just don't have a game" would be wrong there: nobody does.
+ */
+export type LvEmptyReason = Exclude<LiveLeagueStatus, 'ok'> | 'pre-season' | 'not-scheduled';
 
 export interface LvEmptyStateProps {
   reason: LvEmptyReason;
@@ -43,6 +48,10 @@ const COPY: Record<LvEmptyReason, { title: string; body: string }> = {
   'no-matchup': {
     title: 'No matchup this week',
     body: 'The league is scoring normally; you just don’t have a game on the schedule.',
+  },
+  'not-scheduled': {
+    title: 'Matchups aren’t set yet',
+    body: 'The league hasn’t paired this week yet. Playoff games appear here once the bracket is set, and the NFL games below are this week’s real slate.',
   },
   unavailable: {
     title: 'Couldn’t read this league',

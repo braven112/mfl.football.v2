@@ -918,7 +918,13 @@ export default function LiveBoard({
                 // list, saying why. Dropping it would re-order the board
                 // mid-afternoon and make an owner wonder where a team went.
                 <LvEmptyState
-                  reason={preSeason ? 'pre-season' : panel.status}
+                  reason={
+                    preSeason
+                      ? 'pre-season'
+                      : rostersComplete && panel.status === 'no-matchup'
+                        ? 'not-scheduled'
+                        : panel.status
+                  }
                   leagueName={multiLeague ? panel.leagueName : undefined}
                 />
               )}
