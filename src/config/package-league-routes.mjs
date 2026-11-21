@@ -73,6 +73,14 @@ export const PACKAGE_ROUTES = {
 export const HISTORY_ONLY_ROUTES = new Set(['index.astro', 'login.astro', 'forbidden.astro']);
 
 /**
+ * The tiers with no site of their own: History ('history') and the AI Beat
+ * Reporter plan ('ai', History plus a news page per story). Both keep only
+ * HISTORY_ONLY_ROUTES of the every-league routes; the AI tier's News routes
+ * come from its `schefterFeed` box like any feature route.
+ */
+export const isSitelessTier = (league) => league?.tier === 'history' || league?.tier === 'ai';
+
+/**
  * Routes that also need DATA before they exist for a reader: a page the box
  * entitles but that has nothing to show yet. The route file is still
  * generated (so it is there the moment the data lands, with no sync); the
@@ -98,7 +106,7 @@ function entitles(route, feature, features, historyOnly) {
  * league drops the every-league routes it does not get.
  */
 export function packageRoutesFor(features, league = null) {
-  const historyOnly = league?.tier === 'history';
+  const historyOnly = isSitelessTier(league);
   return Object.entries(PACKAGE_ROUTES)
     .filter(([route, feature]) => entitles(route, feature, features, historyOnly))
     .map(([route]) => route);
@@ -125,7 +133,7 @@ export function isPackageLeague(league) {
 export function packageLeagueHasPath(league, p) {
   const route = packageRouteForPath(p);
   if (!route) return false;
-  const entitled = entitles(route, PACKAGE_ROUTES[route], league?.features, league?.tier === 'history');
+  const entitled = entitles(route, PACKAGE_ROUTES[route], league?.features, isSitelessTier(league));
   return entitled && (DATA_GATES[route]?.(league) ?? true);
 }
 

@@ -19,8 +19,9 @@ export const prerender = false;
 const league = getLeagueBySlug('sandbox')!;
 // A History-only league's homepage IS its History page, at /<slug>/history
 // (package-league-routes.mjs HISTORY_ONLY_ROUTES). Upgrading to a full site
-// changes the tier and this page takes the bare address back.
-if (league.tier === 'history') {
+// changes the tier and this page takes the bare address back. The AI Beat
+// Reporter tier ('ai') is History plus its stories, so it lands there too.
+if (league.tier === 'history' || league.tier === 'ai') {
   return Astro.redirect(resolveLeaguePath(`/${league.slug}/history`, Astro.locals.hideLeaguePrefix ?? false));
 }
 const feedDir = `${league.dataPath}/mfl-feeds`;

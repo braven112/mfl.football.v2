@@ -61,7 +61,7 @@ export type IconSet = 'classic' | 'line';
 export type SiteTheme = 'editorial' | 'primetime';
 
 export type LeagueTier = 'history' | 'ai' | 'full';
-export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only';
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only' | 'history-and-reporter';
 
 export interface LeagueFeatures {
   contracts: boolean;

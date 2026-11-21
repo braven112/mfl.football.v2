@@ -15,7 +15,7 @@
 import { FEATURE_CATALOG, FEATURE_KEYS, featureDependencyErrors, getFeature } from './league-feature-catalog.mjs';
 
 /**
- * @typedef {'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only'} LeagueArchetype
+ * @typedef {'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft' | 'history-only' | 'history-and-reporter'} LeagueArchetype
  */
 
 /**
@@ -191,6 +191,22 @@ export const ARCHETYPES = {
       brandingEditor: false,
     },
   },
+};
+
+/**
+ * The $49 two-for-one (Brandon, 2026-11-19): the History tier plus the AI
+ * beat reporter, for an MFL league that is not one of our sites. Its pages are
+ * History's plus each story's own page (the News routes the feed entitles);
+ * the reporter's widget goes on the league's own MFL home page. Launched by
+ * hand with scripts/add-beat-reporter-league.mjs, which also writes the
+ * league's own reporter (`persona`) and the scanner block.
+ */
+ARCHETYPES['history-and-reporter'] = {
+  label: 'League History + AI Beat Reporter',
+  description:
+    'The History tier plus the AI beat reporter: History pages, a news page for every story, and the news widget on the league’s MFL home page. No other league pages.',
+  example: null,
+  features: { ...ARCHETYPES['history-only'].features, schefterFeed: true },
 };
 
 export const ARCHETYPE_KEYS = /** @type {LeagueArchetype[]} */ (Object.keys(ARCHETYPES));
