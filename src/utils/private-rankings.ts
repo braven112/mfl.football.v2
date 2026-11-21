@@ -15,7 +15,8 @@
  * order, and remembers the first that can read the repo: the private-repo
  * token the build uses for Beat-Reporter, then the site's admin token. Each
  * needs read access to braven112/brandon-fantasy; a token without it answers
- * 404 and the next is tried. `BRANDON_FANTASY_TOKEN`, if ever set, goes first.
+ * 404 and the next is tried. `PERSONAL_FANTASY_TOKEN` (the token Brandon made
+ * for this repo) goes first, then `BRANDON_FANTASY_TOKEN` if ever set.
  * `BRANDON_FANTASY_REF` (optional) reads a branch other than the default one.
  * `BRANDON_FANTASY_DIR` (local dev only) reads a local clone of the private
  * repo instead of GitHub; it is never set in Vercel.
@@ -42,6 +43,7 @@ export type BoardLoad =
 
 /** The env vars tried, in order. The same token under two names is tried once. */
 export const BOARD_TOKEN_VARS = [
+  'PERSONAL_FANTASY_TOKEN',
   'BRANDON_FANTASY_TOKEN',
   'VERCEL_BEAT_REPORTER_TOKEN',
   'BEAT_REPORTER_TOKEN',
