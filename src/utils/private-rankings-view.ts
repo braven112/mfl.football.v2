@@ -24,6 +24,8 @@ export interface Consensus {
 
 export interface BoardPlayer {
   id: string | null;
+  /** ESPN's id, for the headshot (the board carries it since 2026-11-21). */
+  espnId?: string | null;
   name: string;
   pos: string;
   team: string;
