@@ -177,6 +177,7 @@ const tickerLines = [
   }
 
   .bn-byline__meta {
+    text-align: left;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -227,6 +228,11 @@ const tickerLines = [
   /* The shared .cta pattern (src/styles/cta.css) supplies shape, colour and
      hover; the error pages only run their buttons a size up. */
   .btn {
+    /* This repo has no global border-box, so without this the phone rule's
+       width: 100% adds the padding and border on top and the button runs
+       past the card's right edge. */
+    box-sizing: border-box;
+    max-width: 100%;
     padding: 0.75rem 1.25rem;
     font-size: 1rem;
   }
