@@ -36,12 +36,13 @@ import { waiverDeadlineCopy } from '../../utils/waiver-deadline-copy';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
+import { resolveViewerBreakingStory } from '../../utils/breaking-story-hero';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { resolveHeroState } from '../../utils/league-hero/season-state';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
-import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
+import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
 import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
@@ -50,7 +51,7 @@ import { hasSubmittedLineup } from '../../utils/lineup-submitted';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
 import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
-import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
+import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castShowcasePanels, castsFor } from '../../utils/hero-casting';
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
@@ -160,15 +161,19 @@ const timeline = getWhatsNextTimeline(effectiveDate);
 // Pass a castability predicate so a newer non-compositable bomb (K/DEF, MFL-only
 // photo) doesn't hide an older story whose player actually renders.
 const breakingPlayerMap = getPlayerMap(getCurrentSeasonYear());
-const breakingStory = selectBreakingStory(
-  feed.posts,
-  effectiveDate ?? new Date(),
-  48,
-  (ids) => !!castStoryModel(ids, breakingPlayerMap),
-);
-const breakingModel = breakingStory
-  ? castStoryModel(breakingStory.playerIds, breakingPlayerMap)
-  : null;
+// An injury leads the hero only for the owner who rosters the player, or for
+// everyone when he is a star (top 5 at his position by public consensus or
+// this season's points). See src/utils/breaking-injury-relevance.ts.
+const viewerBreaking = await resolveViewerBreakingStory({
+  league: THELEAGUE.slug,
+  posts: feed.posts,
+  now: effectiveDate ?? new Date(),
+  viewerFranchiseId: theLeagueFranchiseId,
+  leagueYear: getCurrentLeagueYear(),
+  players: breakingPlayerMap,
+});
+const breakingStory = viewerBreaking?.story ?? null;
+const breakingModel = viewerBreaking?.model ?? null;
 const hasBreakingStory = !!(breakingStory && breakingModel);
 
 const whatsNewEntries = getWhatsNewEntriesForLeague('theleague');

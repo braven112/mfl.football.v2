@@ -53,7 +53,7 @@ const ALLOWLIST: Record<string, string> = {
   // the team tint over a fixed deep-ink base (same family as the heroes).
   'src/components/shared/hp-sections/TopPlayersPromo.astro': 'homepage Top Players poster (composite family)',
   'src/components/theleague/AuctionCompositeHero.astro': 'composite hero',
-  'src/components/theleague/BreakingStoryHero.astro': 'composite hero',
+  'src/components/shared/BreakingStoryHero.astro': 'composite hero',
   'src/components/theleague/CutWatchCompositeHero.astro': 'composite hero',
   'src/components/theleague/PreseasonCompositeHero.astro': 'composite hero',
   'src/components/shared/FaceoffComposite.astro': 'two-panel composite',

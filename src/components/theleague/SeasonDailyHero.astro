@@ -40,7 +40,7 @@ import WaiverWireHero from './season-heroes/WaiverWireHero.astro';
 import ArticleHero from './season-heroes/ArticleHero.astro';
 import MatchupSplitHero from './season-heroes/MatchupSplitHero.astro';
 import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
-import BreakingStoryHero from './BreakingStoryHero.astro';
+import BreakingStoryHero from '../shared/BreakingStoryHero.astro';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { DEFAULT_COUNTRY, type CountryCode } from '../../utils/broadcast-channels';
@@ -187,6 +187,7 @@ const fallback = state.fallbackHero;
 {/* Breaking story (P0) — a fresh <48h trade/auction bomb leads every non-live slot. */}
 {phase === 'breaking-story' && breakingModel && breakingStory && (
   <BreakingStoryHero
+    league="theleague"
     model={breakingModel}
     story={breakingStory}
     resolveLeaguePath={resolveLeaguePath}

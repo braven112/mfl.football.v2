@@ -50,6 +50,8 @@ import {
 import { buildMondaySpotlightProps, type MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
+import { resolveViewerBreakingStory } from '../../utils/breaking-story-hero';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { loadMyTeamWeek } from '../../utils/my-team-week';
@@ -305,6 +307,20 @@ const showTradeDeadlineConflict =
   !!authUser && isCommissionerOrAdminForLeague(authUser, AFL.id)
   && isTradeDeadlineCheckWindow(aflTradeCheck, effectiveDate ?? new Date());
 
+// A fresh breaking story — a trade, or an injury the viewer should care about
+// (their own player, or a top-5 star) — leads the hero, as on TheLeague's.
+// Asked BEFORE the hero resolves so the resolver only takes a boolean.
+const breakingSeasonYear = getCurrentSeasonYear(effectiveDate);
+await preloadPlayerIdentity([breakingSeasonYear]).catch(() => undefined);
+const aflBreaking = await resolveViewerBreakingStory({
+  league: AFL.slug,
+  posts: feed.posts,
+  now: effectiveDate,
+  viewerFranchiseId: authAflFranchiseId,
+  leagueYear: aflLeagueYearForHero,
+  players: getPlayerMap(breakingSeasonYear),
+});
+
 const heroInput = {
   league: AFL,
   effectiveDate,
@@ -324,6 +340,7 @@ const heroInput = {
   timeline,
   whatsNewEntries: aflWhatsNew,
   standingsLeaderId,
+  hasBreakingStory: !!aflBreaking,
 };
 let heroState = await resolveLeagueHomeHero(heroInput);
 
@@ -455,6 +472,7 @@ const aflTopPlayers = await loadLeagueData<TopPlayersFile>(`${AFL.dataPath}/deri
     standings: standingsFranchises,
     userFranchiseId,
     backdrop: heroBackdrop,
+    breaking: aflBreaking,
   }}
   whatsNew={{
     entries: aflWhatsNew,
