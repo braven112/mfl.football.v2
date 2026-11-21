@@ -13,6 +13,7 @@
  * Phones get one card per player (no sideways-scrolling table), with the
  * sort as a row of pills.
  */
+import PlayerCell from './PlayerCell.astro';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
@@ -237,8 +238,13 @@ const sourceLines = load.ok
                 <tr class:list={['mr-row', { 'mr-row--mine': row.ownership?.mine }]}>
                   <td class="mr-num mr-idx">{i + 1}</td>
                   <td class="mr-player">
-                    <span class="mr-name">{p.name}</span>
-                    <span class="mr-meta">{[p.pos, p.team, p.age != null ? `${p.age} yrs` : ''].filter(Boolean).join(' · ')}</span>
+                    <PlayerCell
+                      name={p.name}
+                      position={p.pos}
+                      nflTeam={p.team || undefined}
+                      mflId={p.id ?? undefined}
+                      espnId={p.espnId ?? undefined}
+                    />
                   </td>
                   {q.view === 'dynasty' && (
                     <>
@@ -248,7 +254,7 @@ const sourceLines = load.ok
                       <td class="mr-num" data-label="DLF">{rank(p.dynasty?.dlf)}</td>
                       <td class="mr-num" data-label="Consensus">{consensusCell(p.dynasty?.fp)}{rangeText(p.dynasty?.fp, p.pos) && <span class="mr-meta mr-range">{rangeText(p.dynasty?.fp, p.pos)}</span>}</td>
                       <td class="mr-num" data-label="Gap"><span class:list={['mr-gap', gapTone(p.dynasty?.gap)]}>{gapText(p.dynasty?.gap)}</span></td>
-                      <td class="mr-num mr-hide-phone" data-label="Age">{rank(p.age)}</td>
+                      <td class="mr-num" data-label="Age">{rank(p.age)}</td>
                     </>
                   )}
                   {q.view === 'rookies' && (
@@ -408,10 +414,6 @@ const sourceLines = load.ok
   .mr-key {
     font-weight: var(--font-weight-semibold);
   }
-  .mr-name {
-    display: block;
-    font-weight: var(--font-weight-semibold);
-  }
   .mr-meta {
     color: var(--content-text-muted);
     font-size: var(--font-size-xs);
@@ -526,9 +528,6 @@ const sourceLines = load.ok
     .mr-week,
     .mr-owner {
       grid-column: 1 / -1 !important;
-    }
-    .mr-hide-phone {
-      display: none;
     }
   }
 </style>
