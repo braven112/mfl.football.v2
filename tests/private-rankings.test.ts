@@ -48,6 +48,18 @@ describe('private rankings view', () => {
     expect(v.rows.map((r) => r.player.name)).toEqual(['Jeremiyah Love', 'Prospect X']);
   });
 
+  it('sorts by the gap to consensus, biggest buy first', () => {
+    const withFp = board([
+      { ...P.gibbs, dynasty: { ...P.gibbs.dynasty, fp: { rank: 2, best: 1, worst: 4, tier: 1 }, gap: -2 } },
+      { ...P.bowers, dynasty: { ...P.bowers.dynasty, fp: { rank: 30, best: 1, worst: 60, tier: 3 }, gap: 25.5 } },
+      P.love,
+    ]);
+    const v = buildView(withFp, parseViewQuery(new URLSearchParams('sort=gap')), null, null);
+    expect(v.rows.map((r) => r.player.name)).toEqual(['Brock Bowers', 'Jahmyr Gibbs', 'Jeremiyah Love']);
+    const c = buildView(withFp, parseViewQuery(new URLSearchParams('sort=fp')), null, null);
+    expect(c.rows.map((r) => r.player.name)).toEqual(['Jahmyr Gibbs', 'Brock Bowers', 'Jeremiyah Love']);
+  });
+
   it('caps a long tab unless all=1', () => {
     const many = board(Array.from({ length: PAGE_SIZE + 5 }, (_, i) => ({ id: String(i), name: `P${i}`, pos: 'WR', team: '', age: null, dynasty: { avg: i + 1 } })));
     expect(buildView(many, parseViewQuery(new URLSearchParams()), null, null)).toMatchObject({ truncated: true, total: PAGE_SIZE + 5 });

@@ -8,7 +8,18 @@ export interface BoardSource {
   label: string;
   fetchedAt: string | null;
   edition?: string;
+  experts?: number;
   count: number;
+}
+
+/** FantasyPros consensus for a player: rank, the experts' best and worst, tier. */
+export interface Consensus {
+  rank: number;
+  /** FantasyPros' rank at the player's position. */
+  posRank?: number | null;
+  best: number | null;
+  worst: number | null;
+  tier: number | null;
 }
 
 export interface BoardPlayer {
@@ -17,11 +28,14 @@ export interface BoardPlayer {
   pos: string;
   team: string;
   age: number | null;
-  dynasty?: { fbg?: number; fbgTier?: number; dlf?: number; avg?: number; posRank?: string };
+  dynasty?: { fbg?: number; fbgTier?: number; dlf?: number; avg?: number; posRank?: string; fp?: Consensus; gap?: number; myPosRank?: number };
   rookie?: {
     fbg?: number;
     dlf?: number;
     avg?: number;
+    fp?: Consensus;
+    gap?: number;
+    myPosRank?: number;
     rsp?: { posRank: string | null; score: number | null; grade: string | null; tier: string | null };
   };
   season?: {
@@ -32,6 +46,9 @@ export interface BoardPlayer {
     weekPosRank?: string;
     weekPts?: number | null;
     matchup?: string;
+    fp?: Consensus;
+    gap?: number;
+    myPosRank?: number;
   };
 }
 
@@ -57,16 +74,22 @@ export const SORTS: Record<View, { key: string; label: string; dir: 'asc' | 'des
     { key: 'avg', label: 'Avg', dir: 'asc' },
     { key: 'fbg', label: 'FBG', dir: 'asc' },
     { key: 'dlf', label: 'DLF', dir: 'asc' },
+    { key: 'fp', label: 'Consensus', dir: 'asc' },
+    { key: 'gap', label: 'Gap', dir: 'desc' },
     { key: 'age', label: 'Age', dir: 'asc' },
   ],
   rookies: [
     { key: 'avg', label: 'Avg', dir: 'asc' },
     { key: 'fbg', label: 'FBG', dir: 'asc' },
     { key: 'dlf', label: 'DLF', dir: 'asc' },
+    { key: 'fp', label: 'Consensus', dir: 'asc' },
+    { key: 'gap', label: 'Gap', dir: 'desc' },
     { key: 'rsp', label: 'RSP score', dir: 'desc' },
   ],
   season: [
     { key: 'ros', label: 'ROS', dir: 'asc' },
+    { key: 'fp', label: 'Consensus', dir: 'asc' },
+    { key: 'gap', label: 'Gap', dir: 'desc' },
     { key: 'rosPts', label: 'ROS pts', dir: 'desc' },
     { key: 'ppg', label: 'PPG', dir: 'desc' },
     { key: 'weekPts', label: 'This week', dir: 'desc' },
@@ -107,6 +130,9 @@ export function parseViewQuery(params: URLSearchParams): ViewQuery {
 export function sortValue(p: BoardPlayer, view: View, key: string): number | null {
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
   if (key === 'age') return n(p.age);
+  const block = view === 'dynasty' ? p.dynasty : view === 'rookies' ? p.rookie : p.season;
+  if (key === 'fp') return n(block?.fp?.rank);
+  if (key === 'gap') return n(block?.gap);
   if (view === 'dynasty') return n(p.dynasty?.[key as 'avg' | 'fbg' | 'dlf']);
   if (view === 'rookies') {
     if (key === 'rsp') return n(p.rookie?.rsp?.score);

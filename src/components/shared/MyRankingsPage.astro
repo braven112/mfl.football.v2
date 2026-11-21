@@ -22,7 +22,7 @@ import { siteOwnerFranchise } from '../../utils/site-owner';
 import { BOARD_KEY_BY_SLUG, loadPrivateBoard } from '../../utils/private-rankings';
 import {
   buildView, freshnessLabel, parseViewQuery, viewHref, OWNERSHIP, POSITIONS, SORTS, VIEWS,
-  type View, type ViewRow,
+  type Consensus, type View, type ViewRow,
 } from '../../utils/private-rankings-view';
 
 interface Props {
@@ -100,16 +100,28 @@ const fmt = (v: number | null | undefined, digits = 0) => (typeof v === 'number'
 const rank = (v: number | null | undefined) => (typeof v === 'number' ? String(v) : '—');
 const avg = (v: number | null | undefined) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : '—');
 
+/** The consensus rank, and the experts' best-to-worst spread under it. */
+const consensusCell = (fp?: Consensus) => (fp ? String(fp.rank) : '—');
+const rangeText = (fp?: Consensus, pos = '') => {
+  if (!fp) return '';
+  const range = fp.best != null && fp.worst != null && fp.best !== fp.worst ? `${fp.best}–${fp.worst}` : '';
+  return [fp.posRank ? `${pos || '#'}${fp.posRank}` : '', range].filter(Boolean).join(' · ');
+};
+/** Position spots: + = your sources rank him higher at his position than the market (a buy); − = lower (a sell). */
+const gapText = (g?: number) => (typeof g === 'number' ? (g > 0 ? `+${avg(g)}` : g < 0 ? `−${avg(-g)}` : '0') : '—');
+const gapTone = (g?: number) => (typeof g !== 'number' || Math.abs(g) < 3 ? 'mr-gap--even' : g > 0 ? 'mr-gap--buy' : 'mr-gap--sell');
+
 /** The sources that feed the tab on screen, for the freshness line. */
 const SOURCE_IDS: Record<View, string[]> = {
-  dynasty: ['fbgDynasty', 'dlfDynasty'],
-  rookies: ['fbgRookie', 'dlfRookie', 'rsp'],
-  season: ['fbgRos', 'fbgRosProj', 'fbgWeek'],
+  dynasty: ['fbgDynasty', 'dlfDynasty', 'fpDynasty'],
+  rookies: ['fbgRookie', 'dlfRookie', 'fpRookie', 'rsp'],
+  season: ['fbgRos', 'fbgRosProj', 'fbgWeek', 'fpRos'],
 };
 const sourceLines = load.ok
   ? SOURCE_IDS[q.view].filter((id) => load.board.sources[id]).map((id) => {
     const s = load.board.sources[id];
-    return `${s.label}${s.edition ? ` (${s.edition})` : ''}: ${freshnessLabel(s.fetchedAt, clock)}`;
+    const note = [s.edition, s.experts ? `${s.experts} experts` : ''].filter(Boolean).join(', ');
+    return `${s.label}${note ? ` (${note})` : ''}: ${freshnessLabel(s.fetchedAt, clock)}`;
   })
   : [];
 ---
@@ -172,6 +184,10 @@ const sourceLines = load.ok
         {boardSlug === 'afl-fantasy' && rosters && ' Roster status is for your conference.'}
       </p>
 
+      <p class="mr-hint">
+        Consensus is FantasyPros' expert average, with the experts' best-to-worst range. Gap compares position ranks ({q.view === 'season' ? 'Footballguys rest of season' : 'your FBG and DLF average'} against the consensus), so your leagues' tight-end scoring doesn't skew it: +4 means your sources rank him 4 spots higher at his position than the market (green, a buy); red is a sell.
+      </p>
+
       {result!.rows.length === 0 ? (
         <p class="mr-empty">No players match these filters.</p>
       ) : (
@@ -186,6 +202,8 @@ const sourceLines = load.ok
                   <th scope="col" class="mr-num"><a href={sortHref('fbg')}>FBG {arrow('fbg')}</a></th>
                   <th scope="col" class="mr-num">Tier</th>
                   <th scope="col" class="mr-num"><a href={sortHref('dlf')}>DLF {arrow('dlf')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('fp')}>Consensus {arrow('fp')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('gap')} title="Position spots between the consensus and your sources: + means yours rank him higher at his position">Gap {arrow('gap')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('age')}>Age {arrow('age')}</a></th>
                 </>
               )}
@@ -194,6 +212,8 @@ const sourceLines = load.ok
                   <th scope="col" class="mr-num"><a href={sortHref('avg')}>Avg {arrow('avg')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('fbg')}>FBG {arrow('fbg')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('dlf')}>DLF {arrow('dlf')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('fp')}>Consensus {arrow('fp')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('gap')} title="Position spots between the consensus and your sources: + means yours rank him higher at his position">Gap {arrow('gap')}</a></th>
                   <th scope="col"><a href={sortHref('rsp')}>RSP {arrow('rsp')}</a></th>
                 </>
               )}
@@ -201,6 +221,8 @@ const sourceLines = load.ok
                 <>
                   <th scope="col" class="mr-num"><a href={sortHref('ros')}>ROS {arrow('ros')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('rosPts')}>ROS pts {arrow('rosPts')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('fp')}>Consensus {arrow('fp')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('gap')} title="Position spots between the consensus and your sources: + means yours rank him higher at his position">Gap {arrow('gap')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('ppg')}>PPG {arrow('ppg')}</a></th>
                   <th scope="col"><a href={sortHref('weekPts')}>This week {arrow('weekPts')}</a></th>
                 </>
@@ -224,6 +246,8 @@ const sourceLines = load.ok
                       <td class="mr-num" data-label="FBG">{rank(p.dynasty?.fbg)}</td>
                       <td class="mr-num" data-label="Tier">{rank(p.dynasty?.fbgTier)}</td>
                       <td class="mr-num" data-label="DLF">{rank(p.dynasty?.dlf)}</td>
+                      <td class="mr-num" data-label="Consensus">{consensusCell(p.dynasty?.fp)}{rangeText(p.dynasty?.fp, p.pos) && <span class="mr-meta mr-range">{rangeText(p.dynasty?.fp, p.pos)}</span>}</td>
+                      <td class="mr-num" data-label="Gap"><span class:list={['mr-gap', gapTone(p.dynasty?.gap)]}>{gapText(p.dynasty?.gap)}</span></td>
                       <td class="mr-num mr-hide-phone" data-label="Age">{rank(p.age)}</td>
                     </>
                   )}
@@ -232,6 +256,8 @@ const sourceLines = load.ok
                       <td class="mr-num mr-key" data-label="Avg">{avg(p.rookie?.avg)}</td>
                       <td class="mr-num" data-label="FBG">{rank(p.rookie?.fbg)}</td>
                       <td class="mr-num" data-label="DLF">{rank(p.rookie?.dlf)}</td>
+                      <td class="mr-num" data-label="Consensus">{consensusCell(p.rookie?.fp)}{rangeText(p.rookie?.fp, p.pos) && <span class="mr-meta mr-range">{rangeText(p.rookie?.fp, p.pos)}</span>}</td>
+                      <td class="mr-num" data-label="Gap"><span class:list={['mr-gap', gapTone(p.rookie?.gap)]}>{gapText(p.rookie?.gap)}</span></td>
                       <td class="mr-rsp" data-label="RSP">
                         {p.rookie?.rsp ? (
                           <>
@@ -248,6 +274,8 @@ const sourceLines = load.ok
                         {rank(p.season?.ros)}{p.season?.rosPosRank && <span class="mr-meta"> {p.season.rosPosRank}</span>}
                       </td>
                       <td class="mr-num" data-label="ROS pts">{fmt(p.season?.rosPts, 1)}</td>
+                      <td class="mr-num" data-label="Consensus">{consensusCell(p.season?.fp)}{rangeText(p.season?.fp, p.pos) && <span class="mr-meta mr-range">{rangeText(p.season?.fp, p.pos)}</span>}</td>
+                      <td class="mr-num" data-label="Gap"><span class:list={['mr-gap', gapTone(p.season?.gap)]}>{gapText(p.season?.gap)}</span></td>
                       <td class="mr-num" data-label="PPG">{fmt(p.season?.ppg, 1)}</td>
                       <td class="mr-week" data-label="This week">
                         {p.season?.weekPts != null ? (
@@ -325,9 +353,13 @@ const sourceLines = load.ok
     display: none;
   }
   .mr-count,
+  .mr-hint,
   .mr-sources {
     color: var(--content-text-muted);
     font-size: var(--font-size-sm);
+  }
+  .mr-hint {
+    margin-top: 0;
   }
   .mr-sources p {
     margin: 0.25rem 0;
@@ -406,6 +438,22 @@ const sourceLines = load.ok
   .mr-own--other {
     color: var(--content-text-muted);
   }
+  .mr-range {
+    display: block;
+  }
+  .mr-gap {
+    font-weight: var(--font-weight-semibold);
+  }
+  .mr-gap--buy {
+    color: var(--badge-success-text);
+  }
+  .mr-gap--sell {
+    color: var(--badge-error-text);
+  }
+  .mr-gap--even {
+    color: var(--content-text-muted);
+    font-weight: normal;
+  }
   .mr-more {
     text-align: center;
     margin: var(--spacing-lg) 0;
@@ -431,11 +479,12 @@ const sourceLines = load.ok
       display: none;
     }
     .mr-row {
+      position: relative;
       display: grid;
-      grid-template-columns: 2rem 1fr 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem 0.75rem;
       margin-bottom: var(--spacing-sm);
-      padding: 0.75rem;
+      padding: 0.75rem 0.75rem 0.75rem 2.75rem;
       background: var(--content-bg);
       border: 1px solid var(--content-border);
       border-radius: var(--radius-lg);
@@ -451,11 +500,15 @@ const sourceLines = load.ok
       background: none;
       text-align: left;
     }
-    .mr-idx {
-      grid-row: span 1;
+    /* The index sits in the card's left margin, outside the value grid, so
+       every value row starts in the same column. */
+    .mr-table td.mr-idx {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
     }
     .mr-player {
-      grid-column: 2 / -1;
+      grid-column: 1 / -1;
     }
     .mr-table td[data-label] {
       grid-column: auto;
@@ -469,13 +522,10 @@ const sourceLines = load.ok
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .mr-table td[data-label]:nth-child(3) {
-      grid-column-start: 2;
-    }
     .mr-rsp,
     .mr-week,
     .mr-owner {
-      grid-column: 2 / -1 !important;
+      grid-column: 1 / -1 !important;
     }
     .mr-hide-phone {
       display: none;
