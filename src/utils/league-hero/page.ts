@@ -83,6 +83,12 @@ export interface LeagueHomeHeroInput {
    * column and the Wednesday slot stays the news card.
    */
   isColumn?: (post: SchefterPost) => boolean;
+  /**
+   * A fresh breaking story with a castable player exists FOR THIS VIEWER
+   * (`resolveViewerBreakingStory`). Only a profile whose ladder lists the
+   * `breaking-story` rung reads it.
+   */
+  hasBreakingStory?: boolean;
 }
 
 /** A post's byline, wearing the league's persona when the author is the league's own desk. */
@@ -189,6 +195,7 @@ export async function resolveLeagueHomeHero(input: LeagueHomeHeroInput): Promise
     article,
     peckingOrder: input.peckingOrder,
     mondayNightQuiet: input.mondayNightQuiet,
+    hasBreakingStory: input.hasBreakingStory,
     column,
   });
 

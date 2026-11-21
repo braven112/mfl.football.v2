@@ -12,26 +12,40 @@
  * there is no in-component fallback: no story, no hero.
  */
 import { getPersonaLabels } from '../../utils/persona-server';
+import { getLeagueBySlug, ensureLeaguePrefix, type CanonicalLeagueSlug } from '../../config/leagues';
 import type { HeroModel } from '../../utils/hero-casting';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
-import { getNflTeamColors, getNflTeamNickname, hexToRgba } from '../../utils/nfl-team-colors';
+import { getNflTeamColors, getNflTeamNickname, hexToRgba, pickBrandAccent } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { repairLastFirstName } from '../../utils/player-name-matching';
 
 interface Props {
+  /** Whose homepage this is — sets the roster/news links and the persona. */
+  league: CanonicalLeagueSlug;
   model: HeroModel;
   story: BreakingStory;
   resolveLeaguePath: (path: string) => string;
   referenceDate?: Date;
 }
 
-const { model, story, resolveLeaguePath: r, referenceDate } = Astro.props;
+const { league, model, story, resolveLeaguePath: r, referenceDate } = Astro.props;
+const leagueDef = getLeagueBySlug(league)!;
 
 const teamCode = normalizeTeamCode(model.nflTeam);
 const nickname = getNflTeamNickname(teamCode);
-const { primary } = getNflTeamColors(teamCode);
-const glowDark = hexToRgba(primary, 0.4);
-const glowLight = hexToRgba(primary, 0.22);
+const { primary, secondary } = getNflTeamColors(teamCode);
+// The card's surface: the team's primary, or — when the primary is black — the
+// team's OWN secondary (Steelers gold, Saints old gold, Raiders silver), so
+// every card still reads as its team (Brandon, Nov 2026). pickBrandAccent then
+// only pulls a very light colour down so white copy holds.
+const nearBlack = (hex: string) => {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 40;
+};
+const surfaceBase = nearBlack(primary) && secondary ? secondary : primary;
+const teamSurface = pickBrandAccent(surfaceBase, surfaceBase);
+const glowDark = hexToRgba(teamSurface, 0.4);
+const glowLight = hexToRgba(teamSurface, 0.22);
 
 // Relative time for the eyebrow ("2 HRS AGO"), from the post timestamp.
 const now = referenceDate ?? new Date();
@@ -53,19 +67,21 @@ const summary =
     ? fullSummary.slice(0, 180).replace(/\s+\S*$/, '') + '…'
     : fullSummary;
 
+// `?franchise=` only VIEWS that team on every league's roster page — never
+// `?myteam=`, which on the AFL's rewrites the viewer's own team preference.
 // A breaking transaction points at the acquiring team's roster — go see the
 // player on his new team. Otherwise a real http(s) source URL (never a
 // feed-supplied `javascript:`/`data:` scheme), else the Schefter feed.
 const rosterHref = story.franchiseId
-  ? r(`/theleague/rosters?franchise=${encodeURIComponent(story.franchiseId)}`)
+  ? r(ensureLeaguePrefix(leagueDef, `/rosters?franchise=${encodeURIComponent(story.franchiseId)}`))
   : null;
 const safeExternal =
   typeof story.link === 'string' && /^https?:\/\//i.test(story.link) ? story.link : null;
-const ctaHref = rosterHref ?? safeExternal ?? r('/theleague/news');
+const ctaHref = rosterHref ?? safeExternal ?? r(ensureLeaguePrefix(leagueDef, '/news'));
 const ctaExternal = !rosterHref && !!safeExternal;
 const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
-const labels = await getPersonaLabels('theleague');
+const labels = await getPersonaLabels(league);
 
 // The tag pill must stay on ONE line (Brandon, 2026-11-14). When the eyebrow
 // is too narrow for "<Persona> Report · Breaking", the source half drops and
@@ -80,7 +96,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
 
 <section
   class="bsh"
-  style={`--bsh-glow-dark: ${glowDark}; --bsh-glow-light: ${glowLight};`}
+  style={`--bsh-team: ${teamSurface}; --bsh-glow-dark: ${glowDark}; --bsh-glow-light: ${glowLight};`}
   aria-label="Breaking story"
 >
   <span class="bsh__ghost" aria-hidden="true">{nickname}</span>
@@ -126,7 +142,15 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
        white-on-dark foreground tokens copied from the html.dark block, only the
        surface swapped for the red gradient. See player-composites.md:
        "Saturated light-mode heroes flip the theme-paired assets too". */
-    --bsh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
+    /* The card wears the PLAYER'S NFL team colour (Brandon, Nov 2026); only
+       the Breaking tag stays red. Light: the team primary, deepening toward
+       ink so white copy holds on bright primaries too. */
+    --bsh-surface: linear-gradient(
+      115deg,
+      var(--bsh-team, #991b1b) 0%,
+      color-mix(in srgb, var(--bsh-team, #991b1b) 62%, #05070a) 55%,
+      color-mix(in srgb, var(--bsh-team, #991b1b) 30%, #05070a) 100%
+    );
     --bsh-ink: #ffffff;
     --bsh-body: rgba(255, 255, 255, 0.78);
     --bsh-ghost: rgba(255, 255, 255, 0.05);
@@ -135,7 +159,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
     --bsh-tag-bg: #ef4444;
     --bsh-tag-ink: #ffffff;
     --bsh-cta-bg: #ffffff;
-    --bsh-cta-ink: #140b0b;
+    --bsh-cta-ink: #0b0e12;
     --bsh-border: rgba(255, 255, 255, 0.1);
 
     position: relative;
@@ -148,7 +172,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
        ever dropped (the whole `background` is then invalid at computed-value
        time), the hero goes transparent while the white ink stays, which is
        unreadable in BOTH themes. A literal background-color cannot be dropped. */
-    background-color: #991b1b;
+    background-color: #0b0e12;
     background-image: var(--bsh-surface);
     color: var(--bsh-ink);
     display: flex;
@@ -157,8 +181,15 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
   }
 
   :global(html.dark) .bsh {
-    --bsh-surface: linear-gradient(115deg, #140b0b 0%, #241111 46%, #3a1414 130%);
-    background-color: #241111;
+    /* Dark: a deep-ink card tinted by the team, the same family as the
+       other composite heroes, so near-black primaries still read. */
+    --bsh-surface: linear-gradient(
+      115deg,
+      #0b0e12 0%,
+      color-mix(in srgb, var(--bsh-team, #3a1414) 22%, #0b0e12) 46%,
+      color-mix(in srgb, var(--bsh-team, #3a1414) 48%, #0b0e12) 130%
+    );
+    background-color: #0b0e12;
     --bsh-ink: #ffffff;
     --bsh-body: rgba(255, 255, 255, 0.78);
     --bsh-ghost: rgba(255, 255, 255, 0.05);
@@ -167,7 +198,7 @@ const tagCollapseCss = `@container bsh-eyebrow (max-width: ${tagFullPx}px) { .bs
     --bsh-tag-bg: #ef4444;
     --bsh-tag-ink: #ffffff;
     --bsh-cta-bg: #ffffff;
-    --bsh-cta-ink: #140b0b;
+    --bsh-cta-ink: #0b0e12;
     --bsh-border: rgba(255, 255, 255, 0.1);
   }
 

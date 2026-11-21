@@ -272,7 +272,17 @@ const CALENDAR_LADDER: HeroStepId[] = [
 
 const aflProfile: LeagueHeroProfile = {
   league: 'afl-fantasy',
-  ladder: CALENDAR_LADDER,
+  // The calendar ladder plus TheLeague's breaking-story rung (Brandon, Nov
+  // 2026): a fresh trade or a star's injury leads the homepage, below the
+  // deadline/title windows and above every ambient slot — where TheLeague
+  // ranks it.
+  ladder: [
+    'trade-deadline',
+    'championship',
+    'champion-crowned',
+    'breaking-story',
+    ...CALENDAR_LADDER.filter((id) => !['trade-deadline', 'championship', 'champion-crowned'].includes(id)),
+  ],
   scheduleRelease: { priority: 'P3', accentColor: ACCENT_GOLD },
   whatsNewTag: 'afl',
   featureSeed: 'afl-feature',

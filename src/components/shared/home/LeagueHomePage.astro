@@ -62,6 +62,8 @@ interface Props {
     config?: any;
     standings?: any[];
     userFranchiseId?: string;
+    /** The breaking story for this viewer (`resolveViewerBreakingStory`). */
+    breaking?: import('../../../utils/breaking-story-hero').ViewerBreakingStory | null;
   };
   /** Passed to QuickLinks; undefined leaves its default. */
   quickLinksAuthenticated?: boolean;
@@ -124,6 +126,7 @@ const {
           standings={hero.standings}
           userFranchiseId={hero.userFranchiseId}
           backdrop={hero.backdrop}
+          breaking={hero.breaking}
         />
       )}
     </section>

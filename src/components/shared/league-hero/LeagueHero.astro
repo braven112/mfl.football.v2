@@ -54,6 +54,8 @@ import type { HeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdr
 import type { BuiltLiveScoringProps } from '../../../utils/live-scoring-hero-props';
 import type { MondaySpotlightHeroProps } from '../../../utils/monday-spotlight-props';
 import MondayNightHero from '../MondayNightHero.astro';
+import BreakingStoryHero from '../BreakingStoryHero.astro';
+import type { ViewerBreakingStory } from '../../../utils/breaking-story-hero';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
 const REGION_LABEL: Record<string, string> = {
@@ -88,9 +90,14 @@ interface Props {
   liveScoring?: BuiltLiveScoringProps;
   /** Monday's closest-game spotlight; replaces the scoreboard when present. */
   mondaySpotlight?: MondaySpotlightHeroProps;
+  /**
+   * The breaking story and its cast player (`resolveViewerBreakingStory`),
+   * when the page found one. The resolver reaches `breaking-story` only then.
+   */
+  breaking?: ViewerBreakingStory | null;
 }
 
-const { league, state, config, standings, userFranchiseId, backdrop = null, liveScoring, mondaySpotlight } = Astro.props;
+const { league, state, config, standings, userFranchiseId, backdrop = null, liveScoring, mondaySpotlight, breaking = null } = Astro.props;
 
 const profile = getLeagueHeroProfile(league);
 // Built from the registry, never written as a literal — the path belongs to
@@ -140,6 +147,14 @@ const clampsSummary = state.kind === 'feature' || slot === 'article' || slot ===
     deadlineLabel={state.deadlineLabel}
     referenceNowISO={state.referenceNowISO}
     tradeBuilderHref={TRADE_BUILDER}
+  />
+) : state.kind === 'breaking-story' && breaking ? (
+  <BreakingStoryHero
+    league={league}
+    model={breaking.model}
+    story={breaking.story}
+    resolveLeaguePath={(path) => path}
+    referenceDate={breaking.referenceDate}
   />
 ) : state.kind === 'playoffs' && !view && config && standings ? (
   <AflPlayoffsHero
