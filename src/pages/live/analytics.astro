@@ -79,6 +79,8 @@ import { canonicalPath, directoryTitle } from '../../utils/site-analytics';
 import { interestName, readContactRequests, readProductInterest } from '../../utils/product-interest';
 import { FUNNEL_PLATFORMS, readFunnelReport } from '../../utils/history-funnel';
 import { recordedPageTitle } from '../../utils/recorded-page-title';
+import { HAIKU_MODEL, SONNET_MODEL } from '../../utils/claude-models.mjs';
+import { readAiSpend, aiSpendMonths, summarizeAiSpend, type AiSpendReport } from '../../utils/ai-usage';
 import { formatLastSeen } from '../../utils/owner-activity';
 import { getLeagueTeamConfig, getLeagueTeamConfigs } from '../../utils/league-team-brands';
 import {
@@ -219,6 +221,38 @@ if (!useMock && !report.focused) {
 		console.warn('[live/analytics] product interest read failed:', err);
 	}
 }
+
+// Ask the History's real AI cost per league, last three Pacific months. It is
+// the one AI feature that records what it spends (src/utils/ai-usage.ts).
+let aiSpend: AiSpendReport | null = null;
+if (!report.focused) {
+	try {
+		if (useMock) {
+			const ms = aiSpendMonths(3);
+			const fake = (q: number, usd: number, model = SONNET_MODEL) => ({ [`${model}:questions`]: q, [`${model}:microUsd`]: Math.round(usd * 1e6) });
+			aiSpend = summarizeAiSpend(
+				[
+					{ slug: 'afl-fantasy', month: ms[0], fields: fake(38, 4.12) },
+					{ slug: 'afl-fantasy', month: ms[1], fields: fake(51, 5.87) },
+					{ slug: 'theleague', month: ms[0], fields: fake(22, 2.31) },
+					{ slug: 'theleague', month: ms[1], fields: fake(30, 3.05) },
+					{ slug: 'theleague', month: ms[2], fields: fake(9, 0.96) },
+					{ slug: 'theleague-guest', month: ms[0], fields: fake(14, 0.03, HAIKU_MODEL) },
+				],
+				ms,
+			);
+		} else {
+			aiSpend = await readAiSpend(3);
+		}
+	} catch (err) {
+		console.warn('[live/analytics] ai spend read failed:', err);
+	}
+}
+const leagueName = (slug: string) => ALL_LEAGUES.find((l) => l.slug === slug)?.name ?? slug;
+const monthName = (m: string, style: 'long' | 'short' = 'long') =>
+	new Date(`${m}-15T12:00:00Z`).toLocaleString('en-US', { month: style, timeZone: 'UTC' });
+const usd = (v: number) => (v === 0 ? '$0' : v < 0.01 ? '<$0.01' : `$${v.toFixed(2)}`);
+const perQuestion = (c: { questions: number; costUsd: number }) => (c.questions > 0 ? usd(c.costUsd / c.questions) : '—');
 
 // The video → League History funnel and its client list. Read over the same
 // day range as the rest of the report; totals and people are all time.
@@ -1109,6 +1143,67 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 					</section>
 				)}
 
+				{aiSpend && (
+					<section class="ins__card" aria-labelledby="ins-ai-spend">
+						<h2 class="ins__h2" id="ins-ai-spend">AI spend: Ask the History</h2>
+						<p class="ins__note">
+							What Buck's answers really cost, by league and Pacific month, from Anthropic's own token counts. Reporter posts and Roger aren't counted here.
+						</p>
+						<div class="ins__tiles ins__spend-tiles">
+							{[
+								{ value: usd(aiSpend.totals[aiSpend.months[0]].costUsd), label: `${monthName(aiSpend.months[0])} so far` },
+								{ value: usd(aiSpend.totals[aiSpend.months[1]].costUsd), label: monthName(aiSpend.months[1]) },
+								{ value: String(aiSpend.totals[aiSpend.months[0]].questions), label: `Questions in ${monthName(aiSpend.months[0])}` },
+								{ value: perQuestion(aiSpend.totals[aiSpend.months[0]]), label: 'Average per question' },
+							].map((t) => (
+								<div class="ins__tile">
+									<span class="ins__tile-value">{t.value}</span>
+									<span class="ins__tile-label">{t.label}</span>
+								</div>
+							))}
+						</div>
+						{aiSpend.leagues.length === 0 ? (
+							<p class="ins__note">No questions asked in the last three months.</p>
+						) : (
+							<div class="ins__scroll">
+								<table class="ui-table ins__table ins__table--stack" data-sortable="ai-spend">
+									<thead>
+										<tr>
+											<th data-sort="text"><button type="button" class="ins__sort">League</button></th>
+											{aiSpend.months.map((m, i) => (
+												<th class="num" data-sort="num" aria-sort={i === 0 ? 'descending' : undefined}>
+													<button type="button" class="ins__sort">{monthName(m, 'short')}</button>
+												</th>
+											))}
+											<th class="num" data-sort="num"><button type="button" class="ins__sort">Questions</button></th>
+											<th class="num">Per question</th>
+										</tr>
+									</thead>
+									<tbody>
+										{aiSpend.leagues.map((l) => {
+											const now = l.byMonth[aiSpend!.months[0]];
+											return (
+												<tr>
+													<td data-v={leagueName(l.slug) + (l.guest ? ' demo' : '')}>
+														<span class="ins__spend-league">{leagueName(l.slug)}</span>
+														{l.guest && <span class="ins__muted"> · signed-out demo</span>}
+														{l.models.map((m) => <span class="ins__spend-model">{m}</span>)}
+													</td>
+													{aiSpend!.months.map((m) => (
+														<td class="num" data-label={monthName(m, 'short')} data-v={l.byMonth[m].costUsd}>{usd(l.byMonth[m].costUsd)}</td>
+													))}
+													<td class="num" data-label="Questions" data-v={now.questions}>{now.questions}</td>
+													<td class="num" data-label="Per question">{perQuestion(now)}</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</section>
+				)}
+
 				{!report.focused && requests && requests.length > 0 && (
 					<section class="ins__card" aria-labelledby="ins-requests">
 						<h2 class="ins__h2" id="ins-requests">Product requests</h2>
@@ -1294,6 +1389,23 @@ const viewsLabel = pageRef ? 'Views of this page' : 'Page views';
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+	}
+	.ins__spend-tiles {
+		margin-block: 0.75rem 1rem;
+	}
+	.ins__spend-league {
+		font-weight: 600;
+	}
+	.ins__spend-model {
+		display: inline-block;
+		margin-inline-start: 0.375rem;
+		padding: 0.0625rem 0.5rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 999px;
+		font-size: var(--font-size-xs);
+		line-height: 1.4;
+		color: var(--color-text-secondary);
+		vertical-align: 0.0625rem;
 	}
 	.ins__tiles {
 		display: grid;
