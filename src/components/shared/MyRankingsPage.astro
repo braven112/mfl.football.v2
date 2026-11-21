@@ -1,0 +1,484 @@
+---
+/**
+ * Brandon's private rankings board — /theleague/admin/my-rankings and
+ * /afl-fantasy/admin/my-rankings.
+ *
+ * The route wrappers own the gate (the site owner's own franchise session,
+ * `isSiteOwnerIn`) and the layout; this component reads the board from the
+ * PRIVATE repo at request time (private-rankings.ts) and renders it as HTML.
+ * No rankings JSON reaches the browser, and the page has no client script:
+ * every tab, filter and sort is a link, so it works the same after a
+ * ClientRouter swap as on a fresh load.
+ *
+ * Phones get one card per player (no sideways-scrolling table), with the
+ * sort as a row of pills.
+ */
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
+import { getLeagueTeamBrands } from '../../utils/league-team-brands';
+import { sameConference } from '../../utils/afl-conference';
+import { siteOwnerFranchise } from '../../utils/site-owner';
+import { BOARD_KEY_BY_SLUG, loadPrivateBoard } from '../../utils/private-rankings';
+import {
+  buildView, freshnessLabel, parseViewQuery, viewHref, OWNERSHIP, POSITIONS, SORTS, VIEWS,
+  type View, type ViewRow,
+} from '../../utils/private-rankings-view';
+
+interface Props {
+  /** The registry slug of the route this renders under. */
+  routeSlug: string;
+}
+const { routeSlug } = Astro.props;
+
+// Which board: ?league= names a board league; the route's own league otherwise.
+const slugByBoard = Object.fromEntries(Object.entries(BOARD_KEY_BY_SLUG).map(([slug, key]) => [key, slug]));
+const requested = Astro.url.searchParams.get('league');
+const boardKey = requested && slugByBoard[requested] ? requested : BOARD_KEY_BY_SLUG[routeSlug];
+const boardSlug = slugByBoard[boardKey];
+const boardLeague = getLeagueBySlug(boardSlug)!;
+const q = parseViewQuery(Astro.url.searchParams);
+const fresh = Astro.url.searchParams.get('fresh') === '1';
+const path = Astro.url.pathname;
+
+const load = await loadPrivateBoard(boardKey, { fresh });
+
+// Who rosters each player, live from MFL (60 s Redis cache). In the AFL a
+// player is routinely on one team per conference; only the owner's own
+// conference decides whether he is available to him.
+const mine = siteOwnerFranchise(boardSlug);
+let rosters: Map<string, string[]> | null = null;
+try {
+  const franchises = await getCachedRosterFranchises(String(getCurrentLeagueYear()), boardLeague.id);
+  if (franchises) {
+    rosters = new Map();
+    const conferenceScoped = boardSlug === 'afl-fantasy' && !!mine;
+    for (const f of franchises) {
+      if (conferenceScoped && !sameConference(f.id, mine!, 'afl-fantasy')) continue;
+      for (const p of f.player ?? []) {
+        const list = rosters.get(p.id) ?? [];
+        list.push(f.id);
+        rosters.set(p.id, list);
+      }
+    }
+  }
+} catch {
+  rosters = null;
+}
+
+let brands: Record<string, { nameShort: string; name: string }> = {};
+try {
+  brands = getLeagueTeamBrands(boardSlug);
+} catch {
+  brands = {};
+}
+
+const result = load.ok ? buildView(load.board, q, rosters, mine) : null;
+const clock = leagueClock(boardSlug).zone;
+
+const VIEW_LABELS: Record<View, string> = { dynasty: 'Dynasty', rookies: 'Rookies', season: 'This season' };
+const OWN_LABELS: Record<string, string> = { all: 'Everyone', mine: 'My team', available: 'Free agents', rostered: 'Other teams' };
+const sorts = SORTS[q.view];
+
+/** The link for a sort: tapping the active one reverses it. */
+function sortHref(key: string): string {
+  const def = sorts.find((s) => s.key === key)!;
+  const dir = q.sort === key ? (q.dir === 'asc' ? 'desc' : 'asc') : def.dir;
+  return viewHref(path, boardKey, q, { sort: key, dir });
+}
+const arrow = (key: string) => (q.sort === key ? (q.dir === 'asc' ? '↑' : '↓') : '');
+
+function ownerText(row: ViewRow): string {
+  const o = row.ownership;
+  if (!o) return '—';
+  if (o.mine) return 'My team';
+  if (!o.holders.length) return 'Free agent';
+  return o.holders.map((id) => brands[id]?.nameShort || brands[id]?.name || id).join(', ');
+}
+const ownerTone = (row: ViewRow) => (row.ownership?.mine ? 'mine' : row.ownership && !row.ownership.holders.length ? 'fa' : 'other');
+const fmt = (v: number | null | undefined, digits = 0) => (typeof v === 'number' ? v.toFixed(digits) : '—');
+const rank = (v: number | null | undefined) => (typeof v === 'number' ? String(v) : '—');
+const avg = (v: number | null | undefined) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : '—');
+
+/** The sources that feed the tab on screen, for the freshness line. */
+const SOURCE_IDS: Record<View, string[]> = {
+  dynasty: ['fbgDynasty', 'dlfDynasty'],
+  rookies: ['fbgRookie', 'dlfRookie', 'rsp'],
+  season: ['fbgRos', 'fbgRosProj', 'fbgWeek'],
+};
+const sourceLines = load.ok
+  ? SOURCE_IDS[q.view].filter((id) => load.board.sources[id]).map((id) => {
+    const s = load.board.sources[id];
+    return `${s.label}${s.edition ? ` (${s.edition})` : ''}: ${freshnessLabel(s.fetchedAt, clock)}`;
+  })
+  : [];
+---
+
+<section class="mr" data-league={routeSlug}>
+  <header class="mr-head">
+    <div>
+      <h1 class="mr-title">My Rankings</h1>
+      <p class="mr-sub">Only you can see this page. Rankings come from your private repo.</p>
+    </div>
+    <div class="ui-pills mr-leagues" role="group" aria-label="League">
+      {Object.entries(BOARD_KEY_BY_SLUG).map(([slug, key]) => (
+        <a class="ui-pill" href={viewHref(path, key, q, { league: key })} aria-current={key === boardKey ? 'true' : undefined}>
+          {getLeagueBySlug(slug)?.name ?? key}
+        </a>
+      ))}
+    </div>
+  </header>
+
+  <nav class="ui-tabs mr-tabs" aria-label="Rankings">
+    {VIEWS.map((v) => (
+      <a class="ui-tab mr-tab" href={viewHref(path, boardKey, q, { view: v })} aria-current={v === q.view ? 'page' : undefined}>{VIEW_LABELS[v]}</a>
+    ))}
+  </nav>
+
+  {!load.ok ? (
+    <div class="mr-empty" role="status">
+      <p><strong>The board could not load.</strong> {load.message}</p>
+      {load.reason === 'no-token' && (
+        <p>Add a read-only GitHub token for the private repo as <code>BRANDON_FANTASY_TOKEN</code> in Vercel, then redeploy.</p>
+      )}
+    </div>
+  ) : (
+    <>
+      <div class="mr-filters">
+        <div class="ui-pills" role="group" aria-label="Position">
+          {POSITIONS.map((p) => (
+            <a class="ui-pill" href={viewHref(path, boardKey, q, { pos: p })} aria-current={p === q.pos ? 'true' : undefined}>{p === 'all' ? 'All' : p}</a>
+          ))}
+        </div>
+        {rosters && (
+          <div class="ui-pills" role="group" aria-label="Rostered by">
+            {OWNERSHIP.map((o) => (
+              <a class="ui-pill" href={viewHref(path, boardKey, q, { own: o })} aria-current={o === q.own ? 'true' : undefined}>{OWN_LABELS[o]}</a>
+            ))}
+          </div>
+        )}
+        <div class="ui-pills mr-sort-pills" role="group" aria-label="Sort by">
+          {sorts.map((s) => (
+            <a class="ui-pill" href={sortHref(s.key)} aria-current={s.key === q.sort ? 'true' : undefined}>
+              {s.label}{arrow(s.key) && <span aria-hidden="true"> {arrow(s.key)}</span>}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <p class="mr-count">
+        {result!.total.toLocaleString()} players{result!.truncated ? `, showing the top ${result!.rows.length}` : ''}.
+        {!rosters && ' Roster status is unavailable right now.'}
+        {boardSlug === 'afl-fantasy' && rosters && ' Roster status is for your conference.'}
+      </p>
+
+      {result!.rows.length === 0 ? (
+        <p class="mr-empty">No players match these filters.</p>
+      ) : (
+        <table class="ui-table mr-table">
+          <thead>
+            <tr>
+              <th scope="col" class="mr-num">#</th>
+              <th scope="col">Player</th>
+              {q.view === 'dynasty' && (
+                <>
+                  <th scope="col" class="mr-num"><a href={sortHref('avg')}>Avg {arrow('avg')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('fbg')}>FBG {arrow('fbg')}</a></th>
+                  <th scope="col" class="mr-num">Tier</th>
+                  <th scope="col" class="mr-num"><a href={sortHref('dlf')}>DLF {arrow('dlf')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('age')}>Age {arrow('age')}</a></th>
+                </>
+              )}
+              {q.view === 'rookies' && (
+                <>
+                  <th scope="col" class="mr-num"><a href={sortHref('avg')}>Avg {arrow('avg')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('fbg')}>FBG {arrow('fbg')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('dlf')}>DLF {arrow('dlf')}</a></th>
+                  <th scope="col"><a href={sortHref('rsp')}>RSP {arrow('rsp')}</a></th>
+                </>
+              )}
+              {q.view === 'season' && (
+                <>
+                  <th scope="col" class="mr-num"><a href={sortHref('ros')}>ROS {arrow('ros')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('rosPts')}>ROS pts {arrow('rosPts')}</a></th>
+                  <th scope="col" class="mr-num"><a href={sortHref('ppg')}>PPG {arrow('ppg')}</a></th>
+                  <th scope="col"><a href={sortHref('weekPts')}>This week {arrow('weekPts')}</a></th>
+                </>
+              )}
+              {rosters && <th scope="col">Rostered by</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {result!.rows.map((row, i) => {
+              const p = row.player;
+              return (
+                <tr class:list={['mr-row', { 'mr-row--mine': row.ownership?.mine }]}>
+                  <td class="mr-num mr-idx">{i + 1}</td>
+                  <td class="mr-player">
+                    <span class="mr-name">{p.name}</span>
+                    <span class="mr-meta">{[p.pos, p.team, p.age != null ? `${p.age} yrs` : ''].filter(Boolean).join(' · ')}</span>
+                  </td>
+                  {q.view === 'dynasty' && (
+                    <>
+                      <td class="mr-num mr-key" data-label="Avg">{avg(p.dynasty?.avg)}</td>
+                      <td class="mr-num" data-label="FBG">{rank(p.dynasty?.fbg)}</td>
+                      <td class="mr-num" data-label="Tier">{rank(p.dynasty?.fbgTier)}</td>
+                      <td class="mr-num" data-label="DLF">{rank(p.dynasty?.dlf)}</td>
+                      <td class="mr-num mr-hide-phone" data-label="Age">{rank(p.age)}</td>
+                    </>
+                  )}
+                  {q.view === 'rookies' && (
+                    <>
+                      <td class="mr-num mr-key" data-label="Avg">{avg(p.rookie?.avg)}</td>
+                      <td class="mr-num" data-label="FBG">{rank(p.rookie?.fbg)}</td>
+                      <td class="mr-num" data-label="DLF">{rank(p.rookie?.dlf)}</td>
+                      <td class="mr-rsp" data-label="RSP">
+                        {p.rookie?.rsp ? (
+                          <>
+                            <span>{[p.rookie.rsp.posRank, p.rookie.rsp.tier ? `Tier ${p.rookie.rsp.tier}` : ''].filter(Boolean).join(' · ')}</span>
+                            <span class="mr-meta">{[p.rookie.rsp.grade, p.rookie.rsp.score != null ? fmt(p.rookie.rsp.score, 1) : ''].filter(Boolean).join(' · ')}</span>
+                          </>
+                        ) : '—'}
+                      </td>
+                    </>
+                  )}
+                  {q.view === 'season' && (
+                    <>
+                      <td class="mr-num mr-key" data-label="ROS">
+                        {rank(p.season?.ros)}{p.season?.rosPosRank && <span class="mr-meta"> {p.season.rosPosRank}</span>}
+                      </td>
+                      <td class="mr-num" data-label="ROS pts">{fmt(p.season?.rosPts, 1)}</td>
+                      <td class="mr-num" data-label="PPG">{fmt(p.season?.ppg, 1)}</td>
+                      <td class="mr-week" data-label="This week">
+                        {p.season?.weekPts != null ? (
+                          <>
+                            <span>{fmt(p.season.weekPts, 1)} pts{p.season.weekPosRank && ` · ${p.season.weekPosRank}`}</span>
+                            {p.season.matchup && <span class="mr-meta">{p.season.matchup}</span>}
+                          </>
+                        ) : '—'}
+                      </td>
+                    </>
+                  )}
+                  {rosters && (
+                    <td class="mr-owner" data-label="Rostered by">
+                      <span class:list={['mr-own', `mr-own--${ownerTone(row)}`]}>{ownerText(row)}</span>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {result!.truncated && (
+        <p class="mr-more"><a class="cta cta--ghost" href={viewHref(path, boardKey, q, { all: true })}>Show all {result!.total.toLocaleString()}</a></p>
+      )}
+
+      <footer class="mr-sources">
+        <p>Updated: {sourceLines.join(' · ')}</p>
+        <p><a class="cta-link" href={`${viewHref(path, boardKey, q, {})}${viewHref(path, boardKey, q, {}).includes('?') ? '&' : '?'}fresh=1`}>Reload from the repo</a></p>
+      </footer>
+    </>
+  )}
+</section>
+
+<style>
+  .mr {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-2xl);
+    color: var(--page-text);
+  }
+  .mr-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+  .mr-title {
+    margin: 0;
+    font-size: var(--font-size-2xl);
+  }
+  .mr-sub {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .mr-tabs {
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+  .mr-tab {
+    padding: 0.75rem 0;
+    text-decoration: none;
+  }
+  .mr-filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+  .mr-sort-pills {
+    display: none;
+  }
+  .mr-count,
+  .mr-sources {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .mr-sources p {
+    margin: 0.25rem 0;
+  }
+  .mr-empty {
+    padding: var(--spacing-lg);
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .mr-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+  }
+  .mr-table th {
+    padding: 0.625rem 0.75rem;
+    background: var(--content-bg-muted);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .mr-table th a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .mr-table td {
+    padding: 0.625rem 0.75rem;
+    border-top: 1px solid var(--content-border);
+    vertical-align: top;
+  }
+  .mr-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mr-table th.mr-num {
+    text-align: right;
+  }
+  .mr-idx {
+    color: var(--content-text-muted);
+  }
+  .mr-key {
+    font-weight: var(--font-weight-semibold);
+  }
+  .mr-name {
+    display: block;
+    font-weight: var(--font-weight-semibold);
+  }
+  .mr-meta {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .mr-rsp span,
+  .mr-week span {
+    display: block;
+  }
+  /* A soft tint for your own players, never a dark stripe. */
+  .mr-row--mine td {
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--content-bg));
+  }
+  .mr-own {
+    font-size: var(--font-size-xs);
+  }
+  .mr-own--mine {
+    color: var(--pill-on-ink);
+    font-weight: var(--font-weight-semibold);
+  }
+  .mr-own--fa {
+    color: var(--badge-success-text);
+    font-weight: var(--font-weight-semibold);
+  }
+  .mr-own--other {
+    color: var(--content-text-muted);
+  }
+  .mr-more {
+    text-align: center;
+    margin: var(--spacing-lg) 0;
+  }
+
+  /* Phones: one card per player, every value labeled; the headers become the
+     sort pills. */
+  @media (max-width: 767px) {
+    .mr {
+      padding: var(--spacing-md) var(--spacing-md) var(--spacing-xl);
+    }
+    .mr-sort-pills {
+      display: flex;
+    }
+    .mr-table,
+    .mr-table tbody {
+      display: block;
+      background: none;
+      border: 0;
+      border-radius: 0;
+    }
+    .mr-table thead {
+      display: none;
+    }
+    .mr-row {
+      display: grid;
+      grid-template-columns: 2rem 1fr 1fr 1fr;
+      gap: 0.5rem 0.75rem;
+      margin-bottom: var(--spacing-sm);
+      padding: 0.75rem;
+      background: var(--content-bg);
+      border: 1px solid var(--content-border);
+      border-radius: var(--radius-lg);
+    }
+    .mr-row--mine {
+      background: color-mix(in srgb, var(--color-primary) 6%, var(--content-bg));
+      border-color: color-mix(in srgb, var(--color-primary) 25%, var(--content-border));
+    }
+    .mr-table td,
+    .mr-row--mine td {
+      padding: 0;
+      border: 0;
+      background: none;
+      text-align: left;
+    }
+    .mr-idx {
+      grid-row: span 1;
+    }
+    .mr-player {
+      grid-column: 2 / -1;
+    }
+    .mr-table td[data-label] {
+      grid-column: auto;
+    }
+    .mr-table td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--content-text-muted);
+      font-size: var(--font-size-2xs);
+      font-weight: var(--font-weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .mr-table td[data-label]:nth-child(3) {
+      grid-column-start: 2;
+    }
+    .mr-rsp,
+    .mr-week,
+    .mr-owner {
+      grid-column: 2 / -1 !important;
+    }
+    .mr-hide-phone {
+      display: none;
+    }
+  }
+</style>

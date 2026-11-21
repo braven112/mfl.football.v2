@@ -1,0 +1,34 @@
+---
+/**
+ * My Rankings — /theleague/admin/my-rankings. Brandon's alone.
+ *
+ * Thin wrapper: the gate + layout. The gate is the site owner's own
+ * franchise session in this league (isSiteOwnerIn), NOT the commissioner
+ * gate — the board holds his personal subscription data and RSP, which no
+ * other commissioner may see. The data is read from the private repo at
+ * request time (src/utils/private-rankings.ts); view:
+ * components/shared/MyRankingsPage.astro.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MyRankingsPage from '../../../components/shared/MyRankingsPage.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { isSiteOwnerIn } from '../../../utils/site-owner';
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+const league = getLeagueBySlug('theleague');
+const user = getAuthUser(Astro.request);
+if (!league) return Astro.redirect('/');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, league));
+// Every other session, commissioners included, gets the standard refusal.
+if (!isSiteOwnerIn(user, league.slug)) return Astro.rewrite(forbiddenPathFor(league, 'commissioner'));
+---
+
+<TheLeagueLayout title="My Rankings">
+  <MyRankingsPage routeSlug={league.slug} />
+</TheLeagueLayout>
