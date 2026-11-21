@@ -114,7 +114,9 @@ export async function loadPrivateBoard(
       // GitHub answers 404 (not 403) when a token cannot see a private repo,
       // so a 404 moves on too; only a token that reads it is remembered.
       if (res.status === 401 || res.status === 403 || res.status === 404) {
-        refused.push(name);
+        // The status says why: 401 = the value is wrong or expired, 403/404 =
+        // the token is valid but has no access to this repo. Never the value.
+        refused.push(`${name} ${res.status}`);
         continue;
       }
       workingTokenVar = name;
@@ -125,7 +127,7 @@ export async function loadPrivateBoard(
       return {
         ok: false,
         reason: 'no-access',
-        message: `None of the GitHub tokens this deployment has (${refused.join(', ')}) can read ${BOARD_REPO}, or it has no ${boardKey} board yet.`,
+        message: `None of the GitHub tokens this deployment has (${refused.join(', ')}) can read ${BOARD_REPO}, or it has no ${boardKey} board yet. (401: the token's value is wrong or expired. 403 or 404: the token works but cannot see this repo.)`,
       };
     }
     if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
