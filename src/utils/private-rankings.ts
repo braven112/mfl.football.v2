@@ -10,9 +10,12 @@
  * scrape; this module fetches that one file with a read-only token and keeps
  * it in the function's memory for a few minutes.
  *
- * TOKEN. `BRANDON_FANTASY_TOKEN`: a fine-grained GitHub token with read-only
- * Contents access to braven112/brandon-fantasy and nothing else, set in
- * Vercel. Without it the page says so instead of rendering an empty board.
+ * TOKEN. No token of its own (Brandon, 2026-11-21: reuse the ones already set
+ * up). It tries the GitHub tokens Vercel already holds, in BOARD_TOKEN_VARS
+ * order, and remembers the first that can read the repo: the private-repo
+ * token the build uses for Beat-Reporter, then the site's admin token. Each
+ * needs read access to braven112/brandon-fantasy; a token without it answers
+ * 404 and the next is tried. `BRANDON_FANTASY_TOKEN`, if ever set, goes first.
  * `BRANDON_FANTASY_REF` (optional) reads a branch other than the default one.
  * `BRANDON_FANTASY_DIR` (local dev only) reads a local clone of the private
  * repo instead of GitHub; it is never set in Vercel.
@@ -35,11 +38,34 @@ const cache = new Map<string, { at: number; board: BoardFile }>();
 
 export type BoardLoad =
   | { ok: true; board: BoardFile }
-  | { ok: false; reason: 'no-token' | 'not-found' | 'error'; message: string };
+  | { ok: false; reason: 'no-token' | 'no-access' | 'not-found' | 'error'; message: string };
 
-export function boardToken(env: Record<string, string | undefined> = process.env): string | null {
-  return env.BRANDON_FANTASY_TOKEN || null;
+/** The env vars tried, in order. The same token under two names is tried once. */
+export const BOARD_TOKEN_VARS = [
+  'BRANDON_FANTASY_TOKEN',
+  'VERCEL_BEAT_REPORTER_TOKEN',
+  'BEAT_REPORTER_TOKEN',
+  'GITHUB_ADMIN_TOKEN',
+  'GH_ADMIN_TOKEN',
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+] as const;
+
+export function boardTokens(env: Record<string, string | undefined> = process.env): { name: string; token: string }[] {
+  const seen = new Set<string>();
+  const out: { name: string; token: string }[] = [];
+  for (const name of BOARD_TOKEN_VARS) {
+    const token = env[name];
+    if (token && !seen.has(token)) {
+      seen.add(token);
+      out.push({ name, token });
+    }
+  }
+  return out;
 }
+
+/** The env var whose token last read the repo, tried first next time. */
+let workingTokenVar: string | null = null;
 
 /**
  * The board for one league. `fresh` skips the memory cache (the page's
@@ -64,22 +90,41 @@ export async function loadPrivateBoard(
     }
   }
 
-  const token = boardToken(env);
-  if (!token) return { ok: false, reason: 'no-token', message: 'BRANDON_FANTASY_TOKEN is not set in this deployment.' };
+  const tokens = boardTokens(env);
+  if (!tokens.length) return { ok: false, reason: 'no-token', message: 'This deployment has no GitHub token to read the private repo with.' };
+  tokens.sort((a, b) => Number(b.name === workingTokenVar) - Number(a.name === workingTokenVar));
 
   try {
     const ref = env.BRANDON_FANTASY_REF ? `?ref=${encodeURIComponent(env.BRANDON_FANTASY_REF)}` : '';
-    const res = await fetchImpl(`https://api.github.com/repos/${BOARD_REPO}/contents/data/rankings-board/${boardKey}.json${ref}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.raw+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'mfl-football-site',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (res.status === 404) {
-      return hit ? { ok: true, board: hit.board } : { ok: false, reason: 'not-found', message: `The private repo has no ${boardKey} board yet.` };
+    const url = `https://api.github.com/repos/${BOARD_REPO}/contents/data/rankings-board/${boardKey}.json${ref}`;
+    let res: Response | null = null;
+    const refused: string[] = [];
+    for (const { name, token } of tokens) {
+      res = await fetchImpl(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'mfl-football-site',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      // GitHub answers 404 (not 403) when a token cannot see a private repo,
+      // so a 404 moves on too; only a token that reads it is remembered.
+      if (res.status === 401 || res.status === 403 || res.status === 404) {
+        refused.push(name);
+        continue;
+      }
+      workingTokenVar = name;
+      break;
+    }
+    if (!res || refused.length === tokens.length) {
+      if (hit) return { ok: true, board: hit.board };
+      return {
+        ok: false,
+        reason: 'no-access',
+        message: `None of the GitHub tokens this deployment has (${refused.join(', ')}) can read ${BOARD_REPO}, or it has no ${boardKey} board yet.`,
+      };
     }
     if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
     const board = (await res.json()) as BoardFile;
@@ -95,4 +140,5 @@ export async function loadPrivateBoard(
 /** Test hook. */
 export function clearPrivateBoardCache(): void {
   cache.clear();
+  workingTokenVar = null;
 }

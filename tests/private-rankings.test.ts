@@ -88,6 +88,28 @@ describe('private rankings loader', () => {
     expect(seen!.auth).toBe('Bearer t0k');
   });
 
+  it('tries the tokens already set up, in order, and remembers the one that works', async () => {
+    const tried: string[] = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      const auth = new Headers(init.headers).get('Authorization')!;
+      tried.push(auth);
+      return auth === 'Bearer admin' ? new Response(JSON.stringify(board([P.gibbs]))) : new Response('{}', { status: 404 });
+    }) as unknown as typeof fetch;
+    const env = { VERCEL_BEAT_REPORTER_TOKEN: 'beat', BEAT_REPORTER_TOKEN: 'beat', GH_TOKEN: 'admin' };
+    expect((await loadPrivateBoard('theleague', { env, fetchImpl })).ok).toBe(true);
+    // The same token under two names is tried once.
+    expect(tried).toEqual(['Bearer beat', 'Bearer admin']);
+    tried.length = 0;
+    await loadPrivateBoard('theleague', { env, fetchImpl, fresh: true });
+    expect(tried).toEqual(['Bearer admin']);
+  });
+
+  it('names the tokens it tried when none can read the repo', async () => {
+    const r = await loadPrivateBoard('theleague', { env: { VERCEL_BEAT_REPORTER_TOKEN: 'b' }, fetchImpl: ok({}, 404) });
+    expect(r).toMatchObject({ ok: false, reason: 'no-access' });
+    expect(!r.ok && r.message).toContain('VERCEL_BEAT_REPORTER_TOKEN');
+  });
+
   it('serves the last good copy when a refresh fails', async () => {
     const env = { BRANDON_FANTASY_TOKEN: 't' };
     await loadPrivateBoard('theleague', { env, fetchImpl: ok(board([P.gibbs])) });

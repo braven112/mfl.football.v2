@@ -138,8 +138,8 @@ const sourceLines = load.ok
   {!load.ok ? (
     <div class="mr-empty" role="status">
       <p><strong>The board could not load.</strong> {load.message}</p>
-      {load.reason === 'no-token' && (
-        <p>Add a read-only GitHub token for the private repo as <code>BRANDON_FANTASY_TOKEN</code> in Vercel, then redeploy.</p>
+      {load.reason === 'no-access' && (
+        <p>Give the Beat-Reporter token (<code>VERCEL_BEAT_REPORTER_TOKEN</code>) read access to brandon-fantasy in its GitHub settings, and make sure that repo has built its rankings board.</p>
       )}
     </div>
   ) : (
