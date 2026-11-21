@@ -130,7 +130,9 @@ describe('private rankings loader', () => {
   it('names the tokens it tried when none can read the repo', async () => {
     const r = await loadPrivateBoard('theleague', { env: { VERCEL_BEAT_REPORTER_TOKEN: 'b' }, fetchImpl: ok({}, 404) });
     expect(r).toMatchObject({ ok: false, reason: 'no-access' });
-    expect(!r.ok && r.message).toContain('VERCEL_BEAT_REPORTER_TOKEN');
+    expect(!r.ok && r.message).toContain('VERCEL_BEAT_REPORTER_TOKEN 404');
+    // The status is shown, never the token's value.
+    expect(!r.ok && r.message).not.toContain("'b'");
   });
 
   it('serves the last good copy when a refresh fails', async () => {
