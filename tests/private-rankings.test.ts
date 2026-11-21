@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { loadPrivateBoard, clearPrivateBoardCache } from '../src/utils/private-rankings';
 import { buildView, parseViewQuery, viewHref, PAGE_SIZE, type BoardFile } from '../src/utils/private-rankings-view';
@@ -130,10 +130,10 @@ describe('the board data never enters this repo', () => {
   it('has no rankings-board file anywhere under src/, data/ or public/', () => {
     const hits: string[] = [];
     const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        if (name === 'node_modules' || name.startsWith('.')) continue;
-        const full = path.join(dir, name);
-        if (statSync(full).isDirectory()) walk(full);
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
         else if (full.includes('rankings-board')) hits.push(full);
       }
     };
@@ -145,10 +145,10 @@ describe('the board data never enters this repo', () => {
     // The loader carries the token; only server code (the page component) may import it.
     const importers: string[] = [];
     const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        const full = path.join(dir, name);
-        if (statSync(full).isDirectory()) walk(full);
-        else if (/\.(tsx?|astro|mjs)$/.test(name) && /private-rankings['"]/.test(readFileSync(full, 'utf8'))) importers.push(full);
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(tsx?|astro|mjs)$/.test(entry.name) && /private-rankings['"]/.test(readFileSync(full, 'utf8'))) importers.push(full);
       }
     };
     walk('src');
