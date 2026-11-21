@@ -116,6 +116,17 @@ describe('private rankings loader', () => {
     expect(tried).toEqual(['Bearer admin']);
   });
 
+  it('reads PERSONAL_FANTASY_TOKEN first', async () => {
+    const tried: string[] = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      tried.push(new Headers(init.headers).get('Authorization')!);
+      return new Response(JSON.stringify(board([P.gibbs])));
+    }) as unknown as typeof fetch;
+    const r = await loadPrivateBoard('theleague', { env: { VERCEL_BEAT_REPORTER_TOKEN: 'beat', PERSONAL_FANTASY_TOKEN: 'mine' }, fetchImpl });
+    expect(r.ok).toBe(true);
+    expect(tried).toEqual(['Bearer mine']);
+  });
+
   it('names the tokens it tried when none can read the repo', async () => {
     const r = await loadPrivateBoard('theleague', { env: { VERCEL_BEAT_REPORTER_TOKEN: 'b' }, fetchImpl: ok({}, 404) });
     expect(r).toMatchObject({ ok: false, reason: 'no-access' });
