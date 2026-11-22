@@ -1,0 +1,108 @@
+---
+/**
+ * The Blend slider on My Rankings: the redraft share of the site owner's
+ * auction / AFL draft board (src/utils/my-ranks.ts). Saves only the number,
+ * through /api/my-ranks. Its own component so the board page itself ships no
+ * client script (tests/private-rankings.test.ts).
+ */
+interface Props {
+  /** Registry slug of the board's league. */
+  slug: string;
+  /** Saved redraft share, 0–100. */
+  pct: number;
+}
+const { slug, pct } = Astro.props;
+---
+
+  <form class="mr-blend" data-blend-form data-league={slug}>
+    <label class="mr-blend-label" for="mr-blend-range">
+      <strong>Your blend</strong>
+      <span>Used on the Keeper Planner. Projected Free Agents is dynasty only; contract pages blend by years left.</span>
+    </label>
+    <div class="mr-blend-row">
+      <input id="mr-blend-range" type="range" min="0" max="100" step="5" value={pct} data-blend-range />
+      <output class="mr-blend-value" data-blend-value>{pct}% redraft · {100 - pct}% dynasty</output>
+      <button type="submit" class="cta cta--primary" data-blend-save>Save</button>
+    </div>
+    <p class="mr-blend-status" role="status" data-blend-status></p>
+  </form>
+
+<script>
+  import { refreshMyRanks } from '../../utils/my-ranks-client';
+
+  // ClientRouter: re-bind on every page load; the form is replaced each swap.
+  document.addEventListener('astro:page-load', () => {
+    const form = document.querySelector<HTMLFormElement>('form[data-blend-form]');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    const range = form.querySelector<HTMLInputElement>('[data-blend-range]')!;
+    const value = form.querySelector<HTMLOutputElement>('[data-blend-value]')!;
+    const status = form.querySelector<HTMLElement>('[data-blend-status]')!;
+    const show = () => {
+      const pct = Number(range.value);
+      value.textContent = `${pct}% redraft · ${100 - pct}% dynasty`;
+    };
+    range.addEventListener('input', () => {
+      show();
+      status.textContent = '';
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = 'Saving…';
+      try {
+        const res = await fetch(`/api/my-ranks?league=${encodeURIComponent(form.dataset.league ?? '')}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ blendRedraftPct: Number(range.value) }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        status.textContent = 'Saved.';
+        refreshMyRanks();
+      } catch {
+        status.textContent = "Couldn't save. Try again.";
+      }
+    });
+  });
+</script>
+
+<style>
+  .mr-blend {
+    margin: 0.75rem 0 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--content-border);
+    border-radius: 0.75rem;
+    background: var(--content-bg-muted);
+  }
+  .mr-blend-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .mr-blend-label span,
+  .mr-blend-status {
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+  .mr-blend-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+  }
+  /* The slider takes its own full row on a phone; value + Save share the next. */
+  .mr-blend-row input[type='range'] {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .mr-blend-value {
+    flex: 1 1 auto;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .mr-blend-status {
+    margin: 0.35rem 0 0;
+    min-height: 1.2em;
+  }
+</style>

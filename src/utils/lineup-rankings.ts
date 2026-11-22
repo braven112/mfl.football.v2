@@ -45,7 +45,8 @@ const EMPTY: LineupRankings = {
  * AFL lineup would show TheLeague's board.
  */
 export function loadLineupRankings(): LineupRankings {
-  const lookup = buildRankingLookup();
+  // Set Lineup is a one-week decision: the site owner's `week` list, never dynasty.
+  const lookup = buildRankingLookup(undefined, { kind: 'week' });
   const column = lookup.columns[0];
   if (!column) return EMPTY;
 

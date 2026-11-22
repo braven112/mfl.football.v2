@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { loadPrivateBoard, clearPrivateBoardCache } from '../src/utils/private-rankings';
 import { buildView, parseViewQuery, viewHref, PAGE_SIZE, type BoardFile } from '../src/utils/private-rankings-view';
-import { isSiteOwnerIn } from '../src/utils/site-owner';
+import { isSiteOwnerIn, isSiteOwnerAnywhere } from '../src/utils/site-owner';
 import { getLeagueBySlug } from '../src/config/leagues';
 import type { AuthUser } from '../src/utils/auth';
 
@@ -58,6 +58,18 @@ describe('private rankings view', () => {
     expect(v.rows.map((r) => r.player.name)).toEqual(['Brock Bowers', 'Jahmyr Gibbs', 'Jeremiyah Love']);
     const c = buildView(withFp, parseViewQuery(new URLSearchParams('sort=fp')), null, null);
     expect(c.rows.map((r) => r.player.name)).toEqual(['Jahmyr Gibbs', 'Brock Bowers', 'Jeremiyah Love']);
+  });
+
+  it('this week: only players with a projection, most projected points first', () => {
+    const wk = board([
+      { ...P.gibbs, season: { ...P.gibbs.season, weekPts: 20.6, weekPosRank: 'RB2' } },
+      { ...P.bowers, season: { ...P.bowers.season, weekPts: 22.1, weekPosRank: 'TE1' } },
+      P.love,
+    ]);
+    const v = buildView(wk, parseViewQuery(new URLSearchParams('view=week')), null, null);
+    expect(v.rows.map((r) => r.player.name)).toEqual(['Brock Bowers', 'Jahmyr Gibbs']);
+    const byRos = buildView(wk, parseViewQuery(new URLSearchParams('view=week&sort=ros')), null, null);
+    expect(byRos.rows.map((r) => r.player.name)).toEqual(['Jahmyr Gibbs', 'Brock Bowers']);
   });
 
   it('caps a long tab unless all=1', () => {
@@ -164,6 +176,16 @@ describe('site owner gate', () => {
     expect(isSiteOwnerIn(null, 'theleague')).toBe(false);
   });
 
+  it('his boards open from either league session, and to nobody else', () => {
+    expect(isSiteOwnerAnywhere(user(tl.id, '0001'))).toBe(true);
+    expect(isSiteOwnerAnywhere(user(afl.id, '0001'))).toBe(true);
+    expect(isSiteOwnerAnywhere(user(tl.id, '0002'))).toBe(false);
+    expect(isSiteOwnerAnywhere(user(tl.id, '0000', 'commissioner'))).toBe(false);
+    expect(isSiteOwnerAnywhere(user('99999', '0001'))).toBe(false);
+    expect(isSiteOwnerAnywhere(null)).toBe(false);
+    expect(readFileSync('src/pages/api/my-ranks.ts', 'utf8')).toMatch(/isSiteOwnerAnywhere\(user\)/);
+  });
+
   it('gates both routes with isSiteOwnerIn, not the commissioner gate', () => {
     for (const slug of ['theleague', 'afl-fantasy']) {
       const src = readFileSync(path.join('src/pages', slug, 'admin/my-rankings.astro'), 'utf8');
@@ -199,8 +221,18 @@ describe('the board data never enters this repo', () => {
       }
     };
     walk('src');
-    expect(importers.sort()).toEqual(['src/components/shared/MyRankingsPage.astro']);
-    const page = readFileSync('src/components/shared/MyRankingsPage.astro', 'utf8');
-    expect(page).not.toMatch(/<script/);
+    // The board page, the site owner's ranks API (server-only, private,
+    // no-store) and the marker that opts his pages in (frontmatter only: it
+    // reads BOARD_KEY_BY_SLUG, never the board).
+    expect(importers.sort()).toEqual([
+      'src/components/shared/MyRankingsPage.astro',
+      'src/components/shared/MyRanksMarker.astro',
+      'src/pages/api/my-ranks.ts',
+    ]);
+    for (const file of ['src/components/shared/MyRankingsPage.astro', 'src/components/shared/MyRanksMarker.astro']) {
+      expect(readFileSync(file, 'utf8'), file).not.toMatch(/<script/);
+    }
+    // The browser half reaches the ranks only through the gated API.
+    expect(readFileSync('src/utils/my-ranks-client.ts', 'utf8')).not.toMatch(/private-rankings['"]/);
   });
 });

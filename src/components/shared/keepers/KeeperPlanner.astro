@@ -1136,7 +1136,7 @@ try {
       if (!cardsEl) return;
       let orderIds = initialOrderIds;
       if (sortMyRankToggle?.checked) {
-        const lookup = buildRankingLookup();
+        const lookup = buildRankingLookup(undefined, { kind: 'blend' });
         const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
         if (compositeMap && compositeMap.size > 0) {
           orderIds = [...initialOrderIds].sort((a, b) => {

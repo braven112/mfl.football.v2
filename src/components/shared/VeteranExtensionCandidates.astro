@@ -275,7 +275,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
       // --- Rankings-based position ranks (from localStorage imports) ---
-      const lookup = buildRankingLookup();
+      const lookup = buildRankingLookup(undefined, { kind: 'contract' });
       const bestImportId = chooseBestImport(lookup);
       const rankMap = bestImportId ? lookup.byImport.get(bestImportId) : null;
       const posRankByRanking = derivePositionRanks(allPlayers, rankMap);

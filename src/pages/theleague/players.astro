@@ -3312,6 +3312,12 @@ const spriteUrl = spriteUrlFor(Astro.url);
     anchorSelector: '[data-sort="weight"]',
     // My Rank doubles as the Value view's ranking column.
     compositeThClasses: ['col-my-rank', 'col-group--value'],
+    // The site owner alone can switch My Rank between these (rankings-table.ts).
+    kindChoices: [
+      { kind: 'season', label: 'This season' },
+      { kind: 'week', label: 'This week' },
+      { kind: 'dynasty', label: 'Dynasty' },
+    ],
   });
 </script>
 

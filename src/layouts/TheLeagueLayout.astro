@@ -67,6 +67,7 @@ import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference, getLeaguePreference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
+import MyRanksMarker from '../components/shared/MyRanksMarker.astro';
 import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
 import { getLeagueTeamConfigs } from '../utils/league-team-brands';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
@@ -540,6 +541,7 @@ const siteStyle = resolveSiteTheme(leagueContext.slug, Astro.locals.siteThemePre
 				hideMobileNavIcons={hideMobileNavIcons}
 			/>
 			<main>
+				<MyRanksMarker user={layoutAuthUser} slug={leagueContext.slug} />
 				<slot />
 			</main>
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />

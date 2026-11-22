@@ -1,0 +1,41 @@
+---
+/**
+ * Opts the page into the site owner's own ranks under "My Rank"
+ * (src/utils/my-ranks-client.ts). Renders NOTHING for anyone else, so the
+ * HTML every other viewer receives is unchanged — no ranks, no hint that a
+ * private board exists. The ranks themselves arrive from /api/my-ranks
+ * (private, no-store), never in this HTML, so a cached page can't carry them.
+ *
+ * Its only visible state is the fallback notice, shown by the client when
+ * the board can't load and the page falls back to the default board.
+ */
+import { BOARD_KEY_BY_SLUG } from '../../utils/private-rankings';
+import { isSiteOwnerIn } from '../../utils/site-owner';
+import type { AuthUser } from '../../utils/auth';
+
+interface Props {
+  user: AuthUser | null;
+  slug: string;
+}
+const { user, slug } = Astro.props;
+const show = Boolean(BOARD_KEY_BY_SLUG[slug]) && isSiteOwnerIn(user, slug);
+---
+{show && (
+  <p class="my-ranks-notice" role="status" data-my-ranks data-league={slug} data-owner hidden>
+    Your rankings board couldn't load, so My Rank shows the default for now.
+  </p>
+)}
+<style>
+  .my-ranks-notice {
+    margin: 0.5rem auto;
+    max-width: 60rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+  }
+  .my-ranks-notice[hidden] {
+    display: none;
+  }
+</style>

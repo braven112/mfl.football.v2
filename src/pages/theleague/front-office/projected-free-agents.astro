@@ -62,7 +62,6 @@ const loadFeedYears = async (
 const [
   playerModules,
   rostersModules,
-  projectedScoresModules,
   seasonWeeklyModules,
   seasonYtdModules,
   playerWeekScoreModules,
@@ -72,7 +71,6 @@ const [
 ] = await Promise.all([
   loadFeedYears('players.json', [currentYear, statsSeasonYear], CURRENT_ERA_FLOOR),
   loadFeedYears('rosters.json', [currentYear]),
-  loadFeedYears('projectedScores.json', [currentYear]),
   // Season-to-date points for the WHOLE player pool come from playerScores-ytd
   // (src/utils/stats-season.mjs); playerScores-by-week is the per-week
   // fallback for unrostered players (src/utils/player-week-scores.mjs).
@@ -100,7 +98,6 @@ const findForYear = (modules: Record<string, any>, yr: number) => {
 
 const playersData = findForYear(playerModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
-const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 
 // ── Build franchise lookup ──
 const teams = (leagueConfig as any).teams ?? [];
@@ -139,20 +136,6 @@ const MFL_TEAM_CODE_MAP: Record<string, string> = {
 function normalizeMflTeam(code: string): string {
   if (!code) return 'FA';
   return MFL_TEAM_CODE_MAP[code] || code;
-}
-
-// ── Build projected scores lookup ──
-const projectedMap = new Map<string, number>();
-if (projectedScoresData?.projectedScores?.playerScore) {
-  const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
-    ? projectedScoresData.projectedScores.playerScore
-    : [projectedScoresData.projectedScores.playerScore];
-  for (const s of scores) {
-    if (s?.id && s?.score) {
-      const score = parseFloat(s.score);
-      if (score > 0) projectedMap.set(s.id, score);
-    }
-  }
 }
 
 // ── Build last season stats ──
@@ -213,7 +196,6 @@ interface ProjectedFARow {
   franchiseIcon: string;
   salary: number;
   age: number | null;
-  projected: number | null;
   seasonPts: number | null;
   games: number | null;
   ppg: number | null;
@@ -273,7 +255,6 @@ function buildPlayerRow(
     franchiseIcon: fInfo?.icon || '',
     salary,
     age,
-    projected: projectedMap.get(playerId) ?? null,
     seasonPts,
     games: gamesPlayed,
     ppg,
@@ -348,8 +329,8 @@ try {
   }
 } catch (_) { /* Redis unavailable — use static data */ }
 
-// ── Sort by projected points descending ──
-expiringPlayers.sort((a, b) => (b.projected ?? -1) - (a.projected ?? -1));
+// ── Sort by salary descending (My Rank takes over in the browser once it loads) ──
+expiringPlayers.sort((a, b) => b.salary - a.salary);
 
 // ── Compute summary metrics ──
 const totalPlayers = expiringPlayers.length;
@@ -527,9 +508,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-projected" data-sort="projected">
-              <div class="th-content">Proj</div>
-            </th>
             <th
               class="sortable col-lastyr col-hide-mobile"
               data-sort="seasonPts"
@@ -583,7 +561,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   let filteredPlayers = [...players];
-  let currentSort = 'projected';
+  let currentSort = 'salary';
+  // Once My Rank arrives it becomes the default order, until the owner picks another.
+  let rankDefaultApplied = false;
   let sortDirection = 'desc';
   let activePosition = 'ALL';
   let searchQuery = '';
@@ -692,7 +672,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         var map = rankingLookup.byImport.get(col.importId);
         var rank = map ? map.get(p.id) : null;
         var cls = col.isComposite ? 'col-ranking col-ranking-composite' : (col.isAverage ? 'col-ranking col-ranking-avg' : 'col-ranking');
-        rankingCells += '<td class="' + cls + ' col-group--rankings col-hide-mobile">' + (rank != null ? rank : '\u2014') + '</td>';
+        rankingCells += '<td class="' + cls + ' col-group--rankings">' + (rank != null ? rank : '\u2014') + '</td>';
       }
     }
 
@@ -725,10 +705,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       + '</td>'
       + '<td class="cell-salary">' + formatSalary(p.salary) + '</td>'
       + '<td class="cell-age">' + (p.age != null ? p.age : '\u2014') + '</td>'
-      + '<td class="cell-projected">' + (p.projected != null ? p.projected.toFixed(1) : '\u2014') + '</td>'
+      // Ranking cells sit right after Age, where rankings-table.ts puts the header.
+      + rankingCells
       + '<td class="cell-lastyr col-hide-mobile">' + (p.seasonPts != null ? p.seasonPts.toFixed(1) : '\u2014') + '</td>'
       + '<td class="cell-ppg col-hide-mobile">' + (p.ppg != null ? p.ppg.toFixed(1) : '\u2014') + '</td>'
-      + rankingCells
     + '</tr>';
   }
 
@@ -918,6 +898,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (detail.lookup) {
         rankingLookup = detail.lookup;
         hasRankingColumns = !!detail.hasColumns;
+        if (!rankDefaultApplied && detail.hasComposite && currentSort === 'salary') {
+          rankDefaultApplied = true;
+          currentSort = 'ranking___composite__';
+          sortDirection = 'asc';
+        }
       }
     });
     document.addEventListener('rankings:refilter', function() {
@@ -936,7 +921,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // hid its source) and there is nothing left to hand off to — restore this
       // page's own default instead of sorting by a column that no longer exists.
       if (detail.key == null) {
-        currentSort = 'projected';
+        currentSort = 'salary';
         sortDirection = 'desc';
         return;
       }
@@ -946,7 +931,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     document.addEventListener('rankings:get-sort', function(e) {
       if (!isLivePage()) return;
       e.detail.currentSort = currentSort;
-      e.detail.descDefaults = new Set(['projected', 'seasonPts', 'ppg', 'salary', 'age']);
+      e.detail.descDefaults = new Set(['seasonPts', 'ppg', 'salary', 'age']);
     });
 
     // Initial render
@@ -969,11 +954,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   initRankingTable({
     tableSelector: '.pfa-table',
-    anchorSelector: '[data-sort="ppg"]',
-    // The ranking block is desktop-only here and the <td>s already carry this
-    // class, so the headers must too — otherwise the header row keeps columns
-    // the body has dropped and every mobile cell lands under the wrong title.
-    thClasses: ['col-hide-mobile'],
+    // Dynasty, FBG + DLF averaged (Brandon, 2026-11-22; my-ranks.ts).
+    kind: 'dynasty',
+    // Right after Age, and shown on phones too: it is one column now, and the
+    // reason this page exists (Projected was dropped from it the same day).
+    anchorSelector: '[data-sort="age"]',
   });
 </script>
 
@@ -1360,10 +1345,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .cell-salary {
-    font-weight: 500;
-  }
-
-  .cell-projected {
     font-weight: 500;
   }
 
