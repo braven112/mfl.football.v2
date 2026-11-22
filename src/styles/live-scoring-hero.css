@@ -223,6 +223,65 @@ html.dark {
   background: var(--lsh-card-bg);
 }
 
+/* ── Linked matchups ──
+   Each card is an <a> to that game on the league's live-scoring board. The
+   layouts' global a:hover (link colour + underline, (0,1,1)) would repaint
+   every team name red, so these restate ink and decoration above it. The
+   hover is a quiet lift: a touch more border and fill, never a colour change
+   to the names or scores. */
+.lsh a.lsh__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast),
+    transform var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lsh a.lsh__link:hover,
+.lsh a.lsh__link:focus-visible {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lsh a.lsh__compact.lsh__link:hover {
+  border-color: color-mix(in srgb, var(--lsh-accent) 45%, var(--lsh-border));
+  background: color-mix(in srgb, var(--lsh-accent) 6%, var(--lsh-card-bg));
+}
+
+.lsh a.lsh__featured.lsh__link:hover {
+  background: color-mix(in srgb, var(--lsh-accent) 18%, transparent);
+}
+
+.lsh a.lsh__link:active {
+  transform: scale(0.99);
+}
+
+.lsh a.lsh__link:focus-visible {
+  outline: 2px solid var(--lsh-accent);
+  outline-offset: 2px;
+}
+
+.lsh a.lsh__championship.lsh__link {
+  display: flex;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lsh a.lsh__link { transition: none; }
+  .lsh a.lsh__link:active { transform: none; }
+}
+
+/* ── View all matchups ── */
+.lsh__footer {
+  display: flex;
+  justify-content: center;
+}
+
+.lsh__cta {
+  white-space: nowrap;
+}
+
 /* ── Matchup Row (shared between featured & compact) ── */
 .lsh__matchup-row {
   display: flex;
@@ -400,6 +459,12 @@ html.dark {
 
   .lsh__compact-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* A full-width button is the easy thumb target on a phone. */
+  .lsh__cta {
+    width: 100%;
+    justify-content: center;
   }
 
   .lsh__championship {
