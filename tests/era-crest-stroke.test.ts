@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
 import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
@@ -143,6 +144,42 @@ describe('era crest rim', () => {
     // A rule keyed on a src that does not exist is invisible dead CSS.
     const paths = new Set(eras.filter((e) => e.era.iconStroke).map((e) => e.era.icon));
     expect(paths.size).toBeGreaterThan(0);
+  });
+});
+
+describe('a rim never clips a logo', () => {
+  // The rim rule sets `border-radius: 50%` on the <img>, so it rounds off
+  // whatever art it rings. That is harmless on a crest that is ALREADY a
+  // circle (transparent corners) and bites the corners off a square one —
+  // which is how 13 AFL eras (the Soup Nazi, the YTS shield, the DTs face)
+  // rendered as crops on Live Scoring during Throwback Week (2026-11-22).
+  // Square art takes `iconFreeform` instead: no round slot, no crop.
+  const cornerIsOpaque = (png: PNG, fx: number, fy: number) => {
+    const x = Math.floor(png.width * fx);
+    const y = Math.floor(png.height * fy);
+    return png.data[(png.width * y + x) * 4 + 3] > 40;
+  };
+  const ringed = [...aflTeams, ...((theleagueConfig as any).teams ?? [])]
+    .flatMap((t: any) => (t.history ?? []).map((e: any) => ({ team: t, era: e })))
+    .filter(({ era }: any) => era.iconStroke && /\.png$/i.test(era.icon ?? ''));
+
+  it('rings only round art', () => {
+    expect(ringed.length).toBeGreaterThan(0);
+    for (const { team, era } of ringed) {
+      const file = join(process.cwd(), 'public', era.icon);
+      if (!existsSync(file)) continue;
+      const png = PNG.sync.read(readFileSync(file));
+      const opaque = [
+        [0.08, 0.08],
+        [0.92, 0.08],
+        [0.08, 0.92],
+        [0.92, 0.92],
+      ].filter(([fx, fy]) => cornerIsOpaque(png, fx, fy)).length;
+      expect(
+        opaque,
+        `${team.name} "${era.name}" is square art with a rim, which crops it into a circle; use iconFreeform`,
+      ).toBe(0);
+    }
   });
 });
 
