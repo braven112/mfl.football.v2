@@ -105,6 +105,7 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
    *
    * 1. The league's own desk — the same predicate `/news?source=theleague`
    *    filters on, so every transaction post lands here whoever it is about.
+   *    Except injuries: those come through lane 3 only.
    * 2. The group chat, whole. Filtering it to the reader's own messages left
    *    them reading themselves talk.
    * 3. Anything personal that the first two miss: a wire item naming a player
@@ -112,8 +113,13 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
    *
    * What is left over for All is exactly the NFL wire and the NFL Draft lane.
    */
-  const isMine = (p: SchefterPost): boolean =>
-    SOURCE_PREDICATES.theleague(p) || isGroupMePost(p) || postIsForViewer(p, sets, franchiseId);
+  const isMine = (p: SchefterPost): boolean => {
+    // Doc Rivers' injury reports are the league's desk, but they name ~20
+    // rostered players a week: My News keeps only the reader's own — on their
+    // roster or watch list — and the rest stay on All (Brandon, Nov 2026).
+    if (p.type === 'injury') return postIsForViewer(p, sets, franchiseId);
+    return SOURCE_PREDICATES.theleague(p) || isGroupMePost(p) || postIsForViewer(p, sets, franchiseId);
+  };
 
   const mine = readable.filter(isMine).slice(0, limit);
 
