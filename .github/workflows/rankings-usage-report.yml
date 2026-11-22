@@ -1,0 +1,22 @@
+# One-off, read-only usage count for the rankings revamp. Never merge.
+name: Rankings usage report
+on:
+  push:
+    branches: [claude/project-thread-4v1jzo]
+    paths: [scripts/rankings-usage-report.mjs, .github/workflows/rankings-usage-report.yml]
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/rankings-usage-report.mjs
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
