@@ -2,8 +2,8 @@
  * AFL tier (Premier League / D-League) standings + promotion/relegation logic.
  *
  * Extracted into a pure, importable module so the season-end compute script
- * (scripts/compute-afl-tier-movement.mjs) and the unit tests
- * (tests/afl-tier-movement.test.ts) share one source of truth. NOTHING here
+ * (scripts/compute-afl-competition-movement.mjs) and the unit tests
+ * (tests/afl-competition-movement.test.ts) share one source of truth. NOTHING here
  * touches the filesystem or the network — callers pass plain data in and get
  * plain data out, mirroring scripts/lib/roger-reminder-window.mjs.
  *
@@ -12,7 +12,7 @@
  *   MFL has NO concept of these tiers: its all-play export (leagueStandings /
  *   O=101) returns ONE all-play-sorted list of all 24 teams with no tier
  *   markers. The split lives only in per-year membership data the league
- *   maintains (data/afl-fantasy/tier-history.json). Given that membership plus
+ *   maintains (data/afl-fantasy/competition-history.json). Given that membership plus
  *   the season's weekly scores, everything below is deterministic.
  *
  * The movement rule (AFL constitution §146–148):
@@ -91,7 +91,7 @@ export function byAllPlay(allPlay) {
  * Rank a list of franchise ids by all-play (best first). Pure — returns a new
  * array and does not mutate the input.
  */
-export function rankWithinTier(ids, allPlay) {
+export function rankWithinCompetition(ids, allPlay) {
   return ids.slice().sort(byAllPlay(allPlay));
 }
 
@@ -142,14 +142,14 @@ export function flattenMembership(split) {
  *   nextMembership: Record<string,string>,
  * }}
  */
-export function computeTierMovement(
+export function computeCompetitionMovement(
   membership,
   allPlay,
   rules = CONSTITUTION_MOVEMENT_RULES
 ) {
   const split = splitMembership(membership);
-  const premier = rankWithinTier(split[PREMIER], allPlay);
-  const dleague = rankWithinTier(split[DLEAGUE], allPlay);
+  const premier = rankWithinCompetition(split[PREMIER], allPlay);
+  const dleague = rankWithinCompetition(split[DLEAGUE], allPlay);
 
   const standings = { [PREMIER]: premier, [DLEAGUE]: dleague };
   const champions = {
@@ -179,7 +179,7 @@ export function computeTierMovement(
       ...swingCfg.premierRanks.map((r) => premier[r - 1]),
       ...swingCfg.dleagueRanks.map((r) => dleague[r - 1]),
     ];
-    const ranked = rankWithinTier(pool, allPlay);
+    const ranked = rankWithinCompetition(pool, allPlay);
     const promoted = ranked.slice(0, swingCfg.promoteCount);
     const relegated = ranked.slice(swingCfg.promoteCount);
     swing = { pool, promoted, relegated };
@@ -202,8 +202,8 @@ export function computeTierMovement(
   ];
 
   const next = {
-    [PREMIER]: rankWithinTier(nextPremier, allPlay),
-    [DLEAGUE]: rankWithinTier(nextDLeague, allPlay),
+    [PREMIER]: rankWithinCompetition(nextPremier, allPlay),
+    [DLEAGUE]: rankWithinCompetition(nextDLeague, allPlay),
   };
 
   return {

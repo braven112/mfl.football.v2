@@ -26,8 +26,8 @@ const prefix = `/${league.slug}`;
 const PLANNER_VIEW = 'view=planner';
 
 const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
-  const tierA = a.tier === 'Premier League' ? 0 : 1;
-  const tierB = b.tier === 'Premier League' ? 0 : 1;
+  const tierA = a.competition === 'Premier League' ? 0 : 1;
+  const tierB = b.competition === 'Premier League' ? 0 : 1;
   if (tierA !== tierB) return tierA - tierB;
   return a.name.localeCompare(b.name);
 });
@@ -78,11 +78,11 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
               <div class="keeper-card__meta">
                 <span class:list={[
                   'keeper-card__tier',
-                  team.tier === 'Premier League'
+                  team.competition === 'Premier League'
                     ? 'keeper-card__tier--premier'
                     : 'keeper-card__tier--dleague',
                 ]}>
-                  {team.tier}
+                  {team.competition}
                 </span>
                 <span class="keeper-card__count keeper-card__count--placeholder">
                   Manage keepers →

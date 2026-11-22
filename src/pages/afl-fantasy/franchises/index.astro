@@ -107,7 +107,7 @@ const toCard = (r: CardRow): FranchiseCardRow => ({
   pct: winPct(r.stats),
   seasons: r.stats?.seasons ?? 0,
   points: r.stats?.pointsFor ?? 0,
-  subtitle: `${r.team.division} Division · ${r.team.tier}`,
+  subtitle: `${r.team.division} Division · ${r.team.competition}`,
   titles: r.titles,
 });
 

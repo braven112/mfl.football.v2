@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
  * Compute AFL Fantasy tier (Premier League / D-League) movement for a completed
- * season and roll the makeup forward → data/afl-fantasy/tier-history.json.
+ * season and roll the makeup forward → data/afl-fantasy/competition-history.json.
  *
  * For each target season it:
- *   1. reads that year's tier membership from tier-history.json (the source of
+ *   1. reads that year's tier membership from competition-history.json (the source of
  *      truth — MFL does not store tiers); the latest completed season can be
  *      seeded from afl.config.json when membership isn't recorded yet,
  *   2. computes each franchise's all-play record from the per-year weekly
  *      results, gated to that season's cutoff week (afl.config.json#
- *      tierCompetition.cutoffWeek, overridden per year by cutoffWeekByYear —
- *      a recorded per-season fact, never inferred; see resolveTierCutoffWeek),
+ *      competitionSettings.cutoffWeek, overridden per year by cutoffWeekByYear —
+ *      a recorded per-season fact, never inferred; see resolveCompetitionCutoffWeek),
  *   3. ranks within each tier and applies the constitution movement rule
- *      (scripts/lib/afl-tier-standings.mjs) to name the two tier champions and
+ *      (scripts/lib/afl-competition-standings.mjs) to name the two tier champions and
  *      derive next season's makeup, and
  *   4. writes the computed champions back onto the season and the rolled-forward
  *      membership onto the NEXT season.
  *
- * Re-run safe / idempotent: an existing tier-history.json is read first;
+ * Re-run safe / idempotent: an existing competition-history.json is read first;
  * hand-entered champions for years WITHOUT membership (pre-2025, never
  * recoverable from MFL) are preserved, computed champions/membership are
  * refreshed. Same conventions as scripts/backfill-afl-championship-history.mjs
@@ -29,7 +29,7 @@
  * franchise slot competed in — so a turnover year relegates correspondingly
  * fewer Premier League teams. This roll-forward is franchise-id-based and
  * cannot detect owner changes; when an owner leaves, hand-correct the NEXT
- * season's membership in tier-history.json after running this (the re-run
+ * season's membership in competition-history.json after running this (the re-run
  * preserves the correction). Also why 2017-2019 membership can't be
  * reconstructed by formula (2016→2017 alone had slot swaps AND new owners).
  *
@@ -41,10 +41,10 @@
  * else skipped. 2024+ local caches are genuine AFL.
  *
  * Usage:
- *   node scripts/compute-afl-tier-movement.mjs            # latest completed season
- *   node scripts/compute-afl-tier-movement.mjs --year 2025
- *   node scripts/compute-afl-tier-movement.mjs --all      # every season with membership
- *   node scripts/compute-afl-tier-movement.mjs --online   # allow MFL fetch for contaminated/missing years
+ *   node scripts/compute-afl-competition-movement.mjs            # latest completed season
+ *   node scripts/compute-afl-competition-movement.mjs --year 2025
+ *   node scripts/compute-afl-competition-movement.mjs --all      # every season with membership
+ *   node scripts/compute-afl-competition-movement.mjs --online   # allow MFL fetch for contaminated/missing years
  */
 
 import { promises as fs } from 'node:fs';
@@ -57,9 +57,9 @@ import {
   PREMIER,
   DLEAGUE,
   computeAllPlayThroughCutoff,
-  computeTierMovement,
-} from './lib/afl-tier-standings.mjs';
-import { resolveTierCutoffWeek } from '../src/utils/all-play.mjs';
+  computeCompetitionMovement,
+} from './lib/afl-competition-standings.mjs';
+import { resolveCompetitionCutoffWeek } from '../src/utils/all-play.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,7 +69,7 @@ const AFL_LEAGUE = getLeagueBySlug('afl-fantasy');
 
 const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
 const CONFIG_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'afl.config.json');
-const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'tier-history.json');
+const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'competition-history.json');
 
 const HOST = mflHostPrefix(AFL_LEAGUE.mflHost);
 const LEAGUE_ID = AFL_LEAGUE.id;
@@ -84,8 +84,8 @@ const SINGLE_YEAR = yearArgIdx >= 0 ? parseInt(args[yearArgIdx + 1], 10) : null;
 // never complete mid-year, so the latest completed season is last year.
 const LATEST_COMPLETED = new Date().getFullYear() - 1;
 
-const log = (m) => console.log(`[afl-tier] ${m}`);
-const warn = (m) => console.warn(`[afl-tier] WARN: ${m}`);
+const log = (m) => console.log(`[afl-competition] ${m}`);
+const warn = (m) => console.warn(`[afl-competition] WARN: ${m}`);
 
 const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
@@ -193,17 +193,17 @@ async function loadWeeklyResults(cfg, year, cutoffWeek) {
 
 // --- Membership resolution -----------------------------------------------------
 
-// Membership for a season: tier-history if present, else (for the latest
+// Membership for a season: competition-history if present, else (for the latest
 // completed season only) seed from afl.config.json, which mirrors the makeup
 // teams competed in that season.
 function resolveMembership(history, cfg, year) {
   const recorded = history.seasons?.[String(year)]?.membership;
   if (recorded && Object.keys(recorded).length) {
-    return { membership: recorded, source: 'tier-history' };
+    return { membership: recorded, source: 'competition-history' };
   }
   if (year === LATEST_COMPLETED) {
     const fromConfig = {};
-    for (const t of cfg.teams) if (t.tier) fromConfig[t.franchiseId] = t.tier;
+    for (const t of cfg.teams) if (t.competition) fromConfig[t.franchiseId] = t.competition;
     return { membership: fromConfig, source: 'afl.config snapshot (latest completed season)' };
   }
   return { membership: null, source: null };
@@ -228,7 +228,7 @@ async function computeSeason(history, cfg, year, cutoffWeek) {
   }
 
   const allPlay = computeAllPlayThroughCutoff(weekly, cutoffWeek);
-  const movement = computeTierMovement(membership, allPlay, history.movementRules);
+  const movement = computeCompetitionMovement(membership, allPlay, history.movementRules);
 
   const champ = movement.champions;
   log(
@@ -270,20 +270,20 @@ async function main() {
   for (const year of years) {
     // The cutoff is per-season and RECORDED, not derived — week 16 for the
     // 2017 AFL Cup, 17 everywhere else. Do not infer it from the title-game
-    // week; see the warning on resolveTierCutoffWeek (that rule would rewrite
+    // week; see the warning on resolveCompetitionCutoffWeek (that rule would rewrite
     // 2020's D-League champion, and this script commits what it computes).
     const result = await computeSeason(
       history,
       cfg,
       year,
-      resolveTierCutoffWeek(cfg.tierCompetition, year)
+      resolveCompetitionCutoffWeek(cfg.competitionSettings, year)
     );
     if (!result) continue;
 
     // Write computed champions + (seeded) membership onto this season.
     const season = history.seasons[String(year)] ?? {};
     season.membership = result.membership;
-    if (!season.membershipSource || result.membershipSource !== 'tier-history') {
+    if (!season.membershipSource || result.membershipSource !== 'competition-history') {
       season.membershipSource = result.membershipSource;
     }
     season.champions = result.movement.champions;
@@ -309,6 +309,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[afl-tier] fatal:', err);
+  console.error('[afl-competition] fatal:', err);
   process.exit(1);
 });

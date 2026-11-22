@@ -54,7 +54,7 @@ export interface AFLTeam {
   aliases: string[];
   conference: ConferenceId;
   division: string;
-  tier: string;
+  competition: string;
   icon: string;
   banner: string;
 }

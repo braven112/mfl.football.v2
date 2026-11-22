@@ -822,7 +822,7 @@ function competitionsOf(ds, data) {
  * describeCompetitions), or '' for a league without one.
  */
 export function competitionStory(ds, data) {
-  return data ? describeCompetitionsOf(competitionsOf(ds, data), data.tierCompetition) : '';
+  return data ? describeCompetitionsOf(competitionsOf(ds, data), data.competitionSettings) : '';
 }
 
 const UNIT_WORDS = {

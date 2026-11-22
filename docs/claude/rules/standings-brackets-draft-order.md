@@ -56,7 +56,7 @@ one of them with a view of its own:
 |---|---|---|---|
 | TheLeague | Division | Playoffs | All-Play |
 | Archie's | Division | MAD (its playoffs) | All-Play (skins may replace it one day) |
-| AFL | Division | Playoffs (per conference) | Tiers |
+| AFL | Division | Playoffs (per conference) | Premier League / D-League |
 
 - The **standard views** (Division, Playoffs, All-Play) live in the shared
   page and differ only by profile data: columns, seeding (e.g. MAD), labels.
@@ -74,7 +74,7 @@ one of them with a view of its own:
 Status: the slot mechanism is NOT built yet — today's tabs are fixed
 (Division / league-wide / All-Play, with a configurable middle label).
 Build it when the AFL moves onto the shared page: its Division and Playoffs
-tabs are standard views, and Tiers becomes its custom tab. Do not build the
+tabs are standard views, and its Premier League / D-League competition becomes its custom tab. Do not build the
 slot before a league needs it.
 
 **1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**

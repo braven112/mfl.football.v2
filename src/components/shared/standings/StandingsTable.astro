@@ -188,10 +188,10 @@ function cellText(col: StandingsColumn, team: (typeof teams)[number]): string {
 const TIER_PRIZES: Record<string, string[]> = (() => {
   const table: Record<string, string[]> = {};
   for (const prize of getLeagueBySlug('afl-fantasy')?.payouts?.prizes ?? []) {
-    if (prize.source.kind !== 'tier-rank') continue;
-    const row = table[prize.source.tier] ?? [];
+    if (prize.source.kind !== 'competition-rank') continue;
+    const row = table[prize.source.competition] ?? [];
     row[prize.source.rank - 1] = `$${prize.amount}`;
-    table[prize.source.tier] = row;
+    table[prize.source.competition] = row;
   }
   // Ranks with no prize must render as an empty cell, not `undefined`.
   for (const tier of Object.keys(table)) {

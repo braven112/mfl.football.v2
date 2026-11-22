@@ -47,7 +47,7 @@ export interface BrandBookAssets {
 export interface BrandBookConfig {
   conferences?: Array<{ code: string; name: string }>;
   masterAssets?: Array<{ label: string; description?: string; filename: string; relativePath: string }>;
-  tierCompetition?: { tiers?: string[] };
+  competitionSettings?: { names?: string[] };
 }
 
 export interface BrandFile {
@@ -210,7 +210,7 @@ export function brandSubjects(
         // premier.svg → "Premier League": the file names are short, the tiers are not.
         const squash = (v: string) => slugify(v).replace(/-/g, '');
         const base = squash(e.filename.replace(/\.\w+$/, '').replace(/-dark$/, ''));
-        const tier = (config.tierCompetition?.tiers ?? []).find((t) => squash(t).startsWith(base));
+        const tier = (config.competitionSettings?.names ?? []).find((t) => squash(t).startsWith(base));
         return toFile(e, tier ? withDark(tier, e.relativePath) : undefined);
       }),
     });
@@ -220,7 +220,7 @@ export function brandSubjects(
       title: 'Championships and awards',
       // "dleague-champion.svg" → "D-League Champion": a word that IS a tier, squashed, prints as the tier.
       files: extras.championship.map((e) => {
-        const tiers = config.tierCompetition?.tiers ?? [];
+        const tiers = config.competitionSettings?.names ?? [];
         const label = labelFor(e.filename)
           .split(' ')
           .map((w) => tiers.find((t) => slugify(t).replace(/-/g, '') === w.toLowerCase()) ?? w)

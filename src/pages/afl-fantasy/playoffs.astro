@@ -47,7 +47,7 @@ const franchiseParam = Astro.url.searchParams.get('franchise');
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
   if (teamData) {
-    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.competition);
   }
 }
 

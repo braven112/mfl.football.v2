@@ -8,7 +8,7 @@
 import BigLeagueHomePage from '../../components/bigleague/BigLeagueHomePage.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { feedsByYear } from '../../utils/afl-family-standings';
-import { getTierMembership } from '../../utils/afl-tier';
+import { getCompetitionMembership } from '../../utils/afl-competition';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 
@@ -26,6 +26,6 @@ const year = Math.max(...standings.keys(), 0);
   year={year}
   standingsFeed={standings.get(year)}
   leagueFeed={leagueFeeds.get(year)}
-  tierMembership={getTierMembership(year)}
+  competitionMembership={getCompetitionMembership(year)}
   franchiseId={franchiseIdForLeague(getAuthUser(Astro.request), league.id)}
 />

@@ -166,7 +166,7 @@ export type PayoutSource =
    */
   | { kind: 'playoff-seed'; seeds: number[] }
   /** Rank N of an all-play tier table (AFL Premier League / D-League). */
-  | { kind: 'tier-rank'; tier: string; rank: number };
+  | { kind: 'competition-rank'; competition: string; rank: number };
 
 /** One line of a league's prize table. */
 export interface PayoutPrize {

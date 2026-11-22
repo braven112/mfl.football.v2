@@ -17,7 +17,7 @@ import { getConferenceStandings } from '../../utils/standings';
 import { resolveConfigForYear } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import { getConferenceLogo, getConferenceLogoDark, getConferenceName, leagueConferenceIds, type AflFamilySlug } from '../../utils/afl-conference';
-import { getTierLogo, getTierLogoDark } from '../../utils/afl-tier-logo';
+import { getCompetitionLogo, getCompetitionLogoDark } from '../../utils/afl-competition-logo';
 import type { LeagueDefinition } from '../../config/leagues';
 
 interface Props {
@@ -27,11 +27,11 @@ interface Props {
   standingsFeed: any;
   leagueFeed: unknown;
   /** This season's tier makeup ({ franchiseId: tier }), or null. */
-  tierMembership: Record<string, string> | null;
+  competitionMembership: Record<string, string> | null;
   /** The signed-in owner's franchise in this league, or null. */
   franchiseId: string | null;
 }
-const { league, config, year, standingsFeed, leagueFeed, tierMembership, franchiseId } = Astro.props;
+const { league, config, year, standingsFeed, leagueFeed, competitionMembership, franchiseId } = Astro.props;
 const slug = league.slug as AflFamilySlug;
 const prefix = `/${league.slug}`;
 
@@ -45,9 +45,9 @@ const myConference = team?.conference ?? conferenceIds[0];
 const ladder = getConferenceStandings(franchises, seasonConfig, myConference, { preserveFeedOrder: true });
 const myRow = team ? ladder.allTeams.find((t) => t.id === team.franchiseId) : null;
 
-const tiers: string[] = config.tierCompetition?.tiers ?? [];
-const tierSizes: number[] = config.tierCompetition?.sizes ?? [];
-const myTier = team ? tierMembership?.[team.franchiseId] ?? team.tier : null;
+const tiers: string[] = config.competitionSettings?.names ?? [];
+const tierSizes: number[] = config.competitionSettings?.sizes ?? [];
+const myTier = team ? competitionMembership?.[team.franchiseId] ?? team.competition : null;
 // Tier leaders by league-wide all-play (MFL's standings field) — the tier
 // tables proper are on the standings page.
 const allPlayPct = (f: any) => {
@@ -58,7 +58,7 @@ const allPlayPct = (f: any) => {
 };
 const teamById = new Map(teams.map((t) => [t.franchiseId, t]));
 const tierLeaders = tiers.map((tier) => {
-  const members = franchises.filter((f) => (tierMembership?.[f.id] ?? teamById.get(f.id)?.tier) === tier);
+  const members = franchises.filter((f) => (competitionMembership?.[f.id] ?? teamById.get(f.id)?.competition) === tier);
   const ranked = [...members].sort((a, b) => allPlayPct(b) - allPlayPct(a));
   return { tier, leaders: ranked.slice(0, 3), myRank: team ? ranked.findIndex((f) => f.id === team.franchiseId) + 1 : 0, size: members.length };
 });
@@ -100,7 +100,7 @@ const tools = [
         </div>
         {myTier && (
           <div class="blh__tier">
-            <ThemeImage src={getTierLogo(myTier)} darkSrc={getTierLogoDark(myTier)} alt="" class="blh__tier-logo" />
+            <ThemeImage src={getCompetitionLogo(myTier)} darkSrc={getCompetitionLogoDark(myTier)} alt="" class="blh__tier-logo" />
             <span>{myTier}</span>
           </div>
         )}
@@ -146,7 +146,7 @@ const tools = [
           {tierLeaders.map((t, i) => (
             <div class="blh__tier-block">
               <p class="blh__tier-name">
-                <ThemeImage src={getTierLogo(t.tier)} darkSrc={getTierLogoDark(t.tier)} alt="" class="blh__tier-logo" />
+                <ThemeImage src={getCompetitionLogo(t.tier)} darkSrc={getCompetitionLogoDark(t.tier)} alt="" class="blh__tier-logo" />
                 {t.tier} <span>{tierSizes[i] ?? t.size} teams</span>
               </p>
               <ol class="blh__leaders">

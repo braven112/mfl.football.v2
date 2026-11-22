@@ -84,7 +84,7 @@ const franchiseParam = Astro.url.searchParams.get('franchise');
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
   if (teamData) {
-    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.competition);
   }
 }
 
@@ -332,7 +332,7 @@ const heroInput = {
   // franchise alone decides whose colours the card wears.
   castFranchiseId: userFranchiseId,
   userPoolId: userConferenceId,
-  userTier: userTeam?.tier,
+  userTier: userTeam?.competition,
   poolOf: getFranchiseConference,
   posts: feed.posts,
   waiverCalendar: aflWaiverCalendar,

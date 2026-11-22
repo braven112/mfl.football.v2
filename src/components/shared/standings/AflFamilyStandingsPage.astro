@@ -16,21 +16,21 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import AflFamilyBoard from './AflFamilyBoard.astro';
 import { resolveSiteTheme } from '../../../utils/site-theme';
 import { TIERING } from './standings-table-config';
-import { getTierLogo, getTierLogoDark, getTierMonoMark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import { getCompetitionLogo, getCompetitionLogoDark, getCompetitionMonoMark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-competition-logo';
 import { getConferenceLogo, getConferenceLogoDark } from '../../../utils/afl-conference';
 import StandingsViewSelector from '../StandingsViewSelector.astro';
 import YearSelector from '../YearSelector.astro';
 import {
   getDivisionStandings,
   getConferenceStandings,
-  getTierAllPlayStandings,
+  getCompetitionAllPlayStandings,
   getAllPlayStandings,
   calculateAllPlayFromWeekly,
   getDivisionChampionDetails,
   type WeeklyResultsData,
 } from '../../../utils/standings';
-import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../../utils/afl-tier';
-import { resolveTierCutoffWeek } from '../../../utils/all-play.mjs';
+import { getCompetitionMembership, COMPETITION_FIRST_SEASON, AFL_CUP } from '../../../utils/afl-competition';
+import { resolveCompetitionCutoffWeek } from '../../../utils/all-play.mjs';
 import {
   resolveConfigForYear,
   resolvePreferredTeamIdForYear,
@@ -131,25 +131,25 @@ const yearPreferredTeamId = resolvePreferredTeamIdForYear(
 );
 
 
-// Premier League all-play uses the league's tierCompetition cutoff week
+// Premier League all-play uses the league's competitionSettings cutoff week
 // (configured in afl.config.json) so we use consistent data from weekly results
 // rather than MFL's cumulative all-play data. The cutoff is per-season and
 // recorded, not derived — week 16 for the 2017 AFL Cup, 17 everywhere else.
-// See resolveTierCutoffWeek before adding a year.
-const tierCutoffWeek = resolveTierCutoffWeek(
-  (aflConfig as { tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> } })
-    .tierCompetition,
+// See resolveCompetitionCutoffWeek before adding a year.
+const tierCutoffWeek = resolveCompetitionCutoffWeek(
+  (aflConfig as { competitionSettings?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> } })
+    .competitionSettings,
   selectedYear
 );
 // A league may declare its own tiers and how many teams move between
-// neighbours each season (tierCompetition.tiers / .movement — the custom-site
+// neighbours each season (competitionSettings.names / .movement — the custom-site
 // demo's three-tier big league). The AFL declares no movement, so its two
 // tiers keep their fixed bands and the promotion/relegation playoff below.
-const tierCompetitionConfig = (aflConfig as {
-  tierCompetition?: { tiers?: string[]; movement?: { promote?: number; relegate?: number } };
-}).tierCompetition;
-const declaredTiers = tierCompetitionConfig?.tiers ?? [PREMIER_LEAGUE, D_LEAGUE];
-const declaredMovement = tierCompetitionConfig?.movement;
+const competitionSettingsConfig = (aflConfig as {
+  competitionSettings?: { names?: string[]; movement?: { promote?: number; relegate?: number } };
+}).competitionSettings;
+const declaredTiers = competitionSettingsConfig?.names ?? [PREMIER_LEAGUE, D_LEAGUE];
+const declaredMovement = competitionSettingsConfig?.movement;
 function tierMovementFor(tier: string) {
   if (!declaredMovement) return undefined;
   const index = declaredTiers.indexOf(tier);
@@ -186,16 +186,16 @@ const conferenceLadders = leagueConferenceIds(leagueSlug).map((id) => ({
 //   Premier League branding yet, but its top 12 really were headed for
 //   promotion (confirmed to exactly match the 2018 Premier League roster), so
 //   the table still carries the relegation/promotion cutoff line after rank
-//   12. It ends at week 16 — see resolveTierCutoffWeek.
-// - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
+//   12. It ends at week 16 — see resolveCompetitionCutoffWeek.
+// - 2018+: grouped by THAT season's makeup from competition-history.json, recovered
 //   from the league skin's premierleague-YYYY.js grouping scripts (the source
 //   of truth for who was in which league). Any season missing a record falls
 //   back to the plain combined table rather than inventing a split.
-const tierMembership = competitions ? getTierMembership(selectedYear) : null;
-const allPlayEra = competitions && selectedYear >= TIER_COMPETITION_FIRST_SEASON;
-const hasTierRecord = tierMembership !== null;
+const competitionMembership = competitions ? getCompetitionMembership(selectedYear) : null;
+const allPlayEra = competitions && selectedYear >= COMPETITION_FIRST_SEASON;
+const hasTierRecord = competitionMembership !== null;
 const tierAllPlayStandings = hasTierRecord
-  ? getTierAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, tierMembership, { preserveFeedOrder: true })
+  ? getCompetitionAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, competitionMembership, { preserveFeedOrder: true })
   : [];
 const combinedAllPlayStandings =
   allPlayEra && !hasTierRecord
@@ -203,8 +203,8 @@ const combinedAllPlayStandings =
     : [];
 // 2017 is branded "AFL Cup" — the league's own name for it that season, and
 // the competition that became the Premier League / D-League split the
-// following year (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
-const isInauguralAllPlaySeason = competitions && selectedYear === TIER_COMPETITION_FIRST_SEASON;
+// following year (see COMPETITION_FIRST_SEASON in afl-competition.ts).
+const isInauguralAllPlaySeason = competitions && selectedYear === COMPETITION_FIRST_SEASON;
 const nitTeams = !competitions || !hasNit ? [] : conferenceLadders
   .flatMap(({ standings }) =>
     standings.allTeams.filter(team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12)
@@ -219,8 +219,8 @@ const nitTeams = !competitions || !hasNit ? [] : conferenceLadders
 // The All-Play tile wears the viewer's tier mark: D-League for a D-League
 // team, otherwise the Premier League (signed out, or the inaugural AFL Cup
 // season, which had no tiers yet).
-const viewerTier = yearPreferredTeamId ? tierMembership?.[yearPreferredTeamId] : undefined;
-const allPlayMark = allPlayEra ? getTierMonoMark(viewerTier === D_LEAGUE ? D_LEAGUE : PREMIER_LEAGUE) : null;
+const viewerTier = yearPreferredTeamId ? competitionMembership?.[yearPreferredTeamId] : undefined;
+const allPlayMark = allPlayEra ? getCompetitionMonoMark(viewerTier === D_LEAGUE ? D_LEAGUE : PREMIER_LEAGUE) : null;
 const validViews = allPlayEra ? ['division', 'league', 'all_play'] : ['division', 'league'];
 const requestedView = Astro.url.searchParams.get('view');
 const view = (validViews.includes(requestedView ?? '')
@@ -229,8 +229,8 @@ const view = (validViews.includes(requestedView ?? '')
 
 
 // Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
-const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
-const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+const premierLeague = tierAllPlayStandings.find(t => t.competition === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.competition === 'D-League');
 const promoRegTeams = declaredMovement ? [] : [
   ...(premierLeague?.teams.slice(8, 10) || []), // Premier League ranks 9-10
   ...(dLeague?.teams.slice(2, 4) || []), // D-League ranks 3-4
@@ -326,13 +326,13 @@ const boardConferences = conferenceLadders.map(({ id, standings }) => ({
 }));
 const boardTiers = hasTierRecord
   ? tierAllPlayStandings.map((g) => ({
-      tier: g.tier,
+      competition: g.competition,
       teams: g.teams,
-      movement: tierMovementFor(g.tier),
-      logo: declaredTiers.includes(g.tier) ? { src: getTierLogo(g.tier), darkSrc: getTierLogoDark(g.tier) } : undefined,
+      movement: tierMovementFor(g.competition),
+      logo: declaredTiers.includes(g.competition) ? { src: getCompetitionLogo(g.competition), darkSrc: getCompetitionLogoDark(g.competition) } : undefined,
     }))
   : allPlayEra
-    ? [{ tier: combinedTierName, teams: combinedAllPlayStandings, promotionCutoff: isInauguralAllPlaySeason ? 12 : undefined }]
+    ? [{ competition: combinedTierName, teams: combinedAllPlayStandings, promotionCutoff: isInauguralAllPlaySeason ? 12 : undefined }]
     : [];
 ---
 

@@ -180,7 +180,7 @@ export function clearTheLeaguePreference(cookies: AstroCookies): void {
 /**
  * Get AFL team data by franchise ID
  */
-export function getAFLTeamData(franchiseId: string): { conference: string; tier: string } | null {
+export function getAFLTeamData(franchiseId: string): { conference: string; competition: string } | null {
   const normalized = normalizeFranchiseId(franchiseId);
   const team = getActiveTeams(aflAssets).find(t => t.id === normalized);
 
@@ -188,7 +188,7 @@ export function getAFLTeamData(franchiseId: string): { conference: string; tier:
 
   return {
     conference: team.conference,
-    tier: team.tier,
+    competition: team.competition,
   };
 }
 
@@ -446,7 +446,7 @@ export function rememberAflTeamChoice(cookies: AstroCookies, franchiseId: string
   if (!franchiseId) return;
   const meta = getAFLTeamData(franchiseId);
   if (!meta) return;
-  setAFLPreference(cookies, franchiseId, meta.conference, meta.tier);
+  setAFLPreference(cookies, franchiseId, meta.conference, meta.competition);
 }
 
 // ── Any league ───────────────────────────────────────────────────────────────

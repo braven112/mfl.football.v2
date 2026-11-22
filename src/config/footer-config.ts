@@ -12,7 +12,7 @@
 
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
-import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
+import { getCurrentCompetitionMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-competition';
 import { getSearchPath } from '../utils/nav-utils';
 
 /**
@@ -102,7 +102,7 @@ export function pathBelongsToLeague(
  * NOT relabel the link — the tier follows who you are, not who you're looking
  * at, so the label can't flicker as you click around other franchises.
  *
- * Reads getCurrentTierMembership() rather than keying off getCurrentSeasonYear():
+ * Reads getCurrentCompetitionMembership() rather than keying off getCurrentSeasonYear():
  * the season year rolls at Labor Day, but tier membership is written per season
  * and rolled forward when a season completes. Between those two moments there
  * is no row for the current season year, so a year-keyed lookup returns null
@@ -118,7 +118,7 @@ function applyTierLabel(
   franchiseId: string | null
 ): FooterColumn[] {
   if (!franchiseId) return columns;
-  const tier = getCurrentTierMembership()?.[franchiseId] ?? null;
+  const tier = getCurrentCompetitionMembership()?.[franchiseId] ?? null;
   if (tier !== D_LEAGUE) return columns;
   return columns.map((col) => ({
     ...col,

@@ -1,6 +1,6 @@
 /**
  * The standings board's view models (src/utils/standings-board.ts, the AFL's
- * tier rows in src/utils/tier-board.ts) and the site-theme preview switch
+ * tier rows in src/utils/competition-board.ts) and the site-theme preview switch
  * (src/utils/site-theme.ts).
  */
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import {
   toBoardTeam,
   type BoardTeam,
 } from '../src/utils/standings-board';
-import { buildNitRows, buildProRelRows, buildTierRows } from '../src/utils/tier-board';
+import { buildNitRows, buildProRelRows, buildCompetitionRows } from '../src/utils/competition-board';
 import { TIERING } from '../src/components/shared/standings/standings-table-config';
 import { parseSiteTheme, resolveSiteTheme, resolveThemePreview } from '../src/utils/site-theme';
 import { leagueSiteTheme } from '../src/config/leagues';
@@ -114,11 +114,11 @@ describe('shortDivision', () => {
   });
 });
 
-describe('buildTierRows (the AFL tier competition)', () => {
+describe('buildCompetitionRows (the AFL tier competition)', () => {
   const twelve = Array.from({ length: 12 }, (_, i) => toBoardTeam(standing(String(i + 1).padStart(4, '0')), opts));
 
   it('Premier League: the paid ranks medalled and "In the money", relegation playoff 9-10, relegated 11-12', () => {
-    const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy' });
+    const rows = buildCompetitionRows(twelve, { competition: 'Premier League', leagueSlug: 'afl-fantasy' });
     expect(rows[0].rank).toEqual({ kind: 'medal', n: 1, medals: 4 });
     expect(rows.slice(0, 5).map((r) => r.zone)).toEqual(['money', 'money', 'money', 'money', undefined]);
     expect(rows[0].zoneLabel).toEqual({ tone: 'money', text: 'In the money' });
@@ -130,26 +130,26 @@ describe('buildTierRows (the AFL tier competition)', () => {
   });
 
   it('D-League: 1-2 promoted, 3-4 in the promotion playoff, no medals', () => {
-    const rows = buildTierRows(twelve, { tier: 'D-League', leagueSlug: 'afl-fantasy' });
+    const rows = buildCompetitionRows(twelve, { competition: 'D-League', leagueSlug: 'afl-fantasy' });
     expect(rows[0].rank.kind).toBe('num');
     expect(rows.slice(0, 4).map((r) => r.zone)).toEqual(['up', 'up', 'danger', 'danger']);
   });
 
   it('D-League: last place gets the name-change band, and only last place', () => {
-    const rows = buildTierRows(twelve, { tier: 'D-League', leagueSlug: 'afl-fantasy' });
+    const rows = buildCompetitionRows(twelve, { competition: 'D-League', leagueSlug: 'afl-fantasy' });
     expect(rows.filter((r) => r.zone === 'rename')).toEqual([rows[11]]);
     expect(rows[11].zoneLabel).toEqual({ tone: 'rename', text: 'Name change' });
     expect(rows[11].cells.at(-1)?.arrow).toBeUndefined();
   });
 
   it('a declared movement wins over the AFL defaults', () => {
-    const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy', movement: { promote: 0, relegate: 3 } });
+    const rows = buildCompetitionRows(twelve, { competition: 'Premier League', leagueSlug: 'afl-fantasy', movement: { promote: 0, relegate: 3 } });
     expect(rows.filter((r) => r.zone === 'down')).toHaveLength(3);
     expect(rows.some((r) => r.zone === 'danger')).toBe(false);
   });
 
   it('prices ranks from the league payout table', () => {
-    const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy' });
+    const rows = buildCompetitionRows(twelve, { competition: 'Premier League', leagueSlug: 'afl-fantasy' });
     expect(rows[0].cells.at(-1)?.prize).toMatch(/^\$\d+/);
   });
 });

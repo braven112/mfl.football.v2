@@ -53,7 +53,7 @@ import {
   bigLeagueConfig,
   bigLeagueDraftResults,
   bigLeagueFeed,
-  bigLeagueTierHistory,
+  bigLeagueCompetitionHistory,
   simulateBigLeague,
 } from './lib/bigleague.mjs';
 import { DEMO_AFL_ROUTES } from '../../src/utils/demo-isolation-core.mjs';
@@ -371,7 +371,7 @@ function writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, gene
     mflHost: () => league.mflHost,
     shapeLeague: bigLeagueFeed,
   };
-  const { seasons, tierHistory, currentTiers } = simulateBigLeague({
+  const { seasons, competitionHistory, currentTiers } = simulateBigLeague({
     years,
     facts,
     currentYear,
@@ -391,9 +391,9 @@ function writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, gene
   }
   writeJson(path.join(ROOT, league.configPath), bigLeagueConfig({ leagueId: slot.leagueId, currentTiers }));
   writeJson(path.join(dir, 'afl.assets.json'), bigLeagueAssets({ firstYear: years[0], generatedAt }));
-  writeJson(path.join(dir, 'tier-history.json'), bigLeagueTierHistory(tierHistory));
+  writeJson(path.join(dir, 'competition-history.json'), bigLeagueCompetitionHistory(competitionHistory));
   writeJson(path.join(dir, 'championship-history.json'), bigLeagueChampionships(seasons));
-  writeJson(path.join(dir, 'awards-history.json'), bigLeagueAwards(seasons, tierHistory));
+  writeJson(path.join(dir, 'awards-history.json'), bigLeagueAwards(seasons, competitionHistory));
   writeJson(path.join(ROOT, league.schefterFeedPath), { posts: [] });
   for (const [rel, contents] of bigLeagueArtFiles()) writeText(path.join(PUBLIC, rel), contents);
   runNode('scripts/compute-free-agents.mjs', ['--league', 'afl-fantasy']);

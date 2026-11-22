@@ -4,7 +4,7 @@
  * Background (August 2026): scripts/compute-afl-awards.mjs credits a division
  * title to the first row of each division in MFL's official standings order.
  * Its only guard was "was any football played" (`divpct > 0 || pf > 0`), which
- * is true from week 1 onward. Because .github/workflows/afl-tier-rollover.yml
+ * is true from week 1 onward. Because .github/workflows/afl-competition-rollover.yml
  * runs that script weekly and COMMITS data/afl-fantasy/awards-history.json,
  * an in-progress season would stamp four division titles onto the trophy wall,
  * the footer champion cards and getFranchiseTrophyRank — then churn them every

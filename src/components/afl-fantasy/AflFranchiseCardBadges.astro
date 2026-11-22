@@ -7,7 +7,7 @@
  */
 import { stripBadgeYear, namespaceBadgeIds } from '../../utils/afl-badge';
 import { aflBadgeSvgs, aflPageSeasonId } from '../../utils/afl-badge-art';
-import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../utils/afl-tier-logo';
+import { PREMIER_LEAGUE, D_LEAGUE, getCompetitionLogo, getCompetitionLogoDark } from '../../utils/afl-competition-logo';
 import type { TitleTypeKey, TitleTypeProgress } from '../../utils/afl-awards';
 import ThemeImage from '../shared/ThemeImage.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
@@ -112,8 +112,8 @@ const titleYears = (t: TitleTypeProgress): string =>
       <span class="icon" aria-hidden="true">
         {t.key === 'premier' || t.key === 'dleague' ? (
           <ThemeImage
-            src={getTierLogo(tierNameFor(t.key))}
-            darkSrc={getTierLogoDark(tierNameFor(t.key))}
+            src={getCompetitionLogo(tierNameFor(t.key))}
+            darkSrc={getCompetitionLogoDark(tierNameFor(t.key))}
             alt=""
             class="badge-tier-logo"
           />

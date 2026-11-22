@@ -57,7 +57,7 @@ const myTeamParam = Astro.url.searchParams.get('myteam');
 const cookiePreference = getAFLPreference(Astro.cookies);
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
-  if (teamData) setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  if (teamData) setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.competition);
 }
 // No `defaultTeam`: a visitor with no choice and no session highlights NOBODY
 // (it used to pass '0001', which told every signed-out stranger Smokane FC was

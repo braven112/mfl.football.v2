@@ -9,7 +9,7 @@
  * Bracket meaning comes from `bracketKind`, never an id: ids 2 and 3 are the
  * AL/NL brackets only from 2018 on (src/utils/afl-bracket-kind.mjs).
  */
-import { getTierAllPlayStandings } from '../../utils/standings';
+import { getCompetitionAllPlayStandings } from '../../utils/standings';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
 import { findFinalGame, type BracketView } from '../../utils/playoff-bracket-views';
@@ -75,17 +75,17 @@ const getTeamDisplay = (franchiseId?: string) => {
     id,
     name: asset?.name || franchise?.name || franchise?.franchise_name || `Franchise ${id}`,
     icon: asset?.icon,
-    tier: asset?.tier,
+    competition: asset?.competition,
   };
 };
 
 
 // Get Premier League and D-League standings
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, undefined, undefined, {
+const tierAllPlayStandings = getCompetitionAllPlayStandings(franchises, yearResolvedConfig, undefined, undefined, {
   preserveFeedOrder: true,
 });
-const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
-const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+const premierLeague = tierAllPlayStandings.find(t => t.competition === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.competition === 'D-League');
 
 type PrizeLine = {
   label: string;

@@ -96,7 +96,7 @@ export function maskAskData(ds: AskData, mask: NameMasker): AskData {
     // Salaries are ids and dollars, no names: nothing to mask.
     salaries: ds.salaries,
     competitions: c
-      ? { tierCompetition: m(c.tierCompetition), tierHistory: m(c.tierHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
+      ? { competitionSettings: m(c.competitionSettings), competitionHistory: m(c.competitionHistory), awards: m(c.awards), weekly: Object.fromEntries(Object.entries(c.weekly ?? {}).map(([k, v]) => [k, m(v)])) }
       : c,
   };
 }

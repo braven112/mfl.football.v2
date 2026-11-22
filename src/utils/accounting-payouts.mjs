@@ -359,15 +359,15 @@ export function planPayouts({ year, payouts, data = {}, existingRecords = [] }) 
       continue;
     }
 
-    if (source.kind === 'tier-rank') {
-      const table = asArray(tierTable?.[source.tier]).map(padFranchise).filter(Boolean);
+    if (source.kind === 'competition-rank') {
+      const table = asArray(tierTable?.[source.competition]).map(padFranchise).filter(Boolean);
       const franchiseId = table[source.rank - 1];
       if (!franchiseId) {
         unresolved.push({
           key: prize.key,
           label: prize.label,
           amount: prize.amount,
-          reason: `No franchise at ${source.tier} rank ${source.rank} — the all-play table is missing or short.`,
+          reason: `No franchise at ${source.competition} rank ${source.rank} — the all-play table is missing or short.`,
         });
         continue;
       }

@@ -189,7 +189,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (resolvedLeagueId === AFL_LEAGUE_ID) {
       const teamData = getAFLTeamData(mflResponse.franchiseId);
       if (teamData) {
-        setAFLPreference(cookies, mflResponse.franchiseId, teamData.conference, teamData.tier);
+        setAFLPreference(cookies, mflResponse.franchiseId, teamData.conference, teamData.competition);
       }
     } else if (resolvedLeagueId === BB1_LEAGUE_ID) {
       setBestBall1Preference(cookies, mflResponse.franchiseId);

@@ -122,11 +122,11 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
   the conferences, each tagged with its `conference`).
 - Tiers across all 96: **Premier League 20, A League 20, D-League 56**, ranked
   on all-play through week 12, four up and four down between each pair
-  (`tierCompetition.{tiers,sizes,movement,cutoffWeek}`, `nit: false`).
+  (`competitionSettings.{tiers,sizes,movement,cutoffWeek}`, `nit: false`).
 - Everything conference- and tier-shaped now reads the league config instead
   of the AFL's two constants: `afl-conference` (ids, names, shorts, logos,
   colours, order), the tier logo helpers (`/assets/afl/tiers/<slug>.svg` for a
-  tier the AFL has no mark for), `getTierAllPlayStandings`, and the standings
+  tier the AFL has no mark for), `getCompetitionAllPlayStandings`, and the standings
   tier tables (`tierMovement` drives the promotion/relegation bands). The real
   AFL's standings, rosters, players, trade builder, home, playoffs and live
   scoring render byte-identical before and after, bar the tightened

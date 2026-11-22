@@ -29,7 +29,7 @@ import { calculateDraftOrder } from '../src/utils/draft-utils';
 import {
   getDivisionStandings,
   getAllPlayStandings,
-  getTierAllPlayStandings,
+  getCompetitionAllPlayStandings,
 } from '../src/utils/standings';
 
 // Two teams identical on every step of both chains EXCEPT points allowed.
@@ -108,7 +108,7 @@ describe('most points allowed — standings direction (src/utils/standings.ts)',
   // The all-play sorters are TheLeague's Wild Card chain (All Play -> Total
   // points -> Power Rank -> Victory Points -> Most Points Allowed) and, unlike
   // divisionTiebreaker, they ARE live: getAllPlayStandings backs the all-play
-  // view on the standings page and getTierAllPlayStandings backs the AFL's
+  // view on the standings page and getCompetitionAllPlayStandings backs the AFL's
   // tier view. They were missed in the first pass at the ruling and kept
   // ranking the lower-PA team higher — caught in review on PR #501.
   it('applies the same direction in the all-play view', () => {
@@ -117,7 +117,7 @@ describe('most points allowed — standings direction (src/utils/standings.ts)',
   });
 
   it('applies the same direction in the tiered all-play view', () => {
-    const tiers = getTierAllPlayStandings(
+    const tiers = getCompetitionAllPlayStandings(
       TIED_EXCEPT_PA as never[],
       config as never,
       undefined,
@@ -125,7 +125,7 @@ describe('most points allowed — standings direction (src/utils/standings.ts)',
       // else falls back to config.tier and lands under 'Unknown'.
       { '0001': 'Premier League', '0002': 'Premier League' }
     );
-    const premier = tiers.find((t) => t.tier === 'Premier League');
+    const premier = tiers.find((t) => t.competition === 'Premier League');
     expect(premier, 'expected a Premier League tier block').toBeTruthy();
     expect(premier!.teams.map((t) => t.id)).toEqual(['0002', '0001']);
   });

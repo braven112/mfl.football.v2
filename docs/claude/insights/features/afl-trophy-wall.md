@@ -45,7 +45,7 @@ client-side from per-year membership data that isn't served. Current
 `afl.config.json` membership can't be back-applied because teams are
 promoted/relegated (e.g. Titsburgh Feelers was Premier in 2023, D-League now).
 So tier champions are HAND-ENTERED into `awards-history.json` (slugs
-`premier-league` / `dleague-champion`, `source: "manual:tier-champion"`) and
+`premier-league` / `dleague-champion`, `source: "manual:competition-champion"`) and
 the compute script's per-year merge PRESERVES them on re-run. The commissioner
 reads each season's tier champion off the skin's standings page header
 ("YYYY Champions: NAME").
@@ -58,7 +58,7 @@ skips network (no pre-2024, since those local caches are contaminated).
 `getFranchiseAwards()` returns all 10 `AwardType`s with a `years[]` array (empty
 = locked, shown grayscale + dimmed via `[data-earned='false']`). Badges are
 full-color `<img>` brand marks in `public/assets/afl/awards/`, resolved through
-`getAwardBadge()` (never hardcode the path — mirrors `afl-tier.ts`/
+`getAwardBadge()` (never hardcode the path — mirrors `afl-competition.ts`/
 `afl-conference.ts`). Gold accent uses the new `--afl-gold` token in
 `tokens.css`.
 
@@ -182,27 +182,27 @@ a per-season tier source of truth plus a season-end compute/roll-forward
 pipeline. With it, tier champions no longer need hand-entry.
 
 **What changed (supersedes data gotcha #4 above):** Tier membership now lives
-in `data/afl-fantasy/tier-history.json` (keyed by year → franchiseId → tier) —
+in `data/afl-fantasy/competition-history.json` (keyed by year → franchiseId → tier) —
 the single source of truth, since MFL still serves no tier markers.
-`scripts/compute-afl-tier-movement.mjs` (+ pure logic in
-`scripts/lib/afl-tier-standings.mjs`) ranks each tier's cutoff-week all-play
-(`afl.config.json#tierCompetition.cutoffWeek`), names the two champions, applies
+`scripts/compute-afl-competition-movement.mjs` (+ pure logic in
+`scripts/lib/afl-competition-standings.mjs`) ranks each tier's cutoff-week all-play
+(`afl.config.json#competitionSettings.cutoffWeek`), names the two champions, applies
 the constitution promotion/relegation rule (bottom-2 PL relegated, top-2 DL
 promoted, plus the 4-team swing playoff PL 9/10 vs DL 3/4 decided by all-play),
 and writes next season's makeup back into the same file.
 
-`compute-afl-awards.mjs` now reads `tier-history.json` for the
-`premier-league` / `dleague-champion` slugs (`source: "tier-history"`) instead
+`compute-afl-awards.mjs` now reads `competition-history.json` for the
+`premier-league` / `dleague-champion` slugs (`source: "competition-history"`) instead
 of preserving hand-entered rows. Verified the auto-derived champions match the
 previously hand-entered values exactly (2025 Premier 0015 / D-League 0017; 2024
 0002 / 0008; 2023 0002 / 0014; 2022 0002 / 0017; 2021 0002 / 0008; 2020 0020 /
 0015). The 2025 champions are *computed* from weekly scores; 2020-2024 are the
-recorded values carried in tier-history (membership for those years was never
+recorded values carried in competition-history (membership for those years was never
 captured and isn't recoverable from MFL, so only their champions are stored).
 
 **Offline vs online:** `--offline` only refreshes 2024-2025 tier rows (the
 genuine-local years); a `--online` run fetches the genuine-AFL feeds for
-2020-2023 and flips those tier rows to `source: "tier-history"` too. Pre-2024
+2020-2023 and flips those tier rows to `source: "competition-history"` too. Pre-2024
 local feeds are still contaminated (gotcha #1), so the genuine-AFL validation
 guards both scripts.
 
@@ -220,7 +220,7 @@ duplicated all-play calc. Three things a future session must not undo.
 **1. There is ONE all-play accumulator: `src/utils/all-play.mjs#accumulateAllPlay`.**
 Both the live standings page (via `src/utils/standings.ts#calculateAllPlayFromWeekly`,
 now a thin typed wrapper) and the node tier scripts
-(`scripts/lib/afl-tier-standings.mjs#computeAllPlayThroughCutoff`) import it. Do
+(`scripts/lib/afl-competition-standings.mjs#computeAllPlayThroughCutoff`) import it. Do
 NOT reimplement the week-by-week all-play loop anywhere — import this. It lives
 in a `.mjs` (not `.ts`) on purpose: a plain-`node` cron script can import a
 `src/**/*.mjs` directly (same pattern `scripts/schefter-scan.mjs` uses for
@@ -229,10 +229,10 @@ file, no `tsx` in the cron path. The record now carries `pf` (total points, the
 constitution promotion/relegation tiebreak); the page ignores it.
 
 **2. The standings page groups by PER-YEAR tier membership, not static config.**
-`getTierAllPlayStandings(franchises, config, calculatedAllPlay, tierMembership?)`
+`getCompetitionAllPlayStandings(franchises, config, calculatedAllPlay, competitionMembership?)`
 takes an optional `{ franchiseId: tier }` override. `standings.astro` passes
-`getTierMembership(selectedYear)` (from `src/utils/afl-tier.ts`, reading
-`tier-history.json`), falling back to `config.tier` when a year isn't recorded.
+`getCompetitionMembership(selectedYear)` (from `src/utils/afl-competition.ts`, reading
+`competition-history.json`), falling back to `config.tier` when a year isn't recorded.
 Why it matters: `afl.config.json#teams[].tier` is the CURRENT makeup only — it
 verifies the latest completed season but is wrong for every prior year (and for
 next year after roll-forward). Never rank historical tiers off `config.tier`.
@@ -242,7 +242,7 @@ next year after roll-forward). Never rank historical tiers off `config.tier`.
 range 368–385 (not equal). Ranking is by all-play **pct** (a rate stat), so the
 unevenness doesn't distort order, and cutoff 16 vs 17 produce the *identical*
 promotion/relegation outcome. Don't "fix" this by forcing equal games or moving
-the `tierCompetition.cutoffWeek` — the live page uses the same inclusive cutoff,
+the `competitionSettings.cutoffWeek` — the live page uses the same inclusive cutoff,
 so script and page stay in lockstep.
 
 ---
@@ -323,9 +323,9 @@ confirms the tier competition began in 2020. Note: `mfl.football` 406s plain
 curl — send a browser `User-Agent` (+ `Referer`) to fetch.
 
 All five years were extracted and recorded into
-`data/afl-fantasy/tier-history.json` `seasons[year].membership`
+`data/afl-fantasy/competition-history.json` `seasons[year].membership`
 (`membershipSource` cites the script). The standings page's
-`getTierMembership(year)` picks them up automatically — verified the rendered
+`getCompetitionMembership(year)` picks them up automatically — verified the rendered
 2021 tables now match MFL's official page team-for-team.
 
 **Identity-dating caveat (from Brandon):** owners sometimes renamed in MFL
@@ -386,22 +386,22 @@ generalize:
 
 - **A cutoff week is a per-season fact, not a constant AND not a formula.**
   It resolves per season now
-  (`afl.config.json#tierCompetition.cutoffWeekByYear` →
-  `resolveTierCutoffWeek` in `src/utils/all-play.mjs`). One week either side
+  (`afl.config.json#competitionSettings.cutoffWeekByYear` →
+  `resolveCompetitionCutoffWeek` in `src/utils/all-play.mjs`). One week either side
   of the finish line silently crowns a different champion, and the table looks
   entirely plausible either way. The first draft of this fix explained 2017's
   week 16 as "the week of that season's title game" — a tidy rule, stated in
   five files, and **wrong**: bracket 1 also resolves in week 16 in 2018, 2019
   and 2020, yet those seasons ran their all-play through 17, and recomputing
   2020 at 16 flips its recorded D-League champion from 0015 to 0013. Because
-  `compute-afl-tier-movement.mjs` writes champions back, a future session
+  `compute-afl-competition-movement.mjs` writes champions back, a future session
   "completing" the pattern would have committed that flip. Record the year;
-  don't derive it. `tests/afl-tier-movement.test.ts` pins 2020 as the
+  don't derive it. `tests/afl-competition-movement.test.ts` pins 2020 as the
   counterexample so the tempting generalization fails loudly.
 - **A verification that reproduces a SET can pass while the ORDER is wrong.**
   The top-12 set-match held at both week 16 and week 17 — it proved 2017 was
   one table, and was never evidence about who won it. Pin the thing you
-  actually care about (`tests/afl-tier-movement.test.ts` now pins both the
+  actually care about (`tests/afl-competition-movement.test.ts` now pins both the
   cutoff and the #1).
 
 **Confirmed out-of-band: the commissioner checked the season's payout
@@ -422,15 +422,15 @@ New entry. The league called it the AFL Cup. Naming a historical thing we only
 partly understood made the misunderstanding harder to see — it read as a
 deliberate distinction from the Cup rather than as a gap.
 
-**2025 was also wrong:** tier-history's 2025 membership had been seeded from
+**2025 was also wrong:** competition-history's 2025 membership had been seeded from
 an `afl.config.json` snapshot, not the js file. `premierleague-2025.js` has
 0024 (No Soup For You) in Premier League and 0012 (Suh girls, one cup) in
 D-League — the opposite of what was recorded. Corrected, and 2026's
-roll-forward (`compute-afl-tier-movement.mjs`) was re-run from the fixed base
+roll-forward (`compute-afl-competition-movement.mjs`) was re-run from the fixed base
 so 2026 membership + `afl.config.json` team tiers stayed consistent.
 
-**Constants:** `TIER_COMPETITION_FIRST_SEASON = 2017`,
-`TIER_SPLIT_FIRST_SEASON = 2018` in `src/utils/afl-tier.ts` — supersede any
+**Constants:** `COMPETITION_FIRST_SEASON = 2017`,
+`COMPETITION_SPLIT_FIRST_SEASON = 2018` in `src/utils/afl-competition.ts` — supersede any
 earlier "2020" or "2016" assumption found elsewhere (this file's own entry
 above was one such place).
 
@@ -558,8 +558,8 @@ frame as `afl-championship.svg` (same viewBox, same gold/navy ring construction
 — see gotcha 4 in the 2026-06-25 entry above about the "two AFL golds"), so at
 badge-icon size they read as "another AFL trophy," not "Premier League." The
 tier LOGO marks used elsewhere (`/assets/afl/premier.svg` /
-`/assets/afl/dleague.svg` + `-dark` variants, via `getTierLogo`/`getTierLogoDark`
-in `afl-tier-logo.ts` + `<ThemeImage>`, same pattern as the standings page promo
+`/assets/afl/dleague.svg` + `-dark` variants, via `getCompetitionLogo`/`getCompetitionLogoDark`
+in `afl-competition-logo.ts` + `<ThemeImage>`, same pattern as the standings page promo
 strip) are visually distinct from the medallion and were the better fit for
 those two title types specifically. Conference/division shield art (`al-champion`,
 `al-north`, etc.) doesn't have this collision — shields and medallions are
