@@ -162,7 +162,8 @@ const sourceLines = load.ok
     ))}
   </nav>
 
-  <MyRanksBlendForm slug={boardSlug} pct={blendPct} />
+  {/* The blend feeds only the AFL Keeper Planner (Projected FA went dynasty-only 2026-11-22). */}
+  {boardSlug === 'afl-fantasy' && <MyRanksBlendForm slug={boardSlug} pct={blendPct} />}
 
   {!load.ok ? (
     <div class="mr-empty" role="status">

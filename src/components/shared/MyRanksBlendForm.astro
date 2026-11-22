@@ -17,7 +17,7 @@ const { slug, pct } = Astro.props;
   <form class="mr-blend" data-blend-form data-league={slug}>
     <label class="mr-blend-label" for="mr-blend-range">
       <strong>Your blend</strong>
-      <span>Used on Projected Free Agents{slug === 'afl-fantasy' ? ' and the Keeper Planner' : ''}. Contract pages blend by years left.</span>
+      <span>Used on the Keeper Planner. Projected Free Agents is dynasty only; contract pages blend by years left.</span>
     </label>
     <div class="mr-blend-row">
       <input id="mr-blend-range" type="range" min="0" max="100" step="5" value={pct} data-blend-range />
