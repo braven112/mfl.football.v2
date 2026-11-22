@@ -236,3 +236,23 @@ describe('every date-dependent read uses the same clock', () => {
     expect(leagueYearCalls).toContainEqual(now);
   });
 });
+
+describe('My News keeps only the reader’s own injuries', () => {
+  const injury = (over: Partial<SchefterPost> = {}) =>
+    post({ type: 'injury', authorId: 'doc-rivers', tier: 'standard', ...over });
+
+  it('files another team’s injury under All only', async () => {
+    const theirs = injury({ franchiseIds: ['0007'], playerIds: ['99999'] });
+    const desk = leagueDesk();
+    const v = await rail([theirs, desk], owner);
+    expect(v.forYouIds).toContain(desk.id);
+    expect(v.forYouIds).not.toContain(theirs.id);
+    expect(v.posts.map((p) => p.id)).toContain(theirs.id);
+  });
+
+  it('keeps an injury to the reader’s own player', async () => {
+    const mine = injury({ franchiseIds: ['0001'], playerIds: ['88888'] });
+    const v = await rail([mine, leagueDesk()], owner);
+    expect(v.forYouIds).toContain(mine.id);
+  });
+});
